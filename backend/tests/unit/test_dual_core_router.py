@@ -285,3 +285,31 @@ def test_dual_core_router_biases_toward_cognitive_support_when_cognitive_load_is
     assert decision.mode == "cognitive_first"
     assert "认知负荷偏高" in rendered
     assert decision.routing_debug["cognitive_load"] == 0.84
+
+
+def test_dual_core_router_logs_and_uses_capsule_method_preferences() -> None:
+    decision = dual_core_router.route(
+        DualCoreRoutingInput(
+            intent="plan",
+            intent_confidence=0.9,
+            information_sufficient=True,
+            primary_challenge_area="execution",
+            recent_sentiment_distribution={"neutral": 2},
+            has_active_plan=True,
+            plan_health_status="healthy",
+            recent_task_feedback_distribution={"just_right": 1},
+            capsule_preferences={
+                "favorite_count": 1,
+                "method_preferences": [
+                    {"key": "pomodoro", "label": "番茄钟方法", "count": 1, "confidence": 0.8}
+                ],
+                "method_preference_summary": ["用户偏好番茄钟方法"],
+            },
+        )
+    )
+
+    rendered = "\n".join(decision.cognitive_adjustments + decision.execution_constraints)
+    assert "用户偏好番茄钟方法" in rendered
+    assert decision.routing_debug["explicit_capsule_signal"] is True
+    assert decision.routing_debug["capsule_preferences"]["method_preference_summary"] == ["用户偏好番茄钟方法"]
+    assert decision.routing_debug["capsule_method_preferences"][0]["key"] == "pomodoro"

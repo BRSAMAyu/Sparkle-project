@@ -25,16 +25,19 @@ Prompt 管理系统 - 统一的Agent Prompt管理
     prompt = get_system_prompt_for_role(AgentRole.GALAXY_GUIDE, user_context, query)
 """
 
+from datetime import datetime, timezone
 from typing import Any
 import json
 import math
 import random
+import re
 
 from loguru import logger
 
 from app.core.agent_persona import build_agent_persona_prompt_section
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
+from app.core.i18n import I18n
 from app.core.kill_switch import normalize_mode
 from app.core.metrics import SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO
 from app.core.plan_context import merge_plan_context
@@ -54,6 +57,9 @@ class _SafeFormatDict(dict):
 
 
 PROMPT_SECTION_SOFT_LIMIT_TOKENS = 4000
+CONVERSATION_MEMORY_MIN_MESSAGE_COUNT = 4
+CONVERSATION_MEMORY_RECENT_MESSAGE_LIMIT = 6
+CONVERSATION_MEMORY_ITEM_LIMIT = 2
 
 # 各 tier 的 prompt token 预算（与 ModelTier 对应但避免循环导入，用字符串 key）
 _TIER_PROMPT_BUDGET: dict[str, int] = {
@@ -156,49 +162,119 @@ def _coalesce_mapping_value(source: dict[str, Any], key: str, default: Any) -> A
     return default if value is None else value
 
 
+def _format_aurora_planning_sidecar_section(
+    *,
+    sidecar_payload: dict[str, Any] | None,
+    legacy_prompt: str = "",
+) -> str:
+    payload = dict(sidecar_payload or {})
+    if not payload:
+        prompt = str(legacy_prompt or "").strip()
+        return "\n## AURORA PLANNING SIDECAR [L2 引导]\n" + prompt if prompt else ""
+
+    decision = payload.get("decision")
+    if not isinstance(decision, dict):
+        decision = {}
+    scaffold = payload.get("scaffold")
+    if not isinstance(scaffold, dict):
+        scaffold = {}
+    directive = decision.get("chat_directive")
+    if not isinstance(directive, dict):
+        directive = {}
+    top_tension = scaffold.get("top_tension")
+    if not isinstance(top_tension, dict):
+        top_tension = {}
+    top_thread = scaffold.get("top_latent_thread")
+    if not isinstance(top_thread, dict):
+        top_thread = {}
+
+    action = str(decision.get("action") or "wait").strip() or "wait"
+    lines = [
+        "## AURORA PLANNING SIDECAR [L2 引导]",
+        "这是 Aurora decision loop 给主聊天链的意图级指令，不是可直接复述给用户的话术。",
+        f"Aurora action: {action}",
+    ]
+
+    if action == "soft_return_topic":
+        lines.append("先处理用户当前需求；如果收口自然，再用一句短桥接带回规划，不要生硬切题。")
+    elif action == "drop_thread":
+        lines.append("把先前那条规划追问放下，本轮不要带回，也不要补问刚才那块信息。")
+    else:
+        lines.append("本轮先处理当前需求，不要主动把话题拉回规划；只在用户自己回到规划时继续。")
+
+    intent = str(directive.get("intent") or "").strip()
+    if intent:
+        lines.append(f"Directive intent: {intent}")
+    brief = str(directive.get("brief") or "").strip()
+    if brief:
+        lines.append(f"Directive brief: {brief}")
+
+    goal_raw = str(scaffold.get("goal_raw") or "").strip()
+    if goal_raw:
+        lines.append(f"Planning goal: {goal_raw}")
+
+    if action != "drop_thread" and top_tension:
+        domain = str(top_tension.get("domain") or "").strip()
+        description = str(top_tension.get("description") or "").strip()
+        if domain and description:
+            lines.append(f"Only unresolved tension worth tracking now: {domain} - {description}")
+
+    if action == "soft_return_topic":
+        context_snapshot = str(top_thread.get("context_snapshot") or "").strip()
+        if context_snapshot:
+            lines.append(f"Latent thread to recover naturally: {context_snapshot}")
+
+    resolved_facts = [str(item).strip() for item in list(scaffold.get("resolved_facts") or []) if str(item).strip()]
+    if resolved_facts:
+        lines.append("Already resolved facts: " + "；".join(resolved_facts[:3]))
+
+    lines.append("不要把已经补齐的信息重新问一遍。")
+    return "\n" + "\n".join(lines)
+
+
 def _describe_warmth_level(value: float) -> str:
     if value <= 0.2:
-        return "保持克制而不过度外露"
+        return I18n.t("prompts.companion.warmth_restrained", locale="zh")
     if value <= 0.45:
-        return "带着稳定的温度感"
+        return I18n.t("prompts.companion.warmth_stable", locale="zh")
     if value <= 0.7:
-        return "明显温暖但不黏腻"
-    return "温暖感更主动一些"
+        return I18n.t("prompts.companion.warmth_warm", locale="zh")
+    return I18n.t("prompts.companion.warmth_proactive", locale="zh")
 
 
 def _describe_candor_level(value: float) -> str:
     if value <= 0.2:
-        return "先轻放判断，给用户留出缓冲"
+        return I18n.t("prompts.companion.candor_gentle", locale="zh")
     if value <= 0.45:
-        return "保持柔和但不回避关键事实"
+        return I18n.t("prompts.companion.candor_soft", locale="zh")
     if value <= 0.75:
-        return "直说重点，同时注意落点"
-    return "会更直接地点明判断与代价"
+        return I18n.t("prompts.companion.candor_direct", locale="zh")
+    return I18n.t("prompts.companion.candor_blunt", locale="zh")
 
 
 def _describe_relationship_stage(stage: str) -> str:
     return {
-        "early": "关系还在建立早期，要轻一点、少预设",
-        "building": "关系正在建立，靠稳定承接和连续性来积累信任",
-        "trusted": "关系已有一定信任基础，可以更直接一些",
-        "deepening": "关系连续性更深了，但仍然要守住边界和节制",
-    }.get(stage, "关系连续性主要靠稳定、诚实和记忆感来体现")
+        "early": I18n.t("prompts.companion.relationship_early", locale="zh"),
+        "building": I18n.t("prompts.companion.relationship_building", locale="zh"),
+        "trusted": I18n.t("prompts.companion.relationship_trusted", locale="zh"),
+        "deepening": I18n.t("prompts.companion.relationship_deepening", locale="zh"),
+    }.get(stage, I18n.t("prompts.companion.relationship_default", locale="zh"))
 
 
 def _describe_challenge_style(style: str) -> str:
     return {
-        "gentle": "推进时用更轻的力度，不把压力堆到用户身上",
-        "balanced": "推进时保持温度和力度都不过头",
-        "firm": "必要时稳稳顶住关键判断，不用软化核心现实",
-    }.get(style, "推进时保持温度和力度都不过头")
+        "gentle": I18n.t("prompts.companion.challenge_gentle", locale="zh"),
+        "balanced": I18n.t("prompts.companion.challenge_balanced", locale="zh"),
+        "firm": I18n.t("prompts.companion.challenge_firm", locale="zh"),
+    }.get(style, I18n.t("prompts.companion.challenge_default", locale="zh"))
 
 
 def _describe_truth_style(style: str) -> str:
     return {
-        "honest_warm": "表达真实判断时保留温度",
-        "direct_structured": "表达上更强调清晰、结构和结论先行",
-        "gentle_reflective": "表达上更偏向陪着想清楚，再慢慢落到结论",
-    }.get(style, "表达上保持真实、清晰和有分寸")
+        "honest_warm": I18n.t("prompts.companion.truth_honest_warm", locale="zh"),
+        "direct_structured": I18n.t("prompts.companion.truth_direct_structured", locale="zh"),
+        "gentle_reflective": I18n.t("prompts.companion.truth_gentle_reflective", locale="zh"),
+    }.get(style, I18n.t("prompts.companion.truth_default", locale="zh"))
 
 
 def _format_intervention_language_contract_section(
@@ -409,6 +485,8 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 {plan_context_section}
 
 {preference_instructions}
+
+{capsule_preference_section}
 
 ## 对话历史
 
@@ -868,6 +946,8 @@ def build_system_prompt(
     persona_constraints_summary = ""
     agent_memory_context = ""
     collaboration_narrative = ""
+    aurora_planning_sidecar = {}
+    aurora_planning_sidecar_prompt = ""
     agent_persona_section = ""
     if isinstance(user_context, dict):
         raw_trace = user_context.get("orchestration_trace")
@@ -891,6 +971,10 @@ def build_system_prompt(
         persona_constraints_summary = str(user_context.get("persona_constraints_summary") or "").strip()
         agent_memory_context = str(user_context.get("agent_memory_context") or "").strip()
         collaboration_narrative = str(user_context.get("collaboration_narrative") or "").strip()
+        raw_sidecar = user_context.get("aurora_planning_sidecar")
+        if isinstance(raw_sidecar, dict):
+            aurora_planning_sidecar = raw_sidecar
+        aurora_planning_sidecar_prompt = str(user_context.get("aurora_planning_sidecar_prompt") or "").strip()
 
     # 1. 首先检查 AgentProfile 是否有专用 prompt
 
@@ -913,6 +997,8 @@ def build_system_prompt(
         context_level=context_level,
         context_focus=context_focus,
     )
+    past_session_memory_section = _format_past_session_memory_section(user_context)
+    capsule_preference_section = _format_capsule_preference_section(user_context)
 
     llm_profile = _extract_llm_profile(user_context)
     understanding_depth_hint = None
@@ -927,7 +1013,11 @@ def build_system_prompt(
         context_focus=context_focus,
     )
 
-    conversation_history_section = _format_conversation_history(conversation_history)
+    conversation_memory_section = build_conversation_memory_fragment(conversation_history)
+    raw_conversation_history_section = _format_conversation_history(conversation_history)
+    conversation_history_section = "\n\n".join(
+        section for section in (conversation_memory_section, raw_conversation_history_section) if section
+    )
 
     # 2.5 格式化计划上下文
 
@@ -1033,6 +1123,11 @@ def build_system_prompt(
     agent_memory_section = ""
     if agent_memory_context:
         agent_memory_section = "\n## 专家交互记忆 [L2 引导]\n" + agent_memory_context
+
+    aurora_planning_sidecar_section = _format_aurora_planning_sidecar_section(
+        sidecar_payload=aurora_planning_sidecar,
+        legacy_prompt=aurora_planning_sidecar_prompt,
+    )
 
     situation_brief_section = ""
     if isinstance(user_context, dict):
@@ -1170,6 +1265,7 @@ def build_system_prompt(
         "session_feedback_section": session_feedback_section,
         "user_context": f"[优先级：L3 背景]\n{formatted_user_context}".strip(),
         "preference_instructions": f"[优先级：L3 背景]\n{preference_instructions}".strip(),
+        "capsule_preference_section": capsule_preference_section,
         "plan_context_section": plan_context_section,
         "dual_core_section": dual_core_section,
         "understanding_depth_section": understanding_depth_section,
@@ -1181,6 +1277,7 @@ def build_system_prompt(
         "constitution_guardrail_section": constitution_guardrail_section,
         "agent_persona_section": agent_persona_section,
         "agent_memory_section": agent_memory_section,
+        "aurora_planning_sidecar_section": aurora_planning_sidecar_section,
         "cognitive_prism_section": cognitive_prism_section,
         "seed_library_section": seed_library_section,
         "conversation_history_section": (
@@ -1220,6 +1317,7 @@ def build_system_prompt(
             "session_feedback_section": 1,
             "user_context": 3,
             "preference_instructions": 3,
+            "capsule_preference_section": 2,
             "plan_context_section": 2,
             "dual_core_section": 2,
             "understanding_depth_section": 2,
@@ -1231,6 +1329,7 @@ def build_system_prompt(
             "constitution_guardrail_section": 1,
             "agent_persona_section": 2,
             "agent_memory_section": 2,
+            "aurora_planning_sidecar_section": 2,
             "cognitive_prism_section": cognitive_priority,
             "seed_library_section": 3,
             "conversation_history_section": 3,
@@ -1253,6 +1352,7 @@ def build_system_prompt(
     session_feedback_section = section_map["session_feedback_section"]
     formatted_user_context = section_map["user_context"]
     preference_instructions = section_map["preference_instructions"]
+    capsule_preference_section = section_map["capsule_preference_section"]
     plan_context_section = section_map["plan_context_section"]
     dual_core_section = section_map["dual_core_section"]
     understanding_depth_section = section_map["understanding_depth_section"]
@@ -1264,6 +1364,7 @@ def build_system_prompt(
     constitution_guardrail_section = section_map["constitution_guardrail_section"]
     agent_persona_section = section_map["agent_persona_section"]
     agent_memory_section = section_map["agent_memory_section"]
+    aurora_planning_sidecar_section = section_map["aurora_planning_sidecar_section"]
     cognitive_prism_section = section_map["cognitive_prism_section"]
     conversation_history_section = section_map["conversation_history_section"]
     task_awareness_section = section_map["task_awareness_section"]
@@ -1278,9 +1379,7 @@ def build_system_prompt(
         )
     if isinstance(prompt_signal_telemetry, dict):
         visible_fields = [
-            key
-            for key, meta in prompt_signal_telemetry.get("high_value_fields", {}).items()
-            if meta.get("rendered")
+            key for key, meta in prompt_signal_telemetry.get("high_value_fields", {}).items() if meta.get("rendered")
         ]
         prompt_signal_telemetry["prompt_visible_high_value_fields"] = visible_fields
         for key in prompt_signal_telemetry["tracked_fields"]:
@@ -1319,6 +1418,7 @@ def build_system_prompt(
                 user_context=rendered_user_context,
                 conversation_history_section=conversation_history_section,
                 preference_instructions=preference_instructions,
+                capsule_preference_section=capsule_preference_section,
                 plan_context_section=plan_context_section,
                 intent_section=intent_section,
                 session_feedback_section=session_feedback_section,
@@ -1333,6 +1433,7 @@ def build_system_prompt(
                 constitution_guardrail_section=constitution_guardrail_section,
                 agent_persona_section=agent_persona_section,
                 agent_memory_section=agent_memory_section,
+                aurora_planning_sidecar_section=aurora_planning_sidecar_section,
                 situation_brief_section=situation_brief_section,
                 decision_policy_section=decision_policy_section,
                 planning_strategy_section=planning_strategy_section,
@@ -1365,6 +1466,7 @@ def build_system_prompt(
                 galaxy_snapshot_section,
                 idiographic_section,
                 intervention_language_contract_section,
+                capsule_preference_section,
                 plan_context_section,
                 conversation_history_section,
                 context_briefing_section,
@@ -1376,6 +1478,7 @@ def build_system_prompt(
                 orchestration_context_section,
                 collaboration_narrative_section,
                 agent_memory_section,
+                aurora_planning_sidecar_section,
                 cognitive_prism_section,
                 seed_library_section,
             ]
@@ -1425,6 +1528,7 @@ def build_system_prompt(
             galaxy_snapshot_section,
             idiographic_section,
             intervention_language_contract_section,
+            capsule_preference_section,
             plan_context_section,
             conversation_history_section,
             context_briefing_section,
@@ -1436,12 +1540,16 @@ def build_system_prompt(
             orchestration_context_section,
             collaboration_narrative_section,
             agent_memory_section,
+            aurora_planning_sidecar_section,
             cognitive_prism_section,
             seed_library_section,
         ]
         suffix = "\n\n".join(section for section in ordered_sections if str(section or "").strip())
         if suffix:
             prompt = f"{prompt}\n\n{suffix}"
+
+    if past_session_memory_section:
+        prompt = f"{past_session_memory_section}\n\n{prompt}"
 
     # 4. 版本特定修饰
 
@@ -1544,6 +1652,156 @@ def _is_anchor_message(msg: dict[str, Any]) -> bool:
         return True
     anchor_keywords = ["计划已创建", "任务完成", "阶段", "里程碑", "目标确认", "关键决策"]
     return any(keyword in content for keyword in anchor_keywords)
+
+
+_CLAUSE_SPLIT_RE = re.compile(r"[。！？!?；;\n]+")
+_CONVERSATION_MEMORY_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
+    "困难": (
+        re.compile(
+            r"(?:最)?(?:头疼|头痛|困难|难点|痛点|短板|薄弱|卡在|卡住|搞不懂|不懂|不会|不熟)"
+            r"(?:的是|是|在|：|:)?\s*(?P<item>[^，,。！？!?；;\n]{2,40})"
+        ),
+        re.compile(
+            r"(?P<item>[\w\u4e00-\u9fff（）()·/+\-\s]{2,40}?)"
+            r"(?:很|太|特别|有点|还是)?(?:难|头疼|头痛|搞不懂|不懂|不会|不熟|卡住)"
+        ),
+    ),
+    "目标": (
+        re.compile(
+            r"(?:目标|目的|这次想要|希望|打算|准备|想要|想拿|想把|想在|要)"
+            r"(?:是|：|:)?\s*(?P<item>[^，,。！？!?；;\n]{2,40})"
+        ),
+    ),
+    "已完成": (
+        re.compile(
+            r"(?:已完成|已经完成|完成了|做完了|刷完了|看完了|复述了|"
+            r"背完了|过完了|搞定了)"
+            r"\s*(?P<item>[^，,。！？!?；;\n]{2,40})"
+        ),
+        re.compile(
+            r"(?P<item>[\w\u4e00-\u9fff（）()·/+\-\s]{2,40}?)"
+            r"(?:已完成|已经完成|完成了|做完了|刷完了|看完了|复述完了|"
+            r"背完了|过完了|搞定了)"
+        ),
+        re.compile(r"(?:能|可以)?闭卷复述\s*(?P<item>[^，,。！？!?；;\n]{2,40})"),
+    ),
+}
+
+
+def _conversation_messages_from_context(conversation_context: Any) -> tuple[list[dict[str, Any]], int]:
+    if isinstance(conversation_context, dict):
+        raw_messages = conversation_context.get("messages")
+        if not isinstance(raw_messages, list):
+            raw_messages = conversation_context.get("recent_messages")
+        messages = [msg for msg in raw_messages or [] if isinstance(msg, dict)]
+        raw_count = conversation_context.get("message_count")
+        if raw_count is None:
+            raw_count = conversation_context.get("original_count")
+        try:
+            message_count = int(raw_count)
+        except (TypeError, ValueError):
+            message_count = len(messages)
+        return messages, max(message_count, len(messages))
+
+    if isinstance(conversation_context, list):
+        messages = [msg for msg in conversation_context if isinstance(msg, dict)]
+        return messages, len(messages)
+
+    return [], 0
+
+
+def _message_content(message: dict[str, Any]) -> str:
+    content = message.get("content")
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: list[str] = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict) and isinstance(item.get("text"), str):
+                parts.append(item["text"])
+        return " ".join(parts)
+    text = message.get("text")
+    return str(text or "")
+
+
+def _clean_conversation_memory_item(raw_item: str, *, category: str) -> str:
+    item = " ".join(str(raw_item or "").split()).strip(" ：:，,。！？!?；;")
+    if not item:
+        return ""
+
+    item = re.sub(r"\s+(?=[\u4e00-\u9fff])|(?<=[\u4e00-\u9fff])\s+", "", item)
+    item = re.sub(
+        r"^(我|我的|目前|现在|最近|这一轮|这次|最|觉得|感觉|" r"对我来说|主要|就是|是|在|还|还是)+",
+        "",
+        item,
+    )
+    item = re.sub(r"^(的是|的是：|的是:|是|在|为|要|想要|希望|打算|准备)", "", item)
+
+    if category == "困难":
+        item = re.sub(
+            r"(很|太|特别|有点|还是)?(难|头疼|头痛|搞不懂|不懂|不会|不熟|卡住|卡在)$",
+            "",
+            item,
+        )
+    elif category == "目标":
+        item = re.sub(r"(一下|一下子|吧|了)$", "", item)
+    elif category == "已完成":
+        item = re.sub(
+            r"(已完成|已经完成|完成了|做完了|刷完了|看完了|复述完了|" r"背完了|过完了|搞定了|了)$",
+            "",
+            item,
+        )
+
+    item = item.strip(" ：:，,。！？!?；;")
+    if not item or len(item) < 2:
+        return ""
+    if len(item) > 28:
+        item = item[:28].rstrip(" ：:，,。！？!?；;") + "..."
+    return item
+
+
+def _extract_conversation_key_points(messages: list[dict[str, Any]]) -> dict[str, list[str]]:
+    key_points: dict[str, list[str]] = {"困难": [], "目标": [], "已完成": []}
+    for message in messages:
+        if str(message.get("role") or "").lower() != "user":
+            continue
+        content = _message_content(message)
+        if not content:
+            continue
+        clauses = [clause.strip() for clause in _CLAUSE_SPLIT_RE.split(content) if clause.strip()]
+        for clause in clauses:
+            if any(negation in clause for negation in ("不难", "没那么难", "不是很难")):
+                continue
+            for category, patterns in _CONVERSATION_MEMORY_PATTERNS.items():
+                if len(key_points[category]) >= CONVERSATION_MEMORY_ITEM_LIMIT:
+                    continue
+                for pattern in patterns:
+                    match = pattern.search(clause)
+                    if not match:
+                        continue
+                    item = _clean_conversation_memory_item(match.group("item"), category=category)
+                    if item and item not in key_points[category]:
+                        key_points[category].append(item)
+                    break
+    return key_points
+
+
+def build_conversation_memory_fragment(conversation_context: Any) -> str:
+    """Render compact, non-transcript key points from the recent conversation."""
+    messages, message_count = _conversation_messages_from_context(conversation_context)
+    if message_count < CONVERSATION_MEMORY_MIN_MESSAGE_COUNT or not messages:
+        return ""
+
+    recent_messages = messages[-CONVERSATION_MEMORY_RECENT_MESSAGE_LIMIT:]
+    key_points = _extract_conversation_key_points(recent_messages)
+    lines = ["## 对话记忆片段", "本轮对话中用户已提及："]
+    for category in ("困难", "目标", "已完成"):
+        for item in key_points[category]:
+            lines.append(f"- {category}：{item}")
+
+    return "\n".join(lines) if len(lines) > 2 else ""
 
 
 def _format_conversation_history(conversation_history: dict = None) -> str:
@@ -2106,7 +2364,11 @@ def _format_galaxy_snapshot_section(*, user_context: dict) -> str:
         detail_bits = [role]
         if mastery_score is not None:
             detail_bits.append(f"mastery {mastery_score}")
-        line = f"- {name} ({', '.join(detail_bits)}): {description}" if description else f"- {name} ({', '.join(detail_bits)})"
+        line = (
+            f"- {name} ({', '.join(detail_bits)}): {description}"
+            if description
+            else f"- {name} ({', '.join(detail_bits)})"
+        )
         lines.append(line[:180])
     return "\n" + "\n".join(lines)
 
@@ -2456,11 +2718,7 @@ def _extract_stage33_srl_payload(context: dict[str, Any] | None) -> dict[str, An
     payload = context if isinstance(context, dict) else {}
     cognitive_context = _extract_cognitive_context_payload(payload)
     profile_context = _extract_profile_context_payload(payload)
-    insight_state = (
-        profile_context.get("user_insight_state")
-        if isinstance(profile_context, dict)
-        else None
-    )
+    insight_state = profile_context.get("user_insight_state") if isinstance(profile_context, dict) else None
     insight_state = insight_state if isinstance(insight_state, dict) else {}
 
     for candidate in (
@@ -2481,17 +2739,9 @@ def _format_stage33_social_signal_section(payload: dict[str, Any] | None) -> str
     if not isinstance(payload, dict) or not payload:
         return ""
 
-    summary_lines = [
-        str(item).strip()
-        for item in (payload.get("summary_lines") or [])
-        if str(item).strip()
-    ]
+    summary_lines = [str(item).strip() for item in (payload.get("summary_lines") or []) if str(item).strip()]
     if not summary_lines and str(payload.get("summary_text") or "").strip():
-        summary_lines = [
-            part.strip()
-            for part in str(payload.get("summary_text") or "").split("；")
-            if part.strip()
-        ]
+        summary_lines = [part.strip() for part in str(payload.get("summary_text") or "").split("；") if part.strip()]
     if not summary_lines:
         mention_count = int(payload.get("mention_count") or 0)
         relationship_count = int(payload.get("relationship_count") or 0)
@@ -2756,6 +3006,17 @@ def _format_achievement_context_line(summary: dict[str, Any]) -> str:
                     parts.append(f"{top.get('name') or '一项成就'} 进度 {float(progress):.0%}")
                 except Exception:
                     parts.append(f"{top.get('name') or '一项成就'} 正在推进")
+    progress_events = summary.get("recent_progress_events") or []
+    if progress_events:
+        top_event = progress_events[0] if isinstance(progress_events[0], dict) else {}
+        if top_event:
+            name = top_event.get("achievement_name") or top_event.get("achievement_id") or "一项成就"
+            progress_percent = top_event.get("progress_percent")
+            if progress_percent is not None:
+                try:
+                    parts.append(f"{name} 刚推进到 {int(float(progress_percent))}%")
+                except Exception:
+                    parts.append(f"{name} 刚有新进展")
     score = summary.get("total_achievement_score")
     if score is not None:
         try:
@@ -3035,9 +3296,7 @@ def _render_user_context_content(
 
     stage33_social_mode = _resolve_stage33_feature_mode(context, "social")
     if stage33_social_mode == "live":
-        social_signal_section = _format_stage33_social_signal_section(
-            normalized.get("social_signals_summary")
-        )
+        social_signal_section = _format_stage33_social_signal_section(normalized.get("social_signals_summary"))
         if social_signal_section:
             lines.append(social_signal_section)
             _mark_rendered("social_signals_summary")
@@ -3045,17 +3304,16 @@ def _render_user_context_content(
                 "items": len(
                     [
                         item
-                        for item in str(normalized.get("social_signals_summary", {}).get("summary_text") or "").split("；")
+                        for item in str(normalized.get("social_signals_summary", {}).get("summary_text") or "").split(
+                            "；"
+                        )
                         if item.strip()
                     ]
                 )
                 or len((normalized.get("social_signals_summary") or {}).get("summary_lines") or []),
                 "approx_tokens": _estimate_prompt_tokens(social_signal_section),
             }
-    elif (
-        settings.SPARKLE_ROUTER_SOCIAL_CONTEXT_READ_ENABLED
-        or settings.SPARKLE_PROMPT_SOCIAL_CONTEXT_RENDER_ENABLED
-    ):
+    elif settings.SPARKLE_ROUTER_SOCIAL_CONTEXT_READ_ENABLED or settings.SPARKLE_PROMPT_SOCIAL_CONTEXT_RENDER_ENABLED:
         social_context = context.get("social_context") if isinstance(context, dict) else None
         social_lines = render_social_context_lines(social_context if isinstance(social_context, dict) else None)
         if social_lines:
@@ -3075,9 +3333,7 @@ def _render_user_context_content(
 
     working_memory_mode = _resolve_stage33_feature_mode(context, "wm_prompt")
     if working_memory_mode == "live":
-        working_memory_section = _format_working_memory_section(
-            normalized.get("working_memory_snapshot")
-        )
+        working_memory_section = _format_working_memory_section(normalized.get("working_memory_snapshot"))
         if working_memory_section:
             lines.append(working_memory_section)
             _mark_rendered("working_memory_snapshot")
@@ -3168,6 +3424,231 @@ def format_user_context(
         context_focus=context_focus,
     )
     return rendered
+
+
+def _format_past_session_memory_section(user_context: dict[str, Any] | None) -> str:
+    if not isinstance(user_context, dict):
+        return ""
+    raw_items = user_context.get("past_session_memory") or []
+    if not isinstance(raw_items, list):
+        return ""
+
+    lines: list[str] = []
+    seen: set[str] = set()
+    for item in raw_items:
+        summary = ""
+        subject = ""
+        source = ""
+        occurred_at = None
+        tags: list[str] = []
+        if isinstance(item, dict):
+            summary = str(
+                item.get("summary") or item.get("text") or item.get("content") or item.get("title") or ""
+            ).strip()
+            subject = str(item.get("subject_type") or "").strip()
+            source = str(item.get("source_type") or "").strip()
+            occurred_at = item.get("occurred_at")
+            raw_tags = item.get("tags") or []
+            if isinstance(raw_tags, list):
+                tags = [str(tag).strip() for tag in raw_tags if str(tag).strip()]
+        else:
+            summary = str(getattr(item, "summary", item) or "").strip()
+            subject = str(getattr(item, "subject_type", "") or "").strip()
+            source = str(getattr(item, "source_type", "") or "").strip()
+            occurred_at = getattr(item, "occurred_at", None)
+            raw_tags = getattr(item, "tags", []) or []
+            if isinstance(raw_tags, list):
+                tags = [str(tag).strip() for tag in raw_tags if str(tag).strip()]
+        if not summary or summary in seen:
+            continue
+        seen.add(summary)
+        qualifiers = [
+            label
+            for label in (
+                _format_memory_recency_label(occurred_at),
+                subject,
+                source,
+            )
+            if label
+        ]
+        prefix = f"[{' / '.join(qualifiers)}] " if qualifiers else ""
+        tag_suffix = f" tags={', '.join(tags[:3])}" if tags else ""
+        lines.append(f"{prefix}{summary}{tag_suffix}")
+        if len(lines) >= 3:
+            break
+
+    if not lines:
+        return ""
+    return (
+        "## 跨会话记忆 [L2 引导]\n"
+        "当用户问候、含糊开场、请求继续学习，或本轮内容与以下记忆相关时，"
+        "请自然衔接上次内容；不要生硬复述，也不要引用与当前请求无关的记忆。\n"
+        + "\n".join(f"- {line}" for line in lines)
+    )
+
+
+def _format_memory_recency_label(value: Any) -> str:
+    occurred_at = _parse_memory_datetime(value)
+    if occurred_at is None:
+        return ""
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    delta = now - occurred_at
+    if delta.total_seconds() < 0:
+        return "刚才"
+    if delta.total_seconds() < 2 * 3600:
+        return "刚才"
+    days = delta.days
+    if days == 0:
+        return "今天"
+    if days == 1:
+        return "昨天"
+    if days <= 6:
+        return f"{days}天前"
+    if days <= 13:
+        return "上周"
+    return occurred_at.date().isoformat()
+
+
+def _parse_memory_datetime(value: Any) -> datetime | None:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        parsed = value
+    else:
+        raw = str(value or "").strip()
+        if not raw:
+            return None
+        try:
+            parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+    return parsed
+
+
+def _format_capsule_preference_section(user_context: dict[str, Any] | None) -> str:
+    preferences = _extract_capsule_preferences(user_context)
+    if not preferences:
+        return ""
+
+    favorite_count = int(preferences.get("favorite_count") or 0)
+    depth = str(preferences.get("content_depth_preference") or "").strip()
+    subjects = [
+        str(subject).strip()
+        for subject in list(preferences.get("subject_affinity") or preferences.get("content_subject_affinities") or [])
+        if str(subject).strip()
+    ][:3]
+    notes = [str(note).strip() for note in list(preferences.get("recent_notes") or []) if str(note).strip()][:3]
+    methods = [
+        method
+        for method in list(preferences.get("method_preferences") or preferences.get("capsule_method_preferences") or [])
+        if isinstance(method, dict) and str(method.get("label") or "").strip()
+    ][:3]
+    method_summaries = [
+        str(item).strip() for item in list(preferences.get("method_preference_summary") or []) if str(item).strip()
+    ][:3]
+    if not method_summaries:
+        method_summaries = [f"用户偏好{str(method.get('label') or '').strip()}" for method in methods]
+    if favorite_count <= 0 and not depth and not subjects and not notes and not method_summaries:
+        return ""
+
+    lines = [
+        "## 胶囊内容偏好 [L2 引导]",
+        "这些信号来自用户收藏过的认知胶囊，用来调整讲解深度、例子选择和推送密度；当前请求冲突时，以当前请求为准。",
+    ]
+    if favorite_count > 0:
+        lines.append(f"- 收藏样本: {favorite_count} 个胶囊")
+    if depth:
+        lines.append(f"- 内容深度偏好: {depth}")
+    if subjects:
+        lines.append(f"- 主题亲和: {', '.join(subjects)}")
+    if notes:
+        lines.append(f"- 收藏备注: {'; '.join(notes)}")
+    if method_summaries:
+        lines.append(f"- 方法偏好: {'; '.join(method_summaries)}")
+
+    if depth == "deep":
+        lines.append("- 行为适配: 优先给完整推理链、关键反例和体系化小结，减少碎片化提示。")
+    elif depth == "shallow":
+        lines.append("- 行为适配: 优先给短步骤和轻量提醒，只在用户要求时展开。")
+    elif depth:
+        lines.append("- 行为适配: 保持标准深度，先给主线，再按用户反应补充。")
+    if subjects:
+        lines.append("- 行为适配: 当任务涉及上述主题时，给更具体的例子、检查点和复盘提示。")
+    if methods or method_summaries:
+        lines.append("- 行为适配: 当用户要安排学习节奏、启动任务或复盘方法时，优先尝试这些方法偏好。")
+    return "\n".join(lines)
+
+
+def _extract_capsule_preferences(user_context: dict[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(user_context, dict):
+        return {}
+
+    candidates: list[dict[str, Any]] = []
+
+    def add_candidate(value: Any) -> None:
+        if isinstance(value, dict):
+            candidates.append(value)
+
+    add_candidate(user_context.get("capsule_preferences"))
+    cognitive_context = user_context.get("cognitive_context")
+    if isinstance(cognitive_context, dict):
+        add_candidate(cognitive_context.get("capsule_preferences"))
+
+    preferences = user_context.get("preferences")
+    if isinstance(preferences, dict):
+        add_candidate(preferences.get("capsule_preferences"))
+        if "capsule_preferences" not in preferences and (
+            preferences.get("content_depth_preference")
+            or preferences.get("content_subject_affinities")
+            or preferences.get("capsule_method_preferences")
+        ):
+            candidates.append(
+                {
+                    "content_depth_preference": preferences.get("content_depth_preference"),
+                    "subject_affinity": preferences.get("content_subject_affinities") or [],
+                    "favorite_count": preferences.get("capsule_favorite_count") or 0,
+                    "method_preferences": preferences.get("capsule_method_preferences") or [],
+                }
+            )
+
+    profile_context = user_context.get("profile_context")
+    if isinstance(profile_context, dict):
+        insight_state = profile_context.get("user_insight_state")
+        if isinstance(insight_state, dict):
+            stable_preferences = insight_state.get("stable_preferences") or {}
+            if isinstance(stable_preferences, dict):
+                add_candidate(stable_preferences.get("capsule"))
+                if "capsule" not in stable_preferences and (
+                    stable_preferences.get("content_depth_preference")
+                    or stable_preferences.get("content_subject_affinities")
+                    or stable_preferences.get("capsule_method_preferences")
+                ):
+                    candidates.append(
+                        {
+                            "content_depth_preference": stable_preferences.get("content_depth_preference"),
+                            "subject_affinity": stable_preferences.get("content_subject_affinities") or [],
+                            "favorite_count": stable_preferences.get("capsule_favorite_count") or 0,
+                            "method_preferences": stable_preferences.get("capsule_method_preferences") or [],
+                        }
+                    )
+
+    merged: dict[str, Any] = {}
+    for candidate in candidates:
+        for key in (
+            "favorite_count",
+            "content_depth_preference",
+            "subject_affinity",
+            "recent_notes",
+            "method_preferences",
+            "method_preference_summary",
+        ):
+            value = candidate.get(key)
+            if value not in (None, "", [], {}) and key not in merged:
+                merged[key] = value
+    return merged
 
 
 def _extract_canonical_signal(

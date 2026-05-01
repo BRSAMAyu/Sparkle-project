@@ -7,7 +7,7 @@ import (
 )
 
 func TestConnectionRegistryRegisterGetUnregister(t *testing.T) {
-	registry := NewConnectionRegistry(nil, nil, 0)
+	registry := NewConnectionRegistry(nil, nil, 0, 0)
 	conn := &websocket.Conn{}
 
 	registry.Register("user-1", conn, nil)
@@ -26,7 +26,7 @@ func TestConnectionRegistryRegisterGetUnregister(t *testing.T) {
 }
 
 func TestConnectionRegistryAllowsMultipleConnectionsPerUser(t *testing.T) {
-	registry := NewConnectionRegistry(nil, nil, 0)
+	registry := NewConnectionRegistry(nil, nil, 0, 0)
 	connA := &websocket.Conn{}
 	connB := &websocket.Conn{}
 
@@ -53,5 +53,33 @@ func TestConnectionRegistryAllowsMultipleConnectionsPerUser(t *testing.T) {
 	registry.Unregister("user-1", connB)
 	if _, ok := registry.Get("user-1"); ok {
 		t.Fatal("expected all user-1 connections to be unregistered")
+	}
+}
+
+func TestConnectionRegistryPerUserLimit(t *testing.T) {
+	registry := NewConnectionRegistry(nil, nil, 100, 2)
+	connA := &websocket.Conn{}
+	connB := &websocket.Conn{}
+	connC := &websocket.Conn{}
+
+	if !registry.Register("user-1", connA, nil) {
+		t.Fatal("first connection should be accepted")
+	}
+	if !registry.Register("user-1", connB, nil) {
+		t.Fatal("second connection should be accepted")
+	}
+	if registry.Register("user-1", connC, nil) {
+		t.Fatal("third connection should be rejected (per-user limit=2)")
+	}
+
+	// Other user is not affected by user-1's limit
+	if !registry.Register("user-2", connC, nil) {
+		t.Fatal("user-2 connection should be accepted")
+	}
+
+	// After unregistering one, user-1 can connect again
+	registry.Unregister("user-1", connA)
+	if !registry.Register("user-1", connC, nil) {
+		t.Fatal("user-1 should be able to connect after unregistering one")
 	}
 }

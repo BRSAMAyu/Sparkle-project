@@ -45,6 +45,7 @@ class MockChatRepository extends Mock implements ChatRepository {
     List<String>? fileIds,
     bool includeReferences = false,
     String? chatMode,
+    bool? useDocumentContext,
   }) =>
       // 模拟流式响应
       Stream.fromIterable([

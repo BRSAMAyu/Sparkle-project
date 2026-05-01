@@ -48,6 +48,7 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
   }
 
   Future<void> _reloadVocabularyData({String? search}) async {
+    if (!mounted) return;
     final notifier = ref.read(vocabularyProvider.notifier);
     await Future.wait([
       notifier.fetchWordbook(search: search),

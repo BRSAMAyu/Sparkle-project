@@ -2,12 +2,14 @@
 Achievements API Endpoints
 成就系统 API 端点
 """
+
 from __future__ import annotations
 import secrets
 from datetime import timezone, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
+from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -79,10 +81,15 @@ async def _build_achievement_detail_response(
     if not achievement:
         raise HTTPException(status_code=404, detail="Achievement not found")
 
-    is_unlocked = await engine.is_unlocked(current_user.id, achievement_id)
+    user_progress = await engine._get_user_achievement_progress(current_user.id, achievement_id)
+    user_progress_payload = engine._build_user_progress_payload(user_progress, achievement)
+    is_unlocked = bool(user_progress and user_progress.unlocked_at is not None)
     return AchievementDetailResponse(
         data=engine.build_achievement_detail(achievement, locale),
         is_unlocked=is_unlocked,
+        user_progress=user_progress_payload,
+        context_snapshot=user_progress_payload.context_snapshot if user_progress_payload else None,
+        context_story=user_progress_payload.context_story if user_progress_payload else None,
     )
 
 
@@ -163,7 +170,7 @@ async def list_achievements(
     locale: str | None = Query(None, description="Locale for localized fields"),
     accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     获取用户成就列表
@@ -184,10 +191,7 @@ async def list_achievements(
 
 
 @router.get("/stats", response_model=dict[str, Any])
-async def get_achievement_stats(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_achievement_stats(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
     获取用户成就统计
 
@@ -203,7 +207,7 @@ async def get_achievement_map(
     locale: str | None = Query(None, description="Locale for localized fields"),
     accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     获取成就地图（可视化展示）
@@ -216,10 +220,7 @@ async def get_achievement_map(
 
 
 @router.get("/streak", response_model=dict[str, Any])
-async def get_streak_stats(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_streak_stats(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
     获取连胜统计
 
@@ -233,7 +234,7 @@ async def get_streak_stats(
 async def get_streak_history(
     days: int = Query(90, ge=1, le=365, description="Number of days to return"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     获取连胜日历历史
@@ -254,7 +255,7 @@ async def get_achievement_detail(
     locale: str | None = Query(None, description="Locale for localized fields"),
     accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     获取单个成就详情
@@ -280,7 +281,7 @@ async def share_achievement(
     locale: str | None = Query(None, description="Locale for localized fields"),
     accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     生成成就分享卡片
@@ -305,7 +306,7 @@ async def pin_achievement(
     achievement_id: str = Path(..., description="Achievement ID"),
     pinned: bool = Query(..., description="Pin state"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     置顶/取消置顶成就
@@ -316,10 +317,7 @@ async def pin_achievement(
 
 
 @router.get("/contracts", response_model=dict[str, Any])
-async def get_contract_status(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_contract_status(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
     获取当前契约状态
 
@@ -347,7 +345,7 @@ async def create_contract(
     request: ContractCreateRequest,
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     创建星火契约
@@ -361,17 +359,14 @@ async def create_contract(
 
     try:
         contract = await service.create_contract(
-            current_user.id,
-            request.target_study_minutes,
-            request.target_days,
-            request.photon_stake
+            current_user.id, request.target_study_minutes, request.target_days, request.photon_stake
         )
         return {
             "success": True,
             "data": ContractResponse.model_validate(
                 contract,
                 from_attributes=True,
-            ).model_dump()
+            ).model_dump(),
         }
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -381,7 +376,7 @@ async def create_contract(
 async def cancel_contract(
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     取消当前契约
@@ -396,10 +391,7 @@ async def cancel_contract(
     from app.models.achievement import ContractStatus, SparkContract
 
     query = select(SparkContract).where(
-        and_(
-            SparkContract.user_id == current_user.id,
-            SparkContract.status == ContractStatus.ACTIVE
-        )
+        and_(SparkContract.user_id == current_user.id, SparkContract.status == ContractStatus.ACTIVE)
     )
     result = await db.execute(query)
     contract = result.scalar_one_or_none()
@@ -411,20 +403,29 @@ async def cancel_contract(
     contract.failed_at = datetime.now(timezone.utc).replace(tzinfo=None)
     contract.failure_reason = "User cancelled"
 
+    try:
+        from app.services.achievement_engine import AchievementEngine, AchievementEvent
+
+        await AchievementEngine(db).process_event(
+            user_id=str(current_user.id),
+            event_type=AchievementEvent.CONTRACT_FAILED,
+            contract_id=str(contract.id),
+            target_days=int(contract.target_days or 0),
+            current_days=int(contract.current_days or 0),
+            target_study_minutes=int(contract.target_study_minutes or 0),
+            photon_stake=int(contract.photon_stake or 0),
+            source="contract_cancelled",
+        )
+    except Exception as exc:
+        logger.warning(f"Failed to publish contract failed achievement event for contract {contract.id}: {exc}")
+
     await db.commit()
 
-    return {
-        "success": True,
-        "message": "Contract cancelled",
-        "photons_lost": contract.photon_stake
-    }
+    return {"success": True, "message": "Contract cancelled", "photons_lost": contract.photon_stake}
 
 
 @router.get("/skins", response_model=dict[str, Any])
-async def list_galaxy_skins(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def list_galaxy_skins(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
     获取星系皮肤列表
 
@@ -440,49 +441,48 @@ async def list_galaxy_skins(
     skins = result.scalars().all()
 
     # 获取用户已解锁的皮肤
-    user_skin_query = select(UserGalaxySkin).where(
-        UserGalaxySkin.user_id == current_user.id
-    )
+    user_skin_query = select(UserGalaxySkin).where(UserGalaxySkin.user_id == current_user.id)
     user_skin_result = await db.execute(user_skin_query)
     user_skins = {us.skin_id: us for us in user_skin_result.scalars().all()}
 
     # 组装结果
     from app.schemas.achievement import GalaxySkinDetail
+
     skin_list = []
-    equipped_skin_id = current_user.equipped_skin if current_user.equipped_skin_source == EquipmentSource.ACHIEVEMENT else None
+    equipped_skin_id = (
+        current_user.equipped_skin if current_user.equipped_skin_source == EquipmentSource.ACHIEVEMENT else None
+    )
 
     for skin in skins:
         user_skin = user_skins.get(skin.id)
         is_unlocked = user_skin is not None
         is_equipped = (
-            current_user.equipped_skin_source == EquipmentSource.ACHIEVEMENT
-            and current_user.equipped_skin == skin.id
+            current_user.equipped_skin_source == EquipmentSource.ACHIEVEMENT and current_user.equipped_skin == skin.id
         )
-        skin_list.append(GalaxySkinDetail(
-            id=skin.id,
-            name=skin.name,
-            description=skin.description,
-            preview_url=skin.preview_url,
-            rarity=skin.rarity,
-            sort_order=skin.sort_order,
-            unlock_type=skin.unlock_type,
-            unlock_requirement=skin.unlock_requirement or {},
-            skin_config=skin.skin_config or {},
-            is_unlocked=is_unlocked,
-            is_equipped=is_equipped
-        ))
+        skin_list.append(
+            GalaxySkinDetail(
+                id=skin.id,
+                name=skin.name,
+                description=skin.description,
+                preview_url=skin.preview_url,
+                rarity=skin.rarity,
+                sort_order=skin.sort_order,
+                unlock_type=skin.unlock_type,
+                unlock_requirement=skin.unlock_requirement or {},
+                skin_config=skin.skin_config or {},
+                is_unlocked=is_unlocked,
+                is_equipped=is_equipped,
+            )
+        )
 
-    return {
-        "data": [s.model_dump() for s in skin_list],
-        "equipped_skin_id": equipped_skin_id
-    }
+    return {"data": [s.model_dump() for s in skin_list], "equipped_skin_id": equipped_skin_id}
 
 
 @router.post("/skins/{skin_id}/equip", response_model=dict[str, Any])
 async def equip_galaxy_skin(
     skin_id: str = Path(..., description="Skin ID"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     装备星系皮肤
@@ -498,10 +498,7 @@ async def equip_galaxy_skin(
 
 
 @router.get("/titles", response_model=dict[str, Any])
-async def list_user_titles(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def list_user_titles(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
     获取用户称号列表
 
@@ -511,14 +508,15 @@ async def list_user_titles(
 
     from app.models.achievement import UserTitle
 
-    query = select(UserTitle).where(
-        UserTitle.user_id == current_user.id
-    ).order_by(UserTitle.unlocked_at.desc())
+    query = select(UserTitle).where(UserTitle.user_id == current_user.id).order_by(UserTitle.unlocked_at.desc())
     result = await db.execute(query)
     titles = result.scalars().all()
 
     from app.schemas.achievement import UserTitleResponse
-    equipped_title = current_user.equipped_title if current_user.equipped_title_source == EquipmentSource.ACHIEVEMENT else None
+
+    equipped_title = (
+        current_user.equipped_title if current_user.equipped_title_source == EquipmentSource.ACHIEVEMENT else None
+    )
     title_list = [
         UserTitleResponse.model_validate(title, from_attributes=True).model_copy(
             update={
@@ -531,17 +529,14 @@ async def list_user_titles(
         for title in titles
     ]
 
-    return {
-        "data": [t.model_dump() for t in title_list],
-        "equipped_title": equipped_title
-    }
+    return {"data": [t.model_dump() for t in title_list], "equipped_title": equipped_title}
 
 
 @router.post("/titles/{title_id}/equip", response_model=dict[str, Any])
 async def equip_title(
     title_id: str = Path(..., description="Title ID"),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     装备称号
@@ -558,6 +553,7 @@ async def equip_title(
 
 # ========== Internal Event Endpoint ==========
 
+
 # route-tier: internal
 @router.post("/events/process", response_model=AchievementEventProcessResponse)
 async def process_achievement_event(
@@ -566,7 +562,7 @@ async def process_achievement_event(
     event_data: dict[str, Any] | None = None,
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     _: None = Depends(verify_internal_token),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     处理成就事件（内部API）
@@ -581,11 +577,7 @@ async def process_achievement_event(
         event_data = {}
 
     engine = AchievementEngine(db)
-    unlocked = await engine.process_event(
-        user_id,
-        event_type,
-        **event_data
-    )
+    unlocked = await engine.process_event(user_id, event_type, **event_data)
 
     return AchievementEventProcessResponse(
         success=True,
@@ -596,6 +588,7 @@ async def process_achievement_event(
 
 # ========== Enhancement Endpoints ==========
 
+
 @router.get("/close-to-unlock", response_model=CloseToUnlockAchievementListResponse)
 async def get_close_to_unlock_achievements(
     category: str | None = Query(None, description="Filter by category (e.g., 'sprint')"),
@@ -603,7 +596,7 @@ async def get_close_to_unlock_achievements(
     locale: str | None = Query(None, description="Locale for localized fields"),
     accept_language: str | None = Header(None),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     获取接近解锁的成就（用于临界提示）
@@ -620,10 +613,7 @@ async def get_close_to_unlock_achievements(
         locale=resolved_locale,
     )
 
-    return {
-        "data": close_achievements,
-        "count": len(close_achievements)
-    }
+    return {"data": close_achievements, "count": len(close_achievements)}
 
 
 @router.get("/share-templates", response_model=ShareTemplateListResponse)

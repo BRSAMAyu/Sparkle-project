@@ -160,6 +160,7 @@ class DemoDataService {
   List<Map<String, dynamic>>? _demoAchievementDetailsCache;
   List<Map<String, dynamic>>? _demoAccountabilityHeatmapCache;
   List<Map<String, dynamic>>? _demoCheckinsCache;
+  Map<String, dynamic>? _demoAuroraCalibrationCache;
 
   static const String demoUserId = 'CS_Sophomore_12345';
   static const String demoUsername = 'AI_Learner_02';
@@ -212,6 +213,7 @@ class DemoDataService {
     _demoAchievementDetailsCache = null;
     _demoAccountabilityHeatmapCache = null;
     _demoCheckinsCache = null;
+    _demoAuroraCalibrationCache = null;
   }
 
   DateTime get _now => _snapshotAnchor;
@@ -2189,6 +2191,107 @@ class DemoDataService {
       },
     };
     return _demoDashboardCache!;
+  }
+
+  Map<String, dynamic> demoAuroraCalibrationCards({String? planId}) {
+    _demoAuroraCalibrationCache ??= {
+      'surface': {
+        'state': 'needs_confirmation',
+        'label': 'Aurora · 需要确认',
+      },
+      'items': [
+        {
+          'id': 'demo-capacity-overestimated',
+          'title': '你这两天的可用时间可能被高估了',
+          'statement': '我目前的判断：你这两天的可用时间可能被高估了。',
+          'confidence': 0.58,
+          'confidence_label': '58%',
+          'needs_confirmation': true,
+          'evidence_summary': '证据：两张 90 分钟任务卡都超过了 130 分钟。',
+          'evidence': [
+            '本周最近两张 90 分钟任务卡都超时完成',
+            '晚上 9 点后的启动率明显下降',
+          ],
+          'plan_id': 'plan_sprint_1',
+          'source': 'plan_execution',
+        },
+        {
+          'id': 'demo-short-cards-fit',
+          'title': '你更适合短任务卡推进',
+          'statement': '我目前的判断：你更容易完成 25-35 分钟的短任务卡。',
+          'confidence': 0.63,
+          'confidence_label': '63%',
+          'needs_confirmation': false,
+          'evidence_summary': '证据：最近一周 30 分钟内任务的完成率高于长任务。',
+          'evidence': [
+            '25-35 分钟任务完成率 78%',
+            '60 分钟以上任务多次被顺延',
+          ],
+          'source': 'task_completion',
+        },
+        {
+          'id': 'demo-tcp-weak-spot',
+          'title': 'TCP 这块还需要再校准',
+          'statement': '我目前的判断：你在 TCP 三次握手和流量控制上还不够稳。',
+          'confidence': 0.46,
+          'confidence_label': '46%',
+          'needs_confirmation': false,
+          'evidence_summary': '证据：最近三次相关题目里有两次混淆了窗口控制与拥塞控制。',
+          'evidence': [
+            '相关错题重复出现',
+          ],
+          'plan_id': 'plan_sprint_1',
+          'source': 'error_review',
+        },
+      ],
+    };
+
+    final payload = Map<String, dynamic>.from(_demoAuroraCalibrationCache!);
+    final items = ((payload['items'] as List?) ?? const [])
+        .whereType<Map<Object?, Object?>>()
+        .map(Map<String, dynamic>.from)
+        .where((item) {
+      if (planId == null || planId.trim().isEmpty) {
+        return true;
+      }
+      final itemPlanId = item['plan_id']?.toString();
+      return itemPlanId == null || itemPlanId == planId;
+    }).toList();
+    final needsConfirmation = items.any(
+      (item) => item['needs_confirmation'] == true,
+    );
+
+    return {
+      'surface': {
+        'state': needsConfirmation ? 'needs_confirmation' : 'observing',
+        'label': needsConfirmation ? 'Aurora · 需要确认' : 'Aurora · 观察中',
+      },
+      'items': items,
+    };
+  }
+
+  void respondToDemoAuroraCalibrationCard({
+    required String cardId,
+    required String response,
+  }) {
+    final payload = demoAuroraCalibrationCards();
+    final items = ((payload['items'] as List?) ?? const [])
+        .whereType<Map<Object?, Object?>>()
+        .map(Map<String, dynamic>.from)
+        .where((item) => item['id']?.toString() != cardId)
+        .toList();
+    final needsConfirmation = items.any(
+      (item) => item['needs_confirmation'] == true,
+    );
+
+    _demoAuroraCalibrationCache = {
+      'surface': {
+        'state': needsConfirmation ? 'needs_confirmation' : 'observing',
+        'label': needsConfirmation ? 'Aurora · 需要确认' : 'Aurora · 观察中',
+      },
+      'items': items,
+      'last_response': response,
+    };
   }
 
   // --- 🎓 认知胶囊 Data ---

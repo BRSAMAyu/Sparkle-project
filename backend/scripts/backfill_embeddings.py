@@ -25,7 +25,7 @@ from app.config import settings
 class EmbeddingBackfill:
     """Embedding 回填器"""
 
-    def __init__(self, batch_size: int = 50, delay: float = 0.2):
+    def __init__(self, batch_size: int = 10, delay: float = 0.2):  # DashScope limit: ≤10 per batch
         self.batch_size = batch_size
         self.delay = delay
         self.stats = {
@@ -160,7 +160,7 @@ class EmbeddingBackfill:
 async def main():
     """主函数"""
     parser = argparse.ArgumentParser(description="回填知识节点 Embedding")
-    parser.add_argument("--batch-size", type=int, default=50, help="批量大小")
+    parser.add_argument("--batch-size", type=int, default=10, help="批量大小 (DashScope API 限制 ≤10)")
     parser.add_argument("--delay", type=float, default=0.2, help="API 调用延迟（秒）")
     parser.add_argument("--dry-run", action="store_true", help="仅统计，不实际更新")
 

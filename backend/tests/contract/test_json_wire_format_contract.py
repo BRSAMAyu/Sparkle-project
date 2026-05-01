@@ -87,6 +87,7 @@ def test_finish_reason_all_enum_values_stable():
         3: "TOOL_CALLS",
         4: "CONTENT_FILTER",
         5: "ERROR",
+        6: "CONTINUE",
     }
 
     for number, name in expected.items():

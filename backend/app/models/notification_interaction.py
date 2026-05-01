@@ -4,7 +4,7 @@ Notification Interaction and Preference Models
 """
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
@@ -47,6 +47,7 @@ class NotificationPreferences(Base):
     user_id = Column(GUID(), ForeignKey("users.id"), primary_key=True, nullable=False)
     enable_system = Column(Boolean, default=True, nullable=False)
     enable_interventions = Column(Boolean, default=True, nullable=False)
+    disabled_types = Column(JSON, default=list, nullable=False)
     notification_level = Column(String(20), default="standard", nullable=False)
     quiet_hours_enabled = Column(Boolean, default=False, nullable=False)
     quiet_hours_start = Column(String(5), nullable=True, comment="HH:MM format")

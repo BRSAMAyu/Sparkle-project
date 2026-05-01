@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Export option button widget
 class ExportOptionButton extends StatelessWidget {
@@ -218,7 +221,7 @@ class _StatisticsExportBottomSheetState
   Widget _buildHeader() => Row(
         children: [
           Text(
-            '导出统计数据',
+            context.l10n.statisticsExportTitle,
             style: DS.headlineStyle.copyWith(
               fontSize: 20,
               fontWeight: DS.fontWeightSemibold,
@@ -244,7 +247,7 @@ class _StatisticsExportBottomSheetState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '选择导出格式',
+            context.l10n.statisticsExportFormat,
             style: DS.bodyStyle.copyWith(
               fontWeight: DS.fontWeightMedium,
               color: DS.neutral600,
@@ -265,8 +268,8 @@ class _StatisticsExportBottomSheetState
                           child: ExportOptionButton(
                             format: format,
                             icon: _getIconForFormat(format),
-                            label: format.label,
-                            description: _getDescriptionForFormat(format),
+                            label: format.localizedLabel(context.l10n),
+                            description: _getDescriptionForFormat(format, context.l10n),
                             isSelected: _selectedFormat == format,
                             onTap: () {
                               setState(() {
@@ -295,8 +298,8 @@ class _StatisticsExportBottomSheetState
                       (format) => ExportOptionButton(
                         format: format,
                         icon: _getIconForFormat(format),
-                        label: format.label,
-                        description: _getDescriptionForFormat(format),
+                        label: format.localizedLabel(context.l10n),
+                        description: _getDescriptionForFormat(format, context.l10n),
                         isSelected: _selectedFormat == format,
                         onTap: () {
                           setState(() {
@@ -328,7 +331,7 @@ class _StatisticsExportBottomSheetState
             const SizedBox(width: DS.sm),
             Expanded(
               child: Text(
-                '包含图表数据',
+                context.l10n.statisticsExportIncludeCharts,
                 style: DS.bodyStyle.copyWith(
                   color: DS.neutral700,
                 ),
@@ -351,7 +354,7 @@ class _StatisticsExportBottomSheetState
     final canExport = _selectedFormat != null;
 
     return SparkleButton(
-      label: '导出为 ${_selectedFormat?.label ?? ''}',
+      label: '${context.l10n.statisticsExportAs} ${_selectedFormat?.localizedLabel(context.l10n) ?? ''}',
       onPressed: _handleExport,
       loading: _isExporting,
       disabled: !canExport || _isExporting,
@@ -374,16 +377,16 @@ class _StatisticsExportBottomSheetState
     }
   }
 
-  String _getDescriptionForFormat(ExportFormat format) {
+  String _getDescriptionForFormat(ExportFormat format, AppLocalizations l10n) {
     switch (format) {
       case ExportFormat.json:
-        return '结构化数据';
+        return l10n.statisticsExportStructured;
       case ExportFormat.csv:
-        return '电子表格';
+        return l10n.statisticsExportSpreadsheet;
       case ExportFormat.pngReport:
-        return '高清图片';
+        return l10n.statisticsExportHDImage;
       case ExportFormat.pdfReport:
-        return 'PDF文档';
+        return l10n.statisticsExportPDF;
     }
   }
 
@@ -402,10 +405,7 @@ class _StatisticsExportBottomSheetState
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('导出失败: $e'),
-            backgroundColor: DS.error,
-          ),
+          SparkleSnackBar.error(context.l10n.statisticsExportFailed(e.toString())),
         );
       }
     } finally {
@@ -475,7 +475,7 @@ class StatisticsShareBottomSheet extends StatelessWidget {
   Widget _buildHeader(BuildContext context) => Row(
         children: [
           Text(
-            '分享统计数据',
+            context.l10n.statisticsShareTitle,
             style: DS.headlineStyle.copyWith(
               fontSize: 20,
               fontWeight: DS.fontWeightSemibold,
@@ -624,50 +624,65 @@ class ShareOption {
 /// Common share options
 class CommonShareOptions {
   /// Share to WeChat
-  static ShareOption weChat({required Future<void> Function() action}) =>
+  static ShareOption weChat({
+    required Future<void> Function() action,
+    AppLocalizations? l10n,
+  }) =>
       ShareOption(
         id: 'wechat',
-        label: '微信',
+        label: l10n?.statisticsShareWechat ?? '微信',
         icon: Icons.chat,
         color: DS.success,
         action: action,
       );
 
   /// Share to WeChat Moments
-  static ShareOption weChatMoments({required Future<void> Function() action}) =>
+  static ShareOption weChatMoments({
+    required Future<void> Function() action,
+    AppLocalizations? l10n,
+  }) =>
       ShareOption(
         id: 'wechat_moments',
-        label: '朋友圈',
+        label: l10n?.statisticsShareMoments ?? '朋友圈',
         icon: Icons.photo_camera,
         color: DS.success,
         action: action,
       );
 
   /// Save to gallery
-  static ShareOption saveToGallery({required Future<void> Function() action}) =>
+  static ShareOption saveToGallery({
+    required Future<void> Function() action,
+    AppLocalizations? l10n,
+  }) =>
       ShareOption(
         id: 'save',
-        label: '保存图片',
+        label: l10n?.statisticsShareSaveImage ?? '保存图片',
         icon: Icons.download,
         color: DS.brandPrimary,
         action: action,
       );
 
   /// Copy link
-  static ShareOption copyLink({required Future<void> Function() action}) =>
+  static ShareOption copyLink({
+    required Future<void> Function() action,
+    AppLocalizations? l10n,
+  }) =>
       ShareOption(
         id: 'copy_link',
-        label: '复制链接',
+        label: l10n?.statisticsShareCopyLink ?? '复制链接',
         icon: Icons.link,
         color: DS.neutral500,
         action: action,
       );
 
   /// More options
-  static ShareOption more({required Future<void> Function() action}) =>
+  static ShareOption more({
+    required Future<void> Function() action,
+    AppLocalizations? l10n,
+  }) =>
       ShareOption(
         id: 'more',
-        label: '更多',
+        label: l10n?.statisticsShareMore ?? '更多',
         icon: Icons.more_horiz,
         color: DS.neutral500,
         action: action,

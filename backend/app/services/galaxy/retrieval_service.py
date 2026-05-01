@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import asyncio
 import time
 from dataclasses import dataclass
@@ -6,21 +7,28 @@ from uuid import UUID
 
 from loguru import logger
 from redis.commands.search.query import Query
-from sqlalchemy import func, select
+from sqlalchemy import and_, false, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.models.community import GroupMember
 from app.core.metrics import RAG_RETRIEVAL_LATENCY, RETRIEVAL_ERROR_TOTAL, RETRIEVAL_TIMEOUT_TOTAL
 from app.core.redis_search_client import redis_search_client
 from app.db.extensions import is_vector_extension_available
 from app.models.document_chunks import DocumentChunk
 from app.models.file_storage import StoredFile
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
-from app.schemas.galaxy import NodeBase, SearchResultItem, SectorCode, UserStatusInfo
+from app.models.group_files import GroupFile
+from app.schemas.galaxy import NodeBase, SearchResultItem, UserStatusInfo
 from app.services.embedding_service import embedding_service
 from app.services.rerank_service import rerank_service
+
+try:
+    from app.services.group_file_service import GroupFileService
+except ImportError:
+    GroupFileService = None
 
 try:
     from app.services.semantic_cache_service import semantic_cache_service
@@ -126,7 +134,7 @@ class KnowledgeRetrievalService:
         vector_query: str | None = None,
         subject_id: int | None = None,
         limit: int = 5,
-        threshold: float = 0.3,
+        threshold: float = 0.6,
         use_reranker: bool = True
     ) -> list[SearchResultItem]:
         """
@@ -161,7 +169,7 @@ class KnowledgeRetrievalService:
         vector_query: str | None = None,
         subject_id: int | None = None,
         limit: int = 5,
-        threshold: float = 0.3,
+        threshold: float = 0.6,
         use_reranker: bool = True
     ) -> list[SearchResultItem]:
         """
@@ -390,7 +398,9 @@ class KnowledgeRetrievalService:
         file_ids: list[UUID],
         vector_query: str | None = None,
         limit: int = 5,
-        threshold: float = 0.3
+        threshold: float = 0.6,
+        include_group_documents: bool = False,
+        group_ids: list[UUID | str] | None = None,
     ) -> list["DocumentChunkResult"]:
         """
         Vector search over document chunks with forced file scope.
@@ -402,15 +412,45 @@ class KnowledgeRetrievalService:
 
         actual_vector_text = vector_query if vector_query else query
         query_embedding = await embedding_service.get_embedding(actual_vector_text, text_type="query")
+        accessible_group_ids: list[UUID] = []
+        if include_group_documents and GroupFileService is not None:
+            accessible_group_ids = await GroupFileService.list_accessible_group_ids(
+                self.db,
+                user_id,
+                requested_group_ids=group_ids,
+            )
 
         stmt = (
             select(
                 DocumentChunk,
                 StoredFile.file_name,
+                GroupFile.group_id,
+                GroupFile.shared_by_id,
                 DocumentChunk.embedding.cosine_distance(query_embedding).label("distance")
             )
             .join(StoredFile, StoredFile.id == DocumentChunk.file_id)
-            .where(DocumentChunk.user_id == user_id)
+            .outerjoin(
+                GroupFile,
+                and_(
+                    GroupFile.file_id == DocumentChunk.file_id,
+                    GroupFile.not_deleted_filter(),
+                    GroupFile.group_id.in_(accessible_group_ids) if accessible_group_ids else false(),
+                ),
+            )
+            .outerjoin(
+                GroupMember,
+                and_(
+                    GroupMember.group_id == GroupFile.group_id,
+                    GroupMember.user_id == user_id,
+                    GroupMember.not_deleted_filter(),
+                ),
+            )
+            .where(
+                or_(
+                    DocumentChunk.user_id == user_id,
+                    GroupMember.id.isnot(None),
+                )
+            )
             .where(DocumentChunk.file_id.in_(file_ids))
             .where(DocumentChunk.embedding.isnot(None))
             .order_by("distance")
@@ -427,12 +467,25 @@ class KnowledgeRetrievalService:
         rows = result.all()
 
         results: list[DocumentChunkResult] = []
-        for chunk, file_name, distance in rows:
+        seen: set[tuple[str, str]] = set()
+        for chunk, file_name, group_id, shared_by_id, distance in rows:
             if distance is None:
                 continue
             if distance <= threshold:
                 score = max(0.0, 1.0 - float(distance))
-                results.append(DocumentChunkResult(chunk=chunk, file_name=file_name, score=score))
+                dedupe_key = (str(chunk.id), str(group_id or "personal"))
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                results.append(
+                    DocumentChunkResult(
+                        chunk=chunk,
+                        file_name=file_name,
+                        score=score,
+                        group_id=group_id,
+                        shared_by_user_id=shared_by_id,
+                    )
+                )
 
         return results[:limit]
 
@@ -457,9 +510,12 @@ class KnowledgeRetrievalService:
         query: str,
         subject_id: int | None = None,
         limit: int = 10,
-        threshold: float = 0.3,
+        threshold: float = 0.6,
     ) -> list[tuple[KnowledgeNode, float]]:
-        """Internal semantic search that returns nodes with normalized scores."""
+        """Internal semantic search that returns nodes with normalized scores.
+        threshold is cosine DISTANCE (0=identical, 1=opposite).
+        Default 0.6 ≈ similarity>0.4, suitable for Chinese DashScope embeddings.
+        """
         if not await self._vector_runtime_available():
             return []
 
@@ -475,6 +531,7 @@ class KnowledgeRetrievalService:
                 selectinload(KnowledgeNode.parent)
             )
             .where(KnowledgeNode.embedding.isnot(None))
+            .where(or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"))
         )
 
         if subject_id:
@@ -512,7 +569,7 @@ class KnowledgeRetrievalService:
         limit: int = 20
     ) -> list[KnowledgeNode]:
         """Keyword search for nodes (Sparse Retrieval)"""
-        from sqlalchemy import func, or_
+        from sqlalchemy import func
 
         # Optimized JSONB search using @> operator for exact tags match
         # and jsonb_path_exists for partial match inside array if needed (requires PG 12+)
@@ -537,6 +594,7 @@ class KnowledgeRetrievalService:
                     )
                 )
             )
+            .where(or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"))
         )
 
         if subject_id:
@@ -605,3 +663,6 @@ class DocumentChunkResult:
     chunk: DocumentChunk
     file_name: str
     score: float
+    group_id: UUID | None = None
+    shared_by_user_id: UUID | None = None
+    trust_level: str | None = None

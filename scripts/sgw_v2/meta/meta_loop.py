@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import random
 import subprocess
 import sys
@@ -45,6 +46,7 @@ for p in [str(SCRIPTS_DIR), str(SGW_V2_DIR), str(SGW_DIR)]:
 
 from sgw_v2.storage.db import RunDB
 from sgw_v2.meta.meta_orchestrator import MetaOrchestrator
+from sgw_v2.rl.environment import PolicyZoo
 
 
 RL_MODES = ("off", "shadow", "rl")
@@ -99,9 +101,23 @@ def _run_sgw_subprocess(
     persona_library: Path,
     adversarial_playbook: Path,
     output_dir: Path,
+    shared_db_path: Path,
     config: dict[str, Any],
 ) -> int:
-    """Run the SGW orchestrator as a subprocess. Returns exit code."""
+    """Run the SGW orchestrator as a subprocess. Returns exit code.
+
+    Critical design notes
+    ---------------------
+    * ``--db-path`` is passed explicitly so the orchestrator writes its run
+      records into the *same* SQLite file that meta_loop reads.  Without this,
+      ``db.latest_run_id()`` always returns None and the RL loop never adapts.
+    * Dynamic RL parameters (soft_violation_threshold, audit_sample_rate, etc.)
+      are injected as environment variables because the orchestrator reads them
+      from the environment, not from CLI flags.  Passing them here ensures that
+      every policy-adjusted parameter actually takes effect in the next run.
+    * The subprocess timeout is derived from wall_clock_hours so long runs are
+      not killed prematurely (adds a 10-minute safety buffer).
+    """
     report_path = output_dir / "report.md"
     checkpoint_path = output_dir / "checkpoint.json"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -113,6 +129,7 @@ def _run_sgw_subprocess(
         "--adversarial-playbook", str(adversarial_playbook),
         "--report-path", str(report_path),
         "--checkpoint-path", str(checkpoint_path),
+        "--db-path", str(shared_db_path),         # FIX: share a single DB
         "--wall-clock-hours", str(config.get("wall_clock_hours", 0.5)),
         "--min-sessions", str(config.get("min_sessions", 20)),
         "--min-turns", str(config.get("min_turns", 200)),
@@ -120,10 +137,40 @@ def _run_sgw_subprocess(
         "--adversarial-sessions", str(config.get("adversarial_sessions", 4)),
     ]
 
-    print(f"[meta-loop] Launching SGW subprocess...")
-    print(f"[meta-loop]   cmd: {' '.join(cmd[:6])}...")
+    # FIX: inject RL-adjustable parameters as env vars so they actually reach
+    # the orchestrator's OrchestratorConfig (which reads from os.getenv).
+    env_overrides: dict[str, str] = {}
+    _ENV_MAP = {
+        "soft_violation_threshold": "SGW_SOFT_VIOLATION_THRESHOLD",
+        "audit_sample_rate":        "SGW_AUDIT_SAMPLE_RATE",
+        "authenticity_sample_rate": "SGW_AUTHENTICITY_SAMPLE_RATE",
+        "expression_validation_retries": "SGW_EXPRESSION_VALIDATION_RETRIES",
+        "max_history_pairs":        "SGW_MAX_HISTORY_PAIRS",
+        "session_turn_slice":       "SGW_SESSION_TURN_SLICE",
+        "claude_timeout_seconds":   "SGW_CLAUDE_TIMEOUT_SECONDS",
+        "claude_failure_backoff_seconds": "SGW_CLAUDE_FAILURE_BACKOFF_SECONDS",
+    }
+    for config_key, env_key in _ENV_MAP.items():
+        if config_key in config:
+            env_overrides[env_key] = str(config[config_key])
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+    subprocess_env = {**os.environ, **env_overrides}
+
+    wall_hours = config.get("wall_clock_hours", 0.5)
+    timeout_seconds = int(wall_hours * 3600) + 600  # +10 min safety buffer
+
+    print(f"[meta-loop] Launching SGW subprocess (timeout={timeout_seconds}s)...")
+    print(f"[meta-loop]   cmd: {' '.join(cmd[:6])}...")
+    if env_overrides:
+        print(f"[meta-loop]   env overrides: {json.dumps(env_overrides)}")
+
+    result = subprocess.run(
+        cmd,
+        capture_output=True,
+        text=True,
+        timeout=timeout_seconds,
+        env=subprocess_env,
+    )
 
     if result.returncode != 0:
         print(f"[meta-loop] SGW exited with code {result.returncode}")
@@ -131,6 +178,24 @@ def _run_sgw_subprocess(
             print(f"[meta-loop] stderr: {result.stderr[-500:]}")
 
     return result.returncode
+
+
+def _completed_run_after_nonzero_exit(db: RunDB) -> str | None:
+    """Return the latest run_id when SGW completed despite a non-zero exit.
+
+    SGW uses its process exit code to signal whether a run satisfied the full
+    acceptance gate. Fast shadow / RL iterations intentionally run below the
+    production acceptance thresholds, so a completed test run may still exit
+    non-zero. In that case we should continue diagnosis instead of treating the
+    run like a crash.
+    """
+    latest_run_id = db.latest_run_id()
+    if not latest_run_id:
+        return None
+    run_data = db.get_run(latest_run_id) or {}
+    if run_data.get("status") == "completed":
+        return latest_run_id
+    return None
 
 
 def _inject_random_exploration(config: dict[str, Any], rng: random.Random) -> dict[str, Any]:
@@ -167,8 +232,8 @@ def _check_convergence(db: RunDB, window: int = 5) -> bool:
     if len(rows) < window:
         return False
     outcomes = [row[0] for row in rows]
-    # Converged if all recent outcomes are neutral or improved_sig
-    non_neutral = [o for o in outcomes if o not in ("neutral", "improved_sig")]
+    # Converged if all recent outcomes are stable or shadow-only.
+    non_neutral = [o for o in outcomes if o not in ("neutral", "improved_sig", "shadow")]
     return len(non_neutral) == 0
 
 
@@ -204,6 +269,9 @@ def run_meta_loop(
     db = RunDB(db_path)
     rng = random.Random(seed)
     output_dir = db_path.parent / "meta_loop_output"
+    policy_dir = db_path.parent / "policy"
+    policy_dir.mkdir(parents=True, exist_ok=True)
+    policy_zoo = PolicyZoo(policy_dir)
 
     current_config = _load_config(db)
     recipe_overrides = RL_RECIPES[rl_recipe]
@@ -220,20 +288,31 @@ def run_meta_loop(
         print(f"[meta-loop] Iteration {iteration}/{max_iterations}")
         print(f"{'='*60}")
 
-        # Step 1: Run SGW with current config
+        # Step 1: Run SGW with current config.
+        # db_path is passed explicitly so the orchestrator writes into the same
+        # SQLite file that this loop reads — without it latest_run_id() is always None.
         exit_code = _run_sgw_subprocess(
             persona_library=persona_library,
             adversarial_playbook=adversarial_playbook,
             output_dir=output_dir / f"iter_{iteration}",
+            shared_db_path=db_path,
             config=current_config,
         )
 
+        latest_run_id = db.latest_run_id()
         if exit_code != 0:
-            print(f"[meta-loop] SGW failed with exit code {exit_code}, skipping diagnosis")
-            continue
+            latest_completed_run_id = _completed_run_after_nonzero_exit(db)
+            if latest_completed_run_id:
+                latest_run_id = latest_completed_run_id
+                print(
+                    "[meta-loop] SGW exited non-zero, but the latest run completed; "
+                    "continuing diagnosis (likely acceptance-gate miss during test iteration)"
+                )
+            else:
+                print(f"[meta-loop] SGW failed with exit code {exit_code}, skipping diagnosis")
+                continue
 
         # Step 2: Get latest run from DB
-        latest_run_id = db.latest_run_id()
         if not latest_run_id:
             print("[meta-loop] No run found in DB after subprocess, skipping")
             continue
@@ -246,52 +325,101 @@ def run_meta_loop(
                 print(f"[dashboard] iter={iteration} mode=off run={latest_run_id[:12]}")
             continue
 
-        # Step 3: Run meta-iteration (diagnose -> plan)
         meta = MetaOrchestrator(db, current_config)
+        evaluation_outcome = "none"
+        snapshot_id: str | None = None
+        counted_this_iteration = False
+
+        # Step 3: Evaluate the *previous* pending iteration against this run.
+        # Each iteration proposes config changes for the *next* SGW run, so the
+        # current run can only evaluate the pending iteration created one cycle earlier.
+        if rl_mode == "rl":
+            pending = meta.get_latest_pending_iteration()
+            if pending and pending.get("run_id") != latest_run_id:
+                evaluation = meta.evaluate_iteration(pending["iteration_id"], latest_run_id)
+                current_config = meta.current_config
+                counted_this_iteration = True
+
+                if evaluation:
+                    evaluation_outcome = evaluation.outcome
+                    print(
+                        "[meta-loop] Evaluation: "
+                        f"{evaluation.outcome} (iteration={pending['iteration_id']}, run={latest_run_id[:12]})"
+                    )
+
+                    if evaluation.outcome.startswith("regressed"):
+                        consecutive_neutral = 0
+                        print("[meta-loop] Regression detected — reverted to pre-change config")
+                    elif evaluation.outcome == "improved_sig":
+                        consecutive_neutral = 0
+                        print("[meta-loop] Significant improvement — keeping current config as new baseline")
+                        try:
+                            snapshot_id = policy_zoo.save_config_snapshot(
+                                current_config=current_config,
+                                metadata={
+                                    "iteration": iteration,
+                                    "iteration_id": pending["iteration_id"],
+                                    "run_id": latest_run_id,
+                                    "outcome": evaluation.outcome,
+                                    "rl_mode": rl_mode,
+                                    "rl_recipe": rl_recipe,
+                                },
+                            )
+                            print(f"[meta-loop] Config snapshot saved: {snapshot_id}")
+                        except Exception as exc:
+                            print(f"[meta-loop] Warning: config snapshot failed: {exc}")
+                    else:
+                        consecutive_neutral += 1
+            elif pending:
+                print(
+                    "[meta-loop] Pending iteration already points at the latest run; "
+                    "waiting for the next run before evaluation."
+                )
+
+        # Step 4: Run meta-iteration (diagnose -> plan) for the *next* run.
         result = meta.run_iteration(latest_run_id)
 
         if result is None:
+            if not counted_this_iteration:
+                consecutive_neutral += 1
             print("[meta-loop] No iteration produced, continuing")
             if dashboard:
-                print(f"[dashboard] iter={iteration} mode={rl_mode} outcome=none")
+                print(f"[dashboard] iter={iteration} mode={rl_mode} eval={evaluation_outcome} outcome=none")
             continue
 
-        print(f"[meta-loop] Iteration result: {result.outcome}, hypotheses={result.hypotheses_count}, changes={result.changes_applied}")
+        print(
+            f"[meta-loop] Iteration result: {result.outcome}, "
+            f"hypotheses={result.hypotheses_count}, changes={result.changes_applied}"
+        )
 
-        # Step 4: Evaluate if we have a previous run to compare against
-        evaluation_outcome = "pending"
-        if result.plan_id and result.changes_applied > 0:
-            evaluation = meta.evaluate_iteration(result.iteration_id, latest_run_id)
-            if evaluation:
-                evaluation_outcome = evaluation.outcome
-                print(f"[meta-loop] Evaluation: {evaluation.outcome}")
+        planned_change = bool(result.plan_id and result.changes_applied > 0)
 
-                if rl_mode == "shadow":
-                    print("[meta-loop] shadow mode: logging decision without adopting")
-                    consecutive_neutral += 1
-                else:
-                    current_config = meta.current_config
-                    if evaluation.outcome == "regressed":
-                        consecutive_neutral = 0
-                        print("[meta-loop] Regressed — keeping original config")
-                    elif evaluation.outcome == "improved_sig":
-                        consecutive_neutral = 0
-                        print("[meta-loop] Significant improvement — adopted new config")
-                    elif evaluation.outcome == "improved_nonsig":
-                        print("[meta-loop] Non-significant improvement — adopting cautiously")
-                        consecutive_neutral += 1
-                    else:
-                        consecutive_neutral += 1
+        if rl_mode == "shadow" and planned_change:
+            meta.set_iteration_outcome(
+                result.iteration_id,
+                outcome="shadow",
+                summary_after=result.summary_before,
+            )
+            print("[meta-loop] shadow mode: recorded plan without adopting config")
+        elif rl_mode == "rl":
+            current_config = meta.current_config
+
+        if not counted_this_iteration:
+            if rl_mode == "rl" and planned_change:
+                # Wait for the next completed run to judge this newly proposed config.
+                pass
             else:
                 consecutive_neutral += 1
-        else:
-            consecutive_neutral += 1
+
+        if rl_mode != "shadow" and planned_change:
+            print(f"[meta-loop] Proposed next config: {json.dumps(current_config, indent=2)}")
 
         if dashboard:
             print(
                 f"[dashboard] iter={iteration} mode={rl_mode} "
                 f"outcome={result.outcome} eval={evaluation_outcome} "
                 f"hypotheses={result.hypotheses_count} changes={result.changes_applied}"
+                + (f" snapshot={snapshot_id}" if snapshot_id else "")
             )
 
         # Step 5: Random exploration injection (rl mode only)

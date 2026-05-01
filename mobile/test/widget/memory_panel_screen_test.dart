@@ -210,6 +210,36 @@ class _FakeEvidenceResolveService implements EvidenceResolveService {
 }
 
 void main() {
+  testWidgets(
+      'Memory panel renders guided empty state when there is no memory data',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1440, 2200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    AppFeatureFlags.enableMemoryPanelV2 = true;
+    AppFeatureFlags.enableEvidenceViewer = false;
+    AppFeatureFlags.enableMemoryExplain = false;
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          memoryApiServiceProvider.overrideWithValue(_EmptyMemoryApiService()),
+        ],
+        child: const MaterialApp(
+          home: MemoryPanelScreen(),
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: Locale('zh'),
+        ),
+      ),
+    );
+
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('记忆面板还没有内容'), findsOneWidget);
+    expect(find.text('去开始对话'), findsOneWidget);
+  });
+
   testWidgets('Memory panel renders sections and opens detail',
       (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(1440, 2200));
@@ -245,4 +275,25 @@ void main() {
     expect(find.text('版本历史'), findsOneWidget);
     expect(find.text('缺失'), findsOneWidget);
   });
+}
+
+class _EmptyMemoryApiService extends _FakeMemoryApiService {
+  @override
+  Future<List<MemoryPreferenceItem>> getPreferences() async => [];
+
+  @override
+  Future<List<MemoryGoalItem>> getGoals({
+    String? status,
+    bool includeExpired = false,
+    int limit = 20,
+  }) async =>
+      [];
+
+  @override
+  Future<List<EpisodicMemoryItem>> getEpisodic({
+    DateTime? start,
+    DateTime? end,
+    int limit = 20,
+  }) async =>
+      [];
 }

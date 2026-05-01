@@ -1,0 +1,2243 @@
+{
+  "id": "computer_networks@v1",
+  "name": "计算机网络冲刺包",
+  "version": "v1.0",
+  "description": "面向本科计算机网络期末考试的完整冲刺知识包，覆盖 OSI/TCP-IP 分层模型、物理层、数据链路层、网络层、传输层、应用层及安全与性能基础知识。",
+  "subject": "计算机网络",
+  "author": "sparkle-core",
+  "created_at": "2026-04-25T00:00:00",
+  "changelog": [
+    "Initial release: 45 knowledge nodes, 18 question archetypes, 11 mistake types, 7d/14d strategy presets."
+  ],
+  "knowledge_nodes": [
+    {
+      "node_id": "cn.osi_model",
+      "label": "OSI 七层模型",
+      "layer": "architecture",
+      "prerequisites": [],
+      "exam_weight": 0.95,
+      "frequency": 0.95,
+      "trainability": 0.85,
+      "time_cost": 30,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.layer_confusion",
+        "mistake.layer_data_unit"
+      ],
+      "recommended_action": "闭卷默写七层名称、功能、协议示例及每层 PDU 名称"
+    },
+    {
+      "node_id": "cn.tcp_ip_model",
+      "label": "TCP/IP 四层模型",
+      "layer": "architecture",
+      "prerequisites": [
+        "cn.osi_model"
+      ],
+      "exam_weight": 0.9,
+      "frequency": 0.9,
+      "trainability": 0.85,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.layer_confusion",
+        "mistake.osi_tcpip_mapping"
+      ],
+      "recommended_action": "对比 OSI 与 TCP/IP 各层对应关系，画双层对照图"
+    },
+    {
+      "node_id": "cn.protocol_stack_concepts",
+      "label": "协议栈核心概念（封装/解封装/对等层）",
+      "layer": "architecture",
+      "prerequisites": [
+        "cn.osi_model"
+      ],
+      "exam_weight": 0.8,
+      "frequency": 0.75,
+      "trainability": 0.8,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.layer_data_unit",
+        "mistake.encapsulation_order"
+      ],
+      "recommended_action": "画一次完整的数据封装解封装流程图，标注各层添加的头部"
+    },
+    {
+      "node_id": "cn.physical_encoding",
+      "label": "物理层数据编码（曼彻斯特/差分曼彻斯特/NRZ）",
+      "layer": "physical",
+      "prerequisites": [],
+      "exam_weight": 0.45,
+      "frequency": 0.4,
+      "trainability": 0.7,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.encoding_waveform"
+      ],
+      "recommended_action": "对比三种编码方式的波形图，理解自同步和带宽效率差异"
+    },
+    {
+      "node_id": "cn.multiplexing",
+      "label": "多路复用技术（FDM/TDM/STDM/WDM/CDMA）",
+      "layer": "physical",
+      "prerequisites": [],
+      "exam_weight": 0.4,
+      "frequency": 0.35,
+      "trainability": 0.65,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.mux_type_confusion"
+      ],
+      "recommended_action": "列表对比五种复用技术的原理、应用场景和区别"
+    },
+    {
+      "node_id": "cn.error_detection",
+      "label": "差错检测（奇偶校验/CRC/校验和）",
+      "layer": "data_link",
+      "prerequisites": [
+        "cn.protocol_stack_concepts"
+      ],
+      "exam_weight": 0.8,
+      "frequency": 0.75,
+      "trainability": 0.7,
+      "time_cost": 35,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.crc_calculation",
+        "mistake.hamming_distance"
+      ],
+      "recommended_action": "手算一道 CRC 例题（模2除法），理解生成多项式的作用"
+    },
+    {
+      "node_id": "cn.flow_control",
+      "label": "流量控制（停止-等待/滑动窗口）",
+      "layer": "data_link",
+      "prerequisites": [
+        "cn.error_detection"
+      ],
+      "exam_weight": 0.75,
+      "frequency": 0.7,
+      "trainability": 0.75,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.window_size_error",
+        "mistake.flow_congestion_confusion"
+      ],
+      "recommended_action": "画滑动窗口示意图，计算信道利用率与窗口大小的关系"
+    },
+    {
+      "node_id": "cn.arq_stop_wait",
+      "label": "停止-等待协议 (Stop-and-Wait ARQ)",
+      "layer": "data_link",
+      "prerequisites": [
+        "cn.flow_control"
+      ],
+      "exam_weight": 0.7,
+      "frequency": 0.65,
+      "trainability": 0.8,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.stop_wait_utilization",
+        "mistake.ack_numbering"
+      ],
+      "recommended_action": "推导停止-等待协议的信道利用率公式 U = Tf/(Tf+2Tp)"
+    },
+    {
+      "node_id": "cn.arq_gbn",
+      "label": "后退N帧协议 (Go-Back-N ARQ)",
+      "layer": "data_link",
+      "prerequisites": [
+        "cn.arq_stop_wait",
+        "cn.flow_control"
+      ],
+      "exam_weight": 0.8,
+      "frequency": 0.8,
+      "trainability": 0.7,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.gbn_window_size",
+        "mistake.ack_numbering"
+      ],
+      "recommended_action": "画 GBN 时序图（发送窗口 N=4），模拟丢帧后的回退过程"
+    },
+    {
+      "node_id": "cn.arq_sr",
+      "label": "选择重传协议 (Selective Repeat ARQ)",
+      "layer": "data_link",
+      "prerequisites": [
+        "cn.arq_gbn"
+      ],
+      "exam_weight": 0.75,
+      "frequency": 0.7,
+      "trainability": 0.65,
+      "time_cost": 30,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.sr_window_constraint",
+        "mistake.ack_numbering"
+      ],
+      "recommended_action": "对比 GBN 与 SR 的窗口限制（SR 发送窗口 <= 接收窗口），画时序图"
+    },
+    {
+      "node_id": "cn.mac_protocols",
+      "label": "MAC 协议（CSMA/CD/CA、令牌传递）",
+      "layer": "data_link",
+      "prerequisites": [
+        "cn.protocol_stack_concepts"
+      ],
+      "exam_weight": 0.65,
+      "frequency": 0.6,
+      "trainability": 0.7,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.csma_cd_ca_confusion",
+        "mistake.collision_domain"
+      ],
+      "recommended_action": "对比 CSMA/CD 与 CSMA/CA 的适用场景和冲突处理机制"
+    },
+    {
+      "node_id": "cn.ethernet",
+      "label": "以太网（帧格式/最小帧长/最短帧长）",
+      "layer": "data_link",
+      "prerequisites": [
+        "cn.mac_protocols"
+      ],
+      "exam_weight": 0.6,
+      "frequency": 0.55,
+      "trainability": 0.7,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.mac_confusion",
+        "mistake.min_frame_calc"
+      ],
+      "recommended_action": "背诵以太网帧格式各字段，理解 64 字节最小帧长的由来"
+    },
+    {
+      "node_id": "cn.ip_addressing",
+      "label": "IP 地址分类（A/B/C/D/E 类）",
+      "layer": "network",
+      "prerequisites": [
+        "cn.tcp_ip_model"
+      ],
+      "exam_weight": 0.85,
+      "frequency": 0.8,
+      "trainability": 0.9,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.ip_class_range",
+        "mistake.private_ip"
+      ],
+      "recommended_action": "默写各类 IP 地址范围、默认掩码、私有地址段"
+    },
+    {
+      "node_id": "cn.subnetting",
+      "label": "子网划分与 CIDR",
+      "layer": "network",
+      "prerequisites": [
+        "cn.ip_addressing"
+      ],
+      "exam_weight": 1.0,
+      "frequency": 1.0,
+      "trainability": 0.75,
+      "time_cost": 45,
+      "difficulty": 4,
+      "minimum_pass_required": true,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.subnet_calculation_error",
+        "mistake.bit_byte_confusion"
+      ],
+      "recommended_action": "连续做 5 道子网划分计算题：求子网数、主机数、网络地址、广播地址"
+    },
+    {
+      "node_id": "cn.nat",
+      "label": "NAT（网络地址转换）",
+      "layer": "network",
+      "prerequisites": [
+        "cn.ip_addressing"
+      ],
+      "exam_weight": 0.55,
+      "frequency": 0.5,
+      "trainability": 0.75,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.nat_type_confusion"
+      ],
+      "recommended_action": "区分 SNAT/DNAT/NAPT 的作用场景，画一次地址转换过程"
+    },
+    {
+      "node_id": "cn.arp",
+      "label": "ARP 协议（地址解析）",
+      "layer": "network",
+      "prerequisites": [
+        "cn.ip_addressing",
+        "cn.ethernet"
+      ],
+      "exam_weight": 0.7,
+      "frequency": 0.65,
+      "trainability": 0.8,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.arp_gratuitous",
+        "mistake.mac_confusion"
+      ],
+      "recommended_action": "画 ARP 请求/响应流程图，理解同子网和跨子网的 ARP 过程"
+    },
+    {
+      "node_id": "cn.icmp",
+      "label": "ICMP 协议",
+      "layer": "network",
+      "prerequisites": [
+        "cn.ip_addressing"
+      ],
+      "exam_weight": 0.5,
+      "frequency": 0.45,
+      "trainability": 0.8,
+      "time_cost": 15,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.icmp_type_code"
+      ],
+      "recommended_action": "记忆常见 ICMP 报文类型（回送请求/应答、目标不可达、重定向）"
+    },
+    {
+      "node_id": "cn.ipv6_basics",
+      "label": "IPv6 基础（地址格式/过渡机制）",
+      "layer": "network",
+      "prerequisites": [
+        "cn.ip_addressing"
+      ],
+      "exam_weight": 0.45,
+      "frequency": 0.4,
+      "trainability": 0.7,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.ipv6_address_shortening"
+      ],
+      "recommended_action": "练习 IPv6 地址缩写规则，了解双栈和隧道过渡机制"
+    },
+    {
+      "node_id": "cn.routing_basics",
+      "label": "路由基础（路由表/最长前缀匹配/默认路由）",
+      "layer": "network",
+      "prerequisites": [
+        "cn.ip_addressing"
+      ],
+      "exam_weight": 1.0,
+      "frequency": 1.0,
+      "trainability": 0.8,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.longest_prefix_error",
+        "mistake.route_update_confusion"
+      ],
+      "recommended_action": "做 3 道最长前缀匹配路由查找题，练习路由表构建"
+    },
+    {
+      "node_id": "cn.routing_rip",
+      "label": "RIP 路由协议（距离向量）",
+      "layer": "network",
+      "prerequisites": [
+        "cn.routing_basics"
+      ],
+      "exam_weight": 0.75,
+      "frequency": 0.7,
+      "trainability": 0.7,
+      "time_cost": 30,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.rip_convergence",
+        "mistake.route_update_confusion"
+      ],
+      "recommended_action": "模拟 RIP 路由更新过程（3 轮），理解最大跳数 15 的限制"
+    },
+    {
+      "node_id": "cn.routing_ospf",
+      "label": "OSPF 路由协议（链路状态）",
+      "layer": "network",
+      "prerequisites": [
+        "cn.routing_basics"
+      ],
+      "exam_weight": 0.8,
+      "frequency": 0.75,
+      "trainability": 0.65,
+      "time_cost": 35,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.ospf_area_concept",
+        "mistake.route_update_confusion"
+      ],
+      "recommended_action": "对比 RIP 与 OSPF 的核心差异（算法/收敛速度/开销/适用规模）"
+    },
+    {
+      "node_id": "cn.routing_bgp",
+      "label": "BGP 路由协议（路径向量）",
+      "layer": "network",
+      "prerequisites": [
+        "cn.routing_ospf"
+      ],
+      "exam_weight": 0.5,
+      "frequency": 0.45,
+      "trainability": 0.6,
+      "time_cost": 25,
+      "difficulty": 4,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.bgp_ebgp_ibgp"
+      ],
+      "recommended_action": "理解 BGP 的自治系统概念，区分 eBGP 和 iBGP"
+    },
+    {
+      "node_id": "cn.udp",
+      "label": "UDP 协议（特点/首部格式/校验和）",
+      "layer": "transport",
+      "prerequisites": [
+        "cn.tcp_ip_model"
+      ],
+      "exam_weight": 0.55,
+      "frequency": 0.5,
+      "trainability": 0.85,
+      "time_cost": 15,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.udp_tcp_choice"
+      ],
+      "recommended_action": "默写 UDP 首部格式（8 字节），列举 UDP 适用场景"
+    },
+    {
+      "node_id": "cn.tcp_basics",
+      "label": "TCP 基础（特点/首部格式/端口号）",
+      "layer": "transport",
+      "prerequisites": [
+        "cn.tcp_ip_model"
+      ],
+      "exam_weight": 0.9,
+      "frequency": 0.85,
+      "trainability": 0.8,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.tcp_header_fields",
+        "mistake.port_number"
+      ],
+      "recommended_action": "默写 TCP 首部关键字段（源/目的端口、序号、确认号、标志位）"
+    },
+    {
+      "node_id": "cn.tcp_three_way",
+      "label": "TCP 三次握手",
+      "layer": "transport",
+      "prerequisites": [
+        "cn.tcp_basics"
+      ],
+      "exam_weight": 1.0,
+      "frequency": 1.0,
+      "trainability": 0.9,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.three_way_state",
+        "mistake.syn_flood"
+      ],
+      "recommended_action": "画出三次握手时序图，标注 SYN/ACK 标志位和序号变化"
+    },
+    {
+      "node_id": "cn.tcp_four_way",
+      "label": "TCP 四次挥手",
+      "layer": "transport",
+      "prerequisites": [
+        "cn.tcp_basics"
+      ],
+      "exam_weight": 1.0,
+      "frequency": 1.0,
+      "trainability": 0.85,
+      "time_cost": 20,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.four_way_state",
+        "mistake.time_wait"
+      ],
+      "recommended_action": "画四次挥手时序图，理解 TIME_WAIT 状态的 2MSL 等待意义"
+    },
+    {
+      "node_id": "cn.tcp_reliable_transport",
+      "label": "TCP 可靠传输机制（序号/确认/重传）",
+      "layer": "transport",
+      "prerequisites": [
+        "cn.tcp_basics",
+        "cn.flow_control"
+      ],
+      "exam_weight": 1.0,
+      "frequency": 1.0,
+      "trainability": 0.7,
+      "time_cost": 35,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.ack_misread",
+        "mistake.cumulative_ack"
+      ],
+      "recommended_action": "做 TCP 序号/确认号计算题：已知发送序号和数据长度，求返回 ACK 值"
+    },
+    {
+      "node_id": "cn.tcp_flow_control",
+      "label": "TCP 流量控制（滑动窗口/rwnd）",
+      "layer": "transport",
+      "prerequisites": [
+        "cn.tcp_reliable_transport"
+      ],
+      "exam_weight": 0.9,
+      "frequency": 0.85,
+      "trainability": 0.7,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.window_variable_confusion",
+        "mistake.flow_congestion_confusion"
+      ],
+      "recommended_action": "理解 rwnd 含义，画滑动窗口动态调整示意图"
+    },
+    {
+      "node_id": "cn.tcp_congestion_control",
+      "label": "TCP 拥塞控制（慢启动/拥塞避免/快重传/快恢复）",
+      "layer": "transport",
+      "prerequisites": [
+        "cn.tcp_flow_control"
+      ],
+      "exam_weight": 1.0,
+      "frequency": 1.0,
+      "trainability": 0.6,
+      "time_cost": 45,
+      "difficulty": 4,
+      "minimum_pass_required": true,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.state_transition_error",
+        "mistake.window_variable_confusion",
+        "mistake.ssthresh_calc"
+      ],
+      "recommended_action": "画完整的拥塞窗口变化图（慢启动→拥塞避免→超时/3重复ACK→快恢复）"
+    },
+    {
+      "node_id": "cn.dns",
+      "label": "DNS 域名系统（解析流程/记录类型）",
+      "layer": "application",
+      "prerequisites": [
+        "cn.tcp_ip_model",
+        "cn.udp"
+      ],
+      "exam_weight": 1.0,
+      "frequency": 1.0,
+      "trainability": 0.8,
+      "time_cost": 25,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.dns_recursive_iterative",
+        "mistake.process_gap"
+      ],
+      "recommended_action": "画 DNS 递归查询和迭代查询的流程对比图"
+    },
+    {
+      "node_id": "cn.http",
+      "label": "HTTP/HTTPS 协议",
+      "layer": "application",
+      "prerequisites": [
+        "cn.tcp_three_way",
+        "cn.dns"
+      ],
+      "exam_weight": 1.0,
+      "frequency": 1.0,
+      "trainability": 0.8,
+      "time_cost": 30,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.http_version_diff",
+        "mistake.process_gap"
+      ],
+      "recommended_action": "对比 HTTP/1.0、HTTP/1.1、HTTP/2 的核心差异，理解 keep-alive 机制"
+    },
+    {
+      "node_id": "cn.ftp",
+      "label": "FTP 协议（主动/被动模式）",
+      "layer": "application",
+      "prerequisites": [
+        "cn.tcp_basics"
+      ],
+      "exam_weight": 0.4,
+      "frequency": 0.35,
+      "trainability": 0.75,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.ftp_active_passive"
+      ],
+      "recommended_action": "画 FTP 主动模式和被动模式的连接建立过程对比图"
+    },
+    {
+      "node_id": "cn.email_protocols",
+      "label": "邮件协议（SMTP/POP3/IMAP）",
+      "layer": "application",
+      "prerequisites": [
+        "cn.tcp_basics",
+        "cn.dns"
+      ],
+      "exam_weight": 0.45,
+      "frequency": 0.4,
+      "trainability": 0.8,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.smtp_pop3_role"
+      ],
+      "recommended_action": "画一封邮件从发送到接收的完整流程（SMTP→MX→POP3/IMAP）"
+    },
+    {
+      "node_id": "cn.dhcp",
+      "label": "DHCP 协议（动态主机配置）",
+      "layer": "application",
+      "prerequisites": [
+        "cn.ip_addressing",
+        "cn.udp"
+      ],
+      "exam_weight": 0.5,
+      "frequency": 0.45,
+      "trainability": 0.8,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.dhcp_dora_order"
+      ],
+      "recommended_action": "记忆 DHCP 四步交互（Discover→Offer→Request→ACK）"
+    },
+    {
+      "node_id": "cn.encryption_basics",
+      "label": "加密基础（对称/非对称/散列）",
+      "layer": "security",
+      "prerequisites": [],
+      "exam_weight": 0.5,
+      "frequency": 0.45,
+      "trainability": 0.7,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.sym_asym_confusion"
+      ],
+      "recommended_action": "列表对比对称加密（AES/DES）、非对称加密（RSA）、散列（MD5/SHA）特点"
+    },
+    {
+      "node_id": "cn.ssl_tls",
+      "label": "SSL/TLS 协议",
+      "layer": "security",
+      "prerequisites": [
+        "cn.encryption_basics",
+        "cn.tcp_three_way"
+      ],
+      "exam_weight": 0.5,
+      "frequency": 0.45,
+      "trainability": 0.65,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.ssl_handshake_order"
+      ],
+      "recommended_action": "画 TLS 握手流程图，理解数字证书验证和密钥交换过程"
+    },
+    {
+      "node_id": "cn.firewall",
+      "label": "防火墙与网络安全基础",
+      "layer": "security",
+      "prerequisites": [
+        "cn.encryption_basics"
+      ],
+      "exam_weight": 0.35,
+      "frequency": 0.3,
+      "trainability": 0.75,
+      "time_cost": 15,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.firewall_type"
+      ],
+      "recommended_action": "区分包过滤防火墙和状态检测防火墙的工作原理"
+    },
+    {
+      "node_id": "cn.bandwidth_delay_product",
+      "label": "带宽延迟积与吞吐量计算",
+      "layer": "performance",
+      "prerequisites": [
+        "cn.tcp_flow_control",
+        "cn.tcp_congestion_control"
+      ],
+      "exam_weight": 0.7,
+      "frequency": 0.65,
+      "trainability": 0.65,
+      "time_cost": 25,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.bdp_calculation",
+        "mistake.bandwidth_unit"
+      ],
+      "recommended_action": "做 3 道 BDP 计算题：BDP = bandwidth * RTT，理解其对窗口设计的影响"
+    },
+    {
+      "node_id": "cn.throughput_calculation",
+      "label": "吞吐量与效率计算",
+      "layer": "performance",
+      "prerequisites": [
+        "cn.bandwidth_delay_product"
+      ],
+      "exam_weight": 0.6,
+      "frequency": 0.55,
+      "trainability": 0.65,
+      "time_cost": 20,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.throughput_formula",
+        "mistake.bandwidth_unit"
+      ],
+      "recommended_action": "练习吞吐量计算题（含链路带宽、传播延迟、传输延迟的综合题）"
+    },
+    {
+      "node_id": "cn.queuing_delay",
+      "label": "排队延迟与网络延迟分析",
+      "layer": "performance",
+      "prerequisites": [
+        "cn.protocol_stack_concepts"
+      ],
+      "exam_weight": 0.45,
+      "frequency": 0.4,
+      "trainability": 0.6,
+      "time_cost": 20,
+      "difficulty": 3,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.delay_decomposition"
+      ],
+      "recommended_action": "分解总延迟 = 处理延迟 + 排队延迟 + 传输延迟 + 传播延迟，做综合计算题"
+    },
+    {
+      "node_id": "cn.switching",
+      "label": "交换技术（电路交换/分组交换/报文交换）",
+      "layer": "architecture",
+      "prerequisites": [
+        "cn.osi_model"
+      ],
+      "exam_weight": 0.65,
+      "frequency": 0.6,
+      "trainability": 0.75,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.switching_comparison"
+      ],
+      "recommended_action": "对比三种交换方式的时延特性，画时序对比图"
+    },
+    {
+      "node_id": "cn.virtual_circuit_datagram",
+      "label": "虚电路与数据报",
+      "layer": "network",
+      "prerequisites": [
+        "cn.switching",
+        "cn.ip_addressing"
+      ],
+      "exam_weight": 0.6,
+      "frequency": 0.55,
+      "trainability": 0.7,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.vc_datagram_confusion"
+      ],
+      "recommended_action": "列表对比虚电路和数据报在连接建立、路由、有序性上的差异"
+    },
+    {
+      "node_id": "cn.transport_multiplexing",
+      "label": "传输层复用与分用（端口号/SOCKET）",
+      "layer": "transport",
+      "prerequisites": [
+        "cn.tcp_basics",
+        "cn.udp"
+      ],
+      "exam_weight": 0.65,
+      "frequency": 0.6,
+      "trainability": 0.85,
+      "time_cost": 15,
+      "difficulty": 2,
+      "minimum_pass_required": true,
+      "score_max_required": false,
+      "common_mistakes": [
+        "mistake.port_number",
+        "mistake.multiplexing_concept"
+      ],
+      "recommended_action": "区分熟知端口（0-1023）、注册端口、临时端口，理解套接字五元组"
+    },
+    {
+      "node_id": "cn.http_request_response",
+      "label": "HTTP 请求响应格式与状态码",
+      "layer": "application",
+      "prerequisites": [
+        "cn.http"
+      ],
+      "exam_weight": 0.65,
+      "frequency": 0.6,
+      "trainability": 0.85,
+      "time_cost": 20,
+      "difficulty": 2,
+      "minimum_pass_required": false,
+      "score_max_required": true,
+      "common_mistakes": [
+        "mistake.http_status_code"
+      ],
+      "recommended_action": "记忆常见 HTTP 状态码（200/301/302/304/400/403/404/500/503）"
+    }
+  ],
+  "question_archetypes": [
+    {
+      "archetype_id": "high_frequency_concept_judgment",
+      "label": "高频概念判断题",
+      "knowledge_nodes": [
+        "cn.osi_model",
+        "cn.tcp_ip_model",
+        "cn.tcp_basics",
+        "cn.mac_protocols",
+        "cn.ethernet",
+        "cn.http",
+        "cn.tcp_flow_control",
+        "cn.udp",
+        "cn.transport_multiplexing",
+        "cn.error_detection"
+      ],
+      "difficulty": 2,
+      "frequency": 0.95,
+      "common_mistakes": [
+        "mistake.layer_confusion",
+        "mistake.flow_congestion_confusion"
+      ],
+      "worked_example_strategy": "给出4个选项，让用户判断哪个描述正确或错误，重点关注概念边界区分"
+    },
+    {
+      "archetype_id": "high_frequency_calculation",
+      "label": "高频计算题",
+      "knowledge_nodes": [
+        "cn.subnetting",
+        "cn.tcp_reliable_transport",
+        "cn.bandwidth_delay_product",
+        "cn.throughput_calculation",
+        "cn.arq_stop_wait",
+        "cn.arq_gbn"
+      ],
+      "difficulty": 3,
+      "frequency": 0.9,
+      "common_mistakes": [
+        "mistake.subnet_calculation_error",
+        "mistake.ack_misread",
+        "mistake.bdp_calculation"
+      ],
+      "worked_example_strategy": "给出一组具体数值（IP/序号/带宽/延迟），要求逐步计算，展示中间步骤"
+    },
+    {
+      "archetype_id": "process_trace",
+      "label": "协议流程追踪题",
+      "knowledge_nodes": [
+        "cn.tcp_three_way",
+        "cn.tcp_four_way",
+        "cn.dns",
+        "cn.arp",
+        "cn.dhcp",
+        "cn.routing_basics",
+        "cn.ssl_tls"
+      ],
+      "difficulty": 3,
+      "frequency": 0.85,
+      "common_mistakes": [
+        "mistake.process_gap",
+        "mistake.three_way_state",
+        "mistake.four_way_state"
+      ],
+      "worked_example_strategy": "描述一个场景（如浏览器访问网页），要求用户按顺序列出涉及的协议交互步骤"
+    },
+    {
+      "archetype_id": "integrated_scenario",
+      "label": "综合场景分析题",
+      "knowledge_nodes": [
+        "cn.dns",
+        "cn.http",
+        "cn.tcp_three_way",
+        "cn.arp",
+        "cn.routing_basics",
+        "cn.tcp_congestion_control",
+        "cn.osi_model",
+        "cn.tcp_reliable_transport"
+      ],
+      "difficulty": 4,
+      "frequency": 0.7,
+      "common_mistakes": [
+        "mistake.process_gap",
+        "mistake.layer_confusion",
+        "mistake.flow_congestion_confusion"
+      ],
+      "worked_example_strategy": "给出一个端到端通信场景，要求用户从应用层到物理层逐层分析涉及的所有协议和数据单元"
+    },
+    {
+      "archetype_id": "subnet_design",
+      "label": "子网划分设计题",
+      "knowledge_nodes": [
+        "cn.subnetting",
+        "cn.ip_addressing",
+        "cn.nat"
+      ],
+      "difficulty": 4,
+      "frequency": 0.85,
+      "common_mistakes": [
+        "mistake.subnet_calculation_error",
+        "mistake.bit_byte_confusion",
+        "mistake.private_ip"
+      ],
+      "worked_example_strategy": "给出一组主机需求，要求划分子网并列出每个子网的网络地址、广播地址、可用主机范围"
+    },
+    {
+      "archetype_id": "congestion_window_trace",
+      "label": "拥塞窗口变化追踪题",
+      "knowledge_nodes": [
+        "cn.tcp_congestion_control",
+        "cn.tcp_flow_control"
+      ],
+      "difficulty": 4,
+      "frequency": 0.8,
+      "common_mistakes": [
+        "mistake.state_transition_error",
+        "mistake.ssthresh_calc",
+        "mistake.window_variable_confusion"
+      ],
+      "worked_example_strategy": "给定初始 cwnd、ssthresh 和 RTT 数，模拟若干轮传输后 cwnd 的变化轨迹"
+    },
+    {
+      "archetype_id": "routing_table_construction",
+      "label": "路由表构建题",
+      "knowledge_nodes": [
+        "cn.routing_basics",
+        "cn.routing_rip",
+        "cn.routing_ospf"
+      ],
+      "difficulty": 3,
+      "frequency": 0.7,
+      "common_mistakes": [
+        "mistake.longest_prefix_error",
+        "mistake.rip_convergence",
+        "mistake.route_update_confusion"
+      ],
+      "worked_example_strategy": "给出网络拓扑图，要求构建路由表或模拟 RIP 路由更新过程"
+    },
+    {
+      "archetype_id": "frame_analysis",
+      "label": "帧格式分析题",
+      "knowledge_nodes": [
+        "cn.ethernet",
+        "cn.tcp_basics",
+        "cn.udp",
+        "cn.ip_addressing"
+      ],
+      "difficulty": 3,
+      "frequency": 0.6,
+      "common_mistakes": [
+        "mistake.tcp_header_fields",
+        "mistake.mac_confusion",
+        "mistake.layer_data_unit"
+      ],
+      "worked_example_strategy": "给出一段十六进制帧数据，要求解析出源/目的 MAC、IP、端口号等关键字段"
+    },
+    {
+      "archetype_id": "error_detection_calculation",
+      "label": "差错检测计算题",
+      "knowledge_nodes": [
+        "cn.error_detection"
+      ],
+      "difficulty": 3,
+      "frequency": 0.55,
+      "common_mistakes": [
+        "mistake.crc_calculation",
+        "mistake.hamming_distance"
+      ],
+      "worked_example_strategy": "给定位串和生成多项式，手算 CRC 余数，或判断海明距离与检错能力"
+    },
+    {
+      "archetype_id": "arq_analysis",
+      "label": "ARQ 协议分析题",
+      "knowledge_nodes": [
+        "cn.arq_stop_wait",
+        "cn.arq_gbn",
+        "cn.arq_sr"
+      ],
+      "difficulty": 3,
+      "frequency": 0.65,
+      "common_mistakes": [
+        "mistake.gbn_window_size",
+        "mistake.sr_window_constraint",
+        "mistake.stop_wait_utilization"
+      ],
+      "worked_example_strategy": "给定窗口大小和丢帧情况，画出 GBN 或 SR 的发送/接收窗口滑动过程"
+    },
+    {
+      "archetype_id": "comparison_table",
+      "label": "对比分析题",
+      "knowledge_nodes": [
+        "cn.osi_model",
+        "cn.tcp_ip_model",
+        "cn.udp",
+        "cn.tcp_basics",
+        "cn.routing_rip",
+        "cn.routing_ospf",
+        "cn.switching",
+        "cn.virtual_circuit_datagram"
+      ],
+      "difficulty": 2,
+      "frequency": 0.75,
+      "common_mistakes": [
+        "mistake.osi_tcpip_mapping",
+        "mistake.udp_tcp_choice",
+        "mistake.vc_datagram_confusion"
+      ],
+      "worked_example_strategy": "要求列表对比两个概念（如 TCP vs UDP、RIP vs OSPF）在多个维度上的差异"
+    },
+    {
+      "archetype_id": "dns_resolution_trace",
+      "label": "DNS 解析追踪题",
+      "knowledge_nodes": [
+        "cn.dns",
+        "cn.http",
+        "cn.arp"
+      ],
+      "difficulty": 2,
+      "frequency": 0.8,
+      "common_mistakes": [
+        "mistake.dns_recursive_iterative",
+        "mistake.process_gap"
+      ],
+      "worked_example_strategy": "从浏览器输入 URL 到页面显示，追踪 DNS 解析全流程（本地→根→顶级→权威）"
+    },
+    {
+      "archetype_id": "delay_calculation",
+      "label": "网络延迟综合计算题",
+      "knowledge_nodes": [
+        "cn.queuing_delay",
+        "cn.throughput_calculation",
+        "cn.bandwidth_delay_product"
+      ],
+      "difficulty": 3,
+      "frequency": 0.55,
+      "common_mistakes": [
+        "mistake.delay_decomposition",
+        "mistake.bandwidth_unit",
+        "mistake.throughput_formula"
+      ],
+      "worked_example_strategy": "给出带宽、距离、信号传播速度和数据大小，要求计算总延迟并分解各分量"
+    },
+    {
+      "archetype_id": "handshake_state_machine",
+      "label": "TCP 状态机追踪题",
+      "knowledge_nodes": [
+        "cn.tcp_three_way",
+        "cn.tcp_four_way"
+      ],
+      "difficulty": 3,
+      "frequency": 0.75,
+      "common_mistakes": [
+        "mistake.three_way_state",
+        "mistake.four_way_state",
+        "mistake.time_wait"
+      ],
+      "worked_example_strategy": "给出一组报文交互，要求标出每一步的 TCP 状态变化（LISTEN→SYN_SENT→ESTABLISHED→...）"
+    },
+    {
+      "archetype_id": "security_protocol_analysis",
+      "label": "安全协议分析题",
+      "knowledge_nodes": [
+        "cn.encryption_basics",
+        "cn.ssl_tls",
+        "cn.firewall"
+      ],
+      "difficulty": 3,
+      "frequency": 0.4,
+      "common_mistakes": [
+        "mistake.sym_asym_confusion",
+        "mistake.ssl_handshake_order"
+      ],
+      "worked_example_strategy": "给出 HTTPS 通信场景，要求描述加密和认证过程中的关键步骤"
+    },
+    {
+      "archetype_id": "application_protocol_detail",
+      "label": "应用层协议细节题",
+      "knowledge_nodes": [
+        "cn.ftp",
+        "cn.email_protocols",
+        "cn.dhcp",
+        "cn.http_request_response"
+      ],
+      "difficulty": 2,
+      "frequency": 0.5,
+      "common_mistakes": [
+        "mistake.ftp_active_passive",
+        "mistake.smtp_pop3_role",
+        "mistake.dhcp_dora_order"
+      ],
+      "worked_example_strategy": "考察特定应用层协议的工作原理、命令/响应格式或交互流程"
+    },
+    {
+      "archetype_id": "ipv6_transition",
+      "label": "IPv6 过渡与编址题",
+      "knowledge_nodes": [
+        "cn.ipv6_basics",
+        "cn.ip_addressing"
+      ],
+      "difficulty": 2,
+      "frequency": 0.3,
+      "common_mistakes": [
+        "mistake.ipv6_address_shortening"
+      ],
+      "worked_example_strategy": "给出完整 IPv6 地址，要求写出缩写形式；或解释双栈/隧道过渡方案"
+    },
+    {
+      "archetype_id": "layer_pdu_identification",
+      "label": "协议层 PDU 辨析题",
+      "knowledge_nodes": [
+        "cn.osi_model",
+        "cn.protocol_stack_concepts",
+        "cn.ethernet",
+        "cn.tcp_basics",
+        "cn.ip_addressing"
+      ],
+      "difficulty": 2,
+      "frequency": 0.65,
+      "common_mistakes": [
+        "mistake.layer_data_unit",
+        "mistake.encapsulation_order"
+      ],
+      "worked_example_strategy": "给出一段通信描述，要求判断每个阶段对应的协议层及其协议数据单元名称"
+    }
+  ],
+  "mistake_types": [
+    {
+      "mistake_id": "mistake.layer_confusion",
+      "label": "协议层混淆（把某层功能归到另一层）",
+      "related_nodes": [
+        "cn.osi_model",
+        "cn.tcp_ip_model",
+        "cn.protocol_stack_concepts"
+      ],
+      "repair_strategy": "重画 OSI 七层与 TCP/IP 四层对照表，每层只写 2-3 个关键词功能，用对比题强化边界记忆"
+    },
+    {
+      "mistake_id": "mistake.layer_data_unit",
+      "label": "协议数据单元名称混淆",
+      "related_nodes": [
+        "cn.osi_model",
+        "cn.protocol_stack_concepts",
+        "cn.ethernet",
+        "cn.tcp_basics",
+        "cn.ip_addressing"
+      ],
+      "repair_strategy": "制作层名-PDU名称对照卡（帧/分组/报文段/数据报），用闪卡反复测验"
+    },
+    {
+      "mistake_id": "mistake.subnet_calculation_error",
+      "label": "子网划分计算错误",
+      "related_nodes": [
+        "cn.subnetting",
+        "cn.ip_addressing"
+      ],
+      "repair_strategy": "回到二进制与运算基础，用 5 道递进难度子网题重新建立计算肌肉记忆"
+    },
+    {
+      "mistake_id": "mistake.ack_misread",
+      "label": "TCP 确认号理解错误",
+      "related_nodes": [
+        "cn.tcp_reliable_transport",
+        "cn.tcp_basics"
+      ],
+      "repair_strategy": "复习累计确认机制，做 3 道'已知发送序号+长度→求ACK值'的专项练习"
+    },
+    {
+      "mistake_id": "mistake.window_variable_confusion",
+      "label": "混淆 rwnd 与 cwnd",
+      "related_nodes": [
+        "cn.tcp_flow_control",
+        "cn.tcp_congestion_control"
+      ],
+      "repair_strategy": "画双变量对比图：rwnd 由接收方控制（流量控制），cwnd 由发送方控制（拥塞控制），实际窗口 = min(rwnd, cwnd)"
+    },
+    {
+      "mistake_id": "mistake.state_transition_error",
+      "label": "TCP 拥塞控制状态转换错误",
+      "related_nodes": [
+        "cn.tcp_congestion_control"
+      ],
+      "repair_strategy": "画完整 cwnd 变化曲线图，标注每个状态转换的触发条件（超时 vs 3重复ACK）"
+    },
+    {
+      "mistake_id": "mistake.process_gap",
+      "label": "协议交互流程缺失步骤",
+      "related_nodes": [
+        "cn.dns",
+        "cn.http",
+        "cn.tcp_three_way",
+        "cn.arp",
+        "cn.dhcp"
+      ],
+      "repair_strategy": "用完整时序图重新走一遍流程，对每个箭头标注协议名称和报文类型"
+    },
+    {
+      "mistake_id": "mistake.three_way_state",
+      "label": "三次握手状态/标志位错误",
+      "related_nodes": [
+        "cn.tcp_three_way"
+      ],
+      "repair_strategy": "重画三次握手时序图，每步标注 SYN/ACK 标志位、序号 seq、确认号 ack 和状态名"
+    },
+    {
+      "mistake_id": "mistake.four_way_state",
+      "label": "四次挥手状态/过程错误",
+      "related_nodes": [
+        "cn.tcp_four_way"
+      ],
+      "repair_strategy": "画四次挥手完整时序图，重点理解 TIME_WAIT 的 2MSL 等待和为什么需要四次而非三次"
+    },
+    {
+      "mistake_id": "mistake.tcp_state_diagram",
+      "label": "TCP 状态机图连线/触发条件混淆",
+      "related_nodes": [
+        "cn.tcp_three_way",
+        "cn.tcp_four_way"
+      ],
+      "repair_strategy": "先只分两类：连线表示状态能否相邻转换，触发条件写 SYN/ACK/FIN/超时；不要一次背完整图"
+    },
+    {
+      "mistake_id": "mistake.bit_byte_confusion",
+      "label": "位与字节单位混淆",
+      "related_nodes": [
+        "cn.subnetting",
+        "cn.bandwidth_delay_product",
+        "cn.throughput_calculation"
+      ],
+      "repair_strategy": "每次计算前先统一单位，标注 Mbps = Mb/s = 10^6 bps，MB/s = 8 * Mbps"
+    },
+    {
+      "mistake_id": "mistake.flow_congestion_confusion",
+      "label": "流量控制与拥塞控制混淆",
+      "related_nodes": [
+        "cn.tcp_flow_control",
+        "cn.tcp_congestion_control",
+        "cn.flow_control"
+      ],
+      "repair_strategy": "列表对比：流量控制是端到端（rwnd），拥塞控制是全局性（cwnd），二者的目的、机制、变量完全不同"
+    },
+    {
+      "mistake_id": "mistake.osi_tcpip_mapping",
+      "label": "OSI 与 TCP/IP 层次映射错误",
+      "related_nodes": [
+        "cn.osi_model",
+        "cn.tcp_ip_model"
+      ],
+      "repair_strategy": "画双层对照图，明确 TCP/IP 的应用层对应 OSI 的上三层，网络接口层对应 OSI 的下两层"
+    },
+    {
+      "mistake_id": "mistake.encapsulation_order",
+      "label": "封装/解封装顺序错误",
+      "related_nodes": [
+        "cn.protocol_stack_concepts"
+      ],
+      "repair_strategy": "从应用层到物理层依次画出每层添加的头部和尾部，理解封装是自上而下、解封装是自下而上"
+    },
+    {
+      "mistake_id": "mistake.encoding_waveform",
+      "label": "编码方式波形混淆",
+      "related_nodes": [
+        "cn.physical_encoding"
+      ],
+      "repair_strategy": "对比三种编码的波形图：NRZ 无翻转、曼彻斯特每位必翻转、差分曼彻斯特看起始边界"
+    },
+    {
+      "mistake_id": "mistake.mux_type_confusion",
+      "label": "多路复用技术类型混淆",
+      "related_nodes": [
+        "cn.multiplexing"
+      ],
+      "repair_strategy": "按频分/时分/波分/码分四个维度列表，每个写一个典型应用场景"
+    },
+    {
+      "mistake_id": "mistake.crc_calculation",
+      "label": "CRC 计算错误（模2除法）",
+      "related_nodes": [
+        "cn.error_detection"
+      ],
+      "repair_strategy": "重新手算 CRC 例题，注意模2除法是异或运算不进位不借位"
+    },
+    {
+      "mistake_id": "mistake.hamming_distance",
+      "label": "海明距离与检错能力关系混淆",
+      "related_nodes": [
+        "cn.error_detection"
+      ],
+      "repair_strategy": "记住核心公式：要检测 d 位错需海明距离 d+1，要纠正 d 位错需海明距离 2d+1"
+    },
+    {
+      "mistake_id": "mistake.window_size_error",
+      "label": "滑动窗口大小计算错误",
+      "related_nodes": [
+        "cn.flow_control"
+      ],
+      "repair_strategy": "理解窗口大小与序号空间的关系，做 2 道窗口利用率计算题"
+    },
+    {
+      "mistake_id": "mistake.stop_wait_utilization",
+      "label": "停止-等待协议利用率公式记错",
+      "related_nodes": [
+        "cn.arq_stop_wait"
+      ],
+      "repair_strategy": "推导 U = Tf/(Tf+2Tp)，理解分母为什么是 2Tp（往返传播延迟）"
+    },
+    {
+      "mistake_id": "mistake.ack_numbering",
+      "label": "ACK 编号方式混淆",
+      "related_nodes": [
+        "cn.arq_stop_wait",
+        "cn.arq_gbn",
+        "cn.arq_sr"
+      ],
+      "repair_strategy": "区分停止-等待的交替编号（0/1）、GBN 的累计确认、SR 的独立确认"
+    },
+    {
+      "mistake_id": "mistake.gbn_window_size",
+      "label": "GBN 发送窗口大小限制记错",
+      "related_nodes": [
+        "cn.arq_gbn"
+      ],
+      "repair_strategy": "记住 GBN 发送窗口 <= 2^n - 1（n 为序号位数），理解为什么不是 2^n"
+    },
+    {
+      "mistake_id": "mistake.sr_window_constraint",
+      "label": "SR 窗口大小约束记错",
+      "related_nodes": [
+        "cn.arq_sr"
+      ],
+      "repair_strategy": "记住 SR 发送窗口 + 接收窗口 <= 2^n，且发送窗口 <= 接收窗口"
+    },
+    {
+      "mistake_id": "mistake.csma_cd_ca_confusion",
+      "label": "CSMA/CD 与 CSMA/CA 混淆",
+      "related_nodes": [
+        "cn.mac_protocols"
+      ],
+      "repair_strategy": "CD=有线以太网检测冲突，CA=无线WiFi避免冲突，记住应用场景即可区分"
+    },
+    {
+      "mistake_id": "mistake.collision_domain",
+      "label": "冲突域与广播域混淆",
+      "related_nodes": [
+        "cn.mac_protocols"
+      ],
+      "repair_strategy": "集线器不隔冲突域、交换机隔冲突域、路由器隔广播域"
+    },
+    {
+      "mistake_id": "mistake.mac_confusion",
+      "label": "MAC 地址概念错误",
+      "related_nodes": [
+        "cn.ethernet",
+        "cn.arp"
+      ],
+      "repair_strategy": "记住 MAC 是 48 位（6字节），是链路层地址，固化在网卡中但可软件修改"
+    },
+    {
+      "mistake_id": "mistake.min_frame_calc",
+      "label": "以太网最小帧长计算错误",
+      "related_nodes": [
+        "cn.ethernet"
+      ],
+      "repair_strategy": "理解 64 字节最小帧长的由来：与 2Tp 传播延迟和 10Mbps 带宽有关"
+    },
+    {
+      "mistake_id": "mistake.ip_class_range",
+      "label": "IP 类地址范围记错",
+      "related_nodes": [
+        "cn.ip_addressing"
+      ],
+      "repair_strategy": "默写 A(1-126)/B(128-191)/C(192-223)/D(224-239)/E(240-255) 各类范围和默认掩码"
+    },
+    {
+      "mistake_id": "mistake.private_ip",
+      "label": "私有 IP 地址段记错",
+      "related_nodes": [
+        "cn.ip_addressing",
+        "cn.subnetting"
+      ],
+      "repair_strategy": "记忆三类私有地址：10.x.x.x、172.16-31.x.x、192.168.x.x"
+    },
+    {
+      "mistake_id": "mistake.nat_type_confusion",
+      "label": "NAT 类型混淆（SNAT/DNAT/NAPT）",
+      "related_nodes": [
+        "cn.nat"
+      ],
+      "repair_strategy": "SNAT 出方向替换源地址、DNAT 入方向替换目的地址、NAPT 加上端口映射"
+    },
+    {
+      "mistake_id": "mistake.arp_gratuitous",
+      "label": "ARP 工作原理/免费 ARP 混淆",
+      "related_nodes": [
+        "cn.arp"
+      ],
+      "repair_strategy": "理解 ARP 是通过广播请求、单播应答来解析 IP→MAC，免费 ARP 用于 IP 冲突检测"
+    },
+    {
+      "mistake_id": "mistake.icmp_type_code",
+      "label": "ICMP 报文类型/代码记错",
+      "related_nodes": [
+        "cn.icmp"
+      ],
+      "repair_strategy": "重点记忆：类型8/0=回送请求/应答、类型3=目标不可达、类型5=重定向、类型11=超时"
+    },
+    {
+      "mistake_id": "mistake.ipv6_address_shortening",
+      "label": "IPv6 地址缩写规则错误",
+      "related_nodes": [
+        "cn.ipv6_basics"
+      ],
+      "repair_strategy": "练习缩写规则：每组前导零可省、连续全零组可用::替代（只能用一次）"
+    },
+    {
+      "mistake_id": "mistake.longest_prefix_error",
+      "label": "最长前缀匹配规则应用错误",
+      "related_nodes": [
+        "cn.routing_basics"
+      ],
+      "repair_strategy": "做 3 道路由表查找题，每次把所有匹配项列出来再选前缀最长的"
+    },
+    {
+      "mistake_id": "mistake.route_update_confusion",
+      "label": "路由更新算法混淆",
+      "related_nodes": [
+        "cn.routing_basics",
+        "cn.routing_rip",
+        "cn.routing_ospf"
+      ],
+      "repair_strategy": "对比表：RIP 用距离向量+Bellman-Ford、OSPF 用链路状态+Dijkstra"
+    },
+    {
+      "mistake_id": "mistake.rip_convergence",
+      "label": "RIP 收敛/慢收敛问题理解错误",
+      "related_nodes": [
+        "cn.routing_rip"
+      ],
+      "repair_strategy": "理解好消息传得快、坏消息传得慢的原因，了解水平分裂和毒性逆转措施"
+    },
+    {
+      "mistake_id": "mistake.ospf_area_concept",
+      "label": "OSPF 区域概念混淆",
+      "related_nodes": [
+        "cn.routing_ospf"
+      ],
+      "repair_strategy": "理解 OSPF 分区域是为了减少 LSA 泛洪范围，必须有骨干区域 Area 0"
+    },
+    {
+      "mistake_id": "mistake.bgp_ebgp_ibgp",
+      "label": "eBGP 与 iBGP 混淆",
+      "related_nodes": [
+        "cn.routing_bgp"
+      ],
+      "repair_strategy": "eBGP 连接不同自治系统、iBGP 在同一自治系统内传递路由"
+    },
+    {
+      "mistake_id": "mistake.udp_tcp_choice",
+      "label": "UDP 与 TCP 选择判断错误",
+      "related_nodes": [
+        "cn.udp",
+        "cn.tcp_basics"
+      ],
+      "repair_strategy": "列表对比：TCP 可靠连接导向、UDP 快速无连接；实时/广播场景选 UDP"
+    },
+    {
+      "mistake_id": "mistake.tcp_header_fields",
+      "label": "TCP 首部字段记错",
+      "related_nodes": [
+        "cn.tcp_basics"
+      ],
+      "repair_strategy": "重点记住：20字节固定部分、序号(4B)、确认号(4B)、6个标志位(URG/ACK/PSH/RST/SYN/FIN)"
+    },
+    {
+      "mistake_id": "mistake.port_number",
+      "label": "端口号概念或范围记错",
+      "related_nodes": [
+        "cn.tcp_basics",
+        "cn.transport_multiplexing"
+      ],
+      "repair_strategy": "熟知端口0-1023、注册端口1024-49151、临时端口49152-65535"
+    },
+    {
+      "mistake_id": "mistake.syn_flood",
+      "label": "三次握手安全攻击（SYN Flood）理解错误",
+      "related_nodes": [
+        "cn.tcp_three_way"
+      ],
+      "repair_strategy": "理解攻击原理：大量伪造 SYN 占满半连接队列，了解 SYN Cookie 防御机制"
+    },
+    {
+      "mistake_id": "mistake.time_wait",
+      "label": "TIME_WAIT 状态/2MSL 理解错误",
+      "related_nodes": [
+        "cn.tcp_four_way"
+      ],
+      "repair_strategy": "理解 2MSL 等待的两个原因：确保最后一个 ACK 到达、等待残留报文消失"
+    },
+    {
+      "mistake_id": "mistake.cumulative_ack",
+      "label": "累计确认机制理解错误",
+      "related_nodes": [
+        "cn.tcp_reliable_transport"
+      ],
+      "repair_strategy": "累计确认意味着 ACK=N 表示 N 之前所有数据已正确收到，不逐个确认"
+    },
+    {
+      "mistake_id": "mistake.ssthresh_calc",
+      "label": "ssthresh 计算错误",
+      "related_nodes": [
+        "cn.tcp_congestion_control"
+      ],
+      "repair_strategy": "记住：超时时 ssthresh=cwnd/2, cwnd=1；3重复ACK时 ssthresh=cwnd/2, cwnd=ssthresh+3"
+    },
+    {
+      "mistake_id": "mistake.dns_recursive_iterative",
+      "label": "DNS 递归与迭代查询混淆",
+      "related_nodes": [
+        "cn.dns"
+      ],
+      "repair_strategy": "递归=客户端问本地DNS，本地DNS全权负责；迭代=本地DNS依次问根/顶级/权威"
+    },
+    {
+      "mistake_id": "mistake.http_version_diff",
+      "label": "HTTP 版本差异混淆",
+      "related_nodes": [
+        "cn.http"
+      ],
+      "repair_strategy": "1.0 每次新建连接、1.1 默认 keep-alive + 管道化、2.0 多路复用+二进制帧"
+    },
+    {
+      "mistake_id": "mistake.ftp_active_passive",
+      "label": "FTP 主动/被动模式混淆",
+      "related_nodes": [
+        "cn.ftp"
+      ],
+      "repair_strategy": "主动模式=服务器主动连客户端数据端口、被动模式=客户端连服务器开放的数据端口"
+    },
+    {
+      "mistake_id": "mistake.smtp_pop3_role",
+      "label": "SMTP 与 POP3/IMAP 角色混淆",
+      "related_nodes": [
+        "cn.email_protocols"
+      ],
+      "repair_strategy": "SMTP 只管发送推送、POP3/IMAP 管接收拉取，SMTP 在发送方和接收方邮件服务器之间也会用"
+    },
+    {
+      "mistake_id": "mistake.dhcp_dora_order",
+      "label": "DHCP 四步交互顺序记错",
+      "related_nodes": [
+        "cn.dhcp"
+      ],
+      "repair_strategy": "记忆 DORA 口诀：Discover→Offer→Request→ACK"
+    },
+    {
+      "mistake_id": "mistake.sym_asym_confusion",
+      "label": "对称与非对称加密混淆",
+      "related_nodes": [
+        "cn.encryption_basics"
+      ],
+      "repair_strategy": "对称=加解密用同一密钥（快）、非对称=公钥加密私钥解密（安全但慢）"
+    },
+    {
+      "mistake_id": "mistake.ssl_handshake_order",
+      "label": "SSL/TLS 握手顺序错误",
+      "related_nodes": [
+        "cn.ssl_tls"
+      ],
+      "repair_strategy": "画完整握手流程：ClientHello→ServerHello+证书→密钥交换→ChangeCipherSpec→Finished"
+    },
+    {
+      "mistake_id": "mistake.firewall_type",
+      "label": "防火墙类型/工作层次混淆",
+      "related_nodes": [
+        "cn.firewall"
+      ],
+      "repair_strategy": "包过滤看网络层IP/端口、状态检测跟踪连接状态、应用层网关理解应用协议"
+    },
+    {
+      "mistake_id": "mistake.bdp_calculation",
+      "label": "带宽延迟积（BDP）计算错误",
+      "related_nodes": [
+        "cn.bandwidth_delay_product"
+      ],
+      "repair_strategy": "BDP = 带宽(bps) × RTT(s)，注意单位统一，结果单位是 bit"
+    },
+    {
+      "mistake_id": "mistake.bandwidth_unit",
+      "label": "带宽单位换算错误",
+      "related_nodes": [
+        "cn.bandwidth_delay_product",
+        "cn.throughput_calculation",
+        "cn.queuing_delay"
+      ],
+      "repair_strategy": "1 Mbps = 10^6 bps，1 Gbps = 10^9 bps，字节与位差8倍"
+    },
+    {
+      "mistake_id": "mistake.throughput_formula",
+      "label": "吞吐量公式记错",
+      "related_nodes": [
+        "cn.throughput_calculation"
+      ],
+      "repair_strategy": "吞吐量 = 窗口大小 / RTT，或考虑链路瓶颈带宽取 min"
+    },
+    {
+      "mistake_id": "mistake.delay_decomposition",
+      "label": "网络延迟分解错误",
+      "related_nodes": [
+        "cn.queuing_delay"
+      ],
+      "repair_strategy": "总延迟 = 处理延迟 + 排队延迟 + 传输延迟(L/R) + 传播延迟(d/s)，各分量含义要分清"
+    },
+    {
+      "mistake_id": "mistake.switching_comparison",
+      "label": "三种交换方式对比错误",
+      "related_nodes": [
+        "cn.switching"
+      ],
+      "repair_strategy": "电路交换=独占通路、分组交换=存储转发按分组、报文交换=整个报文存储转发"
+    },
+    {
+      "mistake_id": "mistake.vc_datagram_confusion",
+      "label": "虚电路与数据报混淆",
+      "related_nodes": [
+        "cn.virtual_circuit_datagram"
+      ],
+      "repair_strategy": "虚电路=先建连接再有路径（如ATM）、数据报=每个分组独立路由（如IP）"
+    },
+    {
+      "mistake_id": "mistake.multiplexing_concept",
+      "label": "传输层复用分用概念混淆",
+      "related_nodes": [
+        "cn.transport_multiplexing"
+      ],
+      "repair_strategy": "复用=多个进程共用一个传输层协议、分用=根据端口号将数据分发给正确进程"
+    },
+    {
+      "mistake_id": "mistake.http_status_code",
+      "label": "HTTP 状态码分类记错",
+      "related_nodes": [
+        "cn.http_request_response"
+      ],
+      "repair_strategy": "2xx成功、3xx重定向、4xx客户端错误、5xx服务端错误；重点记200/301/304/404/500"
+    }
+  ],
+  "paths": {
+    "minimum_pass": {
+      "label": "保过路线（60分底线）",
+      "description": "聚焦高频必考知识点，优先确保基础分不丢",
+      "ordered_nodes": [
+        "cn.osi_model",
+        "cn.tcp_ip_model",
+        "cn.protocol_stack_concepts",
+        "cn.ip_addressing",
+        "cn.subnetting",
+        "cn.arp",
+        "cn.routing_basics",
+        "cn.udp",
+        "cn.tcp_basics",
+        "cn.tcp_three_way",
+        "cn.tcp_four_way",
+        "cn.tcp_reliable_transport",
+        "cn.tcp_flow_control",
+        "cn.tcp_congestion_control",
+        "cn.dns",
+        "cn.http",
+        "cn.flow_control",
+        "cn.error_detection",
+        "cn.transport_multiplexing"
+      ],
+      "drop_candidates": [
+        "cn.physical_encoding",
+        "cn.multiplexing",
+        "cn.ipv6_basics",
+        "cn.routing_bgp",
+        "cn.ftp",
+        "cn.email_protocols",
+        "cn.queuing_delay",
+        "cn.firewall"
+      ]
+    },
+    "score_max": {
+      "label": "满分路线（全面覆盖）",
+      "description": "覆盖所有知识节点，适合基础较好、时间充裕、目标高分的用户",
+      "ordered_nodes": [
+        "cn.osi_model",
+        "cn.tcp_ip_model",
+        "cn.protocol_stack_concepts",
+        "cn.switching",
+        "cn.physical_encoding",
+        "cn.multiplexing",
+        "cn.error_detection",
+        "cn.flow_control",
+        "cn.arq_stop_wait",
+        "cn.arq_gbn",
+        "cn.arq_sr",
+        "cn.mac_protocols",
+        "cn.ethernet",
+        "cn.ip_addressing",
+        "cn.subnetting",
+        "cn.nat",
+        "cn.arp",
+        "cn.icmp",
+        "cn.ipv6_basics",
+        "cn.virtual_circuit_datagram",
+        "cn.routing_basics",
+        "cn.routing_rip",
+        "cn.routing_ospf",
+        "cn.routing_bgp",
+        "cn.udp",
+        "cn.tcp_basics",
+        "cn.tcp_three_way",
+        "cn.tcp_four_way",
+        "cn.tcp_reliable_transport",
+        "cn.tcp_flow_control",
+        "cn.tcp_congestion_control",
+        "cn.transport_multiplexing",
+        "cn.dns",
+        "cn.http",
+        "cn.http_request_response",
+        "cn.ftp",
+        "cn.email_protocols",
+        "cn.dhcp",
+        "cn.encryption_basics",
+        "cn.ssl_tls",
+        "cn.firewall",
+        "cn.bandwidth_delay_product",
+        "cn.throughput_calculation",
+        "cn.queuing_delay"
+      ]
+    }
+  },
+  "strategy_presets": {
+    "7d": {
+      "label": "7天冲刺策略",
+      "description": "紧急生存模式：只攻高频必考点，每天保证一次闭卷输出",
+      "daily_ratio": {
+        "new_learning": 0.25,
+        "retrieval_practice": 0.45,
+        "targeted_drill": 0.2,
+        "review_and_adjust": 0.1
+      },
+      "daily_targets": {
+        "max_new_nodes": 3,
+        "retrieval_sessions": 2,
+        "minimum_output": "每天至少完成一次闭卷输出或3题小测"
+      },
+      "phase_plan": [
+        {
+          "phase": 1,
+          "days": "1-2",
+          "focus": "基础架构 + IP 子网划分",
+          "nodes": [
+            "cn.osi_model",
+            "cn.tcp_ip_model",
+            "cn.protocol_stack_concepts",
+            "cn.ip_addressing",
+            "cn.subnetting"
+          ],
+          "output": "闭卷默写七层模型 + 完成3道子网计算题"
+        },
+        {
+          "phase": 2,
+          "days": "3-4",
+          "focus": "TCP 可靠传输 + 拥塞控制",
+          "nodes": [
+            "cn.tcp_basics",
+            "cn.tcp_three_way",
+            "cn.tcp_four_way",
+            "cn.tcp_reliable_transport",
+            "cn.tcp_flow_control",
+            "cn.tcp_congestion_control"
+          ],
+          "output": "画出完整的三次握手/四次挥手/拥塞窗口变化图"
+        },
+        {
+          "phase": 3,
+          "days": "5-6",
+          "focus": "应用层 + 网络层核心",
+          "nodes": [
+            "cn.dns",
+            "cn.http",
+            "cn.routing_basics",
+            "cn.arp",
+            "cn.error_detection",
+            "cn.flow_control",
+            "cn.udp",
+            "cn.transport_multiplexing"
+          ],
+          "output": "完成一次综合场景追踪题（从输入URL到页面显示）"
+        },
+        {
+          "phase": 4,
+          "days": "7",
+          "focus": "模拟验收 + 薄弱修复",
+          "nodes": [],
+          "output": "完成一次完整模拟测验，针对性补强错题涉及的知识点"
+        }
+      ]
+    },
+    "14d": {
+      "label": "14天冲刺策略",
+      "description": "稳步推进模式：两轮复习 + 间隔检索 + 模拟检验",
+      "daily_ratio": {
+        "new_learning": 0.3,
+        "retrieval_practice": 0.3,
+        "spaced_review": 0.25,
+        "targeted_drill": 0.15
+      },
+      "daily_targets": {
+        "max_new_nodes": 4,
+        "retrieval_sessions": 2,
+        "minimum_output": "每天完成至少一次闭卷输出或阶段小测"
+      },
+      "phase_plan": [
+        {
+          "phase": 1,
+          "days": "1-3",
+          "focus": "网络体系结构 + 物理层 + 数据链路层",
+          "nodes": [
+            "cn.osi_model",
+            "cn.tcp_ip_model",
+            "cn.protocol_stack_concepts",
+            "cn.switching",
+            "cn.physical_encoding",
+            "cn.multiplexing",
+            "cn.error_detection",
+            "cn.flow_control",
+            "cn.arq_stop_wait",
+            "cn.arq_gbn"
+          ],
+          "output": "完成分层模型对比表 + 手算一道 CRC 题 + ARQ 窗口分析"
+        },
+        {
+          "phase": 2,
+          "days": "4-6",
+          "focus": "网络层核心",
+          "nodes": [
+            "cn.ip_addressing",
+            "cn.subnetting",
+            "cn.nat",
+            "cn.arp",
+            "cn.icmp",
+            "cn.mac_protocols",
+            "cn.ethernet",
+            "cn.routing_basics",
+            "cn.routing_rip",
+            "cn.routing_ospf"
+          ],
+          "output": "完成5道子网划分题 + 构建一张路由表 + RIP/OSPF对比表"
+        },
+        {
+          "phase": 3,
+          "days": "7-9",
+          "focus": "传输层核心",
+          "nodes": [
+            "cn.udp",
+            "cn.tcp_basics",
+            "cn.tcp_three_way",
+            "cn.tcp_four_way",
+            "cn.tcp_reliable_transport",
+            "cn.tcp_flow_control",
+            "cn.tcp_congestion_control",
+            "cn.transport_multiplexing",
+            "cn.arq_sr"
+          ],
+          "output": "画出完整 TCP 状态转换图 + 拥塞窗口变化图 + 序号/确认号计算3题"
+        },
+        {
+          "phase": 4,
+          "days": "10-11",
+          "focus": "应用层 + 安全",
+          "nodes": [
+            "cn.dns",
+            "cn.http",
+            "cn.http_request_response",
+            "cn.ftp",
+            "cn.email_protocols",
+            "cn.dhcp",
+            "cn.encryption_basics",
+            "cn.ssl_tls",
+            "cn.firewall"
+          ],
+          "output": "画 DNS 解析流程图 + HTTP 请求响应分析 + 安全协议对比"
+        },
+        {
+          "phase": 5,
+          "days": "12-13",
+          "focus": "性能计算 + 综合复习",
+          "nodes": [
+            "cn.bandwidth_delay_product",
+            "cn.throughput_calculation",
+            "cn.queuing_delay",
+            "cn.ipv6_basics",
+            "cn.routing_bgp",
+            "cn.virtual_circuit_datagram"
+          ],
+          "output": "完成3道延迟/吞吐量计算题 + 综合场景分析题"
+        },
+        {
+          "phase": 6,
+          "days": "14",
+          "focus": "最终模拟 + 错题修复",
+          "nodes": [],
+          "output": "完成一次完整模拟测验，考前最后补强"
+        }
+      ]
+    }
+  },
+  "task_card_templates": [
+    {
+      "template_id": "concept_recall_card",
+      "label": "概念闭卷复述卡",
+      "description": "闭卷默写核心概念和对比表，用输出倒逼记忆",
+      "steps": [
+        "看一眼知识点列表（不展开内容）",
+        "闭卷默写该知识点核心内容",
+        "对照课本/笔记标记遗漏项",
+        "用红笔补写遗漏，再默写一次"
+      ],
+      "done_criteria": "闭卷复述覆盖90%以上关键点，遗漏不超过2个",
+      "duration_minutes": 20
+    },
+    {
+      "template_id": "calculation_drill_card",
+      "label": "计算专项训练卡",
+      "description": "针对子网划分、序号计算、延迟计算等高频计算题进行集中训练",
+      "steps": [
+        "复习相关公式和解题步骤",
+        "独立完成3道计算题（不看答案）",
+        "对照答案逐步骤核对",
+        "标记错误步骤并重做错题"
+      ],
+      "done_criteria": "3道题全部正确，或错题订正后能独立重做正确",
+      "duration_minutes": 35
+    },
+    {
+      "template_id": "process_trace_card",
+      "label": "协议流程追踪卡",
+      "description": "画出完整协议交互时序图，确保每一步都清晰",
+      "steps": [
+        "阅读协议交互场景描述",
+        "画出完整的时序图（标注协议名、报文类型、序号/标志位）",
+        "对照标准时序图检查遗漏",
+        "闭卷重画一次"
+      ],
+      "done_criteria": "闭卷画出的时序图无关键步骤遗漏，标志位和序号正确",
+      "duration_minutes": 25
+    },
+    {
+      "template_id": "comparison_table_card",
+      "label": "对比分析表卡",
+      "description": "用表格形式对比容易混淆的概念对（TCP/UDP、RIP/OSPF等）",
+      "steps": [
+        "列出需要对比的两个概念",
+        "闭卷填写对比维度（原理、适用场景、优缺点、关键参数）",
+        "对照资料补充遗漏维度",
+        "用一句话总结核心区别"
+      ],
+      "done_criteria": "对比表至少覆盖5个维度，核心区别表述准确",
+      "duration_minutes": 15
+    },
+    {
+      "template_id": "integrated_scenario_card",
+      "label": "综合场景分析卡",
+      "description": "从端到端的角度分析一个完整通信场景，串联多层知识",
+      "steps": [
+        "阅读场景描述（如'在浏览器输入一个新域名访问网站'）",
+        "按层次从上到下列出涉及的每个协议和交互",
+        "画出完整的数据流路径（含DNS→TCP→HTTP→路由→ARP等）",
+        "检查是否有遗漏的中间步骤"
+      ],
+      "done_criteria": "完整列出从应用层到物理层的所有关键协议步骤，无遗漏",
+      "duration_minutes": 30
+    }
+  ],
+  "checkpoint_rules": {
+    "pass_threshold": 60,
+    "high_score_threshold": 80,
+    "mastery_minimum": {
+      "minimum_pass_nodes": 65,
+      "score_max_nodes": 75
+    },
+    "checkpoint_intervals": {
+      "7d": [
+        3,
+        5,
+        7
+      ],
+      "14d": [
+        4,
+        7,
+        10,
+        14
+      ]
+    },
+    "upgrade_criteria": {
+      "minimum_pass_to_score_max": {
+        "condition": "所有 minimum_pass 节点掌握度 >= 70%",
+        "action": "unlock score_max drop_candidates 节点"
+      }
+    },
+    "downgrade_criteria": {
+      "score_max_to_minimum_pass": {
+        "condition": "连续2次检查点 minimum_pass 节点掌握度低于 55%",
+        "action": "回退到 minimum_pass 路线，暂停 score_max 专项内容"
+      }
+    }
+  },
+  "last_24h_strategy": {
+    "label": "考前24小时策略",
+    "description": "考前最后一天的复习策略，聚焦最高收益内容和心态调整",
+    "focus": [
+      {
+        "node_id": "cn.osi_model",
+        "label": "OSI 七层模型",
+        "recommended_action": "闭卷默写七层顺序、每层核心职责和常见设备/协议归属"
+      },
+      {
+        "node_id": "cn.tcp_ip_model",
+        "label": "TCP/IP 四层模型",
+        "recommended_action": "对照 OSI 模型复述 TCP/IP 四层职责和协议映射"
+      },
+      {
+        "node_id": "cn.subnetting",
+        "label": "子网划分",
+        "recommended_action": "快速重做掩码、主机数和网段范围的典型判断题"
+      },
+      {
+        "node_id": "cn.routing_basics",
+        "label": "路由基础",
+        "recommended_action": "复述最长前缀匹配、路由表查找和默认路由判断"
+      },
+      {
+        "node_id": "cn.tcp_three_way",
+        "label": "TCP 三次握手",
+        "recommended_action": "画出 SYN、SYN-ACK、ACK 时序和状态变化"
+      },
+      {
+        "node_id": "cn.tcp_four_way",
+        "label": "TCP 四次挥手",
+        "recommended_action": "画出 FIN/ACK 时序，特别标出 TIME_WAIT 的作用"
+      },
+      {
+        "node_id": "cn.tcp_reliable_transport",
+        "label": "TCP 可靠传输",
+        "recommended_action": "口头解释序号、确认、重传和滑动窗口如何配合"
+      },
+      {
+        "node_id": "cn.tcp_congestion_control",
+        "label": "TCP 拥塞控制",
+        "recommended_action": "默写慢开始、拥塞避免、快重传和快恢复的触发条件"
+      },
+      {
+        "node_id": "cn.dns",
+        "label": "DNS 解析流程",
+        "recommended_action": "复述递归/迭代查询流程和缓存命中时的路径变化"
+      },
+      {
+        "node_id": "cn.http",
+        "label": "HTTP 基础",
+        "recommended_action": "对比请求/响应报文、常见状态码和连接复用要点"
+      }
+    ],
+    "mock_exam": {
+      "duration_minutes": 30,
+      "question_count": 8,
+      "coverage_labels": [
+        "子网划分",
+        "TCP 时序/状态",
+        "拥塞控制",
+        "路由基础",
+        "DNS/HTTP 流程"
+      ],
+      "instruction": "做一套 6-8 题短模拟，覆盖子网划分、TCP 状态变化、拥塞控制、路由基础和 DNS/HTTP 流程"
+    },
+    "schedule": [
+      {
+        "time_block": "上午",
+        "duration_minutes": 90,
+        "focus": "高频核心概念速览",
+        "activities": [
+          "快速过一遍 OSI/TCP-IP 分层模型要点",
+          "默写 TCP 三次握手/四次挥手时序图",
+          "复习子网划分核心公式和常见题型"
+        ]
+      },
+      {
+        "time_block": "下午",
+        "duration_minutes": 90,
+        "focus": "薄弱知识点精准补强",
+        "activities": [
+          "只看错题本中标记的高频错误",
+          "针对薄弱节点做1-2道针对性练习",
+          "不学习新知识点"
+        ]
+      },
+      {
+        "time_block": "傍晚",
+        "duration_minutes": 45,
+        "focus": "模拟验收",
+        "activities": [
+          "做一套精简模拟题（6-8题覆盖主要题型）",
+          "只检查不深度扩展"
+        ]
+      },
+      {
+        "time_block": "晚间",
+        "duration_minutes": 30,
+        "focus": "轻量复习 + 收尾",
+        "activities": [
+          "过一遍关键公式和对比表",
+          "准备考试用品",
+          "保证充足睡眠，不熬夜"
+        ]
+      }
+    ],
+    "forbidden_actions": [
+      "不学习全新的知识点",
+      "不做耗时超过15分钟的单题",
+      "不熬夜复习"
+    ]
+  },
+  "aurora_rules": {
+    "medium_aurora": {
+      "label": "中等强度自适应介入",
+      "trigger_conditions": [
+        "连续2次检索练习正确率低于 60%",
+        "单个知识节点掌握度连续3天无提升",
+        "用户主动表达'学不进去'或'太抽象'"
+      ],
+      "actions": [
+        "自动降低该节点关联题目的难度",
+        "增加概念对比和类比类任务卡",
+        "缩短单次学习时长，增加间隔"
+      ]
+    },
+    "full_aurora": {
+      "label": "全量自适应介入",
+      "trigger_conditions": [
+        "整体估计分数低于 40%",
+        "连续3次检查点未达到最低通过阈值",
+        "单个核心节点掌握度低于 30%",
+        "用户连续3天未完成任何检索练习"
+      ],
+      "actions": [
+        "回退到 minimum_pass 路线",
+        "每天只安排1个核心知识点",
+        "增加概念复述和对比分析任务卡比例",
+        "触发主动鼓励和节奏调整建议",
+        "考虑调整目标模式为'保过'"
+      ]
+    }
+  },
+  "priority_formula": "priority = exam_weight * frequency * (1 - current_mastery) * trainability * (minimum_pass_required ? 1.3 : 1.0) * (days_left <= 7 && !minimum_pass_required ? 0.6 : 1.0)",
+  "priority_matrix": {
+    "formula": "priority = exam_weight * frequency * gap * trainability / (time_cost * difficulty)",
+    "variables": {
+      "gap": "1.0 - current_mastery (defaults to 1.0 if unknown)",
+      "time_pressure_boost": "1.3 if days_left<=3, 1.1 if days_left<=7, else 1.0",
+      "minimum_pass_boost": "1.2 if minimum_pass_required else 1.0"
+    },
+    "note": "Higher score = higher priority. Schedule minimum_pass nodes first."
+  }
+}

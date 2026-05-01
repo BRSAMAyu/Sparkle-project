@@ -73,6 +73,101 @@ async def test_tracker_handles_task_started_transition(
 
 
 @pytest.mark.asyncio
+async def test_tracker_shadow_computes_without_persisting_state(
+    db_session, test_user, monkeypatch
+) -> None:
+    monkeypatch.setattr(cache_service, "redis", None)
+    cache_service._local_cache.clear()
+    service = AuroraStage29SRLKillSwitchService()
+    await service.ordered_startup("shadow")
+    tracker = SRLPhaseTrackerService(db_session)
+
+    state = await tracker.handle_transition_event(
+        {
+            "event_type": "srl.phase.transition",
+            "user_id": str(test_user.id),
+            "trigger_event_type": "task.started",
+            "evidence_id": "task:shadow",
+        }
+    )
+
+    assert state is not None
+    assert state.current_phase == SRLPhase.PERFORMANCE
+    record = (
+        await db_session.execute(
+            select(SRLPhaseStateRecord).where(
+                SRLPhaseStateRecord.user_id == test_user.id
+            )
+        )
+    ).scalar_one_or_none()
+    assert record is None
+
+
+@pytest.mark.asyncio
+async def test_tracker_shadow_get_current_phase_does_not_persist_coldstart(
+    db_session, test_user, monkeypatch
+) -> None:
+    monkeypatch.setattr(cache_service, "redis", None)
+    cache_service._local_cache.clear()
+    service = AuroraStage29SRLKillSwitchService()
+    await service.ordered_startup("shadow")
+    db_session.add(
+        UserPreferencesCenter(
+            user_id=test_user.id,
+            explicit={},
+            inferred={},
+            traits_prior={
+                "conscientiousness": {
+                    "value": 0.8,
+                    "confidence": 0.2,
+                    "evidence_count": 3,
+                    "source": "merged",
+                }
+            },
+        )
+    )
+    await db_session.commit()
+
+    state = await SRLPhaseTrackerService(db_session).get_current_phase(test_user.id)
+
+    assert state.current_phase == SRLPhase.FORETHOUGHT
+    record = (
+        await db_session.execute(
+            select(SRLPhaseStateRecord).where(
+                SRLPhaseStateRecord.user_id == test_user.id
+            )
+        )
+    ).scalar_one_or_none()
+    assert record is None
+
+
+@pytest.mark.asyncio
+async def test_tracker_shadow_force_reset_does_not_persist_state(
+    db_session, test_user, monkeypatch
+) -> None:
+    monkeypatch.setattr(cache_service, "redis", None)
+    cache_service._local_cache.clear()
+    service = AuroraStage29SRLKillSwitchService()
+    await service.ordered_startup("shadow")
+
+    state = await SRLPhaseTrackerService(db_session).force_reset(
+        test_user.id,
+        SRLPhase.SELF_REFLECTION,
+        "shadow-reset",
+    )
+
+    assert state.current_phase == SRLPhase.SELF_REFLECTION
+    record = (
+        await db_session.execute(
+            select(SRLPhaseStateRecord).where(
+                SRLPhaseStateRecord.user_id == test_user.id
+            )
+        )
+    ).scalar_one_or_none()
+    assert record is None
+
+
+@pytest.mark.asyncio
 async def test_tracker_rejects_illegal_jump(db_session, test_user, monkeypatch) -> None:
     await _enable_live_modes(monkeypatch)
     tracker = SRLPhaseTrackerService(db_session)

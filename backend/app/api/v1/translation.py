@@ -180,9 +180,11 @@ async def translate_text(
             )
 
     except Exception as e:
+        from loguru import logger as log
+        log.warning("Translation endpoint error: {} — {}", type(e).__name__, e)
         raise HTTPException(
             status_code=500,
-            detail="Translation service unavailable",
+            detail=f"Translation service unavailable: {type(e).__name__}",
         )
 
 

@@ -80,6 +80,8 @@ class IngestionService:
                 return self._process_docx(file_path)
             elif ext == ".pptx":
                 return self._process_pptx(file_path)
+            elif ext in [".md", ".markdown", ".txt"]:
+                return self._process_text_like(file_path)
             elif ext in [".jpg", ".jpeg", ".png", ".webp", ".gif"]:
                 return self._process_image(file_path, options)
             else:
@@ -438,6 +440,71 @@ class IngestionService:
         except Exception as e:
             logger.error(f"Failed to process image {path}: {e}")
             raise
+
+    def _process_text_like(self, path: str) -> list[ExtractedChunk]:
+        """
+        Process markdown/plain-text content into structured chunks.
+        Markdown headings are preserved as section titles so later chunking,
+        node extraction, and retrieval have lightweight structure to work with.
+        """
+        with open(path, "r", encoding="utf-8", errors="ignore") as handle:
+            raw_text = handle.read()
+
+        if not raw_text.strip():
+            return []
+
+        normalized = raw_text.replace("\r\n", "\n").replace("\r", "\n")
+        lines = normalized.split("\n")
+        chunks: list[ExtractedChunk] = []
+        current_title = "General"
+        buffer: list[str] = []
+
+        def flush_buffer(page_num: int) -> None:
+            text = self._clean_text("\n".join(buffer).strip())
+            if len(text) < 20:
+                return
+            metadata = {"title": current_title} if current_title else {}
+            chunks.append(
+                ExtractedChunk(
+                    text=text,
+                    page_num=page_num,
+                    source="markdown" if path.lower().endswith((".md", ".markdown")) else "text",
+                    metadata=metadata,
+                )
+            )
+
+        page_num = 1
+        for line in lines:
+            heading_match = re.match(r"^\s{0,3}(#{1,6})\s+(.+?)\s*$", line)
+            if heading_match:
+                if buffer:
+                    flush_buffer(page_num)
+                    buffer = []
+                    page_num += 1
+                current_title = heading_match.group(2).strip() or current_title
+                continue
+
+            stripped = line.strip()
+            if stripped == "":
+                if buffer:
+                    flush_buffer(page_num)
+                    buffer = []
+                    page_num += 1
+                continue
+
+            # Remove the most common markdown syntax while preserving content.
+            cleaned_line = re.sub(r"^[-*+]\s+", "", stripped)
+            cleaned_line = re.sub(r"^\d+\.\s+", "", cleaned_line)
+            cleaned_line = re.sub(r"`{1,3}", "", cleaned_line)
+            cleaned_line = re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", r"\1", cleaned_line)
+            cleaned_line = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1", cleaned_line)
+            cleaned_line = re.sub(r"[*_~]{1,3}", "", cleaned_line)
+            buffer.append(cleaned_line)
+
+        if buffer:
+            flush_buffer(page_num)
+
+        return chunks
 
     def _clean_text(self, text: str) -> str:
         """

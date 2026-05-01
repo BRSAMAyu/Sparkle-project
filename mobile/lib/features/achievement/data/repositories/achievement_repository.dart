@@ -90,6 +90,55 @@ class AchievementRepository {
     }
   }
 
+  /// Get a single achievement with user unlock context
+  Future<AchievementWithProgress> getAchievementDetail(
+    String achievementId,
+  ) async {
+    if (DemoDataService.isDemoMode) {
+      return _getDemoAchievements().achievements.firstWhere(
+            (item) => item.achievement.id == achievementId,
+          );
+    }
+
+    try {
+      final locale = I18nService.instance.currentLocale.languageCode;
+      final response = await _apiClient.get<Map<String, dynamic>>(
+        ApiEndpoints.achievementDetail(achievementId),
+        queryParameters: {'locale': locale},
+      );
+
+      final payload = response.data;
+      if (payload == null) {
+        throw Exception('getAchievementDetail response is empty');
+      }
+
+      final achievementJson = payload['data'] as Map<String, dynamic>?;
+      if (achievementJson == null) {
+        throw Exception('getAchievementDetail response missing data');
+      }
+
+      final userProgressJson =
+          payload['user_progress'] as Map<String, dynamic>?;
+      final userProgress = userProgressJson == null
+          ? null
+          : UserAchievementProgress.fromJson(userProgressJson);
+      final isUnlocked =
+          payload['is_unlocked'] as bool? ?? userProgress?.unlockedAt != null;
+      final progressPercentage = userProgress == null
+          ? (isUnlocked ? 100 : 0)
+          : (userProgress.progress * 100).round().clamp(0, 100);
+
+      return AchievementWithProgress(
+        achievement: AchievementModel.fromJson(achievementJson),
+        userProgress: userProgress,
+        isUnlocked: isUnlocked,
+        progressPercentage: progressPercentage,
+      );
+    } on DioException catch (e) {
+      return _handleDioError(e, 'getAchievementDetail');
+    }
+  }
+
   /// Get achievement statistics
   Future<AchievementStats> getAchievementStats() async {
     if (DemoDataService.isDemoMode) {
@@ -850,8 +899,8 @@ class AchievementRepository {
     final history = <StreakDayRecord>[];
 
     for (var i = 0; i < days; i++) {
-      final day = DateTime(start.year, start.month, start.day)
-          .add(Duration(days: i));
+      final day =
+          DateTime(start.year, start.month, start.day).add(Duration(days: i));
       final status = i % 10 == 0
           ? StreakDayStatus.frozen
           : i % 7 == 0

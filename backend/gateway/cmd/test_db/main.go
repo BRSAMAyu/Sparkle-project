@@ -12,25 +12,25 @@ import (
 func main() {
 	cfg := config.Load()
 
-	log.Printf("正在连接数据库: %s", cfg.DatabaseURL)
+	log.Printf("Connecting to database: %s", cfg.DatabaseURL)
 
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, cfg.DatabaseURL)
 	if err != nil {
-		log.Fatalf("❌ 数据库连接失败: %v", err)
+		log.Fatalf("❌ Database connection failed: %v", err)
 	}
 	defer conn.Close(ctx)
 
-	log.Println("✅ 数据库连接成功！")
+	log.Println("✅ Database connection successful!")
 
 	// 测试查询
 	var count int64
 	err = conn.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
 	if err != nil {
-		log.Fatalf("❌ 查询失败: %v", err)
+		log.Fatalf("❌ Query failed: %v", err)
 	}
 
-	log.Printf("✅ 成功查询 users 表，当前记录数: %d", count)
+	log.Printf("✅ Successfully queried users table, current record count: %d", count)
 
 	// 测试其他关键表
 	tables := []string{"chat_messages", "tasks", "knowledge_nodes", "plans"}
@@ -38,11 +38,11 @@ func main() {
 		var tableCount int64
 		err = conn.QueryRow(ctx, fmt.Sprintf("SELECT COUNT(*) FROM %s", table)).Scan(&tableCount)
 		if err != nil {
-			log.Printf("⚠️  查询 %s 表失败: %v", table, err)
+			log.Printf("⚠️  Query %s table failed: %v", table, err)
 		} else {
-			log.Printf("✅ %s 表: %d 条记录", table, tableCount)
+			log.Printf("✅ %s table: %d records", table, tableCount)
 		}
 	}
 
-	log.Println("\n🎉 数据库访问链路测试完成！Go 网关可以正常访问 PostgreSQL 数据库。")
+	log.Println("\n🎉 Database access chain test complete! Go gateway can access PostgreSQL database normally.")
 }

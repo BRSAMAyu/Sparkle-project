@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	pbws "github.com/sparkle/gateway/gen/ws"
+	"github.com/sparkle/gateway/internal/i18n"
 	wsmetrics "github.com/sparkle/gateway/internal/metrics"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -49,8 +50,26 @@ var jsonMetadataKeys = map[string]bool{
 	"collaboration_summary":  true,
 }
 
+func isTerminalFinishReason(reason agentv1.FinishReason) bool {
+	return reason != agentv1.FinishReason_NULL && reason != agentv1.FinishReason_CONTINUE
+}
+
+func isAuroraRuntimeResponse(resp *agentv1.ChatResponse) bool {
+	if resp == nil {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(resp.Metadata["aurora_runtime_enabled"]), "true")
+}
+
+func shouldEmitSyntheticDone(sawAuroraRuntime bool, sawUpstreamFinishReason bool) bool {
+	if !sawAuroraRuntime {
+		return true
+	}
+	return !sawUpstreamFinishReason
+}
+
 // convertResponseToJSON converts protobuf ChatResponse to JSON-serializable map
-func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
+func convertResponseToJSON(ctx context.Context, resp *agentv1.ChatResponse) map[string]interface{} {
 	metadata := map[string]interface{}{}
 	for key, value := range resp.Metadata {
 		if jsonMetadataKeys[key] {
@@ -105,7 +124,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 	case *agentv1.ChatResponse_StatusUpdate:
 		result["type"] = "status_update"
 		if _, ok := metadata["ux_progress"]; !ok {
-			metadata["ux_progress"] = deriveUXProgress(content.StatusUpdate.State.String(), sanitizer.Sanitize(content.StatusUpdate.Details))
+			metadata["ux_progress"] = deriveUXProgress(ctx, content.StatusUpdate.State.String(), sanitizer.Sanitize(content.StatusUpdate.Details))
 		}
 		result["status"] = map[string]interface{}{
 			"state":              content.StatusUpdate.State.String(),
@@ -155,7 +174,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 		}
 		result["citations"] = citations
 		if _, ok := metadata["ux_sources"]; !ok {
-			metadata["ux_sources"] = buildSourceSummary(citations)
+			metadata["ux_sources"] = buildSourceSummary(ctx, citations)
 		}
 	case *agentv1.ChatResponse_ToolResult:
 		result["type"] = "tool_result"
@@ -173,9 +192,9 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 			widgetType = "execution_summary"
 		}
 		if len(widgetData) == 0 {
-			widgetData = buildExecutionSummaryWidget(tool.ToolName, tool.Success, data, tool.ErrorMessage, tool.Suggestion, tool.ToolCallId)
+			widgetData = buildExecutionSummaryWidget(ctx, tool.ToolName, tool.Success, data, tool.ErrorMessage, tool.Suggestion, tool.ToolCallId)
 		} else if widgetType == "execution_summary" {
-			merged := buildExecutionSummaryWidget(tool.ToolName, tool.Success, data, tool.ErrorMessage, tool.Suggestion, tool.ToolCallId)
+			merged := buildExecutionSummaryWidget(ctx, tool.ToolName, tool.Success, data, tool.ErrorMessage, tool.Suggestion, tool.ToolCallId)
 			for k, v := range widgetData {
 				merged[k] = v
 			}
@@ -251,7 +270,7 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 		result["intervention"] = intervention
 	default:
 		// Finish-only responses are terminal stream markers for WebSocket clients.
-		if resp.FinishReason != agentv1.FinishReason_NULL {
+		if isTerminalFinishReason(resp.FinishReason) {
 			result["type"] = "done"
 		} else if _, hasType := result["type"]; !hasType {
 			// If no content field is set, add type "metadata" for responses with only metadata
@@ -261,36 +280,38 @@ func convertResponseToJSON(resp *agentv1.ChatResponse) map[string]interface{} {
 
 	if resp.FinishReason != agentv1.FinishReason_NULL {
 		result["finish_reason"] = resp.FinishReason.String()
-		metadata["done"] = true
+		if isTerminalFinishReason(resp.FinishReason) {
+			metadata["done"] = true
+		}
 	}
 
 	return result
 }
 
-func deriveUXProgress(state string, details string) map[string]interface{} {
+func deriveUXProgress(ctx context.Context, state string, details string) map[string]interface{} {
 	stage := "understanding"
-	headline := "我先理解你的问题"
+	headline := i18n.T(ctx, "chat.understanding")
 	blocked := false
 
 	switch state {
 	case "THINKING":
 		stage = "planning"
-		headline = "我在整理你的目标和思路"
+		headline = i18n.T(ctx, "chat.planning")
 	case "SEARCHING":
 		stage = "retrieving"
-		headline = "我在查找相关依据和上下文"
+		headline = i18n.T(ctx, "chat.retrieving")
 	case "EXECUTING_TOOL":
 		stage = "executing"
-		headline = "我在替你执行需要的步骤"
+		headline = i18n.T(ctx, "chat.executing")
 	case "GENERATING":
 		stage = "answering"
-		headline = "我在组织最终回答"
+		headline = i18n.T(ctx, "chat.answering")
 	case "IDLE":
 		stage = "answering"
-		headline = "这轮处理已经完成"
+		headline = i18n.T(ctx, "chat.round_finished")
 	}
 
-	if strings.Contains(details, "等待") || strings.Contains(details, "确认") || strings.Contains(details, "补充") {
+	if isBlockedDetails(details) {
 		blocked = true
 	}
 
@@ -302,17 +323,36 @@ func deriveUXProgress(state string, details string) map[string]interface{} {
 	}
 }
 
-func buildExecutionSummaryWidget(toolName string, success bool, data map[string]interface{}, errorMessage string, suggestion string, toolCallID string) map[string]interface{} {
+// blockedDetailsKeywords defines locale-independent keywords that indicate
+// the agent is waiting for user input. These are checked against the details string.
+var blockedDetailsKeywords = []string{
+	"waiting", "awaiting",
+	"confirm", "confirmation",
+	"supplement", "additional input",
+	"等待", "确认", "补充",
+}
+
+func isBlockedDetails(details string) bool {
+	lower := strings.ToLower(details)
+	for _, kw := range blockedDetailsKeywords {
+		if strings.Contains(lower, kw) {
+			return true
+		}
+	}
+	return false
+}
+
+func buildExecutionSummaryWidget(ctx context.Context, toolName string, success bool, data map[string]interface{}, errorMessage string, suggestion string, toolCallID string) map[string]interface{} {
 	state := "success"
-	headline := fmt.Sprintf("%s 已执行", toolName)
-	impact := "已更新相关结果。"
+	headline := i18n.T(ctx, "chat.tool_executed", map[string]string{"tool": toolName})
+	impact := i18n.T(ctx, "chat.update_success")
 	if !success {
 		state = "failed"
-		headline = fmt.Sprintf("%s 执行失败", toolName)
-		impact = "这一步没有成功完成，结果可能部分受影响。"
+		headline = i18n.T(ctx, "chat.tool_failed", map[string]string{"tool": toolName})
+		impact = i18n.T(ctx, "chat.impact_partial")
 	} else if len(data) == 0 {
 		state = "partial"
-		impact = "执行已完成，但暂时没有返回可展示的详细对象。"
+		impact = i18n.T(ctx, "chat.partial_no_data")
 	}
 
 	affected := make([]string, 0, minInt(3, len(data)))
@@ -323,9 +363,9 @@ func buildExecutionSummaryWidget(toolName string, success bool, data map[string]
 		}
 	}
 
-	nextAction := "继续查看最终回答"
+	nextAction := i18n.T(ctx, "chat.next_action_default")
 	if !success {
-		nextAction = "补充信息后重试，或换一种方式继续"
+		nextAction = i18n.T(ctx, "chat.next_action_retry")
 	} else if suggestion != "" {
 		nextAction = suggestion
 	}
@@ -343,7 +383,7 @@ func buildExecutionSummaryWidget(toolName string, success bool, data map[string]
 	}
 }
 
-func buildSourceSummary(citations []map[string]interface{}) map[string]interface{} {
+func buildSourceSummary(ctx context.Context, citations []map[string]interface{}) map[string]interface{} {
 	scope := "mixed"
 	if len(citations) == 0 {
 		scope = "none"
@@ -361,9 +401,9 @@ func buildSourceSummary(citations []map[string]interface{}) map[string]interface
 		}
 	}
 
-	summary := "本轮回答带有可展开的依据来源。"
+	summary := i18n.T(ctx, "chat.evidence_summary_with")
 	if len(citations) == 0 {
-		summary = "本轮回答没有附带可展开的引用来源。"
+		summary = i18n.T(ctx, "chat.evidence_summary_without")
 	}
 
 	return map[string]interface{}{
@@ -463,6 +503,11 @@ func decodeChatRequestEnvelope(raw json.RawMessage, input *chatInput) error {
 	input.ChatMode = req.GetChatMode()
 	input.Nickname = req.GetUserProfile().GetNickname()
 	input.FileIds = req.GetFileIds()
+	if req.UseDocumentContext != nil {
+		value := req.GetUseDocumentContext()
+		input.UseDocumentContext = &value
+	}
+	input.DocumentFilter = req.GetDocumentFilter()
 	input.IncludeReferences = req.GetIncludeReferences()
 	input.ActiveTools = req.GetActiveTools()
 	if extra := req.GetExtraContext(); extra != nil {
@@ -541,7 +586,17 @@ func (h *ChatOrchestrator) handleProtobufMessage(writer *wsSafeWriter, msg []byt
 
 		input.Message = chatMsg.Message
 		input.SessionID = chatMsg.SessionId
-		// Map other fields if ChatMessage has them (e.g. UserProfile)
+		if chatMsg.UseDocumentContext != nil {
+			value := chatMsg.GetUseDocumentContext()
+			input.UseDocumentContext = &value
+		}
+		input.DocumentFilter = chatMsg.GetDocumentFilter()
+
+		if len(input.Message) > maxMessageLength {
+			responder.SendError("invalid_argument",
+				i18n.T(ctx, "chat.message_length_exceeded", map[string]string{"max_length": fmt.Sprintf("%d", maxMessageLength)}), false)
+			return
+		}
 
 		h.handleChatMessage(ctx, responder, userID, input, wsMsg.RequestId)
 

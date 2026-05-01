@@ -11,6 +11,7 @@ import os
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from contextlib import suppress
+from dataclasses import dataclass as _dataclass
 from datetime import timezone, datetime
 from functools import wraps
 from typing import Any
@@ -93,6 +94,72 @@ class ErrorCreated(Event):
         }
 
 
+@_dataclass
+class GroupFileSharedEvent:
+    event_type: str = "group.file.shared"
+    group_id: str = ""
+    file_id: str = ""
+    group_file_id: str = ""
+    shared_by_user_id: str = ""
+    triggered_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "group_id": self.group_id,
+            "file_id": self.file_id,
+            "group_file_id": self.group_file_id,
+            "shared_by_user_id": self.shared_by_user_id,
+            "triggered_at": self.triggered_at,
+        }
+
+
+@_dataclass
+class GroupFileDeletedEvent:
+    event_type: str = "group.file.deleted"
+    group_id: str = ""
+    file_id: str = ""
+    group_file_id: str = ""
+    shared_by_user_id: str = ""
+    triggered_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "group_id": self.group_id,
+            "file_id": self.file_id,
+            "group_file_id": self.group_file_id,
+            "shared_by_user_id": self.shared_by_user_id,
+            "triggered_at": self.triggered_at,
+        }
+
+
+@_dataclass
+class MasteryUpdatedFromError:
+    event_type: str = "mastery_updated_from_error"
+    user_id: str = ""
+    node_id: str = ""
+    node_name: str = ""
+    old_mastery: float = 0.0
+    new_mastery: float = 0.0
+    delta: float = 0.0
+    error_type: str = ""
+    triggered_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "user_id": self.user_id,
+            "node_id": self.node_id,
+            "node_name": self.node_name,
+            "old_mastery": self.old_mastery,
+            "new_mastery": self.new_mastery,
+            "delta": self.delta,
+            "error_type": self.error_type,
+            "triggered_at": self.triggered_at,
+        }
+
+
 class TaskCompleted(Event):
     def __init__(
         self,
@@ -132,6 +199,43 @@ class TaskCompleted(Event):
             "plan_id": self.plan_id,
             "source": self.source,
             "source_metadata": self.source_metadata,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class FocusSessionCompletedEvent(Event):
+    def __init__(
+        self,
+        user_id: str,
+        session_id: str,
+        duration_minutes: int,
+        task_id: str | None = None,
+        plan_id: str | None = None,
+        mastery_updates: list[dict[str, Any]] | None = None,
+        started_at: str | None = None,
+        completed: bool = True,
+    ):
+        self.user_id = user_id
+        self.session_id = session_id
+        self.duration_minutes = duration_minutes
+        self.task_id = task_id
+        self.plan_id = plan_id
+        self.mastery_updates = mastery_updates or []
+        self.started_at = started_at
+        self.completed = completed
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "focus.session.completed",
+            "user_id": self.user_id,
+            "session_id": self.session_id,
+            "task_id": self.task_id,
+            "plan_id": self.plan_id,
+            "duration_minutes": self.duration_minutes,
+            "mastery_updates": self.mastery_updates,
+            "started_at": self.started_at,
+            "completed": self.completed,
             "timestamp": self.timestamp.isoformat(),
         }
 
@@ -188,6 +292,40 @@ class TaskStartedEvent(Event):
             "task_id": self.task_id,
             "plan_id": self.plan_id,
             "source": self.source,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
+class TaskStuckEvent(Event):
+    def __init__(
+        self,
+        user_id: str,
+        task_id: str,
+        plan_id: str | None = None,
+        stuck_point: str | None = None,
+        recent_steps: list[str] | None = None,
+        elapsed_seconds: int | None = None,
+        diagnosis: dict[str, Any] | None = None,
+    ):
+        self.user_id = user_id
+        self.task_id = task_id
+        self.plan_id = plan_id
+        self.stuck_point = stuck_point
+        self.recent_steps = recent_steps or []
+        self.elapsed_seconds = elapsed_seconds
+        self.diagnosis = diagnosis or {}
+        self.timestamp = datetime.now(timezone.utc)
+
+    def to_dict(self):
+        return {
+            "event_type": "task.stuck",
+            "user_id": self.user_id,
+            "task_id": self.task_id,
+            "plan_id": self.plan_id,
+            "stuck_point": self.stuck_point,
+            "recent_steps": self.recent_steps,
+            "elapsed_seconds": self.elapsed_seconds,
+            "diagnosis": self.diagnosis,
             "timestamp": self.timestamp.isoformat(),
         }
 
@@ -654,6 +792,50 @@ class OccurrenceCompletedEvent(Event):
         }
 
 
+class DocumentCitationFeedbackEvent(Event):
+    """Document citation feedback published by explicit UI actions or implicit turn heuristics."""
+
+    def __init__(
+        self,
+        *,
+        user_id: str,
+        file_id: str,
+        chunk_id: str | None,
+        query_type: str | None,
+        rating: int,
+        feedback_source: str,
+        conversation_id: str | None = None,
+        context: dict[str, Any] | None = None,
+    ):
+        self.user_id = user_id
+        self.file_id = file_id
+        self.chunk_id = chunk_id
+        self.query_type = query_type
+        self.rating = rating
+        self.feedback_source = feedback_source
+        self.conversation_id = conversation_id
+        self.context = context or {}
+        self.timestamp = datetime.now(timezone.utc)
+
+    @property
+    def event_type(self) -> str:
+        return "document.citation.feedback"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "user_id": self.user_id,
+            "file_id": self.file_id,
+            "chunk_id": self.chunk_id,
+            "query_type": self.query_type,
+            "rating": self.rating,
+            "feedback_source": self.feedback_source,
+            "conversation_id": self.conversation_id,
+            "context": self.context,
+            "timestamp": self.timestamp.isoformat(),
+        }
+
+
 class InterventionRecordCreatedEvent(Event):
     """Fired when a new InterventionRecord is created."""
 
@@ -712,6 +894,16 @@ class EventBus:
         self.max_retries = getattr(settings, "EVENT_BUS_MAX_RETRIES", 3)
         self.publish_base_delay_ms = getattr(settings, "EVENT_BUS_PUBLISH_BASE_DELAY_MS", 200)
         self.publish_max_delay_ms = getattr(settings, "EVENT_BUS_PUBLISH_MAX_DELAY_MS", 2000)
+        self.consumer_retry_base_delay_ms = getattr(
+            settings,
+            "EVENT_BUS_CONSUMER_RETRY_BASE_DELAY_MS",
+            self.publish_base_delay_ms,
+        )
+        self.consumer_retry_max_delay_ms = getattr(
+            settings,
+            "EVENT_BUS_CONSUMER_RETRY_MAX_DELAY_MS",
+            self.publish_max_delay_ms,
+        )
         self.dlq_suffix = getattr(settings, "EVENT_BUS_DLQ_SUFFIX", ":dlq")
         self.dlq_maxlen = getattr(settings, "EVENT_BUS_DLQ_MAXLEN", 10000)
         self.dlq_enabled = bool(getattr(settings, "EVENT_BUS_DLQ_ENABLED", True))
@@ -831,6 +1023,9 @@ class EventBus:
             failure_stage="consume",
         )
         EVENT_BUS_DLQ_TOTAL.labels(event_type=str(parsed_data.get("event_type") or "unknown")).inc()
+        # Ack AFTER DLQ write succeeds — safe because DLQ has captured the event.
+        if self.redis:
+            await self.redis.xack(stream, group_name, message_id)
         logger.error(
             "Moved event to DLQ: stream={} group={} consumer={} message_id={} retry_count={} error={}",
             stream,
@@ -856,6 +1051,10 @@ class EventBus:
             return
 
         next_retry = retry_count + 1
+        delay_ms = min(self.consumer_retry_base_delay_ms * (2**retry_count), self.consumer_retry_max_delay_ms)
+        if delay_ms > 0:
+            await asyncio.sleep(delay_ms / 1000)
+
         retry_payload = dict(parsed_data)
         retry_payload["_retry_count"] = next_retry
         retry_payload["_last_error"] = str(error)
@@ -864,20 +1063,23 @@ class EventBus:
         retry_payload["_failed_at"] = datetime.now(timezone.utc).isoformat()
         retry_payload["_original_message_id"] = parsed_data.get("_original_message_id", message_id)
 
+        # Ack original BEFORE requeue to prevent duplicate processing
+        # if xadd succeeds but xack fails.
+        await self.redis.xack(stream, group_name, message_id)
         await self.redis.xadd(
             stream,
             self._serialize_stream_body(retry_payload),
             maxlen=self.retry_stream_maxlen,
         )
-        await self.redis.xack(stream, group_name, message_id)
         logger.warning(
-            "Requeued failed event: stream={} group={} consumer={} message_id={} retry={}/{} error={}",
+            "Requeued failed event: stream={} group={} consumer={} message_id={} retry={}/{} delay_ms={} error={}",
             stream,
             group_name,
             consumer_name,
             message_id,
             next_retry,
             self.max_retries,
+            delay_ms,
             error,
         )
 
@@ -914,6 +1116,12 @@ class EventBus:
                     retry_count=retry_count,
                 )
         except Exception as dlq_error:
+            # Best-effort ack to prevent permanent pending messages
+            try:
+                if self.redis:
+                    await self.redis.xack(stream, group_name, message_id)
+            except Exception as ack_err:
+                logger.error("Failed to ack after DLQ failure: {}", ack_err)
             logger.error(
                 "Failed to requeue/DLQ event: stream={} group={} message_id={} original_error={} dlq_error={}",
                 stream,
@@ -1135,14 +1343,13 @@ class EventBus:
             label = self._consumer_label(callback, consumer_name)
             EVENT_BUS_CONSUMER_FAILURE_TOTAL.labels(consumer=label).inc()
             logger.error(f"Error processing message {message_id}: {exc}")
-            await self._move_to_dlq(
+            await self._handle_failed_message(
                 stream=stream,
                 group_name=group_name,
                 consumer_name=label,
                 message_id=message_id,
                 parsed_data=parsed_data,
                 error=exc,
-                retry_count=self._extract_retry_count(parsed_data),
             )
 
     async def _consume_loop(self, stream: str, group_name: str, consumer_name: str, callback: Callable):
@@ -1328,3 +1535,68 @@ class EventBusReliablePublisher:
 
 
 event_bus_reliable = EventBusReliablePublisher(event_bus)
+
+
+from dataclasses import dataclass
+
+
+@dataclass
+class InterventionRecorded:
+    event_type: str = "intervention_recorded"
+    user_id: str = ""
+    intervention_id: str = ""
+    intervention_type: str = ""
+    triggered_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "user_id": self.user_id,
+            "intervention_id": self.intervention_id,
+            "intervention_type": self.intervention_type,
+            "triggered_at": self.triggered_at,
+        }
+
+
+@dataclass
+class InterventionOutcomeRecorded:
+    event_type: str = "intervention_outcome_recorded"
+    user_id: str = ""
+    intervention_id: str = ""
+    effective: bool | None = None
+    status: str = ""
+    checked_at: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "user_id": self.user_id,
+            "intervention_id": self.intervention_id,
+            "effective": self.effective,
+            "status": self.status,
+            "checked_at": self.checked_at,
+        }
+
+
+@dataclass
+class DocumentCitationFeedbackEvent:
+    """Fired when a user provides feedback on a document citation / retrieved chunk."""
+
+    event_type: str = "document.citation.feedback"
+    user_id: str = ""
+    file_id: str = ""
+    chunk_id: str | None = None
+    feedback_score: int = 0  # 1=positive, -1=negative, 0=neutral
+    query_intent_type: str | None = None
+    conversation_id: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "event_type": self.event_type,
+            "user_id": self.user_id,
+            "file_id": self.file_id,
+            "chunk_id": self.chunk_id,
+            "feedback_score": self.feedback_score,
+            "query_intent_type": self.query_intent_type,
+            "conversation_id": self.conversation_id,
+        }

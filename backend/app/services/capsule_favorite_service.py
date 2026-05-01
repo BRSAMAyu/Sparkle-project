@@ -5,6 +5,7 @@ Capsule Favorite Service
 """
 from __future__ import annotations
 
+import re
 from uuid import UUID
 
 from loguru import logger
@@ -222,11 +223,14 @@ class CapsuleFavoriteService:
                 "content_depth_preference": None,
                 "subject_affinity": [],
                 "recent_notes": [],
+                "method_preferences": [],
+                "method_preference_summary": [],
             }
 
         depth_counts: dict[str, int] = {}
         subject_counts: dict[str, int] = {}
         recent_notes: list[str] = []
+        method_counts: dict[str, dict[str, object]] = {}
         for favorite, capsule in rows:
             depth = str(getattr(capsule.depth_level, "value", capsule.depth_level) or "").strip()
             if depth:
@@ -237,6 +241,20 @@ class CapsuleFavoriteService:
             note = str(favorite.note or "").strip()
             if note and note not in recent_notes:
                 recent_notes.append(note)
+            for method in self._extract_method_preferences(capsule, note=note):
+                entry = method_counts.setdefault(
+                    method["key"],
+                    {
+                        "key": method["key"],
+                        "label": method["label"],
+                        "count": 0,
+                        "source_titles": [],
+                    },
+                )
+                entry["count"] = int(entry["count"]) + 1
+                source_titles = entry["source_titles"]
+                if isinstance(source_titles, list) and method["source_title"] not in source_titles:
+                    source_titles.append(method["source_title"])
 
         content_depth_preference = None
         if depth_counts:
@@ -252,11 +270,16 @@ class CapsuleFavoriteService:
                 key=lambda item: (-item[1], item[0]),
             )[:3]
         ]
+        method_preferences = self._rank_method_preferences(method_counts, favorite_count=len(rows))
         return {
             "favorite_count": len(rows),
             "content_depth_preference": content_depth_preference,
             "subject_affinity": subject_affinity,
             "recent_notes": recent_notes[:3],
+            "method_preferences": method_preferences,
+            "method_preference_summary": [
+                f"用户偏好{method['label']}" for method in method_preferences[:3]
+            ],
         }
 
     async def toggle_favorite(
@@ -300,6 +323,81 @@ class CapsuleFavoriteService:
                 "action": action,
             },
         )
+
+    @staticmethod
+    def _extract_method_preferences(capsule: CuriosityCapsule, *, note: str = "") -> list[dict[str, str]]:
+        title = str(capsule.title or "").strip()
+        content = str(capsule.content or "").strip()
+        subject = str(capsule.related_subject or "").strip()
+        haystack = "\n".join(part for part in (title, content[:500], subject, note) if part).lower()
+        methods: list[dict[str, str]] = []
+
+        if any(token in haystack for token in ("番茄钟", "pomodoro", "25/5", "25 分钟", "25分钟")):
+            methods.append(
+                {
+                    "key": "pomodoro",
+                    "label": "番茄钟方法",
+                    "source_title": title or "未命名胶囊",
+                }
+            )
+
+        title_method = CapsuleFavoriteService._method_label_from_title(title)
+        if (
+            title_method
+            and not any(item["key"] == "pomodoro" for item in methods)
+            and all(item["label"] != title_method for item in methods)
+        ):
+            methods.append(
+                {
+                    "key": CapsuleFavoriteService._method_key(title_method),
+                    "label": title_method,
+                    "source_title": title or "未命名胶囊",
+                }
+            )
+        return methods[:3]
+
+    @staticmethod
+    def _method_label_from_title(title: str) -> str:
+        normalized = str(title or "").strip()
+        if not normalized:
+            return ""
+        if any(marker in normalized for marker in ("方法", "技巧", "法", "策略", "模型")):
+            return normalized[:40]
+        match = re.search(r"([\w\u4e00-\u9fff]{2,24}(?:方法|技巧|法|策略|模型))", normalized)
+        return match.group(1) if match else ""
+
+    @staticmethod
+    def _method_key(label: str) -> str:
+        slug = re.sub(r"[^0-9a-zA-Z\u4e00-\u9fff]+", "_", str(label or "").strip().lower()).strip("_")
+        return slug[:48] or "capsule_method"
+
+    @staticmethod
+    def _rank_method_preferences(
+        method_counts: dict[str, dict[str, object]],
+        *,
+        favorite_count: int,
+    ) -> list[dict[str, object]]:
+        ranked: list[dict[str, object]] = []
+        for entry in sorted(
+            method_counts.values(),
+            key=lambda item: (-int(item.get("count") or 0), str(item.get("label") or "")),
+        ):
+            count = int(entry.get("count") or 0)
+            confidence = min(0.86, 0.55 + (count / max(favorite_count, 1)) * 0.25)
+            ranked.append(
+                {
+                    "key": str(entry.get("key") or ""),
+                    "label": str(entry.get("label") or ""),
+                    "count": count,
+                    "confidence": round(confidence, 2),
+                    "source_titles": [
+                        str(title)
+                        for title in list(entry.get("source_titles") or [])[:3]
+                        if str(title).strip()
+                    ],
+                }
+            )
+        return ranked[:5]
 
 
 # 全局单例

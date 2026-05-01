@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/domain/services/emotion_visual_blending_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/weather_layer.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_presentation.dart';
@@ -21,36 +23,36 @@ class _WeatherGuideScreenState extends ConsumerState<WeatherGuideScreen>
   late final AnimationController _mainAnimationController;
   late final AnimationController _particleController;
 
-  static const List<_WeatherGuideSpec> _specs = [
-    _WeatherGuideSpec(
-      type: 'sunny',
-      title: '晴空',
-      previewLabel: '稳定推进',
-      detail: '默认天气。通常代表近期节奏平稳，没有明显风险，适合按计划持续推进。',
-      trigger: '当冲刺没有进入高压或落后状态时，系统会保持晴空。',
-    ),
-    _WeatherGuideSpec(
-      type: 'cloudy',
-      title: '薄雾',
-      previewLabel: '整理与回稳',
-      detail: '代表节奏开始变慢，系统会提醒你回到主线、补上最近的推进。',
-      trigger: '冲刺 7 天内且进度低于 20%，或连续 2 天没有完成任务时更容易出现。',
-    ),
-    _WeatherGuideSpec(
-      type: 'rainy',
-      title: '风雨',
-      previewLabel: '收束与聚焦',
-      detail: '代表压力上升，需要减少噪声、尽快聚焦关键动作。',
-      trigger: '冲刺剩余少于 3 天且进度低于 50%，或近期焦虑指标高于 50% 时更容易出现。',
-    ),
-    _WeatherGuideSpec(
-      type: 'meteor',
-      title: '流星',
-      previewLabel: '高光冲刺',
-      detail: '代表你正处于很强的推进势能里，系统会给到更亮、更轻快的反馈。',
-      trigger: '当前冲刺进度高于 80% 时更容易出现。',
-    ),
-  ];
+  List<_WeatherGuideSpec> _specs(AppLocalizations l10n) => [
+        _WeatherGuideSpec(
+          type: 'sunny',
+          title: l10n.weatherTitleSunny,
+          previewLabel: l10n.weatherCompactSunny,
+          detail: l10n.weatherSubtitleSunny,
+          trigger: l10n.weatherGuideRule1Body,
+        ),
+        _WeatherGuideSpec(
+          type: 'cloudy',
+          title: l10n.weatherTitleCloudy,
+          previewLabel: l10n.weatherCompactCloudy,
+          detail: l10n.weatherSubtitleCloudy,
+          trigger: l10n.weatherGuideRule2Body,
+        ),
+        _WeatherGuideSpec(
+          type: 'rainy',
+          title: l10n.weatherTitleRainy,
+          previewLabel: l10n.weatherCompactRainy,
+          detail: l10n.weatherSubtitleRainy,
+          trigger: l10n.weatherGuideRule3Body,
+        ),
+        _WeatherGuideSpec(
+          type: 'meteor',
+          title: l10n.weatherTitleMeteor,
+          previewLabel: l10n.weatherCompactMeteor,
+          detail: l10n.weatherSubtitleMeteor,
+          trigger: l10n.weatherGuideRule5Body,
+        ),
+      ];
 
   @override
   void initState() {
@@ -90,7 +92,7 @@ class _WeatherGuideScreenState extends ConsumerState<WeatherGuideScreen>
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
         ),
-        title: const Text('天气图鉴'),
+        title: Text(context.l10n.weatherGuideTitle),
       ),
       child: ContentConstraint(
         child: ListView(
@@ -106,13 +108,14 @@ class _WeatherGuideScreenState extends ConsumerState<WeatherGuideScreen>
               condition: dashboardState.weather.condition,
             ),
             const SizedBox(height: DS.spacing16),
-            const _SectionHeader(
-              title: '天气预览',
-              subtitle: '这里可以预览系统里的全部天气表现。预览不会改动真实天气，只用于帮助你理解视觉效果与设定。',
+            _SectionHeader(
+              title: context.l10n.weatherGuidePreview,
+              subtitle: context.l10n.weatherGuidePreviewSubtitle,
             ),
             const SizedBox(height: DS.spacing10),
             LayoutBuilder(
               builder: (context, constraints) {
+                final l10n = context.l10n;
                 final compact = constraints.maxWidth < 720;
                 final cardWidth = compact
                     ? constraints.maxWidth
@@ -120,7 +123,7 @@ class _WeatherGuideScreenState extends ConsumerState<WeatherGuideScreen>
                 return Wrap(
                   spacing: DS.spacing12,
                   runSpacing: DS.spacing12,
-                  children: _specs
+                  children: _specs(l10n)
                       .map(
                         (spec) => SizedBox(
                           width: cardWidth,
@@ -137,36 +140,41 @@ class _WeatherGuideScreenState extends ConsumerState<WeatherGuideScreen>
               },
             ),
             const SizedBox(height: DS.spacing20),
-            const _SectionHeader(
-              title: '判定标准',
-              subtitle: '真实天气依然由你的近期数据决定，下面是当前系统的主要参考规则。',
+            _SectionHeader(
+              title: context.l10n.weatherGuideCriteria,
+              subtitle: context.l10n.weatherGuideCriteriaSubtitle,
             ),
             const SizedBox(height: DS.spacing10),
-            const _WeatherRuleTile(
-              title: '晴空是默认状态',
-              body: '当系统没有检测到明显的高压、拖延或强势冲刺信号时，会保持晴空。',
+            _WeatherRuleTile(
+              title: context.l10n.weatherGuideRule1Title,
+              body: context.l10n.weatherGuideRule1Body,
             ),
-            const _WeatherRuleTile(
-              title: '薄雾代表节奏变慢',
-              body: '冲刺剩余 7 天内且进度低于 20%，或连续 2 天没有完成任务时，天气更容易转为薄雾。',
+            _WeatherRuleTile(
+              title: context.l10n.weatherGuideRule2Title,
+              body: context.l10n.weatherGuideRule2Body,
             ),
-            const _WeatherRuleTile(
-              title: '风雨代表压力偏高',
-              body: '冲刺剩余少于 3 天且进度低于 50% 时，系统会倾向给出风雨状态，提醒你尽快收束焦点。',
+            _WeatherRuleTile(
+              title: context.l10n.weatherGuideRule3Title,
+              body: context.l10n.weatherGuideRule3Body,
             ),
-            const _WeatherRuleTile(
-              title: '焦虑会覆盖基础判断',
-              body: '如果近期焦虑指标高于 50%，系统会优先给出风雨天气，用来提示当前负荷偏高。',
+            _WeatherRuleTile(
+              title: context.l10n.weatherGuideRule4Title,
+              body: context.l10n.weatherGuideRule4Body,
             ),
-            const _WeatherRuleTile(
-              title: '流星代表高势能',
-              body: '当当前冲刺进度高于 80% 时，系统更容易进入流星天气，强调你的推进势头。',
+            _WeatherRuleTile(
+              title: context.l10n.weatherGuideRule5Title,
+              body: context.l10n.weatherGuideRule5Body,
             ),
             const SizedBox(height: DS.spacing20),
-            const _SectionHeader(
-              title: '说明',
-              subtitle:
-                  '这个页面用于理解天气系统的视觉效果与判定逻辑。真正显示给你的天气，仍然会跟随你的真实任务、冲刺和状态数据动态更新。',
+            Padding(
+              padding: const EdgeInsets.only(top: DS.spacing12),
+              child: Text(
+                context.l10n.weatherGuideDisclaimer,
+                style: context.sparkleTypography.labelSmall?.copyWith(
+                  color: DS.textSecondary,
+                  height: 1.45,
+                ),
+              ),
             ),
           ],
         ),
@@ -194,7 +202,7 @@ class _CurrentWeatherPanel extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '当前天气',
+                    context.l10n.weatherGuideCurrentWeather,
                     style: context.sparkleTypography.titleLarge.copyWith(
                       fontWeight: DS.fontWeightBold,
                       color: DS.textPrimary,
@@ -234,8 +242,8 @@ class _CurrentWeatherPanel extends StatelessWidget {
               ),
               child: Text(
                 condition.trim().isEmpty
-                    ? '当前天气会根据你的真实数据自动更新。'
-                    : '当前判定：$condition',
+                    ? context.l10n.weatherGuideConditionFallback
+                    : context.l10n.weatherGuideConditionPrefix(condition),
                 style: context.sparkleTypography.labelSmall.copyWith(
                   color: DS.textSecondary,
                   height: 1.4,
@@ -325,7 +333,7 @@ class _WeatherPreviewCard extends StatelessWidget {
                                   border: Border.all(color: DS.borderSubtle),
                                 ),
                                 child: Text(
-                                  '当前',
+                                  context.l10n.weatherGuideCurrent,
                                   style: context.sparkleTypography.labelSmall
                                       .copyWith(
                                     color: DS.textPrimary,
@@ -384,7 +392,7 @@ class _WeatherPreviewCard extends StatelessWidget {
                       border: Border.all(color: DS.borderSubtle),
                     ),
                     child: Text(
-                      '真实触发参考：${spec.trigger}',
+                      context.l10n.weatherGuideTriggerPrefix(spec.trigger),
                       style: context.sparkleTypography.labelSmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.4,

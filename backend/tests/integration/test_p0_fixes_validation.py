@@ -1,3 +1,4 @@
+# FIXED: 2026-04-25 - Integration DB schema was behind task planning migrations - verified Task ORM insert after Alembic head.
 """
 P0修复验证测试脚本
 
@@ -6,6 +7,7 @@ P0修复验证测试脚本
 2. DecisionRecordService优雅处理None session
 3. FocusService正确使用TaskStatus枚举
 """
+
 import asyncio
 from datetime import datetime, timedelta
 from uuid import uuid4
@@ -24,8 +26,9 @@ from app.services.focus_service import focus_service
 async def test_dashscope_in_worker():
     """验证dashscope在worker环境中可用"""
     import dashscope
+
     # 验证模块可导入
-    assert hasattr(dashscope, 'AioGeneration')
+    assert hasattr(dashscope, "AioGeneration")
     print("✅ Test 1 passed: dashscope模块可用")
 
 
@@ -42,7 +45,7 @@ async def test_decision_record_service_with_none_session():
         action="test_action",
         preference_version=1,
         preferences_snapshot={},
-        outcome="test_outcome"
+        outcome="test_outcome",
     )
     print("✅ Test 2 passed: DecisionRecordService优雅处理None session")
 
@@ -71,7 +74,7 @@ async def test_decision_record_service_with_valid_session():
             action="test_action_valid",
             preference_version=1,
             preferences_snapshot={"test": "data"},
-            outcome="success"
+            outcome="success",
         )
 
         # 验证记录已保存
@@ -91,7 +94,7 @@ async def test_task_status_enum_in_focus_service(db_session: AsyncSession):
         username=f"test_user_{uuid4().hex[:8]}",
         email=f"test_{uuid4().hex[:8]}@example.com",
         hashed_password="hash",
-        is_active=True
+        is_active=True,
     )
     db_session.add(test_user)
     await db_session.flush()
@@ -104,7 +107,7 @@ async def test_task_status_enum_in_focus_service(db_session: AsyncSession):
         type=TaskType.LEARNING,
         status=TaskStatus.PENDING,
         priority=1,
-        estimated_minutes=25
+        estimated_minutes=30,
     )
     db_session.add(test_task)
     await db_session.flush()
@@ -120,13 +123,12 @@ async def test_task_status_enum_in_focus_service(db_session: AsyncSession):
         start_time=start_time,
         end_time=end_time,
         duration_minutes=25,
-        status="completed"
+        status="completed",
     )
 
     # 刷新并验证任务状态
     await db_session.refresh(test_task)
-    assert test_task.status == TaskStatus.IN_PROGRESS, \
-        f"Expected status IN_PROGRESS, got {test_task.status}"
+    assert test_task.status == TaskStatus.IN_PROGRESS, f"Expected status IN_PROGRESS, got {test_task.status}"
     assert test_task.started_at is not None
 
     print("✅ Test 4 passed: FocusService正确使用TaskStatus枚举")
@@ -151,13 +153,14 @@ async def test_task_status_equality():
 
 async def run_all_tests():
     """运行所有验证测试"""
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("开始P0修复验证测试")
-    print("="*60 + "\n")
+    print("=" * 60 + "\n")
 
     try:
         # Test 1: dashscope可用性
         import dashscope
+
         print("✅ Test 1: dashscope模块可用性")
 
         # Test 2: None session处理
@@ -168,7 +171,7 @@ async def run_all_tests():
             action="test_none",
             preference_version=1,
             preferences_snapshot={},
-            outcome="test"
+            outcome="test",
         )
         print("✅ Test 2: DecisionRecordService优雅处理None session")
 
@@ -182,7 +185,7 @@ async def run_all_tests():
                 action="test_valid_session",
                 preference_version=1,
                 preferences_snapshot={"test": True},
-                outcome="validated"
+                outcome="validated",
             )
             records = await decision_service.get_recent_records(test_user_id, limit=1)
             assert len(records) >= 1
@@ -196,7 +199,7 @@ async def run_all_tests():
                 username=f"validation_user_{uuid4().hex[:8]}",
                 email=f"validate_{uuid4().hex[:8]}@test.com",
                 hashed_password="test_hash",
-                is_active=True
+                is_active=True,
             )
             db.add(test_user)
             await db.flush()
@@ -208,7 +211,7 @@ async def run_all_tests():
                 type=TaskType.LEARNING,
                 status=TaskStatus.PENDING,
                 priority=5,
-                estimated_minutes=30
+                estimated_minutes=30,
             )
             db.add(test_task)
             await db.flush()
@@ -218,10 +221,10 @@ async def run_all_tests():
                 db=db,
                 user_id=test_user.id,
                 task_id=test_task.id,
-                start_time=datetime.now() - timedelta(minutes=30),
+                start_time=datetime.now() - timedelta(minutes=25),
                 end_time=datetime.now(),
-                duration_minutes=30,
-                status="completed"
+                duration_minutes=25,
+                status="completed",
             )
             await db.refresh(test_task)
 
@@ -238,14 +241,15 @@ async def run_all_tests():
         assert TaskStatus.IN_PROGRESS != "in_progress"
         print("✅ Test 5: TaskStatus枚举比较正确性")
 
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("🎉 所有P0修复验证测试通过!")
-        print("="*60 + "\n")
+        print("=" * 60 + "\n")
         return True
 
     except Exception as e:
         print(f"\n❌ 测试失败: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 

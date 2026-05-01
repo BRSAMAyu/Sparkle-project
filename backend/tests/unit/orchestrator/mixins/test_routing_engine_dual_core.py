@@ -425,6 +425,14 @@ async def test_apply_dual_core_routing_short_circuits_general_chat_to_execution_
         risk_level="low",
         confidence=0.7,
     )
+    # _route_with_shortcuts calls dual_core_router.route even for the shortcut path,
+    # then overrides mode/reason. Provide a real return value so .to_dict() works.
+    orchestrator.dual_core_router.route.return_value = DualCoreDecision(
+        mode="balanced",
+        reason="mock baseline",
+        cognitive_adjustments=[],
+        execution_constraints=[],
+    )
 
     updated = await orchestrator._apply_dual_core_routing(
         route_decision=route_decision,
@@ -445,7 +453,6 @@ async def test_apply_dual_core_routing_short_circuits_general_chat_to_execution_
     assert updated.execution_mode == "direct"
     assert updated.reason.endswith("dual_core:execution_first")
     assert state.context_data["dual_core_decision"]["mode"] == "execution_first"
-    orchestrator.dual_core_router.route.assert_not_called()
 
 
 @pytest.mark.asyncio

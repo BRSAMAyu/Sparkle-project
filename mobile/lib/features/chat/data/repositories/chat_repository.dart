@@ -90,6 +90,7 @@ class ChatRepository {
     String taskId,
     String message,
     String? conversationId,
+    Map<String, dynamic>? extraContext,
   ) async {
     if (DemoDataService.isDemoMode) {
       return (
@@ -105,6 +106,7 @@ class ChatRepository {
       data: {
         'message': message,
         'conversation_id': conversationId,
+        if (extraContext != null) 'context': extraContext,
       },
     );
     final payload =
@@ -116,6 +118,33 @@ class ChatRepository {
       response: ChatResponseModel.fromJson(payload),
       dormantInjection: dormantInjection,
     );
+  }
+
+  Future<ChatResponseModel> sendMessage(
+    String message, {
+    String? conversationId,
+    Map<String, dynamic>? extraContext,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      return ChatResponseModel(
+        message: 'Demo response: $message',
+        conversationId: conversationId ?? 'demo_id',
+      );
+    }
+
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/chat',
+      data: {
+        'message': message,
+        'conversation_id': conversationId,
+        if (extraContext != null) 'context': extraContext,
+      },
+    );
+    final payload = ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'sendMessage',
+    );
+    return ChatResponseModel.fromJson(payload);
   }
 
   /// 获取对话历史
@@ -311,6 +340,7 @@ class ChatRepository {
     List<String>? fileIds,
     bool includeReferences = false,
     String? chatMode,
+    bool? useDocumentContext,
   }) =>
       // 🎭 演示模式：LLM对话仍然使用真实API，保证核心功能可用
       // 只有历史数据使用预设内容
@@ -326,6 +356,7 @@ class ChatRepository {
         fileIds: fileIds,
         includeReferences: includeReferences,
         chatMode: chatMode,
+        useDocumentContext: useDocumentContext,
       );
 
   /// 发送 ActionCard 确认/忽略反馈

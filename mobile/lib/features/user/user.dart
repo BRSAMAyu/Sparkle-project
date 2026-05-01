@@ -1,5 +1,6 @@
 export 'presentation/screens/delete_account_screen.dart';
 export 'presentation/screens/edit_profile_screen.dart';
+export 'presentation/screens/export_data_screen.dart';
 export 'presentation/screens/guest_upgrade_screen.dart';
 export 'presentation/screens/learning_mode_screen.dart';
 export 'presentation/screens/password_reset_screen.dart';

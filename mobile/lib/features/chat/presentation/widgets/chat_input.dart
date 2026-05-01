@@ -4,8 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/attachment_picker_sheet.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/document/document.dart';
@@ -26,6 +29,12 @@ class ChatInput extends ConsumerStatefulWidget {
     this.onFileUploaded,
     this.fileUploadGroupId,
     this.onTextChanged,
+    this.studyMaterialsEnabled = true,
+    this.availableStudyMaterialsCount = 0,
+    this.documentContextMode = DocumentContextMode.auto,
+    this.onToggleStudyMaterials,
+    this.onOpenStudyMaterials,
+    this.onSetDocumentContextMode,
   });
   final bool enabled;
   final String? hintText;
@@ -35,6 +44,12 @@ class ChatInput extends ConsumerStatefulWidget {
   final void Function(StoredFile file)? onFileUploaded;
   final String? fileUploadGroupId;
   final void Function(String text)? onTextChanged;
+  final bool studyMaterialsEnabled;
+  final int availableStudyMaterialsCount;
+  final DocumentContextMode documentContextMode;
+  final VoidCallback? onToggleStudyMaterials;
+  final VoidCallback? onOpenStudyMaterials;
+  final ValueChanged<DocumentContextMode>? onSetDocumentContextMode;
 
   @override
   ConsumerState<ChatInput> createState() => _ChatInputState();
@@ -216,6 +231,53 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (widget.quotedMessage != null) _buildQuotePreview(isDark),
+          if (widget.onToggleStudyMaterials != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                DS.spacing8,
+                0,
+                DS.spacing8,
+                DS.spacing6,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: [
+                    _SourceTrayPill(
+                      mode: widget.documentContextMode,
+                      enabled: widget.enabled,
+                      onModeChanged: widget.onSetDocumentContextMode,
+                    ),
+                    if (widget.documentContextMode != DocumentContextMode.off &&
+                        widget.availableStudyMaterialsCount > 0)
+                      ChatAccessoryPill(
+                        icon: Icons.description_outlined,
+                        label: context.l10n.chatStudyMaterialsAvailable(
+                          widget.availableStudyMaterialsCount,
+                        ),
+                        trailing: Icon(
+                          Icons.arrow_outward_rounded,
+                          size: 12,
+                          color: DS.textSecondary,
+                        ),
+                        onTap:
+                            widget.enabled ? widget.onOpenStudyMaterials : null,
+                        emphasize: true,
+                      ),
+                    if (widget.documentContextMode == DocumentContextMode.off)
+                      ChatAccessoryPill(
+                        icon: Icons.pause_circle_outline_rounded,
+                        label: context.l10n.chatStudyMaterialsPausedDescription,
+                        onTap: widget.enabled
+                            ? widget.onToggleStudyMaterials
+                            : null,
+                      ),
+                  ],
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.all(DS.spacing8),
             child: Row(
@@ -239,7 +301,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             color: DS.textSecondary,
                           ),
                           iconSize: attachmentIconSize,
-                          onPressed: widget.enabled ? _showAttachmentSheet : null,
+                          onPressed:
+                              widget.enabled ? _showAttachmentSheet : null,
                           padding: EdgeInsets.all(attachmentPadding),
                           constraints: BoxConstraints.tightFor(
                             width: attachmentVisualSize,
@@ -331,69 +394,69 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   }
 
   Widget _buildSendButton(bool reduceMotion) => ValueListenableBuilder<bool>(
-      valueListenable: _textNotEmpty,
-      builder: (context, hasText, child) {
-        final canSend = widget.enabled && !_isSending && hasText;
-        return Semantics(
-          button: true,
-          enabled: canSend,
-          label: 'Send message',
-          child: AnimatedScale(
-            scale: _isButtonPressed ? 0.9 : 1.0,
-            duration: reduceMotion ? Duration.zero : DS.quick,
-            curve: Curves.easeInOut,
-            child: AnimatedContainer(
-              duration: reduceMotion ? Duration.zero : DS.normal,
-              width: DS.touchTargetMinSize,
-              height: DS.touchTargetMinSize,
-              decoration: BoxDecoration(
-                gradient: canSend ? DS.primaryGradient : null,
-                color: canSend ? null : DS.surfaceTertiary,
-                shape: BoxShape.circle,
-                boxShadow: canSend
-                    ? [
-                        BoxShadow(
-                          color: DS.brandPrimary.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Material(
-                color: Colors.transparent,
-                shape: const CircleBorder(),
-                child: InkWell(
-                  customBorder: const CircleBorder(),
-                  onTap: canSend ? _handleSend : null,
-                  onHighlightChanged: (pressed) {
-                    if (!mounted) return;
-                    setState(() => _isButtonPressed = pressed);
-                  },
-                  child: Center(
-                    child: _isSending
-                        ? SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: DS.textOnPrimary,
-                            ),
-                          )
-                        : Icon(
-                            Icons.arrow_upward_rounded,
-                            color:
-                                canSend ? DS.textOnPrimary : DS.textSecondary,
-                            size: DS.iconSizeBase,
+        valueListenable: _textNotEmpty,
+        builder: (context, hasText, child) {
+          final canSend = widget.enabled && !_isSending && hasText;
+          return Semantics(
+            button: true,
+            enabled: canSend,
+            label: 'Send message',
+            child: AnimatedScale(
+              scale: _isButtonPressed ? 0.9 : 1.0,
+              duration: reduceMotion ? Duration.zero : DS.quick,
+              curve: Curves.easeInOut,
+              child: AnimatedContainer(
+                duration: reduceMotion ? Duration.zero : DS.normal,
+                width: DS.touchTargetMinSize,
+                height: DS.touchTargetMinSize,
+                decoration: BoxDecoration(
+                  gradient: canSend ? DS.primaryGradient : null,
+                  color: canSend ? null : DS.surfaceTertiary,
+                  shape: BoxShape.circle,
+                  boxShadow: canSend
+                      ? [
+                          BoxShadow(
+                            color: DS.brandPrimary.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
                           ),
+                        ]
+                      : null,
+                ),
+                child: Material(
+                  color: Colors.transparent,
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: canSend ? _handleSend : null,
+                    onHighlightChanged: (pressed) {
+                      if (!mounted) return;
+                      setState(() => _isButtonPressed = pressed);
+                    },
+                    child: Center(
+                      child: _isSending
+                          ? SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: DS.textOnPrimary,
+                              ),
+                            )
+                          : Icon(
+                              Icons.arrow_upward_rounded,
+                              color:
+                                  canSend ? DS.textOnPrimary : DS.textSecondary,
+                              size: DS.iconSizeBase,
+                            ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
 
   Widget _buildQuotePreview(bool isDark) => Container(
         width: double.infinity,
@@ -451,4 +514,60 @@ class _ChatInputState extends ConsumerState<ChatInput> {
           ],
         ),
       );
+}
+
+class _SourceTrayPill extends StatelessWidget {
+  const _SourceTrayPill({
+    required this.mode,
+    required this.enabled,
+    this.onModeChanged,
+  });
+
+  final DocumentContextMode mode;
+  final bool enabled;
+  final ValueChanged<DocumentContextMode>? onModeChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final (icon, label) = switch (mode) {
+      DocumentContextMode.auto => (
+          Icons.auto_awesome_rounded,
+          context.l10n.chatStudyMaterialsLabel,
+        ),
+      DocumentContextMode.userSelected => (
+          Icons.playlist_add_check_rounded,
+          'My Sources',
+        ),
+      DocumentContextMode.taskScope => (
+          Icons.task_alt_rounded,
+          'Task Scope',
+        ),
+      DocumentContextMode.goalScope => (
+          Icons.flag_rounded,
+          'Goal Scope',
+        ),
+      DocumentContextMode.off => (
+          Icons.menu_book_outlined,
+          context.l10n.chatStudyMaterialsPaused,
+        ),
+    };
+    return ChatAccessoryPill(
+      icon: icon,
+      label: label,
+      selected: mode != DocumentContextMode.off,
+      onTap: enabled
+          ? () {
+              final next = switch (mode) {
+                DocumentContextMode.auto => DocumentContextMode.userSelected,
+                DocumentContextMode.userSelected => DocumentContextMode.taskScope,
+                DocumentContextMode.taskScope => DocumentContextMode.goalScope,
+                DocumentContextMode.goalScope => DocumentContextMode.off,
+                DocumentContextMode.off => DocumentContextMode.auto,
+              };
+              onModeChanged?.call(next);
+            }
+          : null,
+      accentColor: DS.primaryBase,
+    );
+  }
 }

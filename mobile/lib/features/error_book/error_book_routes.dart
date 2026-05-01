@@ -49,7 +49,11 @@ class ErrorBookRoutes {
               state: state,
               child: SceneAudioScope(
                 policy: const SceneAudioPolicy(track: BgmTrack.task),
-                child: ErrorListScreen(filterByDimension: dimension),
+                child: ErrorListScreen(
+                  filterByDimension: dimension,
+                  filterByNodeId: state.uri.queryParameters['node_id'],
+                  filterByNodeLabel: state.uri.queryParameters['node_label'],
+                ),
               ),
             );
           },

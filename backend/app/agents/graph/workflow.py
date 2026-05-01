@@ -98,9 +98,19 @@ all_tools = [
 tool_node = ToolNode(all_tools)
 workflow.add_node("tools", tool_node)
 
-# (C) 添加虚拟人工节点
+# (C) Human-in-the-loop node
+# When the graph routes here with interrupt_before, execution pauses.
+# The caller (orchestrator) inspects approval_context, presents it to the
+# user, and resumes with approval_result set to "approved" or "rejected".
 def human_node(state: SparkleState):
-    pass
+    result = state.get("approval_result")
+    context = state.get("approval_context", "")
+    if result == "approved":
+        logger.info(f"Human approved: {context}")
+        return {"approval_result": None, "require_approval": False}
+    else:
+        logger.info(f"Human rejected: {context}")
+        return {"approval_result": None, "require_approval": False}
 workflow.add_node("human_node", human_node)
 
 # --- 3. 连接边 (Edges) ---
@@ -136,6 +146,9 @@ for agent_name in RUNTIME_NODE_NAMES:
 # 修正：为每个 Agent 建立回边是 LangGraph 的标准做法，但这需要条件边。
 # 简便方案：让 Tools 节点执行完后，统一路由回 Router (让 Router 决定是否结束)。
 workflow.add_edge("tools", "router")
+
+# Human node -> back to Router for next-step decision after approval
+workflow.add_edge("human_node", "router")
 
 # --- 4. 编译标准图 (Compile) ---
 

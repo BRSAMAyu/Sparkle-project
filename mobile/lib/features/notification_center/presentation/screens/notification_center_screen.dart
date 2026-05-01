@@ -68,7 +68,7 @@ class _NotificationCenterScreenState
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: Theme.of(context).colorScheme.onPrimary,
                               fontSize: 9,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: DS.fontWeightBold,
                             ),
                       ),
                     ),
@@ -227,6 +227,10 @@ class _NotificationCenterScreenState
                   notification.isPush && notification.canDisablePushCategory
                       ? () => _disablePushCategory(notification)
                       : null,
+              onAccountabilityEncourage:
+                  notification.canSendAccountabilityEncouragement
+                      ? () => _sendAccountabilityEncouragement(notification)
+                      : null,
             ),
           );
         },
@@ -241,7 +245,7 @@ class _NotificationCenterScreenState
             Icon(Icons.error_outline, size: DS.spacing64, color: DS.error),
             const SizedBox(height: DS.spacing16),
             Text(
-              context.l10n.loadingFailed,
+              context.l10n.loadingFailed(error),
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: DS.spacing8),
@@ -440,6 +444,22 @@ class _NotificationCenterScreenState
       return;
     }
     AppFeedback.success(context, '这类主动提醒已关闭');
+  }
+
+  Future<void> _sendAccountabilityEncouragement(
+    UnifiedNotification notification,
+  ) async {
+    final result = await ref
+        .read(notificationCenterProvider.notifier)
+        .sendAccountabilityEncouragement(notification);
+    if (!mounted) {
+      return;
+    }
+    final message = result['message'] as String? ?? '他收到了你的鼓励';
+    AppFeedback.success(context, message);
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
+    );
   }
 
   Future<void> _clearReadNotifications() async {

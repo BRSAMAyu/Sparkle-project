@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 
 /// 确认操作对话框 (用于高风险操作)
 class ConfirmationDialog extends StatelessWidget {
@@ -43,6 +44,7 @@ class ConfirmationDialog extends StatelessWidget {
                     _formatPreview(previewData!),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontFamily: 'monospace',
+                          fontFamilyFallback: sparkleFontFallback,
                         ),
                   ),
                 ),

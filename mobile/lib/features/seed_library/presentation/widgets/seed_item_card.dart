@@ -89,7 +89,7 @@ class SeedItemCard extends StatelessWidget {
                                 item.difficultyLevelDisplayName!,
                                 style: TextStyle(
                                   fontSize: 11,
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: DS.fontWeightSemibold,
                                   color: _getDifficultyColor(),
                                 ),
                               ),

@@ -126,8 +126,10 @@ def test_selector_respects_live_model_availability_and_records_cost_fallback() -
         blocked_capability_ids=[
             "model:xiaomi_chat",
             "model:dashscope_fast",
+            "model:deepseek_fast",
             "model:glm_4_7_flash_no_thinking",
             "model:xiaomi_standard_thinking",
+            "model:deepseek_chat",
             "model:dashscope_standard_thinking",
             "model:default",
         ],
@@ -160,6 +162,7 @@ def test_selector_records_in_band_model_fallback_when_fast_model_is_blocked() ->
         blocked_capability_ids=[
             "model:xiaomi_chat",
             "model:dashscope_fast",
+            "model:deepseek_fast",
             "model:glm_4_7_flash_no_thinking",
         ],
     )

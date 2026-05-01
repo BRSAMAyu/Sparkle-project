@@ -135,6 +135,45 @@ def test_share_endpoint_supports_canonical_and_deprecated_routes(achievement_cli
     assert canonical.json()["achievement"]["id"] == "speed_learner"
 
 
+def test_detail_endpoint_returns_unlock_context_snapshot(achievement_client):
+    payload = {
+        "schema_version": 1,
+        "current_plan": {"name": "考前冲刺", "days_to_target": 5},
+        "task": {"title": "导数专项练习"},
+        "story": "2026年3月10日，在「考前冲刺」目标日前 5 天，完成了「导数专项练习」，解锁了「速通大师」。",
+    }
+    response_payload = {
+        "data": _achievement_detail(),
+        "is_unlocked": True,
+        "user_progress": {
+            "achievement_id": "speed_learner",
+            "progress": 1.0,
+            "progress_value": 20,
+            "progress_target": 20,
+            "is_pinned": False,
+            "share_count": 0,
+            "is_first_unlocker": False,
+            "unlocked_at": datetime(2026, 3, 10, 10, 0, 0),
+            "last_progress_update": datetime(2026, 3, 10, 10, 0, 0),
+            "context_snapshot": payload,
+            "context_story": payload["story"],
+        },
+        "context_snapshot": payload,
+        "context_story": payload["story"],
+    }
+
+    with patch(
+        "app.api.v1.achievements._build_achievement_detail_response",
+        new=AsyncMock(return_value=response_payload),
+    ):
+        response = achievement_client.get("/achievements/speed_learner")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["context_snapshot"]["task"]["title"] == "导数专项练习"
+    assert body["user_progress"]["context_story"] == payload["story"]
+
+
 def test_process_achievement_event_requires_internal_token(achievement_client):
     with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", "secret-key"):
         response = achievement_client.post(

@@ -78,6 +78,7 @@ class NotificationPreferencesUpdate(BaseModel):
     """Update notification preferences"""
     enable_system: bool | None = None
     enable_interventions: bool | None = None
+    disabled_types: list[str] | None = Field(None, description="Notification type/category keys disabled by the user")
     notification_level: str | None = Field(None, pattern="^(minimal|standard|verbose)$")
     quiet_hours_enabled: bool | None = None
     quiet_hours_start: str | None = Field(None, pattern="^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$")
@@ -89,6 +90,7 @@ class NotificationPreferencesResponse(BaseModel):
     user_id: UUID4
     enable_system: bool
     enable_interventions: bool
+    disabled_types: list[str] = Field(default_factory=list)
     notification_level: str
     quiet_hours_enabled: bool
     quiet_hours_start: str | None

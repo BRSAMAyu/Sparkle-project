@@ -4,6 +4,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.i18n import I18n
 from app.models.user import AvatarStatus, User
 from app.schemas.notification import NotificationCreate
 from app.services.notification_service import NotificationService
@@ -38,8 +39,8 @@ class AuditService:
             db,
             user_id,
             NotificationCreate(
-                title="头像审核通过",
-                content="您的新头像已经审核通过，现在大家都可以看到啦！",
+                title=I18n.t("audit.avatar_approved_title", locale="zh"),
+                content=I18n.t("audit.avatar_approved_content", locale="zh"),
                 type="system",
                 data={"status": "approved"}
             )
@@ -48,7 +49,7 @@ class AuditService:
         return user
 
     @staticmethod
-    async def reject_avatar(db: AsyncSession, user_id: UUID, reason: str = "头像内容不符合规范") -> User | None:
+    async def reject_avatar(db: AsyncSession, user_id: UUID, reason: str | None = None) -> User | None:
         """审核驳回头像"""
         user = await db.get(User, user_id)
         if not user or user.avatar_status != AvatarStatus.PENDING:
@@ -67,8 +68,8 @@ class AuditService:
             db,
             user_id,
             NotificationCreate(
-                title="头像审核未通过",
-                content=f"很抱歉，您的头像审核未通过。原因：{reason}",
+                title=I18n.t("audit.avatar_rejected_title", locale="zh"),
+                content=I18n.t("audit.avatar_rejected_content", locale="zh", reason=reason or I18n.t("audit.avatar_rejected_default_reason", locale="zh")),
                 type="system",
                 data={"status": "rejected", "reason": reason}
             )

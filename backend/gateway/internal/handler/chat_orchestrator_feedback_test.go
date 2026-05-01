@@ -1,9 +1,12 @@
 package handler
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestBuildExecutionSummaryToolResultPayload(t *testing.T) {
-	payload := buildExecutionSummaryToolResultPayload(map[string]interface{}{
+	payload := buildExecutionSummaryToolResultPayload(context.Background(), map[string]interface{}{
 		"id":                    "record-1",
 		"execution_intent_id":   "intent-1",
 		"execution_status":      "succeeded",

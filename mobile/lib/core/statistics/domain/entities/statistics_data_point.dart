@@ -1,4 +1,6 @@
+import 'package:flutter/widgets.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 part 'statistics_data_point.freezed.dart';
 part 'statistics_data_point.g.dart';
@@ -105,18 +107,18 @@ enum StatisticsAggregation {
 /// Extension for aggregation helper methods
 extension StatisticsAggregationExt on StatisticsAggregation {
   /// Get the label for this aggregation level
-  String get label {
+  String getLabel(BuildContext context) {
     switch (this) {
       case StatisticsAggregation.none:
-        return '原始数据';
+        return context.l10n.statisticsAggregationNone;
       case StatisticsAggregation.hourly:
-        return '按小时';
+        return context.l10n.statisticsAggregationHourly;
       case StatisticsAggregation.daily:
-        return '按天';
+        return context.l10n.statisticsAggregationDaily;
       case StatisticsAggregation.weekly:
-        return '按周';
+        return context.l10n.statisticsAggregationWeekly;
       case StatisticsAggregation.monthly:
-        return '按月';
+        return context.l10n.statisticsAggregationMonthly;
     }
   }
 

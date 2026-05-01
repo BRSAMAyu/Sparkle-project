@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:sparkle/core/statistics/domain/entities/statistics_entity.dart';
 import 'package:sparkle/core/statistics/domain/entities/statistics_period.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Export format options
 enum ExportFormat {
@@ -19,16 +20,18 @@ enum ExportFormat {
 
 /// Extension for ExportFormat
 extension ExportFormatExt on ExportFormat {
-  String get label {
+  String get label => localizedLabel(null);
+
+  String localizedLabel(AppLocalizations? l10n) {
     switch (this) {
       case ExportFormat.json:
         return 'JSON';
       case ExportFormat.csv:
         return 'CSV';
       case ExportFormat.pngReport:
-        return '图片报告';
+        return l10n?.statisticsExportImageReport ?? '图片报告';
       case ExportFormat.pdfReport:
-        return 'PDF报告';
+        return l10n?.statisticsExportPDFReport ?? 'PDF报告';
     }
   }
 

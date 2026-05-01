@@ -267,11 +267,17 @@ register_res.json
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
 .claude/ide/
+.claude/workflow/
 
 # ========================================
 # Session continuation artifacts (Claude Code)
 # ========================================
 2026-*-this-session-is-being-continued-from-a-previous-*.txt
+
+# ========================================
+# SGW runtime artifacts (databases, checkpoints, debug output)
+# ========================================
+artifacts/sgw*/
 
 # Keep dictionaries directory (MDX files for vocabulary lookup)
 # data/dictionaries/

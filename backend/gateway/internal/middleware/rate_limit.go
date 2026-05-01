@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"github.com/sparkle/gateway/internal/i18n"
 	"golang.org/x/time/rate"
 )
 
@@ -161,7 +162,7 @@ func RateLimitMiddleware(rl *RateLimiter) gin.HandlerFunc {
 		if !limiter.Allow() {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":       "rate_limit_exceeded",
-				"message":     "请求过于频繁，请稍后再试",
+				"message":     i18n.T(c.Request.Context(), "ratelimit.exceeded"),
 				"retry_after": retryAfterSeconds(limiter),
 			})
 			c.Abort()
@@ -206,7 +207,7 @@ func UserBasedRateLimit(requestsPerSecond float64, burst int) gin.HandlerFunc {
 		if !limiter.Allow() {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":       "rate_limit_exceeded",
-				"message":     "请求过于频繁，请稍后再试",
+				"message":     i18n.T(c.Request.Context(), "ratelimit.exceeded"),
 				"retry_after": retryAfterSeconds(limiter),
 			})
 			c.Abort()
@@ -241,7 +242,7 @@ func EndpointSpecificRateLimit(endpoint string, requestsPerSecond float64, burst
 		if !limiter.Allow() {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":       "rate_limit_exceeded",
-				"message":     "该端点请求过于频繁，请稍后再试",
+				"message":     i18n.T(c.Request.Context(), "ratelimit.endpoint_exceeded"),
 				"retry_after": retryAfterSeconds(limiter),
 			})
 			c.Abort()
@@ -294,7 +295,7 @@ func AdaptiveRateLimitMiddleware(baseRate float64, burst int) gin.HandlerFunc {
 		if !limiter.Allow() {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":       "rate_limit_exceeded",
-				"message":     "请求过于频繁，请稍后再试",
+				"message":     i18n.T(c.Request.Context(), "ratelimit.exceeded"),
 				"retry_after": retryAfterSeconds(limiter),
 				"endpoint":    path,
 			})
@@ -386,7 +387,7 @@ func WebSocketRateLimitMiddleware() gin.HandlerFunc {
 		if !limiter.Allow() {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":   "websocket_rate_limit_exceeded",
-				"message": "WebSocket连接过于频繁，请稍后再试",
+				"message": i18n.T(c.Request.Context(), "ratelimit.websocket_exceeded"),
 			})
 			c.Abort()
 			return
@@ -457,7 +458,7 @@ func HybridRateLimitMiddleware(rdb *redis.Client, localRL *RateLimiter, config H
 		if !allowed {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":   "rate_limit_exceeded",
-				"message": "请求过于频繁，请稍后再试",
+				"message": i18n.T(c.Request.Context(), "ratelimit.exceeded"),
 			})
 			c.Abort()
 			return
@@ -504,7 +505,7 @@ func SlidingWindowRateLimitMiddleware(rdb *redis.Client, window time.Duration, l
 		if !allowed {
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":     "rate_limit_exceeded",
-				"message":   "请求过于频繁，请稍后再试",
+				"message":   i18n.T(c.Request.Context(), "ratelimit.exceeded"),
 				"limit":     limit,
 				"remaining": remaining,
 			})

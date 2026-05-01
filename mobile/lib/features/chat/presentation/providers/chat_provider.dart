@@ -98,6 +98,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   // P0修复: 计划切换进行中标志，阻止切换期间发送消息防止消息发送到错误上下文
   bool isSwitchingPlan = false;
+  _PendingChatRequest? _retryableRequest;
 
   // Any response stream created before the latest generation value becomes
   // stale and must not mutate the current chat UI.
@@ -181,11 +182,13 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   void _beginRun({
     required String runId,
-    required ChatMessageModel userMessage,
+    ChatMessageModel? userMessage,
   }) {
     final nowMs = DateTime.now().millisecondsSinceEpoch;
     state = state.copyWith(
-      messages: [...state.messages, userMessage],
+      messages: userMessage == null
+          ? state.messages
+          : [...state.messages, userMessage],
       isSending: true,
       hasMoreMessages: false,
       streamingContent: '',
@@ -723,8 +726,82 @@ class ChatNotifier extends StateNotifier<ChatState> {
     state = state.copyWith(messages: [welcome]);
   }
 
+  void showDailyStartupMessage(
+    String content, {
+    required String planId,
+    required String dateKey,
+  }) {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return;
+    if (state.messages.any((message) => message.role == MessageRole.user)) {
+      return;
+    }
+
+    final safePlanId = planId.replaceAll(RegExp('[^a-zA-Z0-9_-]'), '_');
+    final messageId = 'daily_startup_${safePlanId}_$dateKey';
+    if (state.messages.any((message) => message.id == messageId)) {
+      return;
+    }
+
+    final retainedMessages = state.messages
+        .where(
+          (message) =>
+              !message.id.startsWith('daily_startup_') &&
+              !message.id.startsWith('welcome_'),
+        )
+        .toList(growable: false);
+    final startup = ChatMessageModel(
+      id: messageId,
+      conversationId: state.conversationId ?? 'daily_startup',
+      role: MessageRole.assistant,
+      content: trimmed,
+      createdAt: DateTime.now(),
+    );
+    state = state.copyWith(messages: [...retainedMessages, startup]);
+  }
+
+  void showComebackMessage(
+    String content, {
+    required String planId,
+    required int daysAway,
+  }) {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return;
+    if (state.messages.any((message) => message.role == MessageRole.user)) {
+      return;
+    }
+
+    final safePlanId = planId.replaceAll(RegExp('[^a-zA-Z0-9_-]'), '_');
+    final messageId = 'comeback_${safePlanId}_$daysAway';
+    if (state.messages.any((message) => message.id == messageId)) {
+      return;
+    }
+
+    final retainedMessages = state.messages
+        .where(
+          (message) =>
+              !message.id.startsWith('comeback_') &&
+              !message.id.startsWith('daily_startup_') &&
+              !message.id.startsWith('welcome_'),
+        )
+        .toList(growable: false);
+    final comeback = ChatMessageModel(
+      id: messageId,
+      conversationId: state.conversationId ?? 'comeback',
+      role: MessageRole.assistant,
+      content: trimmed,
+      createdAt: DateTime.now(),
+    );
+    state = state.copyWith(messages: [...retainedMessages, comeback]);
+  }
+
   /// 发送消息 (使用 SSE/WebSocket 流式响应)
-  Future<void> sendMessage(String content, {String? taskId}) async {
+  Future<void> sendMessage(
+    String content, {
+    String? taskId,
+    Map<String, dynamic>? extraContextOverrides,
+    bool reuseLastUserMessage = false,
+  }) async {
     // P0修复: 计划切换期间禁止发送，防止消息关联到错误的计划上下文
     if (isSwitchingPlan) {
       debugPrint('[Chat] sendMessage blocked: plan switch in progress');
@@ -754,23 +831,39 @@ class ChatNotifier extends StateNotifier<ChatState> {
     }
 
     final runId = _nextClientRunId();
+    final request = _PendingChatRequest(
+      content: content,
+      taskId: taskId,
+      extraContextOverrides: extraContextOverrides == null
+          ? null
+          : Map<String, dynamic>.from(extraContextOverrides),
+    );
+    _retryableRequest = request;
     final requestGeneration = ++_streamGeneration;
     bool isCurrentRequest() => requestGeneration == _streamGeneration;
     final queuedAttachments = List<StoredFile>.from(state.attachedFiles);
     final hasQueuedAttachments = queuedAttachments.isNotEmpty;
 
-    // 1. 立即添加用户消息到 UI
-    final userMessage = ChatMessageModel(
-      id: 'temp_user_${DateTime.now().millisecondsSinceEpoch}',
-      userId: userId,
-      conversationId: state.conversationId ?? 'temp_conversation',
-      role: MessageRole.user,
-      content: content,
-      taskId: taskId,
-      createdAt: DateTime.now(),
-    );
+    final canReuseLastUserMessage = reuseLastUserMessage &&
+        state.messages.isNotEmpty &&
+        state.messages.last.role == MessageRole.user &&
+        state.messages.last.content == content &&
+        state.messages.last.taskId == taskId;
 
-    _beginRun(runId: runId, userMessage: userMessage);
+    if (canReuseLastUserMessage) {
+      _beginRun(runId: runId);
+    } else {
+      final userMessage = ChatMessageModel(
+        id: 'temp_user_${DateTime.now().millisecondsSinceEpoch}',
+        userId: userId,
+        conversationId: state.conversationId ?? 'temp_conversation',
+        role: MessageRole.user,
+        content: content,
+        taskId: taskId,
+        createdAt: DateTime.now(),
+      );
+      _beginRun(runId: runId, userMessage: userMessage);
+    }
 
     var accumulatedContent = '';
     String? responseId;
@@ -781,6 +874,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
     final accumulatedWidgets = <WidgetPayload>[];
     Map<String, dynamic>? accumulatedCollaboration;
     Map<String, dynamic>? accumulatedUxEnvelope;
+    final accumulatedRawMetadata = <String, dynamic>{};
     Map<String, dynamic>? accumulatedOrchestrationTrace;
     Map<String, dynamic>? accumulatedModeSuggestion;
     Map<String, dynamic>? accumulatedRoutingPreview;
@@ -801,6 +895,53 @@ class ChatNotifier extends StateNotifier<ChatState> {
     List<Map<String, dynamic>>? snapshotAgentActivities;
     var sawTerminalEvent = false;
     var shouldResetSending = true;
+
+    void upsertSourceSummaryCitations(List<Map<String, dynamic>> citations) {
+      accumulatedRawMetadata['citations'] =
+          List<Map<String, dynamic>>.from(citations);
+      final data = {
+        'citations_available': citations.isNotEmpty,
+        'reference_scope': citations.every(
+          (citation) => (citation['file_id']?.toString() ?? '').isNotEmpty,
+        )
+            ? 'file_only'
+            : 'mixed',
+        'evidence_summary': citations.isNotEmpty
+            ? I18nService.instance.l10n.chatSourcesAvailable
+            : I18nService.instance.l10n.chatSourcesUnavailable,
+        'citations': citations,
+      };
+      final existingIndex = accumulatedWidgets.indexWhere(
+        (widget) => widget.type == 'source_summary',
+      );
+      if (existingIndex >= 0) {
+        accumulatedWidgets[existingIndex] = WidgetPayload(
+          type: 'source_summary',
+          data: data,
+        );
+      } else {
+        accumulatedWidgets.add(
+          WidgetPayload(
+            type: 'source_summary',
+            data: data,
+          ),
+        );
+      }
+    }
+
+    void captureCitationMetadata(dynamic rawCitations) {
+      if (rawCitations is! List || rawCitations.isEmpty) {
+        return;
+      }
+      final citations = rawCitations
+          .whereType<Map<dynamic, dynamic>>()
+          .map(Map<String, dynamic>.from)
+          .toList();
+      if (citations.isEmpty) {
+        return;
+      }
+      upsertSourceSummaryCitations(citations);
+    }
 
     void flushPending({bool immediate = false}) {
       void applyPending() {
@@ -916,6 +1057,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           workflowId: workflowId,
           promptVersion: promptVersion,
           uxEnvelope: accumulatedUxEnvelope,
+          rawMetadata:
+              accumulatedRawMetadata.isNotEmpty ? accumulatedRawMetadata : null,
         );
 
         state = state.copyWith(
@@ -948,12 +1091,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
         isErrorRetryable: errorMessage == null ? false : isRetryable,
         attachedFiles: restoreAttachments ? queuedAttachments : const [],
       );
+      if (phase == ChatRunPhase.completed) {
+        _retryableRequest = null;
+      }
       shouldResetSending = false;
     }
 
     try {
       final token = await _ref.read(authRepositoryProvider).getAccessToken();
       final fileIds = state.attachedFiles.map((file) => file.id).toList();
+      final useDocumentContext = state.documentRetrievalEnabled;
       state = state.copyWith(clearAttachments: true);
 
       // Get selected plan for chat context
@@ -970,6 +1117,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
         if (selectedPlanId != null) 'plan_id': selectedPlanId,
         'reasoning_mode': reasoningMode,
         'guidance_mode': _ref.read(guidanceModeProvider).name,
+        'use_document_context': useDocumentContext,
+        'document_context_scope': state.documentContextMode.name,
         'seed_library_enabled': seedLibraryEnabled,
         if (seedLibraryEnabled) ...{
           'active_seed_library_ids':
@@ -984,6 +1133,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
               )
               .toList(),
         },
+        ...?extraContextOverrides,
       };
 
       // Get selected chat mode
@@ -1003,10 +1153,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
         nickname: nickname,
         token: token,
         fileIds: fileIds,
-        includeReferences: fileIds.isNotEmpty,
+        includeReferences: useDocumentContext || fileIds.isNotEmpty,
         extraContext: extraContext,
         chatMode: chatModeValue,
         requestId: runId,
+        useDocumentContext: useDocumentContext,
       );
 
       // Wrap with timeout check
@@ -1053,7 +1204,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
           final metadata = event.metadata;
           if (metadata != null) {
             accumulatedMeta.addAll(metadata);
+            accumulatedRawMetadata.addAll(metadata);
             _appendExecutionWidgets(accumulatedWidgets, metadata);
+            captureCitationMetadata(metadata['citations']);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
@@ -1244,7 +1397,9 @@ class ChatNotifier extends StateNotifier<ChatState> {
           final metadata = event.metadata;
           if (metadata != null) {
             accumulatedMeta.addAll(metadata);
+            accumulatedRawMetadata.addAll(metadata);
             _appendExecutionWidgets(accumulatedWidgets, metadata);
+            captureCitationMetadata(metadata['citations']);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
@@ -1431,24 +1586,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
                 .add(_normalizeWidgetPayload(widgetType, widgetData));
           }
         } else if (event is CitationEvent) {
-          accumulatedWidgets.add(
-            WidgetPayload(
-              type: 'source_summary',
-              data: {
-                'citations_available': event.citations.isNotEmpty,
-                'reference_scope': event.citations.every(
-                  (citation) =>
-                      (citation['file_id']?.toString() ?? '').isNotEmpty,
-                )
-                    ? 'file_only'
-                    : 'mixed',
-                'evidence_summary': event.citations.isNotEmpty
-                    ? I18nService.instance.l10n.chatSourcesAvailable
-                    : I18nService.instance.l10n.chatSourcesUnavailable,
-                'citations': event.citations,
-              },
-            ),
-          );
+          upsertSourceSummaryCitations(event.citations);
         } else if (event is UsageEvent) {
           state = state.copyWith(
             lastPromptTokens: event.promptTokens,
@@ -1458,6 +1596,8 @@ class ChatNotifier extends StateNotifier<ChatState> {
           await _updateDailyUsage(event);
         } else if (event is MetaEvent) {
           accumulatedMeta.addAll(event.meta);
+          accumulatedRawMetadata.addAll(event.meta);
+          captureCitationMetadata(event.meta['citations']);
           flushPending();
         } else if (event is ReasoningStepEvent) {
           // 🆕 推理步骤事件 - Chain of Thought Visualization
@@ -1668,4 +1808,35 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
     }
   }
+
+  Future<void> retryLastMessage() async {
+    final request = _retryableRequest;
+    if (request == null) {
+      if (state.wsConnectionState == WsConnectionState.failed ||
+          state.wsConnectionState == WsConnectionState.disconnected) {
+        await reconnect();
+      }
+      return;
+    }
+
+    state = state.copyWith(clearError: true);
+    await sendMessage(
+      request.content,
+      taskId: request.taskId,
+      extraContextOverrides: request.extraContextOverrides,
+      reuseLastUserMessage: true,
+    );
+  }
+}
+
+class _PendingChatRequest {
+  const _PendingChatRequest({
+    required this.content,
+    this.taskId,
+    this.extraContextOverrides,
+  });
+
+  final String content;
+  final String? taskId;
+  final Map<String, dynamic>? extraContextOverrides;
 }

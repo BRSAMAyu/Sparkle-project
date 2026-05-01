@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
+import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/presentation/providers/simulation_provider.dart';
 import 'package:sparkle/features/simulation/simulation_routes.dart';
+import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 
@@ -21,6 +25,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
   static const String panelSimulation = 'simulation';
   static const String panelTheater = 'theater';
   static const String panelReport = 'report';
+  static const String panelWeeklyNarrative = 'weeklyNarrative';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,6 +61,13 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
     final topSeed = simulationState.recommendedSeeds.isNotEmpty
         ? simulationState.recommendedSeeds.first
         : null;
+    final weeklyNarrative =
+        ref.watch(weeklyGrowthNarrativeProvider).valueOrNull;
+    final showOverviewEmptyState = (weeklyNarrative?.hasData == false) &&
+        latestTheater == null &&
+        latestSimulation == null &&
+        latestReportPayload == null &&
+        topSeed == null;
 
     return SparklePageScaffold(
       role: SparklePageRole.content,
@@ -80,6 +92,19 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (showOverviewEmptyState)
+                EmptyState(
+                  icon: Icons.insights_outlined,
+                  title: '学习洞察还没有可读数据',
+                  description: '先完成一次学习任务、记录一道错题，或开始一轮仿真，周报和洞察才会开始给出真正有用的反馈。',
+                  actionText: '去创建学习任务',
+                  onAction: () => context.push(TaskRoutes.taskCreate),
+                )
+              else
+                WeeklyGrowthNarrativeCard(
+                  initialExpanded: initialPanel == panelWeeklyNarrative,
+                ),
+              const SizedBox(height: DS.spacing16),
               _OverviewHero(activePanel: initialPanel),
               const SizedBox(height: DS.spacing16),
               _InsightModuleCard(
@@ -352,7 +377,7 @@ class _OverviewHero extends StatelessWidget {
               focusLabel,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.info,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ),
@@ -455,7 +480,7 @@ class _InsightModuleCard extends StatelessWidget {
                       '推荐先看',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: accent,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                   ),
@@ -465,7 +490,7 @@ class _InsightModuleCard extends StatelessWidget {
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: DS.fontWeightBold,
                     height: 1.35,
                   ),
             ),

@@ -16,6 +16,7 @@ from loguru import logger
 
 from app.agents.graph.state import SparkleState
 from app.agents.graph.workflow import sparkle_planning_graph  # Phase 2: Use planning-only graph
+from app.core.i18n import I18n
 from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.rendered_plan_artifact import parse_rendered_plan_artifact
 from app.orchestration.schemas import ExecutablePlan, StateSnapshot, StepCriteria, ToolCallSpec
@@ -82,6 +83,7 @@ class LangGraphPlanner:
         state_overrides: dict[str, Any] | None = None,
         planning_constraints: dict[str, Any] | None = None,
         stream_callback: Any | None = None,
+        locale: str = "en",
     ) -> ExecutablePlan:
         """Generate execution plan from LangGraph
 
@@ -93,6 +95,7 @@ class LangGraphPlanner:
             conversation_history: Optional conversation history for context
             plan_id: Plan ID for version tracking (Phase 4)
             execution_feedback: Past execution feedback (slow_tools, failed_tools, etc.)
+            locale: User locale (en, zh, etc.)
 
         Returns:
             ExecutablePlan: Executable plan with tool_calls
@@ -106,7 +109,7 @@ class LangGraphPlanner:
         # Build initial state
         messages = [HumanMessage(content=message)]
         if planning_constraints:
-            messages.insert(0, HumanMessage(content=self._build_constraints_context(planning_constraints)))
+            messages.insert(0, HumanMessage(content=self._build_constraints_context(planning_constraints, locale=locale)))
         if persona_constraints:
             messages.insert(0, HumanMessage(content=self._build_persona_constraints_context(persona_constraints)))
 
@@ -132,6 +135,7 @@ class LangGraphPlanner:
                 **(snapshot.to_dict() if snapshot else {}),
                 **({"plan_constraints": planning_constraints} if planning_constraints else {}),
                 **({"persona_constraints": persona_constraints.to_planning_constraints()} if hasattr(persona_constraints, "to_planning_constraints") else {}),
+                "language": locale,
             },
             "next_step": None,
             "active_agent": None,
@@ -150,6 +154,7 @@ class LangGraphPlanner:
             "_execution_feedback": execution_feedback,
             "_planning_constraints": planning_constraints or {},
         }
+
         if mode_config:
             initial_state["mode_name"] = getattr(mode_config, "chat_mode", None)
             initial_state["collaboration_mode"] = getattr(mode_config, "collaboration_mode", None)
@@ -232,8 +237,9 @@ class LangGraphPlanner:
         return self._rendered_plan_artifacts_by_session.pop(session_id, None)
 
     @staticmethod
-    def _build_constraints_context(planning_constraints: dict[str, Any]) -> str:
-        lines = ["规划约束（必须尽量满足）："]
+    def _build_constraints_context(planning_constraints: dict[str, Any], locale: str = "en") -> str:
+        header = I18n.t("planner.constraints_header", locale=locale)
+        lines = [header]
         planning_strategy = planning_constraints.get("planning_strategy")
         semantic_control = planning_constraints.get("semantic_control")
         if isinstance(planning_strategy, dict) and planning_strategy:
@@ -244,11 +250,11 @@ class LangGraphPlanner:
                     body_awareness_guidance=planning_constraints.get("body_awareness_guidance"),
                     user_strategy_state=planning_constraints.get("user_strategy_state"),
                     outcome_learning=planning_constraints.get("outcome_learning"),
-                    language="zh",
+                    language=locale,
                 ).to_dict()
-            for item in format_semantic_control_lines(semantic_control, language="zh", section="planning")[:4]:
+            for item in format_semantic_control_lines(semantic_control, language=locale, section="planning")[:4]:
                 lines.append(f"- {item}")
-            for item in format_semantic_control_lines(semantic_control, language="zh", section="decision")[:2]:
+            for item in format_semantic_control_lines(semantic_control, language=locale, section="decision")[:2]:
                 lines.append(f"- {item}")
         weak_nodes = planning_constraints.get("weak_knowledge_nodes") or []
         if planning_constraints.get("insert_prerequisite_review") and isinstance(weak_nodes, list) and weak_nodes:
@@ -259,9 +265,11 @@ class LangGraphPlanner:
                 if isinstance(item, dict) and item.get("name") and item.get("description")
             ]
             if names:
-                lines.append(f"- 在开始目标任务前，先安排一个针对「{'、'.join(names[:3])}」的复习任务。")
+                review_text = I18n.t("planner.start_task_with", locale=locale, topic="、".join(names[:3]))
+                lines.append(f"- {review_text}")
             for description in descriptions[:3]:
-                lines.append(f"- 薄弱知识点说明: {description}")
+                desc_header = "Weakness description" if locale == "en" else "薄弱知识点说明"
+                lines.append(f"- {desc_header}: {description}")
         for key, value in planning_constraints.items():
             if key == "_meta":
                 continue
@@ -282,20 +290,23 @@ class LangGraphPlanner:
             
         cognitive_signals = planning_constraints.get("cognitive_policy_signals")
         if isinstance(cognitive_signals, list) and cognitive_signals:
-            lines.append("用户认知和行为约束（重点考虑）：")
+            signals_header = "User cognitive and behavioral constraints (important):" if locale == "en" else "用户认知和行为约束（重点考虑）："
+            lines.append(signals_header)
             for sig in cognitive_signals:
                 if sig == "task.time_estimate.add_buffer_30pct":
-                    lines.append("- 时间预估缓冲: 将所有任务的预估时间增加约30%，避免用户挫败感。")
+                    text = "Time estimate buffer: increase all task estimates by ~30%." if locale == "en" else "时间预估缓冲: 将所有任务的预估时间增加约30%，避免用户挫败感。"
+                    lines.append(f"- {text}")
                 elif sig == "task.difficulty.start_easy":
-                    lines.append("- 难度排序偏好: 优先安排简单、低阻力的任务，帮助用户启动。")
+                    text = "Difficulty preference: start with simple, low-resistance tasks." if locale == "en" else "难度排序偏好: 优先安排简单、低阻力的任务，帮助用户启动。"
                 elif sig == "plan.milestone.add_checkpoint":
-                    lines.append("- 里程碑检查点: 在计划执行中自动插入检查点（Checkpoint）进行复盘。")
+                    text = "Milestones: automatically insert checkpoints for review." if locale == "en" else "里程碑检查点: 在计划执行中自动插入检查点（Checkpoint）进行复盘。"
                 elif sig == "llm.feedback.emphasize_progress":
-                    lines.append("- 互动反馈偏好: 强调用户的进步和正向反馈，增强对话语气中的鼓励性。")
+                    text = "Feedback preference: emphasize progress and positive feedback." if locale == "en" else "互动反馈偏好: 强调用户的进步和正向反馈，增强对话语气中的鼓励性。"
                 else:
                     lines.append(f"- {sig}")
 
         return "\n".join(lines)
+
 
     @staticmethod
     def _build_persona_constraints_context(persona_constraints: Any) -> str:

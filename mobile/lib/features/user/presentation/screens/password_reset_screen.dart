@@ -100,7 +100,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
       ),
       child: ContentConstraint(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(DS.spacing24),
+          padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
           child: GraphiteCardSurface(
             surfaceRole: SparkleSurfaceRole.card,
             child: Form(
@@ -201,7 +201,7 @@ class _PasswordResetScreenState extends ConsumerState<PasswordResetScreen> {
           label,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: DS.fontWeightMedium,
             color: isDark ? DS.brandPrimary70 : DS.brandPrimary.shade700,
           ),
         ),

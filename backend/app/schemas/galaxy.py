@@ -1,8 +1,9 @@
 from __future__ import annotations
-from datetime import datetime
-from enum import Enum
+
 import math
 import re
+from datetime import datetime
+from enum import Enum
 from typing import Any
 from uuid import UUID
 
@@ -13,10 +14,10 @@ from app.services.node_sector_service import (
     blend_sector_colors,
     build_sector_visuals,
     dominant_sector_from_weights,
-    normalize_sector_weights,
     parse_sector_code,
     resolve_sector_weights,
 )
+
 
 class NodeStatus(str, Enum):
     LOCKED = "locked"  # 未解锁
@@ -40,7 +41,7 @@ class SparkRequest(BaseModel):
 class SearchRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=200)
     limit: int = Field(10, ge=1, le=50)
-    threshold: float = Field(0.3, ge=0.0, le=1.0)
+    threshold: float = Field(0.6, ge=0.0, le=1.0)  # cosine distance threshold; 0.6 ≈ similarity>0.4, suitable for Chinese embeddings
 
 
 class CreateGalaxyNodeRequest(BaseModel):
@@ -103,9 +104,107 @@ class ApplyNodeExpansionResponse(BaseModel):
     reused_nodes: list[NodeBase] = Field(default_factory=list)
 
 
+class SuggestedNodeSimilarity(BaseModel):
+    node_id: UUID
+    name: str
+    similarity: float = Field(..., ge=0.0, le=1.0)
+
+
+class SuggestedDocumentNode(BaseModel):
+    node_id: UUID
+    name: str
+    description: str | None = None
+    confidence_score: float = Field(..., ge=0.0, le=1.0)
+    similarity_to_existing: list[SuggestedNodeSimilarity] = Field(default_factory=list)
+
+
+class SuggestedDocumentNodesResponse(BaseModel):
+    file_id: UUID
+    suggested_nodes: list[SuggestedDocumentNode] = Field(default_factory=list)
+
+
+class DraftGalaxyNode(SuggestedDocumentNode):
+    source_file_id: UUID | None = None
+    source_file_name: str | None = None
+    created_at: datetime | None = None
+
+
+class DraftGalaxyNodesResponse(BaseModel):
+    drafts: list[DraftGalaxyNode] = Field(default_factory=list)
+
+
+class ReviewNodeDecision(BaseModel):
+    node_id: UUID
+    action: str = Field(..., pattern="^(approve|reject|merge)$")
+    edited_name: str | None = Field(None, min_length=1, max_length=255)
+    edited_description: str | None = None
+    merge_into_node_id: UUID | None = None
+
+
+class ReviewDocumentNodesRequest(BaseModel):
+    decisions: list[ReviewNodeDecision] = Field(default_factory=list)
+
+
+class ReviewNodeResult(BaseModel):
+    node_id: UUID
+    action: str
+    status: str
+    merge_into_node_id: UUID | None = None
+
+
+class ReviewDocumentNodesResponse(BaseModel):
+    file_id: UUID
+    approved_count: int = 0
+    rejected_count: int = 0
+    merged_count: int = 0
+    results: list[ReviewNodeResult] = Field(default_factory=list)
+
+
 # ==========================================
 # 响应模型
 # ==========================================
+class NodeHistoryErrorItem(BaseModel):
+    id: UUID
+    question_text: str | None = None
+    question_image_url: str | None = None
+    subject_code: str | None = None
+    chapter: str | None = None
+    mastery_level: float = 0.0
+    review_count: int = 0
+    analysis_summary: str | None = None
+    affected_node_id: UUID | None = None
+    linked_knowledge_node_ids: list[str] = Field(default_factory=list)
+    created_at: datetime | None = None
+    last_reviewed_at: datetime | None = None
+
+
+class NodeHistoryResponse(BaseModel):
+    node_id: str
+    resolved_node_id: UUID | None = None
+    node_label: str | None = None
+    mastery: float = Field(0.0, ge=0.0, le=1.0)
+    last_studied_at: datetime | None = None
+    study_count: int = 0
+    related_errors: list[NodeHistoryErrorItem] = Field(default_factory=list)
+
+
+class GalaxyContributionNode(BaseModel):
+    node_id: UUID
+    node_name: str
+    reason: str | None = None
+    mastery_delta: int = 0
+    updated_at: datetime | None = None
+
+
+class UserGalaxyContribution(BaseModel):
+    first_activation_count: int = 0
+    error_repaired_count: int = 0
+    conversation_updated_count: int = 0
+    first_activated_nodes: list[GalaxyContributionNode] = Field(default_factory=list)
+    error_repaired_nodes: list[GalaxyContributionNode] = Field(default_factory=list)
+    conversation_updated_nodes: list[GalaxyContributionNode] = Field(default_factory=list)
+
+
 class NodeBase(BaseModel):
     id: UUID
     name: str
@@ -171,11 +270,18 @@ class UserStatusInfo(BaseModel):
     is_favorite: bool
     first_unlock_at: datetime | None = None
     last_study_at: datetime | None = None
+    mastery_last_updated_at: datetime | None = None
     next_review_at: datetime | None = None
     decay_paused: bool
 
     # Evidence-mode: recent errors on this node (last 14 days)
     recent_error_count: int = 0
+
+    # Predictive review overlay: 0.0-1.0 urgency + top recommendation marker.
+    review_urgency_score: float = 0.0
+    is_review_recommended: bool = False
+    review_urgency_reason: str | None = None
+    days_since_mastery_update: float = 0.0
 
     # 计算属性
     status: NodeStatus
@@ -194,12 +300,25 @@ class NodeWithStatus(NodeBase):
     position_y: float
 
     @classmethod
-    def from_models(cls, node, status, recent_error_count: int = 0):
+    def from_models(cls, node, status, recent_error_count: int = 0, review_signal=None):
         user_status = None
         if status:
             # 计算视觉状态
             visual_status = cls._calculate_status(status)
             brightness = cls._calculate_brightness(status)
+            mastery_last_updated_at = next(
+                (
+                    value
+                    for value in (
+                        getattr(review_signal, "mastery_last_updated_at", None),
+                        getattr(status, "bkt_last_updated_at", None),
+                        getattr(status, "last_study_at", None),
+                        getattr(status, "updated_at", None),
+                    )
+                    if isinstance(value, datetime)
+                ),
+                None,
+            )
 
             user_status = UserStatusInfo(
                 mastery_score=status.mastery_score,
@@ -210,9 +329,14 @@ class NodeWithStatus(NodeBase):
                 is_favorite=status.is_favorite,
                 first_unlock_at=status.first_unlock_at,
                 last_study_at=status.last_study_at,
+                mastery_last_updated_at=mastery_last_updated_at,
                 next_review_at=status.next_review_at,
                 decay_paused=status.decay_paused,
                 recent_error_count=recent_error_count,
+                review_urgency_score=float(getattr(review_signal, "score", 0.0) or 0.0),
+                is_review_recommended=bool(getattr(review_signal, "is_recommended", False)),
+                review_urgency_reason=getattr(review_signal, "reason", None),
+                days_since_mastery_update=float(getattr(review_signal, "days_since_mastery_update", 0.0) or 0.0),
                 status=visual_status,
                 brightness=brightness,
             )
@@ -418,7 +542,50 @@ class ReviewSuggestionsResponse(BaseModel):
     next_review_count: int = 0  # 未来 7 天需要复习的总数
 
 
+class NodeDocumentRef(BaseModel):
+    file_id: UUID
+    filename: str
+    file_type: str | None = None
+    upload_date: datetime | None = None
+    chunk_count: int = 0
+    preview_chunks: list[str] = Field(default_factory=list)
+
+
+class NodeKnowledgeStats(BaseModel):
+    total_documents: int = 0
+    total_chunks: int = 0
+    has_personal_uploads: bool = False
+    last_material_added: datetime | None = None
+
+
+class NodeSourceChunk(BaseModel):
+    chunk_id: UUID
+    file_id: UUID
+    filename: str
+    file_type: str | None = None
+    chunk_index: int
+    content: str
+    preview: str
+    page_numbers: list[int] = Field(default_factory=list)
+    section_title: str | None = None
+    quality_score: float | None = None
+    created_at: datetime | None = None
+
+
+class NodeChunksResponse(BaseModel):
+    node_id: UUID
+    chunks: list[NodeSourceChunk] = Field(default_factory=list)
+    total: int = 0
+    page: int = 1
+    page_size: int = 20
+    total_pages: int = 0
+    has_next: bool = False
+    has_prev: bool = False
+
+
 class NodeDetailResponse(BaseModel):
     node: NodeWithStatus
     relations: list[NodeRelationInfo]
+    source_documents: list[NodeDocumentRef] = Field(default_factory=list)
+    knowledge_stats: NodeKnowledgeStats = Field(default_factory=NodeKnowledgeStats)
     # 可以添加更多详情，如学习记录历史等

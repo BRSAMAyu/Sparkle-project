@@ -215,6 +215,7 @@ class RunDB:
         role: str,
         seed_persona_id: str | None = None,
         persona_sample: dict | None = None,
+        arc_id: str | None = None,
         target_turns: int = 12,
         turns_completed: int = 0,
         status: str = "pending",
@@ -224,11 +225,12 @@ class RunDB:
         now = _utcnow_iso()
         self.conn.execute(
             """INSERT INTO sessions
-               (session_id, run_id, task_id, role, seed_persona_id, persona_sample,
+               (session_id, run_id, task_id, role, seed_persona_id, persona_sample, arc_id,
                 status, target_turns, turns_completed, detected_memory_ids,
                 revoke_scheduled, created_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                ON CONFLICT(session_id) DO UPDATE SET
+                 arc_id=excluded.arc_id,
                  status=excluded.status,
                  turns_completed=excluded.turns_completed,
                  detected_memory_ids=excluded.detected_memory_ids,
@@ -242,6 +244,7 @@ class RunDB:
                 role,
                 seed_persona_id,
                 json.dumps(persona_sample, ensure_ascii=False) if persona_sample else None,
+                arc_id,
                 status,
                 target_turns,
                 turns_completed,

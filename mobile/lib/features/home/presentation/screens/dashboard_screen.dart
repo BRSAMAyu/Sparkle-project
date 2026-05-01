@@ -7,19 +7,28 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
+import 'package:sparkle/features/aurora/presentation/widgets/aurora_calibration_strip.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
+import 'package:sparkle/features/home/presentation/widgets/active_bottleneck_alert.dart';
 import 'package:sparkle/features/home/presentation/widgets/compact_status_bar.dart';
+import 'package:sparkle/features/home/presentation/widgets/daily_context_line.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_card_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
+import 'package:sparkle/features/home/presentation/widgets/exam_sprint_dashboard_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/learning_heatmap_widget.dart';
 import 'package:sparkle/features/home/presentation/widgets/metrics_row.dart';
+import 'package:sparkle/features/home/presentation/widgets/next_action_prompt.dart';
 import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/today_growth_status_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
@@ -28,6 +37,7 @@ import 'package:sparkle/features/reviews/presentation/providers/nightly_review_p
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Dashboard screen - extracted from HomeScreen
@@ -47,15 +57,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   bool _isBriefingExpanded = false;
   double? _omniBarHeight;
 
-  SliverToBoxAdapter _staggeredSection({
+  Widget _staggeredSection({
     required int index,
     required Widget child,
   }) =>
-      SliverToBoxAdapter(
-        child: SparkleStaggerItem(
-          index: index,
-          child: child,
-        ),
+      SparkleStaggerItem(
+        index: index,
+        child: child,
       );
 
   bool _shouldShowFirstGoalEmptyState(DashboardState state) {
@@ -67,11 +75,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         state.growth == null;
   }
 
-  bool get _isChinese => Localizations.localeOf(context)
-      .languageCode
-      .toLowerCase()
-      .startsWith('zh');
-
   void _handleOmniBarHeightChanged(double height) {
     if (_omniBarHeight != null && (_omniBarHeight! - height).abs() < 0.5) {
       return;
@@ -79,6 +82,58 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     setState(() {
       _omniBarHeight = height;
     });
+  }
+
+  Future<void> _refreshHomeGrowthState() async {
+    ref
+      ..invalidate(homeActivePlanStatusProvider)
+      ..invalidate(homeTodayTasksSnapshotProvider)
+      ..invalidate(homeStreakProvider)
+      ..invalidate(homePlanBottlenecksProvider)
+      ..invalidate(homeDailyContextLineProvider)
+      ..invalidate(homeGrowthDashboardSnapshotProvider)
+      ..invalidate(homeGrowthStateProvider)
+      ..invalidate(examSprintDashboardProvider);
+
+    try {
+      await Future.wait([
+        ref.read(homeGrowthStateProvider.future),
+        ref.read(homeDailyContextLineProvider.future),
+      ]);
+    } catch (_) {
+      // The card falls back to an empty-plan state if growth data is unavailable.
+    }
+  }
+
+  void _openBottleneckChat(HomeBottleneck bottleneck) {
+    final prompt = context.l10n.dashboardBottleneckPrompt(bottleneck.topic);
+    context.go(
+      Uri(
+        path: '/chat',
+        queryParameters: {
+          'prompt': prompt,
+          'chat_mode': 'growth',
+        },
+      ).toString(),
+    );
+  }
+
+  void _startNextAction(HomeGrowthTask task) {
+    if (task.id.isEmpty) {
+      unawaited(context.push('/tasks'));
+      return;
+    }
+
+    final taskModel = task.taskModel;
+    if (taskModel == null) {
+      unawaited(context.push('/tasks/${task.id}'));
+      return;
+    }
+
+    ref.read(activeTaskProvider.notifier).state = taskModel;
+    unawaited(
+      context.push('/tasks/${task.id}/execute?origin=home_growth'),
+    );
   }
 
   Widget _buildFirstGoalEmptyState() => ContentConstraint(
@@ -99,10 +154,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   icon: Icons.auto_awesome_rounded,
                   iconSize: 40,
                   accentColor: DS.brandPrimary,
-                  title: _isChinese ? '先定下你的第一个目标' : 'Set your first goal',
-                  summary: _isChinese
-                      ? '告诉我你最近最想推进的一件事，我会立刻帮你拆成可执行的计划。'
-                      : 'Tell me the one thing you want to move forward, and I will turn it into an actionable plan.',
+                  title: context.l10n.dashboardSetFirstGoal,
+                  summary: context.l10n.dashboardSetFirstGoalSummary,
                 ),
                 const SizedBox(height: DS.spacing16),
                 Wrap(
@@ -110,11 +163,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   runSpacing: DS.spacing10,
                   children: [
                     SparkleButton.primary(
-                      label: _isChinese ? '和 AI 定目标' : 'Start with AI',
+                      label: context.l10n.dashboardStartWithAI,
                       onPressed: () => context.go('/chat'),
                     ),
                     SparkleButton.ghost(
-                      label: _isChinese ? '查看任务列表' : 'Open tasks',
+                      label: context.l10n.dashboardOpenTaskList,
                       onPressed: () => context.push('/tasks'),
                     ),
                   ],
@@ -167,6 +220,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
     final dashboardState = ref.watch(dashboardProvider);
+    final examSprintDashboardAsync = ref.watch(examSprintDashboardProvider);
+    final growthAsync = ref.watch(homeGrowthStateProvider);
+    final dailyContextAsync = ref.watch(homeDailyContextLineProvider);
     final predictions = ref.watch(visiblePredictionsProvider);
     final l10n = AppLocalizations.of(context)!;
     final showFirstGoalEmptyState =
@@ -196,6 +252,160 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       DeviceCategory.phone => double.infinity,
       DeviceCategory.phablet => double.infinity,
     };
+
+    final growthState = growthAsync.maybeWhen(
+      data: (state) => state,
+      error: (_, __) => const HomeGrowthState.empty(),
+      orElse: () => null,
+    );
+    final dailyContextLine = dailyContextAsync.maybeWhen(
+      data: (line) => line,
+      error: (_, __) => HomeDailyContextLine.fallback(),
+      orElse: () => null,
+    );
+    final activeBottleneck = growthState?.activeBottleneck;
+    final examSprintDashboard = examSprintDashboardAsync.valueOrNull;
+    var growthSectionIndex = 0;
+    final growthSections = <Widget>[
+      _staggeredSection(
+        index: growthSectionIndex++,
+        child: DailyContextLine(
+          text: dailyContextLine?.text,
+          isLoading: dailyContextLine == null && dailyContextAsync.isLoading,
+        ),
+      ),
+      if (examSprintDashboard != null)
+        _staggeredSection(
+          index: growthSectionIndex++,
+          child: ExamSprintDashboardCard(
+            data: examSprintDashboard,
+            onRecordResult: () {
+              unawaited(
+                context.push(
+                  '/exam-sprint/review?plan_id=${examSprintDashboard.planId}'
+                  '&subject=${Uri.encodeComponent(examSprintDashboard.subject)}',
+                ),
+              );
+            },
+          ),
+        ),
+      _staggeredSection(
+        index: growthSectionIndex++,
+        child: TodayGrowthStatusCard(
+          state: growthState,
+          isLoading: growthState == null && growthAsync.isLoading,
+          onCreatePlan: () {
+            unawaited(context.push('/plans/new?type=growth'));
+          },
+        ),
+      ),
+      if (activeBottleneck != null)
+        _staggeredSection(
+          index: growthSectionIndex++,
+          child: ActiveBottleneckAlert(
+            bottleneck: activeBottleneck,
+            onOpenChat: _openBottleneckChat,
+          ),
+        ),
+      _staggeredSection(
+        index: growthSectionIndex++,
+        child: NextActionPrompt(
+          task: growthState?.nextAction,
+          isLoading: growthState == null && growthAsync.isLoading,
+          onStart: _startNextAction,
+          onOpenTasks: () {
+            unawaited(context.push('/tasks'));
+          },
+        ),
+      ),
+    ];
+
+    var sectionIndex = growthSections.length;
+    final dashboardSections = <Widget>[];
+    if (dashboardState.isLoading) {
+      dashboardSections.add(
+        _staggeredSection(
+          index: sectionIndex++,
+          child: CompactStatusBar(
+            user: user,
+            dashboardState: dashboardState,
+          ),
+        ),
+      );
+      for (final skeleton in _buildDashboardSkeletonSections()) {
+        dashboardSections.add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: skeleton,
+          ),
+        );
+      }
+    } else {
+      dashboardSections.addAll([
+        _staggeredSection(
+          index: sectionIndex++,
+          child: CompactStatusBar(
+            user: user,
+            dashboardState: dashboardState,
+          ),
+        ),
+        _staggeredSection(
+          index: sectionIndex++,
+          child: _DailyBriefingCard(
+            dashboardState: dashboardState,
+            isExpanded: _isBriefingExpanded,
+            onToggleExpanded: () {
+              setState(() {
+                _isBriefingExpanded = !_isBriefingExpanded;
+              });
+            },
+          ),
+        ),
+        _staggeredSection(
+          index: sectionIndex++,
+          child: MetricsRow(dashboardState: dashboardState),
+        ),
+      ]);
+
+      // Always show the full rich dashboard sections — workspace modules,
+      // achievement progress, heatmap, and task board handle their own
+      // empty/loading states internally.  Only prepend the "set first goal"
+      // prompt when the legacy dashboard provider confirms there are no
+      // actions, sprints or growth plans yet.
+      if (showFirstGoalEmptyState) {
+        dashboardSections.add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: _buildFirstGoalEmptyState(),
+          ),
+        );
+      }
+      dashboardSections.addAll([
+        _staggeredSection(
+          index: sectionIndex++,
+          child: const _DashboardUpdatesSection(),
+        ),
+        _staggeredSection(
+          index: sectionIndex++,
+          child: const DashboardCardSection(),
+        ),
+        _staggeredSection(
+          index: sectionIndex++,
+          child: const AchievementProgressCard(),
+        ),
+        _staggeredSection(
+          index: sectionIndex++,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
+            child: LearningHeatmapWidget(),
+          ),
+        ),
+        _staggeredSection(
+          index: sectionIndex++,
+          child: const TaskBoardCard(),
+        ),
+      ]);
+    }
 
     return SparklePageScaffold(
       role: SparklePageRole.dashboard,
@@ -237,6 +447,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               onRefresh: () async {
                 await ref.read(dashboardProvider.notifier).refresh();
                 await ref.read(taskListProvider.notifier).refreshTasks();
+                await _refreshHomeGrowthState();
               },
               child: Padding(
                 padding: EdgeInsets.only(bottom: viewportBottomInset),
@@ -244,72 +455,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: CustomScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     slivers: [
-                      if (dashboardState.isLoading) ...[
-                        _staggeredSection(
-                          index: 0,
-                          child: CompactStatusBar(
-                            user: user,
-                            dashboardState: dashboardState,
-                          ),
+                      SliverList(
+                        delegate: SliverChildListDelegate(
+                          [
+                            ...growthSections,
+                            ...dashboardSections,
+                            const AuroraCalibrationStrip(),
+                          ],
                         ),
-                        ..._buildDashboardSkeletonSections()
-                            .asMap()
-                            .entries
-                            .map(
-                              (entry) => _staggeredSection(
-                                index: entry.key + 1,
-                                child: entry.value,
-                              ),
-                            ),
-                      ] else ...[
-                        _staggeredSection(
-                          index: 0,
-                          child: CompactStatusBar(
-                            user: user,
-                            dashboardState: dashboardState,
-                          ),
-                        ),
-                        _staggeredSection(
-                          index: 1,
-                          child: _DailyBriefingCard(
-                            dashboardState: dashboardState,
-                            isExpanded: _isBriefingExpanded,
-                            onToggleExpanded: () {
-                              setState(() {
-                                _isBriefingExpanded = !_isBriefingExpanded;
-                              });
-                            },
-                          ),
-                        ),
-                        _staggeredSection(
-                          index: 2,
-                          child: MetricsRow(dashboardState: dashboardState),
-                        ),
-                        if (showFirstGoalEmptyState)
-                          _staggeredSection(
-                            index: 3,
-                            child: _buildFirstGoalEmptyState(),
-                          )
-                        else ...[
-                          _staggeredSection(
-                            index: 3,
-                            child: const _DashboardUpdatesSection(),
-                          ),
-                          _staggeredSection(
-                            index: 4,
-                            child: const DashboardCardSection(),
-                          ),
-                          _staggeredSection(
-                            index: 5,
-                            child: const AchievementProgressCard(),
-                          ),
-                          _staggeredSection(
-                            index: 6,
-                            child: const TaskBoardCard(),
-                          ),
-                        ],
-                      ],
-
+                      ),
                       SliverToBoxAdapter(
                         child: SizedBox(
                           height: totalBottomHeight,
@@ -347,24 +501,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 }
 
 String _formatDeadlineLabel({
-  required bool isChinese,
+  required BuildContext context,
   required int daysToDeadline,
 }) {
   if (daysToDeadline == 0) {
-    return isChinese ? '今天截止' : 'Due today';
+    return context.l10n.dashboardDueToday;
   }
 
   final absoluteDays = daysToDeadline.abs();
-  final englishDayUnit = absoluteDays == 1 ? 'day' : 'days';
   if (daysToDeadline < 0) {
-    return isChinese
-        ? '已逾期 $absoluteDays 天'
-        : '$absoluteDays $englishDayUnit overdue';
+    return context.l10n.dashboardOverdueDays(absoluteDays);
   }
 
-  return isChinese
-      ? '还有 $daysToDeadline 天'
-      : '$daysToDeadline $englishDayUnit left';
+  return context.l10n.dashboardDaysLeft(daysToDeadline);
 }
 
 class _DailyBriefingCard extends StatelessWidget {
@@ -387,10 +536,6 @@ class _DailyBriefingCard extends StatelessWidget {
     final growthSignal = dashboardState.growthSignal;
     final activePlan = dashboardState.activePlanProgress;
     final nextActionCount = dashboardState.nextActions.length;
-    final isChinese = Localizations.localeOf(context)
-        .languageCode
-        .toLowerCase()
-        .startsWith('zh');
 
     final hasObservation = observation != null || growthStatus != null;
     final hasNextMove = nextMove != null || task != null;
@@ -411,15 +556,11 @@ class _DailyBriefingCard extends StatelessWidget {
     final taskId = nextMove?.taskId ?? task?.id;
 
     final summaryBits = <String>[
-      if (hasNextMove) isChinese ? '1 个重点动作' : '1 main move',
+      if (hasNextMove) context.l10n.dashboardMainMove,
       if (nextActionCount > 1)
-        isChinese
-            ? '另有 ${nextActionCount - 1} 项待推进'
-            : '${nextActionCount - 1} more queued',
+        context.l10n.dashboardMoreQueued(nextActionCount - 1),
       if (activePlan != null)
-        isChinese
-            ? '${(activePlan.progress * 100).round()}% 进度'
-            : '${(activePlan.progress * 100).round()}% progress',
+        context.l10n.dashboardProgress((activePlan.progress * 100).round()),
     ];
 
     return ContentConstraint(
@@ -440,11 +581,9 @@ class _DailyBriefingCard extends StatelessWidget {
                 icon: Icons.auto_awesome_rounded,
                 iconSize: 40,
                 accentColor: DS.brandPrimary,
-                title: isChinese ? '今日总览' : 'Today Briefing',
+                title: context.l10n.dashboardTodayBriefing,
                 summary: summaryBits.isEmpty
-                    ? (isChinese
-                        ? '把最重要的事情压缩成一张卡'
-                        : 'One place for the important stuff')
+                    ? context.l10n.dashboardBriefingSummary
                     : summaryBits.join(' • '),
                 trailing: SparkleIconButton(
                   key: const ValueKey('dashboard-briefing-toggle'),
@@ -464,7 +603,7 @@ class _DailyBriefingCard extends StatelessWidget {
               if (hasObservation) ...[
                 const SizedBox(height: DS.spacing12),
                 _BriefingBlock(
-                  eyebrow: isChinese ? 'Sparkle 的观察' : 'What Sparkle Noticed',
+                  eyebrow: context.l10n.dashboardSparkleObservation,
                   title: observationTitle ?? '',
                   summary: observationSummary ?? '',
                 ),
@@ -472,7 +611,7 @@ class _DailyBriefingCard extends StatelessWidget {
               if (hasNextMove) ...[
                 const SizedBox(height: DS.spacing12),
                 _BriefingBlock(
-                  eyebrow: isChinese ? '今天先做这一步' : 'Start With This',
+                  eyebrow: context.l10n.dashboardStartWithThis,
                   title: nextTitle ?? '',
                   summary: nextSummary ?? '',
                   footer: Wrap(
@@ -493,7 +632,7 @@ class _DailyBriefingCard extends StatelessWidget {
                         _DashboardChip(
                           icon: Icons.timelapse_rounded,
                           label: _formatDeadlineLabel(
-                            isChinese: isChinese,
+                            context: context,
                             daysToDeadline: daysToDeadline,
                           ),
                         ),
@@ -503,7 +642,6 @@ class _DailyBriefingCard extends StatelessWidget {
               ],
               const SizedBox(height: DS.spacing12),
               _BriefingActions(
-                isChinese: isChinese,
                 hasTaskAction: taskId != null && taskId.isNotEmpty,
                 taskId: taskId,
               ),
@@ -523,8 +661,7 @@ class _DailyBriefingCard extends StatelessWidget {
                                 _BriefingDetailTile(
                                   icon: Icons.trending_up_rounded,
                                   iconColor: DS.success,
-                                  title:
-                                      isChinese ? '最近最明显的变化' : 'Growth Signal',
+                                  title: context.l10n.dashboardGrowthSignal,
                                   headline: growthSignal.headline,
                                   summary: growthSignal.summary,
                                   trailing: growthSignal.source,
@@ -534,14 +671,13 @@ class _DailyBriefingCard extends StatelessWidget {
                               if (activePlan != null)
                                 _PlanProgressTile(
                                   plan: activePlan,
-                                  isChinese: isChinese,
                                 ),
                               if (nextActionCount > 1) ...[
                                 const SizedBox(height: DS.spacing12),
                                 Text(
-                                  isChinese
-                                      ? '除了当前重点，还有 ${nextActionCount - 1} 项任务在队列中。'
-                                      : '${nextActionCount - 1} more tasks are still queued after this one.',
+                                  context.l10n.dashboardMoreTasksQueued(
+                                    nextActionCount - 1,
+                                  ),
                                   style: context.sparkleTypography.bodySmall
                                       .copyWith(
                                     color: DS.textSecondary,
@@ -555,7 +691,7 @@ class _DailyBriefingCard extends StatelessWidget {
                                 runSpacing: DS.spacing10,
                                 children: [
                                   SparkleButton.ghost(
-                                    label: isChinese ? '开始专注' : 'Start Focus',
+                                    label: context.l10n.dashboardStartFocus,
                                     onPressed: () => context.push('/focus'),
                                   ),
                                   SparkleButton.ghost(
@@ -637,12 +773,10 @@ class _BriefingBlock extends StatelessWidget {
 
 class _BriefingActions extends StatelessWidget {
   const _BriefingActions({
-    required this.isChinese,
     required this.hasTaskAction,
     required this.taskId,
   });
 
-  final bool isChinese;
   final bool hasTaskAction;
   final String? taskId;
 
@@ -651,14 +785,14 @@ class _BriefingActions extends StatelessWidget {
         builder: (context, constraints) {
           final primaryButton = SparkleButton.primary(
             label: hasTaskAction
-                ? (isChinese ? '先做这个' : 'Start Here')
-                : (isChinese ? '查看任务' : 'Open Tasks'),
+                ? context.l10n.dashboardStartHere
+                : context.l10n.dashboardOpenTasks,
             onPressed: () => hasTaskAction
                 ? context.push('/tasks/$taskId')
                 : context.push('/tasks'),
           );
           final secondaryButton = SparkleButton.ghost(
-            label: isChinese ? '任务列表' : 'View Tasks',
+            label: context.l10n.dashboardTaskList,
             onPressed: () => context.push('/tasks'),
           );
 
@@ -772,11 +906,9 @@ class _BriefingDetailTile extends StatelessWidget {
 class _PlanProgressTile extends StatelessWidget {
   const _PlanProgressTile({
     required this.plan,
-    required this.isChinese,
   });
 
   final ActivePlanProgressData plan;
-  final bool isChinese;
 
   @override
   Widget build(BuildContext context) => Container(
@@ -794,7 +926,7 @@ class _PlanProgressTile extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    isChinese ? '当前主计划' : 'Active Plan',
+                    context.l10n.dashboardActivePlan,
                     style: context.sparkleTypography.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightBold,
@@ -828,9 +960,11 @@ class _PlanProgressTile extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              isChinese
-                  ? '阶段：${plan.phase.isEmpty ? '进行中' : plan.phase}'
-                  : 'Phase: ${plan.phase.isEmpty ? 'in progress' : plan.phase}',
+              context.l10n.dashboardPhaseLabel(
+                plan.phase.isEmpty
+                    ? context.l10n.dashboardPhaseInProgress
+                    : plan.phase,
+              ),
               style: context.sparkleTypography.bodySmall.copyWith(
                 color: DS.textSecondary,
               ),
@@ -838,9 +972,7 @@ class _PlanProgressTile extends StatelessWidget {
             if (plan.daysToDeadline != null) ...[
               const SizedBox(height: DS.spacing4),
               Text(
-                isChinese
-                    ? '距离截止还有 ${plan.daysToDeadline} 天'
-                    : '${plan.daysToDeadline} days to deadline',
+                context.l10n.dashboardDaysToDeadline(plan.daysToDeadline!),
                 style: context.sparkleTypography.bodySmall.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -892,10 +1024,6 @@ class _DashboardUpdatesSectionState
           orElse: () => const <Map<String, dynamic>>[],
         );
     final reviewAsync = ref.watch(nightlyReviewProvider);
-    final isChinese = Localizations.localeOf(context)
-        .languageCode
-        .toLowerCase()
-        .startsWith('zh');
 
     final insightCount = _recentInsightCount(
       notificationCenterState.notifications,
@@ -913,14 +1041,14 @@ class _DashboardUpdatesSectionState
         dashboardState.nextIntentForecast!.summary.isNotEmpty;
 
     final summaryBits = <String>[
-      if (hasPrediction) isChinese ? '预测建议' : 'prediction',
+      if (hasPrediction) context.l10n.dashboardPrediction,
       if (unreadMessages > 0)
-        isChinese ? '$unreadMessages 条消息' : '$unreadMessages messages',
+        context.l10n.dashboardMessagesCount(unreadMessages),
       if (unreadNotifications > 0)
-        isChinese ? '$unreadNotifications 条通知' : '$unreadNotifications alerts',
+        context.l10n.dashboardAlertsCount(unreadNotifications),
       if (insightCount > 0)
-        isChinese ? '$insightCount 条洞察' : '$insightCount insights',
-      if (hasPendingReview) isChinese ? '夜间复盘待处理' : 'review pending',
+        context.l10n.dashboardInsightsCount(insightCount),
+      if (hasPendingReview) context.l10n.dashboardReviewPending,
     ];
 
     if (summaryBits.isEmpty) {
@@ -948,7 +1076,7 @@ class _DashboardUpdatesSectionState
                 child: DashboardSectionHeader(
                   icon: Icons.notifications_active_outlined,
                   accentColor: DS.info,
-                  title: isChinese ? '更新与洞察' : 'Updates & Insights',
+                  title: context.l10n.dashboardUpdatesInsights,
                   summary: summaryBits.take(3).join(' • '),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,

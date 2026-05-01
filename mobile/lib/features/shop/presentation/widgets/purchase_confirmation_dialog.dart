@@ -16,7 +16,7 @@ class PurchaseConfirmationDialog extends ConsumerStatefulWidget {
   });
 
   final ShopItem item;
-  final VoidCallback onConfirm;
+  final Future<void> Function() onConfirm;
 
   @override
   ConsumerState<PurchaseConfirmationDialog> createState() =>
@@ -249,7 +249,7 @@ class _PurchaseConfirmationDialogState
               _isPurchasing = true;
             });
 
-            widget.onConfirm();
+            await widget.onConfirm();
 
             if (mounted) {
               setState(() {

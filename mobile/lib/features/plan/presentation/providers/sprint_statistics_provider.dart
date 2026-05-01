@@ -27,13 +27,19 @@ final sprintStatisticsProvider = Provider<SprintStatistics>((ref) {
   final sprintPlanId = dashboardState.sprint!.id;
 
   // Get all tasks for this sprint
-  final sprintTasks = taskState.tasks.where((t) => t.planId == sprintPlanId).toList();
+  final sprintTasks =
+      taskState.tasks.where((t) => t.planId == sprintPlanId).toList();
 
   // Count by status
   final totalTasks = sprintTasks.length;
-  final completedTasks = sprintTasks.where((t) => t.status == TaskStatus.completed).length;
-  final inProgressTasks = sprintTasks.where((t) => t.status == TaskStatus.inProgress).length;
-  final todoTasks = sprintTasks.where((t) => t.status == TaskStatus.pending).length;
+  final completedTasks =
+      sprintTasks.where((t) => t.status == TaskStatus.completed).length;
+  final inProgressTasks = sprintTasks
+      .where((t) =>
+          t.status == TaskStatus.inProgress || t.status == TaskStatus.stuck)
+      .length;
+  final todoTasks =
+      sprintTasks.where((t) => t.status == TaskStatus.pending).length;
 
   // Calculate completion rate
   final completionRate = totalTasks > 0 ? completedTasks / totalTasks : 0.0;
@@ -73,7 +79,8 @@ List<DailyProgress> _calculateDailyProgress(List<TaskModel> tasks) {
   // Group completed tasks by completion date
   for (final task in tasks) {
     if (task.status == TaskStatus.completed && task.completedAt != null) {
-      final dateKey = '${task.completedAt!.year}-${task.completedAt!.month}-${task.completedAt!.day}';
+      final dateKey =
+          '${task.completedAt!.year}-${task.completedAt!.month}-${task.completedAt!.day}';
       completedByDate.putIfAbsent(dateKey, () => []).add(task.completedAt!);
     }
   }
@@ -93,21 +100,25 @@ List<DailyProgress> _calculateDailyProgress(List<TaskModel> tasks) {
 
     // Calculate actual focus minutes from tasks
     final actualFocusMinutes = tasks
-        .where((t) =>
-            t.status == TaskStatus.completed &&
-            t.completedAt != null &&
-            t.completedAt!.year == date.year &&
-            t.completedAt!.month == date.month &&
-            t.completedAt!.day == date.day,)
+        .where(
+          (t) =>
+              t.status == TaskStatus.completed &&
+              t.completedAt != null &&
+              t.completedAt!.year == date.year &&
+              t.completedAt!.month == date.month &&
+              t.completedAt!.day == date.day,
+        )
         .fold<int>(0, (sum, t) => sum + (t.actualMinutes ?? 0));
 
-    progress.add(DailyProgress(
-      date: date,
-      tasksCompleted: completedTasks.length,
-      focusMinutes: actualFocusMinutes > 0
-          ? actualFocusMinutes
-          : completedTasks.length * 30, // Fallback to estimate
-    ),);
+    progress.add(
+      DailyProgress(
+        date: date,
+        tasksCompleted: completedTasks.length,
+        focusMinutes: actualFocusMinutes > 0
+            ? actualFocusMinutes
+            : completedTasks.length * 30, // Fallback to estimate
+      ),
+    );
   }
 
   return progress;

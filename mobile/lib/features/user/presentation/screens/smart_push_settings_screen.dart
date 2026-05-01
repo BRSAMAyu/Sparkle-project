@@ -162,7 +162,7 @@ class _SmartPushSettingsScreenState
       ),
       child: ContentConstraint(
         child: ListView(
-          padding: const EdgeInsets.all(DS.lg),
+          padding: const EdgeInsets.symmetric(vertical: DS.lg),
           children: [
             GraphiteCardSurface(
               child: Column(
@@ -422,7 +422,7 @@ class _SmartPushSettingsScreenState
           ),
           child: Text(
             time,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            style: const TextStyle(fontSize: 16, fontWeight: DS.fontWeightMedium),
           ),
         ),
       );

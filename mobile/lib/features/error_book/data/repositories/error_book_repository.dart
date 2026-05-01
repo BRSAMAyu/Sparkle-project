@@ -67,6 +67,7 @@ class ErrorBookRepository {
   Future<ErrorListResponse> getErrors({
     String? subject,
     String? chapter,
+    String? nodeId,
     bool? needReview,
     String? keyword,
     double? masteryMin,
@@ -81,6 +82,7 @@ class ErrorBookRepository {
         'page_size': pageSize,
         if (subject != null) 'subject': subject,
         if (chapter != null) 'chapter': chapter,
+        if (nodeId != null) 'node_id': nodeId,
         if (needReview != null) 'need_review': needReview,
         if (keyword != null) 'keyword': keyword,
         if (masteryMin != null) 'mastery_min': masteryMin,

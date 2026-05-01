@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
+	"github.com/sparkle/gateway/internal/i18n"
 )
 
 const (
@@ -91,6 +92,12 @@ type ChatSessionSummary struct {
 	ID        string `json:"id"`
 	Title     string `json:"title"`
 	UpdatedAt string `json:"updated_at"`
+}
+
+type ConversationSettings struct {
+	UseDocumentContext bool     `json:"use_document_context"`
+	DocumentFilter     []string `json:"document_filter,omitempty"`
+	UpdatedAt          string   `json:"updated_at,omitempty"`
 }
 
 func NewChatHistoryService(rdb *redis.Client) *ChatHistoryService {
@@ -274,7 +281,7 @@ func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []
 			"last_message_at": updatedAt.UTC().Format(time.RFC3339),
 		}
 		if payload.Role == "user" {
-			fields["title"] = buildSessionTitle(payload.Role, payload.Content)
+			fields["title"] = buildSessionTitle(ctx, payload.Role, payload.Content)
 		}
 		pipe.HSet(ctx, metaKey, fields)
 		pipe.Expire(ctx, metaKey, s.chatHistoryTTL)
@@ -286,6 +293,114 @@ func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []
 	}
 	if bufferOverflow {
 		return errRetryBufferOverflow
+	}
+	return nil
+}
+
+func (s *ChatHistoryService) GetConversationSettings(ctx context.Context, userID, sessionID string) (*ConversationSettings, bool, error) {
+	if s.rdb == nil {
+		return nil, false, nil
+	}
+	if err := s.ensureSessionAccess(ctx, userID, sessionID); err != nil {
+		return nil, false, err
+	}
+
+	metaKey := fmt.Sprintf("chat:session_meta:%s", sessionID)
+	values, err := s.rdb.HMGet(ctx, metaKey, "use_document_context", "document_filter", "settings_updated_at").Result()
+	if err != nil {
+		if err == redis.Nil {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	rawUse, _ := values[0].(string)
+	if strings.TrimSpace(rawUse) == "" {
+		return nil, false, nil
+	}
+	useDocumentContext, err := strconv.ParseBool(rawUse)
+	if err != nil {
+		return nil, false, err
+	}
+	settings := &ConversationSettings{
+		UseDocumentContext: useDocumentContext,
+		DocumentFilter:     []string{},
+	}
+	if rawFilter, _ := values[1].(string); strings.TrimSpace(rawFilter) != "" {
+		_ = json.Unmarshal([]byte(rawFilter), &settings.DocumentFilter)
+	}
+	if updatedAt, _ := values[2].(string); updatedAt != "" {
+		settings.UpdatedAt = updatedAt
+	}
+	return settings, true, nil
+}
+
+func (s *ChatHistoryService) UpdateConversationSettings(ctx context.Context, userID, sessionID string, settings ConversationSettings) (*ConversationSettings, error) {
+	if s.rdb == nil {
+		return &settings, nil
+	}
+	if err := s.ensureSessionAccess(ctx, userID, sessionID); err != nil {
+		return nil, err
+	}
+
+	filter := normalizeDocumentFilter(settings.DocumentFilter)
+	filterJSON, err := json.Marshal(filter)
+	if err != nil {
+		return nil, err
+	}
+	updatedAt := time.Now().UTC().Format(time.RFC3339)
+	metaKey := fmt.Sprintf("chat:session_meta:%s", sessionID)
+	fields := map[string]interface{}{
+		"user_id":              userID,
+		"use_document_context": strconv.FormatBool(settings.UseDocumentContext),
+		"document_filter":      string(filterJSON),
+		"settings_updated_at":  updatedAt,
+	}
+	pipe := s.rdb.Pipeline()
+	pipe.HSet(ctx, metaKey, fields)
+	pipe.Expire(ctx, metaKey, s.chatHistoryTTL)
+	if _, err := pipe.Exec(ctx); err != nil {
+		return nil, err
+	}
+	return &ConversationSettings{
+		UseDocumentContext: settings.UseDocumentContext,
+		DocumentFilter:     filter,
+		UpdatedAt:          updatedAt,
+	}, nil
+}
+
+func (s *ChatHistoryService) ensureSessionAccess(ctx context.Context, userID, sessionID string) error {
+	metaKey := fmt.Sprintf("chat:session_meta:%s", sessionID)
+	owner, err := s.rdb.HGet(ctx, metaKey, "user_id").Result()
+	if err != nil && err != redis.Nil {
+		return err
+	}
+	if owner != "" && owner != userID {
+		return errChatHistoryForbidden
+	}
+	if owner != "" || s.pool == nil {
+		return nil
+	}
+
+	var sessionUUID, userUUID pgtype.UUID
+	if err := sessionUUID.Scan(sessionID); err != nil {
+		return nil
+	}
+	if err := userUUID.Scan(userID); err != nil {
+		return nil
+	}
+	hasAccess, err := s.userOwnsSessionInDB(ctx, userUUID, sessionUUID)
+	if err != nil {
+		return err
+	}
+	if hasAccess {
+		return nil
+	}
+	exists, err := s.sessionExistsInDB(ctx, sessionUUID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return errChatHistoryForbidden
 	}
 	return nil
 }
@@ -574,7 +689,7 @@ func (s *ChatHistoryService) getRecentSessionsFromRedis(ctx context.Context, use
 		}
 		title := strings.TrimSpace(meta["title"])
 		if title == "" {
-			title = "新对话"
+			title = i18n.T(ctx, "chat_history.new_conversation")
 		}
 		updatedAt := meta["last_message_at"]
 		summaries = append(summaries, ChatSessionSummary{
@@ -644,7 +759,7 @@ func (s *ChatHistoryService) getRecentSessionsFromDB(ctx context.Context, userID
 			} else if preview != nil && *preview != "" {
 				formattedTitle = *preview
 			} else {
-				formattedTitle = "新对话"
+				formattedTitle = i18n.T(ctx, "chat_history.new_conversation")
 			}
 		}
 
@@ -704,13 +819,33 @@ func parseUnixString(raw string) time.Time {
 	return time.Unix(seconds, 0).UTC()
 }
 
-func buildSessionTitle(role, content string) string {
+func normalizeDocumentFilter(values []string) []string {
+	if len(values) == 0 {
+		return []string{}
+	}
+	seen := make(map[string]struct{}, len(values))
+	filter := make([]string, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		filter = append(filter, trimmed)
+	}
+	return filter
+}
+
+func buildSessionTitle(ctx context.Context, role, content string) string {
 	if role != "user" {
-		return "新对话"
+		return i18n.T(ctx, "chat_history.new_conversation")
 	}
 	title := strings.TrimSpace(content)
 	if title == "" {
-		return "新对话"
+		return i18n.T(ctx, "chat_history.new_conversation")
 	}
 	runes := []rune(title)
 	if len(runes) > 24 {

@@ -77,7 +77,7 @@ class PhotonBalanceCard extends ConsumerWidget {
                       style: TextStyle(
                         color: DS.neutral0.withValues(alpha: 0.9),
                         fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: DS.fontWeightMedium,
                       ),
                     ),
                     const SizedBox(height: 4),

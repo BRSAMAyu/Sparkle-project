@@ -76,7 +76,7 @@ class _ScheduleGroup extends StatelessWidget {
             group.title,
             style: context.sparkleTypography.labelLarge.copyWith(
               color: DS.textSecondary,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
         ),

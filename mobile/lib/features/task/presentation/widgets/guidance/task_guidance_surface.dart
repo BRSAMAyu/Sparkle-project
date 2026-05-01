@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
@@ -310,6 +311,7 @@ class _GuidanceContent extends StatelessWidget {
         style: DS.bodySmall.copyWith(
           color: DS.textPrimary,
           fontFamily: 'monospace',
+          fontFamilyFallback: sparkleFontFallback,
           height: 1.55,
         ),
       ),

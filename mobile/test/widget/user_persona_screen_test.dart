@@ -181,6 +181,23 @@ class _FakeUserRepository implements UserRepository {
       {required String goalId, String? title, String? status}) async {}
 
   @override
+  Future<Map<String, dynamic>> fetchTraitsColdstartQuestions() async =>
+      <String, dynamic>{'questions': <dynamic>[], 'allow_skip': true};
+
+  @override
+  Future<Map<String, dynamic>> submitTraitsColdstart({
+    Map<String, String> answers = const <String, String>{},
+    bool skip = false,
+  }) async =>
+      <String, dynamic>{'status': 'ok', 'skipped': skip, 'traits_prior': <String, dynamic>{}};
+
+  @override
+  Future<Map<String, dynamic>> updateMetacognitionPanelPreference({
+    required bool hidden,
+  }) async =>
+      <String, dynamic>{'hidden': hidden};
+
+  @override
   Future<Map<String, dynamic>> fetchUserSettings() async => <String, dynamic>{};
 
   @override
@@ -235,6 +252,11 @@ class _FakeUserRepository implements UserRepository {
   @override
   Future<UserModel> updateSchedulePreferences(
       Map<String, dynamic> scheduleData) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<int>> exportUserData() {
     throw UnimplementedError();
   }
 }

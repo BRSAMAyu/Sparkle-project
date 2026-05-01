@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from app.core.i18n import I18n
 
 
 _PATTERN_COPY_ALIASES: dict[str, str] = {
@@ -12,6 +13,54 @@ _PATTERN_COPY_ALIASES: dict[str, str] = {
     "专注衰减": "focus decay",
     "怀疑驱动的反复修改循环": "doubt-driven revision loop",
     "认知盲点": "cognitive blindspot",
+}
+
+_PATTERN_I18N_KEYS: dict[str, dict[str, str]] = {
+    "the night-time energy mismatch loop": {
+        "display_name": "insight.night_energy_mismatch_name",
+        "description": "insight.night_energy_mismatch_desc",
+        "solution_text": "insight.night_energy_mismatch_solution",
+    },
+    "the perfectionism-avoidance loop": {
+        "display_name": "insight.perfectionism_avoidance_name",
+        "description": "insight.perfectionism_avoidance_desc",
+        "solution_text": "insight.perfectionism_avoidance_solution",
+    },
+    "perfectionism paralysis": {
+        "display_name": "insight.perfectionism_paralysis_name",
+        "description": "insight.perfectionism_paralysis_desc",
+        "solution_text": "insight.perfectionism_paralysis_solution",
+    },
+    "the perfectionist's paralysis": {
+        "display_name": "insight.perfectionism_paralysis_name",
+        "description": "insight.perfectionism_paralysis_desc",
+        "solution_text": "insight.perfectionism_paralysis_solution",
+    },
+    "idealistic scheduling loop": {
+        "display_name": "insight.idealistic_scheduling_name",
+        "description": "insight.idealistic_scheduling_desc",
+        "solution_text": "insight.idealistic_scheduling_solution",
+    },
+    "planning optimism": {
+        "display_name": "insight.planning_optimism_name",
+        "description": "insight.planning_optimism_desc",
+        "solution_text": "insight.planning_optimism_solution",
+    },
+    "focus decay": {
+        "display_name": "insight.focus_decay_name",
+        "description": "insight.focus_decay_desc",
+        "solution_text": "insight.focus_decay_solution",
+    },
+    "doubt-driven revision loop": {
+        "display_name": "insight.doubt_revision_loop_name",
+        "description": "insight.doubt_revision_loop_desc",
+        "solution_text": "insight.doubt_revision_loop_solution",
+    },
+    "cognitive blindspot": {
+        "display_name": "insight.cognitive_blindspot_name",
+        "description": "insight.cognitive_blindspot_desc",
+        "solution_text": "insight.cognitive_blindspot_solution",
+    },
 }
 
 _PATTERN_COPY: dict[str, dict[str, str]] = {
@@ -96,33 +145,33 @@ def canonical_pattern_key(name: str | None) -> str:
     return _PATTERN_POLICY_KEYS.get(resolved, resolved)
 
 
-def present_pattern_name(name: str | None) -> str:
+def present_pattern_name(name: str | None, locale: str = "zh") -> str:
     raw = str(name or "").strip()
     if not raw:
         return ""
-    mapped = _PATTERN_COPY.get(resolve_pattern_copy_key(raw))
-    if mapped:
-        return mapped["display_name"]
+    keys = _PATTERN_I18N_KEYS.get(resolve_pattern_copy_key(raw))
+    if keys:
+        return I18n.t(keys["display_name"], locale=locale)
     return raw
 
 
-def present_pattern_description(name: str | None, description: str | None = None) -> str:
+def present_pattern_description(name: str | None, description: str | None = None, locale: str = "zh") -> str:
     raw_description = str(description or "").strip()
-    mapped = _PATTERN_COPY.get(resolve_pattern_copy_key(name))
-    if mapped:
+    keys = _PATTERN_I18N_KEYS.get(resolve_pattern_copy_key(name))
+    if keys:
         if raw_description and any("\u4e00" <= ch <= "\u9fff" for ch in raw_description):
             return raw_description
-        return mapped["description"]
+        return I18n.t(keys["description"], locale=locale)
     return raw_description
 
 
-def present_pattern_solution(name: str | None, solution_text: str | None = None) -> str:
+def present_pattern_solution(name: str | None, solution_text: str | None = None, locale: str = "zh") -> str:
     raw_solution = str(solution_text or "").strip()
-    mapped = _PATTERN_COPY.get(resolve_pattern_copy_key(name))
-    if mapped:
+    keys = _PATTERN_I18N_KEYS.get(resolve_pattern_copy_key(name))
+    if keys:
         if raw_solution and any("\u4e00" <= ch <= "\u9fff" for ch in raw_solution):
             return raw_solution
-        return mapped["solution_text"]
+        return I18n.t(keys["solution_text"], locale=locale)
     return raw_solution
 
 
@@ -132,18 +181,19 @@ def present_pattern_entry(
     confidence: float | None = None,
     description: str | None = None,
     solution_text: str | None = None,
+    locale: str = "zh",
 ) -> dict[str, Any]:
-    display_name = present_pattern_name(name)
+    display_name = present_pattern_name(name, locale=locale)
     payload: dict[str, Any] = {
         "pattern_name": display_name,
         "raw_pattern_name": str(name or "").strip(),
     }
     if confidence is not None:
         payload["confidence"] = float(confidence)
-    localized_description = present_pattern_description(name, description)
+    localized_description = present_pattern_description(name, description, locale=locale)
     if localized_description:
         payload["description"] = localized_description
-    localized_solution = present_pattern_solution(name, solution_text)
+    localized_solution = present_pattern_solution(name, solution_text, locale=locale)
     if localized_solution:
         payload["solution_text"] = localized_solution
     return payload

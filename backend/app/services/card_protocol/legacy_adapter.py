@@ -12,6 +12,7 @@ Migration rule (from ADR-0004):
 These adapters are Phase 1's step 2-3. They ensure the legacy system continues
 to work while the card protocol is built alongside it.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -20,23 +21,22 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.plan import Plan, PlanType, PlanStage
-from app.models.task import Task, TaskStatus
+from app.core.event_bus import EventBus
 from app.models.card_protocol import (
+    BindingMode,
     Card,
-    CardType,
-    CardLifecycleStatus,
-    CardVisibility,
-    CardSourceType,
     CardCreatedBy,
     CardEdge,
+    CardLifecycleStatus,
+    CardSourceType,
+    CardType,
+    CardVisibility,
     EdgeType,
-    BindingMode,
 )
-from app.services.card_service import CardService
+from app.models.plan import Plan, PlanStage, PlanType
+from app.models.task import Task, TaskStatus
 from app.services.card_edge_service import CardEdgeService
-from app.core.event_bus import EventBus
-
+from app.services.card_service import CardService
 
 # ---------------------------------------------------------------------------
 # Legacy Plan → Card Protocol mapping
@@ -142,13 +142,10 @@ class PlanAdapter:
 
     async def _find_card_by_legacy_plan(self, plan_id: uuid.UUID) -> Card | None:
         """Find a card that projects a specific legacy plan."""
-        stmt = (
-            select(Card)
-            .where(
-                Card.card_type == CardType.PLAN,
-                Card.metadata_["legacy_plan_id"].as_string() == str(plan_id),
-                Card.not_deleted_filter(),
-            )
+        stmt = select(Card).where(
+            Card.card_type == CardType.PLAN,
+            Card.metadata_["legacy_plan_id"].as_string() == str(plan_id),
+            Card.not_deleted_filter(),
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
@@ -202,13 +199,10 @@ class PlanAdapter:
         return phase
 
     async def _find_default_phase_card(self, plan_id: uuid.UUID) -> Card | None:
-        stmt = (
-            select(Card)
-            .where(
-                Card.card_type == CardType.PHASE,
-                Card.metadata_["legacy_plan_id"].as_string() == str(plan_id),
-                Card.not_deleted_filter(),
-            )
+        stmt = select(Card).where(
+            Card.card_type == CardType.PHASE,
+            Card.metadata_["legacy_plan_id"].as_string() == str(plan_id),
+            Card.not_deleted_filter(),
         )
         result = await self.db.execute(stmt)
         for card in result.scalars().all():
@@ -216,9 +210,7 @@ class PlanAdapter:
                 return card
         return None
 
-    async def _ensure_phase3_artifacts(
-        self, plan: Plan, plan_card: Card
-    ) -> None:
+    async def _ensure_phase3_artifacts(self, plan: Plan, plan_card: Card) -> None:
         """Auto-initialize GLOBAL_COMPASS and STRATEGY_MAP for a plan card.
 
         This is the Phase 3 onboarding: when a legacy plan gets projected
@@ -258,6 +250,7 @@ class PlanAdapter:
                 await self.db.flush()
         except Exception as exc:
             from loguru import logger
+
             logger.warning("Phase3 artifact auto-init failed (non-fatal): {}", exc)
 
     async def _ensure_phase4_active_pack(self, plan: Plan, plan_card: Card) -> None:
@@ -282,6 +275,7 @@ class PlanAdapter:
 _TASK_STATUS_MAP = {
     TaskStatus.PENDING: CardLifecycleStatus.ACTIVE,
     TaskStatus.IN_PROGRESS: CardLifecycleStatus.ACTIVE,
+    TaskStatus.STUCK: CardLifecycleStatus.ACTIVE,
     TaskStatus.COMPLETED: CardLifecycleStatus.COMPLETED,
     TaskStatus.ABANDONED: CardLifecycleStatus.CANCELLED,
 }
@@ -353,25 +347,19 @@ class TaskAdapter:
         return card
 
     async def _find_card_by_legacy_task(self, task_id: uuid.UUID) -> Card | None:
-        stmt = (
-            select(Card)
-            .where(
-                Card.card_type == CardType.TASK,
-                Card.metadata_["legacy_task_id"].as_string() == str(task_id),
-                Card.not_deleted_filter(),
-            )
+        stmt = select(Card).where(
+            Card.card_type == CardType.TASK,
+            Card.metadata_["legacy_task_id"].as_string() == str(task_id),
+            Card.not_deleted_filter(),
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
     async def _find_plan_card(self, plan_id: uuid.UUID) -> Card | None:
-        stmt = (
-            select(Card)
-            .where(
-                Card.card_type == CardType.PLAN,
-                Card.metadata_["legacy_plan_id"].as_string() == str(plan_id),
-                Card.not_deleted_filter(),
-            )
+        stmt = select(Card).where(
+            Card.card_type == CardType.PLAN,
+            Card.metadata_["legacy_plan_id"].as_string() == str(plan_id),
+            Card.not_deleted_filter(),
         )
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
@@ -397,13 +385,10 @@ class TaskAdapter:
                 if child.card_type == CardType.PHASE and not bool((child.metadata_ or {}).get("synthetic_phase")):
                     return child
 
-        stmt = (
-            select(Card)
-            .where(
-                Card.card_type == CardType.PHASE,
-                Card.metadata_["legacy_plan_id"].as_string() == str(plan_id),
-                Card.not_deleted_filter(),
-            )
+        stmt = select(Card).where(
+            Card.card_type == CardType.PHASE,
+            Card.metadata_["legacy_plan_id"].as_string() == str(plan_id),
+            Card.not_deleted_filter(),
         )
         result = await self.db.execute(stmt)
         for card in result.scalars().all():
@@ -411,18 +396,13 @@ class TaskAdapter:
                 return card
         return None
 
-    async def _find_or_create_knowledge_card(
-        self, knowledge_node_id: uuid.UUID, user_id: uuid.UUID
-    ) -> Card | None:
+    async def _find_or_create_knowledge_card(self, knowledge_node_id: uuid.UUID, user_id: uuid.UUID) -> Card | None:
         """Find existing KNOWLEDGE card for a knowledge node, or create one."""
-        stmt = (
-            select(Card)
-            .where(
-                Card.card_type == CardType.KNOWLEDGE,
-                Card.metadata_["knowledge_node_id"].as_string() == str(knowledge_node_id),
-                Card.owner_id == user_id,
-                Card.not_deleted_filter(),
-            )
+        stmt = select(Card).where(
+            Card.card_type == CardType.KNOWLEDGE,
+            Card.metadata_["knowledge_node_id"].as_string() == str(knowledge_node_id),
+            Card.owner_id == user_id,
+            Card.not_deleted_filter(),
         )
         result = await self.db.execute(stmt)
         existing = result.scalar_one_or_none()

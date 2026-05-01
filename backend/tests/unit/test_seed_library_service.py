@@ -355,6 +355,38 @@ class TestSeedLibraryAccessAndPromptContext:
             }
         ]
 
+    @pytest.mark.asyncio
+    async def test_get_few_shot_examples_orders_by_library_quality_score(self, mock_db, service):
+        execute_result = MagicMock()
+        execute_result.scalars.return_value.all.return_value = []
+        mock_db.execute = AsyncMock(return_value=execute_result)
+
+        await service.get_few_shot_examples(
+            mock_db,
+            user_id=uuid.uuid4(),
+            subject="math",
+            count=3,
+        )
+
+        stmt = mock_db.execute.await_args.args[0]
+        sql = str(stmt.compile(compile_kwargs={"literal_binds": False}))
+        order_by = sql.split("ORDER BY", 1)[1]
+        quality_pos = order_by.index("seed_libraries.quality_score")
+        featured_pos = order_by.index("seed_libraries.is_featured")
+        official_pos = order_by.index("seed_libraries.is_official")
+        assert quality_pos < featured_pos < official_pos
+
+    def test_extract_example_node_ids_from_metadata_and_tags(self, service):
+        node_ids = service._extract_example_node_ids(
+            {
+                "knowledge_node_ids": ["ds.quicksort"],
+                "related_nodes": ["ds.heap", "not_a_node"],
+            },
+            ["ds.quicksort", "ds.tree_traversal", "sorting"],
+        )
+
+        assert node_ids == ["ds.quicksort", "ds.heap", "ds.tree_traversal"]
+
 
 # ============ P0 #1: Backfill Embeddings Commit Tests ============
 

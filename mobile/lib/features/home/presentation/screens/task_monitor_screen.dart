@@ -437,7 +437,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
         style: TextStyle(
           color: color,
           fontSize: 11,
-          fontWeight: FontWeight.w500,
+          fontWeight: DS.fontWeightMedium,
         ),
       ),
     );
@@ -477,7 +477,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
                 style: TextStyle(
                   color: DS.brandPrimary70Const,
                   fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                 ),
               ),
             ],

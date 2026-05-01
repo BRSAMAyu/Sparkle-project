@@ -34,7 +34,7 @@ class UserTitleBadge extends ConsumerWidget {
 
     final defaultStyle = TextStyle(
       fontSize: 11,
-      fontWeight: FontWeight.w600,
+      fontWeight: DS.fontWeightSemibold,
       color: DS.brandPrimaryConst,
     );
 

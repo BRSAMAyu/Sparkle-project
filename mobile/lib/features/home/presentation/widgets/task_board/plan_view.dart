@@ -215,7 +215,7 @@ class DashboardPlanManager extends ConsumerWidget {
               Text(
                 compact ? '可恢复计划' : '计划库',
                 style: context.sparkleTypography.labelLarge.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                   color: DS.textPrimary,
                 ),
               ),
@@ -289,7 +289,7 @@ class _PlanManagerHeader extends StatelessWidget {
                 '计划管理',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                   color: DS.textPrimary,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
               const SizedBox(height: DS.spacing4),
@@ -315,7 +315,7 @@ class _PlanManagerHeader extends StatelessWidget {
             '$activeCount/3',
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
               color: DS.brandPrimary,
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
         ),
@@ -355,7 +355,7 @@ class _PlanFilterBanner extends ConsumerWidget {
                 '当前聚焦：$planName',
                 style: context.sparkleTypography.labelLarge.copyWith(
                   color: DS.textPrimary,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
             ),
@@ -459,7 +459,7 @@ class _ActivePlanSlot extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: context.sparkleTypography.labelLarge.copyWith(
                         color: DS.textPrimary,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                     const SizedBox(height: DS.spacing4),
@@ -615,7 +615,7 @@ class _EmptyPlanSlot extends StatelessWidget {
               '空闲计划位',
               style: context.sparkleTypography.labelLarge.copyWith(
                 color: DS.textPrimary,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
               ),
             ),
             const SizedBox(height: DS.spacing6),
@@ -689,7 +689,7 @@ class _InactivePlanRow extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                         style: context.sparkleTypography.labelLarge.copyWith(
                           color: DS.textPrimary,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: DS.fontWeightSemibold,
                         ),
                       ),
                       const SizedBox(height: DS.spacing2),
@@ -755,7 +755,7 @@ class _PlanTag extends StatelessWidget {
           label,
           style: context.sparkleTypography.labelSmall.copyWith(
             color: highlighted ? DS.brandPrimary : DS.textSecondary,
-            fontWeight: FontWeight.w600,
+            fontWeight: DS.fontWeightSemibold,
           ),
         ),
       );
@@ -797,7 +797,7 @@ class _PlanSection extends ConsumerWidget {
                   color: (planName != null || planId != null)
                       ? DS.textPrimary
                       : DS.textSecondary,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
               const SizedBox(width: DS.spacing8),
@@ -814,7 +814,7 @@ class _PlanSection extends ConsumerWidget {
                   '${tasks.length}',
                   style: context.sparkleTypography.labelSmall.copyWith(
                     color: DS.brandPrimaryConst,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
               ),

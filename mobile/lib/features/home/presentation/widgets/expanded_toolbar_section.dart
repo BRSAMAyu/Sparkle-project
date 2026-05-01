@@ -30,7 +30,7 @@ class ExpandedToolbarSection extends ConsumerWidget {
             '快捷工具',
             style: context.sparkleTypography.labelLarge.copyWith(
               color: DS.textSecondary,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
             ),
           ),
           const SizedBox(height: DS.spacing12),
@@ -138,7 +138,7 @@ class _ToolButton extends StatelessWidget {
               style: context.sparkleTypography.labelSmall.copyWith(
                 fontSize: 10,
                 color: DS.textPrimary,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
               ),
               textAlign: TextAlign.center,
               maxLines: 1,

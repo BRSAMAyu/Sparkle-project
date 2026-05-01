@@ -80,7 +80,7 @@ class LegalDocumentScreen extends StatelessWidget {
                   Text(
                     section.title,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: DS.fontWeightBold,
                         ),
                   ),
                   const SizedBox(height: DS.spacing8),

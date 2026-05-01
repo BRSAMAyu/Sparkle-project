@@ -183,6 +183,8 @@ class UserProfile(UserBase):
     flame_brightness: float = Field(description="Flame brightness")
     depth_preference: float = Field(description="Depth preference")
     curiosity_preference: float = Field(description="Curiosity preference")
+    schedule_preferences: dict[str, Any] | None = Field(default=None, description="Weekly schedule preferences")
+    weather_preferences: dict[str, Any] | None = Field(default=None, description="Weather mapping preferences")
     is_active: bool = Field(description="Is active")
     status: UserStatusEnum = Field(default=UserStatusEnum.OFFLINE, description="Status")
     created_at: datetime = Field(description="Registration time")
@@ -254,7 +256,7 @@ class PushPreferenceUpdate(BaseModel):
     """Push preference update request"""
     enable_curiosity: bool | None = Field(default=None, description="Enable curiosity-based push notifications")
     persona_type: str | None = Field(default=None, description="AI persona type (coach, anime, mentor, friend)")
-    daily_cap: int | None = Field(default=None, ge=1, le=20, description="Daily push notification cap")
+    daily_cap: int | None = Field(default=None, ge=0, le=20, description="Daily push notification cap; 0 disables proactive pushes")
     active_slots: list[dict[str, str]] | None = Field(default=None, description="Active time slots [{'start': '08:00', 'end': '09:00'}]")
     timezone: str | None = Field(default=None, description="User timezone")
 

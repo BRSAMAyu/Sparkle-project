@@ -17,7 +17,7 @@ from app.config.settings import settings
 from app.services.dictionary_package_service import dictionary_package_service
 from app.db.session import get_db
 from app.models.user import User
-from app.services.mdx_dictionary_service import create_mdx_service
+from app.services.mdx_dictionary_service import MDX_AVAILABLE, create_mdx_service
 from app.services.vocabulary_service import vocabulary_service
 from app.utils.helpers import read_upload_file
 
@@ -53,7 +53,7 @@ def get_mdx_service():
     """获取或初始化 MDX 词典服务"""
     global _mdx_service
     if _mdx_service is None:
-        if not settings.MDX_DICTIONARY_ENABLED:
+        if not settings.MDX_DICTIONARY_ENABLED or not MDX_AVAILABLE:
             return None
         mdx_path = getattr(settings, 'MDX_DICTIONARY_PATH', None)
         if not mdx_path:

@@ -35,6 +35,17 @@ const (
 	teamModePref    = "team::"
 )
 
+func defaultUseDocumentContextForMode(chatMode string) bool {
+	return normalizeChatMode(chatMode) == "study_plan"
+}
+
+func ensureChatExtraContext(input *chatInput) map[string]interface{} {
+	if input.ExtraContext == nil {
+		input.ExtraContext = map[string]interface{}{}
+	}
+	return input.ExtraContext
+}
+
 func shortHash(parts ...string) string {
 	h := sha256.New()
 	for _, part := range parts {
@@ -48,9 +59,12 @@ func shortHash(parts ...string) string {
 	return hex.EncodeToString(h.Sum(nil))[:12]
 }
 
-func semanticCacheScope(userID, chatMode, userContextJSON string, fileIDs []string, includeReferences bool) string {
+func semanticCacheScope(userID, chatMode, userContextJSON string, fileIDs []string, includeReferences bool, activeTools []string, extraContext map[string]interface{}) string {
 	sortedFileIDs := append([]string(nil), fileIDs...)
 	sort.Strings(sortedFileIDs)
+
+	sortedActiveTools := append([]string(nil), activeTools...)
+	sort.Strings(sortedActiveTools)
 
 	referencesFlag := "refs_off"
 	if includeReferences {
@@ -59,13 +73,19 @@ func semanticCacheScope(userID, chatMode, userContextJSON string, fileIDs []stri
 
 	contextHash := shortHash(userContextJSON)
 	fileHash := shortHash(strings.Join(sortedFileIDs, ","))
+	toolsHash := shortHash(strings.Join(sortedActiveTools, ","))
+
+	extraCtxJSON, _ := json.Marshal(extraContext)
+	extraHash := shortHash(string(extraCtxJSON))
 
 	return fmt.Sprintf(
-		"user:%s|mode:%s|ctx:%s|files:%s|%s",
+		"user:%s|mode:%s|ctx:%s|files:%s|tools:%s|extra:%s|%s",
 		userID,
 		normalizeChatMode(chatMode),
 		contextHash,
 		fileHash,
+		toolsHash,
+		extraHash,
 		referencesFlag,
 	)
 }
@@ -308,14 +328,63 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	// P0: Semantic Cache Check (scoped by user + mode, after context resolution)
 	normalizedChatMode := normalizeChatMode(input.ChatMode)
+	useDocumentContext := defaultUseDocumentContextForMode(normalizedChatMode)
+	documentFilter := append([]string(nil), input.DocumentFilter...)
+	if h.chatHistory != nil && input.SessionID != "" {
+		if stored, ok, err := h.chatHistory.GetConversationSettings(ctx, userID, input.SessionID); err != nil {
+			log.Printf("Failed to load conversation settings for session=%s: %v", input.SessionID, err)
+		} else if ok && stored != nil {
+			useDocumentContext = stored.UseDocumentContext
+			if len(input.DocumentFilter) == 0 {
+				documentFilter = append([]string(nil), stored.DocumentFilter...)
+			}
+		}
+		if input.UseDocumentContext != nil {
+			useDocumentContext = *input.UseDocumentContext
+		}
+		if input.UseDocumentContext != nil || len(input.DocumentFilter) > 0 {
+			updated, err := h.chatHistory.UpdateConversationSettings(ctx, userID, input.SessionID, service.ConversationSettings{
+				UseDocumentContext: useDocumentContext,
+				DocumentFilter:     documentFilter,
+			})
+			if err != nil {
+				log.Printf("Failed to update conversation settings for session=%s: %v", input.SessionID, err)
+			} else if updated != nil {
+				useDocumentContext = updated.UseDocumentContext
+				documentFilter = append([]string(nil), updated.DocumentFilter...)
+			}
+		}
+	} else if input.UseDocumentContext != nil {
+		useDocumentContext = *input.UseDocumentContext
+	}
+	if input.UseDocumentContext != nil && (h.chatHistory == nil || input.SessionID == "") {
+		useDocumentContext = *input.UseDocumentContext
+	}
+	extraContext := ensureChatExtraContext(input)
+	extraContext["use_document_context"] = useDocumentContext
+	extraContext["document_filter"] = documentFilter
+	extraContext["conversation_settings"] = map[string]interface{}{
+		"use_document_context": useDocumentContext,
+		"document_filter":      documentFilter,
+	}
+	if len(documentFilter) > 0 {
+		extraContext["selected_document_ids"] = documentFilter
+	}
+
 	cacheScope := semanticCacheScope(
 		userID,
 		normalizedChatMode,
 		userContextJSON,
 		input.FileIds,
 		input.IncludeReferences,
+		input.ActiveTools,
+		input.ExtraContext,
 	)
-	if h.semantic != nil {
+	// Skip cache when request carries orchestration-bearing fields
+	// (active_tools, tool results, or extra_context) — these must hit
+	// the Python orchestrator to preserve graph/tool/HITL behavior.
+	shouldSkipCache := len(input.ActiveTools) > 0 || input.IsToolResult || len(input.ExtraContext) > 0
+	if h.semantic != nil && !shouldSkipCache {
 		cacheCtx, cacheSpan := tracer.Start(ctx, "semantic_cache.search")
 		cachedResp, err := h.semantic.SearchExact(cacheCtx, cacheScope, input.Message)
 		cacheSpan.End()
@@ -353,7 +422,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 					"is_cache_hit": true,
 				})
 			case *wsSafeWriter:
-				_ = writeLegacyJSON(r, convertResponseToJSON(resp))
+				_ = writeLegacyJSON(r, convertResponseToJSON(ctx, resp))
 				_ = writeLegacyJSON(r, gin.H{
 					"type": "meta",
 					"meta": map[string]interface{}{
@@ -386,11 +455,13 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		UserId:            userID,
 		SessionId:         input.SessionID,
 		FileIds:           input.FileIds,
+		DocumentFilter:    documentFilter,
 		IncludeReferences: input.IncludeReferences,
 		ActiveTools:       input.ActiveTools,
 		ChatMode:          normalizedChatMode,
 		UserProfile:       buildAgentUserProfile(input.Nickname, userContextJSON, profileSnapshot, resolvedUser),
 	}
+	req.UseDocumentContext = &useDocumentContext
 
 	// Set input based on whether this is a tool result or a regular message
 	if input.IsToolResult {
@@ -460,6 +531,8 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	var segmentIndex int
 	var outputRuneCount int
 	var responseEventCount int64
+	var sawAuroraRuntime bool
+	var sawUpstreamFinishReason bool
 	var firstEventAt time.Time
 	var firstTokenAt time.Time
 	segmentSize := getEnvInt64("STREAM_TOKEN_SEGMENT", 200)
@@ -501,6 +574,12 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 		if usage := resp.GetUsage(); usage != nil {
 			usageTotalTokens = int64(usage.TotalTokens)
+		}
+		if isAuroraRuntimeResponse(resp) {
+			sawAuroraRuntime = true
+		}
+		if resp.GetFinishReason() != agentv1.FinishReason_NULL {
+			sawUpstreamFinishReason = true
 		}
 
 		if h.quota != nil && segmentSize > 0 {
@@ -545,7 +624,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			}
 		case *wsSafeWriter:
 			// Convert protobuf response to JSON-friendly map
-			jsonResp := convertResponseToJSON(resp)
+			jsonResp := convertResponseToJSON(ctx, resp)
 			// Forward to WebSocket client
 			if err := writeLegacyJSON(r, jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
@@ -647,13 +726,15 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		EventTime:     timestamppb.New(time.Now()),
 	}
 
-	switch r := responder.(type) {
-	case *envelopeResponder:
-		_ = r.SendChatResponse(doneResp)
-	case *protobufResponder:
-		_ = r.SendChatResponse(doneResp)
-	case *wsSafeWriter:
-		_ = writeLegacyJSON(r, convertResponseToJSON(doneResp))
+	if shouldEmitSyntheticDone(sawAuroraRuntime, sawUpstreamFinishReason) {
+		switch r := responder.(type) {
+		case *envelopeResponder:
+			_ = r.SendChatResponse(doneResp)
+		case *protobufResponder:
+			_ = r.SendChatResponse(doneResp)
+		case *wsSafeWriter:
+			_ = writeLegacyJSON(r, convertResponseToJSON(ctx, doneResp))
+		}
 	}
 
 	// Persist completed message to database and cache (async)

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
@@ -316,7 +317,8 @@ class _SparkleAttentionPulseState extends State<SparkleAttentionPulse>
   @override
   void didUpdateWidget(covariant SparkleAttentionPulse oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.active != widget.active || oldWidget.duration != widget.duration) {
+    if (oldWidget.active != widget.active ||
+        oldWidget.duration != widget.duration) {
       if (oldWidget.duration != widget.duration) {
         _controller.duration = widget.duration;
       }
@@ -352,8 +354,9 @@ class _SparkleAttentionPulseState extends State<SparkleAttentionPulse>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        final t =
-            DS.motionCurve(SparkleMotionToken.scene).transform(_controller.value);
+        final t = DS
+            .motionCurve(SparkleMotionToken.scene)
+            .transform(_controller.value);
         final scale = 1 + (widget.scaleRange * t);
         final glowOpacity = 0.06 + (0.10 * t);
         return Padding(
@@ -425,5 +428,248 @@ class SparkleExitTransition extends StatelessWidget {
       curve: curve,
       child: visible ? animatedChild : const SizedBox.shrink(),
     );
+  }
+}
+
+class SparkleGalaxyArrivalOverlay extends StatefulWidget {
+  const SparkleGalaxyArrivalOverlay({
+    required this.labels,
+    required this.summary,
+    super.key,
+    this.onComplete,
+    this.duration = const Duration(milliseconds: 2200),
+  });
+
+  final List<String> labels;
+  final String summary;
+  final VoidCallback? onComplete;
+  final Duration duration;
+
+  @override
+  State<SparkleGalaxyArrivalOverlay> createState() =>
+      _SparkleGalaxyArrivalOverlayState();
+}
+
+class _SparkleGalaxyArrivalOverlayState
+    extends State<SparkleGalaxyArrivalOverlay>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: widget.duration,
+    );
+    unawaited(
+      _controller.forward().whenComplete(() {
+        if (mounted) {
+          widget.onComplete?.call();
+        }
+      }),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final size = Size(constraints.maxWidth, constraints.maxHeight);
+            final source = Offset(size.width / 2, size.height - 88);
+            final targets = _buildTargets(size, widget.labels.length);
+            return AnimatedBuilder(
+              animation: _controller,
+              builder: (context, child) {
+                final progress = _controller.value;
+                return Stack(
+                  children: [
+                    Positioned(
+                      left: source.dx - 90,
+                      top: source.dy - 90,
+                      child: Opacity(
+                        opacity: (1 - progress).clamp(0.0, 1.0) * 0.45,
+                        child: Container(
+                          width: 180,
+                          height: 180,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                DS.brandPrimary.withValues(alpha: 0.24),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    for (final entry in targets.asMap().entries)
+                      _buildStar(
+                        context: context,
+                        index: entry.key,
+                        source: source,
+                        target: entry.value,
+                        progress: progress,
+                      ),
+                    Positioned(
+                      left: 24,
+                      right: 24,
+                      bottom: 24,
+                      child: Opacity(
+                        opacity: _badgeOpacity(progress),
+                        child: Transform.translate(
+                          offset: Offset(0, 18 * (1 - _badgeOpacity(progress))),
+                          child: Center(
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                color: const Color(0xDD101A2C),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.18),
+                                    blurRadius: 18,
+                                    offset: const Offset(0, 10),
+                                  ),
+                                ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                child: Text(
+                                  widget.summary,
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .bodyMedium
+                                      ?.copyWith(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        ),
+      );
+
+  List<Offset> _buildTargets(Size size, int count) {
+    if (count <= 0) {
+      return const <Offset>[];
+    }
+    final safeCount = math.min(5, math.max(1, count));
+    final center = Offset(size.width / 2, size.height * 0.33);
+    const spreadX = 118.0;
+    const spreadY = 44.0;
+    return List<Offset>.generate(safeCount, (index) {
+      final factor = safeCount == 1 ? 0.0 : (index / (safeCount - 1)) - 0.5;
+      final dx = factor * spreadX * 2;
+      final dy = math.sin((index + 1) * 0.9) * spreadY;
+      return Offset(center.dx + dx, center.dy + dy);
+    });
+  }
+
+  Widget _buildStar({
+    required BuildContext context,
+    required int index,
+    required Offset source,
+    required Offset target,
+    required double progress,
+  }) {
+    final start = index * 0.08;
+    final travel = ((progress - start) / 0.48).clamp(0.0, 1.0);
+    final eased = Curves.easeOutCubic.transform(travel);
+    final lift = 84 * math.sin(eased * math.pi);
+    final control = Offset(
+      (source.dx + target.dx) / 2,
+      math.min(source.dy, target.dy) - 110 - (index * 18),
+    );
+    final position = _quadraticBezier(source, control, target, eased);
+    final shimmer = (0.72 + (0.28 * math.sin((progress + index) * math.pi * 6)))
+        .clamp(0.0, 1.0);
+    final arrival = ((progress - (start + 0.42)) / 0.18).clamp(0.0, 1.0);
+    final opacity = travel <= 0
+        ? 0.0
+        : progress > 0.9
+            ? ((1 - progress) / 0.1).clamp(0.0, 1.0)
+            : 1.0;
+
+    return Positioned(
+      left: position.dx - 12,
+      top: position.dy - 12 - lift * 0.08,
+      child: Opacity(
+        opacity: opacity,
+        child: Column(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    Colors.white,
+                    DS.brandPrimary.withValues(alpha: shimmer),
+                    Colors.transparent,
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: DS.brandPrimary.withValues(alpha: 0.32 * shimmer),
+                    blurRadius: 18,
+                    spreadRadius: 2 + (arrival * 2),
+                  ),
+                ],
+              ),
+            ),
+            if (arrival > 0.05)
+              Container(
+                margin: const EdgeInsets.only(top: 6),
+                width: 8 + (arrival * 30),
+                height: 2,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: arrival * 0.85),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  double _badgeOpacity(double progress) {
+    if (progress < 0.28) {
+      return (progress / 0.28).clamp(0.0, 1.0);
+    }
+    if (progress > 0.9) {
+      return ((1 - progress) / 0.1).clamp(0.0, 1.0);
+    }
+    return 1.0;
+  }
+
+  Offset _quadraticBezier(Offset a, Offset b, Offset c, double t) {
+    final ab = Offset.lerp(a, b, t)!;
+    final bc = Offset.lerp(b, c, t)!;
+    return Offset.lerp(ab, bc, t)!;
   }
 }

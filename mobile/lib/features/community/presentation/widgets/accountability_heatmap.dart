@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 
 /// 责任伙伴打卡热力图组件
 ///
@@ -172,7 +173,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
               child: Text(
                 '${widget.year}年${_currentMonthPage + 1}月',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
             ),
@@ -386,7 +387,7 @@ class _DayCell extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: textColor,
                     fontWeight:
-                        totalCheckins == 0 ? FontWeight.w500 : FontWeight.w700,
+                        totalCheckins == 0 ? DS.fontWeightMedium : DS.fontWeightBold,
                   ),
             ),
           ),

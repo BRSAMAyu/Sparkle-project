@@ -91,111 +91,89 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
           ),
         ),
         child: ContentConstraint(
-          child: Padding(
-            padding: const EdgeInsets.all(DS.spacing16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Flexible(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        GraphiteCardSurface(
-                          surfaceRole: SparkleSurfaceRole.card,
-                          child: statsAsync.when(
-                            data: (stats) => _StatsView(stats: stats),
-                            loading: () => const Center(
-                                child: CircularProgressIndicator(),),
-                            error: (error, stackTrace) => Text(
-                              context.l10n.syncCenterLoadFailed(
-                                error.toString(),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: DS.spacing16),
-                        GraphiteCardSurface(
-                          surfaceRole: SparkleSurfaceRole.card,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _TopicFilter(
-                                value: _topicFilter,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _topicFilter = value;
-                                  });
-                                },
-                              ),
-                              const SizedBox(height: DS.spacing8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: SparkleButton.ghost(
-                                  onPressed: () async {
-                                    final diagnostics =
-                                        await service.buildDiagnostics();
-                                    await Clipboard.setData(
-                                      ClipboardData(text: diagnostics),
-                                    );
-                                    if (context.mounted) {
-                                      AppFeedback.success(
-                                        context,
-                                        context
-                                            .l10n.syncCenterDiagnosticsCopied,
-                                      );
-                                    }
-                                  },
-                                  icon: const Icon(Icons.copy),
-                                  label: context.l10n.syncCenterCopyDiagnostics,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: DS.spacing8),
-                        Text(
-                          context.l10n.syncCenterDisplayLimit(200),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: DS.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: DS.spacing8),
-                      ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Compact stats header row
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  DS.spacing16,
+                  DS.spacing12,
+                  DS.spacing16,
+                  DS.spacing4,
+                ),
+                child: statsAsync.when(
+                  data: (stats) => _CompactStatsRow(stats: stats),
+                  loading: () => const SizedBox(
+                    height: 72,
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                  error: (error, _) => Padding(
+                    padding: const EdgeInsets.all(DS.spacing12),
+                    child: Text(
+                      context.l10n.syncCenterLoadFailed(error.toString()),
+                      style: DS.bodySmall.copyWith(color: DS.error),
                     ),
                   ),
                 ),
-                Expanded(
-                  child: TabBarView(
-                    children: [
-                      _ItemsList(
-                        query: SyncCenterQuery(topicFilter: _topicFilter),
-                      ),
-                      _ItemsList(
-                        query: SyncCenterQuery(
-                          statusFilter: SyncStatus.failed,
-                          topicFilter: _topicFilter,
-                        ),
-                      ),
-                      _ItemsList(
-                        query: SyncCenterQuery(
-                          statusFilter: SyncStatus.waitingAck,
-                          topicFilter: _topicFilter,
-                        ),
-                      ),
-                      _ItemsList(
-                        query: SyncCenterQuery(
-                          statusFilter: SyncStatus.pending,
-                          topicFilter: _topicFilter,
-                        ),
-                      ),
-                    ],
-                  ),
+              ),
+              // Topic filter + diagnostics in a compact row
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing16,
+                  vertical: DS.spacing4,
                 ),
-              ],
-            ),
+                child: _CompactFilterRow(
+                  topicFilter: _topicFilter,
+                  onTopicChanged: (value) {
+                    setState(() => _topicFilter = value);
+                  },
+                  onCopyDiagnostics: () async {
+                    final diagnostics =
+                        await service.buildDiagnostics();
+                    await Clipboard.setData(
+                      ClipboardData(text: diagnostics),
+                    );
+                    if (context.mounted) {
+                      AppFeedback.success(
+                        context,
+                        context.l10n.syncCenterDiagnosticsCopied,
+                      );
+                    }
+                  },
+                  onCopyLabel: context.l10n.syncCenterCopyDiagnostics,
+                ),
+              ),
+              const SizedBox(height: DS.spacing4),
+              // Record list takes full remaining height
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _ItemsList(
+                      query: SyncCenterQuery(topicFilter: _topicFilter),
+                    ),
+                    _ItemsList(
+                      query: SyncCenterQuery(
+                        statusFilter: SyncStatus.failed,
+                        topicFilter: _topicFilter,
+                      ),
+                    ),
+                    _ItemsList(
+                      query: SyncCenterQuery(
+                        statusFilter: SyncStatus.waitingAck,
+                        topicFilter: _topicFilter,
+                      ),
+                    ),
+                    _ItemsList(
+                      query: SyncCenterQuery(
+                        statusFilter: SyncStatus.pending,
+                        topicFilter: _topicFilter,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -203,48 +181,73 @@ class _SyncCenterScreenState extends ConsumerState<SyncCenterScreen> {
   }
 }
 
-class _StatsView extends StatelessWidget {
-  const _StatsView({required this.stats});
+/// Balanced header row showing pending count (left) and last sync time (right).
+class _CompactStatsRow extends StatelessWidget {
+  const _CompactStatsRow({required this.stats});
 
   final SyncCenterStats stats;
 
   @override
   Widget build(BuildContext context) {
-    final topicEntries = stats.pendingByTopic.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final lastSuccessLabel = stats.lastSuccessAt != null
+    final lastSyncLabel = stats.lastSuccessAt != null
         ? Formatters.formatDateTime(stats.lastSuccessAt!.toLocal())
         : context.l10n.syncCenterNeverSynced;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          context.l10n.syncCenterTotalPending(stats.totalPending),
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: DS.spacing8),
-        Text(
-          context.l10n.syncCenterLastSync(lastSuccessLabel),
-          style: TextStyle(fontSize: 12, color: DS.textSecondary),
-        ),
-        const SizedBox(height: DS.spacing12),
-        Text(
-          context.l10n.syncCenterByTopic,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: DS.spacing8),
-        if (topicEntries.isEmpty)
-          Text(context.l10n.syncCenterNoPendingItems)
-        else
-          ...topicEntries.map(
-            (entry) => ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(_topicLabel(context, entry.key)),
-              trailing: Text('${entry.value}'),
-            ),
+    final topicEntries = stats.pendingByTopic.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing16,
+        vertical: DS.spacing12,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top row: pending count left, last sync right
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Pending count
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n.syncCenterTotalPending(stats.totalPending),
+                      style: DS.titleLarge.copyWith(
+                        color: DS.textPrimary,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing2),
+                    Text(
+                      context.l10n.syncCenterLastSync(lastSyncLabel),
+                      style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+              // Topic breakdown chips (compact)
+              if (topicEntries.isNotEmpty)
+                Expanded(
+                  child: Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: DS.spacing6,
+                    runSpacing: DS.spacing4,
+                    children: topicEntries.map((entry) {
+                      return _StatChip(
+                        label: _topicLabel(context, entry.key),
+                        count: entry.value,
+                      );
+                    }).toList(),
+                  ),
+                ),
+            ],
           ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -266,28 +269,70 @@ class _StatsView extends StatelessWidget {
   }
 }
 
-class _TopicFilter extends StatelessWidget {
-  const _TopicFilter({
-    required this.value,
-    required this.onChanged,
-  });
+/// A compact chip showing topic name and count, used in the stats header.
+class _StatChip extends StatelessWidget {
+  const _StatChip({required this.label, required this.count});
 
-  final String value;
-  final ValueChanged<String> onChanged;
+  final String label;
+  final int count;
 
   @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing8,
+        vertical: DS.spacing4,
+      ),
+      decoration: BoxDecoration(
+        color: DS.brandPrimary12,
+        borderRadius: DS.borderRadius8,
+        border: Border.all(color: DS.brandPrimary24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            context.l10n.syncCenterTopicLabel,
-            style: DS.labelLarge.copyWith(
-              color: DS.textPrimary,
-              fontWeight: DS.fontWeightSemibold,
+            label,
+            style: DS.labelSmall.copyWith(
+              color: DS.brandPrimary,
+              fontWeight: DS.fontWeightMedium,
             ),
           ),
-          const SizedBox(height: DS.spacing8),
-          DecoratedBox(
+          const SizedBox(width: DS.spacing4),
+          Text(
+            '$count',
+            style: DS.labelSmall.copyWith(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightBold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact single-row filter: topic dropdown on the left, copy button on the right.
+class _CompactFilterRow extends StatelessWidget {
+  const _CompactFilterRow({
+    required this.topicFilter,
+    required this.onTopicChanged,
+    required this.onCopyDiagnostics,
+    required this.onCopyLabel,
+  });
+
+  final String topicFilter;
+  final ValueChanged<String> onTopicChanged;
+  final VoidCallback onCopyDiagnostics;
+  final String onCopyLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        // Topic filter dropdown
+        Flexible(
+          child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: DS.borderRadius12,
               border: Border.all(color: DS.borderSubtle),
@@ -296,13 +341,12 @@ class _TopicFilter extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: DS.spacing12),
               child: DropdownButton<String>(
-                value: value,
+                value: topicFilter,
                 isExpanded: true,
                 underline: const SizedBox.shrink(),
+                style: DS.bodySmall.copyWith(color: DS.textPrimary),
                 onChanged: (next) {
-                  if (next != null) {
-                    onChanged(next);
-                  }
+                  if (next != null) onTopicChanged(next);
                 },
                 items: [
                   DropdownMenuItem(
@@ -333,8 +377,18 @@ class _TopicFilter extends StatelessWidget {
               ),
             ),
           ),
-        ],
-      );
+        ),
+        const SizedBox(width: DS.spacing8),
+        // Copy diagnostics button
+        SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          size: DS.spacing40,
+          icon: Icon(Icons.copy, size: 18, color: DS.textSecondary),
+          onPressed: onCopyDiagnostics,
+        ),
+      ],
+    );
+  }
 }
 
 class _ItemsList extends ConsumerWidget {
@@ -350,9 +404,15 @@ class _ItemsList extends ConsumerWidget {
     return itemsAsync.when(
       data: (items) {
         if (items.isEmpty) {
-          return Center(child: Text(context.l10n.syncCenterNoRecords));
+          return const _EmptyState();
         }
         return ListView.separated(
+          padding: EdgeInsets.fromLTRB(
+            DS.spacing16,
+            DS.spacing4,
+            DS.spacing16,
+            DS.spacing64 + DS.spacing16,
+          ),
           itemCount: items.length,
           separatorBuilder: (_, __) => const SizedBox(height: DS.spacing8),
           itemBuilder: (context, index) {
@@ -397,6 +457,41 @@ class _ItemsList extends ConsumerWidget {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stackTrace) => Center(
         child: Text(context.l10n.syncCenterLoadFailed(error.toString())),
+      ),
+    );
+  }
+}
+
+/// Empty state with icon and descriptive text instead of plain "暂无记录".
+class _EmptyState extends StatelessWidget {
+  const _EmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(DS.spacing32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.cloud_done_rounded,
+              size: DS.iconSizeXl * 2,
+              color: DS.success.withValues(alpha: 0.35),
+            ),
+            const SizedBox(height: DS.spacing16),
+            Text(
+              context.l10n.syncCenterNoRecords,
+              style: DS.titleMedium.copyWith(color: DS.textSecondary),
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              context.l10n.syncCenterNoPendingItems,
+              style: DS.bodySmall.copyWith(color: DS.textTertiary),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -66,6 +66,7 @@ func TestProtoSerializationChatResponseAllFinishReasons(t *testing.T) {
 		agentv1.FinishReason_TOOL_CALLS,
 		agentv1.FinishReason_CONTENT_FILTER,
 		agentv1.FinishReason_ERROR,
+		agentv1.FinishReason_CONTINUE,
 	}
 
 	for _, reason := range validFinishReasons {

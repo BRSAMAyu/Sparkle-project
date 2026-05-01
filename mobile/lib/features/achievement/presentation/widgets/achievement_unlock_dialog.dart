@@ -98,7 +98,7 @@ class AchievementUnlockDialog extends StatefulWidget {
       showSensoryGeneralDialog(
         context: context,
         barrierDismissible: barrierDismissible,
-        barrierLabel: 'Achievement Unlock',
+        barrierLabel: '成就解锁',
         barrierColor: DS.textPrimary.withValues(alpha: 0.7),
         transitionDuration: const Duration(milliseconds: 600),
         pageBuilder: (context, animation, secondaryAnimation) =>

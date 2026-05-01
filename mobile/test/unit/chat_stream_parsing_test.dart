@@ -36,6 +36,24 @@ void main() {
       expect(event.details, 'planning next step');
     });
 
+    test('treats CONTINUE finish_reason frames as ContinueEvent', () {
+      final event = parseChatEventForTest(
+        json.encode({
+          'type': 'done',
+          'finish_reason': 'CONTINUE',
+          'metadata': {
+            'aurora_surface': 'aurora_modeling',
+            'aurora_runtime_enabled': true,
+          },
+        }),
+      );
+
+      expect(event, isA<ContinueEvent>());
+      final continueEvent = event as ContinueEvent;
+      expect(continueEvent.finishReason, 'CONTINUE');
+      expect(continueEvent.metadata?['aurora_surface'], 'aurora_modeling');
+    });
+
     test('treats finish_reason frames as DoneEvent', () {
       final event = parseChatEventForTest(
         json.encode({

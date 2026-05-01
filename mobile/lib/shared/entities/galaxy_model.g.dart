@@ -75,6 +75,16 @@ GalaxyNodeModel _$GalaxyNodeModelFromJson(Map<String, dynamic> json) =>
       studyCount: (GalaxyNodeModel._readStudyCount(json, 'study_count') as num?)
               ?.toInt() ??
           0,
+      recentErrorCount: (json['recent_error_count'] as num?)?.toInt() ?? 0,
+      reviewUrgencyScore:
+          (json['review_urgency_score'] as num?)?.toDouble() ?? 0,
+      isReviewRecommended: json['is_review_recommended'] as bool? ?? false,
+      reviewUrgencyReason: json['review_urgency_reason'] as String?,
+      masteryLastUpdatedAt: json['mastery_last_updated_at'] == null
+          ? null
+          : DateTime.parse(json['mastery_last_updated_at'] as String),
+      daysSinceMasteryUpdate:
+          (json['days_since_mastery_update'] as num?)?.toDouble() ?? 0,
       firstUnlockAt: json['first_unlock_at'] == null
           ? null
           : DateTime.parse(json['first_unlock_at'] as String),
@@ -116,6 +126,13 @@ Map<String, dynamic> _$GalaxyNodeModelToJson(GalaxyNodeModel instance) =>
       'is_unlocked': instance.isUnlocked,
       'mastery_score': instance.masteryScore,
       'study_count': instance.studyCount,
+      'recent_error_count': instance.recentErrorCount,
+      'review_urgency_score': instance.reviewUrgencyScore,
+      'is_review_recommended': instance.isReviewRecommended,
+      'review_urgency_reason': instance.reviewUrgencyReason,
+      'mastery_last_updated_at':
+          instance.masteryLastUpdatedAt?.toIso8601String(),
+      'days_since_mastery_update': instance.daysSinceMasteryUpdate,
       'first_unlock_at': instance.firstUnlockAt?.toIso8601String(),
       'tags': instance.tags,
       'description': instance.description,

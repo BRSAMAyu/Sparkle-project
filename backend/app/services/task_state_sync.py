@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 TaskStateSync - 任务状态同步服务
 
@@ -71,9 +72,7 @@ class TaskStateSyncService:
             )
             # Also sync task summaries after creation
             await self.sync_task_summaries(task.user_id, task.plan_id)
-            logger.info(
-                f"Synced task creation: task_id={task.id}, plan_id={task.plan_id}"
-            )
+            logger.info(f"Synced task creation: task_id={task.id}, plan_id={task.plan_id}")
         except Exception as e:
             logger.warning(f"Failed to sync task creation: {e}")
 
@@ -117,21 +116,20 @@ class TaskStateSyncService:
                         plan_id=task.plan_id,
                         milestone=milestone,
                         pending_task_count=pending_count,
-                        current_plan_context=plan_context
+                        current_plan_context=plan_context,
                     )
 
-            logger.info(
-                f"Synced task completion: task_id={task.id}, plan_id={task.plan_id}"
-            )
+            logger.info(f"Synced task completion: task_id={task.id}, plan_id={task.plan_id}")
         except Exception as e:
             logger.warning(f"Failed to sync task completion: {e}")
 
     async def _count_pending_tasks(self, plan_id: UUID) -> int:
         """Count pending and in-progress tasks for a plan."""
         result = await self.db.execute(
-            select(func.count()).select_from(Task).where(
-                Task.plan_id == plan_id,
-                Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS])
+            select(func.count())
+            .select_from(Task)
+            .where(
+                Task.plan_id == plan_id, Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.STUCK])
             )
         )
         return result.scalar() or 0
@@ -185,9 +183,7 @@ class TaskStateSyncService:
                 patch={"task_summaries": summaries},
                 bump_version=False,  # Don't bump version for cache update
             )
-            logger.debug(
-                f"Synced task summaries: plan_id={plan_id}, count={len(summaries)}"
-            )
+            logger.debug(f"Synced task summaries: plan_id={plan_id}, count={len(summaries)}")
         except Exception as e:
             logger.warning(f"Failed to sync task summaries: {e}")
 
@@ -239,9 +235,7 @@ class TaskStateSyncService:
 
         # Calculate completion rate
         if task_index["total"] > 0:
-            task_index["avg_completion_rate"] = round(
-                task_index["completed"] / task_index["total"], 3
-            )
+            task_index["avg_completion_rate"] = round(task_index["completed"] / task_index["total"], 3)
 
         # Update plan state with rebuilt index
         await self._plan_state_service.upsert_plan_state(
@@ -349,6 +343,7 @@ class TaskStateSyncService:
 
         try:
             from app.models.galaxy import KnowledgeNode
+
             link_result = await self.db.execute(
                 select(TaskKnowledgeLink, KnowledgeNode)
                 .join(KnowledgeNode, TaskKnowledgeLink.knowledge_node_id == KnowledgeNode.id)

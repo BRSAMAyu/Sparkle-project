@@ -238,7 +238,7 @@ func (p *ChatHistoryPersister) writeBatchToDB(ctx context.Context, batch []ChatH
 					last_message_at = EXCLUDED.last_message_at,
 					updated_at = NOW(),
 					title = COALESCE(NULLIF(EXCLUDED.title, ''), chat_sessions.title)
-			`, sessionID, userID, buildSessionTitle(role, msg.Content), msg.Timestamp)
+			`, sessionID, userID, buildSessionTitle(ctx, role, msg.Content), msg.Timestamp)
 
 			if err != nil {
 				log.Printf("[ChatHistoryPersister] Failed to upsert session: %v", err)

@@ -2,18 +2,18 @@
 统计数据 API
 Statistics API
 """
-from datetime import timezone, datetime, timedelta
+from datetime import date, timezone, datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.models.achievement import UserAchievement
-from app.models.galaxy import UserNodeStatus
+from app.models.galaxy import StudyRecord, UserNodeStatus
 from app.models.focus import FocusSession, FocusStatus
-from app.models.task import Task
+from app.models.task import Task, TaskStatus
 from app.models.user import User
 
 router = APIRouter()
@@ -212,6 +212,124 @@ async def get_weekly_stats(
         "total_study_minutes": weekly_minutes,
         "average_daily_minutes": round(weekly_minutes / 7, 1) if weekly_minutes else 0,
     }
+
+
+def _day_key(value: date | str | datetime) -> str:
+    if isinstance(value, datetime):
+        return value.date().isoformat()
+    if isinstance(value, date):
+        return value.isoformat()
+    return str(value)
+
+
+def _resolve_heatmap_user_id(current_user: User, requested_user_id: UUID | None) -> UUID:
+    if requested_user_id is None or requested_user_id == current_user.id:
+        return current_user.id
+    if current_user.is_superuser:
+        return requested_user_id
+    raise HTTPException(status_code=403, detail="Not authorized to view another user's activity heatmap")
+
+
+@router.get("/activity/heatmap")
+async def get_learning_heatmap(
+    days: int = Query(default=90, ge=1, le=365),
+    user_id: UUID | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    学习热力图（GitHub 风格贡献图）
+    Returns one entry per day, including today.
+
+    Minutes are sourced from:
+    1. `study_records` written by galaxy/task learning updates
+    2. completed tasks without a linked study record as a fallback
+
+    Response: [{date: "2026-04-01", minutes: 45, tasks_completed: 3}, ...]
+    """
+    target_user_id = _resolve_heatmap_user_id(current_user, user_id)
+    today = datetime.now(timezone.utc).replace(tzinfo=None).date()
+    start_day = today - timedelta(days=days - 1)
+    range_start = datetime.combine(start_day, datetime.min.time())
+    range_end = datetime.combine(today + timedelta(days=1), datetime.min.time())
+
+    study_query = (
+        select(
+            func.date(StudyRecord.created_at).label("day"),
+            func.coalesce(func.sum(StudyRecord.study_minutes), 0).label("study_minutes"),
+        )
+        .where(
+            StudyRecord.user_id == target_user_id,
+            StudyRecord.created_at >= range_start,
+            StudyRecord.created_at < range_end,
+        )
+        .group_by(func.date(StudyRecord.created_at))
+    )
+    study_result = await db.execute(study_query)
+    study_minutes_by_day = {
+        _day_key(row.day): float(row.study_minutes or 0)
+        for row in study_result
+    }
+
+    task_has_study_record = select(StudyRecord.id).where(StudyRecord.task_id == Task.id).exists()
+    task_minutes_query = (
+        select(
+            func.date(Task.completed_at).label("day"),
+            func.coalesce(
+                func.sum(func.coalesce(Task.actual_minutes, Task.estimated_minutes, 0)),
+                0,
+            ).label("task_minutes"),
+        )
+        .where(
+            Task.user_id == target_user_id,
+            Task.status == TaskStatus.COMPLETED,
+            Task.completed_at.is_not(None),
+            Task.completed_at >= range_start,
+            Task.completed_at < range_end,
+            ~task_has_study_record,
+        )
+        .group_by(func.date(Task.completed_at))
+    )
+    task_minutes_result = await db.execute(task_minutes_query)
+    fallback_task_minutes_by_day = {
+        _day_key(row.day): float(row.task_minutes or 0)
+        for row in task_minutes_result
+    }
+
+    task_count_query = (
+        select(
+            func.date(Task.completed_at).label("day"),
+            func.count(Task.id).label("task_count"),
+        )
+        .where(
+            Task.user_id == target_user_id,
+            Task.status == TaskStatus.COMPLETED,
+            Task.completed_at.is_not(None),
+            Task.completed_at >= range_start,
+            Task.completed_at < range_end,
+        )
+        .group_by(func.date(Task.completed_at))
+    )
+    task_count_result = await db.execute(task_count_query)
+    tasks_completed_by_day = {
+        _day_key(row.day): int(row.task_count or 0)
+        for row in task_count_result
+    }
+
+    result: list[dict[str, str | int | float]] = []
+    for offset in range(days):
+        current_day = start_day + timedelta(days=offset)
+        day_key = current_day.isoformat()
+        total_minutes = study_minutes_by_day.get(day_key, 0.0) + fallback_task_minutes_by_day.get(day_key, 0.0)
+        result.append(
+            {
+                "date": day_key,
+                "minutes": round(total_minutes, 1),
+                "tasks_completed": tasks_completed_by_day.get(day_key, 0),
+            }
+        )
+
+    return result
 
 
 @router.get("/flame")

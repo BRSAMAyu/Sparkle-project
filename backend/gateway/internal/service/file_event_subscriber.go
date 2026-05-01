@@ -9,12 +9,16 @@ import (
 )
 
 type FileStatusEvent struct {
-	Type     string `json:"type"`
-	FileID   string `json:"file_id"`
-	UserID   string `json:"user_id"`
-	Status   string `json:"status"`
-	Progress int    `json:"progress"`
-	Error    string `json:"error,omitempty"`
+	Type            string `json:"type"`
+	FileID          string `json:"file_id"`
+	UserID          string `json:"user_id"`
+	Status          string `json:"status"`
+	Stage           string `json:"stage,omitempty"`
+	Progress        int    `json:"progress"`
+	ProgressPercent int    `json:"progress_percent,omitempty"`
+	JobID           string `json:"job_id,omitempty"`
+	NodesFound      *int   `json:"nodes_found,omitempty"`
+	Error           string `json:"error,omitempty"`
 }
 
 type FileEventSubscriber struct {
@@ -57,6 +61,43 @@ func (s *FileEventSubscriber) Run(ctx context.Context) error {
 		if event.UserID == "" {
 			continue
 		}
+		event.normalize()
 		s.hub.Send(event.UserID, event)
 	}
+}
+
+func (e *FileStatusEvent) normalize() {
+	if e.ProgressPercent == 0 && e.Progress > 0 {
+		e.ProgressPercent = e.Progress
+	}
+	if e.Progress == 0 && e.ProgressPercent > 0 {
+		e.Progress = e.ProgressPercent
+	}
+	if e.Stage == "" {
+		e.Stage = documentStage(e.Status, e.ProgressPercent)
+	}
+	if e.Status == "processing" {
+		e.Status = e.Stage
+	}
+	if e.Status == "processed" {
+		e.Status = "done"
+	}
+}
+
+func documentStage(status string, progress int) string {
+	switch status {
+	case "failed":
+		return "failed"
+	case "processed", "done":
+		return "done"
+	case "uploading", "uploaded", "queued":
+		return "queued"
+	}
+	if progress < 25 {
+		return "extracting"
+	}
+	if progress < 70 {
+		return "embedding"
+	}
+	return "building_nodes"
 }

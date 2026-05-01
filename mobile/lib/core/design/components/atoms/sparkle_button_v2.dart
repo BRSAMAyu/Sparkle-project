@@ -32,11 +32,13 @@ class SparkleButton extends StatelessWidget {
   factory SparkleButton.primary({
     required String label,
     required VoidCallback onPressed,
+    Key? key,
     Widget? icon,
     bool loading = false,
     bool expand = false,
   }) =>
       SparkleButton(
+        key: key,
         label: label,
         onPressed: onPressed,
         icon: icon,
@@ -47,10 +49,12 @@ class SparkleButton extends StatelessWidget {
   factory SparkleButton.secondary({
     required String label,
     required VoidCallback onPressed,
+    Key? key,
     Widget? icon,
     bool expand = false,
   }) =>
       SparkleButton(
+        key: key,
         label: label,
         onPressed: onPressed,
         variant: ButtonVariant.secondary,
@@ -61,10 +65,12 @@ class SparkleButton extends StatelessWidget {
   factory SparkleButton.outline({
     required String label,
     required VoidCallback onPressed,
+    Key? key,
     Widget? icon,
     bool expand = false,
   }) =>
       SparkleButton(
+        key: key,
         label: label,
         onPressed: onPressed,
         variant: ButtonVariant.outline,
@@ -75,10 +81,12 @@ class SparkleButton extends StatelessWidget {
   factory SparkleButton.ghost({
     required String label,
     required VoidCallback onPressed,
+    Key? key,
     Widget? icon,
     bool expand = false,
   }) =>
       SparkleButton(
+        key: key,
         label: label,
         onPressed: onPressed,
         variant: ButtonVariant.ghost,
@@ -89,10 +97,12 @@ class SparkleButton extends StatelessWidget {
   factory SparkleButton.destructive({
     required String label,
     required VoidCallback onPressed,
+    Key? key,
     Widget? icon,
     bool expand = false,
   }) =>
       SparkleButton(
+        key: key,
         label: label,
         onPressed: onPressed,
         variant: ButtonVariant.destructive,
@@ -184,9 +194,14 @@ class SparkleButton extends StatelessWidget {
     }
 
     children.add(
-      Text(
-        label,
-        style: _getTextStyle(theme, info),
+      Flexible(
+        child: Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          softWrap: false,
+          style: _getTextStyle(theme, info),
+        ),
       ),
     );
 

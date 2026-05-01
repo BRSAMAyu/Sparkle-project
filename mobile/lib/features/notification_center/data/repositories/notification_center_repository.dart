@@ -3,6 +3,7 @@
 import 'package:dio/dio.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/notification_center/data/models/notification_analytics_model.dart';
@@ -185,6 +186,49 @@ class NotificationCenterRepository {
           'action': action,
           'action_payload': actionPayload ?? <String, dynamic>{},
         },
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<Map<String, dynamic>> sendAccountabilityEncouragement(
+    String notificationId, {
+    String? presetId,
+    String? message,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final items = DemoDataService().demoNotifications;
+      final index = items.indexWhere((item) => item['id'] == notificationId);
+      if (index != -1) {
+        items[index] = {
+          ...items[index],
+          'is_read': true,
+          'read_at': DateTime.now().toIso8601String(),
+          'metadata': {
+            ...(items[index]['metadata'] as Map<String, dynamic>? ?? {}),
+            'encouragement_status': 'sent',
+          },
+        };
+      }
+      return {
+        'success': true,
+        'message': '他收到了你的鼓励',
+      };
+    }
+
+    try {
+      final response = await _client.post<Map<String, dynamic>>(
+        ApiEndpoints.accountabilityStruggleAlertEncourage(notificationId),
+        data: {
+          if (presetId != null) 'preset_id': presetId,
+          if (message != null && message.trim().isNotEmpty)
+            'message': message.trim(),
+        },
+      );
+      return ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'sendAccountabilityEncouragement',
       );
     } on DioException catch (e) {
       throw _handleError(e);
@@ -467,6 +511,7 @@ class NotificationCenterRepository {
       return {
         'enable_system': true,
         'enable_interventions': true,
+        'disabled_types': <String>[],
         'notification_level': 'standard',
         'quiet_hours_enabled': false,
         'quiet_hours_start': '22:00',
@@ -495,6 +540,7 @@ class NotificationCenterRepository {
       return {
         'enable_system': true,
         'enable_interventions': true,
+        'disabled_types': <String>[],
         'notification_level': 'standard',
         'quiet_hours_enabled': false,
         'quiet_hours_start': '22:00',
@@ -552,8 +598,8 @@ class NotificationCenterRepository {
       final statusCode = e.response?.statusCode;
       final responseData = e.response?.data;
       final message = responseData is Map<String, dynamic>
-          ? responseData['message'] ?? 'Unknown error'
-          : 'Unknown error';
+          ? responseData['message'] ?? '未知错误'
+          : '未知错误';
 
       switch (statusCode) {
         case 400:

@@ -1,6 +1,7 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Bar chart widget for statistics data visualization
 class StatisticsBarChart extends StatelessWidget {
@@ -47,7 +48,7 @@ class StatisticsBarChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (dataPoints.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState(context);
     }
 
     final labels = xLabels ??
@@ -232,7 +233,7 @@ class StatisticsBarChart extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() => Container(
+  Widget _buildEmptyState(BuildContext context) => Container(
         height: 200,
         alignment: Alignment.center,
         child: Column(
@@ -245,7 +246,7 @@ class StatisticsBarChart extends StatelessWidget {
             ),
             const SizedBox(height: DS.md),
             Text(
-              '暂无数据',
+              context.l10n.statisticsNoData,
               style: DS.bodyStyle.copyWith(
                 color: DS.neutral400,
               ),

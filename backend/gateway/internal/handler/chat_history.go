@@ -36,6 +36,11 @@ type ChatHistoryHandler struct {
 	chatHistory *service.ChatHistoryService
 }
 
+type ConversationSettingsPatchRequest struct {
+	UseDocumentContext *bool     `json:"use_document_context"`
+	DocumentFilter     *[]string `json:"document_filter"`
+}
+
 func NewChatHistoryHandler(chatHistory *service.ChatHistoryService) *ChatHistoryHandler {
 	return &ChatHistoryHandler{chatHistory: chatHistory}
 }
@@ -112,4 +117,61 @@ func (h *ChatHistoryHandler) GetConversationHistory(c *gin.Context) {
 		})
 	}
 	c.JSON(http.StatusOK, result)
+}
+
+func (h *ChatHistoryHandler) PatchConversationSettings(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Missing user ID in context"})
+		return
+	}
+	sessionID := c.Param("conversation_id")
+	if sessionID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing conversation_id"})
+		return
+	}
+
+	var payload ConversationSettingsPatchRequest
+	if err := c.ShouldBindJSON(&payload); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+	if payload.UseDocumentContext == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "use_document_context is required"})
+		return
+	}
+
+	documentFilter := []string{}
+	if payload.DocumentFilter != nil {
+		documentFilter = *payload.DocumentFilter
+	} else if stored, ok, err := h.chatHistory.GetConversationSettings(c.Request.Context(), userID, sessionID); err == nil && ok && stored != nil {
+		documentFilter = stored.DocumentFilter
+	} else if err != nil {
+		if errors.Is(err, service.ErrChatHistoryForbidden()) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to load conversation settings"})
+		return
+	}
+
+	settings, err := h.chatHistory.UpdateConversationSettings(
+		c.Request.Context(),
+		userID,
+		sessionID,
+		service.ConversationSettings{
+			UseDocumentContext: *payload.UseDocumentContext,
+			DocumentFilter:     documentFilter,
+		},
+	)
+	if err != nil {
+		if errors.Is(err, service.ErrChatHistoryForbidden()) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Forbidden"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update conversation settings"})
+		return
+	}
+
+	c.JSON(http.StatusOK, settings)
 }

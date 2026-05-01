@@ -396,6 +396,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	}
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	r.Use(otelgin.Middleware("sparkle-gateway"))
+	r.Use(middleware.I18n())
 	r.Use(middleware.RequestContextMiddleware())
 	r.Use(middleware.SecurityHeadersMiddleware(cfg))
 	if cfg.CORSEnabled {
@@ -485,6 +486,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		)
 		api.GET("/chat/sessions", authMiddleware, handlers.chatHistoryHandler.GetRecentSessions)
 		api.GET("/chat/history/:conversation_id", authMiddleware, handlers.chatHistoryHandler.GetConversationHistory)
+		api.PATCH("/conversations/:conversation_id/settings", authMiddleware, handlers.chatHistoryHandler.PatchConversationSettings)
 
 		api.GET("/groups/:group_id/messages", authMiddleware, handlers.groupChatHandler.GetMessages)
 		handlers.errorBookHandler.RegisterRoutes(api, authMiddleware)

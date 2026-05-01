@@ -2,15 +2,15 @@
 
 # Sparkle 星火
 
-### AI 原生的规划与成长操作系统
+### AI 原生的学习成长系统
 
-**Sparkle 不是让普通用户学会 prompt engineering，而是先理解用户，再把用户自己的信息转化成更好的计划、更好的下一步和更好的持续适应。**
+**Sparkle 不是让普通用户先学会 prompt engineering，而是先理解用户，再把用户自己的信息转化成更好的计划、更好的下一步和更长期的自适应支持。**
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.24+-02569B?style=flat-square&logo=flutter&logoColor=white)](https://flutter.dev)
 [![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat-square&logo=go&logoColor=white)](https://go.dev)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-4169E1?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
 **简体中文** · [English](README_EN.md) · [开发文档入口](docs/README.md)
 
@@ -20,61 +20,56 @@
 
 ## Sparkle 是什么
 
-Sparkle 是一个 **AI-native 的规划与指导系统**。它的核心不是聊天本身，而是把用户的目标、材料、限制、行为、错误和反馈组织成一个持续演化的理解状态，再用这个状态去生成更好的计划、节奏和下一步。
+Sparkle 的签字定义已经收敛为一个更准确的表述：
 
-一句话说：
+> **Sparkle 是一个 AI 学习成长系统。**
 
-> **Sparkle 先真正理解你，再给你更好的路径。**
+短期形态，它可以被理解为一位 AI 学习教练；长期形态，它会演进为 AI 成长操作系统。这不是两个彼此分离的产品，而是一条连续演进的曲线。
+
+Sparkle 的核心任务不是“多聊几轮”，而是把用户的目标、材料、限制、行为、错误和反馈组织成一个可持续演化的理解状态，再用这个状态生成更 grounded 的计划、更可靠的节奏和更合适的下一步。
 
 ---
 
 ## 为什么它重要
 
-今天的大模型已经很强，但大多数普通用户在真实目标场景中仍然会卡在三个地方：
+今天的大模型已经很强，但普通用户在真实目标场景里仍然会卡在三个地方：
 
-1. 不知道该给 AI 什么信息
-2. 不知道如何把自己的资料、行为、错误和限制组织成高质量上下文
-3. 即使拿到了答案，也很难把它变成真正可执行、可持续、可纠偏的路径
+1. 不知道该给 AI 什么信息。
+2. 不知道如何把自己的资料、行为、错误和限制组织成高质量上下文。
+3. 即使拿到了答案，也很难把它变成真正可执行、可持续、可纠偏的路径。
 
 Sparkle 的目标不是把用户训练成 AI 专家，而是替用户承担这部分“理解、组织、规划、适配”的系统工作。
 
----
-
-## 它为谁而做
-
-Sparkle 优先服务的不是 prompt 工程高手，而是这些人：
-
-- 有重要目标，但不会高质量使用 AI 的普通用户
-- 手里有很多自己的资料、笔记、错题、经历，却不会把它们转化成有效帮助的人
-- 在 deadline、压力和负荷波动中，需要快速找对路径的人
-- 想长期成长，但缺乏高质量结构与反馈回路的人
-
-当前最能体现 Sparkle 价值的北极星场景仍然是：
+当前最清晰的北极星场景仍然是：
 
 > **14 天准备热力学期末考试**
 
-在这个场景里，Sparkle 不只是回答问题，而是要看懂用户真正的状态，判断还缺什么信息，生成合理计划，并在过载、拖延、滑移和反馈之后继续做可见的调整。
+在这个场景里，Sparkle 不只是回答问题，而是要看懂用户真实处境，判断还缺什么，生成计划，并在过载、偏移、失败或反馈之后继续调整。
 
 ---
 
-## Sparkle 如何工作
+## 它如何理解用户
 
-Sparkle 当前最稳定的产品表达是四个模式：
+Sparkle 当前对外最稳定的表达仍然是四个模式：
 
 | 模式 | 用户看到什么 | 系统在背后做什么 |
 |:---|:---|:---|
-| `Understand` | 先弄清你是谁、你要什么、还缺什么 | 编译用户画像、证据、缺口和当前状态 |
+| `Understand` | 先弄清你是谁、你要什么、还缺什么 | 编译画像、证据、缺口和当前状态 |
 | `Plan` | 给出最合适的计划、节奏和下一步 | 判断 readiness，编译策略，并约束计划质量 |
-| `Adapt` | 当现实变化时，计划会跟着变 | 读取反馈、结果、负荷、材料和执行状态 |
+| `Adapt` | 当现实变化时，路径会跟着变 | 读取反馈、结果、负荷、材料和执行状态 |
 | `Grow` | 系统会越用越懂你，而且你能看见并纠正它 | 做校准、反漂移、透明展示和用户控制 |
 
-这意味着 Sparkle 不是单轮问答系统，而是一个围绕目标达成持续迭代的闭环。
+这背后真正支撑 Sparkle 的，是三组更稳定的产品共识：
+
+- `双核协作`：执行核负责目标澄清、充分性评估、计划与执行调整；认知核负责用户画像、记忆、情绪/动机/状态理解与持续陪伴。两核必须协作，而不是并行孤岛。
+- `五层用户模型`：从 raw evidence、projection、inference，到 Aurora shadow 和用户纠偏，系统按层处理理解与更新，不让推断静默污染事实层。
+- `关系姿态`：Sparkle 不是工具式 prompt 工程，也不只是“助手人格”；它强调可校准、可纠偏、朋友式持续陪伴，同时保留独立判断。
 
 ---
 
 ## 为什么 Sparkle 不一样
 
-Sparkle 不是靠“模型更多”取胜，它真正收敛在两条 moat 上：
+Sparkle 的核心 moat 仍然收敛在两条线上：
 
 | Moat | 含义 | 用户感受到的价值 |
 |:---|:---|:---|
@@ -86,7 +81,7 @@ Sparkle 不是靠“模型更多”取胜，它真正收敛在两条 moat 上：
 | 维度 | 原始 AI 直接使用 | Sparkle |
 |:---|:---|:---|
 | 上下文组织 | 用户自己做 prompt engineering | 系统主动判断缺口并编译上下文 |
-| 用户理解 | 高度依赖当前轮输入 | 建立在持续累积的 `UserInsightState` 之上 |
+| 用户理解 | 高度依赖当前轮输入 | 建立在持续累积的理解状态与证据链之上 |
 | 规划质量 | 往往是通用答案或通用计划 | 先判断是否准备好规划，再给 grounded plan |
 | 反馈学习 | 多数停留在单轮满意度 | 进入 outcome learning、calibration 和 anti-drift |
 | 透明度 | 用户通常看不到系统如何理解自己 | 用户可以查看、纠正和控制自己的 insight |
@@ -96,7 +91,7 @@ Sparkle 不是靠“模型更多”取胜，它真正收敛在两条 moat 上：
 
 ## 系统架构
 
-Sparkle 当前是一个三层混合系统：`Flutter Mobile + Go Gateway + Python AI Engine`，并由 PostgreSQL、Redis、对象存储和外部执行层共同支撑。
+Sparkle 当前仍然是一个三层混合系统：`Flutter Mobile + Go Gateway + Python AI Engine`，并由 PostgreSQL、Redis、对象存储和外部执行层共同支撑。
 
 ```mermaid
 flowchart TB
@@ -121,7 +116,7 @@ Delegated execution layer"]
 | 组件 | 角色 | 为什么存在 |
 |:---|:---|:---|
 | `Flutter Mobile` | 真实产品入口 | 承载聊天、主页、任务、星图、洞察等用户体验 |
-| `Go Gateway` | 接入与桥接层 | 负责 WebSocket / HTTP 接入、鉴权、连接治理、以及到 Python gRPC 的转发 |
+| `Go Gateway` | 接入与桥接层 | 负责 WebSocket / HTTP 接入、鉴权、连接治理，以及到 Python gRPC 的转发 |
 | `Python AI Engine` | 智能主引擎 | 负责上下文编译、规划、工具调用、反馈学习和语义控制 |
 | `FastAPI` | 业务 API 层 | 承载资源管理、文件、设置、干预、观测等 HTTP 能力 |
 | `gRPC AgentService` | AI 主通信协议 | 承载主聊天链路中的流式 AI 请求与结构化响应 |
@@ -138,65 +133,104 @@ Delegated execution layer"]
 
 对应关系大致是：
 
-1. Flutter 端主聊天服务通过 WebSocket 连接 Gateway
-2. Go Gateway 负责连接、鉴权、消息治理和协议桥接
-3. Gateway 调用 Python 的 `AgentService.StreamChat`
-4. Python `ChatOrchestrator` 组装上下文、决定策略、调用工具、生成流式结果
-5. 结果再经 Gateway 回到 App，驱动文本、卡片、工具结果和干预表达
-
-### AI 引擎内部主干
-
-```mermaid
-flowchart LR
-    Insight["User Insight Engine
-画像 / 证据 / 多跨度分析 / 预测"] --> Planning["Planning Engine
-readiness / strategy / plan quality gate"]
-    Planning --> Growth["Feedback & Growth
-outcome learning / calibration / anti-drift"]
-    Growth --> Insight
-    Semantic["AI Semantic Control
-ontology / renderer / compliance / trace"] --> Planning
-    Body["Body Awareness & Capability Governance"] --> Planning
-    Layered["Five-Layer Learning System"] --> Insight
-    Layered --> Planning
-```
-
-这条主干表达了 Sparkle 的核心逻辑：
-
-- `User Insight Engine` 负责把用户自己的信息编译成统一理解状态
-- `Planning Engine` 负责判断是否该规划、如何规划、以及计划质量是否足够好
-- `Feedback & Growth` 负责把结果、反馈和纠偏重新带回系统
-- `Semantic Control` 不只是贴标签，而是约束 AI 行为与产品意图的一层
-- `Body Awareness` 和 `Five-Layer Learning` 负责把能力边界、负荷状态和长期学习治理插回主链
+1. Flutter 端主聊天服务通过 WebSocket 连接 Gateway。
+2. Go Gateway 负责连接、鉴权、消息治理和协议桥接。
+3. Gateway 调用 Python 的 `AgentService.StreamChat`。
+4. Python `ChatOrchestrator` 组装上下文、决定策略、调用工具、生成流式结果。
+5. 结果再经 Gateway 回到 App，驱动文本、卡片、工具结果和干预表达。
 
 ---
 
-## 当前阶段
+## 当前状态
 
 Sparkle 已经不再是概念验证项目，也不是“多 Agent 炫技 demo”。
 
-它的核心产品主干已经完成了 `v1` 级别的搭建：
+截至 `2026-04-24`，仓库内可追溯的主线状态是：
 
-- `User Profile / Insight` 已形成统一编译主干
-- `Planning Engine` 已具备 readiness gate、strategy compile 和 plan quality gate
-- `Feedback / Growth` 已具备 outcome learning、calibration 和 anti-drift
-- `AI Semantic Control` 已形成 ontology、renderer、compliance 和 trace
-- `Body Awareness` 与 `Five-Layer Learning` 已进入受治理的运行状态
+- `Stage 3-40` 的文档链、实现链、可执行验收链已完成收束。
+- `Phase I Exit Gate` 已签字，结论是 `ready with exception / YES`。
+- `Rule BD` 仍然保持 `CONDITIONAL`，因为 SGW 真跑仍依赖完整后端栈，不把它表述为 unconditional。
 
-当前项目已进入 `Stage 2`。重点不再是继续发明新的基础层，而是：
+当前首页可以安全引用的硬指标包括：
 
-- 跑通 runnable golden path
-- 提升全链路产品一致性
-- 在真实 App 中证明理解质量和计划质量
-- 用真实 transcript、真实反馈和真实人类验证推动下一轮迭代
+| 指标 | 当前状态 | 依据 |
+|:---|:---|:---|
+| `scripts/run_all_rule_guards.sh` | `59/59 PASS` | `docs/audit/STAGE3_40_FULL_CLOSEOUT_VERIFICATION_2026-04-24.md` |
+| 核心 kill switch 三态化 | `12/12` | `docs/product/SPARKLE_AURORA_PHASE_I_EXIT_GATE_2026-04-22.md` |
+| Mobile black-hole rate | `0.000%` | `docs/product/SPARKLE_AURORA_STAGE35_HANDOFF_2026-04-22.md` |
+| top-50 hot files Core/Phase 声明头覆盖率 | `100%` | `docs/product/SPARKLE_AURORA_PHASE_I_EXIT_GATE_2026-04-22.md` |
 
-今天最准确的描述是：
+今天更准确的描述是：
 
-> **Sparkle 是一个已经搭起核心智能系统、正在从内部复杂性走向真实产品证明的 AI-native 产品。**
+> **Sparkle 已从“核心概念搭建阶段”进入“治理闭环完成、准备做 RL 精调与真实运行优化”的阶段。**
+
+---
+
+## 最近阶段进展
+
+README 不逐 stage 记流水账，但从 `Stage 22` 到 `Stage 40`，主线已经形成了几段清晰的能力闭环。
+
+### Stage 22-23：把可见上下文、结果闭环与拟真基线补齐
+
+- 建立了 prompt coverage 审计，并把 `achievement_summary`、`calendar_context` 等 read-visible context 接入主链。
+- 修复了 `error -> replan -> verify -> learn` 的闭环，让错误驱动的调整不再落在漏水管道上。
+- 补齐了 seed adoption / withdrawal 闭环、outcome backfill、source-state registry。
+- 建立了 Stage 23 synthetic density bootstrap：3 个 synthetic users、每人 150 组 decision→outcome pairs，用于 Bayesian 与后续策略评估。
+
+### Stage 24-35：把策略、认知与移动端主干真正接上
+
+- 完成了 policy、reflection、scene、foresight、SRL、metacognition、mobile parity 等主干接线。
+- `working_memory_snapshot`、`achievement_summary`、`active_skills_summary`、`engagement_state`、`foresight_hint` 等状态已进入真实主链，而不只是文档概念。
+- mobile parity 被纳入治理，`UserStateV1` 的真实消费与 backend-only 字段边界被显式化。
+
+### Stage 34-40：把治理、drill 与 Exit Gate 收口
+
+- 接通了 event subscribers、journey smoke、context assembly 与更多 prompt-visible state。
+- 完成 kill switch 三态化、guard manifest 收口、calendar prompt kill switch、drill playbook 与 consolidated drill。
+- 完成 Phase I Exit Gate，并把 Phase II 的 RL 优化方向从“想法”冻结成可执行 handoff。
+
+权威入口：
+
+- [愿景锚定清单](docs/product/SPARKLE_VISION_ANCHOR_LIST_2026-04-19.md)
+- [Stage 40 Handoff](docs/product/SPARKLE_AURORA_STAGE40_HANDOFF_2026-04-22.md)
+- [Stage 40 Main Integration Report](docs/audit/STAGE40_MAIN_INTEGRATION_REPORT_2026-04-23.md)
+- [Phase I Exit Gate](docs/product/SPARKLE_AURORA_PHASE_I_EXIT_GATE_2026-04-22.md)
+- [SGW v2 RL System Handoff](docs/sgw/07_rl_system_handoff.md)
+
+---
+
+## 拟真 / 评估 / RL 脚手架
+
+仓库当前已经不只是“有一些阶段文档”，而是具备了一套完整的拟真、评估与 RL 准备脚手架。
+
+### 数据与拟真输入
+
+- Stage 23 已建立 synthetic density bootstrap，可生成 synthetic users 与 decision→outcome pairs。
+- 种子库、source-state registry、outcome backfill 已经形成可追踪的数据输入与反馈回路。
+- 这套基础设施的目标不是造 demo 数据，而是为策略评估、行为验证和后续 RL 优化提供可重复输入。
+
+### 交互与评估
+
+- 仓库内已有 `Soul Drift Evaluation Harness`，用于区分 governed companion growth 和 stylized personality drift。
+- 已有 `Phase D Evaluation Harness`，用于 body-aware selection、fallback reporting 与 blocked-organ simulation 的回归验证。
+- 主链还配有 `journey smoke`、stage drill 脚本和全局 rule guards，用于持续验证产品链路和治理约束。
+
+### RL 准备
+
+- SGW v2 已具备 `off / shadow / rl` 三模式。
+- RL CLI 契约、指标、rollout gates、rollback red lines 已冻结到 handoff 文档中。
+- Phase II 的主题已经明确为：**优化现有回路，而不是继续扩张新功能面。**
+
+当前 README 对 RL 的表述边界是：
+
+- 可以表述为“RL scaffolding 与 Phase II 入场凭证已具备”。
+- 不表述为“RL 已在真实生产中 fully rolled out”。
 
 ---
 
 ## 快速开始
+
+当前主开发路径仍是 `Flutter + Go Gateway + Python AI Engine` 的本地三层协同。
 
 ### 最短启动路径
 
@@ -238,6 +272,15 @@ cd mobile && flutter pub get && flutter run
 | `cd backend/gateway && go test ./...` | 跑 Go 测试 |
 | `cd mobile && flutter test` | 跑 Flutter 测试 |
 
+### 治理与主干验证
+
+如果你要验证当前主干治理状态，优先看这两个入口：
+
+- `scripts/run_all_rule_guards.sh`
+  用于全局规则、守卫与治理约束回归验证。
+- `scripts/stage40/drill_all.sh`
+  用于 Stage 40 kill switch 与主干收口 drill。
+
 ---
 
 ## 仓库导航
@@ -248,8 +291,10 @@ cd mobile && flutter pub get && flutter run
 | `backend/app/` | Python AI 引擎、FastAPI、编排与状态系统 | 看智能逻辑、规划、反馈、API 时 |
 | `backend/gateway/` | Go Gateway、WebSocket / HTTP 接入、gRPC 桥接 | 看主聊天链路、鉴权和连接治理时 |
 | `proto/` | gRPC 协议定义 | 改跨服务接口时 |
-| `docs/product/` | 当前产品共识、路线图、Stage 2 文档 | 做产品判断时 |
-| `docs/02_技术设计文档/` | API、协议、数据库、关键设计 | 改架构、接口或数据模型时 |
+| `docs/product/` | 路线图、handoff、vision anchor、阶段共识 | 做产品判断或对齐阶段状态时 |
+| `docs/audit/` | Stage 40 集成、主线恢复、closeout verification | 追溯当前主线已验证状态时 |
+| `docs/sgw/` | SGW、MDP、rollout gate、RL handoff | 看拟真、评估与 RL 方向时 |
+| `scripts/stage*/` | stage gate、drill、dogfood、rule guard | 需要执行阶段验证时 |
 | `docs/README.md` | 文档总入口 | 第一次进入仓库时 |
 
 ---
@@ -257,14 +302,16 @@ cd mobile && flutter pub get && flutter run
 ## 延伸阅读
 
 - [开发文档入口](docs/README.md)
-- [产品 Thesis 与重构路线](docs/product/SPARKLE_PRODUCT_THESIS_AND_REFOCUSED_ROADMAP_2026-04-05.md)
-- [Sparkle 项目理解总文档](docs/product/SPARKLE_CHATGPT_PROJECT_CONTEXT_MASTER_2026-04-16.md)
-- [Stage 2 Product Coherence 与 Live Alpha Plan](docs/product/SPARKLE_STAGE2_PRODUCT_COHERENCE_AND_LIVE_ALPHA_PLAN_2026-04-06.md)
-- [系统架构全景与模块分层](docs/00_项目概览/04_系统架构全景与模块分层.md)
-- [API 参考](docs/02_技术设计文档/03_API参考.md)
+- [愿景锚定清单](docs/product/SPARKLE_VISION_ANCHOR_LIST_2026-04-19.md)
+- [Stage 3-40 Full Closeout Verification](docs/audit/STAGE3_40_FULL_CLOSEOUT_VERIFICATION_2026-04-24.md)
+- [Roadmap Implementation Verification](docs/audit/ROADMAP_IMPLEMENTATION_VERIFICATION_2026-04-24.md)
+- [Stage 40 Main Integration Report](docs/audit/STAGE40_MAIN_INTEGRATION_REPORT_2026-04-23.md)
+- [Phase I Exit Gate](docs/product/SPARKLE_AURORA_PHASE_I_EXIT_GATE_2026-04-22.md)
+- [Phase II RL Optimization Kickoff](docs/product/SPARKLE_AURORA_PHASE_II_RL_OPTIMIZATION_KICKOFF_2026-04-22.md)
+- [SGW v2 RL System Handoff](docs/sgw/07_rl_system_handoff.md)
 
 ---
 
 ## 许可协议
 
-本项目采用 [MIT License](LICENSE)。
+本项目当前按 MIT License 口径维护。

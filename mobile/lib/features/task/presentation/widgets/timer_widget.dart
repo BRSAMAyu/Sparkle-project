@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 
 enum TimerMode { countUp, countDown }
 
@@ -285,6 +286,7 @@ class _TimerWidgetState extends State<TimerWidget>
                                 fontSize: timeFontSize,
                                 fontWeight: DS.fontWeightBold,
                                 fontFamily: 'monospace',
+                                fontFamilyFallback: sparkleFontFallback,
                                 color: DS.textPrimary,
                               ),
                     ),

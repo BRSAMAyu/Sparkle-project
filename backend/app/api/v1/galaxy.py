@@ -18,23 +18,29 @@ from pydantic import BaseModel, Field
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user_id, get_db
+from app.api.deps import get_current_user_id, get_db, get_optional_current_user
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 from app.models.plan import Plan
 from app.models.task import Task
+from app.models.user import User
 from app.schemas.galaxy import (
     ApplyNodeExpansionRequest,
     ApplyNodeExpansionResponse,
     CreateGalaxyNodeRequest,
+    DraftGalaxyNodesResponse,
     ExpansionFeedbackRequest,
     ExpansionFeedbackResponse,
     GalaxyGraphResponse,
     NodeBase,
+    NodeChunksResponse,
+    NodeDetailResponse,
     NodeExpansionCandidate,
     NodeExpansionCandidateRequest,
     NodeExpansionCandidatesResponse,
-    NodeDetailResponse,
+    NodeHistoryResponse,
     NodeRelationInfo,
+    ReviewDocumentNodesRequest,
+    ReviewDocumentNodesResponse,
     ReviewSuggestion,
     ReviewSuggestionsResponse,
     SearchRequest,
@@ -42,6 +48,8 @@ from app.schemas.galaxy import (
     SectorCode,
     SparkRequest,
     SparkResult,
+    SuggestedDocumentNodesResponse,
+    UserGalaxyContribution,
 )
 from app.services.decay_service import DecayService
 from app.services.expansion_service import ExpansionService
@@ -85,6 +93,29 @@ class UpdateNodeMasteryRequest(BaseModel):
     version: datetime | None = None
 
 
+class AttachNodeDocumentRequest(BaseModel):
+    file_id: UUID
+    is_primary: bool = False
+
+
+class MoveDocumentRequest(BaseModel):
+    from_node_id: UUID
+    to_node_id: UUID
+
+
+class AttachNodeDocumentRequest(BaseModel):
+    file_id: UUID
+    is_primary: bool = False
+
+
+def _raise_document_attachment_error(exc: Exception) -> None:
+    if isinstance(exc, LookupError):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    if isinstance(exc, ValueError):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    raise exc
+
+
 @router.post("/sync/mastery")
 async def sync_node_mastery(
     request: MasterySyncRequest,
@@ -109,6 +140,9 @@ async def sync_node_mastery(
     return result
 
 
+@router.post("/node/{node_id}/mastery")
+@router.post("/node/{node_id}/update-mastery")
+@router.post("/nodes/{node_id}/mastery")
 @router.post("/nodes/{node_id}/update-mastery")
 async def update_node_mastery(
     node_id: UUID,
@@ -171,6 +205,156 @@ async def get_galaxy_graph(
     )
 
 
+@router.get("/contribution-stats", response_model=UserGalaxyContribution)
+async def get_galaxy_contribution_stats(
+    user_id_query: str | None = Query(None, alias="user_id", description="验收/调试场景可显式指定用户 ID"),
+    current_user: User | None = Depends(get_optional_current_user),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """Return per-user Galaxy contribution stats and detail lists."""
+    effective_user_id = user_id_query or (str(current_user.id) if current_user else None)
+    if not effective_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing user_id or authentication",
+        )
+    return await galaxy_service.get_user_contribution_stats(UUID(effective_user_id))
+
+
+@router.get("/documents/{file_id}/suggested-nodes", response_model=SuggestedDocumentNodesResponse)
+async def get_document_suggested_nodes(
+    file_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """Return draft Galaxy nodes created from a document upload for user review."""
+    suggestions = await galaxy_service.get_suggested_nodes_for_document(user_id=UUID(user_id), file_id=file_id)
+    return SuggestedDocumentNodesResponse(file_id=file_id, suggested_nodes=suggestions)
+
+
+@router.post("/documents/{file_id}/review-nodes", response_model=ReviewDocumentNodesResponse)
+async def review_document_nodes(
+    file_id: UUID,
+    request: ReviewDocumentNodesRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """Apply approve/reject/merge decisions for draft nodes from a document upload."""
+    try:
+        return await galaxy_service.review_document_nodes(
+            user_id=UUID(user_id),
+            file_id=file_id,
+            decisions=request.decisions,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+
+
+@router.post("/documents/{file_id}/approve-all", response_model=ReviewDocumentNodesResponse)
+async def approve_all_document_nodes(
+    file_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """Publish all draft Galaxy nodes created from a document upload."""
+    return await galaxy_service.approve_all_document_nodes(user_id=UUID(user_id), file_id=file_id)
+
+
+@router.get("/drafts", response_model=DraftGalaxyNodesResponse)
+async def get_galaxy_drafts(
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """Return all pending draft Galaxy nodes for the current user."""
+    drafts = await galaxy_service.get_draft_nodes(user_id=UUID(user_id))
+    return DraftGalaxyNodesResponse(drafts=drafts)
+
+
+@router.post("/nodes/{node_id}/documents")
+@router.post("/node/{node_id}/documents")
+async def attach_node_document(
+    node_id: UUID,
+    request: AttachNodeDocumentRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """Attach an uploaded document to a Galaxy node."""
+    try:
+        return await galaxy_service.attach_document_to_node(
+            user_id=UUID(user_id),
+            node_id=node_id,
+            file_id=request.file_id,
+            is_primary=request.is_primary,
+        )
+    except (LookupError, ValueError) as exc:
+        _raise_document_attachment_error(exc)
+
+
+@router.delete("/nodes/{node_id}/documents/{file_id}")
+@router.delete("/node/{node_id}/documents/{file_id}")
+async def detach_node_document(
+    node_id: UUID,
+    file_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """Detach an uploaded document from a Galaxy node."""
+    try:
+        return await galaxy_service.detach_document_from_node(
+            user_id=UUID(user_id),
+            node_id=node_id,
+            file_id=file_id,
+        )
+    except (LookupError, ValueError) as exc:
+        _raise_document_attachment_error(exc)
+
+
+@router.post("/documents/{file_id}/move")
+async def move_document_primary_node(
+    file_id: UUID,
+    request: MoveDocumentRequest,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """Move a document's primary Galaxy node assignment."""
+    try:
+        return await galaxy_service.move_document_primary_node(
+            user_id=UUID(user_id),
+            file_id=file_id,
+            from_node_id=request.from_node_id,
+            to_node_id=request.to_node_id,
+        )
+    except (LookupError, ValueError) as exc:
+        _raise_document_attachment_error(exc)
+
+
+@router.get("/nodes/{node_id}/documents")
+@router.get("/node/{node_id}/documents")
+async def list_node_documents(
+    node_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """List documents attached to a Galaxy node."""
+    try:
+        return await galaxy_service.list_node_documents(user_id=UUID(user_id), node_id=node_id)
+    except (LookupError, ValueError) as exc:
+        _raise_document_attachment_error(exc)
+
+
+@router.get("/documents/{file_id}/nodes")
+async def list_document_nodes(
+    file_id: UUID,
+    user_id: str = Depends(get_current_user_id),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """List Galaxy nodes attached to a document."""
+    try:
+        return await galaxy_service.list_document_nodes(user_id=UUID(user_id), file_id=file_id)
+    except (LookupError, ValueError) as exc:
+        _raise_document_attachment_error(exc)
+
+
 # route-tier: authed
 @router.post("/nodes", response_model=NodeBase)
 async def create_galaxy_node(
@@ -198,6 +382,7 @@ async def create_galaxy_node(
 
 
 @router.post("/node/{node_id}/spark", response_model=SparkResult)
+@router.post("/nodes/{node_id}/spark", response_model=SparkResult)
 async def spark_node(
     node_id: UUID,
     request: SparkRequest | None = None,
@@ -218,7 +403,74 @@ async def spark_node(
     )
 
 
+@router.get("/node/{node_id}/history", response_model=NodeHistoryResponse)
+@router.get("/nodes/{node_id}/history", response_model=NodeHistoryResponse)
+async def get_node_history(
+    node_id: str,
+    user_id_query: str | None = Query(None, alias="user_id", description="验收/调试场景可显式指定用户 ID"),
+    pack_id: str | None = Query(None, description="可选 Sprint Pack ID，用于 pack 节点消歧"),
+    current_user: User | None = Depends(get_optional_current_user),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """
+    获取知识节点的个人学习历史。
+
+    支持 UUID Galaxy 节点和 `cn.tcp_flow_control` 这类 Sprint Pack 节点 ID。
+    """
+    effective_user_id = user_id_query or (str(current_user.id) if current_user else None)
+    if not effective_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing user_id or authentication",
+        )
+
+    try:
+        user_uuid = UUID(effective_user_id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid user_id",
+        ) from exc
+
+    try:
+        return await galaxy_service.get_node_history(
+            user_id=user_uuid,
+            node_id=node_id,
+            pack_id=pack_id,
+            related_errors_limit=2,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get("/node/{node_id}/chunks", response_model=NodeChunksResponse)
+@router.get("/nodes/{node_id}/chunks", response_model=NodeChunksResponse)
+async def get_node_source_chunks(
+    node_id: UUID,
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Chunks per page"),
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+    galaxy_service: GalaxyService = Depends(get_galaxy_service),
+):
+    """Return paginated document chunks attached to a knowledge node."""
+    node = await db.get(KnowledgeNode, node_id)
+    if not node:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge node not found")
+
+    return await galaxy_service.get_node_document_chunks(
+        user_id=UUID(user_id),
+        node_id=node_id,
+        page=page,
+        page_size=page_size,
+    )
+
+
 @router.get("/node/{node_id}")
+@router.get("/nodes/{node_id}")
 async def get_node_detail(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
@@ -234,9 +486,7 @@ async def get_node_detail(
 
     # 获取节点（eager-load subject）
     result = await db.execute(
-        select(KnowledgeNode)
-        .options(joinedload(KnowledgeNode.subject))
-        .where(KnowledgeNode.id == node_id)
+        select(KnowledgeNode).options(joinedload(KnowledgeNode.subject)).where(KnowledgeNode.id == node_id)
     )
     node = result.scalar_one_or_none()
     if not node:
@@ -252,12 +502,12 @@ async def get_node_detail(
             joinedload(NodeRelation.source_node),
             joinedload(NodeRelation.target_node),
         )
-        .where(
-            or_(NodeRelation.source_node_id == node_id, NodeRelation.target_node_id == node_id)
-        )
+        .where(or_(NodeRelation.source_node_id == node_id, NodeRelation.target_node_id == node_id))
     )
     relations_result = await db.execute(relations_query)
     relations = relations_result.unique().scalars().all()
+    source_documents = await galaxy_service.get_node_source_documents(UUID(user_id), node_id)
+    knowledge_stats = await galaxy_service.get_node_knowledge_stats(UUID(user_id), node_id)
 
     sector_weights = resolve_sector_weights(node)
     sector_code = dominant_sector_from_weights(sector_weights).value
@@ -304,6 +554,7 @@ async def get_node_detail(
         "subject_id": node.subject_id,
         "subject_name": node.subject.name if node.subject else None,
         "created_at": node.created_at.isoformat() if node.created_at else None,
+        "community_signal": node.community_signal,
     }
 
     # 构建 relations list (matching Flutter NodeRelation)
@@ -338,13 +589,12 @@ async def get_node_detail(
         .limit(6)
     )
     related_plans = [
-        plan for plan in related_plans_result.scalars().all()
+        plan
+        for plan in related_plans_result.scalars().all()
         if isinstance(plan.source_metadata, dict)
         and (
             str(plan.source_metadata.get("target_node_id")) == str(node_id)
-            or str(node_id) in {
-                str(item) for item in (plan.source_metadata.get("path_node_ids") or [])
-            }
+            or str(node_id) in {str(item) for item in (plan.source_metadata.get("path_node_ids") or [])}
         )
     ]
 
@@ -352,6 +602,8 @@ async def get_node_detail(
         "node": node_dict,
         "userStats": user_stats,
         "relations": relations_list,
+        "source_documents": [doc.model_dump(mode="json") for doc in source_documents],
+        "knowledge_stats": knowledge_stats.model_dump(mode="json"),
         "relatedTasks": [
             {
                 "id": str(task.id),
@@ -395,6 +647,7 @@ async def get_node_detail(
 
 
 @router.post("/node/{node_id}/expansion/candidates", response_model=NodeExpansionCandidatesResponse)
+@router.post("/nodes/{node_id}/expansion/candidates", response_model=NodeExpansionCandidatesResponse)
 async def generate_node_expansion_candidates(
     node_id: UUID,
     request: NodeExpansionCandidateRequest,
@@ -419,6 +672,7 @@ async def generate_node_expansion_candidates(
 
 
 @router.post("/node/{node_id}/expansion/apply", response_model=ApplyNodeExpansionResponse)
+@router.post("/nodes/{node_id}/expansion/apply", response_model=ApplyNodeExpansionResponse)
 async def apply_node_expansion_candidates(
     node_id: UUID,
     request: ApplyNodeExpansionRequest,
@@ -437,14 +691,8 @@ async def apply_node_expansion_candidates(
         UUID(user_id),
         candidates=[candidate.model_dump() for candidate in request.candidates],
     )
-    created = [
-        NodeBase.from_model(created_node)
-        for created_node in apply_result.created_nodes
-    ]
-    reused = [
-        NodeBase.from_model(reused_node)
-        for reused_node in apply_result.reused_nodes
-    ]
+    created = [NodeBase.from_model(created_node) for created_node in apply_result.created_nodes]
+    reused = [NodeBase.from_model(reused_node) for reused_node in apply_result.reused_nodes]
     return ApplyNodeExpansionResponse(
         success=True,
         requested_count=len(request.candidates),
@@ -525,6 +773,7 @@ async def get_review_suggestions(
 
 
 @router.post("/node/{node_id}/decay/pause")
+@router.post("/nodes/{node_id}/decay/pause")
 async def pause_node_decay(
     node_id: UUID,
     pause: bool = Query(True),
@@ -542,6 +791,7 @@ async def pause_node_decay(
 
 
 @router.post("/node/{node_id}/favorite")
+@router.post("/nodes/{node_id}/favorite")
 async def toggle_node_favorite(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
@@ -740,6 +990,7 @@ async def create_vocabulary_node(
 
 
 @router.delete("/node/{node_id}/draft")
+@router.delete("/nodes/{node_id}/draft")
 async def delete_draft_node(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
@@ -770,6 +1021,7 @@ class UpdateNodeContentRequest(BaseModel):
 
 
 @router.patch("/node/{node_id}/content")
+@router.patch("/nodes/{node_id}/content")
 async def update_node_content(
     node_id: UUID,
     request: UpdateNodeContentRequest,
@@ -857,6 +1109,7 @@ async def update_node_positions(
 
 
 @router.post("/node/{node_id}/autolink")
+@router.post("/nodes/{node_id}/autolink")
 async def trigger_auto_link(
     node_id: UUID,
     user_id: str = Depends(get_current_user_id),
@@ -879,3 +1132,52 @@ async def get_heatmap(
     Phase 4.2 Insight.
     """
     return await galaxy_service.get_heatmap_data(UUID(user_id))
+
+
+@router.post("/community/aggregate-errors", summary="Aggregate community error patterns for nodes with recent errors")
+async def aggregate_community_errors(
+    _user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services.community_error_aggregation_service import CommunityErrorAggregationService
+
+    service = CommunityErrorAggregationService(db)
+    updated = await service.aggregate_for_nodes_with_recent_errors()
+    return {"status": "ok", "nodes_updated": updated}
+
+
+@router.get("/context-plan/timeline", summary="Get ContextPlan timeline for causal trace")
+async def get_context_plan_timeline(
+    _user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(default=20, ge=1, le=100),
+):
+    from app.models.aurora_stage20 import RoutingDecisionLog
+
+    user_uuid = UUID(_user_id)
+    rows = await db.execute(
+        select(
+            RoutingDecisionLog.decision_id,
+            RoutingDecisionLog.decided_at,
+            RoutingDecisionLog.decision_payload,
+        )
+        .where(
+            RoutingDecisionLog.user_id == user_uuid,
+            RoutingDecisionLog.decision_type == "context_plan",
+        )
+        .order_by(desc(RoutingDecisionLog.decided_at))
+        .limit(limit)
+    )
+    events = []
+    for row in rows:
+        payload = row.decision_payload or {}
+        events.append({
+            "decision_id": str(row.decision_id),
+            "decided_at": row.decided_at.isoformat() if row.decided_at else None,
+            "retrieval_mode": payload.get("retrieval_mode"),
+            "reason": payload.get("reason"),
+            "reason_for_user": payload.get("reason_for_user"),
+            "budget_tokens": payload.get("budget_tokens"),
+            "should_retrieve": payload.get("should_retrieve"),
+        })
+    return {"events": events, "count": len(events)}

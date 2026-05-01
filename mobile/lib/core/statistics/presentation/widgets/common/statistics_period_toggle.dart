@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Period toggle widget for switching between time periods
 ///
@@ -155,7 +156,7 @@ class _PeriodButtonState extends State<_PeriodButton>
                 : null,
           ),
           child: Text(
-            widget.period.shortLabel,
+            widget.period.localizedShortLabel(context.l10n),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: DS.textStyle.copyWith(
@@ -200,7 +201,7 @@ class StatisticsPeriodDropdown extends StatelessWidget {
                 onPeriodChanged(period);
               }
             },
-            items: _buildItems(),
+            items: _buildItems(context),
             icon: Icon(
               Icons.keyboard_arrow_down,
               color: DS.neutral500,
@@ -217,7 +218,7 @@ class StatisticsPeriodDropdown extends StatelessWidget {
         ),
       );
 
-  List<DropdownMenuItem<StatisticsPeriod>> _buildItems() {
+  List<DropdownMenuItem<StatisticsPeriod>> _buildItems(BuildContext context) {
     final periods = showCustomOption
         ? StatisticsPeriod.values
         : [
@@ -231,7 +232,7 @@ class StatisticsPeriodDropdown extends StatelessWidget {
         .map(
           (period) => DropdownMenuItem<StatisticsPeriod>(
             value: period,
-            child: Text(period.label),
+            child: Text(period.localizedLabel(context.l10n)),
           ),
         )
         .toList();

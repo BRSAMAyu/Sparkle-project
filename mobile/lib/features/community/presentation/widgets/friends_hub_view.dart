@@ -48,6 +48,10 @@ class FriendsHubView extends ConsumerWidget {
         padding: padding,
         children: [
           _PartnerHero(overview: overview),
+          if (overview?.inAppHints.isNotEmpty ?? false) ...[
+            const SizedBox(height: 12),
+            _InAppHintBanner(hint: overview!.inAppHints.first),
+          ],
           if (pending.isNotEmpty) ...[
             const SizedBox(height: 12),
             _PendingInviteBanner(count: pending.length),
@@ -73,6 +77,54 @@ class FriendsHubView extends ConsumerWidget {
       ),
     );
   }
+}
+
+class _InAppHintBanner extends ConsumerWidget {
+  const _InAppHintBanner({required this.hint});
+
+  final AccountabilityInAppHintInfo hint;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.panel,
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: DS.success.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                Icons.visibility_outlined,
+                color: DS.success,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                hint.message,
+                style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SparkleButton.ghost(
+              label: '收到',
+              onPressed: () async {
+                await ref
+                    .read(accountabilityActionsProvider)
+                    .dismissInAppHint(ref, hint.id);
+                if (context.mounted) {
+                  AppFeedback.success(context, '已收起');
+                }
+              },
+            ),
+          ],
+        ),
+      );
 }
 
 class _PartnerHero extends ConsumerWidget {
@@ -325,7 +377,7 @@ class _PendingInviteBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 '$count 条责任伙伴/好友请求待处理',
-                style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+                style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
               ),
             ),
             SparkleButton.ghost(
@@ -407,7 +459,7 @@ class _FriendCard extends StatelessWidget {
                           friend.displayName,
                           overflow: TextOverflow.ellipsis,
                           style: DS.bodyLarge.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                       ),
@@ -602,7 +654,7 @@ class _Pill extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: DS.labelSmall.copyWith(
             color: color,
-            fontWeight: FontWeight.w700,
+            fontWeight: DS.fontWeightBold,
           ),
         ),
       );

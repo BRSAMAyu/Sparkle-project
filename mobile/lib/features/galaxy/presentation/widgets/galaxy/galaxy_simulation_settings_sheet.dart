@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
 
 class GalaxySimulationSettingsSheet extends StatelessWidget {
@@ -318,7 +319,7 @@ class _SliderTile extends StatelessWidget {
                   child: Text(
                     label,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
+                          fontWeight: DS.fontWeightBold,
                         ),
                   ),
                 ),
@@ -326,7 +327,7 @@ class _SliderTile extends StatelessWidget {
                   valueLabel,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                         color: colorScheme.primary,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
               ],
@@ -379,7 +380,7 @@ class _ExpandablePanel extends StatelessWidget {
           title: Text(
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           children: [child],

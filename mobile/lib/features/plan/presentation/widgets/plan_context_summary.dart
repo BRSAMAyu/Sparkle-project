@@ -162,71 +162,72 @@ class _PlanContextSnapshotCardState extends State<_PlanContextSnapshotCard>
         borderRadius: DS.borderRadius16,
         padding: const EdgeInsets.all(DS.spacing16),
         child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing8,
-                  vertical: DS.spacing4,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.12),
-                  borderRadius: DS.borderRadius12,
-                ),
-                child: Text(
-                  statusLabel,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: DS.fontSizeXs,
-                    fontWeight: DS.fontWeightSemibold,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing8,
+                    vertical: DS.spacing4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.12),
+                    borderRadius: DS.borderRadius12,
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: DS.fontSizeXs,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: DS.spacing10),
-              Expanded(
-                child: Text(
-                  planName,
-                  style: TextStyle(
-                    fontSize: DS.fontSizeBase,
-                    fontWeight: DS.fontWeightBold,
-                    color: widget.isDark ? DS.neutral100 : DS.neutral900,
+                const SizedBox(width: DS.spacing10),
+                Expanded(
+                  child: Text(
+                    planName,
+                    style: TextStyle(
+                      fontSize: DS.fontSizeBase,
+                      fontWeight: DS.fontWeightBold,
+                      color: widget.isDark ? DS.neutral100 : DS.neutral900,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              SparkleIconButton(
-                variant: ButtonVariant.ghost,
-                size: DS.spacing32,
-                icon: Icon(
-                  _expanded
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  color: widget.isDark ? DS.neutral300 : DS.neutral600,
+                SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: DS.spacing32,
+                  icon: Icon(
+                    _expanded
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    color: widget.isDark ? DS.neutral300 : DS.neutral600,
+                  ),
+                  onPressed: () {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection),
+                    );
+                    setState(() => _expanded = !_expanded);
+                  },
                 ),
-                onPressed: () {
-                  unawaited(
-                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-                  );
-                  setState(() => _expanded = !_expanded);
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: DS.spacing12),
-          _buildProgress(l10n, summary),
-          AnimatedSize(
-            duration: AnimationSystem.normal,
-            curve: AnimationSystem.smooth,
-            alignment: Alignment.topCenter,
-            child: _expanded
-                ? _buildExpandedContent(l10n)
-                : _buildCollapsedHint(l10n),
-          ),
-        ],
-      ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing12),
+            _buildProgress(l10n, summary),
+            AnimatedSize(
+              duration: AnimationSystem.normal,
+              curve: AnimationSystem.smooth,
+              alignment: Alignment.topCenter,
+              child: _expanded
+                  ? _buildExpandedContent(l10n)
+                  : _buildCollapsedHint(l10n),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -716,6 +717,7 @@ class _PlanContextCard extends StatelessWidget {
       case TaskStatus.completed:
         return DS.success;
       case TaskStatus.inProgress:
+      case TaskStatus.stuck:
         return DS.info;
       case TaskStatus.pending:
         return DS.neutral400;

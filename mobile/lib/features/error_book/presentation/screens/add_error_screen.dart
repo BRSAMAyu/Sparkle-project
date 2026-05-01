@@ -253,7 +253,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               Text(
                 '题目图片（可选）',
                 style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
               const Spacer(),
@@ -421,7 +421,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
               Text(
                 '选择科目 *',
                 style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
               const SizedBox(height: DS.spacing12),
@@ -531,7 +531,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
                   padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
                   textStyle: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
               ),

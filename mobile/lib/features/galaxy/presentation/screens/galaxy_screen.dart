@@ -1,25 +1,37 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/file/file.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_build_playback_plan.dart';
+import 'package:sparkle/features/galaxy/data/models/galaxy_draft_review_models.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_accessibility_service.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_force_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_layout_engine.dart';
 import 'package:sparkle/features/galaxy/data/services/galaxy_spatial_index.dart';
+import 'package:sparkle/features/galaxy/galaxy_routes.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_contribution_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_settings_provider.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_document_upload_provider.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/galaxy_draft_review_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
+import 'package:sparkle/features/galaxy/presentation/screens/galaxy_draft_review_screen.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_document_upload_overlay.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_error_dialog.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_gesture_handler.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_mini_map.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_node_preview_card.dart';
@@ -28,6 +40,10 @@ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_simul
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_success_animation.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/galaxy_contribution_banner.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
+import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
+import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -66,8 +82,21 @@ class GalaxyPlaybackSnapshot {
       );
 }
 
+enum _GalaxyEmptySpaceAction {
+  uploadDocumentHere,
+}
+
 class GalaxyScreen extends ConsumerStatefulWidget {
-  const GalaxyScreen({super.key});
+  const GalaxyScreen({
+    super.key,
+    this.initialFocusNodeId,
+    this.initialMasteryDelta,
+    this.initialPackId,
+  });
+
+  final String? initialFocusNodeId;
+  final double? initialMasteryDelta;
+  final String? initialPackId;
 
   @override
   ConsumerState<GalaxyScreen> createState() => _GalaxyScreenState();
@@ -97,6 +126,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   late final ProviderSubscription<GalaxyDisplaySettings>
       _displaySettingsSubscription;
   late final ProviderSubscription<GalaxyState> _galaxySubscription;
+  late final ProviderSubscription<int> _refreshTriggerSubscription;
 
   GalaxyGraphResponse? _graph;
   Map<String, Offset> _positions = const <String, Offset>{};
@@ -127,6 +157,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   String? _tapFeedbackNodeId;
   String? _pendingNavigationNodeId;
   String? _pendingPersistNodeId;
+  _DraftArrivalCelebration? _draftArrivalCelebration;
   GalaxyNodeModel? _previewNode;
   Offset? _previewScreenPosition;
   Size _viewportSize = Size.zero;
@@ -158,11 +189,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   bool _physicsUsesViewportCulling = true;
   Timer? _previewDismissTimer;
   Timer? _initialBuildReplayTimer;
+  Timer? _pendingExternalFocusTimer;
   int _layoutOptimizationEpoch = 0;
   Map<String, Offset> _layoutBlendStartPositions = const <String, Offset>{};
   Map<String, Offset> _layoutBlendTargetPositions = const <String, Offset>{};
   bool _didApplyProviderGraph = false;
   bool? _nextProviderGraphPreserveCamera;
+  String? _pendingExternalFocusNodeId;
+  double? _pendingExternalMasteryDelta;
+  GoRouter? _router;
+  String? _lastObservedRoutePath;
+  bool _isDraftReviewOpen = false;
 
   // Mastery milestone subscription
   StreamSubscription<MasteryMilestoneEvent>? _milestoneSubscription;
@@ -173,6 +210,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   @override
   void initState() {
     super.initState();
+    _pendingExternalFocusNodeId = widget.initialFocusNodeId;
+    _pendingExternalMasteryDelta = widget.initialMasteryDelta;
     _spatialIndex = GalaxySpatialIndex();
     _forceEngine = GalaxyForceEngine();
     _accessibilityService = GalaxyAccessibilityService();
@@ -194,6 +233,20 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _galaxySubscription = ref.listenManual<GalaxyState>(
       galaxyProvider,
       _handleGalaxyStateChanged,
+    );
+    _refreshTriggerSubscription = ref.listenManual<int>(
+      galaxyRefreshTriggerProvider,
+      (previous, next) {
+        if (previous == null || previous == next || !mounted) {
+          return;
+        }
+        unawaited(
+          _loadGraph(
+            forceRefresh: true,
+            preserveCamera: true,
+          ),
+        );
+      },
     );
     // Subscribe to mastery milestone events for celebration animation
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -252,8 +305,22 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         return;
       }
       unawaited(_ambientTicker.start());
-      unawaited(_loadGraph());
+      unawaited(_loadGraph().whenComplete(_schedulePendingExternalFocus));
     });
+  }
+
+  @override
+  void didUpdateWidget(covariant GalaxyScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final sameInitialFocus =
+        widget.initialFocusNodeId == oldWidget.initialFocusNodeId &&
+            widget.initialMasteryDelta == oldWidget.initialMasteryDelta;
+    if (widget.initialFocusNodeId == null || sameInitialFocus) {
+      return;
+    }
+    _pendingExternalFocusNodeId = widget.initialFocusNodeId;
+    _pendingExternalMasteryDelta = widget.initialMasteryDelta;
+    _schedulePendingExternalFocus();
   }
 
   @override
@@ -262,6 +329,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _accessibilityService.initialize(context);
     final refreshRate = View.maybeOf(context)?.display.refreshRate ?? 60;
     _frameBudgetMs = 1000 / (refreshRate <= 0 ? 60 : refreshRate);
+    _attachRouteRefreshListener();
   }
 
   @override
@@ -291,9 +359,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _entranceController.dispose();
     _displaySettingsSubscription.close();
     _galaxySubscription.close();
+    _refreshTriggerSubscription.close();
+    _router?.routeInformationProvider.removeListener(
+      _handleRouteVisibilityChanged,
+    );
     unawaited(_milestoneSubscription?.cancel());
     _previewDismissTimer?.cancel();
     _initialBuildReplayTimer?.cancel();
+    _pendingExternalFocusTimer?.cancel();
     SchedulerBinding.instance.removeTimingsCallback(_handleFrameTimings);
     super.dispose();
   }
@@ -311,17 +384,34 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
 
     if (next.lastError != null && !next.isLoading) {
+      if (previous?.lastError?.message != next.lastError!.message) {
+        GalaxyErrorSnackBar.show(
+          context,
+          error: next.lastError!,
+          onRetry: _loadGraph,
+        );
+      }
       setState(() {
         _isLoading = false;
         _loadError = next.lastError!.message;
       });
     }
 
-    final graphChanged = previous == null ||
+    final graphChanged = _graph == null ||
+        previous == null ||
+        previous.isLoading != next.isLoading ||
         !identical(previous.nodes, next.nodes) ||
         !identical(previous.edges, next.edges) ||
         previous.userFlameIntensity != next.userFlameIntensity;
     if (!graphChanged) {
+      return;
+    }
+
+    // Skip applying an empty graph during initial loading — wait for real data.
+    // Without this guard, the first isLoading:true state transition sets
+    // _isLoading=false and briefly shows the "empty galaxy" panel before the
+    // actual graph data arrives.
+    if (next.isLoading && next.nodes.isEmpty && _graph == null) {
       return;
     }
 
@@ -339,11 +429,63 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     );
   }
 
+  void _attachRouteRefreshListener() {
+    final router = GoRouter.maybeOf(context);
+    if (router == null) {
+      _router?.routeInformationProvider.removeListener(
+        _handleRouteVisibilityChanged,
+      );
+      _router = null;
+      _lastObservedRoutePath = null;
+      return;
+    }
+    if (identical(_router, router)) {
+      return;
+    }
+    _router?.routeInformationProvider.removeListener(
+      _handleRouteVisibilityChanged,
+    );
+    _router = router;
+    _lastObservedRoutePath = router.routeInformationProvider.value.uri.path;
+    router.routeInformationProvider.addListener(_handleRouteVisibilityChanged);
+  }
+
+  void _handleRouteVisibilityChanged() {
+    final path = _router?.routeInformationProvider.value.uri.path;
+    final previousPath = _lastObservedRoutePath;
+    _lastObservedRoutePath = path;
+    if (!mounted ||
+        path != GalaxyRoutes.home ||
+        previousPath == GalaxyRoutes.home) {
+      return;
+    }
+
+    unawaited(
+      _loadGraph(
+        forceRefresh: true,
+        preserveCamera: true,
+      ),
+    );
+  }
+
+  Future<void> _handlePullToRefresh() async {
+    await Future.wait<void>([
+      _loadGraph(
+        forceRefresh: true,
+        preserveCamera: true,
+      ),
+      ref.read(galaxyDraftReviewProvider.notifier).refresh(),
+    ]);
+  }
+
   Future<void> _loadGraph({
     bool forceRefresh = false,
     bool preserveCamera = false,
   }) async {
     _stopAllAutoMotion(commitPhysicsPosition: true);
+    if (forceRefresh || _graph == null) {
+      ref.invalidate(galaxyContributionProvider);
+    }
     if (!preserveCamera) {
       setState(() {
         _isLoading = true;
@@ -355,6 +497,74 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     await ref
         .read(galaxyProvider.notifier)
         .loadGalaxy(forceRefresh: forceRefresh);
+  }
+
+  void _schedulePendingExternalFocus() {
+    if (_pendingExternalFocusNodeId == null) {
+      return;
+    }
+    _pendingExternalFocusTimer?.cancel();
+    _pendingExternalFocusTimer = Timer(
+      const Duration(milliseconds: 180),
+      _applyPendingExternalFocus,
+    );
+  }
+
+  void _applyPendingExternalFocus() {
+    final nodeId = _pendingExternalFocusNodeId;
+    if (!mounted || nodeId == null || _graph == null) {
+      return;
+    }
+    if (_viewportSize == Size.zero || !_renderPositions.containsKey(nodeId)) {
+      _schedulePendingExternalFocus();
+      return;
+    }
+
+    final node = _nodesById[nodeId];
+    if (node == null) {
+      _pendingExternalFocusNodeId = null;
+      _pendingExternalMasteryDelta = null;
+      return;
+    }
+
+    final masteryDelta = _pendingExternalMasteryDelta;
+    _pendingExternalFocusNodeId = null;
+    _pendingExternalMasteryDelta = null;
+
+    ref
+        .read(galaxyProvider.notifier)
+        .setEvidenceHighlight({nodeId}, focusId: nodeId);
+    _focusOnNode(nodeId, targetScale: 0.9);
+    _pulseNodeWithoutNavigation(nodeId);
+    _showErrorImpactMessage(node, masteryDelta);
+  }
+
+  void _pulseNodeWithoutNavigation(String nodeId) {
+    setState(() {
+      _tapFeedbackNodeId = nodeId;
+      _pendingNavigationNodeId = null;
+    });
+    _tapFeedbackController
+      ..stop()
+      ..reset();
+    unawaited(_tapFeedbackController.forward());
+  }
+
+  void _showErrorImpactMessage(GalaxyNodeModel node, double? masteryDelta) {
+    final deltaText = masteryDelta == null
+        ? ''
+        : masteryDelta < 0
+            ? '，下降 ${masteryDelta.abs().toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1)}'
+            : '，变化 +${masteryDelta.toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1)}';
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('「${node.name}」当前掌握度 ${node.masteryScore}%$deltaText'),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
   }
 
   void _syncProviderSelection(String? nodeId) {
@@ -451,6 +661,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         _startGraphSettleSimulation(impulse: 0.28);
       }
     }
+    _schedulePendingExternalFocus();
   }
 
   Map<String, Offset> get _renderPositions =>
@@ -571,6 +782,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     }
     _previewScreenPosition = _computePreviewPosition(
       anchor: _camera.worldToScreen(anchor),
+      node: previewNode,
     );
   }
 
@@ -678,6 +890,58 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     );
   }
 
+  void _startReviewForPreviewNode() {
+    final previewNode = _previewNode;
+    if (previewNode == null) {
+      return;
+    }
+    _startReviewForNode(previewNode);
+  }
+
+  void _startReviewForNode(GalaxyNodeModel node) {
+    final focusPrompt = node.reviewUrgencyReason == 'recent_errors'
+        ? '带我复习「${node.name}」。我上次掌握度 ${node.masteryScore} 分，而且最近这里又出现了错题。请先帮我定位最容易再错的点，再给我一个 15 分钟内可以开始的练习顺序。'
+        : '带我复习「${node.name}」。我上次掌握度 ${node.masteryScore} 分，请根据我现在的遗忘风险，给我一个 15 分钟就能开始的强化步骤。';
+    final chatMode = node.reviewUrgencyReason == 'recent_errors'
+        ? 'error_diagnosis'
+        : 'study_plan';
+    final query = <String, String>{
+      'prompt': focusPrompt,
+      'chat_mode': chatMode,
+      'target_node_id': node.id,
+    };
+    setState(_clearPreviewState);
+    unawaited(
+      context.push(
+        Uri(path: '/chat', queryParameters: query).toString(),
+      ),
+    );
+  }
+
+  void _showPreviewForNode(
+    GalaxyNodeModel node, {
+    required Offset anchor,
+    bool scheduleDismiss = false,
+  }) {
+    _previewDismissTimer?.cancel();
+    setState(() {
+      _cancelTapFeedbackState();
+      _selectedNodeId = node.id;
+      _spotlightAnchorId = node.id;
+      _spotlightNodeIds = _spotlightSetFor(node.id);
+      _draggingNodeId = null;
+      _previewNode = node;
+      _previewScreenPosition = _computePreviewPosition(
+        anchor: anchor,
+        node: node,
+      );
+    });
+    _syncProviderSelection(node.id);
+    if (scheduleDismiss) {
+      _schedulePreviewDismiss();
+    }
+  }
+
   void _handleGestureCommand(GalaxyGestureCommand command) {
     _noteInteraction();
 
@@ -739,17 +1003,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
       if (!tappedNode.isUnlocked) {
         unawaited(_accessibilityService.lightHaptic());
-        setState(() {
-          _cancelTapFeedbackState();
-          _selectedNodeId = tappedNode.id;
-          _spotlightAnchorId = tappedNode.id;
-          _previewNode = tappedNode;
-          _previewScreenPosition = _computePreviewPosition(
-            anchor: _camera.worldToScreen(command.hit!.worldPosition),
-          );
-          _spotlightNodeIds = _spotlightSetFor(tappedNode.id);
-        });
-        _syncProviderSelection(tappedNode.id);
+        _showPreviewForNode(
+          tappedNode,
+          anchor: _camera.worldToScreen(command.hit!.worldPosition),
+        );
         return;
       }
 
@@ -766,6 +1023,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           _clearPreviewState();
         });
         _syncProviderSelection(null);
+        unawaited(_showEmptySpaceUploadMenu(command));
         return;
       }
 
@@ -775,18 +1033,10 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       }
 
       unawaited(_accessibilityService.mediumHaptic());
-      setState(() {
-        _cancelTapFeedbackState();
-        _selectedNodeId = previewNode.id;
-        _spotlightAnchorId = previewNode.id;
-        _spotlightNodeIds = _spotlightSetFor(previewNode.id);
-        _draggingNodeId = null;
-        _previewNode = previewNode;
-        _previewScreenPosition = _computePreviewPosition(
-          anchor: _camera.worldToScreen(command.hit!.worldPosition),
-        );
-      });
-      _syncProviderSelection(previewNode.id);
+      _showPreviewForNode(
+        previewNode,
+        anchor: _camera.worldToScreen(command.hit!.worldPosition),
+      );
       _schedulePreviewDismiss();
       return;
     }
@@ -881,7 +1131,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     _tapFeedbackController.reset();
 
     if (nodeId != null) {
-      unawaited(_openKnowledgeDetail(nodeId));
+      unawaited(_openNodeDetailSheet(nodeId));
     }
   }
 
@@ -952,9 +1202,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           ? <String>{nodeId, ...?_adjacency[nodeId]}
           : <String>{nodeId};
 
-  Offset _computePreviewPosition({required Offset anchor}) {
-    const cardWidth = 220.0;
-    const cardHeight = 132.0;
+  Offset _computePreviewPosition({
+    required Offset anchor,
+    GalaxyNodeModel? node,
+  }) {
+    final activeNode = node ?? _previewNode;
+    final hasReviewOverlay = activeNode?.shouldPulseForReview ?? false;
+    final cardWidth = hasReviewOverlay ? 252.0 : 220.0;
+    final cardHeight = hasReviewOverlay ? 352.0 : 244.0;
     const gap = 16.0;
     const edgePadding = 12.0;
 
@@ -1166,6 +1421,155 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     if (previousNode != null && nextNode != null) {
       _triggerMasteryCelebrationIfNeeded(previousNode, nextNode);
     }
+  }
+
+  Future<void> _openNodeDetailSheet(String nodeId) async {
+    final node = _nodesById[nodeId];
+    if (node == null) {
+      return;
+    }
+    await NodeDetailSheet.show(
+      context: context,
+      nodeId: node.id,
+      nodeLabel: node.name,
+      packId: widget.initialPackId,
+      onAddMaterial: _handleNodeMaterialUploadRequested,
+    );
+  }
+
+  Future<void> _handleNodeMaterialUploadRequested(
+    String nodeId,
+    String label,
+  ) async {
+    await _promptForDocumentUpload(
+      originScreenPosition: Offset(
+        _viewportSize.width / 2,
+        _viewportSize.height - 132,
+      ),
+      target: GalaxyDocumentUploadTarget.node(
+        label: label,
+        nodeId: nodeId,
+        worldPosition: _renderPositions[nodeId],
+      ),
+    );
+  }
+
+  Future<void> _handleGalaxyCoreUploadRequested() async {
+    await _promptForDocumentUpload(
+      originScreenPosition: Offset(
+        _viewportSize.width / 2,
+        _viewportSize.height - 92,
+      ),
+      target: GalaxyDocumentUploadTarget.galaxyCore(
+        label: context.l10n.galaxyUploadTargetGalaxyCore,
+      ),
+    );
+  }
+
+  Future<void> _promptForDocumentUpload({
+    required Offset originScreenPosition,
+    required GalaxyDocumentUploadTarget target,
+  }) async {
+    if (ref.read(galaxyDocumentUploadProvider.notifier).hasActiveUpload) {
+      AppFeedback.info(
+        context,
+        context.l10n.galaxyUploadAlreadyInProgress,
+      );
+      return;
+    }
+
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: supportedStudyMaterialExtensions,
+    );
+    final pickedFile =
+        result != null && result.files.isNotEmpty ? result.files.first : null;
+    final path = pickedFile?.path;
+    if (path == null || !mounted) {
+      return;
+    }
+
+    final started =
+        await ref.read(galaxyDocumentUploadProvider.notifier).uploadDocument(
+              File(path),
+              target: target,
+              originScreenPosition: originScreenPosition,
+            );
+    if (!started && mounted) {
+      AppFeedback.info(
+        context,
+        context.l10n.galaxyUploadAlreadyInProgress,
+      );
+    }
+  }
+
+  Future<void> _showEmptySpaceUploadMenu(LongPressCommand command) async {
+    final overlayBox =
+        Overlay.of(context).context.findRenderObject() as RenderBox?;
+    if (overlayBox == null) {
+      return;
+    }
+
+    final selection = await showMenu<_GalaxyEmptySpaceAction>(
+      context: context,
+      color: const Color(0xFF0C1626),
+      position: RelativeRect.fromRect(
+        Rect.fromCenter(
+          center: command.screenPosition,
+          width: 1,
+          height: 1,
+        ),
+        Offset.zero & overlayBox.size,
+      ),
+      items: [
+        PopupMenuItem<_GalaxyEmptySpaceAction>(
+          value: _GalaxyEmptySpaceAction.uploadDocumentHere,
+          child: Row(
+            children: [
+              const Icon(Icons.upload_file_rounded, size: 18),
+              const SizedBox(width: 10),
+              Text(context.l10n.galaxyUploadDocumentHere),
+            ],
+          ),
+        ),
+      ],
+    );
+
+    if (!mounted || selection != _GalaxyEmptySpaceAction.uploadDocumentHere) {
+      return;
+    }
+
+    await _promptForDocumentUpload(
+      originScreenPosition: command.screenPosition,
+      target: GalaxyDocumentUploadTarget.worldPosition(
+        label: context.l10n.galaxyUploadTargetSelectedConstellation,
+        worldPosition: command.worldPosition,
+      ),
+    );
+  }
+
+  Offset _resolveUploadTargetScreenPosition(
+    GalaxyDocumentUploadSession session,
+  ) {
+    final target = session.target;
+    final worldTarget = switch (target.kind) {
+      GalaxyDocumentUploadTargetKind.galaxyCore => Offset.zero,
+      GalaxyDocumentUploadTargetKind.worldPosition =>
+        target.worldPosition ?? Offset.zero,
+      GalaxyDocumentUploadTargetKind.node =>
+        target.nodeId != null && _renderPositions[target.nodeId] != null
+            ? _renderPositions[target.nodeId]!
+            : (target.worldPosition ?? Offset.zero),
+    };
+
+    final screenPoint = _camera.worldToScreen(worldTarget);
+    if (_viewportSize == Size.zero) {
+      return screenPoint;
+    }
+    return Offset(
+      screenPoint.dx.clamp(56.0, _viewportSize.width - 56.0),
+      screenPoint.dy.clamp(88.0, _viewportSize.height - 132.0),
+    );
   }
 
   void _triggerMasteryCelebrationIfNeeded(
@@ -2167,10 +2571,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
           if (anchor != null) {
             _previewScreenPosition = _computePreviewPosition(
               anchor: _camera.worldToScreen(anchor),
+              node: _previewNode,
             );
           }
         }
       });
+      _schedulePendingExternalFocus();
     });
   }
 
@@ -2268,6 +2674,68 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     );
   }
 
+  Future<void> _openDraftReview({String? batchId}) async {
+    if (_isDraftReviewOpen) {
+      return;
+    }
+    final draftState = ref.read(galaxyDraftReviewProvider);
+    final batch = draftState.batchById(batchId) ?? draftState.promptBatch;
+    if (batch == null) {
+      await ref.read(galaxyDraftReviewProvider.notifier).refresh();
+      return;
+    }
+
+    _isDraftReviewOpen = true;
+    final result = await context.push<GalaxyDraftReviewResult>(
+      GalaxyRoutes.draftReview,
+      extra: GalaxyDraftReviewRouteArgs(batchId: batch.id),
+    );
+    _isDraftReviewOpen = false;
+
+    if (!mounted || result == null) {
+      return;
+    }
+    _playDraftArrivalCelebration(result);
+  }
+
+  void _playDraftArrivalCelebration(GalaxyDraftReviewResult result) {
+    if (result.acceptedCount <= 0) {
+      AppFeedback.info(
+        context,
+        context.l10n.galaxyDraftCompletionNothingAdded,
+      );
+      return;
+    }
+
+    final acceptedLabels = result.reviewedNodes
+        .where((node) => node.decision != GalaxyDraftDecision.reject)
+        .map((node) => node.finalName)
+        .take(5)
+        .toList(growable: false);
+    final summary = context.l10n.galaxyDraftCompletionSummary(
+      result.acceptedCount,
+      result.totalDraftCount,
+    );
+
+    setState(() {
+      _draftArrivalCelebration = _DraftArrivalCelebration(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        labels: acceptedLabels,
+        summary: summary,
+      );
+    });
+    AppFeedback.success(context, summary);
+  }
+
+  void _dismissDraftArrivalCelebration() {
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _draftArrivalCelebration = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -2278,7 +2746,19 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final currentSector = _currentSector();
     final blendedColors = isDarkMode ? _darkBlendedColors : _lightBlendedColors;
     final overviewStats = graph == null ? null : _buildOverviewStats(graph);
+    final showMasteryEmptyBanner = overviewStats != null &&
+        overviewStats.totalNodes > 0 &&
+        overviewStats.masteryAverage == 0;
+    final contributionStats = ref.watch(galaxyContributionProvider);
+    final draftReviewState = ref.watch(galaxyDraftReviewProvider);
+    final draftPromptBatch = draftReviewState.promptBatch;
+    final showDraftPendingIndicator =
+        draftPromptBatch == null && draftReviewState.pendingBatchCount > 0;
     final theaterOverlay = ref.watch(theaterOverlayProvider);
+    final examSprintActive =
+        ref.watch(examSprintDashboardProvider).valueOrNull != null;
+    final uploadState = ref.watch(galaxyDocumentUploadProvider);
+    final uploadSession = uploadState.session;
 
     final baseTheme = Theme.of(context);
     final galaxyTheme = baseTheme.copyWith(
@@ -2314,262 +2794,611 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                   ),
                 ),
               ),
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            _updateViewportSize(
-              Size(constraints.maxWidth, constraints.maxHeight),
-            );
-
-            if (_isLoading) {
-              return _StatusPanel(
-                backgroundColor: backgroundColor,
-                foregroundColor: Colors.white,
-                title: context.l10n.galaxyLoadingTitle,
-                message: context.l10n.galaxyLoadingMessage,
-                highlights: <String>[
-                  context.l10n.searchNodes,
-                  '推演模式',
-                  context.l10n.galaxyOverviewNodes,
-                ],
-                showLoader: true,
-              );
-            }
-
-            if (_loadError != null) {
-              return _StatusPanel(
-                backgroundColor: backgroundColor,
-                foregroundColor: isDarkMode ? Colors.white : Colors.black,
-                title: context.l10n.galaxyLoadFailedTitle,
-                message: '$_loadError',
-                actionLabel: context.l10n.retry,
-                onAction: _loadGraph,
-              );
-            }
-
-            if (graph == null) {
-              return _StatusPanel(
-                backgroundColor: backgroundColor,
-                foregroundColor: isDarkMode ? Colors.white : Colors.black,
-                title: context.l10n.galaxyEmptyTitle,
-                message: context.l10n.galaxyEmptyMessage,
-                actionLabel: context.l10n.galaxyReload,
-                onAction: _loadGraph,
-              );
-            }
-
-            return AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              switchInCurve: Curves.easeOut,
-              switchOutCurve: Curves.easeIn,
-              child: Stack(
-                key: const ValueKey<bool>(isDarkMode),
-                children: [
-                  Listener(
-                    behavior: HitTestBehavior.opaque,
-                    onPointerDown: _handlePointerDown,
-                    onPointerMove: _gestureHandler.handlePointerMove,
-                    onPointerUp: _handlePointerUp,
-                    onPointerCancel: _handlePointerCancel,
-                    onPointerSignal: _handlePointerSignal,
-                    child: RepaintBoundary(
-                      child: CustomPaint(
-                        painter: StarMapPainter(
-                          camera: _camera,
-                          nodesById: _nodesById,
-                          edges: graph.edges,
-                          positions: _renderPositions,
-                          spatialIndex: _spatialIndex,
-                          labelCache: _labelCache,
-                          backdropPictureCache: _backdropPictureCache,
-                          parallaxStarLayerCache: _parallaxStarLayerCache,
-                          sceneVersion: _sceneVersion,
-                          selectedNodeId: _selectedNodeId,
-                          previewNodeId: _previewNode?.id,
-                          draggingNodeId: _draggingNodeId,
-                          tapFeedbackNodeId: _tapFeedbackNodeId,
-                          tapFeedbackProgress: _tapFeedbackAnimation.value,
-                          tapFeedbackPhase: _tapFeedbackController.value,
-                          isDarkMode: isDarkMode,
-                          worldBounds: _computeWorldBounds(),
-                          blendedColors: blendedColors,
-                          displaySettings: displaySettings,
-                          playbackPlan: _playbackPlan,
-                          playbackElapsedMs: _playbackElapsedMs,
-                          preRevealedNodeIds: _preRevealedNodeIds,
-                          preRevealedEdgeIds: _preRevealedEdgeIds,
-                          nodeConnectionCounts: _nodeConnectionCounts,
-                          ambientPhase: _ambientPhase,
-                          isBuildAnimating: _isBuildAnimating,
-                          spotlightNodeIds: _spotlightNodeIds,
-                          spotlightAnchorId: _spotlightAnchorId,
-                          searchMatchedNodeIds: _searchMatchedNodeIds,
-                          driftOffsets: _microDriftOffsets,
-                          edgeParticles: _edgeParticles,
-                          celebrationNodeIds: _celebrations
-                              .map((entry) => entry.nodeId)
-                              .toSet(),
-                          performanceDegraded: _performanceDegraded,
-                          predictionOverlay: theaterOverlay,
-                        ),
-                        child: const SizedBox.expand(),
-                      ),
-                    ),
-                  ),
-                  ..._celebrations.map((entry) {
-                    final worldPosition = _renderPositions[entry.nodeId];
-                    if (worldPosition == null) {
-                      return const SizedBox.shrink();
-                    }
-                    final neighborIds =
-                        _adjacency[entry.nodeId] ?? const <String>{};
-                    final neighborScreenPositions = <Offset>[];
-                    for (final nid in neighborIds) {
-                      final nPos = _renderPositions[nid];
-                      if (nPos != null) {
-                        neighborScreenPositions
-                            .add(_camera.worldToScreen(nPos));
-                      }
-                    }
-                    return Positioned.fill(
-                      child: IgnorePointer(
-                        child: StarSuccessAnimation(
-                          key: ValueKey(entry.id),
-                          position: _camera.worldToScreen(worldPosition),
-                          color: entry.color,
-                          neighborPositions: neighborScreenPositions,
-                          emphasizeNeighbors: entry.emphasizeNeighbors,
-                          onComplete: () => _removeCelebration(entry.id),
-                        ),
-                      ),
+        body: RefreshIndicator(
+          onRefresh: _handlePullToRefresh,
+          child: CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              SliverFillRemaining(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    _updateViewportSize(
+                      Size(constraints.maxWidth, constraints.maxHeight),
                     );
-                  }),
-                  if (_previewNode != null && _previewScreenPosition != null)
-                    Positioned(
-                      left: _previewScreenPosition!.dx,
-                      top: _previewScreenPosition!.dy,
-                      child: AnimatedScale(
-                        scale: 1,
-                        duration: const Duration(milliseconds: 180),
-                        curve: Curves.easeOutBack,
-                        child: AnimatedOpacity(
-                          opacity: 1,
-                          duration: const Duration(milliseconds: 160),
-                          child: GalaxyNodePreviewCard(
-                            node: _previewNode!,
-                            onFocus: _focusPreviewNode,
-                            onInspectConnections: _inspectPreviewConnections,
-                            onViewDetails: () => unawaited(
-                              _openKnowledgeDetail(_previewNode!.id),
-                            ),
-                            onLaunchPrediction: _launchPredictionForPreviewNode,
-                          ),
-                        ),
-                      ),
-                    ),
-                  SafeArea(
-                    child: Stack(
-                      children: [
-                        Positioned(
-                          top: 12,
-                          left: 16,
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 150),
-                            child: currentSector == null
-                                ? const SizedBox.shrink()
-                                : GalaxySectorIndicator(
-                                    key: ValueKey(currentSector.name),
-                                    label: SectorConfig.getStyle(currentSector)
-                                        .name,
-                                    color: SectorConfig.getColor(currentSector),
-                                    isDarkMode: isDarkMode,
-                                  ),
-                          ),
-                        ),
-                        if (overviewStats != null && _camera.scale < 0.32)
-                          Positioned(
-                            top: 14,
-                            right: 16,
-                            child: _GalaxyOverviewStats(
-                              stats: overviewStats,
-                              isDarkMode: isDarkMode,
-                            ),
-                          ),
-                        Positioned(
-                          left: 16,
-                          bottom: 16,
-                          child: AnimatedOpacity(
-                            opacity: _camera.scale >= 0.3 ? 1 : 0,
-                            duration: const Duration(milliseconds: 180),
-                            child: IgnorePointer(
-                              ignoring: _camera.scale < 0.3,
-                              child: GalaxyMiniMap(
-                                camera: _camera,
-                                positions: _renderPositions,
-                                nodesById: _nodesById,
-                                blendedColors: blendedColors,
-                                worldBounds: _computeWorldBounds(),
-                                isDarkMode: isDarkMode,
-                                sceneVersion: _sceneVersion,
-                                onNavigate: _handleMiniMapNavigate,
-                                onViewportDragged: _handleMiniMapDrag,
+
+                    if (_isLoading) {
+                      return _StatusPanel(
+                        backgroundColor: backgroundColor,
+                        foregroundColor: Colors.white,
+                        title: context.l10n.galaxyLoadingTitle,
+                        message: context.l10n.galaxyLoadingMessage,
+                        highlights: <String>[
+                          context.l10n.searchNodes,
+                          '推演模式',
+                          context.l10n.galaxyOverviewNodes,
+                        ],
+                        showLoader: true,
+                      );
+                    }
+
+                    if (_loadError != null) {
+                      return _StatusPanel(
+                        backgroundColor: backgroundColor,
+                        foregroundColor:
+                            isDarkMode ? Colors.white : Colors.black,
+                        title: context.l10n.galaxyLoadFailedTitle,
+                        message: '$_loadError',
+                        actionLabel: context.l10n.retry,
+                        onAction: _loadGraph,
+                      );
+                    }
+
+                    if (graph == null || graph.nodes.isEmpty) {
+                      return _StatusPanel(
+                        backgroundColor: backgroundColor,
+                        foregroundColor:
+                            isDarkMode ? Colors.white : Colors.black,
+                        title: context.l10n.galaxyEmptyTitle,
+                        message: '先完成一个学习任务或创建一次冲刺，知识节点和掌握记录才会在这里慢慢点亮。',
+                        highlights: const <String>['完成任务', '记录错题', '开始冲刺'],
+                        actionLabel: '去创建学习任务',
+                        onAction: () async {
+                          await context.push(TaskRoutes.taskCreate);
+                        },
+                      );
+                    }
+
+                    return AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      child: Stack(
+                        key: const ValueKey<bool>(isDarkMode),
+                        children: [
+                          Listener(
+                            behavior: HitTestBehavior.opaque,
+                            onPointerDown: _handlePointerDown,
+                            onPointerMove: _gestureHandler.handlePointerMove,
+                            onPointerUp: _handlePointerUp,
+                            onPointerCancel: _handlePointerCancel,
+                            onPointerSignal: _handlePointerSignal,
+                            child: RepaintBoundary(
+                              child: CustomPaint(
+                                painter: StarMapPainter(
+                                  camera: _camera,
+                                  nodesById: _nodesById,
+                                  edges: graph.edges,
+                                  positions: _renderPositions,
+                                  spatialIndex: _spatialIndex,
+                                  labelCache: _labelCache,
+                                  backdropPictureCache: _backdropPictureCache,
+                                  parallaxStarLayerCache:
+                                      _parallaxStarLayerCache,
+                                  sceneVersion: _sceneVersion,
+                                  selectedNodeId: _selectedNodeId,
+                                  previewNodeId: _previewNode?.id,
+                                  draggingNodeId: _draggingNodeId,
+                                  tapFeedbackNodeId: _tapFeedbackNodeId,
+                                  tapFeedbackProgress:
+                                      _tapFeedbackAnimation.value,
+                                  tapFeedbackPhase:
+                                      _tapFeedbackController.value,
+                                  isDarkMode: isDarkMode,
+                                  worldBounds: _computeWorldBounds(),
+                                  blendedColors: blendedColors,
+                                  displaySettings: displaySettings,
+                                  playbackPlan: _playbackPlan,
+                                  playbackElapsedMs: _playbackElapsedMs,
+                                  preRevealedNodeIds: _preRevealedNodeIds,
+                                  preRevealedEdgeIds: _preRevealedEdgeIds,
+                                  nodeConnectionCounts: _nodeConnectionCounts,
+                                  ambientPhase: _ambientPhase,
+                                  isBuildAnimating: _isBuildAnimating,
+                                  spotlightNodeIds: _spotlightNodeIds,
+                                  spotlightAnchorId: _spotlightAnchorId,
+                                  searchMatchedNodeIds: _searchMatchedNodeIds,
+                                  driftOffsets: _microDriftOffsets,
+                                  edgeParticles: _edgeParticles,
+                                  celebrationNodeIds: _celebrations
+                                      .map((entry) => entry.nodeId)
+                                      .toSet(),
+                                  performanceDegraded: _performanceDegraded,
+                                  predictionOverlay: theaterOverlay,
+                                  examSprintActive: examSprintActive,
+                                ),
+                                child: const SizedBox.expand(),
                               ),
                             ),
                           ),
-                        ),
-                        Positioned(
-                          right: 16,
-                          bottom: 16,
-                          child: GalaxyControls(
-                            onZoomIn: () => _zoomAroundCenter(1.5),
-                            onFitToOverview: _fitOverviewAnimated,
-                            onZoomOut: () => _zoomAroundCenter(1 / 1.5),
-                            onReplay: _toggleBuildReplay,
-                            onSearch: _toggleSearchPanel,
-                            onSettings: _openSimulationSettings,
-                            isDarkMode: isDarkMode,
-                            isReplaying: _isBuildAnimating,
-                            isSearchOpen: _isSearchOpen,
-                            isSettingsOpen: _isSettingsOpen,
-                          ),
-                        ),
-                        Positioned(
-                          top: 58,
-                          right: 16,
-                          child: AnimatedSlide(
-                            offset: _isSearchOpen
-                                ? Offset.zero
-                                : const Offset(0, -0.08),
-                            duration: const Duration(milliseconds: 220),
-                            curve: Curves.easeOutCubic,
-                            child: AnimatedOpacity(
-                              opacity: _isSearchOpen ? 1 : 0,
-                              duration: const Duration(milliseconds: 180),
+                          ..._celebrations.map((entry) {
+                            final worldPosition =
+                                _renderPositions[entry.nodeId];
+                            if (worldPosition == null) {
+                              return const SizedBox.shrink();
+                            }
+                            final neighborIds =
+                                _adjacency[entry.nodeId] ?? const <String>{};
+                            final neighborScreenPositions = <Offset>[];
+                            for (final nid in neighborIds) {
+                              final nPos = _renderPositions[nid];
+                              if (nPos != null) {
+                                neighborScreenPositions
+                                    .add(_camera.worldToScreen(nPos));
+                              }
+                            }
+                            return Positioned.fill(
                               child: IgnorePointer(
-                                ignoring: !_isSearchOpen,
-                                child: GalaxySearchPanel(
-                                  controller: _searchController,
-                                  query: _searchQuery,
-                                  results: _searchResults,
-                                  isDarkMode: isDarkMode,
-                                  onQueryChanged: _updateSearchQuery,
-                                  onClose: _toggleSearchPanel,
-                                  onNodeSelected: _handleSearchNodeSelected,
+                                child: StarSuccessAnimation(
+                                  key: ValueKey(entry.id),
+                                  position:
+                                      _camera.worldToScreen(worldPosition),
+                                  color: entry.color,
+                                  neighborPositions: neighborScreenPositions,
+                                  emphasizeNeighbors: entry.emphasizeNeighbors,
+                                  onComplete: () =>
+                                      _removeCelebration(entry.id),
+                                ),
+                              ),
+                            );
+                          }),
+                          if (_draftArrivalCelebration != null)
+                            Positioned.fill(
+                              child: SparkleGalaxyArrivalOverlay(
+                                key: ValueKey(_draftArrivalCelebration!.id),
+                                labels: _draftArrivalCelebration!.labels,
+                                summary: _draftArrivalCelebration!.summary,
+                                onComplete: _dismissDraftArrivalCelebration,
+                              ),
+                            ),
+                          if (uploadSession != null)
+                            GalaxyDocumentUploadOverlay(
+                              session: uploadSession,
+                              targetScreenPosition:
+                                  _resolveUploadTargetScreenPosition(
+                                uploadSession,
+                              ),
+                              onRetry: () => ref
+                                  .read(galaxyDocumentUploadProvider.notifier)
+                                  .retryLastUpload(),
+                              onDismiss: () => ref
+                                  .read(galaxyDocumentUploadProvider.notifier)
+                                  .clearSession(),
+                            ),
+                          if (_previewNode != null &&
+                              _previewScreenPosition != null)
+                            Positioned(
+                              left: _previewScreenPosition!.dx,
+                              top: _previewScreenPosition!.dy,
+                              child: AnimatedScale(
+                                scale: 1,
+                                duration: const Duration(milliseconds: 180),
+                                curve: Curves.easeOutBack,
+                                child: AnimatedOpacity(
+                                  opacity: 1,
+                                  duration: const Duration(milliseconds: 160),
+                                  child: GalaxyNodePreviewCard(
+                                    node: _previewNode!,
+                                    onFocus: _focusPreviewNode,
+                                    onInspectConnections:
+                                        _inspectPreviewConnections,
+                                    onViewDetails: () => unawaited(
+                                      _openKnowledgeDetail(_previewNode!.id),
+                                    ),
+                                    onStartReview: _startReviewForPreviewNode,
+                                    onLaunchPrediction:
+                                        _launchPredictionForPreviewNode,
+                                  ),
                                 ),
                               ),
                             ),
+                          SafeArea(
+                            child: Stack(
+                              children: [
+                                Positioned(
+                                  top: 12,
+                                  left: 16,
+                                  child: AnimatedSwitcher(
+                                    duration: const Duration(milliseconds: 150),
+                                    child: currentSector == null
+                                        ? const SizedBox.shrink()
+                                        : GalaxySectorIndicator(
+                                            key: ValueKey(currentSector.name),
+                                            label: SectorConfig.getStyle(
+                                              currentSector,
+                                            ).name,
+                                            color: SectorConfig.getColor(
+                                              currentSector,
+                                            ),
+                                            isDarkMode: isDarkMode,
+                                          ),
+                                  ),
+                                ),
+                                if (overviewStats != null &&
+                                    _camera.scale < 0.32)
+                                  Positioned(
+                                    top: 14,
+                                    right: 16,
+                                    child: _GalaxyOverviewStats(
+                                      stats: overviewStats,
+                                      isDarkMode: isDarkMode,
+                                    ),
+                                  ),
+                                Positioned(
+                                  top: 56,
+                                  left: 16,
+                                  right: 16,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      contributionStats.when(
+                                        data: (stats) =>
+                                            GalaxyContributionBanner(
+                                          isDarkMode: isDarkMode,
+                                          stats: stats,
+                                        ),
+                                        loading: () =>
+                                            const GalaxyContributionBanner
+                                                .loading(
+                                          isDarkMode: isDarkMode,
+                                        ),
+                                        error: (_, __) =>
+                                            const SizedBox.shrink(),
+                                      ),
+                                      if (showMasteryEmptyBanner) ...[
+                                        const SizedBox(height: 12),
+                                        _GalaxyMasteryEmptyBanner(
+                                          onAction: () => context.push(
+                                            TaskRoutes.taskCreate,
+                                          ),
+                                        ),
+                                      ],
+                                      if (draftPromptBatch != null) ...[
+                                        const SizedBox(height: 12),
+                                        _GalaxyDraftPromptCard(
+                                          batch: draftPromptBatch,
+                                          onReview: () => _openDraftReview(
+                                            batchId: draftPromptBatch.id,
+                                          ),
+                                          onDismiss: () => ref
+                                              .read(
+                                                galaxyDraftReviewProvider
+                                                    .notifier,
+                                              )
+                                              .dismissPrompt(
+                                                draftPromptBatch.id,
+                                              ),
+                                        ),
+                                      ],
+                                      if (showDraftPendingIndicator) ...[
+                                        const SizedBox(height: 12),
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: _GalaxyDraftPendingIndicator(
+                                            batchCount: draftReviewState
+                                                .pendingBatchCount,
+                                            draftCount: draftReviewState
+                                                .pendingDraftCount,
+                                            onTap: _openDraftReview,
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                                Positioned(
+                                  left: 0,
+                                  right: 0,
+                                  bottom: 18,
+                                  child: Center(
+                                    child: FloatingActionButton.extended(
+                                      heroTag: 'galaxy_add_study_material',
+                                      onPressed: uploadSession != null &&
+                                              !uploadSession.isTerminal
+                                          ? null
+                                          : _handleGalaxyCoreUploadRequested,
+                                      icon: const Icon(Icons.menu_book_rounded),
+                                      label: Text(
+                                        context.l10n.galaxyUploadFabLabel,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  left: 16,
+                                  bottom: 16,
+                                  child: AnimatedOpacity(
+                                    opacity: _camera.scale >= 0.3 ? 1 : 0,
+                                    duration: const Duration(milliseconds: 180),
+                                    child: IgnorePointer(
+                                      ignoring: _camera.scale < 0.3,
+                                      child: GalaxyMiniMap(
+                                        camera: _camera,
+                                        positions: _renderPositions,
+                                        nodesById: _nodesById,
+                                        blendedColors: blendedColors,
+                                        worldBounds: _computeWorldBounds(),
+                                        isDarkMode: isDarkMode,
+                                        sceneVersion: _sceneVersion,
+                                        onNavigate: _handleMiniMapNavigate,
+                                        onViewportDragged: _handleMiniMapDrag,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  right: 16,
+                                  bottom: 16,
+                                  child: GalaxyControls(
+                                    onZoomIn: () => _zoomAroundCenter(1.5),
+                                    onFitToOverview: _fitOverviewAnimated,
+                                    onZoomOut: () => _zoomAroundCenter(1 / 1.5),
+                                    onReplay: _toggleBuildReplay,
+                                    onSearch: _toggleSearchPanel,
+                                    onSettings: _openSimulationSettings,
+                                    isDarkMode: isDarkMode,
+                                    isReplaying: _isBuildAnimating,
+                                    isSearchOpen: _isSearchOpen,
+                                    isSettingsOpen: _isSettingsOpen,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 58,
+                                  right: 16,
+                                  child: AnimatedSlide(
+                                    offset: _isSearchOpen
+                                        ? Offset.zero
+                                        : const Offset(0, -0.08),
+                                    duration: const Duration(milliseconds: 220),
+                                    curve: Curves.easeOutCubic,
+                                    child: AnimatedOpacity(
+                                      opacity: _isSearchOpen ? 1 : 0,
+                                      duration:
+                                          const Duration(milliseconds: 180),
+                                      child: IgnorePointer(
+                                        ignoring: !_isSearchOpen,
+                                        child: GalaxySearchPanel(
+                                          controller: _searchController,
+                                          query: _searchQuery,
+                                          results: _searchResults,
+                                          isDarkMode: isDarkMode,
+                                          onQueryChanged: _updateSearchQuery,
+                                          onClose: _toggleSearchPanel,
+                                          onNodeSelected:
+                                              _handleSearchNodeSelected,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
-            );
-          },
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _DraftArrivalCelebration {
+  const _DraftArrivalCelebration({
+    required this.id,
+    required this.labels,
+    required this.summary,
+  });
+
+  final String id;
+  final List<String> labels;
+  final String summary;
+}
+
+class _GalaxyDraftPromptCard extends StatelessWidget {
+  const _GalaxyDraftPromptCard({
+    required this.batch,
+    required this.onReview,
+    required this.onDismiss,
+  });
+
+  final GalaxyDraftBatch batch;
+  final VoidCallback onReview;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onReview,
+        borderRadius: BorderRadius.circular(24),
+        child: Ink(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            gradient: const LinearGradient(
+              colors: <Color>[
+                Color(0xE6223658),
+                Color(0xE6142038),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.16),
+                blurRadius: 24,
+                offset: const Offset(0, 14),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 16, 16, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            context.l10n.galaxyDraftReviewPromptTitle(
+                              batch.drafts.length,
+                              batch.documentName,
+                            ),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              height: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            context.l10n.galaxyDraftReviewPromptBody,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.72),
+                              height: 1.4,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: onDismiss,
+                      icon: Icon(
+                        Icons.close_rounded,
+                        color: Colors.white.withValues(alpha: 0.8),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: BorderSide(
+                            color: Colors.white.withValues(alpha: 0.18),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: onDismiss,
+                        child: Text(context.l10n.galaxyDraftReviewLater),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: const Color(0xFF182238),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: onReview,
+                        icon: const Icon(Icons.swipe_rounded, size: 18),
+                        label: Text(context.l10n.galaxyDraftReviewNow),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GalaxyDraftPendingIndicator extends StatelessWidget {
+  const _GalaxyDraftPendingIndicator({
+    required this.batchCount,
+    required this.draftCount,
+    required this.onTap,
+  });
+
+  final int batchCount;
+  final int draftCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(999),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: const Color(0xD9101A2C),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: DS.warning,
+                      boxShadow: [
+                        BoxShadow(
+                          color: DS.warning.withValues(alpha: 0.5),
+                          blurRadius: 10,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    context.l10n.galaxyDraftPendingIndicator(
+                      batchCount,
+                      draftCount,
+                    ),
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
 }
 
 class _StatusPanel extends StatelessWidget {
@@ -2688,7 +3517,7 @@ class _StatusPanel extends StatelessWidget {
                                     color:
                                         foregroundColor.withValues(alpha: 0.72),
                                     fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                                    fontWeight: DS.fontWeightSemibold,
                                   ),
                                 ),
                               ),
@@ -2754,6 +3583,8 @@ class _GalaxyOverviewStats extends StatelessWidget {
                 label: context.l10n.galaxyOverviewNodes,
                 value: stats.totalNodes.toDouble(),
                 suffix: '',
+                emptyLabel: '尚未开始',
+                isEmpty: stats.totalNodes == 0,
                 isDarkMode: isDarkMode,
               ),
               const SizedBox(width: 14),
@@ -2761,6 +3592,8 @@ class _GalaxyOverviewStats extends StatelessWidget {
                 label: context.l10n.galaxyOverviewUnlocked,
                 value: stats.unlockRatio * 100,
                 suffix: '%',
+                emptyLabel: '尚未点亮',
+                isEmpty: stats.unlockedNodes == 0,
                 isDarkMode: isDarkMode,
               ),
               const SizedBox(width: 14),
@@ -2768,6 +3601,8 @@ class _GalaxyOverviewStats extends StatelessWidget {
                 label: context.l10n.galaxyOverviewMastery,
                 value: stats.masteryAverage.toDouble(),
                 suffix: '%',
+                emptyLabel: '尚未开始',
+                isEmpty: stats.masteryAverage == 0,
                 isDarkMode: isDarkMode,
               ),
             ],
@@ -2781,12 +3616,16 @@ class _OverviewMetric extends StatelessWidget {
     required this.label,
     required this.value,
     required this.suffix,
+    required this.emptyLabel,
+    required this.isEmpty,
     required this.isDarkMode,
   });
 
   final String label;
   final double value;
   final String suffix;
+  final String emptyLabel;
+  final bool isEmpty;
   final bool isDarkMode;
 
   @override
@@ -2803,26 +3642,101 @@ class _OverviewMetric extends StatelessWidget {
           style: TextStyle(
             color: secondary,
             fontSize: 11,
-            fontWeight: FontWeight.w600,
+            fontWeight: DS.fontWeightSemibold,
           ),
         ),
         const SizedBox(height: 2),
-        TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: 0, end: value),
-          duration: const Duration(milliseconds: 720),
-          curve: Curves.easeOutCubic,
-          builder: (context, animatedValue, _) => Text(
-            '${animatedValue.round()}$suffix',
+        if (isEmpty)
+          Text(
+            emptyLabel,
             style: TextStyle(
               color: foreground,
-              fontSize: 15,
+              fontSize: 13,
               fontWeight: FontWeight.w800,
             ),
+          )
+        else
+          TweenAnimationBuilder<double>(
+            tween: Tween<double>(begin: 0, end: value),
+            duration: const Duration(milliseconds: 720),
+            curve: Curves.easeOutCubic,
+            builder: (context, animatedValue, _) => Text(
+              '${animatedValue.round()}$suffix',
+              style: TextStyle(
+                color: foreground,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
-        ),
       ],
     );
   }
+}
+
+class _GalaxyMasteryEmptyBanner extends StatelessWidget {
+  const _GalaxyMasteryEmptyBanner({required this.onAction});
+
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xE6101929),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome_outlined,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '还没有点亮掌握记录',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '先完成一个学习任务或复习一个知识点，星图才会开始出现真实掌握度。',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.72),
+                        fontSize: 12,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              FilledButton(
+                onPressed: onAction,
+                child: const Text('去学习'),
+              ),
+            ],
+          ),
+        ),
+      );
 }
 
 class _StatusLoader extends StatelessWidget {

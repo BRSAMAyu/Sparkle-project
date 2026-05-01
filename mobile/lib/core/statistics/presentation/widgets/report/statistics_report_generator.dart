@@ -3,6 +3,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Configuration for PNG report generation
 class ReportConfig {
@@ -150,6 +153,7 @@ class StatisticsReportGenerator {
           color: config.resolvedPrimaryColor,
           fontSize: 56 * config.pixelRatio,
           fontWeight: FontWeight.bold,
+          fontFamilyFallback: sparkleFontFallback,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -167,6 +171,7 @@ class StatisticsReportGenerator {
         style: TextStyle(
           color: config.resolvedSecondaryColor,
           fontSize: 36 * config.pixelRatio,
+          fontFamilyFallback: sparkleFontFallback,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -187,6 +192,7 @@ class StatisticsReportGenerator {
         style: TextStyle(
           color: config.resolvedPrimaryColor.withValues(alpha: 0.7),
           fontSize: 28 * config.pixelRatio,
+          fontFamilyFallback: sparkleFontFallback,
         ),
       ),
       textDirection: TextDirection.ltr,
@@ -294,8 +300,12 @@ class StatisticsReportGenerator {
   }
 
   /// Format date for display
-  static String _formatDate(DateTime date) =>
-      '${date.year}年${date.month}月${date.day}日';
+  static String _formatDate(DateTime date, [AppLocalizations? l10n]) {
+    if (l10n != null) {
+      return l10n.statisticsDateFormat(date.year.toString(), date.month.toString(), date.day.toString());
+    }
+    return '${date.year}年${date.month}月${date.day}日';
+  }
 }
 
 /// Widget for generating a report preview
@@ -355,7 +365,7 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
         child: Column(
           children: [
             Text(
-              widget.statistics.type.displayName,
+              widget.statistics.type.localizedDisplayName(context.l10n),
               style: TextStyle(
                 color: widget.config.resolvedPrimaryColor,
                 fontSize: 28,
@@ -364,7 +374,7 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
             ),
             const SizedBox(height: DS.sm),
             Text(
-              widget.statistics.period.label,
+              widget.statistics.period.localizedLabel(context.l10n),
               style: TextStyle(
                 color: widget.config.resolvedSecondaryColor,
                 fontSize: 18,
@@ -372,7 +382,7 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
             ),
             const SizedBox(height: DS.xs),
             Text(
-              StatisticsReportGenerator._formatDate(DateTime.now()),
+              StatisticsReportGenerator._formatDate(DateTime.now(), context.l10n),
               style: TextStyle(
                 color:
                     widget.config.resolvedPrimaryColor.withValues(alpha: 0.7),

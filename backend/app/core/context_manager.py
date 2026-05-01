@@ -1,5 +1,7 @@
 from __future__ import annotations
 import asyncio
+import contextlib
+import inspect
 import json
 from collections import defaultdict
 from datetime import date, timedelta, timezone, datetime
@@ -18,9 +20,11 @@ from app.models.community import Group, GroupMember, GroupTaskClaim
 from app.schemas.error_book import ErrorQueryParams
 from app.schemas.task import TaskListQuery, TaskStatus
 from app.services.aurora_stage40_calendar_kill_switch_service import AuroraStage40CalendarKillSwitchService
+from app.services.capsule_favorite_service import CapsuleFavoriteService
 from app.services.error_book_service import ErrorBookService
 from app.services.focus_service import focus_service
 from app.services.galaxy_service import GalaxyService
+from app.services.memory_service import MemoryService
 from app.services.personalization.preference_service import PreferenceService
 from app.services.profile_context_service import ProfileContextService
 from app.services.social_signal_bridge import SocialSignalBridge
@@ -37,6 +41,7 @@ class CognitiveContext(BaseModel):
     User's aggregated cognitive context for LLM injection.
     Reflects the 'Learning Profile' of the user.
     """
+
     user_id: str
     timestamp: datetime
 
@@ -55,12 +60,26 @@ class CognitiveContext(BaseModel):
     # User Profile (User)
     preferences: dict[str, Any] = Field(default_factory=dict, description="Learning preferences")
     engagement_metrics: dict[str, Any] = Field(default_factory=dict, description="Engagement level and patterns")
-    community_context: dict[str, Any] = Field(default_factory=dict, description="Active community participation snapshot")
-    social_context: dict[str, Any] = Field(default_factory=dict, description="Stage 17 isolated social context namespace")
-    social_context_v1: dict[str, Any] = Field(default_factory=dict, description="Stage 33 read-only social signal summary")
+    community_context: dict[str, Any] = Field(
+        default_factory=dict, description="Active community participation snapshot"
+    )
+    social_context: dict[str, Any] = Field(
+        default_factory=dict, description="Stage 17 isolated social context namespace"
+    )
+    social_context_v1: dict[str, Any] = Field(
+        default_factory=dict, description="Stage 33 read-only social signal summary"
+    )
     profile_context: dict[str, Any] | None = Field(default=None, description="Unified profile context payload")
     achievement_summary: dict[str, Any] = Field(default_factory=dict, description="Read-only achievement summary")
     calendar_context: dict[str, Any] = Field(default_factory=dict, description="Read-only calendar constraints")
+    past_session_memory: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Recent cross-session episodic memories for prompt continuity",
+    )
+    capsule_preferences: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Favorite capsule-derived content depth and subject preferences",
+    )
 
     # Preference Version (for cache invalidation)
     preference_version: int = Field(default=0, description="Preference version for cache validation")
@@ -68,7 +87,7 @@ class CognitiveContext(BaseModel):
     def to_llm_system_prompt_context(self) -> str:
         """Convert to a string representation suitable for System Prompt injection"""
         # Compact representation
-        return json.dumps(self.model_dump(mode='json', exclude={'user_id', 'timestamp'}), ensure_ascii=False)
+        return json.dumps(self.model_dump(mode="json", exclude={"user_id", "timestamp"}), ensure_ascii=False)
 
 
 class ContextOrchestrator:
@@ -78,6 +97,7 @@ class ContextOrchestrator:
     """
 
     CACHE_TTL_SECONDS = 300  # 5 minutes cache
+    ACHIEVEMENT_PROGRESS_CONTEXT_TTL_SECONDS = 86400
     COMMUNITY_CONTEXT_ALLOWED_FIELDS = frozenset(
         {
             "active_group_count",
@@ -102,6 +122,75 @@ class ContextOrchestrator:
         self.user_service = UserService(db_session, redis_client)
         self.preference_service = PreferenceService(db_session, redis_client)
         self.profile_context_service = ProfileContextService(db_session, redis_client)
+
+    @classmethod
+    def _achievement_progress_context_key(cls, user_id: str) -> str:
+        return f"user:context:achievement_progress:{user_id}"
+
+    @staticmethod
+    async def _maybe_await(value):
+        if inspect.isawaitable(value):
+            return await value
+        return value
+
+    @classmethod
+    async def record_achievement_progress_event(cls, redis_client, event: dict[str, Any]) -> None:
+        """Persist a fresh achievement progress event for the next AI context build."""
+        if redis_client is None or not isinstance(event, dict):
+            return
+
+        user_id = str(event.get("user_id") or "").strip()
+        achievement_id = str(event.get("achievement_id") or "").strip()
+        if not user_id or not achievement_id:
+            return
+
+        try:
+            progress_percent = int(float(event.get("progress_percent") or 0))
+        except (TypeError, ValueError):
+            return
+        if progress_percent <= 0:
+            return
+
+        payload = {
+            "event_type": "achievement.progress",
+            "achievement_id": achievement_id,
+            "achievement_name": str(event.get("achievement_name") or achievement_id).strip(),
+            "progress_percent": progress_percent,
+            "timestamp": str(event.get("timestamp") or _utcnow().isoformat()),
+        }
+
+        key = cls._achievement_progress_context_key(user_id)
+        existing: list[dict[str, Any]] = []
+        try:
+            raw = await cls._maybe_await(redis_client.get(key))
+            if raw:
+                parsed = json.loads(raw)
+                if isinstance(parsed, list):
+                    existing = [item for item in parsed if isinstance(item, dict)]
+                elif isinstance(parsed, dict):
+                    existing = [parsed]
+        except Exception as exc:
+            logger.warning(f"Failed to read achievement progress context cache: {exc}")
+
+        merged = [payload]
+        for item in existing:
+            if item.get("achievement_id") == achievement_id and item.get("progress_percent") == progress_percent:
+                continue
+            merged.append(item)
+            if len(merged) >= 5:
+                break
+
+        try:
+            await cls._maybe_await(
+                redis_client.setex(
+                    key,
+                    cls.ACHIEVEMENT_PROGRESS_CONTEXT_TTL_SECONDS,
+                    json.dumps(merged, ensure_ascii=False),
+                )
+            )
+            await cls._maybe_await(redis_client.delete(f"user:context:snapshot:{user_id}"))
+        except Exception as exc:
+            logger.warning(f"Failed to write achievement progress context cache: {exc}")
 
     def _get_error_book_service(self, db_session: AsyncSession | None = None) -> ErrorBookService:
         db = db_session or self.db
@@ -140,10 +229,14 @@ class ContextOrchestrator:
                 # 验证偏好版本是否一致
                 current_version = await self._get_preference_version(user_id)
                 if cached.preference_version == current_version:
+                    with contextlib.suppress(Exception):
+                        cached.past_session_memory = await self._get_past_session_memory(UUID(user_id))
                     return cached
                 # 版本不一致，需要刷新
-                logger.info(f"Preference version changed for user {user_id}: "
-                           f"cached={cached.preference_version}, current={current_version}, refreshing context")
+                logger.info(
+                    f"Preference version changed for user {user_id}: "
+                    f"cached={cached.preference_version}, current={current_version}, refreshing context"
+                )
 
         uid = UUID(user_id)
 
@@ -167,7 +260,8 @@ class ContextOrchestrator:
             _with_session(lambda db: self._get_social_context_v1(uid, db)),  # type: ignore[misc]
             _with_session(lambda db: self._get_achievement_context(uid, db)),  # type: ignore[misc]
             _with_session(lambda db: self._get_calendar_context(uid, db)),  # type: ignore[misc]
-            return_exceptions=True
+            _with_session(lambda db: self._get_capsule_preferences(uid, db)),  # type: ignore[misc]
+            return_exceptions=True,
         )
 
         # Unpack results
@@ -179,6 +273,12 @@ class ContextOrchestrator:
         social_data = self._handle_result(results[5], "social", {})
         achievement_data = self._handle_result(results[6], "achievement", {})
         calendar_data = self._handle_result(results[7], "calendar", {})
+        capsule_preferences = self._handle_result(results[8], "capsule_preferences", {})
+        achievement_progress_events = await self._get_recent_achievement_progress_events(user_id)
+        if achievement_progress_events:
+            achievement_data = dict(achievement_data or {})
+            achievement_data["recent_progress_events"] = achievement_progress_events
+        past_session_memory = await self._get_past_session_memory(uid)
 
         knowledge_summary = {}
         preference_version = 0
@@ -188,27 +288,24 @@ class ContextOrchestrator:
             profile_context_payload = profile_context.to_prompt_context()
             preferences = profile_context.preferences or {}
             preference_version = profile_context.preference_version or 0
-            knowledge_summary = (profile_context.knowledge_summary.model_dump(mode="json")
-                                 if profile_context.knowledge_summary else {})
+            knowledge_summary = (
+                profile_context.knowledge_summary.model_dump(mode="json") if profile_context.knowledge_summary else {}
+            )
 
         # Construct Context Object
         context = CognitiveContext(
             user_id=user_id,
             timestamp=_utcnow(),
-
             knowledge_stats={
                 "overall_mastery": knowledge_summary.get("overall_mastery", 0.0),
                 "active_learning_subjects": knowledge_summary.get("active_learning_subjects", []),
                 "weak_spots": knowledge_summary.get("weak_spots", []),
             },
             recent_mastery_changes=knowledge_summary.get("recent_mastery_changes", []),
-
             error_summary=error_data.get("summary", {}),
             recent_errors=error_data.get("recent", []),
-
             active_tasks=task_data.get("tasks", []),
             focus_stats=task_data.get("focus", {}),
-
             preferences=preferences,
             engagement_metrics=metrics_data or {},
             community_context=self._assert_allowed_community_context(community_data or {}),
@@ -217,7 +314,8 @@ class ContextOrchestrator:
             profile_context=profile_context_payload,
             achievement_summary=achievement_data or {},
             calendar_context=calendar_data or {},
-
+            past_session_memory=past_session_memory,
+            capsule_preferences=capsule_preferences or {},
             # 记录偏好版本用于缓存验证
             preference_version=preference_version,
         )
@@ -229,8 +327,13 @@ class ContextOrchestrator:
 
         return context
 
+    async def get_context(self, user_id: str, force_refresh: bool = False) -> CognitiveContext:
+        """Compatibility wrapper for call sites that refer to the aggregate context as get_context."""
+        return await self.get_user_context(user_id, force_refresh=force_refresh)
+
     def _sanitize_context(self, context: CognitiveContext) -> CognitiveContext:
         sensitive_keys = {"email", "phone", "device_id", "ip_address", "raw_content", "sensitive_tags"}
+
         def _clean(data: dict[str, Any]) -> dict[str, Any]:
             return {k: v for k, v in data.items() if k not in sensitive_keys}
 
@@ -238,7 +341,96 @@ class ContextOrchestrator:
         context.engagement_metrics = _clean(context.engagement_metrics)
         context.achievement_summary = _clean(context.achievement_summary)
         context.calendar_context = _clean(context.calendar_context)
+        context.capsule_preferences = _clean(context.capsule_preferences)
         return context
+
+    async def _get_past_session_memory(
+        self,
+        user_id: UUID,
+        db_session: AsyncSession | None = None,
+        limit: int = 3,
+    ) -> list[dict[str, Any]]:
+        try:
+            service = MemoryService(db_session or self.db)
+            rows = await service.get_recent_episodic(user_id, limit=limit)
+        except Exception as exc:
+            logger.warning(f"Failed to load past session memory: {exc}")
+            return []
+
+        memories: list[dict[str, Any]] = []
+        for item in rows:
+            summary = str(getattr(item, "summary", "") or "").strip()
+            if not summary:
+                continue
+            memories.append(
+                {
+                    "id": str(getattr(item, "id", "")),
+                    "summary": summary,
+                    "subject_type": str(getattr(item, "subject_type", "") or "").strip(),
+                    "source_type": str(getattr(item, "source_type", "") or "").strip(),
+                    "occurred_at": (
+                        item.occurred_at.isoformat() if getattr(item, "occurred_at", None) is not None else None
+                    ),
+                    "tags": list(getattr(item, "tags", None) or []),
+                }
+            )
+        return memories
+
+    async def _get_capsule_preferences(
+        self,
+        user_id: UUID,
+        db_session: AsyncSession | None = None,
+    ) -> dict[str, Any]:
+        db = db_session or self.db
+        try:
+            favorite_preferences = await CapsuleFavoriteService().get_preferences(user_id, db)
+        except Exception as exc:
+            logger.warning(f"Failed to load capsule preferences: {exc}")
+            favorite_preferences = {}
+        try:
+            stored_preferences = await self._get_profile_capsule_preferences(user_id, db)
+        except Exception as exc:
+            logger.warning(f"Failed to load stored capsule preferences: {exc}")
+            stored_preferences = {}
+        return self._merge_capsule_preferences(stored_preferences, favorite_preferences)
+
+    async def _get_profile_capsule_preferences(
+        self,
+        user_id: UUID,
+        db_session: AsyncSession,
+    ) -> dict[str, Any]:
+        prefs = await self._get_preference_service(db_session).get_preferences(user_id)
+        inferred = dict(prefs.inferred or {}) if prefs else {}
+        capsule_preferences = inferred.get("capsule_preferences")
+        if isinstance(capsule_preferences, dict):
+            return capsule_preferences
+        methods = inferred.get("capsule_method_preferences")
+        if isinstance(methods, list):
+            return {
+                "favorite_count": inferred.get("capsule_favorite_count") or 0,
+                "content_depth_preference": inferred.get("content_depth_preference"),
+                "subject_affinity": inferred.get("content_subject_affinities") or [],
+                "method_preferences": methods,
+                "method_preference_summary": [
+                    f"用户偏好{str(method.get('label') or '').strip()}"
+                    for method in methods
+                    if isinstance(method, dict) and str(method.get("label") or "").strip()
+                ],
+            }
+        return {}
+
+    @staticmethod
+    def _merge_capsule_preferences(
+        stored_preferences: dict[str, Any],
+        favorite_preferences: dict[str, Any],
+    ) -> dict[str, Any]:
+        merged = dict(stored_preferences or {})
+        merged.update(
+            {key: value for key, value in dict(favorite_preferences or {}).items() if value not in (None, [], {})}
+        )
+        if "favorite_count" not in merged:
+            merged["favorite_count"] = 0
+        return merged
 
     async def _get_social_context_v1(
         self,
@@ -276,6 +468,38 @@ class ContextOrchestrator:
             logger.warning(f"Cache get failed for user context: {e}")
         return None
 
+    async def _get_recent_achievement_progress_events(self, user_id: str) -> list[dict[str, Any]]:
+        if not self.redis:
+            return []
+        try:
+            raw = await self._maybe_await(self.redis.get(self._achievement_progress_context_key(user_id)))
+            if not raw:
+                return []
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict):
+                parsed = [parsed]
+            if not isinstance(parsed, list):
+                return []
+            events: list[dict[str, Any]] = []
+            for item in parsed[:5]:
+                if not isinstance(item, dict):
+                    continue
+                achievement_id = str(item.get("achievement_id") or "").strip()
+                if not achievement_id:
+                    continue
+                events.append(
+                    {
+                        "achievement_id": achievement_id,
+                        "achievement_name": str(item.get("achievement_name") or achievement_id).strip(),
+                        "progress_percent": int(float(item.get("progress_percent") or 0)),
+                        "timestamp": item.get("timestamp"),
+                    }
+                )
+            return events
+        except Exception as exc:
+            logger.warning(f"Failed to load achievement progress context events: {exc}")
+            return []
+
     async def _cache_context(self, user_id: str, context: CognitiveContext):
         if not self.redis:
             return
@@ -299,10 +523,7 @@ class ContextOrchestrator:
         # Assuming we might want to add a method to GalaxyService later for "recent updates".
         recent = []
 
-        return {
-            "stats": stats,
-            "recent": recent
-        }
+        return {"stats": stats, "recent": recent}
 
     async def _get_error_profile(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
         """Fetch Error Book stats and recent errors"""
@@ -313,24 +534,22 @@ class ContextOrchestrator:
         # 2. Recent Errors (Top 5 pending review or just created)
         # We want "Recent High Frequency Errors" or just "Recent Errors"
         errors, _ = await service.list_errors(
-            user_id,
-            ErrorQueryParams(page=1, page_size=5, need_review=False) # Just latest
+            user_id, ErrorQueryParams(page=1, page_size=5, need_review=False)  # Just latest
         )
 
         recent_errors_data = []
         for e in errors:
-            recent_errors_data.append({
-                "id": str(e.id),
-                "question_preview": e.question_text[:50] if e.question_text else "Image Question",
-                "subject": e.subject_code,
-                "error_type": e.latest_analysis.get("error_type_label") if e.latest_analysis else "Unknown",
-                "mastery": e.mastery_level
-            })
+            recent_errors_data.append(
+                {
+                    "id": str(e.id),
+                    "question_preview": e.question_text[:50] if e.question_text else "Image Question",
+                    "subject": e.subject_code,
+                    "error_type": e.latest_analysis.get("error_type_label") if e.latest_analysis else "Unknown",
+                    "mastery": e.mastery_level,
+                }
+            )
 
-        return {
-            "summary": stats,
-            "recent": recent_errors_data
-        }
+        return {"summary": stats, "recent": recent_errors_data}
 
     async def _get_task_profile(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
         """Fetch Active Tasks and Focus Stats"""
@@ -338,28 +557,25 @@ class ContextOrchestrator:
         db = db_session if db_session is not None else self.db
         # 1. Active Tasks
         tasks, _ = await TaskService.get_multi(
-            db,
-            user_id,
-            TaskListQuery(page=1, page_size=5, status=TaskStatus.PENDING)
+            db, user_id, TaskListQuery(page=1, page_size=5, status=TaskStatus.PENDING)
         )
 
         active_tasks_data = []
         for t in tasks:
-            active_tasks_data.append({
-                "id": str(t.id),
-                "title": t.title,
-                "priority": t.priority,
-                "due_date": t.due_date.isoformat() if t.due_date else None,
-                "type": t.type.value
-            })
+            active_tasks_data.append(
+                {
+                    "id": str(t.id),
+                    "title": t.title,
+                    "priority": t.priority,
+                    "due_date": t.due_date.isoformat() if t.due_date else None,
+                    "type": t.type.value,
+                }
+            )
 
         # 2. Focus Stats
         focus = await focus_service.get_today_stats(db, user_id)
 
-        return {
-            "tasks": active_tasks_data,
-            "focus": focus
-        }
+        return {"tasks": active_tasks_data, "focus": focus}
 
     async def _get_user_profile(self, user_id: UUID) -> dict[str, Any]:
         """Fetch User Context and Analytics"""
@@ -373,10 +589,7 @@ class ContextOrchestrator:
         # 2. Analytics
         analytics = await service.get_analytics_summary(user_id)
 
-        return {
-            "preferences": preferences,
-            "metrics": analytics
-        }
+        return {"preferences": preferences, "metrics": analytics}
 
     async def _get_user_metrics(self, user_id: UUID, db_session: AsyncSession | None = None) -> dict[str, Any]:
         """Fetch analytics metrics only."""
@@ -451,7 +664,11 @@ class ContextOrchestrator:
         }
         total_score = 0.0
         for user_achievement, achievement in score_result.all():
-            rarity = achievement.rarity.value if hasattr(achievement.rarity, "value") else str(achievement.rarity or "common")
+            rarity = (
+                achievement.rarity.value
+                if hasattr(achievement.rarity, "value")
+                else str(achievement.rarity or "common")
+            )
             weight = rarity_weights.get(rarity, 1.0)
             progress = float(user_achievement.progress or 0.0)
             total_score += weight if user_achievement.unlocked_at else (progress * weight)
@@ -492,8 +709,8 @@ class ContextOrchestrator:
             .where(
                 CalendarEvent.user_id == user_id,
                 CalendarEvent.deleted_at.is_(None),
-                CalendarEvent.start_time >= now,
-                CalendarEvent.start_time <= week_end,
+                CalendarEvent.start_time < week_end,
+                CalendarEvent.end_time > today_start,
             )
             .order_by(CalendarEvent.start_time)
         )
@@ -509,28 +726,61 @@ class ContextOrchestrator:
 
         upcoming_deadlines = []
         for event in week_events[:6]:
-            if event.task_id is None and event.plan_id is None:
+            event_kind = self._calendar_event_kind(event)
+            if event.task_id is None and event.plan_id is None and event_kind not in {"exam", "deadline"}:
                 continue
             upcoming_deadlines.append(
                 {
                     "title": event.title,
                     "start_time": event.start_time.isoformat(),
                     "end_time": event.end_time.isoformat(),
-                    "source": "task" if event.task_id else "plan",
+                    "source": "task" if event.task_id else "plan" if event.plan_id else "calendar",
+                    "kind": event_kind,
                 }
             )
 
         time_blocks_today = self._derive_available_time_blocks(today_events, reference_day=today_start.date())
+        busy_events_today = self._serialize_busy_calendar_events(today_events)
+        busy_events_by_date: dict[str, list[dict[str, Any]]] = {}
+        time_blocks_by_date: dict[str, list[dict[str, str]]] = {}
+        for offset in range(7):
+            target_day = today_start.date() + timedelta(days=offset)
+            day_events = [
+                event
+                for event in week_events
+                if (event.start_time.replace(tzinfo=None) if event.start_time.tzinfo else event.start_time).date()
+                == target_day
+            ]
+            if offset == 0:
+                day_events = today_events
+            day_key = target_day.isoformat()
+            serialized = self._serialize_busy_calendar_events(day_events)
+            if serialized:
+                busy_events_by_date[day_key] = serialized
+            blocks = self._derive_available_time_blocks(day_events, reference_day=target_day)
+            if blocks:
+                time_blocks_by_date[day_key] = blocks
         workload_density = self._derive_workload_density(week_events)
 
-        if not upcoming_deadlines and not time_blocks_today and not workload_density and not exam_urgency:
+        if (
+            not upcoming_deadlines
+            and not time_blocks_today
+            and not busy_events_today
+            and not busy_events_by_date
+            and not workload_density
+            and not exam_urgency
+        ):
             if mode != "live":
                 return {"_stage40_mode": mode}
             return {}
 
         payload = {
+            "today": today_start.date().isoformat(),
             "upcoming_deadlines": upcoming_deadlines,
             "time_blocks_today": time_blocks_today,
+            "time_blocks_by_date": time_blocks_by_date,
+            "busy_events": busy_events_today,
+            "busy_events_by_date": busy_events_by_date,
             "workload_density": workload_density,
             "exam_urgency": exam_urgency or {},
         }
@@ -606,7 +856,7 @@ class ContextOrchestrator:
                 total_claims, completed_claims = claim_map.get(group.id, (0, 0))
                 progress = round((completed_claims / total_claims) * 100) if total_claims else 0
                 sprint_summaries.append(
-                    f"\"{group.name}\" 群组进度 {progress}%，你的贡献 {completed_claims}/{max(total_claims, 1)} 任务"
+                    f'"{group.name}" 群组进度 {progress}%，你的贡献 {completed_claims}/{max(total_claims, 1)} 任务'
                 )
 
         unfinished_claims = await db.execute(
@@ -646,6 +896,58 @@ class ContextOrchestrator:
             "pending_group_task_count": pending_group_tasks,
             "summary_lines": summary_lines,
         }
+
+    @classmethod
+    def _serialize_busy_calendar_events(cls, events: list[CalendarEvent]) -> list[dict[str, Any]]:
+        serialized: list[dict[str, Any]] = []
+        for event in events:
+            start = event.start_time.replace(tzinfo=None) if event.start_time.tzinfo else event.start_time
+            end = event.end_time.replace(tzinfo=None) if event.end_time.tzinfo else event.end_time
+            if end <= start:
+                continue
+            kind = cls._calendar_event_kind(event)
+            serialized.append(
+                {
+                    "title": event.title,
+                    "start_time": start.isoformat(),
+                    "end_time": end.isoformat(),
+                    "start": start.strftime("%H:%M"),
+                    "end": end.strftime("%H:%M"),
+                    "date": start.date().isoformat(),
+                    "kind": kind,
+                    "is_all_day": bool(event.is_all_day),
+                    "source": event.source,
+                    "task_id": str(event.task_id) if event.task_id else None,
+                    "plan_id": str(event.plan_id) if event.plan_id else None,
+                }
+            )
+        return serialized[:8]
+
+    @staticmethod
+    def _calendar_event_kind(event: CalendarEvent) -> str:
+        metadata = event.source_metadata if isinstance(event.source_metadata, dict) else {}
+        raw_kind = (
+            str(
+                metadata.get("kind")
+                or metadata.get("event_type")
+                or metadata.get("type")
+                or metadata.get("category")
+                or ""
+            )
+            .strip()
+            .lower()
+        )
+        if raw_kind in {"exam", "test", "quiz", "deadline", "class", "course", "lecture"}:
+            return "class" if raw_kind in {"course", "lecture"} else raw_kind
+
+        title = str(event.title or "").lower()
+        if any(token in title for token in ("考试", "期末", "测验", "exam", "quiz", "test")):
+            return "exam"
+        if any(token in title for token in ("截止", "ddl", "deadline", "due")):
+            return "deadline"
+        if any(token in title for token in ("上课", "课程", "课堂", "lecture", "class", "course", "seminar", "lab")):
+            return "class"
+        return "busy"
 
     @staticmethod
     def _derive_available_time_blocks(events: list[CalendarEvent], *, reference_day: date) -> list[dict[str, str]]:

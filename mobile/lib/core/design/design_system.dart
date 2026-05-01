@@ -872,10 +872,10 @@ class DS {
     final duration = switch (role) {
       SparkleFeedbackRole.loading => const Duration(milliseconds: 1400),
       SparkleFeedbackRole.undoable => const Duration(seconds: 4),
+      SparkleFeedbackRole.error => const Duration(seconds: 6),
+      SparkleFeedbackRole.warning => const Duration(seconds: 5),
       SparkleFeedbackRole.info ||
-      SparkleFeedbackRole.success ||
-      SparkleFeedbackRole.warning ||
-      SparkleFeedbackRole.error =>
+      SparkleFeedbackRole.success =>
         const Duration(seconds: 3),
     };
 
@@ -902,12 +902,14 @@ class DS {
   static const double spacing8 = 8.0;
   static const double spacing10 = 10.0;
   static const double spacing12 = 12.0;
+  static const double spacing14 = 14.0;
   static const double spacing16 = 16.0;
   static const double spacing18 = 18.0;
   static const double spacing20 = 20.0;
   static const double spacing24 = 24.0;
   static const double spacing32 = 32.0;
   static const double spacing40 = 40.0;
+  static const double spacing56 = 56.0;
   static const double spacing64 = 64.0;
 
   // Const aliases for backward compatibility

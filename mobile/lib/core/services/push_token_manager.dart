@@ -26,8 +26,13 @@ class PushTokenManager extends AsyncNotifier<void> {
 
   @override
   Future<void> build() async {
-    // Initialize device ID on build
-    _deviceId = await _getOrCreateDeviceId();
+    try {
+      // Initialize device ID on build
+      _deviceId = await _getOrCreateDeviceId();
+    } catch (error, stackTrace) {
+      _logger.e('Failed to initialize push token manager', error: error);
+      Error.throwWithStackTrace(error, stackTrace);
+    }
   }
 
   /// Get or create a unique device identifier
@@ -42,10 +47,12 @@ class PushTokenManager extends AsyncNotifier<void> {
 
       if (Platform.isAndroid) {
         final androidInfo = await deviceInfo.androidInfo;
-        identifier = '${androidInfo.brand}_${androidInfo.model}_${androidInfo.id}';
+        identifier =
+            '${androidInfo.brand}_${androidInfo.model}_${androidInfo.id}';
       } else if (Platform.isIOS) {
         final iosInfo = await deviceInfo.iosInfo;
-        identifier = '${iosInfo.name}_${iosInfo.model}_${iosInfo.identifierForVendor ?? "unknown"}';
+        identifier =
+            '${iosInfo.name}_${iosInfo.model}_${iosInfo.identifierForVendor ?? "unknown"}';
       } else {
         identifier = 'unknown_${DateTime.now().millisecondsSinceEpoch}';
       }
@@ -86,7 +93,11 @@ class PushTokenManager extends AsyncNotifier<void> {
 
     try {
       final deviceId = await _getOrCreateDeviceId();
-      final platform = Platform.isIOS ? 'ios' : Platform.isAndroid ? 'android' : 'web';
+      final platform = Platform.isIOS
+          ? 'ios'
+          : Platform.isAndroid
+              ? 'android'
+              : 'web';
 
       // Determine token type if not provided
       final resolvedTokenType = tokenType ?? _inferTokenType();
@@ -145,7 +156,8 @@ class PushTokenManager extends AsyncNotifier<void> {
         final prefs = ref.read(sharedPreferencesProvider);
         await prefs.setString(_lastTokenKey, token);
 
-        _logger.i('Successfully registered $resolvedTokenType push token for device $deviceId');
+        _logger.i(
+            'Successfully registered $resolvedTokenType push token for device $deviceId');
         return true;
       }
 

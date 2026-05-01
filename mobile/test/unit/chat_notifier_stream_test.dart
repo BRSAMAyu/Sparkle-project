@@ -18,7 +18,9 @@ import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.da
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
+import 'package:sparkle/features/chat/presentation/providers/guidance_mode_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
+import 'package:sparkle/features/seed_library/presentation/providers/seed_library_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class _NoopApiClient extends ApiClient {
@@ -88,6 +90,7 @@ class _FakeChatRepository extends ChatRepository {
     List<String>? fileIds,
     bool includeReferences = false,
     String? chatMode,
+    bool? useDocumentContext,
   }) {
     return _streamFactory(
       message,
@@ -153,6 +156,12 @@ class _FakeRef implements Ref {
     }
     if (provider == systemUpdateLevelProvider) {
       return 0 as T;
+    }
+    if (provider == guidanceModeProvider) {
+      return GuidanceMode.aiGuide as T;
+    }
+    if (provider == subscriptionsProvider) {
+      return const SubscriptionsState() as T;
     }
     throw UnimplementedError('Unsupported provider read: $provider');
   }

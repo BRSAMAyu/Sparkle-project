@@ -36,6 +36,9 @@ from app.models.intervention_adaptive import (  # noqa: F401
 )
 from app.models.intervention_strategy_outcome import InterventionStrategyOutcome  # noqa: F401
 from app.models.distilled_strategy_cache import DistilledStrategyCacheEntry  # noqa: F401
+from app.models.document_chunks import DocumentChunk  # noqa: F401
+from app.models.document_feedback import DocumentRetrievalFeedback  # noqa: F401
+from app.models.file_storage import StoredFile  # noqa: F401
 from app.models.task_feedback import TaskFeedback  # noqa: F401
 from app.models.session_completion import SessionCompletion  # noqa: F401
 from app.models.srl_phase_state import SRLPhaseStateRecord  # noqa: F401

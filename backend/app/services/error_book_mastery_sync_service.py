@@ -15,6 +15,7 @@ After this service:
 
 See: docs/product/implementation/ERROR_BOOK_TO_KNOWLEDGE_MASTERY_IMPLEMENTATION_2026-04-02.md
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
@@ -32,7 +33,6 @@ from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.galaxy.stats_service import GalaxyStatsService
-
 
 # ---------------------------------------------------------------------------
 # Error type → mastery impact weights
@@ -57,9 +57,17 @@ REVIEW_PERFORMANCE_IMPACT: dict[str, int] = {
     "fuzzy": 1,
     "forgot": -2,
 }
+NO_LINKED_NODE_HINT = {
+    "code": "missing_knowledge_links",
+    "message": (
+        "暂时没有关联到知识节点。补充学科/章节，或先到 Galaxy 关联课程后再分析，"
+        "星图就能同步这道错题。"
+    ),
+    "action": "add_subject_or_link_course",
+}
 
 # Safety limits
-MAX_SINGLE_ERROR_IMPACT = 10   # 单次错题最多对单节点扣10分
+MAX_SINGLE_ERROR_IMPACT = 10  # 单次错题最多对单节点扣10分
 MIN_MASTERY_SCORE = 0
 MAX_MASTERY_SCORE = 100
 LOW_MASTERY_REPLAN_THRESHOLD = 50
@@ -102,6 +110,7 @@ class ErrorBookMasterySyncService:
         """
         linked_ids = getattr(error_record, "linked_knowledge_node_ids", None) or []
         if not linked_ids:
+            self._attach_no_linked_node_hint(error_record)
             return []
 
         error_type = self._extract_error_type(error_record)
@@ -133,8 +142,7 @@ class ErrorBookMasterySyncService:
 
         if results:
             logger.info(
-                "ErrorBookMasterySync: applied diagnosis for error {}, "
-                "type={}, affected {} nodes",
+                "ErrorBookMasterySync: applied diagnosis for error {}, " "type={}, affected {} nodes",
                 getattr(error_record, "id", "?"),
                 error_type,
                 len(results),
@@ -169,6 +177,7 @@ class ErrorBookMasterySyncService:
         """
         linked_ids = getattr(error_record, "linked_knowledge_node_ids", None) or []
         if not linked_ids:
+            self._attach_no_linked_node_hint(error_record)
             return []
 
         delta = REVIEW_PERFORMANCE_IMPACT.get(performance, 0)
@@ -190,8 +199,7 @@ class ErrorBookMasterySyncService:
 
         if results:
             logger.info(
-                "ErrorBookMasterySync: applied review feedback for error {}, "
-                "performance={}, affected {} nodes",
+                "ErrorBookMasterySync: applied review feedback for error {}, " "performance={}, affected {} nodes",
                 getattr(error_record, "id", "?"),
                 performance,
                 len(results),
@@ -202,6 +210,16 @@ class ErrorBookMasterySyncService:
     # -----------------------------------------------------------------------
     # Core mastery update
     # -----------------------------------------------------------------------
+
+    @staticmethod
+    def _attach_no_linked_node_hint(error_record: Any) -> None:
+        """Attach a response-visible hint when an error cannot affect Galaxy yet."""
+        latest_analysis = getattr(error_record, "latest_analysis", None)
+        if not isinstance(latest_analysis, dict):
+            latest_analysis = {}
+        updated_analysis = dict(latest_analysis)
+        updated_analysis["linking_hint"] = dict(NO_LINKED_NODE_HINT)
+        setattr(error_record, "latest_analysis", updated_analysis)
 
     async def _update_node_mastery(
         self,
@@ -233,29 +251,43 @@ class ErrorBookMasterySyncService:
             if not status:
                 logger.warning(
                     "ErrorBookMasterySync: could not create status for user={}/node={}",
-                    user_id, node_id,
+                    user_id,
+                    node_id,
                 )
                 return None
 
         if new_mastery == old_mastery:
             return None
 
-        # 2. Update mastery
-        now = _utcnow()
-        was_unlocked = bool(status.is_unlocked)
-        status.mastery_score = new_mastery
-        status.study_count = (status.study_count or 0) + 1
-        status.last_study_at = now
+        revision = getattr(status, "revision", None)
+        update_result = await self._write_node_mastery_via_galaxy(
+            user_id=user_id,
+            node_id=node_id,
+            new_mastery=new_mastery,
+            reason=reason,
+            request_id=f"{record_type}:{error_id}:{node_id}" if error_id else f"{record_type}:{node_id}",
+            revision=int(revision) if revision is not None else None,
+        )
+        if not update_result or update_result.get("success") is False:
+            logger.warning(
+                "ErrorBookMasterySync: GalaxyService rejected mastery update for user={}/node={}, reason={}",
+                user_id,
+                node_id,
+                (update_result or {}).get("reason"),
+            )
+            return None
 
-        # 3. Update BKT mastery probability & next_review_at (fix #3)
-        # Scale mastery_score (0-100) → bkt_mastery_prob (0.0-1.0)
-        status.bkt_mastery_prob = max(0.0, min(new_mastery / 100.0, 1.0))
-        status.bkt_last_updated_at = now
-        status.next_review_at = self.stats_service._calculate_next_review(float(new_mastery))
-        if new_mastery > 0:
-            status.is_unlocked = True
-            if not was_unlocked and getattr(status, "first_unlock_at", None) is None:
-                status.first_unlock_at = now
+        old_mastery = int(round(float(update_result.get("old_mastery", old_mastery) or 0)))
+        new_mastery = int(round(float(update_result.get("new_mastery", new_mastery) or 0)))
+
+        refreshed_status = await self._get_or_create_node_status(
+            user_id,
+            node_id,
+            create_if_missing=False,
+        )
+        if refreshed_status is not None:
+            refreshed_status.study_count = (refreshed_status.study_count or 0) + 1
+            refreshed_status.next_review_at = self.stats_service._calculate_next_review(float(new_mastery))
 
         # 4. Write StudyRecord
         study_record = StudyRecord(
@@ -289,6 +321,27 @@ class ErrorBookMasterySyncService:
             "record_type": record_type,
             "_pending_event": pending_event,
         }
+
+    async def _write_node_mastery_via_galaxy(
+        self,
+        *,
+        user_id: UUID,
+        node_id: UUID,
+        new_mastery: int,
+        reason: str,
+        request_id: str,
+        revision: int | None,
+    ) -> dict | None:
+        from app.services.galaxy_service import GalaxyService
+
+        return await GalaxyService(self.db).update_node_mastery(
+            user_id=user_id,
+            node_id=node_id,
+            new_mastery=new_mastery,
+            reason=reason,
+            request_id=request_id,
+            revision=revision,
+        )
 
     # -----------------------------------------------------------------------
     # Helpers
@@ -334,7 +387,9 @@ class ErrorBookMasterySyncService:
         except Exception as exc:
             logger.warning(
                 "ErrorBookMasterySync: get/create failed for {}/{}: {}",
-                user_id, node_id, exc,
+                user_id,
+                node_id,
+                exc,
             )
             return None
 
@@ -429,14 +484,11 @@ class ErrorBookMasterySyncService:
         user_id: UUID,
         node_id: UUID,
     ) -> set[UUID]:
-        stmt = (
-            select(Card.id)
-            .where(
-                Card.card_type == CardType.KNOWLEDGE,
-                Card.owner_id == user_id,
-                Card.metadata_["knowledge_node_id"].as_string() == str(node_id),
-                Card.not_deleted_filter(),
-            )
+        stmt = select(Card.id).where(
+            Card.card_type == CardType.KNOWLEDGE,
+            Card.owner_id == user_id,
+            Card.metadata_["knowledge_node_id"].as_string() == str(node_id),
+            Card.not_deleted_filter(),
         )
         result = await self.db.execute(stmt)
         knowledge_card_ids = list(result.scalars().all())
@@ -537,8 +589,7 @@ class ErrorBookMasterySyncService:
                 )
             except Exception as exc:
                 logger.warning(
-                    "ErrorBookMasterySync: immediate plan health evaluation failed "
-                    "for user={}/plan={}: {}",
+                    "ErrorBookMasterySync: immediate plan health evaluation failed " "for user={}/plan={}: {}",
                     user_id,
                     plan_id,
                     exc,

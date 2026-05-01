@@ -146,11 +146,12 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
         : await ref.read(achievementRepositoryProvider).getAchievements();
 
     final achievements = response?.achievements ?? state.achievements;
-    final unlockedAchievements = achievements
-        .where((a) => a.isUnlocked)
-        .toList()
-      ..sort((a, b) => (b.userProgress?.unlockedAt ?? DateTime(1970))
-          .compareTo(a.userProgress?.unlockedAt ?? DateTime(1970)),);
+    final unlockedAchievements =
+        achievements.where((a) => a.isUnlocked).toList()
+          ..sort(
+            (a, b) => (b.userProgress?.unlockedAt ?? DateTime(1970))
+                .compareTo(a.userProgress?.unlockedAt ?? DateTime(1970)),
+          );
 
     return unlockedAchievements.take(10).map((achievement) {
       final rarity = achievement.achievement.rarity;
@@ -189,23 +190,26 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
     final loadedPlans = state.plans.isNotEmpty
         ? state.plans
         : await ref.read(planRepositoryProvider).getPlans();
-    final activePlans = loadedPlans
-        .where((plan) => plan.isActive)
-        .toList()
+    final activePlans = loadedPlans.where((plan) => plan.isActive).toList()
       ..sort((a, b) => b.progress.compareTo(a.progress));
 
-    return activePlans.take(10).map((plan) => QuickShareItem(
-        id: plan.id,
-        title: plan.name,
-        subtitle: '进度: ${(plan.progress * 100).toStringAsFixed(0)}%',
-        contentType: ShareableContentType.planProgress,
-        icon: Icons.flag,
-        iconColor: DS.info,
-        metadata: {
-          'progress': plan.progress,
-          'subject': plan.subject,
-        },
-      ),).toList();
+    return activePlans
+        .take(10)
+        .map(
+          (plan) => QuickShareItem(
+            id: plan.id,
+            title: plan.name,
+            subtitle: '进度: ${(plan.progress * 100).toStringAsFixed(0)}%',
+            contentType: ShareableContentType.planProgress,
+            icon: Icons.flag,
+            iconColor: DS.info,
+            metadata: {
+              'progress': plan.progress,
+              'subject': plan.subject,
+            },
+          ),
+        )
+        .toList();
   }
 
   Future<List<QuickShareItem>> _loadRecentTasks() async {
@@ -217,6 +221,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
         .where((t) =>
             t.status == TaskStatus.completed ||
             t.status == TaskStatus.inProgress ||
+            t.status == TaskStatus.stuck ||
             t.status == TaskStatus.pending)
         .toList()
       ..sort(
@@ -224,18 +229,24 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
             .compareTo(a.completedAt ?? a.updatedAt),
       );
 
-    return tasks.take(10).map((task) => QuickShareItem(
-        id: task.id,
-        title: task.title,
-        subtitle: '${_taskStatusLabel(task.status)} · ${task.actualMinutes ?? task.estimatedMinutes}分钟',
-        contentType: ShareableContentType.taskCompletion,
-        icon: Icons.task_alt,
-        iconColor: DS.success,
-        metadata: {
-          'duration': task.actualMinutes ?? task.estimatedMinutes,
-          'type': task.type.name,
-        },
-      ),).toList();
+    return tasks
+        .take(10)
+        .map(
+          (task) => QuickShareItem(
+            id: task.id,
+            title: task.title,
+            subtitle:
+                '${_taskStatusLabel(task.status)} · ${task.actualMinutes ?? task.estimatedMinutes}分钟',
+            contentType: ShareableContentType.taskCompletion,
+            icon: Icons.task_alt,
+            iconColor: DS.success,
+            metadata: {
+              'duration': task.actualMinutes ?? task.estimatedMinutes,
+              'type': task.type.name,
+            },
+          ),
+        )
+        .toList();
   }
 
   Future<List<QuickShareItem>> _loadKnowledgeNodes() async {
@@ -268,6 +279,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
   String _taskStatusLabel(TaskStatus status) => switch (status) {
         TaskStatus.completed => '已完成',
         TaskStatus.inProgress => '进行中',
+        TaskStatus.stuck => '卡住了',
         TaskStatus.pending => '待开始',
         TaskStatus.abandoned => '已放弃',
       };
@@ -281,65 +293,65 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle bar
-            Container(
-              width: 36,
-              height: 4,
-              margin: const EdgeInsets.only(top: DS.md),
-              decoration: BoxDecoration(
-                color: DS.neutral300,
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-
-            // Title
-            Padding(
-              padding: const EdgeInsets.all(DS.lg),
-              child: Text(
-                '快捷分享',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-
-            // Category tabs
-            TabBar(
-              controller: _tabController,
-              labelColor: DS.brandPrimary,
-              indicatorColor: DS.brandPrimary,
-              tabs: const [
-                Tab(icon: Icon(Icons.emoji_events), text: '成就'),
-                Tab(icon: Icon(Icons.flag), text: '计划'),
-                Tab(icon: Icon(Icons.task_alt), text: '任务'),
-                Tab(icon: Icon(Icons.school), text: '知识'),
-              ],
-            ),
-
-            // Content
-            SizedBox(
-              height: 300,
-              child: TabBarView(
-                controller: _tabController,
-                children: List.generate(
-                  4,
-                  (_) => _buildItemList(),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 36,
+                height: 4,
+                margin: const EdgeInsets.only(top: DS.md),
+                decoration: BoxDecoration(
+                  color: DS.neutral300,
+                  borderRadius: BorderRadius.circular(4),
                 ),
               ),
-            ),
 
-            const SizedBox(height: DS.md),
-          ],
+              // Title
+              Padding(
+                padding: const EdgeInsets.all(DS.lg),
+                child: Text(
+                  '快捷分享',
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+
+              // Category tabs
+              TabBar(
+                controller: _tabController,
+                labelColor: DS.brandPrimary,
+                indicatorColor: DS.brandPrimary,
+                tabs: const [
+                  Tab(icon: Icon(Icons.emoji_events), text: '成就'),
+                  Tab(icon: Icon(Icons.flag), text: '计划'),
+                  Tab(icon: Icon(Icons.task_alt), text: '任务'),
+                  Tab(icon: Icon(Icons.school), text: '知识'),
+                ],
+              ),
+
+              // Content
+              SizedBox(
+                height: 300,
+                child: TabBarView(
+                  controller: _tabController,
+                  children: List.generate(
+                    4,
+                    (_) => _buildItemList(),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: DS.md),
+            ],
+          ),
         ),
-      ),
-    );
+      );
 
   Widget _buildItemList() {
     if (_isLoading) {

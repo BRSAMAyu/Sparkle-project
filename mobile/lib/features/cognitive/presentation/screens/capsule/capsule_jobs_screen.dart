@@ -152,7 +152,7 @@ class _JobCard extends ConsumerWidget {
                       job.statusLabel,
                       style: TextStyle(
                         fontSize: 12,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: DS.fontWeightSemibold,
                         color: _getStatusColor(),
                       ),
                     ),

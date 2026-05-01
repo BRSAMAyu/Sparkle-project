@@ -24,7 +24,7 @@ class AccountSecurityScreen extends StatelessWidget {
       ),
       child: ContentConstraint(
         child: ListView(
-          padding: const EdgeInsets.all(DS.spacing16),
+          padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
           children: [
             SparkleStaggerItem(
               index: 0,
@@ -71,7 +71,7 @@ class AccountSecurityScreen extends StatelessWidget {
                     Text(
                       l10n.accountSecurity,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                     const SizedBox(height: DS.spacing4),
@@ -152,7 +152,7 @@ class AccountSecurityScreen extends StatelessWidget {
               label,
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: DS.textSecondary,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
             ),
           ],

@@ -348,7 +348,7 @@ class _TranslationHistoryScreenState
             style: TextStyle(
               fontSize: 18,
               color: DS.neutral600,
-              fontWeight: FontWeight.w500,
+              fontWeight: DS.fontWeightMedium,
             ),
           ),
           ...[
@@ -404,7 +404,7 @@ class _FilterChip extends StatelessWidget {
                 style: TextStyle(
                   color: isSelected ? DS.textOnPrimary : DS.neutral700,
                   fontSize: 13,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                  fontWeight: isSelected ? DS.fontWeightSemibold : FontWeight.normal,
                 ),
               ),
               if (count != null) ...[
@@ -423,7 +423,7 @@ class _FilterChip extends StatelessWidget {
                     style: TextStyle(
                       color: isSelected ? DS.textOnPrimary : DS.neutral600,
                       fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                     ),
                   ),
                 ),
@@ -471,7 +471,7 @@ class _TranslationCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 12,
                         color: DS.neutral500,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: DS.fontWeightMedium,
                       ),
                     ),
                     const Spacer(),
@@ -493,7 +493,7 @@ class _TranslationCard extends StatelessWidget {
                   item.originalText,
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: DS.fontWeightMedium,
                   ),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,

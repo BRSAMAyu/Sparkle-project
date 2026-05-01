@@ -117,7 +117,7 @@ class _WeeklyTrendChart extends StatelessWidget {
                         style: TextStyle(
                           color: DS.textSecondary,
                           fontSize: 10,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: DS.fontWeightSemibold,
                         ),
                       ),
                     );

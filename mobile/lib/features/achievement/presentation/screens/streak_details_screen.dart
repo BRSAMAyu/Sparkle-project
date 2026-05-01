@@ -189,7 +189,7 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
         Column(
           children: [
             Text(
-              l10n.loadingFailed,
+              l10n.loadingFailed(state.error!),
               style: TextStyle(color: DS.textSecondary),
             ),
             const SizedBox(height: DS.spacing8),
@@ -796,7 +796,7 @@ class _CalendarCellState extends State<_CalendarCell>
               '${record.day.day}',
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
-                fontWeight: FontWeight.w600,
+                fontWeight: DS.fontWeightSemibold,
                 color: textColor,
               ),
             ),

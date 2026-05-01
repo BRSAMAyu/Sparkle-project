@@ -65,12 +65,18 @@ async def test_get_health_returns_pairing_error_without_raising(
     monkeypatch.setattr("app.adapters.openclaw.client.OpenClawClient.list_nodes", _list_nodes)
 
     service = ExecutionService(db=db_session)
+    # Unauthenticated: returns minimal response (no infrastructure details)
     health = await service.get_health()
-
+    assert health["openclaw_enabled"] is True
     assert health["reachable"] is False
-    assert health["message"] == "pairing required"
-    assert health["connected_nodes"] == 0
-    assert health["supports_nodes"] is True
+    assert "gateway_url" not in health  # No infrastructure leakage
+    assert "message" not in health
+
+    # Authenticated: returns full response with pairing error
+    health_authed = await service.get_health(user_id=user.id)
+    assert health_authed["reachable"] is False
+    assert health_authed["message"] == "pairing required"
+    assert health_authed["connected_nodes"] == 0
 
 
 @pytest.mark.asyncio

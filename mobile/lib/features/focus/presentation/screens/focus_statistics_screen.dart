@@ -165,7 +165,7 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
               title,
               style: const TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.w700,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: DS.md),

@@ -59,7 +59,7 @@ class GalaxyErrorDialog extends StatelessWidget {
                 style: TextStyle(
                   color: DS.textPrimary,
                   fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
             ),
@@ -106,15 +106,14 @@ class GalaxyErrorDialog extends StatelessWidget {
           ],
         ),
         actions: [
-          if (onDismiss != null)
-            SparkleButton(
-              label: l10n.close,
-              variant: ButtonVariant.ghost,
-              onPressed: () {
-                Navigator.of(context).pop();
-                onDismiss?.call();
-              },
-            ),
+          SparkleButton(
+            label: l10n.close,
+            variant: ButtonVariant.ghost,
+            onPressed: () {
+              Navigator.of(context).pop();
+              onDismiss?.call();
+            },
+          ),
           if (onRetry != null && error.isRetryable)
             SparkleButton(
               label: l10n.retry,
@@ -290,7 +289,7 @@ class OfflineIndicator extends StatelessWidget {
             style: TextStyle(
               color: DS.neutral0,
               fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontWeight: DS.fontWeightMedium,
             ),
           ),
           if (onRetry != null) ...[
@@ -365,7 +364,7 @@ class GalaxyErrorPlaceholder extends StatelessWidget {
                 style: TextStyle(
                   color: DS.textPrimary,
                   fontSize: 18,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                 ),
               ),
               const SizedBox(height: 8),

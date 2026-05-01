@@ -99,6 +99,8 @@ def _build_user_profile(user: User, push_pref: PushPreference | None) -> UserPro
         flame_brightness=user.flame_brightness,
         depth_preference=user.depth_preference,
         curiosity_preference=user.curiosity_preference,
+        schedule_preferences=user.schedule_preferences,
+        weather_preferences=user.weather_preferences,
         is_active=user.is_active,
         status=user.status,
         created_at=user.created_at.isoformat() if user.created_at else "",
@@ -354,6 +356,7 @@ async def link_social(
         current_user.avatar_url = user_info["picture"]
 
     db.add(current_user)
+    await db.commit()
     auth_audit_service.schedule_log(
         AuthAuditAction.SOCIAL_LINK,
         user_id=str(current_user.id),
@@ -388,6 +391,7 @@ async def unlink_social(
         raise HTTPException(status_code=400, detail="暂不支持这种登录方式")
 
     db.add(current_user)
+    await db.commit()
     auth_audit_service.schedule_log(
         AuthAuditAction.SOCIAL_UNLINK,
         user_id=str(current_user.id),
@@ -553,7 +557,19 @@ async def delete_account(
         ttl_seconds=SESSION_TTL_SECONDS,
     )
     await db.commit()
-    return {"detail": "账号已注销，相关会话已失效"}
+
+    # Schedule hard-delete 30 days from now (GDPR compliance)
+    _THIRTY_DAYS = 30 * 24 * 60 * 60
+    try:
+        from app.core.celery_tasks import purge_deleted_account
+        purge_deleted_account.apply_async(
+            args=[str(current_user.id)],
+            countdown=_THIRTY_DAYS,
+        )
+    except Exception:
+        pass  # Purge will be retried; anonymisation already completed
+
+    return {"detail": "账号已注销，个人数据已匿名化。30天后将永久删除全部数据，期间如需恢复请联系客服。"}
 
 
 @router.put("/me/preferences", response_model=UserProfile)

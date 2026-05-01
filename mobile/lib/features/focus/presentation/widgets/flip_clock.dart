@@ -4,6 +4,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 
 /// 翻页时钟组件 - 星空渐变风格
 class FlipClock extends StatelessWidget {
@@ -122,53 +123,53 @@ class _FlipDigitState extends State<_FlipDigit>
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 3),
           child: Stack(
-          children: [
-            // 静态下半部分（当前数字）
-            _buildHalf(
-              digit: _currentDigit,
-              isTop: false,
-              rotationX: 0,
-            ),
+            children: [
+              // 静态下半部分（当前数字）
+              _buildHalf(
+                digit: _currentDigit,
+                isTop: false,
+                rotationX: 0,
+              ),
 
-            // 静态上半部分（下一个数字）
-            _buildHalf(
-              digit: _nextDigit,
-              isTop: true,
-              rotationX: 0,
-            ),
+              // 静态上半部分（下一个数字）
+              _buildHalf(
+                digit: _nextDigit,
+                isTop: true,
+                rotationX: 0,
+              ),
 
-            // 动画上半部分翻转（当前数字向下翻）
-            AnimatedBuilder(
-              animation: _topFlipAnimation,
-              builder: (context, _) => Transform(
-                alignment: Alignment.bottomCenter,
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.001)
-                  ..rotateX(_topFlipAnimation.value),
-                child: _buildHalf(
-                  digit: _currentDigit,
-                  isTop: true,
-                  rotationX: _topFlipAnimation.value,
+              // 动画上半部分翻转（当前数字向下翻）
+              AnimatedBuilder(
+                animation: _topFlipAnimation,
+                builder: (context, _) => Transform(
+                  alignment: Alignment.bottomCenter,
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, 0.001)
+                    ..rotateX(_topFlipAnimation.value),
+                  child: _buildHalf(
+                    digit: _currentDigit,
+                    isTop: true,
+                    rotationX: _topFlipAnimation.value,
+                  ),
                 ),
               ),
-            ),
 
-            // 动画下半部分翻转（下一个数字从上翻下来）
-            AnimatedBuilder(
-              animation: _bottomFlipAnimation,
-              builder: (context, _) => Transform(
-                alignment: Alignment.topCenter,
-                transform: Matrix4.identity()
-                  ..setEntry(3, 2, 0.001)
-                  ..rotateX(_bottomFlipAnimation.value),
-                child: _buildHalf(
-                  digit: _nextDigit,
-                  isTop: false,
-                  rotationX: _bottomFlipAnimation.value,
+              // 动画下半部分翻转（下一个数字从上翻下来）
+              AnimatedBuilder(
+                animation: _bottomFlipAnimation,
+                builder: (context, _) => Transform(
+                  alignment: Alignment.topCenter,
+                  transform: Matrix4.identity()
+                    ..setEntry(3, 2, 0.001)
+                    ..rotateX(_bottomFlipAnimation.value),
+                  child: _buildHalf(
+                    digit: _nextDigit,
+                    isTop: false,
+                    rotationX: _bottomFlipAnimation.value,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
           ),
         ),
       );
@@ -213,6 +214,7 @@ class _FlipDigitState extends State<_FlipDigit>
                     fontWeight: FontWeight.bold,
                     color: DS.brandPrimaryConst,
                     fontFamily: 'monospace',
+                    fontFamilyFallback: sparkleFontFallback,
                     height: 1.0,
                   ),
                 ),
@@ -258,15 +260,15 @@ class _ColonState extends State<_Colon> with SingleTickerProviderStateMixin {
         child: AnimatedBuilder(
           animation: _opacityAnimation,
           builder: (context, _) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _buildDot(_opacityAnimation.value),
-              const SizedBox(height: DS.lg),
-              _buildDot(_opacityAnimation.value),
-            ],
-          ),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildDot(_opacityAnimation.value),
+                const SizedBox(height: DS.lg),
+                _buildDot(_opacityAnimation.value),
+              ],
+            ),
           ),
         ),
       );
@@ -335,6 +337,7 @@ class SimpleFlipClock extends StatelessWidget {
           fontWeight: FontWeight.bold,
           color: DS.brandPrimaryConst,
           fontFamily: 'monospace',
+          fontFamilyFallback: sparkleFontFallback,
           letterSpacing: 4,
         ),
       ),

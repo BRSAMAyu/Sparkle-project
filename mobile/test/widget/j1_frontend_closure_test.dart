@@ -281,13 +281,15 @@ print(x);
       );
 
       await tester.pumpWidget(
-        MaterialApp(
-          theme: AppThemes.lightTheme,
-          darkTheme: AppThemes.darkTheme,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(
-            body: AgentMessageRenderer(message: message),
+        ProviderScope(
+          child: MaterialApp(
+            theme: AppThemes.lightTheme,
+            darkTheme: AppThemes.darkTheme,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(
+              body: AgentMessageRenderer(message: message),
+            ),
           ),
         ),
       );

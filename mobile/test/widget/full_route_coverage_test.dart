@@ -40,42 +40,50 @@ void main() {
   group('Full route coverage: every feature module defines valid routes', () {
     test('achievement routes (5 paths)', () {
       final paths = _extractPaths(AchievementRoutes.routes);
-      expect(paths, containsAll([
-        '/achievements',
-        '/achievements/:id',
-        '/achievements/map',
-        '/achievements/streak',
-        '/achievements/contract',
-      ]));
+      expect(
+          paths,
+          containsAll([
+            '/achievements',
+            '/achievements/:id',
+            '/achievements/map',
+            '/achievements/streak',
+            '/achievements/contract',
+          ]));
     });
 
     test('auth routes (6 paths)', () {
       final paths = _extractPaths(AuthRoutes.routes);
-      expect(paths, containsAll([
-        '/login',
-        '/register',
-        '/forgot-password',
-        '/reset-password',
-        '/legal/terms',
-        '/legal/privacy',
-      ]));
+      expect(
+          paths,
+          containsAll([
+            '/login',
+            '/register',
+            '/forgot-password',
+            '/reset-password',
+            '/legal/terms',
+            '/legal/privacy',
+          ]));
     });
 
     test('calendar routes (3 paths)', () {
       final paths = _extractPaths(CalendarRoutes.routes);
-      expect(paths, containsAll([
-        '/calendar',
-        '/calendar-stats',
-        '/calendar/day',
-      ]));
+      expect(
+          paths,
+          containsAll([
+            '/calendar',
+            '/calendar-stats',
+            '/calendar/day',
+          ]));
     });
 
     test('chat routes (6 paths including legacy redirects)', () {
       final paths = _extractPaths(ChatRoutes.routes);
-      expect(paths, containsAll([
-        '/chat/group/:id',
-        '/chat/private/:id',
-      ]));
+      expect(
+          paths,
+          containsAll([
+            '/chat/group/:id',
+            '/chat/private/:id',
+          ]));
       // Legacy redirects
       expect(paths.contains('/community/chat/group/:id'), isTrue);
       expect(paths.contains('/community/chat/private/:id'), isTrue);
@@ -83,40 +91,46 @@ void main() {
 
     test('cognitive routes (2 paths)', () {
       final paths = _extractPaths(CognitiveRoutes.routes);
-      expect(paths, containsAll([
-        '/cognitive/patterns',
-        '/curiosity-capsule',
-      ]));
+      expect(
+          paths,
+          containsAll([
+            '/cognitive/patterns',
+            '/curiosity-capsule',
+          ]));
     });
 
     test('community routes (19+ paths)', () {
       final paths = _extractPaths(CommunityRoutes.routes);
       expect(paths.length, greaterThanOrEqualTo(19));
-      expect(paths, containsAll([
-        CommunityRoutes.friends,
-        CommunityRoutes.friendsRequests,
-        CommunityRoutes.friendsDiscover,
-        CommunityRoutes.userSearch,
-        CommunityRoutes.userProfile,
-        CommunityRoutes.groups,
-        CommunityRoutes.groupsCreate,
-        CommunityRoutes.groupDetail,
-        CommunityRoutes.groupMembers,
-        CommunityRoutes.favorites,
-        CommunityRoutes.accountability,
-        CommunityRoutes.accountabilityDetail,
-        CommunityRoutes.postsCreate,
-      ]));
+      expect(
+          paths,
+          containsAll([
+            CommunityRoutes.friends,
+            CommunityRoutes.friendsRequests,
+            CommunityRoutes.friendsDiscover,
+            CommunityRoutes.userSearch,
+            CommunityRoutes.userProfile,
+            CommunityRoutes.groups,
+            CommunityRoutes.groupsCreate,
+            CommunityRoutes.groupDetail,
+            CommunityRoutes.groupMembers,
+            CommunityRoutes.favorites,
+            CommunityRoutes.accountability,
+            CommunityRoutes.accountabilityDetail,
+            CommunityRoutes.postsCreate,
+          ]));
     });
 
     test('error book routes (4 paths)', () {
       final paths = _extractPaths(ErrorBookRoutes.routes);
-      expect(paths, containsAll([
-        '/errors',
-        '/errors/new',
-        '/errors/:id',
-        '/review',
-      ]));
+      expect(
+          paths,
+          containsAll([
+            '/errors',
+            '/errors/new',
+            '/errors/:id',
+            '/review',
+          ]));
     });
 
     test('focus routes (2 paths)', () {
@@ -136,46 +150,62 @@ void main() {
 
     test('memory routes (3 paths)', () {
       final paths = _extractPaths(MemoryRoutes.routes);
-      expect(paths, containsAll([
-        '/memory',
-        '/memory/settings',
-        '/memory/detail',
-      ]));
+      expect(
+          paths,
+          containsAll([
+            '/memory',
+            '/memory/settings',
+            '/memory/detail',
+          ]));
     });
 
     test('notification center routes (2 paths)', () {
       final paths = _extractPaths(NotificationCenterRoutes.routes);
-      expect(paths, containsAll([
-        '/notification-center',
-        '/notification-analytics',
-      ]));
+      expect(
+          paths,
+          containsAll([
+            '/notification-center',
+            '/notification-analytics',
+          ]));
     });
 
     test('photon routes (2 paths)', () {
       final paths = _extractPaths(PhotonRoutes.routes);
-      expect(paths, containsAll([
-        PhotonRoutes.transactionHistory,
-        PhotonRoutes.transfer,
-      ]));
+      expect(
+          paths,
+          containsAll([
+            PhotonRoutes.transactionHistory,
+            PhotonRoutes.transfer,
+          ]));
     });
 
-    test('plan routes (8 paths)', () {
+    test('plan routes (9 paths)', () {
       final paths = _extractPaths(PlanRoutes.routes);
-      expect(paths.length, greaterThanOrEqualTo(7));
-      expect(paths, containsAll([
-        '/plans',
-        '/plans/new',
-        '/plans/:id',
-      ]));
+      expect(paths.length, greaterThanOrEqualTo(9));
+      expect(
+          paths,
+          containsAll([
+            '/plans',
+            '/plans/new',
+            '/plans/:id',
+            '/exam-sprint/review',
+          ]));
+    });
+
+    test('plan detail is also available inside tab shell', () {
+      final paths = _extractPaths(PlanRoutes.shellRoutes);
+      expect(paths, contains('/plans/:id'));
     });
 
     test('seed library routes (3 paths)', () {
       final paths = _extractPaths(SeedLibraryRoutes.routes);
-      expect(paths, containsAll([
-        '/seed-libraries',
-        '/seed-libraries/new',
-        '/seed-libraries/:id',
-      ]));
+      expect(
+          paths,
+          containsAll([
+            '/seed-libraries',
+            '/seed-libraries/new',
+            '/seed-libraries/:id',
+          ]));
     });
 
     test('shop route uses pageBuilder (not bare MaterialPage)', () {
@@ -186,12 +216,14 @@ void main() {
 
     test('task routes (4 paths)', () {
       final paths = _extractPaths(TaskRoutes.routes);
-      expect(paths, containsAll([
-        '/tasks',
-        '/tasks/new',
-        '/tasks/:id',
-        '/tasks/:id/execute',
-      ]));
+      expect(
+          paths,
+          containsAll([
+            '/tasks',
+            '/tasks/new',
+            '/tasks/:id',
+            '/tasks/:id/execute',
+          ]));
     });
 
     test('tools routes (2 paths) use pageBuilder', () {
@@ -211,11 +243,13 @@ void main() {
     test('user routes (17+ paths)', () {
       final paths = _extractPaths(UserRoutes.routes);
       expect(paths.length, greaterThanOrEqualTo(15));
-      expect(paths, containsAll([
-        '/profile/edit',
-        '/profile/settings',
-        '/profile/persona',
-      ]));
+      expect(
+          paths,
+          containsAll([
+            '/profile/edit',
+            '/profile/settings',
+            '/profile/persona',
+          ]));
     });
 
     test('visual elements route uses pageBuilder', () {
@@ -235,7 +269,8 @@ void main() {
           // Skip legacy redirects
           if (path.startsWith('/community/chat/') ||
               path.startsWith('/community/groups/') && path.endsWith('/chat') ||
-              path.startsWith('/community/friends/') && path.endsWith('/chat')) {
+              path.startsWith('/community/friends/') &&
+                  path.endsWith('/chat')) {
             continue;
           }
           if (!allPaths.add(path)) {
@@ -255,7 +290,8 @@ void main() {
       checkUnique('galaxy', _extractPaths(GalaxyRoutes.routes));
       checkUnique('insights', _extractPaths(InsightsRoutes.routes));
       checkUnique('memory', _extractPaths(MemoryRoutes.routes));
-      checkUnique('notification', _extractPaths(NotificationCenterRoutes.routes));
+      checkUnique(
+          'notification', _extractPaths(NotificationCenterRoutes.routes));
       checkUnique('photon', _extractPaths(PhotonRoutes.routes));
       checkUnique('plan', _extractPaths(PlanRoutes.routes));
       checkUnique('seed_library', _extractPaths(SeedLibraryRoutes.routes));
@@ -264,7 +300,8 @@ void main() {
       checkUnique('tools', _extractPaths(ToolsRoutes.routes));
       checkUnique('translation', _extractPaths(TranslationRoutes.routes));
       checkUnique('user', _extractPaths(UserRoutes.routes));
-      checkUnique('visual_elements', _extractPaths(VisualElementsRoutes.routes));
+      checkUnique(
+          'visual_elements', _extractPaths(VisualElementsRoutes.routes));
 
       expect(duplicates, isEmpty,
           reason: 'Duplicate route paths: ${duplicates.join(", ")}');

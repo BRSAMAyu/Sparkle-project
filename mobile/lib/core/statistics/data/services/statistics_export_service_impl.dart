@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 
 /// Default implementation of the statistics export service
 ///
@@ -130,6 +131,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
           style: TextStyle(
             color: DS.textPrimary,
             fontSize: 20,
+            fontFamilyFallback: sparkleFontFallback,
           ),
         ),
         textDirection: TextDirection.ltr,
@@ -249,6 +251,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
       color: DS.onBrandPrimary,
       fontSize: 48,
       fontWeight: FontWeight.bold,
+      fontFamilyFallback: sparkleFontFallback,
     );
     final titlePainter = TextPainter(
       text: TextSpan(
@@ -270,6 +273,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     final periodStyle = TextStyle(
       color: DS.onBrandPrimary,
       fontSize: 32,
+      fontFamilyFallback: sparkleFontFallback,
     );
     final periodPainter = TextPainter(
       text: TextSpan(
@@ -291,6 +295,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     final dateStyle = TextStyle(
       color: DS.onBrandPrimary,
       fontSize: 24,
+      fontFamilyFallback: sparkleFontFallback,
     );
     final datePainter = TextPainter(
       text: TextSpan(
@@ -315,6 +320,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     final footerStyle = TextStyle(
       color: DS.onBrandPrimary,
       fontSize: 20,
+      fontFamilyFallback: sparkleFontFallback,
     );
     final footerPainter = TextPainter(
       text: TextSpan(
@@ -392,6 +398,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
         style: TextStyle(
           fontSize: 28 * config.pngScale,
           color: DS.onBrandPrimary.withValues(alpha: 0.8),
+          fontFamilyFallback: sparkleFontFallback,
         ),
       ),
       textAlign: TextAlign.center,

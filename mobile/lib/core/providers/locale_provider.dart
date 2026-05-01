@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,8 +15,9 @@ final localeProvider =
     StateNotifierProvider<LocaleNotifier, Locale>((ref) => LocaleNotifier());
 
 class LocaleNotifier extends StateNotifier<Locale> {
-  LocaleNotifier() : super(const Locale('zh')) {
-    _loadLocale();
+  LocaleNotifier() : super(I18nService.resolveSupportedLocale()) {
+    _syncI18nService();
+    unawaited(_loadLocale());
   }
 
   /// Load saved locale from SharedPreferences
@@ -22,14 +25,14 @@ class LocaleNotifier extends StateNotifier<Locale> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final localeCode = prefs.getString(kLocaleKey);
-      if (localeCode != null) {
-        state = Locale(localeCode);
-      }
+      state = localeCode != null
+          ? I18nService.resolveSupportedLocale(Locale(localeCode))
+          : I18nService.resolveSupportedLocale();
       // Sync with I18nService
       _syncI18nService();
     } catch (e) {
-      // Default to zh if error occurs
-      state = const Locale('zh');
+      // Default to a supported system locale if an error occurs.
+      state = I18nService.resolveSupportedLocale();
       _syncI18nService();
     }
   }
@@ -42,14 +45,15 @@ class LocaleNotifier extends StateNotifier<Locale> {
 
   /// Change and persist the locale
   Future<void> setLocale(Locale locale) async {
-    if (state == locale) return;
+    final resolvedLocale = I18nService.resolveSupportedLocale(locale);
+    if (state == resolvedLocale) return;
 
-    state = locale;
+    state = resolvedLocale;
     // Sync with I18nService
     _syncI18nService();
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(kLocaleKey, locale.languageCode);
+      await prefs.setString(kLocaleKey, resolvedLocale.languageCode);
     } catch (_) {
       // Silent fail for persistence
     }
@@ -58,9 +62,9 @@ class LocaleNotifier extends StateNotifier<Locale> {
   /// Toggle between zh and en
   void toggleLocale() {
     if (state.languageCode == 'zh') {
-      setLocale(const Locale('en'));
+      unawaited(setLocale(const Locale('en')));
     } else {
-      setLocale(const Locale('zh'));
+      unawaited(setLocale(const Locale('zh')));
     }
   }
 }

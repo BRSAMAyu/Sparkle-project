@@ -16,13 +16,14 @@ from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import desc, select
+from sqlalchemy import desc, select, update
 
 from app.core.business_metrics import ADAPTIVE_ADJUSTMENT_SKIPPED_TOTAL, ADAPTIVE_ROLLBACK_TOTAL
 from app.core.event_bus import event_bus
 from app.models.card_protocol import Card, CardType
 from app.models.cognitive import BehaviorPattern
-from app.models.task import Task
+from app.models.plan import Plan
+from app.models.task import SubTask, SubTaskStatus, Task, TaskStatus, TaskType
 from app.models.task_feedback import TaskFeedback
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.orchestration.plan_revision_summary import PlanRevisionSummary
@@ -34,6 +35,7 @@ from app.services.plan_progress_service import PlanHealthReport, PlanProgressSer
 from app.services.plan_state_service import PlanStateService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.card_protocol.replanner_bridge import ReplannerCardBridge
+from app.services.task_service import _sync_task_card_projection
 
 if TYPE_CHECKING:
     from app.orchestration.step_feedback_collector import PlanExecutionFeedback
@@ -41,6 +43,48 @@ if TYPE_CHECKING:
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _as_dict(value: Any) -> dict[str, Any]:
+    if hasattr(value, "to_dict"):
+        try:
+            value = value.to_dict()
+        except Exception:
+            return {}
+    return value if isinstance(value, dict) else {}
+
+
+def _strip(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _safe_int(value: Any) -> int | None:
+    try:
+        parsed = int(float(value))
+    except (TypeError, ValueError):
+        return None
+    return parsed if parsed > 0 else None
+
+
+def _parse_hhmm(value: Any) -> int | None:
+    text = _strip(value)
+    match = re.search(r"(?:T|\s|^)(\d{1,2}):(\d{2})", text)
+    if not match:
+        return None
+    hour = int(match.group(1))
+    minute = int(match.group(2))
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        return None
+    return hour * 60 + minute
+
+
+def _format_hhmm(minutes: int) -> str:
+    minutes = max(0, min(minutes, 24 * 60))
+    return f"{minutes // 60:02d}:{minutes % 60:02d}"
+
+
+def _task_status_value(task: Task) -> str:
+    return str(getattr(task.status, "value", task.status) or "")
 
 
 @dataclass
@@ -261,6 +305,7 @@ class AdaptiveReplanner:
 
     AUTO_ADJUSTMENT_COOLDOWN = timedelta(hours=2)
     AUTO_REPLAN_COOLDOWN = timedelta(hours=12)
+    STRUGGLE_COOLDOWN_BYPASS_THRESHOLD = 2
     SNAPSHOT_HISTORY_LIMIT = 3
     NEGATIVE_FEEDBACK_CATEGORIES = {"too_difficult", "too_long", "unclear", "irrelevant"}
     STRONG_COGNITIVE_STRUGGLE_MARKERS = (
@@ -274,6 +319,9 @@ class AdaptiveReplanner:
         "don't understand",
         "do not understand",
     )
+    TIME_PRESSURE_MARKERS = ("没时间", "来不及", "时间不够", "太赶", "排不开", "没空")
+    BEHIND_MARKERS = ("落后", "没完成", "没做完", "没跟上", "跑偏", "没搞定")
+    REPEATED_FAILURE_MARKERS = ("连续", "又没", "还是没", "再次", "一直")
 
     def __init__(
         self,
@@ -289,6 +337,448 @@ class AdaptiveReplanner:
         self.plan_health_signal_service = PlanHealthSignalService(db, redis)
         self.cognitive_pattern_trigger = CognitivePatternTrigger(db, redis)
         self._card_bridge: ReplannerCardBridge | None = None
+
+    @classmethod
+    def should_compress(
+        cls,
+        *,
+        completion_rate: float | None,
+        days_left: int | None,
+        calendar_context: dict[str, Any] | None = None,
+        source_daily_spec: dict[str, Any] | None = None,
+    ) -> bool:
+        """Trigger sprint compression only when the user is behind and time is short."""
+        try:
+            rate = float(completion_rate)
+            days = int(float(days_left))
+        except (TypeError, ValueError):
+            return False
+        if days < 0:
+            return False
+        if rate < 0.5 and days <= 5:
+            return True
+        if days <= 5 and rate < 0.85:
+            return cls._has_calendar_compression_pressure(
+                calendar_context=calendar_context,
+                source_daily_spec=source_daily_spec,
+            )
+        return False
+
+    @classmethod
+    def build_compressed_sprint_day_spec(
+        cls,
+        *,
+        day_number: int,
+        completion_rate: float,
+        sprint_policy: dict[str, Any],
+        source_daily_spec: dict[str, Any] | None = None,
+        calendar_context: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        policy = _as_dict(sprint_policy)
+        retrieval_policy = _as_dict(policy.get("retrieval_policy"))
+        fail_safe = _as_dict(policy.get("fail_safe") or retrieval_policy.get("fail_safe"))
+        behind_rule = _strip(fail_safe.get("behind")) or "下一天只保留 1 个核心任务和 1 个最小输出。"
+        minimum_output = (
+            _strip(policy.get("minimum_output"))
+            or _strip(retrieval_policy.get("minimum_output"))
+            or "闭卷复述、3题小测或一道典型题独立完成"
+        )
+        source_spec = _as_dict(source_daily_spec)
+        subject_strategy = _as_dict(source_spec.get("subject_strategy"))
+        node_labels = [
+            _strip(item)
+            for item in list(subject_strategy.get("node_labels") or [])
+            if _strip(item)
+        ]
+        primary_target = (
+            _strip(subject_strategy.get("primary_node_label"))
+            or (node_labels[0] if node_labels else "")
+            or _strip(source_spec.get("primary_target"))
+            or _strip(source_spec.get("title_focus"))
+            or "最高收益核心点"
+        )
+        days_left = _safe_int(policy.get("days_left") or policy.get("actual_days_left") or policy.get("total_days"))
+        if days_left is None:
+            days_left = 5
+        completion_pct = max(0, min(100, int(round(float(completion_rate) * 100))))
+        day_number = max(1, int(day_number or 1))
+        compression_reason = (
+            f"前一天完成率只有 {completion_pct}%，低于 50%，而距离考试只剩 {days_left} 天；"
+            f"所以 Day {day_number} 自动压缩为保底版：{behind_rule}"
+        )
+        objective = f"Day {day_number} 保底恢复：只拿下「{primary_target}」，并留下 1 个最小输出。"
+        output_action = f"围绕「{primary_target}」完成 {minimum_output}。"
+        success_criteria = f"只要完成「{primary_target}」的 {minimum_output}，今天就算把主线接回来了。"
+        calendar_slot = cls._select_calendar_safe_slot(
+            calendar_context=calendar_context,
+            source_daily_spec=source_spec,
+            estimated_minutes=35,
+        )
+        spec = {
+            "day": day_number,
+            "focus": objective,
+            "title_focus": "压缩保底",
+            "task_kind": "compressed_recovery",
+            "estimated_minutes": 35,
+            "minimum_output": minimum_output,
+            "primary_target": primary_target,
+            "optional_tasks": [],
+            "compressed": True,
+            "completion_rate": float(completion_rate),
+            "compression_reason": compression_reason,
+            "output_action": output_action,
+            "success_criteria": success_criteria,
+            "objective": objective,
+            "method_steps": [
+                f"先锁定 1 个核心点：{primary_target}。",
+                f"只做 1 个最小输出：{minimum_output}。",
+                "完成后写一句明天从哪里继续，不把今天扩成补完整章。",
+            ],
+            "fail_safe_rule": behind_rule,
+            "daily_spec": {
+                "day": day_number,
+                "task_kind": "compressed_recovery",
+                "compressed": True,
+                "primary_target": primary_target,
+                "minimum_output": minimum_output,
+                "optional_tasks": [],
+                "estimated_minutes": 35,
+                "compression_reason": compression_reason,
+            },
+        }
+        if calendar_slot:
+            avoidance_note = (
+                f"避开日历冲突，建议安排在 {calendar_slot['start']}-{calendar_slot['end']}。"
+            )
+            spec.update(
+                {
+                    "scheduled_start_time": calendar_slot["start"],
+                    "scheduled_end_time": calendar_slot["end"],
+                    "calendar_avoidance": {
+                        "applied": True,
+                        "reason": avoidance_note,
+                        "conflicts": calendar_slot.get("conflicts", []),
+                    },
+                }
+            )
+            spec["method_steps"].append(avoidance_note)
+            spec["daily_spec"].update(
+                {
+                    "scheduled_start_time": calendar_slot["start"],
+                    "scheduled_end_time": calendar_slot["end"],
+                    "calendar_avoidance": spec["calendar_avoidance"],
+                }
+            )
+        return spec
+
+    @classmethod
+    def _select_calendar_safe_slot(
+        cls,
+        *,
+        calendar_context: dict[str, Any] | None,
+        source_daily_spec: dict[str, Any],
+        estimated_minutes: int,
+    ) -> dict[str, Any] | None:
+        context = _as_dict(calendar_context)
+        if not context:
+            return None
+
+        day_key = _strip(source_daily_spec.get("date") or source_daily_spec.get("target_date"))
+        available_blocks = cls._calendar_available_blocks(context, day_key=day_key)
+        conflicts = cls._calendar_conflicts(context, day_key=day_key)
+        if not available_blocks and conflicts:
+            available_blocks = cls._free_blocks_from_conflicts(conflicts)
+        if not available_blocks:
+            return None
+
+        required_minutes = max(30, min(60, _safe_int(estimated_minutes) or 35))
+        source_start = (
+            _parse_hhmm(source_daily_spec.get("scheduled_start_time"))
+            or _parse_hhmm(source_daily_spec.get("start_time"))
+            or _parse_hhmm(source_daily_spec.get("preferred_start_time"))
+        )
+        source_end = (
+            _parse_hhmm(source_daily_spec.get("scheduled_end_time"))
+            or _parse_hhmm(source_daily_spec.get("end_time"))
+            or (source_start + required_minutes if source_start is not None else None)
+        )
+
+        if source_start is not None and source_end is not None:
+            for block in available_blocks:
+                if block[0] <= source_start and source_end <= block[1]:
+                    return None
+        elif (
+            not conflicts
+            and len(available_blocks) == 1
+            and available_blocks[0][0] <= 7 * 60
+            and available_blocks[0][1] >= 22 * 60
+        ):
+            return None
+
+        for start, end in available_blocks:
+            slot_start = max(start, 9 * 60)
+            if end - slot_start < required_minutes:
+                continue
+            slot_end = min(end, slot_start + max(60, required_minutes))
+            return {
+                "start": _format_hhmm(slot_start),
+                "end": _format_hhmm(slot_end),
+                "conflicts": conflicts[:3],
+            }
+        return None
+
+    @classmethod
+    def _calendar_available_blocks(cls, context: dict[str, Any], *, day_key: str = "") -> list[tuple[int, int]]:
+        raw_blocks: Any = None
+        by_date = _as_dict(context.get("time_blocks_by_date") or context.get("available_blocks_by_date"))
+        if day_key and by_date:
+            raw_blocks = by_date.get(day_key)
+        if raw_blocks is None:
+            today_key = _strip(context.get("today") or context.get("reference_date"))
+            if not day_key or not today_key or day_key == today_key:
+                raw_blocks = context.get("time_blocks_today") or context.get("available_time_blocks") or []
+            else:
+                raw_blocks = []
+        blocks: list[tuple[int, int]] = []
+        for item in list(raw_blocks or []):
+            block = _as_dict(item)
+            start = _parse_hhmm(block.get("start") or block.get("start_time"))
+            end = _parse_hhmm(block.get("end") or block.get("end_time"))
+            if start is None or end is None or end <= start:
+                continue
+            blocks.append((start, end))
+        return sorted(blocks)
+
+    @classmethod
+    def _calendar_conflicts(cls, context: dict[str, Any], *, day_key: str = "") -> list[dict[str, str]]:
+        raw_events: list[Any] = []
+        by_date = _as_dict(context.get("busy_events_by_date") or context.get("events_by_date"))
+        if day_key and by_date:
+            raw_events.extend(list(by_date.get(day_key) or []))
+        today_key = _strip(context.get("today") or context.get("reference_date"))
+        if not day_key or not today_key or day_key == today_key:
+            for key in ("busy_events", "calendar_events", "conflicts", "events"):
+                raw_events.extend(list(context.get(key) or []))
+
+        conflicts: list[dict[str, str]] = []
+        for raw in raw_events:
+            event = _as_dict(raw)
+            start_text = _strip(event.get("start_time") or event.get("start"))
+            end_text = _strip(event.get("end_time") or event.get("end"))
+            start = _parse_hhmm(start_text)
+            end = _parse_hhmm(end_text)
+            if start is None or end is None or end <= start:
+                continue
+            conflicts.append(
+                {
+                    "title": _strip(event.get("title") or event.get("name") or "日历事件"),
+                    "start": _format_hhmm(start),
+                    "end": _format_hhmm(end),
+                    "kind": _strip(event.get("kind") or event.get("type") or event.get("event_type") or "busy"),
+                }
+            )
+        return sorted(conflicts, key=lambda item: item["start"])
+
+    @classmethod
+    def _has_calendar_compression_pressure(
+        cls,
+        *,
+        calendar_context: dict[str, Any] | None,
+        source_daily_spec: dict[str, Any] | None,
+    ) -> bool:
+        context = _as_dict(calendar_context)
+        source_spec = _as_dict(source_daily_spec)
+        if not context or not source_spec:
+            return False
+
+        day_key = _strip(source_spec.get("date") or source_spec.get("target_date"))
+        conflicts = cls._calendar_conflicts(context, day_key=day_key)
+        available_blocks = cls._calendar_available_blocks(context, day_key=day_key)
+        estimated_minutes = _safe_int(source_spec.get("estimated_minutes")) or 60
+        required_minutes = max(30, min(90, estimated_minutes))
+
+        source_start = (
+            _parse_hhmm(source_spec.get("scheduled_start_time"))
+            or _parse_hhmm(source_spec.get("start_time"))
+            or _parse_hhmm(source_spec.get("preferred_start_time"))
+        )
+        source_end = (
+            _parse_hhmm(source_spec.get("scheduled_end_time"))
+            or _parse_hhmm(source_spec.get("end_time"))
+            or (source_start + required_minutes if source_start is not None else None)
+        )
+        if source_start is not None and source_end is not None:
+            for event in conflicts:
+                if not cls._is_high_pressure_calendar_event(event):
+                    continue
+                event_start = _parse_hhmm(event.get("start"))
+                event_end = _parse_hhmm(event.get("end"))
+                if event_start is not None and event_end is not None and source_start < event_end and event_start < source_end:
+                    return True
+
+        if available_blocks:
+            longest_block = max((end - start for start, end in available_blocks), default=0)
+            return longest_block < required_minutes and any(cls._is_high_pressure_calendar_event(event) for event in conflicts)
+        return any(cls._is_high_pressure_calendar_event(event) for event in conflicts)
+
+    @staticmethod
+    def _is_high_pressure_calendar_event(event: dict[str, Any]) -> bool:
+        kind = _strip(event.get("kind") or event.get("type") or event.get("event_type")).lower()
+        title = _strip(event.get("title") or event.get("name")).lower()
+        return kind in {"exam", "quiz", "test", "class", "course", "lecture"} or any(
+            token in title
+            for token in (
+                "考试",
+                "期末",
+                "测验",
+                "上课",
+                "课程",
+                "课堂",
+                "exam",
+                "quiz",
+                "test",
+                "class",
+                "lecture",
+                "course",
+            )
+        )
+
+    @staticmethod
+    def _free_blocks_from_conflicts(conflicts: list[dict[str, str]]) -> list[tuple[int, int]]:
+        blocks: list[tuple[int, int]] = []
+        busy: list[tuple[int, int]] = []
+        for event in conflicts:
+            start = _parse_hhmm(event.get("start"))
+            end = _parse_hhmm(event.get("end"))
+            if start is not None and end is not None and end > start:
+                busy.append((max(7 * 60, start), min(22 * 60, end)))
+        cursor = 9 * 60
+        for start, end in sorted(busy):
+            if start > cursor:
+                blocks.append((cursor, start))
+            cursor = max(cursor, end)
+        if cursor < 22 * 60:
+            blocks.append((cursor, 22 * 60))
+        return blocks
+
+    async def compress_sprint_day(
+        self,
+        *,
+        plan_id: UUID | None = None,
+        day_number: int = 1,
+        completion_rate: float,
+        sprint_policy: dict[str, Any],
+        source_daily_spec: dict[str, Any] | None = None,
+        calendar_context: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Compress one sprint day to a single recovery task and persist it when possible."""
+        compressed_spec = self.build_compressed_sprint_day_spec(
+            day_number=day_number,
+            completion_rate=completion_rate,
+            sprint_policy=sprint_policy,
+            source_daily_spec=source_daily_spec,
+            calendar_context=calendar_context,
+        )
+        if plan_id is not None and getattr(self, "db", None) is not None:
+            await self._write_compressed_sprint_day(
+                plan_id=plan_id,
+                day_number=day_number,
+                compressed_spec=compressed_spec,
+            )
+        return [compressed_spec]
+
+    async def _write_compressed_sprint_day(
+        self,
+        *,
+        plan_id: UUID,
+        day_number: int,
+        compressed_spec: dict[str, Any],
+    ) -> None:
+        result = await self.db.execute(select(Plan).where(Plan.id == plan_id, Plan.not_deleted_filter()))
+        plan = result.scalar_one_or_none()
+        if plan is None:
+            return
+
+        day_number = max(1, int(day_number or 1))
+        user_id = plan.user_id
+        metadata = _as_dict(plan.source_metadata).copy()
+        daily_specs = _as_dict(metadata.get("daily_specs")).copy()
+        daily_specs[str(day_number)] = compressed_spec
+        compressions = _as_dict(metadata.get("adaptive_compressions")).copy()
+        compressions[str(day_number)] = {
+            "day": day_number,
+            "compressed": True,
+            "compression_reason": compressed_spec["compression_reason"],
+            "completion_rate": compressed_spec.get("completion_rate"),
+            "task_kind": "compressed_recovery",
+        }
+        metadata["daily_specs"] = daily_specs
+        metadata["adaptive_compressions"] = compressions
+        plan.source_metadata = metadata
+        self.db.add(plan)
+
+        day_start = day_number * 1000
+        day_end = (day_number + 1) * 1000
+        task_result = await self.db.execute(
+            select(Task)
+            .where(Task.plan_id == plan_id, Task.not_deleted_filter())
+            .where(Task.order_index >= day_start, Task.order_index < day_end)
+            .order_by(Task.order_index.asc(), Task.created_at.asc())
+        )
+        day_tasks = list(task_result.scalars().all())
+        kept_task = next(
+            (task for task in day_tasks if _task_status_value(task) != TaskStatus.COMPLETED.value),
+            day_tasks[0] if day_tasks else None,
+        )
+
+        if kept_task is not None:
+            existing_guide = _as_dict(kept_task.guide_json).copy()
+            kept_task.title = f"Day {day_number} · 压缩保底 - {_strip(compressed_spec.get('primary_target'))}"
+            kept_task.estimated_minutes = min(_safe_int(compressed_spec.get("estimated_minutes")) or 35, 35)
+            kept_task.difficulty = 1
+            kept_task.energy_cost = 1
+            kept_task.guide_content = _strip(compressed_spec.get("objective"))
+            kept_task.success_criteria = _strip(compressed_spec.get("success_criteria"))
+            kept_task.order_index = day_start
+            kept_task.guide_json = {
+                **existing_guide,
+                **compressed_spec,
+                "time_estimate_minutes": kept_task.estimated_minutes,
+                "daily_spec": compressed_spec["daily_spec"],
+            }
+            tags = list(kept_task.tags or [])
+            for tag in ("compressed_recovery", "sprint_fail_safe", "adaptive_compressed", f"day:{day_number}"):
+                if tag not in tags:
+                    tags.append(tag)
+            kept_task.tags = tags
+            self.db.add(kept_task)
+
+        for task in day_tasks:
+            if kept_task is not None and task.id == kept_task.id:
+                continue
+            if _task_status_value(task) == TaskStatus.COMPLETED.value:
+                continue
+            task.soft_delete()
+            self.db.add(task)
+
+        await self.db.commit()
+        if kept_task is not None:
+            await self.db.refresh(kept_task)
+            await _sync_task_card_projection(self.db, kept_task)
+
+        try:
+            await self.plan_state_service.upsert_plan_state(
+                user_id=user_id,
+                plan_id=plan.id,
+                patch={
+                    "facts": {
+                        "daily_spec": {str(day_number): compressed_spec},
+                        "adaptive_compressions": compressions,
+                    }
+                },
+            )
+        except Exception as exc:
+            logger.warning("Failed to persist compressed daily_spec for plan {}: {}", plan_id, exc)
 
     async def on_task_completed(
         self,
@@ -348,6 +838,428 @@ class AdaptiveReplanner:
             feedback_category=category,
             difficulty_delta=difficulty_delta,
         )
+
+    async def adjust_for_checkpoint(
+        self,
+        user_id: UUID,
+        plan_id: UUID,
+        debrief_result: dict[str, Any],
+    ) -> Task | None:
+        """Insert one focused remedial task when checkpoint debrief shows the phase slipped."""
+        if bool(debrief_result.get("goal_met", True)):
+            return None
+
+        result = await self.db.execute(
+            select(Task)
+            .where(Task.user_id == user_id, Task.plan_id == plan_id)
+            .where(Task.status != TaskStatus.COMPLETED)
+            .where(Task.title.not_like("[复盘补强]%"))
+            .order_by(Task.order_index.asc(), Task.created_at.asc())
+            .limit(1)
+        )
+        next_task = result.scalar_one_or_none()
+        insert_order = int(next_task.order_index or 0) if next_task else 0
+        if insert_order <= 0:
+            insert_order = 1000
+
+        await self.db.execute(
+            update(Task)
+            .where(Task.user_id == user_id, Task.plan_id == plan_id, Task.order_index >= insert_order)
+            .values(order_index=Task.order_index + 1)
+        )
+
+        checkpoint_day = int(debrief_result.get("checkpoint_day") or 0)
+        checkpoint_description = str(debrief_result.get("checkpoint_description") or "检查点内容").strip()
+        recovery = self._checkpoint_recovery_contract(
+            checkpoint_day=checkpoint_day,
+            checkpoint_description=checkpoint_description,
+            first_answer=str(debrief_result.get("first_answer") or ""),
+            second_answer=str(debrief_result.get("second_answer") or ""),
+        )
+        title = f"[复盘补强] Day {checkpoint_day} 检查点回顾" if checkpoint_day else "[复盘补强] 检查点回顾"
+        guide_json = {
+            "objective": recovery["objective"],
+            "method_steps": recovery["method_steps"],
+            "time_estimate_minutes": recovery["time_estimate_minutes"],
+            "output_action": recovery["output_action"],
+            "success_criteria": recovery["success_criteria"],
+            "key_points": [checkpoint_description, "优先补影响下一阶段的漏洞"],
+            "common_mistakes": ["只承认落后，但没有定位到具体知识点或时间问题。"],
+            "sprint_fail_safe": True,
+            "density_adjustment": recovery["density_adjustment"],
+            "scaffolding_mode": recovery["scaffolding_mode"],
+            "micro_contract": recovery["micro_contract"],
+            "fail_safe_rule": recovery["fail_safe_rule"],
+        }
+        task = Task(
+            user_id=user_id,
+            plan_id=plan_id,
+            title=title,
+            type=TaskType.REFLECTION,
+            tags=[
+                "checkpoint_remedial",
+                "review",
+                "scaffolded",
+                "reduced_density",
+                "sprint_fail_safe",
+                *list(recovery["tags"]),
+                f"checkpoint_day:{checkpoint_day}",
+            ],
+            estimated_minutes=recovery["time_estimate_minutes"],
+            difficulty=recovery["difficulty"],
+            energy_cost=recovery["energy_cost"],
+            guide_content=guide_json["objective"],
+            guide_json=guide_json,
+            ai_prompt=(
+                f"【背景】我正在做第 {checkpoint_day} 天检查点复盘。\n"
+                f"【检查点】{checkpoint_description}\n"
+                f"【我的状态】{recovery['state_summary']}\n"
+                f"【输出动作】{recovery['output_action']}\n"
+                f"【完成标准】{recovery['success_criteria']}\n"
+                f"【请帮我】定位最影响后续计划的薄弱点，给我一个 {recovery['time_estimate_minutes']} 分钟内能完成的补强路径。"
+            ),
+            success_criteria=guide_json["success_criteria"],
+            status=TaskStatus.PENDING,
+            priority=1,
+            order_index=insert_order,
+            phase_index=getattr(next_task, "phase_index", None) if next_task else None,
+            source_planning_session_id=getattr(next_task, "source_planning_session_id", None) if next_task else None,
+            due_date=getattr(next_task, "due_date", None) if next_task else None,
+        )
+        self.db.add(task)
+        await self.db.flush()
+        await _sync_task_card_projection(self.db, task)
+        return task
+
+    async def break_down_single_task_for_too_hard(
+        self,
+        *,
+        user_id: UUID,
+        task_id: UUID,
+        feedback_text: str | None = None,
+    ) -> list[SubTask]:
+        """
+        Split one currently-too-hard task into smaller subtasks.
+
+        This is intentionally task-local: it does not rewrite the plan or move
+        neighboring tasks. The surrounding plan can still learn from the signal
+        through PlanState feedback and normal health evaluation later.
+        """
+        result = await self.db.execute(
+            select(Task).where(Task.id == task_id, Task.user_id == user_id)
+        )
+        task = result.scalar_one_or_none()
+        if task is None:
+            return []
+
+        breakdown_items = await self._generate_too_hard_breakdown(
+            task=task,
+            feedback_text=feedback_text,
+        )
+        if not breakdown_items:
+            breakdown_items = self._fallback_too_hard_breakdown(task)
+
+        order_result = await self.db.execute(
+            select(SubTask)
+            .where(SubTask.parent_task_id == task.id)
+            .order_by(desc(SubTask.order))
+            .limit(1)
+        )
+        last_subtask = order_result.scalar_one_or_none()
+        next_order = int(last_subtask.order + 1) if last_subtask else 0
+
+        created: list[SubTask] = []
+        for index, raw_item in enumerate(breakdown_items[:5]):
+            normalized = self._normalize_too_hard_subtask(raw_item, index=index, parent_title=task.title)
+            if not normalized:
+                continue
+            subtask = SubTask(
+                parent_task_id=task.id,
+                title=normalized["title"],
+                description=normalized.get("description"),
+                estimated_minutes=normalized["estimated_minutes"],
+                guide_content=normalized.get("guide_content"),
+                order=next_order,
+                status=SubTaskStatus.PENDING,
+                knowledge_node_id=task.knowledge_node_id,
+            )
+            self.db.add(subtask)
+            created.append(subtask)
+            next_order += 1
+
+        if not created:
+            return []
+
+        tags = list(task.tags or [])
+        for tag in ("too_hard", "adaptive_breakdown"):
+            if tag not in tags:
+                tags.append(tag)
+        task.tags = tags
+        task.difficulty = max(1, int(task.difficulty or 1) - 1)
+        self.db.add(task)
+
+        try:
+            feedback = TaskFeedback(
+                user_id=user_id,
+                task_id=task.id,
+                completion_quality=None,
+                feedback_text=feedback_text or "用户在任务卡上标记：太难",
+                category="too_difficult",
+                task_difficulty_snapshot=task.difficulty,
+                task_type_snapshot=task.type.value if task.type else None,
+                actual_minutes_snapshot=task.actual_minutes,
+            )
+            self.db.add(feedback)
+        except Exception as exc:
+            logger.debug("Failed to attach too-hard feedback row: {}", exc)
+
+        await self.db.flush()
+        await self.db.refresh(
+            task,
+            attribute_names=["subtasks_total", "subtasks_completed"],
+        )
+        await _sync_task_card_projection(self.db, task)
+
+        if task.plan_id:
+            record = AdaptationRecord(
+                what_changed=f"把「{task.title}」拆成了 {len(created)} 个更小的步骤",
+                why="用户在任务卡上标记了太难，说明当前任务颗粒度超过了可启动范围。",
+                expected_effect=(
+                    "先把启动门槛降下来，避免因为一张任务卡过重而放弃整段计划。"
+                ),
+                user_facing_message=f"我把「{task.title}」拆小了，先做第一步就够。",
+                source="adaptive_replanner.task_quick_action",
+            )
+            state = await self.plan_state_service.get_plan_state(user_id, task.plan_id)
+            adaptive_meta = dict((((state.facts or {}) if state else {}).get("adaptive_meta")) or {})
+            recent = list(adaptive_meta.get("recent_adaptations") or [])
+            recent.append(record.to_dict())
+            adaptive_meta["recent_adaptations"] = recent[-10:]
+            adaptive_meta["last_task_too_hard_at"] = _utcnow().isoformat()
+            feedback_entry = self._build_feedback_entry(
+                feedback_type="task_quick_action_too_hard",
+                content=f"用户将任务标记为太难，已拆成 {len(created)} 个子任务。",
+                task_id=task.id,
+                applied_adjustment={
+                    "inserted_subtask_ids": [str(item.id) for item in created],
+                    "difficulty_after": task.difficulty,
+                },
+            )
+            await self.plan_state_service.upsert_plan_state(
+                user_id=user_id,
+                plan_id=task.plan_id,
+                patch={
+                    "facts": {"adaptive_meta": adaptive_meta},
+                    "feedback_log": feedback_entry,
+                },
+                bump_version=False,
+            )
+
+        return created
+
+    async def _generate_too_hard_breakdown(
+        self,
+        *,
+        task: Task,
+        feedback_text: str | None,
+    ) -> list[dict[str, Any]]:
+        try:
+            from app.services.focus_service import FocusService
+
+            description_parts = [
+                str(task.guide_content or "").strip(),
+                str(task.success_criteria or "").strip(),
+                self._format_task_guide_json(task.guide_json),
+                str(feedback_text or "").strip(),
+            ]
+            description = "\n".join(part for part in description_parts if part)
+            persona_prompt = (
+                "用户刚刚主动标记这个任务太难。请把任务拆成 3-5 个更小的启动步骤，"
+                "每一步控制在 5-20 分钟，第一步必须非常容易开始。"
+            )
+            result = await FocusService.breakdown_task_via_llm(
+                task_title=task.title,
+                task_description=description,
+                persona_prompt=persona_prompt,
+            )
+            return [item for item in result if isinstance(item, dict)]
+        except Exception as exc:
+            logger.warning("Too-hard task breakdown LLM failed for {}: {}", task.id, exc)
+            return []
+
+    @staticmethod
+    def _format_task_guide_json(guide_json: Any) -> str:
+        if not isinstance(guide_json, dict):
+            return ""
+        parts: list[str] = []
+        for key in (
+            "objective",
+            "method_steps",
+            "success_criteria",
+            "output_action",
+            "if_stuck",
+        ):
+            value = guide_json.get(key)
+            if value in (None, "", []):
+                continue
+            if isinstance(value, list):
+                rendered = "；".join(str(item).strip() for item in value if str(item).strip())
+            else:
+                rendered = str(value).strip()
+            if rendered:
+                parts.append(f"{key}: {rendered}")
+        return "\n".join(parts)
+
+    @staticmethod
+    def _normalize_too_hard_subtask(
+        raw_item: dict[str, Any] | str,
+        *,
+        index: int,
+        parent_title: str,
+    ) -> dict[str, Any] | None:
+        if isinstance(raw_item, str):
+            item: dict[str, Any] = {"title": raw_item}
+        else:
+            item = dict(raw_item)
+
+        title = str(
+            item.get("title")
+            or item.get("name")
+            or item.get("step")
+            or f"小步 {index + 1}: {parent_title}"
+        ).strip()
+        if not title:
+            return None
+
+        raw_minutes = (
+            item.get("estimated_minutes")
+            or item.get("minutes")
+            or item.get("duration")
+            or 15
+        )
+        try:
+            estimated_minutes = int(float(raw_minutes))
+        except (TypeError, ValueError):
+            estimated_minutes = 15
+        estimated_minutes = max(5, min(30, estimated_minutes))
+
+        description = str(item.get("description") or item.get("detail") or "").strip() or None
+        guide_content = str(item.get("guide_content") or item.get("guide") or "").strip()
+        if not guide_content:
+            guide_content = (
+                "这是从“太难”快速操作里拆出来的小步。"
+                "只需要完成这一小步，不要顺手加码。"
+            )
+
+        return {
+            "title": title[:255],
+            "description": description,
+            "estimated_minutes": estimated_minutes,
+            "guide_content": guide_content,
+        }
+
+    @staticmethod
+    def _fallback_too_hard_breakdown(task: Task) -> list[dict[str, Any]]:
+        base_minutes = max(5, min(15, int((task.estimated_minutes or 30) / 3)))
+        return [
+            {
+                "title": f"圈出「{task.title}」里最卡的一点",
+                "description": "只定位一个具体卡点，不解决整张任务卡。",
+                "estimated_minutes": 5,
+                "guide_content": "写下最卡的一句话、一道题或一个步骤。写清楚就算完成。",
+            },
+            {
+                "title": "用自己的话复述这个卡点",
+                "description": "把卡点讲成一句能听懂的话，再补一个例子或反例。",
+                "estimated_minutes": base_minutes,
+                "guide_content": "目标不是完整掌握，而是把最小理解断点补上。",
+            },
+            {
+                "title": "完成一个最小检查动作",
+                "description": "做一道最小题、写一个小结，或列出下一步需要问 AI 的问题。",
+                "estimated_minutes": base_minutes,
+                "guide_content": "只检查刚才那个卡点，不扩展到新的难点。",
+            },
+        ]
+
+    @classmethod
+    def _checkpoint_recovery_contract(
+        cls,
+        *,
+        checkpoint_day: int,
+        checkpoint_description: str,
+        first_answer: str,
+        second_answer: str,
+    ) -> dict[str, Any]:
+        combined = " ".join([checkpoint_description, first_answer, second_answer]).strip().lower()
+        time_pressure = any(marker in combined for marker in cls.TIME_PRESSURE_MARKERS)
+        repeated_failure = any(marker in combined for marker in cls.REPEATED_FAILURE_MARKERS)
+        understanding_issue = any(marker in combined for marker in cls.STRONG_COGNITIVE_STRUGGLE_MARKERS)
+        behind = any(marker in combined for marker in cls.BEHIND_MARKERS)
+
+        if time_pressure:
+            return {
+                "objective": f"把 Day {checkpoint_day} 的落后内容压缩成一个 25 分钟保底回收动作。",
+                "method_steps": [
+                    "先写下最影响下一阶段的 1 个模块，不列长清单。",
+                    "只保留这个模块的 3 个保底点或 1 道代表题，不追完整章。",
+                    "最后写一句明天从哪里继续，避免下次重新启动成本。",
+                ],
+                "output_action": "留下 1 个可检查的保底产出，例如 3 个保底点、1 道代表题或 1 张错因卡。",
+                "success_criteria": "有 1 个可检查的保底产出，并明确下次从哪里继续。",
+                "time_estimate_minutes": 25,
+                "difficulty": 1,
+                "energy_cost": 1,
+                "density_adjustment": "minimum_viable",
+                "scaffolding_mode": "checkpoint_time_boxed_recovery",
+                "micro_contract": "如果开始，就先锁定 1 个模块和 1 个保底输出，不再扩到第二个模块。",
+                "fail_safe_rule": "今天只回收下一阶段最需要的最小产出，不继续加难。",
+                "tags": ["time_boxed", "compressed_recovery"],
+                "state_summary": "这次主要是时间不够，优先做最小保底回收，不继续堆任务。",
+            }
+
+        if understanding_issue:
+            return {
+                "objective": f"只补 Day {checkpoint_day} 检查点里最卡的 1 个概念，并做 1 个最小检查。",
+                "method_steps": [
+                    "先写出到底哪一句、哪一题或哪一个判断点没懂，只选 1 个卡点。",
+                    "用自己的话重讲这个点，并补 1 个适用条件或反例。",
+                    "立刻做 1 个最小检查题，确认不是只看懂答案。",
+                ],
+                "output_action": "补清 1 个最卡概念，并完成 1 个最小检查题。",
+                "success_criteria": "能不用资料讲清 1 个最卡点，并完成 1 个最小检查题。",
+                "time_estimate_minutes": 35,
+                "difficulty": 1,
+                "energy_cost": 1,
+                "density_adjustment": "reduced",
+                "scaffolding_mode": "checkpoint_single_gap_repair",
+                "micro_contract": "如果开始，就只处理 1 个卡点；没讲清前，不切到第二个漏洞。",
+                "fail_safe_rule": "今天不追整章补完，只修最影响后续的一处理解断点。",
+                "tags": ["single_gap_focus"],
+                "state_summary": "这次主要是没搞懂，先补清一个关键卡点，不继续堆更难任务。",
+            }
+
+        density_adjustment = "minimum_viable" if repeated_failure else "reduced"
+        estimated_minutes = 20 if repeated_failure else 30
+        return {
+            "objective": f"回收 Day {checkpoint_day} 检查点的落后部分，并重新锁定下一阶段只保 1 个主线。",
+            "method_steps": [
+                "列出当前落后里最影响下一阶段的 2 项，不再继续展开。",
+                "只选 1 项做最小补回动作，另一项放进稍后回收清单。",
+                "用 1 次口头复述或小测确认主线已经重新接上。",
+            ],
+            "output_action": "完成 1 个最小补回动作，并写下下一阶段只保的 1 个主线。",
+            "success_criteria": "明确 1 个下一阶段主线，完成 1 个最小补回动作，并留下 1 个稍后回收项。",
+            "time_estimate_minutes": estimated_minutes,
+            "difficulty": 1,
+            "energy_cost": 1,
+            "density_adjustment": density_adjustment,
+            "scaffolding_mode": "checkpoint_backlog_triage",
+            "micro_contract": "如果开始，就只补 1 个主线缺口；剩下的内容统一放到稍后回收。",
+            "fail_safe_rule": "先把下一阶段能继续的主线接上，不为了补完而继续加码。",
+            "tags": ["backlog_triage", "streak_fail_safe"] if repeated_failure or behind else ["backlog_triage"],
+            "state_summary": "这次主要是进度落后，先降密度、接回主线，不继续并行补多个漏洞。",
+        }
 
     async def evaluate_plan_health_now(
         self,
@@ -652,7 +1564,12 @@ class AdaptiveReplanner:
         action_records: list[AdaptationRecord] = []
 
         if report.recommended_action == "replan":
-            if self._recently_triggered(state.facts, "last_replan_at", self.AUTO_REPLAN_COOLDOWN):
+            within_cooldown = self._recently_triggered(state.facts, "last_replan_at", self.AUTO_REPLAN_COOLDOWN)
+            bypass_cooldown = False
+            if within_cooldown and trigger == "task_feedback_struggle":
+                new_streak = await self._increment_struggle_streak(report.user_id, report.plan_id, state)
+                bypass_cooldown = new_streak >= self.STRUGGLE_COOLDOWN_BYPASS_THRESHOLD
+            if within_cooldown and not bypass_cooldown:
                 action_taken = "replan_cooldown_active"
             else:
                 action_records = await self._trigger_full_replan(
@@ -942,6 +1859,7 @@ class AdaptiveReplanner:
                 "last_replan_reason": report.reasons,
                 "recent_adaptations": [record.to_dict()],
                 "recent_revision_summaries": [revision_summary.to_dict()],
+                "struggle_streak_since_last_replan": 0,
             }
         }
 
@@ -1005,6 +1923,9 @@ class AdaptiveReplanner:
 
         time_multiplier = adaptive.get("time_multiplier", 1.0)
         difficulty_shift = adaptive.get("difficulty_shift", 0.0)
+        feedback_stats = dict((report.metrics or {}).get("feedback_stats") or {})
+        too_difficult = int(feedback_stats.get("too_difficult", 0) or 0)
+        too_long = int(feedback_stats.get("too_long", 0) or 0)
 
         if "time_overrun" in report.reasons:
             time_multiplier = min(2.0, round(time_multiplier + 0.15, 2))
@@ -1022,6 +1943,17 @@ class AdaptiveReplanner:
             adaptive["time_multiplier"] = time_multiplier
         if difficulty_shift != adaptive.get("difficulty_shift", 0.0):
             adaptive["difficulty_shift"] = difficulty_shift
+
+        if any(reason in {"progress_lag", "time_overrun"} for reason in report.reasons) or too_long >= 2:
+            adaptive["max_concurrent_tasks"] = 1
+            adaptive["task_density_mode"] = "reduced"
+            adaptive["scaffolding_mode"] = "time_boxed_or_single_step"
+
+        if "difficulty_too_hard" in report.reasons or too_difficult >= 2:
+            adaptive["max_concurrent_tasks"] = 1
+            adaptive["task_density_mode"] = "reduced"
+            adaptive["scaffolding_mode"] = "single_gap_repair"
+            adaptive["allow_new_hard_topics"] = False
 
         if adaptive:
             adjustments["adaptive_adjustments"] = adaptive
@@ -1109,6 +2041,26 @@ class AdaptiveReplanner:
         )
         return applied_records
 
+    async def _increment_struggle_streak(
+        self,
+        user_id: "UUID",
+        plan_id: "UUID",
+        state: Any,
+    ) -> int:
+        adaptive_meta = dict(((state.facts or {}).get("adaptive_meta")) or {})
+        streak = int(adaptive_meta.get("struggle_streak_since_last_replan") or 0) + 1
+        adaptive_meta["struggle_streak_since_last_replan"] = streak
+        try:
+            await self.plan_state_service.upsert_plan_state(
+                user_id=user_id,
+                plan_id=plan_id,
+                patch={"facts": {"adaptive_meta": adaptive_meta}},
+                bump_version=False,
+            )
+        except Exception as exc:
+            logger.warning("Failed to persist struggle streak: {}", exc)
+        return streak
+
     def _recently_triggered(
         self,
         facts: dict[str, Any],
@@ -1166,6 +2118,10 @@ class AdaptiveReplanner:
             change_parts.append(f"把任务难度偏移调整为 {adaptive['difficulty_shift']}")
         if "time_multiplier" in adaptive:
             change_parts.append(f"把任务时长预算系数调整为 {adaptive['time_multiplier']}")
+        if adaptive.get("max_concurrent_tasks") == 1:
+            change_parts.append("把同时推进的核心任务收紧到 1 个")
+        if adaptive.get("scaffolding_mode"):
+            change_parts.append(f"补上 {adaptive['scaffolding_mode']} 型脚手架")
         what_changed = "；".join(change_parts) or "调整了当前计划的执行参数"
 
         metrics = report.metrics or {}
@@ -1182,10 +2138,14 @@ class AdaptiveReplanner:
         expected_parts: list[str] = []
         if "time_multiplier" in adaptive:
             expected_parts.append("给每步任务更多缓冲时间")
+        if adaptive.get("max_concurrent_tasks") == 1:
+            expected_parts.append("降低任务密度")
         if "difficulty_shift" in adaptive and adaptive["difficulty_shift"] < 0:
             expected_parts.append("降低任务启动门槛")
         elif "difficulty_shift" in adaptive and adaptive["difficulty_shift"] > 0:
             expected_parts.append("适度提高挑战强度")
+        if adaptive.get("scaffolding_mode"):
+            expected_parts.append("先给更具体的补强脚手架")
         expected_effect = "，".join(expected_parts) if expected_parts else "让后续任务更贴近你当前的执行状态。"
 
         if "difficulty_too_hard" in report.reasons or too_difficult >= 2:
@@ -1629,6 +2589,112 @@ class AdaptiveReplanner:
                 }
             )
         return failed
+
+    async def check_proactive_intervention(
+        self,
+        *,
+        user_id: str,
+        plan_id: str,
+        redis=None,
+    ) -> dict | None:
+        """
+        主动干预检查。由 Celery beat 每6小时调用一次。
+
+        返回 None：不需要干预
+        返回 dict：{action, message_hint, struggle_context}
+        """
+        from app.services.struggle_signal_aggregator import struggle_signal_aggregator
+
+        struggle_context = await struggle_signal_aggregator.get_struggle_context(
+            self.db, user_id=user_id, plan_id=plan_id
+        )
+        score = float(struggle_context.get("struggle_score", 0.0) or 0.0)
+
+        if score < 0.6:
+            return None
+
+        # 检查最近是否已经主动联系过（冷却期8h）
+        last_proactive = self._coerce_meta_datetime(
+            await self._get_meta_value(user_id, plan_id, "last_proactive_at")
+        )
+        if last_proactive and _utcnow() - last_proactive < timedelta(hours=8):
+            return None
+
+        # 构建主动干预上下文
+        stuck_concepts = list(struggle_context.get("stuck_concepts") or [])
+
+        if stuck_concepts:
+            # 有具体卡点
+            try:
+                days_behind = float(struggle_context.get("days_behind", 1) or 1)
+            except (TypeError, ValueError):
+                days_behind = 1.0
+            message_hint = (
+                f"我注意到你在{stuck_concepts[0]}这块已经{max(days_behind, 1.0):.0f}天没有明显推进，"
+                f"我们来看看是不是路径需要调整一下？"
+            )
+        else:
+            # 通用挣扎
+            message_hint = (
+                "你最近学习节奏似乎遇到了一些阻力，这很正常——"
+                "我们来看看是卡点的问题还是任务节奏需要调整？"
+            )
+
+        await self._set_meta_value(user_id, plan_id, "last_proactive_at", _utcnow())
+
+        return {
+            "action": "send_proactive_aurora_message",
+            "message_hint": message_hint,
+            "struggle_score": score,
+            "struggle_context": struggle_context,
+        }
+
+    async def _get_meta_value(
+        self,
+        user_id: UUID | str,
+        plan_id: UUID | str,
+        key: str,
+    ) -> Any:
+        state = await self.plan_state_service.get_plan_state(
+            UUID(str(user_id)),
+            UUID(str(plan_id)),
+        )
+        adaptive_meta = dict(((state.facts or {}) if state else {}).get("adaptive_meta") or {})
+        return adaptive_meta.get(key)
+
+    async def _set_meta_value(
+        self,
+        user_id: UUID | str,
+        plan_id: UUID | str,
+        key: str,
+        value: Any,
+    ) -> None:
+        user_uuid = UUID(str(user_id))
+        plan_uuid = UUID(str(plan_id))
+        state = await self.plan_state_service.get_plan_state(user_uuid, plan_uuid)
+        adaptive_meta = dict(((state.facts or {}) if state else {}).get("adaptive_meta") or {})
+        adaptive_meta[key] = value.isoformat() if isinstance(value, datetime) else value
+        await self.plan_state_service.upsert_plan_state(
+            user_id=user_uuid,
+            plan_id=plan_uuid,
+            patch={"facts": {"adaptive_meta": adaptive_meta}},
+            bump_version=False,
+        )
+
+    @staticmethod
+    def _coerce_meta_datetime(value: Any) -> datetime | None:
+        if value in (None, ""):
+            return None
+        if isinstance(value, datetime):
+            parsed = value
+        else:
+            try:
+                parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            except (TypeError, ValueError):
+                return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
 
     async def _enqueue_adaptation_update(
         self,

@@ -220,7 +220,7 @@ class CapsuleGenerationPreview extends StatelessWidget {
             value,
             style: TextStyle(
               fontSize: 14,
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
               color: DS.textPrimary,
             ),
             maxLines: 2,

@@ -1,13 +1,15 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
-import 'package:sparkle/core/services/intervention_action_service.dart';
+import 'package:sparkle/core/navigation/route_resilience.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/deep_link_service.dart';
+import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -381,17 +383,35 @@ class NotificationService {
 
     final destinationRoute = payload['destination_route'] as String?;
     if (destinationRoute != null && destinationRoute.isNotEmpty) {
-      unawaited(GoRouter.of(context).push(destinationRoute));
+      unawaited(
+        RouteResilience.openExternalRoute(
+          context,
+          destinationRoute,
+          currentContextLookup: () => navigatorKey.currentContext,
+        ),
+      );
       return;
+    }
+
+    final deepLink = payload['deep_link']?.toString().trim();
+    if (deepLink != null && deepLink.isNotEmpty) {
+      if (DeepLinkService.handleExternalDeepLink(
+        context,
+        deepLink,
+        currentContextLookup: () => navigatorKey.currentContext,
+      )) {
+        return;
+      }
     }
 
     final taskId =
         payload['taskId']?.toString() ?? payload['entity_id']?.toString();
     if (taskId != null && taskId.isNotEmpty) {
       unawaited(
-        GoRouter.of(context).pushNamed(
-          'taskExecution',
-          pathParameters: {'id': taskId},
+        RouteResilience.openExternalRoute(
+          context,
+          '/tasks/$taskId/execute',
+          currentContextLookup: () => navigatorKey.currentContext,
         ),
       );
       return;
@@ -513,8 +533,12 @@ class NotificationPermissionStatusNotifier
     extends AsyncNotifier<NotificationPermissionStatus> {
   @override
   Future<NotificationPermissionStatus> build() async {
-    final notificationService = ref.read(notificationServiceProvider);
-    return notificationService.checkPermissionStatus();
+    try {
+      final notificationService = ref.read(notificationServiceProvider);
+      return await notificationService.checkPermissionStatus();
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(error, stackTrace);
+    }
   }
 
   /// 刷新权限状态
@@ -522,7 +546,11 @@ class NotificationPermissionStatusNotifier
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
       final notificationService = ref.read(notificationServiceProvider);
-      return notificationService.checkPermissionStatus();
+      final status = await notificationService.checkPermissionStatus();
+      if (!status.hasPermission) {
+        await _syncPushOptIn(enabled: false);
+      }
+      return status;
     });
   }
 
@@ -530,7 +558,23 @@ class NotificationPermissionStatusNotifier
   Future<bool> requestPermission() async {
     final notificationService = ref.read(notificationServiceProvider);
     final granted = await notificationService.requestPermission();
+    await _syncPushOptIn(enabled: granted);
     await refresh();
     return granted;
+  }
+
+  Future<void> _syncPushOptIn({required bool enabled}) async {
+    try {
+      await ref.read(apiClientProvider).put<Map<String, dynamic>>(
+        '/memory/push-settings',
+        data: <String, dynamic>{
+          'enabled': enabled,
+          'allow_commitment_follow_up': enabled,
+          'allow_engagement_recovery': enabled,
+        },
+      );
+    } catch (_) {
+      // Permission state is still useful locally when the user is offline or signed out.
+    }
   }
 }

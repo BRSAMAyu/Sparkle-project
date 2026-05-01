@@ -66,7 +66,7 @@ class _RealtimeNudgeBubbleState extends ConsumerState<RealtimeNudgeBubble> {
                 '💡 ${latestPatternWithSolution.patternName}: ${latestPatternWithSolution.solutionText}',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: isDark ? DS.neutral200 : DS.neutral800,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: DS.fontWeightMedium,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,

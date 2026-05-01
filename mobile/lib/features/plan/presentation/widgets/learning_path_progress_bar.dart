@@ -36,7 +36,7 @@ class LearningPathProgressBar extends StatelessWidget {
                 '学习路径进度',
                 style: TextStyle(
                   fontSize: 14,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                   color: DS.brandPrimary,
                 ),
               ),

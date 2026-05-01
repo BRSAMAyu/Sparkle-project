@@ -80,6 +80,19 @@ bool _isTrue(dynamic value) {
   return false;
 }
 
+String? _normalizeFinishReason(dynamic raw) {
+  final finishReason = raw?.toString().trim();
+  if (finishReason == null ||
+      finishReason.isEmpty ||
+      finishReason.toUpperCase() == 'NULL') {
+    return null;
+  }
+  return finishReason;
+}
+
+bool _isContinueFinishReason(String? finishReason) =>
+    finishReason?.toUpperCase() == 'CONTINUE';
+
 Map<String, dynamic>? _extractDagExecutionMetadata(
   Map<String, dynamic>? metadata,
 ) {
@@ -121,6 +134,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
     final workflowId = data['workflow_id'] as String?;
     final promptVersion = data['prompt_version'] as String?;
     final sessionId = data['session_id'] as String?;
+    final finishReason = _normalizeFinishReason(data['finish_reason']);
 
     switch (type) {
       case 'delta':
@@ -538,7 +552,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         );
 
       case 'full_text':
-        final metadata = data['metadata'] as Map<String, dynamic>?;
+        final metadata = _normalizeMetadata(data['metadata']);
         return FullTextEvent(
           content: data['full_text'] as String? ?? '',
           responseId: responseId,
@@ -548,13 +562,36 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           metadata: metadata,
         );
 
+      case 'done':
+        final metadata = _normalizeMetadata(data['metadata']);
+        if (_isContinueFinishReason(finishReason)) {
+          return ContinueEvent(
+            finishReason: finishReason,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+            metadata: metadata,
+            sessionId: sessionId,
+          );
+        }
+        return DoneEvent(
+          finishReason: finishReason,
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+          metadata: metadata,
+          sessionId: sessionId,
+        );
+
       case 'error':
         final error = data['error'] as Map<String, dynamic>?;
         if (error != null) {
           final code = (error['error_code'] as String?) ?? 'UNKNOWN';
           return ErrorEvent(
             code: code,
-            message: error['message'] as String? ?? 'Unknown error',
+            message: error['message'] as String? ?? '未知错误',
             retryable: error['retryable'] as bool? ?? false,
             responseId: responseId,
             traceId: traceId,
@@ -564,7 +601,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         }
         return ErrorEvent(
           code: 'UNKNOWN',
-          message: 'Unknown error',
+          message: '未知错误',
           retryable: false,
           responseId: responseId,
           traceId: traceId,
@@ -652,8 +689,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'nack':
         final messageId = data['message_id'] as String?;
         final errorCode = data['error_code'] as String? ?? 'unknown';
-        final errorMessage =
-            data['error_message'] as String? ?? 'Unknown error';
+        final errorMessage = data['error_message'] as String? ?? '未知错误';
         final retryAfterMs = data['retry_after_ms'] as int?;
         if (messageId != null) {
           return NackEvent(
@@ -950,14 +986,26 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
         return NotificationEvent.fromJson(data);
 
       default:
-        final finishReason = data['finish_reason'] as String?;
-        if (finishReason != null && finishReason != 'NULL') {
+        if (finishReason != null) {
+          final metadata = _normalizeMetadata(data['metadata']);
+          if (_isContinueFinishReason(finishReason)) {
+            return ContinueEvent(
+              finishReason: finishReason,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+              metadata: metadata,
+              sessionId: sessionId,
+            );
+          }
           return DoneEvent(
             finishReason: finishReason,
             responseId: responseId,
             traceId: traceId,
             workflowId: workflowId,
             promptVersion: promptVersion,
+            metadata: metadata,
             sessionId: sessionId,
           );
         }
@@ -1057,6 +1105,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   // WebSocket 连接
   WebSocketChannel? _channel;
   StreamSubscription<dynamic>? _socketSubscription;
+  Future<void> _incomingMessageChain = Future<void>.value();
   bool _disposed = false;
   int _connGen = 0;
 
@@ -1156,6 +1205,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     List<String>? fileIds,
     bool includeReferences = false,
     String? chatMode,
+    bool? useDocumentContext,
   }) {
     // ✅ Fix H1: Reset connection state for new user session
     if (_currentUserId != null && _currentUserId != userId) {
@@ -1193,6 +1243,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       if (fileIds != null && fileIds.isNotEmpty) 'file_ids': fileIds,
       if (includeReferences) 'include_references': true,
       if (chatMode != null) 'chat_mode': chatMode,
+      if (useDocumentContext != null)
+        'use_document_context': useDocumentContext,
     };
 
     // 发送或排队
@@ -1421,7 +1473,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
       // 监听 WebSocket 流
       _socketSubscription = _channel!.stream.listen(
-        _handleIncomingMessage,
+        _queueIncomingMessage,
         onError: _handleConnectionError,
         onDone: _handleConnectionClosed,
         cancelOnError: false,
@@ -1555,6 +1607,12 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _scheduleTerminalFallback(targetRequestId);
       return;
     }
+    if (event is ContinueEvent) {
+      // CONTINUE is the authoritative segment boundary for Aurora multi-turn
+      // streams. Keep the request open and avoid synthesizing a false DoneEvent.
+      _cancelTerminalFallback(targetRequestId);
+      return;
+    }
     if (_terminalFallbackTimers.containsKey(targetRequestId) &&
         event is! DoneEvent &&
         event is! ErrorEvent) {
@@ -1618,6 +1676,14 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     }
   }
 
+  void _queueIncomingMessage(dynamic data) {
+    _incomingMessageChain = _incomingMessageChain
+        .then((_) => _handleIncomingMessage(data))
+        .catchError((Object error, StackTrace stackTrace) {
+      _log('❌ Incoming message queue error: $error');
+    });
+  }
+
   /// 处理接收到的消息
   Future<void> _handleIncomingMessage(dynamic data) async {
     if (_disposed) return;
@@ -1641,8 +1707,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         // 解析失败，继续正常处理
       }
 
-      // Parse event in isolate to avoid blocking main thread
-      final event = await compute(_parseChatEvent, data);
+      // Small control/status frames are latency-sensitive; large text frames
+      // still go through an isolate to avoid blocking the UI thread.
+      final event = data.length < 12000
+          ? _parseChatEvent(data)
+          : await compute(_parseChatEvent, data);
       final requestId = _extractRequestIdFromRawMessage(data);
 
       // 🔧 P0修复：标记流活跃状态，抑制心跳超时触发的假性重连
@@ -1889,8 +1958,20 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _log('❌ Max reconnect attempts reached');
       _updateConnectionState(WsConnectionState.failed);
 
-      // TRACKED(TD-001): Clear pending
-      _pendingMessages.clear();
+      // Notify user about dropped pending messages (consistent with 401/token-refresh paths)
+      if (_pendingMessages.isNotEmpty) {
+        final droppedCount = _pendingMessages.length;
+        final l10n = I18nService.instance.l10n;
+        _log(
+          '⚠️ Discarding $droppedCount pending messages: max reconnect attempts reached',
+        );
+        _failPendingMessages(
+          code: 'MESSAGES_LOST',
+          message: l10n.chatPendingMessagesFailed(
+            '有 $droppedCount 条未发送消息因网络连接失败被丢弃 / $droppedCount pending messages were dropped because connection failed after $_maxReconnectAttempts attempts.',
+          ),
+        );
+      }
 
       _broadcastErrorToActiveRequests(
         ErrorEvent(

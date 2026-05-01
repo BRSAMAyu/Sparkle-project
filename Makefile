@@ -112,7 +112,9 @@ init-rag:
 	$(BACKEND_PYTHON) backend/scripts/init_redis_index.py
 
 sync-rag:
-	@echo "🔄 Syncing PG KnowledgeNodes to Redis..."
+	@echo "🏗️ Ensuring Redis RAG index schema..."
+	$(BACKEND_PYTHON) backend/scripts/init_redis_index.py
+	@echo "🔄 Syncing PG KnowledgeNodes and DocumentChunks to Redis..."
 	$(BACKEND_PYTHON) backend/scripts/sync_pg_to_redis.py
 
 init-minio-buckets:

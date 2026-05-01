@@ -354,7 +354,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                         context.l10n.chatReasoningProcess,
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: widget.agentColor,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: DS.fontWeightSemibold,
                         ),
                       ),
                     ],
@@ -465,7 +465,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   labelStyle: TextStyle(
                     color: DS.prismPurple,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,

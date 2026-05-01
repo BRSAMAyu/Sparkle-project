@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
@@ -72,7 +73,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
   Future<void> _lookup() async {
     final word = _controller.text.trim();
     if (word.isEmpty) {
-      AppFeedback.info(context, '请输入要查询的单词');
+      AppFeedback.info(context, context.l10n.vocabularyLookupEnterWord);
       return;
     }
 
@@ -137,7 +138,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
     if (mounted) {
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
-      AppFeedback.success(context, '已添加 "$word" 到生词本');
+      AppFeedback.success(context, context.l10n.vocabularyLookupAddedToWordbook(word));
     }
   }
 
@@ -160,7 +161,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       }
       setState(() => _isInLocalWordbook = false);
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
-      AppFeedback.info(context, '已从生词本移除 "$word"');
+      AppFeedback.info(context, context.l10n.vocabularyLookupRemovedFromWordbook(word));
     }
   }
 
@@ -179,16 +180,16 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
           _preferredStarterPackageId() ??
           _firstAvailablePackageId();
       if (targetId == null) {
-        throw Exception('暂无可下载的离线词典包');
+        throw Exception(context.l10n.vocabularyLookupNoPackage);
       }
       await repository.downloadDictionaryPackage(targetId);
       await _refreshDictionaryPackages();
       if (mounted) {
-        AppFeedback.success(context, '离线词典已下载，可优先本地查词');
+        AppFeedback.success(context, context.l10n.vocabularyLookupOfflineDownloaded);
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '离线词典下载失败: $e');
+        AppFeedback.error(context, context.l10n.vocabularyLookupOfflineDownloadFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -208,12 +209,12 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       if (!mounted) {
         return;
       }
-      AppFeedback.info(context, '已移除离线词典包');
+      AppFeedback.info(context, context.l10n.vocabularyLookupOfflineRemoved);
     } catch (e) {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, '移除离线词典包失败: $e');
+      AppFeedback.error(context, context.l10n.vocabularyLookupOfflineRemoveFailed(e.toString()));
     }
   }
 

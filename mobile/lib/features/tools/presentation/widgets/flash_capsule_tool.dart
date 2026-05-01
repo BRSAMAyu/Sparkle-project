@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/cognitive/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
@@ -181,14 +182,14 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                   ),
                   const SizedBox(height: DS.spacing16),
                   Text(
-                    '历史胶囊',
+                    context.l10n.flashCapsuleHistory,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   const SizedBox(height: DS.spacing8),
                   Text(
-                    history.isEmpty ? '还没有保存过闪念胶囊。' : '这里会显示你之前保存过的闪念与思考胶囊。',
+                    history.isEmpty ? context.l10n.flashCapsuleHistoryEmpty : context.l10n.flashCapsuleHistoryDesc,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
                       height: 1.5,
@@ -199,8 +200,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                     child: history.isEmpty
                         ? ToolEmptyState(
                             icon: Icons.history_rounded,
-                            title: '暂无历史胶囊',
-                            description: '保存一次闪念胶囊后，就能在这里继续回看。',
+                            title: context.l10n.flashCapsuleNoHistory,
+                            description: context.l10n.flashCapsuleNoHistoryDesc,
                             accentColor: DS.warning,
                           )
                         : ListView.separated(
@@ -215,10 +216,10 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                                   .where((line) => line.isNotEmpty)
                                   .toList(growable: false);
                               final title =
-                                  lines.isEmpty ? '未命名胶囊' : lines.first;
+                                  lines.isEmpty ? context.l10n.flashCapsuleUnnamed : lines.first;
                               final detail = lines.length > 1
                                   ? lines.skip(1).join('\n')
-                                  : '暂无补充描述';
+                                  : context.l10n.flashCapsuleNoDesc;
                               final pending = (item.tags ?? const <String>[])
                                   .contains('pending_sync');
 
@@ -248,12 +249,12 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                                           _HistoryChip(
                                             label: item.sourceType ==
                                                     'flash_capsule'
-                                                ? '闪念'
-                                                : '思考',
+                                                ? context.l10n.flashCapsuleTagFlash
+                                                : context.l10n.flashCapsuleTagThink,
                                           ),
                                           if (pending) ...[
                                             const SizedBox(width: DS.spacing8),
-                                            const _HistoryChip(label: '待同步'),
+                                            _HistoryChip(label: context.l10n.flashCapsuleSyncPending),
                                           ],
                                         ],
                                       ),
@@ -353,6 +354,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
     final accent = DS.warning;
     final cognitiveState = ref.watch(cognitiveProvider);
     final historyCount = _historyEntries(cognitiveState.fragments).length;
+    final l10n = context.l10n;
     return ToolShell(
       surface: widget.surface,
       icon: Icons.lightbulb_outline_rounded,
@@ -372,7 +374,7 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
           icon: Icons.label_rounded,
         ),
         ToolHeroChip(
-          label: historyCount == 0 ? '暂无历史胶囊' : '$historyCount 条历史胶囊',
+          label: historyCount == 0 ? context.l10n.flashCapsuleNoHistory : '$historyCount 条历史胶囊',
           accentColor: accent,
           icon: Icons.history_rounded,
         ),

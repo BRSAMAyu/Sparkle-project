@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/skill_models.dart';
 import 'package:sparkle/core/services/skill_api_service.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 class SkillManagementScreen extends ConsumerStatefulWidget {
   const SkillManagementScreen({super.key});
@@ -93,14 +92,17 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
             ? const Center(child: CircularProgressIndicator())
             : _error != null
                 ? Center(child: Text(_error!))
-                : TabBarView(
-                    controller: _tabController,
-                    children: [
-                      RefreshIndicator(
-                        onRefresh: _load,
-                        child: ListView(
-                          padding: const EdgeInsets.all(DS.spacing16),
-                          children: [
+                : ContentConstraint(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        RefreshIndicator(
+                          onRefresh: _load,
+                          child: ListView(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: DS.spacing16,
+                            ),
+                            children: [
                             _buildIntroCard(),
                             const SizedBox(height: DS.spacing12),
                             ..._skills.map(_buildSkillCard),
@@ -115,7 +117,9 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
                       RefreshIndicator(
                         onRefresh: _load,
                         child: ListView(
-                          padding: const EdgeInsets.all(DS.spacing16),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: DS.spacing16,
+                          ),
                           children: [
                             ..._sharedSkills.map(_buildSharedSkillCard),
                             if (_sharedSkills.isEmpty)
@@ -127,6 +131,7 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
                         ),
                       ),
                     ],
+                    ),
                   ),
       );
 

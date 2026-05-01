@@ -490,23 +490,27 @@ class TransparencyPreferencesNotifier
 
   @override
   Future<TransparencyPreferences> build() async {
-    final service = ref.watch(userPreferencesServiceProvider);
-    final prefs = await service.getPreferences();
+    try {
+      final service = ref.watch(userPreferencesServiceProvider);
+      final prefs = await service.getPreferences();
 
-    final transparencyPrefs = prefs['transparency'] as Map<String, dynamic>?;
+      final transparencyPrefs = prefs['transparency'] as Map<String, dynamic>?;
 
-    if (transparencyPrefs != null) {
-      return TransparencyPreferences.fromJson(transparencyPrefs);
+      if (transparencyPrefs != null) {
+        return TransparencyPreferences.fromJson(transparencyPrefs);
+      }
+
+      return const TransparencyPreferences(
+        enabled: true,
+        showTokenUsage: true,
+        showAgentSwitching: true,
+        showReasoningSteps: true,
+        displayMode: TransparencyDisplayMode.collapsedFloating,
+        autoCollapseOnComplete: true,
+        allowPerTurnDismiss: true,
+      );
+    } catch (error, stackTrace) {
+      Error.throwWithStackTrace(error, stackTrace);
     }
-
-    return const TransparencyPreferences(
-      enabled: true,
-      showTokenUsage: true,
-      showAgentSwitching: true,
-      showReasoningSteps: true,
-      displayMode: TransparencyDisplayMode.collapsedFloating,
-      autoCollapseOnComplete: true,
-      allowPerTurnDismiss: true,
-    );
   }
 }

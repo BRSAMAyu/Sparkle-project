@@ -28,8 +28,57 @@ class FileRepository {
         'mime_type': mimeType,
       },
     );
-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'prepareUpload');
+    final payload =
+        ApiResponseParser.unwrapMap(response.data, action: 'prepareUpload');
     return UploadSession.fromJson(payload);
+  }
+
+  Future<DocumentUploadSession> prepareDocumentUpload({
+    required String filename,
+    required int fileSize,
+    required String mimeType,
+    String visibility = 'private',
+    String? groupId,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ApiEndpoints.documentsUpload,
+      data: {
+        'filename': filename,
+        'file_size': fileSize,
+        'mime_type': mimeType,
+        'visibility': visibility,
+        if (groupId != null) 'group_id': groupId,
+      },
+    );
+    final payload = ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'prepareDocumentUpload',
+    );
+    return DocumentUploadSession.fromJson(payload);
+  }
+
+  Future<DocumentUploadConfirmation> confirmDocumentUpload(
+    String fileId,
+  ) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      ApiEndpoints.documentConfirmUpload(fileId),
+    );
+    final payload = ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'confirmDocumentUpload',
+    );
+    return DocumentUploadConfirmation.fromJson(payload);
+  }
+
+  Future<DocumentProcessingStatus> getDocumentStatus(String fileId) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      ApiEndpoints.documentStatus(fileId),
+    );
+    final payload = ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'getDocumentStatus',
+    );
+    return DocumentProcessingStatus.fromJson(payload);
   }
 
   Future<StoredFile> completeUpload({
@@ -47,7 +96,8 @@ class FileRepository {
         if (description != null) 'description': description,
       },
     );
-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'fileOperation');
+    final payload =
+        ApiResponseParser.unwrapMap(response.data, action: 'fileOperation');
     return StoredFile.fromJson(payload);
   }
 
@@ -58,7 +108,8 @@ class FileRepository {
         if (groupId != null) 'group_id': groupId,
       },
     );
-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'fileOperation');
+    final payload =
+        ApiResponseParser.unwrapMap(response.data, action: 'fileOperation');
     return StoredFile.fromJson(payload);
   }
 
@@ -69,7 +120,8 @@ class FileRepository {
         if (groupId != null) 'group_id': groupId,
       },
     );
-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'getDownloadUrl');
+    final payload =
+        ApiResponseParser.unwrapMap(response.data, action: 'getDownloadUrl');
     return PresignedUrl.fromJson(payload, 'download_url');
   }
 
@@ -80,12 +132,16 @@ class FileRepository {
         if (groupId != null) 'group_id': groupId,
       },
     );
-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'getThumbnailUrl');
+    final payload =
+        ApiResponseParser.unwrapMap(response.data, action: 'getThumbnailUrl');
     return PresignedUrl.fromJson(payload, 'thumbnail_url');
   }
 
-  Future<List<StoredFile>> listMyFiles(
-      {String? status, int limit = 20, int offset = 0,}) async {
+  Future<List<StoredFile>> listMyFiles({
+    String? status,
+    int limit = 20,
+    int offset = 0,
+  }) async {
     final response = await _dio.get<dynamic>(
       ApiEndpoints.myFiles,
       queryParameters: {
@@ -94,14 +150,17 @@ class FileRepository {
         'offset': offset,
       },
     );
-    final data = ApiResponseParser.unwrapList(response.data, action: 'listMyFiles');
+    final data =
+        ApiResponseParser.unwrapList(response.data, action: 'listMyFiles');
     return data
         .map((item) => StoredFile.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 
-  Future<List<StoredFile>> searchMyFiles(
-      {required String query, int limit = 20,}) async {
+  Future<List<StoredFile>> searchMyFiles({
+    required String query,
+    int limit = 20,
+  }) async {
     final response = await _dio.get<dynamic>(
       ApiEndpoints.myFilesSearch,
       queryParameters: {
@@ -109,7 +168,8 @@ class FileRepository {
         'limit': limit,
       },
     );
-    final data = ApiResponseParser.unwrapList(response.data, action: 'listMyFiles');
+    final data =
+        ApiResponseParser.unwrapList(response.data, action: 'listMyFiles');
     return data
         .map((item) => StoredFile.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -129,7 +189,8 @@ class FileRepository {
         'offset': offset,
       },
     );
-    final data = ApiResponseParser.unwrapList(response.data, action: 'listGroupFiles');
+    final data =
+        ApiResponseParser.unwrapList(response.data, action: 'listGroupFiles');
     return data
         .map((item) => GroupFileInfo.fromJson(item as Map<String, dynamic>))
         .toList();
@@ -139,20 +200,33 @@ class FileRepository {
     String groupId,
     String fileId, {
     String? category,
+    String? description,
     List<String>? tags,
     GroupFilePermissions? permissions,
+    bool addToGroupGalaxy = false,
+    bool? isOfficial,
     bool sendMessage = true,
   }) async {
+    final mergedTags = <String>{
+      ...?tags,
+      if (addToGroupGalaxy) 'group_galaxy',
+      if (isOfficial ?? false) 'official',
+    }.toList();
+
     final response = await _dio.post<Map<String, dynamic>>(
       ApiEndpoints.groupFileShare(groupId, fileId),
       data: {
         if (category != null) 'category': category,
-        if (tags != null) 'tags': tags,
+        if (description != null) 'description': description,
+        if (mergedTags.isNotEmpty) 'tags': mergedTags,
+        if (addToGroupGalaxy) 'add_to_group_galaxy': true,
+        if (isOfficial ?? false) 'trust_level': 'official',
         if (permissions != null) 'permissions': permissions.toJson(),
         'send_message': sendMessage,
       },
     );
-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'shareToGroup');
+    final payload =
+        ApiResponseParser.unwrapMap(response.data, action: 'shareToGroup');
     return GroupFileInfo.fromJson(payload);
   }
 
@@ -167,18 +241,33 @@ class FileRepository {
         'permissions': permissions.toJson(),
       },
     );
-    final payload = ApiResponseParser.unwrapMap(response.data, action: 'updateGroupFilePermissions');
+    final payload = ApiResponseParser.unwrapMap(
+      response.data,
+      action: 'updateGroupFilePermissions',
+    );
     return GroupFileInfo.fromJson(payload);
   }
 
   Future<List<GroupFileCategoryStat>> getGroupFileCategories(
-      String groupId,) async {
+    String groupId,
+  ) async {
     final response =
         await _dio.get<dynamic>(ApiEndpoints.groupFileCategories(groupId));
-    final data = ApiResponseParser.unwrapList(response.data, action: 'getGroupFileCategories');
+    final data = ApiResponseParser.unwrapList(
+      response.data,
+      action: 'getGroupFileCategories',
+    );
     return data
-        .map((item) =>
-            GroupFileCategoryStat.fromJson(item as Map<String, dynamic>),)
+        .map(
+          (item) =>
+              GroupFileCategoryStat.fromJson(item as Map<String, dynamic>),
+        )
         .toList();
+  }
+
+  Future<void> copyGroupFileToMyLibrary(String groupId, String fileId) async {
+    await _dio.post<void>(
+      '/api/v1/community/groups/$groupId/files/$fileId/copy-to-library',
+    );
   }
 }

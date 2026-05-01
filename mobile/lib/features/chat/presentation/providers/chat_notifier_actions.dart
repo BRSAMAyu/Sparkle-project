@@ -1,6 +1,17 @@
 part of 'chat_provider.dart';
 
 extension ChatNotifierActions on ChatNotifier {
+  void setDocumentRetrievalEnabled(bool enabled) {
+    state = state.copyWith(documentRetrievalEnabled: enabled);
+  }
+
+  void setDocumentContextMode(DocumentContextMode mode) {
+    state = state.copyWith(
+      documentContextMode: mode,
+      documentRetrievalEnabled: mode != DocumentContextMode.off,
+    );
+  }
+
   void setTransparencyExpanded(bool expanded) {
     state = state.copyWith(
       transparencyPresentationState:
@@ -62,8 +73,36 @@ extension ChatNotifierActions on ChatNotifier {
             ? _actionString(payload, 'prompt')
             : payload['label']?.toString() ?? '';
         if (prompt.isNotEmpty) {
-          await sendMessage(prompt);
+          final actionPayload = _actionPayload(payload);
+          final extraContext = <String, dynamic>{
+            if (_actionString(payload, 'planning_session_id').isNotEmpty)
+              'planning_session_id':
+                  _actionString(payload, 'planning_session_id'),
+            if (actionPayload['extra_context'] is Map<String, dynamic>)
+              ...Map<String, dynamic>.from(
+                actionPayload['extra_context'] as Map<String, dynamic>,
+              ),
+          };
+          await sendMessage(
+            prompt,
+            extraContextOverrides: extraContext.isEmpty ? null : extraContext,
+          );
         }
+        return;
+      case 'checkpoint_debrief_start':
+        final prompt = payload['prompt']?.toString() ?? '我来复盘一下';
+        final rawContext = payload['debrief_context'];
+        final debriefContext = rawContext is Map<String, dynamic>
+            ? rawContext
+            : rawContext is Map
+                ? Map<String, dynamic>.from(rawContext)
+                : const <String, dynamic>{};
+        await sendMessage(
+          prompt,
+          extraContextOverrides: {
+            if (debriefContext.isNotEmpty) 'debrief_context': debriefContext,
+          },
+        );
         return;
       case 'route':
         final route = _actionString(payload, 'route');
@@ -194,6 +233,10 @@ extension ChatNotifierActions on ChatNotifier {
               feedbackId,
               selectedOption: _actionString(payload, 'selected_option'),
               freeText: _actionString(payload, 'free_text'),
+              stuckPoint: _actionString(payload, 'stuck_point'),
+              effectiveMethod: _actionString(payload, 'effective_method'),
+              adjustmentIntention:
+                  _actionString(payload, 'adjustment_intention'),
             );
         state = state.copyWith(
           lastActionStatus: 'reflection_submitted',
@@ -468,6 +511,41 @@ extension ChatNotifierActions on ChatNotifier {
   }
 
   void sendResponseFeedback(ChatMessageModel message, String feedbackType) {
+    _sendResponseFeedback(
+      message: message,
+      feedbackType: feedbackType,
+      successMessage:
+          feedbackType == 'up' ? '已收到你的反馈，这条回复已标记为有帮助' : '已收到你的反馈，我们会继续改进这类回复',
+    );
+  }
+
+  void sendCitationFeedback({
+    required ChatMessageModel message,
+    required ChatCitation citation,
+    required bool helpful,
+  }) {
+    _sendResponseFeedback(
+      message: message,
+      feedbackType: helpful ? 'up' : 'down',
+      extraMeta: {
+        'feedback_target': 'citation',
+        'citation_id': citation.id,
+        'citation_title': citation.title,
+        'citation_file_id': citation.fileId,
+        'citation_locator': citation.locatorLabel,
+        'citation_chunk_index': citation.chunkIndex,
+        'citation_page_number': citation.pageNumber,
+      },
+      successMessage: helpful ? '已收到这条引用的正向反馈' : '已记录这条引用的改进反馈',
+    );
+  }
+
+  void _sendResponseFeedback({
+    required ChatMessageModel message,
+    required String feedbackType,
+    required String successMessage,
+    Map<String, dynamic>? extraMeta,
+  }) {
     final responseId = message.responseId ?? '';
     if (responseId.isEmpty) {
       debugPrint('⚠️ Missing response_id for feedback');
@@ -496,13 +574,13 @@ extension ChatNotifierActions on ChatNotifier {
           'reasoning_mode': message.meta?.reasoningMode ?? '',
         if (selectedExpertsMeta != null)
           'selected_experts': selectedExpertsMeta,
+        ...?extraMeta,
       },
     );
     debugPrint('📤 Response feedback sent: $feedbackType for $responseId');
     state = state.copyWith(
       lastActionStatus: 'response_feedback_sent',
-      lastActionMessage:
-          feedbackType == 'up' ? '已收到你的反馈，这条回复已标记为有帮助' : '已收到你的反馈，我们会继续改进这类回复',
+      lastActionMessage: successMessage,
     );
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted) {
@@ -578,6 +656,27 @@ extension ChatNotifierActions on ChatNotifier {
     state = state.copyWith(
       lastActionStatus: 'milestone_reached',
       lastActionMessage: event.message,
+    );
+
+    final now = DateTime.now();
+    _ref.read(notificationCenterProvider.notifier).handleNewNotification(
+      notificationData: {
+        'id':
+            'achievement-progress-${event.achievementId}-${event.milestonePercent}-${now.microsecondsSinceEpoch}',
+        'title': '${event.achievementName} 进度达到 ${event.milestonePercent}%',
+        'content': event.message,
+        'type': 'achievement_progress',
+        'priority': 'medium',
+        'is_read': false,
+        'created_at': now.toIso8601String(),
+        'data': {
+          'achievement_id': event.achievementId,
+          'achievement_name': event.achievementName,
+          'progress_percent': event.milestonePercent,
+          'source_event': 'achievement_milestone',
+        },
+      },
+      notificationType: 'system',
     );
 
     // Phase 1B: Trigger close-to-unlock check

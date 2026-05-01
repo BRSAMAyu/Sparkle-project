@@ -1,3 +1,4 @@
+# FIXED: 2026-04-25 - Integration DB schema was behind task planning migrations - verified after upgrading test DB to Alembic head.
 """
 Integration Tests: Adaptive Replanning & State Management
 

@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from difflib import SequenceMatcher
 from datetime import timezone, datetime, timedelta
 from typing import Any
+from app.core.i18n import I18n
 
 
 SESSION_FEEDBACK_TTL_SECONDS = 6 * 60 * 60
@@ -24,15 +25,15 @@ _SIGNAL_THRESHOLDS = {
 }
 
 _VISIBLE_PREFIXES = {
-    "simplify": "我换成更简洁的版本：",
-    "expand": "我改用更展开的方式说明：",
-    "mismatch": "我直接按你要的方向重答：",
+    "simplify": "session_feedback.visible_prefix_simplify",
+    "expand": "session_feedback.visible_prefix_expand",
+    "mismatch": "session_feedback.visible_prefix_mismatch",
 }
 
 _TRANSITION_HINT_POOLS = {
-    "simplify": ("好，精简版：", "我先说最关键的："),
-    "expand": ("我换个更展开的讲法：", "我按步骤展开说："),
-    "mismatch": ("我按你刚才真正想问的来答：", "我先把方向校正一下："),
+    "simplify": ("session_feedback.transition_simplify_1", "session_feedback.transition_simplify_2"),
+    "expand": ("session_feedback.transition_expand_1", "session_feedback.transition_expand_2"),
+    "mismatch": ("session_feedback.transition_mismatch_1", "session_feedback.transition_mismatch_2"),
 }
 
 _MISMATCH_PHRASES = (
@@ -277,13 +278,16 @@ def _looks_like_topic_shift(message: str, previous_assistant: str, previous_user
 def _build_signal(signal_type: str, confidence: float, trigger_text: str) -> SessionFeedbackSignal:
     threshold = _SIGNAL_THRESHOLDS.get(signal_type)
     applies = signal_type in _VISIBLE_PREFIXES and threshold is not None and confidence >= threshold
+    visible_hint = I18n.t(_VISIBLE_PREFIXES[signal_type], locale="zh") if applies and signal_type in _VISIBLE_PREFIXES else None
+    transition_pool = _TRANSITION_HINT_POOLS.get(signal_type, ("",))
+    transition_hint = I18n.t(transition_pool[0], locale="zh") if applies and transition_pool[0] else None
     return SessionFeedbackSignal(
         signal_type=signal_type,
         confidence=confidence,
         trigger_text=trigger_text,
         applies_adaptation=applies,
-        visible_hint=_VISIBLE_PREFIXES.get(signal_type) if applies else None,
-        transition_hint=_TRANSITION_HINT_POOLS.get(signal_type, ("",))[0] if applies else None,
+        visible_hint=visible_hint,
+        transition_hint=transition_hint,
     )
 
 
@@ -376,15 +380,15 @@ def analyze_conversation_rhythm(
         )
     ):
         signal_type = "stalled_followup"
-        guidance = "用户已经连续多轮围绕同一个点追问，前面的回答没有真正解决问题；这轮请换一种讲法或换一个例子。"
+        guidance = I18n.t("session_feedback.stalled_followup_guidance", locale="zh")
     elif lengths[0] >= lengths[1] >= lengths[2] and lengths[0] - lengths[2] >= 6:
         trend = "shrinking"
         signal_type = "patience_drop"
-        guidance = "用户最近几轮消息越来越短，可能正在失去耐心；这轮请主动收敛，先给结论，减少枝节。"
+        guidance = I18n.t("session_feedback.patience_drop_guidance", locale="zh")
     elif lengths[0] < lengths[1] < lengths[2]:
         trend = "expanding"
         signal_type = "deepening_focus"
-        guidance = "用户最近几轮消息越来越长，说明正在主动深入；这轮可以更展开，但保持结构化。"
+        guidance = I18n.t("session_feedback.deepening_focus_guidance", locale="zh")
 
     if not signal_type:
         return None
@@ -403,7 +407,8 @@ def build_session_feedback_instruction(signal: SessionFeedbackSignal | dict[str,
     if not parsed or not parsed.applies_adaptation:
         return ""
 
-    prefix = parsed.visible_hint or _VISIBLE_PREFIXES.get(parsed.signal_type, "")
+    prefix_key = _VISIBLE_PREFIXES.get(parsed.signal_type, "")
+    prefix = parsed.visible_hint or I18n.t(prefix_key, locale="zh") if prefix_key else ""
     transition_hint = parsed.transition_hint or ""
     if parsed.signal_type == "simplify":
         return (
@@ -449,7 +454,8 @@ def apply_session_feedback_visible_prefix(
     if not parsed or not parsed.applies_adaptation:
         return response, False
 
-    prefix = parsed.visible_hint or _VISIBLE_PREFIXES.get(parsed.signal_type)
+    prefix_key = _VISIBLE_PREFIXES.get(parsed.signal_type, "")
+    prefix = parsed.visible_hint or I18n.t(prefix_key, locale="zh") if prefix_key else ""
     if not prefix:
         return response, False
 
@@ -477,14 +483,14 @@ def build_conversation_rhythm_instruction(rhythm: dict[str, Any] | None) -> str:
     guidance = str(rhythm.get("guidance") or rhythm.get("reason") or "").strip()
     if signal_type == "deepening_focus" and "允许更展开" not in guidance:
         guidance = (
-            guidance + "；这轮允许更展开，但保持结构化。"
+            guidance + I18n.t("session_feedback.rhythm_deepening_focus", locale="zh")
             if guidance
-            else "用户消息连续变长，说明正在主动深入；这轮允许更展开，但保持结构化。"
+            else I18n.t("session_feedback.deepening_focus_guidance", locale="zh")
         )
     if not guidance and signal_type == "patience_drop":
-        guidance = "用户最近可能正在失去耐心；这轮请主动收敛，先给结论。"
+        guidance = I18n.t("session_feedback.rhythm_patience_drop", locale="zh")
     if not guidance and signal_type == "stalled_followup":
-        guidance = "用户已经连续多轮围绕同一点追问；这轮请换一种讲法或换一个例子。"
+        guidance = I18n.t("session_feedback.rhythm_stalled_followup", locale="zh")
     if not guidance or not signal_type:
         return ""
     return (

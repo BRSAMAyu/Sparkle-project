@@ -25,6 +25,8 @@ message ChatMessage {
   string user_id = 2;
   string message = 3;
   repeated agent.v1.ToolCall tool_calls = 4;
+  optional bool use_document_context = 5;
+  repeated string document_filter = 6;
 }
 
 message UpdateNodeMasteryRequest {

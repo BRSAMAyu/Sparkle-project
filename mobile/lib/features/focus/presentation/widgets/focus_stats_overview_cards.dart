@@ -113,7 +113,7 @@ class _StatCard extends StatelessWidget {
                     style: TextStyle(
                       color: iconColor.withValues(alpha: 0.8),
                       fontSize: 11,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: DS.fontWeightMedium,
                     ),
                   ),
                 ),

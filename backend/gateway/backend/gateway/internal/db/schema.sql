@@ -1381,6 +1381,8 @@ CREATE TABLE error_records (
     latest_analysis jsonb,
     cognitive_tags character varying[],
     ai_analysis_summary text,
+    affected_node_id uuid,
+    mastery_delta double precision,
     linked_knowledge_node_ids uuid[],
     suggested_concepts text[],
     created_at timestamp with time zone DEFAULT now(),
@@ -5951,6 +5953,13 @@ CREATE INDEX idx_episodic_memories_user_occurred ON episodic_memories USING btre
 --
 
 CREATE INDEX idx_error_records_cognitive_tags ON error_records USING gin (cognitive_tags);
+
+
+--
+-- Name: idx_error_records_affected_node; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_error_records_affected_node ON error_records USING btree (affected_node_id);
 
 
 --
@@ -11557,4 +11566,3 @@ ALTER TABLE ONLY word_books
 --
 -- PostgreSQL database dump complete
 --
-

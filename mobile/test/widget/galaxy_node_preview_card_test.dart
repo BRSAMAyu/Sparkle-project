@@ -36,6 +36,7 @@ void main() {
               onFocus: () {},
               onInspectConnections: () {},
               onViewDetails: () {},
+              onStartReview: () {},
               onLaunchPrediction: () => launched = true,
             ),
           ),
@@ -49,5 +50,58 @@ void main() {
     await tester.pump();
 
     expect(launched, isTrue);
+  });
+
+  testWidgets('preview card shows review CTA for recommended nodes', (
+    tester,
+  ) async {
+    var startedReview = false;
+
+    final node = GalaxyNodeModel(
+      id: 'review-node',
+      name: '线性代数',
+      importance: 4,
+      sector: SectorEnum.tech,
+      isUnlocked: true,
+      masteryScore: 45,
+      reviewUrgencyScore: 0.88,
+      isReviewRecommended: true,
+      reviewUrgencyReason: 'review_window',
+      daysSinceMasteryUpdate: 6,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: Center(
+            child: GalaxyNodePreviewCard(
+              node: node,
+              onFocus: () {},
+              onInspectConnections: () {},
+              onViewDetails: () {},
+              onStartReview: () => startedReview = true,
+              onLaunchPrediction: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('推荐复习'), findsOneWidget);
+    expect(find.textContaining('掌握度 45 分'), findsOneWidget);
+    expect(find.text('立刻学习'), findsOneWidget);
+
+    await tester.tap(find.text('立刻学习'));
+    await tester.pump();
+
+    expect(startedReview, isTrue);
   });
 }

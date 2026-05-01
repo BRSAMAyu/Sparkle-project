@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Data point for heatmap visualization
 class HeatmapData {
@@ -92,7 +94,7 @@ class StatisticsHeatmap extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) {
-      return _buildEmptyState();
+      return _buildEmptyState(context);
     }
 
     final effectiveRows = rows ?? _calculateRows();
@@ -116,7 +118,7 @@ class StatisticsHeatmap extends StatelessWidget {
             if (showLegend && legendPosition == LegendPosition.right)
               Padding(
                 padding: const EdgeInsets.only(left: DS.md),
-                child: _buildLegend(),
+                child: _buildLegend(context),
               ),
           ],
         ),
@@ -209,7 +211,7 @@ class StatisticsHeatmap extends StatelessWidget {
     return highColor ?? StatisticsChartConfig.heatmapHighColor;
   }
 
-  Widget _buildLegend() => Column(
+  Widget _buildLegend(BuildContext context) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           _buildLegendCell(
@@ -218,15 +220,15 @@ class StatisticsHeatmap extends StatelessWidget {
           ),
           _buildLegendCell(
             lowColor ?? StatisticsChartConfig.heatmapLowColor,
-            '低',
+            context.l10n.statisticsLegendLow,
           ),
           _buildLegendCell(
             mediumColor ?? StatisticsChartConfig.heatmapMediumColor,
-            '中',
+            context.l10n.statisticsLegendMedium,
           ),
           _buildLegendCell(
             highColor ?? StatisticsChartConfig.heatmapHighColor,
-            '高',
+            context.l10n.statisticsLegendHigh,
           ),
         ],
       );
@@ -307,7 +309,7 @@ class StatisticsHeatmap extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState() => Container(
+  Widget _buildEmptyState(BuildContext context) => Container(
         height: 150,
         alignment: Alignment.center,
         child: Column(
@@ -320,7 +322,7 @@ class StatisticsHeatmap extends StatelessWidget {
             ),
             const SizedBox(height: DS.md),
             Text(
-              '暂无数据',
+              context.l10n.statisticsNoData,
               style: DS.bodyStyle.copyWith(
                 color: DS.neutral400,
               ),
@@ -361,20 +363,21 @@ class StatisticsContributionHeatmap extends StatelessWidget {
     final end = endDate ?? DateTime.now();
     final heatmapData = _convertToHeatmapData(startDate, end);
 
-    final xLabels = ['一', '三', '五'];
+    final l10n = AppLocalizations.of(context);
+    final xLabels = [l10n!.statisticsChartMon, l10n.statisticsChartWed, l10n.statisticsChartFri];
     final yLabels = [
-      '一月',
-      '二月',
-      '三月',
-      '四月',
-      '五月',
-      '六月',
-      '七月',
-      '八月',
-      '九月',
-      '十月',
-      '十一月',
-      '十二月',
+      l10n.statisticsChartMonth1,
+      l10n.statisticsChartMonth2,
+      l10n.statisticsChartMonth3,
+      l10n.statisticsChartMonth4,
+      l10n.statisticsChartMonth5,
+      l10n.statisticsChartMonth6,
+      l10n.statisticsChartMonth7,
+      l10n.statisticsChartMonth8,
+      l10n.statisticsChartMonth9,
+      l10n.statisticsChartMonth10,
+      l10n.statisticsChartMonth11,
+      l10n.statisticsChartMonth12,
     ];
 
     return StatisticsHeatmap(

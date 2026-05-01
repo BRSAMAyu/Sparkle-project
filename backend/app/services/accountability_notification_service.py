@@ -16,6 +16,7 @@ from uuid import UUID
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.i18n import I18n
 from app.models.accountability import AccountabilityPartnership
 from app.models.notification import Notification
 from app.models.user import User
@@ -35,6 +36,8 @@ class AccountabilityNotificationType(str, Enum):
     PARTNERSHIP_ENDED = "accountability_partnership_ended"
     MANUAL_NUDGE = "accountability_manual_nudge"
     POLICY_TRIGGERED = "accountability_policy_triggered"
+    STRUGGLE_ALERT = "accountability_struggle_alert"
+    ENCOURAGEMENT_RECEIVED = "accountability_encouragement_received"
 
 
 def _utcnow() -> datetime:
@@ -57,26 +60,14 @@ class AccountabilityNotificationService:
         initiator_id: UUID,
         partner_id: UUID,
         initiator_goal: str,
+        locale: str = "zh",
     ) -> Notification:
-        """
-        发送伙伴邀请通知
-
-        Args:
-            db: 数据库会话
-            partnership_id: 伙伴关系ID
-            initiator_id: 发起人ID
-            partner_id: 被邀请人ID
-            initiator_goal: 发起人目标
-
-        Returns:
-            创建的通知对象
-        """
-        # 获取发起人信息
+        """发送伙伴邀请通知"""
         initiator = await db.get(User, initiator_id)
-        initiator_name = _user_display_name(initiator, "好友")
+        initiator_name = _user_display_name(initiator, I18n.t("common.friend", locale=locale))
 
-        title = "🤝 责任伙伴邀请"
-        content = f"{initiator_name} 邀请你成为责任伙伴\n目标: {initiator_goal}"
+        title = I18n.t("accountability.partner_request_title", locale=locale)
+        content = I18n.t("accountability.partner_request_content", locale=locale, name=initiator_name, goal=initiator_goal)
 
         notification_data = NotificationCreate(
             title=title,
@@ -102,26 +93,16 @@ class AccountabilityNotificationService:
         partnership_id: UUID,
         partner_id: UUID,
         initiator_id: UUID,
+        locale: str = "zh",
     ) -> Notification:
-        """
-        发送伙伴接受通知
-
-        Args:
-            db: 数据库会话
-            partnership_id: 伙伴关系ID
-            partner_id: 接受人ID
-            initiator_id: 发起人ID
-
-        Returns:
-            创建的通知对象
-        """
+        """发送伙伴接受通知"""
         partnership = await db.get(AccountabilityPartnership, partnership_id)
 
-        title = "🎉 责任伙伴关系已建立"
-        content = f"你们现在是责任伙伴了！开始互相监督，共同进步吧！"
+        title = I18n.t("accountability.partner_accepted_title", locale=locale)
+        content = I18n.t("accountability.partner_accepted_content", locale=locale)
 
         if partnership and partnership.partner_goal:
-            content += f"\n伙伴的目标: {partnership.partner_goal}"
+            content += I18n.t("accountability.partner_accepted_goal", locale=locale, goal=partnership.partner_goal)
 
         notification_data = NotificationCreate(
             title=title,
@@ -145,23 +126,14 @@ class AccountabilityNotificationService:
         db: AsyncSession,
         initiator_id: UUID,
         partner_id: UUID,
+        locale: str = "zh",
     ) -> Notification:
-        """
-        发送伙伴拒绝通知
-
-        Args:
-            db: 数据库会话
-            initiator_id: 发起人ID
-            partner_id: 拒绝人ID
-
-        Returns:
-            创建的通知对象
-        """
+        """发送伙伴拒绝通知"""
         partner = await db.get(User, partner_id)
-        partner_name = _user_display_name(partner, "好友")
+        partner_name = _user_display_name(partner, I18n.t("common.friend", locale=locale))
 
-        title = "责任伙伴邀请已 declined"
-        content = f"{partner_name} 暂时无法接受你的责任伙伴邀请"
+        title = I18n.t("accountability.partner_declined_title", locale=locale)
+        content = I18n.t("accountability.partner_declined_content", locale=locale, name=partner_name)
 
         notification_data = NotificationCreate(
             title=title,
@@ -185,21 +157,11 @@ class AccountabilityNotificationService:
         user_id: UUID,
         partnership_id: UUID,
         partner_name: str,
+        locale: str = "zh",
     ) -> Notification:
-        """
-        发送每日打卡提醒
-
-        Args:
-            db: 数据库会话
-            user_id: 用户ID
-            partnership_id: 伙伴关系ID
-            partner_name: 伙伴名称
-
-        Returns:
-            创建的通知对象
-        """
-        title = "⏰ 今日打卡提醒"
-        content = f"还没有今天打卡哦！{partner_name} 正在等你一起进步"
+        """发送每日打卡提醒"""
+        title = I18n.t("accountability.daily_reminder_title", locale=locale)
+        content = I18n.t("accountability.daily_reminder_content", locale=locale, partner=partner_name)
 
         notification_data = NotificationCreate(
             title=title,
@@ -225,21 +187,10 @@ class AccountabilityNotificationService:
         partnership_id: UUID,
         message: str,
         milestone_data: dict,
+        locale: str = "zh",
     ) -> Notification:
-        """
-        发送连胜里程碑通知
-
-        Args:
-            db: 数据库会话
-            user_id: 用户ID
-            partnership_id: 伙伴关系ID
-            message: 里程碑消息
-            milestone_data: 里程碑数据
-
-        Returns:
-            创建的通知对象
-        """
-        title = "🏆 连胜里程碑达成！"
+        """发送连胜里程碑通知"""
+        title = I18n.t("accountability.streak_milestone_title", locale=locale)
 
         notification_data = NotificationCreate(
             title=title,
@@ -264,21 +215,11 @@ class AccountabilityNotificationService:
         user_id: UUID,
         partnership_id: UUID,
         checker_name: str,
+        locale: str = "zh",
     ) -> Notification:
-        """
-        发送伙伴已打卡通知
-
-        Args:
-            db: 数据库会话
-            user_id: 用户ID
-            partnership_id: 伙伴关系ID
-            checker_name: 打卡人名称
-
-        Returns:
-            创建的通知对象
-        """
-        title = "✅ 伙伴已打卡"
-        content = f"{checker_name} 已经完成今日打卡，快来一起打卡吧！"
+        """发送伙伴已打卡通知"""
+        title = I18n.t("accountability.partner_checked_in_title", locale=locale)
+        content = I18n.t("accountability.partner_checked_in_content", locale=locale, checker=checker_name)
 
         notification_data = NotificationCreate(
             title=title,
@@ -303,21 +244,11 @@ class AccountabilityNotificationService:
         user_id: UUID,
         partnership_id: UUID,
         streak_days: int,
+        locale: str = "zh",
     ) -> Notification:
-        """
-        发送打卡中断提醒
-
-        Args:
-            db: 数据库会话
-            user_id: 用户ID
-            partnership_id: 伙伴关系ID
-            streak_days: 之前连胜天数
-
-        Returns:
-            创建的通知对象
-        """
-        title = "💔 连胜中断"
-        content = f"哎呀，{streak_days}天的连胜记录中断了。别灰心，明天重新开始！"
+        """发送打卡中断提醒"""
+        title = I18n.t("accountability.checkin_missed_title", locale=locale)
+        content = I18n.t("accountability.checkin_missed_content", locale=locale, days=streak_days)
 
         notification_data = NotificationCreate(
             title=title,
@@ -343,30 +274,19 @@ class AccountabilityNotificationService:
         partnership_id: UUID,
         partner_id: UUID,
         ended_by: UUID,
+        locale: str = "zh",
     ) -> Notification:
-        """
-        发送伙伴关系结束通知
-
-        Args:
-            db: 数据库会话
-            user_id: 用户ID
-            partnership_id: 伙伴关系ID
-            partner_id: 伙伴ID
-            ended_by: 结束人ID
-
-        Returns:
-            创建的通知对象
-        """
+        """发送伙伴关系结束通知"""
         partner = await db.get(User, partner_id)
-        partner_name = _user_display_name(partner, "伙伴")
+        partner_name = _user_display_name(partner, I18n.t("common.partner", locale=locale))
 
         is_self = str(ended_by) == str(user_id)
-        title = "👋 责任伙伴关系已结束"
+        title = I18n.t("accountability.partnership_ended_title", locale=locale)
 
         if is_self:
-            content = f"你已结束与 {partner_name} 的责任伙伴关系"
+            content = I18n.t("accountability.partnership_ended_self", locale=locale, partner=partner_name)
         else:
-            content = f"{partner_name} 已结束责任伙伴关系"
+            content = I18n.t("accountability.partnership_ended_other", locale=locale, partner=partner_name)
 
         notification_data = NotificationCreate(
             title=title,
@@ -392,13 +312,14 @@ class AccountabilityNotificationService:
         partnership_id: UUID,
         sender_name: str,
         message: str | None = None,
+        locale: str = "zh",
     ) -> Notification:
         """发送手动督促提醒。"""
-        title = "⏱️ 伙伴提醒"
+        title = I18n.t("accountability.manual_nudge_title", locale=locale)
         content = (
-            f"{sender_name} 提醒你看看今天的目标，别让节奏断掉。"
+            I18n.t("accountability.manual_nudge_default", locale=locale, sender=sender_name)
             if not message
-            else f"{sender_name} 提醒你：{message}"
+            else I18n.t("accountability.manual_nudge_custom", locale=locale, sender=sender_name, message=message)
         )
 
         notification_data = NotificationCreate(
@@ -430,12 +351,13 @@ class AccountabilityNotificationService:
         due_at: datetime | None,
         partnership_id: UUID | None = None,
         actor_user_id: UUID | None = None,
+        locale: str = "zh",
     ) -> Notification:
         actor_name = None
         if actor_user_id is not None:
             actor = await db.get(User, actor_user_id)
-            actor_name = _user_display_name(actor, "你的伙伴")
-        due_label = due_at.strftime("%m-%d %H:%M") if due_at else "约定时间"
+            actor_name = _user_display_name(actor, I18n.t("common.partner", locale=locale))
+        due_label = due_at.strftime("%m-%d %H:%M") if due_at else I18n.t("accountability.due_label_fallback", locale=locale)
 
         title, content = self._render_policy_template(
             template_id=template_id,
@@ -461,6 +383,106 @@ class AccountabilityNotificationService:
         logger.info(f"Sent policy notification {policy_id} to {user_id}")
         return notification
 
+    async def send_struggle_alert(
+        self,
+        db: AsyncSession,
+        *,
+        partner_id: UUID,
+        target_user_id: UUID,
+        partnership_id: UUID,
+        plan_id: UUID,
+        target_name: str,
+        no_completion_days: int,
+        struggle_score: float,
+        dedupe_key: str,
+        preset_encouragements: list[dict],
+        locale: str = "zh",
+    ) -> Notification:
+        """Tell an accountability partner that their partner may need a light touch."""
+        days = max(2, int(no_completion_days or 2))
+        title = I18n.t("accountability.struggle_alert_title", locale=locale)
+        content = I18n.t("accountability.struggle_alert_content", locale=locale, name=target_name, days=days)
+
+        notification_data = NotificationCreate(
+            title=title,
+            content=content,
+            type=AccountabilityNotificationType.STRUGGLE_ALERT.value,
+            data={
+                "kind": "accountability_struggle_alert",
+                "partnership_id": str(partnership_id),
+                "target_user_id": str(target_user_id),
+                "target_name": target_name,
+                "plan_id": str(plan_id),
+                "no_completion_days": days,
+                "struggle_score": struggle_score,
+                "dedupe_key": dedupe_key,
+                "encouragement_status": "pending",
+                "preset_encouragements": preset_encouragements,
+                "primary_action": {
+                    "type": "send_accountability_encouragement",
+                    "label": I18n.t("accountability.struggle_alert_action", locale=locale),
+                },
+            },
+        )
+
+        notification = await notification_service.create(
+            db,
+            partner_id,
+            notification_data,
+            push_via_websocket=True,
+        )
+        logger.info(
+            "Sent accountability struggle alert to partner {} for target {} partnership {}",
+            partner_id,
+            target_user_id,
+            partnership_id,
+        )
+        return notification
+
+    async def send_encouragement_received(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: UUID,
+        partnership_id: UUID,
+        sender_id: UUID,
+        sender_name: str,
+        message: str,
+        source_notification_id: UUID | None = None,
+        plan_id: UUID | None = None,
+        locale: str = "zh",
+    ) -> Notification:
+        """Create a weak in-app hint for the struggling user without realtime push."""
+        hint = I18n.t("accountability.encouragement_received_hint", locale=locale, sender=sender_name)
+        notification_data = NotificationCreate(
+            title=I18n.t("accountability.encouragement_received_title", locale=locale),
+            content=hint,
+            type=AccountabilityNotificationType.ENCOURAGEMENT_RECEIVED.value,
+            data={
+                "kind": "accountability_encouragement_hint",
+                "partnership_id": str(partnership_id),
+                "sender_id": str(sender_id),
+                "sender_name": sender_name,
+                "message": message,
+                "hint": hint,
+                "source_notification_id": str(source_notification_id) if source_notification_id else None,
+                "plan_id": str(plan_id) if plan_id else None,
+                "display_mode": "weak_in_app_hint",
+            },
+        )
+        notification = await notification_service.create(
+            db,
+            user_id,
+            notification_data,
+            push_via_websocket=False,
+        )
+        logger.info(
+            "Created in-app accountability encouragement hint for user {} from {}",
+            user_id,
+            sender_id,
+        )
+        return notification
+
     @staticmethod
     def _render_policy_template(
         *,
@@ -468,21 +490,22 @@ class AccountabilityNotificationService:
         commitment_summary: str,
         due_label: str,
         actor_name: str | None = None,
+        locale: str = "zh",
     ) -> tuple[str, str]:
         if template_id == "policy_due_reminder_3d":
-            return "🗓️ 承诺提醒", f"还有 3 天到期：{commitment_summary}\n目标时间：{due_label}"
+            return I18n.t("accountability.policy_due_3d_title", locale=locale), I18n.t("accountability.policy_due_3d_content", locale=locale, summary=commitment_summary, due=due_label)
         if template_id == "policy_due_reminder_1d":
-            return "⏰ 明日到期提醒", f"明天就到期了：{commitment_summary}\n目标时间：{due_label}"
+            return I18n.t("accountability.policy_due_1d_title", locale=locale), I18n.t("accountability.policy_due_1d_content", locale=locale, summary=commitment_summary, due=due_label)
         if template_id == "policy_due_reminder_due_today":
-            return "📌 今日承诺提醒", f"今天要收口这件事：{commitment_summary}\n目标时间：{due_label}"
+            return I18n.t("accountability.policy_due_today_title", locale=locale), I18n.t("accountability.policy_due_today_content", locale=locale, summary=commitment_summary, due=due_label)
         if template_id == "policy_peer_missed_3d":
-            partner_name = actor_name or "你的伙伴"
-            return "🤝 伙伴协同提醒", f"{partner_name} 连续 3 天没有推进这项承诺：{commitment_summary}"
+            partner_name = actor_name or I18n.t("common.partner", locale=locale)
+            return I18n.t("accountability.policy_peer_missed_title", locale=locale), I18n.t("accountability.policy_peer_missed_content", locale=locale, partner=partner_name, summary=commitment_summary)
         if template_id == "policy_success_streak_7d":
-            return "🌟 连续兑现 7 天", f"你已经连续 7 天稳稳推进了承诺：{commitment_summary}"
+            return I18n.t("accountability.policy_success_streak_title", locale=locale), I18n.t("accountability.policy_success_streak_content", locale=locale, summary=commitment_summary)
         if template_id == "policy_retro_request_due_without_outcome":
-            return "📝 到期复盘请求", f"这项承诺已到期且还没有结果记录：{commitment_summary}\n花 2 分钟补一个复盘吧。"
-        return "📣 承诺策略提醒", f"{commitment_summary}\n目标时间：{due_label}"
+            return I18n.t("accountability.policy_retro_request_title", locale=locale), I18n.t("accountability.policy_retro_request_content", locale=locale, summary=commitment_summary)
+        return I18n.t("accountability.policy_default_title", locale=locale), I18n.t("accountability.policy_default_content", locale=locale, summary=commitment_summary, due=due_label)
 
 
 # 单例实例

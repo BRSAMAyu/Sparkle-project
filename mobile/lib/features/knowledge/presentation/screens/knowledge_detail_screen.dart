@@ -173,7 +173,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                             style: TextStyle(
                               color: DS.textPrimary,
                               fontSize: 12,
-                              fontWeight: FontWeight.w700,
+                              fontWeight: DS.fontWeightBold,
                             ),
                           ),
                         ),
@@ -183,7 +183,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                           detail.node.name,
                           style: DS.headingLarge.copyWith(
                             color: DS.textPrimary,
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                         if (detail.node.nameEn != null) ...[
@@ -265,19 +265,19 @@ class KnowledgeDetailScreen extends ConsumerWidget {
               child: SparkleStaggerItem(
                 index: 3,
                 child: _SectionCard(
-                  title: 'AI 拓展相关节点',
+                  title: context.l10n.taskDetailAiExpansionTitle,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '基于当前节点生成 3 个候选相关节点。你可以不选，也可以任选 1 到 3 个真正写入知识星图。',
+                        context.l10n.taskDetailAiExpansionDescription,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                         ),
                       ),
                       const SizedBox(height: DS.sm),
                       SparkleButton(
-                        label: '生成候选节点',
+                        label: context.l10n.taskDetailGenerateCandidates,
                         icon: const Icon(Icons.auto_awesome),
                         expand: true,
                         onPressed: () => unawaited(
@@ -312,7 +312,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                           _getRelationIcon(relation.relationType),
                           color: sectorStyle.primaryColor,
                         ),
-                        title: Text(relatedNodeName ?? '未知节点'),
+                        title: Text(relatedNodeName ?? context.l10n.taskDetailUnknownNode),
                         subtitle: Text(relation.relationLabel),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () {
@@ -320,7 +320,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                               relatedNodeId.trim().isEmpty) {
                             AppFeedback.info(
                               context,
-                              '这个节点已被清理，星图会在下次刷新后同步。',
+                              context.l10n.taskDetailNodeCleanedUp,
                             );
                             return;
                           }
@@ -339,7 +339,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
             SliverToBoxAdapter(
               child: ContentConstraint(
                 child: _SectionCard(
-                  title: '最近生成的学习路径',
+                  title: context.l10n.taskDetailRecentLearningPath,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -351,8 +351,8 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                         ),
                         child: Text(
                           detail.learningPathSnapshot!.mode == 'task_path'
-                              ? '当前为轻量任务路径，不占用计划额度。'
-                              : '当前为完整学习计划路径。',
+                              ? context.l10n.taskDetailLightweightPath
+                              : context.l10n.taskDetailFullPath,
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: DS.textSecondary,
                           ),
@@ -370,9 +370,9 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                       if (detail.learningPathSnapshot!.tasks.isNotEmpty) ...[
                         const SizedBox(height: DS.md),
                         Text(
-                          '已生成任务',
+                          context.l10n.taskDetailGeneratedTasks,
                           style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                         const SizedBox(height: DS.xs),
@@ -395,7 +395,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              subtitle: Text('约 ${task.estimatedMinutes} 分钟'),
+                              subtitle: Text(context.l10n.taskDetailStepMinutes(task.estimatedMinutes)),
                               trailing: const Icon(Icons.chevron_right),
                               onTap: () =>
                                   unawaited(context.push('/tasks/${task.id}')),
@@ -526,7 +526,7 @@ class KnowledgeDetailScreen extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
       builder: (context) => GraphiteModalSurface(
-        title: 'AI 拓展相关节点',
+        title: context.l10n.taskDetailAiExpansionTitle,
         child: _NodeExpansionSheet(
           nodeId: nodeId,
           nodeName: detail.node.name,
@@ -628,7 +628,7 @@ class _MasteryCard extends StatelessWidget {
                       stats.masteryLabel,
                       style: DS.labelLarge.copyWith(
                         color: _getMasteryColor(),
-                        fontWeight: FontWeight.w700,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ),
@@ -651,7 +651,7 @@ class _MasteryCard extends StatelessWidget {
                 '${stats.masteryScore.toStringAsFixed(0)}%',
                 style: DS.titleLarge.copyWith(
                   color: _getMasteryColor(),
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
               const SizedBox(height: DS.lg),
@@ -746,7 +746,7 @@ class _StatItem extends StatelessWidget {
             value,
             style: DS.bodyLarge.copyWith(
               color: DS.textPrimary,
-              fontWeight: FontWeight.w700,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           Text(
@@ -869,7 +869,7 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
       Navigator.of(context).pop();
       AppFeedback.success(
         context,
-        _buildApplySuccessMessage(result, fallbackCount: selectedCount),
+        _buildApplySuccessMessage(context, result, fallbackCount: selectedCount),
       );
     } catch (e) {
       if (!mounted) {
@@ -885,35 +885,38 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
     }
   }
 
-  String _relationLabel(String relation) {
+  String _relationLabel(BuildContext context, String relation) {
+    final l10n = context.l10n;
     switch (relation) {
       case 'prerequisite':
-        return '前置';
+        return l10n.taskDetailRelationPrerequisite;
       case 'application':
-        return '应用';
+        return l10n.taskDetailRelationApplication;
       case 'evolution':
-        return '进阶';
+        return l10n.taskDetailRelationEvolution;
       default:
-        return '相关';
+        return l10n.taskDetailRelationRelated;
     }
   }
 
   String _buildApplySuccessMessage(
+    BuildContext context,
     NodeExpansionApplyResult result, {
     required int fallbackCount,
   }) {
+    final l10n = context.l10n;
     final appliedCount =
         result.appliedCount > 0 ? result.appliedCount : fallbackCount;
     if (appliedCount <= 0) {
-      return '候选节点已处理。';
+      return l10n.taskDetailCandidatesProcessed;
     }
     if (result.createdCount > 0 && result.reusedCount > 0) {
-      return '已处理 $appliedCount 个候选节点，新增 ${result.createdCount} 个，复用 ${result.reusedCount} 个已有节点。';
+      return l10n.taskDetailCandidatesApplied(appliedCount, result.createdCount, result.reusedCount);
     }
     if (result.reusedCount > 0) {
-      return '已处理 $appliedCount 个候选节点，复用 ${result.reusedCount} 个已有节点。';
+      return l10n.taskDetailCandidatesReused(appliedCount, result.reusedCount);
     }
-    return '已将 $appliedCount 个节点纳入星图。';
+    return l10n.taskDetailCandidatesAccepted(appliedCount);
   }
 
   @override
@@ -930,7 +933,7 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '围绕“${widget.nodeName}”生成 3 个候选节点，再由你决定哪些真正写入知识星图。',
+            '围绕“${widget.nodeName}”context.l10n.taskDetailGenerateThreeCandidates，再由你决定哪些真正写入知识星图。',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DS.textSecondary,
                 ),
@@ -943,7 +946,7 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
                 children: [
                   if (_candidates.isEmpty && !_isGenerating)
                     SparkleButton(
-                      label: '生成 3 个候选节点',
+                      label: 'context.l10n.taskDetailGenerateThreeCandidates',
                       icon: const Icon(Icons.auto_awesome),
                       expand: true,
                       onPressed: _generateCandidates,
@@ -964,7 +967,7 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
                   ],
                   if (_candidates.isNotEmpty) ...[
                     Text(
-                      '已选 ${_selectedIds.length} / ${_candidates.length} 个候选节点',
+                      context.l10n.taskDetailSelectedCount(_selectedIds.length, _candidates.length),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: DS.textSecondary,
                           ),
@@ -997,10 +1000,10 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
                                 runSpacing: DS.spacing8,
                                 children: [
                                   _CandidateMetaChip(
-                                    _relationLabel(candidate.relationToTrigger),
+                                    _relationLabel(context, candidate.relationToTrigger),
                                   ),
                                   _CandidateMetaChip(
-                                    '重要度 ${candidate.importanceLevel}',
+                                    'context.l10n.taskDetailImportanceLevel(${candidate.importanceLevel}',
                                   ),
                                   ...candidate.keywords
                                       .take(2)
@@ -1036,14 +1039,14 @@ class _NodeExpansionSheetState extends ConsumerState<_NodeExpansionSheet> {
               runSpacing: DS.spacing8,
               children: [
                 SparkleButton(
-                  label: '重新生成',
+                  label: 'context.l10n.taskDetailRegenerate',
                   variant: ButtonVariant.secondary,
                   onPressed: _isApplying ? null : _generateCandidates,
                 ),
                 SparkleButton(
                   label: _selectedIds.isEmpty
-                      ? '本次不纳入'
-                      : '纳入星图（${_selectedIds.length}）',
+                      ? 'context.l10n.taskDetailSkipAll'
+                      : context.l10n.taskDetailAcceptIntoGalaxy(_selectedIds.length),
                   icon: _isApplying
                       ? const SizedBox(
                           width: 16,
@@ -1082,7 +1085,7 @@ class _CandidateMetaChip extends StatelessWidget {
           label,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: DS.brandPrimary,
-                fontWeight: FontWeight.w700,
+                fontWeight: DS.fontWeightBold,
               ),
         ),
       );

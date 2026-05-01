@@ -4,14 +4,20 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     show CustomButton, CustomButtonSize;
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/presentation/widgets/aurora_nudge_entry.dart';
+import 'package:sparkle/features/chat/presentation/widgets/bottleneck_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/graph_diagnostic_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_progress_strip.dart';
+import 'package:sparkle/features/chat/presentation/widgets/plan_strategy_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/profile_front_door_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
@@ -81,6 +87,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   late Animation<double> _iconScaleAnimation;
   late AnimationController _pressController;
   final TextEditingController _reflectionController = TextEditingController();
+  final TextEditingController _reflectionStuckController =
+      TextEditingController();
+  final TextEditingController _reflectionMethodController =
+      TextEditingController();
+  final TextEditingController _reflectionAdjustmentController =
+      TextEditingController();
   String? _selectedReflectionOption;
   bool _reflectionSubmitted = false;
   late bool _detailsExpanded;
@@ -117,12 +129,21 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     if (oldWidget.action != widget.action) {
       _detailsExpanded = !_shouldCollapseByDefault(widget.action);
       _hiddenAfterAction = false;
+      _reflectionSubmitted = false;
+      _selectedReflectionOption = null;
+      _reflectionController.clear();
+      _reflectionStuckController.clear();
+      _reflectionMethodController.clear();
+      _reflectionAdjustmentController.clear();
     }
   }
 
   @override
   void dispose() {
     _reflectionController.dispose();
+    _reflectionStuckController.dispose();
+    _reflectionMethodController.dispose();
+    _reflectionAdjustmentController.dispose();
     _pulseController.dispose();
     _pressController.dispose();
     super.dispose();
@@ -565,14 +586,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return LinearGradient(
           colors: [
             DS.info.withValues(alpha: 0.95),
-            DS.success.withValues(alpha: 0.9)
+            DS.success.withValues(alpha: 0.9),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
       case 'profile_front_door':
-        return LinearGradient(
-          colors: [const Color(0xFF0EA5A4), const Color(0xFF4F46E5)],
+        return const LinearGradient(
+          colors: [Color(0xFF0EA5A4), Color(0xFF4F46E5)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
@@ -581,6 +602,29 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.cardGradientNeutral;
       case 'blocked_input_request':
         return DS.warningGradient;
+      case 'planning_bottleneck_card':
+        return LinearGradient(
+          colors: [
+            DS.warning.withValues(alpha: 0.95),
+            DS.error.withValues(alpha: 0.9),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'planning_strategy_card':
+        return LinearGradient(
+          colors: [DS.primaryBase, DS.secondaryBase],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+      case 'planning_progress_strip':
+        return DS.infoGradient;
+      case 'aurora_nudge_entry':
+        return const LinearGradient(
+          colors: [Color(0xFF0EA5A4), Color(0xFF4F46E5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
       default:
         return DS.primaryGradient;
     }
@@ -634,6 +678,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return DS.neutral700;
       case 'blocked_input_request':
         return DS.warning;
+      case 'planning_bottleneck_card':
+        return DS.warning;
+      case 'planning_strategy_card':
+        return DS.primaryBase;
+      case 'planning_progress_strip':
+        return DS.info;
+      case 'aurora_nudge_entry':
+        return const Color(0xFF0EA5A4);
       default:
         return DS.primaryBase;
     }
@@ -693,6 +745,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return Icons.tips_and_updates_rounded;
       case 'blocked_input_request':
         return Icons.help_outline_rounded;
+      case 'planning_bottleneck_card':
+        return Icons.warning_amber_rounded;
+      case 'planning_strategy_card':
+        return Icons.map_rounded;
+      case 'planning_progress_strip':
+        return Icons.linear_scale_rounded;
+      case 'aurora_nudge_entry':
+        return Icons.psychology_rounded;
       default:
         return Icons.touch_app_rounded;
     }
@@ -741,6 +801,14 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return l10n.chatActionTitleModeExplanation;
       case 'blocked_input_request':
         return l10n.chatActionTitleBlockedInput;
+      case 'planning_bottleneck_card':
+        return '瓶颈分析';
+      case 'planning_strategy_card':
+        return '策略方案';
+      case 'planning_progress_strip':
+        return '规划流程';
+      case 'aurora_nudge_entry':
+        return 'Aurora 提醒';
       default:
         return l10n.chatActionTitleDefault;
     }
@@ -812,8 +880,26 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     if (action.type == 'reflection_card') {
       return _buildReflectionCard(context, action);
     }
+    if (action.type == 'planning_bottleneck_card') {
+      return BottleneckCard(data: action.data);
+    }
+    if (action.type == 'planning_strategy_card') {
+      return PlanStrategyCard(
+        data: action.data,
+        onWidgetAction: widget.onWidgetAction,
+      );
+    }
+    if (action.type == 'planning_progress_strip') {
+      return PlanProgressStrip(data: action.data);
+    }
     if (action.type == 'plan_card') {
       return _buildPlanCardContent(context, action);
+    }
+    if (action.type == 'aurora_nudge_entry') {
+      return AuroraNudgeEntry(
+        data: action.data,
+        onWidgetAction: widget.onWidgetAction,
+      );
     }
     if (action.type == 'system_update') {
       final description = action.data['description']?.toString() ?? '';
@@ -946,6 +1032,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                     style: TextStyle(
                                       fontSize: DS.fontSizeSm,
                                       color: DS.neutral900,
+                                      fontFamilyFallback: sparkleFontFallback,
                                     ),
                                     children: [
                                       TextSpan(
@@ -3050,8 +3137,13 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         .map((e) => '$e')
         .where((e) => e.isNotEmpty)
         .toList();
+    final fields = (action.data['fields'] as List<dynamic>? ?? [])
+        .whereType<Map<dynamic, dynamic>>()
+        .map((item) => item.map((key, value) => MapEntry('$key', value)))
+        .toList();
     final initialStatus = action.data['status']?.toString() ?? '';
     final submitted = _reflectionSubmitted || initialStatus == 'completed';
+    final usesStructuredFields = fields.isNotEmpty;
 
     if (submitted) {
       return Text(
@@ -3066,12 +3158,22 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       if (feedbackId.isEmpty) {
         return;
       }
+      if (usesStructuredFields &&
+          _reflectionStuckController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SparkleSnackBar.warning(_reflectionFieldLabel(fields, 'stuck_point')),
+        );
+        return;
+      }
       await widget.onWidgetAction?.call(
         'reflection_submit',
         {
           'feedback_id': feedbackId,
           'selected_option': _selectedReflectionOption,
           'free_text': _reflectionController.text.trim(),
+          'stuck_point': _reflectionStuckController.text.trim(),
+          'effective_method': _reflectionMethodController.text.trim(),
+          'adjustment_intention': _reflectionAdjustmentController.text.trim(),
         },
       );
       if (mounted) {
@@ -3092,7 +3194,31 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   fontWeight: DS.fontWeightSemibold,
                 ),
           ),
-        if (options.isNotEmpty) ...[
+        if (usesStructuredFields) ...[
+          const SizedBox(height: DS.spacing12),
+          ...fields.map(
+            (field) => Padding(
+              padding: const EdgeInsets.only(bottom: DS.spacing12),
+              child: _ActionReflectionField(
+                label: _reflectionFieldLabel(
+                  fields,
+                  field['key']?.toString() ?? '',
+                ),
+                hint: _reflectionFieldHint(
+                  fields,
+                  field['key']?.toString() ?? '',
+                ),
+                required: field['required'] == true,
+                controller: switch (field['key']?.toString()) {
+                  'effective_method' => _reflectionMethodController,
+                  'adjustment_intention' => _reflectionAdjustmentController,
+                  _ => _reflectionStuckController,
+                },
+                onChanged: (_) => setState(() {}),
+              ),
+            ),
+          ),
+        ] else if (options.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Wrap(
             spacing: DS.spacing8,
@@ -3111,18 +3237,18 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 )
                 .toList(),
           ),
-        ],
-        const SizedBox(height: DS.spacing12),
-        TextField(
-          controller: _reflectionController,
-          minLines: 1,
-          maxLines: 3,
-          decoration: InputDecoration(
-            hintText: context.l10n.chatOptionalNotesHint,
-            border: const OutlineInputBorder(),
-            isDense: true,
+          const SizedBox(height: DS.spacing12),
+          TextField(
+            controller: _reflectionController,
+            minLines: 1,
+            maxLines: 3,
+            decoration: InputDecoration(
+              hintText: context.l10n.chatOptionalNotesHint,
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: DS.spacing12),
         Align(
           alignment: Alignment.centerRight,
@@ -3135,6 +3261,52 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         ),
       ],
     );
+  }
+
+  String _reflectionFieldLabel(
+    List<Map<String, dynamic>> fields,
+    String key,
+  ) {
+    for (final field in fields) {
+      if (field['key']?.toString() == key) {
+        final label = field['label']?.toString().trim() ?? '';
+        if (label.isNotEmpty) {
+          return label;
+        }
+      }
+    }
+    switch (key) {
+      case 'effective_method':
+        return '哪个方法让你觉得有进展？';
+      case 'adjustment_intention':
+        return '下次会换什么做法？';
+      case 'stuck_point':
+      default:
+        return '这个任务中你卡在哪里了？';
+    }
+  }
+
+  String _reflectionFieldHint(
+    List<Map<String, dynamic>> fields,
+    String key,
+  ) {
+    for (final field in fields) {
+      if (field['key']?.toString() == key) {
+        final hint = field['hint']?.toString().trim() ?? '';
+        if (hint.isNotEmpty) {
+          return hint;
+        }
+      }
+    }
+    switch (key) {
+      case 'effective_method':
+        return '例如：先画图，再列式';
+      case 'adjustment_intention':
+        return '例如：先做 1 道代表题';
+      case 'stuck_point':
+      default:
+        return '例如：公式会背，但不知道什么时候套用';
+    }
   }
 
   Widget _buildAdaptationSummary(BuildContext context, WidgetPayload action) {
@@ -3453,4 +3625,46 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       .split('_')
       .map((word) => word[0].toUpperCase() + word.substring(1))
       .join(' ');
+}
+
+class _ActionReflectionField extends StatelessWidget {
+  const _ActionReflectionField({
+    required this.label,
+    required this.hint,
+    required this.controller,
+    this.required = false,
+    this.onChanged,
+  });
+
+  final String label;
+  final String hint;
+  final TextEditingController controller;
+  final bool required;
+  final ValueChanged<String>? onChanged;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            required ? '$label *' : label,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: DS.neutral700,
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+          ),
+          const SizedBox(height: DS.spacing6),
+          TextField(
+            controller: controller,
+            onChanged: onChanged,
+            minLines: 2,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: hint,
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+          ),
+        ],
+      );
 }

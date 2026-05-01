@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from uuid import UUID
 
+from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -180,7 +181,8 @@ async def stream_learning_simulation(
             yield "data: {\"status\":\"completed\"}\n\n"
         except Exception as exc:
             yield "event: error\n"
-            yield f"data: {json.dumps({'message': str(exc)}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'message': '仿真过程出现错误，请稍后重试'}, ensure_ascii=False)}\n\n"
+            logger.error(f"Simulation stream error: {exc}", exc_info=True)
 
     return StreamingResponse(
         event_generator(),
@@ -253,7 +255,8 @@ async def continue_learning_simulation_stream(
             yield f"data: {json.dumps({'message': str(exc), 'status_code': 404}, ensure_ascii=False)}\n\n"
         except Exception as exc:
             yield "event: error\n"
-            yield f"data: {json.dumps({'message': str(exc)}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'message': '仿真过程出现错误，请稍后重试'}, ensure_ascii=False)}\n\n"
+            logger.error(f"Simulation continue stream error: {exc}", exc_info=True)
 
     return StreamingResponse(
         event_generator(),

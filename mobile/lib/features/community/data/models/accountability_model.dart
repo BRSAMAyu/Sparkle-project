@@ -82,8 +82,7 @@ class AccountabilityPartnershipInfo {
   @JsonKey(name: 'last_checkin_at')
   final DateTime? lastCheckinAt;
 
-  Map<String, dynamic> toJson() =>
-      _$AccountabilityPartnershipInfoToJson(this);
+  Map<String, dynamic> toJson() => _$AccountabilityPartnershipInfoToJson(this);
 
   AccountabilityPartnershipInfo copyWithStats({
     int? myStreakDays,
@@ -212,6 +211,7 @@ class AccountabilityOverviewInfo {
     this.leaderboardSummary = const {},
     this.relationshipSummary,
     this.quickActions = const {},
+    this.inAppHints = const [],
   });
 
   factory AccountabilityOverviewInfo.fromJson(Map<String, dynamic> json) =>
@@ -231,8 +231,43 @@ class AccountabilityOverviewInfo {
   final Map<String, dynamic>? relationshipSummary;
   @JsonKey(name: 'quick_actions')
   final Map<String, dynamic> quickActions;
+  @JsonKey(name: 'in_app_hints')
+  final List<AccountabilityInAppHintInfo> inAppHints;
 
   Map<String, dynamic> toJson() => _$AccountabilityOverviewInfoToJson(this);
+}
+
+@JsonSerializable()
+class AccountabilityInAppHintInfo {
+  AccountabilityInAppHintInfo({
+    required this.id,
+    required this.message,
+    this.type,
+    this.senderName,
+    this.senderId,
+    this.partnershipId,
+    this.sourceNotificationId,
+    this.createdAt,
+  });
+
+  factory AccountabilityInAppHintInfo.fromJson(Map<String, dynamic> json) =>
+      _$AccountabilityInAppHintInfoFromJson(json);
+
+  final String id;
+  final String? type;
+  final String message;
+  @JsonKey(name: 'sender_name')
+  final String? senderName;
+  @JsonKey(name: 'sender_id')
+  final String? senderId;
+  @JsonKey(name: 'partnership_id')
+  final String? partnershipId;
+  @JsonKey(name: 'source_notification_id')
+  final String? sourceNotificationId;
+  @JsonKey(name: 'created_at')
+  final DateTime? createdAt;
+
+  Map<String, dynamic> toJson() => _$AccountabilityInAppHintInfoToJson(this);
 }
 
 @JsonSerializable()

@@ -5,20 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
-import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
-import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:sparkle/core/widgets/bgm_scope.dart';
-import 'package:sparkle/core/widgets/scene_atmosphere_layer.dart';
-import 'package:sparkle/core/widgets/sparkle_markdown.dart';
-import 'package:sparkle/features/focus/data/repositories/focus_repository.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
     as focus_stats;
 import 'package:sparkle/features/home/home_routes.dart';
@@ -30,15 +25,19 @@ import 'package:sparkle/features/task/data/models/execution_template_model.dart'
 import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
+import 'package:sparkle/features/task/presentation/providers/task_chat_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/blocking_interceptor_dialog.dart';
-import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dart';
-import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
-import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/execution_approval_card.dart';
 import 'package:sparkle/features/task/presentation/widgets/execution_status_indicator.dart';
 import 'package:sparkle/features/task/presentation/widgets/execution_template_card.dart';
+import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dart';
+import 'package:sparkle/features/task/presentation/widgets/stuck_help_sheet.dart';
+import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_completion_celebration.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_guide_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
@@ -79,18 +78,11 @@ class TaskExecutionScreen extends ConsumerStatefulWidget {
 class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   int _elapsedSeconds = 0;
   bool _showCelebration = false;
-  bool _showCompletionPanel = false;
-  bool _showCompletionStats = false;
   bool _playCompletionConfetti = false;
   TaskCompletionResult? _completionResult;
   bool _completionFlowFinished = false;
-  Timer? _celebrationDismissTimer;
-  Timer? _completionPanelTimer;
-  Timer? _completionStatsTimer;
-  Timer? _completionAudioTimer;
+  bool _finishCompletionWhenReady = false;
   Timer? _executionRefreshTimer;
-  int _completionMinutesSnapshot = 0;
-  int? _todayFocusMinutesSnapshot;
 
   // Timer Enhancement State
   TimerMode _timerMode = TimerMode.countUp;
@@ -181,15 +173,12 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 debugPrint('Error starting task: $error');
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        context.l10n.taskExecutionStartFailed(
-                          error is DioException
-                              ? (error.message ?? error.toString())
-                              : error.toString(),
-                        ),
+                    SparkleSnackBar.error(
+                      context.l10n.taskExecutionStartFailed(
+                        error is DioException
+                            ? (error.message ?? error.toString())
+                            : error.toString(),
                       ),
-                      backgroundColor: DS.error,
                     ),
                   );
                 }
@@ -204,10 +193,6 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   @override
   void dispose() {
     unawaited(BgmService.setFocusSession(false));
-    _celebrationDismissTimer?.cancel();
-    _completionPanelTimer?.cancel();
-    _completionStatsTimer?.cancel();
-    _completionAudioTimer?.cancel();
     _executionRefreshTimer?.cancel();
     super.dispose();
   }
@@ -261,15 +246,14 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
     setState(() {
       _showCelebration = true;
-      _showCompletionPanel = false;
-      _showCompletionStats = false;
       _playCompletionConfetti = true;
       _completionFlowFinished = false;
-      _completionMinutesSnapshot = minutes;
-      _todayFocusMinutesSnapshot = null;
+      _finishCompletionWhenReady = false;
+      _completionResult = null;
     });
 
-    _scheduleFocusCompletionSequence();
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.focusComplete));
+    unawaited(BgmService.duckTemporarily());
 
     final task = ref.read(activeTaskProvider);
     if (task != null) {
@@ -278,17 +262,12 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           setState(() {
             _completionResult = TaskCompletionResult(
               task: task.toJson(),
-              feedback: '本次自由专注已完成。',
+              feedback: context.l10n.taskExecutionFreeFocusCompleted,
             );
           });
-          unawaited(_loadFocusCompletionSummary(minutes));
-          final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ??
-              MediaQuery.maybeOf(context)?.accessibleNavigation ??
-              false;
-          if (reduceMotion) {
+          _refreshFocusStats();
+          if (_finishCompletionWhenReady) {
             _finishCompletionFlow();
-          } else {
-            _scheduleCelebrationAutoDismiss();
           }
         }
         return;
@@ -302,7 +281,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         setState(() {
           _completionResult = result;
         });
-        unawaited(_loadFocusCompletionSummary(minutes));
+        _refreshFocusStats();
         if (result != null) {
           if (widget.interventionId != null &&
               widget.interventionId!.isNotEmpty) {
@@ -326,95 +305,23 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           AppFeedback.error(context, context.l10n.taskExecutionSyncFailed);
           return;
         }
-        final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ??
-            MediaQuery.maybeOf(context)?.accessibleNavigation ??
-            false;
-        if (reduceMotion) {
+        if (_finishCompletionWhenReady) {
           _finishCompletionFlow();
-        } else {
-          _scheduleCelebrationAutoDismiss();
         }
       }
     }
   }
 
-  void _scheduleFocusCompletionSequence() {
-    _completionPanelTimer?.cancel();
-    _completionStatsTimer?.cancel();
-    _completionAudioTimer?.cancel();
-
+  void _refreshFocusStats() {
     unawaited(
-      SensoryFeedbackService.emit(SensoryFeedbackEvent.focusComplete),
+      Future<void>.sync(
+        () => ref
+            .read(focus_stats.focusStatisticsProvider.notifier)
+            .loadTodayStats(),
+      ).catchError((Object error, StackTrace stackTrace) {
+        debugPrint('Focus stats refresh skipped after task completion: $error');
+      }),
     );
-
-    final reduceMotion = MediaQuery.maybeOf(context)?.disableAnimations ??
-        MediaQuery.maybeOf(context)?.accessibleNavigation ??
-        false;
-
-    if (reduceMotion) {
-      setState(() {
-        _showCompletionPanel = true;
-        _showCompletionStats = true;
-      });
-      unawaited(BgmService.duckTemporarily(factor: 0.3));
-      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
-      return;
-    }
-
-    _completionPanelTimer = Timer(const Duration(milliseconds: 120), () {
-      if (!mounted) return;
-      setState(() {
-        _showCompletionPanel = true;
-      });
-    });
-
-    _completionStatsTimer = Timer(const Duration(milliseconds: 300), () {
-      if (!mounted) return;
-      setState(() {
-        _showCompletionStats = true;
-      });
-    });
-
-    _completionAudioTimer = Timer(const Duration(milliseconds: 400), () {
-      unawaited(BgmService.duckTemporarily(factor: 0.3));
-      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
-    });
-  }
-
-  void _scheduleCelebrationAutoDismiss() {
-    _celebrationDismissTimer?.cancel();
-    _celebrationDismissTimer = Timer(
-      const Duration(milliseconds: 1650),
-      _finishCompletionFlow,
-    );
-  }
-
-  Future<void> _loadFocusCompletionSummary(int minutes) async {
-    final focusStatsState = ref.read(focus_stats.focusStatisticsProvider);
-    final fallbackToday =
-        (focusStatsState.todayMinutes > 0 ? focusStatsState.todayMinutes : 0) +
-            minutes;
-    if (mounted) {
-      setState(() {
-        _todayFocusMinutesSnapshot = fallbackToday;
-      });
-    }
-
-    try {
-      final stats = await ref.read(focusRepositoryProvider).getFocusStats();
-      if (!mounted) return;
-      setState(() {
-        _todayFocusMinutesSnapshot = stats.totalMinutes;
-      });
-      unawaited(
-        ref.read(focus_stats.focusStatisticsProvider.notifier).loadTodayStats(),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _todayFocusMinutesSnapshot ??= fallbackToday;
-      });
-    }
   }
 
   Future<void> _processAchievementUnlocks(TaskCompletionResult result) async {
@@ -436,18 +343,17 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
   void _finishCompletionFlow({bool showFeedbackDialog = true}) {
     if (!mounted || _completionFlowFinished) return;
-    _completionFlowFinished = true;
-    _celebrationDismissTimer?.cancel();
-    _completionPanelTimer?.cancel();
-    _completionStatsTimer?.cancel();
-    _completionAudioTimer?.cancel();
-
     final result = _completionResult;
+    if (showFeedbackDialog && result == null) {
+      _finishCompletionWhenReady = true;
+      return;
+    }
+    _completionFlowFinished = true;
+
     setState(() {
       _showCelebration = false;
-      _showCompletionPanel = false;
-      _showCompletionStats = false;
       _playCompletionConfetti = false;
+      _finishCompletionWhenReady = false;
     });
 
     if (!showFeedbackDialog || result == null) {
@@ -455,24 +361,26 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     }
 
     final task = ref.read(activeTaskProvider);
-    showSensoryDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => TaskFeedbackDialog(
-        result: result,
-        taskId: task?.id ?? '',
-        onClose: () {
-          Navigator.of(context).pop();
-          if (widget.origin == 'focus') {
-            context.go('/focus');
-            return;
-          }
-          if (context.canPop()) {
-            context.pop();
-            return;
-          }
-          context.go(TaskRoutes.home);
-        },
+    unawaited(
+      showSensoryDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => TaskFeedbackDialog(
+          result: result,
+          taskId: task?.id ?? '',
+          onClose: () {
+            Navigator.of(context).pop();
+            if (widget.origin == 'focus') {
+              context.go('/focus');
+              return;
+            }
+            if (context.canPop()) {
+              context.pop();
+              return;
+            }
+            context.go(TaskRoutes.home);
+          },
+        ),
       ),
     );
   }
@@ -513,14 +421,16 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       _pomodoroCycle = 1;
       _currentTimerDuration = 5 * 60; // Short break
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.pomodoroWorkFinished)),
+        SparkleSnackBar.info(context.l10n.pomodoroWorkFinished,
+            duration: const Duration(seconds: 3)),
       );
     } else if (_pomodoroCycle == 1) {
       // Short break completed
       _pomodoroCycle = 0;
       _currentTimerDuration = 25 * 60; // Next work phase
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.pomodoroBreakFinished)),
+        SparkleSnackBar.info(context.l10n.pomodoroBreakFinished,
+            duration: const Duration(seconds: 3)),
       );
     }
     // Extend for long breaks if desired
@@ -538,6 +448,266 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       _timerResetVersion += 1;
     });
   }
+
+  Future<void> _showStuckHelp(TaskModel task) async {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+    var sheetTask = task;
+    if (isServerTaskId(task.id)) {
+      try {
+        final result = await ref.read(taskListProvider.notifier).markTaskStuck(
+              task.id,
+              recentSteps:
+                  _guideStepNames(task.guideJson ?? const {}).take(5).toList(),
+              elapsedSeconds: _elapsedSeconds,
+              trigger: 'stuck_help_fab',
+            );
+        sheetTask = result.task;
+      } catch (error) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SparkleSnackBar.error(
+            context.l10n.taskExecutionAuroraDiagnosticUnavailable('$error'),
+          ),
+        );
+      }
+    }
+    if (!mounted) return;
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => StuckHelpSheet(
+        task: sheetTask,
+        onChatPressed: () {
+          Navigator.of(sheetContext).pop();
+          _openStuckChat(sheetTask);
+        },
+      ),
+    );
+  }
+
+  void _openStuckChat(TaskModel task) {
+    final prompt = _buildStuckChatPrompt(task);
+    unawaited(
+      showModalBottomSheet<void>(
+        context: context,
+        backgroundColor: Colors.transparent,
+        isScrollControlled: true,
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.82,
+          minChildSize: 0.48,
+          maxChildSize: 0.94,
+          builder: (context, scrollController) => GraphiteModalSurface(
+            title: context.l10n.taskExecutionChatAboutStuckPoint,
+            expandChild: true,
+            child: SingleChildScrollView(
+              controller: scrollController,
+              child: TaskChatPanel(
+                taskId: task.id,
+                isAvailable: isServerTaskId(task.id),
+                initialExpanded: true,
+                initialPrompt: prompt,
+                initialExtraContext: _buildStuckChatContext(task),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _sendAuroraTrigger(TaskModel task, String trigger) {
+    final message = trigger.trim();
+    if (message.isEmpty) return;
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+
+    if (isServerTaskId(task.id)) {
+      unawaited(
+        ref.read(taskChatProvider(task.id).notifier).sendMessage(
+              message,
+              extraContext: _buildTaskHelpChatContext(task, trigger),
+            ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SparkleSnackBar.success(context.l10n.taskExecutionSentToAurora),
+      );
+      return;
+    }
+
+    final route = Uri(
+      path: '/chat',
+      queryParameters: {
+        'chat_mode': 'study_plan',
+        'prompt': message,
+      },
+    ).toString();
+    unawaited(
+      context.push(
+        route,
+        extra: {
+          'initial_context': _buildTaskHelpChatContext(task, trigger),
+        },
+      ),
+    );
+  }
+
+  Map<String, dynamic> _buildStuckChatContext(TaskModel task) => {
+        'task_state': {
+          'stage': 'stuck',
+          'status': 'STUCK',
+          'task_id': task.id,
+          'current_task_id': task.id,
+          'task_title': task.title,
+          'stuck_topic': task.title,
+          'estimated_minutes': task.estimatedMinutes,
+          if (task.successCriteria?.trim().isNotEmpty ?? false)
+            'success_criteria': task.successCriteria,
+        },
+        'task_stage': 'stuck',
+        'stuck_event': {
+          'task_id': task.id,
+          'task_title': task.title,
+          'source': 'task_execution_overlay',
+        },
+      };
+
+  Map<String, dynamic> _buildTaskHelpChatContext(
+    TaskModel task,
+    String trigger,
+  ) {
+    final isStuck = task.status == TaskStatus.stuck ||
+        trigger.toLowerCase().contains('stuck') ||
+        trigger.contains('卡住');
+    if (isStuck) return _buildStuckChatContext(task);
+    return {
+      'task_state': {
+        'stage': 'task_help',
+        'task_id': task.id,
+        'current_task_id': task.id,
+        'task_title': task.title,
+        'trigger': trigger,
+        'estimated_minutes': task.estimatedMinutes,
+      },
+    };
+  }
+
+  String _buildStuckChatPrompt(TaskModel task) {
+    final guide = task.guideJson ?? const <String, dynamic>{};
+    final focusCue = (guide['focus_cue']?.toString() ?? '').trim();
+    final steps = _guideStepNames(guide).take(5).join('；');
+    final criteria = taskSuccessCriteriaLines(task).take(3).join('；').trim();
+    final structuredFallback = _guideFallbackLines(guide['fallback_if_stuck']);
+    final ifStuck = (structuredFallback.isNotEmpty
+            ? structuredFallback
+            : _guideList(guide['if_stuck']))
+        .take(5)
+        .join('；')
+        .trim();
+    final fallback = StuckHelpSheet.genericSuggestions(context).join('；');
+    final parts = <String>[
+      context.l10n.taskExecutionStuckPromptIntro,
+      context.l10n.taskExecutionStuckTaskLabel(task.title),
+      if (task.estimatedMinutes > 0)
+        context.l10n.taskExecutionStuckEstimatedTime(task.estimatedMinutes),
+      if (focusCue.isNotEmpty)
+        context.l10n.taskExecutionStuckFocusCue(focusCue),
+      if (steps.isNotEmpty) context.l10n.taskExecutionStuckSteps(steps),
+      if (criteria.isNotEmpty)
+        context.l10n.taskExecutionStuckCriteria(criteria),
+      context.l10n.taskExecutionStuckSuggestion(
+          ifStuck.isNotEmpty ? ifStuck : fallback),
+      context.l10n.taskExecutionStuckClarifyPrompt,
+    ];
+    return parts.join('\n');
+  }
+
+  List<String> _guideList(Object? value) {
+    if (value == null) return const [];
+    if (value is Iterable) {
+      return value
+          .map((item) => item?.toString().trim() ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
+    }
+    final text = value.toString().trim();
+    if (text.isEmpty) return const [];
+    return text
+        .split(RegExp(r'[\n；;]+'))
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
+
+  List<String> _guideStepNames(Map<String, dynamic> guide) {
+    final structured = guide['steps'];
+    if (structured is Iterable) {
+      final names = structured
+          .map((item) {
+            if (item is Map) {
+              return (item['name'] ?? '').toString().trim();
+            }
+            return item?.toString().trim() ?? '';
+          })
+          .where((item) => item.isNotEmpty)
+          .toList(growable: false);
+      if (names.isNotEmpty) return names;
+    }
+    return _guideList(guide['method_steps']);
+  }
+
+  List<String> _guideFallbackLines(Object? value) {
+    if (value is! Iterable) return const [];
+    final lines = <String>[];
+    for (final item in value) {
+      if (item is! Map) continue;
+      lines.addAll(_guideList(item['guidance'] ?? item['content']));
+    }
+    return lines;
+  }
+
+  Widget _buildStuckHelpFab(TaskModel task) => Positioned(
+        left: DS.spacing16,
+        bottom: DS.spacing64 + DS.spacing24,
+        child: SafeArea(
+          top: false,
+          child: Tooltip(
+            message: context.l10n.taskExecutionStuckTooltip,
+            child: Material(
+              color: DS.surfaceOverlay.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(999),
+              child: InkWell(
+                key: const Key('stuck-help-fab'),
+                borderRadius: BorderRadius.circular(999),
+                onTap: () => unawaited(_showStuckHelp(task)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing10,
+                    vertical: DS.spacing8,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline_rounded,
+                        color: DS.primaryBase,
+                        size: 17,
+                      ),
+                      const SizedBox(width: DS.spacing4),
+                      Text(
+                        context.l10n.taskExecutionStuckLabel,
+                        style: DS.bodySmall.copyWith(
+                          color: DS.textSecondary,
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -648,6 +818,12 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               // 1. Focus Mode Entry Card (Prominent)
                               _buildFocusEntryCard(context, activeTask),
                               const SizedBox(height: DS.spacing24),
+                              TaskGuidePanel(
+                                task: activeTask,
+                                onAuroraTriggerPressed: (trigger) =>
+                                    _sendAuroraTrigger(activeTask, trigger),
+                              ),
+                              const SizedBox(height: DS.spacing24),
 
                               // Divider
                               Padding(
@@ -668,7 +844,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 style: TextStyle(
                                   fontSize: DS.fontSizeSm,
                                   color: DS.neutral500,
-                                  fontWeight: FontWeight.w500,
+                                  fontWeight: DS.fontWeightMedium,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -706,10 +882,6 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 PlanContextSummary(planId: activeTask.planId),
                               if (activeTask.planId != null)
                                 const SizedBox(height: DS.spacing16),
-
-                              // 2. Task Guide Area
-                              _TaskGuidePanel(task: activeTask),
-                              const SizedBox(height: DS.spacing16),
 
                               // Subtasks Section (if task has subtasks)
                               Consumer(
@@ -812,77 +984,15 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
             ),
           ),
 
+          _buildStuckHelpFab(activeTask),
+
           // Celebration Overlay
           if (_showCelebration)
             Positioned.fill(
-              child: BgmScope(
-                track: BgmTrack.achievement,
-                priority: BgmPriority.stage,
-                child: GestureDetector(
-                  onTap: _skipCelebration,
-                  behavior: HitTestBehavior.opaque,
-                  child: TweenAnimationBuilder<double>(
-                    tween: Tween<double>(begin: 0, end: 1),
-                    duration: const Duration(milliseconds: 620),
-                    curve: Curves.easeOutCubic,
-                    builder: (context, warmth, child) => DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Color.lerp(
-                                  const Color(0xFF0D1B2A),
-                                  const Color(0xFF53321F),
-                                  warmth,
-                                ) ??
-                                const Color(0xFF0D1B2A),
-                            Color.lerp(
-                                  DS.overlay50.withValues(alpha: 0.90),
-                                  const Color(0xFFF0B77A)
-                                      .withValues(alpha: 0.78),
-                                  warmth,
-                                ) ??
-                                DS.overlay50.withValues(alpha: 0.84),
-                          ],
-                        ),
-                      ),
-                      child: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          Opacity(
-                            opacity: 0.9,
-                            child: SceneAtmosphereLayer(
-                              atmosphere: ExperienceAtmosphere.focusBreath,
-                            ),
-                          ),
-                          SparkleConfetti(
-                            play: _playCompletionConfetti,
-                            intensity: SparkleCelebrationIntensity.large,
-                            alignment: Alignment.topCenter,
-                            enableSensory: false,
-                          ),
-                          child!,
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      child: _FocusCompletionPanel(
-                        visible: _showCompletionPanel,
-                        animateStats: _showCompletionStats,
-                        sessionMinutes: _completionMinutesSnapshot,
-                        todayMinutes: _todayFocusMinutesSnapshot ??
-                            _completionMinutesSnapshot,
-                        expGained: activeTask.difficulty * 10,
-                        unlockedAchievements:
-                            _completionResult?.unlockedAchievements ?? const [],
-                        onSkip: _skipCelebration,
-                        continueLabel: l10n.taskExecutionTapToContinue,
-                        skipLabel: l10n.taskExecutionSkipAnimation,
-                      ),
-                    ),
-                  ),
-                ),
+              child: TaskCompletionCelebration(
+                task: activeTask,
+                play: _playCompletionConfetti,
+                onContinue: _skipCelebration,
               ),
             ),
         ],
@@ -962,309 +1072,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               icon: Icons.arrow_forward_rounded,
               customGradient: _taskWarmActionGradient(context),
               onPressed: () {
-                context.push('/focus/mindfulness/${task.id}');
+                unawaited(context.push('/focus/mindfulness/${task.id}'));
               },
-            ),
-          ],
-        ),
-      );
-}
-
-class _FocusCompletionPanel extends StatelessWidget {
-  const _FocusCompletionPanel({
-    required this.visible,
-    required this.animateStats,
-    required this.sessionMinutes,
-    required this.todayMinutes,
-    required this.expGained,
-    required this.onSkip,
-    required this.continueLabel,
-    required this.skipLabel,
-    this.unlockedAchievements = const [],
-  });
-
-  final bool visible;
-  final bool animateStats;
-  final int sessionMinutes;
-  final int todayMinutes;
-  final int expGained;
-  final List<dynamic> unlockedAchievements;
-  final VoidCallback onSkip;
-  final String continueLabel;
-  final String skipLabel;
-
-  String _labelForLocale(BuildContext context, String zh, String en) {
-    return Localizations.localeOf(context).languageCode == 'zh' ? zh : en;
-  }
-
-  @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<Offset>(
-        tween: Tween<Offset>(
-          begin: const Offset(0, 0.08),
-          end: visible ? Offset.zero : const Offset(0, 0.08),
-        ),
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOutCubic,
-        builder: (context, slideOffset, child) => Transform.translate(
-          offset: Offset(0, slideOffset.dy * 120),
-          child: AnimatedOpacity(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            opacity: visible ? 1 : 0,
-            child: child,
-          ),
-        ),
-        child: TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: 0.96, end: 1),
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.elasticOut,
-          builder: (context, scale, child) =>
-              Transform.scale(scale: scale, child: child),
-          child: GraphiteCardSurface(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(DS.xl),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          const Color(0xFFFFD79A).withValues(alpha: 0.92),
-                          const Color(0xFFFFB86B).withValues(alpha: 0.88),
-                        ],
-                      ),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color:
-                              const Color(0xFFFFC06B).withValues(alpha: 0.38),
-                          blurRadius: 36,
-                          spreadRadius: 6,
-                        ),
-                      ],
-                      border: Border.all(
-                        color: const Color(0xFFFFF1D7).withValues(alpha: 0.7),
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.self_improvement_rounded,
-                      color: const Color(0xFF7E4A12),
-                      size: 72,
-                    ),
-                  ),
-                  const SizedBox(height: DS.spacing20),
-                  Text(
-                    _labelForLocale(context, '专注完成', 'Focus Complete'),
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: DS.textPrimary,
-                          fontWeight: DS.fontWeightBold,
-                        ),
-                  ),
-                  const SizedBox(height: DS.spacing8),
-                  Text(
-                    _labelForLocale(
-                      context,
-                      '状态已回暖，来看看这次沉浸带来的积累。',
-                      'You are back from deep focus. Here is what you gained.',
-                    ),
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: DS.textSecondary,
-                          height: 1.45,
-                        ),
-                  ),
-                  const SizedBox(height: DS.spacing18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _FocusMetricCard(
-                          icon: Icons.timer_outlined,
-                          label:
-                              _labelForLocale(context, '本次专注', 'This Session'),
-                          value: sessionMinutes,
-                          suffix: _labelForLocale(context, '分钟', ' min'),
-                          animate: animateStats,
-                        ),
-                      ),
-                      const SizedBox(width: DS.spacing12),
-                      Expanded(
-                        child: _FocusMetricCard(
-                          icon: Icons.today_rounded,
-                          label: _labelForLocale(
-                            context,
-                            '今日累计',
-                            'Today Total',
-                          ),
-                          value: todayMinutes,
-                          suffix: _labelForLocale(context, '分钟', ' min'),
-                          animate: animateStats,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: DS.spacing12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing18,
-                      vertical: DS.spacing10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: DS.surfaceSecondary,
-                      borderRadius: DS.borderRadius20,
-                      border: Border.all(color: DS.borderSubtle),
-                    ),
-                    child: SparkleCountUp(
-                      end: expGained,
-                      animate: animateStats,
-                      prefix: _labelForLocale(context, '专注经验 +', 'Focus XP +'),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: DS.textPrimary,
-                            fontWeight: DS.fontWeightBold,
-                          ),
-                    ),
-                  ),
-                  if (unlockedAchievements.isNotEmpty) ...[
-                    const SizedBox(height: DS.spacing12),
-                    ...unlockedAchievements.map((a) {
-                      final data = a is Map<String, dynamic>
-                          ? a
-                          : const <String, dynamic>{};
-                      final name =
-                          (data['name'] ?? data['title'] ?? '').toString();
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: DS.spacing16,
-                          vertical: DS.spacing8,
-                        ),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              const Color(0xFFFFD700).withValues(alpha: 0.18),
-                              const Color(0xFFFFA500).withValues(alpha: 0.10),
-                            ],
-                          ),
-                          borderRadius: DS.borderRadius12,
-                          border: Border.all(
-                            color:
-                                const Color(0xFFFFD700).withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.emoji_events_rounded,
-                              color: const Color(0xFFFFB300),
-                              size: 20,
-                            ),
-                            const SizedBox(width: DS.spacing8),
-                            Flexible(
-                              child: Text(
-                                name,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
-                                    ?.copyWith(
-                                      color: DS.textPrimary,
-                                      fontWeight: DS.fontWeightSemiBold,
-                                    ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ],
-                  const SizedBox(height: DS.spacing12),
-                  Text(
-                    continueLabel,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: DS.textSecondary,
-                        ),
-                  ),
-                  const SizedBox(height: DS.spacing12),
-                  SparkleButton.ghost(
-                    label: skipLabel,
-                    onPressed: onSkip,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-}
-
-class _FocusMetricCard extends StatelessWidget {
-  const _FocusMetricCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.suffix,
-    required this.animate,
-  });
-
-  final IconData icon;
-  final String label;
-  final int value;
-  final String suffix;
-  final bool animate;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.all(DS.spacing12),
-        decoration: BoxDecoration(
-          color: DS.surfaceSecondary.withValues(alpha: 0.92),
-          borderRadius: DS.borderRadius16,
-          border: Border.all(color: DS.borderSubtle),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: DS.primaryBase, size: 18),
-                const SizedBox(width: DS.spacing6),
-                Expanded(
-                  child: Text(
-                    label,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: DS.textSecondary,
-                          fontWeight: DS.fontWeightMedium,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.spacing12),
-            RichText(
-              text: TextSpan(
-                children: [
-                  WidgetSpan(
-                    alignment: PlaceholderAlignment.middle,
-                    child: SparkleCountUp(
-                      end: value,
-                      animate: animate,
-                      duration: const Duration(milliseconds: 600),
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                color: DS.textPrimary,
-                                fontWeight: DS.fontWeightBold,
-                              ),
-                    ),
-                  ),
-                  TextSpan(
-                    text: suffix,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: DS.textSecondary,
-                          fontWeight: DS.fontWeightMedium,
-                        ),
-                  ),
-                ],
-              ),
             ),
           ],
         ),
@@ -1305,7 +1114,7 @@ class _TimerControls extends StatelessWidget {
                 ),
               ),
               CustomButton.secondary(
-                text: '重置',
+                text: context.l10n.taskExecutionResetTimer,
                 icon: Icons.restart_alt_rounded,
                 onPressed: onReset,
                 size: CustomButtonSize.small,
@@ -1361,7 +1170,8 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     if (!context.mounted) return;
 
     if (intent == null) {
-      final message = ref.read(taskListProvider).error ?? 'AI 执行发起失败';
+      final message = ref.read(taskListProvider).error ??
+          context.l10n.taskExecutionAiHandoffFailed;
       AppFeedback.error(
         context,
         message.replaceFirst('Exception: ', ''),
@@ -1370,11 +1180,13 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     }
 
     final feedbackMessage = switch (intent.status) {
-      ExecutionIntentStatus.succeeded => 'AI 已完成本次执行',
-      ExecutionIntentStatus.partial => 'AI 已完成部分内容，请继续查看',
-      ExecutionIntentStatus.failed => intent.errorMessage ?? 'AI 执行失败',
-      ExecutionIntentStatus.waitingApproval => 'AI 正在等待你的确认',
-      _ => '任务已交给 AI，当前状态：${intent.statusLabel}',
+      ExecutionIntentStatus.succeeded => context.l10n.taskExecutionAiCompleted,
+      ExecutionIntentStatus.partial => context.l10n.taskExecutionAiPartial,
+      ExecutionIntentStatus.failed =>
+        intent.errorMessage ?? context.l10n.taskExecutionAiFailed,
+      ExecutionIntentStatus.waitingApproval =>
+        context.l10n.taskExecutionAiWaitingApproval,
+      _ => context.l10n.taskExecutionAiHandedOff(intent.statusLabel),
     };
 
     if (intent.status == ExecutionIntentStatus.failed) {
@@ -1410,7 +1222,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     AppFeedback.info(
       context,
       _hasExecutionPermissionIssue(connection)
-          ? '当前执行权限不足，任务已加入等待队列。补齐权限后可统一重试。'
+          ? context.l10n.taskExecutionPermissionInsufficientQueued
           : ExecutionCopy.engineOfflineQueuedMessage,
     );
   }
@@ -1423,12 +1235,13 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     if (!context.mounted) return;
 
     if (record == null) {
-      final message = ref.read(taskListProvider).error ?? 'AI 结果确认失败';
+      final message = ref.read(taskListProvider).error ??
+          context.l10n.taskExecutionAiConfirmFailed;
       AppFeedback.error(context, message.replaceFirst('Exception: ', ''));
       return;
     }
 
-    AppFeedback.success(context, 'AI 结果已确认，任务状态已同步');
+    AppFeedback.success(context, context.l10n.taskExecutionAiResultConfirmed);
   }
 
   Future<void> _showRejectReasonSheet(
@@ -1445,11 +1258,12 @@ class _ExecutionAssistPanel extends ConsumerWidget {
         .rejectTaskExecutionResult(task.id, reason: selectedReason);
     if (!context.mounted) return;
     if (record == null) {
-      final message = ref.read(taskListProvider).error ?? '取回任务失败';
+      final message = ref.read(taskListProvider).error ??
+          context.l10n.taskExecutionRejectFailed;
       AppFeedback.error(context, message.replaceFirst('Exception: ', ''));
       return;
     }
-    AppFeedback.info(context, '任务已交还给你继续处理');
+    AppFeedback.info(context, context.l10n.taskExecutionTaskReturned);
   }
 
   Color _executionStatusColor(ExecutionIntentModel? intent, bool isLoading) {
@@ -1478,21 +1292,25 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     }
   }
 
-  String _executionStatusTitle(ExecutionIntentModel? intent, bool isLoading) {
-    if (isLoading) return 'AI 正在接管这个任务';
-    return intent == null ? 'AI 执行尚未开始' : 'AI 状态：${intent.statusLabel}';
+  String _executionStatusTitle(
+      BuildContext context, ExecutionIntentModel? intent, bool isLoading) {
+    if (isLoading) return context.l10n.taskExecutionAiTakingOver;
+    return intent == null
+        ? context.l10n.taskExecutionAiNotStarted
+        : context.l10n.taskExecutionAiStatusLabel(intent.statusLabel);
   }
 
   String _executionStatusSubtitle(
+    BuildContext context,
     ExecutionIntentModel? intent,
     ExecutionRecordModel? record,
     bool isLoading,
   ) {
     if (isLoading) {
-      return 'Sparkle 正在把任务发送给 OpenClaw。';
+      return context.l10n.taskExecutionSendingToOpenclaw;
     }
     if (intent == null) {
-      return '适合数字执行的任务可以在这里一键转交。';
+      return context.l10n.taskExecutionDigitalTaskHint;
     }
     if (intent.errorMessage != null && intent.errorMessage!.trim().isNotEmpty) {
       return intent.errorMessage!;
@@ -1504,15 +1322,17 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     if (record != null) {
       final validationText =
           record.validationPassed != null && record.validationTotal != null
-              ? '校验 ${record.validationPassed}/${record.validationTotal}'
+              ? context.l10n.taskExecutionValidationLabel(
+                  record.validationPassed!, record.validationTotal!)
               : record.trustLabel;
-      return '结果：$validationText'
-          '${record.approvalRequested != null ? ' · 审批请求 ${record.approvalRequested}' : ''}';
+      return '${context.l10n.taskExecutionResultLabel(validationText)}'
+          '${record.approvalRequested != null ? context.l10n.taskExecutionApprovalRequestLabel(record.approvalRequested!) : ''}';
     }
     if (intent.goal.trim().isNotEmpty) {
-      return '目标：${intent.goal} · ${intent.trustLabel}';
+      return context.l10n
+          .taskExecutionGoalWithTrust(intent.goal, intent.trustLabel);
     }
-    return '结果信任：${intent.trustLabel}';
+    return context.l10n.taskExecutionResultTrust(intent.trustLabel);
   }
 
   String? _executionOutputPreview(ExecutionRecordModel? record) {
@@ -1530,42 +1350,44 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     return preview.isEmpty ? null : preview;
   }
 
-  String? _executionMetaPreview(ExecutionIntentModel? intent) {
+  String? _executionMetaPreview(
+      BuildContext context, ExecutionIntentModel? intent) {
     if (intent == null) return null;
     final parts = <String>[
       if (intent.templateName != null && intent.templateName!.isNotEmpty)
-        '模板 ${intent.templateName}',
+        context.l10n.taskExecutionTemplateLabel(intent.templateName!),
       if (intent.strategyVariant != null && intent.strategyVariant!.isNotEmpty)
-        '策略 ${intent.strategyVariant}',
+        context.l10n.taskExecutionStrategyLabel(intent.strategyVariant!),
       if (intent.targetNodeLabel != null && intent.targetNodeLabel!.isNotEmpty)
-        '节点 ${intent.targetNodeLabel}',
+        context.l10n.taskExecutionNodeLabel(intent.targetNodeLabel!),
     ];
     if (parts.isEmpty) return null;
     return parts.join(' · ');
   }
 
-  String _handoffButtonText(ExecutionIntentModel? intent, bool isLoading) {
-    if (isLoading) return 'AI 接管中...';
+  String _handoffButtonText(
+      BuildContext context, ExecutionIntentModel? intent, bool isLoading) {
+    if (isLoading) return context.l10n.taskExecutionAiTakingOverLoading;
     switch (intent?.status) {
       case ExecutionIntentStatus.failed:
       case ExecutionIntentStatus.timedOut:
       case ExecutionIntentStatus.canceled:
       case ExecutionIntentStatus.handedBack:
-        return '重新交给 AI';
+        return context.l10n.taskExecutionRehandoffToAi;
       case ExecutionIntentStatus.succeeded:
       case ExecutionIntentStatus.partial:
-        return '再次交给 AI';
+        return context.l10n.taskExecutionHandoffToAiAgain;
       case ExecutionIntentStatus.waitingApproval:
-        return '等待确认';
+        return context.l10n.taskExecutionWaitingConfirm;
       case ExecutionIntentStatus.draft:
       case ExecutionIntentStatus.ready:
       case ExecutionIntentStatus.queued:
       case ExecutionIntentStatus.dispatched:
       case ExecutionIntentStatus.running:
-        return 'AI 执行中';
+        return context.l10n.taskExecutionAiRunning;
       case ExecutionIntentStatus.unknown:
       case null:
-        return '交给 AI 执行';
+        return context.l10n.taskExecutionHandoffToAi;
     }
   }
 
@@ -1652,7 +1474,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
     final statusColor =
         _executionStatusColor(executionIntent, isHandoffLoading);
     final outputPreview = _executionOutputPreview(executionRecord);
-    final metaPreview = _executionMetaPreview(executionIntent);
+    final metaPreview = _executionMetaPreview(context, executionIntent);
 
     return GraphiteCardSurface(
       padding: const EdgeInsets.all(DS.spacing16),
@@ -1666,7 +1488,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                '推荐执行模板',
+                context.l10n.taskExecutionRecommendedTemplates,
                 style: DS.bodySmall.copyWith(
                   color: DS.neutral700,
                   fontWeight: DS.fontWeightBold,
@@ -1701,15 +1523,15 @@ class _ExecutionAssistPanel extends ConsumerWidget {
               !nudgeDismissed) ...[
             OpenClawStatusCapsule(
               title: hasExecutionPermissionIssue
-                  ? 'OpenClaw 能连上，但当前没有执行权限'
+                  ? context.l10n.taskExecutionOpenclawConnectedNoPermission
                   : isClawConfigured
-                      ? 'OpenClaw 当前离线，可先加入等待队列'
-                      : 'OpenClaw 尚未连接',
+                      ? context.l10n.taskExecutionOpenclawOfflineQueued
+                      : context.l10n.taskExecutionOpenclawNotConnected,
               subtitle: hasExecutionPermissionIssue
-                  ? '当前令牌能访问网关，但执行会被权限拦住。你可以先把任务排队，等权限修好后统一重试。'
+                  ? context.l10n.taskExecutionOpenclawPermissionHint
                   : isClawConfigured
-                      ? '你可以先继续委派，等引擎恢复后再统一重试，不需要在这个任务页停住。'
-                      : '先完成一次连接，之后任务页和聊天页都会把它当成同一个执行入口来使用。',
+                      ? context.l10n.taskExecutionOpenclawOfflineHint
+                      : context.l10n.taskExecutionOpenclawNotConnectedHint,
               icon: isClawConfigured
                   ? Icons.cloud_queue_rounded
                   : Icons.link_off_rounded,
@@ -1726,7 +1548,9 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                     onPressed: () => context.push(
                       '${HomeRoutes.openClawHub}?section=connection',
                     ),
-                    child: Text(isClawConfigured ? '查看' : '连接'),
+                    child: Text(isClawConfigured
+                        ? context.l10n.taskExecutionViewAction
+                        : context.l10n.taskExecutionConnectAction),
                   ),
                   IconButton(
                     onPressed: () {
@@ -1740,7 +1564,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                     icon: const Icon(Icons.close_rounded, size: 18),
                     visualDensity: VisualDensity.compact,
                     color: DS.textSecondary,
-                    tooltip: '关闭提示',
+                    tooltip: context.l10n.taskExecutionDismissHint,
                   ),
                 ],
               ),
@@ -1750,27 +1574,28 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                       ? Icons.key_off_rounded
                       : Icons.sensors_rounded,
                   label: hasExecutionPermissionIssue
-                      ? '已连到网关但无执行权限'
+                      ? context.l10n.taskExecutionMetricConnectedNoPermission
                       : isClawConfigured
-                          ? '已配置但离线'
-                          : '尚未配置',
+                          ? context.l10n.taskExecutionMetricConfiguredOffline
+                          : context.l10n.taskExecutionMetricNotConfigured,
                   tone: OpenClawVisualTone.offline,
                   emphasized: true,
                 ),
                 if (queuedRequestCount > 0)
                   OpenClawMetricPill(
                     icon: Icons.schedule_rounded,
-                    label: '$queuedRequestCount 个任务已排队',
+                    label: context.l10n
+                        .taskExecutionMetricQueuedTasks(queuedRequestCount),
                     tone: OpenClawVisualTone.attention,
                     emphasized: true,
                   ),
                 OpenClawMetricPill(
                   icon: Icons.arrow_circle_right_rounded,
                   label: hasExecutionPermissionIssue
-                      ? '建议先修权限再重试'
+                      ? context.l10n.taskExecutionSuggestionFixPermission
                       : isClawConfigured
-                          ? '建议先排队再统一重试'
-                          : '建议先连接再委派',
+                          ? context.l10n.taskExecutionSuggestionQueueFirst
+                          : context.l10n.taskExecutionSuggestionConnectFirst,
                   tone: OpenClawVisualTone.active,
                 ),
               ],
@@ -1778,26 +1603,28 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildNudgeDetailBlock(
-                    label: '当前状态',
+                    label: context.l10n.taskExecutionNudgeCurrentStatus,
                     value: hasExecutionPermissionIssue
-                        ? '这台设备已经能访问 OpenClaw 网关，但当前认证没有真正发起执行的权限。'
+                        ? context.l10n.taskExecutionNudgeStatusPermissionIssue
                         : isClawConfigured
-                            ? '连接信息还在，但引擎暂时不在线。'
-                            : '这台设备还没有接入 OpenClaw。',
+                            ? context.l10n.taskExecutionNudgeStatusOffline
+                            : context.l10n.taskExecutionNudgeStatusNotConnected,
                   ),
                   const SizedBox(height: DS.spacing8),
                   _buildNudgeDetailBlock(
-                    label: '为什么现在看到这个提示',
-                    value: '你正在一个支持 AI 委派的任务里，而且当前执行入口还没有准备好。',
+                    label: context.l10n.taskExecutionNudgeWhyThisPrompt,
+                    value: context.l10n.taskExecutionNudgeWhyThisPromptValue,
                   ),
                   const SizedBox(height: DS.spacing8),
                   _buildNudgeDetailBlock(
-                    label: '下一步动作',
+                    label: context.l10n.taskExecutionNudgeNextAction,
                     value: hasExecutionPermissionIssue
-                        ? '打开 OpenClaw Hub 更换具备执行权限的令牌，或切到已配对的 WebSocket 连接；修好后再统一重试队列。'
+                        ? context
+                            .l10n.taskExecutionNudgeNextActionPermissionIssue
                         : isClawConfigured
-                            ? '继续把任务加入等待队列，或去 OpenClaw Hub 恢复连接后统一重试。'
-                            : '打开 OpenClaw Hub 完成连接，之后再回到这里发起委派。',
+                            ? context.l10n.taskExecutionNudgeNextActionOffline
+                            : context
+                                .l10n.taskExecutionNudgeNextActionNotConnected,
                   ),
                 ],
               ),
@@ -1832,6 +1659,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                         children: [
                           Text(
                             _executionStatusTitle(
+                              context,
                               executionIntent,
                               isHandoffLoading,
                             ),
@@ -1842,6 +1670,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                           const SizedBox(height: DS.spacing4),
                           Text(
                             _executionStatusSubtitle(
+                              context,
                               executionIntent,
                               executionRecord,
                               isHandoffLoading,
@@ -1907,7 +1736,8 @@ class _ExecutionAssistPanel extends ConsumerWidget {
                 text: canQueueHandoff
                     ? copy.queueAction
                     : isClawConfigured
-                        ? _handoffButtonText(executionIntent, isHandoffLoading)
+                        ? _handoffButtonText(
+                            context, executionIntent, isHandoffLoading)
                         : copy.connectEngineAction,
                 icon: canQueueHandoff
                     ? Icons.cloud_queue_rounded
@@ -1956,6 +1786,7 @@ class _BottomControls extends ConsumerWidget {
   void _showCompleteDialog(BuildContext context) {
     final noteController = TextEditingController();
     final minutes = Duration(seconds: elapsedSeconds).inMinutes;
+    final criteria = taskSuccessCriteriaLines(task);
 
     unawaited(
       showSensoryDialog<void>(
@@ -1984,12 +1815,20 @@ class _BottomControls extends ConsumerWidget {
                     ),
                     const SizedBox(width: DS.spacing12),
                     Text(
-                      context.l10n.taskExecutionCompleteTitle,
+                      context.l10n.taskExecutionCompletedToday,
                       style: DS.titleLarge.copyWith(
                         fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: DS.spacing8),
+                Text(
+                  context.l10n.taskExecutionCompletionCheckHint,
+                  style: DS.bodySmall.copyWith(
+                    color: DS.textSecondary,
+                    height: 1.45,
+                  ),
                 ),
                 const SizedBox(height: DS.spacing16),
                 GraphiteCardSurface(
@@ -2008,6 +1847,64 @@ class _BottomControls extends ConsumerWidget {
                     ],
                   ),
                 ),
+                const SizedBox(height: DS.spacing12),
+                if (criteria.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(DS.spacing12),
+                    decoration: BoxDecoration(
+                      color: DS.surfaceSecondary,
+                      borderRadius: DS.borderRadius12,
+                      border: Border.all(color: DS.borderSubtle),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          context.l10n.taskExecutionCompletionCriteria,
+                          style: DS.bodyMedium.copyWith(
+                            color: DS.textPrimary,
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                        ),
+                        const SizedBox(height: DS.spacing8),
+                        for (final item in criteria.take(4))
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              bottom: DS.spacing8,
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(
+                                  Icons.check_circle_outline_rounded,
+                                  size: 18,
+                                  color: DS.success,
+                                ),
+                                const SizedBox(width: DS.spacing8),
+                                Expanded(
+                                  child: Text(
+                                    item,
+                                    style: DS.bodySmall.copyWith(
+                                      color: DS.textSecondary,
+                                      height: 1.45,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  )
+                else
+                  Text(
+                    context.l10n.taskExecutionNoCriteriaHint,
+                    style: DS.bodySmall.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
+                    ),
+                  ),
                 const SizedBox(height: DS.spacing16),
                 TextField(
                   controller: noteController,
@@ -2018,18 +1915,33 @@ class _BottomControls extends ConsumerWidget {
                   maxLines: 3,
                 ),
                 const SizedBox(height: DS.spacing20),
+                Text(
+                  context.l10n.taskExecutionCriteriaMatchQuestion,
+                  style: DS.bodyMedium.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+                const SizedBox(height: DS.spacing12),
                 Row(
                   children: [
                     Expanded(
-                      child: CustomButton.text(
-                        text: context.l10n.cancel,
-                        onPressed: () => Navigator.of(ctx).pop(),
+                      child: CustomButton.secondary(
+                        text: context.l10n.taskExecutionCriteriaNotMet,
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          AppFeedback.info(
+                            context,
+                            context.l10n.taskExecutionContinueOrRetryTomorrow,
+                          );
+                        },
+                        size: CustomButtonSize.small,
                       ),
                     ),
                     const SizedBox(width: DS.spacing12),
                     Expanded(
                       child: CustomButton.primary(
-                        text: context.l10n.taskExecutionConfirmComplete,
+                        text: context.l10n.taskExecutionCriteriaMetComplete,
                         icon: Icons.check_rounded,
                         customGradient: _taskWarmActionGradient(context),
                         onPressed: () {
@@ -2050,7 +1962,7 @@ class _BottomControls extends ConsumerWidget {
             ),
           ),
         ),
-      ),
+      ).whenComplete(noteController.dispose),
     );
   }
 
@@ -2097,163 +2009,6 @@ class _BottomControls extends ConsumerWidget {
   }
 }
 
-class _TaskGuidePanel extends ConsumerStatefulWidget {
-  const _TaskGuidePanel({required this.task});
-
-  final TaskModel task;
-
-  @override
-  ConsumerState<_TaskGuidePanel> createState() => _TaskGuidePanelState();
-}
-
-class _TaskGuidePanelState extends ConsumerState<_TaskGuidePanel> {
-  bool _isGeneratingGuide = false;
-
-  Future<void> _generateTaskGuide() async {
-    if (_isGeneratingGuide || !isServerTaskId(widget.task.id)) return;
-    setState(() => _isGeneratingGuide = true);
-    try {
-      final updated = await ref
-          .read(taskListProvider.notifier)
-          .generateGuide(widget.task.id);
-      if (!mounted) return;
-      ref.read(activeTaskProvider.notifier).state = updated;
-      AppFeedback.success(context, '任务指南已生成');
-    } catch (error) {
-      if (!mounted) return;
-      AppFeedback.error(
-        context,
-        '任务指南生成失败：${error.toString().replaceFirst('Exception: ', '')}',
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isGeneratingGuide = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    final task = ref.watch(activeTaskProvider) ?? widget.task;
-    final hasGuide = task.guideContent != null && task.guideContent!.isNotEmpty;
-    final canGenerateGuide = isServerTaskId(task.id);
-
-    return GraphiteCardSurface(
-      padding: EdgeInsets.zero,
-      child: ExpansionTile(
-        shape: const Border(),
-        tilePadding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing12,
-        ),
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: DS.surfaceSecondary,
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: DS.borderSubtle,
-                ),
-              ),
-              child: Icon(
-                Icons.description_outlined,
-                color: DS.primaryBase,
-                size: 22,
-              ),
-            ),
-            const SizedBox(width: DS.spacing12),
-            Expanded(
-              child: Text(
-                l10n.taskExecutionGuideTitle,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: DS.fontWeightBold,
-                      color: DS.neutral900,
-                    ),
-              ),
-            ),
-          ],
-        ),
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(DS.spacing16),
-            decoration: BoxDecoration(
-              color: DS.neutral50,
-              borderRadius: const BorderRadius.only(
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: DS.spacing8,
-                  runSpacing: DS.spacing8,
-                  children: [
-                    OpenClawMetricPill(
-                      icon: hasGuide
-                          ? Icons.auto_awesome_rounded
-                          : Icons.tips_and_updates_outlined,
-                      label: hasGuide ? '已生成任务指南' : '还没有任务指南',
-                      tone: hasGuide
-                          ? OpenClawVisualTone.connected
-                          : OpenClawVisualTone.attention,
-                      emphasized: hasGuide,
-                    ),
-                    if (canGenerateGuide)
-                      const OpenClawMetricPill(
-                        icon: Icons.psychology_alt_rounded,
-                        label: '支持 AI 生成',
-                        tone: OpenClawVisualTone.active,
-                      ),
-                  ],
-                ),
-                const SizedBox(height: DS.spacing12),
-                if (hasGuide)
-                  SparkleMarkdown(
-                    content: task.guideContent!,
-                    textColor: DS.textPrimary,
-                    codeBackgroundColor: DS.neutral100,
-                    linkColor: DS.primaryBase,
-                    contentRole: SparkleMarkdownRole.taskGuide,
-                  )
-                else
-                  Text(
-                    canGenerateGuide
-                        ? '还没有任务指南。你可以让 AI 根据当前任务目标即时生成一版执行建议和步骤。'
-                        : l10n.taskExecutionGuideEmpty,
-                    style: DS.bodySmall.copyWith(
-                      color: DS.textSecondary,
-                      height: 1.5,
-                    ),
-                  ),
-                if (canGenerateGuide) ...[
-                  const SizedBox(height: DS.spacing16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: CustomButton.secondary(
-                      text: hasGuide ? '重新生成任务指南' : '生成任务指南',
-                      icon: _isGeneratingGuide
-                          ? Icons.sync_rounded
-                          : Icons.auto_awesome_rounded,
-                      onPressed: _isGeneratingGuide ? null : _generateTaskGuide,
-                      isLoading: _isGeneratingGuide,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _RejectReasonSheet extends StatefulWidget {
   const _RejectReasonSheet();
 
@@ -2262,13 +2017,6 @@ class _RejectReasonSheet extends StatefulWidget {
 }
 
 class _RejectReasonSheetState extends State<_RejectReasonSheet> {
-  static const List<String> _presetReasons = [
-    '结果不准确',
-    '结果不完整',
-    '安全顾虑',
-    '我想自己做',
-  ];
-
   String? _selectedReason;
   final TextEditingController _controller = TextEditingController();
 
@@ -2280,21 +2028,28 @@ class _RejectReasonSheetState extends State<_RejectReasonSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final presetReasons = [
+      context.l10n.taskExecutionRejectReasonInaccurate,
+      context.l10n.taskExecutionRejectReasonIncomplete,
+      context.l10n.taskExecutionRejectReasonSafety,
+      context.l10n.taskExecutionRejectReasonSelfDo,
+    ];
+
     return GraphiteModalSurface(
-      title: '退回原因',
+      title: context.l10n.taskExecutionRejectReasonTitle,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '告诉 Sparkle 为什么这次结果不适合直接采纳，后续会据此调整执行方式。',
+            context.l10n.taskExecutionRejectDescription,
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing12),
           Wrap(
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
-            children: _presetReasons.map((reason) {
+            children: presetReasons.map((reason) {
               final selected = _selectedReason == reason;
               return ChoiceChip(
                 label: Text(reason),
@@ -2308,9 +2063,9 @@ class _RejectReasonSheetState extends State<_RejectReasonSheet> {
             controller: _controller,
             minLines: 2,
             maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: '补充说明',
-              hintText: '例如：缺少来源、结论太武断、我想保留自己的表达方式',
+            decoration: InputDecoration(
+              labelText: context.l10n.taskExecutionRejectAdditionalNote,
+              hintText: context.l10n.taskExecutionRejectNoteHint,
             ),
           ),
           const SizedBox(height: DS.spacing16),
@@ -2318,14 +2073,14 @@ class _RejectReasonSheetState extends State<_RejectReasonSheet> {
             children: [
               Expanded(
                 child: CustomButton.text(
-                  text: '取消',
+                  text: context.l10n.cancel,
                   onPressed: () => Navigator.of(context).pop(),
                 ),
               ),
               const SizedBox(width: DS.spacing12),
               Expanded(
                 child: CustomButton.primary(
-                  text: '确认退回',
+                  text: context.l10n.taskExecutionRejectConfirm,
                   onPressed: () {
                     final extra = _controller.text.trim();
                     final reason = [
@@ -2333,7 +2088,9 @@ class _RejectReasonSheetState extends State<_RejectReasonSheet> {
                       if (extra.isNotEmpty) extra,
                     ].whereType<String>().join('；');
                     Navigator.of(context).pop(
-                      reason.isEmpty ? '用户取回任务' : reason,
+                      reason.isEmpty
+                          ? context.l10n.taskExecutionUserRetrievedTask
+                          : reason,
                     );
                   },
                 ),
@@ -2385,7 +2142,7 @@ class _TaskExitConfirmationDialogState
         curve: Curves.easeOut,
       ),
     );
-    _slideController.forward();
+    unawaited(_slideController.forward());
   }
 
   @override

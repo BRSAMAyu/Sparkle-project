@@ -362,6 +362,19 @@ class AccountabilityRepository {
           'can_chat': active != null,
           'can_open_dashboard': active != null,
         },
+        inAppHints: active == null
+            ? const []
+            : [
+                AccountabilityInAppHintInfo(
+                  id: 'demo_hint_partner_watch',
+                  message: '${active.partner?.displayName ?? '责任伙伴'} 正在看着你，加油',
+                  senderName: active.partner?.displayName ?? '责任伙伴',
+                  senderId: active.partnerId,
+                  partnershipId: active.id,
+                  createdAt:
+                      DateTime.now().subtract(const Duration(minutes: 18)),
+                ),
+              ],
       );
     }
 
@@ -397,8 +410,9 @@ class AccountabilityRepository {
         ),
         recentReflections: RecentReflectionsSummaryInfo(
           count: partnership.status == AccountabilityStatus.active ? 2 : 0,
-          lastCategory:
-              partnership.status == AccountabilityStatus.active ? 'plan_stall' : null,
+          lastCategory: partnership.status == AccountabilityStatus.active
+              ? 'plan_stall'
+              : null,
           lastAt: partnership.status == AccountabilityStatus.active
               ? DateTime.now().subtract(const Duration(hours: 6))
               : null,
@@ -766,6 +780,16 @@ class AccountabilityRepository {
       );
     }
     throw Exception('Failed to nudge partner');
+  }
+
+  Future<void> dismissInAppHint(String notificationId) async {
+    if (DemoDataService.isDemoMode) {
+      return;
+    }
+
+    await _apiClient.post<dynamic>(
+      ApiEndpoints.accountabilityHintDismiss(notificationId),
+    );
   }
 
   Future<Map<String, dynamic>> getAchievements() async {

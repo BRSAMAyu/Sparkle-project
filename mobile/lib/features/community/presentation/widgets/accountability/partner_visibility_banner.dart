@@ -31,7 +31,7 @@ class PartnerVisibilityBanner extends StatelessWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(height: DS.xs),

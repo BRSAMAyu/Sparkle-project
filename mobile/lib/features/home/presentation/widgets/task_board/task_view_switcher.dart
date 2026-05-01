@@ -137,7 +137,7 @@ class _ViewTab extends StatelessWidget {
                 _getLabel(mode),
                 style: context.sparkleTypography.labelLarge.copyWith(
                   color: isSelected ? selectedTextColor : unselectedTextColor,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  fontWeight: isSelected ? DS.fontWeightSemibold : DS.fontWeightMedium,
                   fontSize: fontSize,
                 ),
                 overflow: TextOverflow.ellipsis,

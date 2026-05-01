@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/intervention.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class CardIntervention extends StatelessWidget {
   const CardIntervention({
@@ -16,10 +17,19 @@ class CardIntervention extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = I18nService.instance.l10n;
     final actions = intervention.actions.isEmpty
-        ? const [
-            InterventionAction(id: 'start_now', label: '开始', type: 'primary'),
-            InterventionAction(id: 'dismiss', label: '关闭', type: 'secondary'),
+        ? [
+            InterventionAction(
+              id: 'start_now',
+              label: l10n.startTask,
+              type: 'primary',
+            ),
+            InterventionAction(
+              id: 'dismiss',
+              label: l10n.commonClose,
+              type: 'secondary',
+            ),
           ]
         : intervention.actions;
     return Positioned(
@@ -64,7 +74,9 @@ class CardIntervention extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   SparkleButton.outline(
-                    label: actions.length > 1 ? actions[1].label : '关闭',
+                    label: actions.length > 1
+                        ? actions[1].label
+                        : l10n.commonClose,
                     onPressed: actions.length > 1
                         ? () => onAction(actions[1].id)
                         : onDismiss,

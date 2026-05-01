@@ -1,0 +1,69 @@
+{
+    "chat": {
+        "round_finished": "This round of processing has finished.",
+        "tool_executed": "{tool} executed",
+        "update_success": "Related results have been updated.",
+        "tool_failed": "{tool} execution failed",
+        "impact_partial": "This step did not finish successfully, results may be partially affected.",
+        "partial_no_data": "Execution finished, but no displayable details were returned.",
+        "next_action_default": "Continue viewing final response",
+        "next_action_retry": "Retry after providing more info, or continue in another way",
+        "understanding": "I will first understand your question",
+        "planning": "I am organizing your goals and thoughts",
+        "retrieving": "I am searching for relevant basis and context",
+        "executing": "I am executing the necessary steps for you",
+        "answering": "I am organizing the final answer",
+        "evidence_summary_with": "This response has expandable source references.",
+        "evidence_summary_without": "This response has no expandable source references.",
+        "message_length_exceeded": "Message length exceeds {max_length} character limit"
+    },
+    "feedback": {
+        "action_confirm_failed": "Confirmation failed, please retry",
+        "task_confirmed": "Task confirmed",
+        "task_dismissed": "Task dismissed",
+        "plan_confirmed": "Plan confirmed",
+        "plan_dismissed": "Plan dismissed",
+        "focus_started": "Focus started",
+        "focus_cancelled": "Focus cancelled",
+        "execution": {
+            "missing_connection": "Missing connection information for execution result callback",
+            "cannot_build_rejection": "Cannot build rejection request",
+            "cannot_create_request": "Cannot create execution callback request",
+            "callback_failed": "Execution callback failed: {error}",
+            "cannot_parse_result": "Cannot parse execution callback result",
+            "callback_failed_status": "Execution callback failed, status={status}",
+            "result_updated": "Execution result updated",
+            "execution_rejected": "Execution rejected",
+            "title_default": "OpenClaw Execution Result",
+            "next_action_default": "View result or send next command",
+            "title_waiting": "OpenClaw Waiting for Confirmation",
+            "next_action_confirm": "Confirm to complete execution",
+            "title_failed": "OpenClaw Execution Incomplete",
+            "next_action_failed": "Provide clearer instructions or retry later",
+            "impact_summary": "This result is from your own OpenClaw remote execution.",
+            "fallback_summary": "OpenClaw has returned the latest execution status."
+        },
+        "plan_review": {
+            "approved": "Plan approved, executing...",
+            "rejected": "Plan cancelled",
+            "modify_requested": "Please provide modification requirements...",
+            "acknowledged": "Acknowledged"
+        }
+    },
+    "auth": {
+        "unsupported_provider": "Unsupported identity provider",
+        "apple_verify_failed": "Apple verification failed: {error}",
+        "create_user_failed": "Failed to create user",
+        "link_apple_failed": "Failed to update Apple login information",
+        "create_token_failed": "Failed to issue token",
+        "create_refresh_token_failed": "Failed to issue refresh token"
+    },
+    "ratelimit": {
+        "exceeded": "Too many requests, please try again later",
+        "endpoint_exceeded": "Too many requests to this endpoint, please try again later",
+        "websocket_exceeded": "Too many WebSocket connections, please try again later"
+    },
+    "chat_history": {
+        "new_conversation": "New conversation"
+    }
+}

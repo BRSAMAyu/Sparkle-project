@@ -7,11 +7,10 @@ Application Configuration Management
 使用 pydantic-settings 管理配置
 """
 
-
 import json
 import logging
 import os
-from typing import Dict, Optional, Union
+from typing import Optional
 from urllib.parse import quote, unquote, urlparse, urlunparse
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
@@ -223,7 +222,7 @@ class Settings(BaseSettings):
     TOOL_EXECUTION_TIMEOUT_SECONDS: float = 120.0
 
     # Aurora Stage 18
-    AURORA_STAGE18_AGGREGATOR_MODE: str = "off"  # off | shadow | live
+    AURORA_STAGE18_AGGREGATOR_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE18_PUSH_POLICY_MODE: str = "off"  # off | shadow | live
     AURORA_STAGE18_PUSH_DELIVERY_MODE: str = "off"  # off | shadow | live
 
@@ -238,7 +237,9 @@ class Settings(BaseSettings):
     AURORA_STAGE21_SKILL_SHARE_MODE: str = "off"  # off | shadow | live
 
     # Aurora Stage 23
-    AURORA_BAYESIAN_MODE: str = "off"  # off | shadow | live
+    AURORA_BAYESIAN_MODE: str = (
+        "shadow"  # Promoted to shadow: Stage 23 SQAM complete, begin real data collection (2026-04-25)
+    )
     AURORA_BAYESIAN_LIVE_CANARY_PERCENT: int = 5
     AURORA_BAYESIAN_TTL_DAYS: int = 30
 
@@ -317,7 +318,7 @@ class Settings(BaseSettings):
 
     # Aurora Stage 33
     AURORA_STAGE33_MODE: str = "shadow"  # off | shadow | live
-    AURORA_STAGE33_SOCIAL_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE33_SOCIAL_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE33_SRL_MODE: str = "shadow"  # off | shadow | live
     AURORA_STAGE33_WM_PROMPT_MODE: str = "shadow"  # off | shadow | live
     AURORA_STAGE33_EVENTS_MODE: str = "shadow"  # off | shadow | live
@@ -338,8 +339,12 @@ class Settings(BaseSettings):
     # Aurora Stage 39
     AURORA_STAGE39_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE39_SCAFFOLDING_PROMPT_MODE: str = "live"  # off | shadow | live
-    AURORA_STAGE39_COGLOAD_ROUTE_MODE: str = "shadow"  # off | shadow | live
-    AURORA_STAGE39_GALAXY_INJECT_MODE: str = "shadow"  # off | shadow | live
+    AURORA_STAGE39_COGLOAD_ROUTE_MODE: str = (
+        "live"  # Promoted to live: Stage 39 tests pass, shadow soak complete (2026-04-22)
+    )
+    AURORA_STAGE39_GALAXY_INJECT_MODE: str = (
+        "live"  # Promoted to live: Stage 39 tests pass, shadow soak complete (2026-04-22)
+    )
 
     # Aurora Stage 40
     AURORA_STAGE40_CALENDAR_MODE: str = "live"  # off | shadow | live
@@ -391,7 +396,7 @@ class Settings(BaseSettings):
     XIAOMI_MIMO_BASE_URL: str = "https://api.xiaomimimo.com/v1"
     XIAOMI_CHAT_MODEL: str = "mimo-v2-flash"
     XIAOMI_STANDARD_MODEL: str = "mimo-v2-flash"
-    XIAOMI_PRO_MODEL: str = "mimo-v2-pro"
+    XIAOMI_PRO_MODEL: str = "MiMo-V2.5"
     XIAOMI_TEMPERATURE: float = 0.3
     XIAOMI_PRO_TEMPERATURE: float = 0.3
 
@@ -407,8 +412,8 @@ class Settings(BaseSettings):
     # DeepSeek Configuration (核心模型 - 思考模式)
     DEEPSEEK_API_KEY: str = ""
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
-    DEEPSEEK_CHAT_MODEL: str = "deepseek-chat"
-    DEEPSEEK_REASON_MODEL: str = "deepseek-reasoner"
+    DEEPSEEK_CHAT_MODEL: str = "deepseek-v4-flash"
+    DEEPSEEK_REASON_MODEL: str = "deepseek-v4-pro"
 
     # Zhipu GLM Configuration (编程/工具调用)
     ZHIPU_API_KEY: str = ""
@@ -455,6 +460,7 @@ class Settings(BaseSettings):
     EMBEDDING_BACKUP_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
     EMBEDDING_MODEL: str = "text-embedding-v4"  # 向量模型
     EMBEDDING_DIM: int = 1024  # 向量维度
+    ENABLE_CONTEXTUAL_CHUNK_ENRICHMENT: bool = True
     RERANK_PROVIDER: str = "dashscope"  # dashscope | siliconflow
     RERANK_BACKUP_PROVIDER: str = "siliconflow"  # dashscope | siliconflow
     RERANK_MODEL: str = "qwen3-rerank"  # 重排序模型
@@ -463,9 +469,9 @@ class Settings(BaseSettings):
     DASHSCOPE_API_KEY: str = ""
     DASHSCOPE_BASE_HTTP_API_URL: str = "https://dashscope.aliyuncs.com/api/v1"
     DASHSCOPE_BASE_URL_COMPATIBLE: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    DASHSCOPE_CHAT_MODEL: str = "qwen3.5-plus"  # 标准/推理模型
-    DASHSCOPE_REASON_MODEL: str = "qwen3.5-plus"
-    DASHSCOPE_FAST_MODEL: str = "qwen3.5-flash"  # 快速响应模型
+    DASHSCOPE_CHAT_MODEL: str = "qwen3.6-plus"  # 标准/推理模型
+    DASHSCOPE_REASON_MODEL: str = "qwen3.6-plus"
+    DASHSCOPE_FAST_MODEL: str = "qwen3.6-flash"  # 快速响应模型
     DASHSCOPE_STANDARD_MODEL: str = "qwen3.5-flash"
     DASHSCOPE_TEMPERATURE: float = 0.7
     DASHSCOPE_EMBEDDING_MODEL: str = "text-embedding-v4"
@@ -581,6 +587,23 @@ class Settings(BaseSettings):
     ENABLE_CONTEXT_SEMANTIC_GATING: bool = False
     ENABLE_CONTEXT_BRIEFING: bool = True
     ENABLE_CONTEXT_FOCUS_METADATA: bool = False
+    ENABLE_FOCUS_DOCUMENT_CONTEXT: bool = True
+    CONTEXT_TOTAL_TOKEN_BUDGET: int = 8000
+    CONVERSATION_HISTORY_CONTEXT_RATIO: float = 0.40
+    ENABLE_DOCUMENT_CONTEXT_INJECTION: bool = True
+    DOCUMENT_CONTEXT_RATIO: float = 0.25
+    DOCUMENT_CONTEXT_MAX_CHUNKS: int = 5
+    DOCUMENT_CONTEXT_RECENCY_BOOST_DAYS: int = 30
+    GALAXY_KNOWLEDGE_CONTEXT_RATIO: float = 0.15
+    TASK_ERROR_CONTEXT_RATIO: float = 0.10
+    COGNITIVE_PROFILE_CONTEXT_RATIO: float = 0.10
+    AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE: str = "shadow"  # off | shadow | live
+    # Aurora document-context gate. auto/live/on run the classifier; off/skip disable
+    # document retrieval for every turn; selective/aggressive cap positive decisions.
+    AURORA_DOC_CONTEXT_MODE: str = "auto"
+    AURORA_DOC_CONTEXT_AGGRESSIVE_BUDGET_TOKENS: int = 2200
+    AURORA_DOC_CONTEXT_SELECTIVE_BUDGET_TOKENS: int = 900
+    AURORA_DOC_CONTEXT_AMBIGUOUS_BUDGET_TOKENS: int = 500
     AURORA_STAGE38_ERR_REPLAN_MODE: str = "shadow"
     AURORA_STAGE38_PUSH_SCHEDULER_MODE: str = "shadow"
     AURORA_STAGE38_PUSH_SCHEDULER_INTERVAL_MINUTES: int = 5
@@ -593,7 +616,7 @@ class Settings(BaseSettings):
     MEMORY_RANK_DEFAULT_FRESHNESS: float = 0.3
     MEMORY_RANK_DEFAULT_CORRECTION: float = 0.1
     ENABLE_USER_MEMORY_CONTROLS: bool = True
-    SPARKLE_MEMORY_INFERRED_WRITE_ENABLED: bool = False
+    SPARKLE_MEMORY_INFERRED_WRITE_ENABLED: bool = True
     SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED: bool = False
     SPARKLE_AGGREGATOR_ENABLED: bool = False
     # This data is prompt context only, not a routing decision signal.
@@ -640,11 +663,24 @@ class Settings(BaseSettings):
     ENABLE_GRAPHRAG_FASTPATH: bool = False
     GRAPHRAG_CACHE_TTL_SECONDS: int = 120
     GRAPHRAG_FASTPATH_TIMEOUT_SECONDS: float = 2.5
+
+    # HyDE (Hypothetical Document Embeddings) pre-retrieval query expansion
+    ENABLE_HYDE: bool = True
+    HYDE_SKIP_THRESHOLD: float = 0.85
+    HYDE_MAX_TOKENS: int = 80
+    HYDE_TIMEOUT_SECONDS: float = 2.0
     ENABLE_GRAPHRAG_MONITOR_API: bool = False
     GRAPHRAG_TRACE_TTL_SECONDS: int = 86400
     GRAPHRAG_TRACE_MAX_BYTES: int = 20000
     GRAPHRAG_TRACE_QUERY_MAX_CHARS: int = 256
     ENABLE_GRAPHRAG_TRACE_PII: bool = False
+    ENABLE_GRAPHRAG_RERANKER: bool = False
+    DOCUMENT_CONTEXT_SIMILARITY_THRESHOLD: float = 0.72
+    DOCUMENT_CONTEXT_WEAK_EVIDENCE_MARGIN: float = 0.08
+    DOCUMENT_CONTEXT_KEYWORD_OVERLAP_WEIGHT: float = 0.0
+    MASTERY_BOOST_FACTOR: float = 0.5
+    ENABLE_DOCUMENT_FEEDBACK_LOOP: bool = True
+    AURORA_PRIVACY_PII_REDACTION_MODE: str = "live"  # off | shadow | live
     REDIS_HYBRID_TIMEOUT_SECONDS: float = 2.0
     RERANK_TIMEOUT_SECONDS: float = 2.5
     ENABLE_REDIS_HYBRID_FALLBACK: bool = False
@@ -672,8 +708,30 @@ class Settings(BaseSettings):
     # File Storage
     UPLOAD_DIR: str = "./uploads"
     MAX_UPLOAD_SIZE: int = 52428800  # 50MB
+    FILE_MAX_UPLOAD_SIZE: int = 52428800  # 50MB
+    FILE_PRESIGN_EXPIRES_SECONDS: int = 420
+    FILE_ALLOWED_MIME_TYPES: str = (
+        "application/pdf,"
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document,"
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation,"
+        "text/markdown,"
+        "text/plain,"
+        "image/png,"
+        "image/jpeg,"
+        "image/gif,"
+        "image/webp"
+    )
+    MINIO_ENDPOINT: str = "localhost:9000"
+    MINIO_PUBLIC_ENDPOINT: str = ""
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin"
+    MINIO_BUCKET: str = "sparkle-files"
+    MINIO_REGION: str = ""
+    MINIO_USE_SSL: bool = False
 
     # MDX Dictionary Configuration
+    # Default is True but the mdx_dictionary_service module will gracefully
+    # degrade to MDX_AVAILABLE=False when readmdict/python-lzo are missing.
     MDX_DICTIONARY_ENABLED: bool = True
     MDX_DICTIONARY_PATH: str = ""
     MDD_RESOURCES_PATH: Optional[str] = None
@@ -693,6 +751,7 @@ class Settings(BaseSettings):
     # Optional Agent Graph V2
     ENABLE_AGENT_GRAPH_V2: bool = False
     ENABLE_MODE_WORKFLOW_V2: bool = True
+    ENABLE_AURORA_RUNTIME_V1: bool = False
     ENABLE_EXPERT_ENTRY: bool = True
     ENABLE_UNIFIED_GRAPH_ROUTING: bool = True
     ENABLE_EXPERT_STRATEGY_V1: bool = True
@@ -792,7 +851,7 @@ class Settings(BaseSettings):
         return _normalize_local_path(str(v), base_dir=repo_root)
 
     @property
-    def CONTEXT_SEMANTIC_GATING_RULES(self) -> Dict[str, Dict[str, Union[float, int]]]:
+    def CONTEXT_SEMANTIC_GATING_RULES(self) -> dict[str, dict[str, float | int]]:
         raw = str(self.CONTEXT_SEMANTIC_GATING_RULES_JSON or "").strip()
         if not raw:
             return {}

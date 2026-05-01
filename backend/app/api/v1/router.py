@@ -7,21 +7,23 @@ API v1 Router
 聚合所有 v1 版本的 API 路由
 """
 
-
 from fastapi import APIRouter
 
 from app.api.v1 import (
     accountability,
     achievements,
     agent_stats,
-    calendar,
-    cards,
     analytics,
     assets,
     audit,
+    aurora,
+    aurora_status,
     auth,
     background_tasks,
+    calendar,
+    data_export,
     capsules,
+    cards,
     chat,
     client_telemetry,
     cognitive,
@@ -32,11 +34,13 @@ from app.api.v1 import (
     decay_timemachine,
     devices,
     dlq_admin,
+    documents,
     error_book,
-    executions,
-    executions_admin,
     event_bus_health,
     events,
+    exam_sprint,
+    executions,
+    executions_admin,
     experiments,
     feedback_admin,
     files,
@@ -50,8 +54,8 @@ from app.api.v1 import (
     interventions,
     inventory,
     leaderboards,
-    learning_reports,
     learning_paths,
+    learning_reports,
     memory,
     memory_admin,
     memory_settings,
@@ -73,9 +77,9 @@ from app.api.v1 import (
     recommendations,
     seed_libraries,
     shop,
-    skills,
     signals,
     simulation,
+    skills,
     statistics,
     stt,
     subjects,
@@ -83,6 +87,7 @@ from app.api.v1 import (
     suggestions,  # Vision Item 3
     tasks,
     theater,
+    tool_history,
     translation,
     user_persona_batch,
     user_settings,
@@ -95,7 +100,9 @@ from app.config import settings
 api_router = APIRouter()
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
+api_router.include_router(data_export.router, prefix="/users", tags=["users"])
 api_router.include_router(suggestions.router, tags=["suggestions"])  # Route already carries /suggestions
+api_router.include_router(documents.router, prefix="/documents", tags=["documents"])
 api_router.include_router(ingestion.router, prefix="/documents", tags=["ingestion"])
 api_router.include_router(ingestion.router, prefix="/ingestion", tags=["ingestion"])
 api_router.include_router(files.router, tags=["files"])
@@ -103,13 +110,14 @@ api_router.include_router(interventions.router, tags=["interventions"])
 api_router.include_router(events.router, tags=["events"])
 api_router.include_router(nightly_reviews.router, tags=["nightly_reviews"])
 api_router.include_router(feedback_admin.router)
-api_router.include_router(audit.router, prefix="/audit", tags=["Audit"])
+api_router.include_router(audit.router, tags=["Audit"])
 api_router.include_router(dlq_admin.router, tags=["DLQ"])
 api_router.include_router(event_bus_health.router, prefix="/admin", tags=["Event Bus Health"])
 api_router.include_router(galaxy.router, tags=["galaxy"])
 api_router.include_router(error_book.router)  # Prefix is defined in router itself (/errors)
 api_router.include_router(learning_paths.router)  # Already has prefix /learning-paths
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
+api_router.include_router(aurora.router)
 api_router.include_router(client_telemetry.router)
 api_router.include_router(signals.router)
 api_router.include_router(tasks.router, prefix="/tasks", tags=["tasks"])
@@ -128,6 +136,7 @@ api_router.include_router(cognitive.router, prefix="/cognitive", tags=["cognitiv
 api_router.include_router(omnibar.router, prefix="/omnibar", tags=["omnibar"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(growth.router, prefix="/growth", tags=["growth"])
+api_router.include_router(exam_sprint.router, prefix="/exam-sprint", tags=["exam-sprint"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(background_tasks.router, prefix="/background-tasks", tags=["background_tasks"])
 api_router.include_router(simulation.router)
@@ -137,6 +146,7 @@ api_router.include_router(agent_stats.router)
 api_router.include_router(assets.router)
 api_router.include_router(stt.router, prefix="/stt", tags=["stt"])
 api_router.include_router(focus.router, prefix="/focus", tags=["focus"])
+api_router.include_router(tool_history.router)
 api_router.include_router(vocabulary.router, prefix="/vocabulary", tags=["vocabulary"])
 api_router.include_router(translation.router, prefix="/translation", tags=["translation"])
 api_router.include_router(health_production.router, prefix="/health", tags=["Health"])
@@ -176,6 +186,7 @@ api_router.include_router(multi_agent.router, tags=["Multi-Agent"])
 # Calendar Events
 api_router.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
 api_router.include_router(accountability.router, prefix="/accountability", tags=["accountability"])
+api_router.include_router(aurora_status.router)
 
 
 @api_router.get("/")
@@ -199,6 +210,7 @@ async def api_root():
             "/capsules",
             "/omnibar",
             "/dashboard",
+            "/exam-sprint",
             "/multi-intent",
             "/prediction",
             "/predictive",

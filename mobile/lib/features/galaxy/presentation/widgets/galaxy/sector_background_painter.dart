@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_config.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -208,6 +209,7 @@ class SectorBackgroundPainter extends CustomPainter {
           fontSize: 16, // Smaller but clearer
           fontWeight: FontWeight.bold,
           letterSpacing: 1.5,
+          fontFamilyFallback: sparkleFontFallback,
           shadows: [
             Shadow(
               color: DS.brandPrimary.withValues(alpha: 0.8),

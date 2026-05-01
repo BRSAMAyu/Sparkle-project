@@ -51,21 +51,26 @@ class _StatusChip extends StatelessWidget {
   final String label;
 
   @override
-  Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing10,
-          vertical: DS.spacing6,
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing10,
+        vertical: DS.spacing6,
+      ),
+      decoration: BoxDecoration(
+        color: isDark
+            ? DS.success.withValues(alpha: 0.12)
+            : const Color(0xFFEAF2E8),
+        borderRadius: DS.borderRadius20,
+      ),
+      child: Text(
+        label,
+        style: DS.bodySmall.copyWith(
+          color: DS.textPrimary,
+          fontWeight: DS.fontWeightSemibold,
         ),
-        decoration: const BoxDecoration(
-          color: Color(0xFFEAF2E8),
-          borderRadius: DS.borderRadius20,
-        ),
-        child: Text(
-          label,
-          style: DS.bodySmall.copyWith(
-            color: DS.textPrimary,
-            fontWeight: DS.fontWeightSemibold,
-          ),
-        ),
-      );
+      ),
+    );
+  }
 }

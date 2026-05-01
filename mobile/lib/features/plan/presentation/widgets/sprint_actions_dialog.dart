@@ -280,7 +280,7 @@ class _ActionTile extends StatelessWidget {
         title: Text(
           title,
           style: context.sparkleTypography.bodyLarge.copyWith(
-            fontWeight: FontWeight.w500,
+            fontWeight: DS.fontWeightMedium,
           ),
         ),
         subtitle: Text(
@@ -450,7 +450,7 @@ class _ExtendSprintDialogState extends State<_ExtendSprintDialog> {
                       style: context.sparkleTypography.bodyMedium.copyWith(
                         color: isSelected ? DS.white : DS.textPrimary,
                         fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.normal,
+                            isSelected ? DS.fontWeightSemibold : FontWeight.normal,
                       ),
                     ),
                   ),

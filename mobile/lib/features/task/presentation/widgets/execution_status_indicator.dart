@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 
 class ExecutionStatusIndicator extends StatefulWidget {
@@ -230,31 +231,31 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
   String _statusLabel() {
     switch (widget.status) {
       case ExecutionIntentStatus.draft:
-        return '待准备';
+        return context.l10n.executionStatusDraft;
       case ExecutionIntentStatus.ready:
-        return '准备完成';
+        return context.l10n.executionStatusReady;
       case ExecutionIntentStatus.queued:
-        return '排队中';
+        return context.l10n.executionStatusQueued;
       case ExecutionIntentStatus.dispatched:
-        return '已发送';
+        return context.l10n.executionStatusDispatched;
       case ExecutionIntentStatus.running:
-        return '执行中';
+        return context.l10n.executionStatusRunning;
       case ExecutionIntentStatus.waitingApproval:
-        return '等待确认';
+        return context.l10n.executionStatusWaitingApproval;
       case ExecutionIntentStatus.succeeded:
-        return '执行成功';
+        return context.l10n.executionStatusSucceeded;
       case ExecutionIntentStatus.partial:
-        return '部分完成';
+        return context.l10n.executionStatusPartial;
       case ExecutionIntentStatus.failed:
-        return '执行失败';
+        return context.l10n.executionStatusFailed;
       case ExecutionIntentStatus.canceled:
-        return '已取消';
+        return context.l10n.executionStatusCanceled;
       case ExecutionIntentStatus.timedOut:
-        return '执行超时';
+        return context.l10n.executionStatusTimedOut;
       case ExecutionIntentStatus.handedBack:
-        return '已交还';
+        return context.l10n.executionStatusHandedBack;
       case ExecutionIntentStatus.unknown:
-        return '状态未知';
+        return context.l10n.executionStatusUnknown;
     }
   }
 

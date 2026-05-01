@@ -60,6 +60,7 @@ import 'package:sparkle/features/tools/presentation/screens/tool_library_screen.
 import 'package:sparkle/features/translation/presentation/screens/translation_history_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/edit_profile_screen.dart';
+import 'package:sparkle/features/user/presentation/screens/export_data_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/password_reset_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/persona_onboarding_screen.dart';
 import 'package:sparkle/features/user/presentation/screens/profile_screen.dart';
@@ -197,6 +198,40 @@ void main() {
       harness.container.dispose();
     });
 
+    testWidgets('passes galaxy focus query parameters into GalaxyScreen',
+        (tester) async {
+      final harness = await _pumpRouter(
+        tester,
+        authState: AuthState(
+          isAuthenticated: true,
+          user: _buildUser(),
+        ),
+        onboardingCompleted: true,
+      );
+
+      harness.router
+          .go('/galaxy?focus_node_id=node-thermo-1&mastery_delta=-0.3');
+      await _pumpFrames(tester);
+
+      expect(
+        harness.router.routeInformationProvider.value.uri.queryParameters,
+        {
+          'focus_node_id': 'node-thermo-1',
+          'mastery_delta': '-0.3',
+        },
+      );
+
+      final galaxyScreen =
+          tester.widget<GalaxyScreen>(find.byType(GalaxyScreen));
+      expect(galaxyScreen.initialFocusNodeId, 'node-thermo-1');
+      expect(galaxyScreen.initialMasteryDelta, -0.3);
+
+      PerformanceService.instance.stopMonitoring();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      harness.container.dispose();
+    });
+
     testWidgets(
         'loads critical secondary routes used by dashboard and community actions',
         (tester) async {
@@ -260,6 +295,7 @@ void main() {
       await expectRoute('/profile/system-updates', SystemUpdatesScreen);
       await expectRoute('/profile/password-reset', PasswordResetScreen);
       await expectRoute('/profile/memory-settings', MemorySettingsScreen);
+      await expectRoute('/profile/export-data', ExportDataScreen);
       await expectRoute('/profile/sync-center', SyncCenterScreen);
       await expectRoute('/memory', MemoryPanelScreen);
       await expectRoute('/memory/settings', MemorySettingsScreen);

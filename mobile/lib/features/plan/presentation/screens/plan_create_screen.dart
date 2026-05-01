@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/features/plan/data/models/plan_draft.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
@@ -53,7 +54,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
   late double _totalEstimatedHours;
   late TimeOfDay _reminderTime;
   DateTime? _targetDate;
-  var _scheduleLabel = '工作日推进，周末复盘';
+  var _scheduleLabel = '';
   var _currentStep = 0;
   var _isSubmitting = false;
   var _isGeneratingGuide = false;
@@ -88,7 +89,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
     _scopeController.text = parsed.scope;
     _taskBlueprintController.text = _stripDraftLines(parsed.taskBlueprint);
     _guideController.text = parsed.guide;
-    _scheduleLabel = _extractScheduleLabel(parsed.schedule);
+    _scheduleLabel = _extractScheduleLabel(parsed.schedule, '');
 
     final planTasks = initialPlan?.tasks ?? const <TaskModel>[];
     if (planTasks.isNotEmpty) {
@@ -120,6 +121,9 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_scheduleLabel.isEmpty) {
+      _scheduleLabel = context.l10n.planScheduleChipWeekday;
+    }
     if (_didInitType || _isEditMode) {
       return;
     }
@@ -156,6 +160,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       return;
     }
 
+    final l10n = context.l10n;
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
     setState(() => _isSubmitting = true);
 
@@ -208,7 +213,10 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
             energyCost: draft.type == PlanType.sprint ? 3 : 2,
             planId: persistedPlan.id,
             tags: <String>[
-              if (draft.type == PlanType.growth) '成长计划' else '冲刺计划',
+              if (draft.type == PlanType.growth)
+                context.l10n.planTypeGrowth
+              else
+                context.l10n.planTypeSprint,
               if (draft.subject.trim().isNotEmpty) draft.subject.trim(),
             ],
             dueDate: taskDraft.dueDate,
@@ -224,7 +232,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       }
       AppFeedback.success(
         context,
-        _isEditMode ? '计划已更新' : context.l10n.planCreateSuccess,
+        _isEditMode ? l10n.planUpdated : l10n.planCreateSuccess,
       );
       context.go('/plans/${persistedPlan.id}');
     } catch (e) {
@@ -286,7 +294,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
   Future<void> _generateGuide() async {
     if (_goalController.text.trim().isEmpty ||
         _nameController.text.trim().isEmpty) {
-      AppFeedback.info(context, '先填写计划名称和计划目标，再生成 AI 指南');
+      AppFeedback.info(context, context.l10n.planGuideFillNameAndGoalFirst);
       return;
     }
 
@@ -309,12 +317,13 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       AppFeedback.success(
         context,
         _selectedGuideAudience == PlanGuideAudience.human
-            ? '已生成给用户看的执行指南'
-            : '已生成给 AI 使用的执行版本',
+            ? context.l10n.planGuideGeneratedHuman
+            : context.l10n.planGuideGeneratedAi,
       );
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '计划指南生成失败：$e');
+        AppFeedback.error(
+            context, context.l10n.planGuideGenerationFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -324,27 +333,28 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
   }
 
   void _seedSuggestedTasks({required bool replaceExisting}) {
+    final l10n = context.l10n;
     final suggestions = _selectedType == PlanType.growth
-        ? const <PlanTaskDraft>[
+        ? <PlanTaskDraft>[
             PlanTaskDraft(
-              title: '建立本周主线推进清单',
+              title: l10n.planSuggestedGrowthTask1,
               estimatedMinutes: 30,
               difficulty: 2,
             ),
             PlanTaskDraft(
-              title: '完成一次阶段复盘',
+              title: l10n.planSuggestedGrowthTask2,
               estimatedMinutes: 20,
               difficulty: 1,
             ),
           ]
-        : const <PlanTaskDraft>[
+        : <PlanTaskDraft>[
             PlanTaskDraft(
-              title: '确认冲刺目标与验收标准',
+              title: l10n.planSuggestedSprintTask1,
               estimatedMinutes: 25,
               difficulty: 2,
             ),
             PlanTaskDraft(
-              title: '完成冲刺关键里程碑',
+              title: l10n.planSuggestedSprintTask2,
               estimatedMinutes: 45,
               difficulty: 3,
             ),
@@ -388,7 +398,9 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
       appBar: AppBar(
         title: Text(
           _isEditMode
-              ? '编辑${_selectedType == PlanType.growth ? '成长计划' : '冲刺计划'}'
+              ? (_selectedType == PlanType.growth
+                  ? l10n.planCreateEditingGrowth
+                  : l10n.planCreateEditingSprint)
               : (_selectedType == PlanType.growth
                   ? l10n.createGrowthPlan
                   : l10n.createSprintPlan),
@@ -433,7 +445,11 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                                     ? Icons.check_rounded
                                     : Icons.arrow_forward,
                               ),
-                        label: isLast ? (_isEditMode ? '保存计划' : '创建计划') : '下一步',
+                        label: isLast
+                            ? (_isEditMode
+                                ? l10n.planCreateSavePlan
+                                : l10n.planCreateAction)
+                            : l10n.commonNext,
                         expand: true,
                       ),
                     ),
@@ -446,7 +462,9 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                                   () => _currentStep =
                                       (_currentStep - 1).clamp(0, 4),
                                 ),
-                        label: _currentStep == 0 ? '取消' : '上一步',
+                        label: _currentStep == 0
+                            ? l10n.commonCancel
+                            : l10n.commonPrevious,
                         expand: true,
                       ),
                     ),
@@ -456,7 +474,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
             },
             steps: [
               Step(
-                title: const Text('计划定位'),
+                title: Text(l10n.planCreateStepPositioning),
                 isActive: _currentStep >= 0,
                 state:
                     _currentStep > 0 ? StepState.complete : StepState.indexed,
@@ -479,7 +497,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                 ),
               ),
               Step(
-                title: const Text('时间结构'),
+                title: Text(l10n.planCreateStepTimeStructure),
                 isActive: _currentStep >= 1,
                 state:
                     _currentStep > 1 ? StepState.complete : StepState.indexed,
@@ -503,7 +521,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                 ),
               ),
               Step(
-                title: const Text('任务编排'),
+                title: Text(l10n.planCreateStepTaskBlueprint),
                 isActive: _currentStep >= 2,
                 state:
                     _currentStep > 2 ? StepState.complete : StepState.indexed,
@@ -516,7 +534,7 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                 ),
               ),
               Step(
-                title: const Text('计划边界与指南'),
+                title: Text(l10n.planCreateStepBoundariesGuide),
                 isActive: _currentStep >= 3,
                 state:
                     _currentStep > 3 ? StepState.complete : StepState.indexed,
@@ -535,13 +553,13 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
                       ClipboardData(text: _aiGuidePreview.trim()),
                     );
                     if (!context.mounted) return;
-                    AppFeedback.success(context, 'AI 版本已复制');
+                    AppFeedback.success(context, l10n.planCreateAiGuideCopied);
                   },
                   onGenerateGuide: _generateGuide,
                 ),
               ),
               Step(
-                title: const Text('确认预览'),
+                title: Text(l10n.planCreateStepReviewConfirm),
                 isActive: _currentStep >= 4,
                 content: _PlanReviewStep(
                   draft: draft,
@@ -570,13 +588,13 @@ class _PlanCreateScreenState extends ConsumerState<PlanCreateScreen> {
     );
   }
 
-  static String _extractScheduleLabel(String rawSchedule) {
+  static String _extractScheduleLabel(String rawSchedule, String defaultLabel) {
     final line = rawSchedule.split('\n').map((item) => item.trim()).firstWhere(
           (item) => item.startsWith('- 节奏说明：'),
           orElse: () => '',
         );
     if (line.isEmpty) {
-      return '工作日推进，周末复盘';
+      return defaultLabel;
     }
     return line.replaceFirst('- 节奏说明：', '').trim();
   }
@@ -616,85 +634,98 @@ class _PlanBasicsStep extends StatelessWidget {
   final ValueChanged<PlanPriority> onPriorityChanged;
 
   @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '先定义这是一张真正的计划卡，而不是普通任务。',
-            style: DS.bodyMedium.copyWith(color: DS.textSecondary),
-          ),
-          const SizedBox(height: DS.spacing16),
-          SegmentedButton<PlanType>(
-            segments: const [
-              ButtonSegment(
-                value: PlanType.sprint,
-                label: Text('冲刺计划'),
-                icon: Icon(Icons.flash_on_rounded),
-              ),
-              ButtonSegment(
-                value: PlanType.growth,
-                label: Text('成长计划'),
-                icon: Icon(Icons.trending_up_rounded),
-              ),
-            ],
-            selected: {selectedType},
-            onSelectionChanged: (values) => onTypeChanged(values.first),
-          ),
-          const SizedBox(height: DS.spacing16),
-          TextFormField(
-            controller: nameController,
-            decoration: const InputDecoration(
-              labelText: '计划名称',
-              hintText: '例如：6 周英语口语提升 / 期中冲刺收束',
-              border: OutlineInputBorder(),
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.planCreateBasicsSubtitle,
+          style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+        ),
+        const SizedBox(height: DS.spacing16),
+        SegmentedButton<PlanType>(
+          segments: [
+            ButtonSegment(
+              value: PlanType.sprint,
+              label: Text(l10n.planTypeSprint),
+              icon: const Icon(Icons.flash_on_rounded),
             ),
-            validator: (value) =>
-                (value == null || value.trim().isEmpty) ? '请先填写计划名称' : null,
-          ),
-          const SizedBox(height: DS.spacing16),
-          TextFormField(
-            controller: subjectController,
-            decoration: const InputDecoration(
-              labelText: '主题方向',
-              hintText: '英语、Flutter、考研数学、论文阅读...',
-              border: OutlineInputBorder(),
+            ButtonSegment(
+              value: PlanType.growth,
+              label: Text(l10n.planTypeGrowth),
+              icon: const Icon(Icons.trending_up_rounded),
             ),
+          ],
+          selected: {selectedType},
+          onSelectionChanged: (values) => onTypeChanged(values.first),
+        ),
+        const SizedBox(height: DS.spacing16),
+        TextFormField(
+          controller: nameController,
+          decoration: InputDecoration(
+            labelText: l10n.planNameLabel,
+            hintText: l10n.planCreateNameHint,
+            border: const OutlineInputBorder(),
           ),
-          const SizedBox(height: DS.spacing16),
-          TextFormField(
-            controller: goalController,
-            maxLines: 4,
-            decoration: InputDecoration(
-              labelText: selectedType == PlanType.growth ? '长期目标' : '冲刺目标',
-              hintText: selectedType == PlanType.growth
-                  ? '写清楚这个成长计划最终想形成什么能力、习惯或成果。'
-                  : '写清楚这次冲刺的结果、验收标准和不能偏离的主线。',
-              border: const OutlineInputBorder(),
-            ),
-            validator: (value) =>
-                (value == null || value.trim().isEmpty) ? '请写出这张计划卡的目标' : null,
+          validator: (value) => (value == null || value.trim().isEmpty)
+              ? l10n.planNameRequired
+              : null,
+        ),
+        const SizedBox(height: DS.spacing16),
+        TextFormField(
+          controller: subjectController,
+          decoration: InputDecoration(
+            labelText: l10n.planCreateSubjectLabel,
+            hintText: l10n.planCreateSubjectHint,
+            border: const OutlineInputBorder(),
           ),
-          const SizedBox(height: DS.spacing16),
-          DropdownButtonFormField<PlanPriority>(
-            initialValue: priority,
-            decoration: const InputDecoration(
-              labelText: '计划优先级',
-              border: OutlineInputBorder(),
-            ),
-            items: const [
-              DropdownMenuItem(value: PlanPriority.low, child: Text('低')),
-              DropdownMenuItem(value: PlanPriority.normal, child: Text('正常')),
-              DropdownMenuItem(value: PlanPriority.high, child: Text('高')),
-              DropdownMenuItem(value: PlanPriority.critical, child: Text('关键')),
-            ],
-            onChanged: (value) {
-              if (value != null) {
-                onPriorityChanged(value);
-              }
-            },
+        ),
+        const SizedBox(height: DS.spacing16),
+        TextFormField(
+          controller: goalController,
+          maxLines: 4,
+          decoration: InputDecoration(
+            labelText: selectedType == PlanType.growth
+                ? l10n.planCreateGrowthGoalLabel
+                : l10n.planCreateSprintGoalLabel,
+            hintText: selectedType == PlanType.growth
+                ? l10n.planCreateGrowthGoalHint
+                : l10n.planCreateSprintGoalHint,
+            border: const OutlineInputBorder(),
           ),
-        ],
-      );
+          validator: (value) => (value == null || value.trim().isEmpty)
+              ? l10n.planCreateGoalRequired
+              : null,
+        ),
+        const SizedBox(height: DS.spacing16),
+        DropdownButtonFormField<PlanPriority>(
+          initialValue: priority,
+          decoration: InputDecoration(
+            labelText: l10n.planPriorityLabel,
+            border: OutlineInputBorder(),
+          ),
+          items: [
+            DropdownMenuItem(
+                value: PlanPriority.low, child: Text(l10n.planPriorityLow)),
+            DropdownMenuItem(
+                value: PlanPriority.normal,
+                child: Text(l10n.planPriorityNormal)),
+            DropdownMenuItem(
+                value: PlanPriority.high, child: Text(l10n.planPriorityHigh)),
+            DropdownMenuItem(
+                value: PlanPriority.critical,
+                child: Text(l10n.planPriorityCritical)),
+          ],
+          onChanged: (value) {
+            if (value != null) {
+              onPriorityChanged(value);
+            }
+          },
+        ),
+      ],
+    );
+  }
 }
 
 class _PlanScheduleStep extends StatelessWidget {
@@ -728,27 +759,28 @@ class _PlanScheduleStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final reminderLabel =
         '${reminderTime.hour.toString().padLeft(2, '0')}:${reminderTime.minute.toString().padLeft(2, '0')}';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '把持续时间、每日投入和提醒节奏一次性定清楚。',
+          l10n.planCreateScheduleSubtitle,
           style: DS.bodyMedium.copyWith(color: DS.textSecondary),
         ),
         const SizedBox(height: DS.spacing16),
         DropdownButtonFormField<int>(
           initialValue: dailyMinutes,
-          decoration: const InputDecoration(
-            labelText: '每日可投入时长',
+          decoration: InputDecoration(
+            labelText: l10n.planCreateDailyMinutesLabel,
             border: OutlineInputBorder(),
           ),
-          items: const [20, 30, 45, 60, 90, 120, 180]
+          items: [20, 30, 45, 60, 90, 120, 180]
               .map(
                 (item) => DropdownMenuItem(
                   value: item,
-                  child: Text('$item 分钟'),
+                  child: Text(l10n.planCreateMinutes(item.toString())),
                 ),
               )
               .toList(),
@@ -760,8 +792,9 @@ class _PlanScheduleStep extends StatelessWidget {
         ),
         const SizedBox(height: DS.spacing16),
         Text(
-          '总预估工时 ${totalEstimatedHours.toStringAsFixed(1)} 小时',
-          style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w600),
+          l10n.planCreateTotalEstimatedHours(
+              totalEstimatedHours.toStringAsFixed(1)),
+          style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
         ),
         Slider(
           value: totalEstimatedHours.clamp(4, 80),
@@ -775,10 +808,10 @@ class _PlanScheduleStep extends StatelessWidget {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.calendar_month_rounded),
-          title: const Text('目标日期'),
+          title: Text(l10n.planTargetDateLabel),
           subtitle: Text(
             targetDate == null
-                ? '暂未设置'
+                ? l10n.planTargetDateUnset
                 : Formatters.formatDateMedium(targetDate!),
           ),
           trailing: const Icon(Icons.chevron_right_rounded),
@@ -787,7 +820,7 @@ class _PlanScheduleStep extends StatelessWidget {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.notifications_active_outlined),
-          title: const Text('每日提醒时间'),
+          title: Text(l10n.planCreateDailyReminderTime),
           subtitle: Text(reminderLabel),
           trailing: const Icon(Icons.chevron_right_rounded),
           onTap: onPickReminderTime,
@@ -795,15 +828,22 @@ class _PlanScheduleStep extends StatelessWidget {
         const SizedBox(height: DS.spacing12),
         DropdownButtonFormField<PlanStage>(
           initialValue: planStage,
-          decoration: const InputDecoration(
-            labelText: '当前计划阶段',
+          decoration: InputDecoration(
+            labelText: l10n.planCreatePlanStageLabel,
             border: OutlineInputBorder(),
           ),
-          items: const [
-            DropdownMenuItem(value: PlanStage.sprint, child: Text('冲刺推进')),
-            DropdownMenuItem(value: PlanStage.daily, child: Text('日常执行')),
-            DropdownMenuItem(value: PlanStage.review, child: Text('复盘调优')),
-            DropdownMenuItem(value: PlanStage.paused, child: Text('暂时暂停')),
+          items: [
+            DropdownMenuItem(
+                value: PlanStage.sprint,
+                child: Text(l10n.planCreateStageSprint)),
+            DropdownMenuItem(
+                value: PlanStage.daily, child: Text(l10n.planCreateStageDaily)),
+            DropdownMenuItem(
+                value: PlanStage.review,
+                child: Text(l10n.planCreateStageReview)),
+            DropdownMenuItem(
+                value: PlanStage.paused,
+                child: Text(l10n.planCreateStagePaused)),
           ],
           onChanged: (value) {
             if (value != null) {
@@ -815,19 +855,19 @@ class _PlanScheduleStep extends StatelessWidget {
         Wrap(
           spacing: DS.spacing8,
           runSpacing: DS.spacing8,
-          children: const [
-            '工作日推进，周末复盘',
-            '早晨启动，晚上收束',
-            '午后主攻，夜间轻复盘',
-          ].map((label) => _ScheduleChip(label: label)).toList(),
+          children: [
+            _ScheduleChip(label: l10n.planCreateScheduleChipWorkday),
+            _ScheduleChip(label: l10n.planCreateScheduleChipMorning),
+            _ScheduleChip(label: l10n.planCreateScheduleChipAfternoon),
+          ],
         ),
         const SizedBox(height: DS.spacing12),
         TextFormField(
           initialValue: scheduleLabel,
           maxLines: 2,
-          decoration: const InputDecoration(
-            labelText: '节奏说明',
-            hintText: '例如：周一到周五推进，周六复盘，周日补缺',
+          decoration: InputDecoration(
+            labelText: l10n.planCreateScheduleLabel,
+            hintText: l10n.planCreateScheduleHint,
             border: OutlineInputBorder(),
           ),
           onChanged: onScheduleChanged,
@@ -905,163 +945,168 @@ class _PlanTasksStepState extends State<_PlanTasksStep> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.planCreateTasksSubtitle,
+          style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+        ),
+        const SizedBox(height: DS.spacing16),
+        TextFormField(
+          controller: widget.blueprintController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: l10n.planCreateTaskBlueprintLabel,
+            hintText: l10n.planCreateTaskBlueprintHint,
+            border: OutlineInputBorder(),
+          ),
+        ),
+        const SizedBox(height: DS.spacing16),
+        if (widget.pendingTasks.isNotEmpty) ...[
           Text(
-            '这一步决定计划实际会承载哪些动作。已有任务先做参考，新任务会真正归属到计划下。',
-            style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+            l10n.planCreateReferenceExistingTasks,
+            style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
           ),
-          const SizedBox(height: DS.spacing16),
-          TextFormField(
-            controller: widget.blueprintController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              labelText: '任务编排说明',
-              hintText: '例如：先搭框架，再每天推进主线，最后统一复盘补漏。',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: DS.spacing16),
-          if (widget.pendingTasks.isNotEmpty) ...[
-            Text(
-              '参考已有任务',
-              style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: DS.spacing8),
-            ...widget.pendingTasks.map(
-              (task) => Card(
-                margin: const EdgeInsets.only(bottom: DS.spacing8),
-                child: ListTile(
-                  title: Text(task.title),
-                  subtitle: Text(
-                    '${task.estimatedMinutes} 分钟 · 难度 ${task.difficulty}',
-                  ),
-                  trailing: TextButton(
-                    onPressed: () => widget.onAddTask(
-                      PlanTaskDraft(
-                        title: task.title,
-                        estimatedMinutes: task.estimatedMinutes,
-                        difficulty: task.difficulty,
-                        dueDate: task.dueDate,
-                        generateGuide:
-                            task.guideContent?.trim().isEmpty ?? true,
-                      ),
+          const SizedBox(height: DS.spacing8),
+          ...widget.pendingTasks.map(
+            (task) => Card(
+              margin: const EdgeInsets.only(bottom: DS.spacing8),
+              child: ListTile(
+                title: Text(task.title),
+                subtitle: Text(
+                  l10n.planCreateTaskSubtitle(task.estimatedMinutes.toString(),
+                      task.difficulty.toString()),
+                ),
+                trailing: TextButton(
+                  onPressed: () => widget.onAddTask(
+                    PlanTaskDraft(
+                      title: task.title,
+                      estimatedMinutes: task.estimatedMinutes,
+                      difficulty: task.difficulty,
+                      dueDate: task.dueDate,
+                      generateGuide: task.guideContent?.trim().isEmpty ?? true,
                     ),
-                    child: const Text('复制进计划'),
                   ),
+                  child: Text(l10n.planCreateCopyToPlan),
                 ),
               ),
             ),
-            const SizedBox(height: DS.spacing12),
-          ],
-          Container(
-            padding: const EdgeInsets.all(DS.spacing12),
-            decoration: BoxDecoration(
-              color: DS.surfacePanel,
-              borderRadius: DS.borderRadius16,
-              border: Border.all(color: DS.borderSubtle),
-            ),
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    labelText: '新增计划任务',
-                    hintText: '例如：完成一轮章节梳理',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: DS.spacing12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<int>(
-                        initialValue: _minutes,
-                        decoration: const InputDecoration(
-                          labelText: '时长',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [20, 30, 45, 60, 90]
-                            .map(
-                              (value) => DropdownMenuItem(
-                                value: value,
-                                child: Text('$value 分钟'),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _minutes = value);
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: DS.spacing12),
-                    Expanded(
-                      child: DropdownButtonFormField<int>(
-                        initialValue: _difficulty,
-                        decoration: const InputDecoration(
-                          labelText: '难度',
-                          border: OutlineInputBorder(),
-                        ),
-                        items: const [1, 2, 3, 4, 5]
-                            .map(
-                              (value) => DropdownMenuItem(
-                                value: value,
-                                child: Text('$value'),
-                              ),
-                            )
-                            .toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _difficulty = value);
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: DS.spacing12),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: SparkleButton.ghost(
-                    onPressed: _appendManualTask,
-                    label: '加入计划任务',
-                  ),
-                ),
-              ],
-            ),
           ),
-          const SizedBox(height: DS.spacing16),
-          if (widget.draftTasks.isEmpty)
-            Text(
-              '当前还没有计划任务',
-              style: DS.bodySmall.copyWith(color: DS.textSecondary),
-            )
-          else
-            ...widget.draftTasks.asMap().entries.map(
-                  (entry) => Card(
-                    margin: const EdgeInsets.only(bottom: DS.spacing8),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor:
-                            DS.brandPrimary.withValues(alpha: 0.12),
-                        child: Text('${entry.key + 1}'),
+          const SizedBox(height: DS.spacing12),
+        ],
+        Container(
+          padding: const EdgeInsets.all(DS.spacing12),
+          decoration: BoxDecoration(
+            color: DS.surfacePanel,
+            borderRadius: DS.borderRadius16,
+            border: Border.all(color: DS.borderSubtle),
+          ),
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _titleController,
+                decoration: InputDecoration(
+                  labelText: l10n.planCreateNewTaskLabel,
+                  hintText: l10n.planCreateNewTaskHint,
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _minutes,
+                      decoration: InputDecoration(
+                        labelText: l10n.planCreateDurationLabel,
+                        border: OutlineInputBorder(),
                       ),
-                      title: Text(entry.value.title),
-                      subtitle: Text(
-                        '${entry.value.estimatedMinutes} 分钟 · 难度 ${entry.value.difficulty}',
+                      items: const [20, 30, 45, 60, 90]
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text(
+                                  l10n.planCreateMinutes(value.toString())),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _minutes = value);
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _difficulty,
+                      decoration: InputDecoration(
+                        labelText: l10n.planCreateDifficultyLabel,
+                        border: OutlineInputBorder(),
                       ),
-                      trailing: IconButton(
-                        onPressed: () => widget.onRemoveTask(entry.key),
-                        icon: const Icon(Icons.delete_outline_rounded),
-                      ),
+                      items: const [1, 2, 3, 4, 5]
+                          .map(
+                            (value) => DropdownMenuItem(
+                              value: value,
+                              child: Text('$value'),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() => _difficulty = value);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: SparkleButton.ghost(
+                  onPressed: _appendManualTask,
+                  label: l10n.planCreateAddTaskToPlan,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: DS.spacing16),
+        if (widget.draftTasks.isEmpty)
+          Text(
+            l10n.planCreateNoTasks,
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          )
+        else
+          ...widget.draftTasks.asMap().entries.map(
+                (entry) => Card(
+                  margin: const EdgeInsets.only(bottom: DS.spacing8),
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: DS.brandPrimary.withValues(alpha: 0.12),
+                      child: Text('${entry.key + 1}'),
+                    ),
+                    title: Text(entry.value.title),
+                    subtitle: Text(
+                      l10n.planCreateTaskSubtitle(
+                          entry.value.estimatedMinutes.toString(),
+                          entry.value.difficulty.toString()),
+                    ),
+                    trailing: IconButton(
+                      onPressed: () => widget.onRemoveTask(entry.key),
+                      icon: const Icon(Icons.delete_outline_rounded),
                     ),
                   ),
                 ),
-        ],
-      );
+              ),
+      ],
+    );
+  }
 }
 
 class _PlanGuideStep extends StatelessWidget {
@@ -1089,6 +1134,7 @@ class _PlanGuideStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final isHuman = selectedAudience == PlanGuideAudience.human;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1096,30 +1142,30 @@ class _PlanGuideStep extends StatelessWidget {
         TextFormField(
           controller: scopeController,
           maxLines: 4,
-          decoration: const InputDecoration(
-            labelText: '计划边界与注意事项',
-            hintText: '例如：本计划不承担临时杂事，只关注考试主线；每天只推进一条主线动作。',
+          decoration: InputDecoration(
+            labelText: l10n.planCreateScopeLabel,
+            hintText: l10n.planCreateScopeHint,
             border: OutlineInputBorder(),
           ),
         ),
         const SizedBox(height: DS.spacing16),
         if (enableStage4Experience) ...[
           Text(
-            '任务指南视角',
-            style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+            l10n.planCreateGuidePerspective,
+            style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
           ),
           const SizedBox(height: DS.spacing8),
           SegmentedButton<PlanGuideAudience>(
-            segments: const [
+            segments: [
               ButtonSegment(
                 value: PlanGuideAudience.human,
-                label: Text('给自己看'),
-                icon: Icon(Icons.person_outline_rounded),
+                label: Text(l10n.planCreateGuideForSelf),
+                icon: const Icon(Icons.person_outline_rounded),
               ),
               ButtonSegment(
                 value: PlanGuideAudience.ai,
-                label: Text('给 AI 用'),
-                icon: Icon(Icons.auto_awesome_rounded),
+                label: Text(l10n.planCreateGuideForAi),
+                icon: const Icon(Icons.auto_awesome_rounded),
               ),
             ],
             selected: {selectedAudience},
@@ -1137,8 +1183,8 @@ class _PlanGuideStep extends StatelessWidget {
             ),
             child: Text(
               isHuman
-                  ? '用户版会默认作为计划卡上的执行指南保存，帮助用户自己直接推进。'
-                  : 'AI 版本只在需要时生成，用于 Sparkle 内部任务助手，不作为默认持久化内容。',
+                  ? l10n.planCreateGuideHumanDescription
+                  : l10n.planCreateGuideAiDescription,
               style: DS.bodySmall.copyWith(
                 color: DS.textSecondary,
                 height: 1.5,
@@ -1151,8 +1197,10 @@ class _PlanGuideStep extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                isHuman || !enableStage4Experience ? '用户版执行指南' : '给 AI 的执行版本',
-                style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+                isHuman || !enableStage4Experience
+                    ? l10n.planCreateGuideHumanTitle
+                    : l10n.planCreateGuideAiTitle,
+                style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
               ),
             ),
             SparkleButton(
@@ -1171,8 +1219,10 @@ class _PlanGuideStep extends StatelessWidget {
                           : Icons.smart_toy_outlined,
                     ),
               label: isGenerating
-                  ? '生成中'
-                  : (isHuman || !enableStage4Experience ? '生成用户版' : '生成 AI 版'),
+                  ? l10n.generating
+                  : (isHuman || !enableStage4Experience
+                      ? l10n.planCreateGenerateHumanGuide
+                      : l10n.planCreateGenerateAiGuide),
             ),
           ],
         ),
@@ -1181,8 +1231,8 @@ class _PlanGuideStep extends StatelessWidget {
           TextFormField(
             controller: guideController,
             maxLines: 12,
-            decoration: const InputDecoration(
-              hintText: '生成后会在这里看到计划推进主线、每日节奏、风险提醒和今日起步动作。',
+            decoration: InputDecoration(
+              hintText: l10n.planCreateGuideHint,
               border: OutlineInputBorder(),
             ),
           )
@@ -1200,12 +1250,13 @@ class _PlanGuideStep extends StatelessWidget {
               children: [
                 Text(
                   aiGuidePreview.trim().isEmpty
-                      ? '还没有 AI 版本。只有明确需要时才生成，避免无意义耗 token。'
+                      ? l10n.planCreateAiGuideEmpty
                       : aiGuidePreview.trim(),
                   style: DS.bodySmall.copyWith(
                     color: DS.textPrimary,
                     fontFamily:
                         aiGuidePreview.trim().isEmpty ? null : 'monospace',
+                    fontFamilyFallback: sparkleFontFallback,
                     height: 1.55,
                   ),
                 ),
@@ -1214,7 +1265,7 @@ class _PlanGuideStep extends StatelessWidget {
                   SparkleButton.ghost(
                     onPressed: onCopyAiGuide,
                     icon: const Icon(Icons.copy_all_rounded),
-                    label: '复制 AI 版',
+                    label: l10n.planCreateCopyAiGuide,
                   ),
                 ],
               ],
@@ -1237,63 +1288,71 @@ class _PlanReviewStep extends StatelessWidget {
   final bool isEditMode;
 
   @override
-  Widget build(BuildContext context) => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(DS.spacing16),
-            decoration: BoxDecoration(
-              color: DS.brandPrimary.withValues(alpha: 0.08),
-              borderRadius: DS.borderRadius16,
-              border:
-                  Border.all(color: DS.brandPrimary.withValues(alpha: 0.14)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  draft.name,
-                  style: Theme.of(context).textTheme.titleLarge,
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(DS.spacing16),
+          decoration: BoxDecoration(
+            color: DS.brandPrimary.withValues(alpha: 0.08),
+            borderRadius: DS.borderRadius16,
+            border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.14)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                draft.name,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                l10n.planCreateReviewSummary(
+                  draft.type == PlanType.growth
+                      ? l10n.planTypeGrowth
+                      : l10n.planTypeSprint,
+                  draft.dailyMinutes.toString(),
+                  draft.totalEstimatedHours.toStringAsFixed(1),
                 ),
-                const SizedBox(height: DS.spacing8),
-                Text(
-                  '${draft.type == PlanType.growth ? '成长计划' : '冲刺计划'} · ${draft.dailyMinutes} 分钟/天 · ${draft.totalEstimatedHours.toStringAsFixed(1)} 小时',
-                  style: DS.bodyMedium.copyWith(color: DS.textSecondary),
-                ),
-                const SizedBox(height: DS.spacing8),
-                Text(
-                  draft.goal,
-                  style: DS.bodyMedium.copyWith(height: 1.5),
-                ),
-              ],
-            ),
+                style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                draft.goal,
+                style: DS.bodyMedium.copyWith(height: 1.5),
+              ),
+            ],
           ),
-          const SizedBox(height: DS.spacing16),
-          Text(
-            isEditMode
-                ? '保存后会更新计划描述，并为新增草案创建新的计划任务。'
-                : '创建后会生成一张更完整的计划卡，并同步创建计划任务。',
-            style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+        ),
+        const SizedBox(height: DS.spacing16),
+        Text(
+          isEditMode
+              ? l10n.planCreateReviewEditDescription
+              : l10n.planCreateReviewCreateDescription,
+          style: DS.bodyMedium.copyWith(color: DS.textSecondary),
+        ),
+        const SizedBox(height: DS.spacing16),
+        Text(
+          l10n.planCreateFinalDescription,
+          style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightBold),
+        ),
+        const SizedBox(height: DS.spacing8),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(DS.spacing16),
+          decoration: BoxDecoration(
+            color: DS.surfacePanel,
+            borderRadius: DS.borderRadius16,
+            border: Border.all(color: DS.borderSubtle),
           ),
-          const SizedBox(height: DS.spacing16),
-          Text(
-            '最终写入的计划描述',
-            style: DS.bodyMedium.copyWith(fontWeight: FontWeight.w700),
+          child: SelectableText(
+            previewDescription,
+            style: DS.bodySmall.copyWith(height: 1.6),
           ),
-          const SizedBox(height: DS.spacing8),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(DS.spacing16),
-            decoration: BoxDecoration(
-              color: DS.surfacePanel,
-              borderRadius: DS.borderRadius16,
-              border: Border.all(color: DS.borderSubtle),
-            ),
-            child: SelectableText(
-              previewDescription,
-              style: DS.bodySmall.copyWith(height: 1.6),
-            ),
-          ),
-        ],
-      );
+        ),
+      ],
+    );
+  }
 }

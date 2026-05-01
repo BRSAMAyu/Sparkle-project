@@ -5,65 +5,69 @@ import 'package:sparkle/core/models/memory_models.dart';
 class PendingCommitmentsSection extends StatelessWidget {
   const PendingCommitmentsSection({
     super.key,
-    required this.items,
-    required this.onResolve,
-    required this.onDismiss,
-    this.processingIds = const <String>{},
+    this.items = const [],
+    this.processingIds = const {},
+    this.onResolve,
+    this.onDismiss,
   });
 
   final List<PendingCommitmentItem> items;
-  final Future<void> Function(PendingCommitmentItem item) onResolve;
-  final Future<void> Function(PendingCommitmentItem item) onDismiss;
   final Set<String> processingIds;
+  final Future<void> Function(PendingCommitmentItem)? onResolve;
+  final Future<void> Function(PendingCommitmentItem)? onDismiss;
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (items.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '待跟进承诺',
-          style: TextStyle(fontSize: DS.fontSizeLg, fontWeight: FontWeight.w700),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(DS.md, DS.md, DS.md, DS.sm),
+          child: Text(
+            '待处理承诺',
+            style: DS.labelLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
         ),
-        const SizedBox(height: DS.sm),
         ...items.map(
-          (item) => Card(
-            margin: const EdgeInsets.only(bottom: DS.md),
+          (c) => Card(
+            margin: const EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.xs),
             child: Padding(
-              padding: const EdgeInsets.all(DS.md),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.all(DS.sm),
+              child: Row(
                 children: [
-                  Text(item.summary, style: const TextStyle(fontWeight: FontWeight.w600)),
-                  const SizedBox(height: DS.xs),
-                  Text(
-                    '到期时间 ${item.dueAt.year}-${item.dueAt.month.toString().padLeft(2, '0')}-${item.dueAt.day.toString().padLeft(2, '0')}',
-                    style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(c.summary, style: DS.bodySmall),
+                        Text(
+                          '截止: ${c.dueAt}',
+                          style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: DS.sm),
-                  Wrap(
-                    spacing: DS.sm,
-                    children: [
-                      SparkleButton(
-                        label: processingIds.contains(item.id) ? '处理中' : '已完成',
-                        onPressed: processingIds.contains(item.id)
-                            ? () {}
-                            : () => onResolve(item),
-                        disabled: processingIds.contains(item.id),
-                        variant: ButtonVariant.ghost,
-                      ),
-                      SparkleButton.ghost(
-                        label: '忽略',
-                        onPressed: processingIds.contains(item.id)
-                            ? () {}
-                            : () => onDismiss(item),
-                      ),
-                    ],
-                  ),
+                  if (processingIds.contains(c.id))
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else ...[
+                    IconButton(
+                      icon: const Icon(Icons.check, size: 16),
+                      onPressed: () => onResolve?.call(c),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 16),
+                      onPressed: () => onDismiss?.call(c),
+                    ),
+                  ],
                 ],
               ),
             ),

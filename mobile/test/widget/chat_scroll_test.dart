@@ -12,7 +12,12 @@ class MockChatNotifier extends ChatNotifier {
   MockChatNotifier(super.chatRepository, super.ref);
 
   @override
-  Future<void> sendMessage(String content, {String? taskId}) async {
+  Future<void> sendMessage(
+    String content, {
+    String? taskId,
+    Map<String, dynamic>? extraContextOverrides,
+    bool reuseLastUserMessage = false,
+  }) async {
     // Mock sending
     state = state.copyWith(
       messages: [

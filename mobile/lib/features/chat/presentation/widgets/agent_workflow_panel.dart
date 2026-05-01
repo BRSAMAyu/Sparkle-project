@@ -194,7 +194,7 @@ class _SingleAgentBadge extends StatelessWidget {
             entry.displayName,
             style: TextStyle(
               fontSize: 12,
-              fontWeight: FontWeight.w500,
+              fontWeight: DS.fontWeightMedium,
               color: agentColor,
             ),
           ),
@@ -268,7 +268,7 @@ class _WorkflowShell extends StatelessWidget {
                 title,
                 style: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                   color: theme.colorScheme.primary,
                 ),
               ),
@@ -313,7 +313,7 @@ class _WorkflowShell extends StatelessWidget {
                 fontSize: 11,
                 height: 1.45,
                 color: theme.colorScheme.onSurface,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
               ),
             ),
           ],
@@ -541,7 +541,7 @@ class _AgentIdentityChip extends StatelessWidget {
             identity.label,
             style: TextStyle(
               fontSize: 11,
-              fontWeight: FontWeight.w600,
+              fontWeight: DS.fontWeightSemibold,
               color: chipColor,
             ),
           ),
@@ -587,7 +587,7 @@ class _ParallelAgentCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
@@ -682,7 +682,7 @@ class _AgentTimelineRow extends StatelessWidget {
                           entry.displayName,
                           style: TextStyle(
                             fontSize: 12,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: DS.fontWeightSemibold,
                             color: theme.colorScheme.onSurface,
                           ),
                         ),
@@ -751,7 +751,7 @@ class _FooterBanner extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w500,
+                fontWeight: DS.fontWeightMedium,
               ),
             ),
           ),
@@ -833,7 +833,7 @@ class _StatusLabel extends StatelessWidget {
         _label,
         style: TextStyle(
           fontSize: 10,
-          fontWeight: FontWeight.w500,
+          fontWeight: DS.fontWeightMedium,
           color: status == 'error' ? Colors.red : color,
           ),
         ),

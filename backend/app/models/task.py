@@ -7,7 +7,6 @@ Stage: <首次引入 Stage 号>
 Task Model - 学习任务卡片系统
 """
 
-
 import enum
 
 from sqlalchemy import (
@@ -47,6 +46,7 @@ class TaskType(str, enum.Enum):
 class TaskStatus(str, enum.Enum):
     PENDING = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
+    STUCK = "STUCK"
     COMPLETED = "COMPLETED"
     ABANDONED = "ABANDONED"
 
@@ -75,6 +75,11 @@ class Task(BaseModel):
 
     # AI生成内容
     guide_content = Column(Text, nullable=True)
+    guide_json = Column(JSONBCompat, nullable=True)
+    ai_prompt = Column(Text, nullable=True)
+    source_planning_session_id = Column(String(64), nullable=True, index=True)
+    phase_index = Column(Integer, nullable=True)
+    success_criteria = Column(Text, nullable=True)
 
     # 状态信息
     status = Column(Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False, index=True)
@@ -130,6 +135,13 @@ class Task(BaseModel):
 
     knowledge_links = relationship(
         "TaskKnowledgeLink",
+        back_populates="task",
+        cascade="all, delete-orphan",
+        lazy="dynamic",
+    )
+
+    document_links = relationship(
+        "TaskDocument",
         back_populates="task",
         cascade="all, delete-orphan",
         lazy="dynamic",

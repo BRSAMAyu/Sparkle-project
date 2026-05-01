@@ -153,6 +153,41 @@ class RoutingEngineMixin:
         return None
 
     @staticmethod
+    def _extract_capsule_preferences(user_context_payload: dict[str, Any] | None) -> dict[str, Any]:
+        if not isinstance(user_context_payload, dict):
+            return {}
+
+        candidates: list[dict[str, Any]] = []
+
+        def add_candidate(value: Any) -> None:
+            if isinstance(value, dict) and value:
+                candidates.append(value)
+
+        add_candidate(user_context_payload.get("capsule_preferences"))
+        cognitive_context = user_context_payload.get("cognitive_context")
+        if isinstance(cognitive_context, dict):
+            add_candidate(cognitive_context.get("capsule_preferences"))
+
+        preferences = user_context_payload.get("preferences")
+        if isinstance(preferences, dict):
+            add_candidate(preferences.get("capsule_preferences"))
+            methods = preferences.get("capsule_method_preferences")
+            if isinstance(methods, list) and methods:
+                add_candidate(
+                    {
+                        "favorite_count": preferences.get("capsule_favorite_count") or 0,
+                        "content_depth_preference": preferences.get("content_depth_preference"),
+                        "subject_affinity": preferences.get("content_subject_affinities") or [],
+                        "method_preferences": methods,
+                    }
+                )
+
+        for candidate in candidates:
+            if any(candidate.get(key) for key in ("method_preferences", "method_preference_summary", "favorite_count")):
+                return candidate
+        return candidates[0] if candidates else {}
+
+    @staticmethod
     def _extract_behavior_pattern_names(
         plan_context: dict[str, Any] | None,
     ) -> list[str]:
@@ -703,6 +738,7 @@ class RoutingEngineMixin:
             srl_phase_hint=srl_phase_hint,
             metacognition_hint=metacognition_hint,
             cognitive_load=self._extract_cognitive_load(user_context_payload, plan_context),
+            capsule_preferences=self._extract_capsule_preferences(user_context_payload),
         )
 
     async def _build_metacognition_hint(
@@ -1049,11 +1085,11 @@ class RoutingEngineMixin:
 
         def _route_with_shortcuts(candidate_input: DualCoreRoutingInput) -> DualCoreDecision:
             if candidate_input.intent == "chat" and route_decision.execution_mode == "direct":
-                return DualCoreDecision(
+                routed = self.dual_core_router.route(candidate_input)
+                return replace(
+                    routed,
                     mode="execution_first",
                     reason="通用知识问答优先直接回答，避免把认知调制或任务背景混入基础解释。",
-                    cognitive_adjustments=[],
-                    execution_constraints=[],
                 )
             return self.dual_core_router.route(candidate_input)
 
@@ -1312,6 +1348,7 @@ class RoutingEngineMixin:
             "routing_profile": effective_routing_input.routing_profile,
             "current_guidance": effective_routing_input.current_guidance,
             "cognitive_load": effective_routing_input.cognitive_load,
+            "capsule_preferences": effective_routing_input.capsule_preferences,
             "aurora_stage33_modes": stage33_modes,
             "aurora_stage35_modes": stage35_modes,
             "aurora_stage39_modes": stage39_modes,
@@ -1607,6 +1644,7 @@ class RoutingEngineMixin:
             "reason": decision.reason,
             "routing_profile": routing_input.routing_profile,
             "current_guidance": routing_input.current_guidance,
+            "capsule_preferences": routing_input.capsule_preferences,
             "routing_debug": decision.routing_debug,
             "timestamp": _utcnow().isoformat(),
         }

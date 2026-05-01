@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -88,7 +89,7 @@ class _BlockedUserTile extends ConsumerWidget {
         title: Text(
           user.nickname ?? user.username,
           style: TextStyle(
-            fontWeight: FontWeight.w600,
+            fontWeight: DS.fontWeightSemibold,
             color: DS.textPrimary,
           ),
         ),
@@ -141,19 +142,13 @@ class _BlockedUserTile extends ConsumerWidget {
             .unblockUser(blockInfo.blockedUser.id);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('已解除对 $displayName 的拉黑'),
-              backgroundColor: DS.success,
-            ),
+            SparkleSnackBar.success('已解除对 $displayName 的拉黑'),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('操作失败: $e'),
-              backgroundColor: DS.error,
-            ),
+            SparkleSnackBar.error('操作失败: $e'),
           );
         }
       }

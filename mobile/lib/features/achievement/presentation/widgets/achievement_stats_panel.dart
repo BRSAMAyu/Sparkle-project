@@ -19,6 +19,12 @@ class AchievementStatsPanel extends StatelessWidget {
   final AchievementStats stats;
   final bool isCompact;
 
+  bool get _hasStarted =>
+      stats.totalAchievements > 0 ||
+      stats.unlockedCount > 0 ||
+      stats.currentStreak > 0 ||
+      stats.totalPhotons > 0;
+
   @override
   Widget build(BuildContext context) {
     if (isCompact) {
@@ -40,19 +46,23 @@ class AchievementStatsPanel extends StatelessWidget {
             final cards = [
               _buildStatCard(
                 l10n.achievementTotalLabel,
-                '${stats.unlockedCount}/${stats.totalAchievements}',
+                _hasStarted
+                    ? '${stats.unlockedCount}/${stats.totalAchievements}'
+                    : '尚未开始',
                 Icons.emoji_events_outlined,
                 DS.brandPrimary,
               ),
               _buildStatCard(
                 l10n.achievementCompletionRate,
-                '${stats.unlockedPercentage.toStringAsFixed(0)}%',
+                _hasStarted
+                    ? '${stats.unlockedPercentage.toStringAsFixed(0)}%'
+                    : '等待点亮',
                 Icons.bar_chart,
                 DS.semanticSuccess,
               ),
               _buildStatCard(
                 l10n.achievementPhotons,
-                '${stats.totalPhotons}',
+                _hasStarted ? '${stats.totalPhotons}' : '待累积',
                 Icons.stars,
                 DS.warning,
               ),
@@ -87,7 +97,8 @@ class AchievementStatsPanel extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: DS.spacing16),
                   child: SparkleStaggerItem(
                     index: 3,
-                    child: _buildOverallProgressBar(l10n, compact: compactStats),
+                    child:
+                        _buildOverallProgressBar(l10n, compact: compactStats),
                   ),
                 ),
                 SparkleStaggerItem(
@@ -113,15 +124,19 @@ class AchievementStatsPanel extends StatelessWidget {
           runSpacing: DS.spacing12,
           children: [
             _buildCompactStatItem(
-              '${stats.unlockedCount}/${stats.totalAchievements}',
+              _hasStarted
+                  ? '${stats.unlockedCount}/${stats.totalAchievements}'
+                  : '尚未开始',
               l10n.achievementTitle,
             ),
             _buildCompactStatItem(
-              '${stats.unlockedPercentage.toStringAsFixed(0)}%',
+              _hasStarted
+                  ? '${stats.unlockedPercentage.toStringAsFixed(0)}%'
+                  : '等待点亮',
               l10n.achievementCompletionRate,
             ),
             _buildCompactStatItem(
-              '${stats.currentStreak}',
+              _hasStarted ? '${stats.currentStreak}' : '待累积',
               l10n.winStreak,
             ),
           ],
@@ -210,7 +225,9 @@ class AchievementStatsPanel extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing4),
               Text(
-                '${stats.unlockedCount} / ${stats.totalAchievements}',
+                _hasStarted
+                    ? '${stats.unlockedCount} / ${stats.totalAchievements}'
+                    : '尚未开始解锁',
                 style: TextStyle(
                   fontSize: DS.fontSizeXs,
                   color: DS.textTertiary,
@@ -230,7 +247,9 @@ class AchievementStatsPanel extends StatelessWidget {
                 ),
               ),
               Text(
-                '${stats.unlockedCount} / ${stats.totalAchievements}',
+                _hasStarted
+                    ? '${stats.unlockedCount} / ${stats.totalAchievements}'
+                    : '尚未开始解锁',
                 style: TextStyle(
                   fontSize: DS.fontSizeXs,
                   color: DS.textTertiary,

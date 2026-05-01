@@ -69,7 +69,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, 'Failed to post: $e');
+        AppFeedback.error(context, '发布失败：$e');
       }
     } finally {
       if (mounted) setState(() => _isPosting = false);

@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 
@@ -225,7 +226,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   Text(
                     _getStatusText(activeStep, isCompleted),
                     style: context.sparkleTypography.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                       color: _getStatusColor(activeStep, isCompleted, context),
                     ),
                   ),
@@ -337,7 +338,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                   context.l10n.chatReasoningProcess,
                   style: context.sparkleTypography.labelLarge.copyWith(
                     color: DS.brandPrimary,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                 ),
                 const Spacer(),
@@ -394,7 +395,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                     Text(
                       step.description,
                       style: context.sparkleTypography.labelSmall.copyWith(
-                        fontWeight: FontWeight.w500,
+                        fontWeight: DS.fontWeightMedium,
                         color: DS.textPrimary,
                       ),
                     ),
@@ -412,6 +413,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           step.toolOutput!,
                           style: TextStyle(
                             fontFamily: 'monospace',
+                            fontFamilyFallback: sparkleFontFallback,
                             fontSize: 11,
                             color: DS.success,
                             height: 1.4,
@@ -460,7 +462,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                                           style: TextStyle(
                                             fontSize: 11,
                                             color: DS.brandPrimary,
-                                            fontWeight: FontWeight.w500,
+                                            fontWeight: DS.fontWeightMedium,
                                           ),
                                         ),
                                       ],
@@ -740,7 +742,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                   labelStyle: TextStyle(
                     color: accent,
                     fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: DS.fontWeightSemibold,
                   ),
                   padding: EdgeInsets.zero,
                   visualDensity: VisualDensity.compact,
@@ -899,7 +901,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                                 context,
                                 contribution.agentType,
                               ),
-                              fontWeight: FontWeight.w500,
+                              fontWeight: DS.fontWeightMedium,
                             ),
                           ),
                         ),

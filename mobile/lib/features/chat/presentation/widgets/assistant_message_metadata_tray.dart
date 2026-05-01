@@ -330,7 +330,7 @@ class _TimingContent extends StatelessWidget {
                       row.value,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: DS.textPrimary,
-                            fontWeight: FontWeight.w600,
+                            fontWeight: DS.fontWeightSemibold,
                           ),
                     ),
                   ),

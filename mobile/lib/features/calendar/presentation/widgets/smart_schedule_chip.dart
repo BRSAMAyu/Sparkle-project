@@ -122,7 +122,7 @@ class _CompactChip extends StatelessWidget {
                 suggestion.timeSlot.startTimeString,
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                   color: DS.brandPrimary,
                 ),
               ),
@@ -193,7 +193,7 @@ class _FullChip extends StatelessWidget {
                     suggestion.displayString,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                       color: DS.brandPrimary,
                     ),
                   ),
@@ -384,7 +384,7 @@ class _SuggestionTile extends StatelessWidget {
                     suggestion.displayString,
                     style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: DS.fontWeightSemibold,
                       color: DS.textPrimary,
                     ),
                   ),
@@ -413,7 +413,7 @@ class _SuggestionTile extends StatelessWidget {
                 '${(suggestion.confidence * 100).toInt()}%',
                 style: TextStyle(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: DS.fontWeightSemibold,
                   color: qualityColor,
                 ),
               ),

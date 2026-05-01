@@ -5,76 +5,74 @@ import 'package:sparkle/core/models/memory_models.dart';
 class UnresolvedConflictsSection extends StatelessWidget {
   const UnresolvedConflictsSection({
     super.key,
-    required this.items,
-    required this.processingIds,
-    required this.onSelectLeft,
-    required this.onSelectRight,
-    required this.onSelectNone,
+    this.items = const [],
+    this.processingIds = const {},
+    this.onSelectLeft,
+    this.onSelectRight,
+    this.onSelectNone,
   });
 
   final List<UnresolvedConflictItem> items;
   final Set<String> processingIds;
-  final Future<void> Function(UnresolvedConflictItem item) onSelectLeft;
-  final Future<void> Function(UnresolvedConflictItem item) onSelectRight;
-  final Future<void> Function(UnresolvedConflictItem item) onSelectNone;
+  final Future<void> Function(UnresolvedConflictItem)? onSelectLeft;
+  final Future<void> Function(UnresolvedConflictItem)? onSelectRight;
+  final Future<void> Function(UnresolvedConflictItem)? onSelectNone;
 
   @override
   Widget build(BuildContext context) {
-    if (items.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    if (items.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '待你确认',
-          style:
-              TextStyle(fontSize: DS.fontSizeLg, fontWeight: FontWeight.w700),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(DS.md, DS.md, DS.md, DS.sm),
+          child: Text(
+            '冲突记录',
+            style: DS.labelLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
         ),
-        const SizedBox(height: DS.sm),
         ...items.map(
-          (item) => Card(
-            margin: const EdgeInsets.only(bottom: DS.md),
+          (c) => Card(
+            margin: const EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.xs),
             child: Padding(
-              padding: const EdgeInsets.all(DS.md),
+              padding: const EdgeInsets.all(DS.sm),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _ConflictCandidateCard(
-                    title: '候选 A',
-                    candidate: item.leftCandidate,
+                  Text(c.conflictKey, style: DS.bodySmall),
+                  Text(
+                    '${c.leftCandidate.summary} vs ${c.rightCandidate.summary}',
+                    style: DS.labelSmall.copyWith(color: DS.textSecondary),
                   ),
-                  const SizedBox(height: DS.sm),
-                  _ConflictCandidateCard(
-                    title: '候选 B',
-                    candidate: item.rightCandidate,
-                  ),
-                  const SizedBox(height: DS.sm),
-                  Wrap(
-                    spacing: DS.sm,
-                    runSpacing: DS.sm,
-                    children: [
-                      SparkleButton.ghost(
-                        label: processingIds.contains(item.id) ? '处理中' : '选 A',
-                        onPressed: processingIds.contains(item.id)
-                            ? () {}
-                            : () => onSelectLeft(item),
-                      ),
-                      SparkleButton.ghost(
-                        label: processingIds.contains(item.id) ? '处理中' : '选 B',
-                        onPressed: processingIds.contains(item.id)
-                            ? () {}
-                            : () => onSelectRight(item),
-                      ),
-                      SparkleButton.ghost(
-                        label: processingIds.contains(item.id) ? '处理中' : '都不对',
-                        onPressed: processingIds.contains(item.id)
-                            ? () {}
-                            : () => onSelectNone(item),
-                      ),
-                    ],
-                  ),
+                  const SizedBox(height: DS.xs),
+                  if (processingIds.contains(c.id))
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  else
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => onSelectLeft?.call(c),
+                          child: const Text('A'),
+                        ),
+                        TextButton(
+                          onPressed: () => onSelectRight?.call(c),
+                          child: const Text('B'),
+                        ),
+                        TextButton(
+                          onPressed: () => onSelectNone?.call(c),
+                          child: const Text('跳过'),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -83,38 +81,4 @@ class UnresolvedConflictsSection extends StatelessWidget {
       ],
     );
   }
-}
-
-class _ConflictCandidateCard extends StatelessWidget {
-  const _ConflictCandidateCard({
-    required this.title,
-    required this.candidate,
-  });
-
-  final String title;
-  final UnresolvedConflictCandidate candidate;
-
-  @override
-  Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(DS.sm),
-        decoration: BoxDecoration(
-          color: DS.surfaceSecondary,
-          borderRadius: BorderRadius.circular(DS.radius12),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-            const SizedBox(height: DS.xs),
-            Text(candidate.summary),
-            const SizedBox(height: DS.xs),
-            Text(
-              'evidence_token: ${candidate.evidenceToken ?? '无'}',
-              style:
-                  TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeSm),
-            ),
-          ],
-        ),
-      );
 }

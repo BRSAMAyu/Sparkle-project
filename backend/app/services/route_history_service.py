@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -294,10 +295,51 @@ class RouteHistoryService:
         record.updated_at = _utcnow()
         await self.db.commit()
         await self.db.refresh(record)
+        await self._sync_self_model(record=record, outcome=outcome, outcome_signal_id=outcome_signal_id)
         latency = max(0.0, (outcome_at - record.decided_at).total_seconds())
         ROUTING_OUTCOME_BACKFILL_LATENCY.labels(outcome=outcome).observe(latency)
         await self._update_learner(record, outcome=outcome)
         return record
+
+    async def _sync_self_model(
+        self,
+        *,
+        record: RoutingDecisionLog,
+        outcome: str,
+        outcome_signal_id: str,
+    ) -> None:
+        try:
+            from app.aurora.runtime_v1.self_model import SparkleSelfModelService
+
+            service = SparkleSelfModelService(cache_service.redis)
+            signal_id = f"route_history:{outcome}:{record.decision_id}:{outcome_signal_id}"
+            if outcome == "user_correction":
+                await service.record_user_correction(
+                    user_id=str(record.user_id),
+                    signal_id=signal_id,
+                    reason=f"route_history:{outcome_signal_id}",
+                    source="route_history",
+                )
+            elif outcome == "timeout":
+                await service.record_task_outcome(
+                    user_id=str(record.user_id),
+                    signal_id=signal_id,
+                    completed=False,
+                    timed_out=True,
+                    source="route_history",
+                    reason="strategy_timeout",
+                )
+            elif outcome == "task_completion":
+                await service.record_task_outcome(
+                    user_id=str(record.user_id),
+                    signal_id=signal_id,
+                    completed=True,
+                    timed_out=False,
+                    source="route_history",
+                    reason="strategy_completed",
+                )
+        except Exception as exc:
+            logger.warning("Failed to sync Aurora self model from route history {}: {}", record.decision_id, exc)
 
     async def _load_decision(self, decision_id: UUID) -> RoutingDecisionLog | None:
         result = await self.db.execute(

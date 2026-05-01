@@ -1,3 +1,4 @@
+# FIXED: 2026-04-25 - Stage 38 failure no longer reproduces with current shop implementation - reran and retained assertions.
 """
 商城系统完整验收测试
 Shop System Acceptance Tests

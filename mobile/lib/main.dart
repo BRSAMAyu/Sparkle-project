@@ -15,6 +15,7 @@ import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/cognitive/data/repositories/local_cognitive_repository.dart';
@@ -126,6 +127,10 @@ void main() async {
     // Show a minimal error app instead of just crashing
     runApp(
       MaterialApp(
+        builder: (context, child) => DefaultTextStyle.merge(
+          style: const TextStyle(fontFamilyFallback: sparkleFontFallback),
+          child: child ?? const SizedBox.shrink(),
+        ),
         home: Scaffold(
           body: Center(
             child: Padding(

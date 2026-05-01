@@ -1,3 +1,5 @@
+import 'package:sparkle/core/services/i18n_service.dart';
+
 enum ExecutionMode {
   human,
   agent,
@@ -203,46 +205,48 @@ class ExecutionIntentModel {
   bool get isWaitingApproval => status == ExecutionIntentStatus.waitingApproval;
 
   String get statusLabel {
+    final l10n = I18nService.instance.l10n;
     switch (status) {
       case ExecutionIntentStatus.draft:
-        return '待准备';
+        return l10n.executionStatusDraft;
       case ExecutionIntentStatus.ready:
-        return '准备完成';
+        return l10n.executionStatusReady;
       case ExecutionIntentStatus.queued:
-        return '排队中';
+        return l10n.executionStatusQueued;
       case ExecutionIntentStatus.dispatched:
-        return '已发送';
+        return l10n.executionStatusDispatched;
       case ExecutionIntentStatus.running:
-        return '执行中';
+        return l10n.executionStatusRunning;
       case ExecutionIntentStatus.waitingApproval:
-        return '等待确认';
+        return l10n.executionStatusWaitingApproval;
       case ExecutionIntentStatus.succeeded:
-        return '执行成功';
+        return l10n.executionStatusSucceeded;
       case ExecutionIntentStatus.partial:
-        return '部分完成';
+        return l10n.executionStatusPartial;
       case ExecutionIntentStatus.failed:
-        return '执行失败';
+        return l10n.executionStatusFailed;
       case ExecutionIntentStatus.canceled:
-        return '已取消';
+        return l10n.executionStatusCanceled;
       case ExecutionIntentStatus.timedOut:
-        return '执行超时';
+        return l10n.executionStatusTimedOut;
       case ExecutionIntentStatus.handedBack:
-        return '已交还';
+        return l10n.executionStatusHandedBack;
       case ExecutionIntentStatus.unknown:
-        return '状态未知';
+        return l10n.executionStatusUnknown;
     }
   }
 
   String get trustLabel {
+    final l10n = I18nService.instance.l10n;
     switch (trustLevel) {
       case ExecutionTrustLevel.raw:
-        return '原始结果';
+        return l10n.executionTrustRaw;
       case ExecutionTrustLevel.validated:
-        return '已校验';
+        return l10n.executionTrustValidated;
       case ExecutionTrustLevel.trusted:
-        return '可信结果';
+        return l10n.executionTrustTrusted;
       case ExecutionTrustLevel.unknown:
-        return '待评估';
+        return l10n.executionTrustUnknown;
     }
   }
 }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/offline/local_database.dart';
@@ -42,11 +44,17 @@ class TranslationHistoryState {
 /// Translation history notifier
 class TranslationHistoryNotifier extends StateNotifier<TranslationHistoryState> {
   TranslationHistoryNotifier(this._repository) : super(const TranslationHistoryState()) {
-    loadHistory();
-    loadStatistics();
+    // Defer initial load so the provider tree is fully built before we
+    // access Isar collections.  This avoids a crash if the widget that
+    // first reads this provider is disposed during the same frame.
+    Future.microtask(() => _initialLoad());
   }
 
   final LocalTranslationRepository _repository;
+
+  Future<void> _initialLoad() async {
+    await Future.wait([loadHistory(), loadStatistics()]);
+  }
 
   /// Load translation history
   Future<void> loadHistory() async {
@@ -186,16 +194,11 @@ final localTranslationRepositoryProvider =
     Provider<LocalTranslationRepository>((ref) {
   final repository = LocalTranslationRepository();
   final db = ref.watch(localDatabaseProvider);
-  // Initialize repository with database
-  ref.onAddListener(() {
-    // The database should already be initialized at app startup
-    repository.init(db);
-  });
 
-  // Try to get the database directly if already initialized
-  try {
-    repository.init(db);
-  } catch (_) {}
+  // The database is initialized in main() before runApp(), so Isar is open.
+  // Initialize the repository eagerly so _collection is set before any
+  // async operations in TranslationHistoryNotifier run.
+  repository.init(db);
 
   return repository;
 });

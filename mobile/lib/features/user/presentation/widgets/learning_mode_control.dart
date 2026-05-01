@@ -298,7 +298,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
         label,
         style: TextStyle(
           color: isDark ? DS.brandPrimary : DS.primaryBase,
-          fontWeight: FontWeight.w600,
+          fontWeight: DS.fontWeightSemibold,
           fontSize: 13,
         ),
       ),

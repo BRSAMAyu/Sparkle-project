@@ -1,10 +1,31 @@
 import uuid
+from datetime import UTC, datetime
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 
 from app.core.context_manager import CognitiveContext, ContextOrchestrator
 from app.core.profile_context import CognitiveSummary, KnowledgeSummary, ProfileContext
+
+
+def test_calendar_context_serializes_exam_and_class_events() -> None:
+    event = SimpleNamespace(
+        title="高数考试",
+        start_time=datetime(2026, 4, 26, 14, 0, tzinfo=UTC),
+        end_time=datetime(2026, 4, 26, 15, 30, tzinfo=UTC),
+        is_all_day=False,
+        source="manual",
+        task_id=None,
+        plan_id=None,
+        source_metadata={},
+    )
+
+    serialized = ContextOrchestrator._serialize_busy_calendar_events([event])
+
+    assert serialized[0]["kind"] == "exam"
+    assert serialized[0]["start"] == "14:00"
+    assert serialized[0]["end"] == "15:30"
 
 
 @pytest.mark.asyncio
@@ -28,13 +49,23 @@ async def test_context_orchestrator_aggregation(db_session):
 
     with pytest.MonkeyPatch.context() as m:
         m.setattr(orchestrator, "_get_profile_context", AsyncMock(return_value=profile_context))
-        m.setattr(orchestrator, "_get_error_profile", AsyncMock(return_value={"summary": {"total_errors": 5}, "recent": []}))
+        m.setattr(
+            orchestrator, "_get_error_profile", AsyncMock(return_value={"summary": {"total_errors": 5}, "recent": []})
+        )
         m.setattr(
             orchestrator,
             "_get_task_profile",
             AsyncMock(
                 return_value={
-                    "tasks": [{"id": str(uuid.uuid4()), "title": "Test Task", "priority": 1, "due_date": None, "type": "study"}],
+                    "tasks": [
+                        {
+                            "id": str(uuid.uuid4()),
+                            "title": "Test Task",
+                            "priority": 1,
+                            "due_date": None,
+                            "type": "study",
+                        }
+                    ],
                     "focus": {"focus_minutes": 120},
                 }
             ),
@@ -52,7 +83,9 @@ async def test_context_orchestrator_aggregation(db_session):
             AsyncMock(
                 return_value={
                     "recent_unlocks": [{"achievement_id": "streak_7", "name": "七日连胜"}],
-                    "in_progress_achievements": [{"achievement_id": "study_100hours", "name": "百小时学习", "progress": 0.62}],
+                    "in_progress_achievements": [
+                        {"achievement_id": "study_100hours", "name": "百小时学习", "progress": 0.62}
+                    ],
                     "total_achievement_score": 3.6,
                 }
             ),
@@ -67,6 +100,33 @@ async def test_context_orchestrator_aggregation(db_session):
                     "workload_density": "medium",
                     "exam_urgency": {"days_left": 12, "urgent": True},
                 }
+            ),
+        )
+        m.setattr(
+            orchestrator,
+            "_get_capsule_preferences",
+            AsyncMock(
+                return_value={
+                    "favorite_count": 3,
+                    "content_depth_preference": "deep",
+                    "subject_affinity": ["computer_networks"],
+                    "recent_notes": ["keep the rigorous examples"],
+                }
+            ),
+        )
+        m.setattr(
+            "app.core.context_manager.MemoryService.get_recent_episodic",
+            AsyncMock(
+                return_value=[
+                    SimpleNamespace(
+                        id=uuid.uuid4(),
+                        summary="上次你备考计算机网络，传输层不错但子网划分薄弱。",
+                        subject_type="learning_profile",
+                        source_type="chat_turn",
+                        occurred_at=None,
+                        tags=["aurora"],
+                    )
+                ]
             ),
         )
 
@@ -88,6 +148,9 @@ async def test_context_orchestrator_aggregation(db_session):
     assert context.social_context_v1["mention_count"] == 1
     assert context.achievement_summary["recent_unlocks"][0]["name"] == "七日连胜"
     assert context.calendar_context["workload_density"] == "medium"
+    assert context.capsule_preferences["content_depth_preference"] == "deep"
+    assert context.capsule_preferences["subject_affinity"] == ["computer_networks"]
+    assert context.past_session_memory[0]["summary"].startswith("上次你备考计算机网络")
     assert redis_client.setex.called
 
 
@@ -98,7 +161,7 @@ async def test_context_orchestrator_uses_isolated_sessions_for_service_backed_he
     redis_client.get.return_value = None
     orchestrator = ContextOrchestrator(shared_db, redis_client)
 
-    created_sessions = [object(), object(), object(), object(), object(), object(), object(), object()]
+    created_sessions = [object(), object(), object(), object(), object(), object(), object(), object(), object()]
     issued_sessions: list[object] = []
     service_dbs: dict[str, list[object]] = {"profile": [], "error": [], "user": []}
 
@@ -152,6 +215,7 @@ async def test_context_orchestrator_uses_isolated_sessions_for_service_backed_he
         m.setattr(orchestrator, "_get_social_context_v1", AsyncMock(return_value={}))
         m.setattr(orchestrator, "_get_achievement_context", AsyncMock(return_value={}))
         m.setattr(orchestrator, "_get_calendar_context", AsyncMock(return_value={}))
+        m.setattr(orchestrator, "_get_past_session_memory", AsyncMock(return_value=[]))
 
         await orchestrator.get_user_context(str(uuid.uuid4()))
 

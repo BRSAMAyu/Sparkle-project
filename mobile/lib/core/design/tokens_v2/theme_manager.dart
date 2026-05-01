@@ -1,20 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-const _cjkFontFallback = <String>[
-  'PingFang SC',
-  'Hiragino Sans GB',
-  'Heiti SC',
-  'Noto Sans SC',
-  'Noto Sans CJK SC',
-  'Source Han Sans SC',
-  'Microsoft YaHei',
-  'Arial Unicode MS',
-  'Apple Color Emoji',
-  'Segoe UI Emoji',
-  'Noto Color Emoji',
-  'Noto Emoji',
-];
+import 'package:sparkle/core/utils/text_rendering.dart';
 
 /// 主题管理器 - 支持动态切换和持久化
 /// 支持商城皮肤系统
@@ -842,56 +828,56 @@ class SparkleTypography {
           fontWeight: FontWeight.w700,
           height: 1.08,
           letterSpacing: -0.8,
-          fontFamilyFallback: _cjkFontFallback,
+          fontFamilyFallback: sparkleFontFallback,
         ),
         headingLarge: TextStyle(
           fontSize: 30.0,
           fontWeight: FontWeight.w700,
           height: 1.12,
           letterSpacing: -0.4,
-          fontFamilyFallback: _cjkFontFallback,
+          fontFamilyFallback: sparkleFontFallback,
         ),
         headingMedium: TextStyle(
           fontSize: 24.0,
           fontWeight: FontWeight.w600,
           height: 1.18,
           letterSpacing: -0.2,
-          fontFamilyFallback: _cjkFontFallback,
+          fontFamilyFallback: sparkleFontFallback,
         ),
         titleLarge: TextStyle(
           fontSize: 19.0,
           fontWeight: FontWeight.w600,
           height: 1.32,
           letterSpacing: -0.1,
-          fontFamilyFallback: _cjkFontFallback,
+          fontFamilyFallback: sparkleFontFallback,
         ),
         bodyLarge: TextStyle(
           fontSize: 16.0,
           fontWeight: FontWeight.w400,
           height: 1.58,
           letterSpacing: 0.1,
-          fontFamilyFallback: _cjkFontFallback,
+          fontFamilyFallback: sparkleFontFallback,
         ),
         bodyMedium: TextStyle(
           fontSize: 14.0,
           fontWeight: FontWeight.w400,
           height: 1.52,
           letterSpacing: 0.1,
-          fontFamilyFallback: _cjkFontFallback,
+          fontFamilyFallback: sparkleFontFallback,
         ),
         labelLarge: TextStyle(
           fontSize: 14.0,
           fontWeight: FontWeight.w500,
           height: 1.18,
           letterSpacing: 0.12,
-          fontFamilyFallback: _cjkFontFallback,
+          fontFamilyFallback: sparkleFontFallback,
         ),
         labelSmall: TextStyle(
           fontSize: 12.0,
           fontWeight: FontWeight.w500,
           height: 1.16,
           letterSpacing: 0.18,
-          fontFamilyFallback: _cjkFontFallback,
+          fontFamilyFallback: sparkleFontFallback,
         ),
       );
   final TextStyle displayLarge;

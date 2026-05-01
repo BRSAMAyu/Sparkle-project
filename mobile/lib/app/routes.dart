@@ -14,6 +14,7 @@ import 'package:sparkle/features/calendar/calendar.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/cognitive/cognitive.dart';
 import 'package:sparkle/features/community/community.dart';
+import 'package:sparkle/features/documents/documents.dart';
 import 'package:sparkle/features/error_book/error_book.dart';
 import 'package:sparkle/features/focus/focus.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
@@ -80,6 +81,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isOnAuth = publicAuthPaths.contains(state.uri.path);
       final isOnPersonaOnboarding =
           state.uri.path == UserRoutes.personaOnboarding;
+      final isOnModelingChat = state.uri.path == UserRoutes.modelingChat;
       final onboardingCompleted = ref.read(onboardingCompletedProvider);
       final isGuestUser = authState.user?.registrationSource == 'guest';
 
@@ -104,7 +106,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isAuthenticated &&
           !isGuestUser &&
           !onboardingCompleted &&
-          !isOnPersonaOnboarding) {
+          !isOnPersonaOnboarding &&
+          !isOnModelingChat) {
         return UserRoutes.personaOnboarding;
       }
 
@@ -138,6 +141,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                   ),
                 ),
               ),
+              ...PlanRoutes.shellRoutes,
             ],
           ),
           // Branch 1: Galaxy
@@ -151,7 +155,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                     policy: ExperienceProfiles.focusImmersive.audioPolicy(
                       trackOverride: BgmTrack.galaxy,
                     ),
-                    child: const GalaxyScreen(),
+                    child: GalaxyScreen(
+                      initialFocusNodeId:
+                          state.uri.queryParameters['focus_node_id'],
+                      initialMasteryDelta: double.tryParse(
+                        state.uri.queryParameters['mastery_delta'] ?? '',
+                      ),
+                      initialPackId: state.uri.queryParameters['pack_id'],
+                    ),
                   ),
                 ),
               ),
@@ -164,20 +175,65 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: '/chat',
                 pageBuilder: (context, state) {
                   final extra = state.extra;
-                  final initialAiMessage = (extra is Map<String, dynamic>)
-                      ? extra['initial_ai_message'] as String?
-                      : null;
+                  final extraMap = extra is Map<String, dynamic> ? extra : null;
+                  final initialAiMessage =
+                      extraMap?['initial_ai_message'] as String?;
+                  final initialUserMessage =
+                      extraMap?['initial_user_message'] as String?;
+                  final fromModelingComplete =
+                      (extraMap?['from_modeling_complete'] as bool?) ?? false;
+                  final modelingOutput =
+                      extraMap?['modeling_output'] as Map<String, dynamic>?;
+                  final extraInitialContext =
+                      extraMap?['initial_context'] is Map
+                          ? Map<String, dynamic>.from(
+                              extraMap!['initial_context'] as Map,
+                            )
+                          : null;
+                  final initialContext = <String, dynamic>{
+                    ...?extraInitialContext,
+                    if (state.uri.queryParameters['review_node'] != null)
+                      'review_node': state.uri.queryParameters['review_node'],
+                    if (state.uri.queryParameters['node_label'] != null)
+                      'node_label': state.uri.queryParameters['node_label'],
+                    if (double.tryParse(
+                          state.uri.queryParameters['mastery'] ?? '',
+                        ) !=
+                        null)
+                      'mastery': double.parse(
+                        state.uri.queryParameters['mastery']!,
+                      ),
+                    if (int.tryParse(
+                          state.uri.queryParameters['study_count'] ?? '',
+                        ) !=
+                        null)
+                      'study_count': int.parse(
+                        state.uri.queryParameters['study_count']!,
+                      ),
+                    if (int.tryParse(
+                          state.uri.queryParameters['related_error_count'] ??
+                              '',
+                        ) !=
+                        null)
+                      'related_error_count': int.parse(
+                        state.uri.queryParameters['related_error_count']!,
+                      ),
+                  };
                   return NoTransitionPage<void>(
                     key: state.pageKey,
                     child: SceneAudioScope(
                       policy: ExperienceProfiles.assistantFlow.audioPolicy(),
                       child: ChatScreen(
                         initialPrompt: state.uri.queryParameters['prompt'],
-                        initialChatMode:
-                            state.uri.queryParameters['chat_mode'],
+                        initialChatMode: state.uri.queryParameters['chat_mode'],
                         initialConversationId:
                             state.uri.queryParameters['session_id'],
                         initialAiMessage: initialAiMessage,
+                        initialUserMessage: initialUserMessage,
+                        fromModelingComplete: fromModelingComplete,
+                        modelingOutput: modelingOutput,
+                        initialExtraContext:
+                            initialContext.isEmpty ? null : initialContext,
                       ),
                     ),
                   );
@@ -239,6 +295,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...GalaxyRoutes.routes,
       ...CognitiveRoutes.routes,
       ...CommunityRoutes.routes,
+      ...DocumentLibraryRoutes.routes,
       ...UserRoutes.routes,
       ...MemoryRoutes.routes,
       ...AchievementRoutes.routes,
