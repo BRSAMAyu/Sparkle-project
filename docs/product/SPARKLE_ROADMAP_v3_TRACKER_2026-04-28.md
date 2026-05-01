@@ -781,3 +781,46 @@
 - P0-4: roadmapv3 → main merge (用户/产品决策)
 - P2-1/P2-2: God Class 长期重构 (SpineOrchestrator 4357行, ChatOrchestrator 3547行)
 - 128 个 Flutter 文件 ~459 处硬编码中文 (下一迭代分批转换)
+
+---
+
+## R9 当前主干复验补充 (2026-05-01)
+
+> **来源**: Codex 当前主干 `main` 复验
+> **方法**: 复验上一轮社区/任务执行修复项，并向外扩展到 smoke harness、社群筛选语义、Aurora/画像/知识星图抽样链路。
+
+### R9.1 已复验通过
+
+| ID | 模块 | 结论 |
+|----|------|------|
+| R9-P1 | 社区主链 | 后端 `/community/feed` 已接受 `scope` 参数；主仓 `CommunityScreen` / `FeedNotifier` / `MockCommunityRepository` / 任务执行文案调用点修复已复验通过 |
+| R9-P2 | Aurora / 画像 / 知识星图 | `31 passed` 抽样通过 |
+| R9-P3 | 社区其他闭环 | `community_remaining_closure_test.dart` 单独通过；`community_group_file_sharing_api + community_e2e` 为 `16 passed` |
+
+### R9.2 新发现问题
+
+| ID | 严重度 | 问题 | 文件/证据 | 状态 |
+|----|--------|------|-----------|------|
+| R9-1 | P1 | `goal_mates` 与 `following` 在后端仍共用同一套 accepted-friend 查询，标签已分流但关系语义尚未真正分开 | `community.py:257-268`; 系统内另有 `AccountabilityPartnership` 独立模型 | 🔴 Reopen |
+| R9-2 | P1 | `main_actions_smoke_test` 内 `_FakeCommunityRepository` 仍是旧版 `getFeed()` 签名，关键 smoke suite 编译失败 | `test/app/main_actions_smoke_test.dart:524-532` | 🔴 Reopen |
+
+### R9.3 本轮实测
+
+| 命令 | 结果 |
+|------|------|
+| `cd mobile && flutter analyze lib/features/community lib/features/task` | ⚠️ 无 error，剩余 warning/info 收尾项 |
+| `cd mobile && flutter test test/widget/community_remaining_closure_test.dart` | ✅ 全部通过 |
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart` | ❌ 编译失败，暴露 `_FakeCommunityRepository.getFeed` 旧签名 |
+| `cd backend && pytest tests/api/test_community_group_file_sharing_api.py tests/test_community_e2e.py -q` | ✅ `16 passed` |
+| `cd backend && pytest tests/api/test_aurora_telemetry_api.py tests/unit/test_h02_aurora_spine_feedback.py tests/unit/test_aurora_spine_policy_feedback.py tests/unit/test_aurora_write_pipeline.py tests/api/test_profile_transparency_api.py tests/services/test_galaxy_node_sources.py tests/services/test_profile_context_service.py -q` | ✅ `31 passed` |
+| `cd mobile && flutter test test/widget/profile_front_door_action_card_test.dart test/features/user/profile_transparent_screen_test.dart test/widget/chat_action_card_navigation_test.dart` | ✅ 全部通过 |
+
+### R9.4 阶段判断修正
+
+当前更准确的说法是：
+
+> **上一轮 6 个社区/任务执行问题中，5 个可正式结案；原“feed scope 停在前端”问题已升级为更细的语义尾差：`Goal Mates` 尚未映射到独立伙伴关系模型。**
+
+并且：
+
+> **移动端主链编译已恢复，但关键 smoke harness 仍未全部跟上接口演进，因此“移动端最终质量门完全通过”还不能写死。**

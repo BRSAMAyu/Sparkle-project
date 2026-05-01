@@ -378,3 +378,69 @@
 | Plan / Task (PLAN/TASK) | 4 | PASS | v5.0 DAG, 两层 review, 自适应重规划, Card Protocol |
 | Learning / Growth / Nudge | 4 | PASS | SRL, 成就引擎, 行为助推 |
 | Stability / Governance / Obs | 4 | PASS | 熔断器, 三态 kill switch, 850+ 行 metrics, SLO alerts |
+
+---
+
+## 14. Codex R9 复验补充 (2026-05-01)
+
+> **方法**: 基于当前主干 `main` 重新复验上一轮 6 个社区/任务执行问题，并向外扩展到 smoke test、社群筛选语义、Aurora/画像/知识星图抽样链路。
+
+### 14.1 已复验通过
+
+| ID | 结论 | 证据 |
+|----|------|------|
+| R9-V1 | 社区 feed 不再停在前端，后端已接受 `scope` 参数 | `community.py:231-270` |
+| R9-V2 | `CommunityScreen` 类边界已恢复正常 | `community_screen.dart:148-184` |
+| R9-V3 | `MockCommunityRepository.getFeed(scope:)` 主仓 mock 已同步 | `mock_community_repository.dart:1453` |
+| R9-V4 | 任务执行离线/未连接文案调用点已迁移到方法调用 | `task_provider.dart:828-834`, `task_execution_screen.dart:1224-1227` |
+| R9-V5 | 社区筛选上下文在 refresh / optimistic sync 中已保留 | `community_providers.dart:15-22`, `68-70` |
+| R9-V6 | Goal Focus 首屏文案已补齐中英双语 | `community_screen.dart:214-265` |
+
+### 14.2 本轮新增发现
+
+| ID | 严重度 | 模块 | 问题 | 状态 |
+|----|--------|------|------|------|
+| C-R9-1 | P1 | 社区 / 语义闭环 | `goal_mates` 与 `following` 在后端仍共用同一套 accepted-friend 查询，两个筛选标签尚未真正映射到不同社交关系语义 | **REOPEN** |
+| C-R9-2 | P1 | 质量门 / Smoke Test | `main_actions_smoke_test` 内部 `_FakeCommunityRepository` 仍是旧版 `getFeed()` 签名，导致关键 smoke suite 编译失败 | **REOPEN** |
+
+#### C-R9-1 说明: `Goal Mates` 与 `Following` 仍未真正分流
+
+- `community.py:257-268` 当前把 `scope in ("following", "goal_mates")` 合并进同一分支
+- 该分支统一使用 `Friendship.status == ACCEPTED` 的好友关系集合
+- 系统内实际上存在独立的责任伙伴模型 `AccountabilityPartnership`，例如：
+  - `profile_transparency.py:1047-1058`
+  - `accountability.py:377-383`, `919-927`
+
+**结论**: 这说明社区筛选已经从“完全假筛选”升级到“部分真实筛选”，但 `Goal Mates` 还没有真正消费它自己的关系模型，当前用户仍会看到与 `Following` 高度重叠的结果。
+
+#### C-R9-2 说明: 主 smoke suite 仍有旧签名假仓库
+
+- `test/app/main_actions_smoke_test.dart:524-532` 的 `_FakeCommunityRepository.getFeed()` 仍是旧签名
+- 直接复验：
+  - `flutter test test/app/main_actions_smoke_test.dart` 编译失败
+  - 错误为 “fewer named arguments than overridden method `CommunityRepository.getFeed`”
+- 与之相对，`community_remaining_closure_test.dart` 当前已可单独通过，说明这不是社区页主链仍坏，而是 smoke harness 里残留了旧假实现
+
+**结论**: 主 smoke suite 现在不能作为完全健康的移动端收尾证据，必须先把这个假仓库接口同步。
+
+### 14.3 本轮抽样结果
+
+| 命令 | 结果 |
+|------|------|
+| `cd mobile && flutter analyze lib/features/community lib/features/task` | ⚠️ 无 error，剩余为 warning/info 收尾项 |
+| `cd mobile && flutter test test/widget/community_remaining_closure_test.dart` | ✅ 全部通过 |
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart` | ❌ 编译失败，暴露 `_FakeCommunityRepository.getFeed` 旧签名 |
+| `cd backend && pytest tests/api/test_community_group_file_sharing_api.py tests/test_community_e2e.py -q` | ✅ `16 passed` |
+| `cd backend && pytest tests/api/test_aurora_telemetry_api.py tests/unit/test_h02_aurora_spine_feedback.py tests/unit/test_aurora_spine_policy_feedback.py tests/unit/test_aurora_write_pipeline.py tests/api/test_profile_transparency_api.py tests/services/test_galaxy_node_sources.py tests/services/test_profile_context_service.py -q` | ✅ `31 passed` |
+| `cd mobile && flutter test test/widget/profile_front_door_action_card_test.dart test/features/user/profile_transparent_screen_test.dart test/widget/chat_action_card_navigation_test.dart` | ✅ 全部通过 |
+
+### 14.4 当前判断
+
+1. **Aurora / 画像 / 知识星图**: 本轮抽样仍是 `PASS`。  
+   我没有在这些高价值闭环里抓到新的结构性回归。
+
+2. **社区首页筛选**: 现在是 `PASS-WIP`。  
+   从“完全假筛选”前进到了“有 scope、能分 squad”，但 `Goal Mates` 还没有真正落到责任伙伴语义。
+
+3. **移动端最终质量门**: 现在还不能写 `PASS`。  
+   原因不是主链编译又炸了，而是 `main_actions_smoke_test` 这类关键 smoke harness 还没和新接口演进保持同步。
