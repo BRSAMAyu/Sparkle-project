@@ -79,6 +79,18 @@ _SEMANTIC_TO_STATE_KEYS: dict[str, list[str]] = {
 }
 
 
+# Maps disconfirming semantic values to routing-profile adjustments.
+# Keys are semantic_values that indicate the user disagrees with the current
+# routing stance. Values drive RoutingProfileService.record_session_outcome().
+_ROUTING_CORRECTION_MAP: dict[str, dict[str, Any]] = {
+    "strategy_too_aggressive": {"route_mode": "execution_first", "execution_suggestion_ignored": True},
+    "avoidance_not_disengaged": {"route_mode": "execution_first", "execution_suggestion_ignored": True},
+    "scope_ok_low_motivation": {"route_mode": "execution_first", "execution_suggestion_ignored": True},
+    "genuinely_fatigued": {"route_mode": "cognitive_first", "frustration_after_cognitive": True},
+    "strategy_too_conservative": {"route_mode": "cognitive_first", "frustration_after_cognitive": True},
+}
+
+
 class CorrectionFeedbackProcessor:
     """T3.3.2-T3.3.3: Processes user option selections and feeds corrections back
     into StateRegister and self_model.
@@ -91,8 +103,9 @@ class CorrectionFeedbackProcessor:
     CONFIDENCE_DECREASE = 0.15
     CONFIDENCE_INCREASE = 0.05
 
-    def __init__(self, redis_client: Any):
+    def __init__(self, redis_client: Any, db_session_factory: Any = None):
         self.redis = redis_client
+        self.db_session_factory = db_session_factory
 
     async def process(
         self,
@@ -206,10 +219,32 @@ class CorrectionFeedbackProcessor:
         except Exception:
             logger.debug("CorrectionFeedback: correction persist failed", exc_info=True)
 
+        # 4. Update routing profile so corrections change future routing behavior
+        await self._update_routing_profile(user_id, semantic_value)
+
         logger.info(
             "CorrectionFeedback: disconfirmation user={} semantic={} affected_states={}",
             user_id, semantic_value, result.affected_state_keys,
         )
+
+    async def _update_routing_profile(self, user_id: str, semantic_value: str) -> None:
+        """Bridge correction → routing profile so disconfirmations change future routing."""
+        routing_kwargs = _ROUTING_CORRECTION_MAP.get(semantic_value)
+        if routing_kwargs is None or self.db_session_factory is None:
+            return
+        try:
+            from uuid import UUID
+
+            from app.services.routing_profile_service import RoutingProfileService
+
+            async with self.db_session_factory() as session:
+                svc = RoutingProfileService(session, self.redis)
+                await svc.record_session_outcome(UUID(user_id), **routing_kwargs)
+        except Exception:
+            logger.debug(
+                "CorrectionFeedback: routing profile update failed semantic={}", semantic_value,
+                exc_info=True,
+            )
 
     async def _process_confirmation(
         self,

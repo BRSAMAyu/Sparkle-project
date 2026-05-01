@@ -680,3 +680,90 @@ class TestCorrectionResilience:
         )
 
         assert isinstance(result, CorrectionResult)
+
+    @pytest.mark.asyncio
+    async def test_routing_profile_updated_on_disconfirmation(self):
+        """Disconfirming a routing-relevant semantic value updates the routing profile."""
+        from contextlib import asynccontextmanager
+        from unittest.mock import AsyncMock, patch
+
+        redis = _make_redis()
+        entry = _make_state_entry("strategy_confidence", "high", 0.80)
+        redis.get.return_value = _state_entry_to_json(entry)
+
+        mock_session = AsyncMock()
+        recorded_profile = {}
+
+        async def fake_record_outcome(user_id, *, route_mode, **kwargs):
+            recorded_profile["route_mode"] = route_mode
+            recorded_profile.update(kwargs)
+            return {"procrastination_threshold": 0.5, "emotional_sensitivity": 0.5, "directness_preference": 0.5}
+
+        @asynccontextmanager
+        async def fake_factory():
+            yield mock_session
+
+        with patch(
+            "app.services.routing_profile_service.RoutingProfileService"
+        ) as MockSvc:
+            MockSvc.return_value.record_session_outcome = fake_record_outcome
+
+            processor = CorrectionFeedbackProcessor(redis, fake_factory)
+            result = await processor.process(
+                user_id="00000000-0000-0000-0000-000000000001",
+                semantic_value="strategy_too_aggressive",
+                is_disconfirming=True,
+            )
+
+        assert result.action == "disconfirmed"
+        assert recorded_profile.get("route_mode") == "execution_first"
+        assert recorded_profile.get("execution_suggestion_ignored") is True
+
+    @pytest.mark.asyncio
+    async def test_no_routing_update_without_db(self):
+        """When db_session_factory is None, routing profile is not updated (no crash)."""
+        redis = _make_redis()
+        entry = _make_state_entry("strategy_confidence", "high", 0.80)
+        redis.get.return_value = _state_entry_to_json(entry)
+
+        processor = CorrectionFeedbackProcessor(redis)
+        result = await processor.process(
+            user_id="user_1",
+            semantic_value="strategy_too_aggressive",
+            is_disconfirming=True,
+        )
+
+        assert isinstance(result, CorrectionResult)
+        assert result.action == "disconfirmed"
+
+    @pytest.mark.asyncio
+    async def test_no_routing_update_for_non_routing_semantic(self):
+        """Semantic values not in _ROUTING_CORRECTION_MAP don't trigger routing update."""
+        from contextlib import asynccontextmanager
+        from unittest.mock import AsyncMock, patch
+
+        redis = _make_redis()
+        entry = _make_state_entry("transfer_failure", "medium", 0.60)
+        redis.get.return_value = _state_entry_to_json(entry)
+
+        mock_session = AsyncMock()
+
+        @asynccontextmanager
+        async def fake_factory():
+            yield mock_session
+
+        with patch(
+            "app.services.routing_profile_service.RoutingProfileService"
+        ) as MockSvc:
+            MockSvc.return_value.record_session_outcome = AsyncMock()
+
+            processor = CorrectionFeedbackProcessor(redis, fake_factory)
+            result = await processor.process(
+                user_id="user_1",
+                semantic_value="carelessness",
+                is_disconfirming=True,
+            )
+
+            MockSvc.return_value.record_session_outcome.assert_not_called()
+
+        assert isinstance(result, CorrectionResult)

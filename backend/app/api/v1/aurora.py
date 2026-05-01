@@ -333,6 +333,7 @@ async def get_predicted_options(
 @router.post("/telemetry/chip-selected")
 async def record_chip_selected(
     payload: ChipSelectedTelemetryRequest,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Record that the user selected a predicted reply chip.
@@ -371,8 +372,15 @@ async def record_chip_selected(
         # T3.3.2-T3.3.3: Correction feedback loop
         if payload.is_disconfirming or payload.is_freeform:
             try:
+                from contextlib import asynccontextmanager
+
                 from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
-                processor = CorrectionFeedbackProcessor(redis)
+
+                @asynccontextmanager
+                async def _db_session():
+                    yield db
+
+                processor = CorrectionFeedbackProcessor(redis, _db_session)
                 correction_result = await processor.process(
                     user_id=str(current_user.id),
                     semantic_value=payload.semantic_value,
