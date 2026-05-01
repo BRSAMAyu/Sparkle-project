@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 import re
 
@@ -19,7 +19,7 @@ from app.services.capability_registry_service import CapabilityRegistryService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
@@ -193,7 +193,7 @@ def _parse_dt(value: Any) -> datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is not None:
-        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
     return parsed
 
 
@@ -378,7 +378,7 @@ class SituationBriefBuilder:
 
             # 3. Evaluate Readiness
             readiness = gate.evaluate(insight_state=compiled_state, gaps=gaps)
-            
+
             # 4. Generate Strategic Questions
             questions = detector.generate_questions(gaps)
 

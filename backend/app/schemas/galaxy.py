@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import re
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -19,7 +19,7 @@ from app.services.node_sector_service import (
 )
 
 
-class NodeStatus(str, Enum):
+class NodeStatus(StrEnum):
     LOCKED = "locked"  # 未解锁
     UNLIT = "unlit"  # 已解锁但未学习
     GLIMMER = "glimmer"  # 微光 (0-30)
@@ -224,7 +224,7 @@ class NodeBase(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     @classmethod
-    def from_model(cls, node) -> "NodeBase":
+    def from_model(cls, node) -> NodeBase:
         sector_weights = resolve_sector_weights(node)
         sector_code = dominant_sector_from_weights(sector_weights)
         base_color, glow_color = cls._resolve_sector_colors(node, sector_weights)

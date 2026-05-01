@@ -29,7 +29,7 @@ from typing import Any
 
 from loguru import logger
 
-from app.signals.types import ActionableSignal, _uid
+from app.signals.types import ActionableSignal
 
 
 # 仲裁优先级（数字越小越优先）

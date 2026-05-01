@@ -12,7 +12,7 @@ import json
 import math
 import os
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from typing import Any
 
 from loguru import logger
@@ -21,7 +21,7 @@ from app.orchestration.schemas import ExecutablePlan, RouteDecision, ShadowPredi
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ShadowPredictionService:

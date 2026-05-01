@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.cache import cache_service
 from app.core.event_bus import EventBus
 from app.event_publishers.srl_events import publish_srl_event
-from app.models.card_protocol import ArtifactType, Card, CardCreatedBy, CardType
+from app.models.card_protocol import ArtifactType, Card, CardCreatedBy
 from app.models.plan import PlanType
 from app.schemas.plan import PlanCreate
 from app.services.card_protocol.global_compass_manager import GlobalCompassManager

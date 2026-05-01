@@ -9,7 +9,7 @@ from __future__ import annotations
 import io
 import json
 import zipfile
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -59,7 +59,7 @@ async def export_user_data(
 ) -> StreamingResponse:
     """Export all user data as a ZIP file containing JSON files per data category."""
     uid = current_user.id
-    now = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    now = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
 
     # Simple per-user rate limit: use Redis if available, otherwise skip
     try:

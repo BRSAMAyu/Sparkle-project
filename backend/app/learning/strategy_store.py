@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 from uuid import UUID
 
@@ -17,7 +17,7 @@ from app.models.distilled_strategy_cache import DistilledStrategyCacheEntry
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 _ALLOWED_TRANSITIONS: dict[DistilledStrategyLifecycle, set[DistilledStrategyLifecycle]] = {

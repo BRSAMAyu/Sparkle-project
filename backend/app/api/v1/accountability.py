@@ -9,7 +9,6 @@ Stage: <首次引入 Stage 号>
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Optional
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
@@ -113,7 +112,7 @@ class PartnershipRequestSchema(BaseModel):
 
 class PartnershipRespondSchema(BaseModel):
     accept: bool
-    partner_goal: Optional[str] = None
+    partner_goal: str | None = None
 
 
 class CheckinCreateSchema(BaseModel):
@@ -131,12 +130,12 @@ class PartnershipOut(BaseModel):
     initiator_id: UUID
     partner_id: UUID
     initiator_goal: str
-    partner_goal: Optional[str]
+    partner_goal: str | None
     check_in_days: int
     slot_type: str
     status: str
-    started_at: Optional[datetime]
-    ended_at: Optional[datetime]
+    started_at: datetime | None
+    ended_at: datetime | None
     created_at: datetime
     initiator: CommunityUserBrief | None = None
     partner: CommunityUserBrief | None = None

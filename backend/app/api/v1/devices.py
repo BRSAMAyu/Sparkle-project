@@ -4,13 +4,12 @@ Device Registration API
 Handles registration and management of user device tokens for push notifications.
 """
 from __future__ import annotations
-from datetime import timezone, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from loguru import logger
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
@@ -144,7 +143,7 @@ async def list_devices(
     try:
         query = select(UserDevice).where(
             UserDevice.user_id == str(current_user.id),
-            UserDevice.is_active == True,
+            UserDevice.is_active,
         ).order_by(UserDevice.last_used_at.desc())
 
         result = await db.execute(query)

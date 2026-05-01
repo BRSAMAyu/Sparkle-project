@@ -1,7 +1,7 @@
 """Auto collector for cognitive fragments based on implicit behavior signals."""
 from __future__ import annotations
 
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -13,7 +13,7 @@ from app.services.cognitive_service import CognitiveService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 COLLECTION_RULES = {

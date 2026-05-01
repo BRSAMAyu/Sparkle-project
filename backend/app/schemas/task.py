@@ -8,7 +8,7 @@ Task Schemas - Task creation, update, query, etc.
 
 from __future__ import annotations
 from datetime import date, datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from typing import Literal
 from uuid import UUID
 
@@ -373,7 +373,7 @@ class TaskSuggestionResponse(BaseModel):
 # ========== Next Step Recommendation Schemas ==========
 
 
-class NextActionType(str, Enum):
+class NextActionType(StrEnum):
     """下一步行动类型"""
 
     QUICK_REVIEW = "quick_review"

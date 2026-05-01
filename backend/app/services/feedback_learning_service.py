@@ -14,7 +14,7 @@ Feedback Learning Service - Phase 2c
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 
 from loguru import logger
@@ -32,7 +32,7 @@ from app.services.review_history_service import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 @dataclass
 class ThresholdAdjustment:
@@ -625,7 +625,7 @@ class FeedbackLearningService:
 
     async def record_execution_result(
         self,
-        validation_result: "dict[str, Any]",
+        validation_result: dict[str, Any],
     ) -> None:
         """
         记录方案执行结果到学习系统

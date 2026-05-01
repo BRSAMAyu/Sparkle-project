@@ -26,7 +26,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.card_protocol import (
     Card,
     CardType,
-    CardLifecycleStatus,
     CardCreatedBy,
     TaskOccurrence,
     OccurrenceStatus,
@@ -77,7 +76,7 @@ class ReplannerCardBridge:
             return summary
 
         # 2. Update plan card metadata with adjustment info
-        adaptive_meta = adjustments.get("adaptive_meta", {})
+        adjustments.get("adaptive_meta", {})
         await self.card_service.update_card(
             plan_card.id,
             metadata={

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 from uuid import UUID
 
@@ -44,7 +44,7 @@ _DELEGATION_SUGGESTION_STATE_KEY = "openclaw.execution.delegation_suggestions"
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @dataclass(frozen=True)
@@ -321,7 +321,7 @@ class ExecutionPreferenceService:
         except ValueError:
             return None
         if parsed.tzinfo is not None:
-            parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+            parsed = parsed.astimezone(UTC).replace(tzinfo=None)
         return parsed
 
     def _compute_cooldown(self, state: dict[str, Any]) -> datetime | None:

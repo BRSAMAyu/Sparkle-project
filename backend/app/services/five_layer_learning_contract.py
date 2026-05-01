@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from typing import Any
 
 PHASE_E_CONTRACT_VERSION = "2026-04-05.phase_e.v1"
@@ -21,7 +21,7 @@ REASON_TAXONOMY: tuple[str, ...] = (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _iso_or_none(value: datetime | None) -> str | None:
@@ -46,7 +46,7 @@ def _parse_dt(value: Any) -> datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is not None:
-        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
     return parsed.replace(tzinfo=None)
 
 

@@ -242,7 +242,7 @@ class SecureLLMClient:
         api_key: str,
         base_url: str,
         timeout_seconds: float = 60.0,
-    ) -> "SecureLLMClient":
+    ) -> SecureLLMClient:
         return cls(
             OpenAICompatibleProvider(
                 api_key=api_key,

@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 from uuid import UUID
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.core.metrics import SPARKLE_SKILL_SELECTION_ACTIVATION_RATE
 from app.models.aurora_stage21 import UserSkill
 from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService

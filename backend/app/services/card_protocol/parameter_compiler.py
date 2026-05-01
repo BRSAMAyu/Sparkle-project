@@ -21,7 +21,7 @@ from typing import Any
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.card_protocol import ArtifactType, PlanningArtifact
+from app.models.card_protocol import ArtifactType
 from app.services.card_protocol.global_compass_manager import GlobalCompassManager
 from app.services.card_protocol.strategy_map_manager import StrategyMapManager
 from app.services.plan_state_service import PlanStateService

@@ -1731,7 +1731,6 @@ async def get_learning_path_progress(
             "overall_progress": 0.0,
         }
 
-    from sqlalchemy import or_
 
     from app.models.galaxy import KnowledgeNode, UserNodeStatus
 
@@ -1750,7 +1749,7 @@ async def get_learning_path_progress(
     mastered_count = 0
 
     for node_id_str in path_node_ids:
-        node_id = UUID(node_id_str)
+        UUID(node_id_str)
         node = nodes.get(node_id_str)
         user_status = user_statuses.get(node_id_str)
 

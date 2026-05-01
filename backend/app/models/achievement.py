@@ -7,7 +7,6 @@ from __future__ import annotations
 
 
 import enum
-from typing import TypeVar
 
 from sqlalchemy import JSON, Boolean, Column, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, String
 from sqlalchemy.dialects.postgresql import JSONB
@@ -19,7 +18,7 @@ JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 # Python 3.9 compatible StrEnum
-class StrEnum(str, enum.Enum):
+class StrEnum(enum.StrEnum):
     """String enum for Python 3.9 compatibility"""
 
     def __new__(cls, value):

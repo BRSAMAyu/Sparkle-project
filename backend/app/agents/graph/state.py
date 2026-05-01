@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import operator
-from enum import Enum
+from enum import StrEnum
 from typing import Annotated, Any, TypedDict
 
 from langchain_core.messages import BaseMessage
 
 
 # P1 Fix #6: Add Enum types for status fields
-class PlanningStatus(str, Enum):
+class PlanningStatus(StrEnum):
     """Planning status values (Vision Item 5a/8: Judge Loop & Review)"""
     GATHERING_INFO = "gathering_info"
     DRAFTING = "drafting"
@@ -17,21 +17,21 @@ class PlanningStatus(str, Enum):
     COMPLETED = "completed"
 
 
-class PlanStatus(str, Enum):
+class PlanStatus(StrEnum):
     """Plan status values"""
     DRAFTING = "drafting"
     ACTIVE = "active"
     COMPLETED = "completed"
 
 
-class ReviewDecisionType(str, Enum):
+class ReviewDecisionType(StrEnum):
     """Review decision types"""
     APPROVE = "approve"
     REJECT = "reject"
     MODIFY = "modify"
 
 
-class ReviewFeedbackSource(str, Enum):
+class ReviewFeedbackSource(StrEnum):
     """Review feedback source types"""
     USER = "user"
     REVIEWER_AGENT = "reviewer_agent"
@@ -41,7 +41,7 @@ class ReviewFeedbackSource(str, Enum):
 # Review System Enums (Phase 1: 全流程审查系统)
 # ============================================
 
-class ReviewStatus(str, Enum):
+class ReviewStatus(StrEnum):
     """审查状态 (Review Status)"""
     PENDING = "pending"           # 等待审查
     IN_PROGRESS = "in_progress"   # 审查中
@@ -51,7 +51,7 @@ class ReviewStatus(str, Enum):
     SKIPPED = "skipped"           # 跳过审查（轻量级模式）
 
 
-class ReviewTargetType(str, Enum):
+class ReviewTargetType(StrEnum):
     """审查目标类型"""
     LLM_RESPONSE = "llm_response"  # LLM生成的响应
     PLAN = "plan"                  # 执行计划

@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 from loguru import logger
@@ -26,7 +26,7 @@ def _uid(prefix: str = "") -> str:
 
 
 def _utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 @dataclass
@@ -264,7 +264,7 @@ class MultivariateExperimentEngine:
         is_conclusive = effect_size >= experiment.min_effect_size
 
         # Bayesian-style confidence interval approximation
-        n = sum(v.sample_size for v in active_variants)
+        sum(v.sample_size for v in active_variants)
         se = (best.success_rate * (1 - best.success_rate) / max(best.sample_size, 1)) ** 0.5
         ci_lower = max(0.0, effect_size - 1.96 * se)
         ci_upper = min(1.0, effect_size + 1.96 * se)

@@ -15,10 +15,9 @@ Phase 2 scope:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 
-from loguru import logger
-from sqlalchemy import select, update, and_, func
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.card_protocol import (
@@ -257,8 +256,7 @@ class InterventionRecordService:
 
         Returns count of records resolved.
         """
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
-        cutoff = now  # outcome_window_days is per-record, checked in SQL
+        now = datetime.now(UTC).replace(tzinfo=None)
 
         stmt = select(InterventionRecord).where(
             InterventionRecord.outcome_status == InterventionOutcomeStatus.PENDING,
@@ -306,7 +304,7 @@ class InterventionRecordService:
     @staticmethod
     def _extract_legacy_plan_id(record: InterventionRecord, evidence_payload: dict[str, Any]) -> str | None:
         candidates = [
-            _strip(((evidence_payload.get("improvement") or {}).get("legacy_plan_id"))),
+            _strip((evidence_payload.get("improvement") or {}).get("legacy_plan_id")),
             _strip((record.diagnosis_payload or {}).get("legacy_plan_id")),
             _strip((record.action_payload or {}).get("plan_id")),
         ]

@@ -89,13 +89,13 @@ class NudgeService:
 
             from app.models.user import User
             from app.services.personalization import get_personalization_engine
-            
+
             user = await self.db.get(User, uuid.UUID(user_id))
             if user:
                  # Get user policy profile
                  engine = get_personalization_engine(self.db, None)
                  policy = await engine.get_push_policy_profile(user.id)
-                 
+
                  # Calling the private _send_push method with the correct signature
                  await self.push_service._send_push(
                     user=user,

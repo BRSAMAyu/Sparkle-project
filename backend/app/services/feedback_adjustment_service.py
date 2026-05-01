@@ -22,8 +22,8 @@ AdjustmentAction[] (实际执行)
 """
 
 from dataclasses import dataclass, field
-from datetime import timezone, datetime
-from enum import Enum
+from datetime import datetime, UTC
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -36,10 +36,10 @@ from app.services.plan_state_service import PlanStateService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
-class FeedbackType(str, Enum):
+class FeedbackType(StrEnum):
     """反馈类型枚举"""
     TASK_COMPLETED = "task_completed"
     TASK_TOO_HARD = "task_too_hard"

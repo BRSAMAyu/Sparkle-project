@@ -3,15 +3,12 @@ Visual Element Service
 视觉元素服务 - 处理视觉元素的解锁、装备、查询等逻辑
 """
 from __future__ import annotations
-from datetime import timezone, datetime
-from typing import Any
+from datetime import datetime, UTC
 import uuid
 
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from app.models.user import User
 from app.models.visual_element import (
     UserVisualConfig,
     UserVisualElement,
@@ -22,7 +19,6 @@ from app.models.visual_element import (
 )
 from app.schemas.visual_element import (
     EquipElementResponse,
-    EquipElementRequest,
     UnlockElementRequest,
     UnlockElementResponse,
     UserVisualConfigResponse,
@@ -55,7 +51,7 @@ class VisualElementService:
         query = select(VisualElement)
 
         if not include_inactive:
-            query = query.where(VisualElement.is_active == True)
+            query = query.where(VisualElement.is_active)
 
         if element_type:
             query = query.where(VisualElement.element_type == element_type)
@@ -88,7 +84,7 @@ class VisualElementService:
             select(VisualElement)
             .join(UserVisualElement, UserVisualElement.element_id == VisualElement.id)
             .where(UserVisualElement.user_id == user_id)
-            .where(VisualElement.is_active == True)
+            .where(VisualElement.is_active)
         )
 
         if element_type:
@@ -100,8 +96,8 @@ class VisualElementService:
         elements = list(result.scalars().all())
 
         default_query = select(VisualElement).where(
-            VisualElement.is_default == True,
-            VisualElement.is_active == True,
+            VisualElement.is_default,
+            VisualElement.is_active,
         )
         if element_type:
             default_query = default_query.where(
@@ -217,7 +213,7 @@ class VisualElementService:
 
         # 获取或创建用户配置
         config = await self._get_or_create_user_config(user_id)
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
 
         # 处理套装
         if element.element_type == VisualElementType.BUNDLE:
@@ -309,7 +305,7 @@ class VisualElementService:
             )
 
         # 创建解锁记录
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
         user_element = UserVisualElement(
             user_id=normalized_user_id,
             element_id=request.element_id,
@@ -358,7 +354,7 @@ class VisualElementService:
         # 查找与成就关联的元素
         query = select(VisualElement).where(
             VisualElement.unlock_source == VisualElementUnlockSource.ACHIEVEMENT,
-            VisualElement.is_active == True,
+            VisualElement.is_active,
         )
 
         result = await self.db.execute(query)
@@ -388,8 +384,8 @@ class VisualElementService:
     async def get_default_elements(self, locale: str | None = None) -> list[VisualElementResponse]:
         """获取默认视觉元素"""
         query = select(VisualElement).where(
-            VisualElement.is_default == True,
-            VisualElement.is_active == True,
+            VisualElement.is_default,
+            VisualElement.is_active,
         )
 
         result = await self.db.execute(query)
@@ -402,7 +398,7 @@ class VisualElementService:
         # 获取默认元素
         defaults = await self.get_default_elements()
 
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        now = datetime.now(UTC).replace(tzinfo=None)
 
         # 解锁所有默认元素
         for element in defaults:
@@ -455,8 +451,8 @@ class VisualElementService:
 
     async def _get_default_elements_by_type(self) -> dict[VisualElementType, VisualElement]:
         query = select(VisualElement).where(
-            VisualElement.is_default == True,
-            VisualElement.is_active == True,
+            VisualElement.is_default,
+            VisualElement.is_active,
         )
         result = await self.db.execute(query)
         defaults = result.scalars().all()

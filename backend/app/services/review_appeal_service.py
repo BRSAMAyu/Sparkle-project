@@ -14,8 +14,8 @@ Review Appeal Service - Phase 2e
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import timezone, datetime, timedelta
-from enum import Enum
+from datetime import datetime, timedelta, UTC
+from enum import StrEnum
 from typing import Any
 
 from loguru import logger
@@ -37,9 +37,9 @@ from app.services.review_history_service import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
-class AppealPriority(str, Enum):
+class AppealPriority(StrEnum):
     """申诉优先级"""
     LOW = "low"
     NORMAL = "normal"
@@ -47,7 +47,7 @@ class AppealPriority(str, Enum):
     URGENT = "urgent"
 
 
-class AppealDecision(str, Enum):
+class AppealDecision(StrEnum):
     """申诉决策"""
     APPROVED = "approved"           # 申诉通过，推翻原审查
     REJECTED = "rejected"           # 申诉拒绝，维持原审查

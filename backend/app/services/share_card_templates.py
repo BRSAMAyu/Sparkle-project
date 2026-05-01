@@ -9,8 +9,7 @@ Four visual styles for achievement share cards:
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Callable
+from dataclasses import dataclass
 
 from app.core.i18n import I18n
 

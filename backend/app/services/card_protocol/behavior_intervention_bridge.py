@@ -94,7 +94,7 @@ class BehaviorInterventionBridge:
         solution_text: str | None = None,
         frequency: int = 1,
         evidence_ids: list[str] | None = None,
-    ) -> "InterventionRecord | None":
+    ) -> InterventionRecord | None:
         """Create an InterventionRecord from a behavior pattern detection.
 
         Only creates a record if:
@@ -104,7 +104,6 @@ class BehaviorInterventionBridge:
 
         Returns the created record, or None if conditions not met.
         """
-        from app.models.card_protocol import InterventionRecord, InterventionAcceptanceStatus
 
         # 1. Check confidence threshold
         if confidence < _MIN_CONFIDENCE:

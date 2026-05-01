@@ -3,7 +3,6 @@ gRPC Auth Interceptors
 """
 from __future__ import annotations
 import secrets
-from typing import Any, Callable
 
 import grpc
 from loguru import logger

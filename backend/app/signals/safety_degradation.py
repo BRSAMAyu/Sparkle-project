@@ -15,14 +15,14 @@ Thresholds:
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import datetime, UTC
+from enum import StrEnum
 from typing import Any
 
 from loguru import logger
 
 
-class SafetyDegradationLevel(str, Enum):
+class SafetyDegradationLevel(StrEnum):
     NORMAL = "normal"
     CAUTION = "caution"
     RESTRICTED = "restricted"
@@ -102,7 +102,7 @@ class SafetyDegradationManager:
             "level": level.value,
             "reason": reason,
             "restricted_capabilities": _RESTRICTED_CAPS[level],
-            "ts": datetime.now(timezone.utc).isoformat(),
+            "ts": datetime.now(UTC).isoformat(),
         })
         await self._redis.set(
             f"{_REDIS_KEY_PREFIX}{user_id}", payload, ex=_TTL_SECONDS

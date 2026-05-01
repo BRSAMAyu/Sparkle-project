@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -9,7 +9,6 @@ from pydantic import BaseModel, Field
 
 from app.api.deps import (
     get_current_active_superuser,
-    get_current_user,
     get_optional_current_user,
 )
 from app.core.cache import cache_service
@@ -37,11 +36,11 @@ class ClientTelemetryBatchRequest(BaseModel):
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _date_key(day: datetime) -> str:
-    return day.astimezone(timezone.utc).date().isoformat()
+    return day.astimezone(UTC).date().isoformat()
 
 
 def _aggregate_key(day: datetime, event_type: str) -> str:
@@ -84,7 +83,7 @@ async def _store_event(
     payload: ClientTelemetryEventRequest,
     user_id: str,
 ) -> tuple[str, datetime]:
-    now = payload.occurred_at.astimezone(timezone.utc) if payload.occurred_at else _utcnow()
+    now = payload.occurred_at.astimezone(UTC) if payload.occurred_at else _utcnow()
     event_type = payload.event_type.strip().lower().replace(" ", "_")
     platform = str((payload.metadata or {}).get("platform") or "unknown").lower()
     normalized = payload.model_copy(update={"event_type": event_type})

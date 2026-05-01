@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 from uuid import UUID
 
@@ -14,7 +14,7 @@ from app.models.background_task import BackgroundTask, BackgroundTaskStatus, Bac
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class TaskMonitorService:

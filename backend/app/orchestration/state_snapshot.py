@@ -11,7 +11,7 @@ from __future__ import annotations
 import contextlib
 import json
 import uuid
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 
 from loguru import logger
@@ -20,7 +20,7 @@ from app.orchestration.schemas import StateSnapshot
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class StateSnapshotManager:

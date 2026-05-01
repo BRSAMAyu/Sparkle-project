@@ -5,8 +5,8 @@ PlanExecutionValidator - 方案执行验证服务
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
-from datetime import timezone, datetime
-from typing import TYPE_CHECKING, Any, Optional
+from datetime import datetime, UTC
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
@@ -77,13 +77,13 @@ class ExecutionValidationResult:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanExecutionValidator:
     """方案执行验证器"""
 
-    def __init__(self, record_service: Optional["PlanExecutionRecordService"] = None):
+    def __init__(self, record_service: PlanExecutionRecordService | None = None):
         """
         Args:
             record_service: PlanExecutionRecordService 实例 (可选)
@@ -92,8 +92,8 @@ class PlanExecutionValidator:
 
     async def validate_and_record(
         self,
-        plan: "ExecutablePlan",
-        tool_results: list["ToolResult"],
+        plan: ExecutablePlan,
+        tool_results: list[ToolResult],
         user_id: UUID,
     ) -> ExecutionValidationResult:
         """
@@ -135,8 +135,8 @@ class PlanExecutionValidator:
 
     async def validate(
         self,
-        plan: "ExecutablePlan",
-        tool_results: list["ToolResult"],
+        plan: ExecutablePlan,
+        tool_results: list[ToolResult],
     ) -> ExecutionValidationResult:
         """
         验证方案执行结果 (不持久化)
@@ -188,7 +188,7 @@ class PlanExecutionValidator:
         )
 
     def _analyze_tool_results(
-        self, tool_results: list["ToolResult"]
+        self, tool_results: list[ToolResult]
     ) -> dict[str, int]:
         """分析工具执行结果"""
         total = len(tool_results)
@@ -204,8 +204,8 @@ class PlanExecutionValidator:
 
     async def _check_success_criteria(
         self,
-        plan: "ExecutablePlan",
-        tool_results: list["ToolResult"],
+        plan: ExecutablePlan,
+        tool_results: list[ToolResult],
     ) -> dict[str, Any]:
         """
         检查方案的成功标准
@@ -330,7 +330,7 @@ class PlanExecutionValidator:
 
     def _collect_issues(
         self,
-        tool_results: list["ToolResult"],
+        tool_results: list[ToolResult],
         criteria_results: dict[str, Any],
     ) -> list[str]:
         """收集问题列表"""
@@ -357,8 +357,8 @@ class PlanExecutionValidator:
 
     async def validate_plan_execution(
         self,
-        plan: "ExecutablePlan",
-        plan_result: "PlanExecutionResult",
+        plan: ExecutablePlan,
+        plan_result: PlanExecutionResult,
         user_id: UUID | None = None,
     ) -> ExecutionValidationResult:
         """Validate a PlanExecutionResult with per-step criteria.
@@ -472,7 +472,7 @@ class PlanExecutionValidator:
 
     def _validate_step(
         self,
-        sr: "StepResult",
+        sr: StepResult,
         criteria: Any | None,
     ) -> StepValidation:
         """Validate a single step against its StepCriteria."""

@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from typing import Any
 
 from app.core.cache import cache_service
 from app.core.kill_switch import (
     KillSwitchBinding,
-    normalize_mode,
     read_mode,
     record_mode_gauge,
     write_mode,

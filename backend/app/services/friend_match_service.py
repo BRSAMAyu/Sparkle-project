@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from uuid import UUID
 
 from sqlalchemy import func, inspect, or_, select
@@ -31,7 +31,7 @@ from app.services.personalization.preference_service import PreferenceService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize_tag(value: str | None) -> str:
@@ -230,7 +230,7 @@ class FriendMatchService:
         tuning = await cls._load_feedback_tuning(db, current_user.id)
 
         recommendations: list[FriendRecommendation] = []
-        for user, context in zip(candidates_by_id.values(), contexts):
+        for user, context in zip(candidates_by_id.values(), contexts, strict=False):
             relationship_status = relationship_map.get(str(user.id), "none")
             is_existing_friend = relationship_status == FriendshipStatus.ACCEPTED.value
             can_invite = (

@@ -15,7 +15,7 @@ from __future__ import annotations
 import contextlib
 import json
 import uuid
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 
 from google.protobuf.json_format import MessageToDict
@@ -36,9 +36,6 @@ from app.routing.tool_preference_router import ToolPreferenceRouter
 from app.services.focus_service import focus_service
 from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
 from app.services.self_evolution_service import UnderstandingDepthService
-from app.services.perceptible_intelligence_service import (
-    PerceptibleInsightService,
-)
 from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
 from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwitchService
 from app.services.galaxy_service import GalaxyService
@@ -55,7 +52,7 @@ from app.state_aggregator.service import StateAggregatorService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 # ---------------------------------------------------------------------------
@@ -248,10 +245,10 @@ class ContextBuilderMixin:
             prefs = user_context_data.get("preferences")
             if isinstance(prefs, dict):
                 flame_level = prefs.get("flame_level")
-            
+
             locale = user_context_data.get("language", "zh-CN")
             unknown_text = I18n.t("common.unknown", locale=locale)
-            
+
             identity = {
                 "nickname": user_context_data.get("nickname", unknown_text),
                 "timezone": user_context_data.get("timezone", "Asia/Shanghai"),
@@ -640,7 +637,7 @@ class ContextBuilderMixin:
             base_user_context = await user_service.get_context(uuid.UUID(user_id))
             base_user_context_data = base_user_context.model_dump() if base_user_context else None
             experiment_cohort = self._experiment_cohort_for_user(user_id)
-            
+
             locale = "zh-CN"
             if base_user_context_data:
                 locale = base_user_context_data.get("language", "zh-CN")
@@ -1030,7 +1027,7 @@ class ContextBuilderMixin:
             progress_text = I18n.t("context.no_progress_record", locale=locale)
             if latest_completed:
                 progress_text = I18n.t("context.last_progress", locale=locale, step=str(latest_completed[0]))
-            
+
             due_text = I18n.t("context.overdue_tasks", locale=locale, count=overdue_count)
             if next_due:
                 due_text = I18n.t("context.overdue_tasks_with_next", locale=locale, count=overdue_count, title=str(next_due[0]))
@@ -1229,7 +1226,7 @@ class ContextBuilderMixin:
                                         patch={"constraints": {"require_phase_rollback": False}},
                                         bump_version=False,
                                     )
-                                    
+
                                     locale = user_context_payload.get("profile", {}).get("identity", {}).get("language", "en")
                                     plan_context["mode"] = "phase_rollback"
                                     plan_context["rollback_reason"] = I18n.t("context.rollback_reason", locale=locale)

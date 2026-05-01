@@ -26,7 +26,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 
 from google.protobuf import struct_pb2  # noqa: F401 — kept for backward compat
@@ -133,7 +133,6 @@ from app.orchestration.session_feedback import (
     detect_session_feedback_signal,  # noqa: F401
 )
 from app.orchestration.soul_compiler import attach_shadow_soul_runtime
-from app.services.capability_registry_service import CapabilityRegistryService
 
 # Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
 from app.orchestration.route_adapter import to_route_decision  # noqa: F401
@@ -214,7 +213,7 @@ SESSION_FEEDBACK_KEY_PREFIX = "session:feedback:"
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def get_agent_type_for_tool(tool_name: str) -> int:
@@ -2571,7 +2570,7 @@ class ChatOrchestrator(
                     resp.trace_id = resp.trace_id or trace_id
                     try:
                         await self._enqueue_stream_response(queue, resp)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         logger.error(
                             "Timed out while enqueueing critical stream response "
                             f"(response_id={resp.response_id}, finish_reason={resp.finish_reason}, "

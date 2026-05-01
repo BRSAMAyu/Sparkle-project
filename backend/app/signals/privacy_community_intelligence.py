@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 from loguru import logger
@@ -26,7 +26,7 @@ def _uid(prefix: str = "") -> str:
 
 
 def _utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 @dataclass
@@ -628,7 +628,7 @@ class SecureAggregationEngine:
                 ranked.append({**item, "rank": None})  # Will fill after sorting
 
         # Sort rankable items by score
-        rankable = [r for r in ranked if r["rank"] is not None or r.get("rank_reason") != "below_privacy_floor"]
+        [r for r in ranked if r["rank"] is not None or r.get("rank_reason") != "below_privacy_floor"]
 
         # Actually, let me fix the logic:
         visible = [r for r in ranked if r.get("rank_reason") != "below_privacy_floor"]

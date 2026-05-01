@@ -53,7 +53,7 @@ class FirebaseSettings(BaseSettings):
             import json
 
             try:
-                with open(self.FIREBASE_CREDENTIALS_PATH, "r") as f:
+                with open(self.FIREBASE_CREDENTIALS_PATH) as f:
                     return json.load(f)
             except Exception as e:
                 logger.error(f"Failed to load Firebase credentials from file: {e}")

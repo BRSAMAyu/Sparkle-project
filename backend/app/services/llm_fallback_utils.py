@@ -88,7 +88,7 @@ async def safe_llm_call(
                 timeout=timeout
             )
             return result
-        except asyncio.TimeoutError:
+        except TimeoutError:
             last_error = f"LLM call timed out after {timeout}s"
             logger.warning(f"[LLMFallback] Timeout (attempt {attempt + 1}/{retry_count + 1})")
         except Exception as e:

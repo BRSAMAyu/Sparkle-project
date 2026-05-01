@@ -12,12 +12,12 @@ import asyncio
 import contextlib
 from copy import deepcopy
 import json
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from loguru import logger
-from sqlalchemy import and_, func, or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
@@ -204,7 +204,7 @@ from app.tools.entity_cards import (
 router = APIRouter()
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _post_to_response(post: Post) -> dict:
@@ -316,7 +316,7 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
         )
 
     read_receipts = sorted(
-        list(getattr(msg, "read_receipts", []) or []),
+        getattr(msg, "read_receipts", []) or [],
         key=lambda receipt: receipt.read_at,
     )
     read_by = [receipt.user_id for receipt in read_receipts]
@@ -1144,7 +1144,7 @@ async def block_user(
     - 拉黑后自动解除好友关系
     - 拉黑后对方无法发送消息或好友请求
     """
-    block = await UserBlockService.block_user(
+    await UserBlockService.block_user(
         db=db,
         blocker_id=current_user.id,
         blocked_id=data.target_user_id,
@@ -1620,7 +1620,7 @@ async def join_group(
             "type": "member_joined",
             "group_id": str(group_id),
             "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return {"success": True}
@@ -1644,7 +1644,7 @@ async def leave_group(
             "type": "member_left",
             "group_id": str(group_id),
             "user_id": str(current_user.id),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return {"success": True}
@@ -1685,7 +1685,7 @@ async def transfer_group_owner(
             "group_id": str(group_id),
             "old_owner_id": str(current_user.id),
             "new_owner_id": str(new_owner_id),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return {"success": True}
@@ -1724,7 +1724,7 @@ async def kick_group_member(
                 "group_id": str(group_id),
                 "user_id": str(user_id),
                 "operator_id": str(current_user.id),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             str(group_id),
         )
@@ -1751,7 +1751,7 @@ async def promote_group_member(
                 "user_id": str(user_id),
                 "role": member.role.value,
                 "operator_id": str(current_user.id),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             str(group_id),
         )
@@ -1778,7 +1778,7 @@ async def demote_group_member(
                 "user_id": str(user_id),
                 "role": member.role.value,
                 "operator_id": str(current_user.id),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
             str(group_id),
         )
@@ -2273,7 +2273,7 @@ async def update_group_file_permissions(
 
     try:
         permissions = data.permissions
-        group_file = await GroupFileService.update_permissions(
+        await GroupFileService.update_permissions(
             db,
             group_id=group_id,
             user_id=current_user.id,
@@ -2707,7 +2707,7 @@ async def checkin(
             "group_id": str(data.group_id),
             "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
             "duration": data.today_duration_minutes,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(data.group_id))
 
         return result
@@ -2748,7 +2748,7 @@ async def create_group_task(
                 "description": task.description,
                 "creator": UserBrief.model_validate(current_user).model_dump(mode='json')
             },
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return GroupTaskInfo(
@@ -3781,7 +3781,7 @@ async def update_group_moderation_settings(
             "type": "group_settings_updated",
             "group_id": str(group_id),
             "settings": data.model_dump(mode='json'),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(UTC).isoformat()
         }, str(group_id))
 
         return {

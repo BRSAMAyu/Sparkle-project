@@ -13,12 +13,10 @@ All decisions are advisory — the user always has final say via PredictedReplyO
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
-from loguru import logger
 
-from app.signals.types import _uid
 
 
 _GOALS_KEY = "spine:goals:{user_id}"
@@ -133,7 +131,7 @@ class MultiGoalArbitrator:
             )
 
         # Check for user overrides
-        paused = [g for g in goals if g.priority_override == "pause"]
+        [g for g in goals if g.priority_override == "pause"]
         active = [g for g in goals if g.priority_override != "pause"]
         forced_high = [g for g in active if g.priority_override == "high"]
 

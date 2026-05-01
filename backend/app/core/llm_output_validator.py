@@ -215,7 +215,7 @@ class LLMOutputValidator:
             risk_score=risk_score
         )
 
-    def _detect_sensitive_info(self, text: str) -> 'DetectionResult':
+    def _detect_sensitive_info(self, text: str) -> DetectionResult:
         """检测敏感信息泄露"""
         violations = []
         sanitized_text = text
@@ -246,7 +246,7 @@ class LLMOutputValidator:
             high_risk=high_risk
         )
 
-    def _filter_malicious_instructions(self, text: str) -> 'DetectionResult':
+    def _filter_malicious_instructions(self, text: str) -> DetectionResult:
         """过滤恶意指令"""
         violations = []
         sanitized_text = text
@@ -269,7 +269,7 @@ class LLMOutputValidator:
             high_risk=True  # 恶意指令都是高风险
         )
 
-    def _filter_code_injection(self, text: str) -> 'DetectionResult':
+    def _filter_code_injection(self, text: str) -> DetectionResult:
         """过滤代码注入"""
         violations = []
         sanitized_text = text
@@ -292,7 +292,7 @@ class LLMOutputValidator:
             high_risk=True  # 代码注入都是高风险
         )
 
-    def _check_compliance(self, text: str) -> 'DetectionResult':
+    def _check_compliance(self, text: str) -> DetectionResult:
         """检查内容合规性"""
         violations = []
         sanitized_text = text

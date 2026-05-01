@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas.task import TaskCreate
 from app.services.cognitive_service import CognitiveService
-from app.services.llm_service import llm_service
 from app.services.task_service import TaskService
 
 

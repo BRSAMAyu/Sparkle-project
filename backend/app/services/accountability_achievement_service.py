@@ -8,7 +8,7 @@ Accountability Achievement Service
 - 协作成就
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -28,7 +28,7 @@ from app.services.notification_service import notification_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize_timezone(timezone_name: str | None) -> str:
@@ -47,7 +47,7 @@ def _user_timezone(user: User | None) -> str:
 def _to_local_date(timestamp: datetime, timezone_name: str):
     zone = ZoneInfo(timezone_name)
     if timestamp.tzinfo is None:
-        timestamp = timestamp.replace(tzinfo=timezone.utc)
+        timestamp = timestamp.replace(tzinfo=UTC)
     return timestamp.astimezone(zone).date()
 
 
@@ -491,8 +491,8 @@ class AccountabilityAchievementService:
 
         for i in range(days):
             target_date = (_utcnow() - timedelta(days=i)).date()
-            day_start = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
-            day_end = datetime.combine(target_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+            day_start = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=UTC)
+            day_end = datetime.combine(target_date, datetime.max.time()).replace(tzinfo=UTC)
 
             # 获取双方当天的打卡时间
             user_checkins = await db.execute(
@@ -542,8 +542,8 @@ class AccountabilityAchievementService:
         days_in_month: int,
     ) -> bool:
         """检查用户在指定月份是否每天打卡"""
-        month_start = datetime(year, month, 1).replace(tzinfo=timezone.utc)
-        month_end = datetime(year, month, days_in_month, 23, 59, 59).replace(tzinfo=timezone.utc)
+        month_start = datetime(year, month, 1).replace(tzinfo=UTC)
+        month_end = datetime(year, month, days_in_month, 23, 59, 59).replace(tzinfo=UTC)
 
         # 统计该月份的打卡天数
         result = await db.execute(

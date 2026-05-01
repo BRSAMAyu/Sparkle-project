@@ -12,7 +12,7 @@ import asyncio
 import json
 import random
 import re
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from uuid import UUID
 
 import httpx
@@ -44,7 +44,7 @@ from app.services.semantic_memory_service import SemanticMemoryService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 SPARKLE_FILE_REFERENCE_PREFIX = "sparkle-file://"

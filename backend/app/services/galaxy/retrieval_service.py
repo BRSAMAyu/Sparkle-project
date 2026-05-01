@@ -401,7 +401,7 @@ class KnowledgeRetrievalService:
         threshold: float = 0.6,
         include_group_documents: bool = False,
         group_ids: list[UUID | str] | None = None,
-    ) -> list["DocumentChunkResult"]:
+    ) -> list[DocumentChunkResult]:
         """
         Vector search over document chunks with forced file scope.
         """

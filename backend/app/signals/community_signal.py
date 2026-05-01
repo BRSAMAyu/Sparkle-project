@@ -15,10 +15,9 @@ Stage: Signal-to-Action Spine P1-6 CommunitySignal v1
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
-from loguru import logger
 
 from app.signals.types import ActionableSignal, _uid
 

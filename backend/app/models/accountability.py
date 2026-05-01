@@ -16,7 +16,6 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    String,
     Text,
     UniqueConstraint,
 )
@@ -28,14 +27,14 @@ from app.models.base import GUID, BaseModel
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
-class AccountabilityStatus(str, enum.Enum):
+class AccountabilityStatus(enum.StrEnum):
     PENDING = "pending"
     ACTIVE = "active"
     PAUSED = "paused"
     ENDED = "ended"
 
 
-class AccountabilitySlotType(str, enum.Enum):
+class AccountabilitySlotType(enum.StrEnum):
     CORE = "core"
 
 

@@ -148,7 +148,7 @@ def estimate_state_space(value_map: dict[str, set[str] | list[str] | tuple[str, 
     total = 1
     for name in SOURCE_STATE_DIMENSION_ORDER:
         options = value_map.get(name) or []
-        count = max(1, len(set(str(item) for item in options)))
+        count = max(1, len({str(item) for item in options}))
         total *= count
     return total
 

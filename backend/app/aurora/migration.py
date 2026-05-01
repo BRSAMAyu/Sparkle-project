@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from datetime import timezone, datetime
-from typing import Any, Iterable
-from uuid import UUID, uuid4
+from datetime import datetime, UTC
+from typing import Any
+from collections.abc import Iterable
+from uuid import UUID
 
 from app.aurora.engine import AuroraDecisionContext, AuroraEngine
 from app.aurora.observability import record_shadow_divergence, record_shadow_hook
@@ -14,7 +15,6 @@ from app.aurora.policy_loader import load_policy_version
 from app.aurora.schemas import (
     AuroraPresenceLevel,
     DecisionBasis,
-    ImpactClass,
     SignalSnapshot,
     TransitionDecisionRecord,
     UXIntent,
@@ -55,7 +55,7 @@ class ShadowHookObservation:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize_ids(values: Iterable[str]) -> set[str]:
@@ -160,7 +160,6 @@ def build_shadow_snapshot_from_routing_input(
     snapshot_hash = hashlib.sha256(
         "|".join(
             [
-                normalized for normalized in (
                     user_id,
                     routing_input.intent,
                     str(routing_input.intent_confidence),
@@ -169,8 +168,7 @@ def build_shadow_snapshot_from_routing_input(
                     str(routing_input.procrastination_pattern),
                     str(routing_input.cognitive_mode_suggested),
                     str(routing_input.emotional_block_detected),
-                )
-            ]
+                ]
         ).encode("utf-8")
     ).hexdigest()[:16]
 

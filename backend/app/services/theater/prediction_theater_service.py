@@ -8,12 +8,12 @@ import json
 import re
 import statistics
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, UTC
 from typing import Any
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
 
-from sqlalchemy import String, and_, cast, desc, func, or_, select
+from sqlalchemy import String, cast, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
@@ -44,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _clamp(value: float, lower: float, upper: float) -> float:
@@ -347,7 +347,7 @@ class PredictionTheaterService:
                 ),
                 timeout=self.PREDICTION_TIMEOUT_SECONDS,
             )
-        except asyncio.TimeoutError as exc:
+        except TimeoutError as exc:
             raise TheaterTimeoutError() from exc
 
     async def _generate_prediction_payload(
@@ -1317,7 +1317,7 @@ class PredictionTheaterService:
                 target_date=date.today() + timedelta(days=horizon_days),
                 daily_available_minutes=int(selected_route.get("daily_minutes") or 40),
                 total_estimated_hours=max(
-                    1.0, sum((int(step.get("estimated_minutes") or 25) for step in steps)) / 60.0
+                    1.0, sum(int(step.get("estimated_minutes") or 25) for step in steps) / 60.0
                 ),
             ),
             user_id=user_id,

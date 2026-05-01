@@ -1348,4 +1348,4 @@ class NotificationCenterService:
             )
         )
         records = {record.notification_id: record for record in result.scalars().all() if record.notification_id}
-        return {notification_id: record for notification_id, record in records.items()}
+        return dict(records.items())

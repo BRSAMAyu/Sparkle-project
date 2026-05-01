@@ -16,14 +16,14 @@ Rules:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
-from enum import Enum
+from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
 
 from loguru import logger
 
 
-class VerificationStatus(str, Enum):
+class VerificationStatus(StrEnum):
     VERIFIED = "verified"
     UNVERIFIABLE = "unverifiable"
     NEEDS_DISCLAIMER = "needs_disclaimer"

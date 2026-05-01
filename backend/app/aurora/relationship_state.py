@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Any, Iterable
+from datetime import datetime, UTC
+from typing import Any
+from collections.abc import Iterable
 from uuid import UUID
 
 from app.aurora.profile_translator import build_user_correction_claim
@@ -10,7 +11,7 @@ from app.aurora.schemas import ClaimLifecycle, ClaimSource, IdentityEvidence, In
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize_text(value: str | None) -> str:

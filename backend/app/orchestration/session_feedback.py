@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from difflib import SequenceMatcher
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 from app.core.i18n import I18n
 
@@ -111,7 +111,7 @@ _CONTEXT_MARKERS = (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize(text: str | None) -> str:

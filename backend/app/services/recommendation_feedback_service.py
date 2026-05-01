@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from math import sqrt
 from typing import Any
 from uuid import UUID
@@ -28,7 +28,7 @@ from app.services.personalization.preference_service import PreferenceService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class RecommendationFeedbackService:

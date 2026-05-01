@@ -1,12 +1,12 @@
 from __future__ import annotations
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 # ============ 任务工具参数 ============
 
-class TaskType(str, Enum):
+class TaskType(StrEnum):
     LEARNING = "learning"
     TRAINING = "training"
     ERROR_FIX = "error_fix"
@@ -51,12 +51,12 @@ class BreakdownTaskParams(BaseModel):
 
 # ============ 计划工具参数 ============
 
-class PlanType(str, Enum):
+class PlanType(StrEnum):
     SPRINT = "sprint"    # 考试冲刺
     GROWTH = "growth"    # 长期成长
 
 
-class PlanStage(str, Enum):
+class PlanStage(StrEnum):
     SPRINT = "sprint"
     DAILY = "daily"
     REVIEW = "review"
@@ -129,7 +129,7 @@ class TranslateParams(BaseModel):
 
 # ============ 联网搜索工具参数 ============
 
-class WebSearchRecencyFilter(str, Enum):
+class WebSearchRecencyFilter(StrEnum):
     """搜索时间范围"""
     ONE_DAY = "oneDay"
     ONE_WEEK = "oneWeek"
@@ -137,7 +137,7 @@ class WebSearchRecencyFilter(str, Enum):
     ONE_YEAR = "oneYear"
     NO_LIMIT = "noLimit"
 
-class WebSearchContentSize(str, Enum):
+class WebSearchContentSize(StrEnum):
     """返回内容长度"""
     MEDIUM = "medium"   # 摘要信息
     HIGH = "high"       # 详细内容
@@ -145,7 +145,7 @@ class WebSearchContentSize(str, Enum):
 
 # ============ P0-3: 任务查询和修改工具参数 ============
 
-class TaskStatusFilter(str, Enum):
+class TaskStatusFilter(StrEnum):
     """任务状态筛选"""
     ALL = "all"
     PENDING = "pending"

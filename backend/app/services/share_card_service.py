@@ -7,7 +7,7 @@ import asyncio
 import math
 import random
 from dataclasses import dataclass
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from textwrap import shorten
 from typing import Any
@@ -15,7 +15,6 @@ from uuid import UUID
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from sqlalchemy import and_, select
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,7 +30,7 @@ from app.services.share_card_templates import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @dataclass(slots=True)

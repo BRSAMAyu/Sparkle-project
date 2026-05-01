@@ -20,27 +20,20 @@ from app.config import settings
 from app.core.agent_persona import build_agent_persona
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import (
-    COLLABORATION_LATENCY,
-    COLLABORATION_SUCCESS,
     EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL,
-    HITL_REQUESTED,
 )
 from app.core.metrics import (
-    ACTIVE_SESSIONS,
-    REQUEST_COUNT,
     RESPONSE_FALLBACK_GENERATED_TOTAL,
     SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,
     TOKEN_USAGE,
 )
-from app.core.pending_actions import pending_actions_store
 from app.core.task_manager import task_manager
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.execution_intent import ExecutionIntentStatus
 from app.models.galaxy import KnowledgeNode
 from app.orchestration.agent_memory import AgentMemoryService
-from app.orchestration.agent_scoring import AgentScoringService
 from app.orchestration.agent_activity import emit_agent_activity, emit_agent_turn
-from app.orchestration.chat_modes import CHAT_MODE_STANDARD, is_expert_chat_mode
+from app.orchestration.chat_modes import CHAT_MODE_STANDARD
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config
 from app.orchestration.multi_agent_adapter import execute_multi_agent_workflow
@@ -1265,12 +1258,11 @@ class ExecutionEngineMixin:
         active_tools: list[str],
         stream_callback,
         tracer,
-    ) -> tuple[TransparencyDataGenerator, "typing.Callable"]:
+    ) -> tuple[TransparencyDataGenerator, typing.Callable]:
         """Prepare transparency tracking, tools schema, and initial status.
 
         Returns (transparency_generator, emit_transparency_event).
         """
-        import typing
 
         transparency_enabled = bool(settings.TRANSPARENCY_MODE_ENABLED and settings.TRANSPARENCY_MODE_DEFAULT)
         transparency_generator = TransparencyDataGenerator(

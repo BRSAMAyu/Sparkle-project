@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Iterable
+from typing import Any
+from collections.abc import Iterable
 
 from app.aurora.schemas import AuroraPolicyVersion, DecisionBasis, SignalSnapshot
 

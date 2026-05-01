@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import JSON, Column, Enum, ForeignKey, Index, Integer, UniqueConstraint
+from sqlalchemy import JSON, Column, ForeignKey, Index, Integer, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.models.base import GUID, BaseModel

@@ -13,7 +13,6 @@ Per-type hourly quotas and cooldowns remain for directive-level rate limiting.
 
 from __future__ import annotations
 
-import json
 from typing import Any
 
 from loguru import logger

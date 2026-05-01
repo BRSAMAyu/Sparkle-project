@@ -243,7 +243,7 @@ class ContextFocusDecision:
         }
 
     @classmethod
-    def from_dict(cls, payload: dict[str, Any] | None) -> "ContextFocusDecision | None":
+    def from_dict(cls, payload: dict[str, Any] | None) -> ContextFocusDecision | None:
         if not isinstance(payload, dict):
             return None
         focus_mode = str(payload.get("focus_mode") or "").strip()

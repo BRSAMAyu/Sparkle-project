@@ -1,4 +1,4 @@
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 
 import y_py as Y
@@ -10,7 +10,7 @@ from app.models.galaxy import CRDTOperationLog, CRDTSnapshot
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CRDTPersistenceManager:

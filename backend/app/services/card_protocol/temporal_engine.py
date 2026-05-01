@@ -8,7 +8,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Any, Literal
 from uuid import UUID
 
-from sqlalchemy import and_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.card_protocol import (
@@ -293,7 +293,6 @@ class TemporalEngine:
 
         results: list[date] = []
         current = from_date
-        generated = 0
         limit = int(rule.end_value) if rule.end_condition == "count" and rule.end_value is not None else None
         hard_end = self._coerce_date(rule.end_value) if rule.end_condition == "date" else None
         phase_end = self._coerce_date((phase_card.metadata_ or {}).get("estimated_end"))

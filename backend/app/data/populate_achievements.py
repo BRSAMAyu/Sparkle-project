@@ -4,7 +4,7 @@ Populate and sync achievement definitions to database
 """
 import asyncio
 import json
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import Any
 
@@ -165,7 +165,7 @@ async def sync_achievement_definitions(db: AsyncSession) -> tuple[int, int, int]
             achievement.name_i18n = i18n_entry.get("name_i18n", {})
             achievement.description_i18n = i18n_entry.get("description_i18n", {})
 
-        achievement.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        achievement.updated_at = datetime.now(UTC).replace(tzinfo=None)
         synced_achievements += 1
 
     for data in INITIAL_GALAXY_SKINS:
@@ -177,7 +177,7 @@ async def sync_achievement_definitions(db: AsyncSession) -> tuple[int, int, int]
 
         for field in GALAXY_SKIN_SYNC_FIELDS:
             setattr(skin, field, data.get(field))
-        skin.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        skin.updated_at = datetime.now(UTC).replace(tzinfo=None)
         synced_skins += 1
 
     for data in INITIAL_VISUAL_ELEMENTS:
@@ -198,7 +198,7 @@ async def sync_achievement_definitions(db: AsyncSession) -> tuple[int, int, int]
             source_achievement_id = element.config.get("source_achievement_id")
             if source_achievement_id:
                 element.unlock_requirement = {"achievement_id": source_achievement_id}
-        element.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        element.updated_at = datetime.now(UTC).replace(tzinfo=None)
         synced_visual_elements += 1
 
     await db.commit()

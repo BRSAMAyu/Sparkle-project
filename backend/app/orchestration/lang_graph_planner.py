@@ -287,7 +287,7 @@ class LangGraphPlanner:
             }:
                 continue
             lines.append(f"- {key}: {value}")
-            
+
         cognitive_signals = planning_constraints.get("cognitive_policy_signals")
         if isinstance(cognitive_signals, list) and cognitive_signals:
             signals_header = "User cognitive and behavioral constraints (important):" if locale == "en" else "用户认知和行为约束（重点考虑）："
@@ -683,7 +683,7 @@ class LangGraphPlanner:
         id_set = set(ids)
 
         # Build in-degree map
-        in_degree: dict[str, int] = {tc_id: 0 for tc_id in ids}
+        in_degree: dict[str, int] = dict.fromkeys(ids, 0)
         children: dict[str, list[str]] = {tc_id: [] for tc_id in ids}
         has_edges = False
         for tc in tool_calls:

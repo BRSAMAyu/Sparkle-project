@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 from uuid import UUID
 
@@ -19,7 +19,7 @@ from app.services.intervention_strategy_learner import InterventionStrategyLearn
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _compact_text(value: Any, *, limit: int = 600) -> str:

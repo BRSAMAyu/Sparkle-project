@@ -12,7 +12,7 @@ User-visible: "为什么给我这个任务" → 可理解的因果卡片
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -226,7 +226,7 @@ class TimelineCardRenderer:
 
         # Build from policy/directive
         if policy_data:
-            strategy = policy_data.get("primary_strategy", "")
+            policy_data.get("primary_strategy", "")
             reason = policy_data.get("reason_for_user", "")
             if reason:
                 return reason

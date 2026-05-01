@@ -21,7 +21,7 @@ Usage:
 
 import json
 import copy
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 from uuid import UUID
 
@@ -38,7 +38,7 @@ PLAN_STATE_CACHE_PREFIX = "state:plan:"
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with existing DB columns."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PlanStateService:

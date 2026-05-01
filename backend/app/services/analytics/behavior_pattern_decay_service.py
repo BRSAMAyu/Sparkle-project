@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from uuid import UUID
 
 from sqlalchemy import select
@@ -11,7 +11,7 @@ from app.models.cognitive import BehaviorPattern
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BehaviorPatternDecayService:

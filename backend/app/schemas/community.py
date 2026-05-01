@@ -9,8 +9,8 @@ Community Schemas - 好友、群组、消息、任务相关的请求/响应模�
 
 from __future__ import annotations
 from datetime import datetime
-from enum import Enum
-from typing import Any, Literal, Optional
+from enum import StrEnum
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -19,30 +19,30 @@ from app.schemas.common import BaseSchema
 
 # ============ 枚举类型 ============
 
-class FriendshipStatusEnum(str, Enum):
+class FriendshipStatusEnum(StrEnum):
     PENDING = "pending"
     ACCEPTED = "accepted"
     BLOCKED = "blocked"
 
 
-class GroupTypeEnum(str, Enum):
+class GroupTypeEnum(StrEnum):
     SQUAD = "squad"
     SPRINT = "sprint"
 
 
-class GroupRoleEnum(str, Enum):
+class GroupRoleEnum(StrEnum):
     OWNER = "owner"
     ADMIN = "admin"
     MEMBER = "member"
 
 
-class GroupFileTrustLevelEnum(str, Enum):
+class GroupFileTrustLevelEnum(StrEnum):
     OFFICIAL = "official"
     VERIFIED = "verified"
     MEMBER = "member"
 
 
-class MessageTypeEnum(str, Enum):
+class MessageTypeEnum(StrEnum):
     TEXT = "text"
     TASK_SHARE = "task_share"
     PLAN_SHARE = "plan_share"
@@ -56,12 +56,12 @@ class MessageTypeEnum(str, Enum):
     SYSTEM = "system"
 
 
-class ReactionActionEnum(str, Enum):
+class ReactionActionEnum(StrEnum):
     ADD = "add"
     REMOVE = "remove"
 
 
-class UserStatusEnum(str, Enum):
+class UserStatusEnum(StrEnum):
     ONLINE = "online"
     OFFLINE = "offline"
     INVISIBLE = "invisible"
@@ -142,28 +142,28 @@ class FriendRecommendation(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-class FriendMatchStrategyEnum(str, Enum):
+class FriendMatchStrategyEnum(StrEnum):
     """好友/责任伙伴匹配策略"""
 
     COMPATIBILITY = "compatibility"
     COMPLEMENTARY = "complementary"
 
 
-class FriendRecommendationTargetEnum(str, Enum):
+class FriendRecommendationTargetEnum(StrEnum):
     """好友推荐目标"""
 
     FRIEND = "friend"
     ACCOUNTABILITY = "accountability"
 
 
-class RecommendationItemTypeEnum(str, Enum):
+class RecommendationItemTypeEnum(StrEnum):
     """推荐对象类型"""
 
     FRIEND = "friend"
     GROUP = "group"
 
 
-class RecommendationFeedbackStageEnum(str, Enum):
+class RecommendationFeedbackStageEnum(StrEnum):
     """推荐反馈阶段"""
 
     IMMEDIATE = "immediate"
@@ -331,7 +331,7 @@ class GroupListItem(BaseModel):
 # ============ 群组推荐 ============
 
 
-class GroupDirectorySortEnum(str, Enum):
+class GroupDirectorySortEnum(StrEnum):
     """群组目录排序方式"""
 
     HOT = "hot"
@@ -442,7 +442,7 @@ class MessageInfo(BaseSchema):
     edited_at: datetime | None = Field(default=None, description="编辑时间")
     read_by: list[UUID] | None = Field(default=None, description="已读用户ID列表")
     read_by_users: list[UserBrief] | None = Field(default=None, description="已读用户信息")
-    quoted_message: Optional['MessageInfo'] = Field(default=None, description="引用消息详情")
+    quoted_message: MessageInfo | None = Field(default=None, description="引用消息详情")
 
 
 class MessageEdit(BaseModel):
@@ -480,7 +480,7 @@ class GroupFilePermissions(BaseModel):
     manage_role: GroupRoleEnum = Field(default=GroupRoleEnum.ADMIN, description="可管理的最低角色")
 
 
-class GroupFileSortEnum(str, Enum):
+class GroupFileSortEnum(StrEnum):
     """群文件排序方式"""
 
     LATEST = "latest"
@@ -713,7 +713,7 @@ class GroupFlameStatus(BaseModel):
 
 # ============ 共享资源 Schemas ============
 
-class SharedResourceTypeEnum(str, Enum):
+class SharedResourceTypeEnum(StrEnum):
     PLAN = "plan"
     TASK = "task"
     KNOWLEDGE_NODE = "knowledge_node"
@@ -816,7 +816,7 @@ class PrivateMessageInfo(BaseSchema):
     edited_at: datetime | None = Field(default=None, description="编辑时间")
     is_read: bool = Field(description="是否已读")
     read_at: datetime | None = Field(description="阅读时间")
-    quoted_message: Optional['PrivateMessageInfo'] = Field(default=None, description="引用消息详情")
+    quoted_message: PrivateMessageInfo | None = Field(default=None, description="引用消息详情")
 
 # Handle recursive references
 MessageInfo.model_rebuild()
@@ -855,7 +855,7 @@ class EncryptedMessageSend(BaseModel):
 
 # ============ 举报相关 Schemas ============
 
-class ReportReasonEnum(str, Enum):
+class ReportReasonEnum(StrEnum):
     SPAM = "spam"
     HARASSMENT = "harassment"
     VIOLENCE = "violence"
@@ -864,14 +864,14 @@ class ReportReasonEnum(str, Enum):
     OTHER = "other"
 
 
-class ReportStatusEnum(str, Enum):
+class ReportStatusEnum(StrEnum):
     PENDING = "pending"
     REVIEWED = "reviewed"
     DISMISSED = "dismissed"
     ACTIONED = "actioned"
 
 
-class ModerationActionEnum(str, Enum):
+class ModerationActionEnum(StrEnum):
     WARN = "warn"
     MUTE = "mute"
     KICK = "kick"
@@ -984,7 +984,7 @@ class MemberWarnRequest(BaseModel):
 
 # ============ 离线队列相关 Schemas ============
 
-class OfflineMessageStatusEnum(str, Enum):
+class OfflineMessageStatusEnum(StrEnum):
     PENDING = "pending"
     SENT = "sent"
     FAILED = "failed"
@@ -1047,7 +1047,7 @@ class BlockUserInfo(BaseSchema):
     reason: str | None = Field(default=None, description="拉黑原因")
 
 
-class SearchVisibilityEnum(str, Enum):
+class SearchVisibilityEnum(StrEnum):
     """搜索可见性设置"""
     EVERYONE = "everyone"
     FRIENDS = "friends"

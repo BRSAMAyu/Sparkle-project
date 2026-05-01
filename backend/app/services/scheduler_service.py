@@ -4,7 +4,7 @@ Phase: <sense|clarify|plan|execute|reflect|reinforce|adapt|none>
 Stage: <首次引入 Stage 号>
 """
 
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from loguru import logger
@@ -27,7 +27,7 @@ from app.services.execution_schedule_service import ExecutionScheduleService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class SchedulerService:

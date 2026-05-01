@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from uuid import UUID
 
 from sqlalchemy import select
@@ -21,7 +21,7 @@ def _default_weights() -> dict[str, float]:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class MemoryRankPolicyService:

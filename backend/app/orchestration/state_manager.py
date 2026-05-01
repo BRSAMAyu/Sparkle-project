@@ -10,8 +10,8 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import asdict, dataclass
-from datetime import timezone, datetime
-from typing import TYPE_CHECKING, Any, Optional
+from datetime import datetime, UTC
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
@@ -52,12 +52,12 @@ class FSMState:
         return json.dumps(asdict(self), ensure_ascii=False)
 
     @classmethod
-    def from_json(cls, data: str) -> 'FSMState':
+    def from_json(cls, data: str) -> FSMState:
         return cls(**json.loads(data))
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class SessionStateManager:
@@ -329,7 +329,7 @@ class SessionStateManager:
                 try:
                     await asyncio.wait_for(stop_event.wait(), timeout=interval)
                     break  # 收到停止信号，退出循环
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     # 超时，执行续期
                     pass
 
@@ -378,9 +378,9 @@ class SessionStateManager:
         task.cancel()
         try:
             await asyncio.wait_for(task, timeout=2.0)
-        except (asyncio.TimeoutError, asyncio.CancelledError):
+        except (TimeoutError, asyncio.CancelledError):
             pass
-        logger.debug(f"Stopped lock renewal task")
+        logger.debug("Stopped lock renewal task")
 
     async def cache_response(self, session_id: str, request_id: str, response: dict[str, Any], ttl: int = 300) -> bool:
         """
@@ -577,7 +577,7 @@ class SessionStateManager:
         user_id: UUID,
         task_context: dict[str, Any],
         db_session=None,
-        plan_matching_service: Optional['PlanMatchingService'] = None
+        plan_matching_service: PlanMatchingService | None = None
     ) -> UUID | None:
         """
         根据任务上下文自动切换计划

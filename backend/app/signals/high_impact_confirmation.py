@@ -14,7 +14,7 @@ No-action signal is noise; no-audit directive is hallucination.
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from loguru import logger

@@ -4,7 +4,7 @@ Error book signal processor - infer preferences from error book patterns.
 from __future__ import annotations
 
 from collections import Counter
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from uuid import UUID
 
 from loguru import logger
@@ -18,7 +18,7 @@ from app.services.signal_adaptation import recency_weight
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ErrorBookSignalProcessor:

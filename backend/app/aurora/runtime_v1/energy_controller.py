@@ -12,10 +12,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-from loguru import logger
 
 from app.aurora.runtime_v1.state import AuroraEnergyState, AuroraEnergyStore
-from app.signals.types import _uid
 
 
 def _utcnow() -> datetime:

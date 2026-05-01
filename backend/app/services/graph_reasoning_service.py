@@ -406,7 +406,7 @@ class GraphReasoningService:
         if not include_related_suggestions and not selected_related_node_ids:
             return []
 
-        selected_set = set(selected_related_node_ids)
+        set(selected_related_node_ids)
         suggested_candidates: list[tuple[UUID, str | None]] = []
         if include_related_suggestions:
             suggested_candidates = await self._suggest_related_candidates(
@@ -415,7 +415,7 @@ class GraphReasoningService:
                 mastered_ids=mastered_ids,
             )
 
-        suggested_map = {node_id: relation_type for node_id, relation_type in suggested_candidates}
+        suggested_map = dict(suggested_candidates)
         ordered_related_ids: list[UUID] = []
 
         for node_id in selected_related_node_ids:

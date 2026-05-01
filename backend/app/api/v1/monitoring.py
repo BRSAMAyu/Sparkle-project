@@ -4,7 +4,7 @@ Provides endpoints for monitoring WebSocket connection status and health.
 Also includes device token management for push notifications.
 """
 from __future__ import annotations
-from datetime import timezone
+from datetime import UTC
 
 from uuid import UUID
 
@@ -251,7 +251,7 @@ async def register_device(
             device = result.scalar_one_or_none()
 
             from datetime import datetime
-            now = datetime.now(timezone.utc)
+            now = datetime.now(UTC)
 
             if device:
                 # 更新现有设备

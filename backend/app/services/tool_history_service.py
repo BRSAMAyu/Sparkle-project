@@ -12,7 +12,8 @@ from __future__ import annotations
 import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Any, Awaitable, Callable
+from typing import Any
+from collections.abc import Awaitable, Callable
 
 from loguru import logger
 from sqlalchemy import Integer, and_, desc, event, func, select

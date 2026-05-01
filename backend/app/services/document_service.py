@@ -5,13 +5,13 @@ import os
 import re
 import tempfile
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 from uuid import UUID
 
 from fastapi import HTTPException
 from loguru import logger
-from sqlalchemy import desc, func, select, update
+from sqlalchemy import desc, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -20,7 +20,6 @@ from app.core.cache import cache_service
 from app.core.ingestion.ingestion_service import ingestion_service
 from app.models.document_feedback import DocumentRetrievalFeedback
 from app.models.file_storage import StoredFile
-from app.models.galaxy import KnowledgeNode
 
 
 @dataclass
@@ -693,7 +692,7 @@ class DocumentService:
             "user_id": str(user_id),
             "query": query,
             "query_type": self._normalize_query_type(query_type),
-            "captured_at": datetime.now(timezone.utc).isoformat(),
+            "captured_at": datetime.now(UTC).isoformat(),
             "citations": citations,
         }
         await cache_service.set(

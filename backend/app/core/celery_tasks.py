@@ -15,6 +15,7 @@ Celery 任务模块 - 任务包装器
 from loguru import logger
 
 from app.core.celery_app import _run_async, celery_app
+from datetime import UTC
 
 
 def _notification_data_matches(actual, expected) -> bool:
@@ -593,7 +594,6 @@ def run_push_policy_scheduler(self):
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.generate_weekly_growth_digests")
 def generate_weekly_growth_digests(self, limit: int = 200, deliver: bool = False):
     """Generate weekly growth digests, optionally delivering them immediately."""
-    import asyncio
 
     from app.core.cache import cache_service
     from app.db.session import AsyncSessionLocal
@@ -616,7 +616,6 @@ def generate_weekly_growth_digests(self, limit: int = 200, deliver: bool = False
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.deliver_weekly_growth_digests")
 def deliver_weekly_growth_digests(self, limit: int = 200):
     """Deliver stored weekly growth digests for active users."""
-    import asyncio
 
     from app.core.cache import cache_service
     from app.db.session import AsyncSessionLocal
@@ -1070,7 +1069,6 @@ def schedule_push_notification(self, user_id: str, intervention_id: str, payload
     Schedule a push notification delivery to the mobile app (APNs/FCM).
     This acts as the PUSH delivery channel for InterventionRecords.
     """
-    import asyncio
 
     async def _send():
         # In a real system, this would call APNs/FCM APIs.
@@ -1660,7 +1658,7 @@ def scan_comeback_nudges(self, limit: int = 500):
     """
     G22: 每日扫描所有用户，为至少 3 天未活跃且有活跃计划的用户派发 comeback_nudge_task。
     """
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from sqlalchemy import and_, select
 
@@ -1672,7 +1670,7 @@ def scan_comeback_nudges(self, limit: int = 500):
 
     async def _run():
         async with AsyncSessionLocal() as session:
-            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=COMEBACK_THRESHOLD_DAYS)
+            cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=COMEBACK_THRESHOLD_DAYS)
 
             # Users who are active but haven't logged in for > threshold days,
             # and have at least one active plan with a target_date
@@ -2206,7 +2204,7 @@ def scan_recall_notifications(self, limit: int = 500):
     Runs every 30 minutes via Celery beat.
     """
     import json
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from sqlalchemy import and_, select
 
@@ -2218,7 +2216,7 @@ def scan_recall_notifications(self, limit: int = 500):
 
     async def _run():
         async with AsyncSessionLocal() as session:
-            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=7)
+            cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=7)
             active_plan_users = (
                 select(Plan.user_id)
                 .where(
@@ -2323,7 +2321,7 @@ def scan_spine_snapshots(self, limit: int = 500):
 
     Runs daily via Celery beat to ensure long-term stability.
     """
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
 
     from sqlalchemy import and_, select
 
@@ -2333,7 +2331,7 @@ def scan_spine_snapshots(self, limit: int = 500):
 
     async def _run():
         async with AsyncSessionLocal() as session:
-            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=30)
+            cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=30)
             active_plan_users = (
                 select(Plan.user_id)
                 .where(
@@ -2498,7 +2496,6 @@ def scan_community_cohort_signals(self, limit: int = 200):
 
     async def _run():
         from app.core.redis_client import get_redis
-        import json
 
         redis = get_redis()
         # Find users with active Spine state (recently interacted)

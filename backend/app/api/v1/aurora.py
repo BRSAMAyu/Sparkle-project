@@ -11,7 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_superuser, get_current_user, get_db
 from app.aurora.core_session import AuroraCoreSessionService
-from app.aurora.predicted_reply_engine import PredictedReplyOptionEngine
 from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
 from app.aurora.runtime_v1.state import AuroraEnergyStore
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService

@@ -3,7 +3,7 @@
 """
 from __future__ import annotations
 from dataclasses import dataclass
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from uuid import UUID
 
 from sqlalchemy import nullsfirst, select
@@ -25,7 +25,7 @@ class TaskRecommendation:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class TaskRecommendationService:

@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 import re
 from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -42,7 +42,7 @@ if TYPE_CHECKING:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _as_dict(value: Any) -> dict[str, Any]:
@@ -1384,7 +1384,7 @@ class AdaptiveReplanner:
         self,
         user_id: UUID,
         plan_id: UUID,
-        feedback: "PlanExecutionFeedback",
+        feedback: PlanExecutionFeedback,
     ) -> list[AdaptationRecord]:
         """Handle feedback from DAG plan execution.
 
@@ -2043,8 +2043,8 @@ class AdaptiveReplanner:
 
     async def _increment_struggle_streak(
         self,
-        user_id: "UUID",
-        plan_id: "UUID",
+        user_id: UUID,
+        plan_id: UUID,
         state: Any,
     ) -> int:
         adaptive_meta = dict(((state.facts or {}).get("adaptive_meta")) or {})
@@ -2076,9 +2076,9 @@ class AdaptiveReplanner:
         except Exception:
             return False
         if last_time.tzinfo is None:
-            last_time = last_time.replace(tzinfo=timezone.utc)
+            last_time = last_time.replace(tzinfo=UTC)
         else:
-            last_time = last_time.astimezone(timezone.utc)
+            last_time = last_time.astimezone(UTC)
         return _utcnow() - last_time < cooldown
 
     def _build_feedback_entry(
@@ -2280,7 +2280,7 @@ class AdaptiveReplanner:
     def _build_execution_revision_summary(
         self,
         *,
-        feedback: "PlanExecutionFeedback",
+        feedback: PlanExecutionFeedback,
         outcome_learning: dict[str, Any] | None = None,
     ) -> PlanRevisionSummary:
         learning = outcome_learning if isinstance(outcome_learning, dict) else {}
@@ -2391,7 +2391,7 @@ class AdaptiveReplanner:
         if not state:
             return []
         facts = dict(state.facts or {})
-        adaptive_meta = dict((facts.get("adaptive_meta") or {}))
+        adaptive_meta = dict(facts.get("adaptive_meta") or {})
         snapshots = list(adaptive_meta.get("adjustment_snapshots") or [])
         active_snapshot_id = str(adaptive_meta.get("active_snapshot_id") or "").strip()
         if not snapshots or not active_snapshot_id:
@@ -2693,8 +2693,8 @@ class AdaptiveReplanner:
             except (TypeError, ValueError):
                 return None
         if parsed.tzinfo is None:
-            return parsed.replace(tzinfo=timezone.utc)
-        return parsed.astimezone(timezone.utc)
+            return parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
 
     async def _enqueue_adaptation_update(
         self,

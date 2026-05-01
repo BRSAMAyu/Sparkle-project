@@ -351,7 +351,6 @@ class SourceEffectivenessTracker:
         self,
         user_id: str,
     ) -> list[dict[str, Any]]:
-        import json
 
         idx_key = _SOURCE_EFFECT_INDEX.format(user_id=user_id)
         source_ids = await self.redis.smembers(idx_key)

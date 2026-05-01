@@ -10,7 +10,7 @@ promotion and deprecation.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 from loguru import logger
@@ -278,7 +278,7 @@ class SkillLifecycleManager:
 
     @staticmethod
     def _now() -> str:
-        return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        return datetime.now(UTC).isoformat().replace("+00:00", "Z")
 
     @staticmethod
     def _parse_datetime(value: Any) -> datetime | None:
@@ -290,8 +290,8 @@ class SkillLifecycleManager:
         except ValueError:
             return None
         if parsed.tzinfo is None:
-            return parsed.replace(tzinfo=timezone.utc)
-        return parsed.astimezone(timezone.utc)
+            return parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
 
     @staticmethod
     def _clamp(value: float) -> float:
@@ -358,7 +358,7 @@ class SkillLifecycleManager:
         parsed = cls._parse_datetime(timestamp)
         if parsed is None:
             return False
-        age = datetime.now(timezone.utc) - parsed
+        age = datetime.now(UTC) - parsed
         return age.days >= _STALE_DAYS
 
     @classmethod

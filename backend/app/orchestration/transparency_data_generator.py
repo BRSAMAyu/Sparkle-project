@@ -10,13 +10,13 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from loguru import logger
 
 
-class StepType(str, Enum):
+class StepType(StrEnum):
     """Transparency step types matching frontend"""
     THINKING = "thinking"
     GENERATING = "generating"
@@ -28,7 +28,7 @@ class StepType(str, Enum):
     LLM_INFERENCE = "generating"
 
 
-class StepStatus(str, Enum):
+class StepStatus(StrEnum):
     """Step status matching frontend"""
     PENDING = "pending"
     IN_PROGRESS = "in_progress"

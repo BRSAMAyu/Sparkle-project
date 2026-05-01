@@ -1,20 +1,20 @@
 from __future__ import annotations
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class InterventionLevel(str, Enum):
+class InterventionLevel(StrEnum):
     SILENT_MARKER = "SILENT_MARKER"
     TOAST = "TOAST"
     CARD = "CARD"
     FULL_SCREEN_MODAL = "FULL_SCREEN_MODAL"
 
 
-class InterventionStatus(str, Enum):
+class InterventionStatus(StrEnum):
     PENDING = "pending"
     DELIVERED = "delivered"
     DEGRADED = "degraded"
@@ -23,7 +23,7 @@ class InterventionStatus(str, Enum):
     RETRACTED = "retracted"
 
 
-class InterventionFeedbackType(str, Enum):
+class InterventionFeedbackType(StrEnum):
     ACCEPT = "accept"
     SNOOZE = "snooze"
     REJECT = "reject"

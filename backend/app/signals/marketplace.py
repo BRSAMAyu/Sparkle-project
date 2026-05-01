@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 
@@ -25,7 +25,7 @@ def _uid(prefix: str = "") -> str:
 
 
 def _utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -204,7 +204,7 @@ class MarketplaceIronLaws:
         if card.last_validated_at:
             try:
                 last = datetime.fromisoformat(card.last_validated_at.replace("Z", "+00:00"))
-                days_stale = (datetime.now(timezone.utc) - last).days
+                days_stale = (datetime.now(UTC) - last).days
                 if days_stale > cls.LAW_MAX_STALE_DAYS:
                     violations.append(IronLawViolation(
                         law_id="ML-3", law_name="staleness",
@@ -527,7 +527,7 @@ class MarketplaceRegistry:
             "abandoned": abandoned,
             "success_rate": round(successful / max(len(records), 1), 3),
             "recent_adoptions": len([r for r in records
-                if (datetime.now(timezone.utc) - datetime.fromisoformat(
+                if (datetime.now(UTC) - datetime.fromisoformat(
                     r.adopted_at.replace("Z", "+00:00"))).days < 30]),
         }
 

@@ -1,4 +1,3 @@
-import asyncio
 from collections.abc import AsyncGenerator
 
 from fastapi import HTTPException
@@ -93,7 +92,7 @@ class OpenAICompatibleProvider(LLMProvider):
                 )
                 await llm_concurrency.report_success(provider)
                 return response.choices[0].message.content or ""
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(f"[LLMConcurrency] Timeout acquiring semaphore for {provider}")
             raise HTTPException(status_code=503, detail="LLM service is busy, please try again")
         except APIError as e:
@@ -129,7 +128,7 @@ class OpenAICompatibleProvider(LLMProvider):
                     if content:
                         yield content
                 await llm_concurrency.report_success(provider)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(f"[LLMConcurrency] Timeout acquiring semaphore for {provider}")
             yield ""
             return

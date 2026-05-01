@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import math
 import re
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 
@@ -67,7 +67,7 @@ from app.services.node_sector_service import NodeSectorService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 SPRINT_NODE_UUID_NAMESPACE = uuid5(NAMESPACE_URL, "sparkle:sprint-pack-node")
@@ -2376,7 +2376,7 @@ class GalaxyService:
         try:
             from app.models.error_book import ErrorRecord
 
-            cutoff = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=days)
+            cutoff = datetime.now(UTC).replace(tzinfo=None) - timedelta(days=days)
             result = await self.db.execute(
                 select(ErrorRecord.linked_knowledge_node_ids)
                 .where(ErrorRecord.user_id == user_id)
@@ -3061,7 +3061,7 @@ class GalaxyService:
             if dt is None:
                 return None
             if dt.tzinfo is not None:
-                return dt.astimezone(timezone.utc).replace(tzinfo=None)
+                return dt.astimezone(UTC).replace(tzinfo=None)
             return dt
 
         node_id = await self._resolve_mastery_node_id(node_id, create_missing=True)

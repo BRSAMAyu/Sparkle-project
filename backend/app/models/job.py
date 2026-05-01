@@ -10,14 +10,14 @@ from sqlalchemy.orm import relationship
 from app.models.base import GUID, BaseModel
 
 
-class JobType(str, enum.Enum):
+class JobType(enum.StrEnum):
     """任务类型枚举"""
     GENERATE_TASKS = "generate_tasks"       # 生成任务
     EXECUTE_ACTIONS = "execute_actions"     # 执行Action
     ANALYZE_ERROR = "analyze_error"         # 错误分析
     GENERATE_PLAN = "generate_plan"         # 生成计划
 
-class JobStatus(str, enum.Enum):
+class JobStatus(enum.StrEnum):
     """任务状态枚举"""
     PENDING = "pending"       # 等待中
     RUNNING = "running"       # 执行中

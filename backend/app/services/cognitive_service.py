@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import json
-from datetime import timedelta, timezone, datetime
+from datetime import timedelta, datetime, UTC
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -30,7 +30,7 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 _VECTOR_RUNTIME_ENABLED = True
@@ -419,7 +419,7 @@ class CognitiveService:
                                     hyde_fragments = []
                                 else:
                                     raise
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         hyde_cancelled = True
                     except Exception as e:
                         logger.warning(f"HyDE retrieval failed: {e}")

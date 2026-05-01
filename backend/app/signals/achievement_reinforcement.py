@@ -16,7 +16,7 @@ Stage: Signal-to-Action Spine P1-1 AchievementReinforcementConsumer
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from loguru import logger

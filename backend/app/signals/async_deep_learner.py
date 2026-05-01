@@ -326,7 +326,6 @@ class AsyncDeepLearner:
 
         Identifies strategies that consistently produce positive outcomes.
         """
-        from collections import Counter
 
         if not strategy_history:
             return self._empty_candidate("skill_candidate", user_id)

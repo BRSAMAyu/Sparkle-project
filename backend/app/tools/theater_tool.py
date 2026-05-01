@@ -37,7 +37,7 @@ class LaunchPredictionTool(BaseTool):
             if params.target_node_id:
                 try:
                     target_node_uuid = UUID(params.target_node_id)
-                except (TypeError, ValueError) as exc:
+                except (TypeError, ValueError):
                     return ToolResult(
                         success=False,
                         tool_name=self.name,

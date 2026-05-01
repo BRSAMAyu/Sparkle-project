@@ -469,7 +469,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
                 ),
                 timeout=_EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 "Explicit expert collaboration timed out for expert=%s after %.1fs",
                 expert_id,
@@ -593,7 +593,7 @@ async def _execute_explicit_expert_collaboration(state: WorkflowState) -> Collab
             ),
             timeout=_EXPLICIT_COLLAB_LLM_TIMEOUT_SECONDS,
         )
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning(
             "Explicit expert collaboration synthesis timed out for target=%s after %.1fs",
             synthesis_target,

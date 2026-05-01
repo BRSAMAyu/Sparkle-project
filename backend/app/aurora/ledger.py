@@ -4,16 +4,17 @@ import argparse
 import json
 import hashlib
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
+from collections.abc import Iterable
 from uuid import UUID, uuid4
 
 from app.aurora.schemas import ClaimLifecycle, ClaimSource, InsightClaim, ProbeOutcome, ProjectionPolicy
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _json_safe(value: Any) -> Any:
@@ -53,7 +54,7 @@ class AppendOnlyLedgerStore:
         self._records: list[dict[str, Any]] = [dict(item) for item in (records or [])]
 
     @classmethod
-    def load(cls, storage_path: str | Path) -> "AppendOnlyLedgerStore":
+    def load(cls, storage_path: str | Path) -> AppendOnlyLedgerStore:
         path = Path(storage_path)
         if not path.exists():
             return cls(storage_path=path)
@@ -170,7 +171,7 @@ class AppendOnlyLedgerStore:
         except ValueError:
             return None
         if parsed.tzinfo is not None:
-            parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+            parsed = parsed.astimezone(UTC).replace(tzinfo=None)
         return parsed
 
 

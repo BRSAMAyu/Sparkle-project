@@ -4,7 +4,7 @@ Shop System Models
 商城系统数据模型 - 包含商城物品、购买记录、光子交易历史、用户消耗品
 """
 import enum
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
@@ -13,10 +13,10 @@ from app.models.base import GUID, BaseModel
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
-class PhotonTransactionType(str, enum.Enum):
+class PhotonTransactionType(enum.StrEnum):
     """光子交易类型"""
     GRANT_ACHIEVEMENT = "grant_achievement"       # 成就奖励
     GRANT_DAILY_FIRST = "grant_daily_first"       # 每日首胜
@@ -31,7 +31,7 @@ class PhotonTransactionType(str, enum.Enum):
     ADMIN_ADJUSTMENT = "admin_adjustment"         # 管理员调整
 
 
-class ShopItemType(str, enum.Enum):
+class ShopItemType(enum.StrEnum):
     """商城物品类型"""
     SKIN = "skin"           # 皮肤
     TITLE = "title"         # 称号
@@ -40,7 +40,7 @@ class ShopItemType(str, enum.Enum):
     VISUAL_ELEMENT = "visual_element"  # 视觉元素（背景、粒子、特效）
 
 
-class ItemRarity(str, enum.Enum):
+class ItemRarity(enum.StrEnum):
     """物品稀有度"""
     COMMON = "common"       # 普通 (灰/白)
     RARE = "rare"           # 稀有 (蓝)
@@ -48,7 +48,7 @@ class ItemRarity(str, enum.Enum):
     LEGENDARY = "legendary" # 传说 (金/橙)
 
 
-class ConsumableEffectType(str, enum.Enum):
+class ConsumableEffectType(enum.StrEnum):
     """消耗品效果类型"""
     EXP_BOOST = "exp_boost"           # 经验加成
     PHOTON_BOOST = "photon_boost"     # 光子加成

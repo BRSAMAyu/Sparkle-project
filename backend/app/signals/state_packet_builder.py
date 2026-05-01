@@ -25,7 +25,6 @@ from app.signals.types import (
     ActionableStatePacket,
     ExecutionDirective,
     StateEntry,
-    _uid,
 )
 
 

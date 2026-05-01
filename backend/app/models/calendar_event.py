@@ -3,7 +3,6 @@
 Calendar Event Model - 日历事件系统
 """
 
-from datetime import timezone, datetime
 
 from sqlalchemy import (
     JSON,

@@ -11,7 +11,7 @@ Handles version conflict detection and resolution for plans:
 P1 Priority: 版本冲突检测增强
 """
 from dataclasses import dataclass, field
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any, Literal
 from uuid import UUID
 
@@ -80,7 +80,7 @@ class ReplanResult:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class VersionConflictService:

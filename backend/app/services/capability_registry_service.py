@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 
 from app.config import settings
@@ -11,7 +11,7 @@ from app.services.five_layer_learning_contract import DEFAULT_FIVE_LAYER_CONTRAC
 
 
 def _utcnow() -> str:
-    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    return datetime.now(UTC).replace(tzinfo=None).isoformat()
 
 
 class CapabilityRegistryService:

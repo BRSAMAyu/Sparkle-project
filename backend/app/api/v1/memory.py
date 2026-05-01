@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/memory", tags=["memory"])
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _ensure_memory_panel_enabled() -> None:

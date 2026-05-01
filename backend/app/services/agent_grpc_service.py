@@ -15,7 +15,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 import grpc
 from google.protobuf.json_format import MessageToDict
@@ -48,7 +48,7 @@ from app.services.progress_narrative_service import ProgressNarrativeService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _grpc_status_for_chat_error(error_code: int) -> grpc.StatusCode:
@@ -96,7 +96,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         service = "agent_grpc_service"
 
         if not response.HasField("event_time"):
-            response.event_time.FromDatetime(datetime.now(timezone.utc))
+            response.event_time.FromDatetime(datetime.now(UTC))
             PROTO_FIELD_READ_TOTAL.labels(service=service, field="chat_response.event_time", source="defaulted").inc()
         else:
             PROTO_FIELD_READ_TOTAL.labels(service=service, field="chat_response.event_time", source="new").inc()
@@ -248,7 +248,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     full_text="（系统提示）当前未生成有效回复，请稍后重试。",
                     finish_reason=agent_service_pb2.STOP,
                 )
-                fallback.event_time.FromDatetime(datetime.now(timezone.utc))
+                fallback.event_time.FromDatetime(datetime.now(UTC))
                 yield fallback
 
             logger.info(f"StreamChat completed for trace={trace_id}")
@@ -289,7 +289,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 ),
                 finish_reason=agent_service_pb2.ERROR,
             )
-            response.event_time.FromDatetime(datetime.now(timezone.utc))
+            response.event_time.FromDatetime(datetime.now(UTC))
             yield response
 
     async def SubmitResponseFeedback(

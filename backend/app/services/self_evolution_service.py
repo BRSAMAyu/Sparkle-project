@@ -5,14 +5,14 @@ import importlib.util
 import json
 import math
 from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from pathlib import Path
 from statistics import mean
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.business_metrics import (
@@ -24,13 +24,13 @@ from app.core.business_metrics import (
 from app.core.i18n import I18n
 from app.models.chat import ChatMessage, MessageRole
 from app.models.cognitive import BehaviorPattern
-from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
+from app.models.memory import MemoryPreference
 from app.models.task import Task, TaskStatus
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _week_bucket(value: datetime | None = None) -> str:

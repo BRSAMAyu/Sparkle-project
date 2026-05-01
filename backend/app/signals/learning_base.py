@@ -15,7 +15,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from loguru import logger
 
 
 @dataclass
@@ -267,10 +266,9 @@ class LearningBase:
             return []
 
     def check_skill_promotion_eligibility(
-        self, beliefs: list[StrategyBelief], skill: "SkillEntry",
+        self, beliefs: list[StrategyBelief], skill: SkillEntry,
     ) -> dict[str, Any]:
         """Check if a skill's underlying strategy belief supports promotion."""
-        from app.signals.types import SkillEntry as SE
         belief_map = {b.strategy_key: b for b in beliefs}
         source_key = skill.source_policy_key
         belief = belief_map.get(source_key)

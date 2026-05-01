@@ -1,6 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel
@@ -8,7 +8,7 @@ from pydantic import BaseModel
 TOOL_RUNTIME_CONTEXT_KEY = "tool_runtime_context"
 
 
-class ToolCategory(str, Enum):
+class ToolCategory(StrEnum):
     """工具分类"""
 
     TASK = "task"

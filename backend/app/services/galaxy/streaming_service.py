@@ -4,7 +4,7 @@ GalaxyStreamingService - 知识星图实时推送服务
 通过WebSocket向用户推送知识星图的实时更新
 """
 from __future__ import annotations
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 from uuid import UUID
 
@@ -15,7 +15,7 @@ from app.core.websocket import ConnectionManager
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GalaxyStreamingService:

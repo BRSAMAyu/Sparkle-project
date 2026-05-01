@@ -6,7 +6,6 @@ Stage: <首次引入 Stage 号>
 
 from __future__ import annotations
 import asyncio
-import json
 import re
 from types import SimpleNamespace
 from typing import Any
@@ -454,7 +453,7 @@ class GenerateTasksForPlanTool(BaseTool):
                     },
                     {
                         "title": f"定位 {topic_name} 易错点",
-                        "description": f"回顾练习结果，记录最容易混淆的概念、公式或步骤，并补齐对应薄弱点。",
+                        "description": "回顾练习结果，记录最容易混淆的概念、公式或步骤，并补齐对应薄弱点。",
                         "type": "error_fix",
                         "estimated_minutes": min(max_session_minutes, 20),
                         "priority": 4,

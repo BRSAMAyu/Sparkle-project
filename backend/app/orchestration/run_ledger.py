@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import json
-import time
 import uuid
 from copy import deepcopy
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 
 from loguru import logger
@@ -18,7 +17,7 @@ from app.core.metrics import (
 
 
 def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    return datetime.now(UTC).replace(tzinfo=None).isoformat()
 
 
 def _safe_json_loads(raw: str | bytes | None, default: Any) -> Any:

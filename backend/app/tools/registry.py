@@ -7,7 +7,6 @@ Tool Registry - 统一工具注册表
 推荐使用: from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 """
 from __future__ import annotations
-from typing import Optional
 
 from .base import BaseTool, ToolCategory
 
@@ -19,7 +18,7 @@ class ToolRegistry:
     此类提供向后兼容的接口，内部委托给 DynamicToolRegistry。
     所有工具由 DynamicToolRegistry 自动从 app.tools 包发现。
     """
-    _instance: Optional["ToolRegistry"] = None
+    _instance: ToolRegistry | None = None
     _dynamic_registry = None
 
     def __new__(cls):

@@ -14,14 +14,14 @@ from app.models.base import GUID, BaseModel
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
-class PlanType(str, enum.Enum):
+class PlanType(enum.StrEnum):
     """计划类型枚举"""
 
     SPRINT = "sprint"  # 冲刺计划(短期考试)
     GROWTH = "growth"  # 成长计划(长期技能)
 
 
-class PlanPriority(str, enum.Enum):
+class PlanPriority(enum.StrEnum):
     """计划优先级枚举"""
 
     CRITICAL = "critical"  # 紧急/截止日期临近
@@ -30,7 +30,7 @@ class PlanPriority(str, enum.Enum):
     LOW = "low"  # 低优先级
 
 
-class PlanStage(str, enum.Enum):
+class PlanStage(enum.StrEnum):
     """计划阶段枚举"""
 
     SPRINT = "sprint"
@@ -39,7 +39,7 @@ class PlanStage(str, enum.Enum):
     PAUSED = "paused"
 
 
-class PlanStatus(str, enum.Enum):
+class PlanStatus(enum.StrEnum):
     """计划状态枚举"""
 
     DRAFT = "draft"  # 草稿

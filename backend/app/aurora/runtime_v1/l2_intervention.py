@@ -22,7 +22,6 @@ from typing import Any
 
 from loguru import logger
 
-from app.signals.types import ActionableSignal, _uid
 
 # Minimum interval between L2 interventions for the same pattern (seconds)
 _L2_COOLDOWN_SECONDS = 3600  # 1 hour

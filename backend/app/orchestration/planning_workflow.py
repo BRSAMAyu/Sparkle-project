@@ -4206,7 +4206,7 @@ class PlanningWorkflowManager:
                     "node_labels": high_yield_labels,
                     "why_now": f"明天就考试了，先把 {high_yield_summary} 这些高频高收益节点压成可提取的闭卷输出，比开新章节更值分。",
                     "output_action": f"闭卷速览 {high_yield_summary}，每个点至少说出 1 个关键判断或流程。",
-                    "success_criteria": f"至少 4 个高频节点能闭卷提取，并明确今天不再开新章节。",
+                    "success_criteria": "至少 4 个高频节点能闭卷提取，并明确今天不再开新章节。",
                     "recommended_actions": [
                         _strip(item.get("recommended_action"))
                         for item in focus_nodes[:3]

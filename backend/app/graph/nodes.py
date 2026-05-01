@@ -28,7 +28,7 @@ class GraphNode:
     order_index: int = 0
 
     @classmethod
-    def from_config(cls, config: NodeConfig, order_index: int = 0) -> "GraphNode":
+    def from_config(cls, config: NodeConfig, order_index: int = 0) -> GraphNode:
         return cls(config=config, order_index=order_index)
 
     @property
@@ -62,7 +62,7 @@ class GraphNode:
             )
             for trigger_name, target in self.config.transition_triggers.items()
         ]
-        return tuple([*backbone_edges, *trigger_edges])
+        return (*backbone_edges, *trigger_edges)
 
     def has_neighbor(self, node_id: str) -> bool:
         return node_id in self.config.neighbors

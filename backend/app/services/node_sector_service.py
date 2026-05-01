@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import math
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 from uuid import UUID
 
@@ -19,7 +19,7 @@ from app.services.llm_service import get_llm_service, get_llm_service_for_specif
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 SECTOR_ORDER: tuple[SectorCode, ...] = (
@@ -592,8 +592,4 @@ def _hex_to_rgb(color: str) -> tuple[int, int, int]:
 
 
 def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
-    return "#{:02X}{:02X}{:02X}".format(
-        max(0, min(255, rgb[0])),
-        max(0, min(255, rgb[1])),
-        max(0, min(255, rgb[2])),
-    )
+    return f"#{max(0, min(255, rgb[0])):02X}{max(0, min(255, rgb[1])):02X}{max(0, min(255, rgb[2])):02X}"

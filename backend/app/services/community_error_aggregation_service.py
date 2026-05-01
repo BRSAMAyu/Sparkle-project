@@ -1,8 +1,6 @@
 """Aggregate anonymous community error patterns and annotate knowledge nodes."""
 from __future__ import annotations
 
-import json
-from collections import Counter
 from datetime import datetime, timedelta
 from uuid import UUID
 

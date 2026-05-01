@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 from uuid import UUID
 
@@ -19,7 +19,7 @@ from app.services.plan_state_service import PlanStateService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _parse_dt(value: Any) -> datetime | None:
@@ -34,7 +34,7 @@ def _parse_dt(value: Any) -> datetime | None:
     except ValueError:
         return None
     if parsed.tzinfo is not None:
-        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
     return parsed
 
 
@@ -164,7 +164,7 @@ class UserStrategyStateService:
         session_layer = await self._load_session_layer(session_id)
 
         values = {field: spec.default for field, spec in self.FIELD_SPECS.items()}
-        sources = {field: "default" for field in self.FIELD_SPECS}
+        sources = dict.fromkeys(self.FIELD_SPECS, "default")
         expirations: dict[str, str | None] = {}
 
         for layer_name, layer_payload in (
@@ -446,7 +446,7 @@ class UserStrategyStateService:
         if plan_id is None:
             return {"state": {}, "meta": {}, "history": [], "adaptive_view": {}}
         state = await self.plan_state_service.get_plan_state(user_id, plan_id)
-        facts = dict((state.facts or {})) if state is not None else {}
+        facts = dict(state.facts or {}) if state is not None else {}
         payload = {
             "state": dict(facts.get(self.EPISODE_STATE_KEY) or {}),
             "meta": dict(facts.get(self.EPISODE_META_KEY) or {}),

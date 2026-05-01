@@ -2,7 +2,7 @@
 Background Tasks API Endpoints
 """
 from __future__ import annotations
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 from uuid import UUID
 
@@ -22,7 +22,7 @@ router = APIRouter()
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @router.get("", response_model=dict[str, Any])

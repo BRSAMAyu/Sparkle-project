@@ -449,7 +449,7 @@ class ConnectionManager:
                     await asyncio.wait_for(ack_event.wait(), timeout=timeout)
                     logger.debug(f"ACK received for message {message_id} from user {user_id} (attempt {attempt + 1})")
                     return True
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     if attempt < max_retries - 1:
                         # Exponential backoff
                         backoff = min(2 ** attempt, 5)

@@ -17,9 +17,9 @@ Otherwise reuse the cached sidecar.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from loguru import logger
 
@@ -33,7 +33,7 @@ from app.task_assistant.store import CacheBackedDormantStore
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class DormantInjector:

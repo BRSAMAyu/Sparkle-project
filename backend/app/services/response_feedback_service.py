@@ -4,7 +4,7 @@ import time
 import uuid
 from collections import Counter
 from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 
 from loguru import logger
@@ -51,7 +51,7 @@ class FeedbackResult:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ResponseFeedbackService:

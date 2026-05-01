@@ -10,7 +10,7 @@ Community Service - 好友、群组、消息、打卡、任务的业务逻辑
 from __future__ import annotations
 import asyncio
 import math
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 from uuid import UUID
 
@@ -61,7 +61,7 @@ from app.services.group_file_service import GroupFileService
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime compatible with existing DB fields."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _record_community_signal(
@@ -986,7 +986,7 @@ class GroupService:
                 file_id=str(file_id),
                 group_file_id=str(group_file_id),
                 shared_by_user_id=str(shared_by_id),
-                triggered_at=deleted_at.replace(tzinfo=timezone.utc).isoformat(),
+                triggered_at=deleted_at.replace(tzinfo=UTC).isoformat(),
             )
             await event_bus.publish(event.event_type, event.to_dict())
 
@@ -1546,7 +1546,7 @@ class GroupMessageService:
         group = await db.get(Group, group_id)
         if group and group.slow_mode_seconds and group.slow_mode_seconds > 0:
             if member.last_active_at:
-                elapsed = (datetime.now(timezone.utc).replace(tzinfo=None) - member.last_active_at).total_seconds()
+                elapsed = (datetime.now(UTC).replace(tzinfo=None) - member.last_active_at).total_seconds()
                 if elapsed < group.slow_mode_seconds:
                     raise ValueError(f"慢速模式：请等待 {int(group.slow_mode_seconds - elapsed)} 秒后再发送")
 
@@ -2651,7 +2651,7 @@ class PrivateMessageService:
             and_(
                 PrivateMessage.receiver_id == user_id,
                 PrivateMessage.sender_id == sender_id,
-                PrivateMessage.is_read == False
+                not PrivateMessage.is_read
             )
         ).values(
             is_read=True,
@@ -2874,7 +2874,7 @@ class UserSearchService:
 
         # 构建查询
         search_query = select(User).where(
-            User.is_active == True,
+            User.is_active,
             User.id != current_user_id,
             or_(
                 User.username.ilike(f"%{query}%"),

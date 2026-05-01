@@ -5,7 +5,7 @@ from datetime import date
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.card_protocol import (
@@ -18,7 +18,7 @@ from app.models.card_protocol import (
     TaskOccurrence,
 )
 from app.models.plan import Plan
-from app.models.task import Task, TaskStatus
+from app.models.task import Task
 from app.services.card_protocol.card_operations_service import CardOperationsService
 from app.services.card_protocol.temporal_engine import TemporalEngine
 from app.services.card_edge_service import CardEdgeService
@@ -405,7 +405,7 @@ class PhaseService:
 
         total_weight = sum(weights) or float(len(weights))
         normalized = [weight / total_weight for weight in weights]
-        return round(sum(weight * progress for weight, progress in zip(normalized, progress_values)), 4)
+        return round(sum(weight * progress for weight, progress in zip(normalized, progress_values, strict=False)), 4)
 
     async def _has_complete_weighted_progress_projection(
         self,

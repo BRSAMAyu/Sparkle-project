@@ -6,7 +6,7 @@ Stage: <首次引入 Stage 号>
 
 from __future__ import annotations
 import os
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 from uuid import uuid4
 
@@ -20,7 +20,7 @@ from app.core.auth_audit_service import auth_audit_service
 from app.core.cache import cache_service
 from app.core.security import get_password_hash, set_user_revoked_before, verify_password
 from app.db.session import get_db
-from app.models.auth_security import AuthAuditAction, AuthAuditLog, UserSession
+from app.models.auth_security import AuthAuditAction, AuthAuditLog
 from app.models.user import PushPreference, User, UserStatus
 from app.schemas.user import (
     AvatarStatus,
@@ -47,7 +47,7 @@ SESSION_TTL_SECONDS = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
 
 
 def _utcnow_naive() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _linked_providers(user: User) -> list[str]:

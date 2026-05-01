@@ -19,7 +19,7 @@ from typing import Any
 
 from loguru import logger
 
-from app.signals.types import PolicyEffectEntry, _uid
+from app.signals.types import _uid
 
 
 _EXPERIMENT_KEY = "spine:experiment:{experiment_id}"

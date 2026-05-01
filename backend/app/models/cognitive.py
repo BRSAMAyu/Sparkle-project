@@ -11,14 +11,14 @@ from sqlalchemy.orm import deferred, relationship
 from app.models.base import GUID, BaseModel
 
 VectorCompat = Vector(1024).with_variant(JSON(), "sqlite")
-class AnalysisStatus(str, enum.Enum):
+class AnalysisStatus(enum.StrEnum):
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
     FAILED = "failed"
 
 
-class PatternType(str, enum.Enum):
+class PatternType(enum.StrEnum):
     COGNITIVE = "cognitive"
     EMOTIONAL = "emotional"
     EXECUTION = "execution"

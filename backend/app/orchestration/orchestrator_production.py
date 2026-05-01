@@ -25,7 +25,7 @@ import os
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 
 from loguru import logger
@@ -105,7 +105,7 @@ if PROMETHEUS_AVAILABLE:
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _as_dict(value: Any) -> dict[str, Any]:

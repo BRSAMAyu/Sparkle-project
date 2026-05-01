@@ -16,10 +16,9 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
-from loguru import logger
 
 from app.signals.intervention_episode import ContextSignature, InterventionEpisode
 
@@ -29,7 +28,7 @@ def _uid(prefix: str = "") -> str:
 
 
 def _utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -722,7 +721,7 @@ class SparkleGoalBench:
         """Run all benchmark suites and produce aggregate report."""
         suite = cls.build_full_suite()
         all_scenarios = []
-        for suite_name, scenarios in suite.items():
+        for _suite_name, scenarios in suite.items():
             all_scenarios.extend(scenarios)
 
         result = ScenarioSimulator.run_suite(all_scenarios)

@@ -3,7 +3,6 @@ from __future__ import annotations
 import ipaddress
 import socket
 from pathlib import Path
-from typing import Iterable
 from urllib.parse import urlparse
 
 import httpx

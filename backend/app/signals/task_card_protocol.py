@@ -6,12 +6,11 @@ and support 6 task types across all goal domains.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
 from app.signals.types import (
     TASK_TYPES,
-    TASK_TYPE_NODE_BINDINGS,
     MaterialsProtocol,
     StuckProtocol,
     TaskCardProtocol,
@@ -19,7 +18,7 @@ from app.signals.types import (
 )
 
 def _utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class TaskCardBuilder:
@@ -236,7 +235,7 @@ class TaskCardBridge:
         guide_json: dict[str, Any],
         goal_id: str = "",
         task_id: str = "",
-    ) -> "TaskCardProtocol":
+    ) -> TaskCardProtocol:
         """Build a TaskCardProtocol from a planning_workflow guide_json dict.
 
         Bridges the existing exam-sprint dict format to the typed protocol.
@@ -346,7 +345,7 @@ class TaskCardValidator:
 
         # Validate node bindings
         if card.bound_nodes:
-            for node_id in card.bound_nodes:
+            for _node_id in card.bound_nodes:
                 pass  # Node existence checked by GoalWorldGraph at runtime
 
         # Domain-specific rules

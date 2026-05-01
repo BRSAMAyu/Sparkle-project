@@ -14,12 +14,11 @@ Aurora 唤醒资格判断 — 判断是否可以唤醒完整 Aurora Session。
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 from loguru import logger
 
-from app.signals.types import _uid
 
 
 @dataclass

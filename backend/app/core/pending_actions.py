@@ -6,14 +6,14 @@ from __future__ import annotations
 
 import asyncio
 import json
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 from uuid import uuid4
 
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with existing DB columns."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PendingActionsStore:

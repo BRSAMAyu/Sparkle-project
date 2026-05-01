@@ -18,17 +18,17 @@ import asyncio
 import time
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 from loguru import logger
 
 from app.core.agent_profiles import ModelTier
 from app.core.cache import cache_service
-from app.core.llm_router import LLMSelection, ModelConfig, llm_router
+from app.core.llm_router import LLMSelection, llm_router
 
 
-class FallbackReason(str, Enum):
+class FallbackReason(StrEnum):
     """回退触发原因"""
     RATE_LIMIT_429 = "rate_limit_429"       # 429 Too Many Requests
     RATE_LIMIT_QUOTA = "rate_limit_quota"   # 配额用尽

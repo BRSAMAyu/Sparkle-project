@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, UTC
 from typing import Any
 from uuid import UUID
 
@@ -35,7 +35,7 @@ AuroraStage34KillSwitchService = AuroraStage38KillSwitchService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BridgeEvaluationError(RuntimeError):
@@ -829,7 +829,7 @@ class ErrorReplanBridge:
         locale: str = "zh",
     ) -> MistakeClusterMatch | None:
         feature_bundle = self._extract_error_feature_bundle(error, node_name_map)
-        feature_text = str(feature_bundle["raw_text"])
+        str(feature_bundle["raw_text"])
         normalized_text = str(feature_bundle["normalized_text"])
         best_rule: dict[str, Any] | None = None
         best_hits: tuple[str, ...] = ()
@@ -923,7 +923,7 @@ class ErrorReplanBridge:
 
     def _match_pack_nodes(self, pack: dict[str, Any], feature_bundle: dict[str, object]) -> set[str]:
         matched: set[str] = set()
-        feature_text = str(feature_bundle["raw_text"])
+        str(feature_bundle["raw_text"])
         normalized_text = str(feature_bundle["normalized_text"])
 
         for node in pack.get("knowledge_nodes", []):

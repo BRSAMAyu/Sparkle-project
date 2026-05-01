@@ -3,7 +3,7 @@ Notification Analytics Service
 
 Provides usage statistics and analytics for notifications.
 """
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from uuid import UUID
 
 from loguru import logger
@@ -38,7 +38,7 @@ from app.schemas.unified_notification import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class NotificationAnalyticsService:

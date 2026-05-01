@@ -242,7 +242,7 @@ class PersonaAwarePlanner:
                     )
 
         feedback_log = list(state.feedback_log or [])
-        stored_review_log = list((facts.get("review_feedback_log") or []))
+        stored_review_log = list(facts.get("review_feedback_log") or [])
         review_log = [item for item in [*stored_review_log, *feedback_log] if isinstance(item, dict)]
         constraints.review_feedback_log = review_log[-8:]
 

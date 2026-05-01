@@ -5,14 +5,13 @@ BehaviorSignalCollector - aggregate implicit behavior into cognitive fragments.
 from __future__ import annotations
 
 import json
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.cognitive import CognitiveFragment
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.plan_state import PlanStateStatus
 from app.models.task import Task, TaskStatus
@@ -32,7 +31,7 @@ from app.services.signal_adaptation import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BehaviorSignalCollector:
@@ -61,7 +60,7 @@ class BehaviorSignalCollector:
 
     async def handle_task_feedback_event(self, event: dict) -> None:
         user_id = UUID(str(event["user_id"]))
-        task_id = UUID(str(event["task_id"]))
+        UUID(str(event["task_id"]))
         category = str(event.get("category") or "").strip().lower()
 
         if category == TaskFeedbackCategory.TOO_DIFFICULT.value:

@@ -9,8 +9,9 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from enum import Enum
-from typing import Any, Iterable, Mapping, Sequence
+from enum import StrEnum
+from typing import Any
+from collections.abc import Iterable, Mapping, Sequence
 from uuid import UUID, uuid4
 
 from app.aurora.schemas import (
@@ -20,14 +21,13 @@ from app.aurora.schemas import (
     InsightClaim,
     ProjectionPolicy,
     Shareability,
-    WindowMode,
     WritePath,
 )
 
 _WS9_FLAG_ENV = "SPARKLE_WS9_ACCOUNTABILITY_ENABLED"
 
 
-class PartnerVisibilityRole(str, Enum):
+class PartnerVisibilityRole(StrEnum):
     """Who is looking at the accountability surface."""
 
     OWNER = "owner"
@@ -61,7 +61,7 @@ class PartnerReportInput:
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_value(cls, value: "PartnerReportInput | Mapping[str, Any]") -> "PartnerReportInput":
+    def from_value(cls, value: PartnerReportInput | Mapping[str, Any]) -> PartnerReportInput:
         if isinstance(value, PartnerReportInput):
             return value
         payload = dict(value)

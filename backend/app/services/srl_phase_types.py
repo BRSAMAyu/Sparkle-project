@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 from uuid import UUID
 
@@ -13,7 +13,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-class SRLPhase(str, Enum):
+class SRLPhase(StrEnum):
     FORETHOUGHT = "FORETHOUGHT"
     PERFORMANCE = "PERFORMANCE"
     SELF_REFLECTION = "SELF_REFLECTION"
@@ -65,7 +65,7 @@ class SRLPhaseHint:
     }
 
     @classmethod
-    def from_payload(cls, payload: dict[str, object] | None) -> "SRLPhaseHint | None":
+    def from_payload(cls, payload: dict[str, object] | None) -> SRLPhaseHint | None:
         if not isinstance(payload, dict) or not payload:
             return None
         nested = payload.get("value")

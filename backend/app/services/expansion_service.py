@@ -7,7 +7,7 @@ import asyncio
 from dataclasses import dataclass, field
 import json
 import re
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from uuid import UUID
 
 from loguru import logger
@@ -35,7 +35,7 @@ from app.services.node_sector_service import (
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 _INVALID_NODE_NAME_PREFIXES = (

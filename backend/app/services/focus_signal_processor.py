@@ -3,7 +3,7 @@ Focus signal processor - translate focus sessions into inferred preferences.
 """
 from __future__ import annotations
 
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from uuid import UUID
 
 from loguru import logger
@@ -19,7 +19,7 @@ from app.services.signal_adaptation import recency_weight, weighted_median
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FocusSignalProcessor:

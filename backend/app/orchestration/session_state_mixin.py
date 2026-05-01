@@ -20,7 +20,6 @@ from app.core.metrics import (
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.context_focus import FocusedContextAssembler
 from app.orchestration.retrieval_intent import RetrievalIntentBudgets, build_retrieval_decision
-from app.orchestration.retrieval_intent import ContextPlan
 from app.orchestration.session_feedback import (
     SESSION_FEEDBACK_TTL_SECONDS,
     SessionAdaptationContext,

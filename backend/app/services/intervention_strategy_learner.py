@@ -168,8 +168,6 @@ class InterventionStrategyLearner:
         Matches on context_snapshot JSONB fields stored at intervention time.
         Capped at 100 rows for query performance.
         """
-        from sqlalchemy import cast
-        from sqlalchemy.dialects.postgresql import JSONB
 
         stmt = (
             select(InterventionStrategyOutcome)

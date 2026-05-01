@@ -21,7 +21,7 @@ except ImportError:
     JSONBCompat = JSON()
 
 
-class PlanStateStatus(str, enum.Enum):
+class PlanStateStatus(enum.StrEnum):
     """Plan state status enum"""
     ACTIVE = "active"
     ARCHIVED = "archived"

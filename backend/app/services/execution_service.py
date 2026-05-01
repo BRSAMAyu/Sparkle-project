@@ -9,7 +9,7 @@ import socket
 import time
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, UTC
 from typing import Any
 from urllib.parse import urlparse
 from uuid import UUID
@@ -21,7 +21,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.adapters.openclaw import OpenClawClient, OpenClawConfig, IntentTranslator, ResultParser
-from app.adapters.openclaw.client import OpenClawConfigurationError, OpenClawError, OpenClawTimeout
+from app.adapters.openclaw.client import OpenClawError, OpenClawTimeout
 from app.adapters.openclaw.intent_translator import (
     IntentTranslationSafetyError,
     describe_tool_call,
@@ -68,7 +68,7 @@ ExecutionStreamSink = Callable[[str, dict[str, Any]], Awaitable[None] | None]
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ExecutionService:
@@ -559,7 +559,7 @@ class ExecutionService:
             ),
             details={
                 "version": version_value,
-                "health_keys": sorted(list((health_payload or {}).keys()))[:10],
+                "health_keys": sorted((health_payload or {}).keys())[:10],
             },
         )
         return [protocol_check, auth_check, version_check]
@@ -695,7 +695,7 @@ class ExecutionService:
                 ),
                 details={
                     "version": version_value,
-                    "health_keys": sorted(list((health_payload or {}).keys()))[:10],
+                    "health_keys": sorted((health_payload or {}).keys())[:10],
                     "protocol_version": self._config.ws_protocol_version,
                 },
             ),
@@ -2697,7 +2697,7 @@ class ExecutionService:
         seed = str(request_id or "").strip()
         if seed:
             return f"chatctl:{seed}"
-        digest = hashlib.md5(f"{session_id}|{message}|{time.time()}".encode("utf-8")).hexdigest()
+        digest = hashlib.md5(f"{session_id}|{message}|{time.time()}".encode()).hexdigest()
         return f"chatctl:{digest}"
 
     def _chat_control_session_key(self, *, user_id: UUID, session_id: str) -> str:

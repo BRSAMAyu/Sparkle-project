@@ -9,24 +9,23 @@ Permission Service - 统一权限检查和管理
 - 资源访问控制
 """
 from __future__ import annotations
-from enum import Enum
+from enum import StrEnum
 from functools import wraps
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
+from collections.abc import Callable
 from uuid import UUID
 
 from fastapi import HTTPException
-from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.community import (
-    Group,
     GroupMember,
     GroupRole,
 )
 
 
-class Permission(str, Enum):
+class Permission(StrEnum):
     """权限枚举"""
     # 消息相关
     SEND_MESSAGE = "send_message"           # 发送消息

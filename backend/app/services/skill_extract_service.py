@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Awaitable, Callable
+from typing import Any
+from collections.abc import Awaitable, Callable
 
 from app.config import settings
 from app.core.metrics import SPARKLE_SKILL_EXTRACT_DRAFT_ACCEPT_RATE

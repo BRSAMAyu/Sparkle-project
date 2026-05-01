@@ -177,7 +177,6 @@ def generate_embedding(self, node_id: str, text: str, user_id: str | None = None
     Returns:
         dict: 包含embedding和状态
     """
-    import asyncio
 
     from loguru import logger
 
@@ -226,7 +225,6 @@ def batch_error_analysis(self, error_ids: list[str], user_id: str):
     Returns:
         dict: 分析结果统计
     """
-    import asyncio
     from uuid import UUID
 
     from loguru import logger
@@ -274,7 +272,6 @@ def cleanup_old_data(self, days_to_keep: int = 30):
     Returns:
         dict: 清理统计
     """
-    import asyncio
     from datetime import datetime, timedelta
 
     from loguru import logger
@@ -314,7 +311,6 @@ def notify_user(self, user_id: str, message: str, notification_type: str = "syst
         message: 消息内容
         notification_type: 通知类型
     """
-    import asyncio
 
     from loguru import logger
 
@@ -401,7 +397,6 @@ def generate_capsules_batch(
             "capsule_ids": list[str],
         }
     """
-    import asyncio
     from uuid import UUID
 
     from loguru import logger
@@ -481,7 +476,6 @@ def analyze_cognitive_fragment_batch(
     model_key: str | None = None,
 ):
     """使用 GLM batch 队列分析认知碎片。"""
-    import asyncio
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
@@ -565,7 +559,6 @@ def update_knowledge_galaxy(
             "nodes_updated": int,
         }
     """
-    import asyncio
     from uuid import UUID
 
     from loguru import logger
@@ -752,7 +745,6 @@ def sync_plan_progress_to_galaxy(self, user_id: str):
     Returns:
         dict: 同步结果统计
     """
-    import asyncio
     from uuid import UUID
 
     from loguru import logger

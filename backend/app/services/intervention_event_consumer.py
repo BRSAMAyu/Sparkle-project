@@ -40,6 +40,7 @@ from app.services.plan_adjustment_applier import PlanAdjustmentApplier
 from app.services.card_protocol.parameter_compiler import ParameterCompiler
 from app.services.template_registry import TemplateRegistry
 from app.services.template_service import TemplateService
+from datetime import UTC
 
 
 _INTENT_BY_TRIGGER: dict[InterventionTriggerType, str] = {
@@ -221,7 +222,7 @@ class InterventionEventConsumer:
             push_via_websocket=True,
         )
 
-        content_hash = hashlib.md5(f"{title}:{body}".encode("utf-8")).hexdigest()
+        content_hash = hashlib.md5(f"{title}:{body}".encode()).hexdigest()
         db.add(
             PushHistory(
                 user_id=record.user_id,
@@ -237,9 +238,9 @@ class InterventionEventConsumer:
         )
         prefs = pref_result.scalar_one_or_none()
         if prefs:
-            from datetime import datetime, timezone
+            from datetime import datetime
 
-            prefs.last_push_time = datetime.now(timezone.utc)
+            prefs.last_push_time = datetime.now(UTC)
         result = {
             "delivered": True,
             "notification_id": str(created.id),

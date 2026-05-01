@@ -6,7 +6,7 @@ Tool Preference Router - 工具偏好路由
 """
 from __future__ import annotations
 import uuid
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 from loguru import logger
 from sqlalchemy import and_, desc, select
@@ -18,7 +18,7 @@ from app.services.tool_history_service import ToolHistoryService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ToolPreferenceRouter:

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
-from datetime import timezone, date, datetime
+from datetime import date, datetime, UTC
 from typing import Any
 from uuid import UUID
 
@@ -51,7 +51,7 @@ SESSION_MOOD_SESSION_KEY_TEMPLATE = "memory:session_mood:{user_id}:{session_id}"
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _truncate_summary(value: str) -> str:
@@ -230,7 +230,7 @@ class MemoryService:
             raise ValueError("mood_score must be numeric") from exc
         score = max(0.0, min(1.0, score))
 
-        recorded_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+        recorded_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
         payload = {
             "user_id": str(user_id),
             "session_id": str(session_id),

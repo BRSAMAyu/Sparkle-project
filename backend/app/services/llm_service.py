@@ -6,7 +6,6 @@ Stage: <首次引入 Stage 号>
 
 from __future__ import annotations
 import asyncio
-import inspect
 import json
 import uuid
 from collections.abc import AsyncGenerator, AsyncIterator
@@ -33,7 +32,7 @@ from app.core.llm_router import LLMSelection, ModelProvider, llm_router
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm.base import LLMProvider
 from app.services.llm.providers import OpenAICompatibleProvider
-from app.services.llm.fallback import FallbackReason, llm_fallback_manager
+from app.services.llm.fallback import llm_fallback_manager
 from app.services.llm.concurrency import llm_concurrency
 from app.core.llm_monitoring import LLMMonitor
 

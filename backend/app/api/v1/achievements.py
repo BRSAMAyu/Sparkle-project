@@ -5,7 +5,7 @@ Achievements API Endpoints
 
 from __future__ import annotations
 import secrets
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
@@ -18,7 +18,6 @@ from app.db.session import get_db
 from app.models.achievement import AchievementRarity
 from app.models.user import User
 from app.schemas.achievement import (
-    AchievementDetail,
     AchievementDetailResponse,
     AchievementEventProcessResponse,
     AchievementPinResponse,
@@ -400,7 +399,7 @@ async def cancel_contract(
         raise HTTPException(status_code=404, detail="No active contract found")
 
     contract.status = ContractStatus.FAILED
-    contract.failed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    contract.failed_at = datetime.now(UTC).replace(tzinfo=None)
     contract.failure_reason = "User cancelled"
 
     try:
@@ -626,7 +625,6 @@ async def get_share_templates(
 
     Returns available share card templates.
     """
-    from app.services.share_card_templates import get_all_templates
 
     resolved_locale = _resolve_locale(locale, accept_language)
     templates = get_all_templates()

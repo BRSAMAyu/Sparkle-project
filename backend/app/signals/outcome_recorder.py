@@ -99,7 +99,6 @@ class OutcomeRecorder:
         Returns:
             OutcomeRecord with attribution filled in.
         """
-        import json as _json
 
         # Idempotency guard: check if outcome already recorded for this trace+intervention
         idem_key = f"spine:outcome_idem:{trace.trace_id}:{intervention}"

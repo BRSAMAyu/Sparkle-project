@@ -10,7 +10,7 @@ Unified Intent Router - 统一意图路由系统
 """
 from __future__ import annotations
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -20,7 +20,7 @@ from app.services.llm_fallback_utils import router_llm
 from app.services.llm_service import LLMService
 
 
-class UnifiedIntentType(str, Enum):
+class UnifiedIntentType(StrEnum):
     """统一意图类型枚举"""
     CHAT = "chat"
     TASK = "task"

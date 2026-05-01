@@ -10,8 +10,9 @@ Achievement Engine Service
 from __future__ import annotations
 import asyncio
 import contextlib
-from datetime import timezone, date, datetime, timedelta
-from typing import Any, Awaitable, Callable
+from datetime import date, datetime, timedelta, UTC
+from typing import Any
+from collections.abc import Awaitable, Callable
 
 from loguru import logger
 from sqlalchemy import event
@@ -45,7 +46,7 @@ from app.services.system_update_service import SystemUpdateService, build_system
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 _EXTERNAL_TRANSACTION_MANAGED_KEY = "external_transaction_managed"

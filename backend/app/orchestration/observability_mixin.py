@@ -144,7 +144,7 @@ class ObservabilityMixin:
                     item = await asyncio.wait_for(queue.get(), timeout=timeout)
                     processed_count += 1
                     yield item
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     logger.warning(f"Queue drain timeout after {processed_count} items")
                     break
                 except Exception as e:

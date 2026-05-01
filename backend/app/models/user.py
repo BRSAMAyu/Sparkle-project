@@ -12,7 +12,7 @@ import enum
 
 
 # Python 3.9 compatible StrEnum
-class StrEnum(str, enum.Enum):
+class StrEnum(enum.StrEnum):
     """String enum for Python 3.9 compatibility"""
     def __new__(cls, value):
         obj = str.__new__(cls, value)

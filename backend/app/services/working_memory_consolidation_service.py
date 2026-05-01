@@ -4,7 +4,6 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
-from app.config import settings
 from app.core.cache import cache_service
 from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
 from app.services.memory_inferred_write_lane import InferredEpisodicCandidate, MemoryInferredWriteLaneService

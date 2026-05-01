@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 
 import numpy as np
@@ -25,7 +25,7 @@ from app.services.embedding_service import embedding_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class SemanticCacheService:

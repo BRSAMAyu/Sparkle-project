@@ -10,7 +10,7 @@ Handles:
 """
 from __future__ import annotations
 import json
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 from uuid import UUID
 
@@ -44,7 +44,7 @@ SESSION_TTL_HOURS = 2
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class LearningAssetService:

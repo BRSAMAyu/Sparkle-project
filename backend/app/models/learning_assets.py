@@ -3,7 +3,7 @@ Learning Assets Models (学习资产模型)
 Represents user's vocabulary, sentences, and concepts collected from translation lookups.
 """
 import enum
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 
 from sqlalchemy import (
     JSON,
@@ -25,24 +25,24 @@ JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
-class AssetStatus(str, enum.Enum):
+class AssetStatus(enum.StrEnum):
     """Asset lifecycle status (not including deleted - use deleted_at for soft delete)"""
     INBOX = "INBOX"       # Pending user review, auto-expires after 7 days
     ACTIVE = "ACTIVE"     # User confirmed, active for review scheduling
     ARCHIVED = "ARCHIVED"  # User archived or auto-archived from inbox expiry
 
 
-class AssetKind(str, enum.Enum):
+class AssetKind(enum.StrEnum):
     """Type of learning asset"""
     WORD = "WORD"         # Single word or phrase
     SENTENCE = "SENTENCE"  # Full sentence
     CONCEPT = "CONCEPT"    # Abstract concept or term
 
 
-class MatchStrength(str, enum.Enum):
+class MatchStrength(enum.StrEnum):
     """Provenance match confidence"""
     STRONG = "STRONG"   # >= 0.85 similarity
     WEAK = "WEAK"       # 0.70 - 0.85 similarity
@@ -141,14 +141,14 @@ class LearningAsset(BaseModel):
         self.inbox_expires_at = None
 
 
-class SuggestionDecision(str, enum.Enum):
+class SuggestionDecision(enum.StrEnum):
     """Decision made by suggestion system"""
     SUGGESTED = "SUGGESTED"      # Suggestion shown to user
     NOT_SUGGESTED = "NOT_SUGGESTED"  # Suppressed (cooldown, quota, etc.)
     SKIPPED = "SKIPPED"          # Skipped due to conditions not met
 
 
-class UserSuggestionResponse(str, enum.Enum):
+class UserSuggestionResponse(enum.StrEnum):
     """User's response to a suggestion"""
     ACCEPT = "ACCEPT"     # User accepted and created asset
     DISMISS = "DISMISS"   # User explicitly dismissed

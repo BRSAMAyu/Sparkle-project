@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from uuid import UUID
 
 from sqlalchemy import desc, func, inspect, or_, select
@@ -31,7 +31,7 @@ from app.services.personalization.preference_service import PreferenceService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _normalize_tag(tag: str) -> str:
@@ -52,7 +52,7 @@ def _normalize_scores(values: dict[UUID, float]) -> dict[UUID, float]:
         return {}
     max_value = max(values.values())
     if max_value <= 0:
-        return {key: 0.0 for key in values}
+        return dict.fromkeys(values, 0.0)
     return {key: value / max_value for key, value in values.items()}
 
 

@@ -3,7 +3,7 @@
 Photon Service - 处理光子积分的发放、扣除和余额查询
 """
 from __future__ import annotations
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 from uuid import uuid4
 
@@ -21,7 +21,7 @@ from app.models.user import User
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime compatible with existing DB fields."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PhotonTransactionType:

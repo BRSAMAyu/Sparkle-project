@@ -4,7 +4,7 @@ import contextlib
 import inspect
 import json
 from collections import defaultdict
-from datetime import date, timedelta, timezone, datetime
+from datetime import date, timedelta, datetime, UTC
 from typing import Any
 from uuid import UUID
 
@@ -33,7 +33,7 @@ from app.services.user_service import UserService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class CognitiveContext(BaseModel):
@@ -400,7 +400,6 @@ class ContextOrchestrator:
         if not self.redis:
             return []
         try:
-            import asyncio
 
             pattern = f"spine:model_claim:{user_id}:*"
             keys = []

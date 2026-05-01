@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -13,7 +13,6 @@ from app.models.card_protocol import (
     Card,
     CardType,
     EdgeType,
-    InterventionRecord,
     TaskOccurrence,
 )
 from app.models.task import Task

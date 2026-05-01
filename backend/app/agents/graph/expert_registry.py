@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Callable
+from collections.abc import Callable
 
 from app.agents.graph.nodes.deep_analyst import deep_analyst_node
 from app.agents.graph.nodes.error_analyst import error_analyst_node

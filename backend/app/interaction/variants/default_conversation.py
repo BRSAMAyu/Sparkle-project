@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.aurora.schemas import InteractionModelConfig, InteractionModelVariant
+from app.aurora.schemas import InteractionModelConfig
 
 from ..profiles import InteractionVariantProfile, build_interaction_variant_profile
 

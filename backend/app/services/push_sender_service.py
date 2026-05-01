@@ -17,7 +17,7 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import delete, select, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.firebase_config import get_firebase_app, initialize_firebase, is_firebase_available
@@ -357,7 +357,7 @@ class PushSenderService:
         try:
             query = select(UserDevice.push_token).where(
                 UserDevice.user_id == user_id,
-                UserDevice.is_active == True,
+                UserDevice.is_active,
             )
             result = await self.db.execute(query)
             tokens = [row[0] for row in result.all()]
@@ -516,7 +516,7 @@ class PushSenderService:
         query = select(UserDevice).where(UserDevice.user_id == user_id_str)
 
         if active_only:
-            query = query.where(UserDevice.is_active == True)
+            query = query.where(UserDevice.is_active)
 
         query = query.order_by(UserDevice.last_used_at.desc())
 

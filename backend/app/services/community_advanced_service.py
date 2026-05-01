@@ -14,7 +14,7 @@ Advanced Community Service - 加密、风控、搜索、离线队列等
 """
 import base64
 import binascii
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 from uuid import UUID
 
@@ -58,7 +58,7 @@ from app.schemas.community import (
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime for compatibility with existing DB columns."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _favorite_load_options():

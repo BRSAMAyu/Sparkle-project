@@ -235,7 +235,7 @@ class TaskDocumentService:
                     .order_by(KnowledgeNodeDocument.is_primary.desc(), StoredFile.updated_at.desc())
                 )
             ).all()
-            for link, file_record, node in rows:
+            for _link, file_record, node in rows:
                 if file_record.id in seen_file_ids:
                     continue
                 seen_file_ids.add(file_record.id)

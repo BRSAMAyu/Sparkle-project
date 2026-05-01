@@ -9,7 +9,7 @@ Login, Register, Refresh Token, Social Login
 
 from __future__ import annotations
 import uuid
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -33,7 +33,6 @@ from app.core.security import (
 )
 from app.core.cache import cache_service
 from app.core.event_bus import UserRegisteredEvent
-from app.core.email_service import email_service
 from app.db.session import get_db
 from app.models.auth_security import AuthAuditAction
 from app.models.community import GroupRole
@@ -46,7 +45,6 @@ from app.schemas.user import (
     ResetPasswordRequest,
     UpgradeGuestRequest,
     UpgradeGuestSocialRequest,
-    UserBase,
     UserLogin,
     UserRegister,
     UserProfile,
@@ -111,7 +109,7 @@ def _apply_terms_acceptance(
     privacy_version: str | None,
     agreed_locale: str | None,
 ) -> None:
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
     user.agreed_to_tos_at = now
     user.agreed_to_privacy_at = now
     user.tos_version = tos_version or "v1"
@@ -329,7 +327,7 @@ async def register(
     )
     if existing_user.scalars().first():
         # 统一返回通用消息，无法区分是用户名还是邮箱已存在
-        logger.warning(f"Registration failed: duplicate username or email")
+        logger.warning("Registration failed: duplicate username or email")
         raise HTTPException(
             status_code=400,
             detail="注册失败，请检查输入的用户名和邮箱"
@@ -715,7 +713,7 @@ async def reset_password(
 
     user.hashed_password = get_password_hash(data.new_password)
     user.password_login_enabled = True
-    user.token_revoked_before = datetime.now(timezone.utc).replace(tzinfo=None)
+    user.token_revoked_before = datetime.now(UTC).replace(tzinfo=None)
     db.add(user)
     await db.commit()
     await db.refresh(user)

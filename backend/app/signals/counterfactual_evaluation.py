@@ -23,10 +23,9 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 
-from loguru import logger
 
 from app.signals.intervention_episode import (
     ContextSignature,
@@ -40,7 +39,7 @@ def _uid(prefix: str = "") -> str:
 
 
 def _utcnow() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -735,7 +734,6 @@ class CounterfactualIronLawEnforcer:
         candidate: PolicyUpdateCandidate,
     ) -> tuple[bool, list[str]]:
         """Iron Law 5: Any policy promotion must go through simulation + shadow + guardrail."""
-        required = ["simulation", "shadow", "guardrail"]
         missing = []
         if not candidate.guardrail_checks_passed:
             missing.append("guardrail")

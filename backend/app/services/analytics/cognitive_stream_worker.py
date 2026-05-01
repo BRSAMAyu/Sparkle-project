@@ -3,7 +3,7 @@ import asyncio
 import hashlib
 import json
 import os
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 from uuid import UUID
 
@@ -25,7 +25,7 @@ from app.services.state_estimator_service import StateEstimatorService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ShadowKafkaWriter:

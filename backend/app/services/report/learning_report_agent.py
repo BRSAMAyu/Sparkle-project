@@ -813,7 +813,7 @@ class LearningReportAgent:
                 }
             )
         comparisons: list[dict[str, Any]] = []
-        for previous, current in zip(history_points, history_points[1:]):
+        for previous, current in zip(history_points, history_points[1:], strict=False):
             delta_mastery = float(current["average_mastery"]) - float(previous["average_mastery"])
             delta_minutes = int(current["study_minutes"]) - int(previous["study_minutes"])
             direction = "up" if delta_mastery > 1 else "down" if delta_mastery < -1 else "flat"

@@ -5,7 +5,7 @@ Learning Paths API
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any, Union
 from uuid import UUID
 
@@ -74,7 +74,7 @@ class LearningPathTaskResponse(BaseModel):
 # ============ Helpers ============
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 def _is_error_response(path: list[dict[str, Any]]) -> bool:
     """检查路径响应是否为错误响应"""

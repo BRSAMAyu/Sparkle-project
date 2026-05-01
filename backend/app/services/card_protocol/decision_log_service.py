@@ -16,7 +16,7 @@ from datetime import datetime
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.card_protocol import ArtifactType, PlanningArtifact
+from app.models.card_protocol import ArtifactType
 from app.services.planning_artifact_service import PlanningArtifactService
 from app.core.event_bus import EventBus
 

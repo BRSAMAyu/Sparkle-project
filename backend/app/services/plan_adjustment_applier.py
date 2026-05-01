@@ -15,12 +15,12 @@ Four patch types supported (Phase 1):
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, UTC
 from typing import Any
 from uuid import UUID, uuid4
 
 from loguru import logger
-from sqlalchemy import and_, select, update
+from sqlalchemy import select
 
 from app.models.task import Task, TaskStatus, TaskType
 from app.services.plan_state_service import PlanStateService
@@ -330,7 +330,7 @@ class PlanAdjustmentApplier:
         result: PlanAdjustmentResult,
     ) -> None:
         """Record a task-level patch snapshot in PlanState for rollback."""
-        now = datetime.now(timezone.utc).isoformat()
+        now = datetime.now(UTC).isoformat()
         snapshot = {
             "id": snapshot_id,
             "trigger": trigger,

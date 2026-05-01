@@ -12,7 +12,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from contextlib import suppress
 from dataclasses import dataclass as _dataclass
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from functools import wraps
 from typing import Any
 
@@ -44,7 +44,7 @@ class KnowledgeNodeUpdated(Event):
         self.user_id = user_id
         self.node_id = node_id
         self.new_mastery = new_mastery
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -63,7 +63,7 @@ class NodeMasteryUpdatedEvent(Event):
         self.old_mastery = old_mastery
         self.new_mastery = new_mastery
         self.reason = reason
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -82,7 +82,7 @@ class ErrorCreated(Event):
         self.user_id = user_id
         self.error_id = error_id
         self.linked_node_ids = linked_node_ids or []
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -184,7 +184,7 @@ class TaskCompleted(Event):
         self.plan_id = plan_id
         self.source = source
         self.source_metadata = source_metadata or {}
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -223,7 +223,7 @@ class FocusSessionCompletedEvent(Event):
         self.mastery_updates = mastery_updates or []
         self.started_at = started_at
         self.completed = completed
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -256,7 +256,7 @@ class TaskAbandoned(Event):
         self.estimated_minutes = estimated_minutes
         self.time_spent = time_spent
         self.plan_id = plan_id
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -283,7 +283,7 @@ class TaskStartedEvent(Event):
         self.task_id = task_id
         self.plan_id = plan_id
         self.source = source
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -314,7 +314,7 @@ class TaskStuckEvent(Event):
         self.recent_steps = recent_steps or []
         self.elapsed_seconds = elapsed_seconds
         self.diagnosis = diagnosis or {}
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -344,7 +344,7 @@ class PlanCreatedEvent(Event):
         self.evidence_id = evidence_id
         self.source = source
         self.metadata = metadata or {}
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -370,7 +370,7 @@ class UserRegisteredEvent(Event):
         self.username = username
         self.registration_source = registration_source
         self.metadata = metadata or {}
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -397,7 +397,7 @@ class ReflectionCompletedEvent(Event):
         self.task_id = task_id
         self.plan_id = plan_id
         self.source = source
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -424,8 +424,8 @@ class SRLPhaseTransitionEvent(Event):
         self.trigger_event_type = trigger_event_type
         self.evidence_id = evidence_id
         self.metadata = metadata or {}
-        self.published_at = published_at or datetime.now(timezone.utc).isoformat()
-        self.timestamp = datetime.now(timezone.utc)
+        self.published_at = published_at or datetime.now(UTC).isoformat()
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -451,7 +451,7 @@ class ProfilePreferenceUpdated(Event):
         self.pref_keys = pref_keys
         self.preference_version = preference_version
         self.source = source
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -474,7 +474,7 @@ class ProfilePreferenceDeleted(Event):
         self.user_id = user_id
         self.pref_key = pref_key
         self.preference_version = preference_version
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -496,7 +496,7 @@ class TraitObserved(Event):
         self.user_id = user_id
         self.evidence_id = evidence_id
         self.source = source
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -516,7 +516,7 @@ class TraitsColdstartCompleted(Event):
     ):
         self.user_id = user_id
         self.completed_at = completed_at
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -543,7 +543,7 @@ class CalendarEventCreated(Event):
         self.title = title
         self.start_time = start_time
         self.source = source
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -569,7 +569,7 @@ class CalendarEventUpdated(Event):
         self.user_id = user_id
         self.event_id = event_id
         self.changes = changes
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -593,7 +593,7 @@ class CalendarEventDeleted(Event):
         self.user_id = user_id
         self.event_id = event_id
         self.hard_delete = hard_delete
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     def to_dict(self):
         return {
@@ -636,7 +636,7 @@ class DocumentCitationFeedbackEvent(Event):
         self.feedback_source = feedback_source
         self.conversation_id = conversation_id
         self.context = context or {}
-        self.timestamp = datetime.now(timezone.utc)
+        self.timestamp = datetime.now(UTC)
 
     @property
     def event_type(self) -> str:
@@ -783,7 +783,7 @@ class EventBus:
             "consumer_name": consumer_name,
             "message_id": message_id,
             "retry_count": retry_count,
-            "failed_at": datetime.now(timezone.utc).isoformat(),
+            "failed_at": datetime.now(UTC).isoformat(),
         }
         if self.redis:
             await self.redis.xadd(
@@ -836,7 +836,7 @@ class EventBus:
         retry_payload["_last_error"] = str(error)
         retry_payload["_failed_consumer_group"] = group_name
         retry_payload["_failed_consumer_name"] = consumer_name
-        retry_payload["_failed_at"] = datetime.now(timezone.utc).isoformat()
+        retry_payload["_failed_at"] = datetime.now(UTC).isoformat()
         retry_payload["_original_message_id"] = parsed_data.get("_original_message_id", message_id)
 
         # Requeue FIRST, then ack. If ack fails the message may be
@@ -1211,7 +1211,7 @@ class EventBus:
                 if first_entry:
                     message_id = first_entry[0][0]
                     timestamp_ms = int(message_id.split("-")[0])
-                    oldest_age_seconds = (datetime.now(timezone.utc).timestamp() * 1000 - timestamp_ms) / 1000
+                    oldest_age_seconds = (datetime.now(UTC).timestamp() * 1000 - timestamp_ms) / 1000
 
             return {
                 "dlq_stream": dlq_stream,

@@ -10,7 +10,7 @@ Sends detailed notifications for major state changes:
 Integrates with WebSocket to deliver real-time notifications to clients.
 Also creates database records for notification center persistence.
 """
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -21,7 +21,7 @@ from app.core.websocket import get_ws_manager
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class StateNotificationService:
@@ -38,7 +38,7 @@ class StateNotificationService:
         self.ws_manager = get_ws_manager()
         self._db = db
 
-    def with_db(self, db: AsyncSession) -> "StateNotificationService":
+    def with_db(self, db: AsyncSession) -> StateNotificationService:
         """Create a new instance with a database session"""
         return StateNotificationService(db=db)
 
@@ -425,7 +425,7 @@ class StateNotificationService:
     async def _push_notification_via_websocket(
         self,
         user_id: str,
-        notification: "Notification",
+        notification: Notification,
         priority: str = "normal",
     ):
         """

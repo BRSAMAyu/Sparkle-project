@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from datetime import timezone, datetime, time, timedelta
+from datetime import datetime, time, timedelta, UTC
 from typing import Any
 
 from sqlalchemy import select
@@ -12,7 +12,7 @@ from app.services.personalization import PushPolicyProfile
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PushStrategy(ABC):

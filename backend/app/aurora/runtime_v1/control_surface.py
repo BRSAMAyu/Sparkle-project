@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import inspect
 import json
-from datetime import datetime, timezone
-from typing import Any, Mapping
+from datetime import datetime, UTC
+from typing import Any
+from collections.abc import Mapping
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -31,7 +32,7 @@ def _coerce_datetime(value: Any) -> datetime | None:
         return None
     if isinstance(value, datetime):
         if value.tzinfo is not None:
-            return value.astimezone(timezone.utc).replace(tzinfo=None)
+            return value.astimezone(UTC).replace(tzinfo=None)
         return value
     raw = _normalize_text(value)
     if not raw:
@@ -39,7 +40,7 @@ def _coerce_datetime(value: Any) -> datetime | None:
     normalized = raw.replace("Z", "+00:00")
     parsed = datetime.fromisoformat(normalized)
     if parsed.tzinfo is not None:
-        return parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        return parsed.astimezone(UTC).replace(tzinfo=None)
     return parsed
 
 
@@ -116,9 +117,9 @@ class AuroraHardBounds(AuroraSchemaBase):
 
     def _to_local_time(self, when: datetime) -> datetime:
         if when.tzinfo is None:
-            aware = when.replace(tzinfo=timezone.utc)
+            aware = when.replace(tzinfo=UTC)
         else:
-            aware = when.astimezone(timezone.utc)
+            aware = when.astimezone(UTC)
         return aware.astimezone(ZoneInfo(self.timezone_name))
 
 

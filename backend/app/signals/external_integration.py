@@ -350,7 +350,7 @@ class FileIntegration:
         return {
             "total_files": len(goal_files),
             "files": [f.to_dict() for f in goal_files],
-            "mime_types": list(set(f.mime_type for f in goal_files)),
+            "mime_types": list({f.mime_type for f in goal_files}),
             "undiagnosed_count": len([f for f in goal_files if not f.parsed_summary]),
         }
 
@@ -585,7 +585,7 @@ class ExternalToolBridge:
         if not active_tools:
             return None
 
-        tool_types = set(s.tool_type for s in active_tools)
+        tool_types = {s.tool_type for s in active_tools}
 
         study_indicators = {"ide", "lms", "note_app"}
         is_study = bool(tool_types & study_indicators)
@@ -596,7 +596,7 @@ class ExternalToolBridge:
         return {
             "session_active": True,
             "active_tool_types": list(tool_types),
-            "activity_types": list(set(s.activity_type for s in active_tools)),
+            "activity_types": list({s.activity_type for s in active_tools}),
             "signal_count": len(signals),
             "study_confidence": 0.7 if len(tool_types) == 1 else 0.9,
         }

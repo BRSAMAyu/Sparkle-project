@@ -15,8 +15,7 @@ Exit: SessionClosure with state_patches, policy_changes, directives_to_regenerat
 """
 from __future__ import annotations
 
-import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -439,7 +438,7 @@ class L3FullCoreEngine:
     def _get_last_activity(self, session: dict[str, Any]) -> datetime | None:
         """Extract last activity timestamp from session."""
         # Check agenda items for latest done item
-        items = session.get("agenda", {}).get("agenda_items", [])
+        session.get("agenda", {}).get("agenda_items", [])
         latest: datetime | None = None
 
         try:

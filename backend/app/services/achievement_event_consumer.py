@@ -4,7 +4,7 @@ Closes event-bus paths for achievement progression without blocking request hand
 """
 
 import asyncio
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from urllib.parse import urlencode
 from uuid import UUID
 
@@ -29,7 +29,7 @@ from app.services.notification_service import NotificationService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AchievementEventConsumer:
@@ -50,7 +50,7 @@ class AchievementEventConsumer:
         if isinstance(value, str) and value.strip():
             try:
                 parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-                return parsed.astimezone(timezone.utc).replace(tzinfo=None) if parsed.tzinfo else parsed
+                return parsed.astimezone(UTC).replace(tzinfo=None) if parsed.tzinfo else parsed
             except ValueError:
                 return None
         return None

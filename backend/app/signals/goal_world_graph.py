@@ -17,7 +17,6 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-from loguru import logger
 
 from app.signals.types import _uid
 
@@ -244,7 +243,7 @@ class GoalWorldGraphService:
             n.node_id for n in graph.nodes
             if n.status in ("mastered", "done")
         }
-        node_map = {n.node_id: n for n in graph.nodes}
+        {n.node_id: n for n in graph.nodes}
         suggestions: list[dict[str, Any]] = []
 
         # 1. Bottleneck first
@@ -402,7 +401,7 @@ class GoalWorldGraphService:
             elif node.mastery >= high_mastery_threshold:
                 why = f"「{node.label}」掌握度已高（{node.mastery:.0%}），优先级降低"
             elif node.status == "pending" and node.dependency_ids:
-                unmet = [d for d in node.dependency_ids]
+                unmet = list(node.dependency_ids)
                 why = f"「{node.label}」等待 {len(unmet)} 个前置节点"
 
             if why:

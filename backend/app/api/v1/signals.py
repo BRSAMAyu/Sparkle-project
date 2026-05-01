@@ -5,7 +5,7 @@ Endpoints for collecting user feedback on candidate actions.
 Enables learning loop for signal threshold calibration.
 """
 import uuid
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -22,7 +22,7 @@ router = APIRouter(prefix="/signals", tags=["signals"])
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class FeedbackRequest(BaseModel):
@@ -201,8 +201,8 @@ async def get_feedback_stats(
         # CTR calculation
         impressions = feedback_type_breakdown.get('impression', 0)
         accepts = feedback_type_breakdown.get('accept', 0)
-        ignores = feedback_type_breakdown.get('ignore', 0)
-        dismisses = feedback_type_breakdown.get('dismiss', 0)
+        feedback_type_breakdown.get('ignore', 0)
+        feedback_type_breakdown.get('dismiss', 0)
         ctr = (accepts / impressions * 100) if impressions > 0 else 0
 
         # Completion rate calculation

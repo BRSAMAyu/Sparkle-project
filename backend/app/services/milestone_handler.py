@@ -6,7 +6,7 @@ Handles automatic task generation when milestones are achieved.
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -18,7 +18,7 @@ from app.models.task import TaskType as ModelTaskType
 from app.services.llm_service import get_llm_service_for_task
 
 
-class ProposalDecision(str, Enum):
+class ProposalDecision(StrEnum):
     GENERATE = "generate"
     SKIP = "skip"
     DEFER = "defer"

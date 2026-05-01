@@ -14,7 +14,7 @@ See: docs/product/SPARKLE_PRODUCT_CONSENSUS_2026-04-02.md (breakpoint 3)
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 from uuid import UUID
 
@@ -195,7 +195,7 @@ class PlanHealthSignalService:
             "action_taken": action_taken,
             "adaptation_count": len(adaptation_records) if adaptation_records else 0,
             "signature": signature,
-            "emitted_at": datetime.now(timezone.utc).isoformat(),
+            "emitted_at": datetime.now(UTC).isoformat(),
         }
 
     # ------------------------------------------------------------------
@@ -232,7 +232,7 @@ class PlanHealthSignalService:
                 "signature": signature,
                 "severity": severity,
                 "action_taken": action_taken,
-                "emitted_at": datetime.now(timezone.utc).isoformat(),
+                "emitted_at": datetime.now(UTC).isoformat(),
             }
 
             await ps.upsert_plan_state(

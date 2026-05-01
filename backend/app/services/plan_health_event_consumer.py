@@ -130,7 +130,7 @@ class PlanHealthEventConsumer:
                     )
                     if record:
                         await db.commit()
-                        
+
                         # --- Delivery Step ---
                         from app.models.card_protocol import DeliveryChannel
                         if record.delivery_channel == DeliveryChannel.IN_APP:
@@ -156,7 +156,7 @@ class PlanHealthEventConsumer:
                                 intervention_id=str(record.id),
                                 payload=record.diagnosis_payload or {}
                             )
-                            
+
                 except Exception as bridge_exc:
                     await db.rollback()
                     logger.warning("PlanHealth→InterventionRecord bridge failed (non-fatal): {}", bridge_exc)

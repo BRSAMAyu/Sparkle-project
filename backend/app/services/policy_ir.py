@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 from uuid import UUID
 
@@ -13,7 +13,7 @@ POLICY_IR_SCHEMA_VERSION = "policy_ir.v1"
 POLICY_IR_FROZEN_AT = "2026-04-21T00:00:00Z"
 
 
-class PolicyTriggerType(str, Enum):
+class PolicyTriggerType(StrEnum):
     TIME_BEFORE_DUE = "time_before_due"
     STREAK_BREAK = "streak_break"
     OVERDUE_BY = "overdue_by"
@@ -21,7 +21,7 @@ class PolicyTriggerType(str, Enum):
     SUCCESS_STREAK = "success_streak"
 
 
-class PolicyActionType(str, Enum):
+class PolicyActionType(StrEnum):
     NOTIFY_USER = "notify_user"
     NOTIFY_PARTNER = "notify_partner"
     DOWNGRADE_PRIORITY = "downgrade_priority"

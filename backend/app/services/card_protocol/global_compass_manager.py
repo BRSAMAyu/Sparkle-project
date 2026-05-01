@@ -56,7 +56,7 @@ class GlobalCompassManager:
         user_id: uuid.UUID,
         user_profile: dict | None = None,
         plan_context: dict | None = None,
-    ) -> "PlanningArtifact":
+    ) -> PlanningArtifact:
         """Create initial GLOBAL_COMPASS from user profile + plan context.
 
         Auto-approves since this is a system-generated initial artifact.
@@ -94,7 +94,7 @@ class GlobalCompassManager:
         user_id: uuid.UUID,
         user_profile: dict | None = None,
         plan_context: dict | None = None,
-    ) -> "PlanningArtifact":
+    ) -> PlanningArtifact:
         """Get existing APPROVED compass or initialize a new one."""
         existing = await self.artifact_service.get_approved(
             plan_card_id, ArtifactType.GLOBAL_COMPASS
@@ -113,7 +113,7 @@ class GlobalCompassManager:
         plan_card_id: uuid.UUID,
         updates: dict,
         evidence: dict | None = None,
-    ) -> "PlanningArtifact | None":
+    ) -> PlanningArtifact | None:
         """Propose a compass update. Creates a new version.
 
         The caller must resolve the plan_card_id from user_id + legacy_plan_id.
@@ -155,7 +155,7 @@ class GlobalCompassManager:
         user_id: uuid.UUID,
     ) -> PlanningArtifact:
         """Build a reviewable GLOBAL_COMPASS from an approved discovery dossier."""
-        plan_card = await self._get_owned_plan(plan_card_id, user_id)
+        await self._get_owned_plan(plan_card_id, user_id)
         dossier_payload, dossier_version, dossier_id = self._normalize_dossier(dossier)
         current = await self.artifact_service.get_approved(plan_card_id, ArtifactType.GLOBAL_COMPASS)
         based_on = {"DISCOVERY_DOSSIER": dossier_version}

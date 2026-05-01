@@ -5,7 +5,7 @@ Budget Optimization Service
 Intelligent budget allocation for context packs using multi-armed bandit algorithms.
 """
 import math
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 
 from loguru import logger
 from sqlalchemy import and_, select
@@ -16,7 +16,7 @@ from app.services.budget_tuning_service import BudgetTuningService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class BudgetOptimizationService:

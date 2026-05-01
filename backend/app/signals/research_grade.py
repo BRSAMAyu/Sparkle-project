@@ -14,12 +14,11 @@ All pure computation, no external I/O.
 from __future__ import annotations
 
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
-from loguru import logger
 
-from app.signals.types import OutcomeRecord, PolicyEffectEntry, _uid
+from app.signals.types import OutcomeRecord, _uid
 
 
 # ═══════════════════════════════════════════════════════════════════════

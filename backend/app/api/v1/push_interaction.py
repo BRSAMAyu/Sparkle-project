@@ -2,7 +2,7 @@
 Push interaction API - record push open/dismiss/ignore events.
 """
 from __future__ import annotations
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,7 +19,7 @@ router = APIRouter()
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class PushInteractionPayload(BaseModel):

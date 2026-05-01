@@ -25,7 +25,7 @@ Prompt 管理系统 - 统一的Agent Prompt管理
     prompt = get_system_prompt_for_role(AgentRole.GALAXY_GUIDE, user_context, query)
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from typing import Any
 import json
 import math
@@ -1006,8 +1006,8 @@ def build_system_prompt(
     )
     past_session_memory_section = _format_past_session_memory_section(user_context)
     capsule_preference_section = _format_capsule_preference_section(user_context)
-    spine_model_claims_section = _format_spine_model_claims_section(user_context)
-    spine_community_skill_section = _format_spine_community_skill_section(user_context)
+    _format_spine_model_claims_section(user_context)
+    _format_spine_community_skill_section(user_context)
 
     llm_profile = _extract_llm_profile(user_context)
     understanding_depth_hint = None
@@ -1399,9 +1399,7 @@ def build_system_prompt(
             for key, meta in prompt_signal_telemetry["high_value_fields"].items()
             if meta.get("collected") and not meta.get("prompt_visible")
         ]
-        prompt_signal_telemetry["model_facing_section_sizes"] = {
-            key: value for key, value in prompt_signal_telemetry.get("section_sizes", {}).items()
-        }
+        prompt_signal_telemetry["model_facing_section_sizes"] = dict(prompt_signal_telemetry.get("section_sizes", {}).items())
         prompt_signal_telemetry["utilization"] = _build_prompt_utilization_snapshot(
             pre_budget_section_map=pre_budget_section_map,
             model_facing_section_map=section_map,
@@ -3572,7 +3570,7 @@ def _format_memory_recency_label(value: Any) -> str:
     if occurred_at is None:
         return ""
 
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(UTC).replace(tzinfo=None)
     delta = now - occurred_at
     if delta.total_seconds() < 0:
         return "刚才"
@@ -3604,7 +3602,7 @@ def _parse_memory_datetime(value: Any) -> datetime | None:
         except ValueError:
             return None
     if parsed.tzinfo is not None:
-        parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
     return parsed
 
 

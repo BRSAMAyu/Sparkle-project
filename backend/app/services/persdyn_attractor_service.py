@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from statistics import fmean, pstdev
-from typing import Iterable
+from collections.abc import Iterable
 from uuid import UUID
 
 from loguru import logger

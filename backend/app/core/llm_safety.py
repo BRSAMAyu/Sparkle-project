@@ -242,7 +242,7 @@ class LLMSafetyService:
         """
         return any(pattern.search(text) for pattern in self._compiled_patterns['dangerous'])
 
-    def _detect_prompt_injection(self, text: str) -> 'RiskResult':
+    def _detect_prompt_injection(self, text: str) -> RiskResult:
         """内部: 检测并尝试修复提示注入"""
         for pattern in self._compiled_patterns['dangerous']:
             match = pattern.search(text)
@@ -256,7 +256,7 @@ class LLMSafetyService:
                 )
         return RiskResult(detected=False, sanitized_text=text)
 
-    def _filter_xss(self, text: str) -> 'RiskResult':
+    def _filter_xss(self, text: str) -> RiskResult:
         """内部: 过滤 XSS 攻击"""
         for pattern in self._compiled_patterns['xss']:
             match = pattern.search(text)
@@ -269,7 +269,7 @@ class LLMSafetyService:
                 )
         return RiskResult(detected=False, sanitized_text=text)
 
-    def _filter_sensitive_info(self, text: str) -> 'RiskResult':
+    def _filter_sensitive_info(self, text: str) -> RiskResult:
         """内部: 过滤敏感信息"""
         for pattern in self._compiled_patterns['sensitive']:
             match = pattern.search(text)
@@ -286,7 +286,7 @@ class LLMSafetyService:
                 )
         return RiskResult(detected=False, sanitized_text=text)
 
-    def _deep_semantic_analysis(self, text: str) -> 'RiskResult':
+    def _deep_semantic_analysis(self, text: str) -> RiskResult:
         """
         深度语义分析 (性能敏感,谨慎使用)
 

@@ -18,7 +18,7 @@ import json
 import time
 import uuid
 from dataclasses import dataclass, field
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from enum import Enum
 from typing import Any
 from uuid import UUID
@@ -42,7 +42,7 @@ from app.services.self_evolution_service import StrategyCalibrationService
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ReviewDecision(Enum):
@@ -1735,7 +1735,6 @@ Please review this plan and provide your assessment."""
         from app.models.plan import Plan, PlanType
         from app.models.task import Task
         from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
-        from app.services.plan_service import PlanService
         from app.tools.schemas import GenerateTasksForPlanParams
 
         try:

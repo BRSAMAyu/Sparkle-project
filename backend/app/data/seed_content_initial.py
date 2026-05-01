@@ -7,7 +7,7 @@ Seed Content Initial Data
 2. 常见问题回复模板 (template) - 如何开始学习、功能介绍
 3. Python编程练习题库 (teaching) - 列表操作、函数定义练习
 """
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 import uuid
 
@@ -415,7 +415,7 @@ even_squared = [x**2 for x in numbers if x % 2 == 0]
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 async def initialize_seed_libraries(db_session) -> int:

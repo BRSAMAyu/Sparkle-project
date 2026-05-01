@@ -10,7 +10,6 @@ Application Configuration Management
 import json
 import logging
 import os
-from typing import Optional
 from urllib.parse import quote, unquote, urlparse, urlunparse
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
@@ -127,7 +126,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Sparkle"
     APP_VERSION: str = "0.1.0"
     ENVIRONMENT: str = "development"
-    DEBUG: Optional[bool] = None
+    DEBUG: bool | None = None
     SERVICE_ROLE: str = "api"  # api | grpc
 
     # Security
@@ -208,7 +207,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     APPLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_ID: str = ""
-    WS_ALLOW_QUERY_TOKEN: Optional[bool] = None
+    WS_ALLOW_QUERY_TOKEN: bool | None = None
 
     # OpenClaw Integration
     OPENCLAW_ENABLED: bool = False
@@ -360,7 +359,7 @@ class Settings(BaseSettings):
     AURORA_STAGE40_CALENDAR_MODE: str = "live"  # off | shadow | live
 
     # Email (SMTP)
-    EMAIL_ENABLED: Optional[bool] = None
+    EMAIL_ENABLED: bool | None = None
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
     SMTP_USER: str = ""
@@ -744,7 +743,7 @@ class Settings(BaseSettings):
     # degrade to MDX_AVAILABLE=False when readmdict/python-lzo are missing.
     MDX_DICTIONARY_ENABLED: bool = True
     MDX_DICTIONARY_PATH: str = ""
-    MDD_RESOURCES_PATH: Optional[str] = None
+    MDD_RESOURCES_PATH: str | None = None
     DICTIONARY_PACKAGE_DIR: str = "data/dictionaries/packages"
     DICTIONARY_PACKAGE_BASE_URL: str = ""
 
@@ -815,7 +814,7 @@ class Settings(BaseSettings):
     # gRPC Server
     GRPC_PORT: int = 50051
     GRPC_ENABLE_REFLECTION: bool = False
-    GRPC_REQUIRE_TLS: Optional[bool] = None
+    GRPC_REQUIRE_TLS: bool | None = None
     GRPC_TLS_CERT_PATH: str = ""
     GRPC_TLS_KEY_PATH: str = ""
 

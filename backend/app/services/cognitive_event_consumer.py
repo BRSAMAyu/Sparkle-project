@@ -1,4 +1,3 @@
-import asyncio
 from uuid import UUID
 
 from loguru import logger

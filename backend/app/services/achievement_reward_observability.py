@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections import Counter
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 
 from prometheus_client import Counter as PrometheusCounter
@@ -12,7 +12,7 @@ from app.core.metrics import get_or_create_metric
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 ACHIEVEMENT_PHOTON_COMPENSATION_TOTAL = get_or_create_metric(

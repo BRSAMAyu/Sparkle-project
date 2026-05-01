@@ -15,7 +15,7 @@ import csv
 import io
 import json
 import re
-from datetime import timezone, datetime, timedelta
+from datetime import datetime, timedelta, UTC
 from typing import Any
 from uuid import UUID
 
@@ -23,11 +23,10 @@ from sqlalchemy import Float, and_, case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.vocabulary import DictionaryEntry, WordBook
-from app.services.llm_service import llm_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class VocabularyService:

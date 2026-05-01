@@ -18,7 +18,7 @@ See: docs/product/implementation/ERROR_BOOK_TO_KNOWLEDGE_MASTERY_IMPLEMENTATION_
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, UTC
 from typing import Any
 from uuid import UUID
 
@@ -76,7 +76,7 @@ ERROR_PRESSURE_TRIGGER_COUNT = 3
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class ErrorBookMasterySyncService:
@@ -219,7 +219,7 @@ class ErrorBookMasterySyncService:
             latest_analysis = {}
         updated_analysis = dict(latest_analysis)
         updated_analysis["linking_hint"] = dict(NO_LINKED_NODE_HINT)
-        setattr(error_record, "latest_analysis", updated_analysis)
+        error_record.latest_analysis = updated_analysis
 
     async def _update_node_mastery(
         self,

@@ -15,8 +15,8 @@ Feedback-Driven Generation Service - Phase 2f
 import uuid
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import timezone, datetime, timedelta
-from enum import Enum
+from datetime import datetime, timedelta, UTC
+from enum import StrEnum
 from typing import Any
 
 from loguru import logger
@@ -34,9 +34,9 @@ from app.services.review_history_service import get_review_history_service
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
-class FeedbackType(str, Enum):
+class FeedbackType(StrEnum):
     """反馈类型"""
     RATING = "rating"                   # 评分反馈 (1-5星)
     QUALITY = "quality"                 # 质量反馈 (helpful/not_helpful)
@@ -45,7 +45,7 @@ class FeedbackType(str, Enum):
     REGENERATION_REQUEST = "regeneration_request"  # 重新生成请求
 
 
-class RegenerationType(str, Enum):
+class RegenerationType(StrEnum):
     """重新生成类型"""
     IMPROVE_QUALITY = "improve_quality"           # 提升质量
     FIX_ISSUES = "fix_issues"                     # 修复问题
@@ -55,7 +55,7 @@ class RegenerationType(str, Enum):
     CUSTOM = "custom"                             # 自定义
 
 
-class RegenerationStatus(str, Enum):
+class RegenerationStatus(StrEnum):
     """重新生成状态"""
     PENDING = "pending"
     IN_PROGRESS = "in_progress"

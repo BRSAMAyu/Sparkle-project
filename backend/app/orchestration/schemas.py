@@ -15,7 +15,7 @@ Defines core data structures for:
 - PlanFeedback: Plan feedback entry (Phase 4)
 """
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 # ============ Phase 4: Plan Version Constants ============
 
@@ -29,14 +29,14 @@ REPLAN_RATE_LIMIT_WINDOW = 60  # seconds
 REPLAN_MAX_PER_WINDOW = 3  # max replans per window
 
 import uuid
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any, Literal
 
 from app.core.user_insight_state import UserInsightState
 
 
 def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()
+    return datetime.now(UTC).replace(tzinfo=None).isoformat()
 
 
 @dataclass
@@ -52,7 +52,7 @@ class RouteDecision:
     context_version: str | None = None
 
 
-class OrchestratorState(str, Enum):
+class OrchestratorState(StrEnum):
     IDLE = "idle"
     PLANNING = "planning"
     TOOL_EXECUTION = "tool_execution"
@@ -160,7 +160,7 @@ class ExecutablePlan:
     # DAG helpers
     # ------------------------------------------------------------------
 
-    def get_execution_layers(self) -> list[list["ToolCallSpec"]]:
+    def get_execution_layers(self) -> list[list[ToolCallSpec]]:
         """Return tool calls organized by execution layer.
 
         Steps within a layer have no mutual dependencies and can run in
@@ -412,7 +412,7 @@ class PlanFeedback:
         }
 
     @classmethod
-    def from_review_result(cls, review_result: Any) -> "PlanFeedback":
+    def from_review_result(cls, review_result: Any) -> PlanFeedback:
         """从 PlanReviewResult 创建 PlanFeedback
 
         Args:
@@ -464,7 +464,7 @@ class CompiledInsightState:
         insight_state: UserInsightState,
         *,
         user_strategy_state: dict[str, Any] | None = None,
-    ) -> "CompiledInsightState":
+    ) -> CompiledInsightState:
         """Adapt the canonical compiled user-model state into the Phase A runtime view.
 
         `UserInsightCompiler -> UserInsightState` remains the fact owner.

@@ -22,7 +22,7 @@ from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError
 from app.db.session import get_db
 from app.models.task import Task, TaskStatus, TaskType
-from app.models.task_resources import TaskKnowledgeLink, TaskResourceLink, TaskResourceType
+from app.models.task_resources import TaskResourceLink, TaskResourceType
 from app.models.user import User
 from app.schemas.task import (
     SubTaskDetail,

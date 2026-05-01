@@ -10,31 +10,26 @@ Content Moderation Service - 敏感词过滤、内容审核、违规处理
 - 群组自定义敏感词
 - 违规记录和自动处理
 """
-import re
 import unicodedata
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 from uuid import UUID
 
 import redis.asyncio as redis
 from loguru import logger
-from sqlalchemy import and_, delete, func, or_, select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
-from app.core.cache import cache_service
 from app.models.community import (
     Group,
     GroupMember,
-    GroupRole,
     ModerationAction,
 )
-from app.models.user import User
 
 
 def _utcnow() -> datetime:
     """Return naive UTC datetime."""
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 # ============ Unicode 正规化和清理 ============

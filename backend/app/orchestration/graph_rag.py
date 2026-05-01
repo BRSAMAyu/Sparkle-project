@@ -849,7 +849,7 @@ Return ONLY a JSON array of concept strings."""
         allowed_group_ids: set[str] | None = None,
         *,
         strategy: Any | None = None,
-        trace: "RetrievalTrace | None" = None,
+        trace: RetrievalTrace | None = None,
     ) -> tuple[
         list[str],
         list[dict[str, Any]],
@@ -1271,7 +1271,7 @@ Return ONLY a JSON array of concept strings."""
         query: str,
         subject_hint: str | None = None,
         timeout_s: float | None = None,
-        trace: "RetrievalTrace | None" = None,
+        trace: RetrievalTrace | None = None,
     ) -> str:
         """
         HyDE pre-retrieval expansion: generate a short hypothetical textbook
@@ -1335,7 +1335,7 @@ Return ONLY a JSON array of concept strings."""
         query: str,
         user_id: str,
         strategy: RagRouter | Any | None = None,
-        trace: "RetrievalTrace | None" = None,
+        trace: RetrievalTrace | None = None,
     ) -> HyDEPreparation:
         if not getattr(strategy, "enable_hyde", False):
             return HyDEPreparation(vector_query=query, source="raw", skip_reason="hyde_disabled")
@@ -1382,7 +1382,7 @@ Return ONLY a JSON array of concept strings."""
         allowed_group_ids: set[str] | None = None,
         *,
         strategy: Any | None = None,
-        trace: "RetrievalTrace | None" = None,
+        trace: RetrievalTrace | None = None,
     ) -> tuple[
         list[str],
         list[dict[str, Any]],
@@ -1475,7 +1475,7 @@ Return ONLY a JSON array of concept strings."""
         allowed_group_ids: set[str] | None = None,
         *,
         strategy: Any | None = None,
-        trace: "RetrievalTrace | None" = None,
+        trace: RetrievalTrace | None = None,
     ) -> tuple[
         list[str],
         list[dict[str, Any]],

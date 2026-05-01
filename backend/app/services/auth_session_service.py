@@ -3,7 +3,7 @@ Authentication session tracking service.
 """
 from __future__ import annotations
 
-from datetime import timezone, datetime
+from datetime import datetime, UTC
 from typing import Any
 
 from fastapi import Request
@@ -18,7 +18,7 @@ SESSION_REVOKED_PREFIX = "session_revoked:"
 
 
 def _utcnow_naive() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _client_ip(request: Request | None) -> str | None:
