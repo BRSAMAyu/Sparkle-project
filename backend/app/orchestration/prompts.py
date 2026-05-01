@@ -4170,11 +4170,15 @@ def _format_behavior_pattern_section(*, user_context: dict) -> str:
 
     behavior_types = user_context.get("behavior_pattern_types") or {}
     details = user_context.get("behavior_pattern_details") or []
+    if not isinstance(details, list):
+        details = []
 
     lines = ["## 行为模式信号 [L2 行为响应]"]
     lines.append("以下是最近检测到的用户行为模式，请在回答中主动适应：")
 
     for pat in details[:5]:
+        if not isinstance(pat, dict):
+            continue
         name = pat.get("name") or pat.get("pattern_name") or ""
         ptype = pat.get("type") or ""
         confidence = pat.get("confidence") or pat.get("match_score") or 0
