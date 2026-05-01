@@ -830,7 +830,7 @@ class EventBus:
                 dlq_len = await self.redis.xlen(self._dlq_stream(stream))
                 EVENT_BUS_DLQ_DEPTH.labels(stream=stream).set(dlq_len)
             except Exception:
-                pass
+                logger.opt(exception=True).debug("Failed to update DLQ depth gauge")
         # Ack AFTER DLQ write succeeds — safe because DLQ has captured the event.
         if self.redis:
             await self.redis.xack(stream, group_name, message_id)
