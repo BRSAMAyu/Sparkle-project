@@ -81,12 +81,17 @@ from app.orchestration.agent_scoring import AgentScoringService  # noqa: F401
 from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
 from app.orchestration.memory_helpers import (
     build_aurora_modeling_memory_summary,
+    build_aurora_runtime_metadata as _build_aurora_runtime_metadata,
     build_error_memory_summary,
     extract_completion_state_from_response_data,
+    extract_struggle_score as _extract_struggle_score,
+    first_memory_value as _first_memory_value,
     memory_dict as _memory_dict,
     memory_json_dict as _memory_json_dict,
     memory_text as _memory_text,
-    first_memory_value as _first_memory_value,
+    safe_float as _safe_float,
+    should_record_stressed_session_mood as _should_record_stressed,
+    wake_policy_energy as _wake_policy_energy,
 )
 
 # Multi-Agent Mode Support
@@ -861,31 +866,15 @@ class ChatOrchestrator(
 
     @staticmethod
     def _safe_float(value: Any) -> float | None:
-        try:
-            return float(value)
-        except (TypeError, ValueError):
-            return None
+        return _safe_float(value)
 
     @classmethod
     def _extract_struggle_score(cls, payload: Any) -> float | None:
-        if not isinstance(payload, dict):
-            return None
-        direct = cls._safe_float(payload.get("struggle_score"))
-        if direct is not None:
-            return direct
-        for key in ("task_state", "checkpoint_state", "signals", "context", "metadata"):
-            nested = payload.get(key)
-            if isinstance(nested, dict):
-                score = cls._extract_struggle_score(nested)
-                if score is not None:
-                    return score
-        return None
+        return _extract_struggle_score(payload)
 
     @staticmethod
     def _wake_policy_energy(wake_policy: dict[str, Any] | None) -> str:
-        if not isinstance(wake_policy, dict):
-            return ""
-        return str(wake_policy.get("energy") or "").strip().lower()
+        return _wake_policy_energy(wake_policy)
 
     @classmethod
     def _should_record_stressed_session_mood(
@@ -895,36 +884,11 @@ class ChatOrchestrator(
         conversation_context: dict[str, Any] | None = None,
         wake_policy: dict[str, Any] | None = None,
     ) -> bool:
-        if cls._wake_policy_energy(wake_policy) == "full":
-            return True
-
-        request_context = dict(request_extra_context or {})
-        nested_wake_policy = request_context.get("wake_policy")
-        if isinstance(nested_wake_policy, dict) and cls._wake_policy_energy(nested_wake_policy) == "full":
-            return True
-
-        candidates: list[Any] = [request_context]
-        conversation = dict(conversation_context or {})
-        messages = conversation.get("messages")
-        if isinstance(messages, list):
-            candidates.extend(item for item in messages[-6:] if isinstance(item, dict))
-        for candidate in candidates:
-            if isinstance(candidate, dict):
-                candidate_wake_policy = candidate.get("wake_policy")
-                if isinstance(candidate_wake_policy, dict) and cls._wake_policy_energy(candidate_wake_policy) == "full":
-                    return True
-                metadata = candidate.get("metadata")
-                if isinstance(metadata, dict):
-                    metadata_wake_policy = metadata.get("wake_policy")
-                    if (
-                        isinstance(metadata_wake_policy, dict)
-                        and cls._wake_policy_energy(metadata_wake_policy) == "full"
-                    ):
-                        return True
-            score = cls._extract_struggle_score(candidate)
-            if score is not None and score > 0.6:
-                return True
-        return False
+        return _should_record_stressed(
+            request_extra_context=request_extra_context,
+            conversation_context=conversation_context,
+            wake_policy=wake_policy,
+        )
 
     async def _maybe_upsert_session_mood(
         self,
@@ -972,18 +936,12 @@ class ChatOrchestrator(
         modeling_complete: bool,
         modeling_snapshot: dict[str, Any] | None = None,
     ) -> dict[str, str]:
-        meta: dict[str, str] = {
-            "aurora_surface": surface,
-            "aurora_runtime_enabled": "true",
-            "surface_complete": str(surface_complete).lower(),
-            "modeling_complete": str(modeling_complete).lower(),
-        }
-        if modeling_complete and modeling_snapshot:
-            try:
-                meta["modeling_output_json"] = json.dumps(modeling_snapshot, ensure_ascii=False, default=str)
-            except Exception:
-                logger.warning("Failed to serialize modeling_snapshot to JSON", exc_info=True)
-        return meta
+        return _build_aurora_runtime_metadata(
+            surface=surface,
+            surface_complete=surface_complete,
+            modeling_complete=modeling_complete,
+            modeling_snapshot=modeling_snapshot,
+        )
 
     # ── Memory helpers (delegated to memory_helpers module) ────────────
 

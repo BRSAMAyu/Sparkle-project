@@ -170,3 +170,90 @@ def build_error_memory_summary(
     if not candidate:
         candidate = memory_text(user_message)[:80] or "current turn"
     return f"struggled with {candidate}"
+
+
+# ── Aurora runtime metadata helpers ────────────────────────────────────
+
+
+def safe_float(value: Any) -> float | None:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def extract_struggle_score(payload: Any) -> float | None:
+    if not isinstance(payload, dict):
+        return None
+    direct = safe_float(payload.get("struggle_score"))
+    if direct is not None:
+        return direct
+    for key in ("task_state", "checkpoint_state", "signals", "context", "metadata"):
+        nested = payload.get(key)
+        if isinstance(nested, dict):
+            score = extract_struggle_score(nested)
+            if score is not None:
+                return score
+    return None
+
+
+def wake_policy_energy(wake_policy: dict[str, Any] | None) -> str:
+    if not isinstance(wake_policy, dict):
+        return ""
+    return str(wake_policy.get("energy") or "").strip().lower()
+
+
+def should_record_stressed_session_mood(
+    *,
+    request_extra_context: dict[str, Any] | None,
+    conversation_context: dict[str, Any] | None = None,
+    wake_policy: dict[str, Any] | None = None,
+) -> bool:
+    if wake_policy_energy(wake_policy) == "full":
+        return True
+
+    request_context = dict(request_extra_context or {})
+    nested_wake_policy = request_context.get("wake_policy")
+    if isinstance(nested_wake_policy, dict) and wake_policy_energy(nested_wake_policy) == "full":
+        return True
+
+    candidates: list[Any] = [request_context]
+    conversation = dict(conversation_context or {})
+    messages = conversation.get("messages")
+    if isinstance(messages, list):
+        candidates.extend(item for item in messages[-6:] if isinstance(item, dict))
+    for candidate in candidates:
+        if isinstance(candidate, dict):
+            candidate_wake_policy = candidate.get("wake_policy")
+            if isinstance(candidate_wake_policy, dict) and wake_policy_energy(candidate_wake_policy) == "full":
+                return True
+            metadata = candidate.get("metadata")
+            if isinstance(metadata, dict):
+                metadata_wake_policy = metadata.get("wake_policy")
+                if isinstance(metadata_wake_policy, dict) and wake_policy_energy(metadata_wake_policy) == "full":
+                    return True
+        score = extract_struggle_score(candidate)
+        if score is not None and score > 0.6:
+            return True
+    return False
+
+
+def build_aurora_runtime_metadata(
+    *,
+    surface: str,
+    surface_complete: bool,
+    modeling_complete: bool,
+    modeling_snapshot: dict[str, Any] | None = None,
+) -> dict[str, str]:
+    meta: dict[str, str] = {
+        "aurora_surface": surface,
+        "aurora_runtime_enabled": "true",
+        "surface_complete": str(surface_complete).lower(),
+        "modeling_complete": str(modeling_complete).lower(),
+    }
+    if modeling_complete and modeling_snapshot:
+        try:
+            meta["modeling_output_json"] = json.dumps(modeling_snapshot, ensure_ascii=False, default=str)
+        except Exception:
+            pass
+    return meta
