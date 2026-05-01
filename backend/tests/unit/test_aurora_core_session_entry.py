@@ -4,6 +4,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.aurora.core_session import AuroraCoreSessionService
+from app.aurora.runtime_v1.models import AuroraCoreSessionSnapshot  # noqa: F401
 from app.signals.aurora_core_session import AuroraCoreSessionEntryReason
 
 
@@ -117,6 +118,7 @@ async def test_core_session_expiry_returns_friendly_summary() -> None:
     )
     session.add_user_message("我先去处理别的。", is_freeform=True)
     session.last_activity_at = (datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=30)).isoformat()
+    session.expires_at = (datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=1)).isoformat()
     await service.store.save(session)
 
     current = await service.get_current_session("u1")
@@ -157,3 +159,79 @@ async def test_core_session_freeform_correction_closure_has_visible_result() -> 
     assert payload["state_patches"]
     assert payload["next_changes"]
     assert any(patch["state_key"] == "aurora_assumption" for patch in payload["state_patches"])
+
+
+@pytest.mark.asyncio
+async def test_core_session_loads_from_postgres_when_redis_misses(db_session) -> None:
+    redis = FakeRedis()
+    service = AuroraCoreSessionService(redis, db=db_session)
+    session = await service.start_session(
+        user_id="u-pg",
+        conversation_id="c1",
+        band_status="calibration_available",
+        wake_reasons=["plan_drift"],
+    )
+    await service.respond(
+        user_id="u-pg",
+        session_id=session.session_id,
+        content="是的，计划偏了",
+        semantic_value="confirmed",
+    )
+    resume_token = (await service.get_session(session.session_id)).resume_token
+    redis.data.clear()
+
+    restored = await AuroraCoreSessionService(redis, db=db_session).resume_session(
+        user_id="u-pg",
+        resume_token=resume_token,
+    )
+
+    assert restored.session_id == session.session_id
+    assert restored.status == "active"
+    assert any(message.content == "是的，计划偏了" for message in restored.messages)
+    assert await redis.get(f"aurora:core_session:{session.session_id}") is not None
+
+
+@pytest.mark.asyncio
+async def test_core_session_idle_timeout_pauses_instead_of_expiring(db_session) -> None:
+    service = AuroraCoreSessionService(FakeRedis(), db=db_session)
+    session = await service.start_session(
+        user_id="u-idle",
+        conversation_id="c1",
+        band_status="calibration_available",
+        wake_reasons=["plan_drift"],
+    )
+    session.last_activity_at = (datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=11)).isoformat()
+    await service.store.save(session)
+
+    current = await service.get_current_session("u-idle")
+
+    assert current is not None
+    assert current.status == "paused"
+    assert current.resume_token
+    assert current.calibration_result is None
+    assert "暂停在这里" in current.messages[-1].content
+
+
+@pytest.mark.asyncio
+async def test_core_session_respond_after_idle_pause_keeps_user_turn(db_session) -> None:
+    service = AuroraCoreSessionService(FakeRedis(), db=db_session)
+    session = await service.start_session(
+        user_id="u-idle-response",
+        conversation_id="c1",
+        band_status="calibration_available",
+        wake_reasons=["plan_drift"],
+    )
+    session.last_activity_at = (datetime.now(UTC).replace(tzinfo=None) - timedelta(minutes=11)).isoformat()
+    await service.store.save(session)
+    paused = await service.get_current_session("u-idle-response")
+
+    updated = await service.respond(
+        user_id="u-idle-response",
+        session_id=paused.session_id,
+        content="继续，刚刚说到计划偏了。",
+        semantic_value="confirmed",
+    )
+
+    assert updated.status == "active"
+    assert any(message.role == "user" and "继续" in message.content for message in updated.messages)
+    assert updated.user_turn_count == 1

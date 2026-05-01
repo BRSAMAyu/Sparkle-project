@@ -14,6 +14,16 @@ from loguru import logger
 from app.config import settings
 from app.core.metrics import FSM_CONTEXT_EVICTION_TOTAL, FSM_CONTEXT_SIZE_BYTES
 
+_CHECKPOINT_VOLATILE_CONTEXT_KEYS = {
+    "db_session",
+    "stream_callback",
+    "run_ledger",
+    "tools_schema",
+    "redis_client",
+    "request_extra_context",
+    "conversation_settings",
+}
+
 # ==========================================
 # 1. Core Data Structures
 # ==========================================
@@ -186,7 +196,13 @@ class StateGraph:
                 if inspect.isawaitable(res):
                     await res
 
-    async def invoke(self, initial_state: WorkflowState, max_steps: int = 50) -> WorkflowState:
+    async def invoke(
+        self,
+        initial_state: WorkflowState,
+        max_steps: int = 50,
+        *,
+        resume_policy: str | None = None,
+    ) -> WorkflowState:
         """Execute the graph."""
         if not self._compiled:
             self.compile()
@@ -195,8 +211,23 @@ class StateGraph:
         current_node_name: str = self.entry_point
         state = initial_state
 
-        # Load from checkpoint if available (TRACKED(TD-008): implement resume logic)
-        # For now, we always start fresh or from provided state
+        if resume_policy == "interrupted_only" and self.checkpointer:
+            resumed = await self._load_interrupted_checkpoint(initial_state)
+            if resumed is not None:
+                checkpoint_state, checkpoint_node = resumed
+                if checkpoint_node in self.nodes:
+                    state = self._merge_checkpoint_state(checkpoint_state, initial_state)
+                    current_node_name = checkpoint_node
+                    state.context_data["checkpoint_resume"] = {
+                        "policy": resume_policy,
+                        "node_id": checkpoint_node,
+                        "source": "redis_checkpoint",
+                    }
+                    logger.info(
+                        "🔁 [{}] Resuming interrupted request from checkpoint node '{}'",
+                        self.name,
+                        checkpoint_node,
+                    )
 
         steps = 0
 
@@ -275,7 +306,49 @@ class StateGraph:
 
         logger.info(f"🏁 [{self.name}] Execution finished")
         await self._emit_event(GraphEventType.GRAPH_END, self.name, state)
+        if self.checkpointer:
+            session_id = str(state.context_data.get("session_id") or "").strip()
+            request_id = str(state.context_data.get("request_id") or "").strip()
+            mark_completed = getattr(self.checkpointer, "mark_completed", None)
+            if session_id and callable(mark_completed):
+                await mark_completed(session_id, request_id or None)
         return state
+
+    async def _load_interrupted_checkpoint(self, initial_state: WorkflowState) -> tuple[WorkflowState, str] | None:
+        session_id = str(initial_state.context_data.get("session_id") or "").strip()
+        request_id = str(initial_state.context_data.get("request_id") or "").strip()
+        if not session_id or not request_id:
+            return None
+        loader = getattr(self.checkpointer, "load_interrupted", None)
+        if not callable(loader):
+            return None
+        result = await loader(session_id=session_id, request_id=request_id, max_age_seconds=30 * 60)
+        if result is None:
+            return None
+        checkpoint_state, node_id, _metadata = result
+        return checkpoint_state, node_id
+
+    def _merge_checkpoint_state(
+        self,
+        checkpoint_state: WorkflowState,
+        fresh_state: WorkflowState,
+    ) -> WorkflowState:
+        """Merge durable checkpoint context while preserving fresh request state."""
+        merged = fresh_state.clone()
+        for key, value in checkpoint_state.context_data.items():
+            if key in _CHECKPOINT_VOLATILE_CONTEXT_KEYS:
+                continue
+            if key in merged.context_data:
+                continue
+            merged.context_data[key] = value
+        if checkpoint_state.errors:
+            merged.errors = list(checkpoint_state.errors) + list(merged.errors)
+        if checkpoint_state.next_step and not merged.next_step:
+            merged.next_step = checkpoint_state.next_step
+        if checkpoint_state.trace_id:
+            merged.context_data["checkpoint_resume_trace_id"] = checkpoint_state.trace_id
+            merged.trace_id = checkpoint_state.trace_id
+        return merged
 
     def _merge_state(self, current_state: WorkflowState, new_state: Any) -> WorkflowState:
         if isinstance(new_state, WorkflowState):

@@ -1264,3 +1264,35 @@ Full `flutter analyze` 仍被项目级 info lint debt 干扰；本轮 scoped ana
 | `docs/product/SPARKLE_AURORA_CONVERGENCE_PLAN_2026-05-01.md` | verified fixed — 已由 Git 追踪 |
 | `docs/product/SPARKLE_FINAL_ACCEPTANCE_LEDGER_2026-05-01.md` | fixed in this pass — 追加本 Section 20 addendum |
 | `docs/product/SPARKLE_ROADMAP_v3_TRACKER_2026-04-28.md` | fixed in this pass — 同步追加 verification section |
+
+---
+
+## 25. Aurora Session Continuity Recovery Closeout (2026-05-02)
+
+> **来源**: `AURORA_SESSION_STATE_ANALYSIS.md` + Codex review findings TD-008/P1/P3
+> **结论**: 本轮把 Aurora/标准对话的关键会话连续性从 Redis-only 易失状态推进到安全恢复模型：StateGraph checkpoint 只用于同 request interrupted resume；普通回归走 returning context；L3 Core Session 和 FSM 状态具备 PostgreSQL fallback。
+
+### 25.1 修复状态
+
+| 项 | 状态 | 证据 |
+|----|------|------|
+| TD-008 checkpoint resume | FIXED-IN-PASS | `RedisCheckpointer` 保存 request/session/checkpoint metadata；`StateGraph.invoke(..., resume_policy="interrupted_only")` 只恢复同 request incomplete checkpoint |
+| Fresh request 保护 | FIXED-IN-PASS | checkpoint merge 保留 fresh user message、`db_session`、`stream_callback`、`request_extra_context` 等 volatile context |
+| FSM Redis miss fallback | FIXED-IN-PASS | 新增 `DurableSessionStateSnapshot`；`SessionStateManager.load_state()` Redis miss 时只恢复 recoverable + 未过期状态，`DONE` 不恢复 |
+| L3 Core Session PG fallback | FIXED-IN-PASS | 新增 `AuroraCoreSessionSnapshot`；Redis miss 可按 session id/latest/resume token hash 从 PG 恢复并回写 Redis |
+| L3 idle pause | FIXED-IN-PASS | 10min idle 改为 `paused`，追加“暂停在这里，可继续”的用户可见消息；硬过期仍生成 summary |
+| 回归体验分档 | FIXED-IN-PASS | returning context 输出 `silent_resume` / `light_resume` / `personalized_return` / `checkpoint_debrief` |
+| Schema | FIXED-IN-PASS | `c11_20260502_add_session_recovery_snapshots.py` 增加两张 recovery snapshot 表 |
+
+### 25.2 验证
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/orchestration/test_statechart_engine.py::TestStateGraphBasicExecution::test_interrupted_checkpoint_resume_preserves_fresh_message_and_volatile_context tests/orchestration/test_statechart_engine.py::TestStateGraphBasicExecution::test_checkpoint_resume_does_not_run_for_new_turn_request -q` | ✅ `2 passed` |
+| `cd backend && pytest tests/unit/test_session_recovery_persistence.py -q` | ✅ `2 passed` |
+| `cd backend && pytest tests/unit/test_aurora_core_session_entry.py::test_core_session_loads_from_postgres_when_redis_misses tests/unit/test_aurora_core_session_entry.py::test_core_session_idle_timeout_pauses_instead_of_expiring -q` | ✅ `2 passed` |
+| `cd backend && alembic heads` | ✅ `c11_20260502 (head)` |
+
+### 25.3 剩余边界
+
+多设备强一致仍不是本轮目标；当前实现保证 latest Aurora state 和回归摘要可恢复，但不对不同设备同时输入做全局锁。未来若真实用户数据证明跨设备并发很高，再推进统一 Session State aggregate。

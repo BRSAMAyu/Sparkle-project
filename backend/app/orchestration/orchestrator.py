@@ -329,7 +329,7 @@ class ChatOrchestrator(
         self._bg_tasks: set[asyncio.Task] = set()
 
         # Initialize components
-        self.state_manager = SessionStateManager(redis_client)
+        self.state_manager = SessionStateManager(redis_client, db_session=db_session)
         self.validator = RequestValidator(
             redis_client,
             daily_quota=getattr(settings, "DAILY_QUOTA", 100000),
@@ -2090,7 +2090,13 @@ class ChatOrchestrator(
                 )
 
                 # Step 3: Initialize state & extract message
-                await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
+                await self._update_state(
+                    session_id,
+                    STATE_INIT,
+                    f"Request {request_id}",
+                    request_id=request_id,
+                    user_id=user_id,
+                )
                 chat_mode = normalize_chat_mode(request.chat_mode or CHAT_MODE_STANDARD)
                 user_message = request.message or ""
                 request_extra_context = {}
@@ -2461,6 +2467,8 @@ class ChatOrchestrator(
                 state.context_data.update(initial_document_context_state)
                 state.context_data["session_id"] = session_id
                 state.context_data["conversation_id"] = session_id
+                state.context_data["request_id"] = request_id
+                state.context_data["user_id"] = user_id
                 # v2.9/v2.10: Inject spine directives into workflow state
                 for _spine_key in ("spine_response_directive", "spine_chronicle_summary",
                                    "spine_fatigue_context", "spine_retrieval_directive",
@@ -3406,7 +3414,13 @@ class ChatOrchestrator(
                     followup_updates, _, _, _, _, _, _ = await self._drain_system_updates(user_id)
                     for update_resp in followup_updates:
                         yield self._bind_response_session_id(update_resp, session_id, request_id=request_id)
-                    await self._update_state(session_id, STATE_DONE, "Response completed")
+                    await self._update_state(
+                        session_id,
+                        STATE_DONE,
+                        "Response completed",
+                        request_id=request_id,
+                        user_id=user_id,
+                    )
                     await self._maybe_upsert_session_mood(
                         active_db=active_db,
                         user_id=user_id,
@@ -3427,7 +3441,13 @@ class ChatOrchestrator(
                     workflow_type="standard_chat", agents_used="orchestrator", outcome="error"
                 ).inc()
                 logger.opt(exception=e).error("Orchestration Error")
-                await self._update_state(session_id, STATE_FAILED, str(e))
+                await self._update_state(
+                    session_id,
+                    STATE_FAILED,
+                    str(e),
+                    request_id=request_id,
+                    user_id=user_id,
+                )
                 await self._write_turn_end_episodic_memory(
                     active_db=active_db,
                     user_id=user_id,

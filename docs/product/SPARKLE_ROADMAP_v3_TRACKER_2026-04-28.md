@@ -1396,3 +1396,34 @@ Full mobile analyzer still reports broad existing lint debt outside C18 (`6327 i
 | `SPARKLE_FINAL_ACCEPTANCE_LEDGER_2026-05-01.md` Section 20 addendum | Added T01-T15 state and R-01/R-16 finding status markers |
 | `SPARKLE_INDEPENDENT_VERIFICATION_REPORT_2026-05-01.md` | Added to Git tracking without changing factual report content |
 | `SPARKLE_AURORA_CLOSEOUT_EXECUTION_PLAN_2026-05-01.md` | Added to Git tracking as the T01-T15 execution source |
+
+---
+
+## 2026-05-02 Aurora Session Continuity Recovery
+
+> **来源**: Codex TD-008/P1/P3 review + `docs/product/AURORA_SESSION_STATE_ANALYSIS.md`
+> **目标**: 把 Aurora 深度校准和标准对话从 Redis-only 易失状态推进到可恢复、可解释、用户可感知的连续体验。
+
+### Recovery Tasks
+
+| ID | 严重度 | 模块 | 状态 | 证据 |
+|----|--------|------|------|------|
+| ASC-01 | P0 | StateGraph checkpoint | FIXED-IN-PASS | Same-request interrupted-only resume；不恢复不同 request；不覆盖 fresh message / volatile context |
+| ASC-02 | P1 | FSM Redis miss fallback | FIXED-IN-PASS | `DurableSessionStateSnapshot` + recoverable-only PG fallback；`DONE` 不恢复 |
+| ASC-03 | P1 | L3 Core Session durability | FIXED-IN-PASS | `AuroraCoreSessionSnapshot` + session/latest/resume-token hash PG fallback |
+| ASC-04 | P1 | L3 idle experience | FIXED-IN-PASS | 10min idle 变为 paused，不直接 expired；用户可继续深度校准 |
+| ASC-05 | P1 | Returning UX tiers | FIXED-IN-PASS | `silent_resume` / `light_resume` / `personalized_return` / `checkpoint_debrief` |
+| ASC-06 | P2 | Alembic schema | FIXED-IN-PASS | `c11_20260502_add_session_recovery_snapshots.py`; `alembic heads` -> `c11_20260502` |
+
+### Verification Evidence
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/orchestration/test_statechart_engine.py::TestStateGraphBasicExecution::test_interrupted_checkpoint_resume_preserves_fresh_message_and_volatile_context tests/orchestration/test_statechart_engine.py::TestStateGraphBasicExecution::test_checkpoint_resume_does_not_run_for_new_turn_request -q` | PASS |
+| `cd backend && pytest tests/unit/test_session_recovery_persistence.py -q` | PASS |
+| `cd backend && pytest tests/unit/test_aurora_core_session_entry.py::test_core_session_loads_from_postgres_when_redis_misses tests/unit/test_aurora_core_session_entry.py::test_core_session_idle_timeout_pauses_instead_of_expiring -q` | PASS |
+| `cd backend && alembic heads` | PASS: `c11_20260502 (head)` |
+
+### Boundary
+
+P4 多设备强一致继续 deferred；当前 pass 只保证 latest Aurora state、resume token fallback、returning context 可恢复和可解释，不引入跨设备全局锁。

@@ -1032,8 +1032,13 @@ class ContextBuilderMixin:
                 return None
 
             silence_gap = _utcnow() - last_message_at
-            if silence_gap < timedelta(days=3):
-                return None
+            if silence_gap < timedelta(minutes=30):
+                return {
+                    "resume_tier": "silent_resume",
+                    "last_active_at": last_message_at.isoformat(),
+                    "briefing_text": "",
+                    "welcome_back_message": "",
+                }
 
             task_result = await db_session.execute(
                 select(Task.title, Task.completed_at)
@@ -1081,16 +1086,29 @@ class ContextBuilderMixin:
                     "context.overdue_tasks_with_next", locale=locale, count=overdue_count, title=str(next_due[0])
                 )
 
-            welcome_back = I18n.t("context.welcome_back", locale=locale, progress=progress_text, due=due_text)
+            if silence_gap < timedelta(hours=8):
+                resume_tier = "light_resume"
+                welcome_back = "我接着刚才的上下文继续。" if locale.startswith("zh") else "I will continue from the recent context."
+                briefing_text = welcome_back
+            elif silence_gap < timedelta(days=3):
+                resume_tier = "personalized_return"
+                welcome_back = I18n.t("context.welcome_back", locale=locale, progress=progress_text, due=due_text)
+                briefing_text = f"{progress_text}{due_text}"
+            else:
+                resume_tier = "checkpoint_debrief"
+                welcome_back = I18n.t("context.welcome_back", locale=locale, progress=progress_text, due=due_text)
+                briefing_text = f"{progress_text}{due_text}"
 
             payload = {
-                "days_away": max(int(silence_gap.days), 3),
+                "resume_tier": resume_tier,
+                "days_away": max(int(silence_gap.days), 0),
+                "hours_away": round(silence_gap.total_seconds() / 3600, 1),
                 "last_active_at": last_message_at.isoformat(),
                 "last_progress": progress_text,
                 "overdue_task_count": overdue_count,
                 "next_due_task_title": str(next_due[0]) if next_due else "",
                 "welcome_back_message": welcome_back,
-                "briefing_text": f"{progress_text}{due_text}",
+                "briefing_text": briefing_text,
             }
             await self.redis.setex(redis_key, 24 * 60 * 60, "1")
             return payload

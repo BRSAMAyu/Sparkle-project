@@ -16,11 +16,15 @@ Rules:
 from __future__ import annotations
 
 import inspect
+import hashlib
 import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
+
+from loguru import logger
+from sqlalchemy import select
 
 from app.signals.aurora_core_session import AuroraCoreSessionEntryReason
 
@@ -41,6 +45,7 @@ SESSION_KEY_PREFIX = "aurora:core_session:"
 RESUME_TOKEN_KEY_PREFIX = f"{SESSION_KEY_PREFIX}resume:"
 SESSION_TTL_SECONDS = 30 * 60  # 30 min max lifetime
 IDLE_TTL_SECONDS = 10 * 60  # 10 min idle kills session
+IDLE_PAUSE_SECONDS = 10 * 60
 MAX_USER_TURNS = 6
 MAX_AURORA_MESSAGES = 12
 
@@ -51,6 +56,22 @@ def _utcnow() -> datetime:
 
 def _new_resume_token() -> str:
     return f"acs_{uuid.uuid4().hex}"
+
+
+def _hash_resume_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _parse_dt(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return None
+    if parsed.tzinfo is not None:
+        parsed = parsed.astimezone(UTC).replace(tzinfo=None)
+    return parsed
 
 
 @dataclass
@@ -232,8 +253,9 @@ class AuroraCoreSession:
 class AuroraCoreSessionStore:
     """Redis-backed store for AuroraCoreSession objects."""
 
-    def __init__(self, redis) -> None:
+    def __init__(self, redis, db=None) -> None:
         self.redis = redis
+        self.db = db
 
     def _session_key(self, session_id: str) -> str:
         return f"{SESSION_KEY_PREFIX}{session_id}"
@@ -256,6 +278,7 @@ class AuroraCoreSessionStore:
         *,
         previous_resume_token: str | None = None,
     ) -> None:
+        await self._save_durable(session)
         if self.redis is None:
             return
         key = self._session_key(session.session_id)
@@ -301,11 +324,12 @@ class AuroraCoreSessionStore:
             await self._call("delete", self._resume_key(previous_resume_token))
 
     async def load(self, session_id: str) -> AuroraCoreSession | None:
-        if self.redis is None:
-            return None
-        raw = await self._call("get", self._session_key(session_id))
+        raw = await self._call("get", self._session_key(session_id)) if self.redis is not None else None
         if not raw:
-            return None
+            session = await self._load_durable_by_session_id(session_id)
+            if session is not None:
+                await self.save(session)
+            return session
         if isinstance(raw, bytes):
             raw = raw.decode("utf-8")
         try:
@@ -314,11 +338,9 @@ class AuroraCoreSessionStore:
             return None
 
     async def load_active(self, user_id: str) -> AuroraCoreSession | None:
-        if self.redis is None:
-            return None
-        raw_id = await self._call("get", self._user_active_key(user_id))
+        raw_id = await self._call("get", self._user_active_key(user_id)) if self.redis is not None else None
         if not raw_id:
-            return None
+            return await self._load_durable_latest(user_id=user_id, statuses=("active",))
         if isinstance(raw_id, bytes):
             raw_id = raw_id.decode("utf-8")
         session = await self.load(raw_id.strip())
@@ -327,35 +349,128 @@ class AuroraCoreSessionStore:
         return session
 
     async def load_current(self, user_id: str) -> AuroraCoreSession | None:
-        if self.redis is None:
-            return None
-        raw_id = await self._call("get", self._user_current_key(user_id))
+        raw_id = await self._call("get", self._user_current_key(user_id)) if self.redis is not None else None
         if not raw_id:
-            return None
+            return await self._load_durable_latest(user_id=user_id, statuses=("active", "paused", "expired"))
         if isinstance(raw_id, bytes):
             raw_id = raw_id.decode("utf-8")
         return await self.load(raw_id.strip())
 
     async def load_last(self, user_id: str) -> AuroraCoreSession | None:
-        if self.redis is None:
-            return None
-        raw_id = await self._call("get", self._user_last_key(user_id))
+        raw_id = await self._call("get", self._user_last_key(user_id)) if self.redis is not None else None
         if not raw_id:
-            return None
+            return await self._load_durable_latest(user_id=user_id, statuses=None)
         if isinstance(raw_id, bytes):
             raw_id = raw_id.decode("utf-8")
         return await self.load(raw_id.strip())
 
     async def load_by_resume_token(self, resume_token: str) -> AuroraCoreSession | None:
-        if self.redis is None:
-            return None
-        raw_id = await self._call("get", self._resume_key(resume_token))
+        raw_id = await self._call("get", self._resume_key(resume_token)) if self.redis is not None else None
         if raw_id:
             if isinstance(raw_id, bytes):
                 raw_id = raw_id.decode("utf-8")
             return await self.load(raw_id.strip())
+        durable = await self._load_durable_by_resume_token(resume_token)
+        if durable is not None:
+            await self.save(durable)
+            return durable
         # Migration fallback for sessions created before opaque resume tokens.
         return await self.load(resume_token)
+
+    async def _save_durable(self, session: AuroraCoreSession) -> None:
+        if self.db is None:
+            return
+        try:
+            from app.aurora.runtime_v1.models import AuroraCoreSessionSnapshot
+
+            result = await self.db.execute(
+                select(AuroraCoreSessionSnapshot).where(AuroraCoreSessionSnapshot.session_id == session.session_id)
+            )
+            record = result.scalar_one_or_none()
+            if record is None:
+                record = AuroraCoreSessionSnapshot(session_id=session.session_id)
+                self.db.add(record)
+            record.user_id = session.user_id
+            record.conversation_id = session.conversation_id
+            record.surface = session.surface
+            record.status = session.status
+            record.stage = session.stage
+            record.resume_token_hash = _hash_resume_token(session.resume_token) if session.resume_token else None
+            record.last_activity_at = _parse_dt(session.last_activity_at) or _utcnow()
+            record.expires_at = _parse_dt(session.expires_at) or (_utcnow() + timedelta(days=3))
+            record.payload = session.to_dict()
+            record.runtime_metadata = {"source": "AuroraCoreSessionStore.save"}
+            await self.db.flush()
+        except Exception as exc:
+            logger.debug(f"Failed to persist Aurora core session {session.session_id}: {exc}")
+
+    async def _load_durable_by_session_id(self, session_id: str) -> AuroraCoreSession | None:
+        if self.db is None:
+            return None
+        try:
+            from app.aurora.runtime_v1.models import AuroraCoreSessionSnapshot
+
+            result = await self.db.execute(
+                select(AuroraCoreSessionSnapshot).where(AuroraCoreSessionSnapshot.session_id == session_id).limit(1)
+            )
+            record = result.scalar_one_or_none()
+            return self._session_from_record(record)
+        except Exception as exc:
+            logger.debug(f"Failed to load durable Aurora core session {session_id}: {exc}")
+            return None
+
+    async def _load_durable_by_resume_token(self, resume_token: str) -> AuroraCoreSession | None:
+        if self.db is None or not resume_token:
+            return None
+        try:
+            from app.aurora.runtime_v1.models import AuroraCoreSessionSnapshot
+
+            result = await self.db.execute(
+                select(AuroraCoreSessionSnapshot)
+                .where(AuroraCoreSessionSnapshot.resume_token_hash == _hash_resume_token(resume_token))
+                .limit(1)
+            )
+            record = result.scalar_one_or_none()
+            return self._session_from_record(record)
+        except Exception as exc:
+            logger.debug(f"Failed to load durable Aurora core session by resume token: {exc}")
+            return None
+
+    async def _load_durable_latest(
+        self,
+        *,
+        user_id: str,
+        statuses: tuple[str, ...] | None,
+    ) -> AuroraCoreSession | None:
+        if self.db is None:
+            return None
+        try:
+            from app.aurora.runtime_v1.models import AuroraCoreSessionSnapshot
+
+            query = select(AuroraCoreSessionSnapshot).where(AuroraCoreSessionSnapshot.user_id == user_id)
+            if statuses:
+                query = query.where(AuroraCoreSessionSnapshot.status.in_(statuses))
+            result = await self.db.execute(query.order_by(AuroraCoreSessionSnapshot.last_activity_at.desc()).limit(1))
+            record = result.scalar_one_or_none()
+            session = self._session_from_record(record)
+            if session is not None:
+                await self.save(session)
+            return session
+        except Exception as exc:
+            logger.debug(f"Failed to load latest durable Aurora core session for {user_id}: {exc}")
+            return None
+
+    @staticmethod
+    def _session_from_record(record: Any) -> AuroraCoreSession | None:
+        if record is None:
+            return None
+        payload = getattr(record, "payload", None)
+        if not isinstance(payload, dict):
+            return None
+        try:
+            return AuroraCoreSession.from_dict(payload)
+        except Exception:
+            return None
 
     async def _call(self, method: str, *args, **kwargs):
         fn = getattr(self.redis, method, None)
@@ -379,7 +494,7 @@ class AuroraCoreSessionService:
     """
 
     def __init__(self, redis, db=None) -> None:
-        self.store = AuroraCoreSessionStore(redis)
+        self.store = AuroraCoreSessionStore(redis, db=db)
         self.db = db
 
     async def start_session(
@@ -460,7 +575,17 @@ class AuroraCoreSessionService:
             raise ValueError(f"Session {session_id} not found")
         if session.user_id != user_id:
             raise PermissionError("Session does not belong to this user")
-        if session.status != "active":
+        previous_resume_token: str | None = None
+        if session.status == "paused":
+            previous_resume_token = self._refresh_resume_token(session)
+            session.status = "active"
+            session.last_activity_at = _utcnow().isoformat()
+            if not session.at_message_limit:
+                session.add_aurora_message(
+                    "我们从暂停的地方继续。你刚才这句我会接在前面的校准里处理。",
+                    "process_response",
+                )
+        elif session.status != "active":
             raise ValueError(f"Session is {session.status}, not active")
         if await self._expire_if_needed(session):
             raise ValueError("Session has expired")
@@ -472,7 +597,7 @@ class AuroraCoreSessionService:
             semantic_value=semantic_value,
             is_freeform=is_freeform,
         )
-        previous_resume_token = self._refresh_resume_token(session)
+        previous_resume_token = previous_resume_token or self._refresh_resume_token(session)
 
         # Apply model write effect if present
         if model_write_effect:
@@ -539,6 +664,8 @@ class AuroraCoreSessionService:
         if session is None:
             return None
         if await self._expire_if_needed(session):
+            return None
+        if session.status != "active":
             return None
         return session
 
@@ -609,12 +736,26 @@ class AuroraCoreSessionService:
     async def _expire_if_needed(self, session: AuroraCoreSession) -> bool:
         if session.status not in ("active", "paused"):
             return session.status == "expired"
-        if not (session.is_expired or session.is_idle_expired):
+        if session.status == "active" and session.is_idle_expired and not session.is_expired:
+            previous_resume_token = self._refresh_resume_token(session)
+            self._pause_for_idle(session)
+            await self.store.save(session, previous_resume_token=previous_resume_token)
+            return False
+        if not session.is_expired:
             return False
         previous_resume_token = session.resume_token
         self._mark_session_expired(session)
         await self.store.save(session, previous_resume_token=previous_resume_token)
         return True
+
+    def _pause_for_idle(self, session: AuroraCoreSession) -> None:
+        session.status = "paused"
+        session.last_activity_at = _utcnow().isoformat()
+        if not session.messages or "暂停在这里" not in session.messages[-1].content:
+            session.add_aurora_message(
+                "我先把这次深度校准暂停在这里。回来时我们可以从这个问题继续，不用你重新解释前面的内容。",
+                "process_response",
+            )
 
     def _mark_session_expired(self, session: AuroraCoreSession) -> None:
         if session.calibration_result is None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
@@ -96,4 +96,49 @@ class AuroraDecisionTelemetry(BaseModel):
     __table_args__ = (
         Index("idx_aurora_decision_telemetry_scope_ts", "user_id", "conversation_id", "decided_at"),
         Index("idx_aurora_decision_telemetry_surface_ts", "surface", "decided_at"),
+    )
+
+
+class AuroraCoreSessionSnapshot(BaseModel):
+    """Durable fallback for the L3 Aurora Core Session Redis FSM."""
+
+    __tablename__ = "aurora_core_session_snapshots"
+
+    session_id = Column(String(128), nullable=False, unique=True, index=True)
+    user_id = Column(String(128), nullable=False, index=True)
+    conversation_id = Column(String(128), nullable=True, index=True)
+    surface = Column(String(64), nullable=False, default="aurora_modeling", index=True)
+    status = Column(String(32), nullable=False, default="active", index=True)
+    stage = Column(String(32), nullable=False, default="declare", index=True)
+    resume_token_hash = Column(String(64), nullable=True, unique=True, index=True)
+    last_activity_at = Column(DateTime, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    payload = Column(JSONBCompat, nullable=False, default=dict)
+    runtime_metadata = Column("metadata", JSONBCompat, nullable=False, default=dict)
+
+    __table_args__ = (
+        Index("idx_aurora_core_session_user_status", "user_id", "status", "last_activity_at"),
+        Index("idx_aurora_core_session_conversation", "user_id", "conversation_id", "last_activity_at"),
+    )
+
+
+class DurableSessionStateSnapshot(BaseModel):
+    """Durable fallback for orchestration FSM state when Redis misses."""
+
+    __tablename__ = "durable_session_state_snapshots"
+
+    session_id = Column(String(128), nullable=False, unique=True, index=True)
+    user_id = Column(String(128), nullable=True, index=True)
+    request_id = Column(String(128), nullable=True, index=True)
+    fsm_state = Column(String(32), nullable=False, index=True)
+    details = Column(Text, nullable=False, default="")
+    payload = Column(JSONBCompat, nullable=False, default=dict)
+    recoverable = Column(Boolean, nullable=False, default=True, index=True)
+    last_seen_at = Column(DateTime, nullable=False, index=True)
+    expires_at = Column(DateTime, nullable=False, index=True)
+    runtime_metadata = Column("metadata", JSONBCompat, nullable=False, default=dict)
+
+    __table_args__ = (
+        Index("idx_durable_session_state_recovery", "session_id", "recoverable", "expires_at"),
+        Index("idx_durable_session_state_user_seen", "user_id", "last_seen_at"),
     )
