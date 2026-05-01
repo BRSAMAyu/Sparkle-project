@@ -8,11 +8,25 @@ import (
 	"time"
 
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+)
+
+var (
+	circuitBreakerStateGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "sparkle_grpc_circuit_breaker_state",
+		Help: "Circuit breaker state: 1 = current state (closed/open/half-open)",
+	}, []string{"state"})
+
+	circuitBreakerTransitionsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sparkle_grpc_circuit_breaker_transitions_total",
+		Help: "Total circuit breaker state transitions",
+	}, []string{"from", "to"})
 )
 
 // CircuitState represents the state of a circuit breaker
@@ -277,6 +291,11 @@ func (h *AgentHealthChecker) transitionTo(newState CircuitState) {
 	}
 
 	log.Printf("[AgentHealthChecker] Circuit breaker transitioned: %s -> %s", oldState, newState)
+
+	// Update Prometheus metrics
+	circuitBreakerStateGauge.Reset()
+	circuitBreakerStateGauge.WithLabelValues(newState.String()).Set(1)
+	circuitBreakerTransitionsTotal.WithLabelValues(oldState.String(), newState.String()).Inc()
 
 	if h.onStateChange != nil {
 		go h.onStateChange(oldState, newState)

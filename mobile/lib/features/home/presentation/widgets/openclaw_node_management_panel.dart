@@ -217,7 +217,7 @@ class _OpenClawNodeManagementPanelState
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                              DS.textOnPrimary,
                             ),
                           ),
                         )

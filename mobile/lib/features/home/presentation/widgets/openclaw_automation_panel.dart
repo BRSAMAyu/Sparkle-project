@@ -161,7 +161,7 @@ class _OpenClawAutomationPanelState
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                              DS.textOnPrimary,
                             ),
                           ),
                         )
@@ -321,7 +321,7 @@ class _OpenClawAutomationPanelState
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
+                              DS.textOnPrimary,
                             ),
                           ),
                         )

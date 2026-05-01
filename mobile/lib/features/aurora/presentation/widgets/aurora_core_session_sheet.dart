@@ -990,7 +990,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
               label: Text(l10n.auroraResumeAction),
               style: FilledButton.styleFrom(
                 backgroundColor: DS.brandPrimary,
-                foregroundColor: Colors.white,
+                foregroundColor: DS.textOnPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(DS.radius8),
                 ),
@@ -1079,7 +1079,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
                       label: Text(l10n.auroraStartNewSession),
                       style: FilledButton.styleFrom(
                         backgroundColor: DS.brandPrimary,
-                        foregroundColor: Colors.white,
+                        foregroundColor: DS.textOnPrimary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(DS.radius8),
                         ),
@@ -1245,7 +1245,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
                       },
                 style: FilledButton.styleFrom(
                   backgroundColor: DS.brandPrimary,
-                  foregroundColor: Colors.white,
+                  foregroundColor: DS.textOnPrimary,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(DS.radius8),
                   ),

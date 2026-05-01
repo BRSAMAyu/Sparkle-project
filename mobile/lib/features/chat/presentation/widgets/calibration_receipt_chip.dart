@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -25,14 +26,40 @@ class _CalibrationReceiptChipState extends State<CalibrationReceiptChip> {
   bool _dismissed = false;
   bool _visible = false;
 
+  String get _dismissKey {
+    final id = widget.receipt['receipt_id']?.toString() ??
+        widget.receipt['correction_id']?.toString() ??
+        '';
+    return 'calibration_receipt_dismissed_$id';
+  }
+
   @override
   void initState() {
     super.initState();
+    _restoreDismissState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         setState(() => _visible = true);
       }
     });
+  }
+
+  Future<void> _restoreDismissState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      final dismissed = prefs.getBool(_dismissKey) ?? false;
+      if (dismissed && !_dismissed) {
+        setState(() => _dismissed = true);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _persistDismiss() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_dismissKey, true);
+    } catch (_) {}
   }
 
   @override
@@ -59,6 +86,7 @@ class _CalibrationReceiptChipState extends State<CalibrationReceiptChip> {
           margin: const EdgeInsets.only(top: 6, bottom: 2),
           child: Semantics(
             button: true,
+            liveRegion: true,
             label: '$summary. $semanticLabel',
             child: ExcludeSemantics(
               child: Material(
@@ -133,6 +161,7 @@ class _CalibrationReceiptChipState extends State<CalibrationReceiptChip> {
                                     ),
                                   );
                                   setState(() => _dismissed = true);
+                                  unawaited(_persistDismiss());
                                 },
                               ),
                             ),

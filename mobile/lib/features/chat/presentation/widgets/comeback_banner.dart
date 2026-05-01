@@ -70,6 +70,7 @@ class _ComebackBannerState extends State<ComebackBanner> {
       onPointerDown: (_) => _finishEntranceAnimation(),
       child: Semantics(
         container: true,
+        liveRegion: true,
         label: [title, body].where((text) => text.trim().isNotEmpty).join('. '),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 240),

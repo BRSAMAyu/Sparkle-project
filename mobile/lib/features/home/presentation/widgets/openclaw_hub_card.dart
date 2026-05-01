@@ -146,7 +146,7 @@ class OpenClawHubCard extends ConsumerWidget {
                   ),
                   child: const Icon(
                     Icons.cloud_sync_rounded,
-                    color: Colors.white,
+                    color: DS.textOnPrimary,
                   ),
                 ),
                 const SizedBox(width: DS.spacing10),

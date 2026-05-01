@@ -274,7 +274,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
             Text(
               context.l10n.examDayReady,
               style: context.sparkleTypography.headingLarge.copyWith(
-                color: Colors.white,
+                color: DS.textOnPrimary,
                 fontWeight: DS.fontWeightBold,
                 height: 1.2,
               ),
@@ -285,7 +285,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
               Text(
                 data.subject,
                 style: context.sparkleTypography.labelLarge.copyWith(
-                  color: Colors.white.withValues(alpha: 0.75),
+                  color: DS.textOnPrimary.withValues(alpha: 0.75),
                   fontWeight: DS.fontWeightMedium,
                 ),
                 textAlign: TextAlign.center,
@@ -297,10 +297,10 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
                 width: double.infinity,
                 padding: const EdgeInsets.all(DS.spacing12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
+                  color: DS.textOnPrimary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.18),
+                    color: DS.textOnPrimary.withValues(alpha: 0.18),
                   ),
                 ),
                 child: Column(
@@ -309,7 +309,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
                     Text(
                       context.l10n.examTips,
                       style: context.sparkleTypography.labelSmall.copyWith(
-                        color: Colors.white.withValues(alpha: 0.65),
+                        color: DS.textOnPrimary.withValues(alpha: 0.65),
                         fontWeight: DS.fontWeightBold,
                       ),
                     ),
@@ -317,7 +317,7 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
                     Text(
                       tipText,
                       style: context.sparkleTypography.bodyMedium.copyWith(
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: DS.textOnPrimary.withValues(alpha: 0.9),
                         height: 1.45,
                       ),
                     ),
@@ -331,14 +331,14 @@ class _DayZeroBannerState extends State<_DayZeroBanner>
               child: FilledButton(
                 onPressed: widget.onRecordResult,
                 style: FilledButton.styleFrom(
-                  backgroundColor: Colors.white.withValues(alpha: 0.18),
-                  foregroundColor: Colors.white,
+                  backgroundColor: DS.textOnPrimary.withValues(alpha: 0.18),
+                  foregroundColor: DS.textOnPrimary,
                   padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
                   ),
                   side: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: DS.textOnPrimary.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(

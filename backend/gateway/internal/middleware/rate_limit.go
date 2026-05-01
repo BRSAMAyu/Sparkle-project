@@ -490,6 +490,8 @@ func normalizeRateLimitRoutePath(c *gin.Context) string {
 // SlidingWindowRateLimitMiddleware uses sliding window algorithm for rate limiting
 func SlidingWindowRateLimitMiddleware(rdb *redis.Client, window time.Duration, limit int) gin.HandlerFunc {
 	swl := NewSlidingWindowRateLimiter(rdb, window, limit, "ratelimit")
+	ratePerSec := float64(limit) / window.Seconds()
+	localRL := NewRateLimiterWithCleanup(rate.Limit(ratePerSec), limit, time.Minute)
 
 	return func(c *gin.Context) {
 		clientID := c.GetString("user_id")
@@ -499,7 +501,10 @@ func SlidingWindowRateLimitMiddleware(rdb *redis.Client, window time.Duration, l
 
 		allowed, remaining, err := swl.Allow(c.Request.Context(), clientID)
 		if err != nil {
-			log.Printf("[SlidingWindowRateLimiter] Error: %v", err)
+			log.Printf("[SlidingWindowRateLimiter] Redis error: %v, falling back to local", err)
+			limiter := localRL.getVisitor(clientID)
+			allowed = limiter.Allow()
+			remaining = int(limiter.Tokens())
 		}
 
 		if !allowed {

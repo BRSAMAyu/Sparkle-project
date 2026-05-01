@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -9,7 +10,7 @@ import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
 
-class AuroraReceiptChip extends StatelessWidget {
+class AuroraReceiptChip extends StatefulWidget {
   const AuroraReceiptChip({
     required this.receipt,
     this.onActionSelected,
@@ -19,163 +20,87 @@ class AuroraReceiptChip extends StatelessWidget {
   final Map<String, dynamic> receipt;
   final ValueChanged<String>? onActionSelected;
 
-  String get receiptType => normalizeAuroraReceiptType(receipt);
+  @override
+  State<AuroraReceiptChip> createState() => _AuroraReceiptChipState();
+}
 
-  bool get _isSocialSource =>
-      receiptType == kSourceContextReceiptType &&
-      receipt['source_kind'] == 'social';
+class _AuroraReceiptChipState extends State<AuroraReceiptChip> {
+  bool _dismissed = false;
 
-  bool get _isMemory => receiptType == kMemoryReferenceReceiptType;
-
-  bool get _isSource => receiptType == kSourceContextReceiptType;
-
-  bool get _isNextAction => receiptType == kNextActionReceiptType;
-
-  List<Map<String, dynamic>> get _memories {
-    final raw = receipt['referenced_memories'];
-    if (raw is! List) return const [];
-    return raw
-        .whereType<Map<Object?, Object?>>()
-        .map(Map<String, dynamic>.from)
-        .where((item) => (item['content']?.toString().trim() ?? '').isNotEmpty)
-        .take(5)
-        .toList(growable: false);
+  String get _dismissKey {
+    final id = widget.receipt['receipt_id']?.toString() ??
+        widget.receipt['response_id']?.toString() ??
+        '';
+    return 'aurora_receipt_dismissed_$id';
   }
 
-  List<String> get _usedNames {
-    final raw = receipt['used_names'];
-    if (raw is List) return raw.map((item) => item.toString()).toList();
-    final events = receipt['events'];
-    if (events is List) {
-      return events
-          .whereType<Map<String, dynamic>>()
-          .map((event) => event['label']?.toString() ?? '')
-          .where((label) => label.isNotEmpty)
-          .toSet()
-          .toList();
-    }
-    return const [];
+  @override
+  void initState() {
+    super.initState();
+    _restoreDismissState();
   }
 
-  List<String> get _excludedNames {
-    final raw = receipt['excluded_names'];
-    if (raw is List) return raw.map((item) => item.toString()).toList();
-    return const [];
+  Future<void> _restoreDismissState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      if (!mounted) return;
+      final dismissed = prefs.getBool(_dismissKey) ?? false;
+      if (dismissed && !_dismissed) {
+        setState(() => _dismissed = true);
+      }
+    } catch (_) {}
   }
 
-  List<Map<String, String>> get _usedTools {
-    final raw = receipt['used_tools'];
-    if (raw is! List) return const [];
-    return raw
-        .whereType<Map<Object?, Object?>>()
-        .map(
-          (item) => {
-            'name': item['name']?.toString() ?? '',
-            'summary': item['summary']?.toString() ?? '',
-            'privacy_note': item['privacy_note']?.toString() ?? '',
-          },
-        )
-        .where(
-          (item) => item['name']!.isNotEmpty || item['summary']!.isNotEmpty,
-        )
-        .toList(growable: false);
+  Future<void> _persistDismiss() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_dismissKey, true);
+    } catch (_) {}
   }
-
-  List<String> get _whatChanged {
-    final raw = receipt['what_changed'];
-    if (raw is List) {
-      return raw
-          .map((item) => item.toString().trim())
-          .where((item) => item.isNotEmpty)
-          .toList(growable: false);
-    }
-    return const [];
-  }
-
-  int get _usedCount {
-    final usedCount = receipt['used_count'] as int? ?? 0;
-    final toolCount = receipt['tool_count'] as int? ?? _usedTools.length;
-    return usedCount + toolCount;
-  }
-
-  String _summary(BuildContext context) {
-    final summary = receipt['summary']?.toString().trim();
-    if (summary != null && summary.isNotEmpty) return summary;
-    final reason = receipt['decision_reason']?.toString().trim();
-    if (reason != null && reason.isNotEmpty) return reason;
-    if (_isMemory) {
-      final count = _memories.length;
-      return _copy(
-        zh: '引用了 $count 条相关记忆',
-        en: 'Used $count related memories',
-      );
-    }
-    if (_isSocialSource) return context.l10n.chatSocialContextUsed;
-    if (_isSource) {
-      return context.l10n.chatContextReceiptSummary(
-        _usedCount,
-        _excludedNames.length,
-      );
-    }
-    if (_isNextAction) {
-      return _copy(
-        zh: 'Aurora 调整了下一步',
-        en: 'Aurora changed the next action',
-      );
-    }
-    return _copy(
-      zh: 'Aurora 调整了体验',
-      en: 'Aurora adjusted the experience',
-    );
-  }
-
-  String _title(BuildContext context) {
-    final title = receipt['detail_title']?.toString().trim();
-    if (title != null && title.isNotEmpty) return title;
-    if (_isMemory) return context.l10n.chatMemoryReferenceDetailTitle;
-    if (_isSocialSource) return context.l10n.chatSocialContextDetail;
-    if (_isSource) return context.l10n.chatContextDetail;
-    if (_isNextAction) {
-      return _copy(zh: '行动调整', en: 'Action change');
-    }
-    return _copy(zh: 'Aurora 体验调整', en: 'Aurora experience change');
-  }
-
-  IconData get _icon {
-    if (_isMemory) return Icons.psychology_alt_outlined;
-    if (_isSocialSource) return Icons.groups_2_outlined;
-    if (_isSource) return Icons.auto_awesome;
-    if (_isNextAction) return Icons.tune_rounded;
-    return Icons.auto_fix_high_outlined;
-  }
-
-  bool get _hasDetail =>
-      _memories.isNotEmpty ||
-      _usedNames.isNotEmpty ||
-      _excludedNames.isNotEmpty ||
-      _usedTools.isNotEmpty ||
-      _whatChanged.isNotEmpty ||
-      (receipt['decision_reason']?.toString().trim().isNotEmpty ?? false) ||
-      (receipt['summary']?.toString().trim().isNotEmpty ?? false);
 
   @override
   Widget build(BuildContext context) {
-    if (_isMemory && _memories.isEmpty) return const SizedBox.shrink();
-    if (_isSource && _usedCount == 0 && !_hasDetail) {
+    if (_dismissed) return const SizedBox.shrink();
+
+    final receipt = widget.receipt;
+    final onActionSelected = widget.onActionSelected;
+    final receiptType = normalizeAuroraReceiptType(receipt);
+
+    final isSocialSource =
+        receiptType == kSourceContextReceiptType && receipt['source_kind'] == 'social';
+    final isMemory = receiptType == kMemoryReferenceReceiptType;
+    final isSource = receiptType == kSourceContextReceiptType;
+    final isNextAction = receiptType == kNextActionReceiptType;
+
+    final memories = _parseMemories(receipt);
+    final usedNames = _parseUsedNames(receipt);
+    final excludedNames = _parseExcludedNames(receipt);
+    final usedTools = _parseUsedTools(receipt);
+    final whatChanged = _parseWhatChanged(receipt);
+    final usedCount = (receipt['used_count'] as int? ?? 0) +
+        (receipt['tool_count'] as int? ?? usedTools.length);
+
+    if (isMemory && memories.isEmpty) return const SizedBox.shrink();
+    if (isSource && usedCount == 0 && !_hasDetailContent(receipt, memories, usedNames, excludedNames, usedTools, whatChanged)) {
       return const SizedBox.shrink();
     }
 
-    final summary = _summary(context);
+    final summary = _summary(context, receipt, isMemory, isSocialSource, isSource, isNextAction, memories, usedCount, excludedNames);
     if (summary.isEmpty) return const SizedBox.shrink();
 
+    final hasDetail = _hasDetailContent(receipt, memories, usedNames, excludedNames, usedTools, whatChanged);
+    final icon = _iconFor(isMemory, isSocialSource, isSource, isNextAction);
+    final title = _title(context, receipt, isMemory, isSocialSource, isSource, isNextAction);
+
     return Semantics(
-      button: _hasDetail,
+      button: hasDetail,
+      liveRegion: true,
       label: summary,
       child: Container(
         margin: const EdgeInsets.only(top: 6, bottom: 2),
         child: InkWell(
           borderRadius: BorderRadius.circular(8),
-          onTap: _hasDetail
+          onTap: hasDetail
               ? () {
                   unawaited(
                     SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
@@ -188,15 +113,15 @@ class AuroraReceiptChip extends StatelessWidget {
                       builder: (_) => _AuroraReceiptDetailSheet(
                         receipt: receipt,
                         receiptType: receiptType,
-                        title: _title(context),
+                        title: title,
                         summary: summary,
-                        icon: _icon,
-                        memories: _memories,
-                        usedNames: _usedNames,
-                        excludedNames: _excludedNames,
-                        usedTools: _usedTools,
-                        whatChanged: _whatChanged,
-                        isSocialSource: _isSocialSource,
+                        icon: icon,
+                        memories: memories,
+                        usedNames: usedNames,
+                        excludedNames: excludedNames,
+                        usedTools: usedTools,
+                        whatChanged: whatChanged,
+                        isSocialSource: isSocialSource,
                         onActionSelected: onActionSelected,
                       ),
                     ),
@@ -212,7 +137,7 @@ class AuroraReceiptChip extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Icon(_icon, size: 13, color: DS.brandPrimary),
+                Icon(icon, size: 13, color: DS.brandPrimary),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -221,13 +146,28 @@ class AuroraReceiptChip extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (_isMemory && _memories.isNotEmpty)
-                  _CountBadge(count: _memories.length),
-                if (_isSource && _usedCount > 0) _CountBadge(count: _usedCount),
-                if (_hasDetail) ...[
+                if (isMemory && memories.isNotEmpty)
+                  _CountBadge(count: memories.length),
+                if (isSource && usedCount > 0) _CountBadge(count: usedCount),
+                if (hasDetail) ...[
                   const SizedBox(width: 4),
                   Icon(Icons.chevron_right, size: 13, color: DS.textTertiary),
                 ],
+                Semantics(
+                  button: true,
+                  label: _copy(zh: '关闭收据', en: 'Dismiss receipt'),
+                  child: GestureDetector(
+                    onTap: () {
+                      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+                      setState(() => _dismissed = true);
+                      unawaited(_persistDismiss());
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Icon(Icons.close_rounded, size: 13, color: DS.textTertiary),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -235,6 +175,153 @@ class AuroraReceiptChip extends StatelessWidget {
       ),
     );
   }
+}
+
+// ── Parsed receipt helpers ────────────────────────────────────
+
+List<Map<String, dynamic>> _parseMemories(Map<String, dynamic> receipt) {
+  final raw = receipt['referenced_memories'];
+  if (raw is! List) return const [];
+  return raw
+      .whereType<Map<Object?, Object?>>()
+      .map(Map<String, dynamic>.from)
+      .where((item) => (item['content']?.toString().trim() ?? '').isNotEmpty)
+      .take(5)
+      .toList(growable: false);
+}
+
+List<String> _parseUsedNames(Map<String, dynamic> receipt) {
+  final raw = receipt['used_names'];
+  if (raw is List) return raw.map((item) => item.toString()).toList();
+  final events = receipt['events'];
+  if (events is List) {
+    return events
+        .whereType<Map<String, dynamic>>()
+        .map((event) => event['label']?.toString() ?? '')
+        .where((label) => label.isNotEmpty)
+        .toSet()
+        .toList();
+  }
+  return const [];
+}
+
+List<String> _parseExcludedNames(Map<String, dynamic> receipt) {
+  final raw = receipt['excluded_names'];
+  if (raw is List) return raw.map((item) => item.toString()).toList();
+  return const [];
+}
+
+List<Map<String, String>> _parseUsedTools(Map<String, dynamic> receipt) {
+  final raw = receipt['used_tools'];
+  if (raw is! List) return const [];
+  return raw
+      .whereType<Map<Object?, Object?>>()
+      .map(
+        (item) => {
+          'name': item['name']?.toString() ?? '',
+          'summary': item['summary']?.toString() ?? '',
+          'privacy_note': item['privacy_note']?.toString() ?? '',
+        },
+      )
+      .where(
+        (item) => item['name']!.isNotEmpty || item['summary']!.isNotEmpty,
+      )
+      .toList(growable: false);
+}
+
+List<String> _parseWhatChanged(Map<String, dynamic> receipt) {
+  final raw = receipt['what_changed'];
+  if (raw is List) {
+    return raw
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty)
+        .toList(growable: false);
+  }
+  return const [];
+}
+
+bool _hasDetailContent(
+  Map<String, dynamic> receipt,
+  List<Map<String, dynamic>> memories,
+  List<String> usedNames,
+  List<String> excludedNames,
+  List<Map<String, String>> usedTools,
+  List<String> whatChanged,
+) =>
+    memories.isNotEmpty ||
+    usedNames.isNotEmpty ||
+    excludedNames.isNotEmpty ||
+    usedTools.isNotEmpty ||
+    whatChanged.isNotEmpty ||
+    (receipt['decision_reason']?.toString().trim().isNotEmpty ?? false) ||
+    (receipt['summary']?.toString().trim().isNotEmpty ?? false);
+
+String _summary(
+  BuildContext context,
+  Map<String, dynamic> receipt,
+  bool isMemory,
+  bool isSocialSource,
+  bool isSource,
+  bool isNextAction,
+  List<Map<String, dynamic>> memories,
+  int usedCount,
+  List<String> excludedNames,
+) {
+  final summary = receipt['summary']?.toString().trim();
+  if (summary != null && summary.isNotEmpty) return summary;
+  final reason = receipt['decision_reason']?.toString().trim();
+  if (reason != null && reason.isNotEmpty) return reason;
+  if (isMemory) {
+    final count = memories.length;
+    return _copy(
+      zh: '引用了 $count 条相关记忆',
+      en: 'Used $count related memories',
+    );
+  }
+  if (isSocialSource) return context.l10n.chatSocialContextUsed;
+  if (isSource) {
+    return context.l10n.chatContextReceiptSummary(
+      usedCount,
+      excludedNames.length,
+    );
+  }
+  if (isNextAction) {
+    return _copy(
+      zh: 'Aurora 调整了下一步',
+      en: 'Aurora changed the next action',
+    );
+  }
+  return _copy(
+    zh: 'Aurora 调整了体验',
+    en: 'Aurora adjusted the experience',
+  );
+}
+
+String _title(
+  BuildContext context,
+  Map<String, dynamic> receipt,
+  bool isMemory,
+  bool isSocialSource,
+  bool isSource,
+  bool isNextAction,
+) {
+  final title = receipt['detail_title']?.toString().trim();
+  if (title != null && title.isNotEmpty) return title;
+  if (isMemory) return context.l10n.chatMemoryReferenceDetailTitle;
+  if (isSocialSource) return context.l10n.chatSocialContextDetail;
+  if (isSource) return context.l10n.chatContextDetail;
+  if (isNextAction) {
+    return _copy(zh: '行动调整', en: 'Action change');
+  }
+  return _copy(zh: 'Aurora 体验调整', en: 'Aurora experience change');
+}
+
+IconData _iconFor(bool isMemory, bool isSocialSource, bool isSource, bool isNextAction) {
+  if (isMemory) return Icons.psychology_alt_outlined;
+  if (isSocialSource) return Icons.groups_2_outlined;
+  if (isSource) return Icons.auto_awesome;
+  if (isNextAction) return Icons.tune_rounded;
+  return Icons.auto_fix_high_outlined;
 }
 
 class _AuroraReceiptDetailSheet extends StatelessWidget {

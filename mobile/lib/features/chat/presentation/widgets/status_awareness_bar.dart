@@ -1042,6 +1042,7 @@ class _BarContainer extends StatelessWidget {
   Widget build(BuildContext context) => Semantics(
         container: true,
         explicitChildNodes: true,
+        liveRegion: true,
         label: semanticLabel,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 300),
@@ -1113,6 +1114,7 @@ class _TimeContextPill extends StatelessWidget {
     return Semantics(
       container: true,
       button: true,
+      liveRegion: true,
       label: semantic,
       onTap: onTap,
       child: ExcludeSemantics(
@@ -1175,6 +1177,7 @@ class _TaskHealthPill extends StatelessWidget {
     return Semantics(
       container: true,
       button: true,
+      liveRegion: true,
       label: semantic,
       onTap: onTap,
       child: ExcludeSemantics(
@@ -1225,6 +1228,7 @@ class _CorrectionEffectPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
+        liveRegion: true,
         label: label,
         child: ExcludeSemantics(
           child: Container(
@@ -1304,7 +1308,7 @@ class _ActionChip extends StatelessWidget {
         onTap: onTap,
         child: ExcludeSemantics(
           child: Container(
-            constraints: const BoxConstraints(minHeight: 32, minWidth: 44),
+            constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
             padding: const EdgeInsets.symmetric(
                 horizontal: DS.spacing10, vertical: DS.spacing6),
             decoration: BoxDecoration(
@@ -1374,7 +1378,7 @@ class _StatusCorrectionChip extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
             curve: Curves.easeOutCubic,
-            constraints: const BoxConstraints(minHeight: 32, minWidth: 44),
+            constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
             padding: const EdgeInsets.symmetric(
                 horizontal: DS.spacing10, vertical: DS.spacing6),
             decoration: BoxDecoration(
@@ -1430,7 +1434,7 @@ class _PredictedOptionChip extends StatelessWidget {
         onTap: onTap,
         child: ExcludeSemantics(
           child: Container(
-            constraints: const BoxConstraints(minHeight: 32, minWidth: 44),
+            constraints: const BoxConstraints(minHeight: 44, minWidth: 44),
             padding: const EdgeInsets.symmetric(
                 horizontal: DS.spacing10, vertical: DS.spacing6),
             decoration: BoxDecoration(

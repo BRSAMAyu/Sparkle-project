@@ -117,3 +117,27 @@ groups:
           summary: "Event Bus consumer lag exceeds 5 minutes"
           description: "Redis Streams consumer group lag is above 300s. Consumers may be stalled or overwhelmed."
           runbook: "monitoring/runbooks/incident_response.md#p2-eventbus-lag"
+
+      - alert: SparkleAuroraCorrectionLoopStuck
+        expr: increase(sparkle_aurora_correction_failure_total[10m]) > 5
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Aurora correction loop stuck"
+          description: "More than 5 consecutive Aurora correction failures in the last 10 minutes. The calibration loop may be stuck and unable to converge for affected users."
+          runbook: "monitoring/runbooks/incident_response.md#p2-aurora-correction-stuck"
+
+      - alert: SparkleCircuitBreakerOpen
+        expr: sparkle_grpc_circuit_breaker_state{state="open"} == 1
+        for: 2m
+        labels:
+          severity: warning
+          tier: P2
+          service: gateway
+        annotations:
+          summary: "gRPC circuit breaker is open"
+          description: "The gRPC agent client circuit breaker has been open for more than 2 minutes. All agent requests are being rejected without attempt."
+          runbook: "monitoring/runbooks/incident_response.md#p2-circuit-breaker-open"
