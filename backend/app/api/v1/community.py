@@ -254,7 +254,27 @@ async def get_feed(
             .correlate(None)
         )
         stmt = stmt.where(Post.user_id.in_(squad_user_subq))
-    elif scope in ("following", "goal_mates"):
+    elif scope == "goal_mates":
+        partner_ids_initiated = (
+            select(AccountabilityPartnership.partner_id)
+            .where(
+                AccountabilityPartnership.initiator_id == current_user.id,
+                AccountabilityPartnership.status == AccountabilityStatus.ACTIVE,
+            )
+            .correlate(None)
+        )
+        partner_ids_accepted = (
+            select(AccountabilityPartnership.initiator_id)
+            .where(
+                AccountabilityPartnership.partner_id == current_user.id,
+                AccountabilityPartnership.status == AccountabilityStatus.ACTIVE,
+            )
+            .correlate(None)
+        )
+        stmt = stmt.where(
+            Post.user_id.in_(partner_ids_initiated) | Post.user_id.in_(partner_ids_accepted)
+        )
+    elif scope == "following":
         friend_ids = (
             select(Friendship.friend_id)
             .where(Friendship.user_id == current_user.id, Friendship.status == FriendshipStatus.ACCEPTED)

@@ -529,7 +529,7 @@ class _FakeCommunityRepository extends CommunityRepository {
   final List<Post> _posts = <Post>[];
 
   @override
-  Future<List<Post>> getFeed({int page = 1, int limit = 20}) async => _posts;
+  Future<List<Post>> getFeed({int page = 1, int limit = 20, String? scope}) async => _posts;
 
   @override
   Future<List<GroupListItem>> getMyGroups() async => const [];
