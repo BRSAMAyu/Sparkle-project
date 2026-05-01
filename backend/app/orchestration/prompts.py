@@ -3402,6 +3402,39 @@ def _render_user_context_content(
                 "approx_tokens": _estimate_prompt_tokens(srl_section),
             }
 
+    # --- State Aggregator enrichment: inject previously unused fields ---
+    _agg_fields = {
+        "commitment_summary": "【承诺概览】",
+        "recent_reflections": "【近期反思】",
+        "foresight_hint": "【前瞻提示】",
+        "engagement_state": "【投入状态】",
+        "learning_state": "【学习状态】",
+        "idiographic_summary": "【个体特征】",
+    }
+    for _agg_key, _agg_label in _agg_fields.items():
+        _agg_val = normalized.get(_agg_key)
+        if not _agg_val:
+            continue
+        if isinstance(_agg_val, dict):
+            _agg_body = "\n".join(f"- {k}: {v}" for k, v in list(_agg_val.items())[:5] if v)
+        elif isinstance(_agg_val, str):
+            _agg_body = _agg_val.strip()
+        else:
+            _agg_body = str(_agg_val)
+        if _agg_body:
+            lines.append(f"{_agg_label}\n{_agg_body}")
+            _mark_rendered(_agg_key)
+    _traits = normalized.get("traits_prior")
+    if isinstance(_traits, dict) and _traits:
+        lines.append(f"【特质基线】\n" + "\n".join(f"- {k}: {v}" for k, v in list(_traits.items())[:5] if v))
+        _mark_rendered("traits_prior")
+    _scenes = normalized.get("recent_scenes")
+    if isinstance(_scenes, list) and _scenes:
+        _scene_lines = [f"- {s}" for s in _scenes[:3]]
+        if _scene_lines:
+            lines.append(f"【近期场景】\n" + "\n".join(_scene_lines))
+            _mark_rendered("recent_scenes")
+
     working_memory_mode = _resolve_stage33_feature_mode(context, "wm_prompt")
     if working_memory_mode == "live":
         working_memory_section = _format_working_memory_section(normalized.get("working_memory_snapshot"))
@@ -3962,6 +3995,26 @@ def _normalize_user_context(context: dict) -> dict:
         normalized["working_memory_snapshot"] = working_memory_snapshot
     if isinstance(context.get("social_context"), dict):
         normalized["social_context"] = context["social_context"]
+
+    # --- State Aggregator enrichment (bridge 15/19 fields that were previously unused) ---
+    for _agg_key in (
+        "commitment_summary",
+        "recent_reflections",
+        "foresight_hint",
+        "engagement_state",
+        "learning_state",
+        "traits_prior",
+        "idiographic_summary",
+    ):
+        _agg_val = context.get(_agg_key)
+        if isinstance(_agg_val, dict) and _agg_val:
+            normalized[_agg_key] = _agg_val
+        elif isinstance(_agg_val, str) and _agg_val.strip():
+            normalized[_agg_key] = _agg_val
+    if isinstance(context.get("recent_scenes"), list) and context["recent_scenes"]:
+        normalized["recent_scenes"] = context["recent_scenes"]
+    if isinstance(context.get("pending_policies"), list) and context["pending_policies"]:
+        normalized["pending_policies"] = context["pending_policies"]
 
     # --- Canonical insight state enrichment ---
     if canonical_insight is not None:
