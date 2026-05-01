@@ -118,6 +118,13 @@ class EngagementStateValue:
 
 
 @dataclass(frozen=True)
+class EmotionHintValue:
+    dominant_sentiment: str | None
+    sentiment_distribution: dict[str, int]
+    emotional_block_detected: bool
+
+
+@dataclass(frozen=True)
 class LearningStateValue:
     within_category_preference: dict[str, Any] | None
 
@@ -302,4 +309,4 @@ class UserStateV1:
         StateFieldEnvelope[MetacognitionProfileSummaryValue] | None
     ) = None
     idiographic_summary: StateFieldEnvelope[IdiographicSummaryValue] | None = None
-    emotion_hint: StateFieldEnvelope[None] | None = None
+    emotion_hint: StateFieldEnvelope[EmotionHintValue] | None = None
