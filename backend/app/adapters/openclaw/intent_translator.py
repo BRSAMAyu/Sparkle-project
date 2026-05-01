@@ -8,6 +8,24 @@ from app.models.execution_intent import ExecutionIntent
 from app.services.execution_risk_assessor import ExecutionRiskAssessor
 
 _TOOL_STAGE_DESCRIPTIONS = {
+    "browser_navigate": "openclaw.stage.navigating",
+    "browser_click": "openclaw.stage.clicking",
+    "browser_screenshot": "openclaw.stage.screenshotting",
+    "browser_extract": "openclaw.stage.extracting",
+    "browser_read": "openclaw.stage.reading_page",
+    "browser_write": "openclaw.stage.writing",
+    "shell_exec": "openclaw.stage.executing_command",
+    "system.run": "openclaw.stage.executing_command",
+    "file_read": "openclaw.stage.reading_file",
+    "file_write": "openclaw.stage.saving_file",
+    "file_delete": "openclaw.stage.deleting_file",
+    "web_search": "openclaw.stage.searching",
+    "web_fetch": "openclaw.stage.fetching",
+    "code_execute": "openclaw.stage.running_code",
+}
+
+# Chinese fallback for backward compatibility when i18n keys are not resolved
+_TOOL_STAGE_DESCRIPTIONS_ZH = {
     "browser_navigate": "正在访问目标网页",
     "browser_click": "正在点击页面元素",
     "browser_screenshot": "正在截取页面截图",
@@ -47,10 +65,17 @@ def summarize_tool_input(raw_input: Any, *, limit: int = 60) -> str:
     return ""
 
 
-def describe_tool_call(tool_name: str, input_summary: str | None = None) -> str:
-    """Translate raw tool calls into user-facing stage text."""
+def describe_tool_call(tool_name: str, input_summary: str | None = None, *, locale: str = "zh") -> str:
+    """Translate raw tool calls into user-facing stage text.
+
+    Returns i18n key for Flutter to resolve, with Chinese fallback for
+    backward compatibility when locale='zh'.
+    """
     normalized = str(tool_name or "").strip()
-    base = _TOOL_STAGE_DESCRIPTIONS.get(normalized, f"正在执行操作：{normalized or 'unknown'}")
+    i18n_key = _TOOL_STAGE_DESCRIPTIONS.get(normalized)
+    if i18n_key and locale != "zh":
+        return i18n_key
+    base = _TOOL_STAGE_DESCRIPTIONS_ZH.get(normalized, f"正在执行操作：{normalized or 'unknown'}")
     summary = str(input_summary or "").strip()
     if summary:
         return f"{base}（{summary}）"

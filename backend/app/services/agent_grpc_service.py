@@ -244,7 +244,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     workflow_id=workflow_id,
                     prompt_version=prompt_version,
                     session_id=request.session_id,
-                    full_text="（系统提示）当前未生成有效回复，请稍后重试。",
+                    full_text="(System) No valid response generated. Please try again later.",
                     finish_reason=agent_service_pb2.STOP,
                 )
                 fallback.event_time.FromDatetime(datetime.now(UTC))
