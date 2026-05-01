@@ -185,6 +185,7 @@ from app.services.community_service import (
     PrivateMessageService,
     UserBlockService,
     UserSearchService,
+    _is_visible_to,
 )
 from app.services.community_signal_bridge import CommunitySignalBridge
 from app.services.friend_match_service import FriendMatchService
@@ -4111,6 +4112,10 @@ async def get_message_favorites(
 
     result = []
     for fav in favorites:
+        if fav.group_message and not _is_visible_to(
+            getattr(fav.group_message, "content_data", None), current_user.id,
+        ):
+            continue
         preview = None
         if fav.group_message and fav.group_message.content:
             preview = fav.group_message.content[:100]
@@ -4233,7 +4238,11 @@ async def advanced_search_group_messages(
     try:
         result = await MessageSearchService.search_group_messages(db, group_id, current_user.id, data)
 
-        messages = [_build_message_info(msg) for msg in result["messages"]]
+        visible_messages = [
+            msg for msg in result["messages"]
+            if _is_visible_to(getattr(msg, "content_data", None), current_user.id)
+        ]
+        messages = [_build_message_info(msg) for msg in visible_messages]
 
         return MessageSearchResult(
             messages=messages,
