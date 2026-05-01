@@ -547,6 +547,10 @@ class ContextBuilderMixin:
         payload["episodic_memories"] = episodic_memories
         payload.setdefault("aurora_stage34_modes", await self._stage34_modes_payload())
 
+        last_mood = await memory_service.get_last_session_mood(user_uuid)
+        if isinstance(last_mood, dict) and last_mood:
+            payload["last_session_mood"] = last_mood
+
         cognitive_context = payload.get("cognitive_context")
         if isinstance(cognitive_context, dict):
             cognitive_context["active_goals"] = active_goals

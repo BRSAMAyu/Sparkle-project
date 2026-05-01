@@ -3361,6 +3361,16 @@ def _render_user_context_content(
             if summary:
                 lines.append(f"- {summary}")
 
+    last_session_mood = normalized.get("last_session_mood")
+    if isinstance(last_session_mood, dict) and last_session_mood:
+        mood_label = str(last_session_mood.get("mood_label") or last_session_mood.get("mood") or "")
+        mood_intensity = last_session_mood.get("intensity")
+        if mood_label:
+            mood_line = f"上次情绪: {mood_label}"
+            if isinstance(mood_intensity, (int, float)):
+                mood_line += f" (强度: {mood_intensity})"
+            lines.append(f"【上次会话情绪】\n{mood_line}")
+
     if normalized.get("preferred_tools"):
         lines.append("【工具偏好】")
         lines.append(f"- 常用工具: {', '.join(normalized['preferred_tools'])}")
@@ -3974,6 +3984,9 @@ def _normalize_user_context(context: dict) -> dict:
 
     if context.get("episodic_memories"):
         normalized["episodic_memories"] = context["episodic_memories"]
+
+    if isinstance(context.get("last_session_mood"), dict):
+        normalized["last_session_mood"] = context["last_session_mood"]
 
     if isinstance(context.get("understanding_depth"), dict):
         normalized["understanding_depth"] = context["understanding_depth"]
