@@ -44,6 +44,14 @@ func (h *SignalHub) Unregister(userID string, conn JSONWriteCloser) {
 	}
 }
 
+// RemoveAll clears every entry. Used during shutdown so DrainAll can
+// atomically reset the hub alongside the connection registry.
+func (h *SignalHub) RemoveAll() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.connections = make(map[string]map[JSONWriteCloser]struct{})
+}
+
 func (h *SignalHub) Send(userID string, payload interface{}) {
 	h.mu.RLock()
 	userConns := h.connections[userID]
