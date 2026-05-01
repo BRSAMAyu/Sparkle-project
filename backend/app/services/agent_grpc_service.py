@@ -51,11 +51,18 @@ def _utcnow() -> datetime:
 
 
 def _grpc_status_for_chat_error(error_code: int) -> grpc.StatusCode:
-    if error_code == agent_service_pb2.ERROR_CODE_TIMEOUT:
-        return grpc.StatusCode.DEADLINE_EXCEEDED
-    if error_code == agent_service_pb2.ERROR_CODE_UNAVAILABLE:
-        return grpc.StatusCode.UNAVAILABLE
-    return grpc.StatusCode.INTERNAL
+    _MAP = {
+        agent_service_pb2.ERROR_CODE_INVALID_ARGUMENT: grpc.StatusCode.INVALID_ARGUMENT,
+        agent_service_pb2.ERROR_CODE_UNAUTHORIZED: grpc.StatusCode.UNAUTHENTICATED,
+        agent_service_pb2.ERROR_CODE_FORBIDDEN: grpc.StatusCode.PERMISSION_DENIED,
+        agent_service_pb2.ERROR_CODE_NOT_FOUND: grpc.StatusCode.NOT_FOUND,
+        agent_service_pb2.ERROR_CODE_CONFLICT: grpc.StatusCode.ALREADY_EXISTS,
+        agent_service_pb2.ERROR_CODE_RATE_LIMITED: grpc.StatusCode.RESOURCE_EXHAUSTED,
+        agent_service_pb2.ERROR_CODE_UNAVAILABLE: grpc.StatusCode.UNAVAILABLE,
+        agent_service_pb2.ERROR_CODE_TIMEOUT: grpc.StatusCode.DEADLINE_EXCEEDED,
+        agent_service_pb2.ERROR_CODE_INTERNAL: grpc.StatusCode.INTERNAL,
+    }
+    return _MAP.get(error_code, grpc.StatusCode.INTERNAL)
 
 
 class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
