@@ -512,6 +512,12 @@ class AchievementEngine:
                 case AchievementEvent.CONTRACT_FAILED:
                     if trigger_code in ["CONTRACT_FAILED", "CONTRACTS_FAILED"]:
                         relevant.append(achievement)
+                case AchievementEvent.ACHIEVEMENT_COMBO:
+                    if trigger_code in ["ACHIEVEMENT_COMBO", "COMBOS_TOTAL"]:
+                        relevant.append(achievement)
+                case AchievementEvent.PROGRESS_MILESTONE:
+                    if trigger_code in ["PROGRESS_MILESTONE", "MILESTONES_REACHED"]:
+                        relevant.append(achievement)
         return relevant
 
     async def _get_user_achievement_progress(self, user_id: str, achievement_id: str) -> UserAchievement | None:

@@ -24,6 +24,7 @@ from redis.exceptions import ResponseError
 from app.config import settings
 from app.core.metrics import (
     EVENT_BUS_CONSUMER_FAILURE_TOTAL,
+    EVENT_BUS_DLQ_DEPTH,
     EVENT_BUS_DLQ_TOTAL,
     EVENT_BUS_PUBLISH_RETRIES_TOTAL,
 )
@@ -723,6 +724,27 @@ class EventBus:
             return label.strip()
         return consumer_name
 
+    async def dlq_health_check(self) -> dict[str, int]:
+        """Return DLQ depth per stream for monitoring and alerting."""
+        result: dict[str, int] = {}
+        if not self.redis:
+            return result
+        try:
+            cursor = 0
+            while True:
+                cursor, keys = await self.redis.scan(cursor, match=f"*{self.dlq_suffix}", count=100)
+                for key in keys:
+                    key_str = key if isinstance(key, str) else key.decode()
+                    length = await self.redis.xlen(key_str)
+                    result[key_str] = length
+                if cursor == 0:
+                    break
+        except Exception:
+            logger.exception("DLQ health check failed")
+        for stream_name, depth in result.items():
+            EVENT_BUS_DLQ_DEPTH.labels(stream=stream_name).set(depth)
+        return result
+
     async def _persist_dlq_entry(
         self,
         *,
@@ -803,6 +825,12 @@ class EventBus:
             failure_stage="consume",
         )
         EVENT_BUS_DLQ_TOTAL.labels(event_type=str(parsed_data.get("event_type") or "unknown")).inc()
+        if self.redis:
+            try:
+                dlq_len = await self.redis.xlen(self._dlq_stream(stream))
+                EVENT_BUS_DLQ_DEPTH.labels(stream=stream).set(dlq_len)
+            except Exception:
+                pass
         # Ack AFTER DLQ write succeeds — safe because DLQ has captured the event.
         if self.redis:
             await self.redis.xack(stream, group_name, message_id)

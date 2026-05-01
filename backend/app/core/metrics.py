@@ -798,6 +798,13 @@ EVENT_BUS_DLQ_TOTAL = get_or_create_metric(
     ["event_type"],
 )
 
+EVENT_BUS_DLQ_DEPTH = get_or_create_metric(
+    Gauge,
+    "sparkle_event_bus_dlq_depth",
+    "Current DLQ depth (pending entries) by stream",
+    ["stream"],
+)
+
 EVENT_BUS_CONSUMER_FAILURE_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_event_bus_consumer_failure_total",
