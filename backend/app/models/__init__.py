@@ -173,6 +173,7 @@ from app.models.memory_evolution import (
 from app.models.memory_rank_policy import MemoryRankPolicy
 from app.models.next_action_selection import NextActionSelection
 from app.models.nightly_review import NightlyReview
+from app.models.north_star_metrics import NorthStarMetricEvent
 from app.models.notification import Notification, PushHistory
 from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
 from app.models.plan import Plan, PlanStage, PlanType

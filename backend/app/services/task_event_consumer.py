@@ -196,6 +196,12 @@ class TaskEventConsumer:
 
             if user_id:
                 await self._handle_spine_bridge_event(event)
+                await self._trigger_adaptive_plan_health_event(
+                    event,
+                    trigger="task_abandoned",
+                    feedback_category="abandoned",
+                    completion_rate=0.0,
+                )
 
         except Exception as e:
             logger.error(f"Failed to handle task.abandoned: {e}")
@@ -204,6 +210,11 @@ class TaskEventConsumer:
         """处理任务卡住 — H-01: 新增 Spine 信号。"""
         try:
             await self._handle_spine_bridge_event(event)
+            await self._trigger_adaptive_plan_health_event(
+                event,
+                trigger="task_stuck",
+                feedback_category=event.get("category") or event.get("feedback_category") or "stuck",
+            )
         except Exception as e:
             logger.error(f"Failed to handle task.stuck: {e}")
 
@@ -283,6 +294,58 @@ class TaskEventConsumer:
             await SpineEventBridge(cache_service.redis).handle_event(event)
         except Exception as e:
             logger.warning("Spine event bridge failed for {}: {}", event.get("event_type"), e)
+
+    async def _trigger_adaptive_plan_health_event(
+        self,
+        event: dict,
+        *,
+        trigger: str,
+        feedback_category: str | None = None,
+        completion_rate: float | None = None,
+    ) -> None:
+        """Route live negative execution signals into AdaptiveReplanner."""
+        user_id_raw = event.get("user_id")
+        if not user_id_raw:
+            return
+
+        task_id_raw = event.get("task_id")
+        plan_id_raw = event.get("plan_id")
+        try:
+            user_id = UUID(str(user_id_raw))
+            task_id = UUID(str(task_id_raw)) if task_id_raw else None
+        except (TypeError, ValueError):
+            logger.warning("Adaptive replanner skipped invalid event ids: {}", event)
+            return
+
+        async with AsyncSessionLocal() as db:
+            plan_id = plan_id_raw
+            if (not plan_id or plan_id == "None") and task_id:
+                result = await db.execute(
+                    select(Task.plan_id).where(
+                        Task.id == task_id,
+                        Task.user_id == user_id,
+                    )
+                )
+                plan_id = result.scalar_one_or_none()
+
+            if not plan_id or plan_id == "None":
+                logger.debug("Adaptive replanner skipped {} because plan_id was missing", trigger)
+                return
+
+            try:
+                replanner = AdaptiveReplanner(db, cache_service.redis)
+                await replanner.evaluate_plan_health_now(
+                    user_id=user_id,
+                    plan_id=UUID(str(plan_id)),
+                    trigger=trigger,
+                    task_id=task_id,
+                    completion_rate=completion_rate,
+                    feedback_category=feedback_category,
+                )
+            except (TypeError, ValueError) as exc:
+                logger.warning("Adaptive replanner skipped {} due to invalid plan id: {}", trigger, exc)
+            except Exception as exc:
+                logger.warning("Adaptive replanner failed for {}: {}", trigger, exc)
 
     async def _record_task_outcome(
         self,

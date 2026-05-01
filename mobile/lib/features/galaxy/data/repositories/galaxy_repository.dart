@@ -84,8 +84,8 @@ class GalaxyRepository {
       final stream = response.data;
       if (stream == null) return;
       final buffer = StringBuffer();
-      await for (final chunk in stream.stream) {
-        buffer.write(utf8.decode(chunk, allowMalformed: true));
+      await for (final chunk in stream.stream.cast<List<int>>().transform(utf8.decoder)) {
+        buffer.write(chunk);
         while (buffer.toString().contains('\n\n')) {
           final content = buffer.toString();
           final idx = content.indexOf('\n\n');

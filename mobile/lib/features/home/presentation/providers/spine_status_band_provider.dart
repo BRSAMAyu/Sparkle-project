@@ -115,7 +115,7 @@ class CorrectionOption {
 // ── Provider ──────────────────────────────────────────────────────────────
 
 final spineStatusBandProvider =
-    FutureProvider.autoDispose<SpineStatusBand?>((ref) async {
+    FutureProvider<SpineStatusBand?>((ref) async {
   try {
     final api = ref.read(apiClientProvider);
     final response = await api.get<Map<String, dynamic>>(

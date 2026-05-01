@@ -22,9 +22,11 @@ import 'package:sparkle/features/home/home.dart';
 import 'package:sparkle/features/insights/insights.dart';
 import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/notification_center/notification_center.dart';
+import 'package:sparkle/features/openclaw/openclaw.dart';
 import 'package:sparkle/features/photon/photon_routes.dart';
 import 'package:sparkle/features/plan/plan.dart';
 import 'package:sparkle/features/report/report_routes.dart';
+import 'package:sparkle/features/reviews/reviews.dart';
 import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 import 'package:sparkle/features/shop/shop_routes.dart';
 import 'package:sparkle/features/simulation/simulation_routes.dart';
@@ -288,6 +290,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...SplashRoutes.routes,
       ...AuthRoutes.routes,
       // Other feature routes (at root level, outside shell)
+      ...OpenClawRoutes.routes,
       ...HomeRoutes.routes,
       ...TaskRoutes.routes,
       ...PlanRoutes.routes,
@@ -299,6 +302,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...CalendarRoutes.routes,
       ...ChatRoutes.routes,
       ...ErrorBookRoutes.routes,
+      ...ReviewRoutes.routes,
       ...GalaxyRoutes.routes,
       ...CognitiveRoutes.routes,
       ...CommunityRoutes.routes,

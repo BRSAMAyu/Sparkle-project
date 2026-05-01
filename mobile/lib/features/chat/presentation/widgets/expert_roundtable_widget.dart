@@ -193,7 +193,9 @@ class _CollapsedExpertRoundtable extends StatelessWidget {
       children: [
         ChatAccessoryPill(
           icon: Icons.forum_rounded,
-          label: experts.isEmpty ? context.l10n.chatRoundtableExpertCollab : '专家协作 ${experts.length}位',
+          label: experts.isEmpty
+              ? context.l10n.chatRoundtableExpertCollab
+              : '专家协作 ${experts.length}位',
           emphasize: true,
           onTap: onExpand,
           trailing: Icon(
@@ -377,7 +379,7 @@ class _TurnCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DS.surfacePrimary,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: color.withValues(alpha: 0.14)),
       ),
@@ -412,7 +414,8 @@ class _TurnCard extends StatelessWidget {
 String _etaLabel(BuildContext context, int? etaMin, int? etaMax) {
   final low = etaMin ?? etaMax;
   final high = etaMax ?? etaMin;
-  if (low == null || high == null) return context.l10n.chatRoundtableEstimatedProcessing;
+  if (low == null || high == null)
+    return context.l10n.chatRoundtableEstimatedProcessing;
   if (low == high) return context.l10n.chatRoundtableAboutSeconds(low);
   return '$low-$high s';
 }

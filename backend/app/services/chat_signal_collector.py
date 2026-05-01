@@ -10,9 +10,11 @@ from typing import Any
 from uuid import UUID
 
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
 from app.db.session import AsyncSessionLocal
+from app.services.cognitive_service import CognitiveService
 from app.services.profile_write_service import ProfileWriteService
 from app.services.signal_adaptation import recency_weight, weighted_average
 
@@ -39,6 +41,7 @@ class ChatSignalCollector:
         conversation_id: str,
         turn_index: int,
         timestamp: datetime | None = None,
+        db_session: AsyncSession | None = None,
     ) -> None:
         if not self.redis:
             return
@@ -51,6 +54,7 @@ class ChatSignalCollector:
         gratitude = self._detect_gratitude(user_message)
         dissatisfaction = self._detect_dissatisfaction(user_message)
         complexity = self._estimate_complexity(user_message)
+        explicit_updates, explicit_confidence = self._extract_explicit_preferences(user_message)
 
         entry = {
             "ts": ts.isoformat(),
@@ -64,6 +68,17 @@ class ChatSignalCollector:
             "turn_index": turn_index,
         }
         await self._store_entry(user_id, entry)
+        await self._persist_immediate_turn_learning(
+            db_session=db_session,
+            user_id=user_id,
+            user_message=user_message,
+            conversation_id=conversation_id,
+            turn_index=turn_index,
+            explicit_updates=explicit_updates,
+            explicit_confidence=explicit_confidence,
+            dissatisfaction=dissatisfaction,
+            complexity=complexity,
+        )
 
         counter = await self._increment_counter(user_id)
         if counter % self.WINDOW_SIZE != 0:
@@ -77,16 +92,99 @@ class ChatSignalCollector:
         if not updates:
             return
 
-        try:
-            async with AsyncSessionLocal() as db:
-                service = ProfileWriteService(db, self.redis)
-                await service.update_inferred_preference(
+        await self._persist_inferred_updates(
+            db_session=db_session,
+            user_id=user_id,
+            updates=updates,
+            confidence_by_key=self._confidence_for_updates(updates),
+        )
+
+    async def _persist_immediate_turn_learning(
+        self,
+        *,
+        db_session: AsyncSession | None,
+        user_id: UUID,
+        user_message: str,
+        conversation_id: str,
+        turn_index: int,
+        explicit_updates: dict[str, Any],
+        explicit_confidence: dict[str, float],
+        dissatisfaction: bool,
+        complexity: float,
+    ) -> None:
+        should_write_fragment = bool(explicit_updates) or dissatisfaction or complexity >= 0.65
+        if not explicit_updates and not should_write_fragment:
+            return
+
+        async def _persist(db: AsyncSession) -> None:
+            evidence_id = self._evidence_id(conversation_id, turn_index)
+            evidence_refs = [
+                {
+                    "type": "chat_turn",
+                    "id": evidence_id,
+                    "conversation_id": conversation_id,
+                    "turn_index": turn_index,
+                    "schema_version": "chat_signal.v1",
+                }
+            ]
+            if explicit_updates:
+                await ProfileWriteService(db, self.redis).set_explicit_preferences(
                     user_id=user_id,
-                    updates=updates,
-                    source="ai_inferred",
+                    updates=explicit_updates,
+                    evidence_refs_by_key=dict.fromkeys(explicit_updates, evidence_refs),
+                    confidence_by_key=explicit_confidence,
+                    source_type="chat_preference",
+                    source="chat_signal_collector",
                 )
+
+            if should_write_fragment:
+                await CognitiveService(db).create_fragment(
+                    user_id=user_id,
+                    content=user_message,
+                    source_type="behavior",
+                    context_tags={
+                        "source": "chat_signal_collector",
+                        "conversation_id": conversation_id,
+                        "turn_index": turn_index,
+                        "preference_keys": sorted(explicit_updates.keys()),
+                        "dissatisfaction": dissatisfaction,
+                        "complexity": round(complexity, 3),
+                    },
+                    severity=2 if dissatisfaction else 1,
+                    source_event_id=f"chat-signal:{evidence_id}",
+                    generate_embedding=False,
+                )
+
+        await self._with_db_session(db_session, _persist, "immediate turn learning")
+
+    async def _persist_inferred_updates(
+        self,
+        *,
+        db_session: AsyncSession | None,
+        user_id: UUID,
+        updates: dict[str, Any],
+        confidence_by_key: dict[str, float],
+    ) -> None:
+        async def _persist(db: AsyncSession) -> None:
+            service = ProfileWriteService(db, self.redis)
+            await service.update_inferred_preference(
+                user_id=user_id,
+                updates=updates,
+                confidence_by_key=confidence_by_key,
+                source="chat_signal_window",
+            )
+
+        await self._with_db_session(db_session, _persist, "inferred signal updates")
+
+    async def _with_db_session(self, db_session: AsyncSession | None, operation, label: str) -> None:
+        try:
+            if db_session is not None:
+                await operation(db_session)
+                return
+            async with AsyncSessionLocal() as db:
+                await operation(db)
         except Exception as exc:
-            logger.warning("ChatSignalCollector failed to persist updates: %s", exc)
+            logger.warning("ChatSignalCollector failed to persist %s: %s", label, exc)
 
     async def _store_entry(self, user_id: UUID, entry: dict[str, Any]) -> None:
         key = f"user:chat:signals:{user_id}"
@@ -164,6 +262,92 @@ class ChatSignalCollector:
         if active_hours:
             updates["chat_active_hours"] = active_hours
         return updates
+
+    def _confidence_for_updates(self, updates: dict[str, Any]) -> dict[str, float]:
+        confidence: dict[str, float] = {}
+        for key in updates:
+            if key == "chat_active_hours":
+                confidence[key] = 0.62
+            elif key == "depth_preference_signal":
+                confidence[key] = 0.66
+            else:
+                confidence[key] = 0.58
+        return confidence
+
+    @classmethod
+    def _extract_explicit_preferences(cls, message: str) -> tuple[dict[str, Any], dict[str, float]]:
+        if not message:
+            return {}, {}
+
+        lowered = message.lower()
+        updates: dict[str, Any] = {}
+        confidence: dict[str, float] = {}
+
+        concise_markers = (
+            "concise",
+            "brief",
+            "shorter",
+            "less verbose",
+            "too long",
+            "简洁",
+            "短一点",
+            "少说",
+            "别太长",
+            "太长",
+            "太啰嗦",
+        )
+        detailed_markers = (
+            "more detail",
+            "detailed",
+            "explain more",
+            "step by step",
+            "step-by-step",
+            "详细",
+            "展开",
+            "一步一步",
+            "多解释",
+        )
+        explicit_intent_markers = (
+            "prefer",
+            "i like",
+            "i want",
+            "please",
+            "以后",
+            "接下来",
+            "更喜欢",
+            "希望",
+            "请",
+            "尽量",
+        )
+
+        has_explicit_intent = any(marker in lowered for marker in explicit_intent_markers)
+        if has_explicit_intent or any(marker in lowered for marker in ("too long", "太长", "太啰嗦")):
+            if any(marker in lowered for marker in concise_markers):
+                updates["ai_verbosity"] = "concise"
+                confidence["ai_verbosity"] = 0.92
+
+            if any(marker in lowered for marker in detailed_markers):
+                updates["ai_verbosity"] = "detailed"
+                confidence["ai_verbosity"] = 0.9
+
+        if any(marker in lowered for marker in ("step by step", "step-by-step", "一步一步")):
+            updates["feedback_style"] = "step_by_step"
+            confidence["feedback_style"] = 0.86 if has_explicit_intent else 0.74
+
+        focus_match = re.search(r"(\d{1,3})\s*(?:minute|min|分钟)", lowered)
+        if has_explicit_intent and focus_match:
+            minutes = max(5, min(180, int(focus_match.group(1))))
+            updates["focus_duration_preference"] = minutes
+            confidence["focus_duration_preference"] = 0.88
+
+        return updates, confidence
+
+    @staticmethod
+    def _evidence_id(conversation_id: str, turn_index: int) -> str:
+        normalized = re.sub(r"[^a-zA-Z0-9_-]+", "-", str(conversation_id or "conversation")).strip("-")
+        if len(normalized) > 40:
+            normalized = normalized[:40]
+        return f"{normalized}:{turn_index}"
 
     def _topic_streak_score(self, entries: list[dict[str, Any]]) -> float:
         max_streak = 1.0

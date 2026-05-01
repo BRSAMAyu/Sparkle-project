@@ -360,6 +360,8 @@ ASR 服务的 gRPC 接口定义位于：
 proto/stt_service.proto
 ```
 
+当前 Python gRPC server 会注册 `stt.v1.STTService`。`grpcurl -plaintext localhost:50051 list` 在启用 reflection 时应列出该服务。
+
 ### 6.2 服务定义
 
 ```protobuf

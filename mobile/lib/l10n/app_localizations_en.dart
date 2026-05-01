@@ -15352,6 +15352,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openclawHubButtonViewTasks => 'View Tasks';
 
   @override
+  String get openclawHubButtonOpenSetupGuide => 'Open Setup Guide';
+
+  @override
+  String get openclawHubSetupGuideUnavailable =>
+      'Setup guide could not be opened';
+
+  @override
   String get openclawHubSectionConnectionTitle => 'Connection & Control';
 
   @override
@@ -26510,6 +26517,21 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String communityDaysAgo(Object count) {
     return '${count}d ago';
+  }
+
+  @override
+  String communityWeeksAgo(Object count) {
+    return '${count}w ago';
+  }
+
+  @override
+  String communityMonthsAgo(Object count) {
+    return '${count}mo ago';
+  }
+
+  @override
+  String communityBadgeUnlockedOn(Object date) {
+    return 'Unlocked on $date';
   }
 
   @override

@@ -95,6 +95,9 @@ def test_push_policy_compiler_builds_commitment_follow_up_decision() -> None:
     assert decision.category == "commitment_follow_up"
     assert decision.evidence_token == "commitment:commitment-1"
     assert decision.scheduled_send_at == now
+    assert decision.metadata["proactive_reason"]
+    assert decision.metadata["destination_route"].startswith("/chat?")
+    assert decision.metadata["intrusiveness_level"] == "standard"
 
 
 def test_push_policy_compiler_applies_daily_cap() -> None:
@@ -112,19 +115,59 @@ def test_push_policy_compiler_applies_daily_cap() -> None:
     assert decision is None
 
 
-def test_push_policy_compiler_respects_dismissed_categories() -> None:
+def test_push_policy_compiler_reduces_after_one_dismissal_and_suppresses_after_repeated_dismissals() -> None:
     compiler = PushPolicyCompiler()
     now = _utcnow()
 
-    decision = compiler.compile(
+    reduced = compiler.compile(
         user_state=_commitment_state(now),
         push_opt_in=_build_opt_in(),
         recent_delivery_count_24h=0,
         dismissed_categories_7d={"commitment_follow_up"},
+        category_dismissal_counts_7d={"commitment_follow_up": 1},
         now=now,
     )
 
-    assert decision is None
+    assert reduced is not None
+    assert reduced.metadata["intrusiveness_level"] == "reduced"
+    assert reduced.metadata["respectfulness_reason"] == "recent_dismissal"
+
+    suppressed = compiler.compile(
+        user_state=_commitment_state(now),
+        push_opt_in=_build_opt_in(),
+        recent_delivery_count_24h=0,
+        dismissed_categories_7d={"commitment_follow_up"},
+        category_dismissal_counts_7d={"commitment_follow_up": 2},
+        now=now,
+    )
+
+    assert suppressed is None
+
+
+def test_push_policy_compiler_carries_multi_device_context() -> None:
+    compiler = PushPolicyCompiler()
+    now = _utcnow().replace(hour=11, minute=30, second=0, microsecond=0)
+
+    decision = compiler.compile(
+        user_state=_engagement_state(now),
+        push_opt_in=_build_opt_in(allow_commitment_follow_up=False),
+        recent_delivery_count_24h=0,
+        dismissed_categories_7d=set(),
+        category_dismissal_counts_7d={},
+        device_context={
+            "active_device_count": 2,
+            "platforms": ["android", "ios"],
+            "last_active_device_id": "phone-1",
+            "last_active_at": now.isoformat(),
+        },
+        now=now,
+    )
+
+    assert decision is not None
+    assert decision.metadata["target_device_count"] == 2
+    assert decision.metadata["target_platforms"] == ["android", "ios"]
+    assert decision.metadata["last_active_device_id"] == "phone-1"
+    assert decision.metadata["cross_device_state_key"] == "aurora_push:engagement_recovery"
 
 
 def test_push_policy_compiler_builds_engagement_recovery_when_no_commitment_trigger() -> None:

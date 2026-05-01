@@ -39,6 +39,7 @@ from app.schemas.exam_sprint import (
 from app.schemas.notification import NotificationCreate
 from app.services.achievement_engine import AchievementEngine, AchievementEvent
 from app.services.galaxy_service import GalaxyService
+from app.services.north_star_metrics_service import NorthStarMetricsService
 from app.services.notification_service import NotificationService
 from app.services.plan_service import PlanService
 from app.services.plan_state_service import PlanStateService
@@ -247,6 +248,14 @@ class ExamSprintReviewService:
             summary=final_summary,
             persistent_weak_nodes=persistent_weak_nodes,
         )
+        await self._record_north_star_post_exam_metrics(
+            user_id=user_id,
+            plan=archived_plan,
+            request=request,
+            review_id=review_id,
+            summary=final_summary,
+            occurred_at=now,
+        )
 
         return PostExamReviewResponse(
             review_id=review_id,
@@ -296,6 +305,12 @@ class ExamSprintReviewService:
             return SprintCompletionCheckResponse(completed=False)
 
         summary = await self._build_summary(user_id=plan.user_id, plan=plan)
+        await self._record_north_star_seven_day_completion(
+            user_id=plan.user_id,
+            plan=plan,
+            summary=summary,
+            source="exam_sprint_completion_check",
+        )
         return SprintCompletionCheckResponse(
             completed=True,
             summary=self._build_completion_summary(plan=plan, summary=summary),
@@ -528,12 +543,98 @@ class ExamSprintReviewService:
             plan=archived_plan,
             completion_rate=completion_rate,
         )
+        if self._has_completed_seven_day_sprint(tasks):
+            summary = await self._build_summary(user_id=user_id, plan=archived_plan)
+            await self._record_north_star_seven_day_completion(
+                user_id=user_id,
+                plan=archived_plan,
+                summary=summary,
+                source="exam_sprint_auto_archive",
+                occurred_at=now,
+            )
 
         logger.info(
             "Sprint auto-archived: plan_id={} user_id={} tasks={}/{}",
             plan_id, user_id, task_stats.completed, task_stats.total,
         )
         return True
+
+    async def _record_north_star_post_exam_metrics(
+        self,
+        *,
+        user_id: UUID,
+        plan: Plan,
+        request: PostExamReviewRequest,
+        review_id: str,
+        summary: SprintSummaryResponse,
+        occurred_at: datetime,
+    ) -> None:
+        passed = bool(request.exam_passed) if request.exam_passed is not None else int(request.result_rating or 0) >= 3
+        payload = {
+            "review_id": review_id,
+            "self_rating": request.self_rating,
+            "result_rating": request.result_rating,
+            "exam_passed_source": "explicit" if request.exam_passed is not None else "result_rating_proxy",
+            "sparkle_helped": request.sparkle_helped,
+            "helpful_features": [item.value for item in request.helpful_features],
+            "task_completion_rate": summary.task_stats.completion_rate,
+            "score_delta": summary.score_stats.delta,
+            "subject": plan.subject,
+            "exam_date": plan.target_date.isoformat() if plan.target_date else None,
+        }
+        try:
+            await NorthStarMetricsService(self.db).record_exam_outcome(
+                user_id=user_id,
+                plan_id=plan.id,
+                passed=passed,
+                source="exam_sprint_post_exam_review",
+                occurred_at=occurred_at,
+                payload=payload,
+            )
+            tasks = await self._load_plan_tasks(plan.id)
+            if self._has_completed_seven_day_sprint(tasks):
+                await self._record_north_star_seven_day_completion(
+                    user_id=user_id,
+                    plan=plan,
+                    summary=summary,
+                    source="exam_sprint_post_exam_review",
+                    occurred_at=occurred_at,
+                )
+        except Exception as exc:
+            logger.warning("North Star post-exam metric recording failed for plan {}: {}", plan.id, exc)
+
+    async def _record_north_star_seven_day_completion(
+        self,
+        *,
+        user_id: UUID,
+        plan: Plan,
+        summary: SprintSummaryResponse,
+        source: str,
+        occurred_at: datetime | None = None,
+    ) -> None:
+        payload = {
+            "plan_name": plan.name,
+            "subject": plan.subject,
+            "exam_date": plan.target_date.isoformat() if plan.target_date else None,
+            "days_used": summary.days_used,
+            "completed_tasks": summary.task_stats.completed,
+            "total_tasks": summary.task_stats.total,
+            "task_completion_rate": summary.task_stats.completion_rate,
+            "covered_topics_after": summary.high_frequency_coverage.covered_topics_after,
+            "covered_topics_total": summary.high_frequency_coverage.total_topics,
+            "repaired_errors": summary.error_recovery.repaired_errors,
+            "total_errors": summary.error_recovery.total_errors,
+        }
+        try:
+            await NorthStarMetricsService(self.db).record_seven_day_goal_completed(
+                user_id=user_id,
+                plan_id=plan.id,
+                source=source,
+                occurred_at=occurred_at,
+                payload=payload,
+            )
+        except Exception as exc:
+            logger.warning("North Star seven-day completion recording failed for plan {}: {}", plan.id, exc)
 
     def _portfolio_sort_key(self, entry: PortfolioSprintEntry) -> tuple[int, str]:
         priority = {

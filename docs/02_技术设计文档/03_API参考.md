@@ -111,6 +111,27 @@ WebSocket 接口主要用于实时对话、状态同步和复杂交互。
 - **Request**: `SyncCollaborativeGalaxyRequest` (partial_update)
 - **Response**: `SyncCollaborativeGalaxyResponse` (server_update)
 
+### 2.3 ErrorBookService
+定义在 `proto/error_book.proto`，由 Python gRPC server 注册。
+
+#### CreateError / ListErrors / SubmitReview
+错题创建、查询、AI 分析触发和复习表现回写。
+
+### 2.4 STTService
+定义在 `proto/stt_service.proto`，由 Python gRPC server 注册。
+
+#### TranscribeAudio / EnhanceTranscript / StreamSpeechToText
+语音文件转写、转写文本增强，以及实时双向流式转写。
+
+### 2.5 InferenceService
+定义在 `proto/sparkle/inference/v1/inference.proto`，由 Python gRPC server 注册。
+
+#### RunInference
+统一 LLM/信号推理入口，当前由 `LLMDispatcher` 承载。
+
+### 2.6 CommunityService
+定义在 `proto/community_service.proto`，但已标记为 `deprecated`。生产社区能力通过 REST API 与 Go gateway CQRS 路径提供，不作为 live Python gRPC 服务注册。
+
 ---
 
 ## 3. REST API (HTTP)

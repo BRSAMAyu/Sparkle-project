@@ -4,7 +4,7 @@ import 'package:sparkle/features/community/data/repositories/accountability_repo
 
 // ─── My Partnerships ──────────────────────────────────────────────────────────
 
-final myPartnershipsProvider = StateNotifierProvider.autoDispose<
+final myPartnershipsProvider = StateNotifierProvider<
     MyPartnershipsNotifier, AsyncValue<List<AccountabilityPartnershipInfo>>>(
   (ref) => MyPartnershipsNotifier(
     ref.watch(accountabilityRepositoryProvider),
@@ -12,7 +12,7 @@ final myPartnershipsProvider = StateNotifierProvider.autoDispose<
 );
 
 final accountabilityOverviewProvider =
-    FutureProvider.autoDispose<AccountabilityOverviewInfo>((ref) async {
+    FutureProvider<AccountabilityOverviewInfo>((ref) async {
   final repo = ref.watch(accountabilityRepositoryProvider);
   return repo.getOverview();
 });

@@ -14701,6 +14701,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openclawHubButtonViewTasks => '查看任务';
 
   @override
+  String get openclawHubButtonOpenSetupGuide => '打开接入指南';
+
+  @override
+  String get openclawHubSetupGuideUnavailable => '暂时无法打开接入指南';
+
+  @override
   String get openclawHubSectionConnectionTitle => '连接与控制';
 
   @override
@@ -25414,6 +25420,21 @@ class AppLocalizationsZh extends AppLocalizations {
   @override
   String communityDaysAgo(Object count) {
     return '$count天前';
+  }
+
+  @override
+  String communityWeeksAgo(Object count) {
+    return '$count周前';
+  }
+
+  @override
+  String communityMonthsAgo(Object count) {
+    return '$count个月前';
+  }
+
+  @override
+  String communityBadgeUnlockedOn(Object date) {
+    return '解锁于 $date';
   }
 
   @override

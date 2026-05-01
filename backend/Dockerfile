@@ -59,8 +59,12 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Create non-root application user for security
-RUN groupadd -r sparkle && useradd -r -g sparkle sparkle
+# Create a stable non-root application user for security. The fixed UID/GID
+# lets compose pin runtime users and keeps named volume ownership predictable.
+ARG SPARKLE_UID=10001
+ARG SPARKLE_GID=10001
+RUN groupadd --gid "${SPARKLE_GID}" sparkle \
+    && useradd --uid "${SPARKLE_UID}" --gid sparkle --home-dir /app --shell /usr/sbin/nologin sparkle
 
 # Install runtime dependencies (libpq5 for PostgreSQL, curl for healthchecks)
 RUN apt-get -o Acquire::Retries=5 update && apt-get install -y --fix-missing --no-install-recommends -o Acquire::Retries=5 \
@@ -86,8 +90,10 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 COPY . .
 
-# Make entrypoint executable
-RUN chmod +x /app/docker-entrypoint.sh
+# Make entrypoint executable and ensure runtime write paths exist before the
+# image switches away from root.
+RUN mkdir -p /app/logs /app/uploads /app/data /app/.cache \
+    && chmod +x /app/docker-entrypoint.sh
 
 # Set ownership to sparkle user
 RUN chown -R sparkle:sparkle /app

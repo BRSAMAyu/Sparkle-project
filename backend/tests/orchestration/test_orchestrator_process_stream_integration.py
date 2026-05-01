@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import importlib
+import json
 import sys
 import types
 import uuid
@@ -13,6 +15,8 @@ from google.protobuf.struct_pb2 import Struct
 from app.aurora.runtime_v1.decision_loop import AuroraDecision
 from app.aurora.runtime_v1.service import AuroraRuntimeTurnPlan
 from app.gen.agent.v1 import agent_service_pb2
+from app.orchestration.dual_core_router import CognitiveAdjustment, DualCoreDecision
+from app.orchestration.goal_quality_evaluator import GoalQualityEvaluation, GoalQualityScores
 from app.orchestration.schemas import ExecutablePlan, RouteDecision, ToolCallSpec
 from app.orchestration.statechart_engine import WorkflowState
 
@@ -541,6 +545,149 @@ async def test_process_stream_direct_flow_reaches_done(orchestrator_factory):
     assert responses[-1].full_text == "先帮你梳理重点。"
     assert final_state is not None
     assert final_state.state == STATE_DONE
+
+
+@pytest.mark.asyncio
+async def test_process_stream_live_path_invokes_dual_core_and_exposes_decision(orchestrator_factory, monkeypatch):
+    orchestrator, _, state_updates = orchestrator_factory()
+    request = _make_request(message="我快考试了但很慌，帮我做一个复习计划")
+    captured_route_decisions: list[RouteDecision] = []
+    captured_final_context: dict[str, object] = {}
+    orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
+    routing_engine_module = importlib.import_module("app.orchestration.routing_engine")
+
+    monkeypatch.setattr(
+        routing_engine_module.AuroraStage33KillSwitchService,
+        "summary",
+        AsyncMock(
+            return_value={
+                "mode": "shadow",
+                "social": "off",
+                "srl": "off",
+                "wm_prompt": "shadow",
+                "events": "shadow",
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        routing_engine_module.AuroraStage35KillSwitchService,
+        "summary",
+        AsyncMock(return_value={"mode": "shadow", "metacog_router_mode": "off"}),
+    )
+    monkeypatch.setattr(
+        routing_engine_module.AuroraStage39KillSwitchService,
+        "summary",
+        AsyncMock(
+            return_value={
+                "mode": "live",
+                "scaffolding_prompt_mode": "live",
+                "cogload_route_mode": "off",
+                "galaxy_inject_mode": "shadow",
+            }
+        ),
+    )
+    monkeypatch.setattr(
+        routing_engine_module,
+        "resolve_cutover_state",
+        lambda user_id: types.SimpleNamespace(mode="legacy", reason=f"test:{user_id}"),
+    )
+
+    decision = DualCoreDecision(
+        mode="cognitive_first",
+        reason="panic signal should be grounded before planning",
+        cognitive_adjustments=["先降低焦虑，再收敛计划"],
+        execution_constraints=["一次只给一个可启动动作"],
+        structured_adjustments=[
+            CognitiveAdjustment(
+                dimension="tone",
+                value="grounded",
+                reason="panic signal should be acknowledged",
+                evidence=["current_turn:很慌"],
+                user_visible=True,
+            )
+        ],
+    )
+    route_spy = MagicMock(return_value=decision)
+    orchestrator.dual_core_router = types.SimpleNamespace(route=route_spy)
+    orchestrator._apply_dual_core_routing = types.MethodType(
+        orchestrator_module.ChatOrchestrator._apply_dual_core_routing,
+        orchestrator,
+    )
+    orchestrator._route_and_classify = AsyncMock(
+        return_value=(
+            RouteDecision(
+                execution_mode="langgraph",
+                reason="complex_plan",
+                risk_level="medium",
+                confidence=0.82,
+            ),
+            types.SimpleNamespace(
+                primary_intent=types.SimpleNamespace(value="plan"),
+                confidence=0.91,
+                context_signals=[],
+            ),
+        )
+    )
+    orchestrator._plan_and_validate = AsyncMock(
+        side_effect=lambda **kwargs: (
+            captured_route_decisions.append(kwargs["route_decision"]) or kwargs["route_decision"],
+            None,
+            None,
+            False,
+        )
+    )
+
+    async def execute_graph(*, state, queue, result_holder, **kwargs):
+        async for item in _drain_queue(queue):
+            yield item
+        yield agent_service_pb2.ChatResponse(delta="我先帮你稳住节奏。")
+        result_holder["final_state"] = state
+
+    async def build_final_response(*, final_state, route_decision, session_id, **kwargs):
+        nonlocal captured_final_context
+        captured_final_context = dict(final_state.context_data)
+        metadata = {
+            "dual_core_decision": json.dumps(
+                final_state.context_data.get("dual_core_decision"),
+                ensure_ascii=False,
+            ),
+            "dual_core_prompt_instruction": str(
+                final_state.context_data.get("dual_core_prompt_instruction") or ""
+            ),
+            "route_reason": route_decision.reason,
+        }
+        return (
+            agent_service_pb2.ChatResponse(
+                session_id=session_id,
+                full_text="我先帮你稳住节奏。",
+                finish_reason=agent_service_pb2.STOP,
+                metadata=metadata,
+            ),
+            {"message": "我先帮你稳住节奏。", "metadata": metadata},
+        )
+
+    orchestrator._execute_graph = execute_graph
+    orchestrator._build_final_response = AsyncMock(side_effect=build_final_response)
+
+    responses = await _collect(orchestrator, request)
+
+    route_spy.assert_called()
+    routed_input = route_spy.call_args.args[0]
+    assert routed_input.intent == "plan"
+    assert captured_route_decisions[0].execution_mode == "direct"
+    assert captured_route_decisions[0].reason.endswith("dual_core:cognitive_first")
+    assert captured_final_context["dual_core_decision"]["mode"] == "cognitive_first"
+    assert "双核心认知调制" in captured_final_context["dual_core_prompt_instruction"]
+    assert "一次只给一个可启动动作" in captured_final_context["dual_core_prompt_instruction"]
+    final_metadata_decision = json.loads(responses[-1].metadata["dual_core_decision"])
+    assert final_metadata_decision["structured_adjustments"][0]["dimension"] == "tone"
+    assert responses[-1].metadata["route_reason"].endswith("dual_core:cognitive_first")
+    assert any(
+        response.HasField("status_update")
+        and response.status_update.details == "我先处理你当前的阻力，再一起收紧计划。"
+        for response in responses
+    )
+    assert state_updates[-1][0] == STATE_DONE
 
 
 @pytest.mark.asyncio
@@ -1531,3 +1678,131 @@ async def test_process_stream_phase_a_hard_stop_survives_underclassified_plannin
     assert orchestrator._route_and_classify.await_count == 0
     assert any(response.metadata.get("planning_detection_source") == "route_intent" for response in responses)
     orchestrator.observability.log_phase_a_decision.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_sufficiency_gate_allows_normal_chat_without_clarification(orchestrator_factory):
+    orchestrator, _, _state_updates = orchestrator_factory()
+    request = _make_request(message="帮我解释一下 TCP 三次握手")
+
+    shadow_module = types.ModuleType("app.services.shadow_prediction_service")
+    shadow_module.shadow_prediction_service = types.SimpleNamespace(
+        predict_intent_only=AsyncMock(
+            return_value={
+                "intent_type": "knowledge_query",
+                "suggested_tools": [],
+            }
+        )
+    )
+    sys.modules["app.services.shadow_prediction_service"] = shadow_module
+
+    orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
+    orchestrator._check_sufficiency = orchestrator_module.ChatOrchestrator._check_sufficiency.__get__(
+        orchestrator,
+        type(orchestrator),
+    )
+    emitted: list[agent_service_pb2.ChatResponse] = []
+
+    handled, intent_type = await orchestrator._check_sufficiency(
+        request=request,
+        user_message=request.message,
+        user_id=request.user_id,
+        plan_id=None,
+        session_id=request.session_id,
+        conversation_context={"messages": [], "session_id": request.session_id},
+        user_context_payload={},
+        plan_context=None,
+        state=WorkflowState(),
+        active_db=None,
+        session_feedback_signal=None,
+        stream_callback=emitted.append,
+        queue=asyncio.Queue(),
+    )
+
+    assert handled is False
+    assert intent_type == "knowledge_query"
+    assert emitted == []
+
+
+@pytest.mark.asyncio
+async def test_goal_quality_gate_allows_specific_planning_goal(orchestrator_factory, monkeypatch):
+    orchestrator, _, _state_updates = orchestrator_factory()
+    orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
+    validation_module = importlib.import_module("app.orchestration.validation_engine")
+    orchestrator._check_goal_quality = orchestrator_module.ChatOrchestrator._check_goal_quality.__get__(
+        orchestrator,
+        type(orchestrator),
+    )
+
+    async def pass_goal_quality(**kwargs):
+        return GoalQualityEvaluation(
+            scores=GoalQualityScores(specificity=0.9, measurability=0.8, time_bound=0.85),
+            passed=True,
+            summary="specific enough",
+        )
+
+    monkeypatch.setattr(validation_module.goal_quality_evaluator, "evaluate", pass_goal_quality)
+    state = WorkflowState()
+    emitted: list[agent_service_pb2.ChatResponse] = []
+
+    handled = await orchestrator._check_goal_quality(
+        intent_type="create_plan",
+        user_message="这学期期末前把高数成绩提高到85分",
+        user_id=str(uuid.uuid4()),
+        plan_id=None,
+        active_db=None,
+        conversation_context={"messages": []},
+        stream_callback=emitted.append,
+        state=state,
+    )
+
+    assert handled is False
+    assert emitted == []
+    assert state.context_data["goal_quality"]["passed"] is True
+
+
+@pytest.mark.asyncio
+async def test_goal_quality_gate_clarifies_weak_time_planning_goal(orchestrator_factory, monkeypatch):
+    orchestrator, _, _state_updates = orchestrator_factory()
+    orchestrator_module = importlib.import_module("app.orchestration.orchestrator")
+    validation_module = importlib.import_module("app.orchestration.validation_engine")
+    orchestrator._check_goal_quality = orchestrator_module.ChatOrchestrator._check_goal_quality.__get__(
+        orchestrator,
+        type(orchestrator),
+    )
+
+    async def weak_goal_quality(**kwargs):
+        return GoalQualityEvaluation(
+            scores=GoalQualityScores(specificity=0.3, measurability=0.2, time_bound=0.2),
+            passed=False,
+            clarification_questions=[
+                "你想围绕哪门课、哪个项目，或者哪类任务来安排时间？",
+                "你希望什么时候前看到什么结果？",
+            ],
+            summary="too vague",
+        )
+
+    monkeypatch.setattr(validation_module.goal_quality_evaluator, "evaluate", weak_goal_quality)
+    orchestrator._compose_fast_interaction_copy = AsyncMock(return_value="先把时间规划目标收紧一点：你主要想安排哪门课？")
+    state = WorkflowState()
+    emitted: list[agent_service_pb2.ChatResponse] = []
+
+    async def emit(response: agent_service_pb2.ChatResponse) -> None:
+        emitted.append(response)
+
+    handled = await orchestrator._check_goal_quality(
+        intent_type="time_planning",
+        user_message="帮我规划一下时间",
+        user_id=str(uuid.uuid4()),
+        plan_id=None,
+        active_db=None,
+        conversation_context={"messages": []},
+        stream_callback=emit,
+        state=state,
+    )
+
+    assert handled is True
+    assert state.context_data["goal_quality"]["passed"] is False
+    assert any(response.metadata.get("requires_goal_clarification") == "true" for response in emitted)
+    assert emitted[-1].finish_reason == agent_service_pb2.STOP
+    assert "哪门课" in emitted[-1].full_text

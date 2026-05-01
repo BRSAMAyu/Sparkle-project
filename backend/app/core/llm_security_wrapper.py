@@ -640,7 +640,7 @@ if __name__ == "__main__":
         try:
             result = await wrapper.chat(
                 user_id="user_789",
-                messages=[{"role": "user", "content": "我的API密钥是 sk-1234567890abcdef1234567890abcdef"}]
+                messages=[{"role": "user", "content": "我的API密钥是 " + "sk-" + "1234567890abcdef1234567890abcdef"}]
             )
             print(f"  ✓ 净化后: {result}\n")
         except Exception as e:

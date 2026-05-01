@@ -97,6 +97,7 @@ services:
     container_name: sparkle_api
     env_file:
       - .env
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     ports:
       - "${SPARKLE_API_PORT:-8000}:8000"
     environment:
@@ -152,6 +153,9 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     volumes:
       - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_uploads:/app/uploads
+      - sparkle_backend_cache:/app/.cache
       - ./data/dictionaries:/app/data/dictionaries:ro
       - ${HOME}/.openclaw/sparkle-backend:/app/.openclaw:ro
     extra_hosts:
@@ -163,7 +167,6 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
-    user: root
     deploy:
       resources:
         limits:
@@ -185,6 +188,7 @@ services:
     env_file:
       - .env
     command: python grpc_server.py
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     ports:
       - "${SPARKLE_AGENT_PORT:-50051}:50051"
     environment:
@@ -239,6 +243,9 @@ services:
       - AURORA_TRAITS_NLP_MODE=live
     volumes:
       - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_uploads:/app/uploads
+      - sparkle_backend_cache:/app/.cache
       - ${HOME}/.openclaw/sparkle-backend:/app/.openclaw:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -270,6 +277,7 @@ services:
     env_file:
       - .env
     command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=4
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
       # Override localhost URLs from .env with correct Docker service names
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
@@ -289,6 +297,9 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_uploads:/app/uploads
+      - sparkle_backend_cache:/app/.cache
     deploy:
       resources:
         limits:
@@ -309,6 +320,7 @@ services:
     env_file:
       - .env
     command: celery -A app.core.celery_app worker -l info -Q glm_batch --autoscale=6,2 --hostname=glm-batch@%h
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
@@ -328,6 +340,9 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_uploads:/app/uploads
+      - sparkle_backend_cache:/app/.cache
     deploy:
       resources:
         limits:
@@ -348,6 +363,7 @@ services:
     container_name: sparkle_gateway
     env_file:
       - .env
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     ports:
       - "${SPARKLE_GATEWAY_PORT:-8080}:8080"
     environment:
@@ -416,6 +432,9 @@ services:
       - ./monitoring/celery_alerts.yml:/etc/prometheus/celery_alerts.yml:ro
       - ./monitoring/sparkle_slo_alerts.yml:/etc/prometheus/sparkle_slo_alerts.yml:ro
       - ./monitoring/sparkle_production_baseline_alerts.yml:/etc/prometheus/sparkle_production_baseline_alerts.yml:ro
+      - ./monitoring/sparkle_t6_slo_alerts.yml:/etc/prometheus/sparkle_t6_slo_alerts.yml:ro
+      - ./monitoring/sparkle_recording_rules.yml:/etc/prometheus/sparkle_recording_rules.yml:ro
+      - ./monitoring/sqam_alerts.yml:/etc/prometheus/sqam_alerts.yml:ro
     ports:
       - "9090:9090"
     depends_on:
@@ -433,7 +452,9 @@ services:
     image: prom/alertmanager:v0.27.0
     container_name: sparkle_alertmanager
     command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "/bin/sh"
+      - "-c"
+      - "envsubst < /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.yml && /bin/alertmanager --config.file=/tmp/alertmanager.yml"
     volumes:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     ports:
@@ -496,3 +517,6 @@ services:
 
 volumes:
   sparkle_minio_data:
+  sparkle_backend_logs:
+  sparkle_backend_uploads:
+  sparkle_backend_cache:

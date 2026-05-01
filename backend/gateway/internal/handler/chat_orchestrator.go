@@ -30,7 +30,6 @@ import (
 	"github.com/sparkle/gateway/internal/service"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"golang.org/x/time/rate"
 )
 
 // P1 Optimization: Object pools to reduce GC pressure in high-concurrency scenarios
@@ -240,7 +239,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	writer := newWSSafeWriter(conn, writeWait)
 	defer func() {
 		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		_ = conn.Close()
+		_ = writer.Close()
 	}()
 	if h.IsDraining() {
 		writeServerDrainingClose(writer, conn)
@@ -284,7 +283,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				websocket.CloseMessage,
 				websocket.FormatCloseMessage(websocket.CloseGoingAway, "idle timeout"),
 			)
-			_ = conn.Close()
+			_ = writer.Close()
 		case <-connDone:
 			return
 		}
@@ -295,7 +294,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	if userID == "" {
 		log.Printf("WebSocket rejected: missing authentication")
 		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
-		_ = conn.Close() // Explicitly close rejected connection
+		_ = writer.Close() // Explicitly close rejected connection
 		return
 	}
 	authToken := c.GetString("auth_token")
@@ -324,24 +323,14 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	defer h.unregisterConnection(userID, conn)
 
 	readLimit := int64(0)
-	msgRate := 0.0
-	msgBurst := 0
 	if h.cfg != nil {
 		readLimit = h.cfg.WSMaxMessageBytes
-		msgRate = h.cfg.WSMessageRateRPS
-		msgBurst = h.cfg.WSMessageRateBurst
 	}
 	if readLimit <= 0 {
 		readLimit = wsDefaultMaxMessageBytes
 	}
 	conn.SetReadLimit(readLimit)
-	if msgRate <= 0 {
-		msgRate = 1
-	}
-	if msgBurst <= 0 {
-		msgBurst = 1
-	}
-	msgLimiter := rate.NewLimiter(rate.Limit(msgRate), msgBurst)
+	msgLimiter := newWSMessageRateLimiter(h.cfg)
 
 	tracer := otel.Tracer("chat-orchestrator")
 
@@ -369,7 +358,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		idleTimer.Reset(idleTimeout)
 
 		if !msgLimiter.Allow() {
-			_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message rate limit exceeded"))
+			_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, defaultWSRateLimitMessage))
 			break
 		}
 

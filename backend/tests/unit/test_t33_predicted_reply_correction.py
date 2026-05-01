@@ -8,8 +8,11 @@ Production scenario coverage:
 - StateRegister.lower_confidence() — new method with floor + counter_evidence
 - Redis failure graceful degradation across all paths
 """
+
 import json
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 
@@ -23,6 +26,7 @@ from app.signals.state_register import StateRegister
 from app.signals.types import ActionableSignal, StateEntry
 
 # ── Helpers ──────────────────────────────────────────────────────────
+
 
 def _make_redis() -> AsyncMock:
     redis = AsyncMock()
@@ -66,6 +70,7 @@ def _state_entry_to_json(entry: StateEntry) -> str:
 # StateRegister.lower_confidence()
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestStateRegisterLowerConfidence:
     """New lower_confidence() method — production safety."""
 
@@ -104,7 +109,10 @@ class TestStateRegisterLowerConfidence:
         register = StateRegister(redis)
 
         updated = await register.lower_confidence(
-            "user_1", "execution_consistency", amount=0.15, reason="User said strategy too aggressive",
+            "user_1",
+            "execution_consistency",
+            amount=0.15,
+            reason="User said strategy too aggressive",
         )
 
         assert updated is not None
@@ -144,6 +152,7 @@ class TestStateRegisterLowerConfidence:
 # ═══════════════════════════════════════════════════════════════════
 # ReplyOptionInjector
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestReplyOptionInjection:
     """T3.3.1: ReplyOptionInjector — generation + metadata injection."""
@@ -256,6 +265,7 @@ class TestReplyOptionInjection:
 # ═══════════════════════════════════════════════════════════════════
 # CorrectionFeedbackProcessor
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestCorrectionFeedback:
     """T3.3.2-T3.3.3: Correction feedback loop — disconfirmation flow."""
@@ -414,6 +424,7 @@ class TestCorrectionFeedback:
 # ChipSelected Telemetry + API Integration
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestChipSelectedTelemetry:
     """T3.3.2: Telemetry recording with correction feedback integration."""
 
@@ -447,7 +458,7 @@ class TestChipSelectedTelemetry:
         result = await processor.process(
             user_id="user_test",
             semantic_value="deep_mastery",  # is_disconfirming=True per mapping
-            is_disconfirming=False,         # user is confirming
+            is_disconfirming=False,  # user is confirming
             telemetry_id="chip_confirm",
         )
 
@@ -484,10 +495,63 @@ class TestChipSelectedTelemetry:
         if "task_granularity_fit" in result.affected_state_keys:
             assert result.new_confidence["task_granularity_fit"] < 0.75
 
+    @pytest.mark.asyncio
+    async def test_api_forwards_freeform_text_to_correction_processor(self, monkeypatch):
+        """Freeform API telemetry sends user text into CorrectionFeedbackProcessor."""
+        from app.api.v1 import aurora as aurora_api
+
+        redis = _make_redis()
+        captured: dict[str, object] = {}
+
+        class CapturingProcessor:
+            def __init__(self, redis_client, db_session_factory):
+                captured["redis_client"] = redis_client
+                captured["db_session_factory"] = db_session_factory
+
+            async def process(self, **kwargs):
+                captured.update(kwargs)
+                return CorrectionResult(
+                    correction_id="corr_api",
+                    telemetry_id=kwargs["telemetry_id"],
+                    action="freeform_correction",
+                    correction_recorded=True,
+                )
+
+        monkeypatch.setattr(aurora_api.cache_service, "redis", redis)
+        monkeypatch.setattr(
+            "app.aurora.runtime_v1.correction_feedback.CorrectionFeedbackProcessor",
+            CapturingProcessor,
+        )
+
+        payload = aurora_api.ChipSelectedTelemetryRequest(
+            chip_id="status_band_correction",
+            telemetry_id="telemetry_freeform",
+            semantic_value="freeform_correction",
+            is_freeform=True,
+            is_disconfirming=False,
+            context_source="home_status_band",
+            band_status="needs_confirm",
+            freeform_text="Aurora missed that I was sick, not avoiding work.",
+        )
+        current_user = SimpleNamespace(id=uuid4())
+
+        response = await aurora_api.record_chip_selected(
+            payload,
+            db=object(),
+            current_user=current_user,
+        )
+
+        assert response["recorded"] is True
+        assert captured["freeform_text"] == "Aurora missed that I was sick, not avoiding work."
+        assert captured["is_freeform"] is True
+        assert captured["is_disconfirming"] is False
+        assert response["correction_result"]["action"] == "freeform_correction"
+
 
 # ═══════════════════════════════════════════════════════════════════
 # Response Metadata Format Contract
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestResponseMetadataContract:
     """T3.3.1: Verify metadata format matches Flutter contract."""
@@ -572,6 +636,7 @@ class TestResponseMetadataContract:
 # Cross-cutting: Signal-based options (Spine engine path)
 # ═══════════════════════════════════════════════════════════════════
 
+
 class TestSpineReplyOptionPath:
     """SpineReplyOptionEngine integration through ReplyOptionInjector."""
 
@@ -624,6 +689,7 @@ class TestSpineReplyOptionPath:
 # ═══════════════════════════════════════════════════════════════════
 # Resilience: CorrectionFeedbackProcessor edge cases
 # ═══════════════════════════════════════════════════════════════════
+
 
 class TestCorrectionResilience:
     """Production safety: correction processor under adverse conditions."""
@@ -703,9 +769,7 @@ class TestCorrectionResilience:
         async def fake_factory():
             yield mock_session
 
-        with patch(
-            "app.services.routing_profile_service.RoutingProfileService"
-        ) as MockSvc:
+        with patch("app.services.routing_profile_service.RoutingProfileService") as MockSvc:
             MockSvc.return_value.record_session_outcome = fake_record_outcome
 
             processor = CorrectionFeedbackProcessor(redis, fake_factory)
@@ -752,9 +816,7 @@ class TestCorrectionResilience:
         async def fake_factory():
             yield mock_session
 
-        with patch(
-            "app.services.routing_profile_service.RoutingProfileService"
-        ) as MockSvc:
+        with patch("app.services.routing_profile_service.RoutingProfileService") as MockSvc:
             MockSvc.return_value.record_session_outcome = AsyncMock()
 
             processor = CorrectionFeedbackProcessor(redis, fake_factory)

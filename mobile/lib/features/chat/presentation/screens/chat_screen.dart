@@ -7,8 +7,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
@@ -48,6 +50,7 @@ import 'package:sparkle/features/chat/presentation/widgets/spine_receipt_card.da
 import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/strategy_intervention_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
+import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/status_awareness_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/study_materials_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
@@ -75,6 +78,50 @@ const _defaultAiSystemPreferences = TransparencyPreferences(
   autoCollapseOnComplete: true,
   allowPerTurnDismiss: true,
 );
+
+IconData _chatFailureIcon(String? code) {
+  switch (FailureKindCode.fromCode(code)) {
+    case FailureKind.offline:
+    case FailureKind.network:
+      return Icons.wifi_off_rounded;
+    case FailureKind.auth:
+      return Icons.lock_outline_rounded;
+    case FailureKind.server:
+      return Icons.cloud_sync_outlined;
+    case FailureKind.validation:
+      return Icons.edit_note_rounded;
+    case FailureKind.unknown:
+      return Icons.error_outline_rounded;
+  }
+}
+
+String _chatFailureTitle(BuildContext context, String? code) {
+  final zh = AppLocalizations.of(context)?.localeName.startsWith('zh') ?? true;
+  switch (FailureKindCode.fromCode(code)) {
+    case FailureKind.offline:
+      return zh ? '离线了' : 'Offline';
+    case FailureKind.auth:
+      return zh ? '需要重新登录' : 'Sign-in needed';
+    case FailureKind.server:
+      return zh ? '服务暂时不稳' : 'Service issue';
+    case FailureKind.validation:
+      return zh ? '需要调整输入' : 'Check input';
+    case FailureKind.network:
+      return zh ? '网络不稳定' : 'Connection issue';
+    case FailureKind.unknown:
+      return zh ? '请求遇到问题' : 'Request issue';
+  }
+}
+
+String _chatFailureActionLabel(BuildContext context, String? code) {
+  final zh = AppLocalizations.of(context)?.localeName.startsWith('zh') ?? true;
+  return switch (FailureKindCode.fromCode(code)) {
+    FailureKind.auth => zh ? '去登录' : 'Sign in',
+    FailureKind.validation => zh ? '修改' : 'Edit',
+    FailureKind.offline => zh ? '连网后重试' : 'Retry online',
+    _ => context.l10n.retry,
+  };
+}
 
 enum _ChatShortcutAction {
   newSession,
@@ -1133,54 +1180,202 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       },
                                     ),
                                     if (showCorrectionBar)
-                                      ContextualCorrectionBar(
-                                        predictedReplyGroups: ref
-                                            .watch(auroraStatusProvider)
-                                            ?.predictedReplyOptions,
-                                        onSendCorrection: (text) => ref
-                                            .read(chatProvider.notifier)
-                                            .sendMessage(text),
-                                        onNotRightDirection: () => ref
-                                            .read(chatProvider.notifier)
-                                            .sendMessage(
-                                              context
-                                                  .l10n.auroraCorrectNotRight,
-                                            ),
-                                        onMakeShorter: () => ref
-                                            .read(chatProvider.notifier)
-                                            .sendMessage(
-                                              context.l10n.auroraCorrectShorter,
-                                            ),
-                                        onGivePractice: () => ref
-                                            .read(chatProvider.notifier)
-                                            .sendMessage(
-                                              context.l10n.auroraCorrectDirect,
-                                            ),
-                                        onRecalibrate: () {
-                                          final snapshot = ref.read(
+                                      Builder(
+                                        builder: (ctx) {
+                                          final auroraStatus = ref.watch(
                                             auroraStatusProvider,
                                           );
-                                          showAuroraCalibration(
-                                            context: context,
-                                            observation: snapshot?.summary ??
-                                                context.l10n
-                                                    .auroraCalibrationObserved,
-                                            judgment: snapshot?.summary ??
-                                                context.l10n
-                                                    .auroraCalibrationJudgment,
-                                            confirmQuestion: context
-                                                .l10n.auroraCalibrationConfirm,
-                                            confirmOptions: [
-                                              context.l10n.chatMinutes30,
-                                              context.l10n.chatMinutes45,
-                                              context.l10n.chatMinutes60,
-                                            ],
-                                            onConfirm: (option) {
-                                              ref
-                                                  .read(chatProvider.notifier)
-                                                  .sendMessage(
-                                                    '${context.l10n.auroraCorrectRecalibrate}: $option',
-                                                  );
+                                          final l10n = ctx.l10n;
+                                          return ContextualCorrectionBar(
+                                            predictedReplyGroups: auroraStatus
+                                                ?.predictedReplyOptions,
+                                            onSendCorrection:
+                                                (option, groupId) {
+                                              final telemetry =
+                                                  AuroraTelemetryService(
+                                                ref.read(apiClientProvider),
+                                              );
+                                              unawaited(
+                                                telemetry.recordChipSelected(
+                                                  option: option,
+                                                  groupId: groupId,
+                                                  bandStatus: auroraStatus
+                                                          ?.overallStatus ??
+                                                      '',
+                                                  conversationId: ref
+                                                      .read(chatProvider)
+                                                      .conversationId,
+                                                ),
+                                              );
+                                              final text = option.label;
+                                              unawaited(
+                                                ref
+                                                    .read(chatProvider.notifier)
+                                                    .sendMessage(
+                                                  text,
+                                                  extraContextOverrides: {
+                                                    'aurora_correction': {
+                                                      'type': 'chip',
+                                                      'telemetry_id':
+                                                          option.telemetryId,
+                                                      'semantic_value':
+                                                          option.semanticValue,
+                                                      'is_disconfirming': option
+                                                          .isDisconfirming,
+                                                      'band_status': auroraStatus
+                                                              ?.overallStatus ??
+                                                          '',
+                                                      'group_id': groupId,
+                                                    },
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                            onNotRightDirection: () {
+                                              final telemetry =
+                                                  AuroraTelemetryService(
+                                                ref.read(apiClientProvider),
+                                              );
+                                              unawaited(
+                                                telemetry
+                                                    .recordStatusBandCorrection(
+                                                  label: l10n
+                                                      .auroraCorrectNotRight,
+                                                  semanticValue:
+                                                      'not_right_direction',
+                                                  isDisconfirming: true,
+                                                  bandStatus: auroraStatus
+                                                          ?.overallStatus ??
+                                                      '',
+                                                ),
+                                              );
+                                              unawaited(
+                                                ref
+                                                    .read(chatProvider.notifier)
+                                                    .sendMessage(
+                                                  l10n.auroraCorrectNotRight,
+                                                  extraContextOverrides: {
+                                                    'aurora_correction': {
+                                                      'type': 'chip',
+                                                      'semantic_value':
+                                                          'not_right_direction',
+                                                      'is_disconfirming': true,
+                                                      'band_status': auroraStatus
+                                                              ?.overallStatus ??
+                                                          '',
+                                                    },
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                            onMakeShorter: () {
+                                              final telemetry =
+                                                  AuroraTelemetryService(
+                                                ref.read(apiClientProvider),
+                                              );
+                                              unawaited(
+                                                telemetry
+                                                    .recordStatusBandCorrection(
+                                                  label:
+                                                      l10n.auroraCorrectShorter,
+                                                  semanticValue: 'make_shorter',
+                                                  isDisconfirming: false,
+                                                  bandStatus: auroraStatus
+                                                          ?.overallStatus ??
+                                                      '',
+                                                ),
+                                              );
+                                              unawaited(
+                                                ref
+                                                    .read(chatProvider.notifier)
+                                                    .sendMessage(
+                                                  l10n.auroraCorrectShorter,
+                                                  extraContextOverrides: {
+                                                    'aurora_correction': {
+                                                      'type': 'chip',
+                                                      'semantic_value':
+                                                          'make_shorter',
+                                                      'is_disconfirming': false,
+                                                      'band_status': auroraStatus
+                                                              ?.overallStatus ??
+                                                          '',
+                                                    },
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                            onGivePractice: () {
+                                              final telemetry =
+                                                  AuroraTelemetryService(
+                                                ref.read(apiClientProvider),
+                                              );
+                                              unawaited(
+                                                telemetry
+                                                    .recordStatusBandCorrection(
+                                                  label:
+                                                      l10n.auroraCorrectDirect,
+                                                  semanticValue:
+                                                      'give_practice',
+                                                  isDisconfirming: false,
+                                                  bandStatus: auroraStatus
+                                                          ?.overallStatus ??
+                                                      '',
+                                                ),
+                                              );
+                                              unawaited(
+                                                ref
+                                                    .read(chatProvider.notifier)
+                                                    .sendMessage(
+                                                  l10n.auroraCorrectDirect,
+                                                  extraContextOverrides: {
+                                                    'aurora_correction': {
+                                                      'type': 'chip',
+                                                      'semantic_value':
+                                                          'give_practice',
+                                                      'is_disconfirming': false,
+                                                      'band_status': auroraStatus
+                                                              ?.overallStatus ??
+                                                          '',
+                                                    },
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                            onRecalibrate: () {
+                                              final snapshot = ref.read(
+                                                auroraStatusProvider,
+                                              );
+                                              unawaited(
+                                                showAuroraCalibration(
+                                                  context: context,
+                                                  observation: snapshot
+                                                          ?.summary ??
+                                                      context.l10n
+                                                          .auroraCalibrationObserved,
+                                                  judgment: snapshot?.summary ??
+                                                      context.l10n
+                                                          .auroraCalibrationJudgment,
+                                                  confirmQuestion: context.l10n
+                                                      .auroraCalibrationConfirm,
+                                                  confirmOptions: [
+                                                    context.l10n.chatMinutes30,
+                                                    context.l10n.chatMinutes45,
+                                                    context.l10n.chatMinutes60,
+                                                  ],
+                                                  onConfirm: (option) {
+                                                    unawaited(
+                                                      ref
+                                                          .read(
+                                                            chatProvider
+                                                                .notifier,
+                                                          )
+                                                          .sendMessage(
+                                                            '${context.l10n.auroraCorrectRecalibrate}: $option',
+                                                          ),
+                                                    );
+                                                  },
+                                                ),
+                                              );
                                             },
                                           );
                                         },
@@ -1218,59 +1413,108 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                         child: chatState.error == null
                             ? const SizedBox.shrink()
-                            : Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      chatState.error!,
-                                      style: TextStyle(
+                            : Builder(
+                                builder: (context) {
+                                  final failureKind = FailureKindCode.fromCode(
+                                    chatState.errorCode,
+                                  );
+                                  return Row(
+                                    children: [
+                                      Icon(
+                                        _chatFailureIcon(chatState.errorCode),
+                                        size: 20,
                                         color: DS.error,
-                                        fontSize: DS.fontSizeSm,
                                       ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  if (chatState.isErrorRetryable)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                        left: DS.spacing8,
-                                      ),
-                                      child: SparkleButton(
-                                        label: context.l10n.retry,
-                                        icon: const Icon(Icons.refresh_rounded),
-                                        onPressed: () => unawaited(
-                                          ref
-                                              .read(chatProvider.notifier)
-                                              .retryLastMessage(),
-                                        ),
-                                        variant: ButtonVariant.secondary,
-                                      ),
-                                    ),
-                                  Material(
-                                    color:
-                                        DS.surfacePrimary.withValues(alpha: 0),
-                                    borderRadius: DS.borderRadiusFull,
-                                    child: InkWell(
-                                      borderRadius: DS.borderRadiusFull,
-                                      onTap: () {
-                                        final notifier =
-                                            ref.read(chatProvider.notifier);
-                                        notifier.state = notifier.state
-                                            .copyWith(clearError: true);
-                                      },
-                                      child: Padding(
-                                        padding:
-                                            const EdgeInsets.all(DS.spacing4),
-                                        child: Icon(
-                                          Icons.close,
-                                          size: DS.iconSizeXs,
-                                          color: DS.error,
+                                      const SizedBox(width: DS.spacing8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              _chatFailureTitle(
+                                                context,
+                                                chatState.errorCode,
+                                              ),
+                                              style: TextStyle(
+                                                color: DS.error,
+                                                fontSize: DS.fontSizeSm,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              chatState.error!,
+                                              style: TextStyle(
+                                                color: DS.error,
+                                                fontSize: DS.fontSizeSm,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                ],
+                                      if (chatState.isErrorRetryable ||
+                                          failureKind == FailureKind.auth)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: DS.spacing8,
+                                          ),
+                                          child: SparkleButton(
+                                            label: _chatFailureActionLabel(
+                                              context,
+                                              chatState.errorCode,
+                                            ),
+                                            icon: Icon(
+                                              failureKind == FailureKind.auth
+                                                  ? Icons.login_rounded
+                                                  : Icons.refresh_rounded,
+                                            ),
+                                            onPressed: () {
+                                              if (failureKind ==
+                                                  FailureKind.auth) {
+                                                context.go('/login');
+                                                return;
+                                              }
+                                              unawaited(
+                                                ref
+                                                    .read(
+                                                      chatProvider.notifier,
+                                                    )
+                                                    .retryLastMessage(),
+                                              );
+                                            },
+                                            variant: ButtonVariant.secondary,
+                                          ),
+                                        ),
+                                      Material(
+                                        color: DS.surfacePrimary
+                                            .withValues(alpha: 0),
+                                        borderRadius: DS.borderRadiusFull,
+                                        child: InkWell(
+                                          borderRadius: DS.borderRadiusFull,
+                                          onTap: () {
+                                            final notifier =
+                                                ref.read(chatProvider.notifier);
+                                            notifier.state = notifier.state
+                                                .copyWith(clearError: true);
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(
+                                                DS.spacing4),
+                                            child: Icon(
+                                              Icons.close,
+                                              size: DS.iconSizeXs,
+                                              color: DS.error,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                       ),
                     ),
@@ -2275,7 +2519,9 @@ class _OpenClawAppBarIcon extends StatelessWidget {
                   child: Text(
                     queueCount > 0 ? '$queueCount' : '!',
                     style: DS.bodySmall.copyWith(
-                      color: Colors.white,
+                      color: DS.onColor(
+                        queueCount > 0 ? DS.warning : DS.semanticError,
+                      ),
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),

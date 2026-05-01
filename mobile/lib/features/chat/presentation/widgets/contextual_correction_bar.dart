@@ -25,8 +25,11 @@ class ContextualCorrectionBar extends StatelessWidget {
   final VoidCallback? onGivePractice;
   final VoidCallback onRecalibrate;
 
-  /// Called with the user's semantic reply text (from predicted options or freeform).
-  final ValueChanged<String>? onSendCorrection;
+  /// Called with the selected predicted reply option and its group id.
+  /// The consumer is expected to record telemetry and send the correction
+  /// with structured Aurora context rather than plain text.
+  final void Function(AuroraPredictedReplyOption option, String groupId)?
+      onSendCorrection;
 
   /// Predicted reply groups from Aurora backend. If non-empty, used instead
   /// of the static fallback chips.
@@ -39,7 +42,8 @@ class ContextualCorrectionBar extends StatelessWidget {
     if (!visible) return const SizedBox.shrink();
 
     final groups = predictedReplyGroups;
-    final topGroup = (groups != null && groups.isNotEmpty) ? groups.first : null;
+    final topGroup =
+        (groups != null && groups.isNotEmpty) ? groups.first : null;
 
     if (topGroup != null && topGroup.options.isNotEmpty) {
       return _buildPredictedOptions(context, topGroup);
@@ -47,9 +51,13 @@ class ContextualCorrectionBar extends StatelessWidget {
     return _buildFallback(context);
   }
 
-  Widget _buildPredictedOptions(BuildContext context, AuroraPredictedReplyGroup group) {
+  Widget _buildPredictedOptions(
+    BuildContext context,
+    AuroraPredictedReplyGroup group,
+  ) {
     final primaryOptions = group.primaryOptions.take(3).toList();
     final freeform = group.freeformOption;
+    final groupId = group.groupId;
 
     return Padding(
       padding: const EdgeInsets.only(
@@ -61,14 +69,16 @@ class ContextualCorrectionBar extends StatelessWidget {
         spacing: DS.spacing6,
         runSpacing: DS.spacing4,
         children: [
-          ...primaryOptions.map((opt) => _CorrectionChip(
-                label: opt.label,
-                onTap: () => _handleOptionTap(opt),
-              )),
+          ...primaryOptions.map(
+            (opt) => _CorrectionChip(
+              label: opt.label,
+              onTap: () => _handleOptionTap(opt, groupId),
+            ),
+          ),
           if (freeform != null)
             _CorrectionChip(
               label: freeform.label,
-              onTap: () => _handleOptionTap(freeform),
+              onTap: () => _handleOptionTap(freeform, groupId),
               isAccent: true,
             )
           else
@@ -82,13 +92,12 @@ class ContextualCorrectionBar extends StatelessWidget {
     );
   }
 
-  void _handleOptionTap(AuroraPredictedReplyOption option) {
+  void _handleOptionTap(AuroraPredictedReplyOption option, String groupId) {
     if (option.isFreeform) {
       onRecalibrate();
       return;
     }
-    final text = option.semanticValue.isNotEmpty ? option.semanticValue : option.label;
-    onSendCorrection?.call(text);
+    onSendCorrection?.call(option, groupId);
   }
 
   Widget _buildFallback(BuildContext context) {
@@ -158,40 +167,42 @@ class SourceBadge extends StatelessWidget {
       child: Wrap(
         spacing: DS.spacing6,
         runSpacing: DS.spacing4,
-        children: sources.map((source) {
-          return GestureDetector(
-            onTap: () => onTapSource?.call(source),
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing8,
-                vertical: DS.spacing4,
-              ),
-              decoration: BoxDecoration(
-                color: DS.surfaceSecondary.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.info_outline_rounded,
-                    size: 12,
-                    color: DS.textSecondary.withValues(alpha: 0.8),
+        children: sources
+            .map(
+              (source) => GestureDetector(
+                onTap: () => onTapSource?.call(source),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing8,
+                    vertical: DS.spacing4,
                   ),
-                  const SizedBox(width: DS.spacing4),
-                  Text(
-                    l10n.auroraSourceBadge(source),
-                    style: TextStyle(
-                      color: DS.textSecondary,
-                      fontSize: 11,
-                      height: 1.2,
-                    ),
+                  decoration: BoxDecoration(
+                    color: DS.surfaceSecondary.withValues(alpha: 0.6),
+                    borderRadius: BorderRadius.circular(999),
                   ),
-                ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        size: 12,
+                        color: DS.textSecondary.withValues(alpha: 0.8),
+                      ),
+                      const SizedBox(width: DS.spacing4),
+                      Text(
+                        l10n.auroraSourceBadge(source),
+                        style: TextStyle(
+                          color: DS.textSecondary,
+                          fontSize: 11,
+                          height: 1.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          );
-        }).toList(),
+            )
+            .toList(),
       ),
     );
   }
@@ -300,30 +311,48 @@ class _CorrectionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing10,
-          vertical: DS.spacing6,
-        ),
-        decoration: BoxDecoration(
-          color: isAccent
-              ? DS.brandPrimary.withValues(alpha: 0.08)
-              : DS.surfaceSecondary.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(999),
-          border: isAccent
-              ? Border.all(
-                  color: DS.brandPrimary.withValues(alpha: 0.2),
-                )
-              : null,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isAccent ? DS.brandPrimary : DS.textSecondary,
-            fontSize: 11,
-            fontWeight: isAccent ? DS.fontWeightMedium : DS.fontWeightRegular,
+    final radius = BorderRadius.circular(999);
+
+    return Semantics(
+      button: true,
+      label: label,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        child: Material(
+          color: Colors.transparent,
+          borderRadius: radius,
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: radius,
+            child: Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing12,
+                vertical: DS.spacing8,
+              ),
+              decoration: BoxDecoration(
+                color: isAccent
+                    ? DS.brandPrimary.withValues(alpha: 0.08)
+                    : DS.surfaceSecondary.withValues(alpha: 0.5),
+                borderRadius: radius,
+                border: isAccent
+                    ? Border.all(
+                        color: DS.brandPrimary.withValues(alpha: 0.2),
+                      )
+                    : Border.all(color: Colors.transparent),
+              ),
+              child: ExcludeSemantics(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: isAccent ? DS.brandPrimary : DS.textSecondary,
+                    fontSize: 11,
+                    fontWeight:
+                        isAccent ? DS.fontWeightMedium : DS.fontWeightRegular,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ),

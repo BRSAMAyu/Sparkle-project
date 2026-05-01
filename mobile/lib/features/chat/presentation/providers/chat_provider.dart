@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -1846,16 +1847,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
       _streamDebouncer.cancel();
       // 捕获未处理的异常，提供友好的错误提示
-      final errorMessage = ErrorMessages.getUserFriendlyMessage(
-        'UNKNOWN',
-        e.toString(),
+      final failure = AppFailureMapper.from(
+        e,
+        fallbackMessage: 'Could not send this message.',
       );
 
       finalizeRun(
         phase: ChatRunPhase.failed,
-        errorMessage: errorMessage,
-        errorCode: 'UNKNOWN',
-        isRetryable: true,
+        errorMessage: failure.userMessage,
+        errorCode: failure.errorCode,
+        isRetryable: failure.isRetryable,
         restoreAttachments: hasQueuedAttachments,
       );
     } finally {

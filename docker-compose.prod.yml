@@ -20,6 +20,7 @@ services:
     image: ${GATEWAY_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-gateway}:${IMAGE_TAG:-latest}
     container_name: sparkle_gateway_blue
     restart: unless-stopped
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
       - PORT=8080
       - DATABASE_URL=${DATABASE_URL}
@@ -50,11 +51,18 @@ services:
     networks:
       - edge
       - app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   gateway_green:
     image: ${GATEWAY_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-gateway}:${IMAGE_TAG:-latest}
     container_name: sparkle_gateway_green
     restart: unless-stopped
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
       - PORT=8080
       - DATABASE_URL=${DATABASE_URL}
@@ -85,11 +93,18 @@ services:
     networks:
       - edge
       - app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   backend:
     image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:-latest}
     container_name: sparkle_backend
     restart: unless-stopped
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
@@ -145,12 +160,19 @@ services:
       - redis
     networks:
       - app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   agent:
     image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:-latest}
     container_name: sparkle_agent
     restart: unless-stopped
     command: python grpc_server.py
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
       - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL}
@@ -201,6 +223,72 @@ services:
       - redis
     networks:
       - app
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket; s=socket.socket(); s.settimeout(3); s.connect(('localhost',50051)); s.close()\" 2>/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  celery_worker:
+    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:-latest}
+    container_name: sparkle_celery_worker
+    restart: unless-stopped
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
+    command: celery -A app.core.celery_app worker -l warning -Q high_priority,default,low_priority --concurrency=4
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - ENVIRONMENT=production
+      - SERVICE_ROLE=worker
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.core.celery_app", "inspect", "ping", "-d", "celery@$$HOSTNAME"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 45s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  celery_beat:
+    image: ${BACKEND_IMAGE:-ghcr.io/${GITHUB_REPOSITORY_OWNER:-local}/sparkle-backend}:${IMAGE_TAG:-latest}
+    container_name: sparkle_celery_beat
+    restart: unless-stopped
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
+    command: celery -A app.core.celery_app beat -l warning
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=${REDIS_URL}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - INTERNAL_API_KEY=${INTERNAL_API_KEY}
+      - ENVIRONMENT=production
+      - SERVICE_ROLE=beat
+      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
+    depends_on:
+      - db
+      - redis
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.core.celery_app", "inspect", "ping", "-d", "celery@$$HOSTNAME"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 30s
 
   db:
     image: postgres:16
@@ -267,6 +355,9 @@ services:
       - ./monitoring/celery_alerts.yml:/etc/prometheus/celery_alerts.yml:ro
       - ./monitoring/sparkle_slo_alerts.yml:/etc/prometheus/sparkle_slo_alerts.yml:ro
       - ./monitoring/sparkle_production_baseline_alerts.yml:/etc/prometheus/sparkle_production_baseline_alerts.yml:ro
+      - ./monitoring/sparkle_t6_slo_alerts.yml:/etc/prometheus/sparkle_t6_slo_alerts.yml:ro
+      - ./monitoring/sparkle_recording_rules.yml:/etc/prometheus/sparkle_recording_rules.yml:ro
+      - ./monitoring/sqam_alerts.yml:/etc/prometheus/sqam_alerts.yml:ro
       - sparkle_prometheus_data:/prometheus
     ports:
       - "127.0.0.1:9090:9090"
@@ -283,7 +374,9 @@ services:
     container_name: sparkle_alertmanager
     restart: unless-stopped
     command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "/bin/sh"
+      - "-c"
+      - "envsubst < /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.yml && /bin/alertmanager --config.file=/tmp/alertmanager.yml"
     environment:
       - ALERTMANAGER_DEFAULT_WEBHOOK_URL=${ALERTMANAGER_DEFAULT_WEBHOOK_URL:-http://host.docker.internal:19093/alerts/default}
       - ALERTMANAGER_CRITICAL_WEBHOOK_URL=${ALERTMANAGER_CRITICAL_WEBHOOK_URL:-http://host.docker.internal:19093/alerts/critical}

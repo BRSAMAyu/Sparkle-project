@@ -6,7 +6,6 @@ import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/error_book/error_book.dart';
-import 'package:sparkle/features/reviews/presentation/screens/review_plan_hub_screen.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 Page<dynamic> _buildTransitionPage({
@@ -102,40 +101,6 @@ class ErrorBookRoutes {
                 policy: const SceneAudioPolicy(track: BgmTrack.task),
                 child: ErrorDetailScreen(errorId: errorId),
               ),
-            );
-          },
-        ),
-        GoRoute(
-          path: '/review-plan',
-          name: 'reviewPlanHub',
-          pageBuilder: (context, state) => _buildTransitionPage(
-            state: state,
-            child: const SceneAudioScope(
-              policy: SceneAudioPolicy(track: BgmTrack.task),
-              child: ReviewPlanHubScreen(),
-            ),
-            type: SharedAxisTransitionType.scaled,
-          ),
-        ),
-        GoRoute(
-          path: '/review',
-          name: 'review',
-          pageBuilder: (context, state) {
-            final modeCode = state.uri.queryParameters['mode'] ?? 'today';
-            final subjectCode = state.uri.queryParameters['subject'];
-
-            final mode = ReviewMode.values.firstWhere(
-              (m) => m.code == modeCode,
-              orElse: () => ReviewMode.today,
-            );
-
-            return _buildTransitionPage(
-              state: state,
-              child: SceneAudioScope(
-                policy: const SceneAudioPolicy(track: BgmTrack.task),
-                child: ReviewScreen(mode: mode, subjectCode: subjectCode),
-              ),
-              type: SharedAxisTransitionType.scaled,
             );
           },
         ),

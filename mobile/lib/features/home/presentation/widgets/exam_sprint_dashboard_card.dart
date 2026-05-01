@@ -51,148 +51,149 @@ class _ExamSprintDashboardCardState extends State<ExamSprintDashboardCard> {
               )
             : DashboardSectionShell(
                 tone: DashboardSurfaceTone.hero,
-          padding: const EdgeInsets.all(DS.spacing18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _CardHeader(
-                isChinese: isChinese,
-                targetMode: data.targetMode,
-                accentColor: accentColor,
-              ),
-              const SizedBox(height: DS.spacing18),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final compact = constraints.maxWidth < 620;
-                  if (compact) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.all(DS.spacing18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _CardHeader(
+                      isChinese: isChinese,
+                      targetMode: data.targetMode,
+                      accentColor: accentColor,
+                    ),
+                    const SizedBox(height: DS.spacing18),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final compact = constraints.maxWidth < 620;
+                        if (compact) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _HeadlineBlock(
+                                data: data,
+                                isChinese: isChinese,
+                                accentColor: accentColor,
+                              ),
+                              const SizedBox(height: DS.spacing18),
+                              Center(
+                                child: _PassProbabilityArc(
+                                  data: data,
+                                  isChinese: isChinese,
+                                  accentColor: accentColor,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _HeadlineBlock(
+                                data: data,
+                                isChinese: isChinese,
+                                accentColor: accentColor,
+                              ),
+                            ),
+                            const SizedBox(width: DS.spacing20),
+                            _PassProbabilityArc(
+                              data: data,
+                              isChinese: isChinese,
+                              accentColor: accentColor,
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: DS.spacing18),
+                    Wrap(
+                      spacing: DS.spacing10,
+                      runSpacing: DS.spacing10,
                       children: [
-                        _HeadlineBlock(
-                          data: data,
-                          isChinese: isChinese,
-                          accentColor: accentColor,
+                        _MetricPill(
+                          label: context.l10n.examHighFreqCoverage,
+                          value: _formatPercent(data.highFreqCoverage),
+                          detail:
+                              '${data.highFreqCoveredCount}/${data.highFreqTotalCount}',
+                          accentColor: DS.brandPrimary,
                         ),
-                        const SizedBox(height: DS.spacing18),
-                        Center(
-                          child: _PassProbabilityArc(
-                            data: data,
-                            isChinese: isChinese,
-                            accentColor: accentColor,
-                          ),
+                        _MetricPill(
+                          label: context.l10n.examMistakeRepair,
+                          value: _formatPercent(data.mistakeFixRate),
+                          detail:
+                              '${data.fixedMistakeCount}/${data.totalMistakeCount}',
+                          accentColor: DS.success,
+                        ),
+                        _MetricPill(
+                          label: context.l10n.examStudyStreak,
+                          value: context.l10n.examStreakDays(data.streakDays),
+                          detail: context.l10n.examKeepRhythm,
+                          accentColor: DS.warning,
                         ),
                       ],
-                    );
-                  }
-
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _HeadlineBlock(
-                          data: data,
-                          isChinese: isChinese,
-                          accentColor: accentColor,
+                    ),
+                    if (data.highYieldLowMasteryTopics.isNotEmpty) ...[
+                      const SizedBox(height: DS.spacing12),
+                      Text(
+                        context.l10n.examHighYieldWeakSpots(
+                            data.highYieldLowMasteryTopics.join(' · ')),
+                        style: context.sparkleTypography.bodySmall.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.35,
                         ),
-                      ),
-                      const SizedBox(width: DS.spacing20),
-                      _PassProbabilityArc(
-                        data: data,
-                        isChinese: isChinese,
-                        accentColor: accentColor,
                       ),
                     ],
-                  );
-                },
-              ),
-              const SizedBox(height: DS.spacing18),
-              Wrap(
-                spacing: DS.spacing10,
-                runSpacing: DS.spacing10,
-                children: [
-                  _MetricPill(
-                    label: context.l10n.examHighFreqCoverage,
-                    value: _formatPercent(data.highFreqCoverage),
-                    detail:
-                        '${data.highFreqCoveredCount}/${data.highFreqTotalCount}',
-                    accentColor: DS.brandPrimary,
-                  ),
-                  _MetricPill(
-                    label: context.l10n.examMistakeRepair,
-                    value: _formatPercent(data.mistakeFixRate),
-                    detail:
-                        '${data.fixedMistakeCount}/${data.totalMistakeCount}',
-                    accentColor: DS.success,
-                  ),
-                  _MetricPill(
-                    label: context.l10n.examStudyStreak,
-                    value: context.l10n.examStreakDays(data.streakDays),
-                    detail: context.l10n.examKeepRhythm,
-                    accentColor: DS.warning,
-                  ),
-                ],
-              ),
-              if (data.highYieldLowMasteryTopics.isNotEmpty) ...[
-                const SizedBox(height: DS.spacing12),
-                Text(
-                  context.l10n.examHighYieldWeakSpots(data.highYieldLowMasteryTopics.join(' · ')),
-                  style: context.sparkleTypography.bodySmall.copyWith(
-                    color: DS.textSecondary,
-                    height: 1.35,
-                  ),
-                ),
-              ],
-              const SizedBox(height: DS.spacing18),
-              _TaskSectionHeader(
-                isChinese: isChinese,
-                isExpanded: _isExpanded,
-                futureGroupCount: futureGroups.length,
-                onToggle: futureGroups.isEmpty
-                    ? null
-                    : () {
-                        setState(() {
-                          _isExpanded = !_isExpanded;
-                        });
-                      },
-              ),
-              const SizedBox(height: DS.spacing12),
-              if (data.todayGroup != null)
-                _TaskGroupCard(
-                  group: data.todayGroup!,
-                  isChinese: isChinese,
-                  accentColor: accentColor,
-                )
-              else
-                Text(
-                  context.l10n.examNoSprintScheduled,
-                  style: context.sparkleTypography.bodySmall.copyWith(
-                    color: DS.textSecondary,
-                  ),
-                ),
-              AnimatedSize(
-                duration: DS.durationSlow,
-                curve: Curves.easeOutCubic,
-                child: _isExpanded && futureGroups.isNotEmpty
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: DS.spacing10),
-                        child: Column(
-                          children: [
-                            for (final group in futureGroups) ...[
-                              _TaskGroupCard(
-                                group: group,
-                                isChinese: isChinese,
-                                accentColor: DS.info,
-                              ),
-                              const SizedBox(height: DS.spacing10),
-                            ],
-                          ],
-                        ),
+                    const SizedBox(height: DS.spacing18),
+                    _TaskSectionHeader(
+                      isChinese: isChinese,
+                      isExpanded: _isExpanded,
+                      futureGroupCount: futureGroups.length,
+                      onToggle: futureGroups.isEmpty
+                          ? null
+                          : () {
+                              setState(() {
+                                _isExpanded = !_isExpanded;
+                              });
+                            },
+                    ),
+                    const SizedBox(height: DS.spacing12),
+                    if (data.todayGroup != null)
+                      _TaskGroupCard(
+                        group: data.todayGroup!,
+                        isChinese: isChinese,
+                        accentColor: accentColor,
                       )
-                    : const SizedBox.shrink(),
+                    else
+                      Text(
+                        context.l10n.examNoSprintScheduled,
+                        style: context.sparkleTypography.bodySmall.copyWith(
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                    AnimatedSize(
+                      duration: DS.durationSlow,
+                      curve: Curves.easeOutCubic,
+                      child: _isExpanded && futureGroups.isNotEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: DS.spacing10),
+                              child: Column(
+                                children: [
+                                  for (final group in futureGroups) ...[
+                                    _TaskGroupCard(
+                                      group: group,
+                                      isChinese: isChinese,
+                                      accentColor: DS.info,
+                                    ),
+                                    const SizedBox(height: DS.spacing10),
+                                  ],
+                                ],
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -422,7 +423,8 @@ class _HeadlineBlock extends StatelessWidget {
     final countdown = data.daysLeft == 0
         ? context.l10n.examDay
         : context.l10n.examDaysUntil(data.daysLeft);
-    final progress = context.l10n.examTodayProgress(data.todayProgress.completed, data.todayProgress.total);
+    final progress = context.l10n.examTodayProgress(
+        data.todayProgress.completed, data.todayProgress.total);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -576,7 +578,9 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
                 ),
                 const SizedBox(height: DS.spacing6),
                 Text(
-                  context.l10n.examTodayCompleted(widget.data.todayProgress.completed, widget.data.todayProgress.total),
+                  context.l10n.examTodayCompleted(
+                      widget.data.todayProgress.completed,
+                      widget.data.todayProgress.total),
                   style: context.sparkleTypography.bodySmall.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -714,14 +718,17 @@ class _TaskSectionHeader extends StatelessWidget {
     final title = context.l10n.examTodaySprintTasks;
     return Row(
       children: [
-        Text(
-          title,
-          style: context.sparkleTypography.titleLarge.copyWith(
-            color: DS.textPrimary,
-            fontWeight: DS.fontWeightBold,
+        Expanded(
+          child: Text(
+            title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: context.sparkleTypography.titleLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightBold,
+            ),
           ),
         ),
-        const Spacer(),
         if (onToggle != null)
           TextButton.icon(
             onPressed: onToggle,
@@ -757,9 +764,8 @@ class _TaskGroupCard extends StatelessWidget {
     final title = group.isToday
         ? context.l10n.examDay
         : context.l10n.examDayIndex(group.dayIndex);
-    final subtitle = group.date == null
-        ? null
-        : '${group.date!.month}/${group.date!.day}';
+    final subtitle =
+        group.date == null ? null : '${group.date!.month}/${group.date!.day}';
 
     return Container(
       width: double.infinity,

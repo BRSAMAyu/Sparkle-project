@@ -840,7 +840,7 @@ func grpcStreamErrorDetails(err error) (string, string, bool) {
 
 	st, ok := grpcstatus.FromError(err)
 	if !ok {
-		return "unknown", err.Error(), retryable
+		return "unknown", defaultWSInternalMessage, retryable
 	}
 
 	if strings.TrimSpace(st.Message()) != "" {
@@ -865,9 +865,9 @@ func grpcStreamErrorDetails(err error) (string, string, bool) {
 	case codes.Unavailable:
 		return "unavailable", message, true
 	case codes.Internal, codes.DataLoss:
-		return "internal", message, true
+		return "internal", publicStreamErrorMessage("internal", message), true
 	default:
-		return "unknown", message, retryable
+		return "unknown", publicStreamErrorMessage("unknown", message), retryable
 	}
 }
 

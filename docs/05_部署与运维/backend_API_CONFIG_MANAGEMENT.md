@@ -87,8 +87,8 @@ HUNYUAN_TRANSLATE_MODEL=tencent/Hunyuan-MT-7B
 
 ```bash
 # API 密钥
-XUNFEI_API_KEY=your-xunfei-api-key-here
-XUNFEI_API_SECRET=your-xunfei-api-secret-here
+XUNFEI_API_KEY=your_xunfei_key
+XUNFEI_API_SECRET=your_xunfei_secret
 
 # STT 配置
 XUNFEI_STT_DOMAIN=iat                           # 听写/实时转写

@@ -194,8 +194,8 @@ class BehaviorSignalCollector:
                                     dict(getattr(record, "diagnosis_payload", {}) or {}),
                                 )
                             )
-                    except Exception:
-                        pass
+                    except Exception as delivery_exc:
+                        logger.warning("Failed to check delivery channel for intervention: {}", delivery_exc)
             except Exception as bridge_exc:
                 logger.warning("Behavior→InterventionRecord bridge failed (non-fatal): {}", bridge_exc)
 

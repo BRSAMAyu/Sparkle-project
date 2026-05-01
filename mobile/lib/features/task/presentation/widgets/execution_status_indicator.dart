@@ -32,6 +32,7 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
   late final AnimationController _errorController;
   Duration _elapsed = Duration.zero;
   ExecutionIntentStatus? _previousStatus;
+  bool _didSyncInitialStatusEffects = false;
 
   @override
   void initState() {
@@ -51,7 +52,15 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
       duration: const Duration(milliseconds: 400),
     );
     _previousStatus = widget.status;
-    _syncStatusEffects(initial: true);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_didSyncInitialStatusEffects) {
+      _didSyncInitialStatusEffects = true;
+      _syncStatusEffects(initial: true);
+    }
   }
 
   @override
@@ -84,7 +93,8 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
     _timer?.cancel();
     if (_isActiveStatus(widget.status) && widget.dispatchedAt != null) {
       _tickElapsed();
-      _timer = Timer.periodic(const Duration(seconds: 1), (_) => _tickElapsed());
+      _timer =
+          Timer.periodic(const Duration(seconds: 1), (_) => _tickElapsed());
     } else if (widget.dispatchedAt != null) {
       _tickElapsed();
     } else {
@@ -263,8 +273,7 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
   Widget build(BuildContext context) {
     final spec = _specFor(widget.status);
     final iconSize = widget.size * 0.46;
-    final showElapsed =
-        widget.dispatchedAt != null &&
+    final showElapsed = widget.dispatchedAt != null &&
         (_isActiveStatus(widget.status) || _elapsed > Duration.zero);
 
     return Semantics(
@@ -329,9 +338,11 @@ class _ExecutionStatusIndicatorState extends State<ExecutionStatusIndicator>
         builder: (context, child) {
           final t = _errorController.value;
           final offsets = [-4.0, 4.0, -2.0, 2.0, 0.0];
-          final segment = math.min((t * (offsets.length - 1)).floor(), offsets.length - 2);
+          final segment =
+              math.min((t * (offsets.length - 1)).floor(), offsets.length - 2);
           final localT = (t * (offsets.length - 1)) - segment;
-          final dx = lerpDouble(offsets[segment], offsets[segment + 1], localT) ?? 0;
+          final dx =
+              lerpDouble(offsets[segment], offsets[segment + 1], localT) ?? 0;
           return Transform.translate(offset: Offset(dx, 0), child: child);
         },
       );

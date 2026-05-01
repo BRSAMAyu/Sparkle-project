@@ -86,13 +86,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // Listen for errors and show a SnackBar
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.error != null && (previous?.error != next.error)) {
+        final failure = next.failure;
         AppFeedback.error(
           context,
-          ErrorMessages.getLocalizedMessage(
-            l10n,
-            'AUTH_ERROR', // Default error code since AuthState doesn't have errorCode
-            next.error,
-          ),
+          failure?.userMessage ??
+              ErrorMessages.getLocalizedMessage(
+                l10n,
+                next.errorCode ?? 'AUTH_ERROR',
+                next.error,
+              ),
         );
       }
       // Successful login is handled by router redirect

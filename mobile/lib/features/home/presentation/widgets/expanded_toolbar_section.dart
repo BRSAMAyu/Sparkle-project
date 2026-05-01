@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/features/reviews/reviews_routes.dart';
 
 /// Expanded toolbar section - Quick action tools
 class ExpandedToolbarSection extends ConsumerWidget {
@@ -81,7 +82,7 @@ class ExpandedToolbarSection extends ConsumerWidget {
                 key: ValueKey('tool_review'),
                 icon: Icons.event_note_rounded,
                 label: '复习计划',
-                route: '/review',
+                route: ReviewRoutes.planHub,
               ),
               _ToolButton(
                 key: ValueKey('tool_forecast'),
@@ -99,7 +100,10 @@ class ExpandedToolbarSection extends ConsumerWidget {
 
 class _ToolButton extends StatelessWidget {
   const _ToolButton({
-    required this.icon, required this.label, required this.route, super.key,
+    required this.icon,
+    required this.label,
+    required this.route,
+    super.key,
   });
 
   final IconData icon;

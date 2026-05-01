@@ -6,9 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
 import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_calibration_strip.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
@@ -44,6 +46,102 @@ import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+
+/// Shows a text input dialog for freeform Aurora correction.
+/// Returns trimmed text only when the user submits; cancel returns null.
+Future<String?> showAuroraFreeformCorrectionInputDialog(BuildContext context) {
+  final zh = I18nService.instance.isChinese;
+  final controller = TextEditingController();
+  final focusNode = FocusNode();
+
+  return showDialog<String?>(
+    context: context,
+    builder: (ctx) {
+      String? submittedText() {
+        final text = controller.text.trim();
+        return text.isEmpty ? null : text;
+      }
+
+      return AlertDialog(
+        title: Text(
+          zh ? '你想告诉 Sparkle 什么？' : 'What would you like to tell Sparkle?',
+        ),
+        content: TextField(
+          controller: controller,
+          focusNode: focusNode,
+          autofocus: true,
+          maxLines: 3,
+          minLines: 2,
+          decoration: InputDecoration(
+            hintText: zh
+                ? '哪里判断错了？说说你的想法…'
+                : 'What did Aurora get wrong? Share your thoughts…',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(DS.radius12),
+            ),
+            contentPadding: const EdgeInsets.all(DS.spacing12),
+          ),
+          textInputAction: TextInputAction.send,
+          onSubmitted: (_) {
+            final text = submittedText();
+            if (text != null) {
+              Navigator.of(ctx).pop(text);
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(null),
+            child: Text(zh ? '取消' : 'Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(submittedText()),
+            child: Text(zh ? '发送' : 'Send'),
+          ),
+        ],
+      );
+    },
+  ).whenComplete(() {
+    focusNode.dispose();
+    controller.dispose();
+  });
+}
+
+/// Records telemetry with the user's actual freeform text AFTER submission.
+Future<void> _showFreeformCorrectionDialog(
+  BuildContext context, {
+  required String bandStatus,
+  required String semanticValue,
+  required bool isDisconfirming,
+  AuroraTelemetryService? telemetry,
+}) async {
+  final text = await showAuroraFreeformCorrectionInputDialog(context);
+  if (text == null || text.isEmpty) return;
+
+  if (!context.mounted) return;
+  if (telemetry != null) {
+    unawaited(telemetry.recordStatusBandCorrection(
+      label: text,
+      semanticValue: semanticValue,
+      isDisconfirming: isDisconfirming,
+      bandStatus: bandStatus,
+      isFreeform: true,
+      freeformText: text,
+    ));
+  }
+  unawaited(
+    context.push(ChatRoutes.chat, extra: {
+      'initial_user_message': text,
+      'aurora_correction': {
+        'type': 'freeform',
+        'semantic_value': semanticValue,
+        'band_status': bandStatus,
+        'is_disconfirming': isDisconfirming,
+        'freeform_text': text,
+      },
+    }),
+  );
+}
 
 /// Dashboard screen - extracted from HomeScreen
 /// Displays the main project cockpit with bento grid layout
@@ -400,6 +498,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     var sectionIndex = growthSections.length;
     final dashboardSections = <Widget>[];
     if (dashboardState.error != null) {
+      final failureKind = dashboardState.failure?.kind ??
+          FailureKindCode.fromCode(dashboardState.failure?.errorCode);
+      final zh = I18nService.instance.isChinese;
+      final failureIcon = switch (failureKind) {
+        FailureKind.auth => Icons.lock_outline_rounded,
+        FailureKind.server => Icons.cloud_sync_outlined,
+        FailureKind.validation => Icons.edit_note_rounded,
+        FailureKind.network || FailureKind.offline => Icons.wifi_off_rounded,
+        FailureKind.unknown => Icons.cloud_off_outlined,
+      };
+      final failureTitle = switch (failureKind) {
+        FailureKind.auth => zh ? '需要重新登录' : 'Sign-in needed',
+        FailureKind.server => zh ? '服务暂时不稳' : 'Service issue',
+        FailureKind.validation => zh ? '需要调整请求' : 'Check request',
+        FailureKind.network => zh ? '网络不稳定' : 'Connection issue',
+        FailureKind.offline => zh ? '离线了' : 'Offline',
+        FailureKind.unknown => zh ? '首页暂时加载失败' : 'Dashboard unavailable',
+      };
+      final actionLabel = switch (failureKind) {
+        FailureKind.auth => zh ? '去登录' : 'Sign in',
+        FailureKind.offline => zh ? '连网后重试' : 'Retry online',
+        _ => context.l10n.dashboardRetry,
+      };
       // R5-F04: Show error UI instead of silently falling back
       dashboardSections.add(
         _staggeredSection(
@@ -417,8 +538,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
             child: Column(
               children: [
-                Icon(Icons.cloud_off_outlined, size: 40, color: DS.textTertiary),
+                Icon(failureIcon, size: 40, color: DS.textTertiary),
                 const SizedBox(height: 12),
+                Text(
+                  failureTitle,
+                  style: TextStyle(
+                    color: DS.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 6),
                 Text(
                   dashboardState.error ?? context.l10n.dashboardLoadFailed,
                   style: TextStyle(color: DS.textSecondary, fontSize: 14),
@@ -426,9 +557,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
                 const SizedBox(height: 16),
                 TextButton.icon(
-                  onPressed: () => ref.invalidate(dashboardProvider),
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: Text(context.l10n.dashboardRetry),
+                  onPressed: () {
+                    if (failureKind == FailureKind.auth) {
+                      context.go('/login');
+                      return;
+                    }
+                    ref.invalidate(dashboardProvider);
+                  },
+                  icon: Icon(
+                    failureKind == FailureKind.auth
+                        ? Icons.login_rounded
+                        : Icons.refresh,
+                    size: 18,
+                  ),
+                  label: Text(actionLabel),
                 ),
               ],
             ),
@@ -479,25 +621,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 cooldownCanOverride: band?.cooldownCanOverride ?? false,
                 onTap: () => context.push(ChatRoutes.chat),
                 onCorrectionTap: (opt) {
-                  final telemetry = AuroraTelemetryService(ref.read(apiClientProvider));
-                  unawaited(telemetry.recordStatusBandCorrection(
-                    label: opt.label,
-                    semanticValue: opt.semanticValue,
-                    isDisconfirming: opt.isDisconfirming,
-                    bandStatus: band?.bandStatus.protocolValue ?? '',
-                    isFreeform: opt.isFreeform,
-                  ));
                   if (opt.isFreeform) {
-                    context.push(ChatRoutes.chat, extra: {
-                      'initial_user_message': '',
-                      'aurora_correction': {
-                        'type': 'freeform',
-                        'semantic_value': opt.semanticValue,
-                        'band_status': band?.bandStatus.protocolValue ?? '',
-                        'is_disconfirming': opt.isDisconfirming,
-                      },
-                    });
+                    _showFreeformCorrectionDialog(
+                      context,
+                      bandStatus: band?.bandStatus.protocolValue ?? '',
+                      semanticValue: opt.semanticValue,
+                      isDisconfirming: opt.isDisconfirming,
+                      telemetry:
+                          AuroraTelemetryService(ref.read(apiClientProvider)),
+                    );
                   } else {
+                    final telemetry =
+                        AuroraTelemetryService(ref.read(apiClientProvider));
+                    unawaited(telemetry.recordStatusBandCorrection(
+                      label: opt.label,
+                      semanticValue: opt.semanticValue,
+                      isDisconfirming: opt.isDisconfirming,
+                      bandStatus: band?.bandStatus.protocolValue ?? '',
+                    ));
                     context.push(ChatRoutes.chat, extra: {
                       'initial_user_message': opt.label,
                       'aurora_correction': {
@@ -510,7 +651,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   }
                 },
                 onCooldownOverride: () {
-                  final telemetry = AuroraTelemetryService(ref.read(apiClientProvider));
+                  final telemetry =
+                      AuroraTelemetryService(ref.read(apiClientProvider));
                   unawaited(telemetry.recordStatusBandCorrection(
                     label: context.l10n.dashboardQuickCalibration,
                     semanticValue: 'quick_calibration',
@@ -518,7 +660,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     bandStatus: band?.bandStatus.protocolValue ?? '',
                   ));
                   context.push(ChatRoutes.chat, extra: {
-                    'initial_user_message': context.l10n.dashboardQuickCalibration,
+                    'initial_user_message':
+                        context.l10n.dashboardQuickCalibration,
                     'aurora_correction': {
                       'type': 'cooldown_override',
                       'semantic_value': 'quick_calibration',
@@ -1237,8 +1380,7 @@ class _DashboardUpdatesSectionState
         context.l10n.dashboardMessagesCount(unreadMessages),
       if (unreadNotifications > 0)
         context.l10n.dashboardAlertsCount(unreadNotifications),
-      if (insightCount > 0)
-        context.l10n.dashboardInsightsCount(insightCount),
+      if (insightCount > 0) context.l10n.dashboardInsightsCount(insightCount),
       if (hasPendingReview) context.l10n.dashboardReviewPending,
     ];
 
@@ -1425,29 +1567,29 @@ class _GoalChip extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            color: DS.brandPrimary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: DS.brandPrimary.withValues(alpha: 0.2),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: DS.brandPrimary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: DS.brandPrimary.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 15, color: DS.brandPrimary),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: DS.labelSmall.copyWith(
+                    color: DS.brandPrimary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 15, color: DS.brandPrimary),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: DS.labelSmall.copyWith(
-                  color: DS.brandPrimary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
         ),
       );
 }

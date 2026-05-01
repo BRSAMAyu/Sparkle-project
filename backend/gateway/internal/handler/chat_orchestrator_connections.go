@@ -2,7 +2,6 @@ package handler
 
 import (
 	"github.com/gorilla/websocket"
-	"time"
 )
 
 func (h *ChatOrchestrator) registerConnection(userID string, conn *websocket.Conn, writer *wsSafeWriter) bool {
@@ -53,19 +52,18 @@ func (h *ChatOrchestrator) IsDraining() bool {
 	return h.draining.Load()
 }
 
-func writeConnectionLimitClose(_ *wsSafeWriter, conn *websocket.Conn) {
-	_ = conn.WriteControl(
+func writeConnectionLimitClose(writer *wsSafeWriter, _ *websocket.Conn) {
+	_ = writer.WriteControl(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Too many connections"),
-		time.Now().Add(time.Second),
 	)
-	_ = conn.Close()
+	_ = writer.Close()
 }
 
-func writeServerDrainingClose(writer *wsSafeWriter, conn *websocket.Conn) {
+func writeServerDrainingClose(writer *wsSafeWriter, _ *websocket.Conn) {
 	_ = writer.WriteControl(
 		websocket.CloseMessage,
 		websocket.FormatCloseMessage(websocket.CloseTryAgainLater, "server shutting down"),
 	)
-	_ = conn.Close()
+	_ = writer.Close()
 }

@@ -185,6 +185,12 @@ class UnifiedNotification {
   String? get deliveryChannel => metadata['delivery_channel'] as String?;
   String? get pushCategory => metadata['category'] as String?;
   String? get evidenceToken => metadata['evidence_token'] as String?;
+  String? get proactiveReason =>
+      metadata['proactive_reason'] as String? ??
+      _contextVariables['proactive_reason'] as String?;
+  String? get intrusivenessLevel =>
+      metadata['intrusiveness_level'] as String? ??
+      _contextVariables['intrusiveness_level'] as String?;
   String? get retractableUntil => metadata['retractable_until'] as String?;
   String? get pushStatus => metadata['push_status'] as String?;
 
@@ -250,7 +256,9 @@ class UnifiedNotification {
   String get previewText {
     final step = suggestedStep;
     if (isIntervention && step != null && step.trim().isNotEmpty) {
-      return I18nService.instance.isChinese ? '$content\n建议动作：$step' : '$content\nSuggested action: $step';
+      return I18nService.instance.isChinese
+          ? '$content\n建议动作：$step'
+          : '$content\nSuggested action: $step';
     }
     return content;
   }

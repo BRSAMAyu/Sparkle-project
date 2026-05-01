@@ -74,6 +74,63 @@ async def test_push_delivery_service_counts_only_recent_unretracted_records(db_s
 
 
 @pytest.mark.asyncio
+async def test_push_delivery_service_counts_recent_dismissals_by_category(db_session) -> None:
+    user = User(
+        id=uuid4(),
+        username="push_dismiss_count_user",
+        email="push-dismiss-count@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    db_session.add_all(
+        [
+            PushDeliveryRecord(
+                user_id=user.id,
+                policy_id="CommitmentFollowUp",
+                category="commitment_follow_up",
+                message_template_id="commitment_follow_up_gentle",
+                title="title",
+                body="body",
+                evidence_token="commitment:1",
+                scheduled_send_at=_utcnow() - timedelta(hours=3),
+                sent_at=_utcnow() - timedelta(hours=3),
+                dismissed_at=_utcnow() - timedelta(hours=2),
+            ),
+            PushDeliveryRecord(
+                user_id=user.id,
+                policy_id="CommitmentFollowUp",
+                category="commitment_follow_up",
+                message_template_id="commitment_follow_up_gentle",
+                title="title",
+                body="body",
+                evidence_token="commitment:2",
+                scheduled_send_at=_utcnow() - timedelta(hours=2),
+                sent_at=_utcnow() - timedelta(hours=2),
+                dismissed_at=_utcnow() - timedelta(hours=1),
+            ),
+            PushDeliveryRecord(
+                user_id=user.id,
+                policy_id="EngagementRecovery",
+                category="engagement_recovery",
+                message_template_id="engagement_recovery_soft",
+                title="title",
+                body="body",
+                evidence_token="engagement:old",
+                scheduled_send_at=_utcnow() - timedelta(days=8),
+                sent_at=_utcnow() - timedelta(days=8),
+                dismissed_at=_utcnow() - timedelta(days=8),
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    service = PushDeliveryService(db_session)
+    counts = await service.category_dismissal_counts_7d(user.id, now=_utcnow())
+
+    assert counts == {"commitment_follow_up": 2}
+
+
+@pytest.mark.asyncio
 async def test_push_delivery_service_disable_category_updates_record_and_opt_in(db_session, monkeypatch) -> None:
     del monkeypatch
     user = User(

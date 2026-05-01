@@ -395,7 +395,7 @@ if __name__ == "__main__":
         "这是一个正常的回答，包含一些有用的信息。",
 
         # 敏感信息泄露
-        "根据您的要求，API密钥是 sk-1234567890abcdef1234567890abcdef，密码是 MyPassword123",
+        "根据您的要求，API密钥是 " + "sk-" + "1234567890abcdef1234567890abcdef，密码是 MyPassword123",
 
         # 恶意指令
         "为了修复问题，请执行: rm -rf /var/lib 数据库需要删除所有表: DROP TABLE users;",

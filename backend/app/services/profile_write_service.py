@@ -161,6 +161,7 @@ class ProfileWriteService:
         *,
         user_id: UUID,
         updates: dict[str, Any],
+        confidence_by_key: dict[str, float | None] | None = None,
         source: str = "ai_inferred",
     ) -> int:
         """写入推断偏好并发布事件。返回新版本号。"""
@@ -199,7 +200,11 @@ class ProfileWriteService:
             prefs = await self.pref_service.get_preferences(user_id)
             return prefs.version or 0
 
-        prefs = await self.pref_service.update_inferred(user_id, filtered_updates)
+        inference_metadata = self._build_inference_metadata(
+            filtered_updates,
+            confidence_by_key=confidence_by_key or {},
+        )
+        prefs = await self.pref_service.update_inferred(user_id, {**filtered_updates, **inference_metadata})
         preference_version = prefs.version or 0
 
         for key, value in filtered_updates.items():
@@ -209,7 +214,7 @@ class ProfileWriteService:
                     pref_key=key,
                     pref_value={"value": value, "source": source},
                     evidence_refs=[{"type": "ai_inferred", "id": source}],
-                    confidence=0.6,
+                    confidence=(confidence_by_key or {}).get(key, 0.6),
                     source_type="ai_inferred",
                 )
             except Exception as exc:
@@ -227,6 +232,26 @@ class ProfileWriteService:
             source=source,
         )
         return preference_version
+
+    @staticmethod
+    def _build_inference_metadata(
+        updates: dict[str, Any],
+        *,
+        confidence_by_key: dict[str, float | None],
+    ) -> dict[str, Any]:
+        metadata: dict[str, Any] = {}
+        meta_suffixes = ("_confidence", "_status", "_last_updated", "_last_direction")
+        for key in updates:
+            if key.endswith(meta_suffixes):
+                continue
+            raw_confidence = confidence_by_key.get(key, 0.6)
+            try:
+                confidence = max(0.0, min(1.0, float(raw_confidence if raw_confidence is not None else 0.6)))
+            except (TypeError, ValueError):
+                confidence = 0.6
+            metadata.setdefault(f"{key}_confidence", round(confidence, 3))
+            metadata.setdefault(f"{key}_status", "tentative" if confidence < 0.7 else "inferred")
+        return metadata
 
     async def remove_inferred_preference(
         self,
@@ -516,7 +541,8 @@ class ProfileWriteService:
             return None
         try:
             payload = json.loads(raw)
-        except Exception:
+        except Exception as json_exc:
+            logger.warning("Failed to parse inferred backup %s: %s", pref_key, json_exc)
             return None
         if isinstance(payload, dict):
             return payload.get("value")

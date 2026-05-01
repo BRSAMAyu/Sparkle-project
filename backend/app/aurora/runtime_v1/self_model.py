@@ -112,6 +112,7 @@ class SparkleSelfModelService:
             await self._persist(user_id=user_id, state=state)
         else:
             await self._refresh_ttl(user_id)
+        await self._attach_bayesian_policy_calibration(user_id=user_id, state=state)
         return self._to_readout_summary(state)
 
     async def record_task_outcome(
@@ -706,4 +707,28 @@ class SparkleSelfModelService:
             "needs_recalibration": bool(state.get("needs_recalibration")),
             "recalibration_reasons": list(state.get("recalibration_reasons") or []),
             "task_failure_streak": max(0, _safe_int(state.get("failure_streak"))),
+            "bayesian_policy": _as_dict(state.get("bayesian_policy")),
         }
+
+    async def _attach_bayesian_policy_calibration(self, *, user_id: str, state: dict[str, Any]) -> None:
+        if self.redis is None:
+            return
+        try:
+            from app.aurora.bayesian import AuroraBayesianLearner
+
+            calibration = await AuroraBayesianLearner(self.redis).policy_calibration(user_id=user_id)
+        except Exception as exc:
+            logger.warning("Sparkle self model Bayesian calibration read failed for {}: {}", user_id, exc)
+            return
+
+        if not calibration.get("calibrated_confidence"):
+            return
+
+        current_confidence = _clamp_unit(
+            state.get("strategy_confidence"),
+            default=DEFAULT_STRATEGY_CONFIDENCE,
+        )
+        calibrated = _clamp_unit(calibration.get("calibrated_confidence"), default=current_confidence)
+        state["strategy_confidence"] = round((0.4 * current_confidence) + (0.6 * calibrated), 4)
+        calibration["applied_strategy_confidence"] = state["strategy_confidence"]
+        state["bayesian_policy"] = calibration

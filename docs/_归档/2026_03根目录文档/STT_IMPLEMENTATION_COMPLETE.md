@@ -238,8 +238,8 @@ flutter run
 STT_PROVIDER=xunfei  # 'xunfei' 或 'whisper'
 
 # 科大讯飞API配置
-XUNFEI_API_KEY=your_xunfei_api_key_here
-XUNFEI_API_SECRET=your_xunfei_api_secret_here
+XUNFEI_API_KEY=your_xunfei_key
+XUNFEI_API_SECRET=your_xunfei_secret
 XUNFEI_STT_DOMAIN=iat
 XUNFEI_STT_LANGUAGE=zh-CN
 XUNFEI_STT_SAMPLE_RATE=16000

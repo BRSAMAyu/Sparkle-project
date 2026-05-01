@@ -29,6 +29,7 @@ class WebSocketPushChannel(PushChannel):
         self.push_service = NotificationPushService(db)
 
     async def deliver(self, *, user_id: UUID, decision: PushDecision) -> PushDeliveryRecord:
+        navigation_data = self._navigation_data(decision)
         notification = await self.push_service.create_and_push(
             user_id=user_id,
             title=decision.title,
@@ -41,6 +42,7 @@ class WebSocketPushChannel(PushChannel):
                 "evidence_token": decision.evidence_token,
                 "message_template_id": decision.message_template_id,
                 "delivery_channel": "websocket",
+                **navigation_data,
                 "context_variables": decision.metadata,
             },
             priority="high",
@@ -72,6 +74,13 @@ class WebSocketPushChannel(PushChannel):
         await self.db.commit()
         return record
 
+    def _navigation_data(self, decision: PushDecision) -> dict[str, object]:
+        return {
+            key: decision.metadata[key]
+            for key in ("destination_route", "deep_link", "route", "primary_action")
+            if key in decision.metadata
+        }
+
 
 class PushDeliveryService:
     def __init__(self, db: AsyncSession):
@@ -102,6 +111,19 @@ class PushDeliveryService:
             )
         )
         return {str(value) for value in result.scalars().all()}
+
+    async def category_dismissal_counts_7d(self, user_id: UUID, *, now: datetime | None = None) -> dict[str, int]:
+        reference_time = now or _utcnow()
+        result = await self.db.execute(
+            select(PushDeliveryRecord.category, func.count(PushDeliveryRecord.id))
+            .where(
+                PushDeliveryRecord.user_id == user_id,
+                PushDeliveryRecord.dismissed_at.is_not(None),
+                PushDeliveryRecord.dismissed_at >= reference_time - timedelta(days=7),
+            )
+            .group_by(PushDeliveryRecord.category)
+        )
+        return {str(category): int(count or 0) for category, count in result.all()}
 
     async def deliver_decision(self, *, user_id: UUID, decision: PushDecision) -> PushDeliveryRecord | None:
         if not await self.kill_switches.is_live("push_delivery_enabled"):

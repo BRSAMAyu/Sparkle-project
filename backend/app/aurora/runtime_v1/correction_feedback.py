@@ -146,7 +146,33 @@ class CorrectionFeedbackProcessor:
                 result=result,
             )
 
+        await self._update_bayesian_policy(
+            user_id=user_id,
+            is_disconfirming=is_disconfirming,
+            is_freeform=is_freeform,
+        )
         return result
+
+    async def _update_bayesian_policy(
+        self,
+        *,
+        user_id: str,
+        is_disconfirming: bool,
+        is_freeform: bool,
+    ) -> None:
+        """Feed explicit correction chips into Aurora's Stage 23 learner."""
+        if self.redis is None:
+            return
+        try:
+            from app.aurora.bayesian import AuroraBayesianLearner
+
+            await AuroraBayesianLearner(self.redis).record_correction(
+                user_id=user_id,
+                is_disconfirming=is_disconfirming,
+                is_freeform=is_freeform,
+            )
+        except Exception:
+            logger.debug("CorrectionFeedback: Bayesian policy update failed", exc_info=True)
 
     async def _process_disconfirmation(
         self,

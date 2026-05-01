@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -89,4 +90,40 @@ func TestWebSocketProxyDrainAllResetsTracking(t *testing.T) {
 	require.Empty(t, proxy.liveConnections)
 	require.True(t, proxy.IsDraining())
 	require.NotNil(t, backendConn)
+}
+
+func TestWebSocketProxyRejectsPerConnectionRateLimit(t *testing.T) {
+	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		upgrader := websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}
+		conn, err := upgrader.Upgrade(w, r, nil)
+		require.NoError(t, err)
+		defer conn.Close()
+		for {
+			if _, _, err := conn.ReadMessage(); err != nil {
+				return
+			}
+		}
+	}))
+	defer backend.Close()
+
+	proxy := NewWebSocketProxy(backend.URL, zap.NewNop(), &config.Config{
+		WSMessageRateRPS:   0.001,
+		WSMessageRateBurst: 1,
+		WSWriteWaitSeconds: 1,
+	})
+	gateway := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		proxy.proxyWebSocket(w, r, backend.URL, "token-123", "user-1", "personal", "")
+	}))
+	defer gateway.Close()
+
+	conn, _, err := websocket.DefaultDialer.Dial(toWebSocketTestURL(gateway.URL), nil)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"ping"}`)))
+	require.NoError(t, conn.WriteMessage(websocket.TextMessage, []byte(`{"type":"ping"}`)))
+	_ = conn.SetReadDeadline(time.Now().Add(time.Second))
+	_, _, err = conn.ReadMessage()
+	require.Error(t, err)
+	require.True(t, websocket.IsCloseError(err, websocket.ClosePolicyViolation), "expected close policy violation, got %v", err)
 }

@@ -607,6 +607,8 @@ class DS {
         brandPrimary,
         darkText: neutral900,
       );
+  static Color onColor(Color background) =>
+      ThemeUtils.getContrastSafeText(background);
   static Color get onBrandPrimary => textOnPrimary;
   static Color get border => _isDark ? neutral600 : neutral300;
   static Color get borderStrong =>

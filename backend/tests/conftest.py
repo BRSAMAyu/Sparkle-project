@@ -42,6 +42,7 @@ from app.models.file_storage import StoredFile  # noqa: F401
 from app.models.task_feedback import TaskFeedback  # noqa: F401
 from app.models.session_completion import SessionCompletion  # noqa: F401
 from app.models.srl_phase_state import SRLPhaseStateRecord  # noqa: F401
+from app.models.north_star_metrics import NorthStarMetricEvent  # noqa: F401
 from app.models.notification import Notification, PushHistory  # noqa: F401
 from app.models.push_delivery_record import PushDeliveryRecord  # noqa: F401
 from app.models.aurora_stage20 import (  # noqa: F401

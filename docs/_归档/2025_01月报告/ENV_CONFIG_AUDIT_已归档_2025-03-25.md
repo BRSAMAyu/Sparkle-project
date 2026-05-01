@@ -22,14 +22,14 @@
 
 ```bash
 # 根目录 .env
-XIAOMI_MIMO_API_KEY=sk-cmwqykkej4amo184uyqf700glf5xcqiuahremcrg2j2kb8o6
-DEEPSEEK_API_KEY=sk-29c29c1c5a9447949b09762140a210ef
-ZHIPU_API_KEY=e78e70c5f139453c9d0df15b848fa084.W31a9cNerGcSYDTt
+XIAOMI_MIMO_API_KEY=replace_with_provider_api_key
+DEEPSEEK_API_KEY=replace_with_provider_api_key
+ZHIPU_API_KEY=replace_with_zhipu_api_key
 
 # backend/.env (相同的 keys)
-XIAOMI_MIMO_API_KEY=sk-cmwqykkej4amo184uyqf700glf5xcqiuahremcrg2j2kb8o6
-DEEPSEEK_API_KEY=sk-29c29c1c5a9447949b09762140a210ef
-ZHIPU_API_KEY=e78e70c5f139453c9d0df15b848fa084.W31a9cNerGcSYDTt
+XIAOMI_MIMO_API_KEY=replace_with_provider_api_key
+DEEPSEEK_API_KEY=replace_with_provider_api_key
+ZHIPU_API_KEY=replace_with_zhipu_api_key
 ```
 
 ### 2. 配置不一致
@@ -82,10 +82,10 @@ LLM_PROVIDER=zhipu  # ❌ 缺少其他 provider 配置
 
 # backend/.env
 LLM_PROVIDER=dashscope  # ✅ 完整配置
-DASHSCOPE_API_KEY=sk-cd9af6e3b7da44c9b67de53c69f2fae8
-ZHIPU_API_KEY=e78e70c5f139453c9d0df15b848fa084.W31a9cNerGcSYDTt
-DEEPSEEK_API_KEY=sk-29c29c1c5a9447949b09762140a210ef
-SILICONFLOW_API_KEY=sk-wregwpyfxrafholmzwrrbucyyvtfgepffgqfysmljdutoqpx
+DASHSCOPE_API_KEY=replace_with_provider_api_key
+ZHIPU_API_KEY=replace_with_zhipu_api_key
+DEEPSEEK_API_KEY=replace_with_provider_api_key
+SILICONFLOW_API_KEY=replace_with_provider_api_key
 ```
 
 ---
@@ -208,10 +208,10 @@ REDIS_PASSWORD=change-me
 ```bash
 # 继承根目录基础配置
 # 添加所有 API Keys 和服务配置
-ZHIPU_API_KEY=e78e70c5f139453c9d0df15b848fa084.W31a9cNerGcSYDTt
-DASHSCOPE_API_KEY=sk-cd9af6e3b7da44c9b67de53c69f2fae8
-DEEPSEEK_API_KEY=sk-29c29c1c5a9447949b09762140a210ef
-SILICONFLOW_API_KEY=sk-wregwpyfxrafholmzwrrbucyyvtfgepffgqfysmljdutoqpx
+ZHIPU_API_KEY=replace_with_zhipu_api_key
+DASHSCOPE_API_KEY=replace_with_provider_api_key
+DEEPSEEK_API_KEY=replace_with_provider_api_key
+SILICONFLOW_API_KEY=replace_with_provider_api_key
 # ... 其他配置
 ```
 

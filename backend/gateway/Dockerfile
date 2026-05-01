@@ -27,8 +27,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root application user for security
-RUN groupadd -r sparkle && useradd -r -g sparkle sparkle
+# Create a stable non-root application user for security.
+ARG SPARKLE_UID=10001
+ARG SPARKLE_GID=10001
+RUN groupadd --gid "${SPARKLE_GID}" sparkle \
+    && useradd --uid "${SPARKLE_UID}" --gid sparkle --home-dir /app --shell /usr/sbin/nologin sparkle
 
 WORKDIR /app
 

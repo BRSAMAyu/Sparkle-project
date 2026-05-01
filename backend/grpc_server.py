@@ -5,10 +5,10 @@ Python 后端 gRPC 服务入口
 """
 from __future__ import annotations
 
-import sys
-import os
 import asyncio
+import os
 import signal
+import sys
 from concurrent import futures
 
 # Add project root and generated directories to PYTHONPATH
@@ -17,25 +17,76 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(current_dir)
 sys.path.append(os.path.join(current_dir, "app", "gen", "agent", "v1"))
 sys.path.append(os.path.join(current_dir, "app", "gen", "galaxy", "v1"))
+sys.path.append(os.path.join(current_dir, "app", "gen", "stt", "v1"))
 sys.path.append(os.path.join(current_dir, "app", "gen"))
 
-from loguru import logger
 import grpc
 from grpc_reflection.v1alpha import reflection
+from loguru import logger
 from opentelemetry.instrumentation.grpc import GrpcAioInstrumentorServer
+from sparkle.inference.v1 import inference_pb2_grpc
 
-from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
-from app.gen.galaxy.v1 import galaxy_service_pb2, galaxy_service_pb2_grpc
-from app.gen import error_book_pb2, error_book_pb2_grpc
-from app.services.agent_grpc_service import AgentServiceImpl
-from app.services.galaxy_grpc_service import GalaxyGrpcServiceImpl
-from app.services.error_book_grpc_service import ErrorBookGrpcServiceImpl
 from app.api.grpc_auth import AuthInterceptor
+from app.config import settings
 from app.core.cache import cache_service
 from app.core.galaxy_event_bridge import galaxy_event_bridge
 from app.db.session import AsyncSessionLocal
+from app.gen import error_book_pb2, error_book_pb2_grpc, stt_service_pb2, stt_service_pb2_grpc
+from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
+from app.gen.galaxy.v1 import galaxy_service_pb2, galaxy_service_pb2_grpc
+from app.gen.sparkle.inference.v1 import inference_pb2
 from app.orchestration.orchestrator import ChatOrchestrator
-from app.config import settings
+from app.services.agent_grpc_service import AgentServiceImpl
+from app.services.error_book_grpc_service import ErrorBookGrpcServiceImpl
+from app.services.galaxy_grpc_service import GalaxyGrpcServiceImpl
+from app.services.inference_grpc_service import InferenceGrpcServiceImpl
+from app.services.stt_grpc_service import STTGrpcServiceImpl
+
+DEPRECATED_PROTO_SERVICE_NAMES = {
+    "sparkle.community.CommunityService": "REST-only via backend/app/api/v1/community.py and gateway CQRS; proto retained as deprecated compatibility documentation.",
+}
+
+
+def registered_grpc_service_names() -> tuple[str, ...]:
+    return (
+        agent_service_pb2.DESCRIPTOR.services_by_name["AgentService"].full_name,
+        error_book_pb2.DESCRIPTOR.services_by_name["ErrorBookService"].full_name,
+        galaxy_service_pb2.DESCRIPTOR.services_by_name["GalaxyService"].full_name,
+        stt_service_pb2.DESCRIPTOR.services_by_name["STTService"].full_name,
+        inference_pb2.DESCRIPTOR.services_by_name["InferenceService"].full_name,
+    )
+
+
+def register_grpc_services(
+    server: grpc.aio.Server,
+    *,
+    orchestrator: ChatOrchestrator,
+    db_session_factory,
+    stt_service=None,
+    inference_dispatcher=None,
+) -> None:
+    agent_service_pb2_grpc.add_AgentServiceServicer_to_server(
+        AgentServiceImpl(orchestrator=orchestrator, db_session_factory=db_session_factory), server
+    )
+
+    error_book_pb2_grpc.add_ErrorBookServiceServicer_to_server(
+        ErrorBookGrpcServiceImpl(db_session_factory=db_session_factory), server
+    )
+
+    galaxy_service_pb2_grpc.add_GalaxyServiceServicer_to_server(
+        GalaxyGrpcServiceImpl(db_session_factory=db_session_factory), server
+    )
+    logger.info("Registered GalaxyService (gRPC)")
+
+    stt_service_pb2_grpc.add_STTServiceServicer_to_server(
+        STTGrpcServiceImpl(service=stt_service), server
+    )
+    logger.info("Registered STTService (gRPC)")
+
+    inference_pb2_grpc.add_InferenceServiceServicer_to_server(
+        InferenceGrpcServiceImpl(dispatcher=inference_dispatcher), server
+    )
+    logger.info("Registered InferenceService (gRPC)")
 
 
 # 配置日志
@@ -124,33 +175,15 @@ async def serve():
     # Start Galaxy Event Bridge (EventBus -> SSE)
     await galaxy_event_bridge.start()
 
-    # 注册 AgentService
-    agent_service_pb2_grpc.add_AgentServiceServicer_to_server(
-        AgentServiceImpl(orchestrator=orchestrator, db_session_factory=AsyncSessionLocal), server
+    register_grpc_services(
+        server,
+        orchestrator=orchestrator,
+        db_session_factory=AsyncSessionLocal,
     )
-    
-    # Register ErrorBookService
-    error_book_pb2_grpc.add_ErrorBookServiceServicer_to_server(
-        ErrorBookGrpcServiceImpl(db_session_factory=AsyncSessionLocal), server
-    )
-
-    # Register GalaxyService (P1: Architecture Resilience)
-    if galaxy_service_pb2_grpc:
-        galaxy_service_pb2_grpc.add_GalaxyServiceServicer_to_server(
-            GalaxyGrpcServiceImpl(db_session_factory=AsyncSessionLocal), server
-        )
-        logger.info("Registered GalaxyService (gRPC)")
 
     if settings.DEBUG or settings.GRPC_ENABLE_REFLECTION:
         # 启用 gRPC 反射（用于调试，生产环境可关闭）
-        services = [
-            agent_service_pb2.DESCRIPTOR.services_by_name['AgentService'].full_name,
-            error_book_pb2.DESCRIPTOR.services_by_name['ErrorBookService'].full_name,
-            reflection.SERVICE_NAME,
-        ]
-        if galaxy_service_pb2:
-            services.append(galaxy_service_pb2.DESCRIPTOR.services_by_name['GalaxyService'].full_name)
-            
+        services = [*registered_grpc_service_names(), reflection.SERVICE_NAME]
         reflection.enable_server_reflection(tuple(services), server)
 
     # 监听端口

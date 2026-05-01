@@ -26809,6 +26809,18 @@ abstract class AppLocalizations {
   /// **'查看任务'**
   String get openclawHubButtonViewTasks;
 
+  /// No description provided for @openclawHubButtonOpenSetupGuide.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开接入指南'**
+  String get openclawHubButtonOpenSetupGuide;
+
+  /// No description provided for @openclawHubSetupGuideUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法打开接入指南'**
+  String get openclawHubSetupGuideUnavailable;
+
   /// No description provided for @openclawHubSectionConnectionTitle.
   ///
   /// In zh, this message translates to:
@@ -46383,6 +46395,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{count}天前'**
   String communityDaysAgo(Object count);
+
+  /// No description provided for @communityWeeksAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}周前'**
+  String communityWeeksAgo(Object count);
+
+  /// No description provided for @communityMonthsAgo.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count}个月前'**
+  String communityMonthsAgo(Object count);
+
+  /// No description provided for @communityBadgeUnlockedOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'解锁于 {date}'**
+  String communityBadgeUnlockedOn(Object date);
 
   /// No description provided for @communityQuickShare.
   ///

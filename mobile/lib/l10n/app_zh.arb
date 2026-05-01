@@ -6366,6 +6366,8 @@
   "openclawHubButtonAutomation": "自动化",
   "openclawHubButtonEnterChat": "进入聊天",
   "openclawHubButtonViewTasks": "查看任务",
+  "openclawHubButtonOpenSetupGuide": "打开接入指南",
+  "openclawHubSetupGuideUnavailable": "暂时无法打开接入指南",
   "openclawHubSectionConnectionTitle": "连接与控制",
   "openclawHubSectionConnectionSubtitle": "先用摘要看清当前连接，再决定是否展开编辑，避免一进来就被整张表单打断。",
   "openclawHubCollapseConnectionEdit": "收起连接编辑",

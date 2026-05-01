@@ -149,6 +149,7 @@ def test_extract_response_outcome_stats_deduplicates_entities(orchestrator):
 def test_roundtrip_ms_calculates_elapsed_time(orchestrator):
     """Test time calculation for elapsed milliseconds."""
     import time
+
     from app.orchestration.observability_mixin import ObservabilityMixin
 
     started_at = time.perf_counter()
@@ -166,6 +167,7 @@ def test_roundtrip_ms_calculates_elapsed_time(orchestrator):
 def test_roundtrip_ms_returns_zero_for_future_time(orchestrator):
     """Test time calculation returns 0 for future start time."""
     import time
+
     from app.orchestration.observability_mixin import ObservabilityMixin
 
     future_time = time.perf_counter() + 1000
@@ -193,6 +195,34 @@ def test_capability_selection_metadata_stays_in_response_metadata(orchestrator):
     assert "capability_selection_report" in metadata
     assert "capability_selection_summary" in metadata
     assert metadata["why_this_path"].startswith("Used your materials first")
+
+
+def test_dual_core_response_metadata_exposes_decision_and_structured_adjustments(orchestrator):
+    metadata = orchestrator._dual_core_response_metadata(
+        {
+            "dual_core_decision": {
+                "mode": "cognitive_first",
+                "reason": "high cognitive load",
+                "cognitive_adjustments": ["先降负荷"],
+                "structured_adjustments": [
+                    {
+                        "dimension": "explanation_depth",
+                        "value": "shallow",
+                        "reason": "cognitive load is high",
+                        "evidence": ["state_register:cognitive_load"],
+                        "scope": "turn",
+                        "user_visible": True,
+                        "ttl": None,
+                    }
+                ],
+                "execution_constraints": ["不要一次给超过一个任务"],
+            }
+        }
+    )
+
+    assert json.loads(metadata["dual_core_decision"])["mode"] == "cognitive_first"
+    structured = json.loads(metadata["structured_cognitive_adjustments"])
+    assert structured[0]["dimension"] == "explanation_depth"
 
 
 def test_semantic_control_trace_metadata_is_emitted(orchestrator):

@@ -226,9 +226,6 @@ func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []
 	pipe.RPush(ctx, cacheKey, msg)
 	pipe.LTrim(ctx, cacheKey, -20, -1) // Keep last 20 messages
 	pipe.Expire(ctx, cacheKey, s.chatHistoryTTL)
-	// Invalidate session metadata so subsequent reads rebuild from fresh data
-	metaKey := "chat:session_meta:" + sid
-	pipe.Del(ctx, metaKey)
 
 	// 2. Write to persistent queue (for DB, with Circuit Breaker)
 	queueKey := "queue:persist:history"

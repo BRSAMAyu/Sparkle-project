@@ -14,6 +14,7 @@ import 'package:sparkle/features/memory/memory_routes.dart';
 import 'package:sparkle/features/notification_center/notification_center_routes.dart';
 import 'package:sparkle/features/photon/photon_routes.dart';
 import 'package:sparkle/features/plan/plan_routes.dart';
+import 'package:sparkle/features/reviews/reviews_routes.dart';
 import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 import 'package:sparkle/features/shop/shop_routes.dart';
 import 'package:sparkle/features/task/task_routes.dart';
@@ -128,8 +129,18 @@ void main() {
           containsAll([
             '/errors',
             '/errors/new',
+            '/errors/:id/edit',
             '/errors/:id',
-            '/review',
+          ]));
+    });
+
+    test('review routes expose hub and active review flow', () {
+      final paths = _extractPaths(ReviewRoutes.routes);
+      expect(
+          paths,
+          containsAll([
+            ReviewRoutes.planHub,
+            ReviewRoutes.review,
           ]));
     });
 

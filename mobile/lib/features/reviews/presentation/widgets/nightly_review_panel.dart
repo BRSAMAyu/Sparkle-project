@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_motion.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
+import 'package:sparkle/features/reviews/reviews_routes.dart';
 
 class NightlyReviewPanel extends ConsumerWidget {
   const NightlyReviewPanel({super.key, this.compact = false});
@@ -37,7 +38,7 @@ class NightlyReviewPanel extends ConsumerWidget {
               slideOffset: const Offset(0, -0.06),
               duration: DS.durationFast,
               child: DashboardPressable(
-                onTap: () => context.push('/review-plan'),
+                onTap: () => context.push(ReviewRoutes.planHub),
                 borderRadius: DS.borderRadius16,
                 child: MaterialStyler(
                   material: AppMaterials.ceramic(context),
@@ -74,7 +75,7 @@ class NightlyReviewPanel extends ConsumerWidget {
                         ),
                       ),
                       InkWell(
-                        onTap: () => context.push('/review-plan'),
+                        onTap: () => context.push(ReviewRoutes.planHub),
                         borderRadius: BorderRadius.circular(999),
                         child: Padding(
                           padding: const EdgeInsets.symmetric(

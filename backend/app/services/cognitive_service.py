@@ -156,7 +156,8 @@ class CognitiveService:
         task_id: UUID | None = None,
         fragment_id: UUID | None = None,
         source_event_id: str | None = None,
-        persona_version: str | None = None
+        persona_version: str | None = None,
+        generate_embedding: bool = True,
     ) -> CognitiveFragment:
         """
         Create a new cognitive fragment and generate its embedding.
@@ -200,7 +201,7 @@ class CognitiveService:
 
         # 2. Generate Embedding
         vector_runtime_enabled = await self._is_vector_runtime_enabled_for_user(user_id)
-        if vector_runtime_enabled:
+        if generate_embedding and vector_runtime_enabled:
             try:
                 embedding = await embedding_service.get_embedding(content)
                 fragment.embedding = embedding

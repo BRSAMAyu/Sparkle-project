@@ -139,6 +139,7 @@ class PostExamReviewRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     plan_id: UUID | None = None
+    exam_passed: bool | None = None
     self_rating: int | None = Field(default=None, ge=1, le=10)
     result_rating: int | None = Field(default=None, ge=1, le=5)
     result_description: str = Field(default="", max_length=2000)

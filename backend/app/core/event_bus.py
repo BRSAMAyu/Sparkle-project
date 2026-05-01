@@ -607,14 +607,6 @@ class CalendarEventDeleted(Event):
         }
 
 
-# ---------------------------------------------------------------------------
-# Card Protocol Events (Phase 1)
-# NOTE: Card/Occurrence/Intervention events removed — zero publishers.
-# Re-add when Card Protocol Phase 1 publishers are implemented.
-# Reference: docs/product/SPARKLE_CARD_PROTOCOL_TAXONOMY_2026-04-02.md
-# ---------------------------------------------------------------------------
-
-
 class DocumentCitationFeedbackEvent(Event):
     """Document citation feedback published by explicit UI actions or implicit turn heuristics."""
 

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"testing"
 
 	"google.golang.org/grpc/codes"
@@ -17,6 +18,32 @@ func TestGrpcStreamErrorDetailsMapsGrpcCode(t *testing.T) {
 	}
 	if retryable {
 		t.Fatalf("resource exhausted should not be retryable")
+	}
+}
+
+func TestGrpcStreamErrorDetailsSanitizesInternalMessages(t *testing.T) {
+	code, message, retryable := grpcStreamErrorDetails(grpcstatus.Error(codes.Internal, "panic: postgres://user:pass@db:5432/sparkle"))
+	if code != "internal" {
+		t.Fatalf("expected internal, got %s", code)
+	}
+	if message != defaultWSInternalMessage {
+		t.Fatalf("expected sanitized internal message, got %q", message)
+	}
+	if !retryable {
+		t.Fatalf("internal errors should remain retryable")
+	}
+}
+
+func TestGrpcStreamErrorDetailsSanitizesNonGRPCErrors(t *testing.T) {
+	code, message, retryable := grpcStreamErrorDetails(errors.New("dial tcp 10.0.0.9:50051: connection refused"))
+	if code != "unknown" {
+		t.Fatalf("expected unknown, got %s", code)
+	}
+	if message != defaultWSInternalMessage {
+		t.Fatalf("expected sanitized unknown message, got %q", message)
+	}
+	if !retryable {
+		t.Fatalf("unknown transport errors should remain retryable")
 	}
 }
 

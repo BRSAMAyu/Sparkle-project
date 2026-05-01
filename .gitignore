@@ -57,6 +57,15 @@ env/
 .env
 .env.local
 .env.*.local
+.env.*
+!.env.example
+!.env.*.example
+**/.env
+**/.env.local
+**/.env.*.local
+**/.env.*
+!**/.env.example
+!**/.env.*.example
 
 # Database
 *.db
@@ -217,6 +226,8 @@ gha-creds-*.json
 postgres_data/
 redis_data/
 minio_data/
+celerybeat-schedule
+*.pid
 # Quality generated artifacts
 mobile/local_audio_overrides/
 quality/flutter_analyze_report.json

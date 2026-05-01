@@ -6,6 +6,7 @@ Stage: <首次引入 Stage 号>
 
 from __future__ import annotations
 
+import logging
 import os
 from datetime import UTC, datetime
 from typing import Any
@@ -45,6 +46,7 @@ from app.utils.helpers import save_upload_file
 
 router = APIRouter()
 SESSION_TTL_SECONDS = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
+logger = logging.getLogger(__name__)
 
 
 def _utcnow_naive() -> datetime:
@@ -567,8 +569,8 @@ async def delete_account(
             args=[str(current_user.id)],
             countdown=_THIRTY_DAYS,
         )
-    except Exception:
-        pass  # Purge will be retried; anonymisation already completed
+    except Exception as purge_exc:
+        logger.warning("Failed to schedule 30-day purge for user %s: %s", str(current_user.id), purge_exc)
 
     return {"detail": "账号已注销，个人数据已匿名化。30天后将永久删除全部数据，期间如需恢复请联系客服。"}
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/features/document/views/document_cleaner_sheet.dart';
+import 'package:sparkle/features/reviews/reviews_routes.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/breathing_tool.dart';
 import 'package:sparkle/features/tools/presentation/widgets/calculator_tool.dart';
@@ -277,7 +278,7 @@ class ToolRegistry {
         ToolLaunchContext.home,
         ToolLaunchContext.toolLibrary,
       },
-      routeBuilder: (_) => '/review?mode=today',
+      routeBuilder: (_) => ReviewRoutes.planHub,
     ),
     ToolDefinition(
       id: 'learning_forecast',

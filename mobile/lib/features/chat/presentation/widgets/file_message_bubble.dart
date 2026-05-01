@@ -102,7 +102,7 @@ class _FileMessageBubbleWithThumbnailState
         ? DS.chatBubbleUserText.withValues(alpha: 0.74)
         : (isDark ? DS.neutral300 : DS.neutral600);
     final borderColor = widget.isMe
-        ? Colors.white.withValues(alpha: 0.12)
+        ? DS.chatBubbleUserText.withValues(alpha: 0.12)
         : DS.borderSubtle;
 
     return Container(
@@ -182,7 +182,8 @@ class _FileMessageBubbleWithThumbnailState
                     Row(
                       children: [
                         Icon(
-                          _iconForMime(widget.data.mimeType, widget.data.fileName),
+                          _iconForMime(
+                              widget.data.mimeType, widget.data.fileName),
                           size: 18,
                           color: accentColor,
                         ),
@@ -234,7 +235,9 @@ class _FileMessageBubbleWithThumbnailState
                 const SizedBox(width: DS.spacing8),
                 Expanded(
                   child: _ActionPill(
-                    label: _isSavingToLibrary ? context.l10n.chatFileSaving : context.l10n.chatFileSaveToLibrary,
+                    label: _isSavingToLibrary
+                        ? context.l10n.chatFileSaving
+                        : context.l10n.chatFileSaveToLibrary,
                     icon: Icons.bookmark_add_outlined,
                     onTap: _isSavingToLibrary ? null : _saveToLibrary,
                     accentColor: accentColor,
@@ -307,9 +310,8 @@ class _FileMessageBubbleWithThumbnailState
 
   String _typeLabel(String? mimeType, String fileName) {
     final normalizedMime = mimeType?.toLowerCase() ?? '';
-    final extension = fileName.contains('.')
-        ? fileName.split('.').last.toUpperCase()
-        : '';
+    final extension =
+        fileName.contains('.') ? fileName.split('.').last.toUpperCase() : '';
 
     if (normalizedMime.contains('pdf')) return 'PDF';
     if (normalizedMime.contains('presentation') || extension == 'PPTX') {

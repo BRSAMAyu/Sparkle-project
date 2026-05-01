@@ -6373,6 +6373,8 @@
   "openclawHubButtonAutomation": "Automation",
   "openclawHubButtonEnterChat": "Open Chat",
   "openclawHubButtonViewTasks": "View Tasks",
+  "openclawHubButtonOpenSetupGuide": "Open Setup Guide",
+  "openclawHubSetupGuideUnavailable": "Setup guide could not be opened",
   "openclawHubSectionConnectionTitle": "Connection & Control",
   "openclawHubSectionConnectionSubtitle": "Review the connection summary first, then decide whether to expand the full editor — so you aren't hit by the full form on arrival.",
   "openclawHubCollapseConnectionEdit": "Collapse editor",

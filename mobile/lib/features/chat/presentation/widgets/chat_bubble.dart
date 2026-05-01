@@ -647,13 +647,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
               decoration: BoxDecoration(
                 color: Theme.of(dialogContext).scaffoldBackgroundColor,
                 borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.16),
-                    blurRadius: 24,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
+                boxShadow: DS.shadowLg,
               ),
               child: Column(
                 children: [
@@ -963,7 +957,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                 .withValues(alpha: 0.9),
                                           ],
                                         ),
-                                        borderColor: Colors.white
+                                        borderColor: DS.textOnPrimary
                                             .withValues(alpha: 0.18),
                                         shadows: [
                                           BoxShadow(
@@ -2192,7 +2186,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     PrivateMessageInfo msg,
   ) {
     final backgroundColor =
-        isUser ? Colors.white.withValues(alpha: 0.18) : DS.surfacePanel;
+        isUser ? DS.textOnPrimary.withValues(alpha: 0.18) : DS.surfacePanel;
     final senderColor = isUser ? DS.textOnPrimary : DS.brandPrimary;
     final contentColor =
         isUser ? DS.textOnPrimary.withValues(alpha: 0.9) : DS.textPrimary;
@@ -2415,7 +2409,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       return SparkleMaterial(
         backgroundColor: darkSurface,
         borderColor: DS.border.withValues(alpha: 0.72),
-        glowColor: Colors.white.withValues(alpha: 0.04),
+        glowColor: DS.textPrimary.withValues(alpha: 0.04),
       );
     }
 
@@ -2505,9 +2499,10 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
     if (msg is! ChatMessageModel) return false;
     if (msg.role != MessageRole.assistant) return false;
     return AuroraMessageGroup.tryParse(
-      content: msg.content,
-      rawMetadata: msg.rawMetadata,
-    ) != null;
+          content: msg.content,
+          rawMetadata: msg.rawMetadata,
+        ) !=
+        null;
   }
 
   Widget _buildAuroraMultiMessage() {

@@ -2703,17 +2703,23 @@ class AdaptiveReplanner:
         *,
         update_type: str,
     ) -> None:
+        reason = _strip(record.why)
+        description = _strip(record.user_facing_message)
+        if reason and reason not in description:
+            description = f"{description} 原因：{reason}"
+
         await SystemUpdateService(self.redis).enqueue(
             user_id,
             build_system_update(
                 update_type=update_type,
                 category="evolution",
-                title="系统已根据你的状态调整",
-                description=record.user_facing_message,
+                title="计划已根据真实进展调整",
+                description=description,
                 priority="low",
                 metadata={
                     "evolution_kind": "adaptation_record",
                     "adaptation_record": record.to_dict(),
+                    "adaptation_reason": reason,
                 },
             ),
         )

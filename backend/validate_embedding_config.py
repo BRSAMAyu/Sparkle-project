@@ -91,7 +91,7 @@ def generate_env_example():
 # 阿里云 DashScope 配置 (推荐)
 EMBEDDING_PROVIDER=dashscope
 RERANK_PROVIDER=dashscope
-DASHSCOPE_API_KEY=sk-your-dashscope-api-key
+DASHSCOPE_API_KEY=replace_with_provider_api_key
 
 # 模型配置
 EMBEDDING_MODEL=text-embedding-v4

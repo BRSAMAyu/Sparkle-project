@@ -64,6 +64,22 @@ class ResponseBuilderMixin:
         return metadata
 
     @staticmethod
+    def _dual_core_response_metadata(context_data: dict[str, Any]) -> dict[str, str]:
+        dual_core_decision = context_data.get("dual_core_decision")
+        if not isinstance(dual_core_decision, dict) or not dual_core_decision:
+            return {}
+
+        metadata = {
+            "dual_core_decision": json.dumps(dual_core_decision, ensure_ascii=False),
+        }
+        structured = dual_core_decision.get("structured_adjustments") or []
+        if structured:
+            metadata["structured_cognitive_adjustments"] = json.dumps(
+                structured, ensure_ascii=False,
+            )
+        return metadata
+
+    @staticmethod
     def _semantic_control_trace_metadata(context_data: dict[str, Any]) -> dict[str, str]:
         situation_brief = context_data.get("situation_brief")
         if not isinstance(situation_brief, dict):
@@ -447,13 +463,7 @@ class ResponseBuilderMixin:
         strategy_state = final_state.context_data.get("user_strategy_state")
         if isinstance(strategy_state, dict):
             response_metadata["user_strategy_state"] = json.dumps(strategy_state, ensure_ascii=False)
-        dual_core_decision = final_state.context_data.get("dual_core_decision")
-        if isinstance(dual_core_decision, dict):
-            structured = dual_core_decision.get("structured_adjustments") or []
-            if structured:
-                response_metadata["structured_cognitive_adjustments"] = json.dumps(
-                    structured, ensure_ascii=False,
-                )
+        response_metadata.update(self._dual_core_response_metadata(final_state.context_data))
         understanding_depth = (
             (user_context_payload or {}).get("understanding_depth") if isinstance(user_context_payload, dict) else None
         )

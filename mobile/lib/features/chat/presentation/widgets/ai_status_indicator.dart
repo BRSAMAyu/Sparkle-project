@@ -100,7 +100,7 @@ class _AiStatusIndicatorState extends State<AiStatusIndicator> {
       colors: [startColor, endColor],
     );
     final detailsBackground = isDark
-        ? Colors.white.withValues(alpha: 0.04)
+        ? DS.textPrimary.withValues(alpha: 0.04)
         : color.withValues(alpha: 0.06);
     final detailsColor = isDark ? DS.textSecondary : DS.textPrimary;
 
@@ -155,7 +155,9 @@ class _AiStatusIndicatorState extends State<AiStatusIndicator> {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      hasDetails ? context.l10n.chatStatusSystemProcessing : context.l10n.chatStatusRealtimeThinking,
+                      hasDetails
+                          ? context.l10n.chatStatusSystemProcessing
+                          : context.l10n.chatStatusRealtimeThinking,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: context.sparkleTypography.labelSmall.copyWith(

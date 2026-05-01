@@ -57,42 +57,47 @@ class _ToolButton extends StatelessWidget {
     return Semantics(
       button: true,
       label: label,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 92,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-          decoration: BoxDecoration(
-            color: DS.surfaceOverlay,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: DS.borderSubtle,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 92, minHeight: 64),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            width: 92,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+            decoration: BoxDecoration(
+              color: DS.surfaceOverlay,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: DS.borderSubtle,
+              ),
             ),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(DS.sm),
-                decoration: BoxDecoration(
-                  color: tone,
-                  shape: BoxShape.circle,
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(DS.sm),
+                  decoration: BoxDecoration(
+                    color: tone,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: DS.primaryBase, size: 20),
                 ),
-                child: Icon(icon, color: DS.primaryBase, size: 20),
-              ),
-              const SizedBox(height: DS.xs),
-              Text(
-                label,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: DS.fontWeightMedium,
-                  color: DS.textSecondary,
+                const SizedBox(height: DS.xs),
+                ExcludeSemantics(
+                  child: Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: DS.fontWeightMedium,
+                      color: DS.textSecondary,
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

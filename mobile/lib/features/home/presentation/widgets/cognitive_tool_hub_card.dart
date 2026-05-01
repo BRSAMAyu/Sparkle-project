@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/reviews/reviews_routes.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/providers/tool_preferences_provider.dart';
 import 'package:sparkle/features/tools/tool_launcher.dart';
@@ -219,7 +220,9 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                         _isExpanded
                             ? context.l10n.cognitiveToolHubExpandedTools(
                                 math.min(pinnedTools.length, 8),
-                                pinnedTools.length > 8 ? context.l10n.cognitiveToolHubExpandedMore : '',
+                                pinnedTools.length > 8
+                                    ? context.l10n.cognitiveToolHubExpandedMore
+                                    : '',
                               )
                             : context.l10n.cognitiveToolHubCollapsedTools,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -228,7 +231,9 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                       ),
                       const Spacer(),
                       SparkleButton.ghost(
-                        label: _isExpanded ? context.l10n.cognitiveToolHubCollapse : context.l10n.cognitiveToolHubExpand,
+                        label: _isExpanded
+                            ? context.l10n.cognitiveToolHubCollapse
+                            : context.l10n.cognitiveToolHubExpand,
                         onPressed: () {
                           setState(() {
                             _isExpanded = !_isExpanded;
@@ -316,7 +321,7 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                     _buildTag(context, '#$weeklyPattern'),
                   _buildTag(context, context.l10n.cognitiveToolCoreTag),
                   InkWell(
-                    onTap: () => context.push('/review-plan'),
+                    onTap: () => context.push(ReviewRoutes.planHub),
                     borderRadius: BorderRadius.circular(999),
                     child: Container(
                       padding: const EdgeInsets.symmetric(

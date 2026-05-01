@@ -323,7 +323,7 @@ class HomeGrowthState {
 }
 
 final homeGrowthDashboardSnapshotProvider =
-    FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+    FutureProvider<Map<String, dynamic>>((ref) async {
   final apiClient = ref.watch(apiClientProvider);
   try {
     final response = await apiClient.get<dynamic>('/growth/dashboard');
@@ -335,7 +335,7 @@ final homeGrowthDashboardSnapshotProvider =
 });
 
 final homeDailyContextLineProvider =
-    FutureProvider.autoDispose<HomeDailyContextLine>((ref) async {
+    FutureProvider<HomeDailyContextLine>((ref) async {
   final apiClient = ref.watch(apiClientProvider);
   try {
     final response = await apiClient.get<dynamic>('/growth/daily-context-line');
@@ -351,7 +351,7 @@ final homeDailyContextLineProvider =
 });
 
 final homeActivePlanStatusProvider =
-    FutureProvider.autoDispose<HomeActivePlanStatus?>((ref) async {
+    FutureProvider<HomeActivePlanStatus?>((ref) async {
   final growthDashboard =
       await ref.watch(homeGrowthDashboardSnapshotProvider.future);
   final activePlanMap =
@@ -378,7 +378,7 @@ final homeActivePlanStatusProvider =
 });
 
 final homeTodayTasksSnapshotProvider =
-    FutureProvider.autoDispose<HomeTodayTasksSnapshot>((ref) async {
+    FutureProvider<HomeTodayTasksSnapshot>((ref) async {
   final apiClient = ref.watch(apiClientProvider);
   try {
     final response = await apiClient.get<dynamic>('/tasks/today');
@@ -389,7 +389,7 @@ final homeTodayTasksSnapshotProvider =
   }
 });
 
-final homeStreakProvider = FutureProvider.autoDispose<int>((ref) async {
+final homeStreakProvider = FutureProvider<int>((ref) async {
   final growthDashboard =
       await ref.watch(homeGrowthDashboardSnapshotProvider.future);
   final growthStatusMap = _asStringKeyedMap(growthDashboard['growth_status']);
@@ -419,7 +419,7 @@ final homeStreakProvider = FutureProvider.autoDispose<int>((ref) async {
 });
 
 final homePlanBottlenecksProvider =
-    FutureProvider.autoDispose<List<HomeBottleneck>>((ref) async {
+    FutureProvider<List<HomeBottleneck>>((ref) async {
   final growthDashboard =
       await ref.watch(homeGrowthDashboardSnapshotProvider.future);
   final activeBottleneckMap =
@@ -453,7 +453,7 @@ final homePlanBottlenecksProvider =
 });
 
 final homeGrowthStateProvider =
-    FutureProvider.autoDispose<HomeGrowthState>((ref) async {
+    FutureProvider<HomeGrowthState>((ref) async {
   final planStatus = await ref.watch(homeActivePlanStatusProvider.future);
   final todayTasks = await ref.watch(homeTodayTasksSnapshotProvider.future);
   final streak = await ref.watch(homeStreakProvider.future);

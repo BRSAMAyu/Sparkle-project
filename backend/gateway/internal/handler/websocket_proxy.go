@@ -244,24 +244,36 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 	p.registerLiveConnection(clientConn, backendConn)
 	defer p.unregisterLiveConnection(clientConn)
 
-	readLimit := p.config.WSMaxMessageBytes
+	readLimit := int64(0)
+	if p.config != nil {
+		readLimit = p.config.WSMaxMessageBytes
+	}
 	if readLimit <= 0 {
 		readLimit = wsDefaultMaxMessageBytes
 	}
-	pongWait := time.Duration(p.config.WSPongWaitSeconds) * time.Second
+	pongWaitSeconds := 0
+	pingIntervalSeconds := 0
+	writeWaitSeconds := 0
+	if p.config != nil {
+		pongWaitSeconds = p.config.WSPongWaitSeconds
+		pingIntervalSeconds = p.config.WSPingIntervalSeconds
+		writeWaitSeconds = p.config.WSWriteWaitSeconds
+	}
+	pongWait := time.Duration(pongWaitSeconds) * time.Second
 	if pongWait <= 0 {
 		pongWait = 90 * time.Second
 	}
-	pingInterval := time.Duration(p.config.WSPingIntervalSeconds) * time.Second
+	pingInterval := time.Duration(pingIntervalSeconds) * time.Second
 	if pingInterval <= 0 || pingInterval >= pongWait {
 		pingInterval = pongWait / 2
 	}
-	writeWait := time.Duration(p.config.WSWriteWaitSeconds) * time.Second
+	writeWait := time.Duration(writeWaitSeconds) * time.Second
 	if writeWait <= 0 {
 		writeWait = 10 * time.Second
 	}
 	clientConn.SetReadLimit(readLimit)
 	backendConn.SetReadLimit(readLimit)
+	msgLimiter := newWSMessageRateLimiter(p.config)
 	_ = clientConn.SetReadDeadline(time.Now().Add(pongWait))
 	_ = backendConn.SetReadDeadline(time.Now().Add(pongWait))
 	clientConn.SetPongHandler(func(string) error {
@@ -309,12 +321,17 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 				return
 			}
 			// Reject oversized messages
-			if len(data) > int(wsDefaultMaxMessageBytes) {
+			if len(data) > int(readLimit) {
 				p.logger.Warn("Dropping oversized client message",
 					zap.String("user_id", userID),
 					zap.Int("size", len(data)),
-					zap.Int("max", int(wsDefaultMaxMessageBytes)))
+					zap.Int("max", int(readLimit)))
 				continue
+			}
+			if !msgLimiter.Allow() {
+				_ = writeMessage(&clientWriteMu, clientConn, websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, defaultWSRateLimitMessage))
+				errChan <- nil
+				return
 			}
 			// Only allow text and binary message types
 			if messageType != websocket.TextMessage && messageType != websocket.BinaryMessage {

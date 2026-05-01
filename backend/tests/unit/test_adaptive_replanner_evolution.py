@@ -4,8 +4,8 @@ from uuid import uuid4
 
 import pytest
 
-from app.orchestration.adaptive_replanner import AdaptiveReplanner
-from app.orchestration.adaptive_replanner import CognitivePatternTrigger, PlanParameterAdjustment
+from app.orchestration.adaptive_replanner import AdaptiveReplanner, CognitivePatternTrigger, PlanParameterAdjustment
+from app.orchestration.dual_core_router import AdaptationRecord
 from app.orchestration.step_feedback_collector import PlanExecutionFeedback
 from app.services.plan_progress_service import PlanHealthReport
 
@@ -192,6 +192,42 @@ async def test_on_plan_execution_completed_records_execution_delta_without_repla
     assert adaptive_meta["last_execution_feedback_delta"]["needs_replanning"] is False
     assert adaptive_meta["last_plan_revision_summary"]["new_next_action"].startswith("继续")
     replanner.plan_review_service.trigger_replanning.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_adaptation_update_explains_why_plan_changed(monkeypatch) -> None:
+    user_id = uuid4()
+    replanner = object.__new__(AdaptiveReplanner)
+    replanner.redis = None
+    enqueue = AsyncMock(return_value=True)
+
+    class _FakeSystemUpdateService:
+        def __init__(self, redis=None):
+            self.redis = redis
+
+        async def enqueue(self, user_id_arg, payload):
+            await enqueue(user_id_arg, payload)
+            return True
+
+    monkeypatch.setattr("app.orchestration.adaptive_replanner.SystemUpdateService", _FakeSystemUpdateService)
+
+    await replanner._enqueue_adaptation_update(
+        user_id,
+        AdaptationRecord(
+            what_changed="重新规划了当前阶段的执行路径",
+            why="触发原因：progress_lag, difficulty_too_hard",
+            expected_effect="避免沿着当前失效路径继续推进。",
+            user_facing_message="我发现原来的推进方式已经不够合适，准备帮你重新收紧计划。",
+            source="adaptive_replanner",
+        ),
+        update_type="plan_adaptation",
+    )
+
+    payload = enqueue.await_args.args[1]
+    assert payload["title"] == "计划已根据真实进展调整"
+    assert "原因：触发原因：progress_lag, difficulty_too_hard" in payload["description"]
+    assert payload["metadata"]["adaptation_reason"] == "触发原因：progress_lag, difficulty_too_hard"
+    assert payload["metadata"]["adaptation_record"]["source"] == "adaptive_replanner"
 
 
 def test_cognitive_pattern_trigger_skips_previously_failed_adjustment() -> None:

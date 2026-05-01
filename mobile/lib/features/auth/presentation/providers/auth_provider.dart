@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -22,23 +23,28 @@ class AuthState {
     this.isAuthenticated = false,
     this.user,
     this.error,
+    this.failure,
   });
   final bool isLoading;
   final bool isAuthenticated;
   final UserModel? user;
   final String? error;
+  final AppFailure? failure;
+  String? get errorCode => failure?.errorCode;
 
   AuthState copyWith({
     bool? isLoading,
     bool? isAuthenticated,
     UserModel? user,
     String? error,
+    AppFailure? failure,
   }) =>
       AuthState(
         isLoading: isLoading ?? this.isLoading,
         isAuthenticated: isAuthenticated ?? this.isAuthenticated,
         user: user ?? this.user,
         error: error, // Don't carry over old errors
+        failure: failure,
       );
 }
 
@@ -49,6 +55,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
   final Ref _ref;
   final AuthRepository _authRepository;
+
+  AuthState _failedAuthState(
+    Object error, {
+    required bool isAuthenticated,
+    bool isLoading = false,
+  }) {
+    final failure = AppFailureMapper.from(error);
+    return state.copyWith(
+      isLoading: isLoading,
+      isAuthenticated: isAuthenticated,
+      error: failure.userMessage,
+      failure: failure,
+    );
+  }
 
   Future<void> _clearUserScopedLocalData() async {
     await _ref.read(guestServiceProvider).clearGuestData();
@@ -133,9 +153,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isAuthenticated: true, user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
-      state = state.copyWith(isAuthenticated: false, error: e.toString());
+      state = _failedAuthState(e, isAuthenticated: false);
     } finally {
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -165,9 +189,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isAuthenticated: true, user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
-      state = state.copyWith(isAuthenticated: false, error: e.toString());
+      state = _failedAuthState(e, isAuthenticated: false);
     } finally {
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -201,9 +229,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(isAuthenticated: true, user: user);
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
-      state = state.copyWith(isAuthenticated: false, error: e.toString());
+      state = _failedAuthState(e, isAuthenticated: false);
     } finally {
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(
+        isLoading: false,
+        error: state.error,
+        failure: state.failure,
+      );
     }
   }
 
@@ -222,7 +254,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
       final user = await _authRepository.guestLogin(guestId);
       final accessToken = await _authRepository.getAccessToken();
       if (accessToken == null || accessToken.isEmpty) {
-        throw Exception(I18nService.instance.isChinese ? '游客登录未获取到有效登录令牌' : 'Guest login failed to obtain valid token');
+        throw Exception(I18nService.instance.isChinese
+            ? '游客登录未获取到有效登录令牌'
+            : 'Guest login failed to obtain valid token');
       }
       state = state.copyWith(
         isLoading: false,
@@ -232,11 +266,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       SessionRefreshService.refreshSessionBoundProviders(_ref);
     } catch (e) {
       debugPrint('⚠️ Guest login failed: $e');
-      state = state.copyWith(
-        isLoading: false,
-        isAuthenticated: false,
-        error: e.toString(),
-      );
+      state = _failedAuthState(e, isAuthenticated: false);
     }
   }
 

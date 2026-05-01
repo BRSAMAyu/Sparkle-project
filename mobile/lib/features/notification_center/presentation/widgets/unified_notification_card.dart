@@ -206,7 +206,8 @@ class UnifiedNotificationCard extends StatelessWidget {
                               pushDisableCategoryAction != null)
                             SparkleButton.outline(
                               onPressed: pushDisableCategoryAction,
-                              label: context.l10n.notificationDisablePushCategory,
+                              label:
+                                  context.l10n.notificationDisablePushCategory,
                             ),
                         ],
                       ),
@@ -384,7 +385,8 @@ class UnifiedNotificationCard extends StatelessWidget {
                   notification.suggestedStep!.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(
-                  context.l10n.notificationSuggestedAction(notification.suggestedStep!),
+                  context.l10n
+                      .notificationSuggestedAction(notification.suggestedStep!),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: DS.fontWeightSemibold,
                       ),
@@ -396,7 +398,10 @@ class UnifiedNotificationCard extends StatelessWidget {
                 _buildDetailRow(
                   context,
                   context.l10n.notificationParameterAdjustment,
-                  _buildParameterCompilationSummary(context, parameterCompilation),
+                  _buildParameterCompilationSummary(
+                    context,
+                    parameterCompilation,
+                  ),
                 ),
               ],
               if (notification.isIntervention && evidence.isNotEmpty) ...[
@@ -412,7 +417,9 @@ class UnifiedNotificationCard extends StatelessWidget {
                 _buildDetailRow(
                   context,
                   context.l10n.notificationTriggerEvidence,
-                  notification.evidenceToken ?? context.l10n.notificationNotProvided,
+                  notification.proactiveReason ??
+                      notification.evidenceToken ??
+                      context.l10n.notificationNotProvided,
                 ),
                 const SizedBox(height: 8),
                 _buildDetailRow(
@@ -503,15 +510,22 @@ class UnifiedNotificationCard extends StatelessWidget {
     }
   }
 
-  String _buildParameterCompilationSummary(BuildContext context, Map<String, dynamic> compilation) {
+  String _buildParameterCompilationSummary(
+    BuildContext context,
+    Map<String, dynamic> compilation,
+  ) {
     final result = compilation['result'] as String? ?? 'unknown';
     final affected = compilation['affected_task_count'] as int? ?? 0;
     final inserted = compilation['inserted_task_count'] as int? ?? 0;
     final hidden = compilation['hidden_task_count'] as int? ?? 0;
-    return context.l10n.notificationCompilationSummary(result, affected, inserted, hidden);
+    return context.l10n
+        .notificationCompilationSummary(result, affected, inserted, hidden);
   }
 
-  String _buildEvidenceSummary(BuildContext context, Map<String, dynamic> evidence) {
+  String _buildEvidenceSummary(
+    BuildContext context,
+    Map<String, dynamic> evidence,
+  ) {
     final improvement = evidence['improvement'];
     if (improvement is Map) {
       final map = Map<String, dynamic>.from(improvement);
@@ -524,8 +538,10 @@ class UnifiedNotificationCard extends StatelessWidget {
       return [
         if (recovered) context.l10n.notificationEvidencePlanHealthRecovered,
         if (masteryImproved) context.l10n.notificationEvidenceMasteryImproved,
-        if (feedbackCount > 0) context.l10n.notificationEvidenceFeedbackCount(feedbackCount),
-        if (negativeFeedback > 0) context.l10n.notificationEvidenceNegativeFeedback(negativeFeedback),
+        if (feedbackCount > 0)
+          context.l10n.notificationEvidenceFeedbackCount(feedbackCount),
+        if (negativeFeedback > 0)
+          context.l10n.notificationEvidenceNegativeFeedback(negativeFeedback),
       ].where((item) => item.isNotEmpty).join('，');
     }
     return context.l10n.notificationEvidenceRecorded;

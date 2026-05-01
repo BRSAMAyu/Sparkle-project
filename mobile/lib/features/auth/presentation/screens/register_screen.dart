@@ -40,7 +40,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   void _submit() {
     if (_formKey.currentState!.validate()) {
       if (!_acceptedTos || !_acceptedPrivacy) {
-        AppFeedback.info(context, I18nService.instance.isChinese ? '请先同意用户协议与隐私政策' : 'Please agree to the Terms of Service and Privacy Policy first');
+        AppFeedback.info(
+            context,
+            I18nService.instance.isChinese
+                ? '请先同意用户协议与隐私政策'
+                : 'Please agree to the Terms of Service and Privacy Policy first');
         return;
       }
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
@@ -71,13 +75,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     // Listen for errors and show a SnackBar
     ref.listen<AuthState>(authProvider, (previous, next) {
       if (next.error != null && (previous?.error != next.error)) {
+        final failure = next.failure;
         AppFeedback.error(
           context,
-          ErrorMessages.getLocalizedMessage(
-            l10n,
-            'AUTH_ERROR', // Default error code since AuthState doesn't have errorCode
-            next.error,
-          ),
+          failure?.userMessage ??
+              ErrorMessages.getLocalizedMessage(
+                l10n,
+                next.errorCode ?? 'AUTH_ERROR',
+                next.error,
+              ),
         );
       }
       // Successful registration is handled by router redirect
@@ -121,7 +127,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 .headlineSmall
                                 ?.copyWith(
                                   fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.secondary,
+                                  color:
+                                      Theme.of(context).colorScheme.secondary,
                                 ),
                           ),
                         ),
@@ -129,117 +136,119 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         SparkleStaggerItem(
                           index: 1,
                           child: TextFormField(
-                          controller: _usernameController,
-                          decoration: InputDecoration(
-                            labelText: l10n.username,
-                            border: const OutlineInputBorder(),
-                            prefixIcon: const Icon(Icons.person_outline),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return l10n.pleaseEnterUsername;
-                            }
-                            if (value.length < 3) {
-                              return l10n.usernameMinLength;
-                            }
-                            return null;
-                          },
+                            controller: _usernameController,
+                            decoration: InputDecoration(
+                              labelText: l10n.username,
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.person_outline),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return l10n.pleaseEnterUsername;
+                              }
+                              if (value.length < 3) {
+                                return l10n.usernameMinLength;
+                              }
+                              return null;
+                            },
                           ),
                         ),
                         const SizedBox(height: DS.lg),
                         SparkleStaggerItem(
                           index: 2,
                           child: TextFormField(
-                          controller: _emailController,
-                          decoration: InputDecoration(
-                            labelText: l10n.email,
-                            border: const OutlineInputBorder(),
-                            prefixIcon: const Icon(Icons.email_outlined),
-                          ),
-                          keyboardType: TextInputType.emailAddress,
-                          validator: (value) {
-                            if (value == null ||
-                                !RegExp(r'^[^@]+@[^@]+\.[^@]+')
-                                    .hasMatch(value)) {
-                              return l10n.invalidEmail;
-                            }
-                            return null;
-                          },
+                            controller: _emailController,
+                            decoration: InputDecoration(
+                              labelText: l10n.email,
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.email_outlined),
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null ||
+                                  !RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                      .hasMatch(value)) {
+                                return l10n.invalidEmail;
+                              }
+                              return null;
+                            },
                           ),
                         ),
                         const SizedBox(height: DS.lg),
                         SparkleStaggerItem(
                           index: 3,
                           child: TextFormField(
-                          controller: _passwordController,
-                          obscureText: !_isPasswordVisible,
-                          decoration: InputDecoration(
-                            labelText: l10n.password,
-                            border: const OutlineInputBorder(),
-                            prefixIcon: const Icon(Icons.lock_outline),
-                            suffixIcon: SparkleIconButton(
-                              icon: Icon(
-                                _isPasswordVisible
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
+                            controller: _passwordController,
+                            obscureText: !_isPasswordVisible,
+                            decoration: InputDecoration(
+                              labelText: l10n.password,
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.lock_outline),
+                              suffixIcon: SparkleIconButton(
+                                icon: Icon(
+                                  _isPasswordVisible
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                ),
+                                onPressed: () {
+                                  unawaited(
+                                    SensoryFeedbackService.emit(
+                                      SensoryFeedbackEvent.selection,
+                                    ),
+                                  );
+                                  setState(
+                                    () => _isPasswordVisible =
+                                        !_isPasswordVisible,
+                                  );
+                                },
+                                variant: ButtonVariant.ghost,
                               ),
-                              onPressed: () {
-                                unawaited(
-                                  SensoryFeedbackService.emit(
-                                    SensoryFeedbackEvent.selection,
-                                  ),
-                                );
-                                setState(
-                                  () => _isPasswordVisible = !_isPasswordVisible,
-                                );
-                              },
-                              variant: ButtonVariant.ghost,
                             ),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.length < 6) {
-                              return l10n.passwordMinLength;
-                            }
-                            return null;
-                          },
+                            validator: (value) {
+                              if (value == null || value.length < 6) {
+                                return l10n.passwordMinLength;
+                              }
+                              return null;
+                            },
                           ),
                         ),
                         const SizedBox(height: DS.lg),
                         SparkleStaggerItem(
                           index: 4,
                           child: TextFormField(
-                          controller: _confirmPasswordController,
-                          obscureText: !_isPasswordVisible,
-                          decoration: InputDecoration(
-                            labelText: l10n.confirmPassword,
-                            border: const OutlineInputBorder(),
-                            prefixIcon: const Icon(Icons.lock_person_outlined),
-                          ),
-                          validator: (value) {
-                            if (value != _passwordController.text) {
-                              return l10n.passwordsDoNotMatch;
-                            }
-                            return null;
-                          },
+                            controller: _confirmPasswordController,
+                            obscureText: !_isPasswordVisible,
+                            decoration: InputDecoration(
+                              labelText: l10n.confirmPassword,
+                              border: const OutlineInputBorder(),
+                              prefixIcon:
+                                  const Icon(Icons.lock_person_outlined),
+                            ),
+                            validator: (value) {
+                              if (value != _passwordController.text) {
+                                return l10n.passwordsDoNotMatch;
+                              }
+                              return null;
+                            },
                           ),
                         ),
                         const SizedBox(height: DS.lg),
                         SparkleStaggerItem(
                           index: 5,
                           child: CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          value: _acceptedTos,
-                          onChanged: (value) {
-                            unawaited(
-                              SensoryFeedbackService.emit(
-                                SensoryFeedbackEvent.selection,
-                              ),
-                            );
-                            setState(() => _acceptedTos = value ?? false);
-                          },
-                          title: Text(context.l10n.authAgreeTerms),
-                          controlAffinity: ListTileControlAffinity.leading,
-                        ),
+                            contentPadding: EdgeInsets.zero,
+                            value: _acceptedTos,
+                            onChanged: (value) {
+                              unawaited(
+                                SensoryFeedbackService.emit(
+                                  SensoryFeedbackEvent.selection,
+                                ),
+                              );
+                              setState(() => _acceptedTos = value ?? false);
+                            },
+                            title: Text(context.l10n.authAgreeTerms),
+                            controlAffinity: ListTileControlAffinity.leading,
+                          ),
                         ),
                         Align(
                           alignment: Alignment.centerLeft,
@@ -251,19 +260,19 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                         SparkleStaggerItem(
                           index: 6,
                           child: CheckboxListTile(
-                          contentPadding: EdgeInsets.zero,
-                          value: _acceptedPrivacy,
-                          onChanged: (value) {
-                            unawaited(
-                              SensoryFeedbackService.emit(
-                                SensoryFeedbackEvent.selection,
-                              ),
-                            );
-                            setState(() => _acceptedPrivacy = value ?? false);
-                          },
-                          title: Text(context.l10n.authAgreePrivacy),
-                          controlAffinity: ListTileControlAffinity.leading,
-                        ),
+                            contentPadding: EdgeInsets.zero,
+                            value: _acceptedPrivacy,
+                            onChanged: (value) {
+                              unawaited(
+                                SensoryFeedbackService.emit(
+                                  SensoryFeedbackEvent.selection,
+                                ),
+                              );
+                              setState(() => _acceptedPrivacy = value ?? false);
+                            },
+                            title: Text(context.l10n.authAgreePrivacy),
+                            controlAffinity: ListTileControlAffinity.leading,
+                          ),
                         ),
                         Align(
                           alignment: Alignment.centerLeft,

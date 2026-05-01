@@ -1547,7 +1547,7 @@ class GroupTasksNotifier
 }
 
 // 8. Private Chat Provider (Family)
-final privateChatProvider = StateNotifierProvider.autoDispose
+final privateChatProvider = StateNotifierProvider
     .family<PrivateChatNotifier, AsyncValue<List<PrivateMessageInfo>>, String>(
         (ref, friendId) {
   final stream = ref.watch(communityEventsStreamProvider);
@@ -2024,7 +2024,7 @@ class CurrentUserStatusNotifier extends StateNotifier<UserStatus> {
 }
 
 // 10. Blocked Users Provider (Phase 4)
-final blockedUsersProvider = StateNotifierProvider.autoDispose<
+final blockedUsersProvider = StateNotifierProvider<
     BlockedUsersNotifier, AsyncValue<List<BlockUserInfo>>>(
   (ref) => BlockedUsersNotifier(ref.watch(communityRepositoryProvider)),
 );

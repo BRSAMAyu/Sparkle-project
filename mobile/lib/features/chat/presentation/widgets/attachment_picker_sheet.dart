@@ -40,13 +40,7 @@ class AttachmentPickerSheet extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(28),
           border: Border.all(color: DS.borderSubtle),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.24 : 0.08),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
-            ),
-          ],
+          boxShadow: DS.shadowLg,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -169,20 +163,18 @@ class _AttachmentOption extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style:
-                            Theme.of(context).textTheme.titleSmall?.copyWith(
-                                  color: DS.textPrimary,
-                                  fontWeight: DS.fontWeightSemiBold,
-                                ),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: DS.fontWeightSemiBold,
+                            ),
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
                         subtitle,
-                        style:
-                            Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: DS.textSecondary,
-                                  height: 1.3,
-                                ),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.3,
+                            ),
                       ),
                     ],
                   ),
