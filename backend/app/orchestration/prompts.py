@@ -99,6 +99,7 @@ _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
     "orchestration_context_section": (60, 0.05),
     "collaboration_narrative_section": (60, 0.05),
     "seed_library_section": (40, 0.04),
+    "behavior_pattern_section": (80, 0.06),
 }
 
 _PROMPT_UTILIZATION_SECTION_ALIASES: dict[str, str] = {
@@ -515,6 +516,8 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 {agent_memory_section}
 
 {cognitive_prism_section}
+
+{behavior_pattern_section}
 
 {seed_library_section}
 
@@ -1159,6 +1162,9 @@ def build_system_prompt(
     # 2.7 格式化认知棱镜指令
     cognitive_prism_section = _format_cognitive_prism_section(user_context, context_focus=context_focus)
 
+    # Behavior patterns from dual-core router cognitive signals
+    behavior_pattern_section = _format_behavior_pattern_section(user_context=user_context)
+
     # 2.8 格式化种子库 few-shot 示例
     seed_library_section = ""
     seed_lib = user_context.get("seed_library") if isinstance(user_context, dict) else None
@@ -1288,6 +1294,7 @@ def build_system_prompt(
         "agent_memory_section": agent_memory_section,
         "aurora_planning_sidecar_section": aurora_planning_sidecar_section,
         "cognitive_prism_section": cognitive_prism_section,
+        "behavior_pattern_section": behavior_pattern_section,
         "seed_library_section": seed_library_section,
         "conversation_history_section": (
             f"[优先级：L3 背景]\n{conversation_history_section}".strip() if conversation_history_section else ""
@@ -1340,6 +1347,7 @@ def build_system_prompt(
             "agent_memory_section": 2,
             "aurora_planning_sidecar_section": 2,
             "cognitive_prism_section": cognitive_priority,
+            "behavior_pattern_section": 2,
             "seed_library_section": 3,
             "conversation_history_section": 3,
             "task_awareness_section": 3,
@@ -4152,6 +4160,43 @@ def _format_cognitive_prism_section(user_context: dict, context_focus: dict[str,
     lines.append("这不是强制要求，而是要在合适的对话时机自然地展示。")
 
     return "\n".join(lines)
+
+
+def _format_behavior_pattern_section(*, user_context: dict) -> str:
+    """Inject detected behavior patterns as actionable guidance for the LLM."""
+    patterns = user_context.get("behavior_patterns") or user_context.get("cognitive_insights", {}).get("recent_patterns", [])
+    if not patterns:
+        return ""
+
+    behavior_types = user_context.get("behavior_pattern_types") or {}
+    details = user_context.get("behavior_pattern_details") or []
+
+    lines = ["## 行为模式信号 [L2 行为响应]"]
+    lines.append("以下是最近检测到的用户行为模式，请在回答中主动适应：")
+
+    for pat in details[:5]:
+        name = pat.get("name") or pat.get("pattern_name") or ""
+        ptype = pat.get("type") or ""
+        confidence = pat.get("confidence") or pat.get("match_score") or 0
+        guidance = pat.get("guidance") or pat.get("recommended_action") or ""
+        if not name:
+            continue
+        label = f"{name}（置信度 {confidence:.0%}）" if confidence else name
+        entry = f"- {label}"
+        if guidance:
+            entry += f" → {guidance}"
+        lines.append(entry)
+
+    # Summarize type distribution if available
+    if behavior_types:
+        type_names = {"cognitive": "认知", "emotional": "情绪", "execution": "执行", "social": "社交"}
+        parts = [f"{type_names.get(k, k)}{v}个" for k, v in behavior_types.items() if v > 0]
+        if parts:
+            lines.append(f"- 分布: {', '.join(parts)}")
+
+    lines.append("")
+    lines.append("这些模式意味着用户的真实行为倾向。请根据上述模式自然调整回答策略，而非忽略。")
+    return "\n" + "\n".join(lines)
 
 
 def _is_query_plan_related(query_text: str, plan_context: dict[str, Any]) -> bool:
