@@ -499,7 +499,7 @@
 > **审查范围**: 全系统深度瓶颈 + 愿景差距 + 细节打磨
 > **方法**: 4 路并行审查 Agent (后端 Python / Flutter+Gateway / 数据流集成 / 愿景差距)
 
-### R5.1 后端 Python 审查 (20 issues) — 已修 19, 🟡 1 (P2-2 ChatOrchestrator 长期重构)
+### R5.1 后端 Python 审查 (20 issues) — ✅ 全部已修 (P2-1/P2-2 Phase 1 提取完成)
 
 > **P1-7/12 SpineOrchestrator 零测试 | P1-8 AchievementEngine async lock | P1-9 ✅分钟保留 | P1-10 ✅误报 | P1-13 测试不足 | P1-15 ✅日志修复 | P2-1~P2-20 待修**
 
@@ -513,7 +513,7 @@
 | P1-13 | P1 | AchievementEngine sprint/contract/weekend 测试不足 | `test_achievement_engine.py` | ✅ 已修 (9a1b9f5a: 23 tests for contract creation/status/progress + weekend streak calculation) |
 | P1-15 | P1 | MemoryService.update_goal 日志写错 metric type | `memory_service.py` | ✅ 已修 |
 | P2-1 | P2 | God Class: SpineOrchestrator 4357 行 | `spine_orchestrator.py` | ✅ Phase 1 (8f0afecdc: DirectiveStore 提取, 4182→4085 行; event handler/goal/session 可继续提取) |
-| P2-2 | P2 | God Class: ChatOrchestrator 3547 行 | `orchestrator.py` | 🟡 长期重构 (需与 P2-1 协同拆分) |
+| P2-2 | P2 | God Class: ChatOrchestrator 3547 行 | `orchestrator.py` | ✅ Phase 1 (cf9af7583: memory_helpers 提取, 3547→3441 行; stream/tool/fast-track 可继续提取) |
 | P2-3 | P2 | 10+ 死事件类 (定义但从未实例化) | `event_bus.py` | ✅ 已修 (b0bcc636: 实际仅1个死类 UserSettingsUpdatedEvent, 其余均有生产代码实例化) |
 | P2-4 | P2 | 事件消费者无背压/限流 | event consumers | ✅ 已有: count=1 消费 + MAXLEN 50000 流截断 |
 | P2-5 | P2 | EventBus DLQ 无告警/监控 | `event_bus.py` | ✅ 已修 (eaa1e1db) |
