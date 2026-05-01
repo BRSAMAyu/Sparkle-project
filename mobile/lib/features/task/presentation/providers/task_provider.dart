@@ -825,13 +825,13 @@ class TaskNotifier extends StateNotifier<TaskListState> {
           );
           if (mounted) {
             state =
-                state.copyWith(error: ExecutionCopy.engineOfflineQueuedMessage);
+                state.copyWith(error: ExecutionCopy.engineOfflineQueuedMessage());
           }
           return null;
         }
         if (mounted) {
           state =
-              state.copyWith(error: ExecutionCopy.engineNotConnectedMessage);
+              state.copyWith(error: ExecutionCopy.engineNotConnectedMessage());
         }
         return null;
       }

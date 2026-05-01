@@ -232,20 +232,46 @@ def _post_to_response(post: Post) -> dict:
 async def get_feed(
     page: int = Query(default=1, ge=1),
     limit: int = Query(default=20, ge=1, le=50),
+    scope: str | None = Query(default=None, description="筛选范围: squad, goal_mates, following"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """获取社区动态列表，按创建时间倒序"""
+    """获取社区动态列表，按创建时间倒序。支持 scope 筛选。"""
     from sqlalchemy.orm import selectinload
 
     offset = (page - 1) * limit
-    stmt = (
-        select(Post)
-        .options(selectinload(Post.user))
-        .order_by(Post.created_at.desc())
-        .offset(offset)
-        .limit(limit)
-    )
+    stmt = select(Post).options(selectinload(Post.user))
+
+    if scope == "squad":
+        squad_member_subq = (
+            select(GroupMember.group_id)
+            .where(GroupMember.user_id == current_user.id)
+            .correlate(None)
+        )
+        squad_user_subq = (
+            select(GroupMember.user_id)
+            .where(GroupMember.group_id.in_(squad_member_subq))
+            .correlate(None)
+        )
+        stmt = stmt.where(Post.user_id.in_(squad_user_subq))
+    elif scope in ("following", "goal_mates"):
+        friend_ids = (
+            select(Friendship.friend_id)
+            .where(Friendship.user_id == current_user.id, Friendship.status == FriendshipStatus.ACCEPTED)
+            .correlate(None)
+        )
+        friend_ids_alt = (
+            select(Friendship.user_id)
+            .where(Friendship.friend_id == current_user.id, Friendship.status == FriendshipStatus.ACCEPTED)
+            .correlate(None)
+        )
+        stmt = stmt.where(Post.user_id.in_(friend_ids) | Post.user_id.in_(friend_ids_alt))
+    elif scope is not None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=400, detail=f"Unknown scope: {scope}")
+
+    stmt = stmt.order_by(Post.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(stmt)
     posts = result.scalars().all()
     return [_post_to_response(p) for p in posts]

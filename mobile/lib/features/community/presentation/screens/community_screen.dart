@@ -223,6 +223,7 @@ class _GoalFocusSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isChinese = Localizations.localeOf(context).languageCode == 'zh';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.lg),
       child: Column(
@@ -234,7 +235,7 @@ class _GoalFocusSection extends StatelessWidget {
               Icon(Icons.track_changes_rounded, size: 18, color: DS.brandPrimary),
               const SizedBox(width: DS.sm),
               Text(
-                'Goal Focus',
+                isChinese ? '目标聚焦' : 'Goal Focus',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -246,22 +247,22 @@ class _GoalFocusSection extends StatelessWidget {
           const SizedBox(height: DS.md),
           _GoalFocusCard(
             icon: Icons.people_outline_rounded,
-            title: 'Accountability Partners',
-            subtitle: 'Pair up with peers pursuing similar goals',
+            title: isChinese ? '责任伙伴' : 'Accountability Partners',
+            subtitle: isChinese ? '与目标相近的伙伴结对' : 'Pair up with peers pursuing similar goals',
             onTap: () => context.push(CommunityRoutes.accountability),
           ),
           const SizedBox(height: DS.sm),
           _GoalFocusCard(
             icon: Icons.school_outlined,
-            title: 'Common Mistakes',
-            subtitle: 'See what others struggled with on the same topics',
+            title: isChinese ? '常见错误' : 'Common Mistakes',
+            subtitle: isChinese ? '看看其他人在同一主题上遇到的困难' : 'See what others struggled with on the same topics',
             onTap: () => context.push('${CommunityRoutes.home}/error-insights'),
           ),
           const SizedBox(height: DS.sm),
           _GoalFocusCard(
             icon: Icons.star_outline_rounded,
-            title: 'Top Resources',
-            subtitle: 'Highest-rated materials from your cohort',
+            title: isChinese ? '优质资源' : 'Top Resources',
+            subtitle: isChinese ? '来自同组伙伴评分最高的资料' : 'Highest-rated materials from your cohort',
             onTap: () => context.push('${CommunityRoutes.home}/top-resources'),
           ),
         ],
