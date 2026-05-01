@@ -117,7 +117,7 @@ class CorrectionFeedbackProcessor:
             action="confirmed",
         )
 
-        if is_disconfirming:
+        if is_disconfirming or is_freeform:
             result.action = "freeform_correction" if is_freeform else "disconfirmed"
             await self._process_disconfirmation(
                 user_id=user_id,

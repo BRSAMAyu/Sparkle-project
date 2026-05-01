@@ -9,18 +9,18 @@ Production scenario coverage:
 - Redis failure graceful degradation across all paths
 """
 import json
-import pytest
 from unittest.mock import AsyncMock
 
-from app.aurora.runtime_v1.reply_option_injector import ReplyOptionInjector
+import pytest
+
 from app.aurora.runtime_v1.correction_feedback import (
+    _SEMANTIC_TO_STATE_KEYS,
     CorrectionFeedbackProcessor,
     CorrectionResult,
-    _SEMANTIC_TO_STATE_KEYS,
 )
+from app.aurora.runtime_v1.reply_option_injector import ReplyOptionInjector
 from app.signals.state_register import StateRegister
 from app.signals.types import ActionableSignal, StateEntry
-
 
 # ── Helpers ──────────────────────────────────────────────────────────
 
@@ -329,6 +329,22 @@ class TestCorrectionFeedback:
             is_freeform=True,
             freeform_text="Actually the task was fine, I was just distracted",
             telemetry_id="opt_free_1",
+        )
+
+        assert result.action == "freeform_correction"
+        assert result.correction_recorded is True
+
+    @pytest.mark.asyncio
+    async def test_freeform_correction_does_not_depend_on_disconfirming_flag(self):
+        """Freeform telemetry must enter the correction lane even if the chip omitted is_disconfirming."""
+        processor = CorrectionFeedbackProcessor(self.redis)
+        result = await processor.process(
+            user_id="user_1",
+            semantic_value="freeform_correction",
+            is_disconfirming=False,
+            is_freeform=True,
+            freeform_text="The status band missed my real blocker.",
+            telemetry_id="opt_free_missing_flag",
         )
 
         assert result.action == "freeform_correction"

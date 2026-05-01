@@ -939,3 +939,47 @@
 当前更准确的说法是：
 
 > **社区 feed 的 P1 隐私与关系语义边界已经可以关闭；下一轮验收应转向 Aurora 真实体验、主动感知、多端触达、任务卡/社群/看板流转以及用户画像可解释性的产品级质量。**
+
+---
+
+## R13 Aurora 真实体验审查与修复 (2026-05-01)
+
+> **来源**: Codex 根据用户反馈切回“愿景差距 / 真实体验”审查
+> **方法**: 以 `主动纠偏有效率 = 预警命中率 x 用户采纳率 x 干预后改善率` 为验收轴，抽查 Aurora 状态带、纠正 chip、聊天接续与 CorrectionFeedbackProcessor 链路。
+
+### R13.1 已修复
+
+| ID | 严重度 | 模块 | 结论 |
+|----|--------|------|------|
+| A-R13-1 | P1 | Aurora 状态带 → 聊天校准 | 已修复：状态带 correction chip 现在能把 `aurora_correction` 结构化上下文带入 ChatScreen，非空 `initialUserMessage` 会自动发送，freeform telemetry 在后端不再依赖 `is_disconfirming` 才进入纠错通道 |
+
+### R13.2 仍需收尾的核心体验缺口
+
+| ID | 严重度 | 模块 | 问题 | 状态 |
+|----|--------|------|------|------|
+| A-R13-2 | P1 | Aurora freeform 纠正 | 首页状态带 freeform chip 仍未捕获用户文字解释，当前 telemetry 的 `freeform_text` 为空，跳转聊天也是空消息 | 🔴 Open |
+| A-R13-3 | P1 | 聊天内纠正 chip | `ContextualCorrectionBar` 只发送普通文本，没有记录结构化 chip telemetry，CorrectionFeedbackProcessor 无法稳定消费聊天内纠正语义 | 🔴 Open |
+
+### R13.3 本轮代码变更
+
+| 文件 | 变更 |
+|------|------|
+| `mobile/lib/app/routes.dart` | 将 `aurora_correction` extra 合并进 `initialExtraContext` |
+| `mobile/lib/features/chat/presentation/screens/chat_screen.dart` | 非建模完成场景也能自动发送非空 `initialUserMessage`，并携带结构化上下文 |
+| `backend/app/aurora/runtime_v1/correction_feedback.py` | `is_freeform=true` 直接进入 correction lane |
+| `backend/tests/unit/test_t33_predicted_reply_correction.py` | 增加 freeform 不依赖 `is_disconfirming` 的回归测试 |
+
+### R13.4 本轮实测
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/unit/test_t33_predicted_reply_correction.py -q` | ✅ `34 passed` |
+| `cd backend && ruff check app/aurora/runtime_v1/correction_feedback.py tests/unit/test_t33_predicted_reply_correction.py` | ✅ 通过 |
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart test/widget/aurora_daily_startup_retry_test.dart` | ✅ 全部通过 |
+| `cd mobile && flutter analyze --no-fatal-infos ...` | ✅ 无 error；仍有既有 info lint |
+
+### R13.5 下一轮优先级
+
+1. **先修 A-R13-2**: freeform 状态带纠正必须先让用户输入“哪里不对”，再把 `freeform_text` 送入 `/aurora/telemetry/chip-selected`。
+2. **再修 A-R13-3**: Chat 内 correction chip 必须调用 `AuroraTelemetryService.recordChipSelected()` 或等价结构化通道，同时继续发送自然语言消息。
+3. **随后扩展到任务卡协议体验**: 检查 `why/materials/stuck/aurora_triggers` 是否不仅存在于 `guide_json`，还在任务执行主屏被用户看见、使用并反馈。

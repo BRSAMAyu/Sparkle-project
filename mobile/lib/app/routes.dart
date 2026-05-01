@@ -190,8 +190,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                               extraMap!['initial_context'] as Map,
                             )
                           : null;
+                  final auroraCorrection = extraMap?['aurora_correction'] is Map
+                      ? Map<String, dynamic>.from(
+                          extraMap!['aurora_correction'] as Map,
+                        )
+                      : null;
                   final initialContext = <String, dynamic>{
                     ...?extraInitialContext,
+                    if (auroraCorrection != null)
+                      'aurora_correction': auroraCorrection,
                     if (state.uri.queryParameters['review_node'] != null)
                       'review_node': state.uri.queryParameters['review_node'],
                     if (state.uri.queryParameters['node_label'] != null)

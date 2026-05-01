@@ -603,3 +603,47 @@
 
 2. **下一层验收重点应从“能不能正确过滤”转向“能不能形成真实好用的体验闭环”**。
    尤其是 Aurora 主动感知、状态带、任务卡/社群/看板流转、多端通知与用户画像解释面，需要继续按“用户是否真的感到被理解、被帮助、可控且可信”来审查，而不是只看接口是否存在。
+
+---
+
+## 18. Codex R13 Aurora 真实体验审查 (2026-05-01)
+
+> **方法**: 从愿景文档的“主动纠偏有效率 = 预警命中率 x 用户采纳率 x 干预后改善率”出发，抽查 Aurora 状态带、纠正 chip、聊天接续和 CorrectionFeedbackProcessor 的端到端链路。
+> **结论**: 找到 1 个已修复的体验断点，另登记 2 个仍需继续打磨的核心体验缺口。
+
+### 18.1 已修复断点
+
+| ID | 严重度 | 模块 | 问题 | 状态 |
+|----|--------|------|------|------|
+| A-R13-1 | P1 | Aurora 状态带 → 聊天校准 | 首页状态带 correction chip 只把 `initial_user_message` 放进路由 extra，但 ChatScreen 过去只在 `fromModelingComplete=true` 时自动发送；同时路由层丢弃 `aurora_correction` 结构化上下文 | ✅ Fixed |
+
+#### A-R13-1 修复说明
+
+- `mobile/lib/app/routes.dart` 现在把 `aurora_correction` 合并进 `ChatScreen.initialExtraContext`。
+- `mobile/lib/features/chat/presentation/screens/chat_screen.dart` 现在会自动发送非空 `initialUserMessage`，并把结构化上下文带入本轮 `extraContextOverrides`。
+- `backend/app/aurora/runtime_v1/correction_feedback.py` 现在只要 `is_freeform=true` 就进入 correction lane，不再依赖前端额外带 `is_disconfirming=true`。
+- 新增 `test_freeform_correction_does_not_depend_on_disconfirming_flag()`。
+
+### 18.2 新登记的高价值体验缺口
+
+| ID | 严重度 | 模块 | 问题 | 状态 |
+|----|--------|------|------|------|
+| A-R13-2 | P1 | Aurora freeform 纠正 | 首页状态带 freeform chip 会立即发送 telemetry，但 `freeform_text` 为空，并跳到聊天页空消息；用户真实解释没有被捕获，Aurora 只能记录“用户说都不对”，不知道错在哪里 | 🔴 Open |
+| A-R13-3 | P1 | 聊天内纠正 chip | Chat 内 `ContextualCorrectionBar` 选择预测回复/纠正项时只发送普通文本，没有调用 AuroraTelemetryService，也没有携带 `telemetry_id / semantic_value / band_status`；这会让聊天内纠正弱化成普通消息，无法稳定进入 CorrectionFeedbackProcessor | 🔴 Open |
+
+### 18.3 本轮实测
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/unit/test_t33_predicted_reply_correction.py -q` | ✅ `34 passed` |
+| `cd backend && ruff check app/aurora/runtime_v1/correction_feedback.py tests/unit/test_t33_predicted_reply_correction.py` | ✅ 通过 |
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart test/widget/aurora_daily_startup_retry_test.dart` | ✅ 全部通过 |
+| `cd mobile && flutter analyze --no-fatal-infos ...` | ✅ 无 error；仍有既有 info lint |
+
+### 18.4 产品判断
+
+这轮的关键不是“状态带能显示”，而是：
+
+> **用户点下“你判断错了”的瞬间，系统必须真的听见、带着语义进入下一轮，并且未来少犯同类错。**
+
+当前已修复“点了却没有进入聊天/Aurora 上下文”的断点；下一步应该优先补 freeform 文本捕获和聊天内 chip 结构化 telemetry，否则 Aurora 会看起来很聪明，但在用户真正纠正它时仍然像只听到半句话。

@@ -101,9 +101,9 @@ class ChatScreen extends ConsumerStatefulWidget {
   /// Used after onboarding to make the AI feel present from the very first moment.
   final String? initialAiMessage;
 
-  /// User message to dispatch automatically after modeling is complete.
-  /// Sent with modeling context overrides so the planning workflow receives
-  /// the full Aurora modeling output.
+  /// User message to dispatch automatically after route hydration.
+  /// Used by onboarding/modeling completion and by contextual Aurora correction
+  /// entries that need to carry structured context into the next chat turn.
   final String? initialUserMessage;
   final bool fromModelingComplete;
   final Map<String, dynamic>? modelingOutput;
@@ -331,7 +331,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _queueInitialUserMessageDispatch() {
-    if (!widget.fromModelingComplete) return;
     final msg = widget.initialUserMessage?.trim();
     if (msg == null || msg.isEmpty || msg == _dispatchedInitialUserMessage) {
       return;
@@ -345,13 +344,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return;
       }
       _dispatchedInitialUserMessage = nextMsg;
-      final overrides = <String, dynamic>{'from_modeling_complete': true};
+      final overrides = <String, dynamic>{...?widget.initialExtraContext};
+      if (widget.fromModelingComplete) {
+        overrides['from_modeling_complete'] = true;
+      }
       if (widget.modelingOutput != null) {
         overrides['modeling_output'] = widget.modelingOutput;
       }
       await ref.read(chatProvider.notifier).sendMessage(
             nextMsg,
-            extraContextOverrides: overrides,
+            extraContextOverrides: overrides.isEmpty ? null : overrides,
           );
     });
   }
@@ -825,7 +827,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onPressed: () =>
                 context.push('${HomeRoutes.openClawHub}?section=delegate'),
             semanticLabel: showOpenClawAttention
-                ? context.l10n.chatOpenclawHubQueued(openClawConnection.queuedRequestCount)
+                ? context.l10n.chatOpenclawHubQueued(
+                    openClawConnection.queuedRequestCount)
                 : 'OpenClaw Hub',
             variant: ButtonVariant.ghost,
           ),
@@ -1086,48 +1089,49 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     ChatBubble(
-                                  message: message,
-                                  isLatestAssistantMessage: isLatestAssistant,
-                                  onActionConfirm: (action) {
-                                    ref
-                                        .read(chatProvider.notifier)
-                                        .confirmAction(action);
-                                  },
-                                  onActionDismiss: (action) {
-                                    ref
-                                        .read(chatProvider.notifier)
-                                        .dismissAction(action);
-                                  },
-                                  onResponseFeedback: (msg, feedbackType) {
-                                    ref
-                                        .read(chatProvider.notifier)
-                                        .sendResponseFeedback(
-                                          msg,
-                                          feedbackType,
-                                        );
-                                  },
-                                  onCitationFeedback:
-                                      (msg, citation, helpful) async {
-                                    ref
-                                        .read(chatProvider.notifier)
-                                        .sendCitationFeedback(
-                                          message: msg,
-                                          citation: citation,
-                                          helpful: helpful,
-                                        );
-                                  },
-                                  onWidgetAction: (
-                                    actionType,
-                                    payload,
-                                  ) async {
-                                    await ref
-                                        .read(chatProvider.notifier)
-                                        .handleWidgetAction(
-                                          actionType,
-                                          payload,
-                                        );
-                                  },
-                                ),
+                                      message: message,
+                                      isLatestAssistantMessage:
+                                          isLatestAssistant,
+                                      onActionConfirm: (action) {
+                                        ref
+                                            .read(chatProvider.notifier)
+                                            .confirmAction(action);
+                                      },
+                                      onActionDismiss: (action) {
+                                        ref
+                                            .read(chatProvider.notifier)
+                                            .dismissAction(action);
+                                      },
+                                      onResponseFeedback: (msg, feedbackType) {
+                                        ref
+                                            .read(chatProvider.notifier)
+                                            .sendResponseFeedback(
+                                              msg,
+                                              feedbackType,
+                                            );
+                                      },
+                                      onCitationFeedback:
+                                          (msg, citation, helpful) async {
+                                        ref
+                                            .read(chatProvider.notifier)
+                                            .sendCitationFeedback(
+                                              message: msg,
+                                              citation: citation,
+                                              helpful: helpful,
+                                            );
+                                      },
+                                      onWidgetAction: (
+                                        actionType,
+                                        payload,
+                                      ) async {
+                                        await ref
+                                            .read(chatProvider.notifier)
+                                            .handleWidgetAction(
+                                              actionType,
+                                              payload,
+                                            );
+                                      },
+                                    ),
                                     if (showCorrectionBar)
                                       ContextualCorrectionBar(
                                         predictedReplyGroups: ref
@@ -1139,7 +1143,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                         onNotRightDirection: () => ref
                                             .read(chatProvider.notifier)
                                             .sendMessage(
-                                              context.l10n.auroraCorrectNotRight,
+                                              context
+                                                  .l10n.auroraCorrectNotRight,
                                             ),
                                         onMakeShorter: () => ref
                                             .read(chatProvider.notifier)
@@ -1163,8 +1168,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                             judgment: snapshot?.summary ??
                                                 context.l10n
                                                     .auroraCalibrationJudgment,
-                                            confirmQuestion: context.l10n
-                                                .auroraCalibrationConfirm,
+                                            confirmQuestion: context
+                                                .l10n.auroraCalibrationConfirm,
                                             confirmOptions: [
                                               context.l10n.chatMinutes30,
                                               context.l10n.chatMinutes45,
@@ -1279,16 +1284,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         resumeOptions:
                             chatState.pendingStaleCard!.resumeOptions,
                         onOptionSelected: (option) {
-                          ref
-                              .read(chatProvider.notifier)
-                              .dismissStaleCard();
-                          ref
-                              .read(chatProvider.notifier)
-                              .sendMessage(option);
+                          ref.read(chatProvider.notifier).dismissStaleCard();
+                          ref.read(chatProvider.notifier).sendMessage(option);
                         },
-                        onDismiss: () => ref
-                            .read(chatProvider.notifier)
-                            .dismissStaleCard(),
+                        onDismiss: () =>
+                            ref.read(chatProvider.notifier).dismissStaleCard(),
                       ),
                     // Spine: Aurora Judgment-Correction Card (divine moment #2 承认误判)
                     if (chatState.pendingSpineReceipt != null)
@@ -1299,9 +1299,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         correctionOptions:
                             chatState.pendingSpineReceipt!.correctionOptions,
                         onCorrect: (correction) {
-                          ref
-                              .read(chatProvider.notifier)
-                              .dismissSpineReceipt();
+                          ref.read(chatProvider.notifier).dismissSpineReceipt();
                           ref
                               .read(chatProvider.notifier)
                               .sendMessage(correction);
@@ -1313,8 +1311,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     // Spine: Community Insight Card (divine moment #6 社群经验转策略)
                     if (chatState.pendingCommunityHint != null)
                       CommunityInsightCard(
-                        hintType:
-                            chatState.pendingCommunityHint!.hintType,
+                        hintType: chatState.pendingCommunityHint!.hintType,
                         title: chatState.pendingCommunityHint!.title,
                         anonymousSummary:
                             chatState.pendingCommunityHint!.anonymousSummary,
@@ -1324,10 +1321,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           ref
                               .read(chatProvider.notifier)
                               .dismissCommunityHint();
-                          ref
-                              .read(chatProvider.notifier)
-                              .sendMessage(
-                                context.l10n.chatCommunitySuggestion(hint.anonymousSummary, hint.tip),
+                          ref.read(chatProvider.notifier).sendMessage(
+                                context.l10n.chatCommunitySuggestion(
+                                    hint.anonymousSummary, hint.tip),
                               );
                         },
                         onDismiss: () => ref
@@ -1343,16 +1339,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             chatState.pendingUXWarning!.suggestedAction,
                         onAdjust: () {
                           final warning = chatState.pendingUXWarning!;
-                          ref
-                              .read(chatProvider.notifier)
-                              .dismissUXWarning();
+                          ref.read(chatProvider.notifier).dismissUXWarning();
                           ref.read(chatProvider.notifier).sendMessage(
-                                context.l10n.chatWarningAction(warning.suggestedAction, warning.reason),
+                                context.l10n.chatWarningAction(
+                                    warning.suggestedAction, warning.reason),
                               );
                         },
-                        onDismiss: () => ref
-                            .read(chatProvider.notifier)
-                            .dismissUXWarning(),
+                        onDismiss: () =>
+                            ref.read(chatProvider.notifier).dismissUXWarning(),
                       ),
                     // STAB-012: Spine degraded indicator
                     if (chatState.spineDegraded)
@@ -1390,7 +1384,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         actions: chatState.pendingGrowthCard!.actions,
                         onAction: (action) {
                           ref.read(chatProvider.notifier).dismissGrowthCard();
-                          if (action.contains('累') || action.contains(context.l10n.chatNotNeeded)) {
+                          if (action.contains('累') ||
+                              action.contains(context.l10n.chatNotNeeded)) {
                             ref.read(chatProvider.notifier).sendMessage(action);
                           }
                         },
@@ -1398,19 +1393,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     // Spine: Goal Arbitration Card — multi-goal conflict surface
                     if (chatState.pendingGoalArbitration != null)
                       GoalArbitrationCard(
-                        primaryGoalTitle: chatState
-                            .pendingGoalArbitration!.primaryGoalTitle,
+                        primaryGoalTitle:
+                            chatState.pendingGoalArbitration!.primaryGoalTitle,
                         reason: chatState.pendingGoalArbitration!.reason,
                         goals: chatState.pendingGoalArbitration!.goals,
-                        conflicts:
-                            chatState.pendingGoalArbitration!.conflicts,
+                        conflicts: chatState.pendingGoalArbitration!.conflicts,
                         onFocusPrimary: () {
                           final arb = chatState.pendingGoalArbitration!;
                           ref
                               .read(chatProvider.notifier)
                               .dismissGoalArbitration();
                           ref.read(chatProvider.notifier).sendMessage(
-                                context.l10n.chatFocusOnGoal(arb.primaryGoalTitle),
+                                context.l10n
+                                    .chatFocusOnGoal(arb.primaryGoalTitle),
                               );
                         },
                         onContinueMulti: () => ref
@@ -2012,7 +2007,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           Consumer(builder: (context, ref, _) {
             final aurora = ref.watch(auroraStatusProvider);
-            if (aurora == null || !aurora.auroraActive) return const SizedBox.shrink();
+            if (aurora == null || !aurora.auroraActive)
+              return const SizedBox.shrink();
             return _AuroraQuickTrigger(
               snapshot: aurora,
               onTap: () {
@@ -2033,7 +2029,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     observation: aurora.summary,
                     judgment: aurora.summary,
                     confirmQuestion: context.l10n.auroraCalibrationConfirm,
-                    confirmOptions: [context.l10n.chatMinutes30, context.l10n.chatMinutes45, context.l10n.chatMinutes60],
+                    confirmOptions: [
+                      context.l10n.chatMinutes30,
+                      context.l10n.chatMinutes45,
+                      context.l10n.chatMinutes60
+                    ],
                     onConfirm: (option) {
                       ref.read(chatProvider.notifier).sendMessage(
                             '${context.l10n.auroraCorrectRecalibrate}: $option',
@@ -2073,7 +2073,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               if (status.isNotEmpty && status != 'processed') {
                 AppFeedback.info(
                   context,
-                  context.l10n.chatFileAdded(file.fileName, _attachmentStatusText(file.status)),
+                  context.l10n.chatFileAdded(
+                      file.fileName, _attachmentStatusText(file.status)),
                 );
               }
             },
@@ -2786,83 +2787,83 @@ class _QuickActionChipState extends State<_QuickActionChip> {
       label: widget.label,
       hint: widget.subtitle,
       child: GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) => setState(() => _isPressed = false),
-      onTapCancel: () => setState(() => _isPressed = false),
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _isPressed ? 0.95 : 1.0,
-        duration: DS.durationFast,
-        curve: DS.curveEaseOut,
-        child: Container(
-          constraints: BoxConstraints(
-            minHeight: DS.touchTargetMinSize,
-            minWidth: widget.isNarrow ? 0 : 168,
-          ),
-          padding: EdgeInsets.symmetric(
-            horizontal: horizontalPadding,
-            vertical: hasSubtitle ? DS.spacing10 : DS.spacing8,
-          ),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: DS.borderRadius20,
-            border: Border.all(
-              color: widget.color.withValues(alpha: _isPressed ? 0.6 : 0.3),
-              width: _isPressed ? 1.5 : 1.0,
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isPressed ? 0.95 : 1.0,
+          duration: DS.durationFast,
+          curve: DS.curveEaseOut,
+          child: Container(
+            constraints: BoxConstraints(
+              minHeight: DS.touchTargetMinSize,
+              minWidth: widget.isNarrow ? 0 : 168,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: widget.color.withValues(alpha: _isPressed ? 0.2 : 0.1),
-                blurRadius: _isPressed ? 4 : 8,
-                offset: _isPressed ? const Offset(0, 2) : const Offset(0, 4),
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: hasSubtitle ? DS.spacing10 : DS.spacing8,
+            ),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: DS.borderRadius20,
+              border: Border.all(
+                color: widget.color.withValues(alpha: _isPressed ? 0.6 : 0.3),
+                width: _isPressed ? 1.5 : 1.0,
               ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: hasSubtitle
-                ? CrossAxisAlignment.start
-                : CrossAxisAlignment.center,
-            children: [
-              Icon(
-                widget.icon,
-                size: DS.iconSizeSm,
-                color: widget.color,
-              ),
-              const SizedBox(width: DS.spacing8),
-              Flexible(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.label,
-                      style: TextStyle(
-                        color: labelColor,
-                        fontWeight: DS.fontWeightMedium,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (hasSubtitle) ...[
-                      const SizedBox(height: DS.spacing2),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.color.withValues(alpha: _isPressed ? 0.2 : 0.1),
+                  blurRadius: _isPressed ? 4 : 8,
+                  offset: _isPressed ? const Offset(0, 2) : const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: hasSubtitle
+                  ? CrossAxisAlignment.start
+                  : CrossAxisAlignment.center,
+              children: [
+                Icon(
+                  widget.icon,
+                  size: DS.iconSizeSm,
+                  color: widget.color,
+                ),
+                const SizedBox(width: DS.spacing8),
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        widget.subtitle!,
-                        style: DS.bodySmall.copyWith(
-                          color: DS.textSecondary,
-                          height: 1.35,
+                        widget.label,
+                        style: TextStyle(
+                          color: labelColor,
+                          fontWeight: DS.fontWeightMedium,
                         ),
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                      if (hasSubtitle) ...[
+                        const SizedBox(height: DS.spacing2),
+                        Text(
+                          widget.subtitle!,
+                          style: DS.bodySmall.copyWith(
+                            color: DS.textSecondary,
+                            height: 1.35,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -2887,7 +2888,8 @@ class _ReviewNodeBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final masteryText = mastery != null
-        ? context.l10n.chatCurrentMastery((mastery! * 100).round().clamp(0, 100).toString())
+        ? context.l10n.chatCurrentMastery(
+            (mastery! * 100).round().clamp(0, 100).toString())
         : '';
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -3233,9 +3235,21 @@ class _DualCoreModeChip extends StatelessWidget {
 
   (String label, Color color, IconData icon) _resolve(BuildContext context) {
     return switch (mode) {
-      'execution' => (context.l10n.chatExecutionMode, const Color(0xFFD97706), Icons.bolt_rounded),
-      'cognitive' => (context.l10n.chatCognitiveMode, const Color(0xFF6366F1), Icons.psychology_rounded),
-      _ => (context.l10n.chatBalancedMode, DS.primaryBase, Icons.balance_rounded),
+      'execution' => (
+          context.l10n.chatExecutionMode,
+          const Color(0xFFD97706),
+          Icons.bolt_rounded
+        ),
+      'cognitive' => (
+          context.l10n.chatCognitiveMode,
+          const Color(0xFF6366F1),
+          Icons.psychology_rounded
+        ),
+      _ => (
+          context.l10n.chatBalancedMode,
+          DS.primaryBase,
+          Icons.balance_rounded
+        ),
     };
   }
 
@@ -3254,7 +3268,8 @@ class _DualCoreModeChip extends StatelessWidget {
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: color.withValues(alpha: 0.3), width: 0.8),
+              border:
+                  Border.all(color: color.withValues(alpha: 0.3), width: 0.8),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
@@ -3321,36 +3336,38 @@ class _AuroraQuickTrigger extends StatelessWidget {
             snapshot.overallStatus == 'needs_confirm');
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(DS.spacing12, 0, DS.spacing12, DS.spacing4),
+      padding:
+          const EdgeInsets.fromLTRB(DS.spacing12, 0, DS.spacing12, DS.spacing4),
       child: GestureDetector(
         onTap: onTap,
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 44),
           child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: DS.spacing10, vertical: DS.spacing10),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: color.withValues(alpha: 0.2)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.auto_awesome_rounded, size: 14, color: color),
-              const SizedBox(width: DS.spacing6),
-              Text(
-                canWake
-                    ? '${_statusLabel(l10n)} · ${l10n.auroraWakeAvailable(wake.userQuotaRemaining)}'
-                    : _statusLabel(l10n),
-                style: TextStyle(
-                  color: color,
-                  fontSize: 11,
-                  fontWeight: DS.fontWeightMedium,
+            padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing10, vertical: DS.spacing10),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(color: color.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.auto_awesome_rounded, size: 14, color: color),
+                const SizedBox(width: DS.spacing6),
+                Text(
+                  canWake
+                      ? '${_statusLabel(l10n)} · ${l10n.auroraWakeAvailable(wake.userQuotaRemaining)}'
+                      : _statusLabel(l10n),
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );
