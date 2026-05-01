@@ -824,3 +824,39 @@
 并且：
 
 > **移动端主链编译已恢复，但关键 smoke harness 仍未全部跟上接口演进，因此“移动端最终质量门完全通过”还不能写死。**
+
+---
+
+## R10 当前主干复验补充 (2026-05-01)
+
+> **来源**: Codex 当前主干 `main` 继续复验
+> **方法**: 关闭 R9 的两个问题后，继续向社区 feed 的关系边界与 smoke/closure harness 扩展。
+
+### R10.1 已复验通过
+
+| ID | 模块 | 结论 |
+|----|------|------|
+| R10-P1 | 社区筛选语义 | `Goal Mates` 已切换到 `AccountabilityPartnership`，`Following` 保持 `Friendship`，两者不再共用同一关系模型 |
+| R10-P2 | 移动端 smoke | `main_actions_smoke_test` 的 fake repo 已同步 `scope` 参数，测试当前通过 |
+| R10-P3 | 移动端 closure | `j3_frontend_closure_test` 与 `accountability_invite_closure_test` 当前通过 |
+
+### R10.2 新发现问题
+
+| ID | 严重度 | 问题 | 文件/证据 | 状态 |
+|----|--------|------|-----------|------|
+| R10-1 | P1 | `/community/feed` 的新 `scope` 查询没有继承社区系统常用的软删除过滤，可能把已解除好友、已退出小队或已失效伙伴关系重新带回 feed | `community.py:245-288`; 对照 `community_service.py:119`, `153-157`, `2720-2729` | 🔴 Reopen |
+
+### R10.3 本轮实测
+
+| 命令 | 结果 |
+|------|------|
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart` | ✅ 全部通过 |
+| `cd mobile && flutter analyze test/app/main_actions_smoke_test.dart test/widget/community_remaining_closure_test.dart` | ⚠️ 仅 warning/info，无 error |
+| `cd mobile && flutter test test/widget/j3_frontend_closure_test.dart test/widget/accountability_invite_closure_test.dart` | ✅ 全部通过 |
+| `cd backend && pytest tests/test_community_e2e.py -q` | ✅ `14 passed` |
+
+### R10.4 阶段判断修正
+
+当前更准确的说法是：
+
+> **R9 的两个问题已关闭；社区 feed 现在的主要尾差不再是“功能是否接线”，而是“关系与软删除边界是否严格一致”。**

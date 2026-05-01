@@ -444,3 +444,54 @@
 
 3. **移动端最终质量门**: 现在还不能写 `PASS`。  
    原因不是主链编译又炸了，而是 `main_actions_smoke_test` 这类关键 smoke harness 还没和新接口演进保持同步。
+
+---
+
+## 15. Codex R10 复验补充 (2026-05-01)
+
+> **方法**: 复验 R9 的两个新问题，并继续向社区 feed 的关系边界与主 smoke suite 扩展。
+
+### 15.1 已复验通过
+
+| ID | 结论 | 证据 |
+|----|------|------|
+| R10-V1 | `Goal Mates` 与 `Following` 不再共用同一关系模型 | `community.py:257-288` 现已拆分为 `AccountabilityPartnership` 与 `Friendship` 两条分支 |
+| R10-V2 | `main_actions_smoke_test` 的 `_FakeCommunityRepository` 已同步 `scope` 参数 | `main_actions_smoke_test.dart:524-532` |
+| R10-V3 | `main_actions_smoke_test` 当前已恢复通过 | `flutter test test/app/main_actions_smoke_test.dart` |
+
+### 15.2 本轮新增发现
+
+| ID | 严重度 | 模块 | 问题 | 状态 |
+|----|--------|------|------|------|
+| C-R10-1 | P1 | 社区 / 数据边界 | `/community/feed` 新增的 `scope` 查询没有继承社区系统常用的软删除过滤，可能把已解除好友、已退出小队或已失效伙伴关系重新带回 feed | **REOPEN** |
+
+#### C-R10-1 说明: feed scope 新查询漏掉软删除边界
+
+- 新的 feed scope 逻辑位于 `community.py:245-288`
+- 这里的三个关系分支当前都没有显式使用软删除过滤：
+  - `squad` 分支未加 `GroupMember.not_deleted_filter()`
+  - `goal_mates` 分支未加 `AccountabilityPartnership.not_deleted_filter()`
+  - `following` 分支未加 `Friendship.not_deleted_filter()`
+- 但在同一社区域内，这些关系模型平时都是带软删除边界使用的，例如：
+  - `community_service.py:153-157` 群成员校验使用 `GroupMember.not_deleted_filter()`
+  - `community_service.py:2720-2729` 拉黑时会对 `Friendship` 执行 `soft_delete()`
+  - `community_service.py:119` 伙伴关系查询使用 `AccountabilityPartnership.not_deleted_filter()`
+
+**结论**: 这不是代码风格差异，而是行为边界不一致。当前 feed 查询有机会把已经解除的好友关系、退出的小队成员或失效伙伴关系重新视为活跃关系来源。
+
+### 15.3 本轮抽样结果
+
+| 命令 | 结果 |
+|------|------|
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart` | ✅ 全部通过 |
+| `cd mobile && flutter analyze test/app/main_actions_smoke_test.dart test/widget/community_remaining_closure_test.dart` | ⚠️ 仅 warning/info，无 error |
+| `cd mobile && flutter test test/widget/j3_frontend_closure_test.dart test/widget/accountability_invite_closure_test.dart` | ✅ 全部通过 |
+| `cd backend && pytest tests/test_community_e2e.py -q` | ✅ `14 passed` |
+
+### 15.4 当前判断
+
+1. **R9 的两个问题都已关闭**。  
+   这轮没有再看到 `Goal Mates` / `Following` 同语义坍缩，也没有再看到 smoke fake repo 的接口漂移。
+
+2. **社区 feed 现在的真正尾差变成了“关系边界是否干净”**。  
+   功能已经连上，但查询没有把软删除语义一起带过来，这类问题很容易在线上变成“为什么我明明退出/解除关系了，还能看到那边的内容”。
