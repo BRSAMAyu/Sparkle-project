@@ -19,3 +19,13 @@
 - `backend/app/services/understanding_benchmark_evaluator.py`
 - `backend/app/services/card_protocol/consistency_validator.py`
 - `backend/app/services/jpush_sender_service.py`
+
+- Dead modules (no runtime importers, candidates for removal):
+- `backend/app/services/budget_optimization_service.py`
+- `backend/app/services/feedback_adjustment_service.py`
+- `backend/app/services/galaxy/event_listener.py`
+
+- Guard false positives (have importers via absolute/relative imports, guard AST resolution misses them):
+- `backend/app/services/feedback_service.py`
+- `backend/app/services/personalization/runtime_context_service.py`
+- `backend/app/services/session_service.py`
