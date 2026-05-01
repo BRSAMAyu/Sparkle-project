@@ -313,7 +313,7 @@ func TestSemanticCacheService_CanonicalizeScope(t *testing.T) {
 		{"colons_replaced", "user:123", "user_123"},
 		{"pipes_replaced", "user|session", "user_session"},
 		{"lowered", "MyScope", "myscope"},
-		{"mixed", "User:Session | Test", "user_session__test"},
+		{"mixed", "User:Session | Test", "user_session___test"},
 	}
 
 	for _, tt := range tests {
