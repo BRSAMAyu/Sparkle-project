@@ -23,7 +23,6 @@ import (
 	pbws "github.com/sparkle/gateway/gen/ws"
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/config"
-	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/galaxy"
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/metrics"
@@ -143,7 +142,7 @@ func streamSemaphoreSize(cfg *config.Config) int {
 type ChatOrchestrator struct {
 	agentClient  *agent.Client
 	galaxyClient *galaxy.Client
-	queries      *db.Queries
+	userIdentity service.UserIdentityService
 	chatHistory  *service.ChatHistoryService
 	quota        *service.QuotaService
 	semantic     *service.SemanticCacheService
@@ -161,11 +160,11 @@ type ChatOrchestrator struct {
 	draining  atomic.Bool
 }
 
-func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string, signalHub *service.SignalHub) *ChatOrchestrator {
+func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, ui service.UserIdentityService, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string, signalHub *service.SignalHub) *ChatOrchestrator {
 	return &ChatOrchestrator{
 		agentClient:  ac,
 		galaxyClient: gc,
-		queries:      q,
+		userIdentity: ui,
 		chatHistory:  ch,
 		quota:        qs,
 		semantic:     sc,
@@ -237,8 +236,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		writeWait = 60 * time.Second
 	}
 	writer := newWSSafeWriter(conn, writeWait)
+	closeCode := websocket.CloseNormalClosure
+	closeReason := ""
 	defer func() {
-		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		_ = writer.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(closeCode, closeReason))
 		_ = writer.Close()
 	}()
 	if h.IsDraining() {
@@ -269,25 +270,11 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	}()
 	defer close(pingDone)
 
-	// Idle timer — close connection if no messages for idleTimeout.
-	// connDone prevents the goroutine from touching conn after the handler exits.
+	// Idle timer — signal the main handler loop to close if no messages arrive.
 	idleTimer := time.NewTimer(idleTimeout)
 	defer idleTimer.Stop()
 	connDone := make(chan struct{})
 	defer close(connDone)
-	go func() {
-		select {
-		case <-idleTimer.C:
-			log.Printf("WebSocket idle timeout for connection, closing")
-			_ = writer.WriteControl(
-				websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseGoingAway, "idle timeout"),
-			)
-			_ = writer.Close()
-		case <-connDone:
-			return
-		}
-	}()
 
 	// Require authenticated user_id from context (must be set by AuthMiddleware)
 	userID := c.GetString("user_id")
@@ -333,14 +320,32 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	msgLimiter := newWSMessageRateLimiter(h.cfg)
 
 	tracer := otel.Tracer("chat-orchestrator")
+	readResults := readWSMessages(conn, connDone)
 
 	// Message handling loop: each WebSocket message triggers a new StreamChat call
 	for {
 		// Read message from WebSocket client
-		msgType, msg, err := conn.ReadMessage()
+		var msgType int
+		var msg []byte
+		var err error
+		select {
+		case <-idleTimer.C:
+			log.Printf("WebSocket idle timeout for connection, closing")
+			closeCode = websocket.CloseGoingAway
+			closeReason = "idle timeout"
+			return
+		case readResult, ok := <-readResults:
+			if !ok {
+				return
+			}
+			msgType = readResult.messageType
+			msg = readResult.message
+			err = readResult.err
+		}
 		if err != nil {
 			if errors.Is(err, websocket.ErrReadLimit) {
-				_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message too large"))
+				closeCode = websocket.ClosePolicyViolation
+				closeReason = "Message too large"
 			}
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("WebSocket error: %v", err)

@@ -14,7 +14,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/sparkle/gateway/internal/db"
 	wsmetrics "github.com/sparkle/gateway/internal/metrics"
@@ -140,21 +139,21 @@ func workflowIDForChatMode(mode string) string {
 
 func (h *ChatOrchestrator) resolveUserIdentity(ctx context.Context, userID string) (uuid.UUID, string, *db.User, error) {
 	if parsed, err := uuid.Parse(userID); err == nil {
-		if h.queries == nil {
+		if h.userIdentity == nil {
 			return parsed, userID, nil, nil
 		}
-		user, err := h.queries.GetUser(ctx, pgtype.UUID{Bytes: parsed, Valid: true})
+		user, err := h.userIdentity.GetUserByUUID(ctx, parsed)
 		if err != nil {
 			return parsed, userID, nil, nil
 		}
 		return parsed, userID, &user, nil
 	}
 
-	if h.queries == nil {
+	if h.userIdentity == nil {
 		return uuid.Nil, userID, nil, nil
 	}
 
-	user, err := h.queries.GetUserByEmail(ctx, userID)
+	user, err := h.userIdentity.GetUserByEmail(ctx, userID)
 	if err != nil {
 		return uuid.Nil, userID, nil, nil
 	}

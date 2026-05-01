@@ -914,7 +914,13 @@ class PredictionTheaterService:
             for query in queries[:3]:
                 try:
                     results = await galaxy.semantic_search_nodes(query, limit=2, threshold=0.22)
-                except Exception:
+                except Exception as exc:
+                    logger.warning(
+                        "Prediction theater semantic node enrichment failed for query %s: %s",
+                        query,
+                        exc,
+                        exc_info=True,
+                    )
                     results = []
                 for candidate in results:
                     confidence = self._semantic_match_confidence(
@@ -953,7 +959,8 @@ class PredictionTheaterService:
         galaxy = GalaxyService(self.db)
         try:
             results = await galaxy.semantic_search_nodes(topic, limit=limit, threshold=0.22)
-        except Exception:
+        except Exception as exc:
+            logger.warning("Prediction theater topic candidate lookup failed for topic %s: %s", topic, exc, exc_info=True)
             return []
         return [
             {
@@ -1272,8 +1279,9 @@ class PredictionTheaterService:
                 commit=False,
             )
             await self.db.commit()
-        except Exception:
+        except Exception as exc:
             await self.db.rollback()
+            logger.error("Prediction theater candidate promotion failed: %s", exc, exc_info=True)
             raise
 
         await expansion_service._invalidate_after_graph_mutation(user_id)
@@ -1362,7 +1370,8 @@ class PredictionTheaterService:
                 continue
             try:
                 await self.structure.tag_node_signal(UUID(str(node_id)), "signal:predicted_risk", active=True)
-            except Exception:
+            except Exception as exc:
+                logger.warning("Failed to tag predicted risk node %s: %s", node_id, exc, exc_info=True)
                 continue
 
         cached["selected_prediction"] = selected_route
@@ -1404,8 +1413,8 @@ class PredictionTheaterService:
                 },
                 severity=2,
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to create prediction theater cognitive fragment: %s", exc, exc_info=True)
 
         query = {
             "topic": str(cached.get("topic") or ""),
@@ -1576,7 +1585,8 @@ class PredictionTheaterService:
                 **row,
                 "comparison_pairs": await self._recent_comparison_pairs(user_id=user_id, limit=10),
             }
-        except Exception:
+        except Exception as exc:
+            logger.warning("Prediction accuracy summary lookup failed for user %s: %s", user_id, exc, exc_info=True)
             return None
 
     async def get_accuracy_overview(self, *, user_id: UUID) -> dict[str, Any]:
@@ -3532,8 +3542,8 @@ class PredictionTheaterService:
                 payload,
                 ttl=self.accuracy.TTL_SECONDS,
             )
-        except Exception:
-            pass  # Cache backfill failure is non-critical
+        except Exception as exc:
+            logger.debug("Prediction cache backfill failed for %s: %s", prediction_id, exc, exc_info=True)
         return payload
 
     async def _get_prediction_for_user_or_raise(self, prediction_id: str, *, user_id: UUID) -> dict[str, Any]:
@@ -3567,8 +3577,8 @@ class PredictionTheaterService:
                 payload,
                 ttl=self.accuracy.TTL_SECONDS,
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Prediction cache refresh failed for %s: %s", prediction_id, exc, exc_info=True)
         return payload
 
     async def _raise_prediction_access_denied(self, *, user_id: UUID, prediction_id: str) -> None:
@@ -3637,8 +3647,8 @@ class PredictionTheaterService:
                     "nodes": list(bundle.nodes_payload or []),
                     "edges": list(bundle.edges_payload or []),
                 }
-        except Exception:
-            pass  # Non-critical; callers that don't need graph still work
+        except Exception as exc:
+            logger.debug("Prediction graph hydration skipped for bundle %s: %s", bundle_id, exc, exc_info=True)
 
     @staticmethod
     def _find_route(payload: dict[str, Any], route_id: str) -> dict[str, Any]:

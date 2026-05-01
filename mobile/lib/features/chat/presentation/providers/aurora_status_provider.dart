@@ -661,6 +661,8 @@ class AuroraStatusNotifier
   }
 }
 
+/// Core keepAlive provider: Aurora status is app-level context and should
+/// survive tab switches until the session is explicitly refreshed or cleared.
 final auroraStatusProvider =
     StateNotifierProvider<AuroraStatusNotifier, AuroraControlSurfaceSnapshot?>(
   (ref) => AuroraStatusNotifier(ref.read(apiClientProvider)),

@@ -64,6 +64,9 @@ type serviceBundle struct {
 	fileStorage    *service.FileStorageService
 	fileEventHub   *service.FileEventHub
 	signalHub      *service.SignalHub
+	appleAccount   *service.AppleAccountService
+	groupChat      *service.GroupChatService
+	consistency    *service.DataConsistencyService
 }
 
 type handlerBundle struct {
@@ -175,6 +178,9 @@ func initServices(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 		fileStorage:    fileStorageService,
 		fileEventHub:   service.NewFileEventHub(),
 		signalHub:      service.NewSignalHub(),
+		appleAccount:   service.NewAppleAccountService(dbh.queries),
+		groupChat:      service.NewGroupChatService(dbh.queries),
+		consistency:    service.NewDataConsistencyService(chatHistoryService, dbh.queries, rdb),
 	}, nil
 }
 
@@ -217,7 +223,7 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	chatOrchestrator := handler.NewChatOrchestrator(
 		agentClient,
 		galaxyClient,
-		dbh.queries,
+		service.NewDBUserIdentityService(dbh.queries),
 		services.chatHistory,
 		services.quota,
 		services.semantic,
@@ -230,12 +236,12 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 		services.signalHub,
 	)
 	signalPushHandler := handler.NewSignalPushHandler(cfg, services.signalHub)
-	groupChatHandler := handler.NewGroupChatHandler(dbh.queries)
+	groupChatHandler := handler.NewGroupChatHandler(services.groupChat)
 	errorBookHandler := handler.NewErrorBookHandler(errorBookClient)
 	chaosHandler := handler.NewChaosHandler(services.chatHistory, cfg.ToxiproxyURL)
 	fileHandler := handler.NewFileHandler(services.fileStorage, services.fileMetadata, services.fileProcessing)
 	interventionPushHandler := handler.NewInterventionPushHandler(chatOrchestrator)
-	dataConsistencyHandler := handler.NewDataConsistencyHandler(services.chatHistory, dbh.queries, rdb)
+	dataConsistencyHandler := handler.NewDataConsistencyHandler(services.consistency)
 
 	sttURL := strings.Replace(cfg.BackendURL, "http://", "ws://", 1)
 	sttURL = strings.Replace(sttURL, "https://", "wss://", 1)
@@ -247,7 +253,7 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	if err != nil {
 		log.Printf("Warning: Apple Auth Service init failed: %v", err)
 	}
-	authHandler := handler.NewAuthHandler(cfg, dbh.queries, appleAuthService)
+	authHandler := handler.NewAuthHandler(cfg, appleAuthService, services.appleAccount)
 
 	// Galaxy handler for knowledge graph endpoints
 	galaxyHandler := handler.NewGalaxyHandler(galaxyClient, rdb, cfg.BackendURL)

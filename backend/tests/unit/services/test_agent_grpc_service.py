@@ -10,6 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "app" / "gen" / "agent" / "v1"))
 
+from app.core.metrics import SESSION_ID_FALLBACK_TOTAL
 from app.gen.agent.v1 import agent_service_pb2
 from app.services.agent_grpc_service import AgentServiceImpl
 
@@ -77,6 +78,16 @@ class _RaisingOrchestrator:
         if False:
             yield None
         raise self.exc
+
+
+class _StreamingOrchestrator:
+    def __init__(self, responses: list[agent_service_pb2.ChatResponse]) -> None:
+        self.responses = responses
+        self.redis = None
+
+    async def process_stream(self, *args, **kwargs):
+        for response in self.responses:
+            yield response
 
 
 @pytest.mark.asyncio
@@ -152,3 +163,59 @@ async def test_stream_chat_error_path_uses_safe_defaults_before_metadata_load():
     assert responses[0].prompt_version == "v1"
     assert responses[0].finish_reason == agent_service_pb2.ERROR
     assert context.code == grpc.StatusCode.INTERNAL
+
+
+@pytest.mark.asyncio
+async def test_stream_chat_reuses_request_session_when_response_omits_session_id():
+    session_factory = _DummySessionFactory()
+    service = AgentServiceImpl(
+        orchestrator=_StreamingOrchestrator(
+            [
+                agent_service_pb2.ChatResponse(
+                    response_id="response-1",
+                    delta="hello",
+                )
+            ]
+        ),
+        db_session_factory=session_factory,
+    )
+    request = agent_service_pb2.ChatRequest(
+        user_id=str(uuid.uuid4()),
+        session_id="session-propagated",
+        request_id="req-propagated",
+        message="hello",
+    )
+
+    responses = [response async for response in service.StreamChat(request, _FakeContext())]
+
+    assert [response.session_id for response in responses] == ["session-propagated"]
+
+
+@pytest.mark.asyncio
+async def test_stream_chat_empty_request_session_generates_single_fallback_and_metric():
+    metric = SESSION_ID_FALLBACK_TOTAL.labels(source="grpc_stream_chat")
+    before = metric._value.get()
+    session_factory = _DummySessionFactory()
+    service = AgentServiceImpl(
+        orchestrator=_StreamingOrchestrator(
+            [
+                agent_service_pb2.ChatResponse(response_id="response-1", delta="hello"),
+                agent_service_pb2.ChatResponse(response_id="response-2", full_text="done"),
+            ]
+        ),
+        db_session_factory=session_factory,
+    )
+    request = agent_service_pb2.ChatRequest(
+        user_id=str(uuid.uuid4()),
+        request_id="req-fallback",
+        message="hello",
+    )
+
+    responses = [response async for response in service.StreamChat(request, _FakeContext())]
+
+    assert len(responses) == 2
+    assert responses[0].session_id
+    assert responses[0].session_id == responses[1].session_id
+    assert request.session_id == responses[0].session_id
+    assert uuid.UUID(responses[0].session_id)
+    assert metric._value.get() == before + 1

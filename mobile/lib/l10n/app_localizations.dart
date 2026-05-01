@@ -33589,6 +33589,42 @@ abstract class AppLocalizations {
   /// **'上次纠正已生效'**
   String get auroraCorrectionApplied;
 
+  /// No description provided for @calibrationReceiptExpand.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开校准回执详情'**
+  String get calibrationReceiptExpand;
+
+  /// No description provided for @calibrationReceiptCollapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起校准回执详情'**
+  String get calibrationReceiptCollapse;
+
+  /// No description provided for @calibrationReceiptDismiss.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏这条校准回执'**
+  String get calibrationReceiptDismiss;
+
+  /// No description provided for @calibrationReceiptWhatChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整了什么'**
+  String get calibrationReceiptWhatChanged;
+
+  /// No description provided for @calibrationReceiptWhyChanged.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么调整'**
+  String get calibrationReceiptWhyChanged;
+
+  /// No description provided for @calibrationReceiptNextTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'下次会怎样'**
+  String get calibrationReceiptNextTime;
+
   /// No description provided for @auroraCorrectionInputTitle.
   ///
   /// In zh, this message translates to:

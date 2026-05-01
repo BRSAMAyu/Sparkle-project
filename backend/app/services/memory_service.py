@@ -49,6 +49,9 @@ SUMMARY_MAX_LEN = 48
 SESSION_MOOD_TTL_SECONDS = 7 * 24 * 60 * 60
 SESSION_MOOD_LAST_KEY_TEMPLATE = "memory:session_mood:{user_id}:last"
 SESSION_MOOD_SESSION_KEY_TEMPLATE = "memory:session_mood:{user_id}:{session_id}"
+RECENT_CALIBRATION_RECEIPTS_KEY_TEMPLATE = "aurora:recent_corrections:{user_id}"
+LAST_CALIBRATION_RECEIPT_KEY_TEMPLATE = "aurora:last_calibration_receipt:{user_id}"
+RECENT_CALIBRATION_RECEIPTS_TTL_SECONDS = 7 * 24 * 60 * 60
 
 
 def _utcnow() -> datetime:
@@ -274,6 +277,68 @@ class MemoryService:
         except Exception as exc:
             logger.debug("Unable to resolve Redis for session mood memory: {}", exc)
             return None
+
+    def _calibration_receipt_redis(self):
+        if self.redis is not None:
+            return self.redis
+        try:
+            from app.core.cache import cache_service
+
+            return cache_service.redis
+        except Exception as exc:
+            logger.debug("Unable to resolve Redis for calibration receipt memory: {}", exc)
+            return None
+
+    async def record_calibration_receipt(
+        self,
+        *,
+        user_id: UUID | str,
+        receipt: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        redis = self._calibration_receipt_redis()
+        if redis is None or not isinstance(receipt, dict) or not receipt:
+            return None
+
+        payload = {
+            **receipt,
+            "user_id": str(user_id),
+            "recorded_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        }
+        encoded = json.dumps(payload, ensure_ascii=False, default=str)
+        recent_key = RECENT_CALIBRATION_RECEIPTS_KEY_TEMPLATE.format(user_id=user_id)
+        last_key = LAST_CALIBRATION_RECEIPT_KEY_TEMPLATE.format(user_id=user_id)
+        await redis.lpush(recent_key, encoded)
+        await redis.ltrim(recent_key, 0, 9)
+        await redis.expire(recent_key, RECENT_CALIBRATION_RECEIPTS_TTL_SECONDS)
+        await redis.setex(last_key, RECENT_CALIBRATION_RECEIPTS_TTL_SECONDS, encoded)
+        return payload
+
+    async def list_recent_calibration_receipts(
+        self,
+        user_id: UUID | str,
+        limit: int = 3,
+    ) -> list[dict[str, Any]]:
+        redis = self._calibration_receipt_redis()
+        if redis is None:
+            return []
+
+        safe_limit = max(1, min(int(limit or 3), 10))
+        raw_items = await redis.lrange(
+            RECENT_CALIBRATION_RECEIPTS_KEY_TEMPLATE.format(user_id=user_id),
+            0,
+            safe_limit - 1,
+        )
+        receipts: list[dict[str, Any]] = []
+        for raw in raw_items or []:
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8", errors="replace")
+            try:
+                payload = json.loads(raw) if isinstance(raw, str) else raw
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if isinstance(payload, dict):
+                receipts.append(payload)
+        return receipts
 
     async def create_goal(
         self,

@@ -108,6 +108,13 @@ TOOL_EXECUTION_COUNT = get_or_create_metric(
 # 5. 系统指标
 ACTIVE_SESSIONS = get_or_create_metric(Gauge, "sparkle_active_sessions_total", "Total number of active chat sessions")
 
+SESSION_ID_FALLBACK_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_session_id_fallback_total",
+    "Total StreamChat responses that required a backend-generated session_id fallback",
+    ["source"],
+)
+
 KNOWLEDGE_NODE_UPDATES = get_or_create_metric(
     Counter,
     "sparkle_knowledge_node_updates_total",

@@ -5,10 +5,8 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
 	"mime"
 	"net/http"
-	"os"
 	"path"
 	"strconv"
 	"strings"
@@ -21,39 +19,6 @@ import (
 	"github.com/sparkle/gateway/internal/service"
 	"golang.org/x/time/rate"
 )
-
-// isDevelopmentMode checks if running in development environment
-func isDevelopmentModeForErrors() bool {
-	env := strings.ToLower(os.Getenv("ENVIRONMENT"))
-	return env == "" || env == "dev" || env == "development"
-}
-
-// sanitizeError returns a safe error message for client consumption
-// In production, internal error details are hidden; in development, full details are shown
-func sanitizeError(err error, fallback string) string {
-	if err == nil {
-		return fallback
-	}
-	if isDevelopmentModeForErrors() {
-		return err.Error()
-	}
-	// Production: hide internal error details
-	log.Printf("[FileHandler] Internal error (hidden from client): %v", err)
-	return fallback
-}
-
-// sanitizeErrorWithDetail returns sanitized error with optional context
-func sanitizeErrorWithDetail(err error, fallback string, detail string) gin.H {
-	if err == nil {
-		return gin.H{"error": fallback}
-	}
-	if isDevelopmentModeForErrors() {
-		return gin.H{"error": fallback, "detail": err.Error()}
-	}
-	// Production: log but don't expose details
-	log.Printf("[FileHandler] Internal error (hidden from client): %v, context: %s", err, detail)
-	return gin.H{"error": fallback}
-}
 
 var allowedMimeTypesByExt = map[string]map[string]bool{
 	".bin":  {"application/octet-stream": true},
@@ -146,7 +111,7 @@ type FileResponse struct {
 func (h *FileHandler) PrepareUpload(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusUnauthorized, err, "file.prepare_upload.get_user_id")
 		return
 	}
 
@@ -159,7 +124,7 @@ func (h *FileHandler) PrepareUpload(c *gin.Context) {
 
 	var req PrepareUploadRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, sanitizeError(err, "invalid request body"))
+		sanitizeErrorResponse(c, http.StatusBadRequest, err, "file.prepare_upload.bind")
 		return
 	}
 	if req.FileSize <= 0 {
@@ -205,7 +170,7 @@ func (h *FileHandler) PrepareUpload(c *gin.Context) {
 		objectKey,
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, sanitizeErrorWithDetail(err, "failed to create file record", "CreatePendingFile"))
+		sanitizeErrorResponse(c, http.StatusInternalServerError, err, "file.prepare_upload.create_pending_file")
 		return
 	}
 
@@ -217,7 +182,7 @@ func (h *FileHandler) PrepareUpload(c *gin.Context) {
 		h.storage.MaxUploadSize(),
 	)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, sanitizeErrorWithDetail(err, "failed to generate upload url", "PresignPost"))
+		sanitizeErrorResponse(c, http.StatusInternalServerError, err, "file.prepare_upload.presign_post")
 		return
 	}
 
@@ -235,13 +200,13 @@ func (h *FileHandler) PrepareUpload(c *gin.Context) {
 func (h *FileHandler) CompleteUpload(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusUnauthorized, err, "file.complete_upload.get_user_id")
 		return
 	}
 
 	var req CompleteUploadRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, sanitizeError(err, "invalid request body"))
+		sanitizeErrorResponse(c, http.StatusBadRequest, err, "file.complete_upload.bind")
 		return
 	}
 
@@ -292,7 +257,7 @@ func (h *FileHandler) CompleteUpload(c *gin.Context) {
 func (h *FileHandler) GetFile(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusUnauthorized, err, "file.get_file.get_user_id")
 		return
 	}
 	fileID, err := uuid.Parse(c.Param("file_id"))
@@ -323,7 +288,7 @@ func (h *FileHandler) GetFile(c *gin.Context) {
 func (h *FileHandler) GetDownloadURL(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusUnauthorized, err, "file.get_download_url.get_user_id")
 		return
 	}
 	fileID, err := uuid.Parse(c.Param("file_id"))
@@ -396,7 +361,7 @@ func (h *FileHandler) GetInternalDownloadURL(c *gin.Context) {
 func (h *FileHandler) GetThumbnailURL(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusUnauthorized, err, "file.get_thumbnail_url.get_user_id")
 		return
 	}
 	fileID, err := uuid.Parse(c.Param("file_id"))
@@ -436,7 +401,7 @@ func (h *FileHandler) GetThumbnailURL(c *gin.Context) {
 func (h *FileHandler) ListMyFiles(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusUnauthorized, err, "file.list_my_files.get_user_id")
 		return
 	}
 
@@ -460,7 +425,7 @@ func (h *FileHandler) ListMyFiles(c *gin.Context) {
 func (h *FileHandler) DeleteMyFile(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusUnauthorized, err, "file.delete_my_file.get_user_id")
 		return
 	}
 	fileID, err := uuid.Parse(c.Param("file_id"))
@@ -486,7 +451,7 @@ func (h *FileHandler) DeleteMyFile(c *gin.Context) {
 func (h *FileHandler) SearchMyFiles(c *gin.Context) {
 	userID, err := getUserID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusUnauthorized, err, "file.search_my_files.get_user_id")
 		return
 	}
 	query := strings.TrimSpace(c.Query("q"))

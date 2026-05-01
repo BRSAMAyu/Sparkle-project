@@ -1,8 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/aurora/presentation/providers/aurora_preferences_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/chat_provider.dart';
 import 'package:sparkle/features/community/presentation/providers/community_provider.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart';
 import 'package:sparkle/features/galaxy/data/repositories/enhanced_galaxy_repository.dart';
@@ -12,6 +15,7 @@ import 'package:sparkle/features/home/presentation/providers/dashboard_provider.
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
 import 'package:sparkle/features/leaderboard/presentation/providers/leaderboard_provider.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
@@ -22,8 +26,13 @@ final sessionBoundProvidersProvider = Provider<List<ProviderOrFamily>>(
     dashboardProvider,
     unreadNotificationsProvider,
     notificationCenterProvider,
+    chatProvider,
+    chatRepositoryProvider,
+    auroraStatusProvider,
+    auroraPreferencesProvider,
     taskListProvider,
     planListProvider,
+    activePlanProvider,
     calendarProvider,
     unifiedCalendarProvider,
     friendsProvider,
@@ -52,6 +61,10 @@ class SessionRefreshService {
 
   static void refreshSessionBoundProviders(Ref ref) {
     DemoDataService().resetDemoState();
-    ref.read(sessionBoundProvidersProvider).forEach(ref.invalidate);
+    for (final provider in ref.read(sessionBoundProvidersProvider)) {
+      if (provider is ProviderBase<Object?> && ref.exists(provider)) {
+        ref.invalidate(provider);
+      }
+    }
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/models/aurora_correction_payload.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -399,14 +400,27 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
                     groupId: topGroup.groupId,
                     conversationId: widget.conversationId,
                     onTap: () {
+                      final payload = AuroraCorrectionPayload.chip(
+                        surface: AuroraCorrectionSurface.statusBand,
+                        semanticValue: option.semanticValue,
+                        label: auroraCorrectionPresentationFor(
+                          context,
+                          option,
+                        ).label,
+                        isDisconfirming: option.isDisconfirming,
+                        bandStatus: snapshot.overallStatus,
+                        telemetryId: option.telemetryId,
+                        groupId: topGroup.groupId,
+                        conversationId: widget.conversationId ?? '',
+                      );
                       // Record telemetry
                       final telemetry =
                           AuroraTelemetryService(ref.read(apiClientProvider));
                       unawaited(telemetry.recordChipSelected(
                         option: option,
-                        groupId: topGroup.groupId,
-                        bandStatus: snapshot.overallStatus,
-                        conversationId: widget.conversationId,
+                        groupId: payload.groupId,
+                        bandStatus: payload.bandStatus,
+                        conversationId: payload.conversationId,
                       ));
                       // Collapse bar after selection
                       _setExpansion(_AuroraExpansion.collapsed);
@@ -977,14 +991,24 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     unawaited(SensoryFeedbackService.emitAuroraEvent(
       AuroraSensoryEvent.correctionCompleted,
     ));
-    final telemetry = AuroraTelemetryService(ref.read(apiClientProvider));
-    unawaited(telemetry.recordStatusBandCorrection(
-      label: option.label,
+    final payload = AuroraCorrectionPayload.chip(
+      surface: AuroraCorrectionSurface.statusBand,
       semanticValue: option.semanticValue,
+      label: option.label,
       isDisconfirming: option.isDisconfirming,
       bandStatus: snapshot.overallStatus,
       groupId: 'status_awareness_bar_fallback',
-      conversationId: widget.conversationId,
+      conversationId: widget.conversationId ?? '',
+    );
+    final telemetry = AuroraTelemetryService(ref.read(apiClientProvider));
+    unawaited(telemetry.recordStatusBandCorrection(
+      label: payload.label,
+      semanticValue: payload.semanticValue,
+      isDisconfirming: payload.isDisconfirming,
+      bandStatus: payload.bandStatus,
+      telemetryId: payload.telemetryId,
+      groupId: payload.groupId,
+      conversationId: payload.conversationId,
     ));
     ref.read(auroraStatusProvider.notifier).markCorrectionEffective(
           semanticValue: option.semanticValue,

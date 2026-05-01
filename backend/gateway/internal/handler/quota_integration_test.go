@@ -43,7 +43,7 @@ func TestChatOrchestrator_QuotaIntegration(t *testing.T) {
 	orchestrator := NewChatOrchestrator(
 		nil,        // agentClient
 		nil,        // galaxyClient
-		nil,        // queries
+		nil,        // userIdentity
 		historySvc, // Mock/Nil history
 		quotaSvc,
 		nil, // Semantic cache (nil to avoid panic in SearchExact)

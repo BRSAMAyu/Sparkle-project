@@ -107,3 +107,104 @@ Page<dynamic> buildSparkleTransitionPage({
     },
   );
 }
+
+Page<dynamic> buildColdStartTransitionPage({
+  required GoRouterState state,
+  required Widget child,
+}) {
+  final reduceMotion = WidgetsBinding
+      .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    transitionDuration: reduceMotion
+        ? const Duration(milliseconds: 140)
+        : const Duration(milliseconds: 400),
+    reverseTransitionDuration: reduceMotion
+        ? const Duration(milliseconds: 120)
+        : const Duration(milliseconds: 220),
+    child: child,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      if (reduceMotion) {
+        return FadeTransition(
+          opacity: Tween<double>(begin: 0.94, end: 1).animate(
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+          ),
+          child: child,
+        );
+      }
+
+      return ColdStartRouteTransition(
+        animation: animation,
+        secondaryAnimation: secondaryAnimation,
+        child: child,
+      );
+    },
+  );
+}
+
+class ColdStartRouteTransition extends StatefulWidget {
+  const ColdStartRouteTransition({
+    required this.animation,
+    required this.secondaryAnimation,
+    required this.child,
+    super.key,
+  });
+
+  final Animation<double> animation;
+  final Animation<double> secondaryAnimation;
+  final Widget child;
+
+  @override
+  State<ColdStartRouteTransition> createState() =>
+      _ColdStartRouteTransitionState();
+}
+
+class _ColdStartRouteTransitionState extends State<ColdStartRouteTransition> {
+  bool _skipRequested = false;
+
+  void _skip() {
+    if (_skipRequested || !mounted) {
+      return;
+    }
+    setState(() {
+      _skipRequested = true;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_skipRequested) {
+      return widget.child;
+    }
+
+    final curved = CurvedAnimation(
+      parent: widget.animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+    final outgoing = CurvedAnimation(
+      parent: widget.secondaryAnimation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
+
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => _skip(),
+      child: FadeTransition(
+        opacity: Tween<double>(begin: 0, end: 1).animate(curved),
+        child: FadeTransition(
+          opacity: Tween<double>(begin: 1, end: 0.88).animate(outgoing),
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.018),
+              end: Offset.zero,
+            ).animate(curved),
+            child: widget.child,
+          ),
+        ),
+      ),
+    );
+  }
+}

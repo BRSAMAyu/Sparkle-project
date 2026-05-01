@@ -60,6 +60,13 @@ const _defaultTransparencyPreferences = TransparencyPreferences(
   allowPerTurnDismiss: true,
 );
 
+enum ChatBubbleDeliveryStatus {
+  normal,
+  queued,
+  sending,
+  failed,
+}
+
 class ChatBubble extends ConsumerStatefulWidget {
   const ChatBubble({
     required this.message,
@@ -75,6 +82,8 @@ class ChatBubble extends ConsumerStatefulWidget {
     this.onWidgetAction,
     this.onPromoteSelfVisibleDraft,
     this.isLatestAssistantMessage = false,
+    this.deliveryStatus = ChatBubbleDeliveryStatus.normal,
+    this.onRetryDelivery,
   });
   final dynamic message; // ChatMessageModel or PrivateMessageInfo
   final bool showAvatar;
@@ -94,6 +103,8 @@ class ChatBubble extends ConsumerStatefulWidget {
       onWidgetAction;
   final void Function(dynamic message)? onPromoteSelfVisibleDraft;
   final bool isLatestAssistantMessage;
+  final ChatBubbleDeliveryStatus deliveryStatus;
+  final VoidCallback? onRetryDelivery;
 
   @override
   ConsumerState<ChatBubble> createState() => _ChatBubbleState();
@@ -942,32 +953,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                               ),
                               child: MaterialStyler(
                                 material: isUser
-                                    ? SparkleMaterial(
-                                        backgroundGradient: LinearGradient(
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                          colors: [
-                                            Color.lerp(
-                                                  DS.brandPrimary,
-                                                  DS.info,
-                                                  0.16,
-                                                ) ??
-                                                DS.brandPrimary,
-                                            DS.brandPrimary
-                                                .withValues(alpha: 0.9),
-                                          ],
-                                        ),
-                                        borderColor: DS.textOnPrimary
-                                            .withValues(alpha: 0.18),
-                                        shadows: [
-                                          BoxShadow(
-                                            color: DS.brandPrimary
-                                                .withValues(alpha: 0.16),
-                                            blurRadius: 14,
-                                            offset: const Offset(0, 8),
-                                          ),
-                                        ],
-                                      )
+                                    ? _getUserMessageMaterial()
                                     : _getAIMessageMaterial(context),
                                 shapeBorder: ContinuousRectangleBorder(
                                   borderRadius: BorderRadius.circular(24),
@@ -2255,6 +2241,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       );
 
   Widget _buildMessageStatus() {
+    if (widget.message is ChatMessageModel && _isUser) {
+      return _buildOfflineDeliveryStatus();
+    }
     if (widget.message is! PrivateMessageInfo) return const SizedBox.shrink();
     final msg = widget.message as PrivateMessageInfo;
 
@@ -2295,6 +2284,49 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
           ),
       ],
     );
+  }
+
+  Widget _buildOfflineDeliveryStatus() {
+    switch (widget.deliveryStatus) {
+      case ChatBubbleDeliveryStatus.normal:
+        return const SizedBox.shrink();
+      case ChatBubbleDeliveryStatus.queued:
+        return _DeliveryBadge(
+          icon: Icons.schedule_rounded,
+          label: _deliveryCopy('queued'),
+          color: DS.warning,
+        );
+      case ChatBubbleDeliveryStatus.sending:
+        return _DeliveryBadge(
+          label: _deliveryCopy('sending'),
+          color: DS.info,
+          showSpinner: true,
+        );
+      case ChatBubbleDeliveryStatus.failed:
+        return _DeliveryBadge(
+          icon: Icons.error_outline_rounded,
+          label: _deliveryCopy('failed'),
+          color: DS.error,
+          actionLabel: _deliveryCopy('retry'),
+          onAction: widget.onRetryDelivery,
+        );
+    }
+  }
+
+  String _deliveryCopy(String key) {
+    final zh = I18nService.instance.isChinese;
+    switch (key) {
+      case 'queued':
+        return zh ? '等待发送' : 'Queued';
+      case 'sending':
+        return zh ? '正在发送' : 'Sending';
+      case 'failed':
+        return zh ? '发送失败' : 'Send failed';
+      case 'retry':
+        return zh ? '重试' : 'Retry';
+      default:
+        return '';
+    }
   }
 
   Widget _buildAvatar(bool isUser) {
@@ -2405,6 +2437,45 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   ///
   /// Dark mode: Uses a lighter gray (#2A2A2A) for better contrast
   /// Light mode: Uses standard ceramic material
+  SparkleMaterial _getUserMessageMaterial() {
+    final status = widget.deliveryStatus;
+    final isDelayed = status == ChatBubbleDeliveryStatus.queued ||
+        status == ChatBubbleDeliveryStatus.sending;
+    final accent = switch (status) {
+      ChatBubbleDeliveryStatus.failed => DS.error,
+      ChatBubbleDeliveryStatus.queued => DS.warning,
+      ChatBubbleDeliveryStatus.sending => DS.info,
+      ChatBubbleDeliveryStatus.normal => DS.textOnPrimary,
+    };
+
+    return SparkleMaterial(
+      backgroundGradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color.lerp(
+                isDelayed ? DS.neutral500 : DS.brandPrimary,
+                DS.info,
+                isDelayed ? 0.06 : 0.16,
+              ) ??
+              DS.brandPrimary,
+          (isDelayed ? DS.neutral600 : DS.brandPrimary)
+              .withValues(alpha: isDelayed ? 0.72 : 0.9),
+        ],
+      ),
+      borderColor: accent.withValues(
+        alpha: status == ChatBubbleDeliveryStatus.normal ? 0.18 : 0.48,
+      ),
+      shadows: [
+        BoxShadow(
+          color: accent.withValues(alpha: 0.16),
+          blurRadius: 14,
+          offset: const Offset(0, 8),
+        ),
+      ],
+    );
+  }
+
   SparkleMaterial _getAIMessageMaterial(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -2734,6 +2805,77 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
       DeepLinkService.handleDeepLink(context, deepLink);
     }
   }
+}
+
+class _DeliveryBadge extends StatelessWidget {
+  const _DeliveryBadge({
+    required this.label,
+    required this.color,
+    this.icon,
+    this.showSpinner = false,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final String label;
+  final Color color;
+  final IconData? icon;
+  final bool showSpinner;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        container: true,
+        label: actionLabel == null ? label : '$label, $actionLabel',
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (showSpinner)
+              SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(
+                  strokeWidth: 1.6,
+                  valueColor: AlwaysStoppedAnimation<Color>(color),
+                ),
+              )
+            else if (icon != null)
+              Icon(icon, size: 13, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(width: 6),
+              InkWell(
+                onTap: onAction,
+                borderRadius: BorderRadius.circular(6),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 2,
+                  ),
+                  child: Text(
+                    actionLabel!,
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: color,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
 }
 
 class _InsightLinkCard extends StatelessWidget {

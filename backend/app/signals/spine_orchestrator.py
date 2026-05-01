@@ -229,8 +229,8 @@ class SpineOrchestrator:
         _post_lock_key = f"spine:task_completed_lock:{user_id}"
         try:
             await self.redis.set(_post_lock_key, "1", nx=True, ex=15)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Task-completed post lock acquisition failed for user={}: {}", user_id, exc)
 
         # Step 3a: Record Aurora energy level decision in trace (T3.1.6)
         try:
@@ -303,8 +303,8 @@ class SpineOrchestrator:
         # Release task-completed lock
         try:
             await self.redis.delete(_post_lock_key)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Task-completed post lock release failed for user={}: {}", user_id, exc)
 
         return trace
 
@@ -1946,7 +1946,8 @@ class SpineOrchestrator:
                 {"state_key": e.state_key, "value": e.value, "confidence": e.confidence, "scope": e.scope}
                 for e in entries
             ]
-        except Exception:
+        except Exception as exc:
+            logger.debug("_get_active_states_dicts degraded for user={}: {}", user_id, exc)
             return []
 
     # ── T5.1.2: Research-Grade InterventionEpisode Generation ──────────
@@ -3105,8 +3106,8 @@ class SpineOrchestrator:
                     freeform_text=f"{original_claim} → {corrected_understanding}",
                     telemetry_id=trace_id or "",
                 )
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Correction feedback processing failed for user={}: {}", user_id, exc)
 
             # Store correction event for Aurora
             correction_event = {
@@ -3217,8 +3218,8 @@ class SpineOrchestrator:
 
             try:
                 await record_aurora_cost(tier="l3_full_core")
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Aurora L3 cost recording failed for user={}: {}", user_id, exc)
 
             return session
         except Exception:

@@ -3,10 +3,10 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_comeback_context.dart';
 
-class ComebackBanner extends StatelessWidget {
+class ComebackBanner extends StatefulWidget {
   const ComebackBanner({
-    super.key,
     required this.contextData,
+    super.key,
     this.onDismiss,
     this.onContinue,
     this.onResumeCoreSession,
@@ -20,7 +20,41 @@ class ComebackBanner extends StatelessWidget {
   final ValueChanged<AuroraComebackItem>? onItemSelected;
 
   @override
+  State<ComebackBanner> createState() => _ComebackBannerState();
+}
+
+class _ComebackBannerState extends State<ComebackBanner> {
+  bool _skipEntranceAnimation = false;
+
+  void _finishEntranceAnimation() {
+    if (_skipEntranceAnimation || !mounted) {
+      return;
+    }
+    setState(() {
+      _skipEntranceAnimation = true;
+    });
+  }
+
+  Widget _staggered({
+    required int index,
+    required Widget child,
+  }) {
+    if (_skipEntranceAnimation || context.reduceMotion) {
+      return child;
+    }
+
+    return SparkleStaggerItem(
+      index: index,
+      initialDelay: const Duration(milliseconds: 100),
+      stepDelay: const Duration(milliseconds: 100),
+      offset: 0.025,
+      child: child,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final contextData = widget.contextData;
     final title = contextData.title.isNotEmpty
         ? contextData.title
         : contextData.topicSummary.isNotEmpty
@@ -31,135 +65,155 @@ class ComebackBanner extends StatelessWidget {
         : contextData.pendingQuestion;
     final items = contextData.unfinishedItems;
 
-    return Semantics(
-      container: true,
-      label: [title, body].where((text) => text.trim().isNotEmpty).join('. '),
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 240),
-        switchInCurve: Curves.easeOutCubic,
-        switchOutCurve: Curves.easeInCubic,
-        child: Container(
-          key: ValueKey(
-              '${contextData.comebackKind}:${contextData.lastActiveAt}'),
-          width: double.infinity,
-          margin: const EdgeInsets.fromLTRB(
-            DS.spacing16,
-            DS.spacing8,
-            DS.spacing16,
-            DS.spacing8,
-          ),
-          padding: const EdgeInsets.all(DS.spacing12),
-          decoration: BoxDecoration(
-            color: DS.surfacePrimary.withValues(alpha: 0.94),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
-              color: DS.primaryBase.withValues(alpha: 0.18),
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => _finishEntranceAnimation(),
+      child: Semantics(
+        container: true,
+        label: [title, body].where((text) => text.trim().isNotEmpty).join('. '),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 240),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          child: Container(
+            key: ValueKey(
+              '${contextData.comebackKind}:${contextData.lastActiveAt}',
             ),
-            boxShadow: [
-              BoxShadow(
-                color: DS.primaryBase.withValues(alpha: 0.08),
-                blurRadius: 16,
-                offset: const Offset(0, 8),
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(
+              DS.spacing16,
+              DS.spacing8,
+              DS.spacing16,
+              DS.spacing8,
+            ),
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              color: DS.surfacePrimary.withValues(alpha: 0.94),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: DS.primaryBase.withValues(alpha: 0.18),
               ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: DS.primaryBase.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
+              boxShadow: [
+                BoxShadow(
+                  color: DS.primaryBase.withValues(alpha: 0.08),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: DS.primaryBase.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.history_rounded,
+                        size: 18,
+                        color: DS.primaryBase,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.history_rounded,
-                      size: 18,
-                      color: DS.primaryBase,
-                    ),
-                  ),
-                  const SizedBox(width: DS.spacing10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          title,
-                          style:
-                              Theme.of(context).textTheme.titleSmall?.copyWith(
+                    const SizedBox(width: DS.spacing10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _staggered(
+                            index: 0,
+                            child: Text(
+                              title,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleSmall
+                                  ?.copyWith(
                                     color: DS.textPrimary,
                                     fontWeight: FontWeight.w700,
                                   ),
-                        ),
-                        if (body.isNotEmpty) ...[
-                          const SizedBox(height: DS.spacing4),
-                          Text(
-                            body,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                            ),
+                          ),
+                          if (body.isNotEmpty) ...[
+                            const SizedBox(height: DS.spacing4),
+                            _staggered(
+                              index: 1,
+                              child: Text(
+                                body,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
                                       color: DS.textSecondary,
                                       height: 1.36,
                                     ),
-                          ),
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ),
-                  if (onDismiss != null)
-                    IconButton(
-                      tooltip:
-                          MaterialLocalizations.of(context).closeButtonTooltip,
-                      onPressed: onDismiss,
-                      icon: Icon(
-                        Icons.close_rounded,
-                        color: DS.textSecondary,
                       ),
                     ),
-                ],
-              ),
-              if (items.isNotEmpty) ...[
-                const SizedBox(height: DS.spacing10),
-                Wrap(
-                  spacing: DS.spacing8,
-                  runSpacing: DS.spacing8,
-                  children: [
-                    for (final item in items)
-                      _ComebackItemChip(
-                        item: item,
-                        onTap: onItemSelected == null
-                            ? null
-                            : () => onItemSelected!(item),
+                    if (widget.onDismiss != null)
+                      IconButton(
+                        tooltip: MaterialLocalizations.of(context)
+                            .closeButtonTooltip,
+                        onPressed: widget.onDismiss,
+                        icon: Icon(
+                          Icons.close_rounded,
+                          color: DS.textSecondary,
+                        ),
                       ),
                   ],
                 ),
-              ],
-              const SizedBox(height: DS.spacing10),
-              Row(
-                children: [
-                  if (contextData.hasActiveCoreSession &&
-                      onResumeCoreSession != null)
-                    TextButton.icon(
-                      onPressed: onResumeCoreSession,
-                      icon: const Icon(Icons.play_arrow_rounded, size: 18),
-                      label: Text(context.l10n.taskActionResume),
+                if (items.isNotEmpty) ...[
+                  const SizedBox(height: DS.spacing10),
+                  _staggered(
+                    index: 2,
+                    child: Wrap(
+                      spacing: DS.spacing8,
+                      runSpacing: DS.spacing8,
+                      children: [
+                        for (final item in items)
+                          _ComebackItemChip(
+                            item: item,
+                            onTap: widget.onItemSelected == null
+                                ? null
+                                : () => widget.onItemSelected!(item),
+                          ),
+                      ],
                     ),
-                  const Spacer(),
-                  TextButton.icon(
-                    onPressed: onContinue,
-                    icon:
-                        const Icon(Icons.chat_bubble_outline_rounded, size: 18),
-                    label: Text(context.l10n.chatContinueInChat),
                   ),
                 ],
-              ),
-            ],
+                const SizedBox(height: DS.spacing10),
+                Row(
+                  children: [
+                    if (contextData.hasActiveCoreSession &&
+                        widget.onResumeCoreSession != null)
+                      TextButton.icon(
+                        onPressed: widget.onResumeCoreSession,
+                        icon: const Icon(Icons.play_arrow_rounded, size: 18),
+                        label: Text(context.l10n.taskActionResume),
+                      ),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: widget.onContinue,
+                      icon: const Icon(
+                        Icons.chat_bubble_outline_rounded,
+                        size: 18,
+                      ),
+                      label: Text(context.l10n.chatContinueInChat),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

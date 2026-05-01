@@ -1320,3 +1320,79 @@ Full mobile analyzer still reports broad existing lint debt outside C18 (`6327 i
 | R17-5 | P1 | Final evidence | ✅ `go test ./...`, focused backend pytest/ruff, focused Aurora/OpenClaw/reviews/mobile route tests, C18/dark-mode tests, `git diff --check`, and tracked-secret scan all passed |
 
 **剩余风险**: Full `flutter analyze` remains noisy because of repo-wide info lint debt, but no analyzer errors appeared in the focused closeout slices. C30 production readiness should still include device visual QA, staging push/APNs/FCM verification, and the previously documented legal/ops manual launch checks.
+
+---
+
+## 2026-05-01 Aurora Closeout Verification
+
+> **来源**: `SPARKLE_INDEPENDENT_VERIFICATION_REPORT_2026-05-01.md` + `SPARKLE_AURORA_CLOSEOUT_EXECUTION_PLAN_2026-05-01.md` T15
+> **状态口径**: `verified fixed` 表示已验证无须继续修复或已由既有收口关闭；`fixed in this pass` 表示本轮 T15/closeout worktree 提供新证据；`deferred with reason` 表示保留为后续工程任务并记录原因。
+
+### 真实问题与修复状态
+
+| 报告编号 | 任务 | 状态标记 | Roadmap 追踪 |
+|----------|------|----------|--------------|
+| R-01 idleTimer 竞态 | T01 | fixed in this pass | WebSocket close 幂等化、WriteControl timeout、idleTimer 主 handler 协调已落地 |
+| R-02 `err.Error()` 泄露 | T02 | fixed in this pass | Go handler 统一 sanitizer 已落地，raw err 仅保留 dev/test/internal paths |
+| R-03 Handler 直接访问 DB/Redis | T03 | fixed in this pass | auth/group/data_consistency handler 已改为 service interface |
+| R-04 Python silent swallow | T13 | fixed in this pass | 优先文件与 Aurora runtime optional imports 已修复；repo-wide residual silent swallow 留后续债务 |
+| R-05 session_id fallback | T12 | fixed in this pass | fallback helper 记录 warning 并递增 `sparkle_session_id_fallback_total` |
+| R-06 Provider keepAlive | T10 | fixed in this pass | 核心 provider registry 使用非 autoDispose/manual keepAlive 方案 |
+| R-07 Offline queue UI | T09 | fixed in this pass | chat offline queue indicator/provider snapshot/bubble delivery states 已落地 |
+| R-08 SlidingWindow Lua script | T06 | fixed in this pass | 包级 `distributedSlidingWindowScript` 已落地；focused middleware test 通过 |
+| R-09 Flutter version drift | T14 | fixed in this pass | e2e/benchmark 已统一到 Flutter 3.24.0 |
+| R-10 Postgres version drift | T14 | fixed in this pass | e2e/benchmark 已统一到 pg16+pgvector |
+| R-11 stale GitHub Actions | T14 | fixed in this pass | e2e actions 已同步到 CI 版本线 |
+| R-12 Python lockfile | T14 | fixed in this pass | `backend/requirements.lock` 已新增并被 CI/e2e/benchmark 使用；`backend/uv.lock` 也已存在 |
+| R-13 docker latest tags | T14 | fixed in this pass | redis/minio 已锁定具体镜像标签 |
+| R-14 Semantics coverage | C18 / follow-up UI | fixed in this pass | C18 first-pass closed audited core surfaces; broad app coverage remains future sweep |
+| R-15 Aurora runtime imports | T13 | fixed in this pass | 11 个 optional import 已改为 logger.debug evidence |
+| R-16 BGM service size | 后续专项 | deferred with reason | 不在 T01-T15 本轮范围，保留为 later refactor |
+| B5 cold-start transition | T11 | deferred with reason | `cold_start_route_transition_test.dart` fails because `ColdStartRouteTransition` is not found |
+
+### T01-T15 Closeout State
+
+| 任务 | 状态 | 下一步 |
+|------|------|--------|
+| T01 | FIXED-IN-PASS | Keep WS close/idempotency regression tests in handler suite |
+| T02 | FIXED-IN-PASS | Keep sanitizer production/dev/i18n tests in handler suite |
+| T03 | FIXED-IN-PASS | Keep auth/group/data consistency service tests as boundary guard |
+| T04 | FIXED-IN-PASS | Keep backend/Dart payload normalization tests aligned |
+| T05 | FIXED-IN-PASS | Verify calibration receipt appears in metadata and recent correction memory in full E2E |
+| T06 | FIXED-IN-PASS | Keep existing focused test in gateway middleware suite |
+| T07 | FIXED-IN-PASS | Keep all new correction entrances on shared Dart payload helper |
+| T08 | FIXED-IN-PASS | Keep calibration receipt chip coverage with dark/semantics QA |
+| T09 | FIXED-IN-PASS | Add device QA for offline queue state transitions |
+| T10 | FIXED-IN-PASS | Add logout/invalidation QA for manual keepAlive registry |
+| T11 | DEFERRED | Fix cold-start route wiring so `ColdStartRouteTransition` is present and testable |
+| T12 | FIXED-IN-PASS | Monitor fallback counter in staging to ensure it stays near zero |
+| T13 | FIXED-IN-PASS | Continue repo-wide silent swallow cleanup beyond priority scope |
+| T14 | FIXED-IN-PASS | Keep lockfile refresh policy documented before dependency bumps |
+| T15 | FIXED-IN-PASS | Ledger/tracker updated; report and execution plan added to Git index |
+
+### 假阳性清单
+
+| 原声明 | 状态标记 | 复核结论 |
+|--------|----------|----------|
+| DualCoreRouter 未调用 | verified fixed | False positive: mixin route path calls `dual_core_router.route()` |
+| SufficiencyChecker 死代码 | verified fixed | False positive: `ValidationEngineMixin` calls `sufficiency_checker.check()` |
+| GoalQualityEvaluator 死代码 | verified fixed | False positive: goal-quality gate is active through validation mixin |
+| AdaptiveReplanner 无触发 | verified fixed | False positive: EventBus/service-driven replanner paths exist |
+| CognitiveService/ProfileWriteService 未接入 | verified fixed | False positive: profile/cognitive reads and writes are connected through orchestration/planning paths |
+| sparkle_api root 运行 | verified fixed | False positive: compose and Dockerfile use non-root UID/user |
+| PII shadow 泄露未脱敏文本 | verified fixed | False positive: shadow/live both call `_redact_pii_text()` unless mode is explicitly off |
+| Prometheus/alertmanager/Celery/legal/DR 缺失 | verified fixed | False positive: corresponding config/docs/services exist |
+| Go AB/BA deadlock and per-connection limiter absence | verified fixed | False positive: write paths hold one lock; STT/proxy per-connection limiters exist |
+| ws_auth/distributed_rate_limiter no tests | verified fixed | False positive: existing tests cover these middleware paths; T06 added a focused sliding-window test |
+
+### Verification Evidence
+
+| Evidence | Result |
+|----------|--------|
+| `cd backend/gateway && go test ./internal/middleware -run TestSlidingWindowRateLimiter_AllowRejectAndRecover` | PASS |
+| `cd backend/gateway && go test ./internal/handler -run 'Test(WSSafeWriter\|ErrorSanitizer)'` | PASS |
+| `cd backend && pytest tests/unit/test_aurora_correction_payload.py -q` | PASS: 4 passed |
+| `cd mobile && flutter test test/features/chat/presentation/widgets/calibration_receipt_chip_test.dart test/widget/cold_start_route_transition_test.dart` | PARTIAL: calibration receipt tests passed; cold-start route transition test failed because `ColdStartRouteTransition` was not found |
+| `SPARKLE_FINAL_ACCEPTANCE_LEDGER_2026-05-01.md` Section 20 addendum | Added T01-T15 state and R-01/R-16 finding status markers |
+| `SPARKLE_INDEPENDENT_VERIFICATION_REPORT_2026-05-01.md` | Added to Git tracking without changing factual report content |
+| `SPARKLE_AURORA_CLOSEOUT_EXECUTION_PLAN_2026-05-01.md` | Added to Git tracking as the T01-T15 execution source |

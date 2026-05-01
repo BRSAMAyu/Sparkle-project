@@ -249,7 +249,10 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
         InAppNotificationOverlay(
           child: ResponsiveScaffold(
             title: 'Sparkle',
-            body: widget.navigationShell,
+            body: _ShellBranchTransition(
+              currentIndex: widget.navigationShell.currentIndex,
+              child: widget.navigationShell,
+            ),
             destinations: destinations,
             currentIndex: widget.navigationShell.currentIndex,
             onDestinationSelected: _handleDestinationSelected,
@@ -297,5 +300,41 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   void dispose() {
     unawaited(_communityEventsSub?.cancel());
     super.dispose();
+  }
+}
+
+class _ShellBranchTransition extends StatelessWidget {
+  const _ShellBranchTransition({
+    required this.currentIndex,
+    required this.child,
+  });
+
+  final int currentIndex;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    if (context.reduceMotion) {
+      return child;
+    }
+
+    final entersChat = currentIndex == 2;
+    return TweenAnimationBuilder<double>(
+      key: ValueKey<int>(currentIndex),
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 240),
+      curve: Curves.easeOutCubic,
+      child: child,
+      builder: (context, value, child) {
+        final slide = (1 - value) * (entersChat ? 18 : -10);
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(slide, 0),
+            child: child,
+          ),
+        );
+      },
+    );
   }
 }

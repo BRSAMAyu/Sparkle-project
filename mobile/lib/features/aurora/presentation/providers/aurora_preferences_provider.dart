@@ -2,8 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 
-final auroraPreferencesProvider = AsyncNotifierProvider<
-    AuroraPreferencesNotifier, AuroraPreferences>(
+/// Core keepAlive provider: preferences are small user-scoped state and should
+/// remain cached across tab switches.
+final auroraPreferencesProvider =
+    AsyncNotifierProvider<AuroraPreferencesNotifier, AuroraPreferences>(
   AuroraPreferencesNotifier.new,
 );
 

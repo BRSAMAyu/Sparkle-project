@@ -19216,6 +19216,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auroraCorrectionApplied => 'Last correction is active';
 
   @override
+  String get calibrationReceiptExpand => 'Show calibration details';
+
+  @override
+  String get calibrationReceiptCollapse => 'Hide calibration details';
+
+  @override
+  String get calibrationReceiptDismiss => 'Hide this calibration receipt';
+
+  @override
+  String get calibrationReceiptWhatChanged => 'What changed';
+
+  @override
+  String get calibrationReceiptWhyChanged => 'Why it changed';
+
+  @override
+  String get calibrationReceiptNextTime => 'Next time';
+
+  @override
   String get auroraCorrectionInputTitle => 'What should Aurora know?';
 
   @override

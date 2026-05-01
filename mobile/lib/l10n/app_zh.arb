@@ -1942,6 +1942,44 @@
   "chatRecalledSelf": "你撤回了一条消息",
   "chatRecalledPeer": "对方撤回了一条消息",
   "chatRead": "已读",
+  "chatOfflineQueuePending": "{count} 条消息等待发送",
+  "@chatOfflineQueuePending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatOfflineQueueSending": "正在发送 {count} 条排队消息...",
+  "@chatOfflineQueueSending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatOfflineQueueComplete": "已全部发送",
+  "chatOfflineQueuePendingSemantic": "离线队列中有 {count} 条消息等待发送",
+  "@chatOfflineQueuePendingSemantic": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatOfflineQueueSendingSemantic": "网络已恢复，正在发送 {count} 条排队消息",
+  "@chatOfflineQueueSendingSemantic": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatOfflineQueueCompleteSemantic": "排队消息已全部发送",
+  "chatMessageQueued": "等待发送",
+  "chatMessageSending": "正在发送",
+  "chatMessageSendFailed": "发送失败",
+  "chatMessageRetrySend": "重试",
   "chatAgentNavigator": "星图导航",
   "chatAgentExamStrategist": "考试策略师",
   "chatAgentTimeCoach": "时间教练",
@@ -8249,6 +8287,12 @@
   "auroraCorrectionReceivedTitle": "已收到",
   "auroraCorrectionReceivedSubtitle": "Aurora 正在更新理解",
   "auroraCorrectionApplied": "上次纠正已生效",
+  "calibrationReceiptExpand": "展开校准回执详情",
+  "calibrationReceiptCollapse": "收起校准回执详情",
+  "calibrationReceiptDismiss": "隐藏这条校准回执",
+  "calibrationReceiptWhatChanged": "调整了什么",
+  "calibrationReceiptWhyChanged": "为什么调整",
+  "calibrationReceiptNextTime": "下次会怎样",
   "auroraCorrectionInputTitle": "想让 Aurora 知道什么？",
   "auroraCorrectionInputHint": "哪里判断错了？说说你的纠正…",
   "auroraCorrectionInputCancel": "取消",

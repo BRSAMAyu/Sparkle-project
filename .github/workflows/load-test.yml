@@ -24,7 +24,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: sparkle
           POSTGRES_PASSWORD: sparkle
@@ -55,14 +55,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install Locust
-        run: pip install locust
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.lock
 
       - name: Install backend dependencies
         run: |
           cd backend
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          pip install -r requirements.lock
 
       - name: Start backend services
         run: |
@@ -102,7 +102,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: sparkle
           POSTGRES_PASSWORD: sparkle
@@ -133,11 +133,14 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.lock
 
       - name: Install backend dependencies
         run: |
           cd backend
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          pip install -r requirements.lock
 
       - name: Start backend services
         run: |

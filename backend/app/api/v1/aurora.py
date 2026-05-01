@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_superuser, get_current_user, get_db
+from app.aurora.correction_types import AuroraCorrectionPayload
 from app.aurora.core_session import AuroraCoreSessionService
 from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
 from app.aurora.runtime_v1.state import AuroraEnergyStore
@@ -98,6 +99,9 @@ class ChipSelectedTelemetryRequest(BaseModel):
     chip_id: str
     telemetry_id: str
     semantic_value: str
+    label: str = ""
+    surface: str = ""
+    source: str = ""
     is_freeform: bool = False
     is_disconfirming: bool = False
     context_source: str = ""
@@ -106,6 +110,23 @@ class ChipSelectedTelemetryRequest(BaseModel):
     session_id: str | None = None
     group_id: str = ""
     freeform_text: str = ""
+
+
+class AuroraCorrectionRequest(BaseModel):
+    surface: str = "chat"
+    source: str = "predicted_chip"
+    semantic_value: str = "freeform_correction"
+    label: str = ""
+    freeform_text: str = ""
+    is_freeform: bool = False
+    is_disconfirming: bool = False
+    band_status: str = ""
+    telemetry_id: str = ""
+    group_id: str = ""
+    conversation_id: str = ""
+    message_id: str = ""
+    type: str | None = None
+    context_source: str = ""
 
 
 # ── Existing endpoints ─────────────────────────────────────────────────────────
@@ -273,8 +294,8 @@ async def start_core_session(
     energy_store = AuroraEnergyStore(cache_service.redis)
     try:
         await energy_store.record_l3_session(current_user.id)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Failed to record Aurora L3 session start: %s", exc, exc_info=True)
 
     return session.to_dict()
 
@@ -455,32 +476,26 @@ async def record_chip_selected(
     import time
 
     correction_result = None
+    correction_payload = AuroraCorrectionPayload.normalize(payload.model_dump())
 
     if redis is not None:
         telemetry_key = f"aurora:chip_telemetry:{current_user.id}"
         record = {
             "chip_id": payload.chip_id,
-            "telemetry_id": payload.telemetry_id,
-            "semantic_value": payload.semantic_value,
-            "is_freeform": payload.is_freeform,
-            "is_disconfirming": payload.is_disconfirming,
+            **correction_payload.to_dict(),
             "context_source": payload.context_source,
-            "band_status": payload.band_status,
-            "conversation_id": payload.conversation_id,
             "session_id": payload.session_id,
-            "group_id": payload.group_id,
-            "freeform_text": payload.freeform_text,
             "ts": time.time(),
         }
         try:
             await redis.lpush(telemetry_key, _json.dumps(record, ensure_ascii=False))
             await redis.ltrim(telemetry_key, 0, 199)
             await redis.expire(telemetry_key, 7 * 24 * 3600)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to persist Aurora chip telemetry: %s", exc, exc_info=True)
 
         # T3.3.2-T3.3.3: Correction feedback loop
-        if payload.is_disconfirming or payload.is_freeform:
+        if correction_payload.is_disconfirming or correction_payload.is_freeform:
             try:
                 from contextlib import asynccontextmanager
 
@@ -493,12 +508,13 @@ async def record_chip_selected(
                 processor = CorrectionFeedbackProcessor(redis, _db_session)
                 correction_result = await processor.process(
                     user_id=str(current_user.id),
-                    semantic_value=payload.semantic_value,
-                    is_disconfirming=payload.is_disconfirming,
-                    is_freeform=payload.is_freeform,
-                    freeform_text=payload.freeform_text,
-                    telemetry_id=payload.telemetry_id,
+                    semantic_value=correction_payload.semantic_value,
+                    is_disconfirming=correction_payload.is_disconfirming,
+                    is_freeform=correction_payload.is_freeform,
+                    freeform_text=correction_payload.freeform_text,
+                    telemetry_id=correction_payload.telemetry_id,
                     context_source=payload.context_source,
+                    correction_payload=correction_payload,
                 )
                 if correction_result.user_visible_effect:
                     effect_key = f"aurora:last_correction_effect:{current_user.id}"
@@ -509,12 +525,76 @@ async def record_chip_selected(
                     try:
                         await redis.set(effect_key, effect_payload)
                         await redis.expire(effect_key, 24 * 3600)
-                    except Exception:
-                        logger.debug("Failed to persist Aurora correction effect", exc_info=True)
-            except Exception:
-                logger.exception("Correction feedback processing failed")
+                    except Exception as exc:
+                        logger.debug("Failed to persist Aurora correction effect: %s", exc, exc_info=True)
+            except Exception as exc:
+                logger.exception("Correction feedback processing failed: %s", exc)
 
-    response = {"recorded": True, "semantic_value": payload.semantic_value}
+    response = {"recorded": True, "semantic_value": correction_payload.semantic_value}
+    if correction_result is not None:
+        response["correction_result"] = correction_result.to_dict()
+    return response
+
+
+# route-tier: authed
+@router.post("/correction")
+async def record_aurora_correction(
+    payload: AuroraCorrectionRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, Any]:
+    """Accept the unified Aurora correction payload from any product surface."""
+    redis = cache_service.redis
+    correction_payload = AuroraCorrectionPayload.normalize(payload.model_dump())
+    correction_result = None
+
+    if redis is not None:
+        import json as _json
+        import time
+        from contextlib import asynccontextmanager
+
+        telemetry_key = f"aurora:correction_telemetry:{current_user.id}"
+        try:
+            await redis.lpush(
+                telemetry_key,
+                _json.dumps({**correction_payload.to_dict(), "ts": time.time()}, ensure_ascii=False),
+            )
+            await redis.ltrim(telemetry_key, 0, 199)
+            await redis.expire(telemetry_key, 7 * 24 * 3600)
+        except Exception:
+            logger.debug("Failed to persist Aurora correction telemetry", exc_info=True)
+
+        try:
+            from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
+
+            @asynccontextmanager
+            async def _db_session():
+                yield db
+
+            processor = CorrectionFeedbackProcessor(redis, _db_session)
+            correction_result = await processor.process(
+                user_id=str(current_user.id),
+                semantic_value=correction_payload.semantic_value,
+                is_disconfirming=correction_payload.is_disconfirming,
+                is_freeform=correction_payload.is_freeform,
+                freeform_text=correction_payload.freeform_text,
+                telemetry_id=correction_payload.telemetry_id,
+                context_source=payload.context_source,
+                correction_payload=correction_payload,
+            )
+            if correction_result.user_visible_effect:
+                await redis.set(
+                    f"aurora:last_correction_effect:{current_user.id}",
+                    _json.dumps(correction_result.user_visible_effect, ensure_ascii=False),
+                )
+                await redis.expire(f"aurora:last_correction_effect:{current_user.id}", 24 * 3600)
+        except Exception:
+            logger.exception("Unified Aurora correction processing failed")
+
+    response = {
+        "recorded": True,
+        "correction_payload": correction_payload.to_dict(),
+    }
     if correction_result is not None:
         response["correction_result"] = correction_result.to_dict()
     return response
@@ -659,8 +739,8 @@ async def get_causal_timeline(
             outcome = await recorder.get_outcome_for_trace(trace.trace_id)
             if outcome:
                 outcome_data = outcome.to_dict()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to load outcome for causal timeline trace %s: %s", trace.trace_id, exc, exc_info=True)
 
         # Human-readable event summary
         event_parts = []
@@ -685,8 +765,8 @@ async def get_causal_timeline(
             )
             if card:
                 card_data = card.to_dict()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to render causal timeline card for trace %s: %s", trace.trace_id, exc, exc_info=True)
 
         entries.append(
             CausalTimelineEntry(
@@ -813,8 +893,13 @@ async def correct_timeline_card(
                 reason=request.user_explanation or "user_corrected_timeline_card",
                 source="timeline_card",
             )
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(
+                "Failed to record timeline card correction for card %s: %s",
+                request.card_id,
+                exc,
+                exc_info=True,
+            )
 
     elif request.action == "confirm":
         await spine.metrics.record_outcome_recorded(effective=True)
@@ -871,7 +956,8 @@ async def get_spine_goals(
                 "rationale": arbitration.rationale,
             },
         }
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to load Spine goal arbitration for user %s: %s", current_user.id, exc, exc_info=True)
         return {"goals": [], "arbitration": None, "active": False}
 
 
@@ -929,7 +1015,8 @@ async def get_goal_graph(
                 focus_ids={s["node_id"] for s in (suggestions or [])},
             ),
         }
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to load Spine goal graph %s for user %s: %s", goal_id, current_user.id, exc, exc_info=True)
         return {"active": False, "nodes": [], "edges": []}
 
 

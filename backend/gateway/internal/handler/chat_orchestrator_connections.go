@@ -4,6 +4,35 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type wsReadResult struct {
+	messageType int
+	message     []byte
+	err         error
+}
+
+func readWSMessages(conn *websocket.Conn, connDone <-chan struct{}) <-chan wsReadResult {
+	readResults := make(chan wsReadResult)
+	go func() {
+		defer close(readResults)
+		for {
+			messageType, message, err := conn.ReadMessage()
+			select {
+			case readResults <- wsReadResult{
+				messageType: messageType,
+				message:     message,
+				err:         err,
+			}:
+			case <-connDone:
+				return
+			}
+			if err != nil {
+				return
+			}
+		}
+	}()
+	return readResults
+}
+
 func (h *ChatOrchestrator) registerConnection(userID string, conn *websocket.Conn, writer *wsSafeWriter) bool {
 	if h.IsDraining() {
 		return false

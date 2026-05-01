@@ -112,6 +112,50 @@ func TestRateLimiter_BurstExhaustion(t *testing.T) {
 	}
 }
 
+func TestSlidingWindowRateLimiter_AllowRejectAndRecover(t *testing.T) {
+	t.Parallel()
+
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() {
+		_ = rdb.Close()
+	})
+
+	limiter := NewSlidingWindowRateLimiter(rdb, 20*time.Millisecond, 2, "ratelimit-test")
+	ctx := context.Background()
+
+	tests := []struct {
+		name              string
+		waitBeforeRequest time.Duration
+		wantAllowed       bool
+		wantRemaining     int
+	}{
+		{name: "first request allowed", wantAllowed: true, wantRemaining: 1},
+		{name: "second request allowed", wantAllowed: true, wantRemaining: 0},
+		{name: "third request rejected", wantAllowed: false, wantRemaining: 0},
+		{name: "request after window allowed", waitBeforeRequest: 30 * time.Millisecond, wantAllowed: true, wantRemaining: 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.waitBeforeRequest > 0 {
+				time.Sleep(tt.waitBeforeRequest)
+			}
+
+			allowed, remaining, err := limiter.Allow(ctx, "sliding")
+			if err != nil {
+				t.Fatalf("Allow(): %v", err)
+			}
+			if allowed != tt.wantAllowed {
+				t.Fatalf("allowed = %v, want %v", allowed, tt.wantAllowed)
+			}
+			if remaining != tt.wantRemaining {
+				t.Fatalf("remaining = %d, want %d", remaining, tt.wantRemaining)
+			}
+		})
+	}
+}
+
 func TestHybridRateLimitMiddleware_RedisAllowAndReject(t *testing.T) {
 	limiter, _ := newDistributedRateLimiterForTest(t, 1, 1, 1)
 	localRL := NewRateLimiterWithCleanup(rate.Limit(100), 100, time.Minute)

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/models/aurora_correction_payload.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
 
 /// Contextual correction buttons shown after AI responses.
@@ -18,7 +19,12 @@ class ContextualCorrectionBar extends StatefulWidget {
     this.onNotRightDirection,
     this.onMakeShorter,
     this.onGivePractice,
+    this.onSendCorrectionPayload,
     this.predictedReplyGroups,
+    this.correctionSurface = AuroraCorrectionSurface.chat,
+    this.bandStatus = '',
+    this.conversationId,
+    this.messageId,
     this.visible = true,
     super.key,
   });
@@ -32,12 +38,20 @@ class ContextualCorrectionBar extends StatefulWidget {
   /// The consumer is expected to record telemetry and send the correction
   /// with structured Aurora context rather than plain text.
   final FutureOr<void> Function(
-      AuroraPredictedReplyOption option, String groupId)? onSendCorrection;
+    AuroraPredictedReplyOption option,
+    String groupId,
+  )? onSendCorrection;
+  final FutureOr<void> Function(AuroraCorrectionPayload payload)?
+      onSendCorrectionPayload;
   final FutureOr<void> Function()? onFreeformCorrectionRequested;
 
   /// Predicted reply groups from Aurora backend. If non-empty, used instead
   /// of the static fallback chips.
   final List<AuroraPredictedReplyGroup>? predictedReplyGroups;
+  final AuroraCorrectionSurface correctionSurface;
+  final String bandStatus;
+  final String? conversationId;
+  final String? messageId;
 
   final bool visible;
 
@@ -140,6 +154,22 @@ class _ContextualCorrectionBarState extends State<ContextualCorrectionBar> {
       return;
     }
     _showAcknowledgement(presentation.label);
+    final payload = AuroraCorrectionPayload.chip(
+      surface: widget.correctionSurface,
+      semanticValue: option.semanticValue,
+      label: presentation.label,
+      isDisconfirming: option.isDisconfirming,
+      bandStatus: widget.bandStatus,
+      telemetryId: option.telemetryId,
+      groupId: groupId,
+      conversationId: widget.conversationId ?? '',
+      messageId: widget.messageId ?? '',
+    );
+    final payloadHandler = widget.onSendCorrectionPayload;
+    if (payloadHandler != null) {
+      unawaited(Future<void>.sync(() => payloadHandler(payload)));
+      return;
+    }
     final handler = widget.onSendCorrection;
     if (handler != null) {
       unawaited(Future<void>.sync(() => handler(option, groupId)));

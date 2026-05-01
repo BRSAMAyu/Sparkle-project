@@ -291,7 +291,7 @@ services:
       start_period: 30s
 
   db:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: sparkle_db
     restart: unless-stopped
     environment:
@@ -304,7 +304,7 @@ services:
       - app
 
   redis:
-    image: redis/redis-stack-server:latest
+    image: redis/redis-stack-server:7.4.0-v8
     container_name: sparkle_redis
     restart: unless-stopped
     environment:
@@ -316,7 +316,7 @@ services:
       - app
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: sparkle_minio
     command: server /data --console-address ":9001"
     restart: unless-stopped

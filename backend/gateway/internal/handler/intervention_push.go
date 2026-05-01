@@ -79,7 +79,9 @@ func (h *InterventionPushHandler) HandlePush(c *gin.Context) {
 	}
 
 	if err := h.orchestrator.PushIntervention(req.UserID, msg); err != nil {
-		c.JSON(http.StatusAccepted, gin.H{"status": "queued", "error": err.Error()})
+		payload := sanitizeErrorPayload(c, http.StatusAccepted, err, "intervention_push.push_intervention")
+		payload["status"] = "queued"
+		c.JSON(http.StatusAccepted, payload)
 		return
 	}
 

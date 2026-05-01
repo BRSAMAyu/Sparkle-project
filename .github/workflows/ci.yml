@@ -49,7 +49,9 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install Python Lint Tools
-        run: pip install ruff mypy
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.lock
 
       - name: Install quality gate runtime deps
         run: sudo apt-get update && sudo apt-get install -y ripgrep
@@ -97,7 +99,7 @@ jobs:
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
+          pip install -r backend/requirements.lock
 
       - name: Install Guard Runtime Deps
         run: sudo apt-get update && sudo apt-get install -y ripgrep
@@ -184,15 +186,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.lock') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-          pip install pytest pytest-cov pytest-asyncio httpx
+          pip install -r backend/requirements.lock
 
       - name: Python Test with Coverage
         env:
@@ -271,8 +272,7 @@ jobs:
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
-          pip install pytest pytest-asyncio httpx
+          pip install -r backend/requirements.lock
 
       - name: Run Stage35 Journey Smoke
         run: bash scripts/journey_smoke.sh all
@@ -359,7 +359,7 @@ jobs:
       - name: Python Safety Check
         run: |
           pip install safety
-          safety check -r backend/requirements.txt --full-report
+          safety check -r backend/requirements.lock --full-report
 
   # ==================== JOB 5: DB SCHEMA CHECK ====================
   db-schema-check:
@@ -368,7 +368,7 @@ jobs:
     needs: lint
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: password
@@ -399,7 +399,7 @@ jobs:
       - name: Install Python Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r backend/requirements.txt
+          pip install -r backend/requirements.lock
 
       - name: Install PostgreSQL Client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client

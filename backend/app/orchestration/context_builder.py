@@ -554,7 +554,7 @@ class ContextBuilderMixin:
         db_session: AsyncSession,
     ) -> dict[str, Any]:
         user_uuid = uuid.UUID(user_id)
-        memory_service = MemoryService(db_session)
+        memory_service = MemoryService(db_session, self.redis)
 
         active_goal_rows = await PlanService.list_active(db_session, user_uuid, limit=3)
         active_goals = [
@@ -576,10 +576,16 @@ class ContextBuilderMixin:
         if isinstance(last_mood, dict) and last_mood:
             payload["last_session_mood"] = last_mood
 
+        recent_corrections = await memory_service.list_recent_calibration_receipts(user_uuid, limit=3)
+        if recent_corrections:
+            payload["recent_corrections"] = recent_corrections
+
         cognitive_context = payload.get("cognitive_context")
         if isinstance(cognitive_context, dict):
             cognitive_context["active_goals"] = active_goals
             cognitive_context["episodic_memories"] = episodic_memories
+            if recent_corrections:
+                cognitive_context["recent_corrections"] = recent_corrections
         return payload
 
     # ------------------------------------------------------------------

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sensory_navigation_observer.dart';
 import 'package:sparkle/core/navigation/shell_navigation.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
@@ -124,8 +125,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       // Root shell route for tab navigation
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) => MainNavigationShell(
-          navigationShell: navigationShell,
+        pageBuilder: (context, state, navigationShell) =>
+            buildColdStartTransitionPage(
+          state: state,
+          child: MainNavigationShell(
+            navigationShell: navigationShell,
+          ),
         ),
         branches: [
           // Branch 0: Home / Dashboard
@@ -228,8 +233,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         state.uri.queryParameters['related_error_count']!,
                       ),
                   };
-                  return NoTransitionPage<void>(
-                    key: state.pageKey,
+                  return buildColdStartTransitionPage(
+                    state: state,
                     child: SceneAudioScope(
                       policy: ExperienceProfiles.assistantFlow.audioPolicy(),
                       child: ChatScreen(

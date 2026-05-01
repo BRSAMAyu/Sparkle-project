@@ -75,6 +75,29 @@ var distributedTokenBucketScript = redis.NewScript(`
 	return {allowed, tostring(remaining)}
 `)
 
+var distributedSlidingWindowScript = redis.NewScript(`
+	local key = KEYS[1]
+	local now = tonumber(ARGV[1])
+	local window_start = tonumber(ARGV[2])
+	local limit = tonumber(ARGV[3])
+	local window_ms = tonumber(ARGV[4])
+
+	-- Remove expired entries
+	redis.call('ZREMRANGEBYSCORE', key, '-inf', window_start)
+
+	-- Count current entries
+	local count = redis.call('ZCARD', key)
+
+	if count < limit then
+		-- Add new entry with unique score
+		redis.call('ZADD', key, now, now .. '-' .. math.random())
+		redis.call('PEXPIRE', key, window_ms)
+		return {1, limit - count - 1}
+	end
+
+	return {0, 0}
+`)
+
 // DistributedRateLimiter implements Token Bucket algorithm using Redis
 // This ensures rate limiting works across multiple gateway instances
 type DistributedRateLimiter struct {
@@ -231,32 +254,8 @@ func (s *SlidingWindowRateLimiter) Allow(ctx context.Context, key string) (bool,
 	now := float64(time.Now().UnixMilli())
 	windowStart := now - float64(s.window.Milliseconds())
 
-	// Sliding Window Lua script using sorted sets
 	// Returns: [allowed (0/1), remaining]
-	script := redis.NewScript(`
-		local key = KEYS[1]
-		local now = tonumber(ARGV[1])
-		local window_start = tonumber(ARGV[2])
-		local limit = tonumber(ARGV[3])
-		local window_ms = tonumber(ARGV[4])
-
-		-- Remove expired entries
-		redis.call('ZREMRANGEBYSCORE', key, '-inf', window_start)
-
-		-- Count current entries
-		local count = redis.call('ZCARD', key)
-
-		if count < limit then
-			-- Add new entry with unique score
-			redis.call('ZADD', key, now, now .. '-' .. math.random())
-			redis.call('PEXPIRE', key, window_ms)
-			return {1, limit - count - 1}
-		end
-
-		return {0, 0}
-	`)
-
-	result, err := script.Run(ctx, s.rdb, []string{fullKey},
+	result, err := distributedSlidingWindowScript.Run(ctx, s.rdb, []string{fullKey},
 		now, windowStart, s.limit, int64(s.window.Milliseconds())).Slice()
 	if err != nil {
 		return false, 0, fmt.Errorf("redis script execution failed: %w", err)

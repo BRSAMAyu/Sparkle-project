@@ -58,6 +58,14 @@
         "create_token_failed": "Failed to issue token",
         "create_refresh_token_failed": "Failed to issue refresh token"
     },
+    "errors": {
+        "generic": "Something went wrong. Please try again later.",
+        "bad_request": "We could not process that request. Please check and try again.",
+        "unauthorized": "Authentication failed. Please sign in again.",
+        "forbidden": "You do not have permission to perform this action.",
+        "not_found": "The requested resource could not be found.",
+        "upstream": "The service is temporarily unavailable. Please try again later."
+    },
     "ratelimit": {
         "exceeded": "Too many requests, please try again later",
         "endpoint_exceeded": "Too many requests to this endpoint, please try again later",

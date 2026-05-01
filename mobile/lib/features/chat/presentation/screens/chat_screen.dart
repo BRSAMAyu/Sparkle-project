@@ -13,6 +13,9 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/offline/models/offline_chat_message.dart';
+import 'package:sparkle/core/offline/offline_providers.dart';
+import 'package:sparkle/core/models/aurora_correction_payload.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
@@ -45,6 +48,7 @@ import 'package:sparkle/features/chat/presentation/widgets/chat_mode_transition_
 import 'package:sparkle/features/chat/presentation/widgets/chat_prediction_dock.dart';
 import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
 import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.dart';
+import 'package:sparkle/features/chat/presentation/widgets/offline_queue_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/community_insight_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/goal_arbitration_card.dart';
@@ -344,6 +348,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  Map<String, dynamic>? _normalizeInitialExtraContext(
+    Map<String, dynamic>? context,
+  ) {
+    if (context == null || context.isEmpty) {
+      return context;
+    }
+    final normalized = Map<String, dynamic>.from(context);
+    final rawCorrection = normalized['aurora_correction'];
+    if (rawCorrection is Map) {
+      final chatState = ref.read(chatProvider);
+      final payload = AuroraCorrectionPayload.fromJson(
+        Map<String, dynamic>.from(rawCorrection),
+      );
+      final conversationId = payload.conversationId.trim().isNotEmpty
+          ? payload.conversationId
+          : chatState.conversationId ?? '';
+      normalized['aurora_correction'] = payload
+          .copyWith(
+            conversationId: conversationId,
+            messageId: payload.messageId.trim().isNotEmpty
+                ? payload.messageId
+                : _latestAssistantMessageId(),
+          )
+          .toJson();
+    }
+    return normalized;
+  }
+
+  String _latestAssistantMessageId() {
+    for (final message in ref.read(chatProvider).messages.reversed) {
+      if (message.role == MessageRole.assistant && message.id.isNotEmpty) {
+        return message.id;
+      }
+    }
+    return '';
+  }
+
   double _normalizeReviewNodeMastery(num mastery) {
     final value = mastery.toDouble();
     final normalized = value > 1 ? value / 100 : value;
@@ -403,7 +444,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return;
       }
       _dispatchedInitialUserMessage = nextMsg;
-      final overrides = <String, dynamic>{...?widget.initialExtraContext};
+      final overrides = <String, dynamic>{
+        ...?_normalizeInitialExtraContext(widget.initialExtraContext),
+      };
       if (widget.fromModelingComplete) {
         overrides['from_modeling_complete'] = true;
       }
@@ -874,18 +917,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           semanticValue: 'freeform_correction',
           action: 'freeform_correction',
         );
+    final payload = AuroraCorrectionPayload.freeform(
+      surface: AuroraCorrectionSurface.chat,
+      semanticValue: 'freeform_correction',
+      label: trimmed,
+      freeformText: trimmed,
+      isDisconfirming: true,
+      bandStatus: snapshot?.overallStatus ?? 'needs_confirm',
+      conversationId: chatState.conversationId ?? '',
+      messageId: _latestAssistantMessageId(),
+    );
     unawaited(
       ref.read(chatProvider.notifier).sendMessage(
         trimmed,
         extraContextOverrides: {
-          'aurora_correction': {
-            'type': 'freeform',
-            'semantic_value': 'freeform_correction',
-            'is_disconfirming': true,
-            'is_freeform': true,
-            'freeform_text': trimmed,
-            'band_status': snapshot?.overallStatus ?? 'needs_confirm',
-          },
+          'aurora_correction': payload.toJson(),
         },
       ),
     );
@@ -986,7 +1032,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
       await ref.read(chatProvider.notifier).sendMessage(
             nextPrompt,
-            extraContextOverrides: widget.initialExtraContext,
+            extraContextOverrides:
+                _normalizeInitialExtraContext(widget.initialExtraContext),
           );
     });
   }
@@ -1022,6 +1069,64 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  Map<String, ChatBubbleDeliveryStatus> _offlineDeliveryStatusesByMessageId(
+    List<ChatMessageModel> messages,
+    List<OfflineQueueEntry> queueEntries,
+  ) {
+    if (queueEntries.isEmpty) {
+      return const <String, ChatBubbleDeliveryStatus>{};
+    }
+
+    final statuses = <String, ChatBubbleDeliveryStatus>{};
+    final unmatchedEntries = List<OfflineQueueEntry>.from(queueEntries);
+    for (final message in messages) {
+      if (message.role != MessageRole.user) {
+        continue;
+      }
+      final requestId =
+          message.rawMetadata?['offline_request_id']?.toString() ?? message.id;
+      final exactIndex = unmatchedEntries.indexWhere(
+        (entry) => entry.requestId == requestId,
+      );
+      var matchIndex = exactIndex;
+      if (matchIndex < 0) {
+        matchIndex = unmatchedEntries.indexWhere(
+          (entry) =>
+              entry.message == message.content &&
+              (entry.sessionId == message.conversationId ||
+                  entry.sessionId.isEmpty ||
+                  message.conversationId == 'temp_conversation') &&
+              entry.createdAt
+                      .difference(message.createdAt)
+                      .inMilliseconds
+                      .abs() <
+                  const Duration(minutes: 10).inMilliseconds,
+        );
+      }
+      if (matchIndex < 0) {
+        continue;
+      }
+      final entry = unmatchedEntries.removeAt(matchIndex);
+      statuses[message.id] = _chatDeliveryStatusFor(entry.status);
+    }
+    return statuses;
+  }
+
+  ChatBubbleDeliveryStatus _chatDeliveryStatusFor(
+    OfflineMessageStatus status,
+  ) {
+    switch (status) {
+      case OfflineMessageStatus.pending:
+        return ChatBubbleDeliveryStatus.queued;
+      case OfflineMessageStatus.sent:
+        return ChatBubbleDeliveryStatus.sending;
+      case OfflineMessageStatus.failed:
+        return ChatBubbleDeliveryStatus.failed;
+      case OfflineMessageStatus.acked:
+        return ChatBubbleDeliveryStatus.normal;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const experience = ExperienceProfiles.assistantFlow;
@@ -1043,6 +1148,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         (openClawConnection.config.isConfigured &&
             !openClawConnection.isConnected);
     final showStreamingBubble = chatState.shouldShowStreamingBubble;
+    final offlineUserId =
+        ref.watch(offlineQueueCurrentUserIdProvider).valueOrNull;
+    final offlineSnapshot = offlineUserId == null
+        ? OfflineQueueSnapshot.empty
+        : ref.watch(offlineQueueSnapshotProvider(offlineUserId)).valueOrNull ??
+            OfflineQueueSnapshot.empty;
+    final offlineStatuses = _offlineDeliveryStatusesByMessageId(
+      messages,
+      offlineSnapshot.entries,
+    );
     final listItemCount = messages.length +
         (showStreamingBubble ? 1 : 0) +
         (showStatusIndicator ? 1 : 0) +
@@ -1424,6 +1539,15 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       message: message,
                                       isLatestAssistantMessage:
                                           isLatestAssistant,
+                                      deliveryStatus:
+                                          offlineStatuses[message.id] ??
+                                              ChatBubbleDeliveryStatus.normal,
+                                      onRetryDelivery:
+                                          message.role == MessageRole.user
+                                              ? () => ref
+                                                  .read(chatProvider.notifier)
+                                                  .sendMessage(message.content)
+                                              : null,
                                       onActionConfirm: (action) {
                                         ref
                                             .read(chatProvider.notifier)
@@ -1474,6 +1598,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                           return ContextualCorrectionBar(
                                             predictedReplyGroups: auroraStatus
                                                 ?.predictedReplyOptions,
+                                            bandStatus:
+                                                auroraStatus?.overallStatus ??
+                                                    '',
+                                            conversationId:
+                                                chatState.conversationId,
+                                            messageId: message.id,
                                             onSendCorrection:
                                                 (option, groupId) {
                                               final presentation =
@@ -1505,25 +1635,36 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                         option.semanticValue,
                                                   );
                                               final text = presentation.label;
+                                              final chatState =
+                                                  ref.read(chatProvider);
+                                              final payload =
+                                                  AuroraCorrectionPayload.chip(
+                                                surface: AuroraCorrectionSurface
+                                                    .chat,
+                                                semanticValue:
+                                                    option.semanticValue,
+                                                label: text,
+                                                isDisconfirming:
+                                                    option.isDisconfirming,
+                                                bandStatus: auroraStatus
+                                                        ?.overallStatus ??
+                                                    '',
+                                                telemetryId: option.telemetryId,
+                                                groupId: groupId,
+                                                conversationId:
+                                                    chatState.conversationId ??
+                                                        '',
+                                                messageId:
+                                                    _latestAssistantMessageId(),
+                                              );
                                               unawaited(
                                                 ref
                                                     .read(chatProvider.notifier)
                                                     .sendMessage(
                                                   text,
                                                   extraContextOverrides: {
-                                                    'aurora_correction': {
-                                                      'type': 'chip',
-                                                      'telemetry_id':
-                                                          option.telemetryId,
-                                                      'semantic_value':
-                                                          option.semanticValue,
-                                                      'is_disconfirming': option
-                                                          .isDisconfirming,
-                                                      'band_status': auroraStatus
-                                                              ?.overallStatus ??
-                                                          '',
-                                                      'group_id': groupId,
-                                                    },
+                                                    'aurora_correction':
+                                                        payload.toJson(),
                                                   },
                                                 ),
                                               );
@@ -1571,15 +1712,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                     .sendMessage(
                                                   l10n.auroraCorrectNotRight,
                                                   extraContextOverrides: {
-                                                    'aurora_correction': {
-                                                      'type': 'chip',
-                                                      'semantic_value':
+                                                    'aurora_correction':
+                                                        AuroraCorrectionPayload
+                                                            .chip(
+                                                      surface:
+                                                          AuroraCorrectionSurface
+                                                              .chat,
+                                                      semanticValue:
                                                           'not_right_direction',
-                                                      'is_disconfirming': true,
-                                                      'band_status': auroraStatus
+                                                      label: l10n
+                                                          .auroraCorrectNotRight,
+                                                      isDisconfirming: true,
+                                                      bandStatus: auroraStatus
                                                               ?.overallStatus ??
                                                           '',
-                                                    },
+                                                      conversationId: ref
+                                                              .read(
+                                                                  chatProvider)
+                                                              .conversationId ??
+                                                          '',
+                                                      messageId:
+                                                          _latestAssistantMessageId(),
+                                                    ).toJson(),
                                                   },
                                                 ),
                                               );
@@ -1617,15 +1771,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                     .sendMessage(
                                                   l10n.auroraCorrectShorter,
                                                   extraContextOverrides: {
-                                                    'aurora_correction': {
-                                                      'type': 'chip',
-                                                      'semantic_value':
+                                                    'aurora_correction':
+                                                        AuroraCorrectionPayload
+                                                            .chip(
+                                                      surface:
+                                                          AuroraCorrectionSurface
+                                                              .chat,
+                                                      semanticValue:
                                                           'make_shorter',
-                                                      'is_disconfirming': false,
-                                                      'band_status': auroraStatus
+                                                      label: l10n
+                                                          .auroraCorrectShorter,
+                                                      isDisconfirming: false,
+                                                      bandStatus: auroraStatus
                                                               ?.overallStatus ??
                                                           '',
-                                                    },
+                                                      conversationId: ref
+                                                              .read(
+                                                                  chatProvider)
+                                                              .conversationId ??
+                                                          '',
+                                                      messageId:
+                                                          _latestAssistantMessageId(),
+                                                    ).toJson(),
                                                   },
                                                 ),
                                               );
@@ -1657,15 +1824,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                     .sendMessage(
                                                   l10n.auroraCorrectDirect,
                                                   extraContextOverrides: {
-                                                    'aurora_correction': {
-                                                      'type': 'chip',
-                                                      'semantic_value':
+                                                    'aurora_correction':
+                                                        AuroraCorrectionPayload
+                                                            .chip(
+                                                      surface:
+                                                          AuroraCorrectionSurface
+                                                              .chat,
+                                                      semanticValue:
                                                           'give_practice',
-                                                      'is_disconfirming': false,
-                                                      'band_status': auroraStatus
+                                                      label: l10n
+                                                          .auroraCorrectDirect,
+                                                      isDisconfirming: false,
+                                                      bandStatus: auroraStatus
                                                               ?.overallStatus ??
                                                           '',
-                                                    },
+                                                      conversationId: ref
+                                                              .read(
+                                                                  chatProvider)
+                                                              .conversationId ??
+                                                          '',
+                                                      messageId:
+                                                          _latestAssistantMessageId(),
+                                                    ).toJson(),
                                                   },
                                                 ),
                                               );
@@ -2474,6 +2654,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ref.watch(planListProvider.select((s) => s.activePlans));
     final activePlan =
         activePlans.where((plan) => plan.id == activePlanId).firstOrNull;
+    final offlineUserId =
+        ref.watch(offlineQueueCurrentUserIdProvider).valueOrNull;
+    final offlineSnapshot = offlineUserId == null
+        ? OfflineQueueSnapshot.empty
+        : ref.watch(offlineQueueSnapshotProvider(offlineUserId)).valueOrNull ??
+            OfflineQueueSnapshot.empty;
 
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
@@ -2645,6 +2831,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               },
             );
           }),
+          _OfflineQueueIndicatorHost(
+            snapshot: offlineSnapshot,
+            connectionState: chatState.wsConnectionState,
+          ),
           ChatInput(
             enabled: !chatState.hasActiveRun,
             studyMaterialsEnabled: chatState.documentRetrievalEnabled,
@@ -3160,6 +3350,77 @@ class _DailyStartupPlanResolution {
   final String planId;
   final String? cachedStartup;
   final bool shouldSelectPlan;
+}
+
+class _OfflineQueueIndicatorHost extends StatefulWidget {
+  const _OfflineQueueIndicatorHost({
+    required this.snapshot,
+    required this.connectionState,
+  });
+
+  final OfflineQueueSnapshot snapshot;
+  final WsConnectionState connectionState;
+
+  @override
+  State<_OfflineQueueIndicatorHost> createState() =>
+      _OfflineQueueIndicatorHostState();
+}
+
+class _OfflineQueueIndicatorHostState
+    extends State<_OfflineQueueIndicatorHost> {
+  Timer? _completeTimer;
+  var _showComplete = false;
+  var _hadActiveQueue = false;
+
+  @override
+  void didUpdateWidget(_OfflineQueueIndicatorHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final hasActiveQueue = widget.snapshot.hasActiveQueue;
+    if (_hadActiveQueue && !hasActiveQueue) {
+      _showComplete = true;
+      _completeTimer?.cancel();
+      _completeTimer = Timer(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() => _showComplete = false);
+        }
+      });
+    }
+    _hadActiveQueue = hasActiveQueue;
+  }
+
+  @override
+  void dispose() {
+    _completeTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final snapshot = widget.snapshot;
+    if (_showComplete && !snapshot.hasActiveQueue) {
+      return const OfflineQueueIndicator(
+        status: OfflineQueueIndicatorStatus.complete,
+        pendingCount: 0,
+      );
+    }
+    if (!snapshot.hasActiveQueue) {
+      return const OfflineQueueIndicator(
+        status: OfflineQueueIndicatorStatus.hidden,
+        pendingCount: 0,
+      );
+    }
+
+    final isSending = widget.connectionState == WsConnectionState.connected ||
+        widget.connectionState == WsConnectionState.connecting ||
+        widget.connectionState == WsConnectionState.reconnecting ||
+        snapshot.sendingCount > 0;
+    return OfflineQueueIndicator(
+      status: isSending
+          ? OfflineQueueIndicatorStatus.sending
+          : OfflineQueueIndicatorStatus.queued,
+      pendingCount: max(1, max(snapshot.pendingCount, snapshot.activeCount)),
+    );
+  }
 }
 
 class _TypingIndicator extends StatefulWidget {

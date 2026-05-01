@@ -11,8 +11,6 @@ class OfflineMessageQueueService {
 
   Isar? get _isar => _localDb.isarOrNull;
 
-  bool get _isReady => _isar?.isOpen == true;
-
   /// Persist a message to the offline queue (status = pending).
   Future<void> enqueue({
     required String requestId,
@@ -75,8 +73,10 @@ class OfflineMessageQueueService {
         .filter()
         .statusEqualTo(OfflineMessageStatus.pending)
         .findAll();
-    results.sort((OfflineChatMessage a, OfflineChatMessage b) =>
-        a.createdAt.compareTo(b.createdAt));
+    results.sort(
+      (OfflineChatMessage a, OfflineChatMessage b) =>
+          a.createdAt.compareTo(b.createdAt),
+    );
     return results;
   }
 
@@ -97,6 +97,24 @@ class OfflineMessageQueueService {
         .and()
         .statusEqualTo(OfflineMessageStatus.pending)
         .count();
+  }
+
+  /// Load all non-acked messages for a user so UI can explain delivery state.
+  Future<List<OfflineChatMessage>> loadActiveForUser(String userId) async {
+    final db = _isar;
+    if (db == null || !db.isOpen) return <OfflineChatMessage>[];
+    final results =
+        await db.offlineChatMessages.filter().userIdEqualTo(userId).findAll();
+    final active = results
+        .where(
+          (OfflineChatMessage msg) => msg.status != OfflineMessageStatus.acked,
+        )
+        .toList()
+      ..sort(
+        (OfflineChatMessage a, OfflineChatMessage b) =>
+            a.createdAt.compareTo(b.createdAt),
+      );
+    return active;
   }
 
   /// Delete acked messages older than 24 hours.

@@ -25,6 +25,7 @@ from app.core.metrics import (
     FEEDBACK_TO_EFFECT_SECONDS,
     PROTO_ERROR_CODE_FALLBACK_TOTAL,
     PROTO_FIELD_READ_TOTAL,
+    SESSION_ID_FALLBACK_TOTAL,
 )
 from app.core.safe_error_messages import build_safe_chat_error
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
@@ -97,6 +98,49 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             return "expert_team_workflow"
         return "standard_chat"
 
+    async def _process_aurora_correction_metadata(
+        self,
+        *,
+        user_id: str,
+        request_extra_context: dict[str, object],
+    ) -> dict[str, object] | None:
+        raw_payload = request_extra_context.get("aurora_correction")
+        if not isinstance(raw_payload, dict) or not user_id:
+            return None
+        try:
+            from app.aurora.correction_types import AuroraCorrectionPayload
+            from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
+
+            payload = AuroraCorrectionPayload.normalize(raw_payload)
+            if not payload.is_disconfirming and not payload.is_freeform:
+                return None
+            processor = CorrectionFeedbackProcessor(self.orchestrator.redis, self.db_session_factory)
+            result = await processor.process(
+                user_id=user_id,
+                correction_payload=payload,
+            )
+            return result.calibration_receipt or None
+        except Exception:
+            logger.debug("Failed to process Aurora correction metadata", exc_info=True)
+            return None
+
+    @staticmethod
+    def _attach_calibration_receipt_metadata(
+        response: agent_service_pb2.ChatResponse,
+        receipt: dict[str, object] | None,
+    ) -> None:
+        if not receipt:
+            return
+        encoded = json.dumps(receipt, ensure_ascii=False, default=str)
+        response.metadata["calibration_receipt"] = encoded
+        if "aurora_receipts" not in response.metadata:
+            unified = {
+                **receipt,
+                "receipt_type": "calibration_receipt",
+                "source_key": "calibration_receipt",
+            }
+            response.metadata["aurora_receipts"] = json.dumps([unified], ensure_ascii=False, default=str)
+
     @staticmethod
     def _normalize_v2_response(response: agent_service_pb2.ChatResponse) -> agent_service_pb2.ChatResponse:
         service = "agent_grpc_service"
@@ -115,6 +159,36 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     direction="enum_missing_defaulted",
                 ).inc()
         return response
+
+    @staticmethod
+    def _ensure_response_session_id(
+        response: agent_service_pb2.ChatResponse,
+        request_session_id: str,
+        *,
+        request_id: str,
+        trace_id: str,
+    ) -> str:
+        response_session_id = str(response.session_id or "").strip()
+        if response_session_id:
+            return response_session_id
+
+        request_session_id = str(request_session_id or "").strip()
+        if request_session_id:
+            logger.warning(
+                "Orchestrator emitted response without session_id; reusing request session_id "
+                f"request_id={request_id} trace_id={trace_id} session_id={request_session_id}"
+            )
+            response.session_id = request_session_id
+            return request_session_id
+
+        fallback_session_id = str(uuid.uuid4())
+        logger.warning(
+            "Generated StreamChat session_id fallback because both request and orchestrator response were empty "
+            f"request_id={request_id} trace_id={trace_id} fallback_session_id={fallback_session_id}"
+        )
+        SESSION_ID_FALLBACK_TOTAL.labels(source="grpc_stream_chat").inc()
+        response.session_id = fallback_session_id
+        return fallback_session_id
 
     async def _require_admin(
         self,
@@ -190,6 +264,11 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             reasoning_mode = str(request_extra_context.get("reasoning_mode") or "balanced").strip().lower()
             if reasoning_mode not in {"fast", "balanced", "deep"}:
                 reasoning_mode = "balanced"
+            calibration_receipt = await self._process_aurora_correction_metadata(
+                user_id=user_id,
+                request_extra_context=request_extra_context,
+            )
+            calibration_receipt_attached = False
             logger.info(f"📋 Chat mode: {chat_mode}")
             workflow_id = self._resolve_workflow_id(chat_mode)
 
@@ -209,6 +288,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             # Create a dedicated DB session for this stream
             has_text_content = False
+            effective_session_id = str(request.session_id or "").strip()
             async with self.db_session_factory() as db_session:
                 try:
                     # Delegate to Orchestrator
@@ -231,8 +311,17 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                         if not response.prompt_version:
                             response.prompt_version = prompt_version
                         # Ensure session_id is always set for conversation continuity
-                        if not response.session_id:
-                            response.session_id = request.session_id or str(uuid.uuid4())
+                        effective_session_id = self._ensure_response_session_id(
+                            response,
+                            effective_session_id,
+                            request_id=request.request_id,
+                            trace_id=trace_id,
+                        )
+                        if not request.session_id:
+                            request.session_id = effective_session_id
+                        if calibration_receipt and not calibration_receipt_attached:
+                            self._attach_calibration_receipt_metadata(response, calibration_receipt)
+                            calibration_receipt_attached = True
                         yield self._normalize_v2_response(response)
                     await db_session.commit()
                 except Exception:
@@ -254,6 +343,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     full_text="(System) No valid response generated. Please try again later.",
                     finish_reason=agent_service_pb2.STOP,
                 )
+                if calibration_receipt and not calibration_receipt_attached:
+                    self._attach_calibration_receipt_metadata(fallback, calibration_receipt)
                 fallback.event_time.FromDatetime(datetime.now(UTC))
                 yield fallback
 

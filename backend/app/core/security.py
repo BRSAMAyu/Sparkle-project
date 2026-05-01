@@ -28,8 +28,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码"""
     try:
         return pwd_context.verify(plain_password, hashed_password)
-    except Exception:
-        # Remove dangerous fallback - always return False for invalid passwords
+    except Exception as exc:
+        # Intentional fail-closed behavior: verifier errors must never authenticate a password.
+        logger.warning("Password verification failed closed: {}", exc)
         return False
 
 
@@ -159,8 +160,9 @@ async def is_token_revoked(jti: str) -> bool:
     try:
         value = await cache_service.get(key)
         return value is not None
-    except Exception:
-        # Fail open if Redis is unavailable to avoid blocking logins.
+    except Exception as exc:
+        # Intentional fail-open behavior: Redis blacklist outages should not block existing valid JWTs.
+        logger.warning("Token blacklist lookup failed open for jti={}: {}", jti, exc)
         return False
 
 
@@ -175,8 +177,8 @@ async def get_user_revoked_before(user_id: str) -> int | None:
         value = await cache_service.get(key)
         if value is not None:
             return int(value)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Revocation timestamp cache lookup failed for user {}: {}", user_id, exc)
 
     try:
         from app.db.session import AsyncSessionLocal
@@ -189,7 +191,8 @@ async def get_user_revoked_before(user_id: str) -> int | None:
             revoked_before_ts = int(user.token_revoked_before.timestamp())
             await set_user_revoked_before(user_id, user.token_revoked_before)
             return revoked_before_ts
-    except Exception:
+    except Exception as exc:
+        logger.warning("Revocation timestamp DB fallback failed for user {}: {}", user_id, exc)
         return None
 
     return None
@@ -204,8 +207,9 @@ async def is_session_revoked(session_id: str) -> bool:
     try:
         if await auth_session_service.is_session_revoked(session_id):
             return True
-    except Exception:
-        pass
+    except Exception as exc:
+        # Intentional fail-open behavior: session service outages fall back to the DB session record.
+        logger.warning("Session revocation service lookup failed open to DB fallback for session {}: {}", session_id, exc)
 
     try:
         from app.db.session import AsyncSessionLocal
@@ -218,7 +222,9 @@ async def is_session_revoked(session_id: str) -> bool:
             if db_session is None:
                 return False
             return (not db_session.is_active) or (db_session.revoked_at is not None)
-    except Exception:
+    except Exception as exc:
+        # Intentional fail-open behavior: revocation DB outages should not block existing valid sessions.
+        logger.warning("Session revocation DB lookup failed open for session {}: {}", session_id, exc)
         return False
 
 
@@ -230,13 +236,15 @@ async def set_user_revoked_before(user_id: str, revoked_before: datetime) -> Non
         return
     try:
         ts = int(revoked_before.timestamp())
-    except Exception:
+    except Exception as exc:
+        logger.warning("Invalid revoked_before timestamp for user {}: {}", user_id, exc)
         return
     ttl = int(settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
     key = f"{USER_REVOKED_BEFORE_PREFIX}{user_id}"
     try:
         await cache_service.set(key, ts, ttl=ttl)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to cache revoked_before timestamp for user {}: {}", user_id, exc)
         return
 
 
@@ -251,7 +259,8 @@ async def blacklist_token(jti: str, exp: int | float | datetime | None) -> None:
             exp_ts = int(exp.timestamp())
         else:
             exp_ts = int(exp)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Invalid blacklist expiration for jti {}: {}", jti, exc)
         return
 
     now_ts = int(datetime.now(UTC).timestamp())

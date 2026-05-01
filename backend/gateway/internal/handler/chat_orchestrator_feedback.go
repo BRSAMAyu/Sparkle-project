@@ -258,7 +258,7 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 			})
 		}
 
-		case "plan_card", "create_plan":
+	case "plan_card", "create_plan":
 		if action == "confirm" {
 			// Handle plan confirmation
 			log.Printf("Plan creation confirmed for user %s", userID)
@@ -377,7 +377,7 @@ func (h *ChatOrchestrator) handleExecutionSummaryActionWithResponder(
 	resp, err := h.httpClient.Do(req)
 	if err != nil {
 		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
-			"message":     i18n.T(ctx, "feedback.execution.callback_failed", map[string]string{"error": err.Error()}),
+			"message":     sanitizeWebSocketError(ctx, err, "chat_orchestrator_feedback.execution_callback"),
 			"widget_type": widgetType,
 		})
 		return

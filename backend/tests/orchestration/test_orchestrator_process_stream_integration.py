@@ -1482,6 +1482,23 @@ async def test_process_stream_lock_conflict_returns_retryable_error(orchestrator
 
 
 @pytest.mark.asyncio
+async def test_process_stream_generates_session_id_for_initial_request(orchestrator_factory):
+    orchestrator, _, _ = orchestrator_factory()
+    request = agent_service_pb2.ChatRequest(
+        request_id=f"req-{uuid.uuid4()}",
+        user_id=str(uuid.uuid4()),
+        message="帮我整理今天的学习重点",
+    )
+    orchestrator._acquire_session_lock = AsyncMock(return_value=False)
+
+    responses = await _collect(orchestrator, request)
+
+    assert request.session_id
+    assert responses[0].session_id == request.session_id
+    assert uuid.UUID(request.session_id)
+
+
+@pytest.mark.asyncio
 async def test_process_stream_review_required_drains_queue_before_return(orchestrator_factory):
     orchestrator, _, state_updates = orchestrator_factory()
     request = _make_request(message="帮我制定一个四周复习计划")

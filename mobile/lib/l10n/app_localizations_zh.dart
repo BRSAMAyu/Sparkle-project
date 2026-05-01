@@ -18406,6 +18406,24 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auroraCorrectionApplied => '上次纠正已生效';
 
   @override
+  String get calibrationReceiptExpand => '展开校准回执详情';
+
+  @override
+  String get calibrationReceiptCollapse => '收起校准回执详情';
+
+  @override
+  String get calibrationReceiptDismiss => '隐藏这条校准回执';
+
+  @override
+  String get calibrationReceiptWhatChanged => '调整了什么';
+
+  @override
+  String get calibrationReceiptWhyChanged => '为什么调整';
+
+  @override
+  String get calibrationReceiptNextTime => '下次会怎样';
+
+  @override
   String get auroraCorrectionInputTitle => '想让 Aurora 知道什么？';
 
   @override

@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -622,6 +623,27 @@ class _BgmLibraryDirectories {
   final Directory rootDirectory;
   final Directory importDirectory;
   final Directory downloadDirectory;
+}
+
+/// Small Riverpod facade for the static BGM service.
+///
+/// Core keepAlive provider: BGM preferences and playback controls are global
+/// app state, so this provider intentionally uses a non-autoDispose provider.
+final bgmServiceProvider = Provider<BgmServiceController>(
+  (ref) => const BgmServiceController(),
+);
+
+@immutable
+class BgmServiceController {
+  const BgmServiceController();
+
+  Future<void> init() => BgmService.init();
+  Future<bool> isEnabled() => BgmService.isEnabled();
+  Future<void> setEnabled(bool enabled) => BgmService.setEnabled(enabled);
+  Future<double> getVolume() => BgmService.getVolume();
+  Future<void> setVolume(double volume) => BgmService.setVolume(volume);
+  Future<BgmMode> getMode() => BgmService.getMode();
+  Future<void> setMode(BgmMode mode) => BgmService.setMode(mode);
 }
 
 class BgmService {

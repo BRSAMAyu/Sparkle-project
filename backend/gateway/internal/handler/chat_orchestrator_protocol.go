@@ -48,6 +48,8 @@ var jsonMetadataKeys = map[string]bool{
 	"continuity_banner":      true,
 	"mode_explanation":       true,
 	"collaboration_summary":  true,
+	"calibration_receipt":    true,
+	"aurora_receipts":        true,
 }
 
 func isTerminalFinishReason(reason agentv1.FinishReason) bool {

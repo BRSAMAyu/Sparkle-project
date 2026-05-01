@@ -1942,6 +1942,44 @@
   "chatRecalledSelf": "You recalled a message",
   "chatRecalledPeer": "The other side recalled a message",
   "chatRead": "Read",
+  "chatOfflineQueuePending": "{count} messages waiting to send",
+  "@chatOfflineQueuePending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatOfflineQueueSending": "Sending {count} queued messages...",
+  "@chatOfflineQueueSending": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatOfflineQueueComplete": "All sent",
+  "chatOfflineQueuePendingSemantic": "Offline queue has {count} messages waiting to send",
+  "@chatOfflineQueuePendingSemantic": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatOfflineQueueSendingSemantic": "Connection restored, sending {count} queued messages",
+  "@chatOfflineQueueSendingSemantic": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatOfflineQueueCompleteSemantic": "All queued messages have been sent",
+  "chatMessageQueued": "Queued",
+  "chatMessageSending": "Sending",
+  "chatMessageSendFailed": "Send failed",
+  "chatMessageRetrySend": "Retry",
   "chatAgentNavigator": "Galaxy Navigator",
   "chatAgentExamStrategist": "Exam Strategist",
   "chatAgentTimeCoach": "Time Coach",
@@ -8475,6 +8513,12 @@
   "auroraCorrectionReceivedTitle": "Got it",
   "auroraCorrectionReceivedSubtitle": "Aurora is updating its understanding",
   "auroraCorrectionApplied": "Last correction is active",
+  "calibrationReceiptExpand": "Show calibration details",
+  "calibrationReceiptCollapse": "Hide calibration details",
+  "calibrationReceiptDismiss": "Hide this calibration receipt",
+  "calibrationReceiptWhatChanged": "What changed",
+  "calibrationReceiptWhyChanged": "Why it changed",
+  "calibrationReceiptNextTime": "Next time",
   "auroraCorrectionInputTitle": "What should Aurora know?",
   "auroraCorrectionInputHint": "What did Aurora get wrong? Share the correction…",
   "auroraCorrectionInputCancel": "Cancel",

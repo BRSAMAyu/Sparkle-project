@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/features/chat/presentation/widgets/aurora_receipt_chip.dart';
+import 'package:sparkle/features/chat/presentation/widgets/calibration_receipt_chip.dart';
 
 class ContextReceiptBar extends StatelessWidget {
   const ContextReceiptBar({
@@ -17,21 +18,36 @@ class ContextReceiptBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final calibrationReceipts = _parseCalibrationReceipts()
+        .where(_isCalibrationReceiptEnabled)
+        .toList(growable: false);
     final receipts =
         _parseReceipts().where(_isReceiptEnabled).toList(growable: false);
-    if (receipts.isEmpty) return const SizedBox.shrink();
+    if (calibrationReceipts.isEmpty && receipts.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: receipts
-          .map(
-            (receipt) => AuroraReceiptChip(
-              receipt: receipt,
-              onActionSelected: onActionSelected,
-            ),
-          )
-          .toList(growable: false),
+      children: [
+        ...calibrationReceipts.map(
+          (receipt) => CalibrationReceiptChip(receipt: receipt),
+        ),
+        ...receipts.map(
+          (receipt) => AuroraReceiptChip(
+            receipt: receipt,
+            onActionSelected: onActionSelected,
+          ),
+        ),
+      ],
     );
+  }
+
+  bool _isCalibrationReceiptEnabled(Map<String, dynamic> receipt) {
+    final enabled = enabledReceiptTypes;
+    if (enabled == null) return true;
+    return enabled.contains(kCalibrationReceiptType) ||
+        enabled.contains(kAuroraExperienceReceiptType);
   }
 
   bool _isReceiptEnabled(Map<String, dynamic> receipt) {
@@ -47,7 +63,9 @@ class ContextReceiptBar extends StatelessWidget {
     final receipts = <Map<String, dynamic>>[];
     final unified = _decodeList(metadata['aurora_receipts']);
     for (final receipt in unified) {
-      _addReceipt(receipts, receipt);
+      if (!isCalibrationReceipt(receipt)) {
+        _addReceipt(receipts, receipt);
+      }
     }
 
     _addReceipt(
@@ -104,6 +122,27 @@ class ContextReceiptBar extends StatelessWidget {
     return receipts;
   }
 
+  List<Map<String, dynamic>> _parseCalibrationReceipts() {
+    final metadata = rawMetadata;
+    if (metadata == null) return const [];
+
+    final receipts = <Map<String, dynamic>>[];
+    for (final receipt in _decodeList(metadata['aurora_receipts'])) {
+      if (isCalibrationReceipt(receipt)) {
+        _addCalibrationReceipt(receipts, receipt);
+      }
+    }
+    _addCalibrationReceipt(
+      receipts,
+      _withType(
+        _decodeReceipt(metadata['calibration_receipt']),
+        kCalibrationReceiptType,
+        sourceKey: 'calibration_receipt',
+      ),
+    );
+    return receipts;
+  }
+
   int _receiptPriority(Map<String, dynamic> receipt) {
     switch (normalizeAuroraReceiptType(receipt)) {
       case kAuroraExperienceReceiptType:
@@ -144,6 +183,29 @@ class ContextReceiptBar extends StatelessWidget {
           '';
       return '$existingType|$existingId|$existingSource|$existingSummary' ==
           key;
+    });
+    if (!duplicate) receipts.add(receipt);
+  }
+
+  void _addCalibrationReceipt(
+    List<Map<String, dynamic>> receipts,
+    Map<String, dynamic>? receipt,
+  ) {
+    if (receipt == null || receipt.isEmpty) return;
+    final id = receipt['correction_id']?.toString().trim() ??
+        receipt['receipt_id']?.toString().trim() ??
+        '';
+    final sourceKey = receipt['source_key']?.toString().trim() ?? '';
+    final summary = CalibrationReceiptViewData.fromReceipt(receipt).summary;
+    final key = '$id|$sourceKey|$summary';
+    final duplicate = receipts.any((existing) {
+      final existingId = existing['correction_id']?.toString().trim() ??
+          existing['receipt_id']?.toString().trim() ??
+          '';
+      final existingSource = existing['source_key']?.toString().trim() ?? '';
+      final existingSummary =
+          CalibrationReceiptViewData.fromReceipt(existing).summary;
+      return '$existingId|$existingSource|$existingSummary' == key;
     });
     if (!duplicate) receipts.add(receipt);
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/models/aurora_correction_payload.dart';
 import 'package:sparkle/features/chat/presentation/providers/aurora_status_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/contextual_correction_bar.dart';
 
@@ -13,14 +14,13 @@ void main() {
       'predicted chip uses natural text while preserving semantic value', (
     tester,
   ) async {
-    AuroraPredictedReplyOption? selected;
-    String? selectedGroupId;
+    AuroraCorrectionPayload? selectedPayload;
 
     await tester.pumpWidget(
       testMaterialApp(
         home: Scaffold(
           body: ContextualCorrectionBar(
-            predictedReplyGroups: [
+            predictedReplyGroups: const [
               AuroraPredictedReplyGroup(
                 groupId: 'group-risk',
                 question: 'Was Aurora wrong?',
@@ -54,10 +54,10 @@ void main() {
                 ],
               ),
             ],
-            onSendCorrection: (option, groupId) {
-              selected = option;
-              selectedGroupId = groupId;
-            },
+            bandStatus: 'needs_confirm',
+            conversationId: 'conversation-1',
+            messageId: 'message-1',
+            onSendCorrectionPayload: (payload) => selectedPayload = payload,
             onRecalibrate: () {},
           ),
         ),
@@ -72,9 +72,16 @@ void main() {
     await tester.pump();
 
     expect(find.text('已收到'), findsOneWidget);
-    expect(selected?.label, 'risk_false_positive');
-    expect(selected?.semanticValue, 'risk_false_positive');
-    expect(selectedGroupId, 'group-risk');
+    expect(selectedPayload?.surface, AuroraCorrectionSurface.chat);
+    expect(selectedPayload?.source, AuroraCorrectionSource.predictedChip);
+    expect(selectedPayload?.label, '我其实不焦虑，只是忙');
+    expect(selectedPayload?.semanticValue, 'risk_false_positive');
+    expect(selectedPayload?.isDisconfirming, isTrue);
+    expect(selectedPayload?.bandStatus, 'needs_confirm');
+    expect(selectedPayload?.telemetryId, 'telemetry-risk');
+    expect(selectedPayload?.groupId, 'group-risk');
+    expect(selectedPayload?.conversationId, 'conversation-1');
+    expect(selectedPayload?.messageId, 'message-1');
   });
 
   testWidgets('freeform chip opens the independent correction lane', (
@@ -86,7 +93,7 @@ void main() {
       testMaterialApp(
         home: Scaffold(
           body: ContextualCorrectionBar(
-            predictedReplyGroups: [
+            predictedReplyGroups: const [
               AuroraPredictedReplyGroup(
                 groupId: 'group-freeform',
                 question: 'Was Aurora wrong?',

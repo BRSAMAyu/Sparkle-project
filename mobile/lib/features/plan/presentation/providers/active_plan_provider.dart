@@ -55,10 +55,9 @@ class ActivePlanNotifier extends PersistentNotifier<String?> {
   }
 }
 
-/// Provider for the currently active plan (for chat context)
+/// Core keepAlive provider for the currently active plan (for chat context).
 ///
 /// Returns the plan_id of the currently selected plan, or null if no plan is selected.
-final activePlanProvider =
-    StateNotifierProvider<ActivePlanNotifier, String?>(
+final activePlanProvider = StateNotifierProvider<ActivePlanNotifier, String?>(
   ActivePlanNotifier.new,
 );

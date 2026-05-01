@@ -2932,6 +2932,31 @@ def _format_working_memory_section(payload: dict[str, Any] | None) -> str:
     return _truncate_section("\n".join(lines), target_tokens=300)
 
 
+def _format_recent_corrections_section(items: Any) -> str:
+    if not isinstance(items, list) or not items:
+        return ""
+
+    lines = ["## 近期 Aurora 校准回执 [L2 引导]"]
+    kept = 0
+    for item in items[:3]:
+        if not isinstance(item, dict):
+            continue
+        what = str(item.get("what_changed") or "").strip()
+        why = str(item.get("why_changed") or "").strip()
+        next_time = str(item.get("next_time") or "").strip()
+        if not what and not next_time:
+            continue
+        parts = [part for part in (what, why, next_time) if part]
+        lines.append("- " + " ".join(parts))
+        kept += 1
+
+    if kept == 0:
+        return ""
+
+    lines.append("- 回应时自然体现这些校准；只有当前对话相关时才简短提及，不要暴露内部 state key 或 semantic token。")
+    return _truncate_section("\n".join(lines), target_tokens=240)
+
+
 def _has_signal_payload(value: Any) -> bool:
     if value is None:
         return False
@@ -3528,6 +3553,14 @@ def _render_user_context_content(
                 ),
                 "approx_tokens": _estimate_prompt_tokens(working_memory_section),
             }
+
+    recent_corrections_section = _format_recent_corrections_section(normalized.get("recent_corrections"))
+    if recent_corrections_section:
+        lines.append(recent_corrections_section)
+        telemetry["section_sizes"]["recent_corrections"] = {
+            "items": min(len(normalized.get("recent_corrections") or []), 3),
+            "approx_tokens": _estimate_prompt_tokens(recent_corrections_section),
+        }
 
     calendar_context = normalized.get("calendar_context") or {}
     calendar_mode = _resolve_stage40_calendar_mode(calendar_context if isinstance(calendar_context, dict) else None)
@@ -4206,6 +4239,8 @@ def _normalize_user_context(context: dict) -> dict:
 
     if isinstance(context.get("last_session_mood"), dict):
         normalized["last_session_mood"] = context["last_session_mood"]
+    if isinstance(context.get("recent_corrections"), list) and context["recent_corrections"]:
+        normalized["recent_corrections"] = context["recent_corrections"]
 
     if isinstance(context.get("understanding_depth"), dict):
         normalized["understanding_depth"] = context["understanding_depth"]

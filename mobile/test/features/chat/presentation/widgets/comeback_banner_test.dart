@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:sparkle/core/design/widgets/sparkle_motion_primitives.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_comeback_context.dart';
 import 'package:sparkle/features/chat/presentation/widgets/comeback_banner.dart';
 
@@ -62,6 +63,50 @@ void main() {
     expect(find.text('接着刚才的线'), findsOneWidget);
     expect(find.textContaining('函数极限'), findsOneWidget);
     expect(find.text('上次的问题还挂着'), findsOneWidget);
+  });
+
+  testWidgets('stages comeback title, summary, and unfinished items',
+      (tester) async {
+    await tester.pumpWidget(
+      testMaterialApp(
+        home: Scaffold(
+          body: ComebackBanner(
+            contextData: _context(
+              items: const [
+                AuroraComebackItem(
+                  type: 'task',
+                  title: '夹逼准则复盘',
+                  subtitle: '30 分钟',
+                  actionLabel: '继续',
+                  route: '/tasks/task-1/execute',
+                  resumeToken: '',
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    expect(find.byType(SparkleStaggerItem), findsNWidgets(3));
+  });
+
+  testWidgets('pointer down skips staged comeback entrance animation',
+      (tester) async {
+    await tester.pumpWidget(
+      testMaterialApp(
+        home: Scaffold(
+          body: ComebackBanner(contextData: _context()),
+        ),
+      ),
+    );
+
+    expect(find.byType(SparkleStaggerItem), findsNWidgets(2));
+
+    await tester.tap(find.text('接着刚才的线'));
+    await tester.pump();
+
+    expect(find.byType(SparkleStaggerItem), findsNothing);
   });
 
   testWidgets('dismiss button calls callback', (tester) async {

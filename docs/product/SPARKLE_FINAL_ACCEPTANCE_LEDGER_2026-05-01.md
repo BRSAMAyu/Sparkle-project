@@ -1192,3 +1192,75 @@ Full `flutter analyze` 仍会因为项目级既有 info lint debt 返回非零�
 ### 剩余真实风险
 
 Full `flutter analyze` 仍被项目级 info lint debt 干扰；本轮 scoped analyzer 退出码为 0，但仍有既有 style/info 项。体验层下一步最值得投入的是真实设备走查：连续会话回归、Core Session 中断恢复、状态带第三层在小屏/大字/深色模式下的视觉节奏，以及 Aurora 引用记忆后的用户纠正是否在多天后明显降低错误复现。
+
+---
+
+## 24. Section 20 Addendum — Aurora Closeout Execution T01-T15 Ledger (2026-05-02)
+
+> **来源**: `SPARKLE_AURORA_CLOSEOUT_EXECUTION_PLAN_2026-05-01.md` T15
+> **结论**: 本节只追加追踪信息，不改写历史 section。T15 文档收敛在本轮完成；当前 worktree 已出现 T01-T14 的对应修复证据，其中 T13 关闭了优先文件和 runtime optional import 的静默吞噬，但 repo-wide silent swallow 仍保留后续清理风险。
+
+### 24.1 T01-T15 状态总账
+
+| 任务 | 状态 | 证据 / 原因 |
+|------|------|-------------|
+| T01 WebSocket 关闭安全 | FIXED-IN-PASS | `wsSafeWriter.Close()` 使用 `sync.Once`；`WriteControlContext()` 增加 context timeout；chat idle timer 不再由 timer goroutine 直接关闭 writer |
+| T02 Go 错误响应脱敏 | FIXED-IN-PASS | 新增 `error_sanitizer.go`，handler raw `err.Error()` 客户端响应被替换；剩余 `err.Error()` 仅在 sanitizer dev path/tests |
+| T03 Handler 服务层隔离 | FIXED-IN-PASS | `auth.go`、`group_chat.go`、`data_consistency_handler.go` 改为 handler-local service interface；新增 apple/group/data consistency service |
+| T04 AuroraCorrectionPayload 后端统一 | FIXED-IN-PASS | 新增 `backend/app/aurora/correction_types.py` 与 `test_aurora_correction_payload.py`，orchestrator/API 使用统一 payload normalization |
+| T05 校准回执生成后端 | FIXED-IN-PASS | `generate_calibration_receipt()` 已加入 `correction_feedback.py`，回执写入 correction result、Redis recent corrections 与 memory lane |
+| T06 SlidingWindow Lua script 复用 | FIXED-IN-PASS | `distributedSlidingWindowScript` 已提升为包级变量；`go test ./internal/middleware -run TestSlidingWindowRateLimiter_AllowRejectAndRecover` 通过 |
+| T07 Flutter 纠错 payload 统一 | FIXED-IN-PASS | 新增 `mobile/lib/core/models/aurora_correction_payload.dart`，dashboard/chat/status band/contextual correction 使用 helper |
+| T08 校准回执 Flutter 体验 | FIXED-IN-PASS | 新增 `CalibrationReceiptChip` 并接入 `ContextReceiptBar`；新增 `calibration_receipt_chip_test.dart` |
+| T09 离线消息队列 UI | FIXED-IN-PASS | 新增 `OfflineQueueIndicator`、offline providers snapshot 与 chat bubble delivery states |
+| T10 Provider keepAlive | FIXED-IN-PASS | 新增 `coreKeepAliveProvidersProvider`，核心 provider 使用非 autoDispose/manual keepAlive registry；logout invalidation仍需继续专项 QA |
+| T11 冷启动过渡体验 | DEFERRED | `ComebackBanner` stagger/skip 已落地，但 `flutter test test/widget/cold_start_route_transition_test.dart` 当前找不到 `ColdStartRouteTransition` |
+| T12 Session ID 传播可靠性 | FIXED-IN-PASS | `agent_grpc_service.py` fallback 改为显式 helper，新增 warning 与 `sparkle_session_id_fallback_total` metric |
+| T13 Python 异常处理审计 | FIXED-IN-PASS | 优先文件中不再存在 `except Exception: pass`；`runtime_v1/__init__.py` 11 处改为 `logger.debug()`；repo-wide silent swallow 仍需后续清理 |
+| T14 CI/CD 版本一致性 | FIXED-IN-PASS | e2e/benchmark 统一 Flutter 3.24.0 与 pg16+pgvector；actions 同步；redis/minio 锁版本；新增 `backend/requirements.lock` |
+| T15 文档收敛与验证追踪 | FIXED-IN-PASS | 本节追加 T01-T15 总账、发现状态、测试证据；Roadmap Tracker 同步新增 closeout verification section；新报告/执行计划进入 Git index |
+
+### 24.2 验证报告发现状态
+
+| 验证报告发现 | 对应任务 | 状态标记 | 追踪结论 |
+|--------------|----------|----------|----------|
+| R-01 idleTimer 竞态 | T01 | fixed in this pass | Close 幂等化与 idle timer 关闭协调已落地 |
+| R-02 err.Error() 泄露 | T02 | fixed in this pass | 统一 sanitizer 已落地，raw err 仅保留在 dev/test/internal sanitizer path |
+| R-03 handler 直接 DB/Redis | T03 | fixed in this pass | handler 改走 service interface，DB/Redis 依赖迁入 service 层 |
+| R-04 `except Exception: pass` | T13 | fixed in this pass | 优先文件与 runtime optional imports 已修复；repo-wide exact pass 仍有残留后续债务 |
+| R-05 session_id fallback UUID | T12 | fixed in this pass | fallback 有 warning 与 Prometheus counter |
+| R-06 Provider keepAlive 缺失 | T10 | fixed in this pass | 核心 provider registry 使用非 autoDispose/manual keepAlive 方案 |
+| R-07 离线队列无聊天 UI | T09 | fixed in this pass | chat indicator、provider snapshot、bubble delivery states 已落地 |
+| R-08 SlidingWindow Lua script | T06 | fixed in this pass | 包级 Lua script 已落地，focused middleware test 通过 |
+| R-09 Flutter 版本不一致 | T14 | fixed in this pass | e2e/benchmark 已统一到 3.24.0 |
+| R-10 PostgreSQL 版本不一致 | T14 | fixed in this pass | e2e/benchmark 已统一到 pg16+pgvector |
+| R-11 e2e actions 过时 | T14 | fixed in this pass | e2e actions 已同步到 CI 版本线 |
+| R-12 Python lockfile 缺失 | T14 | verified fixed | `backend/uv.lock` 已存在；T14 其余项仍 deferred |
+| R-13 redis/minio latest | T14 | fixed in this pass | compose/prod compose 已锁定 redis-stack-server 与 minio 具体标签 |
+| R-14 Semantics 覆盖率 | 各 UI 任务 | fixed in this pass | C18 已完成核心 audited surfaces 的 first-pass semantics；全项目覆盖仍需后续扩大 |
+| R-15 Aurora runtime 静默导入 | T13 | fixed in this pass | 11 个 optional import 均改为 `except ModuleNotFoundError as exc: logger.debug(...)` |
+| R-16 BGM 单文件过大 | 后续专项 | deferred with reason | 不在 T01-T15 修改范围内，保留为后续 refactor |
+| 收敛计划 B5 cold-start transition | T11 | deferred with reason | cold-start route transition test fails: expected `ColdStartRouteTransition`, found none |
+
+### 24.3 本轮测试运行证据
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend/gateway && go test ./internal/middleware -run TestSlidingWindowRateLimiter_AllowRejectAndRecover` | ✅ PASS |
+| `cd backend/gateway && go test ./internal/handler -run 'Test(WSSafeWriter\|ErrorSanitizer)'` | ✅ PASS |
+| `cd backend && pytest tests/unit/test_aurora_correction_payload.py -q` | ✅ `4 passed` |
+| `cd mobile && flutter test test/features/chat/presentation/widgets/calibration_receipt_chip_test.dart test/widget/cold_start_route_transition_test.dart` | ⚠️ calibration receipt tests passed, but cold-start route transition test failed because `ColdStartRouteTransition` was not found |
+| `rg "err\\.Error\\(\\)" backend/gateway/internal/handler` | ✅ 仅 sanitizer dev paths/tests remain |
+| `rg -U "except Exception:\\s*\\n\\s*pass|except ModuleNotFoundError:\\s*\\n\\s*pass" ...priority files...` | ✅ 无匹配 |
+| `rg "3\\.16\\.0|postgres:15|redis-stack-server:latest|minio/minio:latest" .github/workflows docker-compose*.yml` | ✅ 无 T14 blocking matches in targeted files |
+| `find backend/tests mobile/test backend/gateway ...` | ✅ 新增/存在 correction payload、calibration receipt、offline queue、cold start、error sanitizer、ws safe writer、rate limiter 等 focused tests |
+
+### 24.4 Git 追踪范围
+
+| 文件 | 状态 |
+|------|------|
+| `docs/product/SPARKLE_INDEPENDENT_VERIFICATION_REPORT_2026-05-01.md` | fixed in this pass — 新增到 Git index，保留原事实内容 |
+| `docs/product/SPARKLE_AURORA_CLOSEOUT_EXECUTION_PLAN_2026-05-01.md` | fixed in this pass — 新增到 Git index，作为 T01-T15 执行方案 |
+| `docs/product/SPARKLE_AURORA_CONVERGENCE_PLAN_2026-05-01.md` | verified fixed — 已由 Git 追踪 |
+| `docs/product/SPARKLE_FINAL_ACCEPTANCE_LEDGER_2026-05-01.md` | fixed in this pass — 追加本 Section 20 addendum |
+| `docs/product/SPARKLE_ROADMAP_v3_TRACKER_2026-04-28.md` | fixed in this pass — 同步追加 verification section |

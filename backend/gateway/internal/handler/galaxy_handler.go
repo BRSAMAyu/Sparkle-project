@@ -159,7 +159,7 @@ func (h *GalaxyHandler) SparkNode(c *gin.Context) {
 	c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
 	if len(bytes.TrimSpace(rawBody)) > 0 {
 		if err := json.Unmarshal(rawBody, &req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			sanitizeErrorResponse(c, http.StatusBadRequest, err, "galaxy.spark_node.unmarshal")
 			return
 		}
 	}
@@ -201,7 +201,7 @@ func (h *GalaxyHandler) UpdateMastery(c *gin.Context) {
 	c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
 	if len(bytes.TrimSpace(rawBody)) > 0 {
 		if err := json.Unmarshal(rawBody, &req); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			sanitizeErrorResponse(c, http.StatusBadRequest, err, "galaxy.update_mastery.unmarshal")
 			return
 		}
 	}

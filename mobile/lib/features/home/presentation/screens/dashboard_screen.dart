@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/errors/failures.dart';
+import 'package:sparkle/core/models/aurora_correction_payload.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
 import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
 import 'package:sparkle/core/network/api_client.dart';
@@ -132,13 +133,14 @@ Future<void> _showFreeformCorrectionDialog(
   unawaited(
     context.push(ChatRoutes.chat, extra: {
       'initial_user_message': text,
-      'aurora_correction': {
-        'type': 'freeform',
-        'semantic_value': semanticValue,
-        'band_status': bandStatus,
-        'is_disconfirming': isDisconfirming,
-        'freeform_text': text,
-      },
+      'aurora_correction': AuroraCorrectionPayload.freeform(
+        surface: AuroraCorrectionSurface.dashboard,
+        semanticValue: semanticValue,
+        label: text,
+        freeformText: text,
+        isDisconfirming: isDisconfirming,
+        bandStatus: bandStatus,
+      ).toJson(),
     }),
   );
 }
@@ -639,14 +641,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       isDisconfirming: opt.isDisconfirming,
                       bandStatus: band?.bandStatus.protocolValue ?? '',
                     ));
+                    final payload = AuroraCorrectionPayload.chip(
+                      surface: AuroraCorrectionSurface.dashboard,
+                      semanticValue: opt.semanticValue,
+                      label: opt.label,
+                      isDisconfirming: opt.isDisconfirming,
+                      bandStatus: band?.bandStatus.protocolValue ?? '',
+                    );
                     context.push(ChatRoutes.chat, extra: {
                       'initial_user_message': opt.label,
-                      'aurora_correction': {
-                        'type': 'chip',
-                        'semantic_value': opt.semanticValue,
-                        'band_status': band?.bandStatus.protocolValue ?? '',
-                        'is_disconfirming': opt.isDisconfirming,
-                      },
+                      'aurora_correction': payload.toJson(),
                     });
                   }
                 },
@@ -659,14 +663,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     isDisconfirming: false,
                     bandStatus: band?.bandStatus.protocolValue ?? '',
                   ));
+                  final payload = AuroraCorrectionPayload.calibrationOverride(
+                    surface: AuroraCorrectionSurface.dashboard,
+                    semanticValue: 'quick_calibration',
+                    label: context.l10n.dashboardQuickCalibration,
+                    bandStatus: band?.bandStatus.protocolValue ?? '',
+                  );
                   context.push(ChatRoutes.chat, extra: {
                     'initial_user_message':
                         context.l10n.dashboardQuickCalibration,
-                    'aurora_correction': {
-                      'type': 'cooldown_override',
-                      'semantic_value': 'quick_calibration',
-                      'band_status': band?.bandStatus.protocolValue ?? '',
-                    },
+                    'aurora_correction': payload.toJson(),
                   });
                 },
               ),

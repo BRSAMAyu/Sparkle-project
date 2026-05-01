@@ -12,12 +12,26 @@ Page<dynamic> _buildTransitionPage({
     CustomTransitionPage<void>(
       key: state.pageKey,
       child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          buildSharedAxisCompatibleTransition(
-        animation: animation,
-        type: type,
-        child: child,
-      ),
+      transitionDuration: const Duration(milliseconds: 400),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final entering = buildSharedAxisCompatibleTransition(
+          animation: animation,
+          type: type,
+          child: child,
+        );
+
+        return FadeTransition(
+          opacity: Tween<double>(begin: 1, end: 0).animate(
+            CurvedAnimation(
+              parent: secondaryAnimation,
+              curve: Curves.easeOutCubic,
+              reverseCurve: Curves.easeInCubic,
+            ),
+          ),
+          child: entering,
+        );
+      },
     );
 
 class SplashRoutes {

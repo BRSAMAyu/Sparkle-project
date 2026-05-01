@@ -23,6 +23,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.aurora.correction_types import AuroraCorrectionPayload
 from app.signals.types import _uid
 
 
@@ -42,6 +43,7 @@ class CorrectionResult:
     self_model_updated: bool = False
     correction_recorded: bool = False
     user_visible_effect: dict[str, Any] = field(default_factory=dict)
+    calibration_receipt: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -53,6 +55,7 @@ class CorrectionResult:
             "self_model_updated": self.self_model_updated,
             "correction_recorded": self.correction_recorded,
             "user_visible_effect": self.user_visible_effect,
+            "calibration_receipt": self.calibration_receipt,
         }
 
 
@@ -101,6 +104,158 @@ _ROUTING_CORRECTION_MAP: dict[str, dict[str, Any]] = {
 }
 
 
+_STATE_LABELS_ZH: dict[str, str] = {
+    "affective_pressure": "你当前压力或焦虑程度",
+    "aurora_wake_intent": "是否需要 Aurora 主动提醒",
+    "execution_consistency": "执行风险和稳定性",
+    "goal_mode": "当前目标模式",
+    "growth_momentum": "推进状态",
+    "knowledge_bottleneck": "知识卡点",
+    "material_utilization": "材料使用判断",
+    "strategy_confidence": "下一步策略判断",
+    "task_granularity_fit": "任务颗粒度是否合适",
+    "transfer_failure": "迁移理解是否卡住",
+}
+
+_STATE_LABELS_EN: dict[str, str] = {
+    "affective_pressure": "your current stress or anxiety level",
+    "aurora_wake_intent": "whether Aurora should proactively remind you",
+    "execution_consistency": "execution risk and consistency",
+    "goal_mode": "the current goal mode",
+    "growth_momentum": "your forward momentum",
+    "knowledge_bottleneck": "the knowledge blocker",
+    "material_utilization": "how useful the current materials are",
+    "strategy_confidence": "the next-step strategy judgment",
+    "task_granularity_fit": "whether the task size fits",
+    "transfer_failure": "whether transfer of understanding is stuck",
+}
+
+
+def _state_label(state_key: str, *, locale: str) -> str:
+    labels = _STATE_LABELS_EN if locale == "en" else _STATE_LABELS_ZH
+    return labels.get(state_key, state_key.replace("_", " "))
+
+
+def _format_confidence_change(
+    *,
+    state_key: str,
+    new_confidence: float | None,
+    confidence_delta: float,
+    locale: str,
+) -> str:
+    label = _state_label(state_key, locale=locale)
+    if new_confidence is None:
+        if locale == "en":
+            return f"I updated my judgment about {label}."
+        return f"我更新了对「{label}」的判断。"
+
+    previous = max(0.0, min(1.0, float(new_confidence) - confidence_delta))
+    if locale == "en":
+        direction = "lowered" if confidence_delta < 0 else "raised"
+        return f"I {direction} my confidence about {label} from {previous:.2f} to {float(new_confidence):.2f}."
+    direction = "下调" if confidence_delta < 0 else "上调"
+    return f"我把「{label}」的判断置信度从 {previous:.2f} {direction}到 {float(new_confidence):.2f}。"
+
+
+def _receipt_reason(*, freeform_text: str, chip_label: str, locale: str) -> str:
+    reason = freeform_text.strip() or chip_label.strip()
+    if reason:
+        if locale == "en":
+            return f"Because you corrected me with: \"{reason}\"."
+        return f"因为你纠正了我：「{reason}」。"
+    if locale == "en":
+        return "Because you marked that Aurora's earlier read was not quite right."
+    return "因为你标记了 Aurora 刚才的判断不够准确。"
+
+
+def _receipt_next_time(*, action: str, locale: str) -> str:
+    if action == "freeform_correction":
+        if locale == "en":
+            return "Next time a similar situation appears, I will check this interpretation before acting on it."
+        return "下次遇到类似情境，我会先确认这个理解，再决定是否提醒或推进。"
+    if action == "disconfirmed":
+        if locale == "en":
+            return "Next time a similar signal appears, I will treat this judgment as less certain and ask before nudging."
+        return "下次出现类似信号时，我会把这个判断当作不那么确定，并先确认再提醒。"
+    if locale == "en":
+        return "Next time I see a similar signal, I can use this confirmation with slightly more confidence."
+    return "下次看到类似信号时，我会稍微更有把握地使用这个判断。"
+
+
+def generate_calibration_receipt(
+    correction_result: CorrectionResult,
+    *,
+    semantic_value: str = "",
+    freeform_text: str = "",
+    chip_label: str = "",
+    surface: str = "",
+    timestamp: datetime | None = None,
+) -> dict[str, Any]:
+    """Generate a user-visible calibration receipt from the applied correction."""
+    occurred_at = timestamp or _utcnow()
+    action = correction_result.action
+    if action == "confirmed":
+        confidence_delta = CorrectionFeedbackProcessor.CONFIDENCE_INCREASE
+    elif correction_result.affected_state_keys:
+        confidence_delta = -CorrectionFeedbackProcessor.CONFIDENCE_DECREASE
+    else:
+        confidence_delta = 0.0
+
+    affected_states = list(correction_result.affected_state_keys or [])
+    first_state = affected_states[0] if affected_states else ""
+    new_confidence = correction_result.new_confidence.get(first_state) if first_state else None
+
+    if first_state:
+        what_zh = _format_confidence_change(
+            state_key=first_state,
+            new_confidence=new_confidence,
+            confidence_delta=confidence_delta,
+            locale="zh",
+        )
+        what_en = _format_confidence_change(
+            state_key=first_state,
+            new_confidence=new_confidence,
+            confidence_delta=confidence_delta,
+            locale="en",
+        )
+        if len(affected_states) > 1:
+            extra_zh = "、".join(_state_label(state, locale="zh") for state in affected_states[1:3])
+            extra_en = ", ".join(_state_label(state, locale="en") for state in affected_states[1:3])
+            what_zh = f"{what_zh} 同时也更新了「{extra_zh}」。"
+            what_en = f"{what_en} I also updated {extra_en}."
+    else:
+        what_zh = "我记录了一条新的校准：这次判断需要按你的说明重新理解。"
+        what_en = "I recorded a new calibration: this judgment should be reinterpreted using your correction."
+
+    why_zh = _receipt_reason(freeform_text=freeform_text, chip_label=chip_label, locale="zh")
+    why_en = _receipt_reason(freeform_text=freeform_text, chip_label=chip_label, locale="en")
+    next_zh = _receipt_next_time(action=action, locale="zh")
+    next_en = _receipt_next_time(action=action, locale="en")
+
+    return {
+        "correction_id": correction_result.correction_id,
+        "what_changed": what_zh,
+        "why_changed": why_zh,
+        "next_time": next_zh,
+        "affected_states": affected_states,
+        "confidence_delta": round(confidence_delta, 4),
+        "surface": surface or "unknown",
+        "timestamp": occurred_at.isoformat(),
+        "i18n": {
+            "zh": {
+                "what_changed": what_zh,
+                "why_changed": why_zh,
+                "next_time": next_zh,
+            },
+            "en": {
+                "what_changed": what_en,
+                "why_changed": why_en,
+                "next_time": next_en,
+            },
+        },
+    }
+
+
 class CorrectionFeedbackProcessor:
     """T3.3.2-T3.3.3: Processes user option selections and feeds corrections back
     into StateRegister and self_model.
@@ -121,12 +276,13 @@ class CorrectionFeedbackProcessor:
         self,
         *,
         user_id: str,
-        semantic_value: str,
+        semantic_value: str = "",
         is_disconfirming: bool = False,
         is_freeform: bool = False,
         freeform_text: str = "",
         telemetry_id: str = "",
         context_source: str = "",
+        correction_payload: AuroraCorrectionPayload | dict[str, Any] | None = None,
     ) -> CorrectionResult:
         """Process a user option selection.
 
@@ -134,6 +290,25 @@ class CorrectionFeedbackProcessor:
         Confirming selections receive a modest confidence boost.
         Freeform corrections create an open-ended correction entry.
         """
+        if isinstance(correction_payload, AuroraCorrectionPayload):
+            payload = correction_payload
+        elif isinstance(correction_payload, dict):
+            payload = AuroraCorrectionPayload.normalize(correction_payload)
+        else:
+            payload = AuroraCorrectionPayload.normalize(
+                semantic_value=semantic_value,
+                is_disconfirming=is_disconfirming,
+                is_freeform=is_freeform,
+                freeform_text=freeform_text,
+                telemetry_id=telemetry_id,
+                context_source=context_source or None,
+            )
+        semantic_value = payload.semantic_value
+        is_disconfirming = payload.is_disconfirming
+        is_freeform = payload.is_freeform
+        freeform_text = payload.freeform_text
+        telemetry_id = payload.telemetry_id
+
         result = CorrectionResult(
             correction_id=_uid("corr"),
             telemetry_id=telemetry_id,
@@ -146,7 +321,8 @@ class CorrectionFeedbackProcessor:
                 user_id=user_id,
                 semantic_value=semantic_value,
                 freeform_text=freeform_text,
-                context_source=context_source,
+                context_source=payload.source or context_source,
+                correction_payload=payload,
                 result=result,
             )
         else:
@@ -162,22 +338,88 @@ class CorrectionFeedbackProcessor:
             is_freeform=is_freeform,
         )
         result.user_visible_effect = self._build_user_visible_effect(
-            semantic_value=semantic_value,
+            payload=payload,
             result=result,
         )
+        result.calibration_receipt = generate_calibration_receipt(
+            result,
+            semantic_value=payload.semantic_value,
+            freeform_text=payload.freeform_text,
+            chip_label=payload.label,
+            surface=payload.surface,
+        )
+        await self._persist_calibration_receipt(
+            user_id=user_id,
+            receipt=result.calibration_receipt,
+            session_id=payload.conversation_id,
+        )
         return result
+
+    async def _persist_calibration_receipt(
+        self,
+        *,
+        user_id: str,
+        receipt: dict[str, Any],
+        session_id: str = "",
+    ) -> None:
+        if not receipt:
+            return
+        try:
+            from app.services.memory_service import MemoryService
+
+            await MemoryService(None, self.redis).record_calibration_receipt(
+                user_id=user_id,
+                receipt=receipt,
+            )
+        except Exception:
+            logger.debug("CorrectionFeedback: recent correction receipt persist failed", exc_info=True)
+
+        if self.redis is None or not session_id:
+            return
+        try:
+            from app.working_memory.service import WorkingMemoryService
+
+            text = " ".join(
+                part
+                for part in (
+                    str(receipt.get("what_changed") or "").strip(),
+                    str(receipt.get("next_time") or "").strip(),
+                )
+                if part
+            )
+            if not text:
+                return
+            await WorkingMemoryService(self.redis).upsert_entry(
+                user_id=user_id,
+                session_id=session_id,
+                text=text,
+                semantic_key=f"calibration_receipt:{receipt.get('correction_id') or _uid('corr')}",
+                salience_score=0.82,
+                subject_type="aurora_correction",
+                confidence=0.9,
+                evidence_token=str(receipt.get("correction_id") or ""),
+                occurred_at=_utcnow(),
+                source_turn_id=str(receipt.get("correction_id") or ""),
+                source_lane="aurora_calibration_receipt",
+            )
+        except Exception:
+            logger.debug("CorrectionFeedback: working memory receipt write failed", exc_info=True)
 
     def _build_user_visible_effect(
         self,
         *,
-        semantic_value: str,
+        payload: AuroraCorrectionPayload,
         result: CorrectionResult,
     ) -> dict[str, Any]:
         """Small product-facing receipt for status surfaces."""
         return {
             "visible": result.action in {"disconfirmed", "freeform_correction"},
-            "semantic_value": semantic_value,
+            "semantic_value": payload.semantic_value,
             "action": result.action,
+            "surface": payload.surface,
+            "source": payload.source,
+            "conversation_id": payload.conversation_id,
+            "message_id": payload.message_id,
             "affected_state_keys": result.affected_state_keys,
             "updated_at": _utcnow().isoformat(),
         }
@@ -210,6 +452,7 @@ class CorrectionFeedbackProcessor:
         semantic_value: str,
         freeform_text: str,
         context_source: str,
+        correction_payload: AuroraCorrectionPayload,
         result: CorrectionResult,
     ) -> None:
         """Execute the full disconfirmation pipeline."""
@@ -245,14 +488,18 @@ class CorrectionFeedbackProcessor:
 
             self_model = SparkleSelfModelService(self.redis)
             correction_context = {
-                "semantic_value": semantic_value,
-                "freeform_text": freeform_text,
+                **correction_payload.to_dict(),
                 "context_source": context_source,
             }
             await self_model.record_user_correction(
                 user_id=user_id,
                 correction_text=json.dumps(correction_context, ensure_ascii=False),
-                user_context_payload={"source": "predicted_reply_chip"},
+                user_context_payload={
+                    "source": correction_payload.source,
+                    "surface": correction_payload.surface,
+                    "conversation_id": correction_payload.conversation_id,
+                    "message_id": correction_payload.message_id,
+                },
             )
             result.self_model_updated = True
         except Exception:
