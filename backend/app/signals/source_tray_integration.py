@@ -362,34 +362,6 @@ class SourceEffectivenessTracker:
                 results.append(data)
         return sorted(results, key=lambda x: x.get("effectiveness_rate", 0), reverse=True)
 
-    # SRC-014: Source trust correction
-    _BLOCKLIST_KEY = "spine:source_blocklist:{user_id}"
-
-    async def record_user_correction(
-        self,
-        *,
-        user_id: str,
-        source_id: str,
-        reason: str,
-    ) -> dict[str, Any]:
-        key = self._BLOCKLIST_KEY.format(user_id=user_id)
-        await self.redis.sadd(key, source_id)
-        await self.redis.expire(key, _SOURCE_EFFECT_TTL)
-        return {
-            "source_id": source_id,
-            "auto_reuse_blocked": True,
-            "status": "user_corrected",
-        }
-
-    async def is_source_blocked(self, user_id: str, source_id: str) -> bool:
-        key = self._BLOCKLIST_KEY.format(user_id=user_id)
-        return bool(await self.redis.sismember(key, source_id))
-
-    async def get_blocked_sources(self, user_id: str) -> list[str]:
-        key = self._BLOCKLIST_KEY.format(user_id=user_id)
-        members = await self.redis.smembers(key)
-        return [m if isinstance(m, str) else m.decode() for m in members]
-
     async def get_low_effectiveness_sources(
         self,
         user_id: str,

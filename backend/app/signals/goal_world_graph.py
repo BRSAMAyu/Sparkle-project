@@ -281,62 +281,6 @@ class GoalWorldGraphService:
 
         return suggestions[:limit]
 
-    def get_deferred_nodes(self, graph: GoalWorldGraph, focus_ids: set[str] | None = None) -> list[dict[str, Any]]:
-        """Explain why non-focus nodes are deferred (GOAL-006).
-
-        Returns nodes not in focus set and not completed, with a reason
-        explaining why they are lower priority.
-        """
-        focus = focus_ids or set()
-        completed_ids = {n.node_id for n in graph.nodes if n.status in ("mastered", "done")}
-        node_map = {n.node_id: n for n in graph.nodes}
-        deferred: list[dict[str, Any]] = []
-
-        for node in graph.nodes:
-            if node.status in ("mastered", "done"):
-                continue
-            if node.node_id in focus:
-                continue
-            reason = self._deferred_reason(node, node_map, completed_ids)
-            deferred.append({
-                "node_id": node.node_id,
-                "label": node.label,
-                "node_type": node.node_type,
-                "status": node.status,
-                "why_deferred": reason,
-            })
-
-        return deferred
-
-    def _deferred_reason(
-        self,
-        node: GraphNode,
-        node_map: dict[str, GraphNode],
-        completed_ids: set[str],
-    ) -> str:
-        """Derive a human-readable reason why a node is deferred."""
-        if node.status == "blocked":
-            unmet = [d for d in node.dependency_ids if d not in completed_ids]
-            if unmet:
-                blocker_labels = [
-                    node_map[d].label for d in unmet if d in node_map
-                ]
-                if blocker_labels:
-                    return f"被阻塞：需要先完成 {', '.join(blocker_labels[:3])}"
-                return "被阻塞：前置依赖未完成"
-
-        # Not blocked but not in focus — explain why
-        if node.mastery > 0.7:
-            return "已基本掌握，优先级降低"
-        if node.mastery > 0:
-            return "正在学习中，当前有更紧迫的节点"
-
-        # Check if it's a non-urgent informational node
-        if node.node_type in _INFORMATIONAL_TYPES:
-            return "信息参考型节点，不阻塞主线"
-
-        return "当前轮次有更紧迫的焦点，暂缓"
-
     def _recompute(self, graph: GoalWorldGraph) -> None:
         """Recompute derived fields: coverage, bottleneck, blocked status."""
         completed = [

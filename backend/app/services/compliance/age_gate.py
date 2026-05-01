@@ -60,54 +60,6 @@ class AgeGateService:
         user.age_verified_at = _utcnow()
 
 
-# ── GOV-006: Data Deletion Service ──────────────────────────────
-
-
-@dataclass
-class DeletionRequest:
-    user_id: str
-    scope: str
-    status: str
-    legal_hold: bool
-    created_at: datetime | None = None
-
-
-_FULL_ERASURE_TABLES = ("users", "preferences", "episodes", "achievements", "memory", "events")
-
-
-class DataDeletionService:
-    @staticmethod
-    def create_deletion_request(
-        *,
-        user_id: str,
-        scope: str = "full",
-        legal_hold_active: bool = False,
-    ) -> DeletionRequest:
-        status = "blocked_legal_hold" if legal_hold_active else "scheduled"
-        return DeletionRequest(
-            user_id=user_id,
-            scope=scope,
-            status=status,
-            legal_hold=legal_hold_active,
-            created_at=_utcnow() if status == "scheduled" else None,
-        )
-
-    @staticmethod
-    def get_erasure_tables(request: DeletionRequest) -> tuple[str, ...]:
-        if request.scope == "full":
-            return _FULL_ERASURE_TABLES
-        return ("preferences", "episodes")
-
-    @staticmethod
-    def encrypted_erase_field(original: str, *, user_id: str) -> str:
-        import hashlib
-        hashed = hashlib.sha256(f"{user_id}:{original}".encode()).hexdigest()[:12]
-        return f"ERASED:{hashed}"
-
-    @staticmethod
-    def check_legal_hold(user_id: str, active_holds: list[str] | None = None) -> bool:
-        return user_id in (active_holds or [])
-
 
 # ═══════════════════════════════════════════════════════════════════════
 # GOV-006: Data Deletion Protocol + Legal Hold + Encrypted Erasure

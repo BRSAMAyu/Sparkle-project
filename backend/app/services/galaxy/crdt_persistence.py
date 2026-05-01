@@ -119,58 +119,6 @@ class CRDTPersistenceManager:
         await self.db.commit()
 
 
-class MasteryMergeCRDT:
-    """Stateless CRDT merge strategies for mastery/task status."""
-
-    _STATUS_ORDER = {"pending": 0, "in_progress": 1, "completed": 2}
-
-    @staticmethod
-    def merge_mastery(a: float, b: float) -> float:
-        return max(a, b)
-
-    @classmethod
-    def merge_task_status(cls, a: str, b: str) -> str:
-        order_a = cls._STATUS_ORDER.get(a, 0)
-        order_b = cls._STATUS_ORDER.get(b, 0)
-        return a if order_a >= order_b else b
-
-    @classmethod
-    def merge_node(cls, local: dict, remote: dict) -> dict:
-        return {
-            "mastery_score": cls.merge_mastery(
-                local.get("mastery_score", 0.0),
-                remote.get("mastery_score", 0.0),
-            ),
-            "status": cls.merge_task_status(
-                local.get("status", "pending"),
-                remote.get("status", "pending"),
-            ),
-            "revision": max(local.get("revision", 0), remote.get("revision", 0)) + 1,
-        }
-
-    @classmethod
-    def merge_batch(
-        cls,
-        local: dict[str, dict],
-        remote: dict[str, dict],
-    ) -> list[dict]:
-        all_keys = set(local) | set(remote)
-        results: list[dict] = []
-        for key in all_keys:
-            if key in local and key in remote:
-                merged = cls.merge_node(local[key], remote[key])
-                merged["node_id"] = key
-                results.append(merged)
-            elif key in local:
-                entry = dict(local[key])
-                entry.setdefault("node_id", key)
-                results.append(entry)
-            else:
-                entry = dict(remote[key])
-                entry.setdefault("node_id", key)
-                results.append(entry)
-        return results
-
 
 # ═══════════════════════════════════════════════════════════════════════
 # APP-005: CRDT Mastery Merge — offline/multi-device conflict resolution
