@@ -1,7 +1,7 @@
 """Auto collector for cognitive fragments based on implicit behavior signals."""
 from __future__ import annotations
 
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, select

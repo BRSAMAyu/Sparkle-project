@@ -5,7 +5,7 @@ Stores short-lived sessions in Redis for authentication flows.
 from __future__ import annotations
 
 import json
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import uuid4
 
 import redis.asyncio as redis

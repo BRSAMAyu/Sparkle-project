@@ -7,14 +7,13 @@ import asyncio
 import math
 import random
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from textwrap import shorten
 from typing import Any
 from uuid import UUID
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
-
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 

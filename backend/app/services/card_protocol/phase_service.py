@@ -19,9 +19,9 @@ from app.models.card_protocol import (
 )
 from app.models.plan import Plan
 from app.models.task import Task
+from app.services.card_edge_service import CardEdgeService
 from app.services.card_protocol.card_operations_service import CardOperationsService
 from app.services.card_protocol.temporal_engine import TemporalEngine
-from app.services.card_edge_service import CardEdgeService
 from app.services.card_service import CardService
 
 

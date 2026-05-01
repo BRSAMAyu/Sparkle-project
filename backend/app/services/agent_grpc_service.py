@@ -9,28 +9,26 @@ AgentService gRPC Implementation
 
 from __future__ import annotations
 
-
 import asyncio
 import json
 import time
 import uuid
 from collections.abc import AsyncIterator, Callable
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 
 import grpc
 from google.protobuf.json_format import MessageToDict
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.metrics import FEEDBACK_TO_EFFECT_SECONDS
 from app.core.metrics import (
+    FEEDBACK_TO_EFFECT_SECONDS,
     PROTO_ERROR_CODE_FALLBACK_TOTAL,
     PROTO_FIELD_READ_TOTAL,
 )
 from app.core.safe_error_messages import build_safe_chat_error
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
 from app.learning.prompt_bandit import PromptBandit
-from app.orchestration.run_ledger import RunLedgerStore
 from app.orchestration.chat_modes import (
     CHAT_MODE_DEEP_ANALYSIS,
     CHAT_MODE_ERROR_DIAGNOSIS,
@@ -43,8 +41,9 @@ from app.orchestration.chat_modes import (
 )
 from app.orchestration.orchestrator import ChatOrchestrator
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service
-from app.services.response_feedback_service import ResponseFeedbackService
+from app.orchestration.run_ledger import RunLedgerStore
 from app.services.progress_narrative_service import ProgressNarrativeService
+from app.services.response_feedback_service import ResponseFeedbackService
 
 
 def _utcnow() -> datetime:

@@ -4,9 +4,10 @@ Shop Service - 商城核心业务逻辑
 """
 
 from __future__ import annotations
+
 import hashlib
 import json
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 

@@ -7,11 +7,11 @@ inputs and filtered views for the existing Aurora and community layers.
 from __future__ import annotations
 
 import os
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any
-from collections.abc import Iterable, Mapping, Sequence
 from uuid import UUID, uuid4
 
 from app.aurora.schemas import (

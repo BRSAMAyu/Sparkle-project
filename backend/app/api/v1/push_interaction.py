@@ -2,7 +2,8 @@
 Push interaction API - record push open/dismiss/ignore events.
 """
 from __future__ import annotations
-from datetime import datetime, UTC
+
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException

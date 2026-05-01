@@ -3,7 +3,6 @@ Collaboration node with sequential, parallel, debate, and delegation modes.
 """
 from __future__ import annotations
 
-
 import asyncio
 from typing import Any
 
@@ -28,7 +27,6 @@ from app.core.metrics import (
 from app.orchestration.agent_activity import AGENT_DISPLAY_CONFIG, emit_agent_activity, get_stream_callback
 from app.orchestration.agent_scoring import AgentScoringService
 from app.services.custom_expert_service import is_custom_expert_id
-
 
 COLLABORATION_MODES = {"single", "sequential", "parallel", "debate", "delegation"}
 

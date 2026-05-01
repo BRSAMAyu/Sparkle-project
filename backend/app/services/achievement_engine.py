@@ -8,15 +8,15 @@ Achievement Engine Service
 """
 
 from __future__ import annotations
+
 import asyncio
 import contextlib
-from datetime import date, datetime, timedelta, UTC
-from typing import Any
 from collections.abc import Awaitable, Callable
+from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 from loguru import logger
-from sqlalchemy import event
-from sqlalchemy import and_, desc, func, select
+from sqlalchemy import and_, desc, event, func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import IntegrityError

@@ -17,9 +17,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-
 from app.signals.types import _uid
-
 
 _GRAPH_KEY = "spine:goal_graph:{user_id}:{goal_id}"
 _GRAPH_TTL = 90 * 24 * 3600  # 90 days

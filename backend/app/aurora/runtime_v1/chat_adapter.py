@@ -3,9 +3,8 @@ from __future__ import annotations
 import inspect
 import json
 import re
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from typing import Any
-from collections.abc import Awaitable, Callable
 
 from loguru import logger
 

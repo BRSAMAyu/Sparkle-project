@@ -20,7 +20,6 @@ from typing import Any
 from loguru import logger
 
 
-
 @dataclass
 class AuroraWakeEligibility:
     """Aurora 唤醒资格检查结果。"""

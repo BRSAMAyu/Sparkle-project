@@ -9,10 +9,11 @@ Permission Service - 统一权限检查和管理
 - 资源访问控制
 """
 from __future__ import annotations
+
+from collections.abc import Callable
 from enum import StrEnum
 from functools import wraps
 from typing import Any, TypeVar
-from collections.abc import Callable
 from uuid import UUID
 
 from fastapi import HTTPException

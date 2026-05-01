@@ -21,7 +21,6 @@ from loguru import logger
 
 from app.signals.types import _uid
 
-
 _EXPERIMENT_KEY = "spine:experiment:{experiment_id}"
 _USER_EXPERIMENTS_KEY = "spine:experiments:{user_id}"
 _EXPERIMENT_TTL = 30 * 24 * 3600  # 30 days

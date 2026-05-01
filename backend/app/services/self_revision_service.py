@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import inspect
 import json
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 

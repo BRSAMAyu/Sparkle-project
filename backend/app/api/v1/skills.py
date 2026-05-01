@@ -13,7 +13,6 @@ from app.services.skill_schema import draft_to_payload
 from app.services.skill_share import SkillShareService
 from app.services.skill_store import SkillStoreService
 
-
 router = APIRouter(prefix="/skills", tags=["skills"])
 
 

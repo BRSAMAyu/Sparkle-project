@@ -15,7 +15,7 @@ from __future__ import annotations
 import json
 import math
 import re
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 

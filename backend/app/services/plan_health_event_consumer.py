@@ -22,7 +22,6 @@ from app.core.event_bus import EventBus
 from app.db.session import AsyncSessionLocal
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
-
 # Actions where断点1 already handles user-facing notification
 _ALREADY_NOTIFIED_ACTIONS = frozenset({
     "incremental_adjustment_applied",

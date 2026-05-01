@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Reflection Agent - 自我反思与修正Agent
 
@@ -15,12 +16,12 @@ Reflection Agent - 自我反思与修正Agent
 创建时间: 2026-01-25
 """
 
-import uuid
 import json
 import math
 import time
+import uuid
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 

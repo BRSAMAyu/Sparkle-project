@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from typing import Any
-from app.core.i18n import I18n
 
+from app.core.i18n import I18n
 
 _PATTERN_COPY_ALIASES: dict[str, str] = {
     "夜间能量错配循环": "the night-time energy mismatch loop",

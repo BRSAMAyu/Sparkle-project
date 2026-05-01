@@ -3,12 +3,12 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import inspect
-import logging
 import json
+import logging
 import re
 import statistics
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, UTC
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
@@ -29,14 +29,14 @@ from app.models.theater_candidate_bundle import TheaterCandidateBundle
 from app.models.theater_prediction import TheaterPrediction
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate
-from app.services.insight_copy import present_pattern_name
-from app.services.galaxy_service import GalaxyService
+from app.services.cognitive_service import CognitiveService
 from app.services.expansion_service import ExpansionService
 from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
+from app.services.galaxy_service import GalaxyService
+from app.services.graph_reasoning_service import GraphReasoningService
+from app.services.insight_copy import present_pattern_name
 from app.services.llm_fallback_utils import analysis_llm
 from app.services.plan_service import PlanService
-from app.services.graph_reasoning_service import GraphReasoningService
-from app.services.cognitive_service import CognitiveService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.task_service import TaskService
 

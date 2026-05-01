@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, timedelta
-import re
 from typing import Any
 from uuid import UUID, uuid4
 

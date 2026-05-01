@@ -2,7 +2,8 @@
 偏好推断服务 - 从用户反馈中学习并调整推断偏好
 """
 from __future__ import annotations
-from datetime import datetime, UTC
+
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger

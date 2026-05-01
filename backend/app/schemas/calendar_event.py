@@ -1,13 +1,13 @@
 """Calendar Event Schemas - 日历事件创建、更新、查询等"""
 
 from __future__ import annotations
+
 from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator
 
 from app.schemas.common import BaseSchema
-
 
 # ========== Request Schemas ==========
 

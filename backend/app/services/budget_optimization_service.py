@@ -5,7 +5,7 @@ Budget Optimization Service
 Intelligent budget allocation for context packs using multi-armed bandit algorithms.
 """
 import math
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 
 from loguru import logger
 from sqlalchemy import and_, select

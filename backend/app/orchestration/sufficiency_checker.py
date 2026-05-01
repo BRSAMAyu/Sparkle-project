@@ -5,9 +5,10 @@ Sufficiency Checker
 检查LLM是否有足够信息执行用户请求，避免在没有必要信息时直接执行。
 """
 from __future__ import annotations
+
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any, Literal
 

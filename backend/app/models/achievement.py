@@ -5,7 +5,6 @@ Achievement System Models
 
 from __future__ import annotations
 
-
 import enum
 
 from sqlalchemy import JSON, Boolean, Column, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, String

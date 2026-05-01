@@ -12,17 +12,17 @@ from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
 from app.core.business_metrics import EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL
 from app.gen.agent.v1 import agent_service_pb2
+from app.orchestration.goal_quality_evaluator import goal_quality_evaluator
 from app.orchestration.planning_intent import detect_planning_like_turn
 from app.orchestration.schemas import ExecutablePlan
-from app.orchestration.sufficiency_checker import SufficiencyStatus, sufficiency_checker
-from app.orchestration.goal_quality_evaluator import goal_quality_evaluator
-from app.orchestration.tool_result_extractor import ToolResultExtractor
 from app.orchestration.statechart_engine import WorkflowState
+from app.orchestration.sufficiency_checker import SufficiencyStatus, sufficiency_checker
+from app.orchestration.tool_result_extractor import ToolResultExtractor
 from app.services.galaxy_service import GalaxyService
+from app.services.llm_service import get_configured_llm_service_for_tier
+from app.services.perceptible_intelligence_service import ProgressComparisonService
 from app.services.plan_execution_record_service import PlanExecutionRecordService
 from app.services.plan_execution_validator import PlanExecutionValidator
-from app.services.perceptible_intelligence_service import ProgressComparisonService
-from app.services.llm_service import get_configured_llm_service_for_tier
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 
@@ -560,9 +560,7 @@ class ValidationEngineMixin:
             extracted_entities["plan_title"] = normalized_message
             if any(keyword in msg_lower for keyword in ["冲刺", "突击", "期末", "考试", "sprint", "exam"]):
                 extracted_entities["plan_type"] = "sprint"
-            elif any(keyword in msg_lower for keyword in ["长期", "成长", "习惯", "体系", "long-term", "growth"]):
-                extracted_entities["plan_type"] = "growth"
-            elif "计划" in normalized_message or "复习" in normalized_message:
+            elif any(keyword in msg_lower for keyword in ["长期", "成长", "习惯", "体系", "long-term", "growth"]) or "计划" in normalized_message or "复习" in normalized_message:
                 extracted_entities["plan_type"] = "growth"
 
         if intent_type == "task_management" and normalized_message:

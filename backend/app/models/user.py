@@ -8,6 +8,7 @@ User Model - 核心用户信息和个性化偏好
 """
 
 from __future__ import annotations
+
 import enum
 
 
@@ -26,7 +27,6 @@ from sqlalchemy import JSON, Boolean, Column, DateTime, Enum, Float, ForeignKey,
 from sqlalchemy.orm import relationship
 
 from app.models.base import GUID, BaseModel
-
 
 # 导出 SearchVisibility 供其他模块使用
 __all__ = ['UserStatus', 'AvatarStatus', 'SearchVisibility', 'User', 'PushPreference', 'UserDevice', 'LoginAttempt']

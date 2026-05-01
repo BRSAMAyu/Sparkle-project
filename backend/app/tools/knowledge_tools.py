@@ -1,7 +1,8 @@
 # DEPRECATED: no active importers — candidate for removal in next cleanup
 from __future__ import annotations
+
 import contextlib
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 

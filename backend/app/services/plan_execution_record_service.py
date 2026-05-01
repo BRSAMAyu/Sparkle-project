@@ -4,7 +4,8 @@ PlanExecutionRecordService - 方案执行记录持久化服务
 负责将验证结果保存到数据库，并支持后续查询分析
 """
 from __future__ import annotations
-from datetime import datetime, timedelta, UTC
+
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 

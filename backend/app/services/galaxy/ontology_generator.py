@@ -8,7 +8,6 @@ from loguru import logger
 
 from app.services.llm_fallback_utils import analysis_llm
 
-
 DEFAULT_ENTITY_TYPES = [
     "Concept",
     "Theory",

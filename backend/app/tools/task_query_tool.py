@@ -7,6 +7,7 @@ Tools:
 - ModifyPlanTaskTool: Modify task properties (title, status, priority, guide_content)
 """
 from __future__ import annotations
+
 from typing import Any
 from uuid import UUID
 

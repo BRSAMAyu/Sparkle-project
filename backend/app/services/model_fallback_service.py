@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Model Fallback Service - Phase 2d
 
@@ -14,7 +15,7 @@ Model Fallback Service - Phase 2d
 
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any
 

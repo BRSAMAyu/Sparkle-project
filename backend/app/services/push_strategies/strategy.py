@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from datetime import datetime, time, timedelta, UTC
+from datetime import UTC, datetime, time, timedelta
 from typing import Any
 
 from sqlalchemy import select

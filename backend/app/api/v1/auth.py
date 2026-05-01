@@ -8,8 +8,9 @@ Login, Register, Refresh Token, Social Login
 """
 
 from __future__ import annotations
+
 import uuid
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -18,9 +19,12 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.config import settings
-from app.core.auth_audit_service import auth_audit_service
 from app.core.account_lockout import account_lockout_service
+from app.core.auth_audit_service import auth_audit_service
+from app.core.cache import cache_service
+from app.core.event_bus import UserRegisteredEvent
 from app.core.rate_limiting import limiter
 from app.core.security import (
     blacklist_token,
@@ -31,8 +35,6 @@ from app.core.security import (
     set_user_revoked_before,
     verify_password,
 )
-from app.core.cache import cache_service
-from app.core.event_bus import UserRegisteredEvent
 from app.db.session import get_db
 from app.models.auth_security import AuthAuditAction
 from app.models.community import GroupRole
@@ -40,19 +42,18 @@ from app.models.user import User
 from app.schemas.user import (
     ForgotPasswordRequest,
     LogoutRequest,
-    SocialLoginRequest,
     RefreshTokenRequest,
     ResetPasswordRequest,
+    SocialLoginRequest,
     UpgradeGuestRequest,
     UpgradeGuestSocialRequest,
     UserLogin,
-    UserRegister,
     UserProfile,
+    UserRegister,
     VerifyEmailRequest,
 )
-from app.api.deps import get_current_user
-from app.services.permission_service import PermissionService
 from app.services.auth_session_service import auth_session_service
+from app.services.permission_service import PermissionService
 from app.services.stage33_journey_event_service import Stage33JourneyEventService
 
 router = APIRouter()

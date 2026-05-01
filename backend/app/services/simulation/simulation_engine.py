@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import json
 from collections import Counter, OrderedDict
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-import json
 from typing import Any
 from urllib.parse import urlencode
 from uuid import UUID, uuid4
@@ -17,11 +17,11 @@ from app.core.cache import cache_service
 from app.core.event_bus import event_bus_reliable
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
-from app.services.simulation.simulation_run_store import SimulationRunStore
 from app.services.llm_fallback_utils import analysis_llm
 from app.services.predictive_service import PredictiveService
 from app.services.simulation.participant_generator import generate_participants
 from app.services.simulation.scenario_templates import SCENARIOS
+from app.services.simulation.simulation_run_store import SimulationRunStore
 from app.services.simulation.simulation_state import LearningSimulationState
 from app.services.system_update_service import SystemUpdateService, build_system_update
 

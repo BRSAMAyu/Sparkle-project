@@ -4,6 +4,7 @@ Device Registration API
 Handles registration and management of user device tokens for push notifications.
 """
 from __future__ import annotations
+
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,7 +16,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.models.user import User, UserDevice
 from app.services.push_sender_service import PushSenderService
-
 
 router = APIRouter(prefix="/devices", tags=["devices"])
 

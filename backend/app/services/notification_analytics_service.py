@@ -3,7 +3,7 @@ Notification Analytics Service
 
 Provides usage statistics and analytics for notifications.
 """
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
@@ -17,15 +17,15 @@ try:
 except ImportError:
     aioredis = None
 
-from app.models.intervention import InterventionRequest
-from app.models.notification import Notification
-from app.models.notification_interaction import NotificationInteraction
 from app.models.card_protocol import (
     DeliveryStrategy,
     InterventionAcceptanceStatus,
     InterventionOutcomeStatus,
     InterventionRecord,
 )
+from app.models.intervention import InterventionRequest
+from app.models.notification import Notification
+from app.models.notification_interaction import NotificationInteraction
 from app.schemas.unified_notification import (
     InterventionFunnelStats,
     InterventionTimeToActionBucket,

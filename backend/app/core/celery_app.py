@@ -19,9 +19,9 @@ Sparkle Celery 应用配置
 创建时间: 2026-01-03
 """
 
+import asyncio
 import logging
 import os
-import asyncio
 
 from celery import Celery
 from celery.schedules import crontab

@@ -8,6 +8,7 @@ Community Schemas - 好友、群组、消息、任务相关的请求/响应模�
 """
 
 from __future__ import annotations
+
 from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal

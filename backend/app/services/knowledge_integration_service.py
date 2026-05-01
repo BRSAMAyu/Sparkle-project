@@ -8,7 +8,8 @@ Author: Claude Code (Opus 4.5)
 Created: 2026-01-15
 """
 from __future__ import annotations
-from datetime import datetime, timedelta, UTC
+
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger

@@ -175,8 +175,8 @@ async def chat_with_task_context(
         # Build prior_outputs from Aurora user state
         prior_outputs: dict[str, Any] = {}
         try:
-            from app.state_aggregator.service import StateAggregator
             from app.state_aggregator.schema import UserStateFieldName
+            from app.state_aggregator.service import StateAggregator
 
             aggregator = StateAggregator(db)
             state = await aggregator.get_user_state(

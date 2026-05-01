@@ -5,6 +5,7 @@ MDX/MDD Dictionary Query Service
 默认启用；如果运行环境缺依赖或实际词典文件是 Git LFS 指针文件，则优雅降级。
 """
 from __future__ import annotations
+
 import html
 import logging
 import os

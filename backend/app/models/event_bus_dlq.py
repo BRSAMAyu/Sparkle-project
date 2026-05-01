@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import JSON, Column, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 
-from app.models.base import BaseModel, GUID
+from app.models.base import GUID, BaseModel
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 

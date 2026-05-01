@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
-from collections.abc import Awaitable, Callable
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -716,8 +716,9 @@ class StateAggregatorService:
         # DF-10: Also read recent events from Redis cache
         recent_events: list[dict] = []
         try:
-            from app.core.cache import cache_service
             import json as _json
+
+            from app.core.cache import cache_service
             events_key = f"spine:achievement_events:{user_id}"
             raw_events = await cache_service.redis.lrange(events_key, 0, 4) if hasattr(cache_service, 'redis') else []
             for raw in raw_events:

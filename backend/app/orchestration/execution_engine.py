@@ -31,8 +31,8 @@ from app.core.task_manager import task_manager
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.execution_intent import ExecutionIntentStatus
 from app.models.galaxy import KnowledgeNode
-from app.orchestration.agent_memory import AgentMemoryService
 from app.orchestration.agent_activity import emit_agent_activity, emit_agent_turn
+from app.orchestration.agent_memory import AgentMemoryService
 from app.orchestration.chat_modes import CHAT_MODE_STANDARD
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config
@@ -50,9 +50,9 @@ from app.orchestration.statechart_engine import WorkflowState
 from app.orchestration.transparency_data_generator import StepType, TransparencyDataGenerator
 from app.orchestration.ux_envelope import ux_envelope_builder
 from app.services.execution_service import ExecutionService
+from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
 from app.services.llm_service import llm_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
-from app.services.galaxy.graph_structure_service import GraphStructureEvolutionService
 
 _LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 10.0
 _OPENCLAW_CHAT_CONTROL_EXPLICIT_HINTS = (

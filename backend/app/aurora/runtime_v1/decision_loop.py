@@ -3,10 +3,10 @@ from __future__ import annotations
 import inspect
 import json
 import re
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
-from collections.abc import Awaitable, Callable, Mapping
 
 from loguru import logger
 

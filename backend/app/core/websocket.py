@@ -14,6 +14,7 @@ Production-grade features:
 """
 
 from __future__ import annotations
+
 import asyncio
 import contextlib
 import hashlib
@@ -605,7 +606,7 @@ class ConnectionManager:
 
         # 3. Send via FCM/APNs using PushSenderService
         try:
-            from app.services.push_sender_service import PushSenderService, PushPayload
+            from app.services.push_sender_service import PushPayload, PushSenderService
 
             async with AsyncSessionLocal() as db:
                 push_service = PushSenderService(db)

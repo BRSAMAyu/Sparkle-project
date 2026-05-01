@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -469,9 +469,7 @@ class ContinuousImprovementLoop:
         # Update proposal status
         if conclusion.proposal_id in self._proposals:
             prop = self._proposals[conclusion.proposal_id]
-            if conclusion.action == "promote":
-                prop.status = "completed"
-            elif conclusion.action == "abandon":
+            if conclusion.action == "promote" or conclusion.action == "abandon":
                 prop.status = "completed"
 
         log_entry = {

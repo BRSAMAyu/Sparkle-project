@@ -5,10 +5,11 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 import asyncio
 import inspect
 import json
-from datetime import timedelta, datetime, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -24,8 +25,7 @@ from app.models.cognitive import AnalysisStatus, BehaviorPattern, CognitiveFragm
 from app.services.analysis.unified_analysis_service import UnifiedAnalysisService
 from app.services.analytics_service import AnalyticsService
 from app.services.embedding_service import embedding_service
-from app.services.llm_service import llm_service
-from app.services.llm_service import get_llm_service_for_specific_model
+from app.services.llm_service import get_llm_service_for_specific_model, llm_service
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 

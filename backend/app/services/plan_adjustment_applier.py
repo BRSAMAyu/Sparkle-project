@@ -15,7 +15,7 @@ Four patch types supported (Phase 1):
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, UTC
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -25,7 +25,6 @@ from sqlalchemy import select
 from app.models.task import Task, TaskStatus, TaskType
 from app.services.plan_state_service import PlanStateService
 from app.services.system_update_service import SystemUpdateService, build_system_update
-
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -399,7 +398,7 @@ class PlanAdjustmentApplier:
         if task_state_snapshots:
             tasks = await self.db.execute(
                 select(Task).where(
-                    Task.id.in_([UUID(tid) for tid in task_state_snapshots.keys()])
+                    Task.id.in_([UUID(tid) for tid in task_state_snapshots])
                 )
             )
             for task in tasks.scalars():

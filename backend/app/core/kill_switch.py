@@ -6,7 +6,6 @@ from typing import Any
 from app.config import settings
 from app.core.metrics import KILL_SWITCH_MODE
 
-
 TRI_STATE_MODES = frozenset({"off", "shadow", "live"})
 _MODE_ALIASES = {
     "0": "off",

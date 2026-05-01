@@ -16,7 +16,6 @@ from loguru import logger
 
 from app.signals.types import AuroraAgenda, AuroraAgendaItem, _uid
 
-
 _AGENDA_KEY = "spine:agenda:{session_id}"
 _USER_AGENDAS_KEY = "spine:agendas:{user_id}"
 _PENDING_KEY = "spine:agenda_pending:{user_id}"

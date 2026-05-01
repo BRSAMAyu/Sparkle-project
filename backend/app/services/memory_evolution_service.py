@@ -5,8 +5,9 @@ Memory Evolution Service
 Tracks and manages memory evolution history, predictions, and analysis.
 """
 from __future__ import annotations
+
 import inspect
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 

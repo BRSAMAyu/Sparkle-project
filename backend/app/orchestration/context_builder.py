@@ -11,11 +11,10 @@ This is a *mixin* -- it relies on attributes that live on the concrete
 
 from __future__ import annotations
 
-
 import contextlib
 import json
 import uuid
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from google.protobuf.json_format import MessageToDict
@@ -33,17 +32,17 @@ from app.models.task import Task
 from app.models.task import TaskStatus as ModelTaskStatus
 from app.models.task_feedback import TaskFeedback
 from app.routing.tool_preference_router import ToolPreferenceRouter
-from app.services.focus_service import focus_service
-from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
-from app.services.self_evolution_service import UnderstandingDepthService
+from app.scaffolding.scaffolding_fsm import ScaffoldingFSM
 from app.services.aurora_stage34_kill_switch_service import AuroraStage34KillSwitchService
 from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwitchService
+from app.services.focus_service import focus_service
 from app.services.galaxy_service import GalaxyService
+from app.services.insight_copy import canonical_pattern_key, present_pattern_description, present_pattern_name
 from app.services.memory_service import MemoryService
 from app.services.plan_service import PlanService
+from app.services.self_evolution_service import UnderstandingDepthService
 from app.services.simulation.seed_extractor import SeedExtractor
 from app.services.user_service import UserService
-from app.scaffolding.scaffolding_fsm import ScaffoldingFSM
 from app.state_aggregator.service import StateAggregatorService
 
 # ---------------------------------------------------------------------------

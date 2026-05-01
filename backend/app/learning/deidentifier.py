@@ -5,7 +5,6 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-
 _REPLACEMENTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(东北|华北|华东|华南|西北|西南|北京|上海|广州|深圳|杭州|成都)"), ""),
     (re.compile(r"(大一|大二|大三|大四|研一|研二|研三)"), "学生"),

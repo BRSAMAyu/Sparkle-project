@@ -20,7 +20,6 @@ from app.orchestration.plan_quality_contract import (
     SECTION_WORKLOAD_MODEL,
 )
 
-
 SECTION_LABELS: dict[str, tuple[str, ...]] = {
     SECTION_GOAL_FRAME: ("goal frame", "goal", "明确目标", "目标"),
     SECTION_ASSUMPTIONS: ("key assumptions", "assumptions", "关键假设", "假设"),

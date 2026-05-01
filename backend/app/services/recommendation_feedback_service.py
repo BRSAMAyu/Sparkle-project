@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from math import sqrt
 from typing import Any
 from uuid import UUID

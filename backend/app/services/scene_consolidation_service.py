@@ -4,10 +4,10 @@ import hashlib
 import math
 import re
 from collections import Counter
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from statistics import fmean
-from collections.abc import Iterable, Sequence
 from uuid import UUID
 
 from loguru import logger

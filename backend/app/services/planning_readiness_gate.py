@@ -1,6 +1,9 @@
 from __future__ import annotations
+
 from typing import Any, Literal
+
 from app.orchestration.schemas import CompiledInsightState
+
 
 class PlanningReadinessGate:
     """

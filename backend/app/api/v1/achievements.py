@@ -4,8 +4,9 @@ Achievements API Endpoints
 """
 
 from __future__ import annotations
+
 import secrets
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query

@@ -14,8 +14,9 @@ User Service - 生产级实现
 """
 
 from __future__ import annotations
+
 import json
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -27,8 +28,8 @@ from app.core.metrics import CACHE_HIT_COUNT
 from app.core.security import get_password_hash
 from app.models.user import PushPreference, User
 from app.schemas.user import UserContext, UserPreferences, UserRegister
-from app.services.profile_write_service import ProfileWriteService
 from app.services.personalization.preference_service import PreferenceService
+from app.services.profile_write_service import ProfileWriteService
 
 
 def _utcnow() -> datetime:

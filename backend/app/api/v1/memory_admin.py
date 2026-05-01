@@ -1,6 +1,7 @@
 from __future__ import annotations
+
 import contextlib
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
@@ -11,12 +12,12 @@ from app.api.deps import get_current_active_superuser, get_db
 from app.config import settings
 from app.core.business_metrics import (
     ADAPTIVE_ROLLBACK_TOTAL,
-    CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL,
     CONTEXT_PACK_INTENT,
+    CONTEXT_SEMANTIC_GATING_FALLBACK_TOTAL,
     EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL,
-    PHASE4_OPERATION_DURATION_SECONDS,
     PERCEPTIBLE_INSIGHT_SENT_TOTAL,
     PERCEPTIBLE_INSIGHT_SKIPPED_TOTAL,
+    PHASE4_OPERATION_DURATION_SECONDS,
     PLAN_REASONING_GENERATED_TOTAL,
     PLAN_REASONING_SOURCE_TOTAL,
     PROGRESS_COMPARISON_GENERATED_TOTAL,
@@ -30,7 +31,6 @@ from app.core.celery_app import get_celery_status
 from app.core.context_budget import DEFAULT_BUDGETS, _apply_min_budget, _normalize_budget
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
-from app.services.budget_tuning_service import BudgetTuningService
 from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
 from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
 from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService
@@ -44,15 +44,20 @@ from app.services.aurora_stage29_srl_kill_switch_service import AuroraStage29SRL
 from app.services.aurora_stage30_metacognition_kill_switch_service import AuroraStage30MetacognitionKillSwitchService
 from app.services.aurora_stage31_idiographic_kill_switch_service import AuroraStage31IdiographicKillSwitchService
 from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
+from app.services.budget_tuning_service import BudgetTuningService
 from app.services.evidence_health_service import EvidenceHealthService
 from app.services.ltm_health_snapshot import LtmHealthSnapshotService
 from app.services.ltm_release_gate import LtmReleaseGate
 from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_eval_service import MemoryEvalService
+from app.services.memory_inferred_write_lane import revoke_inferred_lane
 from app.services.memory_jobs import MemoryJobsService
 from app.services.memory_rank_policy_service import MemoryRankPolicyService
-from app.services.memory_inferred_write_lane import revoke_inferred_lane
-from app.services.self_evolution_service import CohortPromotionService, MetricBaselineService, StrategyCalibrationService
+from app.services.self_evolution_service import (
+    CohortPromotionService,
+    MetricBaselineService,
+    StrategyCalibrationService,
+)
 
 router = APIRouter(
     prefix="/admin/memory",

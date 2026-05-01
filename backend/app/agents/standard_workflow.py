@@ -5,6 +5,7 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 import asyncio
 import contextlib
 import inspect
@@ -26,15 +27,6 @@ from app.agents.collaboration_workflows import (
     _build_timeline_step,
 )
 from app.agents.enhanced_agents import EnhancedAgentContext
-from app.agents.workflow_experience import (
-    build_collaboration_user_query,
-    build_handoff_packet,
-    format_handoff_packets,
-    inject_examples_into_user_context,
-    resolve_few_shot_examples,
-    should_inject_few_shot,
-)
-from app.config import settings
 
 # Phase 1: Review System
 from app.agents.graph.nodes.review_nodes import (
@@ -45,15 +37,24 @@ from app.agents.graph.nodes.review_nodes import (
 
 # P1 & P2: Tool Fallback and Enhanced Features
 from app.agents.tool_fallback import ToolExecutionFallback
+from app.agents.workflow_experience import (
+    build_collaboration_user_query,
+    build_handoff_packet,
+    format_handoff_packets,
+    inject_examples_into_user_context,
+    resolve_few_shot_examples,
+    should_inject_few_shot,
+)
+from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType, agent_profile_registry
 from app.core.business_metrics import HITL_REQUESTED, TASK_LOOP_COMPLETED
 from app.core.context_pack import ContextBudgetManager, estimate_tokens, format_document_chunks_for_prompt
 from app.core.metrics import DOCUMENT_CONTEXT_CHUNKS_INJECTED_TOTAL, DOCUMENT_CONTEXT_TOKENS_USED
 from app.core.pending_actions import pending_actions_store
 from app.gen.agent.v1 import agent_service_pb2
-from app.orchestration.executor import ToolExecutor
 from app.orchestration.chat_modes import CHAT_MODE_TEAM_PREFIX, parse_team_spec
 from app.orchestration.context_focus import infer_route_intent_from_chat_mode
+from app.orchestration.executor import ToolExecutor
 from app.orchestration.graph_rag import (
     GraphRAGRetriever,
     filter_graph_rag_result,

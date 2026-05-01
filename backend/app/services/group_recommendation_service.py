@@ -8,7 +8,7 @@ from __future__ import annotations
 import math
 import random
 from dataclasses import dataclass
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import desc, func, inspect, or_, select
@@ -24,8 +24,8 @@ from app.schemas.community import (
     GroupRecommendationFeedbackRequest,
     GroupRecommendationItem,
     GroupRecommendationReason,
-    RecommendationItemTypeEnum,
     GroupTypeEnum,
+    RecommendationItemTypeEnum,
 )
 from app.services.personalization.preference_service import PreferenceService
 

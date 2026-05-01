@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, UTC
+from datetime import UTC, date, datetime
 from typing import Any
 
 from app.orchestration.plan_quality_contract import (

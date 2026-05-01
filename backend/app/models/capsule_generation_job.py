@@ -2,7 +2,7 @@
 Capsule Generation Job Model
 """
 import enum
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from sqlalchemy import ARRAY, JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship

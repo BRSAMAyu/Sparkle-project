@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, UTC
-from typing import Any
 import re
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import Any
 
-from app.orchestration.learning_state_fragment import build_learning_state_fragment
-from app.orchestration.planning_intent import detect_planning_like_turn
-from app.orchestration.plan_quality_contract import build_plan_quality_contract
 from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.capability_requirement_compiler import CapabilityRequirementCompiler
 from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
 from app.orchestration.decision_policy import DecisionPolicyCompiler
+from app.orchestration.learning_state_fragment import build_learning_state_fragment
+from app.orchestration.plan_quality_contract import build_plan_quality_contract
+from app.orchestration.planning_intent import detect_planning_like_turn
 from app.orchestration.planning_strategy_compiler import PlanningStrategyCompiler
 from app.orchestration.residual_diagnosis import ResidualDiagnosisRuntime
 from app.semantic.state_primitives import StudyDomainSemanticAdapter

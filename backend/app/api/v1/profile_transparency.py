@@ -51,10 +51,10 @@ from app.services.traits_coldstart_service import (
     COLDSTART_QUESTIONS,
     TraitsColdStartService,
 )
-from app.services.user_settings_service import UserSettingsService
 from app.services.user_insight_transparency_service import (
     UserInsightTransparencyService,
 )
+from app.services.user_settings_service import UserSettingsService
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 

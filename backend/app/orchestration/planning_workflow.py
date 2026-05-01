@@ -24,6 +24,10 @@ from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.orchestration.exam_sprint_policy import ExamSprintPolicyEngine, ExamSprintPolicyInput
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate, coerce_task_type
+from app.services.galaxy_service import GalaxyService
+from app.services.plan_service import PlanService
+from app.services.profile_write_service import ProfileWriteService
+from app.services.task_service import TaskService
 from app.sprint_packs.last_24h_mode import (
     apply_last_24h_policy_overrides,
     calculate_days_left,
@@ -36,10 +40,6 @@ from app.sprint_packs.sprint_pack_loader import (
     load_pack,
     query_nodes_by_priority,
 )
-from app.services.galaxy_service import GalaxyService
-from app.services.plan_service import PlanService
-from app.services.profile_write_service import ProfileWriteService
-from app.services.task_service import TaskService
 
 PLANNING_SESSION_TTL = 2 * 60 * 60
 PLANNING_SESSION_PREFIX = "planning:session:"

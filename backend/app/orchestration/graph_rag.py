@@ -22,8 +22,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.config_rag_strategy import DEFAULT_STRATEGY
-from app.core.agent_profiles import AgentRole, TaskType
 from app.core.age_client import get_age_client
+from app.core.agent_profiles import AgentRole, TaskType
 from app.core.cache import cache_service
 from app.core.cost_controller import is_rag_within_budget, record_rag_cost
 from app.core.metrics import CACHE_HIT_COUNT, RAG_RETRIEVAL_LATENCY, RETRIEVAL_TIMEOUT_TOTAL
@@ -31,8 +31,8 @@ from app.core.redis_search_client import redis_search_client
 from app.services.embedding_service import embedding_service
 from app.services.galaxy.rag_router import RagRouter
 from app.services.graphrag_trace_store import cache_trace
-from app.services.knowledge_service import KnowledgeService
 from app.services.group_file_service import GroupFileService
+from app.services.knowledge_service import KnowledgeService
 from app.services.llm_service import get_configured_llm_service, llm_service
 from app.services.rerank_service import rerank_service
 

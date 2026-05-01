@@ -7,7 +7,6 @@ from typing import Any, Literal
 
 from app.core.i18n import I18n
 
-
 AGENT_DISPLAY_I18N_KEYS: dict[str, dict[str, str]] = {
     "orchestrator": {
         "display_name": "agent_activity.orchestrator_name",
@@ -168,8 +167,9 @@ async def emit_agent_activity(
         metadata=metadata or {},
     )
 
-    from app.gen.agent.v1 import agent_service_pb2
     import json
+
+    from app.gen.agent.v1 import agent_service_pb2
 
     await stream_callback(
         agent_service_pb2.ChatResponse(
@@ -247,8 +247,9 @@ async def emit_routing_preview(
         routing_strategy=routing_strategy,
     )
 
-    from app.gen.agent.v1 import agent_service_pb2
     import json
+
+    from app.gen.agent.v1 import agent_service_pb2
 
     await stream_callback(
         agent_service_pb2.ChatResponse(
@@ -286,8 +287,9 @@ async def emit_agent_turn(
     if stream_callback is None:
         return payload
 
-    from app.gen.agent.v1 import agent_service_pb2
     import json
+
+    from app.gen.agent.v1 import agent_service_pb2
 
     await stream_callback(
         agent_service_pb2.ChatResponse(

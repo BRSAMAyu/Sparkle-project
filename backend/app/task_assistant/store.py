@@ -6,7 +6,7 @@ from typing import Final
 from uuid import UUID
 
 from app.core.cache import cache_service
-from app.task_assistant.schemas import DormantInjection, AssistantOutcome
+from app.task_assistant.schemas import AssistantOutcome, DormantInjection
 
 _TTL_SECONDS: Final[int] = 60 * 60 * 24 * 7  # 7 days for dormant sidecars
 _OUTCOME_TTL_SECONDS: Final[int] = 60 * 60 * 24 * 30  # 30 days for outcomes

@@ -5,6 +5,7 @@ Intent Prediction API
 提供实时意图预测接口，用于前端打字时显示预测建议
 """
 from __future__ import annotations
+
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import asyncio
 import inspect
 import json
@@ -8,9 +9,10 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from loguru import logger
+
 from app.config import settings
 from app.core.metrics import FSM_CONTEXT_EVICTION_TOTAL, FSM_CONTEXT_SIZE_BYTES
-from loguru import logger
 
 # ==========================================
 # 1. Core Data Structures

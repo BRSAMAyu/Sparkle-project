@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 PlanStateService - 计划状态管理服务
 
@@ -19,9 +20,9 @@ Usage:
     await service.upsert_plan_state(user_id, plan_id, {"facts": {"difficulty_preference": 0.7}})
 """
 
-import json
 import copy
-from datetime import datetime, UTC
+import json
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 

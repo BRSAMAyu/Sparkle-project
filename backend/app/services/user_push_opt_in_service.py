@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user_push_opt_in import UserPushOptIn
 
-
 DEFAULTS = {
     "enabled": False,
     "allow_commitment_follow_up": False,

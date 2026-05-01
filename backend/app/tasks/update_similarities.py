@@ -5,7 +5,7 @@ User Similarity Update Tasks
 每日定时任务，计算用户相似度并缓存
 """
 from collections import defaultdict
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 

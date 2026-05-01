@@ -5,6 +5,7 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 """
 LLM Router - 统一的LLM客户端获取入口
 
@@ -29,8 +30,8 @@ from typing import Any
 from loguru import logger
 
 from app.config import settings
-from app.core.agent_profiles import TASK_TO_AGENT_PROFILE, AgentRole, ModelTier, TaskType, agent_profile_registry
 from app.core import complexity_analyzer as _cx
+from app.core.agent_profiles import TASK_TO_AGENT_PROFILE, AgentRole, ModelTier, TaskType, agent_profile_registry
 from app.core.metrics import LLM_ROUTER_ESTIMATED_COST_PER_1K, LLM_ROUTER_SELECTION_TOTAL
 
 

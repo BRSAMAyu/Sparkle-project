@@ -25,7 +25,6 @@ from loguru import logger
 
 from app.signals.types import AuroraAgenda, AuroraAgendaItem, _uid
 
-
 # ── AuroraCaseFile ──────────────────────────────────────────────────
 
 @dataclass

@@ -1,5 +1,6 @@
 from __future__ import annotations
-from datetime import date, datetime, time, timedelta, UTC
+
+from datetime import UTC, date, datetime, time, timedelta
 from uuid import UUID
 
 from sqlalchemy import desc, func, select

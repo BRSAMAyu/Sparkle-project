@@ -6,9 +6,10 @@ Multi-Intent Splitting Service
 支持多意图检测、依赖分析、并行执行规划
 """
 from __future__ import annotations
+
 import asyncio
-from datetime import datetime, UTC
 import re
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 

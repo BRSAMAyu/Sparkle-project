@@ -3,7 +3,7 @@ Streak signal processor - infer profile signals from check-in consistency.
 """
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger

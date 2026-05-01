@@ -12,7 +12,7 @@ import asyncio
 import json
 import random
 import re
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import httpx
@@ -373,9 +373,9 @@ class ErrorBookService:
 
             # Signal-to-Action Spine: check for repeated mistakes on same node
             try:
+                from app.core.cache import cache_service
                 from app.signals.mistake_signal import MistakeSignalDetector
                 from app.signals.spine_orchestrator import SpineOrchestrator
-                from app.core.cache import cache_service
                 if cache_service.redis and linked_ids:
                     mistake_detector = MistakeSignalDetector(cache_service.redis)
                     spine = SpineOrchestrator(cache_service.redis)

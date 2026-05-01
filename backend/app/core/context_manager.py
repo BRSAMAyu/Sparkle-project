@@ -1,16 +1,17 @@
 from __future__ import annotations
+
 import asyncio
 import contextlib
 import inspect
 import json
 from collections import defaultdict
-from datetime import date, timedelta, datetime, UTC
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import Integer, cast, func, select
 from pydantic import BaseModel, Field
+from sqlalchemy import Integer, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.core.metrics import CALENDAR_FALLBACK_TOTAL

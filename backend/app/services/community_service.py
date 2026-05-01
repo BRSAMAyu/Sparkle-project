@@ -8,9 +8,10 @@ Community Service - 好友、群组、消息、打卡、任务的业务逻辑
 """
 
 from __future__ import annotations
+
 import asyncio
 import math
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -30,8 +31,8 @@ from app.models.community import (
     GroupMessage,
     GroupMessageRead,
     GroupRole,
-    GroupTaskClaim,
     GroupTask,
+    GroupTaskClaim,
     GroupType,
     MessageType,
     SharedResource,
@@ -39,16 +40,15 @@ from app.models.community import (
 )
 from app.models.file_storage import StoredFile
 from app.models.galaxy import CollaborativeGalaxy, KnowledgeNode, KnowledgeNodeDocument, NodeRelation
-from app.models.group_files import GroupFile
-from app.models.group_files import GroupFileTrustLevel
+from app.models.group_files import GroupFile, GroupFileTrustLevel
 from app.models.plan import Plan, PlanType
 from app.models.user import User
 from app.schemas.community import (
     CheckinRequest,
+    GroupCollaborativeGalaxyNode,
     GroupCollaborativeGalaxyRelation,
     GroupCollaborativeGalaxyResponse,
     GroupCollaborativeGalaxyStats,
-    GroupCollaborativeGalaxyNode,
     GroupCreate,
     GroupKnowledgeBaseStats,
     GroupTaskCreate,
@@ -2155,7 +2155,8 @@ class GroupTaskService:
             raise ValueError("已认领此任务")
 
         # 创建个人任务副本
-        from app.models.task import Task, TaskStatus, TaskType as PersonalTaskType
+        from app.models.task import Task, TaskStatus
+        from app.models.task import TaskType as PersonalTaskType
         from app.services.task_service import TaskService
 
         # 转换日期 (DateTime -> Date)

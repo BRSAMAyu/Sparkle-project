@@ -28,7 +28,6 @@ from typing import Any
 
 from loguru import logger
 
-
 _RELATIONSHIP_KEY = "spine:relationship:{user_id}"
 _MIN_TRUST = 0.1
 _MAX_TRUST = 1.0

@@ -5,7 +5,6 @@ Database Session Management
 """
 from __future__ import annotations
 
-
 import ssl
 
 from sqlalchemy.engine import make_url

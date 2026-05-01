@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 内容审核服务
 Content Moderation Service - 敏感词过滤、内容审核、违规处理
@@ -11,7 +12,7 @@ Content Moderation Service - 敏感词过滤、内容审核、违规处理
 - 违规记录和自动处理
 """
 import unicodedata
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 

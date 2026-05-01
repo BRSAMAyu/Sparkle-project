@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 from typing import Any
 
 from app.core.llm_secure_io import sanitize_tool_payload

@@ -8,6 +8,7 @@ Responsibilities:
 4. Support multi-agent collaboration output (Phase 3)
 """
 from __future__ import annotations
+
 import uuid
 from typing import Any
 

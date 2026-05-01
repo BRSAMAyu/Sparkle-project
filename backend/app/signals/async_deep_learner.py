@@ -24,7 +24,6 @@ from typing import Any
 
 from loguru import logger
 
-
 _QUEUE_KEY = "spine:deep_learning_queue"
 _SIGNAL_ACCUMULATION_KEY = "spine:deep_learning_accumulation:{user_id}"
 _RESULT_KEY = "spine:deep_learning_result:{user_id}"

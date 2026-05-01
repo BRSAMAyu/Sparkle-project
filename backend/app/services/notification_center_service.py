@@ -1025,8 +1025,8 @@ class NotificationCenterService:
                 else:
                     break
             if consecutive >= 3:
-                from app.core.event_bus import EventBus
                 from app.core.cache import cache_service
+                from app.core.event_bus import EventBus
 
                 event_bus = EventBus(cache_service.redis)
                 await event_bus.publish(

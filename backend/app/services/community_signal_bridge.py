@@ -3,8 +3,7 @@ CommunitySignalBridge - bridge high-value community signals back into personal s
 """
 from __future__ import annotations
 
-
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger

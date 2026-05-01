@@ -2,12 +2,14 @@
 gRPC Auth Interceptors
 """
 from __future__ import annotations
+
 import secrets
 
 import grpc
 from loguru import logger
 
 from app.core.security import decode_token
+
 
 # Context key for storing validated user ID
 # Using a non-string key prevents collision with user-supplied metadata

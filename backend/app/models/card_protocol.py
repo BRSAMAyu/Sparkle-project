@@ -10,6 +10,7 @@ from __future__ import annotations
 import enum
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     Column,
     Date,
@@ -19,7 +20,6 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    JSON,
     String,
     UniqueConstraint,
 )

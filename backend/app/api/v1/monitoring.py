@@ -4,8 +4,8 @@ Provides endpoints for monitoring WebSocket connection status and health.
 Also includes device token management for push notifications.
 """
 from __future__ import annotations
-from datetime import UTC
 
+from datetime import UTC
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException

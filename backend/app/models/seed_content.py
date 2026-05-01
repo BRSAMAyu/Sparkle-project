@@ -2,7 +2,7 @@
 Seed Content Models
 种子内容库模型 - 支持 few-shot 示例、预设教学内容、通用回复模板
 """
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from pgvector.sqlalchemy import Vector

@@ -7,7 +7,8 @@
 - 清理 MinIO 存储
 """
 from __future__ import annotations
-from datetime import datetime, timedelta, UTC
+
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger

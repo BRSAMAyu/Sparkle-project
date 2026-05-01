@@ -23,17 +23,17 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import EventBus
 from app.models.card_protocol import (
     Card,
-    CardType,
     CardCreatedBy,
-    TaskOccurrence,
+    CardType,
     OccurrenceStatus,
+    TaskOccurrence,
 )
-from app.services.card_service import CardService
 from app.services.card_edge_service import CardEdgeService
+from app.services.card_service import CardService
 from app.services.task_occurrence_service import TaskOccurrenceService
-from app.core.event_bus import EventBus
 
 
 class ReplannerCardBridge:

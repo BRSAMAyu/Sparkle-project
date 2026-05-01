@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -223,7 +223,6 @@ class PushService:
     async def _is_in_control_surface_dnd(self, user_id: UUID) -> bool:
         try:
             from app.aurora.runtime_v1.control_surface import ControlSurfaceService
-
             from app.services.personalization.preference_service import PreferenceService
 
             reading = await ControlSurfaceService(

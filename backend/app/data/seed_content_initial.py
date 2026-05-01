@@ -7,9 +7,9 @@ Seed Content Initial Data
 2. 常见问题回复模板 (template) - 如何开始学习、功能介绍
 3. Python编程练习题库 (teaching) - 列表操作、函数定义练习
 """
-from datetime import datetime, UTC
-from typing import Any
 import uuid
+from datetime import UTC, datetime
+from typing import Any
 
 from sqlalchemy import insert
 

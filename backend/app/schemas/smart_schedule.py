@@ -1,5 +1,6 @@
 """Smart Schedule Schemas - 智能排程请求/响应模型"""
 from __future__ import annotations
+
 from datetime import date as DateType
 from enum import StrEnum
 

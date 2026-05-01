@@ -3,6 +3,7 @@ Visual Elements API Endpoints
 视觉元素系统 API 端点
 """
 from __future__ import annotations
+
 import secrets
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query

@@ -683,8 +683,8 @@ class SessionStateMixin:
         # Signal-to-Action Spine: inject retrieval directive from Spine
         if user_context_payload is not None and user_id:
             try:
-                from app.signals.spine_orchestrator import SpineOrchestrator
                 from app.core.cache import cache_service
+                from app.signals.spine_orchestrator import SpineOrchestrator
                 _spine = SpineOrchestrator(cache_service.redis)
                 _spine_directive = await _spine.get_active_directive(str(user_id))
                 if _spine_directive and _spine_directive.hard_constraints.get("retrieval_mode"):

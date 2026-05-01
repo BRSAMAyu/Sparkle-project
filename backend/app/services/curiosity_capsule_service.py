@@ -4,6 +4,7 @@ Curiosity Capsule Service
 整合新的胶囊生成服务，保持向后兼容
 """
 from __future__ import annotations
+
 import random
 from uuid import UUID
 

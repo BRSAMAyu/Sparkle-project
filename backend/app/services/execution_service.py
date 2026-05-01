@@ -9,7 +9,7 @@ import socket
 import time
 import uuid
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import urlparse
 from uuid import UUID
@@ -20,7 +20,7 @@ from sqlalchemy import String, cast, desc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.adapters.openclaw import OpenClawClient, OpenClawConfig, IntentTranslator, ResultParser
+from app.adapters.openclaw import IntentTranslator, OpenClawClient, OpenClawConfig, ResultParser
 from app.adapters.openclaw.client import OpenClawError, OpenClawTimeout
 from app.adapters.openclaw.intent_translator import (
     IntentTranslationSafetyError,
@@ -42,6 +42,7 @@ from app.core.execution_router import ExecutionRouter, RoutingDecision
 from app.core.execution_trust import ExecutionTrustEngine, TrustEvaluation
 from app.core.task_monitor import task_monitor_service
 from app.models.background_task import BackgroundTaskStatus, BackgroundTaskType
+from app.models.execution_audit_log import ExecutionAuditLog
 from app.models.execution_intent import (
     ExecutionIntent,
     ExecutionIntentStatus,
@@ -50,7 +51,6 @@ from app.models.execution_intent import (
     ExecutorType,
     TrustLevel,
 )
-from app.models.execution_audit_log import ExecutionAuditLog
 from app.models.execution_record import ExecutionRecord
 from app.models.task import Task, TaskStatus, TaskType
 from app.services.execution_ingestor import ExecutionIngestor
@@ -58,8 +58,8 @@ from app.services.execution_learning_service import ExecutionLearningService
 from app.services.execution_node_service import ExecutionNode, ExecutionNodeService
 from app.services.execution_preference_service import ExecutionPreferenceService
 from app.services.execution_quality_service import ExecutionQualityService
-from app.services.execution_risk_assessor import ExecutionRiskAssessor
 from app.services.execution_result_validator import ExecutionResultValidator
+from app.services.execution_risk_assessor import ExecutionRiskAssessor
 from app.services.execution_template_service import ExecutionTemplateService
 from app.services.openclaw_connection_profile_service import OpenClawConnectionProfileService
 from app.services.plan_execution_record_service import PlanExecutionRecordService

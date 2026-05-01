@@ -10,18 +10,19 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+from datetime import UTC
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import select
 
+from app.core.event_bus import EventBus
 from app.core.metrics import (
     INTERVENTION_DELIVERY_TOTAL,
     INTERVENTION_PARAMETER_COMPILATION_TOTAL,
     INTERVENTION_PUSH_HISTORY_TOTAL,
 )
-from app.core.event_bus import EventBus
 from app.db.session import AsyncSessionLocal
 from app.models.card_protocol import (
     Card,
@@ -34,14 +35,12 @@ from app.models.card_protocol import (
 from app.models.notification import PushHistory
 from app.models.user import PushPreference
 from app.schemas.notification import NotificationCreate
+from app.services.card_protocol.parameter_compiler import ParameterCompiler
 from app.services.intervention_record_service import InterventionRecordService
 from app.services.notification_service import NotificationService
 from app.services.plan_adjustment_applier import PlanAdjustmentApplier
-from app.services.card_protocol.parameter_compiler import ParameterCompiler
 from app.services.template_registry import TemplateRegistry
 from app.services.template_service import TemplateService
-from datetime import UTC
-
 
 _INTENT_BY_TRIGGER: dict[InterventionTriggerType, str] = {
     InterventionTriggerType.PLAN_RISK: "plan_path_soft_replan",

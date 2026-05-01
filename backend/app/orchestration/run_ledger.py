@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import uuid
 from copy import deepcopy
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger

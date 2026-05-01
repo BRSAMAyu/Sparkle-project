@@ -16,9 +16,6 @@ import json
 from dataclasses import dataclass
 from typing import Any
 
-
-
-
 _GOALS_KEY = "spine:goals:{user_id}"
 _GOAL_KEY = "spine:goal:{user_id}:{goal_id}"
 _GOAL_TTL = 90 * 24 * 3600

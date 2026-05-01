@@ -7,7 +7,6 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
 
-
 POLICY_IR_VERSION = "v1"
 POLICY_IR_SCHEMA_VERSION = "policy_ir.v1"
 POLICY_IR_FROZEN_AT = "2026-04-21T00:00:00Z"

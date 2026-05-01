@@ -5,7 +5,7 @@ import importlib.util
 import json
 import math
 from dataclasses import dataclass
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from statistics import mean
 from typing import Any

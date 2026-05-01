@@ -18,7 +18,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-
 from app.signals.types import ActionableSignal, _uid
 
 

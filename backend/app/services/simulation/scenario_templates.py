@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 SCENARIOS: dict[str, dict[str, object]] = {
     "knowledge_debate": {
         "description": "围绕一个知识点，AI 生成正反方论点，用户参与辩论。",

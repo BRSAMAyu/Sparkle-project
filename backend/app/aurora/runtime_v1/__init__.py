@@ -45,12 +45,12 @@ except ModuleNotFoundError:
 
 try:
     from app.aurora.runtime_v1.write_pipeline import (
-        CANDIDATE_CONFIDENCE_THRESHOLD,
         AURORA_CLAIM_KEY_TEMPLATE,
         AURORA_CLAIM_TTL_SECONDS,
-        INFERENCE_PIPELINE_KEY,
+        CANDIDATE_CONFIDENCE_THRESHOLD,
         INFERENCE_CLAIM_KEY_TEMPLATE,
         INFERENCE_CLAIM_TTL_SECONDS,
+        INFERENCE_PIPELINE_KEY,
         TEMPORARY_STATE_TTL_SECONDS,
         TRIAL_WINDOW_DAYS,
         AuroraWritePipeline,

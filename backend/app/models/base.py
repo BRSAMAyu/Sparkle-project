@@ -4,9 +4,8 @@ Base Model Classes
 """
 from __future__ import annotations
 
-
 import uuid
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import TypeVar
 
 from sqlalchemy import Column, DateTime, select

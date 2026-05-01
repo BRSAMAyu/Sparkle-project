@@ -31,7 +31,6 @@ from loguru import logger
 
 from app.signals.types import ActionableSignal
 
-
 # 仲裁优先级（数字越小越优先）
 _PRIORITY_TIER: dict[str, int] = {
     # Tier 1: 安全 / 隐私 / 用户硬边界

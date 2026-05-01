@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -17,8 +17,8 @@ from app.db.session import get_db
 from app.models.execution_intent import ExecutionIntent, ExecutionIntentStatus
 from app.models.execution_record import ExecutionRecord
 from app.models.user import User
-from app.services.execution_profile_service import ExecutionProfileService
 from app.services.execution_preference_service import ExecutionPreferenceService
+from app.services.execution_profile_service import ExecutionProfileService
 from app.services.execution_result_validator import ExecutionResultValidator
 from app.services.execution_schedule_service import ExecutionScheduleService
 from app.services.execution_service import ExecutionService

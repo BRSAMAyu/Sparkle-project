@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import json
 from contextlib import suppress
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import json
 from typing import Any
 from uuid import UUID
 

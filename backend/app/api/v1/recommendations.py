@@ -5,6 +5,8 @@ Recommendations API
 提供协同过滤推荐接口
 """
 from __future__ import annotations
+
+from datetime import UTC
 from typing import Any
 from uuid import UUID
 
@@ -22,7 +24,6 @@ from app.schemas.recommendation import (
     SimilarUsersRequest,
 )
 from app.services.collaborative_filtering_service import CollaborativeFilteringService
-from datetime import UTC
 
 router = APIRouter()
 

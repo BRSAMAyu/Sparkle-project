@@ -419,7 +419,6 @@ class SourceEffectivenessTracker:
     ) -> dict[str, Any]:
         """User corrected a source as irrelevant/wrong. Update trust and block auto-reuse."""
         import json
-
         from datetime import UTC, datetime
 
         # Record as insufficient outcome

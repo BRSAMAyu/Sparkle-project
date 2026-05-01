@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from uuid import UUID
 
-from loguru import logger
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
+from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,9 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user_id
 from app.db.session import get_db
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
-from app.services.simulation.simulation_engine import SimulationEngine
 from app.services.simulation.scenario_templates import normalize_scenario_key
 from app.services.simulation.seed_extractor import SeedExtractor
+from app.services.simulation.simulation_engine import SimulationEngine
 
 router = APIRouter(prefix="/simulation", tags=["simulation"])
 

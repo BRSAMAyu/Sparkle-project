@@ -1,9 +1,8 @@
 import uuid
 from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from loguru import logger
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.notification import Notification
 from app.services.push_service import PushService

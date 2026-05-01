@@ -4,7 +4,7 @@ Error book signal processor - infer preferences from error book patterns.
 from __future__ import annotations
 
 from collections import Counter
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger

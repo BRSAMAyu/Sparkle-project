@@ -11,7 +11,7 @@ Bridges user preferences to all downstream systems:
 from __future__ import annotations
 
 import json
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -20,8 +20,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import PushPreference
-from app.models.user_settings import UserSettings
 from app.models.user_push_opt_in import UserPushOptIn
+from app.models.user_settings import UserSettings
 from app.services.personalization.preference_service import PreferenceService
 
 

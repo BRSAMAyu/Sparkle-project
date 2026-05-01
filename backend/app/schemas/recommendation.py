@@ -5,6 +5,7 @@ Collaborative Filtering Recommendation Schemas
 基于用户行为相似度的个性化推荐
 """
 from __future__ import annotations
+
 from datetime import datetime
 from enum import StrEnum
 from typing import Any

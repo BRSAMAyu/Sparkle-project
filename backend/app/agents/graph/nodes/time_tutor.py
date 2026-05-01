@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import time
 
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -15,6 +16,7 @@ from app.agents.graph.state import SparkleState
 from app.core.metrics import AGENT_PERFORMANCE_RECORDED_TOTAL
 from app.orchestration.agent_activity import emit_agent_activity, get_stream_callback
 from app.orchestration.agent_scoring import AgentScoringService
+
 
 # --- prompt helpers ---
 def _build_system_prompt(state: SparkleState, *, planning: bool) -> str:

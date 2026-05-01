@@ -17,9 +17,7 @@ import random
 from dataclasses import dataclass
 from typing import Any
 
-
 from app.signals.types import OutcomeRecord, _uid
-
 
 # ═══════════════════════════════════════════════════════════════════════
 # 1. Counterfactual Engine

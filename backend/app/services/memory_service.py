@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
-from datetime import date, datetime, UTC
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -22,11 +22,11 @@ from app.core.memory_constants import PREFERENCE_KEYS
 from app.models.memory import EpisodicMemory, MemoryCorrection, MemoryGoal, MemoryPreference
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.services.evidence_health_service import EvidenceHealthService
-from app.services.policy_compiler_service import PolicyCompilerService
 from app.services.evidence_scoring import compute_score
 from app.services.ltm_rollout_service import LtmRolloutService
 from app.services.memory_evolution_service import MemoryEvolutionService
 from app.services.memory_policy_evaluator import MemoryPolicyEvaluator
+from app.services.policy_compiler_service import PolicyCompilerService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 
 ALLOWED_EVIDENCE_TYPES = {

@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-
 ActivationConditionKind = Literal["intent_keywords", "tool_category", "time_of_day", "weekday_set"]
 
 ALLOWED_CONDITION_KINDS: tuple[ActivationConditionKind, ...] = (

@@ -3,9 +3,11 @@ LLM Client Wrapper
 Provides a unified interface for different LLM providers (Qwen, DeepSeek, OpenAI)
 """
 from __future__ import annotations
+
+from typing import Any
+
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
-from typing import Any
 
 from app.config import settings
 from app.core.llm_secure_io import (

@@ -5,6 +5,7 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 import asyncio
 import re
 from types import SimpleNamespace

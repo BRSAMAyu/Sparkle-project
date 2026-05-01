@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Phase 1, Phase 2 & Phase 3 Schemas for Full-Loop Closed System
 
@@ -29,7 +30,7 @@ REPLAN_RATE_LIMIT_WINDOW = 60  # seconds
 REPLAN_MAX_PER_WINDOW = 3  # max replans per window
 
 import uuid
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from app.core.user_insight_state import UserInsightState

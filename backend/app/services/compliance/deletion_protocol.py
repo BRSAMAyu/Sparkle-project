@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import inspect
 from dataclasses import dataclass
 from uuid import UUID

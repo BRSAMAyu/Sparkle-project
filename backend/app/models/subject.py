@@ -2,7 +2,7 @@
 学科标准模型
 Subject Model - 用于规范化错误档案中的学科分类
 """
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from sqlalchemy import JSON, Boolean, Column, DateTime, Float, Integer, String
 

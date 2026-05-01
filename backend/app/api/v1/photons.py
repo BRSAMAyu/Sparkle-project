@@ -3,7 +3,9 @@ Photon API Endpoints
 光子积分系统 API 端点
 """
 from __future__ import annotations
+
 from typing import Any
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession

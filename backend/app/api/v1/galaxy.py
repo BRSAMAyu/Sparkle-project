@@ -103,11 +103,6 @@ class MoveDocumentRequest(BaseModel):
     to_node_id: UUID
 
 
-class AttachNodeDocumentRequest(BaseModel):
-    file_id: UUID
-    is_primary: bool = False
-
-
 def _raise_document_attachment_error(exc: Exception) -> None:
     if isinstance(exc, LookupError):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc

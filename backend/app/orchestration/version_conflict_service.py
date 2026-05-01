@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Version Conflict Detection Service - Phase 3 (P1)
 
@@ -11,7 +12,7 @@ Handles version conflict detection and resolution for plans:
 P1 Priority: 版本冲突检测增强
 """
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID
 

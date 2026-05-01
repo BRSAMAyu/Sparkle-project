@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import calendar
 import re
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 
 
 def _utcnow() -> datetime:

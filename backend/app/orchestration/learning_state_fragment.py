@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any
-from app.core.i18n import I18n
 
+from app.core.i18n import I18n
 
 MAX_PAIN_POINTS = 3
 MAX_WINS = 3

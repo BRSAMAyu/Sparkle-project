@@ -5,7 +5,7 @@ the full app with realistic pre-populated content.
 """
 import math
 import uuid
-from datetime import date, datetime, timedelta, UTC
+from datetime import UTC, date, datetime, timedelta
 
 from loguru import logger
 from sqlalchemy import func, select
@@ -13,28 +13,24 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import get_password_hash
 from app.data.populate_achievements import sync_achievement_definitions
-from app.models.accountability import (
-    AccountabilityCheckin,
-    AccountabilityPartnership,
-    AccountabilityStatus,
-)
-from app.models.cognitive import AnalysisStatus
 from app.models import (
     AchievementRarity,
     BehaviorPattern,
     CalendarEvent,
-    CapsuleFeedback,
     CapsuleFavorite,
+    CapsuleFeedback,
     CapsuleGenerationJob,
+    ChatMessage,
+    ChatSession,
     CognitiveFragment,
     CuriosityCapsule,
     DepthLevel,
     EventSource,
-    Friendship,
-    FriendshipStatus,
     FocusSession,
     FocusStatus,
     FocusType,
+    Friendship,
+    FriendshipStatus,
     GalaxySkin,
     GenerationType,
     Group,
@@ -71,9 +67,13 @@ from app.models import (
     UserTitle,
     UserVisualConfig,
     UserVisualElement,
-    ChatMessage,
-    ChatSession,
 )
+from app.models.accountability import (
+    AccountabilityCheckin,
+    AccountabilityPartnership,
+    AccountabilityStatus,
+)
+from app.models.cognitive import AnalysisStatus
 from app.models.community import MessageFavorite
 from app.models.galaxy import NodeRelation
 from app.models.shop import PhotonTransactionHistory, PhotonTransactionType

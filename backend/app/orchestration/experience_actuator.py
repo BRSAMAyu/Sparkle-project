@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -11,7 +11,6 @@ from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.intervention_feedback_binding_service import InterventionFeedbackBindingService
 from app.services.user_strategy_state_service import UserStrategyStateService
 from app.tools.material_retrieval_tools import _resolve_scoped_files
-
 
 AUTO_STRATEGY_CONFIDENCE_MIN = 0.65
 AUTO_GROUNDING_LIMIT = 3

@@ -2,8 +2,9 @@
 任务推荐服务 - 基于用户偏好和知识图谱
 """
 from __future__ import annotations
+
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import UUID
 
 from sqlalchemy import nullsfirst, select

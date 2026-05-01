@@ -5,7 +5,7 @@ Learning Paths API
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any, Union
 from uuid import UUID
 
@@ -698,7 +698,7 @@ async def generate_full_path_plan(
     db.add(plan)
 
     # 4. 创建父任务
-    from app.models.task import TaskType, SubTask
+    from app.models.task import SubTask, TaskType
 
     # 第一次遍历：计算总预估时间
     total_estimated = 0

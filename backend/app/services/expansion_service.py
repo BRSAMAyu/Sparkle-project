@@ -3,11 +3,12 @@
 使用 LLM 自动拓展知识星图
 """
 from __future__ import annotations
+
 import asyncio
-from dataclasses import dataclass, field
 import json
 import re
-from datetime import datetime, timedelta, UTC
+from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger

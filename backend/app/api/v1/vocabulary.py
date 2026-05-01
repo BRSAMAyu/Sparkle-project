@@ -3,6 +3,7 @@
 Vocabulary & Dictionary API
 """
 from __future__ import annotations
+
 from datetime import datetime
 from pathlib import Path
 from uuid import UUID
@@ -14,9 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.config.settings import settings
-from app.services.dictionary_package_service import dictionary_package_service
 from app.db.session import get_db
 from app.models.user import User
+from app.services.dictionary_package_service import dictionary_package_service
 from app.services.mdx_dictionary_service import MDX_AVAILABLE, create_mdx_service
 from app.services.vocabulary_service import vocabulary_service
 from app.utils.helpers import read_upload_file

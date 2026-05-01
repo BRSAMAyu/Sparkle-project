@@ -5,20 +5,20 @@ BehaviorSignalCollector - aggregate implicit behavior into cognitive fragments.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import EventBus
 from app.models.curiosity_capsule import CuriosityCapsule
 from app.models.plan_state import PlanStateStatus
 from app.models.task import Task, TaskStatus
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
 from app.models.tool_history import UserToolHistory
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
-from app.core.event_bus import EventBus
 from app.services.capsule_favorite_service import CapsuleFavoriteService
 from app.services.cognitive_service import CognitiveService
 from app.services.plan_state_service import PlanStateService

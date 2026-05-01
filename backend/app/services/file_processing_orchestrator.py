@@ -113,8 +113,8 @@ class FileProcessingOrchestrator:
 
             # V-14: Notify Spine of file upload for signal pipeline
             try:
-                from app.signals.spine_orchestrator import SpineOrchestrator
                 from app.core.redis_client import get_redis
+                from app.signals.spine_orchestrator import SpineOrchestrator
                 spine = SpineOrchestrator(redis=get_redis())
                 summary = chunks[0].get("text", "")[:500] if chunks else ""
                 await spine.on_file_uploaded(

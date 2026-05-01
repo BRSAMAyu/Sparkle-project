@@ -18,7 +18,6 @@ from app.services.planning_benchmark_service import (
     PlanningBenchmarkScenario,
 )
 
-
 STOPWORDS = {
     "a",
     "an",

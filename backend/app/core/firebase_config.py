@@ -5,6 +5,7 @@ Initializes Firebase Admin SDK for Cloud Messaging (FCM) push notifications.
 Supports both FCM (Android/Web) and APNs (iOS) through Firebase.
 """
 from __future__ import annotations
+
 from functools import lru_cache
 from typing import Any
 

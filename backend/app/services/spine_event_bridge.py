@@ -8,8 +8,8 @@ from typing import Any
 
 from loguru import logger
 
-from app.signals.spine_orchestrator import SpineOrchestrator
 from app.signals.external_integration import CalendarEvent, CalendarSignalBridge
+from app.signals.spine_orchestrator import SpineOrchestrator
 from app.signals.types import ActionableSignal, CausalTrace, _uid
 
 SPINE_EVENT_TYPES = {

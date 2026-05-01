@@ -7,7 +7,7 @@ while enforcing guardrails to prevent over-intervention.
 """
 import random
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger

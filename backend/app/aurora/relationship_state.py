@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, UTC
-from typing import Any
 from collections.abc import Iterable
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from app.aurora.profile_translator import build_user_correction_claim

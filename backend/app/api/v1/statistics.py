@@ -2,7 +2,7 @@
 统计数据 API
 Statistics API
 """
-from datetime import date, datetime, timedelta, UTC
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -11,8 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.models.achievement import UserAchievement
-from app.models.galaxy import StudyRecord, UserNodeStatus
 from app.models.focus import FocusSession, FocusStatus
+from app.models.galaxy import StudyRecord, UserNodeStatus
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 

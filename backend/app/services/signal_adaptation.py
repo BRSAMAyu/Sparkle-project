@@ -4,8 +4,8 @@ Shared helpers for recency-weighted signal aggregation and hysteresis.
 from __future__ import annotations
 
 import math
-from datetime import datetime, UTC
 from collections.abc import Hashable, Iterable
+from datetime import UTC, datetime
 
 
 def _utcnow() -> datetime:

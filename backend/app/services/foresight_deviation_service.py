@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from math import isfinite
 
+from prometheus_client import Counter as PrometheusCounter
+
 from app.config import settings
 from app.core.metrics import get_or_create_metric
 from app.schemas.foresight import AttractorState, Deviation
-from prometheus_client import Counter as PrometheusCounter
-
 
 FORESIGHT_DEVIATION_DETECTED_TOTAL = get_or_create_metric(
     PrometheusCounter,

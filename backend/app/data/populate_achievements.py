@@ -4,7 +4,7 @@ Populate and sync achievement definitions to database
 """
 import asyncio
 import json
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 

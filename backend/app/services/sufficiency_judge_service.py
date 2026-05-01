@@ -3,7 +3,12 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.aurora_stage20 import AuroraJudgmentRecord
-from app.services.sufficiency_judge_schema import CurrentTurnParseResult, ScoreBucket, SufficiencyJudgment, SufficiencyScore
+from app.services.sufficiency_judge_schema import (
+    CurrentTurnParseResult,
+    ScoreBucket,
+    SufficiencyJudgment,
+    SufficiencyScore,
+)
 from app.state_aggregator.schema import UserStateV1
 
 

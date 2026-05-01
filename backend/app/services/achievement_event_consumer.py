@@ -4,7 +4,7 @@ Closes event-bus paths for achievement progression without blocking request hand
 """
 
 import asyncio
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from urllib.parse import urlencode
 from uuid import UUID
 
@@ -14,8 +14,7 @@ from sqlalchemy import and_, func, select
 from app.core.event_bus import EventBus
 from app.core.event_types import EXECUTION_RESULT_INGESTED
 from app.db.session import AsyncSessionLocal
-from app.models.achievement import Achievement, AchievementRarity, UserAchievement
-from app.models.achievement import UserStreakStats
+from app.models.achievement import Achievement, AchievementRarity, UserAchievement, UserStreakStats
 from app.models.error_book import ErrorRecord
 from app.models.execution_intent import ExecutionIntent
 from app.models.execution_record import ExecutionRecord

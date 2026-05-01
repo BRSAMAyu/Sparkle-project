@@ -3,7 +3,8 @@ Inventory Service - 物品管理服务
 处理用户物品查询、装备物品、消耗品使用等
 """
 from __future__ import annotations
-from datetime import datetime, UTC
+
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger

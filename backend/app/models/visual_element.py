@@ -5,10 +5,10 @@ Visual Element System Models
 """
 from __future__ import annotations
 
-
 import enum
 
 from sqlalchemy import JSON
+
 
 # Python 3.9 compatible StrEnum
 class StrEnum(enum.StrEnum):
@@ -26,7 +26,6 @@ from sqlalchemy.orm import relationship
 
 from app.db.session import Base
 from app.models.base import GUID, BaseModel
-
 
 JSONBCompat = JSONB().with_variant(JSON(), "sqlite")
 

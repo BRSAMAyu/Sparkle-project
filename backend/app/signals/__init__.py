@@ -20,7 +20,135 @@ Layers:
   8. OutcomeRecorder (causal attribution)
 """
 
+from app.signals.community_loops import CommunityLoopManager
+from app.signals.core_session import CoreSession, CoreSessionManager
+from app.signals.counterfactual_evaluation import (
+    CounterfactualEstimate,
+    CounterfactualIronLawEnforcer,
+    EvidenceGrade,
+    MatchedContextEvaluator,
+    MetricEffect,
+    PolicyComparisonReport,
+    PolicyUpdateCandidate,
+    PolicyUpdateCandidateBuilder,
+)
+from app.signals.exam_sprint_policy import ExamSprintDirective, ExamSprintPhase, ExamSprintPolicyService
+from app.signals.external_integration import (
+    CalendarEvent,
+    CalendarSignalBridge,
+    EmailDeadlineExtractor,
+    EmailDeadlineHint,
+    ExternalIntegrationGateway,
+    ExternalRawEvent,
+    ExternalToolBridge,
+    ExternalToolSignal,
+    FileIntegration,
+    FileReference,
+    GitHubRepoBridge,
+    GitHubRepoSummary,
+)
+from app.signals.goal_type_adapter import GOAL_TYPE_PROFILES, GoalTypeAdapter, GoalTypeProfile
+from app.signals.goal_world_graph import GoalWorldGraph, GoalWorldGraphService, GraphNode
+from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
+from app.signals.intervention_episode import (
+    AgencyOutcome,
+    ContextSignature,
+    EvidenceQuality,
+    ExecutionOutcome,
+    GoalProgressOutcome,
+    InterventionEpisode,
+    InterventionEpisodeLedger,
+    LearningOutcome,
+    LoadOutcome,
+    OutcomeVector,
+    SustainabilityOutcome,
+    TrustOutcome,
+)
+from app.signals.learning_base import LearningBase, StrategyBelief
+from app.signals.marketplace import (
+    AdoptionRecord,
+    DomainPackReview,
+    IronLawViolation,
+    MarketplaceIronLaws,
+    MarketplaceRegistry,
+    SkillCard,
+)
+from app.signals.multi_goal_arbitration import ActiveGoal, GoalArbitrationResult, MultiGoalArbitrator
+from app.signals.policy_experiments import PolicyExperiment, PolicyExperimentManager
+from app.signals.privacy_community_intelligence import (
+    AnonymizedCohortStat,
+    CohortDriftDetector,
+    CohortDriftReport,
+    FederatedInsight,
+    PrivacyBudget,
+    PrivacyPreservingCohort,
+    PrivacyPreservingCommunityEngine,
+    SecureAggregationEngine,
+    TemporalPrivacyBudget,
+)
+from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
+from app.signals.relationship_model import RelationshipModelService, RelationshipState
+from app.signals.research_experiment_platform import (
+    ExperimentConclusion,
+    ExperimentVariant,
+    MultivariateExperiment,
+    MultivariateExperimentEngine,
+    UserSegment,
+)
+from app.signals.research_grade import (
+    CounterfactualEngine,
+    CounterfactualResult,
+    DomainPack,
+    DomainPackMarketplace,
+    SimulatedUserProfile,
+    UserSimulator,
+)
+from app.signals.research_mode import (
+    ContinuousImprovementLoop,
+    GapDetector,
+    ResearchConclusion,
+    ResearchDashboard,
+    ResearchProposal,
+)
+from app.signals.safe_experiment_platform import (
+    BanditActionStats,
+    ExperimentDesignValidator,
+    ExperimentGuardrails,
+    RewardModel,
+    SafeBanditController,
+    SafeExperimentRegistry,
+    SafePolicyExperiment,
+)
+from app.signals.simulation_lab import (
+    Persona,
+    RegressionReport,
+    ScenarioSimulator,
+    ScenarioStep,
+    SparkleGoalBench,
+    SyntheticPersonaSimulator,
+    TestScenario,
+    TraceReplaySimulator,
+)
+from app.signals.skill_lifecycle import SkillLifecycleManager
+from app.signals.source_tray_integration import SourceEffectivenessTracker
+from app.signals.spine_aurora_bridge import SpineAuroraBridge
+from app.signals.spine_quality_guard import (
+    EventBusHealth,
+    EventBusHealthCheck,
+    IronLawComplianceMonitor,
+    LatencyGuard,
+    LatencyThreshold,
+    PromotionGate,
+    QualityCheck,
+    QualityReport,
+    SelfHealingAction,
+    SelfHealingController,
+    SpineQualityGuard,
+)
+from app.signals.task_card_protocol import TaskCardBuilder, TaskCardValidator
 from app.signals.types import (
+    TASK_TYPE_NODE_BINDINGS,
+    TASK_TYPES,
     ActionableSignal,
     ActionableStatePacket,
     AuroraAgendaItem,
@@ -47,138 +175,10 @@ from app.signals.types import (
     StateEntry,
     StuckProtocol,
     TaskCardProtocol,
-    TASK_TYPES,
-    TASK_TYPE_NODE_BINDINGS,
     UserVisibleReceipt,
     UXDirective,
     WhyThisTask,
 )
-from app.signals.community_loops import CommunityLoopManager
-from app.signals.core_session import CoreSession, CoreSessionManager
-from app.signals.exam_sprint_policy import ExamSprintDirective, ExamSprintPhase, ExamSprintPolicyService
-from app.signals.external_integration import (
-    CalendarEvent,
-    CalendarSignalBridge,
-    EmailDeadlineExtractor,
-    EmailDeadlineHint,
-    ExternalIntegrationGateway,
-    ExternalRawEvent,
-    ExternalToolBridge,
-    ExternalToolSignal,
-    FileIntegration,
-    FileReference,
-    GitHubRepoBridge,
-    GitHubRepoSummary,
-)
-from app.signals.goal_type_adapter import GOAL_TYPE_PROFILES, GoalTypeAdapter, GoalTypeProfile
-from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
-from app.signals.learning_base import LearningBase, StrategyBelief
-from app.signals.policy_experiments import PolicyExperiment, PolicyExperimentManager
-from app.signals.privacy_community_intelligence import (
-    AnonymizedCohortStat,
-    CohortDriftDetector,
-    CohortDriftReport,
-    FederatedInsight,
-    PrivacyBudget,
-    PrivacyPreservingCohort,
-    PrivacyPreservingCommunityEngine,
-    SecureAggregationEngine,
-    TemporalPrivacyBudget,
-)
-from app.signals.recall_notification import RecallMessage, RecallNotificationBuilder
-from app.signals.research_mode import (
-    ContinuousImprovementLoop,
-    GapDetector,
-    ResearchConclusion,
-    ResearchDashboard,
-    ResearchProposal,
-)
-from app.signals.relationship_model import RelationshipModelService, RelationshipState
-from app.signals.research_experiment_platform import (
-    ExperimentConclusion,
-    ExperimentVariant,
-    MultivariateExperiment,
-    MultivariateExperimentEngine,
-    UserSegment,
-)
-from app.signals.safe_experiment_platform import (
-    BanditActionStats,
-    ExperimentDesignValidator,
-    ExperimentGuardrails,
-    RewardModel,
-    SafeBanditController,
-    SafeExperimentRegistry,
-    SafePolicyExperiment,
-)
-from app.signals.research_grade import (
-    CounterfactualEngine,
-    CounterfactualResult,
-    DomainPack,
-    DomainPackMarketplace,
-    SimulatedUserProfile,
-    UserSimulator,
-)
-from app.signals.simulation_lab import (
-    Persona,
-    RegressionReport,
-    ScenarioSimulator,
-    ScenarioStep,
-    SparkleGoalBench,
-    SyntheticPersonaSimulator,
-    TestScenario,
-    TraceReplaySimulator,
-)
-from app.signals.marketplace import (
-    AdoptionRecord,
-    DomainPackReview,
-    IronLawViolation,
-    MarketplaceIronLaws,
-    MarketplaceRegistry,
-    SkillCard,
-)
-from app.signals.skill_lifecycle import SkillLifecycleManager
-from app.signals.source_tray_integration import SourceEffectivenessTracker
-from app.signals.spine_quality_guard import (
-    EventBusHealth,
-    EventBusHealthCheck,
-    IronLawComplianceMonitor,
-    LatencyGuard,
-    LatencyThreshold,
-    PromotionGate,
-    QualityCheck,
-    QualityReport,
-    SelfHealingAction,
-    SelfHealingController,
-    SpineQualityGuard,
-)
-from app.signals.task_card_protocol import TaskCardBuilder, TaskCardValidator
-from app.signals.goal_world_graph import GoalWorldGraph, GoalWorldGraphService, GraphNode
-from app.signals.intervention_episode import (
-    AgencyOutcome,
-    ContextSignature,
-    EvidenceQuality,
-    ExecutionOutcome,
-    GoalProgressOutcome,
-    InterventionEpisode,
-    InterventionEpisodeLedger,
-    LearningOutcome,
-    LoadOutcome,
-    OutcomeVector,
-    SustainabilityOutcome,
-    TrustOutcome,
-)
-from app.signals.counterfactual_evaluation import (
-    CounterfactualEstimate,
-    CounterfactualIronLawEnforcer,
-    EvidenceGrade,
-    MatchedContextEvaluator,
-    MetricEffect,
-    PolicyComparisonReport,
-    PolicyUpdateCandidate,
-    PolicyUpdateCandidateBuilder,
-)
-from app.signals.multi_goal_arbitration import ActiveGoal, GoalArbitrationResult, MultiGoalArbitrator
-from app.signals.spine_aurora_bridge import SpineAuroraBridge
 
 __all__ = [
     "ActionableSignal",

@@ -5,6 +5,7 @@ Leaderboards API
 提供多种类型的排行榜查询接口
 """
 from __future__ import annotations
+
 from typing import Any
 from uuid import UUID
 

@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from sqlalchemy import func, inspect, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.profile_context import ProfileContext
 from app.core.cache import cache_service
+from app.core.profile_context import ProfileContext
 from app.db.session import AsyncSessionLocal
 from app.models.accountability import (
     AccountabilityPartnership,
@@ -26,8 +26,8 @@ from app.schemas.community import (
     RecommendationItemTypeEnum,
     UserBrief,
 )
-from app.services.profile_context_service import ProfileContextService
 from app.services.personalization.preference_service import PreferenceService
+from app.services.profile_context_service import ProfileContextService
 
 
 def _utcnow() -> datetime:

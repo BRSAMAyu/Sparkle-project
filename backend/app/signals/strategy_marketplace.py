@@ -14,7 +14,6 @@ from typing import Any
 
 from loguru import logger
 
-
 _STRATEGY_KEY = "spine:marketplace:strategy:{strategy_key}"
 _INDEX_KEY = "spine:marketplace:index"
 _RECOMMENDATIONS_KEY = "spine:marketplace:recs:{user_id}"

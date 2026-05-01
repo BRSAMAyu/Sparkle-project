@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Push Sender Service
 
@@ -12,7 +13,7 @@ Features:
 - Deep link support for notification actions
 """
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -348,7 +349,7 @@ class PushSenderService:
         data["notification_type"] = payload.notification_type
 
         # Add timestamp
-        data["sent_at"] = datetime.now(timezone.utc).isoformat()
+        data["sent_at"] = datetime.now(UTC).isoformat()
 
         return data
 

@@ -7,12 +7,13 @@ from app.agents.graph.expert_registry import (
     get_graph_expert_specs,
     resolve_node_name,
 )
-from app.agents.graph.nodes.custom_expert import custom_expert_node
+
 # Phase 3: Import collaboration nodes
 from app.agents.graph.nodes.collaboration import (
     collaboration_aggregator_node,
     collaboration_node,
 )
+from app.agents.graph.nodes.custom_expert import custom_expert_node
 from app.agents.graph.nodes.registry_tools import (
     batch_create_tasks,
     create_knowledge_node,
@@ -27,7 +28,6 @@ from app.agents.graph.nodes.registry_tools import (
 )
 from app.agents.graph.nodes.router import router_node
 from app.agents.graph.state import SparkleState
-
 
 EXPERT_SPECS = get_graph_expert_specs()
 EXPERT_NODE_NAMES = [spec.node_name for spec in EXPERT_SPECS]

@@ -3,7 +3,8 @@ Equipment Service
 统一处理用户装备真源与派生字段同步
 """
 from __future__ import annotations
-from datetime import datetime, UTC
+
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 排行榜服务
 Leaderboard Service
@@ -12,7 +13,7 @@ Leaderboard Service
 - STREAK: 连胜排行榜
 - GROUP_FLAME: 群组火苗榜
 """
-from datetime import date, datetime, timedelta, UTC
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 

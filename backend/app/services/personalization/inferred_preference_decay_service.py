@@ -1,7 +1,7 @@
 """
 推断偏好衰减服务 - 基于时间衰减推断偏好值
 """
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from math import isclose
 from uuid import UUID
 

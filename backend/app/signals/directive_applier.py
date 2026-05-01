@@ -42,9 +42,7 @@ class DirectiveApplier:
         adjusted = current_difficulty
         if difficulty_hint == "low":
             adjusted = max(1, min(adjusted, 2))
-        elif difficulty_hint == "medium_low":
-            adjusted = max(1, min(adjusted, 3))
-        elif difficulty_hint == "low_medium":
+        elif difficulty_hint == "medium_low" or difficulty_hint == "low_medium":
             adjusted = max(1, min(adjusted, 3))
 
         if challenge == "slight_increase":

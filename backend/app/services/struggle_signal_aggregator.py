@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import inspect
 from dataclasses import dataclass
-from datetime import date, datetime, time, timedelta, UTC
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 from uuid import UUID
 

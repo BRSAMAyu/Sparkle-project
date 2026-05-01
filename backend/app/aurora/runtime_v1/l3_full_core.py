@@ -22,10 +22,10 @@ from loguru import logger
 
 from app.signals.aurora_core_session import (
     AuroraCoreSessionService,
+    PolicyChange,
     PredictedReplyOption,
     SessionClosure,
     StatePatch,
-    PolicyChange,
 )
 from app.signals.types import _uid
 

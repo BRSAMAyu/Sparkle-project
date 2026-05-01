@@ -6,10 +6,10 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from app.core.cache import cache_service
+from app.services.card_protocol.main_chain_artifact_service import MainChainArtifactService
 from app.services.card_protocol.phase_design_service import PhaseDesignService
 from app.services.card_protocol.phase_service import PhaseService
 from app.services.card_protocol.planning_memory_service import PlanningMemoryService
-from app.services.card_protocol.main_chain_artifact_service import MainChainArtifactService
 
 
 @dataclass

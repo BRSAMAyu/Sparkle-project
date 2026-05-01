@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from collections.abc import Iterable
+from dataclasses import dataclass
 
-from app.config.aurora import aurora_flags
 from app.aurora.schemas import (
-    AuroraPresenceLevel,
     AuroraPolicyVersion,
+    AuroraPresenceLevel,
     InteractionModelConfig,
     InteractionModelVariant,
     TransitionDecisionRecord,
     UXIntent,
 )
+from app.config.aurora import aurora_flags
 
 from .config import (
     InteractionVariantFeatureGate,

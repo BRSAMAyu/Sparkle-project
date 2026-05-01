@@ -10,13 +10,12 @@ promotion and deprecation.
 from __future__ import annotations
 
 import json
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
 
 from app.signals.types import SkillEntry
-
 
 _SKILL_TTL_SECONDS = 30 * 24 * 3600
 _STALE_DAYS = 30

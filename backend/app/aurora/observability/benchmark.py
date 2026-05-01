@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from statistics import mean
 from time import perf_counter
 from typing import Any
-from collections.abc import Callable, Iterable
 
 from app.aurora.context import AuroraDecisionContext, AuroraTier, AuroraTierStatus
 from app.aurora.observability.tiering import emit_tier_event

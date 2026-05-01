@@ -9,7 +9,7 @@ from __future__ import annotations
 import io
 import json
 import zipfile
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.models.achievement import UserAchievement
 from app.models.calendar_event import CalendarEvent
 from app.models.chat import ChatSession
 from app.models.error_book import ErrorRecord
@@ -29,7 +30,6 @@ from app.models.plan import Plan
 from app.models.task import Task
 from app.models.user import User
 from app.models.user_settings import UserSettings
-from app.models.achievement import UserAchievement
 
 router = APIRouter()
 

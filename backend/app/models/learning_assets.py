@@ -3,7 +3,7 @@ Learning Assets Models (学习资产模型)
 Represents user's vocabulary, sentences, and concepts collected from translation lookups.
 """
 import enum
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,

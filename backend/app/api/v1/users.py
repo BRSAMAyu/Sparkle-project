@@ -5,8 +5,9 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 import os
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
@@ -23,8 +24,8 @@ from app.db.session import get_db
 from app.models.auth_security import AuthAuditAction, AuthAuditLog
 from app.models.user import PushPreference, User, UserStatus
 from app.schemas.user import (
-    AvatarStatus,
     AuthAuditLogInfo,
+    AvatarStatus,
     DeleteAccountRequest,
     LinkSocialRequest,
     PasswordChange,

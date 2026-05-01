@@ -6,9 +6,10 @@ Collaborative Filtering Recommendation Service
 使用 Jaccard 相似度计算用户相似度
 """
 from __future__ import annotations
+
 import time
 from collections import defaultdict
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from loguru import logger

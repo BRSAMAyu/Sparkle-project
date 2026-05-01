@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import inspect
 import json
-from datetime import datetime, UTC
-from typing import Any
 from collections.abc import Mapping
+from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 from zoneinfo import ZoneInfo
 

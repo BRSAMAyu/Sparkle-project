@@ -9,14 +9,14 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime, timedelta
 
-from sqlalchemy import select, update, func
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.card_protocol import (
-    TaskOccurrence,
-    OccurrenceStatus,
-)
 from app.core.event_bus import EventBus
+from app.models.card_protocol import (
+    OccurrenceStatus,
+    TaskOccurrence,
+)
 
 
 class TaskOccurrenceService:

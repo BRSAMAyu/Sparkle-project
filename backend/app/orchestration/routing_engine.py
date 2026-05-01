@@ -18,6 +18,7 @@ from app.aurora.migration import (
     resolve_cutover_state,
     route_dual_core_via_aurora,
 )
+from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
 from app.aurora.schemas import SignalSnapshot
 from app.config import aurora_flags, settings
 from app.core.metrics import (
@@ -27,7 +28,6 @@ from app.core.metrics import (
 )
 from app.core.unified_intent_router import UnifiedIntentType
 from app.gen.agent.v1 import agent_service_pb2
-from app.aurora.runtime_v1.user_preferences import AuroraUserPreferencesService
 from app.orchestration.dual_core_router import DualCoreDecision, DualCoreRoutingInput
 from app.orchestration.mode_workflow_config import get_mode_strategy
 from app.orchestration.route_adapter import to_route_decision
@@ -1098,17 +1098,9 @@ class RoutingEngineMixin:
         elif srl_mode == "shadow":
             effective_routing_input = replace(effective_routing_input, srl_phase_hint=None)
 
-        if metacog_mode == "off":
+        if metacog_mode == "off" or routing_input.metacognition_hint is None or metacog_mode == "shadow":
             effective_routing_input = replace(effective_routing_input, metacognition_hint=None)
-        elif routing_input.metacognition_hint is None:
-            effective_routing_input = replace(effective_routing_input, metacognition_hint=None)
-        elif metacog_mode == "shadow":
-            effective_routing_input = replace(effective_routing_input, metacognition_hint=None)
-        if cogload_mode == "off":
-            effective_routing_input = replace(effective_routing_input, cognitive_load=None)
-        elif routing_input.cognitive_load is None:
-            effective_routing_input = replace(effective_routing_input, cognitive_load=None)
-        elif cogload_mode == "shadow":
+        if cogload_mode == "off" or routing_input.cognitive_load is None or cogload_mode == "shadow":
             effective_routing_input = replace(effective_routing_input, cognitive_load=None)
 
         if routing_input.social_signals is not None and social_mode in {"shadow", "live"}:

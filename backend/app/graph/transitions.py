@@ -7,7 +7,6 @@ from dataclasses import dataclass
 from app.aurora.schemas import ImpactClass, TransitionDecisionRecord
 from app.graph.backbone import BackbonePathResolver
 
-
 _STRONG_SIGNAL_BASIS = {
     "commitment_conflict",
     "energy_drop",

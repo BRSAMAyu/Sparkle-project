@@ -3,7 +3,7 @@ Galaxy 事件消费者 - 处理错题创建事件
 """
 
 import asyncio
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from loguru import logger
@@ -17,8 +17,8 @@ from app.models.task import Task, TaskStatus
 from app.models.task_resources import TaskKnowledgeLink
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.services.cognitive_service import CognitiveService
-from app.services.galaxy_service import GalaxyService
 from app.services.galaxy.graph_evolution_service import GraphEvolutionService
+from app.services.galaxy_service import GalaxyService
 from app.services.plan_state_service import PlanStateService
 from app.services.simulation.seed_extractor import SeedExtractor
 from app.services.system_update_service import SystemUpdateService, build_system_update

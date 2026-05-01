@@ -5,6 +5,7 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 """
 ChatOrchestrator - 生产级实现
 
@@ -25,13 +26,14 @@ import os
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
-from app.config import settings
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import settings
 
 # Prometheus metrics
 try:
@@ -45,8 +47,8 @@ from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.composer import ResponseComposer
 from app.orchestration.context_pruner import ContextPruner
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
-from app.orchestration.experience_actuator import ExperienceActuator
 from app.orchestration.executor import ToolExecutor
+from app.orchestration.experience_actuator import ExperienceActuator
 from app.orchestration.prompts import build_system_prompt
 from app.orchestration.situation_brief import SituationBriefBuilder
 from app.orchestration.soul_compiler import DEFAULT_COMPANION_STATE, attach_shadow_soul_runtime
@@ -54,14 +56,14 @@ from app.orchestration.state_manager import SessionStateManager
 from app.orchestration.token_tracker import TokenTracker
 from app.orchestration.validator import RequestValidator
 from app.routing.tool_preference_router import ToolPreferenceRouter
+from app.services.companion_state_service import CompanionStateService
 from app.services.galaxy_service import GalaxyService
 from app.services.graph_knowledge_service import GraphKnowledgeService
+from app.services.intervention_feedback_binding_service import InterventionFeedbackBindingService
 from app.services.knowledge_service import KnowledgeService
 from app.services.llm_service import llm_service
-from app.services.companion_state_service import CompanionStateService
-from app.services.intervention_feedback_binding_service import InterventionFeedbackBindingService
-from app.services.user_strategy_state_service import UserStrategyStateService
 from app.services.user_service import UserService
+from app.services.user_strategy_state_service import UserStrategyStateService
 
 TRACER = trace.get_tracer(__name__)
 
@@ -1092,7 +1094,6 @@ class ProductionChatOrchestrator:
                     }
 
                 # StaleStateGuard → check if user returned after extended absence
-                from datetime import datetime, UTC
                 from app.signals.stale_state_guard import TimeContext
                 _last_seen_raw = await self.redis.get(f"spine:last_seen:{user_id}")
                 if _last_seen_raw:
@@ -1290,7 +1291,6 @@ class ProductionChatOrchestrator:
                     # Handle both dict and JSON string cases
                     if isinstance(llm_profile, str):
                         try:
-                            import json
                             llm_profile_meta = json.loads(llm_profile)
                         except (json.JSONDecodeError, TypeError):
                             logger.warning(f"Failed to parse llm_profile JSON string: {llm_profile[:100] if llm_profile else 'None'}")

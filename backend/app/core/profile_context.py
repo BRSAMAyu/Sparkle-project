@@ -22,8 +22,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from app.profile.projection_contract import UserProjectionContract
 from app.core.user_insight_state import BigFiveTraits, UserInsightState
+from app.profile.projection_contract import UserProjectionContract
 
 
 class WeakSpot(BaseModel):

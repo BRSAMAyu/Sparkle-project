@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 PlanContextBuilder - 计划级上下文构建器
 
@@ -15,7 +16,7 @@ Usage:
     enriched_context = await builder.build_enriched(user_id, plan_id)
 """
 
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 

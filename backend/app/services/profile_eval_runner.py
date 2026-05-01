@@ -3,10 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from collections.abc import Callable
 
 from app.services.profile_eval_llm_judge import (
     JUDGE_CONTRACT_VERSION,

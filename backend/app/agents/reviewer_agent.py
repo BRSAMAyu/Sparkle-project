@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Reviewer Agent - AI内容质量审查系统
 
@@ -27,9 +28,9 @@ from app.agents.workflow_experience import (
     build_reviewer_system_prompt,
     get_review_profile,
 )
+from app.config.settings import settings
 from app.core.agent_profiles import TaskType
 from app.core.llm_router import ModelProvider
-from app.config.settings import settings
 from app.services.llm_service import get_llm_service_for_task
 
 # ============================================

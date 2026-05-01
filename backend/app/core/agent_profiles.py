@@ -5,6 +5,7 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 """
 Agent Profile Configuration - 统一的Agent配置管理
 

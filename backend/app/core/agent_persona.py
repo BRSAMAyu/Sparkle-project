@@ -6,7 +6,6 @@ from typing import Any
 
 from app.core.agent_profiles import AgentProfile, AgentRole
 
-
 MBTI_CHOICES = [
     "INFJ",
     "INTJ",

@@ -1,12 +1,19 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, UTC
-from typing import Any
 from collections.abc import Callable, Iterable
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from typing import Any
 from uuid import uuid4
 
-from app.aurora.schemas import ClaimLifecycle, ClaimSource, IdentityEvidence, InsightClaim, ProjectionPolicy, SparkleRelationshipState
+from app.aurora.schemas import (
+    ClaimLifecycle,
+    ClaimSource,
+    IdentityEvidence,
+    InsightClaim,
+    ProjectionPolicy,
+    SparkleRelationshipState,
+)
 
 
 def _utcnow() -> datetime:

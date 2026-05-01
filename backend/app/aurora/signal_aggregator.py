@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-from dataclasses import dataclass
-from datetime import datetime, timedelta, UTC
-from typing import Any
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
-from app.orchestration.signal_samplers.achievement_sampler import sample_achievement_growth_signal
 from app.aurora.schemas import RetentionTier, SignalSnapshot, SignalTier
+from app.orchestration.signal_samplers.achievement_sampler import sample_achievement_growth_signal
 
 
 def _utcnow() -> datetime:

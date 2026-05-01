@@ -1,14 +1,20 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
-from collections.abc import Awaitable, Callable
 
 from app.config import settings
 from app.core.metrics import SPARKLE_SKILL_EXTRACT_DRAFT_ACCEPT_RATE
 from app.services.llm_service import llm_service
-from app.services.skill_schema import SkillDraft, normalize_activation_conditions, normalize_examples, normalize_name, normalize_pattern_template
+from app.services.skill_schema import (
+    SkillDraft,
+    normalize_activation_conditions,
+    normalize_examples,
+    normalize_name,
+    normalize_pattern_template,
+)
 
 
 class SkillExtractService:

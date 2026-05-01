@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 高级社群功能服务层
 Advanced Community Service - 加密、风控、搜索、离线队列等
@@ -14,7 +15,7 @@ Advanced Community Service - 加密、风控、搜索、离线队列等
 """
 import base64
 import binascii
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 

@@ -4,7 +4,7 @@ import json
 import random
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger

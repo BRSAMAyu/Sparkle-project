@@ -26,7 +26,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from google.protobuf import struct_pb2  # noqa: F401 — kept for backward compat
@@ -48,6 +48,7 @@ from app.core.business_metrics import (  # noqa: F401
     EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL,
     HITL_REQUESTED,
 )
+from app.core.execution_router import ExecutionRouter
 from app.core.metrics import (
     ACTIVE_SESSIONS,
     ADAPTIVE_ROUTING_ADJUSTMENTS_TOTAL,  # noqa: F401
@@ -62,43 +63,22 @@ from app.core.metrics import (
     SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,  # noqa: F401
     TOKEN_USAGE,  # noqa: F401
 )
-from app.core.execution_router import ExecutionRouter
 from app.core.pending_actions import pending_actions_store  # noqa: F401
 from app.core.safe_error_messages import build_safe_chat_error
 from app.core.task_manager import task_manager  # noqa: F401
 from app.core.unified_intent_router import UnifiedIntentRouter, UnifiedIntentType  # noqa: F401
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.chat import ChatMessage, ChatSession, MessageRole  # noqa: F401
-from app.models.plan import Plan  # noqa: F401
 from app.models.cognitive import CognitiveFragment  # noqa: F401
 from app.models.galaxy import KnowledgeNode  # noqa: F401
+from app.models.plan import Plan  # noqa: F401
 from app.models.task import Task  # noqa: F401
 from app.models.task import TaskStatus as ModelTaskStatus  # noqa: F401
 from app.models.task_feedback import TaskFeedback  # noqa: F401
-
-# Phase 3: Circuit Breaker, Observability, Shadow Mode
-from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
-from app.orchestration.composer import ResponseComposer
-from app.orchestration.context_focus import (  # noqa: F401
-    FocusedContextAssembler,
-    KNOWLEDGE_ACTION_KEYWORDS,
-    PLAN_ACTION_KEYWORDS,
-    TASK_ACTION_KEYWORDS,
-    infer_route_intent_from_chat_mode,
-)
-from app.orchestration.context_pruner import ContextPruner
-from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
-from app.orchestration.dual_core_router import DualCoreRoutingInput, dual_core_router  # noqa: F401
-from app.orchestration.experience_actuator import ExperienceActuator
-from app.orchestration.executor import ToolExecutor
-from app.orchestration.goal_quality_evaluator import goal_quality_evaluator  # noqa: F401
-from app.orchestration.grounding_validator import GroundingValidator
-from app.orchestration.graph_rag import (
-    GraphRAGRetriever,
-    filter_graph_rag_result,
-    format_graph_rag_document_context,
-)
-from app.orchestration.lang_graph_planner import LangGraphPlanner
+from app.orchestration.agent_activity import emit_agent_activity, emit_routing_preview
+from app.orchestration.agent_memory import AgentMemoryService  # noqa: F401
+from app.orchestration.agent_scoring import AgentScoringService  # noqa: F401
+from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
 
 # Multi-Agent Mode Support
 from app.orchestration.chat_modes import (
@@ -108,19 +88,57 @@ from app.orchestration.chat_modes import (
     normalize_chat_mode,
     parse_team_spec,
 )
-from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
+
+# Phase 3: Circuit Breaker, Observability, Shadow Mode
+from app.orchestration.circuit_breaker import CircuitBreaker, CircuitBreakerConfig, circuit_breaker_registry
+from app.orchestration.composer import ResponseComposer
+
+# ---------------------------------------------------------------------------
+# Mixin imports
+# ---------------------------------------------------------------------------
+from app.orchestration.context_builder import ContextBuilderMixin
+from app.orchestration.context_focus import (  # noqa: F401
+    KNOWLEDGE_ACTION_KEYWORDS,
+    PLAN_ACTION_KEYWORDS,
+    TASK_ACTION_KEYWORDS,
+    FocusedContextAssembler,
+    infer_route_intent_from_chat_mode,
+)
+from app.orchestration.context_pruner import ContextPruner
+from app.orchestration.dual_core_router import DualCoreRoutingInput, dual_core_router  # noqa: F401
+from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
+from app.orchestration.execution_engine import ExecutionEngineMixin
+from app.orchestration.executor import ToolExecutor
+from app.orchestration.experience_actuator import ExperienceActuator
 from app.orchestration.expert_strategy import ExpertStrategyV1
+from app.orchestration.goal_quality_evaluator import goal_quality_evaluator  # noqa: F401
+from app.orchestration.graph_rag import (
+    GraphRAGRetriever,
+    filter_graph_rag_result,
+    format_graph_rag_document_context,
+)
+from app.orchestration.grounding_validator import GroundingValidator
+from app.orchestration.lang_graph_planner import LangGraphPlanner
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config  # noqa: F401
 from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow  # noqa: F401
-from app.orchestration.agent_memory import AgentMemoryService  # noqa: F401
-from app.orchestration.agent_scoring import AgentScoringService  # noqa: F401
-from app.orchestration.agent_activity import emit_agent_activity, emit_routing_preview
-from app.orchestration.orchestration_trace import OrchestrationTrace
-from app.orchestration.persona_aware_planner import PersonaAwarePlanner  # noqa: F401
-from app.orchestration.planning_workflow import EXAM_SPRINT_FAST_TRACK_FLAG, PlanningWorkflowManager
 from app.orchestration.observability_logger import observability_logger
+from app.orchestration.observability_mixin import ObservabilityMixin
+from app.orchestration.orchestration_trace import OrchestrationTrace
+from app.orchestration.persistence_layer import PersistenceLayerMixin
+from app.orchestration.persona_aware_planner import PersonaAwarePlanner  # noqa: F401
 from app.orchestration.plan_review_service import ReviewDecision, plan_review_service  # noqa: F401
+from app.orchestration.planning_workflow import EXAM_SPRINT_FAST_TRACK_FLAG, PlanningWorkflowManager
+from app.orchestration.response_builder import ResponseBuilderMixin
+
+# Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
+from app.orchestration.route_adapter import to_route_decision  # noqa: F401
+from app.orchestration.routing_engine import RoutingEngineMixin
 from app.orchestration.run_ledger import RunLedgerRecorder
+from app.orchestration.schemas import (
+    ExecutablePlan,  # noqa: F401
+    RouteDecision,  # noqa: F401
+    StateSnapshot,  # noqa: F401
+)
 from app.orchestration.session_feedback import (
     SESSION_FEEDBACK_TTL_SECONDS,  # noqa: F401
     SessionAdaptationContext,  # noqa: F401
@@ -132,15 +150,8 @@ from app.orchestration.session_feedback import (
     build_session_feedback_instruction,
     detect_session_feedback_signal,  # noqa: F401
 )
+from app.orchestration.session_state_mixin import SessionStateMixin
 from app.orchestration.soul_compiler import attach_shadow_soul_runtime
-
-# Phase 1 & Phase 2: Full-Loop Closed System with LangGraph Planner
-from app.orchestration.route_adapter import to_route_decision  # noqa: F401
-from app.orchestration.schemas import (
-    ExecutablePlan,  # noqa: F401
-    RouteDecision,  # noqa: F401
-    StateSnapshot,  # noqa: F401
-)
 from app.orchestration.state_manager import SessionStateManager
 from app.orchestration.state_snapshot import StateSnapshotManager
 from app.orchestration.statechart_engine import WorkflowState
@@ -153,41 +164,30 @@ from app.orchestration.token_tracker import TokenTracker
 from app.orchestration.tool_result_extractor import ToolResultExtractor  # noqa: F401
 from app.orchestration.transparency_data_generator import StepType, TransparencyDataGenerator  # noqa: F401
 from app.orchestration.ux_envelope import ux_envelope_builder  # noqa: F401
+from app.orchestration.validation_engine import ValidationEngineMixin
 from app.orchestration.validator import RequestValidator
 from app.routing.tool_preference_router import ToolPreferenceRouter  # noqa: F401
-from app.services.chat_signal_collector import ChatSignalCollector
-from app.services.custom_expert_service import CustomExpertService, is_custom_expert_id
 from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
+from app.services.chat_signal_collector import ChatSignalCollector
+from app.services.checkpoint_nudge_service import CheckpointDebriefService
+from app.services.custom_expert_service import CustomExpertService, is_custom_expert_id
 from app.services.execution_preference_service import ExecutionPreferenceService
 from app.services.focus_service import focus_service  # noqa: F401
 from app.services.knowledge_service import KnowledgeService
 from app.services.llm_service import llm_service  # noqa: F401
 from app.services.memory_service import MemoryService
-from app.services.plan_progress_service import PlanProgressService  # noqa: F401
-from app.services.progress_narrative_service import ProgressNarrativeService  # noqa: F401
-from app.services.plan_execution_record_service import PlanExecutionRecordService  # noqa: F401
-from app.services.plan_execution_validator import PlanExecutionValidator  # noqa: F401
 from app.services.perceptible_intelligence_service import (  # noqa: F401
     PerceptibleInsightService,
     ProgressComparisonService,
 )
+from app.services.plan_execution_record_service import PlanExecutionRecordService  # noqa: F401
+from app.services.plan_execution_validator import PlanExecutionValidator  # noqa: F401
+from app.services.plan_progress_service import PlanProgressService  # noqa: F401
+from app.services.progress_narrative_service import ProgressNarrativeService  # noqa: F401
 from app.services.self_evolution_service import UnderstandingDepthService  # noqa: F401
 from app.services.shadow_prediction_service import shadow_prediction_service
 from app.services.system_update_service import SystemUpdateService, build_system_update  # noqa: F401
 from app.services.user_service import UserService  # noqa: F401
-from app.services.checkpoint_nudge_service import CheckpointDebriefService
-
-# ---------------------------------------------------------------------------
-# Mixin imports
-# ---------------------------------------------------------------------------
-from app.orchestration.context_builder import ContextBuilderMixin
-from app.orchestration.routing_engine import RoutingEngineMixin
-from app.orchestration.validation_engine import ValidationEngineMixin
-from app.orchestration.session_state_mixin import SessionStateMixin
-from app.orchestration.execution_engine import ExecutionEngineMixin
-from app.orchestration.response_builder import ResponseBuilderMixin
-from app.orchestration.persistence_layer import PersistenceLayerMixin
-from app.orchestration.observability_mixin import ObservabilityMixin
 
 # ---------------------------------------------------------------------------
 # Constants (exported for backward compatibility)
@@ -2364,8 +2364,8 @@ class ChatOrchestrator(
                 _spine_context: dict[str, Any] = {}
                 if not request.HasField("tool_result") and user_message:
                     try:
-                        from app.signals.spine_orchestrator import SpineOrchestrator
                         from app.signals.spine_aurora_bridge import SpineAuroraBridge
+                        from app.signals.spine_orchestrator import SpineOrchestrator
                         _spine = SpineOrchestrator(self.redis)
                         _spine_bridge = SpineAuroraBridge(self.redis)
 

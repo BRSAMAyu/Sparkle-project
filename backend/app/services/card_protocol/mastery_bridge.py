@@ -24,19 +24,19 @@ from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import EventBus
 from app.models.card_protocol import (
     Card,
-    CardType,
-    CardLifecycleStatus,
     CardCreatedBy,
-    CardSourceType,
-    CardVisibility,
     CardEdge,
+    CardLifecycleStatus,
+    CardSourceType,
+    CardType,
+    CardVisibility,
     EdgeType,
 )
-from app.services.card_service import CardService
 from app.services.card_edge_service import CardEdgeService
-from app.core.event_bus import EventBus
+from app.services.card_service import CardService
 
 
 class ErrorMasteryBridge:

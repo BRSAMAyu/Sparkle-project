@@ -4,7 +4,7 @@
 
 import asyncio
 import json
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger

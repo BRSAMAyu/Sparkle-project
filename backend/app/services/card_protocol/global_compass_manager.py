@@ -9,18 +9,17 @@ Phase 3 of the Card Protocol.
 """
 from __future__ import annotations
 
-from copy import deepcopy
 import re
 import uuid
+from copy import deepcopy
 
 from loguru import logger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.event_bus import EventBus
 from app.models.card_protocol import ArtifactStatus, ArtifactType, Card, CardCreatedBy, CardType, PlanningArtifact
 from app.services.planning_artifact_service import PlanningArtifactService
-from app.core.event_bus import EventBus
-
 
 # Default compass payload when no user profile data is available
 _DEFAULT_COMPASS = {

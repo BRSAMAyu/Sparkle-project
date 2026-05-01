@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from app.core.cache import cache_service
 from app.core.kill_switch import (
     KillSwitchBinding,

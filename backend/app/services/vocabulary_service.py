@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 生词本与词典服务
 Vocabulary & Dictionary Service
@@ -15,7 +16,7 @@ import csv
 import io
 import json
 import re
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 

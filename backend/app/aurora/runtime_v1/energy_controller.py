@@ -12,7 +12,6 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-
 from app.aurora.runtime_v1.state import AuroraEnergyState, AuroraEnergyStore
 
 

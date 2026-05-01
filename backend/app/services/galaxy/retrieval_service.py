@@ -13,10 +13,10 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.core.cache import cache_service
-from app.models.community import GroupMember
 from app.core.metrics import RAG_RETRIEVAL_LATENCY, RETRIEVAL_ERROR_TOTAL, RETRIEVAL_TIMEOUT_TOTAL
 from app.core.redis_search_client import redis_search_client
 from app.db.extensions import is_vector_extension_available
+from app.models.community import GroupMember
 from app.models.document_chunks import DocumentChunk
 from app.models.file_storage import StoredFile
 from app.models.galaxy import KnowledgeNode, UserNodeStatus

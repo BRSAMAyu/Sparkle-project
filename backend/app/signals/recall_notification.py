@@ -19,7 +19,6 @@ from loguru import logger
 
 from app.signals.types import _uid
 
-
 _COOLDOWN_SECONDS: dict[str, int] = {
     "undigested_material": 24 * 3600,
     "task_not_started": 12 * 3600,

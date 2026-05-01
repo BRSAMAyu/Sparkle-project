@@ -3,6 +3,7 @@ Request Validator
 请求验证器，负责输入验证和清理
 """
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 

@@ -6,6 +6,7 @@ Tracks and formats transparency data for the frontend transparency panel.
 This module captures execution steps, agent switching, tool calls, and resource usage.
 """
 from __future__ import annotations
+
 import time
 import uuid
 from dataclasses import dataclass, field

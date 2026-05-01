@@ -11,15 +11,15 @@ from uuid import UUID, uuid4
 
 from loguru import logger
 
-from app.core.cache import cache_service
 from app.core.agent_persona import build_agent_persona
 from app.core.agent_profiles import AgentRole, agent_profile_registry
+from app.core.cache import cache_service
 from app.schemas.notification import NotificationCreate
 from app.services.insight_copy import present_pattern_solution
 from app.services.llm_fallback_utils import analysis_llm
 from app.services.notification_service import NotificationService
-from app.services.report.report_snapshot_store import ReportSnapshotStore
 from app.services.report.report_logger import ReportLogger
+from app.services.report.report_snapshot_store import ReportSnapshotStore
 from app.services.report.report_templates import DEFAULT_REPORT_SECTIONS
 from app.services.report.report_tools import LearningReportTools
 from app.services.simulation.seed_extractor import SeedExtractor

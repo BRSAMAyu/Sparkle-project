@@ -3,10 +3,13 @@ I18n - Internationalization utility for Sparkle AI.
 Loads translations from JSON files and provides localized strings based on locale.
 """
 from __future__ import annotations
+
 import json
 from pathlib import Path
 from typing import Any
+
 from loguru import logger
+
 
 class I18n:
     _translations: dict[str, dict[str, Any]] = {}

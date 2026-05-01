@@ -5,6 +5,7 @@ Stage: <首次引入 Stage 号>
 """
 
 from __future__ import annotations
+
 import asyncio
 import json
 import uuid
@@ -19,6 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+from app.core.llm_monitoring import LLMMonitor
+from app.core.llm_router import LLMSelection, ModelProvider, llm_router
 from app.core.llm_secure_io import (
     refresh_llm_safety_mode,
     sanitize_llm_output,
@@ -28,13 +31,11 @@ from app.core.llm_secure_io import (
     wrap_tool_result,
     wrap_user_message,
 )
-from app.core.llm_router import LLMSelection, ModelProvider, llm_router
 from app.services.circuit_breaker import CircuitBreakerOpenException, circuit_breaker_service
 from app.services.llm.base import LLMProvider
-from app.services.llm.providers import OpenAICompatibleProvider
-from app.services.llm.fallback import llm_fallback_manager
 from app.services.llm.concurrency import llm_concurrency
-from app.core.llm_monitoring import LLMMonitor
+from app.services.llm.fallback import llm_fallback_manager
+from app.services.llm.providers import OpenAICompatibleProvider
 
 # ==========================================
 # 🎭 演示模式预设响应 (Demo Mock Responses)
@@ -176,8 +177,9 @@ async def _track_daily_user_tokens(user_id: str | None, total_tokens: int) -> No
     if not user_id or total_tokens <= 0:
         return
     try:
-        from app.core.cache import cache_service
         from datetime import UTC, datetime
+
+        from app.core.cache import cache_service
         date_key = datetime.now(UTC).strftime("%Y-%m-%d")
         redis_key = f"llm_tokens:{user_id}:{date_key}"
         r = cache_service.redis

@@ -473,7 +473,10 @@ class ConflictResolverService:
         )
 
         if source_lane == "inferred_extraction":
-            from app.services.memory_inferred_write_lane import InferredEpisodicCandidate, MemoryInferredWriteLaneService
+            from app.services.memory_inferred_write_lane import (
+                InferredEpisodicCandidate,
+                MemoryInferredWriteLaneService,
+            )
 
             try:
                 session_id = UUID(str(source_id))

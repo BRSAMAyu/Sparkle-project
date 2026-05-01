@@ -5,7 +5,6 @@ from pathlib import Path
 
 from app.state_aggregator.schema import SufficiencySummaryValue
 
-
 _TEMPLATE_PATH = Path(__file__).with_name("follow_up_question_templates.v1.json")
 
 

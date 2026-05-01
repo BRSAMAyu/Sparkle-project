@@ -1,7 +1,8 @@
 from __future__ import annotations
+
 import base64
 import os
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM

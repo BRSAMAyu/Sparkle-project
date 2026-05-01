@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 State Change Notification Service
 
@@ -10,10 +11,8 @@ Sends detailed notifications for major state changes:
 Integrates with WebSocket to deliver real-time notifications to clients.
 Also creates database records for notification center persistence.
 """
-from typing import TYPE_CHECKING
-
-from datetime import datetime, UTC
-from typing import Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from loguru import logger

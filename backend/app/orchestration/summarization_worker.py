@@ -15,7 +15,6 @@ import redis.asyncio as redis
 from loguru import logger
 
 
-
 class SummarizationWorker:
     """
     后台总结任务处理器

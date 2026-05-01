@@ -25,7 +25,6 @@ from app.signals.types import (
     _uid,
 )
 
-
 # ── 提取阈值 ──────────────────────────────────────────────────────
 
 _EXTRACTION_THRESHOLD = 3  # 连续有效次数达到此值时触发提取

@@ -12,10 +12,11 @@ Celery 任务模块 - 任务包装器
 """
 
 
+from datetime import UTC
+
 from loguru import logger
 
 from app.core.celery_app import _run_async, celery_app
-from datetime import UTC
 
 
 def _notification_data_matches(actual, expected) -> bool:
@@ -849,11 +850,12 @@ def refresh_metacognition_snapshots(self, limit: int = 500):
     """Refresh Stage 30 metacognition snapshots for recently active users."""
     import asyncio
 
+    from sqlalchemy import select
+
     from app.db.session import AsyncSessionLocal
     from app.models.task import Task
     from app.models.theater_prediction import TheaterPrediction
     from app.services.metacognition_service import MetacognitionService
-    from sqlalchemy import select
 
     async def _run():
         async with AsyncSessionLocal() as session:
@@ -1572,10 +1574,10 @@ def comeback_nudge_task(self, user_id: str):
     """
     from uuid import UUID
 
-    from app.db.session import AsyncSessionLocal
     from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
-    from app.services.notification_service import NotificationService
+    from app.db.session import AsyncSessionLocal
     from app.schemas.notification import NotificationCreate
+    from app.services.notification_service import NotificationService
 
     COMEBACK_THRESHOLD_DAYS = 3
 
@@ -1941,9 +1943,9 @@ def purge_deleted_account(self, user_id: str) -> dict:
     from sqlalchemy import delete as sql_delete
 
     from app.db.session import AsyncSessionLocal
-    from app.models.achievement import UserAchievement, UserStreakStats, UserStreakDays
+    from app.models.achievement import UserAchievement, UserStreakDays, UserStreakStats
     from app.models.calendar_event import CalendarEvent
-    from app.models.chat import ChatSession, ChatMessage
+    from app.models.chat import ChatMessage, ChatSession
     from app.models.cognitive import BehaviorPattern, CognitiveFragment
     from app.models.error_book import ErrorRecord
     from app.models.focus import FocusSession
@@ -2010,10 +2012,10 @@ def aurora_wake_deliver_task(self, wake_id: str, user_id: str):
     """Deliver a single Aurora scheduled wake as a notification to the user."""
     from uuid import UUID
 
-    from app.db.session import AsyncSessionLocal
     from app.aurora.runtime_v1.wake_scheduler import AuroraWakeScheduler
-    from app.services.notification_service import NotificationService
+    from app.db.session import AsyncSessionLocal
     from app.schemas.notification import NotificationCreate
+    from app.services.notification_service import NotificationService
 
     async def _run():
         async with AsyncSessionLocal() as session:
@@ -2082,8 +2084,8 @@ def aurora_wake_deliver_task(self, wake_id: str, user_id: str):
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.scan_aurora_scheduled_wakes")
 def scan_aurora_scheduled_wakes(self, limit: int = 200):
     """Scan for due Aurora scheduled wakes and dispatch delivery tasks."""
-    from app.db.session import AsyncSessionLocal
     from app.aurora.runtime_v1.wake_scheduler import AuroraWakeScheduler
+    from app.db.session import AsyncSessionLocal
 
     async def _run():
         async with AsyncSessionLocal() as session:
@@ -2125,14 +2127,14 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
     from uuid import UUID
 
     from app.db.session import AsyncSessionLocal
-    from app.services.notification_service import NotificationService
     from app.schemas.notification import NotificationCreate
+    from app.services.notification_service import NotificationService
 
     parsed_context = json.loads(context) if isinstance(context, str) else context
 
     async def _run():
-        from app.signals.spine_orchestrator import SpineOrchestrator
         from app.core.redis_client import get_redis
+        from app.signals.spine_orchestrator import SpineOrchestrator
 
         redis = get_redis()
         spine = SpineOrchestrator(redis=redis)
@@ -2299,8 +2301,8 @@ def spine_snapshot_task(self, user_id: str):
     - Known skills
     """
     async def _run():
-        from app.signals.spine_orchestrator import SpineOrchestrator
         from app.core.redis_client import get_redis
+        from app.signals.spine_orchestrator import SpineOrchestrator
 
         redis = get_redis()
         spine = SpineOrchestrator(redis_client=redis)
@@ -2385,8 +2387,8 @@ def compact_user_traces(self, user_id: str):
     compact summary. Individual traces are deleted to free Redis memory.
     """
     async def _run():
-        from app.signals.causal_trace_store import CausalTraceStore
         from app.core.redis_client import get_redis
+        from app.signals.causal_trace_store import CausalTraceStore
 
         redis = get_redis()
         store = CausalTraceStore(redis)
@@ -2455,9 +2457,10 @@ def community_cohort_signal_task(self, user_id: str, knowledge_node_id: str):
     """Inject community error patterns into Spine for a specific user+node."""
 
     async def _run():
+        import json
+
         from app.core.redis_client import get_redis
         from app.signals.spine_orchestrator import SpineOrchestrator
-        import json
 
         redis = get_redis()
         spine = SpineOrchestrator(redis_client=redis)

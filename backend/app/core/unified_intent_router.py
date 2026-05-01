@@ -9,6 +9,7 @@ Unified Intent Router - 统一意图路由系统
 替代原 IntentRouter (17行简单版本)，提供智能路由能力。
 """
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Any

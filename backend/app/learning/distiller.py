@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from uuid import UUID, uuid5
 
 from app.aurora.schemas import DistilledStrategy, DistilledStrategyLifecycle, ProjectionPolicy, Shareability

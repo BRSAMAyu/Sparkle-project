@@ -8,11 +8,12 @@ Community API - 好友、群组、消息、打卡、任务相关接口
 """
 
 from __future__ import annotations
+
 import asyncio
 import contextlib
-from copy import deepcopy
 import json
-from datetime import datetime, UTC
+from copy import deepcopy
+from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
@@ -21,14 +22,29 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
+from app.api.v1.accountability import (
+    _build_leaderboard_summary,
+    _build_partnership_achievements_payload,
+    _build_partnership_out,
+    _build_partnership_stats_payload,
+    _build_recent_shares_payload,
+    _build_relationship_summary,
+    _get_last_checkin_at,
+    _slot_type_value,
+)
 from app.config import settings
 from app.core.cache import cache_service
 from app.core.rate_limiting import limiter
 from app.core.security import decode_token
 from app.core.websocket import manager
 from app.db.session import AsyncSessionLocal, get_db
-from app.models.cognitive import BehaviorPattern, CognitiveFragment
+from app.models.accountability import (
+    AccountabilityPartnership,
+    AccountabilitySlotType,
+    AccountabilityStatus,
+)
 from app.models.card_protocol import ImportMode, SharePermission, ShareScope
+from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.community import (
     Friendship,
     FriendshipStatus,
@@ -36,29 +52,25 @@ from app.models.community import (
     GroupMessage,
     GroupRole,
     GroupType,
+    Post,
+    PostLike,
     PrivateMessage,
     SharedResource,
     SharedResourceType,
 )
-from app.models.accountability import (
-    AccountabilityPartnership,
-    AccountabilitySlotType,
-    AccountabilityStatus,
-)
 from app.models.curiosity_capsule import CuriosityCapsule
-from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.file_storage import StoredFile
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.group_files import GroupFile
 from app.models.plan import Plan
 from app.models.seed_content import SeedItem, SeedLibrary
 from app.models.task import Task
 from app.models.user import User, UserStatus
-from app.schemas.plan import PlanCreate
-from app.schemas.task import TaskCreate
 from app.schemas.community import (
+    AccountabilityFriendSummary,
+    BlockUserInfo,
     # 拉黑相关
     BlockUserRequest,
-    BlockUserInfo,
     # 广播相关
     BroadcastMessageCreate,
     BroadcastMessageInfo,
@@ -67,21 +79,20 @@ from app.schemas.community import (
     CheckinResponse,
     EncryptionKeyCreate,
     EncryptionKeyInfo,
+    # 群文件
+    FileCopyResponse,
     FlameStatus,
+    FriendMatchStrategyEnum,
     FriendRecommendation,
     FriendRecommendationFeedbackRequest,
-    FriendMatchStrategyEnum,
     FriendRecommendationTargetEnum,
-    AccountabilityFriendSummary,
-    RecommendationFeedbackInsight,
-    RecommendationFeedbackPrompt,
-    RecommendationItemTypeEnum,
     # 好友
     FriendRequest,
     FriendResponse,
     FriendshipInfo,
     # 群管理相关
     GroupAnnouncementUpdate,
+    GroupCollaborativeGalaxyResponse,
     # 群组
     GroupCreate,
     GroupDirectoryResponse,
@@ -91,21 +102,18 @@ from app.schemas.community import (
     GroupFileInfo,
     GroupFilePermissions,
     GroupFilePermissionUpdate,
-    GroupFileSortEnum,
-    GroupKnowledgeBaseDocumentCreate,
-    GroupKnowledgeBaseResponse,
-    GroupCollaborativeGalaxyResponse,
-    GroupMemberInfo,
-    # 群文件
-    FileCopyResponse,
     GroupFileShareRequest,
+    GroupFileSortEnum,
     # 火堆
     GroupFlameStatus,
     GroupInfo,
+    GroupKnowledgeBaseDocumentCreate,
+    GroupKnowledgeBaseResponse,
     GroupListItem,
-    GroupModerationSettings,
+    GroupMemberInfo,
     GroupMessageReadRequest,
     GroupMessageReadResponse,
+    GroupModerationSettings,
     GroupRecommendationFeedbackRequest,
     GroupRecommendationItem,
     GroupTaskCreate,
@@ -138,30 +146,24 @@ from app.schemas.community import (
     PrivateMessageInfo,
     PrivateMessageSend,
     ReactionActionEnum,
+    RecommendationFeedbackInsight,
+    RecommendationFeedbackPrompt,
+    RecommendationItemTypeEnum,
+    # 隐私设置
+    SearchVisibilityEnum,
     SharedResourceCreate,
     SharedResourceInfo,
     SharedResourceTypeEnum,
-    UserFileShareRequest,
     UserBrief,
-    # 隐私设置
-    SearchVisibilityEnum,
+    UserFileShareRequest,
     UserPrivacySettings,
     # 状态
     UserStatusUpdate,
 )
+from app.schemas.plan import PlanCreate
+from app.schemas.task import TaskCreate
+from app.services.card_protocol.share_service import ShareService
 from app.services.collaboration_service import collaboration_service
-from app.services.seed_library_service import SeedLibraryService
-from app.services.community_signal_bridge import CommunitySignalBridge
-from app.api.v1.accountability import (
-    _build_leaderboard_summary,
-    _build_partnership_out,
-    _build_partnership_achievements_payload,
-    _build_partnership_stats_payload,
-    _build_recent_shares_payload,
-    _build_relationship_summary,
-    _get_last_checkin_at,
-    _slot_type_value,
-)
 from app.services.community_advanced_service import (
     BroadcastService,
     EncryptionService,
@@ -175,23 +177,23 @@ from app.services.community_advanced_service import (
 from app.services.community_service import (
     CheckinService,
     FriendshipService,
-    GroupMessageService,
     GroupKnowledgeService,
+    GroupMessageService,
     GroupService,
     GroupTaskService,
     PrivateMessageService,
     UserBlockService,
     UserSearchService,
 )
-from app.services.card_protocol.share_service import ShareService
-from app.services.plan_service import PlanService
-from app.services.streak_signal_processor import StreakSignalProcessor
-from app.services.task_service import TaskService
+from app.services.community_signal_bridge import CommunitySignalBridge
+from app.services.friend_match_service import FriendMatchService
 from app.services.group_file_service import GroupFileService
 from app.services.group_recommendation_service import GroupRecommendationService
-from app.services.friend_match_service import FriendMatchService
+from app.services.plan_service import PlanService
 from app.services.recommendation_feedback_service import RecommendationFeedbackService
-from app.models.community import Post, PostLike
+from app.services.seed_library_service import SeedLibraryService
+from app.services.streak_signal_processor import StreakSignalProcessor
+from app.services.task_service import TaskService
 from app.tools.entity_cards import (
     build_entity_action,
     build_entity_card,

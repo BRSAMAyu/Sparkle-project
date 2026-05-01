@@ -1,5 +1,6 @@
 # DEPRECATED: no active importers — candidate for removal in next cleanup
 from __future__ import annotations
+
 """
 ComplexityAnalyzer — 纯规则引擎，< 3ms 执行时间，零 LLM 调用。
 

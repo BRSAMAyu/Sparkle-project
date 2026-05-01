@@ -17,7 +17,6 @@ from typing import Any
 
 from loguru import logger
 
-
 # ── D10: Per-scenario daily quotas for Aurora Core Sessions ──────────
 # normal = standard goal, sprint = 7/14-day exam sprint, crisis = exam 48h/24h
 _SCENARIO_DAILY_QUOTA: dict[str, dict[str, int]] = {

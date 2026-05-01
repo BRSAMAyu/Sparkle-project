@@ -37,8 +37,8 @@ from app.services.card_edge_service import CardEdgeService
 from app.services.card_protocol.main_chain_artifact_service import MainChainArtifactService
 from app.services.card_service import CardService
 from app.services.plan_service import PlanService
-from app.services.task_state_sync import TaskStateSyncService
 from app.services.task_occurrence_service import TaskOccurrenceService
+from app.services.task_state_sync import TaskStateSyncService
 
 
 @dataclass

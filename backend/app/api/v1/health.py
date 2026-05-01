@@ -3,7 +3,8 @@ Health Check API
 健康检查端点 - 包含数据库连接状态检查
 """
 from __future__ import annotations
-from datetime import datetime, UTC
+
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel

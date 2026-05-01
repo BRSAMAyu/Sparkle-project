@@ -17,7 +17,9 @@ from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.core.cache import cache_service
 from app.models.user import User
 from app.services.aurora_calibration_card_service import AuroraCalibrationCardService
-from app.services.aurora_control_surface_service import AuroraControlSurfaceService  # noqa: F401 (used in predicted-options)
+from app.services.aurora_control_surface_service import (
+    AuroraControlSurfaceService,  # noqa: F401 (used in predicted-options)
+)
 
 logger = logging.getLogger(__name__)
 

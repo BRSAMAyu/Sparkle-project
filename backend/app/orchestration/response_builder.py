@@ -17,6 +17,7 @@ from loguru import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
+from app.core.business_metrics import COLLABORATION_LATENCY
 from app.core.metrics import (
     ACTIVE_SESSIONS,
     AI_RESPONSE_TOTAL_DURATION,
@@ -24,7 +25,6 @@ from app.core.metrics import (
     RESPONSE_FALLBACK_GENERATED_TOTAL,
     SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,
 )
-from app.core.business_metrics import COLLABORATION_LATENCY
 from app.core.task_manager import task_manager
 from app.gen.agent.v1 import agent_service_pb2
 from app.orchestration.agent_scoring import AgentScoringService

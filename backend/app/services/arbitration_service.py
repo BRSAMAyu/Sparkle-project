@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 Arbitration Service - Phase 2g
 
@@ -14,7 +15,7 @@ Arbitration Service - Phase 2g
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 

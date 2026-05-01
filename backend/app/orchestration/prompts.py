@@ -25,15 +25,16 @@ Prompt 管理系统 - 统一的Agent Prompt管理
     prompt = get_system_prompt_for_role(AgentRole.GALAXY_GUIDE, user_context, query)
 """
 
-from datetime import datetime, UTC
-from typing import Any
 import json
 import math
 import random
 import re
+from datetime import UTC, datetime
+from typing import Any
 
 from loguru import logger
 
+from app.config import settings
 from app.core.agent_persona import build_agent_persona_prompt_section
 from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import CONTEXT_FOCUS_PROMPT_SECTION_TOTAL
@@ -41,12 +42,11 @@ from app.core.i18n import I18n
 from app.core.kill_switch import normalize_mode
 from app.core.metrics import SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO
 from app.core.plan_context import merge_plan_context
-from app.config import settings
 from app.core.user_insight_state import UserInsightState
 from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
 from app.orchestration.context_focus import ContextFocusDecision
-from app.orchestration.social_context_renderer import render_social_context_lines
 from app.orchestration.situation_brief import format_situation_brief_section
+from app.orchestration.social_context_renderer import render_social_context_lines
 from app.services.srl_phase_types import SRLPhaseHint
 
 
@@ -389,7 +389,7 @@ def _apply_prompt_budget(
     for priority in sorted(set(priority_map.values()), reverse=True):
         section_names = [
             name
-            for name in adjusted.keys()
+            for name in adjusted
             if priority_map.get(name) == priority and str(adjusted.get(name) or "").strip()
         ]
         for section_name in section_names:

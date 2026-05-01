@@ -2,6 +2,7 @@
 Capsule event consumer - listens to cognitive profile updates and feedback triggers.
 """
 from __future__ import annotations
+
 import asyncio
 import os
 from uuid import UUID

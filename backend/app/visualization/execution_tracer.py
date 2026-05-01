@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import json
 
 from app.orchestration.statechart_engine import GraphEvent

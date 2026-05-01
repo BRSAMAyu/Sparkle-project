@@ -17,7 +17,7 @@ Otherwise reuse the cached sidecar.
 
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -138,8 +138,8 @@ class DormantInjector:
             )
         # Try to load from TaskGuidance sidecar store
         try:
-            from app.task_guidance.store import CacheBackedTaskGuidanceStore
             from app.task_guidance.schemas import TaskGuidanceAudience
+            from app.task_guidance.store import CacheBackedTaskGuidanceStore
 
             guidance_store = CacheBackedTaskGuidanceStore()
             guidance = await guidance_store.get_for_task(task_id, TaskGuidanceAudience.AI)

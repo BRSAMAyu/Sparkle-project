@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from collections import Counter
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta, UTC
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -17,14 +17,13 @@ from app.core.metrics import (
     ERROR_REPLAN_BRIDGE_EVALUATED_TOTAL,
     ERROR_REPLAN_BRIDGE_TRIGGERED_TOTAL,
 )
-from app.models.card_protocol import InterventionRecord
+from app.models.card_protocol import DeliveryChannel, DeliveryStrategy, InterventionRecord, InterventionTriggerType
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_resources import TaskKnowledgeLink
 from app.models.user import User
-from app.models.card_protocol import DeliveryChannel, DeliveryStrategy, InterventionTriggerType
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwitchService
 from app.services.intervention_record_service import InterventionRecordService

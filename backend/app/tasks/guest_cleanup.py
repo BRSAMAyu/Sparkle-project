@@ -4,7 +4,7 @@ Guest User Cleanup Tasks
 
 定期清理长期未活跃的游客用户数据
 """
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 
 from celery import shared_task
 from celery.schedules import crontab

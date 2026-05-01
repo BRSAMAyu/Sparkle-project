@@ -6,7 +6,7 @@ and support 6 task types across all goal domains.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
 from app.signals.types import (
@@ -16,6 +16,7 @@ from app.signals.types import (
     TaskCardProtocol,
     WhyThisTask,
 )
+
 
 def _utcnow() -> str:
     return datetime.now(UTC).isoformat()
