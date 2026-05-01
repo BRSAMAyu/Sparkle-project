@@ -1,3 +1,5 @@
+# rule-at: orphan-by-design Merged into age_gate.py during Rule K refactoring; kept for reference
+# DEPRECATED: Merged into age_gate.py as part of Rule K write isolation refactoring.
 from __future__ import annotations
 
 import inspect

@@ -25,6 +25,9 @@
 - `backend/app/services/feedback_adjustment_service.py`
 - `backend/app/services/galaxy/event_listener.py`
 
+- Merged/deprecated modules (logic moved to another file, kept for reference):
+- `backend/app/services/compliance/deletion_protocol.py` — merged into age_gate.py during Rule K refactoring
+
 - Guard false positives (have importers via absolute/relative imports, guard AST resolution misses them):
 - `backend/app/services/feedback_service.py`
 - `backend/app/services/personalization/runtime_context_service.py`
