@@ -1562,25 +1562,65 @@ class RoutingEngineMixin:
         user_context_payload: dict[str, Any] | None,
         plan_context: dict[str, Any] | None,
     ) -> dict[str, float]:
+        base: dict[str, float] = {}
         if active_db is not None:
             with contextlib.suppress(Exception):
-                return await RoutingProfileService(active_db, self.redis).get_profile(uuid.UUID(user_id))
+                base = await RoutingProfileService(active_db, self.redis).get_profile(uuid.UUID(user_id))
 
-        candidates = []
-        if isinstance(user_context_payload, dict):
-            preferences = user_context_payload.get("preferences")
-            if isinstance(preferences, dict):
-                candidates.append(preferences.get("routing_profile"))
-        if isinstance(plan_context, dict):
-            user_profile = plan_context.get("user_profile")
-            if isinstance(user_profile, dict):
-                snapshot = user_profile.get("preferences_snapshot")
-                if isinstance(snapshot, dict):
-                    candidates.append(snapshot.get("routing_profile"))
-        return RoutingProfileService.DEFAULT_PROFILE | next(
-            (candidate for candidate in candidates if isinstance(candidate, dict)),
-            {},
-        )
+        if not base:
+            candidates = []
+            if isinstance(user_context_payload, dict):
+                preferences = user_context_payload.get("preferences")
+                if isinstance(preferences, dict):
+                    candidates.append(preferences.get("routing_profile"))
+            if isinstance(plan_context, dict):
+                user_profile = plan_context.get("user_profile")
+                if isinstance(user_profile, dict):
+                    snapshot = user_profile.get("preferences_snapshot")
+                    if isinstance(snapshot, dict):
+                        candidates.append(snapshot.get("routing_profile"))
+            base = RoutingProfileService.DEFAULT_PROFILE | next(
+                (c for c in candidates if isinstance(c, dict)),
+                {},
+            )
+
+        # Blend recent adaptation records into the profile so that past
+        # preference changes influence routing thresholds.
+        with contextlib.suppress(Exception):
+            base = await self._blend_recent_adaptations(user_id, base)
+        return base
+
+    async def _blend_recent_adaptations(
+        self, user_id: str, base: dict[str, float]
+    ) -> dict[str, float]:
+        from app.services.system_update_service import SystemUpdateService
+
+        svc = SystemUpdateService()
+        updates = await svc.list_updates(uuid.UUID(user_id), limit=20)
+        adjusted = dict(base)
+        for update in updates:
+            if update.get("category") != "evolution":
+                continue
+            meta = update.get("metadata") or {}
+            if meta.get("evolution_kind") != "preference_learning":
+                continue
+            adaptation = meta.get("preference_learning")
+            if not isinstance(adaptation, dict):
+                continue
+            what = str(adaptation.get("what_changed") or "")
+            if "深入" in what or "详尽" in what:
+                adjusted["directness_preference"] = max(0.2, adjusted.get("directness_preference", 0.5) - 0.08)
+            elif "简洁" in what or "概览" in what:
+                adjusted["directness_preference"] = min(0.85, adjusted.get("directness_preference", 0.5) + 0.08)
+            if "更轻量" in what or "降低难度" in what:
+                adjusted["procrastination_threshold"] = max(0.2, adjusted.get("procrastination_threshold", 0.6) - 0.12)
+            elif "更有挑战" in what or "提高难度" in what:
+                adjusted["procrastination_threshold"] = min(0.85, adjusted.get("procrastination_threshold", 0.6) + 0.12)
+            if "感性" in what or "温和" in what:
+                adjusted["emotional_sensitivity"] = min(0.85, adjusted.get("emotional_sensitivity", 0.5) + 0.10)
+            elif "理性" in what or "直接" in what:
+                adjusted["emotional_sensitivity"] = max(0.2, adjusted.get("emotional_sensitivity", 0.5) - 0.10)
+        return adjusted
 
     async def _get_cognitive_routing_signals(
         self,
