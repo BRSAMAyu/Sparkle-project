@@ -44,12 +44,12 @@ Future<void> showAuroraCoreSession({
     isDismissible: false,
     enableDrag: false,
     builder: (ctx) => _AuroraCoreSessionSheet(
-        bandStatus: bandStatus,
-        wakeReasons: wakeReasons,
-        conversationId: conversationId,
-        scope: scope,
-        sessionType: sessionType,
-      ),
+      bandStatus: bandStatus,
+      wakeReasons: wakeReasons,
+      conversationId: conversationId,
+      scope: scope,
+      sessionType: sessionType,
+    ),
   );
 }
 
@@ -75,7 +75,8 @@ class _AuroraCoreSessionSheet extends ConsumerStatefulWidget {
       _AuroraCoreSessionSheetState();
 }
 
-class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet>
+class _AuroraCoreSessionSheetState
+    extends ConsumerState<_AuroraCoreSessionSheet>
     with SingleTickerProviderStateMixin {
   AuroraCoreSession? _session;
   bool _loading = true;
@@ -151,12 +152,12 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
     // Record telemetry for chip selections
     if (option != null) {
       unawaited(ref.read(_telemetryServiceProvider).recordChipSelected(
-        option: option,
-        groupId: groupId ?? '',
-        bandStatus: widget.bandStatus,
-        conversationId: widget.conversationId,
-        sessionId: _session!.sessionId,
-      ));
+            option: option,
+            groupId: groupId ?? '',
+            bandStatus: widget.bandStatus,
+            conversationId: widget.conversationId,
+            sessionId: _session!.sessionId,
+          ));
     }
 
     setState(() => _sending = true);
@@ -208,12 +209,17 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
     try {
       final service = ref.read(_coreSessionServiceProvider);
       await service.closeSession(session.sessionId);
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('会话关闭失败，请重试')),
+          SnackBar(
+            content: Text(
+              context.l10n.networkErrorRetry,
+            ),
+          ),
         );
       }
+      return;
     }
     if (mounted) Navigator.of(context).pop();
   }
@@ -225,7 +231,8 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
       constraints: BoxConstraints(maxHeight: maxHeight),
       decoration: BoxDecoration(
         color: DS.surfacePrimary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(DS.radius20)),
+        borderRadius:
+            const BorderRadius.vertical(top: Radius.circular(DS.radius20)),
         boxShadow: DS.shadowLg,
       ),
       child: SafeArea(
@@ -257,7 +264,8 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
   Widget _buildHeader() {
     final session = _session;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(DS.spacing20, DS.spacing12, DS.spacing12, 0),
+      padding: const EdgeInsets.fromLTRB(
+          DS.spacing20, DS.spacing12, DS.spacing12, 0),
       child: Row(
         children: [
           Container(
@@ -267,7 +275,8 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
               color: DS.brandPrimary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.auto_fix_high_rounded, size: 18, color: DS.brandPrimary),
+            child: Icon(Icons.auto_fix_high_rounded,
+                size: 18, color: DS.brandPrimary),
           ),
           const SizedBox(width: DS.spacing10),
           Expanded(
@@ -284,7 +293,8 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
                 if (session != null && session.scope.isNotEmpty)
                   Text(
                     session.scope,
-                    style: TextStyle(color: DS.textSecondary, fontSize: DS.fontSizeXs),
+                    style: TextStyle(
+                        color: DS.textSecondary, fontSize: DS.fontSizeXs),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -294,7 +304,8 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
           // Turn counter
           if (session != null && session.isActive)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: DS.spacing4),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing8, vertical: DS.spacing4),
               decoration: BoxDecoration(
                 color: DS.borderSubtle,
                 borderRadius: BorderRadius.circular(999),
@@ -325,7 +336,8 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
       opacity: _entryAnimation,
       child: ListView(
         controller: _scrollController,
-        padding: const EdgeInsets.fromLTRB(DS.spacing16, DS.spacing16, DS.spacing16, DS.spacing8),
+        padding: const EdgeInsets.fromLTRB(
+            DS.spacing16, DS.spacing16, DS.spacing16, DS.spacing8),
         children: [
           ...session.messages.map(_buildMessage),
           if (_sending) _buildTypingIndicator(),
@@ -345,7 +357,8 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
             children: [
               const CircularProgressIndicator(strokeWidth: 2),
               const SizedBox(height: DS.spacing12),
-              Text(context.l10n.auroraPreparing, style: TextStyle(color: DS.textSecondary)),
+              Text(context.l10n.auroraPreparing,
+                  style: TextStyle(color: DS.textSecondary)),
             ],
           ),
         ),
@@ -358,9 +371,13 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
           children: [
             Icon(Icons.error_outline, color: DS.error, size: 40),
             const SizedBox(height: DS.spacing12),
-            Text(_error!, textAlign: TextAlign.center, style: TextStyle(color: DS.textSecondary)),
+            Text(_error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: DS.textSecondary)),
             const SizedBox(height: DS.spacing16),
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: Text(context.l10n.auroraClose)),
+            TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text(context.l10n.auroraClose)),
           ],
         ),
       );
@@ -384,7 +401,8 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
                 color: DS.brandPrimary.withValues(alpha: 0.08),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.auto_fix_high_rounded, size: 16, color: DS.brandPrimary),
+              child: Icon(Icons.auto_fix_high_rounded,
+                  size: 16, color: DS.brandPrimary),
             ),
             const SizedBox(width: DS.spacing10),
             const _TypingDots(),
@@ -409,11 +427,13 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
         children: [
           Row(
             children: [
-              Icon(Icons.check_circle_outline_rounded, size: 16, color: DS.success),
+              Icon(Icons.check_circle_outline_rounded,
+                  size: 16, color: DS.success),
               const SizedBox(width: DS.spacing8),
               Text(
                 '校准完成',
-                style: DS.bodySmall.copyWith(color: DS.success, fontWeight: DS.fontWeightSemibold),
+                style: DS.bodySmall.copyWith(
+                    color: DS.success, fontWeight: DS.fontWeightSemibold),
               ),
             ],
           ),
@@ -482,9 +502,11 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
     );
   }
 
-  Widget _buildOptionChips(AuroraPredictedReplyGroup group, AuroraCoreSession session) {
+  Widget _buildOptionChips(
+      AuroraPredictedReplyGroup group, AuroraCoreSession session) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(DS.spacing16, DS.spacing12, DS.spacing16, 0),
+      padding: const EdgeInsets.fromLTRB(
+          DS.spacing16, DS.spacing12, DS.spacing16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -518,7 +540,8 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
                               content: option.label,
                               optionId: option.id,
                               semanticValue: option.semanticValue,
-                              modelWriteEffect: option.modelWriteEffect?.toJson(),
+                              modelWriteEffect:
+                                  option.modelWriteEffect?.toJson(),
                               option: option,
                               groupId: group.groupId,
                             ),
@@ -540,14 +563,16 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
 
   Widget _buildFreeformInput(AuroraCoreSession session) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(DS.spacing16, DS.spacing12, DS.spacing16, 0),
+      padding: const EdgeInsets.fromLTRB(
+          DS.spacing16, DS.spacing12, DS.spacing16, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             '解释一下',
-            style: DS.bodyMedium.copyWith(color: DS.textPrimary, fontWeight: DS.fontWeightSemibold),
+            style: DS.bodyMedium.copyWith(
+                color: DS.textPrimary, fontWeight: DS.fontWeightSemibold),
           ),
           const SizedBox(height: DS.spacing8),
           TextField(
@@ -686,11 +711,13 @@ class _AuroraMessageBubbleState extends State<_AuroraMessageBubble>
                     bottomLeft: Radius.circular(DS.radius12),
                     bottomRight: Radius.circular(DS.radius12),
                   ),
-                  border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.12)),
+                  border: Border.all(
+                      color: DS.brandPrimary.withValues(alpha: 0.12)),
                 ),
                 child: Text(
                   widget.message.content,
-                  style: DS.bodyMedium.copyWith(color: DS.textPrimary, height: 1.5),
+                  style: DS.bodyMedium
+                      .copyWith(color: DS.textPrimary, height: 1.5),
                 ),
               ),
             ),
@@ -777,7 +804,9 @@ class _SessionOptionChip extends StatelessWidget {
             vertical: DS.spacing8,
           ),
           decoration: BoxDecoration(
-            color: isDisconfirming ? Colors.transparent : color.withValues(alpha: 0.06),
+            color: isDisconfirming
+                ? Colors.transparent
+                : color.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: isDisconfirming
@@ -789,7 +818,8 @@ class _SessionOptionChip extends StatelessWidget {
             option.label,
             style: DS.bodySmall.copyWith(
               color: isDisconfirming ? DS.textSecondary : color,
-              fontWeight: isDisconfirming ? DS.fontWeightRegular : DS.fontWeightMedium,
+              fontWeight:
+                  isDisconfirming ? DS.fontWeightRegular : DS.fontWeightMedium,
             ),
           ),
         ),

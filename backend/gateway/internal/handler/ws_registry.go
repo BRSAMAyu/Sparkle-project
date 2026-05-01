@@ -265,11 +265,52 @@ func (r *ConnectionRegistry) DrainAll(timeout time.Duration) {
 	}
 }
 
-// ProxyDrainAll drains the WebSocketProxy's independent activeByUser tracking.
-// Called by the proxy during shutdown so that DrainAll covers both tracking systems.
-func (p *WebSocketProxy) ProxyDrainAll() {
+// ProxyDrainAll closes all live proxied WebSocket pairs, clears proxy-local
+// tracking, and waits for active proxy goroutines to exit.
+func (p *WebSocketProxy) ProxyDrainAll(timeout time.Duration) {
+	p.StartDraining()
 	p.mu.Lock()
+	snapshot := make([]*proxyConnectionPair, 0, len(p.liveConnections))
+	for _, pair := range p.liveConnections {
+		if pair != nil {
+			snapshot = append(snapshot, pair)
+		}
+	}
 	p.activeByUser = make(map[string]int)
 	p.reconnectTrackers = make(map[string]*reconnectTracker)
+	p.liveConnections = make(map[*websocket.Conn]*proxyConnectionPair)
 	p.mu.Unlock()
+
+	deadline := time.Now().Add(timeout)
+	for _, pair := range snapshot {
+		if pair == nil {
+			continue
+		}
+		if pair.clientConn != nil {
+			_ = pair.clientConn.WriteControl(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseGoingAway, "server shutting down"),
+				deadline,
+			)
+			_ = pair.clientConn.Close()
+		}
+		if pair.backendConn != nil {
+			_ = pair.backendConn.WriteControl(
+				websocket.CloseMessage,
+				websocket.FormatCloseMessage(websocket.CloseGoingAway, "server shutting down"),
+				deadline,
+			)
+			_ = pair.backendConn.Close()
+		}
+	}
+
+	done := make(chan struct{})
+	go func() {
+		p.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(timeout):
+	}
 }

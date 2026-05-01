@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -20,10 +21,10 @@ const wsDefaultMaxMessageBytes int64 = 256 * 1024 // 256 KB
 
 // Reconnect rate-limit constants
 const (
-	reconnectMaxAttempts = 10            // max reconnect attempts per window
-	reconnectWindowSec   = 60            // sliding window in seconds
-	reconnectBlockSec    = 300           // block duration after exceeding limit
-	reconnectCleanupSec  = 300           // cleanup interval for expired trackers
+	reconnectMaxAttempts = 10  // max reconnect attempts per window
+	reconnectWindowSec   = 60  // sliding window in seconds
+	reconnectBlockSec    = 300 // block duration after exceeding limit
+	reconnectCleanupSec  = 300 // cleanup interval for expired trackers
 )
 
 type reconnectTracker struct {
@@ -41,13 +42,21 @@ type reconnectTracker struct {
 // deployments this is sufficient. A Redis-backed atomic counter would be needed
 // for multi-instance enforcement — tracked as future work.
 type WebSocketProxy struct {
-	pythonBackendURL   string
-	upgrader           *websocket.Upgrader
-	logger             *zap.Logger
-	config             *config.Config
-	mu                 sync.Mutex
-	activeByUser       map[string]int
-	reconnectTrackers  map[string]*reconnectTracker
+	pythonBackendURL  string
+	upgrader          *websocket.Upgrader
+	logger            *zap.Logger
+	config            *config.Config
+	mu                sync.Mutex
+	activeByUser      map[string]int
+	reconnectTrackers map[string]*reconnectTracker
+	liveConnections   map[*websocket.Conn]*proxyConnectionPair
+	wg                sync.WaitGroup
+	draining          atomic.Bool
+}
+
+type proxyConnectionPair struct {
+	clientConn  *websocket.Conn
+	backendConn *websocket.Conn
 }
 
 // NewWebSocketProxy 创建新的 WebSocket 代理
@@ -77,6 +86,7 @@ func NewWebSocketProxy(backendURL string, logger *zap.Logger, cfg *config.Config
 		config:            cfg,
 		activeByUser:      make(map[string]int),
 		reconnectTrackers: make(map[string]*reconnectTracker),
+		liveConnections:   make(map[*websocket.Conn]*proxyConnectionPair),
 	}
 	proxy.startReconnectTrackerCleanup()
 	return proxy
@@ -85,6 +95,10 @@ func NewWebSocketProxy(backendURL string, logger *zap.Logger, cfg *config.Config
 // HandleCommunityWS 代理群聊 WebSocket 连接
 // 路由: GET /api/v1/community/groups/:group_id/ws
 func (p *WebSocketProxy) HandleCommunityWS(c *gin.Context) {
+	if p.IsDraining() {
+		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "Server shutting down"})
+		return
+	}
 	groupID := c.Param("group_id")
 	userID := c.GetString("user_id")
 
@@ -114,6 +128,10 @@ func (p *WebSocketProxy) HandleCommunityWS(c *gin.Context) {
 // HandlePersonalWS 代理个人 WebSocket 连接
 // 路由: GET /api/v1/community/ws/connect
 func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
+	if p.IsDraining() {
+		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "Server shutting down"})
+		return
+	}
 	userID := c.GetString("user_id")
 
 	// Security: Require authenticated user from middleware
@@ -157,11 +175,21 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 
 // proxyWebSocket 实现双向 WebSocket 代理
 func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, backendURL, authToken, userID, connType, resourceID string) {
+	if p.IsDraining() {
+		http.Error(w, "Server shutting down", http.StatusServiceUnavailable)
+		return
+	}
 	if !p.registerConnection(userID) {
+		if p.IsDraining() {
+			http.Error(w, "Server shutting down", http.StatusServiceUnavailable)
+			return
+		}
 		http.Error(w, "Too many websocket connections", http.StatusTooManyRequests)
 		return
 	}
 	defer p.unregisterConnection(userID)
+	p.wg.Add(1)
+	defer p.wg.Done()
 
 	backendWSURL, err := p.toWebSocketURL(backendURL)
 	if err != nil {
@@ -199,6 +227,22 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	defer clientConn.Close()
+	if p.IsDraining() {
+		_ = backendConn.WriteControl(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseTryAgainLater, "server shutting down"),
+			time.Now().Add(time.Second),
+		)
+		_ = backendConn.Close()
+		_ = clientConn.WriteControl(
+			websocket.CloseMessage,
+			websocket.FormatCloseMessage(websocket.CloseTryAgainLater, "server shutting down"),
+			time.Now().Add(time.Second),
+		)
+		return
+	}
+	p.registerLiveConnection(clientConn, backendConn)
+	defer p.unregisterLiveConnection(clientConn)
 
 	readLimit := p.config.WSMaxMessageBytes
 	if readLimit <= 0 {
@@ -358,6 +402,9 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 }
 
 func (p *WebSocketProxy) registerConnection(userID string) bool {
+	if p.IsDraining() {
+		return false
+	}
 	metrics.WSConnectionsActive.Inc()
 
 	maxConns := p.config.WSMaxConnections
@@ -390,6 +437,21 @@ func (p *WebSocketProxy) unregisterConnection(userID string) {
 		return
 	}
 	p.activeByUser[userID]--
+}
+
+func (p *WebSocketProxy) registerLiveConnection(clientConn, backendConn *websocket.Conn) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.liveConnections[clientConn] = &proxyConnectionPair{
+		clientConn:  clientConn,
+		backendConn: backendConn,
+	}
+}
+
+func (p *WebSocketProxy) unregisterLiveConnection(clientConn *websocket.Conn) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	delete(p.liveConnections, clientConn)
 }
 
 func (p *WebSocketProxy) communityBackendURL(groupID string) string {
@@ -439,6 +501,14 @@ func buildBackendWebSocketHeaders(r *http.Request, authToken string) http.Header
 // Close closes the WebSocket proxy (currently a no-op but kept for interface compatibility)
 func (p *WebSocketProxy) Close() error {
 	return nil
+}
+
+func (p *WebSocketProxy) StartDraining() {
+	p.draining.Store(true)
+}
+
+func (p *WebSocketProxy) IsDraining() bool {
+	return p.draining.Load()
 }
 
 // --- Reconnect rate-limit helpers ---

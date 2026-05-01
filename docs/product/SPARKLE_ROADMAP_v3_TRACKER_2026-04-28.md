@@ -983,3 +983,73 @@
 1. **先修 A-R13-2**: freeform 状态带纠正必须先让用户输入“哪里不对”，再把 `freeform_text` 送入 `/aurora/telemetry/chip-selected`。
 2. **再修 A-R13-3**: Chat 内 correction chip 必须调用 `AuroraTelemetryService.recordChipSelected()` 或等价结构化通道，同时继续发送自然语言消息。
 3. **随后扩展到任务卡协议体验**: 检查 `why/materials/stuck/aurora_triggers` 是否不仅存在于 `guide_json`，还在任务执行主屏被用户看见、使用并反馈。
+
+---
+
+## R14 Aurora 纠偏链复验 (2026-05-01)
+
+> **来源**: Codex 对用户当前 Aurora 前端修复的继续深审
+> **方法**: 顺着 `状态带 → 聊天 → telemetry → CorrectionFeedbackProcessor` 主链复验结构化纠偏是否真的被 Aurora 消费。
+
+### R14.1 已复验通过
+
+| ID | 模块 | 结论 |
+|----|------|------|
+| R14-P1 | 聊天内 correction chip | predicted option 已接入 `AuroraTelemetryService.recordChipSelected()`，不再只是纯文本 |
+| R14-P2 | 首页 freeform 入口 | 状态带 freeform 纠正已新增输入对话框，不再直接空跳转 |
+
+### R14.2 新发现问题
+
+| ID | 严重度 | 问题 | 文件/证据 | 状态 |
+|----|--------|------|-----------|------|
+| R14-1 | P1 | 首页 freeform 纠正仍先发送一次空 `freeform_text` telemetry；用户后续输入只挂在 `aurora_correction` 聊天上下文里，但后端 Aurora 主链没有消费这份上下文，因此 CorrectionFeedbackProcessor 仍拿不到真正解释文本 | `dashboard_screen.dart:547-562` + repo 搜索 `aurora_correction` | 🔴 Reopen |
+| R14-2 | P1 | 聊天内 predicted correction chip 发送消息时仍优先使用 `semanticValue` 作为文本内容，像 `risk_false_positive` / `strategy_adjust_needed` 这类内部 token 会直接进入聊天记录与模型输入 | `chat_screen.dart:1164-1172`; 对照 `spine_orchestrator.py:513-533` | 🔴 Reopen |
+
+### R14.3 本轮实测
+
+| 命令 | 结果 |
+|------|------|
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart test/widget/aurora_daily_startup_retry_test.dart` | ✅ 全部通过 |
+| `cd backend && pytest tests/unit/test_t33_predicted_reply_correction.py -q` | ✅ `34 passed` |
+
+### R14.4 阶段判断修正
+
+当前更准确的说法是：
+
+> **Aurora 纠偏链已经从“是否接上”进入“是否真正听懂”的阶段。**
+
+下一轮优先顺序应为：
+
+1. 让 freeform 纠正的真实文字进入 telemetry / correction processor，而不是只停留在聊天 extra context。
+2. 把聊天内 correction chip 的消息文本从内部 `semanticValue` 改为用户可读 label，同时保留结构化 telemetry 作为学习信号。
+
+---
+
+## R15 Gateway Shutdown / Aurora UX 收口 (2026-05-01)
+
+> **来源**: Codex 对上一轮未闭环生产问题的直接修复
+
+### R15.1 已完成
+
+| ID | 模块 | 结果 |
+|----|------|------|
+| R15-P1 | Gateway shutdown | 已修复：shutdown 时先 `StartDraining()` 拒绝新 WS，再并发触发 `srv.Shutdown()` 停止新 HTTP 接入，随后 drain chat registry + proxy live WS |
+| R15-P2 | WebSocketProxy | 已修复：`ProxyDrainAll(timeout)` 不再只是清空 `activeByUser`，而是关闭真实 live proxy 连接并等待 goroutine 退出 |
+| R15-P3 | Aurora close-session UX | 已修复：close 失败时不再强退面板，用户会停留原地并看到重试提示 |
+| R15-P4 | Vocabulary offline UX | 已修复：词典包加载失败现在会显示错误说明和 retry 按钮，而不是仅内部 `_loadError=true` |
+
+### R15.2 本轮验证
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend/gateway && go test ./internal/handler/...` | ✅ 通过 |
+| `cd backend/gateway && go test ./cmd/server/...` | ✅ 通过 |
+| `cd mobile && flutter analyze lib/features/aurora/presentation/widgets/aurora_core_session_sheet.dart lib/features/tools/presentation/widgets/vocabulary_lookup_tool.dart` | ✅ 无 error；仅剩既有 info lint |
+
+### R15.3 下一阶段重点
+
+本轮是工程收口，不是愿景终点。下一阶段优先级仍然是：
+
+1. Aurora freeform 纠正文本进入真正的 learning/correction 主链；
+2. 聊天内 correction chip 全量改成“结构化 telemetry + 用户可读自然语言”双通道；
+3. 多端主动交互、任务卡协议、社区/看板衔接做真实体验验收，而不只是接口存在。

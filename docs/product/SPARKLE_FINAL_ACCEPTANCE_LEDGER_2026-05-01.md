@@ -647,3 +647,97 @@
 > **用户点下“你判断错了”的瞬间，系统必须真的听见、带着语义进入下一轮，并且未来少犯同类错。**
 
 当前已修复“点了却没有进入聊天/Aurora 上下文”的断点；下一步应该优先补 freeform 文本捕获和聊天内 chip 结构化 telemetry，否则 Aurora 会看起来很聪明，但在用户真正纠正它时仍然像只听到半句话。
+
+---
+
+## 19. Codex R14 Aurora 纠偏链复验 (2026-05-01)
+
+> **方法**: 复验用户正在推进的 `dashboard_screen.dart / chat_screen.dart / contextual_correction_bar.dart` 改动，并继续沿 `状态带 → 聊天 → telemetry → CorrectionFeedbackProcessor` 追踪结构化纠偏是否真的落到 Aurora 学习链路。
+> **结论**: 聊天内 chip telemetry 已明显前进，但仍有 2 个高优先级缺口，会直接限制 Aurora 从用户纠正中学到“哪里错了”。
+
+### 19.1 已复验通过
+
+| ID | 结论 | 证据 |
+|----|------|------|
+| R14-V1 | 聊天内 predicted correction chip 已不再只是普通文本路径 | `chat_screen.dart` 现在会为 predicted option 调用 `AuroraTelemetryService.recordChipSelected()`，并带上 `telemetry_id / semantic_value / group_id / band_status` |
+| R14-V2 | 首页 freeform 纠正至少已经要求用户输入文字 | `dashboard_screen.dart` 新增 `_showFreeformCorrectionDialog()` |
+
+### 19.2 本轮新增发现
+
+| ID | 严重度 | 模块 | 问题 | 状态 |
+|----|--------|------|------|------|
+| A-R14-1 | P1 | Aurora freeform 纠正 | 首页 freeform 纠正仍会在弹输入框前先发送一次空 `freeform_text` telemetry；之后输入的文字只作为聊天上下文 `aurora_correction` 携带，但后端没有消费这份上下文，因此 CorrectionFeedbackProcessor 仍拿不到真正的解释文本 | 🔴 Open |
+| A-R14-2 | P1 | 聊天内 correction UX | Chat 内 predicted chip 发送消息时仍优先使用 `semanticValue` 作为 `content`。像 `risk_false_positive`、`strategy_adjust_needed` 这类内部 token 会直接进入聊天消息和模型输入，破坏用户可读性，也让对话层收到机器语义而非自然语言反馈 | 🔴 Open |
+
+### 19.3 关键说明
+
+#### A-R14-1
+
+- `dashboard_screen.dart` 当前顺序是：
+  1. 先 `recordStatusBandCorrection(... isFreeform: true)`
+  2. 再弹 `_showFreeformCorrectionDialog()`
+  3. 输入完成后只 `context.push('/chat', extra: {'aurora_correction': {..., 'freeform_text': text}})`
+- 我在后端仓内搜索 `aurora_correction`，未找到 Aurora 主链对这份聊天上下文的消费点。
+- 结果是：Aurora 知道“用户否定了判断”，但结构化纠错链里仍缺“用户为什么否定”的文本证据。
+
+#### A-R14-2
+
+- `ContextualCorrectionBar` 现在虽然会上报 telemetry，但 `chat_screen.dart` 仍用：
+  - `option.semanticValue` 优先
+  - `option.label` 兜底
+- 后端默认 option 语义值包含大量内部 token，例如：
+  - `risk_false_positive`
+  - `strategy_adjust_needed`
+  - `knowledge_blocker`
+- 这会让用户聊天记录和模型接收到机器标记，而不是“这个风险判断不对”“需要调整方向”这类自然语言。
+
+### 19.4 本轮实测
+
+| 命令 | 结果 |
+|------|------|
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart test/widget/aurora_daily_startup_retry_test.dart` | ✅ 全部通过 |
+| `cd backend && pytest tests/unit/test_t33_predicted_reply_correction.py -q` | ✅ `34 passed` |
+
+### 19.5 当前判断
+
+Aurora 纠偏链现在已经不是“完全没接上”，而是进入了更难也更关键的阶段：
+
+> **系统已经能知道用户在纠正它，但还没有稳定吃到“纠正的具体内容”，也没有总是用用户语言来承接这次纠正。**
+
+这两点不解决，Aurora 会显得“愿意听”，但仍不够“真正听懂”。
+
+---
+
+## 20. Codex R15 Shutdown / Aurora UX 收口修复 (2026-05-01)
+
+> **方法**: 直接修复上一轮验收里未闭环的生产级缺口，而不是继续停留在“已发现问题”阶段。
+> **结论**: 这轮把 gateway shutdown 的真实收口、proxy live WS drain、Aurora 关闭失败误退出、词典离线加载失败无反馈四个缺口都补上了。
+
+### 20.1 已修复
+
+| ID | 严重度 | 模块 | 修复 | 状态 |
+|----|--------|------|------|------|
+| R15-F1 | P1 | Gateway shutdown | 增加 `StartDraining()`，在 shutdown 时先拒绝新 WS、并发触发 `srv.Shutdown()` 停止新请求接入，再执行 chat registry + proxy live WS drain | ✅ Fixed |
+| R15-F2 | P1 | WebSocket proxy | `ProxyDrainAll(timeout)` 现在会关闭真实的 client/backend live 连接对、清空本地追踪并等待 proxy goroutine 退出，不再只是清零计数器 | ✅ Fixed |
+| R15-F3 | P1 | Aurora 会话关闭 | 关闭失败时不再强制 `Navigator.pop()`，而是留在当前面板并提示重试 | ✅ Fixed |
+| R15-F4 | P2 | 词典离线加载 | `_loadError` 已接入真实 UI：展示错误态 + Retry，而不是只在内部置位 | ✅ Fixed |
+
+### 20.2 本轮新增回归验证
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend/gateway && go test ./internal/handler/...` | ✅ 通过 |
+| `cd backend/gateway && go test ./cmd/server/...` | ✅ 通过 |
+| `cd mobile && flutter analyze lib/features/aurora/presentation/widgets/aurora_core_session_sheet.dart lib/features/tools/presentation/widgets/vocabulary_lookup_tool.dart` | ✅ 无 error；仅剩既有 info lint |
+
+### 20.3 阶段性判断
+
+这一轮之后，前一轮我标出的 4 个“必须亲手收口”的工程缺口已经不再停留在审查意见层：
+
+> **shutdown 现在更接近真正的“先停接入、再排空 live socket、再退出”；Aurora 和工具失败路径也开始符合“失败时留在用户可恢复的位置”。**
+
+但更高一层的 Aurora 真实体验主线还没有结束，尤其是：
+
+1. freeform 纠正文字是否真正进入 Aurora 学习链；
+2. 聊天内 correction chip 是否始终用用户语言而非内部语义 token；
+3. 多端主动感知与任务卡协议是否形成完整、长期可用的体验闭环。

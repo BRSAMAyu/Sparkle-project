@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -158,6 +159,7 @@ type ChatOrchestrator struct {
 	wsRegistry   *ConnectionRegistry
 	// streamSem limits concurrent gRPC StreamChat calls.
 	streamSem chan struct{}
+	draining  atomic.Bool
 }
 
 func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string, signalHub *service.SignalHub) *ChatOrchestrator {
@@ -184,6 +186,11 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch 
 }
 
 func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
+	if h.IsDraining() {
+		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "Server shutting down"})
+		return
+	}
+
 	// Use WebSocketFactory for secure origin checking
 	var upgrader websocket.Upgrader
 	if h.wsFactory != nil {
@@ -235,6 +242,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		_ = conn.Close()
 	}()
+	if h.IsDraining() {
+		writeServerDrainingClose(writer, conn)
+		return
+	}
 
 	_ = conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
@@ -301,6 +312,11 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	}
 	metrics.WSConnectionSuccess.WithLabelValues("/ws/chat", authMethod).Inc()
 	if !h.registerConnection(userID, conn, writer) {
+		if h.IsDraining() {
+			metrics.WSConnectionError.WithLabelValues("/ws/chat", authMethod, "draining").Inc()
+			writeServerDrainingClose(writer, conn)
+			return
+		}
 		metrics.WSConnectionError.WithLabelValues("/ws/chat", authMethod, "connection_limit").Inc()
 		writeConnectionLimitClose(writer, conn)
 		return

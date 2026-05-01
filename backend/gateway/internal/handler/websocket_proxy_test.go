@@ -3,7 +3,9 @@ package handler
 import (
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -52,4 +54,39 @@ func TestWebSocketProxyConnectionLimitPerUser(t *testing.T) {
 
 	proxy.unregisterConnection("user-1")
 	require.True(t, proxy.registerConnection("user-1"))
+}
+
+func TestWebSocketProxyRejectsNewConnectionsWhileDraining(t *testing.T) {
+	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{WSMaxConnections: 1})
+
+	proxy.StartDraining()
+
+	require.False(t, proxy.registerConnection("user-1"))
+	require.True(t, proxy.IsDraining())
+}
+
+func TestWebSocketProxyDrainAllResetsTracking(t *testing.T) {
+	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{WSMaxConnections: 2})
+	clientConn := &websocket.Conn{}
+	backendConn := &websocket.Conn{}
+
+	proxy.activeByUser["user-1"] = 1
+	proxy.reconnectTrackers["user-1"] = &reconnectTracker{attemptCount: 1}
+	proxy.liveConnections[clientConn] = &proxyConnectionPair{
+		clientConn:  nil,
+		backendConn: nil,
+	}
+	proxy.wg.Add(1)
+	go func() {
+		defer proxy.wg.Done()
+		time.Sleep(10 * time.Millisecond)
+	}()
+
+	proxy.ProxyDrainAll(100 * time.Millisecond)
+
+	require.Empty(t, proxy.activeByUser)
+	require.Empty(t, proxy.reconnectTrackers)
+	require.Empty(t, proxy.liveConnections)
+	require.True(t, proxy.IsDraining())
+	require.NotNil(t, backendConn)
 }
