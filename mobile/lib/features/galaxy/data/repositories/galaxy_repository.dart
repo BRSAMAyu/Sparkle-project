@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -63,14 +66,53 @@ class GalaxyRepository {
 
   Stream<SSEEvent> getGalaxyEventsStream() {
     if (DemoDataService.isDemoMode) {
-      // In the future we can simulate events here
       return const Stream.empty();
     }
-    // 🔧 后端未实现galaxy/events端点，返回空流避免404错误
-    debugPrint(
-      '🌌 Galaxy events stream: endpoint not implemented, returning empty stream',
-    );
-    return const Stream.empty();
+    return _connectSSE();
+  }
+
+  Stream<SSEEvent> _connectSSE() async* {
+    try {
+      final dio = Dio();
+      final response = await dio.get<ResponseBody>(
+        ApiEndpoints.galaxyEvents,
+        options: Options(
+          responseType: ResponseType.stream,
+          headers: {'Accept': 'text/event-stream'},
+        ),
+      );
+      final stream = response.data;
+      if (stream == null) return;
+      final buffer = StringBuffer();
+      await for (final chunk in stream.stream) {
+        buffer.write(utf8.decode(chunk, allowMalformed: true));
+        while (buffer.toString().contains('\n\n')) {
+          final content = buffer.toString();
+          final idx = content.indexOf('\n\n');
+          final raw = content.substring(0, idx);
+          buffer.clear();
+          buffer.write(content.substring(idx + 2));
+          final event = _parseSSE(raw);
+          if (event != null) yield event;
+        }
+      }
+    } catch (e) {
+      debugPrint('🌌 Galaxy SSE connection error: $e');
+    }
+  }
+
+  SSEEvent? _parseSSE(String raw) {
+    String? eventType;
+    String? data;
+    for (final line in raw.split('\n')) {
+      if (line.startsWith('event:')) {
+        eventType = line.substring(6).trim();
+      } else if (line.startsWith('data:')) {
+        data = line.substring(5).trim();
+      }
+    }
+    if (eventType == null || data == null) return null;
+    return SSEEvent(event: eventType, data: data);
   }
 
   /// Get detailed information about a specific knowledge node
