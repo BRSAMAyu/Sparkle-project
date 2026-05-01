@@ -54,6 +54,15 @@ EXPECTATIONS: dict[str, dict[Path, tuple[str, ...]]] = {
             'normalized.get("episodic_memories")',
         ),
     },
+    "last_session_mood": {
+        CONTEXT_BUILDER: (
+            'payload["last_session_mood"]',
+        ),
+        PROMPTS: (
+            "【上次会话情绪】",
+            'normalized.get("last_session_mood")',
+        ),
+    },
     "aurora_stage39_modes": {
         CONTEXT_BUILDER: (
             'payload["aurora_stage39_modes"]',
