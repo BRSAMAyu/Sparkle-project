@@ -91,7 +91,14 @@ class CommunityScreen extends ConsumerWidget {
 
   Widget _buildHeader(BuildContext context, WidgetRef ref) {
     final selectedIndex = ref.watch(_communityFeedFilterProvider);
-    const filters = ['Global Feed', 'My Squad', 'Goal Mates', 'Following'];
+    final isChinese = Localizations.localeOf(context).languageCode == 'zh';
+    final filters = [
+      isChinese ? '全局动态' : 'Global Feed',
+      isChinese ? '我的小队' : 'My Squad',
+      isChinese ? '目标伙伴' : 'Goal Mates',
+      isChinese ? '我的关注' : 'Following',
+    ];
+    const scopes = [null, 'squad', 'goal_mates', 'following'];
     return Padding(
       padding: const EdgeInsets.all(DS.lg),
       child: Column(
@@ -108,7 +115,7 @@ class CommunityScreen extends ConsumerWidget {
           ),
           const SizedBox(height: DS.sm),
           Text(
-            'Discover what others are learning',
+            isChinese ? '发现其他人在学什么' : 'Discover what others are learning',
             style: TextStyle(
               fontSize: 14,
               color: DS.textSecondary,
@@ -125,7 +132,7 @@ class CommunityScreen extends ConsumerWidget {
                     isSelected: selectedIndex == i,
                     onTap: () {
                       ref.read(_communityFeedFilterProvider.notifier).state = i;
-                      ref.read(feedProvider.notifier).refresh();
+                      ref.read(feedProvider.notifier).refresh(scope: scopes[i]);
                     },
                   ),
                   if (i < filters.length - 1) const SizedBox(width: DS.sm),
@@ -138,7 +145,9 @@ class CommunityScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, WidgetRef ref) => ScrollEdgeHaptics(
+  Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
+    final isChinese = Localizations.localeOf(context).languageCode == 'zh';
+    return ScrollEdgeHaptics(
         child: ListView(
           children: [
             _buildHeader(context, ref),
@@ -148,11 +157,12 @@ class CommunityScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
               child: EmptyState(
-                title: 'No community spark yet',
-                description:
-                    'Share a plan, insight, or small win to start the first conversation here.',
+                title: isChinese ? '社区还没有火花' : 'No community spark yet',
+                description: isChinese
+                    ? '分享一个计划、洞察或小胜利，开始这里的第一次对话。'
+                    : 'Share a plan, insight, or small win to start the first conversation here.',
                 icon: Icons.forum_outlined,
-                actionText: 'Share a post',
+                actionText: isChinese ? '发一条动态' : 'Share a post',
                 onAction: () {
                   unawaited(
                     SensoryFeedbackService.emit(
@@ -162,7 +172,7 @@ class CommunityScreen extends ConsumerWidget {
                   context.push(CommunityRoutes.postsCreate);
                 },
                 customAction: SparkleButton.ghost(
-                  label: 'Refresh feed',
+                  label: isChinese ? '刷新动态' : 'Refresh feed',
                   onPressed: () => ref.read(feedProvider.notifier).refresh(),
                 ),
               ),
