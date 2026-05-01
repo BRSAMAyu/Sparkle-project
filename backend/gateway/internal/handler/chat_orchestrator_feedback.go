@@ -41,6 +41,7 @@ type planReviewStatusSender interface {
 
 // saveMessage persists a chat message to the database
 func (h *ChatOrchestrator) saveMessage(
+	parentCtx context.Context,
 	userID,
 	sessionID,
 	role,
@@ -48,7 +49,7 @@ func (h *ChatOrchestrator) saveMessage(
 	extra map[string]interface{},
 ) {
 	tracer := otel.Tracer("chat-orchestrator")
-	ctx, span := tracer.Start(context.Background(), "redis.save_message")
+	ctx, span := tracer.Start(parentCtx, "redis.save_message")
 	defer span.End()
 
 	payload := map[string]interface{}{
@@ -228,10 +229,10 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 			log.Printf("Task list creation confirmed for user %s, tool_result_id=%s", userID, toolResultID)
 
 			// [P0.1 FIX]: Call TaskCommand to confirm tasks in database
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			taskCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			err := h.taskCommand.ConfirmGeneratedTasks(ctx, userUUID, toolResultID)
+			err := h.taskCommand.ConfirmGeneratedTasks(taskCtx, userUUID, toolResultID)
 			if err != nil {
 				log.Printf("❌ Failed to confirm tasks for user %s: %v", userID, err)
 				sender.SendActionStatus(toolResultID, "failed", map[string]interface{}{
@@ -539,7 +540,7 @@ func (h *ChatOrchestrator) persistActionFeedback(authToken, toolResultID, widget
 	return nil
 }
 
-func (h *ChatOrchestrator) handleUpdateNodeMasteryWithResponder(responder updateNodeResponder, msgMap map[string]interface{}, userID string) {
+func (h *ChatOrchestrator) handleUpdateNodeMasteryWithResponder(ctx context.Context, responder updateNodeResponder, msgMap map[string]interface{}, userID string) {
 	payload, ok := msgMap["payload"].(map[string]interface{})
 	if !ok {
 		log.Printf("Invalid update_node_mastery: missing payload")
@@ -593,10 +594,10 @@ func (h *ChatOrchestrator) handleUpdateNodeMasteryWithResponder(responder update
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	masteryCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	resp, err := h.galaxyClient.UpdateNodeMastery(ctx, userID, nodeID, mastery, version, "offline_sync")
+	resp, err := h.galaxyClient.UpdateNodeMastery(masteryCtx, userID, nodeID, mastery, version, "offline_sync")
 
 	if err != nil {
 		log.Printf("gRPC mastery update failed: %v", err)
@@ -1023,8 +1024,8 @@ func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, u
 }
 
 // handleUpdateNodeMastery forwards mastery updates to Python backend via gRPC and sends ACK
-func (h *ChatOrchestrator) handleUpdateNodeMastery(writer *wsSafeWriter, msgMap map[string]interface{}, userID string) {
-	h.handleUpdateNodeMasteryWithResponder(legacyUpdateNodeResponder{writer: writer}, msgMap, userID)
+func (h *ChatOrchestrator) handleUpdateNodeMastery(writer *wsSafeWriter, msgMap map[string]interface{}, userID string, ctx context.Context) {
+	h.handleUpdateNodeMasteryWithResponder(ctx, legacyUpdateNodeResponder{writer: writer}, msgMap, userID)
 }
 
 func (h *ChatOrchestrator) sendError(writer *wsSafeWriter, opType, nodeID, version, message string) {

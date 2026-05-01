@@ -53,6 +53,7 @@ type Config struct {
 	WSMessageRateBurst          int      `mapstructure:"WS_MESSAGE_RATE_BURST"`
 	WSMaxConnections            int      `mapstructure:"WS_MAX_CONNECTIONS_PER_USER"`
 	WSGlobalMaxConnections      int      `mapstructure:"WS_GLOBAL_MAX_CONNECTIONS"`
+	StreamMaxConcurrent         int      `mapstructure:"STREAM_MAX_CONCURRENT"`
 	RedisURL                    string   `mapstructure:"REDIS_URL"`
 	RedisHost                   string   `mapstructure:"REDIS_HOST"`
 	RedisPort                   int      `mapstructure:"REDIS_PORT"`

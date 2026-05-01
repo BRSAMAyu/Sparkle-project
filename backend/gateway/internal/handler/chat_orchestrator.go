@@ -130,6 +130,16 @@ const maxMessageLength = 4000
 // maxToolResultLength limits tool_result_json to prevent oversized payloads.
 const maxToolResultLength = 10 * 1024 // 10 KB
 
+// defaultMaxConcurrentStreams is the fallback when StreamMaxConcurrent is not set.
+const defaultMaxConcurrentStreams = 200
+
+func streamSemaphoreSize(cfg *config.Config) int {
+	if cfg != nil && cfg.StreamMaxConcurrent > 0 {
+		return cfg.StreamMaxConcurrent
+	}
+	return defaultMaxConcurrentStreams
+}
+
 type ChatOrchestrator struct {
 	agentClient  *agent.Client
 	galaxyClient *galaxy.Client
@@ -146,6 +156,8 @@ type ChatOrchestrator struct {
 	signalHub    *service.SignalHub
 	httpClient   *http.Client
 	wsRegistry   *ConnectionRegistry
+	// streamSem limits concurrent gRPC StreamChat calls.
+	streamSem chan struct{}
 }
 
 func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string, signalHub *service.SignalHub) *ChatOrchestrator {
@@ -167,6 +179,7 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch 
 			Timeout: 5 * time.Second,
 		},
 		wsRegistry: NewConnectionRegistry(signalHub, ch, cfg.WSGlobalMaxConnections, cfg.WSMaxConnections),
+		streamSem:  make(chan struct{}, streamSemaphoreSize(cfg)),
 	}
 }
 
@@ -428,7 +441,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 						return h.handleChatMessage(ctx2, writer, userID, toolInput, toolInput.RequestID)
 					}()
 				case "update_node_mastery":
-					h.handleUpdateNodeMastery(writer, msgMap, userID)
+					h.handleUpdateNodeMastery(writer, msgMap, userID, c.Request.Context())
 					return false
 				case "message", "":
 					// Continue with normal chat message handling
@@ -585,7 +598,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					responder.SendError("invalid_argument", "Invalid update_node_mastery payload", false)
 					return false
 				}
-				h.handleUpdateNodeMasteryWithResponder(responder, msgMap, userID)
+				h.handleUpdateNodeMasteryWithResponder(msgCtx, responder, msgMap, userID)
 				return false
 			case "intervention_feedback":
 				msgMap, err := decodePayloadMap(envelope.Payload["intervention_feedback"])

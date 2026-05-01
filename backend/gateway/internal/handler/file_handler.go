@@ -278,7 +278,8 @@ func (h *FileHandler) CompleteUpload(c *gin.Context) {
 				ThumbnailUploadURL: thumbnailURL,
 			}
 			go func() {
-				if err := h.processor.TriggerProcessing(context.Background(), payload); err != nil {
+				procCtx := context.WithoutCancel(c.Request.Context())
+				if err := h.processor.TriggerProcessing(procCtx, payload); err != nil {
 					_ = err
 				}
 			}()

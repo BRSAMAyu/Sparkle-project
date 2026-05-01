@@ -237,6 +237,24 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSeconds)*time.Second)
 	defer cancel()
 
+	// Admission control: block until a stream slot is available.
+	// This prevents unbounded concurrent gRPC streams from exhausting resources.
+	select {
+	case h.streamSem <- struct{}{}:
+		defer func() { <-h.streamSem }()
+	default:
+		// All stream slots occupied — reject immediately.
+		switch r := responder.(type) {
+		case *envelopeResponder:
+			r.SendError("resource_exhausted", "Server busy, please retry", true)
+		case *protobufResponder:
+			r.SendError("resource_exhausted", "Server busy, please retry", true)
+		case *wsSafeWriter:
+			_ = writeLegacyJSON(r, legacyStreamErrorPayload("resource_exhausted", "Server busy, please retry", true))
+		}
+		return false
+	}
+
 	// Sanitize Input (Security Hygiene) - reuse global sanitizer
 	input.Message = sanitizer.Sanitize(input.Message)
 
@@ -252,7 +270,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	if input.SessionID != "" {
 		sessionID := input.SessionID
 		message := input.Message
-		h.saveMessage(userID, sessionID, "user", message, nil)
+		h.saveMessage(ctx, userID, sessionID, "user", message, nil)
 	}
 
 	startTime := time.Now()
@@ -773,7 +791,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		queryText := input.Message
 		result := fullText
 
-		h.saveMessage(userID, sessionID, "assistant", result, map[string]interface{}{
+		h.saveMessage(ctx, userID, sessionID, "assistant", result, map[string]interface{}{
 			"meta":           meta,
 			"workflow_id":    doneResp.WorkflowId,
 			"prompt_version": doneResp.PromptVersion,
