@@ -15,10 +15,12 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   String? _scope;
 
   Future<void> refresh({String? scope}) async {
-    _scope = scope;
+    if (scope != null) {
+      _scope = scope;
+    }
     try {
       state = const AsyncValue.loading();
-      final posts = await _repository.getFeed(scope: scope);
+      final posts = await _repository.getFeed(scope: scope ?? _scope);
       state = AsyncValue.data(posts);
     } catch (e, st) {
       state = AsyncValue.error(e, st);

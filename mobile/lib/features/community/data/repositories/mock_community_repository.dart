@@ -1450,7 +1450,7 @@ class MockCommunityRepository implements CommunityRepository {
 
   // === CommunityRepository interface methods ===
   @override
-  Future<List<Post>> getFeed({int page = 1, int limit = 20}) async {
+  Future<List<Post>> getFeed({int page = 1, int limit = 20, String? scope}) async {
     // Return empty list for mock - feed would be handled by community_providers
     return [];
   }

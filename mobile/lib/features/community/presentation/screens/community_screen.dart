@@ -180,6 +180,7 @@ class CommunityScreen extends ConsumerWidget {
           ],
         ),
       );
+  }
 }
 
 class _FilterChip extends StatelessWidget {
