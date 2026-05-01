@@ -245,12 +245,12 @@ async def get_feed(
     if scope == "squad":
         squad_member_subq = (
             select(GroupMember.group_id)
-            .where(GroupMember.user_id == current_user.id)
+            .where(GroupMember.user_id == current_user.id, GroupMember.not_deleted_filter())
             .correlate(None)
         )
         squad_user_subq = (
             select(GroupMember.user_id)
-            .where(GroupMember.group_id.in_(squad_member_subq))
+            .where(GroupMember.group_id.in_(squad_member_subq), GroupMember.not_deleted_filter())
             .correlate(None)
         )
         stmt = stmt.where(Post.user_id.in_(squad_user_subq))
@@ -260,6 +260,7 @@ async def get_feed(
             .where(
                 AccountabilityPartnership.initiator_id == current_user.id,
                 AccountabilityPartnership.status == AccountabilityStatus.ACTIVE,
+                AccountabilityPartnership.not_deleted_filter(),
             )
             .correlate(None)
         )
@@ -268,6 +269,7 @@ async def get_feed(
             .where(
                 AccountabilityPartnership.partner_id == current_user.id,
                 AccountabilityPartnership.status == AccountabilityStatus.ACTIVE,
+                AccountabilityPartnership.not_deleted_filter(),
             )
             .correlate(None)
         )
@@ -277,12 +279,20 @@ async def get_feed(
     elif scope == "following":
         friend_ids = (
             select(Friendship.friend_id)
-            .where(Friendship.user_id == current_user.id, Friendship.status == FriendshipStatus.ACCEPTED)
+            .where(
+                Friendship.user_id == current_user.id,
+                Friendship.status == FriendshipStatus.ACCEPTED,
+                Friendship.not_deleted_filter(),
+            )
             .correlate(None)
         )
         friend_ids_alt = (
             select(Friendship.user_id)
-            .where(Friendship.friend_id == current_user.id, Friendship.status == FriendshipStatus.ACCEPTED)
+            .where(
+                Friendship.friend_id == current_user.id,
+                Friendship.status == FriendshipStatus.ACCEPTED,
+                Friendship.not_deleted_filter(),
+            )
             .correlate(None)
         )
         stmt = stmt.where(Post.user_id.in_(friend_ids) | Post.user_id.in_(friend_ids_alt))
