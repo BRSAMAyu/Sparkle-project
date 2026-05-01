@@ -518,7 +518,13 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                           .read(groupDetailProvider(widget.groupId).notifier)
                           .leaveGroup();
                       if (context.mounted) context.pop();
-                    } catch (_) {}
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('退出群组失败，请重试')),
+                        );
+                      }
+                    }
                   }
                 },
               ),

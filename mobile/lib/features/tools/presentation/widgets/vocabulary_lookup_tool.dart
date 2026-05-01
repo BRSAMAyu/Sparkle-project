@@ -35,6 +35,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
   final FocusNode _focusNode = FocusNode();
   bool _isInLocalWordbook = false;
   bool _isDownloadingDictionary = false;
+  bool _loadError = false;
   int _installedPackageCount = 0;
   List<DictionaryPackageInfo> _availablePackages = const [];
   List<InstalledDictionaryPackage> _installedPackages = const [];
@@ -68,7 +69,13 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
         _installedPackages = installed;
         _availablePackages = available;
       });
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadError = true;
+        });
+      }
+    }
   }
 
   Future<void> _lookup() async {

@@ -208,7 +208,13 @@ class _AuroraCoreSessionSheetState extends ConsumerState<_AuroraCoreSessionSheet
     try {
       final service = ref.read(_coreSessionServiceProvider);
       await service.closeSession(session.sessionId);
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('会话关闭失败，请重试')),
+        );
+      }
+    }
     if (mounted) Navigator.of(context).pop();
   }
 

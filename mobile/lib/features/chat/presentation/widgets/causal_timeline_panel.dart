@@ -136,7 +136,9 @@ class CausalTimelineNotifier
         },
       );
       await load();
-    } catch (_) {}
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
   }
 }
 
