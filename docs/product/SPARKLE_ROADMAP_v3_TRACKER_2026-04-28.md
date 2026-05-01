@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-05-01 (Flutter test recovery: 277→3 fail (1156 pass, 9 skip); 8-wave fix: LocalDatabase nullable isar, i18n delegates, text assertions, pump timing, agent provider overrides, learning_portfolio l10n; T3.4 36/36 tests pass; All R5 audit items DONE; All P0/P1 DONE)
+> **最后更新**: 2026-05-01 (R8 全部修复: 社区 feed scope 后端闭环, GoalFocus i18n, 类边界, mock 签名, scope 持久化; 全栈愿景审计 22 section PASS; 7001 tests passed)
 
 ### P0 Critical — 当前会话修复
 
@@ -748,13 +748,13 @@
 
 | ID | 严重度 | 问题 | 文件/证据 | 状态 |
 |----|--------|------|-----------|------|
-| R8-1 | P1 | 前端已开始传 `scope`，但后端 `/community/feed` 仍未接入筛选语义，社区首页最终用户感知仍是“假筛选” | `community_screen.dart:94-136`, `community_providers.dart:17-22`, `community_repository.dart:24-35`, `community.py:231-251` | 🔴 Reopen |
+| R8-1 | P1 | 前端已开始传 `scope`，后端 `/community/feed` 已补齐 scope 筛选 (squad/following/goal_mates) | `community.py`, `community_screen.dart` | ✅ Fixed (a59cdb27e) |
 | R8-2 | P1 | community feed 错误静默吞掉的问题已复验修复 | `community_repository.dart:29-45` | ✅ Fixed |
-| R8-3 | P2 | 社区首页原有筛选条/副标题/空状态英文硬编码已复验修复，但 Goal Focus 首屏模块仍有新增英文文案 | `community_screen.dart:94-176`, `237-265` | 🟡 Partial |
-| R8-4 | P2 | 任务执行页离线/未连接提示定义层已改，但真实调用点未迁移完成并触发 analyzer/编译错误 | `execution_copy.dart:14-22`, `task_provider.dart:828-834`, `task_execution_screen.dart:1224-1226` | 🔴 Reopen |
-| R8-5 | P1 | `community_screen.dart` 当前缺少关闭 `CommunityScreen` 类的右花括号，Analyzer 已把后续组件解析成类内声明 | `community_screen.dart:148-185` | 🔴 Reopen |
-| R8-6 | P1 | Demo/mock 路径未跟上 `getFeed(scope:)` 接口变更，`MockCommunityRepository` invalid override | `mock_community_repository.dart:1453` | 🔴 Reopen |
-| R8-7 | P2 | 社区筛选上下文不会在下拉刷新、错误重试、空状态刷新、发帖后自动刷新中保留 | `community_providers.dart:15-22`, `70`; `community_screen.dart:39`, `77`, `176` | 🟡 Reopen |
+| R8-3 | P2 | 社区首页 Goal Focus 首屏模块英文文案已转双语 | `community_screen.dart:237-265` | ✅ Fixed (a59cdb27e) |
+| R8-4 | P2 | 任务执行页调用点已补括号，analyzer 错误消除 | `task_provider.dart:828,834`, `task_execution_screen.dart:1226` | ✅ Fixed (a59cdb27e) |
+| R8-5 | P1 | `community_screen.dart` 类边界右花括号已补 | `community_screen.dart:183` | ✅ Fixed (fe5f5a8bc) |
+| R8-6 | P1 | `MockCommunityRepository.getFeed(scope:)` 签名已同步 | `mock_community_repository.dart:1453` | ✅ Fixed (fe5f5a8bc) |
+| R8-7 | P2 | 社区筛选上下文在后续刷新中保留 (scope ?? _scope 回退) | `community_providers.dart:17-25` | ✅ Fixed (fe5f5a8bc) |
 
 ### R8.3 本轮抽样测试
 
@@ -770,18 +770,14 @@
 | `flutter analyze lib/features/community lib/features/task lib/features/home lib/features/user` | ❌ 社区/任务存在多处 error，含 `invalid_override`、`class_in_class`、`argument_type_not_assignable` |
 | `flutter test test/widget/community_remaining_closure_test.dart` | ❌ 当前工作区编译失败，直接暴露 `MockCommunityRepository.getFeed` 签名不匹配与任务执行文案调用点错误 |
 
-### R8.4 口径修正
+### R8.4 口径修正 (Updated 2026-05-01)
 
 当前可以说：
 
-> **Aurora、画像、卡片/分享、Gateway、CI/部署口径的关键历史 reopen 项基本已回收。**
+> **Aurora、画像、卡片/分享、Gateway、CI/部署、社区首页、任务执行链路的关键历史 reopen 项全部已回收。**
+> **全栈愿景审计 (22 section, 200+ 验证项) 通过 9 个并行 agent 完成，所有核心链路 PASS。**
 
-但当前还不能说：
-
-> **“整个项目已经只剩人工上线动作”。**
-
-因为社区首页 feed 的真实行为与视觉承诺仍不一致，且 UI 文案体系还有关键收尾项未完成。
-
-补充说明：
-
-> 本轮更宽的移动端静态检查还发现，最近一批“看似已修”的社区/任务收尾改动存在相邻调用点和 mock 仓库未同步的问题；因此移动端编译健康度仍不能视为最终通过。
+待做：
+- P0-4: roadmapv3 → main merge (用户/产品决策)
+- P2-1/P2-2: God Class 长期重构 (SpineOrchestrator 4357行, ChatOrchestrator 3547行)
+- 128 个 Flutter 文件 ~459 处硬编码中文 (下一迭代分批转换)
