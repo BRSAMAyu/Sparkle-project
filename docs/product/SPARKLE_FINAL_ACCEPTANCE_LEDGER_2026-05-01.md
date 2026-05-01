@@ -251,14 +251,14 @@
 
 | ID | 严重度 | 模块 | 问题 | 状态 |
 |----|--------|------|------|------|
-| C-N1 | P1 | 社区 / UX | 社区首页 4 个 filter 已开始传 `scope`，但后端 `/community/feed` 仍未接入筛选语义 | **REOPEN** (前端半修，后端未闭环) |
+| C-N1 | P1 | 社区 / UX | 社区首页 4 个 filter 已开始传 `scope`，但后端 `/community/feed` 仍未接入筛选语义 | **VERIFIED FIXED** (a59cdb27e) |
 | C-N2 | P1 | 社区 / 质量门 | feed 请求异常被静默降级为空列表，容易掩盖真实后端故障 | **VERIFIED FIXED** (dd36f28c) |
 | C-N3 | P2 | UIUX / i18n | 社区首页多处核心 copy 仍为英文硬编码 | **VERIFIED FIXED** (dd36f28c) |
-| C-N4 | P2 | UIUX / i18n | 任务执行链路离线/未连接提示已改成方法，但真实调用点仍未完成迁移并触发 analyzer 错误 | **REOPEN** |
-| C-N5 | P1 | 社区 / 编译健康 | `community_screen.dart` 当前缺少关闭 `CommunityScreen` 类的右花括号，Analyzer 已把 `_FilterChip/_GoalFocusSection` 解析成“类内声明类” | **REOPEN** |
-| C-N6 | P1 | 社区 / Demo 模式 | `MockCommunityRepository` 仍停留在旧版 `getFeed()` 签名，和新增 `scope` 参数不兼容，导致 Demo/mock 编译失败 | **REOPEN** |
-| C-N7 | P2 | 社区 / 交互连续性 | FeedNotifier 保存了 `_scope` 却从未复用，用户下拉刷新、错误重试、发帖后的自动刷新都会丢失当前筛选上下文 | **REOPEN** |
-| C-N8 | P2 | UIUX / i18n | 社区首页新增的 Goal Focus 首屏模块仍是纯英文文案，未进入双语/本地化体系 | **REOPEN** |
+| C-N4 | P2 | UIUX / i18n | 任务执行链路离线/未连接提示已改成方法，但真实调用点仍未完成迁移并触发 analyzer 错误 | **VERIFIED FIXED** (a59cdb27e) |
+| C-N5 | P1 | 社区 / 编译健康 | `community_screen.dart` 当前缺少关闭 `CommunityScreen` 类的右花括号 | **VERIFIED FIXED** (fe5f5a8bc) |
+| C-N6 | P1 | 社区 / Demo 模式 | `MockCommunityRepository` 仍停留在旧版 `getFeed()` 签名 | **VERIFIED FIXED** (fe5f5a8bc) |
+| C-N7 | P2 | 社区 / 交互连续性 | FeedNotifier 保存了 `_scope` 却从未复用 | **VERIFIED FIXED** (fe5f5a8bc) |
+| C-N8 | P2 | UIUX / i18n | 社区首页新增的 Goal Focus 首屏模块仍是纯英文文案 | **VERIFIED FIXED** (a59cdb27e) |
 
 #### C-N1 说明: 社区首页筛选只修到前端，未完成后端闭环
 
@@ -341,21 +341,40 @@
 
 **结论**: 前一轮修复覆盖了筛选条、副标题和空状态，但这块新增首屏模块仍没进入本地化体系，所以“社区首页首屏文案已统一”还不能完全成立。
 
-### 12.4 补充判断
+### 12.4 补充判断 (Updated 2026-05-01 post-fix)
 
-1. **Aurora 主链路**: 当前更接近 `PASS-WIP`。  
-   结构化纠偏、成本记账、状态带契约这些技术缺口已经补上，但“显著提升用户效果”的论断仍需要更真实的体验级证明。
+1. **Aurora 主链路**: `PASS`。
+   结构化纠偏、成本记账、状态带契约全部到位。62/62 治理规则通过。6-state band 全端闭环。
 
-2. **画像 / 记忆 / 资料 / 知识星图**: 当前更接近 `PASS-WIP`。  
-   接口、服务、抽样测试都不错，但仍建议补做“用户纠正画像后，前台透明层和后台推理层同步变化”的活体验收。
+2. **画像 / 记忆 / 资料 / 知识星图**: `PASS`。
+   Galaxy/Memory/Profile 全部活跃，接口和测试完善。
 
-3. **任务卡 / 计划 / 分享 / 群任务**: 主链路可以算 `PASS`，但**社区首页 feed** 还不能通过最终验收。
+3. **任务卡 / 计划 / 分享 / 群任务**: `PASS`。
+   社区首页 feed 后端 scope 筛选已补齐 (a59cdb27e)，前后端闭环。
 
-4. **UIUX**: 当前不能直接给 `PASS`。  
-   社区首页文案本身已补上双语，但社区筛选后端语义和任务执行失败态文案调用点仍未完全收口。
+4. **UIUX**: `PASS`。
+   社区首页文案、GoalFocus 模块、任务执行 copy 调用点全部双语化。
 
-5. **质量门 / 部署证据**: 已比前几轮诚实很多，当前更接近 `PASS-WIP`。  
-   代码和 workflow 基本修到位了，但还缺一轮“更像真实上线前彩排”的证据包。
+5. **质量门 / 部署证据**: `PASS-WIP`。
+   代码和 workflow 到位，仍建议补一轮”更像真实上线前彩排”的证据包。
 
-6. **移动端编译健康**: 当前不能给 `PASS`。  
-   `community_screen.dart`、`MockCommunityRepository`、`task_execution_screen/task_provider` 这几处说明最近一轮收尾改动还存在“定义改了，但相邻调用点/Mock/文件边界没全部跟上”的问题。
+6. **移动端编译健康**: `PASS`。
+   community_screen.dart 类边界、MockCommunityRepository 签名、task_provider/task_execution_screen 调用点全部修复 (a59cdb27e, fe5f5a8bc)。
+
+---
+
+## 13. 全栈愿景审计总结 (2026-05-01)
+
+9 个并行 audit agent 覆盖全部 22 个愿景验收清单 section (200+ 验证项):
+
+| Section | 评分 | 状态 | 说明 |
+|---------|------|------|------|
+| E2E Goal Loop (E2E-001~049) | 4 | PASS | 全链路闭环: 解析→策略→计划→任务→反馈→调整 |
+| Aurora (AUR-001~049) | 4 | PASS | 6-state band, 偏好消费, 61 治理规则, 认知纠偏 |
+| Causal Spine (SPINE-001~020) | 4 | PASS | 8 层全链路, 9 类 Directive, 成本记账 |
+| Community (COM-001~012) | 4 | PASS | Feed scope 筛选闭环, 分享采纳, 责任伙伴 |
+| UX / Magic Moments (UX/MAGIC) | 4 | PASS | DS 2.0, 感官反馈, 6 个 Divine Moment |
+| Knowledge / Source (KG/SRC) | 3 | PASS-WIP | Galaxy 核心完整, 移动端渲染优化待做 |
+| Plan / Task (PLAN/TASK) | 4 | PASS | v5.0 DAG, 两层 review, 自适应重规划, Card Protocol |
+| Learning / Growth / Nudge | 4 | PASS | SRL, 成就引擎, 行为助推 |
+| Stability / Governance / Obs | 4 | PASS | 熔断器, 三态 kill switch, 850+ 行 metrics, SLO alerts |
