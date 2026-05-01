@@ -493,11 +493,16 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 	}
 
+	sessionID := input.SessionID
+	if sessionID == "" {
+		sessionID = uuid.New().String()
+		log.Printf("Generated new session_id=%s for user=%s (client sent empty)", sessionID, userID)
+	}
 	// Build ChatRequest
 	req := &agentv1.ChatRequest{
 		RequestId:         reqID,
 		UserId:            userID,
-		SessionId:         input.SessionID,
+		SessionId:         sessionID,
 		History:           historyMessages,
 		FileIds:           input.FileIds,
 		DocumentFilter:    documentFilter,

@@ -166,10 +166,8 @@ func (c *Config) IsOriginAllowed(origin string) bool {
 
 		allowedURL, err := neturl.Parse(allowed)
 		if err != nil || allowedURL.Scheme == "" || allowedURL.Host == "" {
-			allowedHost := strings.ToLower(allowed)
-			if originHost == allowedHost {
-				return true
-			}
+			// Skip malformed allowlist entries rather than falling back to
+			// insecure plain-hostname comparison which could be exploited.
 			continue
 		}
 

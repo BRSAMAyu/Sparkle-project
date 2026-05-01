@@ -232,7 +232,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                             response.prompt_version = prompt_version
                         # Ensure session_id is always set for conversation continuity
                         if not response.session_id:
-                            response.session_id = request.session_id
+                            response.session_id = request.session_id or str(uuid.uuid4())
                         yield self._normalize_v2_response(response)
                     await db_session.commit()
                 except Exception:
