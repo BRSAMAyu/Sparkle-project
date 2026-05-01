@@ -29,6 +29,7 @@ from app.signals.achievement_reinforcement import AchievementReinforcementConsum
 from app.signals.aurora_core_session import AuroraCoreSessionService, PolicyChange, SessionClosure, StatePatch
 from app.signals.aurora_wake import AuroraWakeJudge
 from app.signals.causal_trace_store import CausalTraceStore
+from app.signals.directive_store import DirectiveStore
 from app.signals.community_loops import CommunityLoopManager
 from app.signals.community_signal import CommunitySignalDetector
 from app.signals.core_session import CoreSession, CoreSessionManager
@@ -111,6 +112,7 @@ class SpineOrchestrator:
     def __init__(self, redis_client: Any):
         self.redis = redis_client
         self.trace_store = CausalTraceStore(redis_client)
+        self.directive_store = DirectiveStore(redis_client, self.trace_store)
         self.timeout_detector = TaskTimeoutDetector(redis_client)
         self.mistake_detector = MistakeSignalDetector(redis_client)
         self.achievement_consumer = AchievementReinforcementConsumer()
@@ -1214,7 +1216,7 @@ class SpineOrchestrator:
         if message is None:
             return None
 
-        await self._store_notification_directive(user_id, notif_dir)
+        await self.directive_store.store_notification(user_id, notif_dir)
         await self._store_recall_message(user_id, message)
         await self.recall_notification_builder.record_sent_async(user_id, normalized_trigger, self.redis)
         return message
@@ -1402,7 +1404,7 @@ class SpineOrchestrator:
             decision, signal, active_states=active_states,
         )
         if response_dir:
-            await self._store_response_directive(user_id, response_dir)
+            await self.directive_store.store_response(user_id, response_dir)
             # EA-1: Fabrication guard — scan response text for unverifiable claims
             try:
                 response_text = response_dir.message if hasattr(response_dir, "message") else ""
@@ -1416,12 +1418,12 @@ class SpineOrchestrator:
         # Build and store NotificationDirective
         notif_dir = self.policy_engine.build_notification_directive(decision, signal)
         if notif_dir:
-            await self._store_notification_directive(user_id, notif_dir)
+            await self.directive_store.store_notification(user_id, notif_dir)
 
         # Build and store RetrievalDirective
         ret_dir = self.policy_engine.build_retrieval_directive(decision, signal)
         if ret_dir:
-            await self._store_retrieval_directive(user_id, ret_dir)
+            await self.directive_store.store_retrieval(user_id, ret_dir)
             # Divine moment 3: 知道不用资料 — build context receipt
             try:
                 await self.build_context_receipt(
@@ -1437,13 +1439,13 @@ class SpineOrchestrator:
         # Build and store PlanDirective
         plan_dir = self.policy_engine.build_plan_directive(decision, signal)
         if plan_dir:
-            await self._store_plan_directive(user_id, plan_dir)
+            await self.directive_store.store_plan(user_id, plan_dir)
             trace.directive_ids.append(plan_dir.directive_id)
 
         # Build and store ModelWriteDirective
         mw_dir = self.policy_engine.build_model_write_directive(decision, signal)
         if mw_dir:
-            await self._store_model_write_directive(user_id, mw_dir)
+            await self.directive_store.store_model_write(user_id, mw_dir)
             trace.directive_ids.append(mw_dir.directive_id)
             # Auto-apply model writes (confidence-gated, no user_confirmation needed)
             await self._apply_model_writes(user_id, mw_dir)
@@ -1451,7 +1453,7 @@ class SpineOrchestrator:
         # Build and store UXDirective
         ux_dir = self.policy_engine.build_ux_directive(decision, signal)
         if ux_dir:
-            await self._store_ux_directive(user_id, ux_dir)
+            await self.directive_store.store_ux(user_id, ux_dir)
             trace.directive_ids.append(ux_dir.directive_id)
 
         # Build and store CommunityDirective
@@ -2073,43 +2075,26 @@ class SpineOrchestrator:
             logger.warning("L2 escalation check failed for user={}: {}", user_id, exc)
             return None
 
-    # ── Layer 6: ResponseDirective ─────────────────────────────────────
+    # ── Layer 6: Directive persistence (delegated to DirectiveStore) ────
 
     async def _store_response_directive(self, user_id: str, rd: ResponseDirective) -> None:
-        """存储 ResponseDirective 供 response layer 消费。"""
-        await self._store_directive(user_id, "response", rd)
+        await self.directive_store.store_response(user_id, rd)
 
     async def get_response_directive(self, user_id: str) -> ResponseDirective | None:
-        return await self._get_directive(user_id, "response", ResponseDirective)
+        return await self.directive_store.get_response(user_id)
 
     async def _store_notification_directive(self, user_id: str, nd: NotificationDirective) -> None:
-        """存储 NotificationDirective 供通知服务消费。"""
-        await self._store_directive(user_id, "notification", nd)
-        # DF-5: Publish event so notification consumers can act on the directive
-        try:
-            from app.core.event_bus import EventBus
-            bus = EventBus()
-            await bus.publish("spine.notification_directive", {
-                "user_id": user_id,
-                "directive_id": nd.directive_id,
-                "notification_type": nd.notification_type,
-                "allowed": nd.allowed,
-                "user_visible_reason": nd.user_visible_reason,
-            })
-        except Exception:
-            logger.debug("notification_directive event publish failed", exc_info=True)
+        await self.directive_store.store_notification(user_id, nd)
 
     async def get_notification_directive(self, user_id: str) -> NotificationDirective | None:
-        return await self._get_directive(user_id, "notification", NotificationDirective)
+        return await self.directive_store.get_notification(user_id)
 
     async def _store_recall_message(self, user_id: str, message: RecallMessage) -> None:
-        """存储用户可见 RecallMessage 供通知服务消费。"""
         import json
         key = f"spine:recall_notification:{user_id}:latest"
         await self.redis.set(key, json.dumps(message.to_dict()), ex=72 * 3600)
 
     async def get_recall_notification(self, user_id: str) -> RecallMessage | None:
-        """获取用户当前 RecallMessage。Degraded: returns None on Redis failure."""
         try:
             import json
             raw = await self.redis.get(f"spine:recall_notification:{user_id}:latest")
@@ -2121,7 +2106,6 @@ class SpineOrchestrator:
             return None
 
     async def _enrich_retrieval_with_source_tray(self, user_id: str, rd: RetrievalDirective) -> None:
-        """Enrich RetrievalDirective with SourceTrayState, producing concrete load plans."""
         from app.signals.source_tray_integration import build_source_receipt, compute_retrieval_plan
         from app.signals.types import SourceTrayState
 
@@ -2135,7 +2119,6 @@ class SpineOrchestrator:
             logger.warning("_enrich_retrieval_with_source_tray: failed", exc_info=True)
             return
 
-        # SRC-014: Fetch user-corrected blocklist
         from app.signals.source_tray_integration import SourceEffectivenessTracker
         blocked: set[str] = set()
         try:
@@ -2162,17 +2145,12 @@ class SpineOrchestrator:
         )
 
     async def _store_retrieval_directive(self, user_id: str, rd: RetrievalDirective) -> None:
-        await self._store_directive(user_id, "retrieval", rd)
-        await self._publish_directive_event("spine:retrieval_directive_channel", {
-            "user_id": user_id, "directive_id": rd.directive_id,
-            "retrieval_mode": rd.retrieval_mode if hasattr(rd, "retrieval_mode") else None,
-        })
+        await self.directive_store.store_retrieval(user_id, rd)
 
     async def get_retrieval_directive(self, user_id: str) -> RetrievalDirective | None:
-        return await self._get_directive(user_id, "retrieval", RetrievalDirective)
+        return await self.directive_store.get_retrieval(user_id)
 
     async def get_source_receipt(self, user_id: str) -> dict[str, Any] | None:
-        """获取用户最新的资料使用回执。"""
         try:
             import json
             raw = await self.redis.get(f"spine:source_receipt:{user_id}:latest")
@@ -2184,7 +2162,6 @@ class SpineOrchestrator:
             return None
 
     async def set_source_tray(self, user_id: str, tray_state: dict[str, Any]) -> None:
-        """存储用户的 SourceTrayState 供检索时使用。"""
         import json
         await self.redis.set(
             f"spine:source_tray:{user_id}",
@@ -2192,95 +2169,28 @@ class SpineOrchestrator:
             ex=7 * 24 * 3600,
         )
 
-    # ── Layer 6: PlanDirective ──────────────────────────────────────────
-
     async def _store_plan_directive(self, user_id: str, pd: PlanDirective) -> None:
-        await self._store_directive(user_id, "plan", pd)
-        # V-8: Publish plan_directive event for downstream consumers (task generator, replanner)
-        try:
-            from datetime import UTC as _UTC
-            from datetime import datetime
-            await self.redis.publish(
-                "spine:plan_directive_channel",
-                json.dumps({
-                    "user_id": user_id,
-                    "directive_id": pd.directive_id,
-                    "action": pd.action if hasattr(pd, "action") else None,
-                    "plan_id": pd.plan_id if hasattr(pd, "plan_id") else None,
-                    "timestamp": datetime.now(_UTC).isoformat(),
-                }),
-            )
-        except Exception:
-            logger.debug("plan_directive pub/sub publish failed for user={}", user_id, exc_info=True)
-
-    async def _publish_directive_event(self, channel: str, payload: dict) -> None:
-        """V-4: Publish directive to Redis pub/sub for downstream consumers."""
-        import json
-        try:
-            await self.redis.publish(channel, json.dumps(payload))
-        except Exception:
-            logger.debug("directive pub/sub failed on channel={}", channel, exc_info=True)
-
-
-    async def _store_directive(
-        self, user_id: str, directive_type: str, directive: Any,
-    ) -> None:
-        """Generic directive persistence: Redis set + trace store."""
-        import json
-        key = f"spine:{directive_type}_directive:{user_id}:latest"
-        await self.redis.set(key, json.dumps(directive.to_dict()), ex=72 * 3600)
-        await self.trace_store.store_directive_by_id(directive.directive_id, directive.to_dict())
-
-    async def _get_directive(self, user_id: str, directive_type: str, cls: type) -> Any | None:
-        """Generic directive retrieval. Degraded: returns None on Redis failure."""
-        try:
-            import json
-            raw = await self.redis.get(f"spine:{directive_type}_directive:{user_id}:latest")
-            if not raw:
-                return None
-            return cls.from_dict(json.loads(raw))
-        except Exception:
-            logger.debug("get_{}_directive degraded: Redis unavailable for user={}", directive_type, user_id)
-            return None
+        await self.directive_store.store_plan(user_id, pd)
 
     async def get_plan_directive(self, user_id: str) -> PlanDirective | None:
-        return await self._get_directive(user_id, "plan", PlanDirective)
-
-    # ── Layer 6: ModelWriteDirective ────────────────────────────────────
+        return await self.directive_store.get_plan(user_id)
 
     async def _store_model_write_directive(self, user_id: str, mwd: ModelWriteDirective) -> None:
-        await self._store_directive(user_id, "model_write", mwd)
+        await self.directive_store.store_model_write(user_id, mwd)
 
     async def get_model_write_directive(self, user_id: str) -> ModelWriteDirective | None:
-        return await self._get_directive(user_id, "model_write", ModelWriteDirective)
+        return await self.directive_store.get_model_write(user_id)
 
     async def get_model_claims(
         self, user_id: str, target_model: str | None = None, scope: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Retrieve applied model claims. Optionally filter by target_model and scope."""
-        import json
-        try:
-            if target_model and scope:
-                key = f"spine:model_claim:{user_id}:{target_model}:{scope}"
-                raw = await self.redis.get(key)
-                return [json.loads(raw)] if raw else []
-            return []
-        except Exception:
-            logger.warning("get_model_claims: failed", exc_info=True)
-            return []
+        return await self.directive_store.get_model_claims(user_id, target_model, scope)
 
-    # C7 guard: scopes below "sprint" must never be written to persistent preference store.
     _SHORT_SCOPES = frozenset({"turn", "session", "task", "day"})
 
     async def _apply_model_writes(self, user_id: str, mwd: ModelWriteDirective) -> None:
-        """Apply model write claims to user state (confidence-gated, auto-apply only).
-
-        Short-lived scopes (turn/session/task/day) are only stored in Redis with TTL
-        and must never be persisted to long-term preference/self-model storage.
-        """
         import json
         for entry in mwd.writes:
-            # Only auto-apply high-confidence claims that don't need user confirmation
             if entry.needs_user_confirmation or entry.confidence < 0.7:
                 continue
             key = f"spine:model_claim:{user_id}:{entry.target_model}:{entry.scope}"
@@ -2298,24 +2208,17 @@ class SpineOrchestrator:
 
     @staticmethod
     def _ttl_to_seconds(ttl: str) -> int:
-        """Parse TTL like '72h' to seconds."""
         if ttl.endswith("h"):
             return int(ttl[:-1]) * 3600
         if ttl.endswith("d"):
             return int(ttl[:-1]) * 86400
-        return 72 * 3600  # default
-
-    # ── Layer 6: UXDirective ────────────────────────────────────────────
+        return 72 * 3600
 
     async def _store_ux_directive(self, user_id: str, uxd: UXDirective) -> None:
-        await self._store_directive(user_id, "ux", uxd)
-        await self._publish_directive_event("spine:ux_directive_channel", {
-            "user_id": user_id, "directive_id": uxd.directive_id,
-            "presentation_mode": uxd.presentation_mode if hasattr(uxd, "presentation_mode") else None,
-        })
+        await self.directive_store.store_ux(user_id, uxd)
 
     async def get_ux_directive(self, user_id: str) -> UXDirective | None:
-        return await self._get_directive(user_id, "ux", UXDirective)
+        return await self.directive_store.get_ux(user_id)
 
     # ── P0-6: ExamSprintPolicy ──────────────────────────────────────────
 
@@ -2433,14 +2336,14 @@ class SpineOrchestrator:
         await self.redis.set(key, json.dumps(artifact), ex=72 * 3600)
 
     async def _store_community_directive(self, user_id: str, cd: CommunityDirective) -> None:
-        await self._store_directive(user_id, "community", cd)
-        await self._publish_directive_event("spine:community_directive_channel", {
+        await self.directive_store.store(user_id, "community", cd)
+        await self.directive_store.publish_event("spine:community_directive_channel", {
             "user_id": user_id, "directive_id": cd.directive_id,
             "community_action": cd.action if hasattr(cd, "action") else None,
         })
 
     async def get_community_directive(self, user_id: str) -> CommunityDirective | None:
-        return await self._get_directive(user_id, "community", CommunityDirective)
+        return await self.directive_store.retrieve(user_id, "community", CommunityDirective)
 
     async def get_latest_community_hint(self, user_id: str) -> dict[str, Any] | None:
         """Return the latest privacy-safe community hint for Flutter to render.
@@ -2526,14 +2429,14 @@ class SpineOrchestrator:
     # ── Layer 6: SkillDirective ──────────────────────────────────────────
 
     async def _store_skill_directive(self, user_id: str, sd: SkillDirective) -> None:
-        await self._store_directive(user_id, "skill", sd)
-        await self._publish_directive_event("spine:skill_directive_channel", {
+        await self.directive_store.store(user_id, "skill", sd)
+        await self.directive_store.publish_event("spine:skill_directive_channel", {
             "user_id": user_id, "directive_id": sd.directive_id,
             "skill_action": sd.action if hasattr(sd, "action") else None,
         })
 
     async def get_skill_directive(self, user_id: str) -> SkillDirective | None:
-        return await self._get_directive(user_id, "skill", SkillDirective)
+        return await self.directive_store.retrieve(user_id, "skill", SkillDirective)
 
     async def get_applicable_skills(self, user_id: str, context: dict[str, Any]) -> list[SkillEntry]:
         """Return skills that can safely be injected for the current context."""

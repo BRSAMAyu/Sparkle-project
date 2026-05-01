@@ -43,8 +43,8 @@ class TestStoreDirectiveMethodsSingleCall:
 
         source = inspect.getsource(method)
         count = source.count("store_directive_by_id")
-        # Methods delegating to _store_directive are also valid
-        delegates = "_store_directive" in source and count == 0
+        # Methods delegating to _store_directive or directive_store are also valid
+        delegates = ("_store_directive" in source or "directive_store" in source) and count == 0
         assert count == 1 or delegates, (
             f"{method_name} calls store_directive_by_id {count} times, expected 1 (or delegation). "
             f"B-002 regression: duplicate directive storage."
@@ -66,8 +66,8 @@ class TestStoreDirectiveMethodsSingleCall:
         method = getattr(SpineOrchestrator, method_name, None)
         source = inspect.getsource(method)
         count = source.count("redis.set(")
-        # Methods delegating to _store_directive are also valid
-        delegates = "_store_directive" in source and count == 0
+        # Methods delegating to _store_directive or directive_store are also valid
+        delegates = ("_store_directive" in source or "directive_store" in source) and count == 0
         assert count == 1 or delegates, (
             f"{method_name} calls redis.set {count} times, expected 1 (or delegation). "
             f"B-002 regression: duplicate Redis writes."
@@ -93,7 +93,7 @@ class TestNoDuplicateCodeBlocks:
         for method_name in store_methods:
             method = getattr(SpineOrchestrator, method_name)
             source = inspect.getsource(method)
-            delegates = "_store_directive" in source
+            delegates = "_store_directive" in source or "directive_store" in source
             # Count redis.set( calls — should be exactly 1 per method (or 0 if delegating)
             set_count = source.count("redis.set(")
             assert set_count == 1 or (set_count == 0 and delegates), (

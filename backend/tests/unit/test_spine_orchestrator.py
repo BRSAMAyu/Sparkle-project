@@ -425,7 +425,7 @@ class TestStoreDirectiveHelper:
             policy_decision_id=_uid("pdec"),
             plan_action="extend_deadline",
         )
-        await orchestrator._store_directive("u1", "plan", pd)
+        await orchestrator.directive_store.store("u1", "plan", pd)
         raw = await fake_redis.get("spine:plan_directive:u1:latest")
         assert raw is not None
         data = json.loads(raw)
@@ -443,8 +443,8 @@ class TestStoreDirectiveHelper:
             policy_decision_id=_uid("pdec"),
             plan_action="action_b",
         )
-        await orchestrator._store_directive("u1", "plan", pd1)
-        await orchestrator._store_directive("u1", "plan", pd2)
+        await orchestrator.directive_store.store("u1", "plan", pd1)
+        await orchestrator.directive_store.store("u1", "plan", pd2)
         result = await orchestrator.get_plan_directive("u1")
         assert result.plan_action == "action_b"
 
@@ -458,7 +458,7 @@ class TestPublishDirectiveEvent:
     @pytest.mark.asyncio
     async def test_publish_writes_to_pubsub(self, orchestrator, fake_redis):
         payload = {"directive_id": "d1", "type": "plan"}
-        await orchestrator._publish_directive_event("spine:directive:plan", payload)
+        await orchestrator.directive_store.publish_event("spine:directive:plan", payload)
         assert len(fake_redis._pubsub) == 1
         channel, msg = fake_redis._pubsub[0]
         assert channel == "spine:directive:plan"
@@ -467,7 +467,7 @@ class TestPublishDirectiveEvent:
     @pytest.mark.asyncio
     async def test_publish_failure_does_not_raise(self, orchestrator):
         orchestrator.redis.publish = AsyncMock(side_effect=Exception("pubsub down"))
-        await orchestrator._publish_directive_event("ch", {"x": 1})
+        await orchestrator.directive_store.publish_event("ch", {"x": 1})
 
 
 # ═══════════════════════════════════════════════════════════════
