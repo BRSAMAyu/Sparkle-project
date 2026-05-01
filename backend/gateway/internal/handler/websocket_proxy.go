@@ -16,6 +16,20 @@ import (
 // Max client message size: 256KB. Messages larger than this are dropped.
 const maxClientMessageSize = 256 * 1024
 
+// Reconnect rate-limit constants
+const (
+	reconnectMaxAttempts = 10            // max reconnect attempts per window
+	reconnectWindowSec   = 60            // sliding window in seconds
+	reconnectBlockSec    = 300           // block duration after exceeding limit
+	reconnectCleanupSec  = 300           // cleanup interval for expired trackers
+)
+
+type reconnectTracker struct {
+	attemptCount int
+	lastAttempt  time.Time
+	blockedUntil time.Time
+}
+
 // WebSocketProxy 专门处理 WebSocket 连接代理
 // 因为 httputil.ReverseProxy 在某些情况下无法正确处理 WebSocket 升级
 //
@@ -25,17 +39,18 @@ const maxClientMessageSize = 256 * 1024
 // deployments this is sufficient. A Redis-backed atomic counter would be needed
 // for multi-instance enforcement — tracked as future work.
 type WebSocketProxy struct {
-	pythonBackendURL string
-	upgrader         *websocket.Upgrader
-	logger           *zap.Logger
-	config           *config.Config
-	mu               sync.Mutex
-	activeByUser     map[string]int
+	pythonBackendURL   string
+	upgrader           *websocket.Upgrader
+	logger             *zap.Logger
+	config             *config.Config
+	mu                 sync.Mutex
+	activeByUser       map[string]int
+	reconnectTrackers  map[string]*reconnectTracker
 }
 
 // NewWebSocketProxy 创建新的 WebSocket 代理
 func NewWebSocketProxy(backendURL string, logger *zap.Logger, cfg *config.Config) *WebSocketProxy {
-	return &WebSocketProxy{
+	proxy := &WebSocketProxy{
 		pythonBackendURL: backendURL,
 		upgrader: &websocket.Upgrader{
 			HandshakeTimeout: 10 * time.Second,
@@ -56,10 +71,13 @@ func NewWebSocketProxy(backendURL string, logger *zap.Logger, cfg *config.Config
 				return allowed
 			},
 		},
-		logger:       logger,
-		config:       cfg,
-		activeByUser: make(map[string]int),
+		logger:            logger,
+		config:            cfg,
+		activeByUser:      make(map[string]int),
+		reconnectTrackers: make(map[string]*reconnectTracker),
 	}
+	proxy.startReconnectTrackerCleanup()
+	return proxy
 }
 
 // HandleCommunityWS 代理群聊 WebSocket 连接
@@ -115,6 +133,17 @@ func (p *WebSocketProxy) HandlePersonalWS(c *gin.Context) {
 
 	// P0-1: Forward session_id for reconnect context restoration
 	if sessionID := c.Query("session_id"); sessionID != "" {
+		if !p.checkReconnectAllowed(userID) {
+			p.logger.Warn("WS reconnect rate limit exceeded",
+				zap.String("user_id", userID),
+				zap.String("session_id", sessionID))
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error":       "Reconnect rate limit exceeded. Please wait before retrying.",
+				"retry_after": p.reconnectBlockRemaining(userID),
+			})
+			return
+		}
+		p.recordReconnectAttempt(userID)
 		backendURL = backendURL + "?session_id=" + url.QueryEscape(sessionID)
 		p.logger.Info("WS reconnect with session_id",
 			zap.String("user_id", userID),
@@ -408,4 +437,75 @@ func buildBackendWebSocketHeaders(r *http.Request, authToken string) http.Header
 // Close closes the WebSocket proxy (currently a no-op but kept for interface compatibility)
 func (p *WebSocketProxy) Close() error {
 	return nil
+}
+
+// --- Reconnect rate-limit helpers ---
+
+func (p *WebSocketProxy) checkReconnectAllowed(userID string) bool {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	tracker := p.reconnectTrackers[userID]
+	if tracker == nil {
+		return true
+	}
+	if time.Now().Before(tracker.blockedUntil) {
+		return false
+	}
+	window := time.Duration(reconnectWindowSec) * time.Second
+	if time.Since(tracker.lastAttempt) > window {
+		tracker.attemptCount = 0
+		return true
+	}
+	return tracker.attemptCount < reconnectMaxAttempts
+}
+
+func (p *WebSocketProxy) recordReconnectAttempt(userID string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	tracker := p.reconnectTrackers[userID]
+	if tracker == nil {
+		tracker = &reconnectTracker{}
+		p.reconnectTrackers[userID] = tracker
+	}
+	tracker.attemptCount++
+	tracker.lastAttempt = time.Now()
+
+	if tracker.attemptCount >= reconnectMaxAttempts {
+		tracker.blockedUntil = time.Now().Add(time.Duration(reconnectBlockSec) * time.Second)
+	}
+}
+
+func (p *WebSocketProxy) reconnectBlockRemaining(userID string) int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	tracker := p.reconnectTrackers[userID]
+	if tracker == nil || time.Now().After(tracker.blockedUntil) {
+		return 0
+	}
+	return int(time.Until(tracker.blockedUntil).Seconds())
+}
+
+func (p *WebSocketProxy) startReconnectTrackerCleanup() {
+	go func() {
+		ticker := time.NewTicker(time.Duration(reconnectCleanupSec) * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			p.cleanupExpiredReconnectTrackers()
+		}
+	}()
+}
+
+func (p *WebSocketProxy) cleanupExpiredReconnectTrackers() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	cutoff := time.Now().Add(-time.Duration(reconnectWindowSec) * time.Second)
+	for userID, tracker := range p.reconnectTrackers {
+		if tracker.lastAttempt.Before(cutoff) && time.Now().After(tracker.blockedUntil) {
+			delete(p.reconnectTrackers, userID)
+		}
+	}
 }
