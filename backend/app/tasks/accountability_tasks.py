@@ -704,13 +704,28 @@ async def _notify_partner_checkin(
     }
 
 
-async def _calculate_streak(db: AsyncSession, partnership_id: UUID, user_id: UUID) -> int:
-    """计算用户的连续打卡天数"""
+async def _calculate_streak(
+    db: AsyncSession,
+    partnership_id: UUID,
+    user_id: UUID,
+    *,
+    quality_threshold: bool = True,
+) -> int:
+    """计算用户的连续打卡天数。
+
+    当 quality_threshold=True 时，只有"高质量"打卡才计入连续天数：
+    满足 mood >= 4 或 minutes >= 15 的打卡才视为有效日。
+    这避免纯二进制计数——任何活动≠高质量日。
+    """
+    from collections import defaultdict
     from datetime import date
 
-    # 获取所有打卡记录
     result = await db.execute(
-        select(AccountabilityCheckin.created_at)
+        select(
+            AccountabilityCheckin.created_at,
+            AccountabilityCheckin.mood,
+            AccountabilityCheckin.minutes,
+        )
         .where(
             and_(
                 AccountabilityCheckin.partnership_id == partnership_id,
@@ -720,18 +735,31 @@ async def _calculate_streak(db: AsyncSession, partnership_id: UUID, user_id: UUI
         .order_by(AccountabilityCheckin.created_at.desc())
     )
 
-    checkin_dates: set[date] = set()
-    for (ts,) in result.all():
+    # 按日期分组，记录每日最高质量的检查
+    daily_best: dict[date, dict] = defaultdict(lambda: {"mood": 0, "minutes": 0})
+    for ts, mood, minutes in result.all():
         if ts.tzinfo is None:
             ts = ts.replace(tzinfo=UTC)
-        checkin_dates.add(ts.date())
+        d = ts.date()
+        if mood and mood > daily_best[d]["mood"]:
+            daily_best[d]["mood"] = mood
+        if minutes and minutes > daily_best[d]["minutes"]:
+            daily_best[d]["minutes"] = minutes
+
+    def _is_quality_day(d: date) -> bool:
+        if not quality_threshold:
+            return d in daily_best
+        best = daily_best.get(d)
+        if best is None:
+            return False
+        return best["mood"] >= 4 or best["minutes"] >= 15
 
     # 计算连续天数
     today_utc = _utcnow().date()
     streak = 0
     current = today_utc
 
-    while current in checkin_dates:
+    while _is_quality_day(current):
         streak += 1
         current -= timedelta(days=1)
 
