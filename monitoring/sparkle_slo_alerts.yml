@@ -177,3 +177,41 @@ groups:
           summary: "gRPC stream semaphore usage high"
           description: "Gateway gRPC StreamChat semaphore usage has exceeded 80% for 5 minutes."
           runbook: "monitoring/runbooks/incident_response.md#p2-grpc-stream-semaphore-usage"
+
+    # --- Resource Alerts (P2-Inf-2) ---
+
+    - alert: SparkleDatabasePoolExhaustion
+      expr: pg_stat_activity_count{datname="sparkle"} > 25
+      for: 5m
+      labels:
+        severity: warning
+        tier: P2
+        service: database
+      annotations:
+        summary: "Database connection pool nearly exhausted"
+        description: "PostgreSQL connection count for sparkle database has exceeded 25 for 5 minutes. Pool exhaustion will cause request failures."
+        runbook: "monitoring/runbooks/incident_response.md#p2-database-pool"
+
+    - alert: SparkleDiskSpaceHigh
+      expr: (node_filesystem_size_bytes{mountpoint="/var/lib/postgresql"} - node_filesystem_avail_bytes{mountpoint="/var/lib/postgresql"}) / node_filesystem_size_bytes{mountpoint="/var/lib/postgresql"} > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        tier: P2
+        service: infrastructure
+      annotations:
+        summary: "Database disk space above 90%"
+        description: "PostgreSQL data volume disk usage has exceeded 90%. Risk of database corruption and write failures."
+        runbook: "monitoring/runbooks/incident_response.md#p2-disk-space"
+
+    - alert: SparkleContainerMemoryHigh
+      expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.9
+      for: 5m
+      labels:
+        severity: warning
+        tier: P2
+        service: infrastructure
+      annotations:
+        summary: "Container memory usage above 90%"
+        description: "A container is using over 90% of its memory limit. Risk of OOM kills."
+        runbook: "monitoring/runbooks/incident_response.md#p2-memory"

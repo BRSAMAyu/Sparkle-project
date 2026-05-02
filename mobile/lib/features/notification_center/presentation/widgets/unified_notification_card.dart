@@ -117,7 +117,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: notification.isRead
                                 ? FontWeight.normal
-                                : FontWeight.bold,
+                                : DS.fontWeightBold,
                           ),
                     ),
 

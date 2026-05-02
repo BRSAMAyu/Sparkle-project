@@ -108,7 +108,7 @@ class CommunityScreen extends ConsumerWidget {
             context.l10n.communityCommunity,
             style: TextStyle(
               fontSize: 28,
-              fontWeight: FontWeight.bold,
+              fontWeight: DS.fontWeightBold,
               color: DS.textPrimary,
               letterSpacing: 1.2,
             ),
@@ -210,7 +210,7 @@ class _FilterChip extends StatelessWidget {
             label,
             style: TextStyle(
               color: isSelected ? DS.textPrimary : DS.textSecondary,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              fontWeight: isSelected ? DS.fontWeightBold : FontWeight.normal,
             ),
           ),
         ),
@@ -239,7 +239,7 @@ class _GoalFocusSection extends StatelessWidget {
                 isChinese ? '目标聚焦' : 'Goal Focus',
                 style: TextStyle(
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: DS.textPrimary,
                 ),
               ),

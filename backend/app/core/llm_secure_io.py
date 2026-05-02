@@ -95,7 +95,11 @@ def sanitize_llm_output(text: str, *, context: dict[str, Any] | None = None) -> 
     redacted = redact_secrets(text)
     if not llm_safety_enabled():
         _record_bypass("output")
-        return redacted
+        # Always run output validation even when kill switch is off
+        result = _output_validator.validate(redacted, context=context)
+        if result.action == "block":
+            return "抱歉，这部分内容无法直接返回。"
+        return result.sanitized_text
     result = _output_validator.validate(redacted, context=context)
     if result.action == "block":
         return "抱歉，这部分内容无法直接返回。"

@@ -167,7 +167,7 @@ class _AchievementShareDialogState extends State<AchievementShareDialog> {
                     style: TextStyle(
                       color: DS.textPrimary,
                       fontSize: 24,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ],

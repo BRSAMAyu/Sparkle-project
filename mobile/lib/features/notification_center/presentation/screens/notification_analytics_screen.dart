@@ -412,7 +412,7 @@ class _NotificationAnalyticsScreenState
                 child: Text(
                   value,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
               ),
@@ -538,7 +538,7 @@ class _NotificationAnalyticsScreenState
             Text(label, style: const TextStyle(fontSize: 12)),
             Text(
               '$value (${percentage.toStringAsFixed(0)}%)',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 12, fontWeight: DS.fontWeightBold),
             ),
           ],
         ),

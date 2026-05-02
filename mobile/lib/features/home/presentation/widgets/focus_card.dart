@@ -97,7 +97,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                   child: Text(
                     'Lv.$flameLevel',
                     style: context.sparkleTypography.labelSmall.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                       fontSize: 10,
                       color: DS.textPrimary,
                     ),
@@ -172,7 +172,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                             style:
                                 context.sparkleTypography.titleLarge.copyWith(
                               fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                               color: DS.textPrimary,
                             ),
                           ),

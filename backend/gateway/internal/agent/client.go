@@ -331,7 +331,9 @@ func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agen
 	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
 		return nil, err
 	}
-	return c.currentAPI().StreamChat(outCtx, req)
+	// Use fresh context with fresh timeout after reconnection
+	retryCtx := c.injectMetadata(ctx, req.UserId)
+	return c.currentAPI().StreamChat(retryCtx, req)
 }
 
 func (c *Client) SubmitResponseFeedback(ctx context.Context, req *agentv1.ResponseFeedbackRequest) (*agentv1.ResponseFeedbackResponse, error) {

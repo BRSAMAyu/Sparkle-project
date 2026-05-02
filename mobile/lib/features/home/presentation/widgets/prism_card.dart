@@ -163,7 +163,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                               '复习弱项: 分析',
                               style:
                                   context.sparkleTypography.labelSmall.copyWith(
-                                fontWeight: FontWeight.bold,
+                                fontWeight: DS.fontWeightBold,
                                 fontSize: 10,
                                 color: DS.textPrimary,
                               ),
@@ -203,7 +203,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
         child: Text(
           text,
           style: context.sparkleTypography.labelSmall.copyWith(
-            fontWeight: FontWeight.bold,
+            fontWeight: DS.fontWeightBold,
             fontSize: 11,
             color: DS.textPrimary,
           ),

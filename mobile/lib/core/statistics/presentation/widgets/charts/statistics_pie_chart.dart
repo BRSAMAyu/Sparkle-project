@@ -179,7 +179,7 @@ class StatisticsPieChart extends StatelessWidget {
         section.label,
         style: TextStyle(
           fontSize: 11,
-          fontWeight: FontWeight.bold,
+          fontWeight: DS.fontWeightBold,
           color: DS.onBrandPrimary,
         ),
       ),

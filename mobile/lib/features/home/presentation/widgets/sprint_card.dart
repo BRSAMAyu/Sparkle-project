@@ -94,7 +94,7 @@ class SprintCard extends ConsumerWidget {
                         '$daysLeft',
                         style: context.sparkleTypography.headingMedium.copyWith(
                           fontSize: ringSize * 0.3,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                           color: isUrgent ? DS.error : DS.brandPrimary,
                         ),
                       ),

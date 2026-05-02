@@ -10,6 +10,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -312,7 +313,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	var profileSnapshot *service.ChatUserProfileSnapshot
 	if h.userContext != nil && userUUID != uuid.Nil {
 		if snapshot, err := h.userContext.GetChatUserProfileSnapshot(ctx, userUUID); err != nil {
-			log.Printf("Failed to fetch chat user profile for user=%s: %v", userID, err)
+			log.Printf("Failed to fetch chat user profile for user=%s: %v", hashUserIDForLog(userID), err)
 		} else {
 			profileSnapshot = snapshot
 		}
@@ -330,7 +331,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 		if err != nil {
 			log.Printf("[CONTEXT] Failed to fetch user context for user=%s, latency=%dms, error=%v",
-				userID, contextFetchLatency.Milliseconds(), err)
+				hashUserIDForLog(userID), contextFetchLatency.Milliseconds(), err)
 			// Non-fatal: continue with empty context
 		} else {
 			userContextJSON = contextData
@@ -358,11 +359,11 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				}
 
 				log.Printf("[CONTEXT] User=%s, PendingTasks=%d, ActivePlans=%d, FocusMinutes=%dm, RecentProgress=%d, Size=%dB, Latency=%dms",
-					userID, pendingTasksCount, activePlansCount, focusMinutes, recentProgressCount,
+					hashUserIDForLog(userID), pendingTasksCount, activePlansCount, focusMinutes, recentProgressCount,
 					len(userContextJSON), contextFetchLatency.Milliseconds())
 			} else {
 				log.Printf("[CONTEXT] User=%s, Size=%dB, Latency=%dms (JSON parse error: %v)",
-					userID, len(userContextJSON), contextFetchLatency.Milliseconds(), jsonErr)
+					hashUserIDForLog(userID), len(userContextJSON), contextFetchLatency.Milliseconds(), jsonErr)
 			}
 		}
 	}
@@ -372,7 +373,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		reqID = fmt.Sprintf("req_%s", uuid.New().String())
 	}
 	if traceID != "" {
-		log.Printf("Chat request trace_id=%s user_id=%s session_id=%s request_id=%s", traceID, userID, input.SessionID, reqID)
+		log.Printf("Chat request trace_id=%s user_id=%s session_id=%s request_id=%s", traceID, hashUserIDForLog(userID), input.SessionID, reqID)
 	}
 
 	// P0: Semantic Cache Check (scoped by user + mode, after context resolution)
@@ -436,7 +437,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			}
 			sessionHasHistory = len(historyMessages) > 0
 		} else {
-			log.Printf("[chatflow] history load failed for session=%s user=%s: %v", input.SessionID, userID, histErr)
+			log.Printf("[chatflow] history load failed for session=%s user=%s: %v", input.SessionID, hashUserIDForLog(userID), histErr)
 		}
 	}
 
@@ -464,7 +465,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 		if err == nil && cachedResp != "" {
 			isCacheHit = true
-			log.Printf("Semantic cache hit for user=%s scope=%s", userID, cacheScope)
+			log.Printf("Semantic cache hit for user=%s scope=%s", hashUserIDForLog(userID), cacheScope)
 
 			// Construct cached response
 			now := time.Now()
@@ -528,7 +529,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	var dailyLimit int64
 	var dailyUsageStart int64
 	if h.quota != nil {
-		dailyLimit = getEnvInt64("DAILY_QUOTA", 100000)
+		dailyLimit = cachedDailyQuota()
 		if dailyLimit > 0 && !isDevelopmentEnv() {
 			if usage, err := h.quota.GetDailyUsage(ctx, userID); err == nil {
 				dailyUsageStart = usage
@@ -541,7 +542,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	sessionID := input.SessionID
 	if sessionID == "" {
 		sessionID = uuid.New().String()
-		log.Printf("Generated new session_id=%s for user=%s (client sent empty)", sessionID, userID)
+		log.Printf("Generated new session_id=%s for user=%s (client sent empty)", sessionID, hashUserIDForLog(userID))
 	}
 	// Build ChatRequest
 	req := &agentv1.ChatRequest{
@@ -630,7 +631,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	var sawUpstreamFinishReason bool
 	var firstEventAt time.Time
 	var firstTokenAt time.Time
-	segmentSize := getEnvInt64("STREAM_TOKEN_SEGMENT", 200)
+	segmentSize := cachedStreamTokenSegment()
 	for {
 		// Trace each streaming response
 		_, streamSpan := tracer.Start(ctx, "stream.receive")
@@ -681,7 +682,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			estimatedTokens := estimateTokensFromRunes(outputRuneCount)
 			for estimatedTokens-segmentRecorded >= segmentSize {
 				if dailyLimit > 0 && dailyUsageStart+segmentRecorded+segmentSize > dailyLimit {
-					log.Printf("Daily quota exceeded mid-stream user=%s request=%s", userID, reqID)
+					log.Printf("Daily quota exceeded mid-stream user=%s request=%s", hashUserIDForLog(userID), reqID)
 					cancel()
 					switch r := responder.(type) {
 					case *envelopeResponder:
@@ -749,7 +750,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			log.Printf("Failed to record usage: %v", err)
 		}
 		if delta == 0 {
-			log.Printf("Usage missing for request=%s user=%s", reqID, userID)
+			log.Printf("Usage missing for request=%s user=%s", reqID, hashUserIDForLog(userID))
 		}
 	}
 
@@ -954,4 +955,26 @@ func estimateTokensFromRunes(runes int) int64 {
 
 func countRunes(text string) int {
 	return len([]rune(text))
+}
+
+// Cached env vars to avoid os.Getenv on every request.
+var (
+	dailyQuotaOnce        sync.Once
+	dailyQuotaValue       int64
+	streamTokenSegOnce    sync.Once
+	streamTokenSegValue   int64
+)
+
+func cachedDailyQuota() int64 {
+	dailyQuotaOnce.Do(func() {
+		dailyQuotaValue = getEnvInt64("DAILY_QUOTA", 100000)
+	})
+	return dailyQuotaValue
+}
+
+func cachedStreamTokenSegment() int64 {
+	streamTokenSegOnce.Do(func() {
+		streamTokenSegValue = getEnvInt64("STREAM_TOKEN_SEGMENT", 200)
+	})
+	return streamTokenSegValue
 }

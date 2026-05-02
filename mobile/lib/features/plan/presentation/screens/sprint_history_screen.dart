@@ -244,7 +244,7 @@ class _SprintHistoryCard extends StatelessWidget {
                     Text(
                       '${(item.finalProgress * 100).toInt()}%',
                       style: context.sparkleTypography.labelLarge.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         color: _getProgressColor(item.finalProgress),
                       ),
                     ),

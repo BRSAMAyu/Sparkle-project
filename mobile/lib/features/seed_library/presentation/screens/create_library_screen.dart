@@ -165,7 +165,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                       Text(
                         '分类',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                             ),
                       ),
                       const SizedBox(height: DS.spacing8),
@@ -204,7 +204,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                       Text(
                         '可见性',
                         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                             ),
                       ),
                       const SizedBox(height: DS.spacing8),
@@ -239,7 +239,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                 Text(
                   '标签',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: DS.spacing8),

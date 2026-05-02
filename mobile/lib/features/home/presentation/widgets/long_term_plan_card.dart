@@ -76,7 +76,7 @@ class LongTermPlanCard extends ConsumerWidget {
                   '${(growth.progress * 100).toInt()}%',
                   style: TextStyle(
                     fontSize: dense ? 16 : (compact ? 18 : 20),
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     color: DS.success,
                   ),
                 ),

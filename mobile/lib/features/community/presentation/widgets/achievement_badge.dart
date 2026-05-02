@@ -109,7 +109,7 @@ class AchievementBadge extends StatelessWidget {
                     Text(
                       name,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                           ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -186,7 +186,7 @@ class AchievementBadge extends StatelessWidget {
               '+$points',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral0,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],
@@ -377,7 +377,7 @@ class AchievementProgressIndicator extends StatelessWidget {
             Text(
               '$current / $total',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
           ],
@@ -434,7 +434,7 @@ class AchievementDetailDialog extends StatelessWidget {
             Text(
               achievement.name,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
               textAlign: TextAlign.center,
             ),
@@ -463,7 +463,7 @@ class AchievementDetailDialog extends StatelessWidget {
                     Text(
                       '+${achievement.points} 积分',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                   ],

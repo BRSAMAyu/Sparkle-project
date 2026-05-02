@@ -631,7 +631,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             Text(
               context.l10n.ebReviewComplete,
               style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -764,7 +764,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           value,
           style: theme.textTheme.headlineMedium?.copyWith(
             color: color,
-            fontWeight: FontWeight.bold,
+            fontWeight: DS.fontWeightBold,
           ),
         ),
         const SizedBox(height: 4),

@@ -152,7 +152,7 @@ class SprintStatisticsCard extends ConsumerWidget {
                   Text(
                     '${(stats.completionRate * 100).toInt()}%',
                     style: context.sparkleTypography.labelLarge.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                       fontSize: 15,
                     ),
                   ),
@@ -375,7 +375,7 @@ class SprintStatisticsCard extends ConsumerWidget {
             count.toString(),
             style: context.sparkleTypography.labelLarge.copyWith(
               color: color,
-              fontWeight: FontWeight.bold,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           Text(

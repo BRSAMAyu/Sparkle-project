@@ -78,7 +78,7 @@ class FeedPostCard extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: DS.textPrimary,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: DS.fontWeightBold,
                                   fontSize: 16,
                                 ),
                               ),

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
+from app.core.time_utils import utcnow
 from typing import Any
 from uuid import UUID
 
@@ -73,11 +74,6 @@ from app.state_aggregator.schema import (
 )
 from app.working_memory.service import WorkingMemoryService
 
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
 class StateAggregatorService:
     """Read-only Stage 18 user-state aggregator."""
 
@@ -126,7 +122,7 @@ class StateAggregatorService:
         skill_selection_context: SkillSelectionContext | None = None,
         expose_shadow: bool = False,
     ) -> UserStateV1:
-        reference_time = now or _utcnow()
+        reference_time = now or utcnow()
         state = UserStateV1(user_id=user_id)
         for field_name in tuple(dict.fromkeys(required_fields)):
             envelope = await self._get_field(
@@ -228,6 +224,11 @@ class StateAggregatorService:
         if envelope is not None:
             expires_at = envelope.computed_at + timedelta(seconds=ttl_seconds)
         self._cache[cache_key] = (envelope, expires_at)
+        # Evict expired entries periodically to bound memory
+        if len(self._cache) > 500:
+            expired_keys = [k for k, (_, exp) in self._cache.items() if exp <= now]
+            for k in expired_keys:
+                del self._cache[k]
         return envelope
 
     async def _build_commitment_summary(

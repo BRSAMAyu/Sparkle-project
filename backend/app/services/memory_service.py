@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from datetime import UTC, date, datetime
+from app.core.time_utils import utcnow
 from typing import Any
 from uuid import UUID
 
@@ -62,18 +63,12 @@ NON_CRITICAL_SERVICE_ERRORS = (
     SQLAlchemyError,
 )
 
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
 def _truncate_summary(value: str) -> str:
     if not value:
         return ""
     if len(value) <= SUMMARY_MAX_LEN:
         return value
     return f"{value[:SUMMARY_MAX_LEN - 1]}…"
-
 
 class MemoryService:
     def __init__(self, db: AsyncSession | None, redis_client=None):
@@ -132,7 +127,7 @@ class MemoryService:
             select(func.max(MemoryPreference.version)).where(
                 MemoryPreference.user_id == user_id,
                 MemoryPreference.pref_key == pref_key,
-            )
+            ).with_for_update()
         )
         max_version = version_result.scalar_one_or_none() or 0
         version = max_version + 1
@@ -154,7 +149,7 @@ class MemoryService:
 
         if latest is not None:
             latest.replaced_by_id = record.id
-            latest.updated_at = _utcnow()
+            latest.updated_at = utcnow()
 
         await self.db.commit()
         await self.db.refresh(record)
@@ -530,7 +525,7 @@ class MemoryService:
         return record
 
     async def list_active_goals(self, user_id: UUID, now: datetime | None = None) -> list[MemoryGoal]:
-        now = now or _utcnow()
+        now = now or utcnow()
         result = await self.db.execute(
             select(MemoryGoal).where(
                 MemoryGoal.user_id == user_id,
@@ -669,7 +664,7 @@ class MemoryService:
         include_expired: bool = False,
         limit: int = 20,
     ) -> list[MemoryGoal]:
-        now = _utcnow()
+        now = utcnow()
         stmt = select(MemoryGoal).where(
             MemoryGoal.user_id == user_id,
             MemoryGoal.deleted_at.is_(None),
@@ -919,7 +914,7 @@ class MemoryService:
         *,
         now: datetime | None = None,
     ) -> list[EpisodicMemory]:
-        reference_time = now or _utcnow()
+        reference_time = now or utcnow()
         result = await self.db.execute(
             select(EpisodicMemory)
             .where(
@@ -955,8 +950,8 @@ class MemoryService:
         record = result.scalar_one_or_none()
         if record is None:
             return None
-        record.resolved_at = resolved_at or _utcnow()
-        record.updated_at = _utcnow()
+        record.resolved_at = resolved_at or utcnow()
+        record.updated_at = utcnow()
         await self.db.commit()
         await self.db.refresh(record)
         try:
@@ -1088,7 +1083,7 @@ class MemoryService:
             else:
                 current_score = record.evidence_score or 0.0
                 record.evidence_score = max(0.0, current_score - CONFIDENCE_DECREMENT)
-            record.updated_at = _utcnow()
+            record.updated_at = utcnow()
         else:
             raise ValueError(f"Unsupported correction action: {action}")
 
@@ -1178,7 +1173,7 @@ class MemoryService:
         if record is None:
             return None
 
-        now = _utcnow()
+        now = utcnow()
         if hasattr(record, "last_consumed_at"):
             record.last_consumed_at = now
 
@@ -1236,12 +1231,12 @@ class MemoryService:
             updated_refs.append(ref_copy)
 
         record.evidence_refs = updated_refs
-        now = _utcnow()
+        now = utcnow()
         if isinstance(record, EpisodicMemory) and getattr(record, "source_lane", "") == "inferred_extraction":
             record.revoked_at = now
         else:
             record.retracted_at = now
-        record.updated_at = _utcnow()
+        record.updated_at = utcnow()
 
         if isinstance(record, EpisodicMemory):
             snapshot = record.evidence_snapshot or {}
@@ -1286,7 +1281,6 @@ class MemoryService:
             return True
         rollout = LtmRolloutService(self.db)
         return await rollout.is_enabled(user_id)
-
 
 def _normalize_evidence_refs(
     evidence_refs: Iterable[Any],

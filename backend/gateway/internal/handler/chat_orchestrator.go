@@ -23,6 +23,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pbws "github.com/sparkle/gateway/gen/ws"
+	"go.uber.org/zap"
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/galaxy"
@@ -226,7 +227,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Printf("Failed to upgrade WS: %v", err)
+		zap.L().Warn("Failed to upgrade WS", zap.Error(err))
 		return
 	}
 
@@ -304,10 +305,10 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	authToken := c.GetString("auth_token")
 	_ = authToken
 
-	log.Printf("WebSocket connected for user: %s", userID)
+	log.Printf("WebSocket connected for user: %s", hashUserIDForLog(userID))
 	// P0-1: Log reconnect context if session_id provided via query param
 	if reconnectSID := c.Query("session_id"); reconnectSID != "" {
-		log.Printf("WebSocket reconnect for user: %s with session_id: %s", userID, reconnectSID)
+		log.Printf("WebSocket reconnect for user: %s with session_id: %s", hashUserIDForLog(userID), reconnectSID)
 	}
 	authMethod := c.GetString("ws_auth_method")
 	if authMethod == "" {
@@ -679,7 +680,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		}
 	}
 
-	log.Printf("WebSocket disconnected for user: %s", userID)
+	log.Printf("WebSocket disconnected for user: %s", hashUserIDForLog(userID))
 }
 
 // PushIntervention sends an intervention push message to all active WebSocket connections for a user.

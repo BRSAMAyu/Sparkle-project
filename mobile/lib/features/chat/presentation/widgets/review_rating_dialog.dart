@@ -188,7 +188,7 @@ class _ReviewRatingDialogState extends State<ReviewRatingDialog> {
             Text(
               context.l10n.reviewRatingTitle,
               style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
               textAlign: TextAlign.center,
             ),

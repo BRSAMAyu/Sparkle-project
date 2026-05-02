@@ -125,7 +125,7 @@ class _StatCard extends StatelessWidget {
               style: TextStyle(
                 color: iconColor,
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             if (subtitle != null)

@@ -1121,7 +1121,9 @@ class EventBus:
                 except (json.JSONDecodeError, TypeError):
                     parsed_data[key] = value
 
-            idempotency_key = f"evt:{stream}:{message_id}"
+            # Use _original_message_id for idempotency when present (retry case)
+            effective_id = parsed_data.get("_original_message_id", message_id)
+            idempotency_key = f"evt:{stream}:{effective_id}"
             idempotency = await self._get_idempotency_store()
             existing = await idempotency.get(idempotency_key)
             if existing:
@@ -1201,7 +1203,7 @@ class EventBus:
             except Exception as e:
                 logger.error(f"Error in consumer loop: {e}")
                 # R5-P2-20: Attempt Redis reconnection on connection errors
-                if "ConnectionError" in type(e).__name__ or "connection" in str(e).lower():
+                if isinstance(e, (redis.ConnectionError, redis.TimeoutError, ConnectionError, OSError)) or "connection" in str(e).lower():
                     try:
                         await self.connect()
                         logger.info("EventBus consumer reconnected to Redis")

@@ -74,7 +74,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
             Text(
               context.l10n.communityMonthlyCheckinView(widget.year),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             _buildLegend(context),
@@ -316,7 +316,7 @@ class MonthlyHeatmap extends StatelessWidget {
                   child: Text(
                     _weekdayLabels(context)[index],
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                         ),
                   ),
                 ),

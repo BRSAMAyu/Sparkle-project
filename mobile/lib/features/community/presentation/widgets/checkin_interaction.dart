@@ -69,7 +69,7 @@ class CheckinInteraction extends StatelessWidget {
                 Text(
                   authorName,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 if (isMyCheckin)
@@ -192,7 +192,7 @@ class CheckinInteraction extends StatelessWidget {
           Text(
             context.l10n.communityEncouragementMessages,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
           ),
@@ -229,7 +229,7 @@ class CheckinInteraction extends StatelessWidget {
                   Text(
                     _encouragementAuthor(context, encouragement),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                         ),
                   ),
                   const Spacer(),

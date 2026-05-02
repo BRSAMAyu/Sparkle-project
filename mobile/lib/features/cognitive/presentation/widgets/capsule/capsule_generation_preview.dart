@@ -90,7 +90,7 @@ class CapsuleGenerationPreview extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         color: DS.textPrimary,
                       ),
                     ),

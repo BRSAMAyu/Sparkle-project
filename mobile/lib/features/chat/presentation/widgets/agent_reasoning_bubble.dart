@@ -149,7 +149,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                 ),
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: widget.agentColor,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
             ],
@@ -197,7 +197,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                             fontSize: 12,
                             color: widget.agentColor,
                           ),
@@ -280,7 +280,7 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
                           Text(
                             widget.agentName,
                             style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                               color: widget.agentColor,
                             ),
                           ),
@@ -461,7 +461,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                     context.l10n.chatMultiAgentCollab,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: DS.prismPurple,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ),
@@ -521,7 +521,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                         context.l10n.chatSynthesisSuggestions,
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: DS.prismPurple,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                         ),
                       ),
                     ],

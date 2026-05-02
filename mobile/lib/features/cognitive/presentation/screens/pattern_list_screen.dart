@@ -96,7 +96,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
                 context.l10n.patternListTitle,
                 style: TextStyle(
                   fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: DS.textPrimary,
                 ),
               ),
@@ -141,7 +141,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               context.l10n.patternListEmptyTitle,
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
               ),
             ),
@@ -217,7 +217,7 @@ class _PatternCard extends StatelessWidget {
                             pattern.patternName,
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                               color: DS.brandPrimaryConst,
                             ),
                           ),
@@ -260,7 +260,7 @@ class _PatternCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             color: DS.success,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                       ),

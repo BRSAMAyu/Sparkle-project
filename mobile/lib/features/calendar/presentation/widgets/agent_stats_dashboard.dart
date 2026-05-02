@@ -35,7 +35,7 @@ class AgentStatsDashboard extends StatelessWidget {
           Text(
             'Agent 协作统计',
             style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           const SizedBox(height: DS.sm),
@@ -56,7 +56,7 @@ class AgentStatsDashboard extends StatelessWidget {
             Text(
               'Agent 使用分布',
               style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: DS.lg),
@@ -69,7 +69,7 @@ class AgentStatsDashboard extends StatelessWidget {
             Text(
               'Top Agents',
               style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: DS.lg),
@@ -139,7 +139,7 @@ class AgentStatsDashboard extends StatelessWidget {
             Text(
               value,
               style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: color,
               ),
             ),
@@ -171,7 +171,7 @@ class AgentStatsDashboard extends StatelessWidget {
                 radius: 100,
                 titleStyle: TextStyle(
                   fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: DS.brandPrimaryConst,
                 ),
               );
@@ -225,7 +225,7 @@ class AgentStatsDashboard extends StatelessWidget {
                 Text(
                   config.displayName,
                   style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     color: config.color,
                   ),
                 ),
@@ -270,7 +270,7 @@ class AgentStatsDashboard extends StatelessWidget {
               '${successRate.toStringAsFixed(0)}%',
               style: TextStyle(
                 color: _getSuccessRateColor(successRate),
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 fontSize: 12,
               ),
             ),
@@ -338,7 +338,7 @@ class AgentPerformanceChart extends StatelessWidget {
           Text(
             '性能趋势',
             style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.bold,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           const SizedBox(height: DS.lg),

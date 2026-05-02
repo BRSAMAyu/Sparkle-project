@@ -83,6 +83,13 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
     volumes:
       - sparkle_minio_data:/data
+    user: "${SPARKLE_MINIO_UID:-1000}:${SPARKLE_MINIO_GID:-1000}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     deploy:
       resources:
         limits:

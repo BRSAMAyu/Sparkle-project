@@ -85,7 +85,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                 Text(
                   context.l10n.transparencyDisplayOptions,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: DS.sm),

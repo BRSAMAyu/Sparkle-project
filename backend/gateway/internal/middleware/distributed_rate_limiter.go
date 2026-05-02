@@ -27,15 +27,15 @@ var (
 		Help: "Total Redis errors in rate limiter by error type",
 	}, []string{"error_type"})
 
-	rateLimiterTokensCurrent = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	rateLimiterTokensCurrent = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "rate_limiter_tokens_current",
-		Help: "Current token count left in the distributed token bucket",
-	}, []string{"key"})
+		Help: "Current token count left in the distributed token bucket (sampled)",
+	})
 
 	rateLimiterRejectionsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "rate_limiter_rejections_total",
-		Help: "Total distributed token bucket rejections by key and reason",
-	}, []string{"key", "reason"})
+		Help: "Total distributed token bucket rejections by reason",
+	}, []string{"reason"})
 )
 
 var distributedTokenBucketScript = redis.NewScript(`
@@ -203,7 +203,7 @@ func (d *DistributedRateLimiter) allowAtMillis(ctx context.Context, key string, 
 		log.Printf("[ALERT] Rate limiter Redis error: %v, falling back to local", err)
 		redisFallbackCounter.Inc()
 		redisErrorCounter.WithLabelValues("script_error").Inc()
-		rateLimiterRejectionsTotal.WithLabelValues(fullKey, "redis_error").Inc()
+		rateLimiterRejectionsTotal.WithLabelValues("redis_error").Inc()
 		return false, 0, fmt.Errorf("redis script execution failed: %w", err)
 	}
 
@@ -220,10 +220,10 @@ func (d *DistributedRateLimiter) allowAtMillis(ctx context.Context, key string, 
 		return false, 0, fmt.Errorf("parse remaining tokens: %w", err)
 	}
 
-	rateLimiterTokensCurrent.WithLabelValues(fullKey).Set(remaining)
+	rateLimiterTokensCurrent.Set(remaining)
 	allowed := allowedValue == 1
 	if !allowed {
-		rateLimiterRejectionsTotal.WithLabelValues(fullKey, "insufficient_tokens").Inc()
+		rateLimiterRejectionsTotal.WithLabelValues("insufficient_tokens").Inc()
 	}
 	return allowed, remaining, nil
 }
@@ -346,17 +346,15 @@ func (rl *RateLimiter) cleanupVisitorsWithInterval(interval time.Duration) {
 	for {
 		select {
 		case <-rl.stopCh:
-			// Graceful shutdown
 			return
 		case <-ticker.C:
 			rl.mu.Lock()
 			for ip, v := range rl.visitors {
-				// Expire after 3 times the cleanup interval (reduced from 5 minutes)
 				if time.Since(v.lastSeen) > 3*interval {
 					delete(rl.visitors, ip)
 				}
 			}
 			rl.mu.Unlock()
-		}
 	}
+}
 }

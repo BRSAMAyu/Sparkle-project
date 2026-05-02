@@ -179,7 +179,7 @@ class GroupTasksScreen extends ConsumerWidget {
             Text(
               title,
               style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: color,
                   fontSize: DS.fontSizeBase,),
             ),
@@ -222,7 +222,7 @@ class _TaskCard extends StatelessWidget {
                 child: Text(
                   task.title,
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     decoration: isDone ? TextDecoration.lineThrough : null,
                   ),
                 ),
@@ -324,7 +324,7 @@ extension on GroupTasksScreen {
                 const SizedBox(height: DS.md),
                 Text(
                   '${I18nService.instance.isChinese ? '预计时间' : 'Est. time'}: $estimatedMinutes ${I18nService.instance.isChinese ? '分钟' : 'min'}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: DS.fontWeightBold),
                 ),
                 Slider(
                   value: estimatedMinutes.toDouble(),
@@ -341,7 +341,7 @@ extension on GroupTasksScreen {
                 const SizedBox(height: DS.md),
                 Text(
                   '${I18nService.instance.isChinese ? '难度' : 'Difficulty'}: $difficulty/5',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: DS.fontWeightBold),
                 ),
                 Slider(
                   value: difficulty.toDouble(),

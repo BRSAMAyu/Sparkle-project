@@ -742,7 +742,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                     context.l10n.chatMultiAgentCollab,
                     style: theme.textTheme.titleMedium?.copyWith(
                       color: accent,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ),
@@ -805,7 +805,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                         context.l10n.chatSynthesisSuggestions,
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: accent,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                         ),
                       ),
                     ],
@@ -864,7 +864,7 @@ class MultiAgentCollaborationBubble extends StatelessWidget {
                 Text(
                   contribution.agentName,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     color: _getAgentColor(context, contribution.agentType),
                   ),
                 ),

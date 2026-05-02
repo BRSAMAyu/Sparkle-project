@@ -291,7 +291,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
           dividerColor: Colors.transparent,
           labelColor: DS.textPrimary,
           unselectedLabelColor: DS.textSecondary,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          labelStyle: const TextStyle(fontWeight: DS.fontWeightBold),
         ),
       ),
       floatingActionButton: Tooltip(

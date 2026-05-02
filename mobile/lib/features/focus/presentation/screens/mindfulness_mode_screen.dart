@@ -469,7 +469,7 @@ class _MindfulnessModeScreenState extends ConsumerState<MindfulnessModeScreen>
                   style: TextStyle(
                     color: DS.textPrimary,
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 2,

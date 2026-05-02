@@ -580,7 +580,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
               quotedSender,
               style: TextStyle(
                 fontSize: 10,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: isMe
                     ? DS.neutral0.withValues(alpha: 0.9)
                     : DS.textSecondary,
@@ -675,7 +675,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     Text(
                       context.l10n.communityDailyCheckIn,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         fontSize: 14,
                         color: isMe ? DS.neutral0 : DS.textPrimary,
                       ),
@@ -740,7 +740,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
           Text(
             value,
             style: TextStyle(
-              fontWeight: FontWeight.bold,
+              fontWeight: DS.fontWeightBold,
               fontSize: 16,
               color: isMe ? DS.neutral0 : DS.textPrimary,
             ),
@@ -927,7 +927,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         color: isMe ? DS.neutral0 : DS.textPrimary,
                       ),
                     ),

@@ -139,7 +139,7 @@ class _BarChart extends StatelessWidget {
                   TextStyle(
                     color: DS.neutral0,
                     fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 );
               },

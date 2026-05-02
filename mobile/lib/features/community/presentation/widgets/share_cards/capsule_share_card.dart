@@ -258,10 +258,10 @@ class CapsuleShareCard extends StatelessWidget {
       );
 
   IconData _getTypeIcon() => switch (capsuleType?.toLowerCase()) {
-      '思考' || 'thinking' => Icons.psychology,
-      '反思' || 'reflection' => Icons.auto_stories,
-      '灵感' || 'inspiration' => Icons.lightbulb,
-      '总结' || 'summary' => Icons.summarize,
+      'thinking' || '思考' => Icons.psychology,
+      'reflection' || '反思' => Icons.auto_stories,
+      'inspiration' || '灵感' => Icons.lightbulb,
+      'summary' || '总结' => Icons.summarize,
       _ => Icons.hourglass_empty,
     };
 

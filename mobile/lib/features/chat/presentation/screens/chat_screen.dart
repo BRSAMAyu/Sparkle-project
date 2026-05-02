@@ -2462,7 +2462,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 Text(
                   context.l10n.chatWelcomeTitle,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         color: DS.textPrimary,
                       ),
                 ),

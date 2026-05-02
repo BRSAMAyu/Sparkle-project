@@ -415,7 +415,7 @@ class _PerformanceIndicator extends ConsumerWidget {
                 style: TextStyle(
                   color: summary.statusColor,
                   fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
             ],
@@ -502,7 +502,7 @@ class _GalaxyPerformanceDebugPanelState
                 style: TextStyle(
                   color: DS.neutral0,
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
               const Spacer(),
@@ -518,7 +518,7 @@ class _GalaxyPerformanceDebugPanelState
                   style: TextStyle(
                     color: summary.statusColor,
                     fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ),
@@ -554,7 +554,7 @@ class _GalaxyPerformanceDebugPanelState
               style: TextStyle(
                 color: DS.neutral0.withValues(alpha: 0.7),
                 fontSize: 12,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: 4),
@@ -592,7 +592,7 @@ class _GalaxyPerformanceDebugPanelState
               style: TextStyle(
                 color: DS.neutral0.withValues(alpha: 0.7),
                 fontSize: 12,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: 4),

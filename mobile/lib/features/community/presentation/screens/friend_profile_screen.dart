@@ -120,7 +120,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
                 Text(
                   user.displayName,
                   style: theme.textTheme.headlineSmall
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                      ?.copyWith(fontWeight: DS.fontWeightBold),
                 ),
                 const SizedBox(height: DS.xs),
                 Text(
@@ -295,7 +295,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
               const SizedBox(height: DS.spacing16),
               Text(
                 context.l10n.fpCheckinFrequency,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.xs),
               Wrap(
@@ -389,7 +389,7 @@ class _RelationshipPanel extends StatelessWidget {
                 Text(
                   hasAccountability ? context.l10n.fpAccountabilityRelation : context.l10n.fpFriendRelation,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
               ],
@@ -499,7 +499,7 @@ class _SimplePanel extends StatelessWidget {
                 Text(
                   title,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
               ],

@@ -212,7 +212,6 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(communityEventsStreamProvider);
     final l10n = AppLocalizations.of(context)!;
     final unreadCount = ref.watch(unreadMessageCountProvider);
 
@@ -286,7 +285,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 10,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
               textAlign: TextAlign.center,
             ),

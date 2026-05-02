@@ -197,7 +197,7 @@ class _GrowthPlanCard extends StatelessWidget {
                 style: Theme.of(context)
                     .textTheme
                     .bodyLarge
-                    ?.copyWith(fontWeight: FontWeight.bold),
+                    ?.copyWith(fontWeight: DS.fontWeightBold),
               ),
             ],
           ),

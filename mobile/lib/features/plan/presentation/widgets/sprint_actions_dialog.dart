@@ -136,7 +136,7 @@ class _SprintActionsSheetState extends ConsumerState<_SprintActionsSheet> {
                         Text(
                           l10n.sprintActionsTitle,
                           style: context.sparkleTypography.labelLarge.copyWith(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                         Text(

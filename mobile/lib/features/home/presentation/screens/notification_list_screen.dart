@@ -92,7 +92,7 @@ class NotificationItem extends ConsumerWidget {
           child: ListTile(
             title: Text(
               notification.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: DS.fontWeightBold),
             ),
             subtitle: Text(notification.content),
             trailing: !notification.isRead

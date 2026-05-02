@@ -60,7 +60,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
               cognitive.weeklyPattern ?? '探索未知',
               style: context.sparkleTypography.labelLarge.copyWith(
                 fontSize: dense ? 13 : null,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
               ),
               maxLines: dense ? 2 : (compact ? 3 : 2),

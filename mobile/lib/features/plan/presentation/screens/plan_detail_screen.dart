@@ -2168,7 +2168,7 @@ class _PlanProgressTab extends StatelessWidget {
                         radius: 55,
                         titleStyle: TextStyle(
                           color: DS.textOnPrimary,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                           fontSize: 14,
                         ),
                       ),

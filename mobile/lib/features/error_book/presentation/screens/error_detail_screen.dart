@@ -369,7 +369,7 @@ class ErrorDetailScreen extends ConsumerWidget {
       child: Text(
         title,
         style:
-            theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            theme.textTheme.titleMedium?.copyWith(fontWeight: DS.fontWeightBold),
       ),
     );
   }
@@ -788,7 +788,7 @@ class ErrorDetailScreen extends ConsumerWidget {
             value,
             style: theme.textTheme.headlineSmall?.copyWith(
               color: color,
-              fontWeight: FontWeight.bold,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           const SizedBox(height: 4),

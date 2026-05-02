@@ -83,7 +83,7 @@ class _PurchaseConfirmationDialogState
             Text(
               widget.item.name,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
               textAlign: TextAlign.center,
             ),
@@ -126,7 +126,7 @@ class _PurchaseConfirmationDialogState
                           Text(
                             '${widget.item.pricePhotons}',
                             style: const TextStyle(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                             ),
                           ),
                           if (widget.item.originalPrice != null) ...[
@@ -160,7 +160,7 @@ class _PurchaseConfirmationDialogState
                           Text(
                             '$currentBalance',
                             style: const TextStyle(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                             ),
                           ),
                         ],
@@ -174,7 +174,7 @@ class _PurchaseConfirmationDialogState
                       Expanded(
                         child: Text(
                           context.l10n.shopBalanceAfterPurchase,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: const TextStyle(fontWeight: DS.fontWeightBold),
                         ),
                       ),
                       const SizedBox(width: DS.spacing12),
@@ -189,7 +189,7 @@ class _PurchaseConfirmationDialogState
                           Text(
                             '${currentBalance - widget.item.pricePhotons}',
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                               color: canAfford ? DS.textPrimary : DS.error,
                             ),
                           ),
@@ -224,7 +224,7 @@ class _PurchaseConfirmationDialogState
                           context.l10n.shopInsufficientPhotons,
                           style: TextStyle(
                             color: DS.error,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                       ),

@@ -309,7 +309,7 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
                         style: TextStyle(
                           color: DS.brandPrimaryConst,
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                         ),
                       ),
                       if (task.progressMessage != null)

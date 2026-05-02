@@ -242,7 +242,7 @@ class _ArchitectureAnimationState extends State<ArchitectureAnimation>
                   style: TextStyle(
                     color: DS.brandPrimaryConst,
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 const SizedBox(height: DS.xs),
@@ -393,7 +393,7 @@ class _ArchitecturePainter extends CustomPainter {
         style: TextStyle(
           color: DS.brandPrimary.withValues(alpha: opacity),
           fontSize: 16,
-          fontWeight: FontWeight.bold,
+          fontWeight: DS.fontWeightBold,
           fontFamilyFallback: sparkleFontFallback,
         ),
       ),

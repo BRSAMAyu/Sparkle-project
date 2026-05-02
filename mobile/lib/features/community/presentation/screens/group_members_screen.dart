@@ -302,7 +302,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               trailing: Text(
                 value(m),
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: DS.brandPrimary,
                 ),
               ),
@@ -318,7 +318,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
           title,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.bold,
+            fontWeight: DS.fontWeightBold,
             color: DS.neutral600,
           ),
         ),
@@ -378,7 +378,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                 member.user.displayName,
                 style: TextStyle(
                   fontWeight:
-                      isOwner || isAdmin ? FontWeight.bold : FontWeight.normal,
+                      isOwner || isAdmin ? DS.fontWeightBold : FontWeight.normal,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -396,7 +396,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                   style: TextStyle(
                     fontSize: 10,
                     color: DS.neutral900,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ),
@@ -413,7 +413,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                   style: TextStyle(
                     fontSize: 10,
                     color: DS.brandPrimaryConst,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ),
@@ -571,7 +571,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
           user.displayName.substring(0, 1).toUpperCase(),
           style: TextStyle(
             color: DS.brandPrimaryConst,
-            fontWeight: FontWeight.bold,
+            fontWeight: DS.fontWeightBold,
             fontSize: 20,
           ),
         ),

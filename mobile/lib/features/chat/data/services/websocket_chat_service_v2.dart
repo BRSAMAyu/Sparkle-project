@@ -1669,11 +1669,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       // 启动心跳
       _startHeartbeat();
 
-      // Restore pending messages from offline DB (R3 O-01)
-      unawaited(_restorePendingFromDb());
-
-      // 发送待发送的消息
-      _flushPendingMessages();
+      // Restore pending messages from offline DB, then flush all pending
+      // (must complete DB restore before flush to avoid message ordering issues)
+      _restorePendingFromDb().then((_) => _flushPendingMessages());
 
       _log('✅ WebSocket connected');
     } catch (e) {
@@ -1903,6 +1901,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         .then((_) => _handleIncomingMessage(data))
         .catchError((Object error, StackTrace stackTrace) {
       _log('❌ Incoming message queue error: $error');
+      _broadcastErrorToActiveRequests(ErrorEvent(
+        code: 'MESSAGE_PARSE_ERROR',
+        message: '消息解析失败 / Failed to parse incoming message',
+        retryable: false,
+      ));
     });
   }
 

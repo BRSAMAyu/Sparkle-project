@@ -461,46 +461,47 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		logger,
 	)
 
+	// Health endpoints outside rate-limited group for reliable monitoring access
+	r.GET("/api/v1/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "ok",
+			"ready":  "/ready",
+			"live":   "/live",
+		})
+	})
+	r.GET("/api/v1/health/cqrs", func(c *gin.Context) {
+		outboxPendingCount, err := cqrs.outboxRepo.GetPendingCount(context.Background())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "error",
+				"error":  err.Error(),
+			})
+			return
+		}
+
+		commRunning := cqrs.commSyncWorker.IsRunning()
+		taskRunning := cqrs.taskSyncWorker.IsRunning()
+		galaxyRunning := cqrs.galaxySyncWorker.IsRunning()
+
+		c.JSON(http.StatusOK, gin.H{
+			"status": "healthy",
+			"components": gin.H{
+				"outbox_publisher": gin.H{
+					"pending_events": outboxPendingCount,
+				},
+				"workers": gin.H{
+					"community": commRunning,
+					"task":      taskRunning,
+					"galaxy":    galaxyRunning,
+				},
+			},
+		})
+	})
+
 	api := r.Group("/api/v1")
 	api.Use(apiRateLimit)
 	api.Use(middleware.TimeoutMiddleware(time.Duration(requestTimeout) * time.Second))
 	{
-		api.GET("/health", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"status": "ok",
-				"ready":  "/ready",
-				"live":   "/live",
-			})
-		})
-		api.GET("/health/cqrs", func(c *gin.Context) {
-			outboxPendingCount, err := cqrs.outboxRepo.GetPendingCount(context.Background())
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"status": "error",
-					"error":  err.Error(),
-				})
-				return
-			}
-
-			commRunning := cqrs.commSyncWorker.IsRunning()
-			taskRunning := cqrs.taskSyncWorker.IsRunning()
-			galaxyRunning := cqrs.galaxySyncWorker.IsRunning()
-
-			c.JSON(http.StatusOK, gin.H{
-				"status": "healthy",
-				"components": gin.H{
-					"outbox_publisher": gin.H{
-						"pending_events": outboxPendingCount,
-					},
-					"workers": gin.H{
-						"community": commRunning,
-						"task":      taskRunning,
-						"galaxy":    galaxyRunning,
-					},
-				},
-			})
-		})
-
 		api.POST("/auth/apple", authRateLimit, handlers.authHandler.AppleLogin)
 		api.POST(
 			"/ws/ticket",

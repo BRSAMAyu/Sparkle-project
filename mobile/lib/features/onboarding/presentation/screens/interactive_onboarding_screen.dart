@@ -251,7 +251,7 @@ class _InteractiveOnboardingScreenState
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 32,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: DS.lg),
@@ -331,7 +331,7 @@ class _InteractiveOnboardingScreenState
                     style: TextStyle(
                       color: DS.brandPrimaryConst,
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   Text(
@@ -360,7 +360,7 @@ class _InteractiveOnboardingScreenState
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 28,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: DS.lg),
@@ -443,7 +443,7 @@ class _InteractiveOnboardingScreenState
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 28,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: DS.lg),
@@ -521,7 +521,7 @@ class _InteractiveOnboardingScreenState
                 style: TextStyle(
                   color: DS.brandPrimaryConst,
                   fontSize: 28,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                 ),
                 ),
               ),
@@ -620,7 +620,7 @@ class _InteractiveOnboardingScreenState
                         style: TextStyle(
                           color: DS.brandPrimaryConst,
                           fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                         ),
                       ),
                       Text(
@@ -717,7 +717,7 @@ class _InteractiveOnboardingScreenState
                     style: TextStyle(
                       color: DS.brandPrimaryConst,
                       fontSize: 16,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   Text(
@@ -851,7 +851,7 @@ class _InteractiveOnboardingScreenState
                     style: TextStyle(
                       color: color,
                       fontSize: 10,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   Text(

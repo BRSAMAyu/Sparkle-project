@@ -323,7 +323,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(context.l10n.seedLibraryCategory,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                  style: const TextStyle(fontWeight: DS.fontWeightBold)),
               const SizedBox(height: DS.spacing8),
               Wrap(
                 spacing: DS.spacing8,
@@ -342,7 +342,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
               ),
               const SizedBox(height: DS.spacing16),
               Text(context.l10n.seedLibraryVisibility,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+                  style: const TextStyle(fontWeight: DS.fontWeightBold)),
               const SizedBox(height: DS.spacing8),
               Wrap(
                 spacing: DS.spacing8,

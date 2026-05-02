@@ -207,7 +207,7 @@ class SectorBackgroundPainter extends CustomPainter {
         style: TextStyle(
           color: style.glowColor.withValues(alpha: 0.9), // Higher opacity
           fontSize: 16, // Smaller but clearer
-          fontWeight: FontWeight.bold,
+          fontWeight: DS.fontWeightBold,
           letterSpacing: 1.5,
           fontFamilyFallback: sparkleFontFallback,
           shadows: [

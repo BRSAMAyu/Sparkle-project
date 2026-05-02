@@ -186,7 +186,7 @@ class TitleSelector extends ConsumerWidget {
                   style: TextStyle(
                     color: isEquipped ? DS.brandPrimary : DS.textSecondary,
                     fontWeight:
-                        isEquipped ? FontWeight.bold : FontWeight.normal,
+                        isEquipped ? DS.fontWeightBold : FontWeight.normal,
                   ),
                 ),
               ),
@@ -214,7 +214,7 @@ class TitleSelector extends ConsumerWidget {
                   titleText,
                   style: TextStyle(
                     fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     color: isEquipped ? DS.brandPrimary : DS.textPrimary,
                   ),
                 ),

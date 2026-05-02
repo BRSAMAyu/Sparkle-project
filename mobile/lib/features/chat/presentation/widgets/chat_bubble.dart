@@ -2225,7 +2225,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
             msg.sender.displayName,
             style: TextStyle(
               fontSize: 11,
-              fontWeight: FontWeight.bold,
+              fontWeight: DS.fontWeightBold,
               color: senderColor,
             ),
           ),
@@ -2412,7 +2412,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                     initial,
                     style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                       color: isUser ? DS.onBrandPrimary : DS.onBrandPrimary,
                     ),
                   ),

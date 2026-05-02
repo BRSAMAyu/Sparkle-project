@@ -238,7 +238,7 @@ class _SmartPushSettingsScreenState
         style: Theme.of(context)
             .textTheme
             .titleMedium
-            ?.copyWith(fontWeight: FontWeight.bold),
+            ?.copyWith(fontWeight: DS.fontWeightBold),
       );
 
   Widget _buildPersonaSelector(AppLocalizations l10n) => Row(
@@ -315,7 +315,7 @@ class _SmartPushSettingsScreenState
                   : colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: DS.sm),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(label, style: const TextStyle(fontWeight: DS.fontWeightBold)),
             const SizedBox(height: DS.xs),
             Text(
               description,
@@ -338,7 +338,7 @@ class _SmartPushSettingsScreenState
               Text(
                 l10n.smartPushFrequencyLabel(_dailyCap),
                 style: const TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   fontSize: 18,
                 ),
               ),

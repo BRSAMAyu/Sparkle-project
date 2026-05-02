@@ -2247,7 +2247,7 @@ class _TaskExitConfirmationDialogState
                         style: TextStyle(
                           color: DS.neutral900,
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                         ),
                         textAlign: TextAlign.center,
                       ),

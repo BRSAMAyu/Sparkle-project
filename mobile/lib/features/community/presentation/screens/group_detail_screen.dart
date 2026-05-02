@@ -235,7 +235,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   context.l10n.gdSprintCountdown(group.daysRemaining ?? 0),
                   style: TextStyle(
                     color: DS.error,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ),
@@ -295,7 +295,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           Text(
             context.l10n.gdAbout,
             style: theme.textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
+                ?.copyWith(fontWeight: DS.fontWeightBold),
           ),
           const SizedBox(height: DS.sm),
           Text(
@@ -332,7 +332,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                 child: Text(
                   context.l10n.gdAnnouncement,
                   style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                      ?.copyWith(fontWeight: DS.fontWeightBold),
                 ),
               ),
               if (group.isAdmin)
@@ -448,7 +448,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
               value,
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
               ),
             ),
@@ -494,7 +494,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   context.l10n.gdLeaveGroup,
                   style: TextStyle(
                     color: DS.error,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 onTap: () async {

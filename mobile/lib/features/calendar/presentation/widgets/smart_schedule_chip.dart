@@ -282,7 +282,7 @@ class _TimeSuggestionSheet extends StatelessWidget {
                   '智能时间建议',
                   style: TextStyle(
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     color: DS.textPrimary,
                   ),
                 ),

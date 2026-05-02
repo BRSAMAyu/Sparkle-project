@@ -196,8 +196,8 @@ class SparkleMarkdown extends StatelessWidget {
 
     return MarkdownStyleSheet(
       p: base,
-      h1: base.copyWith(fontSize: fontSize + 8, fontWeight: FontWeight.bold),
-      h2: base.copyWith(fontSize: fontSize + 6, fontWeight: FontWeight.bold),
+      h1: base.copyWith(fontSize: fontSize + 8, fontWeight: DS.fontWeightBold),
+      h2: base.copyWith(fontSize: fontSize + 6, fontWeight: DS.fontWeightBold),
       h3: base.copyWith(fontSize: fontSize + 4, fontWeight: FontWeight.w600),
       h4: base.copyWith(fontSize: fontSize + 2, fontWeight: FontWeight.w600),
       h5: base.copyWith(fontSize: fontSize + 1, fontWeight: FontWeight.w600),

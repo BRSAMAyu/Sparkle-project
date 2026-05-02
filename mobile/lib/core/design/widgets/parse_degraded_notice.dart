@@ -30,7 +30,7 @@ class ParseDegradedNotice extends StatelessWidget {
                   Text(
                     l10n.commonOperationWarning,
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                       color: DS.brandPrimary.shade900,
                     ),
                   ),

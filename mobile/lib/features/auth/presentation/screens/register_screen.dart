@@ -126,7 +126,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                 .textTheme
                                 .headlineSmall
                                 ?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: DS.fontWeightBold,
                                   color:
                                       Theme.of(context).colorScheme.secondary,
                                 ),

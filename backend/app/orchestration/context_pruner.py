@@ -326,7 +326,7 @@ context_pruner_instance = None
 
 def get_context_pruner(
     redis_client: redis.Redis | None = None,
-    **kwargs
+    **kwargs,
 ) -> ContextPruner:
     global context_pruner_instance
 
@@ -334,5 +334,8 @@ def get_context_pruner(
         if redis_client is None:
             raise ValueError("Redis client is required for first initialization")
         context_pruner_instance = ContextPruner(redis_client, **kwargs)
+    elif redis_client is not None and context_pruner_instance.redis is not redis_client:
+        # Re-initialize with new Redis client on reconnection
+        context_pruner_instance.redis = redis_client
 
     return context_pruner_instance

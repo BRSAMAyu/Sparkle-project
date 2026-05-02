@@ -50,7 +50,7 @@ class EngagementHeatmap extends StatelessWidget {
                           '学习活跃度',
                           style: TextStyle(
                             fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                         Text(
@@ -177,7 +177,7 @@ class EngagementHeatmap extends StatelessWidget {
           const SizedBox(height: DS.xs),
           Text(
             value,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 16, fontWeight: DS.fontWeightBold),
           ),
           Text(
             label,

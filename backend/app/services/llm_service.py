@@ -598,7 +598,8 @@ class LLMService:
                     response = await _call_with_selection(
                         type('obj', (object,), {'config': type('obj', (object,), {
                             'model_name': model,
-                            'provider': type('obj', (object,), {'value': self._get_provider_name_from_url(), 'temperature': temperature})
+                            'temperature': temperature,
+                            'provider': type('obj', (object,), {'value': self._get_provider_name_from_url()})
                         })})
                     )
                     await circuit_breaker_service.record_success("primary_llm")

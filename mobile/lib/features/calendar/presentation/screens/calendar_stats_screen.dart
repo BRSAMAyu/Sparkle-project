@@ -245,7 +245,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               context.l10n.calendarTitle,
               style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
               ),
             ),
@@ -367,7 +367,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                         _formatMonthLabel(index + 1),
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                           color: isCurrentMonth
                               ? DS.textPrimary
                               : DS.textSecondary,
@@ -422,7 +422,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                       : isDark
                           ? DS.textSecondary
                           : DS.textPrimary,
-                  fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: isToday ? DS.fontWeightBold : FontWeight.normal,
                 ),
               ),
             );
@@ -569,7 +569,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                       style: TextStyle(
                         color: textColor,
                         fontSize: 8,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -656,7 +656,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   : isToday
                       ? DS.primaryBase
                       : DS.textPrimary,
-              fontWeight: FontWeight.bold,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           if (lunarData.isFestival || lunarData.term.isNotEmpty)
@@ -667,7 +667,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 color: isSelected
                     ? DS.textOnPrimary.withValues(alpha: 0.7)
                     : DS.warning,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -708,7 +708,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   ),
                   style: TextStyle(
                     color: DS.brandPrimary70Const,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 SparkleButton.ghost(
@@ -925,7 +925,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   I18nService.instance.isChinese ? '学习热力' : 'Learning Heatmap',
                   style: TextStyle(
                     color: DS.textPrimary,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     fontSize: 16,
                   ),
                 ),
@@ -981,7 +981,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                       : 'Monthly Highlights',
                   style: TextStyle(
                     color: DS.textPrimary,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     fontSize: 16,
                   ),
                 ),
@@ -1043,7 +1043,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 style: TextStyle(
                   color: DS.textPrimary,
                   fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
               const SizedBox(height: DS.spacing4),
@@ -1517,7 +1517,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                               : 'Edit Event'),
                       style: TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         color: DS.textPrimary,
                       ),
                     ),
@@ -1616,7 +1616,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                       Formatters.formatDateTime(_startTime),
                       style: TextStyle(
                         color: DS.textPrimary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ],
@@ -1648,7 +1648,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                       Formatters.formatDateTime(_endTime),
                       style: TextStyle(
                         color: DS.textPrimary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ],

@@ -146,7 +146,7 @@ class _BonfireWidgetState extends State<BonfireWidget>
                     'Lv.${widget.level}',
                     style: TextStyle(
                       color: baseColor,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                       fontSize: 12,
                     ),
                   ),

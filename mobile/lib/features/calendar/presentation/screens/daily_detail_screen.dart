@@ -203,7 +203,7 @@ class DailyDetailScreen extends ConsumerWidget {
                       plan.name,
                       style: TextStyle(
                         color: DS.brandPrimaryConst,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         fontSize: 14,
                       ),
                     ),
@@ -432,7 +432,7 @@ class DailyDetailScreen extends ConsumerWidget {
               '${date.day}',
               style: TextStyle(
                 fontSize: 48,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
               ),
             ),
@@ -509,7 +509,7 @@ class DailyDetailScreen extends ConsumerWidget {
               value,
               style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
               ),
             ),
@@ -543,7 +543,7 @@ class DailyDetailScreen extends ConsumerWidget {
                 context.l10n.dailyDetailPrismTitle,
                 style: TextStyle(
                   color: DS.textPrimary,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
             ],
@@ -580,7 +580,7 @@ class DailyDetailScreen extends ConsumerWidget {
             style: TextStyle(
               color: DS.textPrimary,
               fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
         ],
@@ -631,7 +631,7 @@ class DailyDetailScreen extends ConsumerWidget {
                       event.title,
                       style: TextStyle(
                         color: DS.textPrimary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                     const SizedBox(height: DS.xs),
@@ -784,7 +784,7 @@ class DailyDetailScreen extends ConsumerWidget {
                       I18nService.instance.isChinese ? '编辑日程' : 'Edit Schedule',
                       style: TextStyle(
                         color: DS.textPrimary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         fontSize: 18,
                       ),
                     ),

@@ -213,7 +213,7 @@ class _SchedulePreferencesScreenState
                             I18nService.instance.isChinese ? '专注时段偏好' : 'Focus Period Preference',
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                               color: DS.brandPrimary,
                             ),
                           ),
@@ -254,7 +254,7 @@ class _SchedulePreferencesScreenState
                             I18nService.instance.isChinese ? '任务时长偏好' : 'Task Duration Preference',
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                               color: DS.brandPrimary,
                             ),
                           ),
@@ -503,7 +503,7 @@ class _SchedulePreferencesScreenState
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(label, style: const TextStyle(fontWeight: DS.fontWeightBold)),
           const SizedBox(height: DS.sm),
           Row(
             children: [

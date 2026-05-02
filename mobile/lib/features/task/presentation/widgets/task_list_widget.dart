@@ -57,7 +57,7 @@ class _TaskListWidgetState extends State<TaskListWidget> {
             Text(
               context.l10n.taskBatchCreateTitle(widget.tasks.length),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: 10),

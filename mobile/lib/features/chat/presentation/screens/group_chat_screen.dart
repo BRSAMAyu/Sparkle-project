@@ -122,7 +122,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                 Text(
                   context.l10n.chatGroupForwardToGroup,
                   style: TextStyle(
-                      fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg,),
+                      fontWeight: DS.fontWeightBold, fontSize: DS.fontSizeLg,),
                 ),
                 const SizedBox(height: DS.spacing16),
                 SizedBox(
@@ -197,7 +197,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                   Text(
                     context.l10n.chatGroupReportMessage,
                     style: TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: DS.fontSizeLg,),
+                        fontWeight: DS.fontWeightBold, fontSize: DS.fontSizeLg,),
                   ),
                   const SizedBox(height: DS.spacing8),
                   RadioGroup<ReportReason>(

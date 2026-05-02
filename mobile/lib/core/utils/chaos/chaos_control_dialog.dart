@@ -99,7 +99,7 @@ class _ChaosControlDialogState extends State<ChaosControlDialog> {
         children: [
           Text(
             '队列水位: $_queueLength / $_currentThreshold',
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: const TextStyle(fontWeight: DS.fontWeightBold),
           ),
           const SizedBox(height: DS.sm),
           LinearProgressIndicator(

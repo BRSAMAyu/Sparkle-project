@@ -95,7 +95,7 @@ class _PlanCardState extends State<PlanCard> {
                         payload.title,
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: DS.fontWeightBold,
                                 ),
                         maxLines: widget.compact ? 2 : 1,
                         overflow: TextOverflow.ellipsis,

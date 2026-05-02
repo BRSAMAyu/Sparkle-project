@@ -100,7 +100,7 @@ class SparkleAvatar extends StatelessWidget {
                       style: TextStyle(
                         color: DS.brandPrimaryConst,
                         fontSize: radius * 0.3,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ],
@@ -125,7 +125,7 @@ class SparkleAvatar extends StatelessWidget {
           style: TextStyle(
             color: DS.avatarFallbackForeground,
             fontSize: radius * 0.8,
-            fontWeight: FontWeight.bold,
+            fontWeight: DS.fontWeightBold,
           ),
         ),
       );

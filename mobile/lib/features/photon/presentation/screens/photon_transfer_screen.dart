@@ -107,7 +107,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                             style: TextStyle(
                               color: DS.neutral0,
                               fontSize: 28,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                             ),
                           ),
                         ],
@@ -128,7 +128,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                     Text(
                       context.l10n.ptRecipientId,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                     const SizedBox(height: 8),
@@ -161,7 +161,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                     Text(
                       context.l10n.ptAmount,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                     const SizedBox(height: 8),
@@ -218,7 +218,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
                     Text(
                       context.l10n.ptMessageOptional,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                           ),
                     ),
                     const SizedBox(height: 8),

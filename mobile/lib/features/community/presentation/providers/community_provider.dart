@@ -28,6 +28,13 @@ final _wsTokenProvider = FutureProvider.autoDispose<String?>((ref) async {
   return authRepo.getAccessToken();
 });
 
+// Singleton WebSocketService for community events — survives provider rebuilds
+final _communityWebSocketProvider = Provider<WebSocketService>((ref) {
+  final wsService = WebSocketService();
+  ref.onDispose(() => wsService.disconnect());
+  return wsService;
+});
+
 // Global Community Events Stream
 final communityEventsStreamProvider =
     Provider.autoDispose<Stream<dynamic>>((ref) {
@@ -37,7 +44,7 @@ final communityEventsStreamProvider =
     return const Stream.empty();
   }
 
-  final wsService = WebSocketService();
+  final wsService = ref.watch(_communityWebSocketProvider);
   final tokenAsync = ref.watch(_wsTokenProvider);
 
   final token = tokenAsync.valueOrNull;
@@ -58,8 +65,6 @@ final communityEventsStreamProvider =
     debugPrint('WS Connect Error: $e');
     return const Stream.empty();
   }
-
-  ref.onDispose(wsService.disconnect);
 
   return wsService.stream;
 });

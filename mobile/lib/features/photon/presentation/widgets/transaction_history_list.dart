@@ -273,7 +273,7 @@ class _TransactionItem extends StatelessWidget {
                   style: TextStyle(
                     color: isIncome ? DS.success : DS.warning,
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 const SizedBox(height: 4),

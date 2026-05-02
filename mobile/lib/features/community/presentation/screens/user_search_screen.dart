@@ -214,7 +214,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                               style: TextStyle(
                                 color: DS.warning.shade700,
                                 fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: DS.fontWeightBold,
                               ),
                             ),
                           ),

@@ -188,7 +188,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                       ),
                       style: TextStyle(
                         color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         fontSize: 12,
                       ),
                     ),
@@ -232,7 +232,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: theme.colorScheme.secondary,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                           fontSize: 12,
                         ),
                       ),
@@ -345,7 +345,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               style: TextStyle(
                 color: DS.textOnPrimary,
                 fontSize: 11,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
           );

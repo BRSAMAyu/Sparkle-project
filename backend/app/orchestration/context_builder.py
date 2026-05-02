@@ -11,10 +11,12 @@ This is a *mixin* -- it relies on attributes that live on the concrete
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import uuid
 from datetime import UTC, datetime, timedelta
+from app.core.time_utils import utcnow
 from typing import Any
 
 from google.protobuf.json_format import MessageToDict
@@ -51,15 +53,9 @@ from app.state_aggregator.service import StateAggregatorService
 # Helpers (duplicated from orchestrator to avoid circular imports)
 # ---------------------------------------------------------------------------
 
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
 # ---------------------------------------------------------------------------
 # Mixin
 # ---------------------------------------------------------------------------
-
 
 class ContextBuilderMixin:
     """Mixin providing context building methods for ChatOrchestrator."""
@@ -360,7 +356,7 @@ class ContextBuilderMixin:
                 select(func.count(Task.id)).where(
                     Task.user_id == uuid.UUID(user_id),
                     Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
-                    Task.due_date < _utcnow(),
+                    Task.due_date < utcnow(),
                 )
             )
             overdue = result.scalar() or 0
@@ -426,7 +422,7 @@ class ContextBuilderMixin:
                     key=lambda item: item.last_observed_at or item.created_at or datetime.min,
                 )
                 observed_at = most_recent.last_observed_at or most_recent.created_at
-                if observed_at and observed_at >= _utcnow() - timedelta(days=7):
+                if observed_at and observed_at >= utcnow() - timedelta(days=7):
                     recent_observation = {
                         "pattern_name": present_pattern_name(most_recent.pattern_name),
                         "observed_at": observed_at.isoformat(),
@@ -516,7 +512,7 @@ class ContextBuilderMixin:
             state = await StateAggregatorService(db_session).get_user_state(
                 uuid.UUID(user_id),
                 required_fields=("working_memory_snapshot",),
-                now=_utcnow(),
+                now=utcnow(),
             )
         except Exception as exc:
             logger.warning(f"Failed to build stage33 working memory snapshot for {user_id}: {exc}")
@@ -763,19 +759,19 @@ class ContextBuilderMixin:
                     for plan in plans
                 ]
 
-                # P0: 认知棱镜上下文注入
-                cognitive_insights = await self._get_cognitive_insights(user_id, db_session, locale=locale)
-
-                # P1: 种子库 few-shot 示例注入
-                seed_library_context = await self._get_seed_library_context(user_id, db_session)
-                learning_gaps_summary = await self._build_learning_gaps_summary(user_id, db_session)
-                working_memory_snapshot = await self._build_stage33_working_memory_snapshot(
-                    user_id,
-                    db_session,
-                )
-                recent_tool_usage = await self._get_recent_tool_usage_context(
-                    user_id=user_id,
-                    db_session=db_session,
+                # P0: 认知棱镜上下文注入 — parallel queries
+                (
+                    cognitive_insights,
+                    seed_library_context,
+                    learning_gaps_summary,
+                    working_memory_snapshot,
+                    recent_tool_usage,
+                ) = await asyncio.gather(
+                    self._get_cognitive_insights(user_id, db_session, locale=locale),
+                    self._get_seed_library_context(user_id, db_session),
+                    self._build_learning_gaps_summary(user_id, db_session),
+                    self._build_stage33_working_memory_snapshot(user_id, db_session),
+                    self._get_recent_tool_usage_context(user_id=user_id, db_session=db_session),
                 )
 
                 profile_payload = self._build_profile_payload(
@@ -1041,7 +1037,7 @@ class ContextBuilderMixin:
             if last_message_at is None:
                 return None
 
-            silence_gap = _utcnow() - last_message_at
+            silence_gap = utcnow() - last_message_at
             if silence_gap < timedelta(minutes=30):
                 AURORA_RETURNING_CONTEXT_TIER_TOTAL.labels(tier="silent_resume").inc()
                 return {
@@ -1070,7 +1066,7 @@ class ContextBuilderMixin:
                     Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
                     Task.due_date.is_not(None),
                     Task.due_date >= last_message_at.date(),
-                    Task.due_date <= _utcnow().date(),
+                    Task.due_date <= utcnow().date(),
                 )
             )
             overdue_count = int(overdue_result.scalar() or 0)

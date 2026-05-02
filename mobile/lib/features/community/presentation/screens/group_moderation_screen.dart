@@ -193,7 +193,7 @@ class _GroupModerationScreenState
                           children: [
                             Text('Slow Mode',
                                 style: TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: DS.fontWeightBold,
                                     fontSize: DS.fontSizeBase,),),
                             const Spacer(),
                             Switch(
@@ -250,7 +250,7 @@ class _GroupModerationScreenState
                         children: [
                         Text('Keyword Filter',
                             style: TextStyle(
-                                fontWeight: FontWeight.bold,
+                                fontWeight: DS.fontWeightBold,
                                 fontSize: DS.fontSizeBase,),),
                         const SizedBox(height: DS.spacing8),
                         Text(

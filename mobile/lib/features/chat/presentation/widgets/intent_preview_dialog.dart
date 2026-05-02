@@ -97,7 +97,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                 context.l10n.intentPreviewTitle,
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: DS.textPrimary,
                 ),
               ),
@@ -260,7 +260,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                     '#$index',
                     style: TextStyle(
                       color: DS.onBrandPrimary,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ),

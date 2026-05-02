@@ -56,7 +56,7 @@ class SeedLibraryCard extends StatelessWidget {
                                 .textTheme
                                 .titleMedium
                                 ?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: DS.fontWeightBold,
                                 ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -162,7 +162,7 @@ class SeedLibraryCard extends StatelessWidget {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: DS.fontWeightBold,
                                   color: DS.warningLight,
                                 ),
                           ),

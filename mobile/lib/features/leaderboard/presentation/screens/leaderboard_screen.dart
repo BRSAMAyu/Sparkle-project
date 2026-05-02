@@ -205,7 +205,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                           : '?',
                       style: TextStyle(
                         color: color,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         fontSize: 24,
                       ),
                     ),
@@ -233,7 +233,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                 Text(
                   entry.username,
                   style: const TextStyle(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     fontSize: 12,
                   ),
                   maxLines: 1,
@@ -271,7 +271,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               child: Text(
                 context.l10n.leaderboardMyRank(leaderboard.myRank!),
                 style: const TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   fontSize: 16,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -286,7 +286,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                   : '-',
               style: const TextStyle(
                 fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
           ],
@@ -305,7 +305,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                   entry.rank.toString(),
                   style: TextStyle(
                     color: DS.textOnPrimary,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 )
               : null,
@@ -313,7 +313,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         title: Text(
           entry.username,
           style: TextStyle(
-            fontWeight: entry.isMe ? FontWeight.bold : FontWeight.normal,
+            fontWeight: entry.isMe ? DS.fontWeightBold : FontWeight.normal,
           ),
         ),
         trailing: Row(
@@ -328,7 +328,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
             Text(
               entry.scoreLabel,
               style: const TextStyle(
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
           ],

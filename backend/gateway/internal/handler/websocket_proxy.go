@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"regexp"
 	"net/url"
 	"sync"
 	"sync/atomic"
@@ -106,6 +107,12 @@ func (p *WebSocketProxy) HandleCommunityWS(c *gin.Context) {
 	}
 	groupID := c.Param("group_id")
 	userID := c.GetString("user_id")
+
+	// Validate groupID is a UUID to prevent path traversal
+	if !isValidUUID(groupID) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid group ID format"})
+		return
+	}
 
 	// Security: Require authenticated user from middleware
 	if userID == "" {
@@ -562,6 +569,12 @@ func buildBackendWebSocketHeaders(r *http.Request, authToken string) http.Header
 func hashUserIDForLog(userID string) string {
 	sum := sha256.Sum256([]byte(userID))
 	return hex.EncodeToString(sum[:])[:12]
+}
+
+var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
+
+func isValidUUID(s string) bool {
+	return uuidPattern.MatchString(s)
 }
 
 func sanitizeCommunityWSTextPayload(data []byte) []byte {

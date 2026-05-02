@@ -718,7 +718,7 @@ class _SeedLibraryDetailScreenState
           Text(
             value,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(width: 2),

@@ -214,7 +214,7 @@ class ReviewPerformanceBottomSheet extends StatelessWidget {
             Text(
               context.l10n.ebReviewMasterySheetTitle,
               style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
               textAlign: TextAlign.center,
             ),

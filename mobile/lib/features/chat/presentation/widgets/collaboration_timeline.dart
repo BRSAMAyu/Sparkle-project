@@ -98,7 +98,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                   context.l10n.chatCollabTimelineTitle,
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     color: DS.prismPurple,
                   ),
                 ),
@@ -237,7 +237,7 @@ class _AgentCollaborationTimelineState extends State<AgentCollaborationTimeline>
                 Text(
                   step.agentName,
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     color: step.agentColor,
                     fontSize: 14,
                   ),

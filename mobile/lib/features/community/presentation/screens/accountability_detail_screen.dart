@@ -90,7 +90,7 @@ class _AccountabilityDetailScreenState
                 Text(
                   context.l10n.accountabilityDashboardLoadFailed,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: DS.spacing8),
@@ -471,7 +471,7 @@ class _DashboardView extends StatelessWidget {
               const SizedBox(height: DS.spacing16),
               Text(
                 context.l10n.accountabilityRecentCheckins,
-                style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.spacing8),
               if (dashboard.timeline.isEmpty)
@@ -567,7 +567,7 @@ class _DashboardHero extends StatelessWidget {
                           Text(
                             partnerName,
                             style: DS.titleLarge.copyWith(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -595,7 +595,7 @@ class _DashboardHero extends StatelessWidget {
                                 Text(
                                   '${relationshipSummary['total_checkins'] ?? stats.totalCheckins}',
                                   style: DS.titleLarge.copyWith(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: DS.fontWeightBold,
                                   ),
                                 ),
                                 Text(
@@ -742,7 +742,7 @@ class _InactiveDashboardView extends StatelessWidget {
                 isPending
                     ? context.l10n.accountabilityInvitePending
                     : context.l10n.accountabilityDashboardUnavailable,
-                style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.spacing8),
               Text(
@@ -861,7 +861,7 @@ class _PersonStat extends StatelessWidget {
                   name,
                   style: TextStyle(
                     color: DS.brandPrimary,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ),
@@ -887,7 +887,7 @@ class _PersonStat extends StatelessWidget {
             ],
           ),
           const SizedBox(height: DS.xs),
-          Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(name, style: const TextStyle(fontWeight: DS.fontWeightBold)),
           Text(
             context.l10n.accountabilityStreakDays(streakDays),
             style: TextStyle(fontSize: DS.fontSizeXs, color: DS.brandPrimary),
@@ -911,7 +911,7 @@ class _GoalPanel extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 fontSize: DS.fontSizeSm,
                 color: DS.textSecondary,
               ),
@@ -950,7 +950,7 @@ class _PendingPoliciesCard extends StatelessWidget {
               Text(
                 context.l10n.accountabilityPendingPolicies,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
             ],
@@ -1002,7 +1002,7 @@ class _RecentReflectionsCard extends StatelessWidget {
               Text(
                 context.l10n.accountabilityRecentReflections,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
             ],
@@ -1078,7 +1078,7 @@ class _ForesightHintCard extends StatelessWidget {
               Text(
                 context.l10n.accountabilityForesightHint,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
             ],
@@ -1149,7 +1149,7 @@ class _SectionCard extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing12),
@@ -1255,7 +1255,7 @@ class _CheckinTile extends ConsumerWidget {
               Text(
                 authorName,
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: isMe ? DS.brandPrimary : DS.textPrimary,
                   fontSize: DS.fontSizeSm,
                 ),
@@ -1471,7 +1471,7 @@ class _AccountabilityCheckinSheetState
               Text(
                 context.l10n.accountabilityCheckInToday,
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   fontSize: DS.fontSizeLg,
                 ),
               ),
@@ -1488,7 +1488,7 @@ class _AccountabilityCheckinSheetState
               const SizedBox(height: DS.spacing16),
               Text(
                 context.l10n.accountabilityTodayMood,
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.sm),
               Row(
@@ -1542,7 +1542,7 @@ class _AccountabilityCheckinSheetState
               const SizedBox(height: DS.spacing16),
               Text(
                 context.l10n.accountabilityInvestedTime(_minutes),
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: DS.fontWeightBold),
               ),
               Slider(
                 value: _minutes.toDouble(),

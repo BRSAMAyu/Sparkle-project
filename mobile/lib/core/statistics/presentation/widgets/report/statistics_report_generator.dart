@@ -152,7 +152,7 @@ class StatisticsReportGenerator {
         style: TextStyle(
           color: config.resolvedPrimaryColor,
           fontSize: 56 * config.pixelRatio,
-          fontWeight: FontWeight.bold,
+          fontWeight: DS.fontWeightBold,
           fontFamilyFallback: sparkleFontFallback,
         ),
       ),
@@ -369,7 +369,7 @@ class _ReportPreviewWidgetState extends State<ReportPreviewWidget> {
               style: TextStyle(
                 color: widget.config.resolvedPrimaryColor,
                 fontSize: 28,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: DS.sm),

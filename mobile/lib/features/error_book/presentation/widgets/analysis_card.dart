@@ -233,7 +233,7 @@ class AnalysisCard extends StatelessWidget {
                           '• ',
                           style: TextStyle(
                             color: iconColor,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                         Expanded(

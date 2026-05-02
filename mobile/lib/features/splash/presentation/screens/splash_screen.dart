@@ -48,7 +48,7 @@ class SplashScreen extends ConsumerWidget {
                     'Sparkle',
                     style: TextStyle(
                       fontSize: 34,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                       color: Theme.of(context).colorScheme.secondary,
                       letterSpacing: 1.2,
                     ),
