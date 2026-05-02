@@ -12,6 +12,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
 import 'package:sparkle/features/community/presentation/widgets/feed_post_card.dart';
+import 'package:sparkle/features/experience/presentation/widgets/community_accountability_hub_card.dart';
 
 /// Selected feed filter index (0 = Global, 1 = My Squad, 2 = Following)
 final _communityFeedFilterProvider = StateProvider<int>((ref) => 0);
@@ -166,6 +167,11 @@ class CommunityScreen extends ConsumerWidget {
                 fontSize: 12,
               ),
             ),
+          ),
+          CommunityAccountabilityHubCard(
+            onCreateCommitment: () =>
+                context.push(CommunityRoutes.accountability),
+            onFindPartners: () => context.push(CommunityRoutes.friends),
           ),
         ],
       ),

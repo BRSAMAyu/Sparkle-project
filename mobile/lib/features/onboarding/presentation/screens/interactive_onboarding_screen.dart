@@ -10,6 +10,7 @@ import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
+import 'package:sparkle/features/home/presentation/widgets/understanding_panel.dart';
 import 'package:sparkle/features/onboarding/presentation/widgets/architecture_animation.dart';
 
 /// 交互式引导流程 - Week 7
@@ -125,81 +126,81 @@ class _InteractiveOnboardingScreenState
           trackOverride: BgmTrack.dashboard,
         ),
         child: Scaffold(
-        backgroundColor: DS.deepSpaceStart,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Skip button
-              if (_currentPage < _totalPages - 1)
-                Align(
-                  alignment: Alignment.topRight,
-                  child: SparkleButton.ghost(
-                    label: context.l10n.onboardingSkip,
-                    onPressed: _skipAll,
+          backgroundColor: DS.deepSpaceStart,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Skip button
+                if (_currentPage < _totalPages - 1)
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: SparkleButton.ghost(
+                      label: context.l10n.onboardingSkip,
+                      onPressed: _skipAll,
+                    ),
+                  ),
+
+                // PageView
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() => _currentPage = index);
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.navigation,
+                        ),
+                      );
+                    },
+                    children: [
+                      _buildWelcomePage(),
+                      _buildArchitecturePage(),
+                      _buildGalaxyFeaturePage(),
+                      _buildChatFeaturePage(),
+                      _buildTaskFeaturePage(),
+                      _buildPersonalizationPage(),
+                    ],
                   ),
                 ),
 
-              // PageView
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: (index) {
-                    setState(() => _currentPage = index);
-                    unawaited(
-                      SensoryFeedbackService.emit(
-                        SensoryFeedbackEvent.navigation,
-                      ),
-                    );
-                  },
-                  children: [
-                    _buildWelcomePage(),
-                    _buildArchitecturePage(),
-                    _buildGalaxyFeaturePage(),
-                    _buildChatFeaturePage(),
-                    _buildTaskFeaturePage(),
-                    _buildPersonalizationPage(),
-                  ],
-                ),
-              ),
-
-              // Page indicator
-              Padding(
-                padding: const EdgeInsets.all(DS.lg),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Page dots
-                    Row(
-                      children: List.generate(
-                        _totalPages,
-                        (index) => Container(
-                          width: index == _currentPage ? 24 : 8,
-                          height: 8,
-                          margin: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            color: index == _currentPage
-                                ? DS.brandPrimary
-                                : DS.brandPrimary.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(4),
+                // Page indicator
+                Padding(
+                  padding: const EdgeInsets.all(DS.lg),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Page dots
+                      Row(
+                        children: List.generate(
+                          _totalPages,
+                          (index) => Container(
+                            width: index == _currentPage ? 24 : 8,
+                            height: 8,
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: index == _currentPage
+                                  ? DS.brandPrimary
+                                  : DS.brandPrimary.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
                           ),
                         ),
                       ),
-                    ),
 
-                    // Next/Done button
-                    SparkleButton.primary(
-                      label: _currentPage == _totalPages - 1
-                          ? context.l10n.onboardingGetStarted
-                          : context.l10n.onboardingNext,
-                      onPressed: _nextPage,
-                    ),
-                  ],
+                      // Next/Done button
+                      SparkleButton.primary(
+                        label: _currentPage == _totalPages - 1
+                            ? context.l10n.onboardingGetStarted
+                            : context.l10n.onboardingNext,
+                        onPressed: _nextPage,
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
       );
 
   // Page 1: Welcome
@@ -209,90 +210,90 @@ class _InteractiveOnboardingScreenState
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-            // Logo animation
-            TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: 1),
-              duration: const Duration(seconds: 1),
-              curve: Curves.elasticOut,
-              builder: (context, value, child) => Transform.scale(
-                scale: value,
-                child: Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [
-                        DS.brandPrimary.shade400,
-                        DS.prismPurple,
+              // Logo animation
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(seconds: 1),
+                curve: Curves.elasticOut,
+                builder: (context, value, child) => Transform.scale(
+                  scale: value,
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [
+                          DS.brandPrimary.shade400,
+                          DS.prismPurple,
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: DS.brandPrimary.withValues(alpha: 0.5),
+                          blurRadius: 40,
+                          spreadRadius: 10,
+                        ),
                       ],
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: DS.brandPrimary.withValues(alpha: 0.5),
-                        blurRadius: 40,
-                        spreadRadius: 10,
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.auto_awesome,
-                    size: 60,
-                    color: DS.brandPrimaryConst,
+                    child: Icon(
+                      Icons.auto_awesome,
+                      size: 60,
+                      color: DS.brandPrimaryConst,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: DS.xxxl),
+              const SizedBox(height: DS.xxxl),
 
-            // Title
-            Text(
-              context.l10n.onboardingWelcomeTitle,
-              style: TextStyle(
-                color: DS.brandPrimaryConst,
-                fontSize: 32,
-                fontWeight: DS.fontWeightBold,
+              // Title
+              Text(
+                context.l10n.onboardingWelcomeTitle,
+                style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  fontSize: 32,
+                  fontWeight: DS.fontWeightBold,
+                ),
               ),
-            ),
-            const SizedBox(height: DS.lg),
+              const SizedBox(height: DS.lg),
 
-            // Subtitle
-            Text(
-              context.l10n.onboardingWelcomeSubtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: DS.brandPrimary.withValues(alpha: 0.8),
-                fontSize: 18,
+              // Subtitle
+              Text(
+                context.l10n.onboardingWelcomeSubtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: DS.brandPrimary.withValues(alpha: 0.8),
+                  fontSize: 18,
+                ),
               ),
-            ),
-            const SizedBox(height: DS.xxxl),
+              const SizedBox(height: DS.xxxl),
 
-            // Features preview
-            SparkleStaggerItem(
-              index: 0,
-              child: _buildFeaturePreview(
-                Icons.auto_graph,
-                context.l10n.onboardingFeatureGalaxy,
-                context.l10n.onboardingFeatureGalaxyDesc,
+              // Features preview
+              SparkleStaggerItem(
+                index: 0,
+                child: _buildFeaturePreview(
+                  Icons.auto_graph,
+                  context.l10n.onboardingFeatureGalaxy,
+                  context.l10n.onboardingFeatureGalaxyDesc,
+                ),
               ),
-            ),
-            const SizedBox(height: DS.lg),
-            SparkleStaggerItem(
-              index: 1,
-              child: _buildFeaturePreview(
-                Icons.psychology,
-                context.l10n.onboardingFeatureChat,
-                context.l10n.onboardingFeatureChatDesc,
+              const SizedBox(height: DS.lg),
+              SparkleStaggerItem(
+                index: 1,
+                child: _buildFeaturePreview(
+                  Icons.psychology,
+                  context.l10n.onboardingFeatureChat,
+                  context.l10n.onboardingFeatureChatDesc,
+                ),
               ),
-            ),
-            const SizedBox(height: DS.lg),
+              const SizedBox(height: DS.lg),
               SparkleStaggerItem(
                 index: 2,
                 child: _buildFeaturePreview(
-                Icons.task_alt,
-                context.l10n.onboardingFeatureTasks,
-                context.l10n.onboardingFeatureTasksDesc,
-              ),
+                  Icons.task_alt,
+                  context.l10n.onboardingFeatureTasks,
+                  context.l10n.onboardingFeatureTasksDesc,
+                ),
               ),
             ],
           ),
@@ -355,25 +356,25 @@ class _InteractiveOnboardingScreenState
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-            Text(
-              context.l10n.onboardingArchitectureTitle,
-              style: TextStyle(
-                color: DS.brandPrimaryConst,
-                fontSize: 28,
-                fontWeight: DS.fontWeightBold,
+              Text(
+                context.l10n.onboardingArchitectureTitle,
+                style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  fontSize: 28,
+                  fontWeight: DS.fontWeightBold,
+                ),
               ),
-            ),
-            const SizedBox(height: DS.lg),
-            Text(
-              context.l10n.onboardingArchitectureSubtitle,
-              style: TextStyle(
-                color: DS.brandPrimary.withValues(alpha: 0.8),
-                fontSize: 16,
+              const SizedBox(height: DS.lg),
+              Text(
+                context.l10n.onboardingArchitectureSubtitle,
+                style: TextStyle(
+                  color: DS.brandPrimary.withValues(alpha: 0.8),
+                  fontSize: 16,
+                ),
               ),
-            ),
-            const SizedBox(height: DS.xxl),
+              const SizedBox(height: DS.xxl),
 
-            // Architecture Animation
+              // Architecture Animation
               const ArchitectureAnimation(),
             ],
           ),
@@ -432,54 +433,61 @@ class _InteractiveOnboardingScreenState
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-            Icon(
-              Icons.settings_suggest,
-              size: 80,
-              color: DS.brandPrimaryConst,
-            ),
-            const SizedBox(height: DS.xxl),
-            Text(
-              context.l10n.onboardingPersonalizationTitle,
-              style: TextStyle(
+              Icon(
+                Icons.settings_suggest,
+                size: 80,
                 color: DS.brandPrimaryConst,
-                fontSize: 28,
-                fontWeight: DS.fontWeightBold,
               ),
-            ),
-            const SizedBox(height: DS.lg),
-            Text(
-              context.l10n.onboardingPersonalizationSubtitle,
-              style: TextStyle(
-                color: DS.brandPrimary.withValues(alpha: 0.8),
-                fontSize: 16,
+              const SizedBox(height: DS.xxl),
+              Text(
+                context.l10n.onboardingPersonalizationTitle,
+                style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  fontSize: 28,
+                  fontWeight: DS.fontWeightBold,
+                ),
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: DS.xxxl),
-            _buildPermissionOption(
-              icon: Icons.notifications_active,
-              title: context.l10n.onboardingSettingReminders,
-              description: context.l10n.onboardingSettingRemindersDesc,
-              enabled: _notificationsEnabled,
-              isLoading: _requestingNotification,
-              onTap:
-                  _notificationsEnabled ? null : _requestNotificationPermission,
-            ),
-            const SizedBox(height: DS.lg),
-            _buildPermissionOption(
-              icon: Icons.mic_none_rounded,
-              title: context.l10n.onboardingVoiceInput,
-              description: context.l10n.onboardingVoiceInputDesc,
-              enabled: _microphoneEnabled,
-              isLoading: _requestingMicrophone,
-              onTap: _microphoneEnabled ? null : _requestMicrophonePermission,
-            ),
-            const SizedBox(height: DS.lg),
+              const SizedBox(height: DS.lg),
+              Text(
+                context.l10n.onboardingPersonalizationSubtitle,
+                style: TextStyle(
+                  color: DS.brandPrimary.withValues(alpha: 0.8),
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: DS.xxxl),
+              _buildPermissionOption(
+                icon: Icons.notifications_active,
+                title: context.l10n.onboardingSettingReminders,
+                description: context.l10n.onboardingSettingRemindersDesc,
+                enabled: _notificationsEnabled,
+                isLoading: _requestingNotification,
+                onTap: _notificationsEnabled
+                    ? null
+                    : _requestNotificationPermission,
+              ),
+              const SizedBox(height: DS.lg),
+              _buildPermissionOption(
+                icon: Icons.mic_none_rounded,
+                title: context.l10n.onboardingVoiceInput,
+                description: context.l10n.onboardingVoiceInputDesc,
+                enabled: _microphoneEnabled,
+                isLoading: _requestingMicrophone,
+                onTap: _microphoneEnabled ? null : _requestMicrophonePermission,
+              ),
+              const SizedBox(height: DS.lg),
               _buildSettingOption(
                 icon: Icons.auto_awesome,
                 title: context.l10n.onboardingSettingAssistant,
                 description: context.l10n.onboardingSettingAssistantDesc,
                 value: true,
+              ),
+              const SizedBox(height: DS.lg),
+              const UnderstandingPanel(
+                compact: true,
+                initiallyExpanded: true,
+                surface: 'onboarding',
               ),
             ],
           ),
@@ -503,12 +511,12 @@ class _InteractiveOnboardingScreenState
               SparkleStaggerItem(
                 index: 0,
                 child: Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: iconGradient),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(icon, size: 48, color: DS.brandPrimary),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: iconGradient),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(icon, size: 48, color: DS.brandPrimary),
                 ),
               ),
               const SizedBox(height: DS.xl),
@@ -517,12 +525,12 @@ class _InteractiveOnboardingScreenState
               SparkleStaggerItem(
                 index: 1,
                 child: Text(
-                title,
-                style: TextStyle(
-                  color: DS.brandPrimaryConst,
-                  fontSize: 28,
-                  fontWeight: DS.fontWeightBold,
-                ),
+                  title,
+                  style: TextStyle(
+                    color: DS.brandPrimaryConst,
+                    fontSize: 28,
+                    fontWeight: DS.fontWeightBold,
+                  ),
                 ),
               ),
               const SizedBox(height: DS.md),
@@ -531,12 +539,12 @@ class _InteractiveOnboardingScreenState
               SparkleStaggerItem(
                 index: 2,
                 child: Text(
-                description,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: DS.brandPrimary.withValues(alpha: 0.8),
-                  fontSize: 16,
-                ),
+                  description,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: DS.brandPrimary.withValues(alpha: 0.8),
+                    fontSize: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: DS.xxl),
@@ -550,28 +558,28 @@ class _InteractiveOnboardingScreenState
                 (feature) => SparkleStaggerItem(
                   index: features.indexOf(feature) + 4,
                   child: Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(
-                        Icons.check_circle,
-                        color: iconGradient[0],
-                        size: 24,
-                      ),
-                      const SizedBox(width: DS.md),
-                      Expanded(
-                        child: Text(
-                          feature,
-                          style: TextStyle(
-                            color: DS.brandPrimaryConst,
-                            fontSize: 14,
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: iconGradient[0],
+                          size: 24,
+                        ),
+                        const SizedBox(width: DS.md),
+                        Expanded(
+                          child: Text(
+                            feature,
+                            style: TextStyle(
+                              color: DS.brandPrimaryConst,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
                 ),
               ),
             ],
@@ -581,11 +589,13 @@ class _InteractiveOnboardingScreenState
 
   String get _permissionEnableLabel => context.l10n.onboardingPermissionEnable;
 
-  String get _permissionEnabledLabel => context.l10n.onboardingPermissionEnabled;
+  String get _permissionEnabledLabel =>
+      context.l10n.onboardingPermissionEnabled;
 
   String get _permissionReadyLabel => context.l10n.onboardingPermissionReady;
 
-  String get _permissionPendingLabel => context.l10n.onboardingPermissionPending;
+  String get _permissionPendingLabel =>
+      context.l10n.onboardingPermissionPending;
 
   Widget _buildPermissionOption({
     required IconData icon,
@@ -598,96 +608,98 @@ class _InteractiveOnboardingScreenState
       SparkleStaggerItem(
         index: title.hashCode & 1,
         child: Container(
-        padding: const EdgeInsets.all(DS.lg),
-        decoration: BoxDecoration(
-          color: DS.brandPrimary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: DS.brandPrimary.shade400, size: 32),
-                const SizedBox(width: DS.lg),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          color: DS.brandPrimaryConst,
-                          fontSize: 16,
-                          fontWeight: DS.fontWeightBold,
+          padding: const EdgeInsets.all(DS.lg),
+          decoration: BoxDecoration(
+            color: DS.brandPrimary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: DS.brandPrimary.shade400, size: 32),
+                  const SizedBox(width: DS.lg),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            color: DS.brandPrimaryConst,
+                            fontSize: 16,
+                            fontWeight: DS.fontWeightBold,
+                          ),
                         ),
-                      ),
-                      Text(
-                        description,
-                        style: TextStyle(
-                          color: DS.brandPrimary.withValues(alpha: 0.7),
-                          fontSize: 12,
+                        Text(
+                          description,
+                          style: TextStyle(
+                            color: DS.brandPrimary.withValues(alpha: 0.7),
+                            fontSize: 12,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.md,
-                    vertical: DS.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: enabled
-                        ? DS.success.withValues(alpha: 0.18)
-                        : DS.brandPrimary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    enabled ? _permissionEnabledLabel : _permissionEnableLabel,
-                    style: TextStyle(
-                      color: enabled ? DS.success : DS.brandPrimaryConst,
-                      fontSize: 12,
-                      fontWeight: DS.fontWeightSemibold,
+                      ],
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: DS.md),
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    enabled ? _permissionReadyLabel : _permissionPendingLabel,
-                    style: TextStyle(
-                      color: DS.brandPrimary.withValues(alpha: 0.7),
-                      fontSize: 12,
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.md,
+                      vertical: DS.xs,
+                    ),
+                    decoration: BoxDecoration(
+                      color: enabled
+                          ? DS.success.withValues(alpha: 0.18)
+                          : DS.brandPrimary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      enabled
+                          ? _permissionEnabledLabel
+                          : _permissionEnableLabel,
+                      style: TextStyle(
+                        color: enabled ? DS.success : DS.brandPrimaryConst,
+                        fontSize: 12,
+                        fontWeight: DS.fontWeightSemibold,
+                      ),
                     ),
                   ),
-                ),
-                if (onTap case final action?)
-                  SparkleButton.ghost(
-                    label: isLoading
-                        ? context.l10n.onboardingPermissionWorking
-                        : _permissionEnableLabel,
-                    onPressed: isLoading
-                        ? () {}
-                        : () {
-                            unawaited(
-                              SensoryFeedbackService.emit(
-                                SensoryFeedbackEvent.confirm,
-                              ),
-                            );
-                            unawaited(action());
-                          },
+                ],
+              ),
+              const SizedBox(height: DS.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      enabled ? _permissionReadyLabel : _permissionPendingLabel,
+                      style: TextStyle(
+                        color: DS.brandPrimary.withValues(alpha: 0.7),
+                        fontSize: 12,
+                      ),
+                    ),
                   ),
-              ],
-            ),
-          ],
-        ),
+                  if (onTap case final action?)
+                    SparkleButton.ghost(
+                      label: isLoading
+                          ? context.l10n.onboardingPermissionWorking
+                          : _permissionEnableLabel,
+                      onPressed: isLoading
+                          ? () {}
+                          : () {
+                              unawaited(
+                                SensoryFeedbackService.emit(
+                                  SensoryFeedbackEvent.confirm,
+                                ),
+                              );
+                              unawaited(action());
+                            },
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       );
 

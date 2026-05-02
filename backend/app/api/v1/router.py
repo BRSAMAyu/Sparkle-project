@@ -7,6 +7,9 @@ API v1 Router
 聚合所有 v1 版本的 API 路由
 """
 
+import importlib.util
+from pathlib import Path
+
 from fastapi import APIRouter
 
 from app.api.v1 import (
@@ -29,6 +32,7 @@ from app.api.v1 import (
     cognitive,
     community,
     community_aggregates,
+    counterfactual,
     dashboard,
     data_export,
     # graph_monitor,
@@ -43,6 +47,7 @@ from app.api.v1 import (
     exam_sprint,
     executions,
     executions_admin,
+    experience,
     experiments,
     feedback_admin,
     files,
@@ -78,16 +83,16 @@ from app.api.v1 import (
     profile_transparency,
     push_interaction,
     recommendations,
+    release_approvals,
     research,
     research_consent,
-    release_approvals,
     safe_experiments,
     seed_libraries,
     shop,
     signals,
     simulation,
-    sources,
     skills,
+    sources,
     statistics,
     stt,
     subjects,
@@ -106,6 +111,39 @@ from app.api.v1 import (
 from app.config import settings
 
 api_router = APIRouter()
+
+
+def _route_key(route: object) -> tuple[str, frozenset[str]]:
+    path = getattr(route, "path", "")
+    methods = frozenset(getattr(route, "methods", None) or [])
+    return path, methods
+
+
+def _include_router_if_new(router: APIRouter) -> None:
+    existing = {_route_key(route) for route in api_router.routes}
+    incoming = {_route_key(route) for route in router.routes}
+    if existing.isdisjoint(incoming):
+        api_router.include_router(router)
+
+
+def _include_experience_routers() -> None:
+    """Register BFF experience routers created by parallel closeout agents."""
+    experience_dir = Path(__file__).resolve().parent / "experience"
+    if not experience_dir.is_dir():
+        return
+
+    for router_file in sorted(experience_dir.glob("*_router.py")):
+        module_name = f"app.api.v1.experience_closeout_{router_file.stem}"
+        spec = importlib.util.spec_from_file_location(module_name, router_file)
+        if spec is None or spec.loader is None:
+            continue
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        router = getattr(module, "router", None)
+        if router is not None:
+            _include_router_if_new(router)
+
+
 api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(data_export.router, prefix="/users", tags=["users"])
@@ -147,6 +185,8 @@ api_router.include_router(counterfactual.router)
 api_router.include_router(omnibar.router, prefix="/omnibar", tags=["omnibar"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(growth.router, prefix="/growth", tags=["growth"])
+api_router.include_router(experience.router)
+_include_experience_routers()
 api_router.include_router(exam_sprint.router, prefix="/exam-sprint", tags=["exam-sprint"])
 api_router.include_router(analytics.router, prefix="/analytics", tags=["analytics"])
 api_router.include_router(background_tasks.router, prefix="/background-tasks", tags=["background_tasks"])

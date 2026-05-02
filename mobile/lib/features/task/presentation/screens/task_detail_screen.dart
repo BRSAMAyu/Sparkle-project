@@ -81,7 +81,8 @@ class _TaskDetailView extends ConsumerWidget {
                       child: SparkleStaggerList(
                         gap: DS.spacing24,
                         children: [
-                          if (task.status == TaskStatus.paused)
+                          if (task.status == TaskStatus.paused ||
+                              task.status == TaskStatus.restore)
                             _buildPausedRecoveryCard(context, ref),
                           _buildInfoSection(context, ref),
                           if (task.guideJson != null ||
@@ -725,6 +726,8 @@ class _TaskDetailView extends ConsumerWidget {
         return l10n.taskStatusInProgress;
       case TaskStatus.paused:
         return l10n.taskStatusPaused;
+      case TaskStatus.restore:
+        return l10n.taskStatusRestore;
       case TaskStatus.stuck:
         return l10n.taskStatusStuck;
       case TaskStatus.completed:
@@ -740,6 +743,7 @@ class _TaskDetailView extends ConsumerWidget {
         return DS.warning;
       case TaskStatus.inProgress:
       case TaskStatus.paused:
+      case TaskStatus.restore:
       case TaskStatus.stuck:
         return DS.info;
       case TaskStatus.completed:
@@ -903,10 +907,12 @@ class _BottomActionBar extends ConsumerWidget {
                 Expanded(
                   flex: 2,
                   child: CustomButton.primary(
-                    text: task.status == TaskStatus.paused
+                    text: task.status == TaskStatus.paused ||
+                            task.status == TaskStatus.restore
                         ? context.l10n.taskActionResume
                         : context.l10n.taskStart,
-                    icon: task.status == TaskStatus.paused
+                    icon: task.status == TaskStatus.paused ||
+                            task.status == TaskStatus.restore
                         ? Icons.restart_alt_rounded
                         : Icons.play_arrow_rounded,
                     onPressed: () {
@@ -915,7 +921,8 @@ class _BottomActionBar extends ConsumerWidget {
                           SensoryFeedbackEvent.confirm,
                         ),
                       );
-                      if (task.status == TaskStatus.paused) {
+                      if (task.status == TaskStatus.paused ||
+                          task.status == TaskStatus.restore) {
                         unawaited(
                           ref
                               .read(taskListProvider.notifier)
@@ -923,7 +930,8 @@ class _BottomActionBar extends ConsumerWidget {
                         );
                       }
                       ref.read(activeTaskProvider.notifier).state =
-                          task.status == TaskStatus.paused
+                          task.status == TaskStatus.paused ||
+                                  task.status == TaskStatus.restore
                               ? task.copyWith(status: TaskStatus.inProgress)
                               : task;
                       // P0-1: Auto-switch plan context when starting task

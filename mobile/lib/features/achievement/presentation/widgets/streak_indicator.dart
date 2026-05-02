@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/streak_quality_indicator.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// 连胜指示器样式
@@ -270,7 +271,7 @@ class _StreakIndicatorFullState extends State<_StreakIndicatorFull>
         curve: Curves.easeInOut,
       ),
     );
-    _flameController.repeat(reverse: true);
+    unawaited(_flameController.repeat(reverse: true));
   }
 
   @override
@@ -513,7 +514,7 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
         curve: Curves.easeOutCubic,
       ),
     );
-    _controller.forward();
+    unawaited(_controller.forward());
 
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 1500),
@@ -525,7 +526,7 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
         curve: Curves.easeInOut,
       ),
     );
-    _pulseController.repeat(reverse: true);
+    unawaited(_pulseController.repeat(reverse: true));
   }
 
   @override
@@ -600,7 +601,9 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    isZeroStreak ? context.l10n.streakStartChallenge : '${widget.streakStats.currentStreak}',
+                    isZeroStreak
+                        ? context.l10n.streakStartChallenge
+                        : '${widget.streakStats.currentStreak}',
                     style: TextStyle(
                       fontSize: isZeroStreak ? DS.fontSizeSm : DS.fontSizeLg,
                       fontWeight: DS.fontWeightBold,
@@ -608,7 +611,9 @@ class _StreakIndicatorCircularState extends State<_StreakIndicatorCircular>
                     ),
                   ),
                   Text(
-                    isZeroStreak ? context.l10n.streakChallenge : context.l10n.streakDays(0).replaceAll('0', '').trim(),
+                    isZeroStreak
+                        ? context.l10n.streakChallenge
+                        : context.l10n.streakDays(0).replaceAll('0', '').trim(),
                     style: TextStyle(
                       fontSize: 10,
                       color: DS.textSecondary,
@@ -683,7 +688,11 @@ class _CircularProgressPainter extends CustomPainter {
   }
 
   void _drawDashedCircle(
-      Canvas canvas, Offset center, double radius, Paint paint,) {
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Paint paint,
+  ) {
     const dashWidth = 5.0;
     const dashSpace = 5.0;
     final circumference = 2 * math.pi * radius;
@@ -752,8 +761,8 @@ class DashboardStreakIndicator extends ConsumerWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => StreakIndicator(
-        style: StreakIndicatorStyle.circular,
-        onTap: onTap,
+  Widget build(BuildContext context, WidgetRef ref) => StreakQualityIndicator(
+        compact: true,
+        onOpenDetails: onTap,
       );
 }

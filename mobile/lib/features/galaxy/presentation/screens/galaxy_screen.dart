@@ -41,6 +41,7 @@ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_confi
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_success_animation.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy_contribution_banner.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/goal_world_graph_mini_panel.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/task/task_routes.dart';
@@ -554,17 +555,25 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final deltaText = masteryDelta == null
         ? ''
         : masteryDelta < 0
-            ? context.l10n.galaxyMasteryDeltaDown(masteryDelta
-                .abs()
-                .toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1))
+            ? context.l10n.galaxyMasteryDeltaDown(
+                masteryDelta
+                    .abs()
+                    .toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1),
+              )
             : context.l10n.galaxyMasteryDeltaUp(
-                masteryDelta.toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1));
+                masteryDelta.toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1),
+              );
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(context.l10n
-              .galaxyNodeMasteryToast(node.name, node.masteryScore, deltaText)),
+          content: Text(
+            context.l10n.galaxyNodeMasteryToast(
+              node.name,
+              node.masteryScore,
+              deltaText,
+            ),
+          ),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 3),
         ),
@@ -2848,7 +2857,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                         highlights: <String>[
                           context.l10n.galaxyEmptyHighlights1,
                           context.l10n.galaxyEmptyHighlights2,
-                          context.l10n.galaxyEmptyHighlights3
+                          context.l10n.galaxyEmptyHighlights3,
                         ],
                         actionLabel: context.l10n.galaxyEmptyActionLabel,
                         onAction: () async {
@@ -3032,6 +3041,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                       isDarkMode: isDarkMode,
                                     ),
                                   ),
+                                Positioned(
+                                  top: 112,
+                                  right: 16,
+                                  left: constraints.maxWidth < 560 ? 16 : null,
+                                  child: const GoalWorldGraphMiniPanel(),
+                                ),
                                 Positioned(
                                   top: 56,
                                   left: 16,

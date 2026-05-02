@@ -43,10 +43,6 @@ class ApiEndpoints {
   static String documentConfirmUpload(String fileId) =>
       '/documents/$fileId/confirm-upload';
   static String documentStatus(String fileId) => '/documents/$fileId/status';
-  static String sourceArchive(String fileId) => '/sources/$fileId/archive';
-  static String sourceRestore(String fileId) => '/sources/$fileId/restore';
-  static String sourceRevoke(String fileId) => '/sources/$fileId/revoke';
-  static String sourceDelete(String fileId) => '/sources/$fileId';
 
   // Vocabulary / Dictionary
   static const String vocabularyLookup = '/vocabulary/lookup';
@@ -194,6 +190,14 @@ class ApiEndpoints {
   static const String growthWeeklyNarrative = '/growth/weekly-narrative';
   static const String growthWeeklyNarrativeGenerate =
       '/growth/weekly-narrative/generate';
+  static const String experienceUnderstandingSnapshot =
+      '/experience/understanding-snapshot';
+  static const String experienceGrowthDashboard =
+      '/experience/growth-dashboard';
+  static const String experienceCommunityAccountability =
+      '/experience/community-accountability';
+  static String experienceGoalDetail(String goalId) =>
+      '/experience/goal-detail/$goalId';
   static const String examSprintIntake = '/exam-sprint/intake';
   static const String examSprintDashboard = '/exam-sprint/dashboard';
   static const String examSprintPostExamReview =
@@ -207,6 +211,10 @@ class ApiEndpoints {
   static String auroraCalibrationCardRespond(String id) =>
       '/aurora/calibration-cards/$id/respond';
   static const String auroraControlSurface = '/aurora/control-surface';
+  static const String understandingSnapshot =
+      '/experience/understanding-snapshot';
+  static const String understandingSnapshotCorrections =
+      '/experience/understanding-snapshot/corrections';
   static const String auroraModelingStatus = '/aurora/modeling-status';
   static const String auroraPredictedOptions = '/aurora/predicted-options';
   static const String auroraCoreSessionStart = '/aurora/core-session/start';

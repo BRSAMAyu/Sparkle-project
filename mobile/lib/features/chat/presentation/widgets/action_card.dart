@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     show CustomButton, CustomButtonSize;
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -12,10 +12,12 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/presentation/providers/low_yield_block_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/aurora_nudge_entry.dart';
 import 'package:sparkle/features/chat/presentation/widgets/bottleneck_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/graph_diagnostic_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/low_yield_gentle_block_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_progress_strip.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_strategy_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/profile_front_door_card.dart';
@@ -29,7 +31,7 @@ import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
-class ActionCard extends StatefulWidget {
+class ActionCard extends ConsumerStatefulWidget {
   const ActionCard({
     required this.action,
     super.key,
@@ -50,10 +52,11 @@ class ActionCard extends StatefulWidget {
       onWidgetAction;
 
   @override
-  State<ActionCard> createState() => _ActionCardState();
+  ConsumerState<ActionCard> createState() => _ActionCardState();
 }
 
-class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
+class _ActionCardState extends ConsumerState<ActionCard>
+    with TickerProviderStateMixin {
   static const Set<String> _narrativeKeys = {
     'summary',
     'description',
@@ -636,6 +639,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         );
       case 'task_stuck_card':
         return DS.warningGradient;
+      case 'low_yield_gentle_block':
+        return DS.infoGradient;
       default:
         return DS.primaryGradient;
     }
@@ -700,6 +705,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return const Color(0xFF0EA5A4);
       case 'task_stuck_card':
         return DS.warning;
+      case 'low_yield_gentle_block':
+        return DS.info;
       default:
         return DS.primaryBase;
     }
@@ -770,6 +777,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return Icons.psychology_rounded;
       case 'task_stuck_card':
         return Icons.assignment_late_rounded;
+      case 'low_yield_gentle_block':
+        return Icons.tips_and_updates_outlined;
       default:
         return Icons.touch_app_rounded;
     }
@@ -829,6 +838,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
         return context.l10n.chatActionAuroraReminder;
       case 'task_stuck_card':
         return context.l10n.stuckHelpTitle;
+      case 'low_yield_gentle_block':
+        return context.l10n.lowYieldCardTitle;
       default:
         return l10n.chatActionTitleDefault;
     }
@@ -928,6 +939,28 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       return TaskStuckCard(
         data: action.data,
         onWidgetAction: widget.onWidgetAction,
+      );
+    }
+    if (action.type == 'low_yield_gentle_block') {
+      final block = LowYieldBlock.fromPayload(action.data);
+      return LowYieldGentleBlockCard(
+        block: block,
+        onAccept: (block) async {
+          await ref.read(lowYieldBlockProvider.notifier).accept(block);
+          final route = block.route;
+          if (route != null && route.isNotEmpty && context.mounted) {
+            unawaited(context.push(route));
+          }
+        },
+        onDismiss: (block) =>
+            ref.read(lowYieldBlockProvider.notifier).dismiss(block),
+        onCorrect: (block) async {
+          await ref.read(lowYieldBlockProvider.notifier).correct(block);
+          await widget.onWidgetAction?.call(
+            'low_yield_correction',
+            block.rawPayload,
+          );
+        },
       );
     }
     if (action.type == 'system_update') {
@@ -1340,6 +1373,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'task_list':
       case 'aurora_runtime_follow_up':
       case 'task_stuck_card':
+      case 'low_yield_gentle_block':
         return true;
       default:
         return false;

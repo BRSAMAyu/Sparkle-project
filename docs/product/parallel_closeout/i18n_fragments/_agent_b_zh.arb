@@ -1,0 +1,14 @@
+{
+  "@@locale": "zh",
+  "goalDetailTitle": "目标详情",
+  "goalDetailProgress": "总体进度",
+  "goalDetailMastery": "掌握度",
+  "goalDetailTargetDate": "目标日期",
+  "goalDetailPriority": "优先级",
+  "goalDetailMinimumLine": "最低达标线",
+  "goalDetailBottlenecks": "知识瓶颈",
+  "goalDetailTodayStep": "今日最小下一步",
+  "goalDetailPlanHealth": "计划健康状态",
+  "goalDetailAccountability": "社群问责",
+  "goalDetailRelatedSources": "相关资料来源"
+}

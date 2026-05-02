@@ -5,6 +5,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
+import 'package:sparkle/features/insights/insights_routes.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
@@ -65,6 +66,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
         : null;
     final weeklyNarrative =
         ref.watch(weeklyGrowthNarrativeProvider).valueOrNull;
+    final colors = Theme.of(context).colorScheme;
     final showOverviewEmptyState = (weeklyNarrative?.hasData == false) &&
         latestTheater == null &&
         latestSimulation == null &&
@@ -99,13 +101,37 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                   icon: Icons.insights_outlined,
                   title: context.l10n.insOverviewEmpty,
                   description: context.l10n.insOverviewEmptyDesc,
-                  actionText: I18nService.instance.isChinese ? '去创建学习任务' : 'Create Learning Task',
+                  actionText: I18nService.instance.isChinese
+                      ? '去创建学习任务'
+                      : 'Create Learning Task',
                   onAction: () => context.push(TaskRoutes.taskCreate),
                 )
               else
                 WeeklyGrowthNarrativeCard(
                   initialExpanded: initialPanel == panelWeeklyNarrative,
                 ),
+              const SizedBox(height: DS.spacing16),
+              _InsightModuleCard(
+                title: context.l10n.gdChronicleTitle,
+                subtitle: context.l10n.gdChronicleSubtitle,
+                status: context.l10n.gdStorySummary,
+                accent: colors.primary,
+                icon: Icons.auto_stories_rounded,
+                highlighted: initialPanel == panelWeeklyNarrative,
+                buttonLabel: context.l10n.gdOpenChronicle,
+                onPressed: () => context.push(InsightsRoutes.growthChronicle),
+              ),
+              const SizedBox(height: DS.spacing12),
+              _InsightModuleCard(
+                title: context.l10n.gdLearningDashboardTitle,
+                subtitle: context.l10n.gdLearningDashboardSubtitle,
+                status: context.l10n.gdDashboardSemantics,
+                accent: colors.tertiary,
+                icon: Icons.dashboard_customize_rounded,
+                highlighted: false,
+                buttonLabel: context.l10n.gdOpenDashboard,
+                onPressed: () => context.push(InsightsRoutes.learningDashboard),
+              ),
               const SizedBox(height: DS.spacing16),
               _OverviewHero(activePanel: initialPanel),
               const SizedBox(height: DS.spacing16),
@@ -119,7 +145,8 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                 status: latestSimulation != null
                     ? _simulationStatus(context, latestSimulation)
                     : simulationState.recommendedSeeds.isNotEmpty
-                        ? context.l10n.lioRecommendedSeeds(simulationState.recommendedSeeds.length)
+                        ? context.l10n.lioRecommendedSeeds(
+                            simulationState.recommendedSeeds.length)
                         : context.l10n.lioStartNewSim,
                 accent: DS.accent,
                 icon: Icons.groups_rounded,
@@ -127,8 +154,12 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                 buttonLabel: latestSimulation != null
                     ? (I18nService.instance.isChinese ? '继续查看' : 'Continue')
                     : topSeed != null
-                        ? (I18nService.instance.isChinese ? '从推荐开始' : 'Start from Recommended')
-                        : (I18nService.instance.isChinese ? '开始模拟' : 'Start Simulation'),
+                        ? (I18nService.instance.isChinese
+                            ? '从推荐开始'
+                            : 'Start from Recommended')
+                        : (I18nService.instance.isChinese
+                            ? '开始模拟'
+                            : 'Start Simulation'),
                 onPressed: () => context.push(
                   latestSimulation != null
                       ? _simulationLocation(context, latestSimulation)
@@ -154,7 +185,8 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
               _InsightModuleCard(
                 title: context.l10n.insReportLabel,
                 subtitle: latestReportPayload?.mastery.isNotEmpty ?? false
-                    ? context.l10n.lioRecentAnalysis(latestReportPayload!.mastery.length)
+                    ? context.l10n
+                        .lioRecentAnalysis(latestReportPayload!.mastery.length)
                     : context.l10n.lioBuildConclusion,
                 status: _reportStatus(context, latestReportPayload),
                 accent: DS.success,
@@ -188,7 +220,9 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                               const SizedBox(width: DS.spacing10),
                               Expanded(
                                 child: Text(
-                                  I18nService.instance.isChinese ? '首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。' : 'Learning Insights is in the customizable card area on the home screen. Default: calendar, swipe left for insights, right for tools.',
+                                  I18nService.instance.isChinese
+                                      ? '首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。'
+                                      : 'Learning Insights is in the customizable card area on the home screen. Default: calendar, swipe left for insights, right for tools.',
                                   style: Theme.of(context)
                                       .textTheme
                                       .bodySmall
@@ -219,7 +253,9 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                         const SizedBox(width: DS.spacing10),
                         Expanded(
                           child: Text(
-                            I18nService.instance.isChinese ? '首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。' : 'Learning Insights is in the customizable card area on the home screen. Default: calendar, swipe left for insights, right for tools.',
+                            I18nService.instance.isChinese
+                                ? '首页已经把学习洞察放进可定制卡牌区。默认先看日历，左滑就是洞察，右滑是工具快捷。'
+                                : 'Learning Insights is in the customizable card area on the home screen. Default: calendar, swipe left for insights, right for tools.',
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: DS.textSecondary,
@@ -244,16 +280,20 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
     );
   }
 
-  String _theaterTitle(BuildContext context, Map<String, dynamic>? latestTheater) {
+  String _theaterTitle(
+      BuildContext context, Map<String, dynamic>? latestTheater) {
     if (latestTheater == null) {
-      return I18nService.instance.isChinese ? '把一个目标拆成多条学习路径' : 'Break a goal into multiple learning paths';
+      return I18nService.instance.isChinese
+          ? '把一个目标拆成多条学习路径'
+          : 'Break a goal into multiple learning paths';
     }
     final metadata = Map<String, dynamic>.from(
       latestTheater['metadata'] as Map? ?? const {},
     );
     return metadata['title']?.toString().trim().isNotEmpty ?? false
         ? metadata['title']!.toString()
-        : latestTheater['description']?.toString() ?? context.l10n.insContinueSim;
+        : latestTheater['description']?.toString() ??
+            context.l10n.insContinueSim;
   }
 
   String _simulationTitle(
@@ -262,7 +302,10 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
     required SimulationSeedModel? fallbackSeed,
   }) {
     if (latestSimulation == null) {
-      return fallbackSeed?.topic ?? (I18nService.instance.isChinese ? '把一个知识点拉进多角色现场讨论' : 'Bring a knowledge point into multi-role live discussion');
+      return fallbackSeed?.topic ??
+          (I18nService.instance.isChinese
+              ? '把一个知识点拉进多角色现场讨论'
+              : 'Bring a knowledge point into multi-role live discussion');
     }
     final metadata = Map<String, dynamic>.from(
       latestSimulation['metadata'] as Map? ?? const {},
@@ -274,21 +317,28 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
         return topic;
       }
     }
-    return latestSimulation['title']?.toString() ?? context.l10n.insContinueLearnSim;
+    return latestSimulation['title']?.toString() ??
+        context.l10n.insContinueLearnSim;
   }
 
-  String _simulationStatus(BuildContext context, Map<String, dynamic>? latestSimulation) {
+  String _simulationStatus(
+      BuildContext context, Map<String, dynamic>? latestSimulation) {
     if (latestSimulation == null) {
       return context.l10n.lioNoSimYet;
     }
-    return context.l10n.lioRecentUpdate(latestSimulation['description']?.toString() ?? context.l10n.insHasContinue);
+    return context.l10n.lioRecentUpdate(
+        latestSimulation['description']?.toString() ??
+            context.l10n.insHasContinue);
   }
 
-  String _theaterStatus(BuildContext context, Map<String, dynamic>? latestTheater) {
+  String _theaterStatus(
+      BuildContext context, Map<String, dynamic>? latestTheater) {
     if (latestTheater == null) {
       return context.l10n.lioNoTheaterYet;
     }
-    return context.l10n.lioRecentUpdate(latestTheater['description']?.toString() ?? context.l10n.insHasContinue);
+    return context.l10n.lioRecentUpdate(
+        latestTheater['description']?.toString() ??
+            context.l10n.insHasContinue);
   }
 
   String _reportStatus(BuildContext context, LearningReport? report) {
@@ -302,7 +352,8 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
     return context.l10n.lioMastery(avg.round().toString());
   }
 
-  String _simulationLocation(BuildContext context, Map<String, dynamic>? latestSimulation) {
+  String _simulationLocation(
+      BuildContext context, Map<String, dynamic>? latestSimulation) {
     if (latestSimulation == null) {
       return SimulationRoutes.simulation;
     }
@@ -316,7 +367,8 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
     return SimulationRoutes.simulation;
   }
 
-  String _theaterLocation(BuildContext context, Map<String, dynamic>? latestTheater) {
+  String _theaterLocation(
+      BuildContext context, Map<String, dynamic>? latestTheater) {
     if (latestTheater == null) {
       return TheaterRoutes.theater;
     }
@@ -356,9 +408,12 @@ class _OverviewHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final zh = I18nService.instance.isChinese;
     final focusLabel = switch (activePanel) {
-      LearningInsightsOverviewScreen.panelSimulation => zh ? '已聚焦：学习仿真' : 'Focused: Learning Simulation',
-      LearningInsightsOverviewScreen.panelTheater => zh ? '已聚焦：推演剧场' : 'Focused: Scenario Theater',
-      LearningInsightsOverviewScreen.panelReport => zh ? '已聚焦：学习报告' : 'Focused: Learning Report',
+      LearningInsightsOverviewScreen.panelSimulation =>
+        zh ? '已聚焦：学习仿真' : 'Focused: Learning Simulation',
+      LearningInsightsOverviewScreen.panelTheater =>
+        zh ? '已聚焦：推演剧场' : 'Focused: Scenario Theater',
+      LearningInsightsOverviewScreen.panelReport =>
+        zh ? '已聚焦：学习报告' : 'Focused: Learning Report',
       _ => zh ? '仿真、推演、报告统一收在这里' : 'Simulation, theater & reports in one place',
     };
 
@@ -388,7 +443,9 @@ class _OverviewHero extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            I18nService.instance.isChinese ? '把学习里的”看见问题、模拟讨论、沉淀结论”放到同一条动线里。' : 'Connect “spot problems, simulate discussions, draw conclusions” into one flow.',
+            I18nService.instance.isChinese
+                ? '把学习里的”看见问题、模拟讨论、沉淀结论”放到同一条动线里。'
+                : 'Connect “spot problems, simulate discussions, draw conclusions” into one flow.',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.w800,
                   height: 1.2,
@@ -396,7 +453,9 @@ class _OverviewHero extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            I18nService.instance.isChinese ? '这里只保留你下一步真正需要的入口，不再堆叠多余说明。' : 'Only the entries you actually need next — no clutter.',
+            I18nService.instance.isChinese
+                ? '这里只保留你下一步真正需要的入口，不再堆叠多余说明。'
+                : 'Only the entries you actually need next — no clutter.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DS.textSecondary,
                   height: 1.45,

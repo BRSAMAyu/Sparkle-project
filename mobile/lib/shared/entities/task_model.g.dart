@@ -41,6 +41,8 @@ TaskModel _$TaskModelFromJson(Map<String, dynamic> json) => TaskModel(
       orderIndex: (json['order_index'] as num?)?.toInt() ?? 0,
       subtasksTotal: (json['subtasks_total'] as num?)?.toInt() ?? 0,
       subtasksCompleted: (json['subtasks_completed'] as num?)?.toInt() ?? 0,
+      metadata: json['metadata'] as Map<String, dynamic>? ??
+          const <String, dynamic>{},
     );
 
 Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
@@ -70,6 +72,7 @@ Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
       'order_index': instance.orderIndex,
       'subtasks_total': instance.subtasksTotal,
       'subtasks_completed': instance.subtasksCompleted,
+      'metadata': instance.metadata,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };
@@ -88,6 +91,7 @@ const _$TaskStatusEnumMap = {
   TaskStatus.pending: 'PENDING',
   TaskStatus.inProgress: 'IN_PROGRESS',
   TaskStatus.paused: 'PAUSED',
+  TaskStatus.restore: 'RESTORE',
   TaskStatus.stuck: 'STUCK',
   TaskStatus.completed: 'COMPLETED',
   TaskStatus.abandoned: 'ABANDONED',

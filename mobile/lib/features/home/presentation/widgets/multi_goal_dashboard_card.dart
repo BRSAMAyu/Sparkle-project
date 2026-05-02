@@ -2,8 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/goal_switcher.dart';
@@ -39,7 +41,7 @@ class _MultiGoalDashboardContent extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    if (overview.goals.length < 2) {
+    if (overview.goals.isEmpty) {
       return const SizedBox.shrink();
     }
 
@@ -63,10 +65,14 @@ class _MultiGoalDashboardContent extends ConsumerWidget {
               DashboardSectionHeader(
                 icon: Icons.account_tree_rounded,
                 accentColor: DS.info,
-                title: zh ? '多目标仪表盘' : 'Multi-goal Dashboard',
-                summary: zh
-                    ? '${overview.goals.length} 个活跃目标，当前关注会同步到聊天、任务和星图'
-                    : '${overview.goals.length} active goals. Focus syncs to chat, tasks, and galaxy.',
+                title: overview.goals.length == 1
+                    ? context.l10n.dashboardActivePlan
+                    : (zh ? '多目标仪表盘' : 'Multi-goal Dashboard'),
+                summary: overview.goals.length == 1
+                    ? context.l10n.dashboardBriefingSummary
+                    : (zh
+                        ? '${overview.goals.length} 个活跃目标，当前关注会同步到聊天、任务和星图'
+                        : '${overview.goals.length} active goals. Focus syncs to chat, tasks, and galaxy.'),
                 trailing: GoalSwitcher(overview: overview, dense: true),
               ),
               if (suggestion != null && suggestion.hasConflict) ...[
@@ -90,6 +96,19 @@ class _MultiGoalDashboardContent extends ConsumerWidget {
                               .selectGoal(goal.id),
                         );
                         ref.invalidate(multiGoalOverviewProvider);
+                        try {
+                          unawaited(
+                            context.push(
+                              '/goals/${Uri.encodeComponent(goal.id)}',
+                            ),
+                          );
+                        } catch (_) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(context.l10n.planViewDetails),
+                            ),
+                          );
+                        }
                       },
                     ),
                     if (goal != overview.goals.take(5).last)
@@ -198,76 +217,80 @@ class _GoalRow extends StatelessWidget {
     final accent =
         isSelected ? DS.brandPrimary : _healthColor(goal.healthScore);
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: DS.borderRadius16,
-      child: Container(
-        padding: const EdgeInsets.all(DS.spacing12),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? DS.brandPrimary.withValues(alpha: 0.08)
-              : DS.surfaceOverlay.withValues(alpha: 0.5),
-          borderRadius: DS.borderRadius16,
-          border: Border.all(
+    return Semantics(
+      button: true,
+      label: goal.title,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: DS.borderRadius16,
+        child: Container(
+          padding: const EdgeInsets.all(DS.spacing12),
+          decoration: BoxDecoration(
             color: isSelected
-                ? DS.brandPrimary.withValues(alpha: 0.26)
-                : DS.borderSubtle,
+                ? DS.brandPrimary.withValues(alpha: 0.08)
+                : DS.surfaceOverlay.withValues(alpha: 0.5),
+            borderRadius: DS.borderRadius16,
+            border: Border.all(
+              color: isSelected
+                  ? DS.brandPrimary.withValues(alpha: 0.26)
+                  : DS.borderSubtle,
+            ),
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  isSelected
-                      ? Icons.radio_button_checked_rounded
-                      : Icons.radio_button_unchecked_rounded,
-                  size: 18,
-                  color: accent,
-                ),
-                const SizedBox(width: DS.spacing8),
-                Expanded(
-                  child: Text(
-                    goal.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: context.sparkleTypography.bodyMedium.copyWith(
-                      color: DS.textPrimary,
-                      fontWeight: DS.fontWeightBold,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isSelected
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_unchecked_rounded,
+                    size: 18,
+                    color: accent,
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: Text(
+                      goal.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.sparkleTypography.bodyMedium.copyWith(
+                        color: DS.textPrimary,
+                        fontWeight: DS.fontWeightBold,
+                      ),
                     ),
                   ),
-                ),
-                _HealthPill(score: goal.healthScore, color: accent),
-              ],
-            ),
-            const SizedBox(height: DS.spacing10),
-            Wrap(
-              spacing: DS.spacing8,
-              runSpacing: DS.spacing8,
-              children: [
-                _MetaPill(
-                  icon: Icons.event_rounded,
-                  label: _deadlineLabel(goal.deadlineDays, zh),
-                ),
-                _MetaPill(
-                  icon: Icons.timeline_rounded,
-                  label: goal.currentPhase ?? (zh ? '进行中' : 'In progress'),
-                ),
-                _MetaPill(
-                  icon: Icons.warning_amber_rounded,
-                  label: zh
-                      ? '本周冲突 ${goal.weeklyConflictCount}'
-                      : '${goal.weeklyConflictCount} conflicts',
-                ),
-                if (goal.timeFraction != null)
+                  _HealthPill(score: goal.healthScore, color: accent),
+                ],
+              ),
+              const SizedBox(height: DS.spacing10),
+              Wrap(
+                spacing: DS.spacing8,
+                runSpacing: DS.spacing8,
+                children: [
                   _MetaPill(
-                    icon: Icons.pie_chart_rounded,
-                    label: '${(goal.timeFraction! * 100).round()}%',
+                    icon: Icons.event_rounded,
+                    label: _deadlineLabel(goal.deadlineDays, zh),
                   ),
-              ],
-            ),
-          ],
+                  _MetaPill(
+                    icon: Icons.timeline_rounded,
+                    label: goal.currentPhase ?? (zh ? '进行中' : 'In progress'),
+                  ),
+                  _MetaPill(
+                    icon: Icons.warning_amber_rounded,
+                    label: zh
+                        ? '本周冲突 ${goal.weeklyConflictCount}'
+                        : '${goal.weeklyConflictCount} conflicts',
+                  ),
+                  if (goal.timeFraction != null)
+                    _MetaPill(
+                      icon: Icons.pie_chart_rounded,
+                      label: '${(goal.timeFraction! * 100).round()}%',
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

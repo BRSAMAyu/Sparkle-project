@@ -10,6 +10,7 @@ import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/task/presentation/widgets/paused_task_status_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_quick_action_menu.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -46,6 +47,7 @@ class TaskCard extends ConsumerStatefulWidget {
 
 class _TaskCardState extends ConsumerState<TaskCard> {
   bool _hasEmittedDragStart = false;
+  bool _restoreDialogShown = false;
 
   SparkleThemeExtension? _sparkleTheme(BuildContext context) =>
       Theme.of(context).extension<SparkleThemeExtension>();
@@ -87,7 +89,31 @@ class _TaskCardState extends ConsumerState<TaskCard> {
   }
 
   @override
+  void didUpdateWidget(covariant TaskCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.task.id != widget.task.id ||
+        oldWidget.task.status != widget.task.status) {
+      _restoreDialogShown = false;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (widget.task.status == TaskStatus.restore &&
+        !_restoreDialogShown &&
+        !widget.compact) {
+      _restoreDialogShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        unawaited(
+          showRestoreTaskDialog(
+            context: context,
+            task: widget.task,
+            onConfirm: widget.onResume ?? widget.onStart,
+          ),
+        );
+      });
+    }
     final card = _buildCardContent(context);
     if (!widget.enableSwipeComplete ||
         widget.onComplete == null ||
@@ -350,26 +376,44 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                               ),
                                               child: Column(
                                                 children: [
-                                                  if (widget.onStart != null &&
-                                                      (widget.task.status ==
-                                                              TaskStatus
-                                                                  .pending ||
+                                                  if ((widget.onStart != null &&
                                                           widget.task.status ==
                                                               TaskStatus
-                                                                  .paused))
+                                                                  .pending) ||
+                                                      (widget.onResume !=
+                                                              null &&
+                                                          (widget.task.status ==
+                                                                  TaskStatus
+                                                                      .restore ||
+                                                              widget.task
+                                                                      .status ==
+                                                                  TaskStatus
+                                                                      .paused)))
                                                     _ActionButton(
                                                       icon: widget.task
                                                                   .status ==
-                                                              TaskStatus.paused
+                                                              TaskStatus.restore
                                                           ? Icons
-                                                              .restart_alt_rounded
-                                                          : Icons.play_arrow,
+                                                              .restore_rounded
+                                                          : widget.task
+                                                                      .status ==
+                                                                  TaskStatus
+                                                                      .paused
+                                                              ? Icons
+                                                                  .restart_alt_rounded
+                                                              : Icons
+                                                                  .play_arrow,
                                                       color: context
                                                           .sparkleColors
                                                           .brandPrimary,
                                                       onPressed: widget.task
-                                                                  .status ==
-                                                              TaskStatus.paused
+                                                                      .status ==
+                                                                  TaskStatus
+                                                                      .restore ||
+                                                              widget.task
+                                                                      .status ==
+                                                                  TaskStatus
+                                                                      .paused
                                                           ? (widget.onResume ??
                                                               widget.onStart!)
                                                           : widget.onStart!,
@@ -394,6 +438,8 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                       widget.task.status !=
                                                           TaskStatus
                                                               .abandoned &&
+                                                      widget.task.status !=
+                                                          TaskStatus.restore &&
                                                       widget.task.status !=
                                                           TaskStatus.paused)
                                                     _ActionButton(
@@ -485,6 +531,16 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                 color: DS.textSecondary,
                                                 height: 1.35,
                                               ),
+                                        ),
+                                      ],
+                                      if (widget.task.status ==
+                                          TaskStatus.paused) ...[
+                                        const SizedBox(height: 10),
+                                        PausedTaskStatusPanel(
+                                          task: widget.task,
+                                          onResume:
+                                              widget.onResume ?? widget.onStart,
+                                          onPause: widget.onPause,
                                         ),
                                       ],
                                       if (widget.task.knowledgeNodeId !=
@@ -717,6 +773,7 @@ TaskPillTone _statusTone(TaskStatus status) {
     case TaskStatus.stuck:
       return TaskPillTone.brand;
     case TaskStatus.paused:
+    case TaskStatus.restore:
       return TaskPillTone.neutral;
     case TaskStatus.completed:
       return TaskPillTone.success;
@@ -752,6 +809,8 @@ String _statusLabel(AppLocalizations l10n, TaskStatus status) {
       return l10n.taskStatusInProgress;
     case TaskStatus.paused:
       return l10n.taskStatusPaused;
+    case TaskStatus.restore:
+      return l10n.taskStatusRestore;
     case TaskStatus.stuck:
       return l10n.taskStatusStuck;
     case TaskStatus.completed:

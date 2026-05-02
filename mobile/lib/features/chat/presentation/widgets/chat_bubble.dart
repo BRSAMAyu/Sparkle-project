@@ -33,6 +33,7 @@ import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_wid
 import 'package:sparkle/features/chat/presentation/widgets/message_detail_view.dart';
 import 'package:sparkle/features/chat/presentation/widgets/mode_suggestion_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/orchestration_trace_panel.dart';
+import 'package:sparkle/features/chat/presentation/widgets/source_explanation_card.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_share_repository.dart';
 import 'package:sparkle/features/community/presentation/providers/community_agent_provider.dart';
@@ -1011,7 +1012,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                               null)
                                         Padding(
                                           padding: const EdgeInsets.only(
-                                              bottom: 8.0),
+                                            bottom: 8.0,
+                                          ),
                                           child: AgentReasoningBubble(
                                             steps: (widget.message
                                                     as ChatMessageModel)
@@ -1132,6 +1134,11 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                             transparencyPreferences
                                                 .enabledReceiptTypes,
                                         onActionSelected: _continueInlinePrompt,
+                                      ),
+                                      SourceExplanationCard(
+                                        rawMetadata:
+                                            (widget.message as ChatMessageModel)
+                                                .rawMetadata,
                                       ),
                                     ],
                                   ),
@@ -3073,8 +3080,10 @@ class _InsightLinkCard extends StatelessWidget {
                         .map(
                           (item) => FilledButton.tonalIcon(
                             onPressed: item.onTap,
-                            icon: const Icon(Icons.arrow_outward_rounded,
-                                size: 16),
+                            icon: const Icon(
+                              Icons.arrow_outward_rounded,
+                              size: 16,
+                            ),
                             label: Text(item.label),
                           ),
                         )

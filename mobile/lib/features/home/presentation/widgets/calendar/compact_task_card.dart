@@ -149,6 +149,7 @@ class CompactTaskCard extends ConsumerWidget {
               .push(TaskRoutes.taskExecution.replaceFirst(':id', task.id)),
         );
       case TaskStatus.paused:
+      case TaskStatus.restore:
         return _ActionButton(
           icon: Icons.restart_alt_rounded,
           color: DS.brandPrimaryConst,

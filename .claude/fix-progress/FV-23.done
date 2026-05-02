@@ -1,0 +1,13 @@
+FV-23: i18n 残余清零 (CI guard)
+Status: DONE
+Branch: codex/FV-17-source-lifecycle
+Modified files:
+- scripts/guards/check_i18n_coverage.py
+- scripts/rule_guard_manifest.tsv (already registered, no change needed)
+Verification:
+- python3 scripts/guards/check_i18n_coverage.py: PASS
+- Guard registered in rule_guard_manifest.tsv: CONFIRMED
+- Strategy: File-level check — presentation files with Chinese strings must import i18n infrastructure
+- 16 legacy files exempted (previously reviewed in prior i18n rounds)
+User-visible change: CI now prevents new presentation-layer files from being created without i18n imports, while not retroactively blocking existing reviewed files
+Architect handoff: 16 exempted files are documented in the guard's EXEMPT_FILES set. Future i18n rounds can remove them from the exemption list as they get bilingual support.

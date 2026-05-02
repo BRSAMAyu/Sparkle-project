@@ -1,0 +1,18 @@
+{
+  "streakQualityTitle": "高质量连胜",
+  "streakQualitySubtitle": "连胜会参考有效时长、核心任务、难点突破和计划一致性。",
+  "streakQualityDaysShort": "质量日",
+  "streakQualityTodayBreakdown": "今日质量拆解",
+  "streakQualityEffectiveMinutes": "有效时长",
+  "streakQualityCoreTasks": "核心任务",
+  "streakQualityBreakthroughs": "难点突破",
+  "streakQualityPlanConsistency": "计划一致性",
+  "streakQualityWeeklyTrend": "本周质量趋势",
+  "streakQualityEvidence": "为什么值得庆祝",
+  "streakQualityEmpty": "开始一次学习后，这里会显示质量趋势。",
+  "streakQualityUnavailable": "质量数据暂不可用",
+  "streakQualityViewDetails": "查看连胜详情",
+  "streakQualityScoreLabel": "质量 {score}%",
+  "streakQualityMinutesValue": "{minutes} 分钟",
+  "streakQualitySemantics": "高质量连胜 {qualityDays} 天，当前连续 {currentDays} 天。点按查看拆解。"
+}

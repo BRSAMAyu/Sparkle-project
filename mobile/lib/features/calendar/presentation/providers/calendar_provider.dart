@@ -239,6 +239,7 @@ class TaskCalendarNotifier extends StateNotifier<TaskCalendarState> {
               overdue: isOverdue ? existing.overdue + 1 : existing.overdue,
             );
           case TaskStatus.paused:
+          case TaskStatus.restore:
             newSummary = existing.copyWith(
               pending: existing.pending + 1,
               overdue: isOverdue ? existing.overdue + 1 : existing.overdue,

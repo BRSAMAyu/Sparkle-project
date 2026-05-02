@@ -908,6 +908,20 @@ class AchievementUnlockEvent extends ChatStreamEvent {
           .toList() ??
       const [];
 
+  Map<String, dynamic>? get contextSnapshot {
+    final raw = achievementData['context_snapshot'];
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return null;
+  }
+
+  String? get contextStory {
+    final raw = achievementData['context_story'];
+    if (raw == null) return null;
+    final text = '$raw'.trim();
+    return text.isEmpty ? null : text;
+  }
+
   /// 转换为AchievementUnlockEvent模型用于弹窗显示
   AchievementUnlockModel toUnlockModel() => AchievementUnlockModel(
         achievementId: achievementId,
@@ -921,6 +935,8 @@ class AchievementUnlockEvent extends ChatStreamEvent {
         rewardPreview: rewardPreview,
         surfacePreview: surfacePreview,
         gloryLines: gloryLines,
+        contextSnapshot: contextSnapshot,
+        contextStory: contextStory,
       );
 }
 
@@ -938,6 +954,8 @@ class AchievementUnlockModel {
     this.rewardPreview = const [],
     this.surfacePreview = const [],
     this.gloryLines = const [],
+    this.contextSnapshot,
+    this.contextStory,
   });
 
   final String achievementId;
@@ -951,6 +969,8 @@ class AchievementUnlockModel {
   final List<String> rewardPreview;
   final List<String> surfacePreview;
   final List<String> gloryLines;
+  final Map<String, dynamic>? contextSnapshot;
+  final String? contextStory;
 }
 
 /// ============================================
@@ -1701,7 +1721,7 @@ class StaleRecoveryEvent extends ChatStreamEvent {
       S.chatCompleted,
       S.chatStreamStuck,
       S.chatStreamNotStarted,
-      S.chatStreamSwitchTask
+      S.chatStreamSwitchTask,
     ];
   }
 

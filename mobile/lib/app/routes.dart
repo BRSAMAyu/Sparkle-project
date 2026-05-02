@@ -19,6 +19,7 @@ import 'package:sparkle/features/documents/documents.dart';
 import 'package:sparkle/features/error_book/error_book.dart';
 import 'package:sparkle/features/focus/focus.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/goal/goal.dart';
 import 'package:sparkle/features/home/home.dart';
 import 'package:sparkle/features/insights/insights.dart';
 import 'package:sparkle/features/memory/memory.dart';
@@ -309,6 +310,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...ErrorBookRoutes.routes,
       ...ReviewRoutes.routes,
       ...GalaxyRoutes.routes,
+      ...GoalRoutes.routes,
       ...CognitiveRoutes.routes,
       ...CommunityRoutes.routes,
       ...DocumentLibraryRoutes.routes,

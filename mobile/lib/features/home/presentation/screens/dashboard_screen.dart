@@ -17,6 +17,11 @@ import 'package:sparkle/features/aurora/presentation/widgets/aurora_calibration_
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/chat/chat_routes.dart';
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
+import 'package:sparkle/features/community/data/models/accountability_model.dart';
+import 'package:sparkle/features/community/presentation/providers/accountability_provider.dart';
+import 'package:sparkle/features/experience/presentation/providers/experience_provider.dart';
+import 'package:sparkle/features/experience/presentation/widgets/goal_detail_snapshot_card.dart';
+import 'package:sparkle/features/experience/presentation/widgets/growth_quality_card.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
@@ -37,8 +42,10 @@ import 'package:sparkle/features/home/presentation/widgets/multi_goal_dashboard_
 import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/understanding_panel.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
+import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/reviews/presentation/providers/nightly_review_provider.dart';
@@ -91,7 +98,7 @@ Future<String?> showAuroraFreeformCorrectionInputDialog(BuildContext context) {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(null),
+            onPressed: () => Navigator.of(ctx).pop(),
             child: Text(zh ? '取消' : 'Cancel'),
           ),
           FilledButton(
@@ -120,27 +127,32 @@ Future<void> _showFreeformCorrectionDialog(
 
   if (!context.mounted) return;
   if (telemetry != null) {
-    unawaited(telemetry.recordStatusBandCorrection(
-      label: text,
-      semanticValue: semanticValue,
-      isDisconfirming: isDisconfirming,
-      bandStatus: bandStatus,
-      isFreeform: true,
-      freeformText: text,
-    ));
-  }
-  unawaited(
-    context.push(ChatRoutes.chat, extra: {
-      'initial_user_message': text,
-      'aurora_correction': AuroraCorrectionPayload.freeform(
-        surface: AuroraCorrectionSurface.dashboard,
-        semanticValue: semanticValue,
+    unawaited(
+      telemetry.recordStatusBandCorrection(
         label: text,
-        freeformText: text,
+        semanticValue: semanticValue,
         isDisconfirming: isDisconfirming,
         bandStatus: bandStatus,
-      ).toJson(),
-    }),
+        isFreeform: true,
+        freeformText: text,
+      ),
+    );
+  }
+  unawaited(
+    context.push(
+      ChatRoutes.chat,
+      extra: {
+        'initial_user_message': text,
+        'aurora_correction': AuroraCorrectionPayload.freeform(
+          surface: AuroraCorrectionSurface.dashboard,
+          semanticValue: semanticValue,
+          label: text,
+          freeformText: text,
+          isDisconfirming: isDisconfirming,
+          bandStatus: bandStatus,
+        ).toJson(),
+      },
+    ),
   );
 }
 
@@ -159,6 +171,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   static const double _bottomScrollTailHeight = 24;
   static const double _omniBarExpandedBuffer = 96;
   bool _isBriefingExpanded = false;
+  bool _isUnderstandingExpanded = false;
   double? _omniBarHeight;
 
   Widget _staggeredSection({
@@ -218,6 +231,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ..invalidate(homeDailyContextLineProvider)
       ..invalidate(homeGrowthDashboardSnapshotProvider)
       ..invalidate(homeGrowthStateProvider)
+      ..invalidate(understandingSnapshotProvider)
+      ..invalidate(experienceGrowthDashboardProvider)
+      ..invalidate(currentGoalDetailSnapshotProvider)
       ..invalidate(examSprintDashboardProvider);
 
     try {
@@ -230,6 +246,106 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       debugPrint('Dashboard: growth state refresh failed: $e\n$st');
     }
   }
+
+  Widget _buildAuroraStatusBandSlot(DashboardState dashboardState) => Builder(
+        builder: (context) {
+          final bandAsync = ref.watch(spineStatusBandProvider);
+          return bandAsync.when(
+            data: (band) => AuroraStatusBand(
+              state: band != null
+                  ? AuroraStatusBand.mapBandStatus(band.bandStatus)
+                  : _resolveAuroraState(dashboardState),
+              label: band?.bandSummary.isNotEmpty ?? false
+                  ? band!.bandSummary
+                  : _auroraBandLabel(dashboardState),
+              correctionOptions: band?.correctionOptions ?? [],
+              cooldownRemainingSeconds: band?.cooldownRemainingSeconds,
+              cooldownCanOverride: band?.cooldownCanOverride ?? false,
+              onTap: () => unawaited(context.push(ChatRoutes.chat)),
+              onCorrectionTap: (opt) {
+                if (opt.isFreeform) {
+                  unawaited(
+                    _showFreeformCorrectionDialog(
+                      context,
+                      bandStatus: band?.bandStatus.protocolValue ?? '',
+                      semanticValue: opt.semanticValue,
+                      isDisconfirming: opt.isDisconfirming,
+                      telemetry: AuroraTelemetryService(
+                        ref.read(apiClientProvider),
+                      ),
+                    ),
+                  );
+                } else {
+                  final telemetry =
+                      AuroraTelemetryService(ref.read(apiClientProvider));
+                  unawaited(
+                    telemetry.recordStatusBandCorrection(
+                      label: opt.label,
+                      semanticValue: opt.semanticValue,
+                      isDisconfirming: opt.isDisconfirming,
+                      bandStatus: band?.bandStatus.protocolValue ?? '',
+                    ),
+                  );
+                  final payload = AuroraCorrectionPayload.chip(
+                    surface: AuroraCorrectionSurface.dashboard,
+                    semanticValue: opt.semanticValue,
+                    label: opt.label,
+                    isDisconfirming: opt.isDisconfirming,
+                    bandStatus: band?.bandStatus.protocolValue ?? '',
+                  );
+                  unawaited(
+                    context.push(
+                      ChatRoutes.chat,
+                      extra: {
+                        'initial_user_message': opt.label,
+                        'aurora_correction': payload.toJson(),
+                      },
+                    ),
+                  );
+                }
+              },
+              onCooldownOverride: () {
+                final telemetry =
+                    AuroraTelemetryService(ref.read(apiClientProvider));
+                unawaited(
+                  telemetry.recordStatusBandCorrection(
+                    label: context.l10n.dashboardQuickCalibration,
+                    semanticValue: 'quick_calibration',
+                    isDisconfirming: false,
+                    bandStatus: band?.bandStatus.protocolValue ?? '',
+                  ),
+                );
+                final payload = AuroraCorrectionPayload.calibrationOverride(
+                  surface: AuroraCorrectionSurface.dashboard,
+                  semanticValue: 'quick_calibration',
+                  label: context.l10n.dashboardQuickCalibration,
+                  bandStatus: band?.bandStatus.protocolValue ?? '',
+                );
+                unawaited(
+                  context.push(
+                    ChatRoutes.chat,
+                    extra: {
+                      'initial_user_message':
+                          context.l10n.dashboardQuickCalibration,
+                      'aurora_correction': payload.toJson(),
+                    },
+                  ),
+                );
+              },
+            ),
+            loading: () => AuroraStatusBand(
+              state: _resolveAuroraState(dashboardState),
+              label: _auroraBandLabel(dashboardState),
+              onTap: () => context.push(ChatRoutes.chat),
+            ),
+            error: (_, __) => AuroraStatusBand(
+              state: _resolveAuroraState(dashboardState),
+              label: _auroraBandLabel(dashboardState),
+              onTap: () => context.push(ChatRoutes.chat),
+            ),
+          );
+        },
+      );
 
   void _openBottleneckChat(HomeBottleneck bottleneck) {
     final prompt = context.l10n.dashboardBottleneckPrompt(bottleneck.topic);
@@ -455,6 +571,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             _staggeredSection(
               index: growthSectionIndex++,
+              child: _buildAuroraStatusBandSlot(dashboardState),
+            ),
+            _staggeredSection(
+              index: growthSectionIndex++,
+              child: _UnderstandingExpansionSlot(
+                isExpanded: _isUnderstandingExpanded,
+                onToggle: () {
+                  setState(() {
+                    _isUnderstandingExpanded = !_isUnderstandingExpanded;
+                  });
+                },
+              ),
+            ),
+            _staggeredSection(
+              index: growthSectionIndex++,
               child: const _DashboardGoalSwitcherBand(),
             ),
             _staggeredSection(
@@ -488,7 +619,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             _staggeredSection(
               index: growthSectionIndex++,
+              child: GoalDetailSnapshotCard(
+                onOpenGoal: () => unawaited(context.push('/goals/current')),
+              ),
+            ),
+            _staggeredSection(
+              index: growthSectionIndex++,
               child: const MultiGoalDashboardCard(),
+            ),
+            _staggeredSection(
+              index: growthSectionIndex++,
+              child: const TaskBoardCard(),
+            ),
+            _staggeredSection(
+              index: growthSectionIndex++,
+              child: const GrowthQualityCard(),
+            ),
+            _staggeredSection(
+              index: growthSectionIndex++,
+              child: const _CommunityAccountabilitySlot(),
+            ),
+            if (activeBottleneck != null)
+              _staggeredSection(
+                index: growthSectionIndex++,
+                child: _AttentionSlot(
+                  bottleneck: activeBottleneck,
+                  onOpen: () => _openBottleneckChat(activeBottleneck),
+                ),
+              ),
+            _staggeredSection(
+              index: growthSectionIndex++,
+              child: const _WeeklyNarrativeSlot(),
             ),
             if (examSprintDashboard != null)
               _staggeredSection(
@@ -534,61 +695,62 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         _ => context.l10n.dashboardRetry,
       };
       // R5-F04: Show error UI instead of silently falling back
-      dashboardSections.add(
-        _staggeredSection(
-          index: sectionIndex++,
-          child: CompactStatusBar(
-            user: user,
-            dashboardState: dashboardState,
-          ),
-        ),
-      );
-      dashboardSections.add(
-        _staggeredSection(
-          index: sectionIndex++,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-            child: Column(
-              children: [
-                Icon(failureIcon, size: 40, color: DS.textTertiary),
-                const SizedBox(height: 12),
-                Text(
-                  failureTitle,
-                  style: TextStyle(
-                    color: DS.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  dashboardState.error ?? context.l10n.dashboardLoadFailed,
-                  style: TextStyle(color: DS.textSecondary, fontSize: 14),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                TextButton.icon(
-                  onPressed: () {
-                    if (failureKind == FailureKind.auth) {
-                      context.go('/login');
-                      return;
-                    }
-                    ref.invalidate(dashboardProvider);
-                  },
-                  icon: Icon(
-                    failureKind == FailureKind.auth
-                        ? Icons.login_rounded
-                        : Icons.refresh,
-                    size: 18,
-                  ),
-                  label: Text(actionLabel),
-                ),
-              ],
+      dashboardSections
+        ..add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: CompactStatusBar(
+              user: user,
+              dashboardState: dashboardState,
             ),
           ),
-        ),
-      );
+        )
+        ..add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              child: Column(
+                children: [
+                  Icon(failureIcon, size: 40, color: DS.textTertiary),
+                  const SizedBox(height: 12),
+                  Text(
+                    failureTitle,
+                    style: TextStyle(
+                      color: DS.textPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    dashboardState.error ?? context.l10n.dashboardLoadFailed,
+                    style: TextStyle(color: DS.textSecondary, fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  TextButton.icon(
+                    onPressed: () {
+                      if (failureKind == FailureKind.auth) {
+                        context.go('/login');
+                        return;
+                      }
+                      ref.invalidate(dashboardProvider);
+                    },
+                    icon: Icon(
+                      failureKind == FailureKind.auth
+                          ? Icons.login_rounded
+                          : Icons.refresh,
+                      size: 18,
+                    ),
+                    label: Text(actionLabel),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
     } else if (dashboardState.isLoading) {
       for (final skeleton in _buildDashboardSkeletonSections()) {
         dashboardSections.add(
@@ -600,96 +762,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       }
     } else {
       dashboardSections.addAll([
-        _staggeredSection(
-          index: sectionIndex++,
-          child: Builder(builder: (context) {
-            final bandAsync = ref.watch(spineStatusBandProvider);
-            return bandAsync.when(
-              data: (band) => AuroraStatusBand(
-                state: band != null
-                    ? AuroraStatusBand.mapBandStatus(band.bandStatus)
-                    : _resolveAuroraState(dashboardState),
-                label: band?.bandSummary.isNotEmpty ?? false
-                    ? band!.bandSummary
-                    : _auroraBandLabel(dashboardState),
-                correctionOptions: band?.correctionOptions ?? [],
-                cooldownRemainingSeconds: band?.cooldownRemainingSeconds,
-                cooldownCanOverride: band?.cooldownCanOverride ?? false,
-                onTap: () => unawaited(context.push(ChatRoutes.chat)),
-                onCorrectionTap: (opt) {
-                  if (opt.isFreeform) {
-                    unawaited(
-                      _showFreeformCorrectionDialog(
-                        context,
-                        bandStatus: band?.bandStatus.protocolValue ?? '',
-                        semanticValue: opt.semanticValue,
-                        isDisconfirming: opt.isDisconfirming,
-                        telemetry: AuroraTelemetryService(
-                          ref.read(apiClientProvider),
-                        ),
-                      ),
-                    );
-                  } else {
-                    final telemetry =
-                        AuroraTelemetryService(ref.read(apiClientProvider));
-                    unawaited(telemetry.recordStatusBandCorrection(
-                      label: opt.label,
-                      semanticValue: opt.semanticValue,
-                      isDisconfirming: opt.isDisconfirming,
-                      bandStatus: band?.bandStatus.protocolValue ?? '',
-                    ));
-                    final payload = AuroraCorrectionPayload.chip(
-                      surface: AuroraCorrectionSurface.dashboard,
-                      semanticValue: opt.semanticValue,
-                      label: opt.label,
-                      isDisconfirming: opt.isDisconfirming,
-                      bandStatus: band?.bandStatus.protocolValue ?? '',
-                    );
-                    unawaited(
-                      context.push(ChatRoutes.chat, extra: {
-                        'initial_user_message': opt.label,
-                        'aurora_correction': payload.toJson(),
-                      }),
-                    );
-                  }
-                },
-                onCooldownOverride: () {
-                  final telemetry =
-                      AuroraTelemetryService(ref.read(apiClientProvider));
-                  unawaited(telemetry.recordStatusBandCorrection(
-                    label: context.l10n.dashboardQuickCalibration,
-                    semanticValue: 'quick_calibration',
-                    isDisconfirming: false,
-                    bandStatus: band?.bandStatus.protocolValue ?? '',
-                  ));
-                  final payload = AuroraCorrectionPayload.calibrationOverride(
-                    surface: AuroraCorrectionSurface.dashboard,
-                    semanticValue: 'quick_calibration',
-                    label: context.l10n.dashboardQuickCalibration,
-                    bandStatus: band?.bandStatus.protocolValue ?? '',
-                  );
-                  unawaited(
-                    context.push(ChatRoutes.chat, extra: {
-                      'initial_user_message':
-                          context.l10n.dashboardQuickCalibration,
-                      'aurora_correction': payload.toJson(),
-                    }),
-                  );
-                },
-              ),
-              loading: () => AuroraStatusBand(
-                state: _resolveAuroraState(dashboardState),
-                label: _auroraBandLabel(dashboardState),
-                onTap: () => context.push(ChatRoutes.chat),
-              ),
-              error: (_, __) => AuroraStatusBand(
-                state: _resolveAuroraState(dashboardState),
-                label: _auroraBandLabel(dashboardState),
-                onTap: () => context.push(ChatRoutes.chat),
-              ),
-            );
-          }),
-        ),
         _staggeredSection(
           index: sectionIndex++,
           child: _DailyBriefingCard(
@@ -740,10 +812,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
             child: LearningHeatmapWidget(),
           ),
-        ),
-        _staggeredSection(
-          index: sectionIndex++,
-          child: const TaskBoardCard(),
         ),
       ]);
     }
@@ -845,9 +913,9 @@ class _DashboardGoalSwitcherBand extends StatelessWidget {
   const _DashboardGoalSwitcherBand();
 
   @override
-  Widget build(BuildContext context) => ContentConstraint(
+  Widget build(BuildContext context) => const ContentConstraint(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(
+          padding: EdgeInsets.fromLTRB(
             DS.spacing16,
             0,
             DS.spacing16,
@@ -859,6 +927,444 @@ class _DashboardGoalSwitcherBand extends StatelessWidget {
           ),
         ),
       );
+}
+
+class _UnderstandingExpansionSlot extends StatelessWidget {
+  const _UnderstandingExpansionSlot({
+    required this.isExpanded,
+    required this.onToggle,
+  });
+
+  final bool isExpanded;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing10,
+        ),
+        child: Column(
+          children: [
+            Semantics(
+              button: true,
+              label: isExpanded
+                  ? context.l10n.understandingPanelCollapse
+                  : context.l10n.understandingPanelExpand,
+              child: InkWell(
+                onTap: onToggle,
+                borderRadius: BorderRadius.circular(8),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing12,
+                    vertical: DS.spacing10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: scheme.outlineVariant),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.psychology_alt_outlined,
+                        size: 18,
+                        color: scheme.primary,
+                      ),
+                      const SizedBox(width: DS.spacing8),
+                      Expanded(
+                        child: Text(
+                          context.l10n.understandingPanelTitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.labelLarge?.copyWith(
+                            color: scheme.onSurface,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        isExpanded
+                            ? Icons.expand_less_rounded
+                            : Icons.expand_more_rounded,
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            ClipRect(
+              child: AnimatedSize(
+                duration: DS.quick,
+                curve: DS.motionCurve(SparkleMotionToken.standard),
+                alignment: Alignment.topCenter,
+                child: isExpanded
+                    ? const UnderstandingPanel(
+                        compact: true,
+                        initiallyExpanded: true,
+                      )
+                    : const SizedBox.shrink(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommunityAccountabilitySlot extends ConsumerWidget {
+  const _CommunityAccountabilitySlot();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final overview = ref.watch(accountabilityOverviewProvider);
+    return overview.when(
+      data: (data) => _CommunityAccountabilitySurface(data: data),
+      loading: () => const Padding(
+        padding: EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing10,
+        ),
+        child: SparkleCardSkeleton(),
+      ),
+      error: (_, __) => _HomeErrorCard(
+        title: context.l10n.communityAccountabilityPartner,
+        message: context.l10n.accountabilityDashboardLoadFailed,
+        onRetry: () => ref.invalidate(accountabilityOverviewProvider),
+      ),
+    );
+  }
+}
+
+class _CommunityAccountabilitySurface extends StatelessWidget {
+  const _CommunityAccountabilitySurface({required this.data});
+
+  final AccountabilityOverviewInfo data;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final active = data.activePartnership;
+    final partnerName = active?.partner?.displayName ??
+        active?.initiator?.displayName ??
+        context.l10n.accountabilityPartner;
+    final hasActive = active != null;
+
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing10,
+        ),
+        child: DashboardSectionShell(
+          key: const ValueKey('home-accountability-slot'),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              DashboardSectionHeader(
+                icon: Icons.handshake_outlined,
+                accentColor: scheme.tertiary,
+                title: context.l10n.communityAccountabilityPartner,
+                summary: hasActive
+                    ? context.l10n.accountabilityGrowingTogether
+                    : context.l10n.communityPartnerDescription,
+                trailing: SparkleIconButton(
+                  variant: ButtonVariant.ghost,
+                  size: 34,
+                  onPressed: () => context.push('/community/accountability'),
+                  icon: const Icon(Icons.chevron_right_rounded, size: 18),
+                ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              if (!hasActive)
+                _HomeEmptyInline(
+                  icon: Icons.group_add_outlined,
+                  title: context.l10n.communityChooseCorePartner,
+                  actionLabel: context.l10n.communityChoosePartner,
+                  onAction: () => context.push('/community/accountability'),
+                )
+              else
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _AccountabilityMiniCard(
+                        title: partnerName,
+                        subtitle: active.partnerGoal ??
+                            (active.initiatorGoal.trim().isEmpty
+                                ? context.l10n.accountabilityGoalNotSet
+                                : active.initiatorGoal),
+                        checkedIn: active.partnerCheckedInToday,
+                      ),
+                      const SizedBox(width: DS.spacing10),
+                      _AccountabilityMiniCard(
+                        title: context.l10n.accountabilityMe,
+                        subtitle: active.initiatorGoal.trim().isEmpty
+                            ? context.l10n.accountabilityGoalNotSet
+                            : active.initiatorGoal,
+                        checkedIn: active.myCheckedInToday,
+                      ),
+                      const SizedBox(width: DS.spacing10),
+                      ActionChip(
+                        avatar: Icon(
+                          Icons.notifications_active_outlined,
+                          size: 18,
+                          color: scheme.primary,
+                        ),
+                        label: Text(context.l10n.accountabilityNudge),
+                        onPressed: () =>
+                            context.push('/community/accountability'),
+                        backgroundColor: scheme.primaryContainer,
+                        labelStyle: textTheme.labelLarge?.copyWith(
+                          color: scheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AccountabilityMiniCard extends StatelessWidget {
+  const _AccountabilityMiniCard({
+    required this.title,
+    required this.subtitle,
+    required this.checkedIn,
+  });
+
+  final String title;
+  final String subtitle;
+  final bool? checkedIn;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final good = checkedIn ?? false;
+    final accent = good ? scheme.primary : scheme.secondary;
+
+    return Semantics(
+      label: title,
+      child: Container(
+        width: 176,
+        padding: const EdgeInsets.all(DS.spacing12),
+        decoration: BoxDecoration(
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: scheme.outlineVariant),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              good
+                  ? Icons.check_circle_outline_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: accent,
+              size: 20,
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.labelLarge?.copyWith(
+                color: scheme.onSurface,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: DS.spacing4),
+            Text(
+              subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: textTheme.bodySmall?.copyWith(
+                color: scheme.onSurfaceVariant,
+                height: 1.3,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AttentionSlot extends StatelessWidget {
+  const _AttentionSlot({
+    required this.bottleneck,
+    required this.onOpen,
+  });
+
+  final HomeBottleneck bottleneck;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) => ContentConstraint(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            0,
+            DS.spacing16,
+            DS.spacing10,
+          ),
+          child: DashboardSectionShell(
+            key: const ValueKey('home-attention-slot'),
+            tone: DashboardSurfaceTone.summary,
+            padding: const EdgeInsets.all(DS.spacing14),
+            child: _CommandCenterRiskBanner(
+              text: context.l10n.dashboardBottleneckPrompt(bottleneck.topic),
+              onTap: onOpen,
+            ),
+          ),
+        ),
+      );
+}
+
+class _WeeklyNarrativeSlot extends StatelessWidget {
+  const _WeeklyNarrativeSlot();
+
+  @override
+  Widget build(BuildContext context) => const ContentConstraint(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            DS.spacing16,
+            0,
+            DS.spacing16,
+            DS.spacing10,
+          ),
+          child: WeeklyGrowthNarrativeCard(),
+        ),
+      );
+}
+
+class _HomeErrorCard extends StatelessWidget {
+  const _HomeErrorCard({
+    required this.title,
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String title;
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing10,
+        ),
+        child: DashboardSectionShell(
+          key: const ValueKey('home-slot-error'),
+          padding: const EdgeInsets.all(DS.spacing14),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline_rounded, color: scheme.error),
+              const SizedBox(width: DS.spacing10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: scheme.onSurface,
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    Text(
+                      message,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: onRetry,
+                child: Text(context.l10n.dashboardRetry),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HomeEmptyInline extends StatelessWidget {
+  const _HomeEmptyInline({
+    required this.icon,
+    required this.title,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String actionLabel;
+  final VoidCallback onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing14),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: scheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: scheme.primary),
+          const SizedBox(width: DS.spacing10),
+          Expanded(
+            child: Text(
+              title,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: scheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+          TextButton(
+            onPressed: onAction,
+            child: Text(actionLabel),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 String _formatDeadlineLabel({
@@ -914,7 +1420,6 @@ class _HomeCommandCenterCard extends StatelessWidget {
         child: DashboardSectionShell(
           key: const ValueKey('dashboard-command-center'),
           tone: DashboardSurfaceTone.hero,
-          padding: const EdgeInsets.all(DS.spacing16),
           child: AnimatedSwitcher(
             duration: DS.quick,
             child: isLoading && state == null
@@ -1207,8 +1712,10 @@ class _CommandCenterContent extends StatelessWidget {
             );
       return [
         if (dueText != null) dueText,
-        if (nextTask.isHighPriority) zh ? '高优先级' : 'High priority',
-        zh ? '完成后会更新计划进度' : 'Completing it updates your plan progress',
+        if (nextTask.isHighPriority && zh) '高优先级',
+        if (nextTask.isHighPriority && !zh) 'High priority',
+        if (zh) '完成后会更新计划进度',
+        if (!zh) 'Completing it updates your plan progress',
       ].join(' - ');
     }
     if (priorityTask != null && priorityTask.reason.trim().isNotEmpty) {

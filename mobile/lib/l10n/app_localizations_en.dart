@@ -1516,6 +1516,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskStatusPaused => 'Paused';
 
   @override
+  String get taskStatusRestore => 'Restored';
+
+  @override
   String get taskStatusStuck => 'Stuck';
 
   @override
@@ -2020,6 +2023,62 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get streakFreezeCharges => 'Freeze Charges';
+
+  @override
+  String get streakQualityTitle => 'Quality Streak';
+
+  @override
+  String get streakQualitySubtitle =>
+      'Streaks count effective minutes, core tasks, hard breakthroughs, and plan consistency.';
+
+  @override
+  String get streakQualityDaysShort => 'quality';
+
+  @override
+  String get streakQualityTodayBreakdown => 'Today\'s quality breakdown';
+
+  @override
+  String get streakQualityEffectiveMinutes => 'Effective time';
+
+  @override
+  String get streakQualityCoreTasks => 'Core tasks';
+
+  @override
+  String get streakQualityBreakthroughs => 'Breakthroughs';
+
+  @override
+  String get streakQualityPlanConsistency => 'Plan match';
+
+  @override
+  String get streakQualityWeeklyTrend => 'Weekly quality trend';
+
+  @override
+  String get streakQualityEvidence => 'Why this is worth celebrating';
+
+  @override
+  String get streakQualityEmpty =>
+      'Start a learning session and the quality trend will appear here.';
+
+  @override
+  String get streakQualityUnavailable => 'Quality data unavailable';
+
+  @override
+  String get streakQualityViewDetails => 'View streak details';
+
+  @override
+  String streakQualityScoreLabel(Object score) {
+    return 'Quality $score%';
+  }
+
+  @override
+  String streakQualityMinutesValue(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String streakQualitySemantics(Object currentDays, Object qualityDays) {
+    return 'Quality streak $qualityDays days, current streak $currentDays days. Tap for breakdown.';
+  }
 
   @override
   String get errorNetwork => 'Network error';
@@ -25095,7 +25154,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memQuietHours => 'Quiet Hours';
 
   @override
-  String memCurrentTimezone(String timezone) => 'Timezone: $timezone';
+  String memCurrentTimezone(String timezone) {
+    return 'Timezone: $timezone';
+  }
 
   @override
   String get memTypes => 'Memory Types';
@@ -27066,6 +27127,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityNoKnowledgeYet => 'No knowledge nodes studied yet';
+
+  @override
+  String get communityTaskPaused => 'Paused';
 
   @override
   String get communityTaskCompleted => 'Completed';
@@ -29438,4 +29502,647 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolsNotesSyncedToPrism => 'Synced to Cognitive Prism';
+
+  @override
+  String get gdChronicleTitle => 'Growth Chronicle';
+
+  @override
+  String get gdChronicleSubtitle =>
+      'Review the milestones, turning points, and patterns Sparkle thinks matter.';
+
+  @override
+  String get gdLearningDashboardTitle => 'Learning Dashboard';
+
+  @override
+  String get gdLearningDashboardSubtitle =>
+      'See time, efficiency, weak spots, knowledge movement, and plan stability.';
+
+  @override
+  String get gdGrowthStory => 'Growth Story';
+
+  @override
+  String get gdStorySummary => 'Weekly story';
+
+  @override
+  String get gdKeyInsights => 'Key insights';
+
+  @override
+  String get gdNextWeekSuggestion => 'Next week suggestion';
+
+  @override
+  String get gdEvidenceChain => 'Evidence chain';
+
+  @override
+  String get gdConfirm => 'Confirm';
+
+  @override
+  String get gdEdit => 'Edit';
+
+  @override
+  String get gdReject => 'Reject';
+
+  @override
+  String get gdUndo => 'Undo';
+
+  @override
+  String get gdEntryConfirmed => 'Chronicle entry confirmed.';
+
+  @override
+  String get gdEntryEdited => 'Chronicle entry marked for editing.';
+
+  @override
+  String get gdEntryRejected => 'Chronicle entry rejected.';
+
+  @override
+  String get gdPending => 'Pending';
+
+  @override
+  String get gdConfirmed => 'Confirmed';
+
+  @override
+  String get gdEdited => 'Edited';
+
+  @override
+  String get gdRejected => 'Rejected';
+
+  @override
+  String get gdMilestone => 'Milestone';
+
+  @override
+  String get gdTurningPoint => 'Turning point';
+
+  @override
+  String get gdPattern => 'Pattern';
+
+  @override
+  String get gdReflection => 'Reflection';
+
+  @override
+  String get gdCategoryLearning => 'Learning';
+
+  @override
+  String get gdCategoryTraining => 'Training';
+
+  @override
+  String get gdCategoryErrorFix => 'Error fixing';
+
+  @override
+  String get gdCategoryReflection => 'Reflection';
+
+  @override
+  String get gdCategorySocial => 'Social';
+
+  @override
+  String get gdCategoryPlanning => 'Planning';
+
+  @override
+  String get gdCategoryOcr => 'Material capture';
+
+  @override
+  String get gdCategoryUnassigned => 'Unassigned';
+
+  @override
+  String get gdEmptyChronicleTitle => 'No chronicle entries yet';
+
+  @override
+  String get gdEmptyChronicleDesc =>
+      'Complete, fail, correct, or reflect on something important and Sparkle will turn the evidence into an editable story.';
+
+  @override
+  String get gdOpenChronicle => 'Open Chronicle';
+
+  @override
+  String get gdOpenDashboard => 'Open Dashboard';
+
+  @override
+  String get gdTimeDistribution => 'Time distribution';
+
+  @override
+  String get gdEfficiency => 'Efficiency';
+
+  @override
+  String get gdWeaknessRadar => 'Weakness radar';
+
+  @override
+  String get gdKnowledgeChanges => 'Knowledge changes';
+
+  @override
+  String get gdPlanStability => 'Plan stability';
+
+  @override
+  String gdTasksCompletedCount(int count) {
+    return '$count tasks';
+  }
+
+  @override
+  String gdAvgMinutes(String minutes) {
+    return '$minutes min avg';
+  }
+
+  @override
+  String gdOnTimeRate(String percent) {
+    return '$percent% on time';
+  }
+
+  @override
+  String gdInterruptionsCount(int count) {
+    return '$count interruptions';
+  }
+
+  @override
+  String gdAdjustmentsCount(int count) {
+    return '$count adjustments';
+  }
+
+  @override
+  String gdAbandonmentRate(String percent) {
+    return '$percent% abandoned';
+  }
+
+  @override
+  String get gdNoDataTitle => 'Learning dashboard is warming up';
+
+  @override
+  String get gdNoDataDesc =>
+      'After a few focus sessions and completed tasks, this page will show reliable patterns instead of guesses.';
+
+  @override
+  String get gdModelReceiptTitle => 'What Sparkle learned';
+
+  @override
+  String get gdTriggerEvent => 'Trigger';
+
+  @override
+  String get gdSparkleLearned => 'Learned';
+
+  @override
+  String get gdWhatChanged => 'Changed';
+
+  @override
+  String get gdNotWritten => 'Not written';
+
+  @override
+  String get gdRemembered => 'Remembered';
+
+  @override
+  String get gdCorrect => 'Correct';
+
+  @override
+  String get gdReceiptRemembered => 'Marked as remembered.';
+
+  @override
+  String get gdReceiptCorrectPrompt =>
+      'Thanks. Sparkle will treat this receipt as needing correction.';
+
+  @override
+  String get gdChronicleSemantics => 'Growth Chronicle timeline';
+
+  @override
+  String get gdDashboardSemantics => 'Learning Dashboard metrics';
+
+  @override
+  String gdTimeHours(String hours) {
+    return '$hours h';
+  }
+
+  @override
+  String gdMasteryMove(String before, String after) {
+    return '$before% to $after%';
+  }
+
+  @override
+  String gdGap(String percent) {
+    return 'Gap $percent%';
+  }
+
+  @override
+  String gdCurrentTarget(String current, String target) {
+    return 'Current $current% · Target $target%';
+  }
+
+  @override
+  String get gdRetry => 'Retry';
+
+  @override
+  String get gdLoadFailed => 'Could not load the growth dashboard';
+
+  @override
+  String get sourceExplanationSemantics => 'Source explanation for this answer';
+
+  @override
+  String sourceExplanationUsedSummary(int count) {
+    return 'This answer used $count source(s)';
+  }
+
+  @override
+  String get sourceExplanationUsedSources => 'Used sources';
+
+  @override
+  String sourceExplanationUnusedSources(int count) {
+    return '$count unused source(s)';
+  }
+
+  @override
+  String get sourceExplanationUnusedSourcesTitle => 'Unused sources';
+
+  @override
+  String get sourceExplanationNoSources => 'No source detail available yet';
+
+  @override
+  String sourceExplanationRelevance(int percent) {
+    return 'Relevance $percent%';
+  }
+
+  @override
+  String sourceExplanationConfidence(int percent) {
+    return '$percent% confidence';
+  }
+
+  @override
+  String get sourceExplanationCorrectSource => 'Correct this source';
+
+  @override
+  String get sourceExplanationCorrectionSent => 'Source correction recorded';
+
+  @override
+  String get sourceExplanationCorrectionFailed =>
+      'Could not record the correction';
+
+  @override
+  String get sourceExplanationUndo => 'Undo';
+
+  @override
+  String get goalGraphPanelSemantics => 'Open goal knowledge graph panel';
+
+  @override
+  String get goalGraphPanelTitle => 'Goal graph';
+
+  @override
+  String get goalGraphNoGoal =>
+      'Choose an active goal to see why each knowledge point matters.';
+
+  @override
+  String get goalGraphLoading => 'Loading goal graph';
+
+  @override
+  String get goalGraphRetry => 'Retry';
+
+  @override
+  String get goalGraphEmpty => 'No goal graph nodes are available yet.';
+
+  @override
+  String get goalGraphBottlenecks => 'Bottlenecks';
+
+  @override
+  String get goalGraphLearning => 'To learn';
+
+  @override
+  String get goalGraphMastered => 'Mastered';
+
+  @override
+  String goalGraphLegendBottleneck(int count) {
+    return '$count bottleneck';
+  }
+
+  @override
+  String goalGraphLegendLearning(int count) {
+    return '$count to learn';
+  }
+
+  @override
+  String goalGraphLegendMastered(int count) {
+    return '$count mastered';
+  }
+
+  @override
+  String goalGraphNodeSemantics(String node) {
+    return 'Open details for $node';
+  }
+
+  @override
+  String goalGraphMasteryPercent(int percent) {
+    return 'Mastery $percent%';
+  }
+
+  @override
+  String get goalGraphNodeType => 'Type';
+
+  @override
+  String get goalGraphMastery => 'Mastery';
+
+  @override
+  String get goalGraphRelationship => 'Why it matters';
+
+  @override
+  String get goalGraphExamWeight => 'Exam weight';
+
+  @override
+  String get goalGraphDifficulty => 'Difficulty';
+
+  @override
+  String get goalGraphTrainability => 'Trainability';
+
+  @override
+  String get goalGraphMistakes => 'Mistakes';
+
+  @override
+  String goalGraphPercentValue(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get taskPausedPanelTitle => 'Paused with context';
+
+  @override
+  String taskPausedPanelSemantics(String title) {
+    return 'Paused task details for $title';
+  }
+
+  @override
+  String get taskPauseReasonLabel => 'Reason:';
+
+  @override
+  String get taskPauseReasonFallback =>
+      'Sparkle paused this task to protect the current plan.';
+
+  @override
+  String get taskRestoreConditionLabel => 'Resume when:';
+
+  @override
+  String get taskRestoreConditionFallback =>
+      'You are ready to continue or the blocking condition clears.';
+
+  @override
+  String taskRestoreConditionDueDate(String date) {
+    return 'Before $date, unless you choose to resume sooner.';
+  }
+
+  @override
+  String get taskResumeQueued => 'Task resume requested.';
+
+  @override
+  String get taskPausedDurationUnknown => 'Paused';
+
+  @override
+  String get taskPausedDurationNow => 'Paused just now';
+
+  @override
+  String taskPausedDurationMinutes(int count) {
+    return 'Paused $count min';
+  }
+
+  @override
+  String taskPausedDurationHours(int count) {
+    return 'Paused $count h';
+  }
+
+  @override
+  String taskPausedDurationDays(int count) {
+    return 'Paused $count d';
+  }
+
+  @override
+  String get taskRestoreDialogTitle => 'Task restored';
+
+  @override
+  String taskRestoreDialogBody(String title) {
+    return '\"$title\" has been restored from abandoned or archived work.';
+  }
+
+  @override
+  String get taskRestoreDialogNextStepLabel => 'Suggested next step';
+
+  @override
+  String get taskRestoreDialogNextStepFallback =>
+      'Review the task context, then restart with the smallest useful step.';
+
+  @override
+  String get lowYieldCardSemantics => 'Gentle priority suggestion';
+
+  @override
+  String get lowYieldCardTitle => 'A more valuable next step';
+
+  @override
+  String get lowYieldActivityFallback => 'this activity';
+
+  @override
+  String get lowYieldReasonFallback =>
+      'your current deadline and goal priority';
+
+  @override
+  String get lowYieldSuggestionFallback => 'the suggested task';
+
+  @override
+  String lowYieldCardMessage(
+      String activity, String reason, String suggestion) {
+    return 'I noticed you are doing $activity. Considering $reason, what may be more valuable now is $suggestion.';
+  }
+
+  @override
+  String get lowYieldActionSwitch => 'Okay, switch';
+
+  @override
+  String get lowYieldActionContinue => 'I know, continue';
+
+  @override
+  String get lowYieldActionCorrect => 'Not right';
+
+  @override
+  String get understandingPanelTitle => 'Sparkle understands me';
+
+  @override
+  String get understandingPanelSemanticLabel =>
+      'Sparkle understanding snapshot';
+
+  @override
+  String understandingPanelSubtitle(int count, int ratio) {
+    return '$count claims · $ratio% high confidence';
+  }
+
+  @override
+  String get understandingPanelEmptySubtitle => 'No stable read yet';
+
+  @override
+  String get understandingPanelEmptyBody =>
+      'As you plan, chat, and finish tasks, Sparkle will show specific assumptions here so you can correct them.';
+
+  @override
+  String get understandingPanelLoading => 'Reading current self-model';
+
+  @override
+  String get understandingPanelError =>
+      'Could not load the understanding snapshot';
+
+  @override
+  String get understandingPanelExpand => 'Expand understanding snapshot';
+
+  @override
+  String get understandingPanelCollapse => 'Collapse understanding snapshot';
+
+  @override
+  String get understandingPanelMemoryTitle => 'What is being used right now';
+
+  @override
+  String get understandingCorrect => 'Correct';
+
+  @override
+  String get understandingConfidenceHigh => 'High confidence';
+
+  @override
+  String get understandingConfidenceMedium => 'Medium confidence';
+
+  @override
+  String get understandingConfidenceLow => 'Low confidence';
+
+  @override
+  String understandingClaimSemantic(String claim, int confidence) {
+    return '$claim. Confidence $confidence percent.';
+  }
+
+  @override
+  String understandingStyleSummary(
+      String tone, String verbosity, String reason) {
+    return '$tone · $verbosity. $reason';
+  }
+
+  @override
+  String understandingRecentlyCorrected(String correction) {
+    return 'Updated from your correction: $correction';
+  }
+
+  @override
+  String get understandingCorrectionTitle => 'Correct this read';
+
+  @override
+  String get understandingCorrectionHint =>
+      'What should Sparkle understand instead?';
+
+  @override
+  String get understandingCorrectionScopeTitle =>
+      'What should this change affect?';
+
+  @override
+  String understandingCorrectionUpdated(String effect) {
+    return 'Updated: $effect';
+  }
+
+  @override
+  String get understandingCorrectionFailed =>
+      'Could not update this correction';
+
+  @override
+  String get understandingCorrectionGenericEffect => 'self-model';
+
+  @override
+  String get understandingScopeMemoryClaim => 'Memory claim';
+
+  @override
+  String get understandingScopeRoutingPolicy => 'Routing policy';
+
+  @override
+  String get understandingScopeTaskGranularity => 'Task size';
+
+  @override
+  String get understandingScopePlanRisk => 'Plan risk';
+
+  @override
+  String get understandingScopeKnowledgeBottleneck => 'Knowledge bottleneck';
+
+  @override
+  String get understandingScopeWakePolicy => 'Wake policy';
+
+  @override
+  String get understandingChatDrawerTitle => 'Current self-model';
+
+  @override
+  String understandingChatDrawerSubtitle(int count) {
+    return '$count correctable claims';
+  }
+
+  @override
+  String get understandingChatDrawerSubtitleEmpty =>
+      'Open what Sparkle currently thinks';
+
+  @override
+  String get understandingChatDrawerOpen => 'Open current self-model';
+
+  @override
+  String get cahTitle => 'Accountability Hub';
+
+  @override
+  String get cahSubtitle =>
+      'Commitments, partner progress, and shared goals in one place';
+
+  @override
+  String get cahMyCommitments => 'My commitments';
+
+  @override
+  String get cahPartnerProgress => 'Partner progress';
+
+  @override
+  String get cahSharedGoals => 'Shared goals';
+
+  @override
+  String get cahNeedsAttention => 'Needs attention';
+
+  @override
+  String get cahHelpable => 'People I can help';
+
+  @override
+  String get cahFeedEntry => 'Open social feed';
+
+  @override
+  String get cahFeedEntryHint =>
+      'The feed stays one tap away for sharing and browsing posts';
+
+  @override
+  String get cahAllowReminder => 'Allow reminders';
+
+  @override
+  String get cahDoNotDisturb => 'Do not disturb';
+
+  @override
+  String get cahAcceptReminder => 'Accept';
+
+  @override
+  String get cahDeclineReminder => 'Decline';
+
+  @override
+  String get cahLaterReminder => 'Later';
+
+  @override
+  String get cahTooFrequentReminder => 'Too frequent';
+
+  @override
+  String get goalDetailTitle => 'Goal detail';
+
+  @override
+  String get goalDetailProgress => 'Overall progress';
+
+  @override
+  String get goalDetailMastery => 'Mastery';
+
+  @override
+  String get goalDetailTargetDate => 'Target date';
+
+  @override
+  String get goalDetailPriority => 'Priority';
+
+  @override
+  String get goalDetailMinimumLine => 'Minimum bar';
+
+  @override
+  String get goalDetailBottlenecks => 'Knowledge bottlenecks';
+
+  @override
+  String get goalDetailTodayStep => 'Today’s smallest next step';
+
+  @override
+  String get goalDetailPlanHealth => 'Plan health';
+
+  @override
+  String get goalDetailAccountability => 'Accountability';
+
+  @override
+  String get goalDetailRelatedSources => 'Related sources';
 }

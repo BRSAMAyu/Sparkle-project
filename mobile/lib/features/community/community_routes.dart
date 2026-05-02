@@ -9,6 +9,7 @@ import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/community/presentation/screens/accountability_detail_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/accountability_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/blocked_users_screen.dart';
+import 'package:sparkle/features/community/presentation/screens/community_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/create_group_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/create_post_screen.dart';
 import 'package:sparkle/features/community/presentation/screens/favorites_screen.dart';
@@ -27,6 +28,7 @@ import 'package:sparkle/features/community/presentation/screens/user_search_scre
 class CommunityRoutes {
   // Route constants for deep linking and navigation
   static const String home = '/community';
+  static const String feed = '/community/feed';
   static const String friends = '/community/friends';
   static const String friendsRequests = '/community/friends/requests';
   static const String friendsDiscover = '/community/friends/discover';
@@ -48,6 +50,20 @@ class CommunityRoutes {
   static const String accountabilityDetail = '/community/accountability/:id';
 
   static List<RouteBase> get routes => [
+        GoRoute(
+          path: feed,
+          name: 'communityFeed',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.socialWarm.audioPolicy(
+                trackOverride: BgmTrack.community,
+              ),
+              child: const CommunityScreen(),
+            ),
+          ),
+        ),
         GoRoute(
           path: friendsRequests,
           name: 'friendRequests',

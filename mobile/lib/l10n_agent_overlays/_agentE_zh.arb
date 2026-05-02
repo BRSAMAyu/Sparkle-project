@@ -1,0 +1,23 @@
+{
+  "sourceExplanationSemantics": "本次回答的资料来源说明",
+  "sourceExplanationUsedSummary": "本次回答使用了 {count} 个资料来源",
+  "sourceExplanationUsedSources": "已使用资料",
+  "sourceExplanationUnusedSources": "{count} 个未使用资料",
+  "sourceExplanationUnusedSourcesTitle": "未使用资料",
+  "sourceExplanationNoSources": "暂时没有资料细节",
+  "sourceExplanationRelevance": "相关性 {percent}%",
+  "sourceExplanationConfidence": "置信度 {percent}%",
+  "sourceExplanationCorrectSource": "纠正这个资料判断",
+  "sourceExplanationCorrectionSent": "已记录资料纠错",
+  "sourceExplanationCorrectionFailed": "暂时无法记录纠错",
+  "sourceExplanationUndo": "撤销",
+  "goalGraphPanelSemantics": "打开目标知识图谱面板",
+  "goalGraphPanelTitle": "目标图谱",
+  "goalGraphNoGoal": "选择当前目标后，可以看到每个知识点为什么重要。",
+  "goalGraphLoading": "正在加载目标图谱",
+  "goalGraphRetry": "重试",
+  "goalGraphEmpty": "暂时没有目标图谱节点。",
+  "goalGraphBottlenecks": "瓶颈节点",
+  "goalGraphLearning": "待学习",
+  "goalGraphMastered": "已掌握"
+}

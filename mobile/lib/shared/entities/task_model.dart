@@ -26,6 +26,8 @@ enum TaskStatus {
   inProgress,
   @JsonValue('PAUSED')
   paused,
+  @JsonValue('RESTORE')
+  restore,
   @JsonValue('STUCK')
   stuck,
   @JsonValue('COMPLETED')
@@ -71,6 +73,7 @@ class TaskModel {
     this.orderIndex = 0,
     this.subtasksTotal = 0,
     this.subtasksCompleted = 0,
+    this.metadata = const <String, dynamic>{},
     this.syncStatus = TaskSyncStatus.synced,
     this.syncError,
     this.retryToken,
@@ -123,6 +126,7 @@ class TaskModel {
   final int subtasksTotal;
   @JsonKey(name: 'subtasks_completed')
   final int subtasksCompleted;
+  final Map<String, dynamic> metadata;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
@@ -164,6 +168,7 @@ class TaskModel {
     int? orderIndex,
     int? subtasksTotal,
     int? subtasksCompleted,
+    Map<String, dynamic>? metadata,
     DateTime? createdAt,
     DateTime? updatedAt,
     TaskSyncStatus? syncStatus,
@@ -198,6 +203,7 @@ class TaskModel {
         orderIndex: orderIndex ?? this.orderIndex,
         subtasksTotal: subtasksTotal ?? this.subtasksTotal,
         subtasksCompleted: subtasksCompleted ?? this.subtasksCompleted,
+        metadata: metadata ?? this.metadata,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         syncStatus: syncStatus ?? this.syncStatus,

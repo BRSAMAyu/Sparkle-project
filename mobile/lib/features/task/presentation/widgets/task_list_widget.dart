@@ -43,8 +43,8 @@ class _TaskListWidgetState extends State<TaskListWidget> {
       },
       fallbackType: 'task_list',
     );
-    final planId =
-        _asString(listPayload.linkedEntities['plan_id']) ?? widget.tasks.first['plan_id']?.toString();
+    final planId = _asString(listPayload.linkedEntities['plan_id']) ??
+        widget.tasks.first['plan_id']?.toString();
 
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -84,7 +84,8 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                   ],
                 ),
               ),
-            ...widget.tasks.map((taskData) => _buildTaskItem(context, taskData)),
+            ...widget.tasks
+                .map((taskData) => _buildTaskItem(context, taskData)),
             const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -93,17 +94,19 @@ class _TaskListWidgetState extends State<TaskListWidget> {
                   label: context.l10n.taskViewAll,
                   variant: ButtonVariant.ghost,
                   icon: const Icon(Icons.arrow_forward_ios, size: 16),
-                    onPressed: () {
-                      // 导航到任务列表页面
-                      unawaited(context.push('/tasks'));
-                    },
+                  onPressed: () {
+                    // 导航到任务列表页面
+                    unawaited(context.push('/tasks'));
+                  },
                 ),
                 if (widget.toolResultId != null &&
                     widget.toolResultId!.trim().isNotEmpty &&
                     widget.onConfirmAll != null &&
                     !_confirmed)
                   SparkleButton(
-                    label: _isConfirming ? context.l10n.taskConfirming : context.l10n.taskConfirmAll,
+                    label: _isConfirming
+                        ? context.l10n.taskConfirming
+                        : context.l10n.taskConfirmAll,
                     icon: const Icon(Icons.check_circle_outline),
                     onPressed: _isConfirming ? null : _handleConfirmAll,
                   ),
@@ -235,14 +238,15 @@ class _TaskListWidgetState extends State<TaskListWidget> {
       },
       fallbackType: 'task_list',
     );
-    final planId =
-        _asString(listPayload.linkedEntities['plan_id']) ?? widget.tasks.first['plan_id']?.toString();
+    final planId = _asString(listPayload.linkedEntities['plan_id']) ??
+        widget.tasks.first['plan_id']?.toString();
     if (planId == null || planId.isEmpty) return;
     await showShareResourceSheet(
       context,
       resourceType: 'plan',
       resourceId: planId,
-      title: _asString(listPayload.linkedEntities['plan_title']) ?? context.l10n.taskLearningPlan,
+      title: _asString(listPayload.linkedEntities['plan_title']) ??
+          context.l10n.taskLearningPlan,
       subtitle: context.l10n.taskContainsCount(widget.tasks.length),
     );
   }
@@ -299,6 +303,9 @@ class _TaskListWidgetState extends State<TaskListWidget> {
       case 'abandoned':
         color = DS.error;
         label = l10n.taskStatusAbandoned;
+      case 'restore':
+        color = DS.info;
+        label = l10n.taskStatusRestore;
       default:
         color = DS.brandPrimary;
         label = status;

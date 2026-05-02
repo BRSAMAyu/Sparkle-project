@@ -1864,6 +1864,8 @@ String _taskStatusLabel(AppLocalizations l10n, TaskStatus status) {
       return l10n.planDetailStatusInProgress;
     case TaskStatus.paused:
       return l10n.taskStatusPaused;
+    case TaskStatus.restore:
+      return l10n.taskStatusRestore;
     case TaskStatus.stuck:
       return l10n.planDetailStatusStuck;
     case TaskStatus.completed:
@@ -1880,6 +1882,7 @@ IconData _taskStatusIcon(TaskStatus status) {
     case TaskStatus.inProgress:
       return Icons.play_circle_outline_rounded;
     case TaskStatus.paused:
+    case TaskStatus.restore:
       return Icons.pause_circle_outline_rounded;
     case TaskStatus.stuck:
       return Icons.help_outline_rounded;
@@ -1897,6 +1900,7 @@ Color _taskStatusColor(TaskStatus status) {
     case TaskStatus.inProgress:
       return DS.info;
     case TaskStatus.paused:
+    case TaskStatus.restore:
       return DS.neutral500;
     case TaskStatus.stuck:
       return DS.warning;

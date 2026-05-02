@@ -24,6 +24,8 @@ import 'package:sparkle/features/cognitive/presentation/screens/capsule/capsule_
 import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart';
 import 'package:sparkle/features/documents/documents_routes.dart';
 import 'package:sparkle/features/settings/presentation/screens/accessibility_settings_screen.dart';
+import 'package:sparkle/features/settings/presentation/widgets/settings_behavior_explanation.dart';
+import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/ai_ops_analysis_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/learning_mode_control.dart';
@@ -94,6 +96,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _hapticEnabled = true;
   bool _auroraSensoryLinkEnabled = true;
   bool _sensoryReady = false;
+  bool _growthChronicleHidden = false;
+  bool _memoryHidden = false;
+  bool _dataControlsSaving = false;
+  String? _dataControlsStatus;
   AmbientScene _ambientScene = AmbientScene.none;
   double _ambientVolume = 0.5;
   Timer? _learningPrefsDebounce;
@@ -106,6 +112,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     super.initState();
     unawaited(_loadBgmPreferences());
     unawaited(_loadSensoryPreferences());
+    unawaited(_loadDataControlPreferences());
   }
 
   @override
@@ -179,6 +186,139 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       _ambientVolume = ambientVolume;
       _sensoryReady = true;
     });
+  }
+
+  Future<void> _loadDataControlPreferences() async {
+    try {
+      final profileContext =
+          await ref.read(userRepositoryProvider).fetchProfileContext();
+      final preferences = profileContext['preferences'];
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _growthChronicleHidden = _readBoolPreference(
+              preferences,
+              const [
+                'growth_chronicle_hidden',
+                'hide_growth_chronicle',
+                'chronicle_hidden',
+              ],
+            ) ??
+            false;
+        _memoryHidden = _readBoolPreference(
+              preferences,
+              const [
+                'memory_panel_hidden',
+                'memory_hidden',
+                'hide_memory',
+              ],
+            ) ??
+            false;
+      });
+    } catch (_) {
+      // These controls still render; failed hydration should not block settings.
+    }
+  }
+
+  bool? _readBoolPreference(dynamic preferences, List<String> keys) {
+    if (preferences is! Map) {
+      return null;
+    }
+    for (final key in keys) {
+      final value = preferences[key];
+      if (value is bool) {
+        return value;
+      }
+      if (value is String) {
+        final normalized = value.trim().toLowerCase();
+        if (normalized == 'true') {
+          return true;
+        }
+        if (normalized == 'false') {
+          return false;
+        }
+      }
+    }
+    return null;
+  }
+
+  Future<void> _setGrowthChronicleHidden(bool hidden) async {
+    setState(() {
+      _growthChronicleHidden = hidden;
+      _dataControlsSaving = true;
+      _dataControlsStatus = I18nService.instance.isChinese
+          ? '正在保存成长编年史可见性...'
+          : 'Saving growth chronicle visibility...';
+    });
+    try {
+      await ref.read(userRepositoryProvider).updateTransparentPreference(
+            prefKey: 'growth_chronicle_hidden',
+            value: hidden,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _dataControlsSaving = false;
+        _dataControlsStatus = I18nService.instance.isChinese
+            ? (hidden ? '成长编年史已隐藏。' : '成长编年史已恢复显示。')
+            : (hidden
+                ? 'Growth chronicle is hidden.'
+                : 'Growth chronicle is visible again.');
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _growthChronicleHidden = !hidden;
+        _dataControlsSaving = false;
+        _dataControlsStatus = I18nService.instance.isChinese
+            ? '保存失败，请稍后重试。'
+            : 'Save failed. Please try again.';
+      });
+      AppFeedback.error(context, _dataControlsStatus!);
+    }
+  }
+
+  Future<void> _setMemoryHidden(bool hidden) async {
+    setState(() {
+      _memoryHidden = hidden;
+      _dataControlsSaving = true;
+      _dataControlsStatus = I18nService.instance.isChinese
+          ? '正在保存记忆可见性...'
+          : 'Saving memory visibility...';
+    });
+    try {
+      await ref.read(userRepositoryProvider).updateTransparentPreference(
+            prefKey: 'memory_panel_hidden',
+            value: hidden,
+          );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _dataControlsSaving = false;
+        _dataControlsStatus = I18nService.instance.isChinese
+            ? (hidden ? '记忆入口已默认隐藏。' : '记忆入口已恢复显示。')
+            : (hidden
+                ? 'Memory surfaces are hidden by default.'
+                : 'Memory surfaces are visible again.');
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _memoryHidden = !hidden;
+        _dataControlsSaving = false;
+        _dataControlsStatus = I18nService.instance.isChinese
+            ? '保存失败，请稍后重试。'
+            : 'Save failed. Please try again.';
+      });
+      AppFeedback.error(context, _dataControlsStatus!);
+    }
   }
 
   Future<void> _setBgmEnabled(bool value) async {
@@ -568,6 +708,13 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                     ),
                   ),
                 ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              SettingsBehaviorExplanation(
+                notificationDailyCap: pushPrefs.dailyCap,
+                notificationLevel: notificationLevel,
+                taskRemindersEnabled: taskReminderConfig.enabled,
+                taskReminderTimes: taskReminderConfig.reminders,
               ),
               const SizedBox(height: DS.spacing16),
               GraphiteCardSurface(
@@ -1754,40 +1901,19 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 ),
               ),
               const SizedBox(height: DS.spacing20),
-              // UX-010: Data & Privacy management entries
-              _buildSectionHeader(Icons.shield_outlined, 'Data & Privacy'),
-              const SizedBox(height: DS.spacing12),
-              GraphiteCardSurface(
-                child: Column(
-                  children: [
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.psychology_outlined),
-                      title: const Text('Memory Settings'),
-                      subtitle: const Text('Manage what Sparkle remembers'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/settings/memory'),
-                    ),
-                    const Divider(height: 1, indent: 48),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.group_outlined),
-                      title: const Text('Community Intelligence'),
-                      subtitle: const Text('Control shared learning insights'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/settings/community'),
-                    ),
-                    const Divider(height: 1, indent: 48),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.source_outlined),
-                      title: const Text('Source Permissions'),
-                      subtitle: const Text('Manage material access'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => context.push('/settings/sources'),
-                    ),
-                  ],
-                ),
+              SettingsDataControlsCard(
+                growthChronicleHidden: _growthChronicleHidden,
+                memoryHidden: _memoryHidden,
+                saving: _dataControlsSaving,
+                statusMessage: _dataControlsStatus,
+                onExportData: () => context.push(UserRoutes.exportData),
+                onDeleteData: () => unawaited(_confirmOpenDeleteData(context)),
+                onGrowthChronicleHiddenChanged: (value) =>
+                    unawaited(_setGrowthChronicleHidden(value)),
+                onMemoryHiddenChanged: (value) =>
+                    unawaited(_setMemoryHidden(value)),
+                onOpenMemorySettings: () =>
+                    context.push(UserRoutes.memorySettings),
               ),
               const SizedBox(height: DS.spacing20),
               _buildSectionHeader(Icons.language_rounded, l10n.language),
@@ -1974,6 +2100,66 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _confirmOpenDeleteData(BuildContext context) async {
+    final zh = I18nService.instance.isChinese;
+    final confirmed = await showSensoryDialog<bool>(
+          context: context,
+          builder: (dialogContext) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+            child: GraphiteModalSurface(
+              title: zh ? '删除我的数据' : 'Delete My Data',
+              showHandle: false,
+              borderRadius: BorderRadius.circular(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    zh
+                        ? '接下来会进入账号删除确认流程。继续前，你可以先导出数据；删除后个人资料、偏好和历史记录将不可恢复。'
+                        : 'Next you will enter the account deletion confirmation flow. Export your data first if needed; deletion permanently removes profile data, preferences, and history.',
+                    style:
+                        Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.45,
+                            ),
+                  ),
+                  const SizedBox(height: DS.spacing16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SparkleButton.ghost(
+                          label: context.l10n.cancel,
+                          onPressed: () =>
+                              Navigator.of(dialogContext).pop(false),
+                          expand: true,
+                        ),
+                      ),
+                      const SizedBox(width: DS.spacing12),
+                      Expanded(
+                        child: SparkleButton.destructive(
+                          label: zh ? '继续' : 'Continue',
+                          onPressed: () =>
+                              Navigator.of(dialogContext).pop(true),
+                          expand: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ) ??
+        false;
+    if (!confirmed || !mounted) {
+      return;
+    }
+    unawaited(this.context.push(UserRoutes.deleteAccount));
   }
 
   Future<void> _updateNotificationPreferences(

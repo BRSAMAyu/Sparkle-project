@@ -227,7 +227,8 @@ class _TaskQuickActionSheet extends StatelessWidget {
                   onTap: () =>
                       Navigator.of(context).pop(_TaskQuickAction.pause),
                 ),
-              if (task.status == TaskStatus.paused)
+              if (task.status == TaskStatus.paused ||
+                  task.status == TaskStatus.restore)
                 _QuickActionTile(
                   icon: Icons.restart_alt_rounded,
                   label: context.l10n.taskActionResume,

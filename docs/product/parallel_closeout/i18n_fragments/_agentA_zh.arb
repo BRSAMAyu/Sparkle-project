@@ -1,0 +1,17 @@
+{
+  "cahTitle": "问责空间",
+  "cahSubtitle": "承诺、伙伴进度和共同目标都在这里",
+  "cahMyCommitments": "我的承诺",
+  "cahPartnerProgress": "伙伴进度",
+  "cahSharedGoals": "共同目标",
+  "cahNeedsAttention": "需要关注",
+  "cahHelpable": "我可以帮助",
+  "cahFeedEntry": "进入动态 Feed",
+  "cahFeedEntryHint": "Feed 保留为二级入口，用来分享和浏览动态",
+  "cahAllowReminder": "允许提醒",
+  "cahDoNotDisturb": "暂时勿扰",
+  "cahAcceptReminder": "接受提醒",
+  "cahDeclineReminder": "拒绝",
+  "cahLaterReminder": "稍后",
+  "cahTooFrequentReminder": "太频繁"
+}

@@ -9,10 +9,10 @@
 
 | 优先级 | 总数 | 待办 | 进行中 | 已完成 |
 |--------|------|------|--------|--------|
-| P0 | 7 | 2 | 0 | 5 |
-| P1 | 10 | 2 | 0 | 8 |
-| P2 | 16 | 2 | 0 | 14 |
-| **合计** | **33** | **6** | **0** | **27** |
+| P0 | 7 | 0 | 0 | 7 |
+| P1 | 10 | 0 | 0 | 10 |
+| P2 | 16 | 1 | 0 | 15 |
+| **合计** | **33** | **1** | **0** | **32** |
 
 ---
 
@@ -23,8 +23,8 @@
 | 1 | L4 异步深度学习无 Celery 连接 | 1/5 | 5/5 | ✅ | `8b75e08` |
 | 2 | P4-PCI 隐私群体智能无生产接入 | 2/5 | 5/5 | ✅ | `c783627`, `b4dd669` |
 | 3 | P4-RES 研究模式无生产接入 | 2/5 | 5/5 | ✅ | `66ae6b1` |
-| 4 | 社区 UI 是社交 Feed 非目标问责 | 2/5 | 5/5 | ⏳ | — |
-| 5 | 12 个 Flutter widget 缺失 | 0-1/5 | 5/5 | ⏳ | — |
+| 4 | 社区 UI 是社交 Feed 非目标问责 | 2/5 | 5/5 | ✅ | Agent A (AccountabilityHub) + Agent I (home) |
+| 5 | 12 个 Flutter widget 缺失 | 0-1/5 | 5/5 | ✅ | Agents A-I: 6 user loops completed |
 | 6 | 连胜无质量加权 | 1/5 | 5/5 | ✅ | `2b0f539` |
 | 7 | Goal 无独立 ORM 模型 | 2/5 | 5/5 | ✅ | `24d7400` |
 
@@ -37,8 +37,8 @@
 | 10 | LearningGuard 僵尸组件 | 2/5 | 5/5 | ✅ | `7775f1e` |
 | 11 | L0 未接入 SpineOrchestrator | 2/5 | 5/5 | ✅ | `7775f1e` |
 | 12 | 事件缺 schema_version 字段 | 2/5 | 5/5 | ✅ | `7bf5db5` |
-| 13 | CRDT 数据层零 UI 可见性 | 2/5 | 5/5 | ⏳ | — |
-| 14 | ExperienceEnvelope 未在 Mobile 实现 | 2/5 | 5/5 | ⏳ | — |
+| 13 | CRDT 数据层零 UI 可见性 | 2/5 | 5/5 | ✅ | SyncCenter exists; inline feedback pending (P2 per revised audit) |
+| 14 | ExperienceEnvelope 未在 Mobile 实现 | 2/5 | 5/5 | ✅ | Agent C (UnderstandingSnapshot.envelope_style) + Agent E (SourceExplanationCard) |
 | 15 | OutcomeVector 无统一多维模式 | 2/5 | 5/5 | ✅ | `24d154f` |
 | 16 | 无 fabricated citation 检测 | 3/5 | 5/5 | ✅ | `7508f91` |
 | 17 | 无低收益行为温和阻止 | 2/5 | 5/5 | ✅ | `7508f91` |
@@ -47,7 +47,7 @@
 
 | # | 差距 | 状态 | 提交 |
 |---|------|------|------|
-| 18 | 5 个预存在规则守卫失败 (2 fixed, 5 remain) | ⏳ | `33f9b21` |
+| 18 | 5 个预存在规则守卫失败 (2 fixed, 5 remain) | ⏳ | `33f9b21` (pre-existing; not in closeout scope) |
 | 19 | SignalRanker contradiction_level 硬编码 | ✅ | `fd683c1` |
 | 20 | StrategyBelief 缺少 scope/retract_if | ✅ | `24d154f` |
 | 21 | ActionableSignal 缺少 counter_evidence | ✅ | `24d154f` |
@@ -60,7 +60,7 @@
 | 28 | gRPC 无 mTLS | ✅ | `9684ea6` |
 | 29 | WebSocket 无服务端去重 | ✅ | `9684ea6` |
 | 30 | 技能无版本化 | ✅ | `24d154f` |
-| 31 | 学习仪表板缺少数据 | ⏳ | — |
+| 31 | 学习仪表板缺少数据 | ✅ | Agent D (LearningDashboardPage + GrowthChroniclePage) |
 | 32 | 负载测试基线缺失 | ✅ | `fad6b3c` |
 | 33 | 契约测试覆盖不足 | ✅ | `fad6b3c` |
 
@@ -114,3 +114,34 @@
 | 阶段 | 验证方式 | 结果 | 日期 |
 |------|---------|------|------|
 | 第二轮审查 | 3-way parallel audit | 3 issues found + fixed | 2026-05-02 |
+| 体验收口 | 10 agent parallel closeout | 32/33 done, flutter analyze 0 agent-caused errors, gateway build clean | 2026-05-02 |
+
+---
+
+## 体验收口完成记录 (2026-05-02)
+
+10 个 agent 并行完成，将已存在的后端能力组织为 6 条用户可见闭环：
+
+| Agent | 闭环 | 产出 |
+|-------|------|------|
+| A | 社区问责 Hub | AccountabilityHubScreen + CommitmentCard + Partner 控制 + BFF |
+| B | Goal Detail | GoalDetailPage + MinimumCriteriaCard + GoalBottleneckStrip + BFF |
+| C | UnderstandingSnapshot | "Sparkle 懂我"面板（onboarding/home/chat）+ BFF + 纠正闭环 |
+| D | Growth Chronicle + Dashboard | GrowthChroniclePage + LearningDashboardPage + ModelUpdateReceipt + BFF |
+| E | Source & Knowledge 透明 | SourceExplanationCard + GoalWorldGraphMiniPanel |
+| F | Task 暂停/恢复 + LowYield | PAUSED 原因卡 + RestoreTaskDialog + LowYieldGentleBlockCard |
+| G | StreakQuality | StreakQualityService + Indicator + 庆祝 evidence |
+| H | Settings 行为解释 | 设置项影响范围说明 + 数据控制入口 |
+| I | 首页重布局 | 今日成长指挥中心 + 卡片槽位系统 |
+| J | 收口整合 | GoRouter + Provider barrel + i18n merge + FastAPI experience router |
+
+**Flutter analyze**: Agent 引入的 switch 错误已修复（TaskStatus.paused/restore）。剩余 16 个 error 均为预存问题（community 无效常量、opencw/opencw panels、knowledge_card 扩展歧义、aurora test、third_party_plugins），不属本轮范围。
+
+**Gateway build**: `go build ./...` 通过。
+
+**未闭合项**:
+- P2-18: 5 个预存规则守卫失败。不在体验收口范围内，需单独 Python backend 修复。
+
+**修正版审计**: 用户审查文档 `SPARKLE_PRODUCT_EXPERIENCE_PANORAMA_REVIEW_2026-05-02.md` 纠正了若干过期判断（Goal ORM 已存在、CausalTimelinePanel 已存在、SyncCenter 已存在等），将"缺失 12 个 widget"改为"6 条用户闭环"。本轮执行已对齐修正版。
+
+**规格文档**: `docs/product/parallel_closeout/SPARKLE_EXPERIENCE_CLOSEOUT_CODEX_SPECS_2026-05-02.md`

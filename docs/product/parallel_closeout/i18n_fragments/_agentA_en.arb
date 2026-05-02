@@ -1,0 +1,17 @@
+{
+  "cahTitle": "Accountability Hub",
+  "cahSubtitle": "Commitments, partner progress, and shared goals in one place",
+  "cahMyCommitments": "My commitments",
+  "cahPartnerProgress": "Partner progress",
+  "cahSharedGoals": "Shared goals",
+  "cahNeedsAttention": "Needs attention",
+  "cahHelpable": "People I can help",
+  "cahFeedEntry": "Open social feed",
+  "cahFeedEntryHint": "The feed stays one tap away for sharing and browsing posts",
+  "cahAllowReminder": "Allow reminders",
+  "cahDoNotDisturb": "Do not disturb",
+  "cahAcceptReminder": "Accept",
+  "cahDeclineReminder": "Decline",
+  "cahLaterReminder": "Later",
+  "cahTooFrequentReminder": "Too frequent"
+}

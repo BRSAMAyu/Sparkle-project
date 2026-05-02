@@ -487,7 +487,11 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   )
                   .length,
               pausedCount: tasks
-                  .where((task) => task.status == TaskStatus.paused)
+                  .where(
+                    (task) =>
+                        task.status == TaskStatus.paused ||
+                        task.status == TaskStatus.restore,
+                  )
                   .length,
               completedCount: tasks
                   .where((task) => task.status == TaskStatus.completed)
@@ -560,7 +564,13 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
             )
             .toList();
       case TaskFilterOptions.paused:
-        return tasks.where((t) => t.status == TaskStatus.paused).toList();
+        return tasks
+            .where(
+              (t) =>
+                  t.status == TaskStatus.paused ||
+                  t.status == TaskStatus.restore,
+            )
+            .toList();
       case TaskFilterOptions.completed:
         return tasks.where((t) => t.status == TaskStatus.completed).toList();
       case TaskFilterOptions.all:

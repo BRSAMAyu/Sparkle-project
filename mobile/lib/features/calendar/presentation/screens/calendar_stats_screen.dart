@@ -1184,6 +1184,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       TaskStatus.inProgress => DS.info,
       TaskStatus.stuck => DS.warning,
       TaskStatus.pending => DS.warning,
+      TaskStatus.paused => DS.warning,
+      TaskStatus.restore => DS.info,
       TaskStatus.abandoned => DS.textSecondary,
     };
 

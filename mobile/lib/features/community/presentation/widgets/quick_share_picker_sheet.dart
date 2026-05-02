@@ -282,6 +282,8 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
         TaskStatus.inProgress => context.l10n.communityTaskInProgress,
         TaskStatus.stuck => context.l10n.communityTaskStuck,
         TaskStatus.pending => context.l10n.communityTaskPending,
+        TaskStatus.paused => context.l10n.communityTaskPaused,
+        TaskStatus.restore => context.l10n.taskStatusRestore,
         TaskStatus.abandoned => context.l10n.communityTaskAbandoned,
       };
 

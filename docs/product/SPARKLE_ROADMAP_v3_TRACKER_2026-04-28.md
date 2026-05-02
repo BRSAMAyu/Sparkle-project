@@ -1486,3 +1486,33 @@ P4 多设备强一致继续 deferred；当前 pass 只保证 latest Aurora state
 ### Boundary
 
 本轮完成的是 Aurora 判断闭环和 L3 主路径体验收口；多设备强一致、全量语义向量召回、全 Flutter 视觉 QA 继续作为后续打磨项，但核心链路现在已经从“可运行”推进到“可学习、可解释、可观测”。
+
+---
+
+## 2026-05-02 User-Visible Experience Bridge
+
+> **来源**: `Sparkle 产品体验全景文档：现状、愿景与差距` + 完全体体验收口计划
+> **目标**: 把 Aurora / Spine / Goal / Growth / Community 的后端能力变成首页和社区首屏可感知的体验，而不是停留在后端链路里。
+
+### Experience Bridge Tasks
+
+| ID | 严重度 | 模块 | 状态 | 证据 |
+|----|--------|------|------|------|
+| UVE-01 | P0 | Understanding Snapshot | FIXED-IN-PASS | `GET /experience/understanding-snapshot` + `UnderstandingSnapshotCard`，展示理解摘要、置信度、证据、开放问题、纠正入口 |
+| UVE-02 | P0 | Goal Detail Snapshot | FIXED-IN-PASS | `GET /experience/goal-detail/current` 聚合 Goal ORM、minimum_acceptance_criteria、Plan、Task、GoalWorldGraph |
+| UVE-03 | P1 | Growth Quality | FIXED-IN-PASS | `GET /experience/growth-dashboard` + `GrowthQualityCard`，连胜质量由任务完成、专注分钟、当前 streak 和 stuck 状态共同计算 |
+| UVE-04 | P1 | Community Accountability Frame | FIXED-IN-PASS | `GET /experience/community-accountability` + `CommunityAccountabilityHubCard`，社区首屏强化承诺/伙伴/进度，不再只解释 feed tabs |
+| UVE-05 | P1 | Home Compile Health | FIXED-IN-PASS | 清理未接线的 `_UnderstandingExpansionSlot` / `_CommunityAccountabilitySlot` / `_WeeklyNarrativeSlot` 等孤立占位，避免 analyzer 硬错误 |
+
+### Verification Evidence
+
+| 命令 | 结果 |
+|------|------|
+| `python3 -m py_compile backend/app/api/v1/experience.py backend/app/api/v1/router.py` | PASS |
+| `cd backend && ruff check app/api/v1/experience.py app/api/v1/router.py` | PASS |
+| `cd backend && black --check app/api/v1/experience.py app/api/v1/router.py` | PASS |
+| `cd mobile && flutter analyze --no-fatal-infos lib/features/experience/... dashboard_screen.dart community_screen.dart` | PASS: info-only style findings remain |
+
+### Boundary
+
+本轮优先完成“用户能看见 Sparkle 如何理解、如何推进目标、如何衡量坚持质量”的体验桥接。SourceExplanationCard 专名化、独立 Goal route、社区真实 commitment/partner 数据增强、全设备视觉 QA 继续作为后续体验打磨项。

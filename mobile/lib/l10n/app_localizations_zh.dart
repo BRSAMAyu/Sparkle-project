@@ -1484,6 +1484,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskStatusPaused => '已暂停';
 
   @override
+  String get taskStatusRestore => '已恢复';
+
+  @override
   String get taskStatusStuck => '卡住了';
 
   @override
@@ -1977,6 +1980,60 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get streakFreezeCharges => '冻结次数';
+
+  @override
+  String get streakQualityTitle => '高质量连胜';
+
+  @override
+  String get streakQualitySubtitle => '连胜会参考有效时长、核心任务、难点突破和计划一致性。';
+
+  @override
+  String get streakQualityDaysShort => '质量日';
+
+  @override
+  String get streakQualityTodayBreakdown => '今日质量拆解';
+
+  @override
+  String get streakQualityEffectiveMinutes => '有效时长';
+
+  @override
+  String get streakQualityCoreTasks => '核心任务';
+
+  @override
+  String get streakQualityBreakthroughs => '难点突破';
+
+  @override
+  String get streakQualityPlanConsistency => '计划一致性';
+
+  @override
+  String get streakQualityWeeklyTrend => '本周质量趋势';
+
+  @override
+  String get streakQualityEvidence => '为什么值得庆祝';
+
+  @override
+  String get streakQualityEmpty => '开始一次学习后，这里会显示质量趋势。';
+
+  @override
+  String get streakQualityUnavailable => '质量数据暂不可用';
+
+  @override
+  String get streakQualityViewDetails => '查看连胜详情';
+
+  @override
+  String streakQualityScoreLabel(Object score) {
+    return '质量 $score%';
+  }
+
+  @override
+  String streakQualityMinutesValue(Object minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String streakQualitySemantics(Object currentDays, Object qualityDays) {
+    return '高质量连胜 $qualityDays 天，当前连续 $currentDays 天。点按查看拆解。';
+  }
 
   @override
   String get errorNetwork => '网络错误';
@@ -24061,7 +24118,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memQuietHours => '静默时段';
 
   @override
-  String memCurrentTimezone(String timezone) => '当前时区：$timezone';
+  String memCurrentTimezone(String timezone) {
+    return '当前时区：$timezone';
+  }
 
   @override
   String get memTypes => '记忆类型';
@@ -25944,6 +26003,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get communityNoKnowledgeYet => '还没有学习知识节点';
+
+  @override
+  String get communityTaskPaused => '已暂停';
 
   @override
   String get communityTaskCompleted => '已完成';
@@ -28220,4 +28282,629 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolsNotesSyncedToPrism => '已同步到认知棱镜';
+
+  @override
+  String get gdChronicleTitle => '成长编年史';
+
+  @override
+  String get gdChronicleSubtitle => '查看 Sparkle 认为重要的里程碑、转折点和模式。';
+
+  @override
+  String get gdLearningDashboardTitle => '学习仪表板';
+
+  @override
+  String get gdLearningDashboardSubtitle => '查看时间、效率、薄弱点、知识变化和计划稳定性。';
+
+  @override
+  String get gdGrowthStory => '成长故事';
+
+  @override
+  String get gdStorySummary => '周叙事';
+
+  @override
+  String get gdKeyInsights => '关键洞察';
+
+  @override
+  String get gdNextWeekSuggestion => '下周建议';
+
+  @override
+  String get gdEvidenceChain => '证据链';
+
+  @override
+  String get gdConfirm => '确认';
+
+  @override
+  String get gdEdit => '编辑';
+
+  @override
+  String get gdReject => '驳回';
+
+  @override
+  String get gdUndo => '撤销';
+
+  @override
+  String get gdEntryConfirmed => '已确认这条成长记录。';
+
+  @override
+  String get gdEntryEdited => '已标记为需要编辑。';
+
+  @override
+  String get gdEntryRejected => '已驳回这条成长记录。';
+
+  @override
+  String get gdPending => '待确认';
+
+  @override
+  String get gdConfirmed => '已确认';
+
+  @override
+  String get gdEdited => '已编辑';
+
+  @override
+  String get gdRejected => '已驳回';
+
+  @override
+  String get gdMilestone => '里程碑';
+
+  @override
+  String get gdTurningPoint => '转折点';
+
+  @override
+  String get gdPattern => '模式';
+
+  @override
+  String get gdReflection => '反思';
+
+  @override
+  String get gdCategoryLearning => '学习';
+
+  @override
+  String get gdCategoryTraining => '训练';
+
+  @override
+  String get gdCategoryErrorFix => '错题修复';
+
+  @override
+  String get gdCategoryReflection => '复盘';
+
+  @override
+  String get gdCategorySocial => '社群';
+
+  @override
+  String get gdCategoryPlanning => '规划';
+
+  @override
+  String get gdCategoryOcr => '资料录入';
+
+  @override
+  String get gdCategoryUnassigned => '未分类';
+
+  @override
+  String get gdEmptyChronicleTitle => '还没有成长记录';
+
+  @override
+  String get gdEmptyChronicleDesc =>
+      '当你完成、失败、纠正或复盘一件重要的事后，Sparkle 会把证据整理成可编辑的故事。';
+
+  @override
+  String get gdOpenChronicle => '打开编年史';
+
+  @override
+  String get gdOpenDashboard => '打开仪表板';
+
+  @override
+  String get gdTimeDistribution => '时间分布';
+
+  @override
+  String get gdEfficiency => '效率指标';
+
+  @override
+  String get gdWeaknessRadar => '薄弱点雷达';
+
+  @override
+  String get gdKnowledgeChanges => '知识变化';
+
+  @override
+  String get gdPlanStability => '计划稳定性';
+
+  @override
+  String gdTasksCompletedCount(int count) {
+    return '$count 个任务';
+  }
+
+  @override
+  String gdAvgMinutes(String minutes) {
+    return '平均 $minutes 分钟';
+  }
+
+  @override
+  String gdOnTimeRate(String percent) {
+    return '$percent% 准时';
+  }
+
+  @override
+  String gdInterruptionsCount(int count) {
+    return '$count 次中断';
+  }
+
+  @override
+  String gdAdjustmentsCount(int count) {
+    return '$count 次调整';
+  }
+
+  @override
+  String gdAbandonmentRate(String percent) {
+    return '$percent% 放弃';
+  }
+
+  @override
+  String get gdNoDataTitle => '学习仪表板正在积累信号';
+
+  @override
+  String get gdNoDataDesc => '完成几次专注和任务后，这里会展示可靠模式，而不是猜测。';
+
+  @override
+  String get gdModelReceiptTitle => 'Sparkle 学到了什么';
+
+  @override
+  String get gdTriggerEvent => '触发事件';
+
+  @override
+  String get gdSparkleLearned => '学到';
+
+  @override
+  String get gdWhatChanged => '改变';
+
+  @override
+  String get gdNotWritten => '未写入';
+
+  @override
+  String get gdRemembered => '记住了';
+
+  @override
+  String get gdCorrect => '纠正';
+
+  @override
+  String get gdReceiptRemembered => '已标记为记住。';
+
+  @override
+  String get gdReceiptCorrectPrompt => '收到，Sparkle 会把这条回执视为需要纠正。';
+
+  @override
+  String get gdChronicleSemantics => '成长编年史时间线';
+
+  @override
+  String get gdDashboardSemantics => '学习仪表板指标';
+
+  @override
+  String gdTimeHours(String hours) {
+    return '$hours 小时';
+  }
+
+  @override
+  String gdMasteryMove(String before, String after) {
+    return '$before% 到 $after%';
+  }
+
+  @override
+  String gdGap(String percent) {
+    return '差距 $percent%';
+  }
+
+  @override
+  String gdCurrentTarget(String current, String target) {
+    return '当前 $current% · 目标 $target%';
+  }
+
+  @override
+  String get gdRetry => '重试';
+
+  @override
+  String get gdLoadFailed => '无法加载成长仪表板';
+
+  @override
+  String get sourceExplanationSemantics => '本次回答的资料来源说明';
+
+  @override
+  String sourceExplanationUsedSummary(int count) {
+    return '本次回答使用了 $count 个资料来源';
+  }
+
+  @override
+  String get sourceExplanationUsedSources => '已使用资料';
+
+  @override
+  String sourceExplanationUnusedSources(int count) {
+    return '$count 个未使用资料';
+  }
+
+  @override
+  String get sourceExplanationUnusedSourcesTitle => '未使用资料';
+
+  @override
+  String get sourceExplanationNoSources => '暂时没有资料细节';
+
+  @override
+  String sourceExplanationRelevance(int percent) {
+    return '相关性 $percent%';
+  }
+
+  @override
+  String sourceExplanationConfidence(int percent) {
+    return '置信度 $percent%';
+  }
+
+  @override
+  String get sourceExplanationCorrectSource => '纠正这个资料判断';
+
+  @override
+  String get sourceExplanationCorrectionSent => '已记录资料纠错';
+
+  @override
+  String get sourceExplanationCorrectionFailed => '暂时无法记录纠错';
+
+  @override
+  String get sourceExplanationUndo => '撤销';
+
+  @override
+  String get goalGraphPanelSemantics => '打开目标知识图谱面板';
+
+  @override
+  String get goalGraphPanelTitle => '目标图谱';
+
+  @override
+  String get goalGraphNoGoal => '选择当前目标后，可以看到每个知识点为什么重要。';
+
+  @override
+  String get goalGraphLoading => '正在加载目标图谱';
+
+  @override
+  String get goalGraphRetry => '重试';
+
+  @override
+  String get goalGraphEmpty => '暂时没有目标图谱节点。';
+
+  @override
+  String get goalGraphBottlenecks => '瓶颈节点';
+
+  @override
+  String get goalGraphLearning => '待学习';
+
+  @override
+  String get goalGraphMastered => '已掌握';
+
+  @override
+  String goalGraphLegendBottleneck(int count) {
+    return '$count 个瓶颈';
+  }
+
+  @override
+  String goalGraphLegendLearning(int count) {
+    return '$count 个待学习';
+  }
+
+  @override
+  String goalGraphLegendMastered(int count) {
+    return '$count 个已掌握';
+  }
+
+  @override
+  String goalGraphNodeSemantics(String node) {
+    return '打开 $node 的详情';
+  }
+
+  @override
+  String goalGraphMasteryPercent(int percent) {
+    return '掌握度 $percent%';
+  }
+
+  @override
+  String get goalGraphNodeType => '类型';
+
+  @override
+  String get goalGraphMastery => '掌握度';
+
+  @override
+  String get goalGraphRelationship => '为什么重要';
+
+  @override
+  String get goalGraphExamWeight => '考试权重';
+
+  @override
+  String get goalGraphDifficulty => '难度';
+
+  @override
+  String get goalGraphTrainability => '可训练性';
+
+  @override
+  String get goalGraphMistakes => '错题数';
+
+  @override
+  String goalGraphPercentValue(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get taskPausedPanelTitle => '暂停上下文';
+
+  @override
+  String taskPausedPanelSemantics(String title) {
+    return '$title 的暂停任务详情';
+  }
+
+  @override
+  String get taskPauseReasonLabel => '暂停原因：';
+
+  @override
+  String get taskPauseReasonFallback => 'Sparkle 暂停了这个任务，用来保护当前计划节奏。';
+
+  @override
+  String get taskRestoreConditionLabel => '恢复条件：';
+
+  @override
+  String get taskRestoreConditionFallback => '当你准备继续，或阻塞条件解除时即可恢复。';
+
+  @override
+  String taskRestoreConditionDueDate(String date) {
+    return '$date 前恢复，当然你也可以现在继续。';
+  }
+
+  @override
+  String get taskResumeQueued => '已请求恢复任务。';
+
+  @override
+  String get taskPausedDurationUnknown => '已暂停';
+
+  @override
+  String get taskPausedDurationNow => '刚刚暂停';
+
+  @override
+  String taskPausedDurationMinutes(int count) {
+    return '已暂停 $count 分钟';
+  }
+
+  @override
+  String taskPausedDurationHours(int count) {
+    return '已暂停 $count 小时';
+  }
+
+  @override
+  String taskPausedDurationDays(int count) {
+    return '已暂停 $count 天';
+  }
+
+  @override
+  String get taskRestoreDialogTitle => '任务已恢复';
+
+  @override
+  String taskRestoreDialogBody(String title) {
+    return '“$title” 已从放弃或归档状态恢复。';
+  }
+
+  @override
+  String get taskRestoreDialogNextStepLabel => '建议下一步';
+
+  @override
+  String get taskRestoreDialogNextStepFallback => '先看一眼任务上下文，再从最小可推进的一步重新开始。';
+
+  @override
+  String get lowYieldCardSemantics => '温和的优先级建议';
+
+  @override
+  String get lowYieldCardTitle => '现在更值得做的一步';
+
+  @override
+  String get lowYieldActivityFallback => '这件事';
+
+  @override
+  String get lowYieldReasonFallback => '你当前的截止日期和目标优先级';
+
+  @override
+  String get lowYieldSuggestionFallback => '建议任务';
+
+  @override
+  String lowYieldCardMessage(
+      String activity, String reason, String suggestion) {
+    return '我注意到你正在做 $activity。考虑到 $reason，现在更值得做的可能是 $suggestion。';
+  }
+
+  @override
+  String get lowYieldActionSwitch => '好的，切换';
+
+  @override
+  String get lowYieldActionContinue => '我知道，继续';
+
+  @override
+  String get lowYieldActionCorrect => '不对，纠正';
+
+  @override
+  String get understandingPanelTitle => 'Sparkle 懂我';
+
+  @override
+  String get understandingPanelSemanticLabel => 'Sparkle 对我的理解快照';
+
+  @override
+  String understandingPanelSubtitle(int count, int ratio) {
+    return '$count 条判断 · $ratio% 高置信';
+  }
+
+  @override
+  String get understandingPanelEmptySubtitle => '还没有稳定判断';
+
+  @override
+  String get understandingPanelEmptyBody =>
+      '当你制定计划、聊天和完成任务后，Sparkle 会把具体假设放在这里，方便你纠正。';
+
+  @override
+  String get understandingPanelLoading => '正在读取当前自我模型';
+
+  @override
+  String get understandingPanelError => '暂时无法加载理解快照';
+
+  @override
+  String get understandingPanelExpand => '展开理解快照';
+
+  @override
+  String get understandingPanelCollapse => '收起理解快照';
+
+  @override
+  String get understandingPanelMemoryTitle => '当前正在使用的理解';
+
+  @override
+  String get understandingCorrect => '纠正';
+
+  @override
+  String get understandingConfidenceHigh => '高置信';
+
+  @override
+  String get understandingConfidenceMedium => '中置信';
+
+  @override
+  String get understandingConfidenceLow => '低置信';
+
+  @override
+  String understandingClaimSemantic(String claim, int confidence) {
+    return '$claim。置信度 $confidence%。';
+  }
+
+  @override
+  String understandingStyleSummary(
+      String tone, String verbosity, String reason) {
+    return '$tone · $verbosity。$reason';
+  }
+
+  @override
+  String understandingRecentlyCorrected(String correction) {
+    return '已根据你的纠正更新：$correction';
+  }
+
+  @override
+  String get understandingCorrectionTitle => '纠正这条判断';
+
+  @override
+  String get understandingCorrectionHint => 'Sparkle 应该怎样理解？';
+
+  @override
+  String get understandingCorrectionScopeTitle => '这次纠正应该影响哪里？';
+
+  @override
+  String understandingCorrectionUpdated(String effect) {
+    return '已更新：$effect';
+  }
+
+  @override
+  String get understandingCorrectionFailed => '这次纠正更新失败';
+
+  @override
+  String get understandingCorrectionGenericEffect => '自我模型';
+
+  @override
+  String get understandingScopeMemoryClaim => '记忆判断';
+
+  @override
+  String get understandingScopeRoutingPolicy => '路由策略';
+
+  @override
+  String get understandingScopeTaskGranularity => '任务粒度';
+
+  @override
+  String get understandingScopePlanRisk => '计划风险';
+
+  @override
+  String get understandingScopeKnowledgeBottleneck => '知识瓶颈';
+
+  @override
+  String get understandingScopeWakePolicy => '唤醒策略';
+
+  @override
+  String get understandingChatDrawerTitle => '当前自我模型';
+
+  @override
+  String understandingChatDrawerSubtitle(int count) {
+    return '$count 条可纠正判断';
+  }
+
+  @override
+  String get understandingChatDrawerSubtitleEmpty => '查看 Sparkle 当前怎么理解你';
+
+  @override
+  String get understandingChatDrawerOpen => '打开当前自我模型';
+
+  @override
+  String get cahTitle => '问责空间';
+
+  @override
+  String get cahSubtitle => '承诺、伙伴进度和共同目标都在这里';
+
+  @override
+  String get cahMyCommitments => '我的承诺';
+
+  @override
+  String get cahPartnerProgress => '伙伴进度';
+
+  @override
+  String get cahSharedGoals => '共同目标';
+
+  @override
+  String get cahNeedsAttention => '需要关注';
+
+  @override
+  String get cahHelpable => '我可以帮助';
+
+  @override
+  String get cahFeedEntry => '进入动态 Feed';
+
+  @override
+  String get cahFeedEntryHint => 'Feed 保留为二级入口，用来分享和浏览动态';
+
+  @override
+  String get cahAllowReminder => '允许提醒';
+
+  @override
+  String get cahDoNotDisturb => '暂时勿扰';
+
+  @override
+  String get cahAcceptReminder => '接受提醒';
+
+  @override
+  String get cahDeclineReminder => '拒绝';
+
+  @override
+  String get cahLaterReminder => '稍后';
+
+  @override
+  String get cahTooFrequentReminder => '太频繁';
+
+  @override
+  String get goalDetailTitle => '目标详情';
+
+  @override
+  String get goalDetailProgress => '总体进度';
+
+  @override
+  String get goalDetailMastery => '掌握度';
+
+  @override
+  String get goalDetailTargetDate => '目标日期';
+
+  @override
+  String get goalDetailPriority => '优先级';
+
+  @override
+  String get goalDetailMinimumLine => '最低达标线';
+
+  @override
+  String get goalDetailBottlenecks => '知识瓶颈';
+
+  @override
+  String get goalDetailTodayStep => '今日最小下一步';
+
+  @override
+  String get goalDetailPlanHealth => '计划健康状态';
+
+  @override
+  String get goalDetailAccountability => '社群问责';
+
+  @override
+  String get goalDetailRelatedSources => '相关资料来源';
 }
