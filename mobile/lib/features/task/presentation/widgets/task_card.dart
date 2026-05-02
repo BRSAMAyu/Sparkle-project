@@ -21,6 +21,8 @@ class TaskCard extends ConsumerStatefulWidget {
     super.key,
     this.onTap,
     this.onStart,
+    this.onPause,
+    this.onResume,
     this.onComplete,
     this.onRetrySync,
     this.onDiscardSync,
@@ -30,6 +32,8 @@ class TaskCard extends ConsumerStatefulWidget {
   final TaskModel task;
   final VoidCallback? onTap;
   final VoidCallback? onStart;
+  final VoidCallback? onPause;
+  final VoidCallback? onResume;
   final VoidCallback? onComplete;
   final VoidCallback? onRetrySync;
   final VoidCallback? onDiscardSync;
@@ -337,6 +341,8 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                             ),
                                           ),
                                           if (widget.onStart != null ||
+                                              widget.onPause != null ||
+                                              widget.onResume != null ||
                                               widget.onComplete != null)
                                             Padding(
                                               padding: const EdgeInsets.only(
@@ -345,20 +351,51 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                               child: Column(
                                                 children: [
                                                   if (widget.onStart != null &&
-                                                      widget.task.status ==
-                                                          TaskStatus.pending)
+                                                      (widget.task.status ==
+                                                              TaskStatus
+                                                                  .pending ||
+                                                          widget.task.status ==
+                                                              TaskStatus
+                                                                  .paused))
                                                     _ActionButton(
-                                                      icon: Icons.play_arrow,
+                                                      icon: widget.task
+                                                                  .status ==
+                                                              TaskStatus.paused
+                                                          ? Icons
+                                                              .restart_alt_rounded
+                                                          : Icons.play_arrow,
                                                       color: context
                                                           .sparkleColors
                                                           .brandPrimary,
+                                                      onPressed: widget.task
+                                                                  .status ==
+                                                              TaskStatus.paused
+                                                          ? (widget.onResume ??
+                                                              widget.onStart!)
+                                                          : widget.onStart!,
+                                                    ),
+                                                  if (widget.onPause != null &&
+                                                      (widget.task.status ==
+                                                              TaskStatus
+                                                                  .inProgress ||
+                                                          widget.task.status ==
+                                                              TaskStatus.stuck))
+                                                    _ActionButton(
+                                                      icon: Icons.pause_rounded,
+                                                      color: DS.warning,
                                                       onPressed:
-                                                          widget.onStart!,
+                                                          widget.onPause!,
                                                     ),
                                                   if (widget.onComplete !=
                                                           null &&
                                                       widget.task.status !=
-                                                          TaskStatus.completed)
+                                                          TaskStatus
+                                                              .completed &&
+                                                      widget.task.status !=
+                                                          TaskStatus
+                                                              .abandoned &&
+                                                      widget.task.status !=
+                                                          TaskStatus.paused)
                                                     _ActionButton(
                                                       icon: Icons.check,
                                                       color: _success(context),
@@ -679,6 +716,8 @@ TaskPillTone _statusTone(TaskStatus status) {
     case TaskStatus.inProgress:
     case TaskStatus.stuck:
       return TaskPillTone.brand;
+    case TaskStatus.paused:
+      return TaskPillTone.neutral;
     case TaskStatus.completed:
       return TaskPillTone.success;
     case TaskStatus.abandoned:
@@ -711,6 +750,8 @@ String _statusLabel(AppLocalizations l10n, TaskStatus status) {
       return l10n.taskStatusPending;
     case TaskStatus.inProgress:
       return l10n.taskStatusInProgress;
+    case TaskStatus.paused:
+      return l10n.taskStatusPaused;
     case TaskStatus.stuck:
       return l10n.taskStatusStuck;
     case TaskStatus.completed:

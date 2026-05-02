@@ -1246,6 +1246,66 @@ Clarify the core output and completion criteria.
     }
   }
 
+  Future<TaskModel> pauseTask(String id, {String? reason}) async {
+    if (DemoDataService.isDemoMode) {
+      final existingIndex =
+          DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+      if (existingIndex != -1) {
+        final existing = DemoDataService().demoTasks[existingIndex];
+        final updated = existing.copyWith(
+          status: TaskStatus.paused,
+          userNote: reason == null || reason.isEmpty
+              ? existing.userNote
+              : 'Paused: $reason',
+          updatedAt: DateTime.now(),
+        );
+        DemoDataService().demoTasks[existingIndex] = updated;
+        return updated;
+      }
+    }
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.pauseTask(id),
+        data: {
+          if (reason != null && reason.trim().isNotEmpty)
+            'reason': reason.trim(),
+        },
+      );
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'pauseTask');
+      return TaskModel.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'pauseTask');
+    }
+  }
+
+  Future<TaskModel> resumeTask(String id) async {
+    if (DemoDataService.isDemoMode) {
+      final existingIndex =
+          DemoDataService().demoTasks.indexWhere((t) => t.id == id);
+      if (existingIndex != -1) {
+        final existing = DemoDataService().demoTasks[existingIndex];
+        final updated = existing.copyWith(
+          status: TaskStatus.inProgress,
+          startedAt: existing.startedAt ?? DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        DemoDataService().demoTasks[existingIndex] = updated;
+        return updated;
+      }
+    }
+    try {
+      final response = await _apiClient.post<Map<String, dynamic>>(
+        ApiEndpoints.resumeTask(id),
+      );
+      final payload =
+          ApiResponseParser.unwrapMap(response.data, action: 'resumeTask');
+      return TaskModel.fromJson(payload);
+    } on DioException catch (e) {
+      return _handleDioError(e, 'resumeTask');
+    }
+  }
+
   Future<TaskStuckResult> markTaskStuck(
     String id, {
     String? stuckPoint,

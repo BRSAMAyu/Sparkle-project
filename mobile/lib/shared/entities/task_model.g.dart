@@ -87,6 +87,7 @@ const _$TaskTypeEnumMap = {
 const _$TaskStatusEnumMap = {
   TaskStatus.pending: 'PENDING',
   TaskStatus.inProgress: 'IN_PROGRESS',
+  TaskStatus.paused: 'PAUSED',
   TaskStatus.stuck: 'STUCK',
   TaskStatus.completed: 'COMPLETED',
   TaskStatus.abandoned: 'ABANDONED',

@@ -34,6 +34,10 @@ class ApiEndpoints {
   static String fileThumbnail(String id) => '/files/$id/thumbnail';
   static const String myFiles = '/me/files';
   static const String myFilesSearch = '/me/files/search';
+  static String sourceArchive(String id) => '/sources/$id/archive';
+  static String sourceRestore(String id) => '/sources/$id/restore';
+  static String sourceRevoke(String id) => '/sources/$id/revoke';
+  static String sourceDelete(String id) => '/sources/$id';
   static String galaxyDocumentNodes(String id) => '/galaxy/documents/$id/nodes';
   static const String documentsUpload = '/documents/upload';
   static String documentConfirmUpload(String fileId) =>
@@ -57,6 +61,8 @@ class ApiEndpoints {
   static const String todayTasks = '/tasks/today';
   static const String recommendedTasks = '/tasks/recommended';
   static String startTask(String id) => '/tasks/$id/start';
+  static String pauseTask(String id) => '/tasks/$id/pause';
+  static String resumeTask(String id) => '/tasks/$id/resume';
   static String completeTask(String id) => '/tasks/$id/complete';
   static String abandonTask(String id) => '/tasks/$id/abandon';
   static String snoozeTask(String id) => '/tasks/$id/snooze';
@@ -566,6 +572,16 @@ class ApiEndpoints {
   static String seedLibraryFewShot = '/seed-libraries/examples/few-shot';
   static String seedLibraryReplyTemplate =
       '/seed-libraries/query/reply-template';
+  static const String marketplaceSkills = '/marketplace/skills';
+  static const String marketplacePacks = '/marketplace/packs';
+  static String marketplaceSkillPreview(String id) =>
+      '/marketplace/skills/$id/preview';
+  static String marketplacePackPreview(String id) =>
+      '/marketplace/packs/$id/preview';
+  static String marketplaceSkillAdopt(String id) =>
+      '/marketplace/skills/$id/adopt';
+  static String marketplacePackAdopt(String id) =>
+      '/marketplace/packs/$id/adopt';
 
   // Shop System
   static const String shopItems = '/shop/items';

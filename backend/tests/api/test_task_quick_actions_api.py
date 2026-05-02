@@ -297,6 +297,38 @@ async def test_skip_task_marks_task_abandoned(tasks_client, db_session, monkeypa
 
 
 @pytest.mark.asyncio
+async def test_pause_and_resume_task_api(tasks_client, db_session, monkeypatch):
+    client, state = tasks_client
+    user = await _create_user(db_session)
+    task = await _create_task(
+        db_session,
+        user_id=user.id,
+        title="暂停后继续的任务",
+    )
+    task.status = TaskStatus.IN_PROGRESS
+    db_session.add(task)
+    await db_session.commit()
+    state["current_user"] = user
+
+    monkeypatch.setattr("app.services.task_service.event_bus_reliable.publish", AsyncMock())
+    monkeypatch.setattr("app.services.task_service.publish_srl_event", AsyncMock())
+
+    pause_response = client.post(
+        f"/tasks/{task.id}/pause",
+        json={"reason": "喝水休息"},
+    )
+    assert pause_response.status_code == 200
+    pause_payload = pause_response.json()["data"]
+    assert pause_payload["status"] == "PAUSED"
+    assert pause_payload["completed_at"] is None
+
+    resume_response = client.post(f"/tasks/{task.id}/resume")
+    assert resume_response.status_code == 200
+    resume_payload = resume_response.json()["data"]
+    assert resume_payload["status"] == "IN_PROGRESS"
+
+
+@pytest.mark.asyncio
 async def test_stuck_task_returns_live_aurora_diagnosis(tasks_client, db_session, monkeypatch):
     client, state = tasks_client
     user = await _create_user(db_session)

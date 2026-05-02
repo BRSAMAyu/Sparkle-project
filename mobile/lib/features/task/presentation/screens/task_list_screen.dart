@@ -14,7 +14,7 @@ import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
-enum TaskFilterOptions { all, pending, inProgress, completed }
+enum TaskFilterOptions { all, pending, inProgress, paused, completed }
 
 enum TaskPriorityFilterOptions { all, high, medium, low }
 
@@ -387,6 +387,21 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                               .startTask(task.id),
                         );
                       },
+                      onPause: () {
+                        unawaited(
+                          ref.read(taskListProvider.notifier).pauseTask(
+                                task.id,
+                                reason: 'user_paused_from_task_list',
+                              ),
+                        );
+                      },
+                      onResume: () {
+                        unawaited(
+                          ref
+                              .read(taskListProvider.notifier)
+                              .resumeTask(task.id),
+                        );
+                      },
                       onComplete: () {
                         unawaited(
                           ref.read(taskListProvider.notifier).completeTask(
@@ -471,6 +486,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                         task.status == TaskStatus.stuck,
                   )
                   .length,
+              pausedCount: tasks
+                  .where((task) => task.status == TaskStatus.paused)
+                  .length,
               completedCount: tasks
                   .where((task) => task.status == TaskStatus.completed)
                   .length,
@@ -485,6 +503,19 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
               onStart: () {
                 unawaited(
                   ref.read(taskListProvider.notifier).startTask(task.id),
+                );
+              },
+              onPause: () {
+                unawaited(
+                  ref.read(taskListProvider.notifier).pauseTask(
+                        task.id,
+                        reason: 'user_paused_from_task_list',
+                      ),
+                );
+              },
+              onResume: () {
+                unawaited(
+                  ref.read(taskListProvider.notifier).resumeTask(task.id),
                 );
               },
               onComplete: () {
@@ -528,6 +559,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   t.status == TaskStatus.stuck,
             )
             .toList();
+      case TaskFilterOptions.paused:
+        return tasks.where((t) => t.status == TaskStatus.paused).toList();
       case TaskFilterOptions.completed:
         return tasks.where((t) => t.status == TaskStatus.completed).toList();
       case TaskFilterOptions.all:
@@ -672,6 +705,8 @@ class _FilterChips extends ConsumerWidget {
         return l10n.taskStatusPending;
       case TaskFilterOptions.inProgress:
         return l10n.taskStatusInProgress;
+      case TaskFilterOptions.paused:
+        return l10n.taskStatusPaused;
       case TaskFilterOptions.completed:
         return l10n.taskStatusCompleted;
     }
@@ -683,12 +718,14 @@ class _TaskListSummary extends StatelessWidget {
     required this.totalCount,
     required this.pendingCount,
     required this.inProgressCount,
+    required this.pausedCount,
     required this.completedCount,
   });
 
   final int totalCount;
   final int pendingCount;
   final int inProgressCount;
+  final int pausedCount;
   final int completedCount;
 
   @override
@@ -697,7 +734,7 @@ class _TaskListSummary extends StatelessWidget {
     return Semantics(
       container: true,
       label:
-          '${l10n.taskListTitle}: $totalCount, ${l10n.taskStatusPending}: $pendingCount, ${l10n.taskStatusInProgress}: $inProgressCount, ${l10n.taskStatusCompleted}: $completedCount',
+          '${l10n.taskListTitle}: $totalCount, ${l10n.taskStatusPending}: $pendingCount, ${l10n.taskStatusInProgress}: $inProgressCount, ${l10n.taskStatusPaused}: $pausedCount, ${l10n.taskStatusCompleted}: $completedCount',
       child: Container(
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
@@ -723,6 +760,11 @@ class _TaskListSummary extends StatelessWidget {
               label: l10n.taskStatusInProgress,
               value: inProgressCount,
               tone: DS.warning,
+            ),
+            _TaskMetricChip(
+              label: l10n.taskStatusPaused,
+              value: pausedCount,
+              tone: DS.neutral500,
             ),
             _TaskMetricChip(
               label: l10n.taskStatusCompleted,

@@ -244,7 +244,7 @@ class TaskService:
         """Start task"""
         old_status = db_obj.status
         db_obj.status = TaskStatus.IN_PROGRESS
-        db_obj.started_at = _utcnow()
+        db_obj.started_at = db_obj.started_at or _utcnow()
 
         db.add(db_obj)
         if not _is_mock_session(db):
@@ -289,6 +289,155 @@ class TaskService:
         )
 
         return db_obj
+
+    @staticmethod
+    async def pause(db: AsyncSession, db_obj: Task, reason: str | None = None) -> Task:
+        """Pause a task without marking it as a success or failure."""
+        if db_obj.status in (TaskStatus.COMPLETED, TaskStatus.ABANDONED):
+            raise ValueError("Completed or abandoned tasks cannot be paused")
+
+        old_status = db_obj.status
+        paused_at = _utcnow()
+        guide_json = dict(db_obj.guide_json or {})
+        pause_state = dict(guide_json.get("pause_state") or {})
+        pause_count = int(pause_state.get("paused_count") or 0) + 1
+        pause_state.update(
+            {
+                "paused_at": paused_at.isoformat(),
+                "reason": reason,
+                "paused_count": pause_count,
+                "resumed_at": None,
+            }
+        )
+        guide_json["pause_state"] = pause_state
+
+        db_obj.status = TaskStatus.PAUSED
+        db_obj.guide_json = guide_json
+        if reason:
+            db_obj.user_note = f"Paused: {reason}"
+
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        await _sync_task_card_projection(db, db_obj)
+
+        if db_obj.plan_id:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_updated(db_obj, old_status=old_status)
+            except Exception as e:
+                logger.warning(f"Failed to sync task pause with plan state: {e}")
+
+        event_payload = {
+            "event_type": "task.paused",
+            "user_id": str(db_obj.user_id),
+            "task_id": str(db_obj.id),
+            "plan_id": str(db_obj.plan_id) if db_obj.plan_id else None,
+            "reason": reason,
+            "paused_count": pause_count,
+            "timestamp": paused_at.isoformat(),
+        }
+        await event_bus_reliable.publish("task.paused", event_payload)
+        try:
+            from app.signals.outcome_tracker import OutcomeTracker
+
+            await OutcomeTracker(cache_service.redis).record_actual_for_user(
+                user_id=str(db_obj.user_id),
+                actual_outcome={
+                    "task_id": str(db_obj.id),
+                    "plan_id": str(db_obj.plan_id) if db_obj.plan_id else None,
+                    "paused": True,
+                    "paused_count": pause_count,
+                    "completed": None,
+                    "user_responded": True,
+                    "behavior_changed": True,
+                },
+                exclude_context={"task_id": str(db_obj.id)},
+            )
+        except Exception as exc:
+            logger.warning("Failed to record neutral paused outcome for task {}: {}", db_obj.id, exc)
+        await publish_srl_event(
+            user_id=db_obj.user_id,
+            trigger_event_type="task.paused",
+            evidence_id=str(db_obj.id),
+            metadata={
+                "plan_id": str(db_obj.plan_id) if db_obj.plan_id else None,
+                "reason": reason,
+                "paused_count": pause_count,
+            },
+        )
+        return db_obj
+
+    @staticmethod
+    async def pause_task(db: AsyncSession, task_id: UUID, user_id: UUID, reason: str | None = None) -> Task:
+        """Pause task by ID and verify user ownership."""
+        task = await TaskService.get_by_id(db, task_id, user_id)
+        if not task:
+            from app.core.exceptions import NotFoundError
+
+            raise NotFoundError(message="Task not found")
+        return await TaskService.pause(db, task, reason)
+
+    @staticmethod
+    async def resume(db: AsyncSession, db_obj: Task) -> Task:
+        """Resume a paused task."""
+        if db_obj.status != TaskStatus.PAUSED:
+            raise ValueError("Only paused tasks can be resumed")
+
+        old_status = db_obj.status
+        resumed_at = _utcnow()
+        guide_json = dict(db_obj.guide_json or {})
+        pause_state = dict(guide_json.get("pause_state") or {})
+        pause_state["resumed_at"] = resumed_at.isoformat()
+        guide_json["pause_state"] = pause_state
+
+        db_obj.status = TaskStatus.IN_PROGRESS
+        db_obj.started_at = db_obj.started_at or resumed_at
+        db_obj.guide_json = guide_json
+
+        db.add(db_obj)
+        await db.commit()
+        await db.refresh(db_obj)
+        await _sync_task_card_projection(db, db_obj)
+
+        if db_obj.plan_id:
+            try:
+                from app.services.task_state_sync import TaskStateSyncService
+
+                sync_service = TaskStateSyncService(db)
+                await sync_service.on_task_updated(db_obj, old_status=old_status)
+            except Exception as e:
+                logger.warning(f"Failed to sync task resume with plan state: {e}")
+
+        await event_bus_reliable.publish(
+            "task.resumed",
+            {
+                "event_type": "task.resumed",
+                "user_id": str(db_obj.user_id),
+                "task_id": str(db_obj.id),
+                "plan_id": str(db_obj.plan_id) if db_obj.plan_id else None,
+                "timestamp": resumed_at.isoformat(),
+            },
+        )
+        await publish_srl_event(
+            user_id=db_obj.user_id,
+            trigger_event_type="task.resumed",
+            evidence_id=str(db_obj.id),
+            metadata={"plan_id": str(db_obj.plan_id) if db_obj.plan_id else None},
+        )
+        return db_obj
+
+    @staticmethod
+    async def resume_task(db: AsyncSession, task_id: UUID, user_id: UUID) -> Task:
+        """Resume paused task by ID and verify user ownership."""
+        task = await TaskService.get_by_id(db, task_id, user_id)
+        if not task:
+            from app.core.exceptions import NotFoundError
+
+            raise NotFoundError(message="Task not found")
+        return await TaskService.resume(db, task)
 
     @staticmethod
     async def start_task(db: AsyncSession, task_id: UUID, user_id: UUID) -> Task:

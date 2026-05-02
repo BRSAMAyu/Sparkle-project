@@ -898,6 +898,8 @@ String _normalizeTaskStatus(dynamic raw) {
     case 'in_progress':
     case 'inprogress':
       return 'IN_PROGRESS';
+    case 'paused':
+      return 'PAUSED';
     case 'completed':
       return 'COMPLETED';
     case 'abandoned':
