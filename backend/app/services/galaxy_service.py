@@ -33,6 +33,7 @@ from app.models.error_book import ErrorRecord
 from app.models.file_storage import StoredFile
 from app.models.galaxy import KnowledgeNode, KnowledgeNodeDocument, NodeRelation, StudyRecord, UserNodeStatus
 from app.models.task import Task, TaskStatus
+from app.models.task_resources import TaskKnowledgeLink
 from app.schemas.galaxy import (
     DraftGalaxyNode,
     GalaxyContributionNode,
@@ -59,6 +60,7 @@ from app.services.galaxy.ontology_generator import (
     OntologyGenerator,
     relation_type_to_wire_name,
 )
+from app.services.galaxy.provenance import append_graph_event_source
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.galaxy.review_urgency_service import ReviewUrgencyService
 from app.services.galaxy.stats_service import GalaxyStatsService
@@ -565,6 +567,23 @@ class GalaxyService:
             )
             self.db.add(edge)
             created_relations.append(edge)
+
+        for node in [root_node, *created_nodes]:
+            status = await self.db.get(UserNodeStatus, (user_id, node.id))
+            if status is not None:
+                append_graph_event_source(
+                    status,
+                    event_type="document.ontology_created",
+                    source_type="document",
+                    reference_id=file_id,
+                    label=file_name,
+                    payload={
+                        "node_name": node.name,
+                        "subject": subject,
+                        "draft": True,
+                    },
+                )
+                self.db.add(status)
 
         self.db.add(
             KnowledgeNodeDocument(
@@ -2259,6 +2278,8 @@ class GalaxyService:
             nodes_with_status,
             recent_error_counts=error_counts,
         )
+        goal_node_ids = await self._get_goal_connected_node_ids(user_id)
+        blocked_prerequisites = self._get_blocked_prerequisites_by_node(nodes_with_status, relations)
 
         # 6. Assemble with Flutter-compatible fields
         return GalaxyGraphResponse(
@@ -2268,6 +2289,8 @@ class GalaxyService:
                     status,
                     recent_error_count=error_counts.get(node.id, 0),
                     review_signal=review_signals.get(node.id),
+                    goal_node_ids=goal_node_ids,
+                    blocked_by_prerequisite_node_ids=blocked_prerequisites.get(node.id, []),
                 )
                 for node, status in nodes_with_status
             ],
@@ -2303,6 +2326,55 @@ class GalaxyService:
         except Exception as exc:
             logger.debug("GalaxyService: could not load error counts: {}", exc)
             return {}
+
+    async def _get_goal_connected_node_ids(self, user_id: UUID) -> set[UUID]:
+        """Return nodes attached to active work so Galaxy can explain goal relevance."""
+        try:
+            direct_rows = (
+                await self.db.execute(
+                    select(Task.knowledge_node_id)
+                    .where(Task.user_id == user_id)
+                    .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS]))
+                    .where(Task.knowledge_node_id.is_not(None))
+                    .limit(80)
+                )
+            ).all()
+            linked_rows = (
+                await self.db.execute(
+                    select(TaskKnowledgeLink.knowledge_node_id)
+                    .join(Task, Task.id == TaskKnowledgeLink.task_id)
+                    .where(Task.user_id == user_id)
+                    .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS]))
+                    .limit(120)
+                )
+            ).all()
+
+            node_ids: set[UUID] = set()
+            for node_id, in [*direct_rows, *linked_rows]:
+                if isinstance(node_id, UUID):
+                    node_ids.add(node_id)
+            return node_ids
+        except Exception as exc:
+            logger.debug("GalaxyService: could not load goal-connected node ids: {}", exc)
+            return set()
+
+    @staticmethod
+    def _get_blocked_prerequisites_by_node(
+        nodes_with_status: list[tuple[KnowledgeNode, UserNodeStatus | None]],
+        relations: list[NodeRelation],
+    ) -> dict[UUID, list[UUID]]:
+        status_by_node_id = {node.id: status for node, status in nodes_with_status}
+        blocked: dict[UUID, list[UUID]] = {}
+        for relation in relations:
+            if str(relation.relation_type or "").lower() != "prerequisite":
+                continue
+            prereq_status = status_by_node_id.get(relation.source_node_id)
+            prereq_mastery = float(getattr(prereq_status, "mastery_score", 0.0) or 0.0) if prereq_status else 0.0
+            prereq_ready = bool(getattr(prereq_status, "is_unlocked", False)) and prereq_mastery >= 40.0
+            if prereq_ready:
+                continue
+            blocked.setdefault(relation.target_node_id, []).append(relation.source_node_id)
+        return blocked
 
     async def get_galaxy_graph_viewport(
         self,

@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.services.embedding_service import embedding_service
 from app.services.expansion_service import ExpansionService
+from app.services.galaxy.provenance import append_graph_event_source
 
 
 def _utcnow() -> datetime:
@@ -123,6 +124,18 @@ class KnowledgeIntegrationService:
                 created_at=_utcnow(),
                 updated_at=_utcnow(),
             )
+            append_graph_event_source(
+                user_status,
+                event_type="translation.saved",
+                source_type="translation",
+                reference_id=source_document_id or source_url or source_text,
+                label=source_text,
+                payload={
+                    "translation": translation,
+                    "language": language,
+                    "domain": domain,
+                },
+            )
 
             self.db.add(user_status)
 
@@ -174,6 +187,16 @@ class KnowledgeIntegrationService:
             self.db.add(user_status)
             await self._schedule_first_review(user_status)
             logger.info(f"🔗 Linked user {user_id} to existing node {node.id}")
+
+        append_graph_event_source(
+            user_status,
+            event_type="translation.saved",
+            source_type="translation",
+            reference_id=source_url or node.id,
+            label=node.name,
+            payload={"context": context[:240] if context else None},
+        )
+        self.db.add(user_status)
 
         # 2. Append Context (if not already present)
         if context and (not node.description or context not in node.description):

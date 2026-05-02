@@ -17,7 +17,9 @@ from app.models.task import Task, TaskStatus
 from app.models.task_resources import TaskKnowledgeLink
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.services.cognitive_service import CognitiveService
+from app.services.expansion_service import ExpansionService
 from app.services.galaxy.graph_evolution_service import GraphEvolutionService
+from app.services.galaxy.provenance import append_graph_event_source
 from app.services.galaxy_service import GalaxyService
 from app.services.plan_state_service import PlanStateService
 from app.services.simulation.seed_extractor import SeedExtractor
@@ -89,17 +91,57 @@ class GalaxyEventConsumer:
         linked_node_ids = event.get("linked_node_ids", [])
         error_id = event.get("error_id")
 
-        if not user_id or not linked_node_ids:
+        if not user_id:
             return
 
         user_uuid = UUID(str(user_id))
-        linked_node_uuids = [UUID(str(node_id)) for node_id in linked_node_ids]
+        linked_node_uuids = []
+        for node_id in linked_node_ids:
+            try:
+                linked_node_uuids.append(UUID(str(node_id)))
+            except Exception:
+                continue
+        error_uuid = UUID(str(error_id)) if error_id else uuid4()
 
         async with AsyncSessionLocal() as db:
+            if not linked_node_uuids:
+                fallback_node = await self._create_error_gap_node(db=db, user_id=user_uuid, event=event)
+                if fallback_node is not None:
+                    linked_node_uuids = [fallback_node.id]
+
+            if not linked_node_uuids:
+                return
+
+            for node_uuid in linked_node_uuids:
+                status = await db.get(UserNodeStatus, (user_uuid, node_uuid))
+                if status is None:
+                    status = UserNodeStatus(
+                        user_id=user_uuid,
+                        node_id=node_uuid,
+                        mastery_score=0.0,
+                        bkt_mastery_prob=0.0,
+                        is_unlocked=True,
+                        first_unlock_at=_utcnow(),
+                    )
+                    db.add(status)
+                append_graph_event_source(
+                    status,
+                    event_type="error.created",
+                    source_type="error_book",
+                    reference_id=error_uuid,
+                    label=str(event.get("root_cause") or event.get("chapter") or event.get("error_type") or "error"),
+                    payload={
+                        "error_type": event.get("error_type"),
+                        "subject": event.get("subject"),
+                        "chapter": event.get("chapter"),
+                    },
+                )
+                db.add(status)
+
             # Graph structure evolution (tags weak signals, adjusts relation strengths)
             # Does NOT modify mastery_score.
             evolution = GraphEvolutionService(db)
-            await evolution.handle_error_created(event)
+            await evolution.handle_error_created({**event, "linked_node_ids": [str(node_id) for node_id in linked_node_uuids]})
             await SeedExtractor(db).prewarm_for_scenarios(user_uuid)
 
             # Plan-health evaluation (read-only for mastery — only reads scores
@@ -109,7 +151,7 @@ class GalaxyEventConsumer:
             error_replan_bridge = ErrorReplanBridge(db)
             await error_replan_bridge.on_error_created(
                 user_id=user_uuid,
-                error_id=UUID(str(error_id)) if error_id else uuid4(),
+                error_id=error_uuid,
                 linked_node_ids=linked_node_uuids,
             )
 
@@ -120,7 +162,7 @@ class GalaxyEventConsumer:
             bridge = ErrorMasteryBridge(db)
             await bridge.on_error_created(
                 user_id=user_uuid,
-                error_id=UUID(str(error_id)) if error_id else uuid4(),
+                error_id=error_uuid,
                 linked_node_ids=linked_node_uuids,
                 analysis=event.get("analysis"),
                 subject=event.get("subject"),
@@ -181,6 +223,41 @@ class GalaxyEventConsumer:
             logger.debug(f"Spine on_mistake_event skipped: {spine_err}")
 
         logger.info(f"Processed error_created for user {user_id}")
+
+    async def _create_error_gap_node(self, *, db, user_id: UUID, event: dict):
+        label = str(
+            event.get("root_cause")
+            or event.get("chapter")
+            or event.get("knowledge_node_name")
+            or event.get("error_type")
+            or ""
+        ).strip()
+        if not label:
+            return None
+
+        description = str(event.get("analysis") or event.get("question_text") or "").strip()
+        expansion = ExpansionService(db)
+        node, _ = await expansion.upsert_node_from_candidate(
+            user_id=user_id,
+            candidate={
+                "name": f"Error gap: {label}"[:255],
+                "description": description[:800] or f"Knowledge gap inferred from an error in {label}.",
+                "importance_level": 3,
+                "keywords": [
+                    "error_book",
+                    "signal:weak_at",
+                    *([str(event.get("subject"))] if event.get("subject") else []),
+                    *([str(event.get("chapter"))] if event.get("chapter") else []),
+                ],
+            },
+            source_type="error_book",
+            generate_embedding=False,
+            unlock_for_user=True,
+            commit=False,
+            invalidate_caches=False,
+            allow_existing_match=True,
+        )
+        return node
 
     async def _handle_node_updated(self, event: dict):
         user_id = event.get("user_id")
