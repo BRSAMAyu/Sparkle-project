@@ -39,6 +39,8 @@ class ActionableSignal:
     ttl_hours: int
     evidence_summary: str
     possible_effects: list[str]
+    counter_evidence: list[str] = field(default_factory=list)
+    alternative_explanations: list[str] = field(default_factory=list)
     priority: str               # "high" | "medium" | "low"
     created_at: str = field(default_factory=_utcnow)
 
@@ -54,6 +56,8 @@ class ActionableSignal:
             "ttl_hours": self.ttl_hours,
             "evidence_summary": self.evidence_summary,
             "possible_effects": self.possible_effects,
+            "counter_evidence": self.counter_evidence,
+            "alternative_explanations": self.alternative_explanations,
             "priority": self.priority,
             "created_at": self.created_at,
         }
@@ -135,10 +139,12 @@ class StrategyBelief:
     """Bayesian belief about a strategy's effectiveness."""
 
     strategy_key: str
+    scope: str = "global"              # current_sprint | global | cohort
     alpha: float = 1.0    # prior "successes" (Beta distribution)
     beta: float = 1.0     # prior "failures"
     evidence_count: int = 0
     last_updated: str = ""
+    retract_if: list[str] = field(default_factory=list)  # conditions triggering auto-retraction
     counter_evidence: list[CounterEvidence] = field(default_factory=list)
 
     COUNTER_EVIDENCE_PENALTY_PER_ITEM: ClassVar[float] = 0.05
@@ -181,10 +187,12 @@ class StrategyBelief:
     def to_dict(self) -> dict[str, Any]:
         return {
             "strategy_key": self.strategy_key,
+            "scope": self.scope,
             "alpha": self.alpha,
             "beta": self.beta,
             "evidence_count": self.evidence_count,
             "last_updated": self.last_updated,
+            "retract_if": self.retract_if,
             "counter_evidence": [e.to_dict() for e in self.counter_evidence],
             "belief_score": self.belief_score,
             "raw_expected_effectiveness": self.raw_expected_effectiveness,
@@ -978,6 +986,7 @@ class SourceTrayState:
 class SkillEntry:
     """A strategy that has been proven effective and extracted for reuse."""
     skill_id: str
+    version: int = 1
     scope: str                           # personal / cohort / system
     source_policy_key: str               # The policy that was proven effective
     strategy: dict[str, Any]             # The effective strategy parameters
@@ -985,18 +994,21 @@ class SkillEntry:
     evidence: dict[str, Any]             # Effectiveness metrics
     privacy: dict[str, bool] | None = None  # contains_personal_data / shareable
     contraindications: list[str] = field(default_factory=list)  # when this skill should not be applied
+    previous_versions: list[dict[str, Any]] = field(default_factory=list)
     effective_count: int = 0
     sample_size: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
             "skill_id": self.skill_id,
+            "version": self.version,
             "scope": self.scope,
             "source_policy_key": self.source_policy_key,
             "strategy": self.strategy,
             "applicable_when": self.applicable_when,
             "evidence": self.evidence,
             "contraindications": self.contraindications,
+            "previous_versions": self.previous_versions,
             "effective_count": self.effective_count,
             "sample_size": self.sample_size,
         }
