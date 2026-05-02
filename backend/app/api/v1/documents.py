@@ -19,9 +19,10 @@ from app.config import settings
 from app.core.cache import cache_service
 from app.core.celery_tasks import process_stored_file
 from app.models.background_task import BackgroundTask, BackgroundTaskStatus, BackgroundTaskType
-from app.models.community import GroupRole
+from app.models.community import GroupMember, GroupRole
 from app.models.document_chunks import DocumentChunk
 from app.models.file_storage import StoredFile
+from app.models.group_files import GroupFile
 from app.models.galaxy import KnowledgeNode
 from app.models.user import User
 from app.services.document_service import document_service
@@ -465,6 +466,58 @@ async def get_drafts_summary(
     return DraftsSummaryResponse(total_drafts=total, files_with_drafts=files)
 
 
+async def _require_citation_feedback_access(
+    db: AsyncSession,
+    *,
+    record: StoredFile,
+    user_id: UUID,
+) -> None:
+    if record.user_id == user_id:
+        return
+
+    visibility = str(record.visibility or "private").lower()
+    if visibility == "public":
+        return
+    if visibility != "group":
+        raise HTTPException(status_code=403, detail="You do not have access to this file")
+
+    result = await db.execute(
+        select(GroupFile, GroupMember)
+        .join(
+            GroupMember,
+            (GroupMember.group_id == GroupFile.group_id)
+            & (GroupMember.user_id == user_id)
+            & GroupMember.not_deleted_filter(),
+        )
+        .where(
+            GroupFile.file_id == record.id,
+            GroupFile.not_deleted_filter(),
+        )
+    )
+    for group_file, member in result.all():
+        if GroupFileService._can_access(member.role, group_file.view_role):
+            return
+    raise HTTPException(status_code=403, detail="You do not have access to this group file")
+
+
+async def _require_citation_chunk_belongs_to_file(
+    db: AsyncSession,
+    *,
+    file_id: UUID,
+    chunk_id: str | None,
+) -> None:
+    if not chunk_id:
+        return
+    try:
+        chunk_uuid = UUID(str(chunk_id))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="chunk_id must be a document chunk id") from exc
+
+    chunk = await db.get(DocumentChunk, chunk_uuid)
+    if not chunk or chunk.is_deleted or chunk.file_id != file_id:
+        raise HTTPException(status_code=404, detail="Citation chunk not found for this file")
+
+
 @router.post("/feedback/citation", response_model=CitationFeedbackResponse, summary="Submit document citation feedback")
 async def submit_citation_feedback(
     payload: CitationFeedbackRequest,
@@ -475,9 +528,8 @@ async def submit_citation_feedback(
     if not record or record.is_deleted:
         raise HTTPException(status_code=404, detail="File not found")
 
-    is_owner = record.user_id == current_user.id
-    if not is_owner and str(record.visibility or "private").lower() != "group":
-        raise HTTPException(status_code=403, detail="You do not have access to this file")
+    await _require_citation_feedback_access(db, record=record, user_id=current_user.id)
+    await _require_citation_chunk_belongs_to_file(db, file_id=payload.file_id, chunk_id=payload.chunk_id)
 
     await document_service.publish_citation_feedback(
         user_id=str(current_user.id),

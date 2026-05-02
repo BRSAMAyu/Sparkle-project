@@ -6281,7 +6281,9 @@ def test_build_source_receipt_empty():
     assert receipt["loaded"] == []
     assert receipt["skipped"] == []
     assert receipt["excluded"] == []
-    assert receipt["reason_for_user"] == "这轮没有加载资料。"
+    assert receipt["answer_basis"] == "general_reasoning"
+    assert receipt["source_uncertainty"] == "no_sources_available"
+    assert "通用推理" in receipt["reason_for_user"]
 
 
 def test_build_source_receipt_mixed():
@@ -18079,4 +18081,3 @@ def test_executable_plan_has_plan_version():
     assert plan.plan_version == 5
     d = plan.to_dict()
     assert d["plan_version"] == 5
-
