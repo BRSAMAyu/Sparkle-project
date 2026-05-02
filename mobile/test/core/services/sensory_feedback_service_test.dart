@@ -61,5 +61,37 @@ void main() {
       ),
       SensoryFeedbackEvent.checkin,
     );
+    expect(
+      SensoryFeedbackService.debugFeedbackEventForAurora(
+        AuroraSensoryEvent.statusChanged,
+      ),
+      SensoryFeedbackEvent.selection,
+    );
+  });
+
+  test('sound preference can be toggled off', () async {
+    await SensoryFeedbackService.setSoundEnabled(false);
+    expect(await SensoryFeedbackService.isSoundEnabled(), isFalse);
+
+    await SensoryFeedbackService.setSoundEnabled(true);
+    expect(await SensoryFeedbackService.isSoundEnabled(), isTrue);
+  });
+
+  test('haptic preference can be toggled off', () async {
+    await SensoryFeedbackService.setHapticEnabled(false);
+    expect(await SensoryFeedbackService.isHapticEnabled(), isFalse);
+
+    await SensoryFeedbackService.setHapticEnabled(true);
+    expect(await SensoryFeedbackService.isHapticEnabled(), isTrue);
+  });
+
+  test('ambient volume persists across reads', () async {
+    await SensoryFeedbackService.setAmbientVolume(0.7);
+    expect(await SensoryFeedbackService.getAmbientVolume(), 0.7);
+  });
+
+  test('ambient scene can be saved and retrieved', () async {
+    await SensoryFeedbackService.setAmbientScene(AmbientScene.rain);
+    expect(await SensoryFeedbackService.getSavedAmbientScene(), AmbientScene.rain);
   });
 }

@@ -312,4 +312,87 @@ void main() {
     final expectedEntry = entries.firstWhere((entry) => entry.id == queue[2]);
     expect(assetPath, expectedEntry.assetPath);
   });
+
+  test('BgmUserTuning copyWith preserves unchanged fields', () {
+    const original = BgmUserTuning(
+      intensity: BgmIntensity.lush,
+      variety: BgmVariety.dynamic,
+      readingProtection: false,
+    );
+    final copy = original.copyWith(focusPriority: true);
+    expect(copy.intensity, BgmIntensity.lush);
+    expect(copy.variety, BgmVariety.dynamic);
+    expect(copy.readingProtection, isFalse);
+    expect(copy.focusPriority, isTrue);
+    expect(copy.lockCurrentStyle, isFalse);
+  });
+
+  test('BgmCatalogEntry.fromJson parses numeric fields robustly', () {
+    final entry = BgmCatalogEntry.fromJson({
+      'id': 'test-entry',
+      'assetPath': 'audio/bgm/test.m4a',
+      'album': 'Test',
+      'sceneTags': ['dashboard'],
+      'paletteTags': ['adaptive'],
+      'energy': '0.5', // String instead of number
+      'density': 0.3,
+      'baseGain': null, // Missing
+      'loopable': true,
+      'releaseApproved': false,
+    });
+    expect(entry.id, 'test-entry');
+    expect(entry.energy, 0.5);
+    expect(entry.density, 0.3);
+    expect(entry.baseGain, 1.0); // Fallback
+  });
+
+  test('BgmLibraryEntry sourceLabel varies by source kind', () {
+    const curated = BgmLibraryEntry(
+      id: '1', title: 'T', album: 'My Album', path: '/a',
+      sourceKind: BgmLibrarySourceKind.curated, isAsset: true,
+      sceneTags: [], paletteTags: [], energy: 0.5, density: 0.5, baseGain: 1.0,
+    );
+    const imported = BgmLibraryEntry(
+      id: '2', title: 'T', album: 'A', path: '/b',
+      sourceKind: BgmLibrarySourceKind.imported, isAsset: false,
+      sceneTags: [], paletteTags: [], energy: 0.5, density: 0.5, baseGain: 1.0,
+    );
+    const bundled = BgmLibraryEntry(
+      id: '3', title: 'T', album: 'A', path: '/c',
+      sourceKind: BgmLibrarySourceKind.bundled, isAsset: true,
+      sceneTags: [], paletteTags: [], energy: 0.5, density: 0.5, baseGain: 1.0,
+    );
+    expect(curated.sourceLabel, 'My Album');
+    expect(imported.sourceLabel, contains('导入'));
+    expect(bundled.sourceLabel, contains('内置'));
+  });
+
+  test('BgmTrack mixVolume values are within valid range', () {
+    for (final track in BgmTrack.values) {
+      expect(track.mixVolume, inInclusiveRange(0.0, 1.0));
+    }
+  });
+
+  test('BgmLibrarySnapshot totalCount matches entries length', () {
+    const snapshot = BgmLibrarySnapshot(
+      entries: [
+        BgmLibraryEntry(
+          id: '1', title: 'A', album: 'B', path: '/',
+          sourceKind: BgmLibrarySourceKind.bundled, isAsset: true,
+          sceneTags: [], paletteTags: [], energy: 0.5, density: 0.5, baseGain: 1.0,
+        ),
+        BgmLibraryEntry(
+          id: '2', title: 'C', album: 'D', path: '/',
+          sourceKind: BgmLibrarySourceKind.curated, isAsset: true,
+          sceneTags: [], paletteTags: [], energy: 0.5, density: 0.5, baseGain: 1.0,
+        ),
+      ],
+      curatedCount: 1,
+      importedCount: 0,
+      bundledCount: 1,
+      importDirectoryPath: '/import',
+      downloadDirectoryPath: '/download',
+    );
+    expect(snapshot.totalCount, 2);
+  });
 }
