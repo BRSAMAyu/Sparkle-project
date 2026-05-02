@@ -235,6 +235,19 @@ class PlanReviewService:
             user_context=user_context,
         )
         quality_payload = quality_report.to_dict()
+        feasibility_comments = self._collect_feasibility_comments(plan=plan, user_context=user_context)
+        if any(comment.severity == SeverityLevel.CRITICAL.value for comment in feasibility_comments):
+            return PlanReviewResult(
+                review_id=review_id,
+                plan_id=plan.plan_id,
+                decision=ReviewDecision.NEEDS_MODIFICATION.value,
+                confidence=min(float(plan.confidence or 0.0), 0.45),
+                comments=[*feasibility_comments, *self._build_quality_gate_comments(quality_report)],
+                reviewed_at=reviewed_at,
+                auto_approved=False,
+                user_facing_reason="这个计划的时间、目标和可用精力不匹配，需要先缩小范围或调整节奏后再执行。",
+                quality_report=quality_payload,
+            )
 
         # Step 1: Quick rule-based check
         rule_result = await self._quick_rule_check(plan, user_context)
@@ -620,7 +633,199 @@ class PlanReviewService:
             return "请先给出一个未来 24 小时内可执行的下一步。"
         if normalized == "overload_too_many_steps":
             return "请减少并行步骤，先压成一个更轻的启动动作。"
+        if normalized == "impossible_schedule_risk":
+            return "请缩小考试范围、降低目标层级、增加可用时间，或先改成保底通过计划。"
+        if normalized == "deadline_without_capacity":
+            return "请先确认每天可投入多少分钟，再把计划标成完整计划。"
+        if normalized == "tight_schedule_requires_review_cadence":
+            return "请加入每日复盘点和落后时的保底改线规则。"
         return None
+
+    def _collect_feasibility_comments(
+        self,
+        *,
+        plan: ExecutablePlan,
+        user_context: dict[str, Any],
+    ) -> list[ReviewComment]:
+        """Catch impossible plan promises before confidence or LLM wording can mask them."""
+        comments: list[ReviewComment] = []
+        context = user_context if isinstance(user_context, dict) else {}
+        planning_strategy = self._extract_planning_strategy(context)
+        context_days = self._positive_float(planning_strategy.get("deadline_days") or context.get("deadline_days"))
+        context_daily_minutes = self._resolve_daily_capacity_minutes(context)
+
+        for tool_call in plan.tool_calls:
+            params = dict(tool_call.params or {})
+            tool_name = str(tool_call.name or "")
+            tool_lower = tool_name.lower()
+            if not any(token in tool_lower for token in ("plan", "sprint", "schedule", "task")):
+                continue
+
+            daily_minutes = self._resolve_daily_capacity_minutes(params) or context_daily_minutes
+            total_days = self._positive_float(
+                params.get("total_days")
+                or params.get("duration_days")
+                or params.get("deadline_days")
+                or params.get("days")
+                or context_days
+            )
+            planned_daily_minutes = self._resolve_planned_daily_minutes(params)
+            title_blob = " ".join(
+                str(params.get(key) or "")
+                for key in ("title", "name", "goal", "description", "objective", "subject")
+            ).lower()
+            difficulty = str(params.get("difficulty") or params.get("target_level") or "").strip().lower()
+            if not difficulty:
+                if any(token in title_blob for token in ("精通", "专家", "expert", "master", "advanced")):
+                    difficulty = "expert"
+                elif any(token in title_blob for token in ("入门", "基础", "beginner", "basic")):
+                    difficulty = "beginner"
+
+            affected = [str(getattr(tool_call, "id", "") or tool_name)]
+            if daily_minutes and planned_daily_minutes and planned_daily_minutes > daily_minutes * 1.25:
+                comments.append(
+                    ReviewComment(
+                        category=ReviewCategory.QUALITY.value,
+                        severity=SeverityLevel.CRITICAL.value,
+                        message=(
+                            f"计划每天安排约 {planned_daily_minutes:.0f} 分钟，但用户每天可用时间约 "
+                            f"{daily_minutes:.0f} 分钟。"
+                        ),
+                        suggested_fix="把每日任务压到真实容量内，或明确增加可用时间后再执行。",
+                        affected_tool_calls=affected,
+                    )
+                )
+
+            if not (daily_minutes and total_days):
+                if total_days and not daily_minutes:
+                    comments.append(
+                        ReviewComment(
+                            category=ReviewCategory.QUALITY.value,
+                            severity=SeverityLevel.WARNING.value,
+                            message="计划有明确截止期，但缺少每日可用时间，不能把排期当成完整承诺。",
+                            suggested_fix="先确认每天可投入多少分钟，或将计划降级为暂定计划。",
+                            affected_tool_calls=affected,
+                        )
+                    )
+                continue
+
+            total_capacity_hours = daily_minutes * total_days / 60.0
+            mastery_goal = difficulty in {"expert", "master", "advanced", "精通", "专家"}
+            if mastery_goal and total_capacity_hours < 50:
+                comments.append(
+                    ReviewComment(
+                        category=ReviewCategory.QUALITY.value,
+                        severity=SeverityLevel.CRITICAL.value,
+                        message=(
+                            f"目标是高熟练度，但总可用时间只有约 {total_capacity_hours:.1f} 小时；"
+                            "这会把计划包装成不可信的成功承诺。"
+                        ),
+                        suggested_fix="降低目标层级、延长期限，或改成保底通过/入门掌握计划。",
+                        affected_tool_calls=affected,
+                    )
+                )
+            elif total_days <= 3 and daily_minutes < 90 and "保底" not in title_blob:
+                comments.append(
+                    ReviewComment(
+                        category=ReviewCategory.QUALITY.value,
+                        severity=SeverityLevel.CRITICAL.value,
+                        message="截止期在 3 天内且每天不足 90 分钟，不适合输出完整多阶段计划。",
+                        suggested_fix="改成单日保底恢复计划，并写清楚舍弃范围。",
+                        affected_tool_calls=affected,
+                    )
+                )
+            elif total_days <= 7 and daily_minutes < 60 and "保底" not in title_blob:
+                comments.append(
+                    ReviewComment(
+                        category=ReviewCategory.QUALITY.value,
+                        severity=SeverityLevel.WARNING.value,
+                        message="一周内且每天不足 60 分钟，计划必须显式缩小范围并设置每日复盘。",
+                        suggested_fix="加入 review cadence、risk flags 和落后时的压缩规则。",
+                        affected_tool_calls=affected,
+                    )
+                )
+
+            if total_days <= 14 and not self._has_review_cadence(params):
+                comments.append(
+                    ReviewComment(
+                        category=ReviewCategory.COMPLETENESS.value,
+                        severity=SeverityLevel.WARNING.value,
+                        message="短周期计划缺少复盘节奏，现实变化时用户看不到何时触发调整。",
+                        suggested_fix="加入每日或隔日 review point，并说明会如何触发重排。",
+                        affected_tool_calls=affected,
+                    )
+                )
+
+        return comments
+
+    @staticmethod
+    def _extract_planning_strategy(user_context: dict[str, Any]) -> dict[str, Any]:
+        strategy = (user_context or {}).get("planning_strategy")
+        if isinstance(strategy, dict):
+            return strategy
+        situation_brief = (user_context or {}).get("situation_brief")
+        if isinstance(situation_brief, dict) and isinstance(situation_brief.get("planning_strategy"), dict):
+            return situation_brief["planning_strategy"]
+        return {}
+
+    @classmethod
+    def _resolve_daily_capacity_minutes(cls, payload: dict[str, Any]) -> float | None:
+        for key in ("daily_available_minutes", "available_minutes_per_day", "daily_minutes", "minutes_per_day"):
+            minutes = cls._positive_float(payload.get(key))
+            if minutes is not None:
+                return minutes
+        for key in ("daily_hours", "daily_available_hours", "available_hours_per_day", "hours_per_day"):
+            hours = cls._positive_float(payload.get(key))
+            if hours is not None:
+                return hours * 60.0
+        return None
+
+    @classmethod
+    def _resolve_planned_daily_minutes(cls, params: dict[str, Any]) -> float | None:
+        direct = cls._positive_float(
+            params.get("planned_daily_minutes")
+            or params.get("estimated_daily_minutes")
+            or params.get("daily_study_minutes")
+        )
+        if direct is not None:
+            return direct
+        daily_tasks = params.get("daily_tasks") or params.get("tasks")
+        if not isinstance(daily_tasks, list):
+            return None
+        by_day: dict[str, float] = {}
+        undated_total = 0.0
+        for index, item in enumerate(daily_tasks):
+            if not isinstance(item, dict):
+                continue
+            minutes = cls._positive_float(
+                item.get("estimated_minutes") or item.get("duration_minutes") or item.get("time_estimate_minutes")
+            )
+            if minutes is None:
+                continue
+            day_key = str(item.get("day") or item.get("date") or item.get("target_date") or index)
+            by_day[day_key] = by_day.get(day_key, 0.0) + minutes
+            undated_total += minutes
+        if by_day:
+            return max(by_day.values())
+        return undated_total or None
+
+    @staticmethod
+    def _positive_float(value: Any) -> float | None:
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed > 0 else None
+
+    @staticmethod
+    def _has_review_cadence(params: dict[str, Any]) -> bool:
+        candidates = (
+            params.get("review_cadence"),
+            params.get("checkpoint_cadence"),
+            params.get("review_points"),
+            params.get("milestones"),
+        )
+        return any(bool(candidate) for candidate in candidates)
 
     async def _validate_feasibility(
         self,
@@ -642,6 +847,10 @@ class PlanReviewService:
         Returns:
             True if plan appears feasible, False if clearly infeasible
         """
+        deterministic_comments = self._collect_feasibility_comments(plan=plan, user_context=user_context)
+        if any(comment.severity == SeverityLevel.CRITICAL.value for comment in deterministic_comments):
+            return False
+
         # Extract user skill level (default to intermediate if unknown)
         user_context.get("skill_level", "intermediate").lower()
         user_background = user_context.get("user_background", "")

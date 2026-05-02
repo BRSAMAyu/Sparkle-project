@@ -76,6 +76,9 @@ class CompiledPlanningStrategy:
     deadline_days: int | None = None
     max_session_minutes: int | None = None
     daily_capacity_minutes: int | None = None
+    workload_fit: str = "unknown"
+    feasibility_flags: tuple[str, ...] = ()
+    first_review_after_days: int | None = None
     overload_signal: bool = False
     adaptation_trigger: str = ""
     first_step_hint: str = ""
@@ -103,6 +106,9 @@ class CompiledPlanningStrategy:
             "deadline_days": self.deadline_days,
             "max_session_minutes": self.max_session_minutes,
             "daily_capacity_minutes": self.daily_capacity_minutes,
+            "workload_fit": self.workload_fit,
+            "feasibility_flags": list(self.feasibility_flags),
+            "first_review_after_days": self.first_review_after_days,
             "overload_signal": self.overload_signal,
             "adaptation_trigger": self.adaptation_trigger,
             "first_step_hint": self.first_step_hint,
@@ -200,7 +206,26 @@ class PlanningStrategyCompiler:
         max_session_minutes = self._safe_int(planning_constraints.get("max_session_minutes")) or self._safe_int(
             _as_dict(planning_constraints.get("persona_constraints")).get("max_session_minutes")
         )
-        daily_capacity_minutes = self._safe_int(plan_context.get("daily_available_minutes"))
+        daily_capacity_minutes = self._derive_daily_capacity_minutes(
+            plan_context=plan_context,
+            planning_constraints=planning_constraints,
+        )
+        workload_fit, feasibility_flags = self._derive_workload_fit(
+            deadline_days=deadline_days,
+            daily_capacity_minutes=daily_capacity_minutes,
+            overload_signal=overload_signal,
+            plan_mode=plan_mode,
+            plan_type=plan_type,
+        )
+        if workload_fit == "impossible":
+            fallback_policy = "shrink_scope_then_retry"
+            pacing_profile = "light"
+            checkpoint_cadence = "daily"
+        first_review_after_days = self._derive_first_review_after_days(
+            deadline_days=deadline_days,
+            overload_signal=overload_signal,
+            plan_mode=plan_mode,
+        )
 
         assumption_basis: list[str] = []
         for item in _as_list(decision_context.get("planning_blocking_unknowns") or insight_state.get("missing_information"))[:3]:
@@ -211,6 +236,8 @@ class PlanningStrategyCompiler:
             assumption_basis.append("use_attached_materials")
         if overload_signal:
             assumption_basis.append("respect_current_capacity")
+        for flag in feasibility_flags[:3]:
+            assumption_basis.append(flag)
 
         first_step_hint = self._build_first_step_hint(plan_mode=plan_mode, overload_signal=overload_signal, plan_type=plan_type)
         adaptation_trigger = self._build_adaptation_trigger(overload_signal=overload_signal, deadline_days=deadline_days, plan_mode=plan_mode)
@@ -241,6 +268,9 @@ class PlanningStrategyCompiler:
             deadline_days=deadline_days,
             max_session_minutes=max_session_minutes,
             daily_capacity_minutes=daily_capacity_minutes,
+            workload_fit=workload_fit,
+            feasibility_flags=tuple(feasibility_flags),
+            first_review_after_days=first_review_after_days,
             overload_signal=overload_signal,
             adaptation_trigger=adaptation_trigger,
             first_step_hint=first_step_hint,
@@ -258,6 +288,78 @@ class PlanningStrategyCompiler:
         except (TypeError, ValueError):
             return None
         return normalized if normalized > 0 else None
+
+    def _derive_daily_capacity_minutes(
+        self,
+        *,
+        plan_context: dict[str, Any],
+        planning_constraints: dict[str, Any],
+    ) -> int | None:
+        for source in (plan_context, planning_constraints):
+            minutes = self._safe_int(source.get("daily_available_minutes") or source.get("available_minutes_per_day"))
+            if minutes is not None:
+                return minutes
+            hours = self._safe_float(source.get("daily_available_hours") or source.get("available_hours_per_day"))
+            if hours is not None and hours > 0:
+                return max(1, int(round(hours * 60)))
+        return None
+
+    @staticmethod
+    def _safe_float(value: Any) -> float | None:
+        try:
+            normalized = float(value)
+        except (TypeError, ValueError):
+            return None
+        return normalized if normalized > 0 else None
+
+    @staticmethod
+    def _derive_workload_fit(
+        *,
+        deadline_days: int | None,
+        daily_capacity_minutes: int | None,
+        overload_signal: bool,
+        plan_mode: str,
+        plan_type: str,
+    ) -> tuple[str, list[str]]:
+        flags: list[str] = []
+        if deadline_days is None:
+            flags.append("deadline_missing")
+        if daily_capacity_minutes is None:
+            flags.append("daily_capacity_missing")
+        if deadline_days is None or daily_capacity_minutes is None:
+            return "unknown", flags
+
+        days = max(deadline_days, 1)
+        total_capacity = days * daily_capacity_minutes
+        if plan_mode == PLAN_MODE_NEXT_STEP_ONLY:
+            return "next_step_only", flags
+        if deadline_days <= 3 and daily_capacity_minutes < 90:
+            flags.append("impossible_schedule_risk")
+            return "impossible", flags
+        if plan_type == "exam_sprint" and deadline_days <= 7 and total_capacity < 420:
+            flags.append("impossible_schedule_risk")
+            return "impossible", flags
+        if deadline_days <= 7 or overload_signal or daily_capacity_minutes < 60:
+            flags.append("deadline_with_low_capacity")
+            return "tight", flags
+        return "realistic", flags
+
+    @staticmethod
+    def _derive_first_review_after_days(
+        *,
+        deadline_days: int | None,
+        overload_signal: bool,
+        plan_mode: str,
+    ) -> int | None:
+        if plan_mode == PLAN_MODE_NEXT_STEP_ONLY:
+            return None
+        if overload_signal:
+            return 1
+        if deadline_days is None:
+            return 3
+        if deadline_days <= 14:
+            return 1
+        return 3
 
     def _derive_deadline_days(self, *, vision: dict[str, Any], plan_context: dict[str, Any]) -> int | None:
         target = _parse_date(vision.get("target_date") or plan_context.get("target_date"))
