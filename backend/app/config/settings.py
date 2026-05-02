@@ -378,6 +378,9 @@ class Settings(BaseSettings):
     LLM_REASON_MODEL_NAME: str = "deepseek-reasoner"
     LLM_PROVIDER: str = "xiaomi"  # 'xiaomi' | 'deepseek' | 'zhipu' | 'qwen' | 'openai' | 'hunyuan'
     LLM_QUOTA_ENABLED: bool = False  # Disable token quota checks by default for demo recording
+    LLM_DAILY_BUDGET_USD: float = 10.0  # Daily USD budget for LLM calls (cost_controller circuit breaker)
+    RAG_DAILY_BUDGET_USD: float = 2.0  # Daily USD budget for RAG operations
+    AURORA_DAILY_BUDGET_USD: float = 5.0  # Daily USD budget for Aurora operations
     AI_MODE_FAST_DAILY_REQUEST_LIMIT: int = 120
     AI_MODE_BALANCED_DAILY_REQUEST_LIMIT: int = 60
     AI_MODE_DEEP_DAILY_REQUEST_LIMIT: int = 24
