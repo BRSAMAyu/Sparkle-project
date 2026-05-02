@@ -218,9 +218,15 @@ async def execute_auto_response(
     description = ACTION_DESCRIPTIONS.get(alert_type, {}).get(alert_status, f"Mode change to {target_mode}")
 
     try:
-        from app.core.redis_utils import get_redis_connection
+        from app.core.cache import cache_service
 
-        redis_client = await get_redis_connection()
+        redis_client = cache_service.redis
+        if redis_client is None:
+            return {
+                "status": "error",
+                "alert_type": alert_type.value,
+                "error": "Redis is not available",
+            }
         normalized = await write_mode(
             redis_client=redis_client,
             prefix="sparkle:",
@@ -362,10 +368,12 @@ async def get_auto_degrade_status(
     """Return current state of all auto-degrade kill switches."""
     _verify_internal_key(x_internal_api_key)
 
+    from app.core.cache import cache_service
     from app.core.kill_switch import read_mode
-    from app.core.redis_utils import get_redis_connection
 
-    redis_client = await get_redis_connection()
+    redis_client = cache_service.redis
+    if redis_client is None:
+        return {"status": "error", "error": "Redis is not available", "bindings": {}}
     statuses = {}
 
     for alert_type, binding in SLO_AUTO_DEGRADE_BINDINGS.items():

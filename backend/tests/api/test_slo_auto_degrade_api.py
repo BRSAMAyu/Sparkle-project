@@ -128,7 +128,8 @@ class TestExecuteAutoResponse:
     async def test_firing_sets_mode_to_live(self):
         mock_redis = AsyncMock()
 
-        with patch("app.api.internal.auto_degrade.get_redis_connection", return_value=mock_redis):
+        with patch("app.core.cache.cache_service") as mock_cs:
+            mock_cs.redis = mock_redis
             with patch("app.api.internal.auto_degrade._write_audit", new_callable=AsyncMock):
                 result = await execute_auto_response(
                     AlertType.LLM_LATENCY_HIGH,
@@ -147,7 +148,8 @@ class TestExecuteAutoResponse:
     async def test_resolved_sets_mode_to_off(self):
         mock_redis = AsyncMock()
 
-        with patch("app.api.internal.auto_degrade.get_redis_connection", return_value=mock_redis):
+        with patch("app.core.cache.cache_service") as mock_cs:
+            mock_cs.redis = mock_redis
             with patch("app.api.internal.auto_degrade._write_audit", new_callable=AsyncMock):
                 result = await execute_auto_response(
                     AlertType.LLM_LATENCY_HIGH,
@@ -165,7 +167,8 @@ class TestExecuteAutoResponse:
         mock_redis = AsyncMock()
         mock_redis.set.side_effect = Exception("Redis connection failed")
 
-        with patch("app.api.internal.auto_degrade.get_redis_connection", return_value=mock_redis):
+        with patch("app.core.cache.cache_service") as mock_cs:
+            mock_cs.redis = mock_redis
             with patch("app.api.internal.auto_degrade._write_audit", new_callable=AsyncMock):
                 result = await execute_auto_response(
                     AlertType.EVENT_BUS_LAG,
@@ -264,7 +267,8 @@ class TestStatusEndpoint:
         mock_redis = AsyncMock()
         mock_redis.get = AsyncMock(return_value=None)
 
-        with patch("app.api.internal.auto_degrade.get_redis_connection", return_value=mock_redis):
+        with patch("app.core.cache.cache_service") as mock_cs:
+            mock_cs.redis = mock_redis
             with patch("app.api.internal.auto_degrade.settings") as mock_settings:
                 mock_settings.INTERNAL_API_KEY = "test-internal-key-12345"
                 mock_settings.SLO_AUTO_LLM_DEGRADE_MODE = "off"
@@ -309,7 +313,8 @@ class TestWebhookIntegration:
             ],
         }
 
-        with patch("app.api.internal.auto_degrade.get_redis_connection", return_value=mock_redis):
+        with patch("app.core.cache.cache_service") as mock_cs:
+            mock_cs.redis = mock_redis
             with patch("app.api.internal.auto_degrade._write_audit", new_callable=AsyncMock):
                 resp = client.post(
                     "/api/internal/auto-degrade/webhook",
@@ -340,7 +345,8 @@ class TestWebhookIntegration:
             ],
         }
 
-        with patch("app.api.internal.auto_degrade.get_redis_connection", return_value=mock_redis):
+        with patch("app.core.cache.cache_service") as mock_cs:
+            mock_cs.redis = mock_redis
             with patch("app.api.internal.auto_degrade._write_audit", new_callable=AsyncMock):
                 resp = client.post(
                     "/api/internal/auto-degrade/webhook",
@@ -374,7 +380,8 @@ class TestWebhookIntegration:
             ],
         }
 
-        with patch("app.api.internal.auto_degrade.get_redis_connection", return_value=mock_redis):
+        with patch("app.core.cache.cache_service") as mock_cs:
+            mock_cs.redis = mock_redis
             with patch("app.api.internal.auto_degrade._write_audit", new_callable=AsyncMock):
                 resp = client.post(
                     "/api/internal/auto-degrade/webhook",
