@@ -3211,7 +3211,9 @@ async def get_group_resources(
 
     rtype = SharedResourceType(resource_type.value) if resource_type else None
 
-    resources = await collaboration_service.get_group_resources(db, group_id, rtype, limit, viewer_id=current_user.id)
+    resources = await collaboration_service.get_group_resources(
+        db, group_id, rtype, limit, viewer_id=current_user.id
+    )
 
     result = []
     for res in resources:
