@@ -158,6 +158,12 @@ class KnowledgeNode(BaseModel):
     sector_classification_model = Column(String(100), nullable=True)
     sector_classified_at = Column(DateTime, nullable=True)
 
+    # P2-24: Exam attributes for retrieval ranking (KG-001)
+    exam_weight = Column(Float, default=0.0, nullable=False, comment="考试权重 0-1")
+    difficulty = Column(Float, default=0.5, nullable=False, comment="难度 0-1")
+    trainability = Column(Float, default=0.5, nullable=False, comment="可训练性 0-1")
+    mistakes = Column(Integer, default=0, nullable=False, comment="累计错误次数")
+
     # Collaborative Data
     global_spark_count = Column(Integer, default=0, nullable=False)
     community_signal = Column(JSONBCompat, nullable=True)

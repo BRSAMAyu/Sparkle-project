@@ -127,6 +127,26 @@ class CalibrationResult:
             "completed_at": self.completed_at,
         }
 
+    def to_session_closure(self) -> Any:
+        """P2-23: Adapt CalibrationResult → SessionClosure for unified consumers."""
+        from app.signals.aurora_core_session import PolicyChange, SessionClosure, StatePatch
+
+        return SessionClosure(
+            session_id=self.session_id or "",
+            state_patches=[
+                StatePatch(key=p.get("key", ""), value=p.get("value", ""), reason=p.get("reason", "calibration"))
+                for p in self.state_patches
+            ],
+            policy_changes=[
+                PolicyChange(policy_key=s, change_type="strategy_change", reason="calibration_result")
+                for s in self.strategy_changes
+            ],
+            directives_to_regenerate=[],
+            next_changes=self.next_changes,
+            user_visible_summary=self.user_visible_summary or self.summary,
+            aurora_returns_to_background=True,
+        )
+
 
 @dataclass
 class AuroraCoreSession:

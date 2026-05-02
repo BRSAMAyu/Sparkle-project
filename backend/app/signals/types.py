@@ -795,6 +795,93 @@ class OutcomeRecord:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
+# ── 8b. OutcomeVector — unified multi-dimensional outcome schema ──────
+# P1-15: Merges attribution, confidence, user feedback, skill extraction
+# candidates, and short/long-term impact into a single standardized structure.
+
+@dataclass
+class OutcomeVector:
+    outcome_id: str
+    causal_trace_id: str
+
+    # Attribution layer (from OutcomeRecord)
+    attribution: str = "inconclusive"       # effective / insufficient / harmful / inconclusive
+    attribution_confidence: float = 0.0
+
+    # User feedback layer
+    user_corrected: bool = False
+    user_feedback_text: str = ""
+    user_satisfaction: float | None = None  # 0-1
+
+    # Skill extraction layer
+    extracted_skill_id: str | None = None
+    skill_candidate_confidence: float = 0.0
+
+    # Temporal impact layer
+    impact_duration: str = "unknown"        # immediate / short_term / long_term / unknown
+    short_term_effect: dict[str, Any] = field(default_factory=dict)
+    long_term_effect: dict[str, Any] = field(default_factory=dict)
+
+    # Composite score (0-1), derived from all layers
+    composite_score: float = 0.0
+
+    created_at: str = field(default_factory=_utcnow)
+
+    def compute_composite(self) -> float:
+        """Derive composite score from attribution confidence + user satisfaction."""
+        base = self.attribution_confidence
+        if self.user_satisfaction is not None:
+            base = (base + self.user_satisfaction) / 2.0
+        if self.user_corrected:
+            base *= 0.6
+        self.composite_score = max(0.0, min(1.0, base))
+        return self.composite_score
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "outcome_id": self.outcome_id,
+            "causal_trace_id": self.causal_trace_id,
+            "attribution": self.attribution,
+            "attribution_confidence": self.attribution_confidence,
+            "user_corrected": self.user_corrected,
+            "user_feedback_text": self.user_feedback_text,
+            "user_satisfaction": self.user_satisfaction,
+            "extracted_skill_id": self.extracted_skill_id,
+            "skill_candidate_confidence": self.skill_candidate_confidence,
+            "impact_duration": self.impact_duration,
+            "short_term_effect": self.short_term_effect,
+            "long_term_effect": self.long_term_effect,
+            "composite_score": self.composite_score,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> OutcomeVector:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+    @classmethod
+    def from_outcome_record(
+        cls,
+        record: OutcomeRecord,
+        *,
+        user_feedback_text: str = "",
+        user_satisfaction: float | None = None,
+        extracted_skill_id: str | None = None,
+    ) -> OutcomeVector:
+        """Create an OutcomeVector from an existing OutcomeRecord."""
+        vec = cls(
+            outcome_id=record.outcome_id,
+            causal_trace_id=record.causal_trace_id,
+            attribution=record.attribution,
+            attribution_confidence=record.attribution_confidence,
+            user_feedback_text=user_feedback_text,
+            user_satisfaction=user_satisfaction,
+            extracted_skill_id=extracted_skill_id,
+        )
+        vec.compute_composite()
+        return vec
+
+
 # ── 9. PolicyEffectLedger ────────────────────────────────────────────────
 # 记录策略执行效果，用于 PolicyEngine 影子模式规则偏置。
 # 不是直接改规则，而是记录+查询+影响下一次决策。
