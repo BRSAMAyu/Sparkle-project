@@ -23,7 +23,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	pbws "github.com/sparkle/gateway/gen/ws"
-	"go.uber.org/zap"
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/galaxy"
@@ -32,6 +31,7 @@ import (
 	"github.com/sparkle/gateway/internal/service"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.uber.org/zap"
 )
 
 // P1 Optimization: Object pools to reduce GC pressure in high-concurrency scenarios
@@ -449,6 +449,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					toolInput.ToolErrorMsg, _ = msgMap["error_message"].(string)
 					toolInput.SessionID, _ = msgMap["session_id"].(string)
 					toolInput.RequestID, _ = msgMap["request_id"].(string)
+					if toolInput.RequestID == "" {
+						toolInput.RequestID = generateRequestID()
+					}
 
 					if len(toolInput.ToolResultJSON) > maxToolResultLength {
 						if !writeWSJSONLogged(writer, "tool result too large error", gin.H{"type": "error", "message": "Tool result too large"}) {
@@ -474,6 +477,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 							attribute.String("tool_name", toolInput.ToolName),
 						)
 						defer span2.End()
+						if !sendLegacyAcceptedAck(writer, toolInput.RequestID) {
+							return true
+						}
 						return h.handleChatMessage(ctx2, writer, userID, toolInput, toolInput.RequestID)
 					}()
 				case "update_node_mastery":
@@ -514,6 +520,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					}
 					return false
 				}
+				if input.RequestID == "" {
+					input.RequestID = generateRequestID()
+				}
 
 				// 🔧 P1-2: 消息长度检查
 				if len(input.Message) > maxMessageLength {
@@ -543,6 +552,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				}
 				defer span.End()
 
+				if !sendLegacyAcceptedAck(writer, input.RequestID) {
+					return true
+				}
 				return h.handleChatMessage(ctx, writer, userID, input, input.RequestID)
 			}
 

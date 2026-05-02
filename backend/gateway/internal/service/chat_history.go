@@ -222,6 +222,20 @@ func (s *ChatHistoryService) PublishConnectionEvent(ctx context.Context, userID 
 	return s.rdb.Publish(ctx, eventKey, eventValue).Err()
 }
 
+// TryAcceptRealtimeRequest records a client request_id for a bounded window.
+// It returns false when the same user/request_id has already been accepted,
+// preventing reconnect/offline replay from creating duplicate side effects.
+func (s *ChatHistoryService) TryAcceptRealtimeRequest(ctx context.Context, userID, requestID string, ttl time.Duration) (bool, error) {
+	if s.rdb == nil || strings.TrimSpace(userID) == "" || strings.TrimSpace(requestID) == "" {
+		return true, nil
+	}
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	key := fmt.Sprintf("ws:chat:request:%s:%s", userID, requestID)
+	return s.rdb.SetNX(ctx, key, time.Now().UTC().Format(time.RFC3339Nano), ttl).Result()
+}
+
 func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []byte) error {
 	pipe := s.rdb.Pipeline()
 	bufferOverflow := false

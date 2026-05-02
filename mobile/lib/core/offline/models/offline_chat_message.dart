@@ -82,19 +82,20 @@ extension OfflineChatMessageExtension on OfflineChatMessage {
     String? chatMode,
     String? nickname,
     int priority = 0,
-  }) => OfflineChatMessage()
-      ..requestId = requestId
-      ..sessionId = sessionId
-      ..message = message
-      ..userId = userId
-      ..createdAt = DateTime.now()
-      ..status = OfflineMessageStatus.pending
-      ..retryCount = 0
-      ..extraContext = extraContext
-      ..fileIds = fileIds != null ? fileIds.join(',') : null
-      ..chatMode = chatMode
-      ..nickname = nickname
-      ..priority = priority;
+  }) =>
+      OfflineChatMessage()
+        ..requestId = requestId
+        ..sessionId = sessionId
+        ..message = message
+        ..userId = userId
+        ..createdAt = DateTime.now()
+        ..status = OfflineMessageStatus.pending
+        ..retryCount = 0
+        ..extraContext = extraContext
+        ..fileIds = fileIds != null ? fileIds.join(',') : null
+        ..chatMode = chatMode
+        ..nickname = nickname
+        ..priority = priority;
 
   /// Mark message as sent
   void markAsSent() {
@@ -119,25 +120,23 @@ extension OfflineChatMessageExtension on OfflineChatMessage {
 
   /// Reset for retry
   void resetForRetry() {
-    if (status == OfflineMessageStatus.failed) {
+    if (status == OfflineMessageStatus.failed ||
+        status == OfflineMessageStatus.sent) {
       status = OfflineMessageStatus.pending;
       lastError = null;
     }
   }
 
   /// Check if message can be retried
-  bool get canRetry =>
-      status == OfflineMessageStatus.failed && retryCount < 5;
+  bool get canRetry => status == OfflineMessageStatus.failed && retryCount < 5;
 
   /// Check if message is in a terminal state
-  bool get isTerminal =>
-      status == OfflineMessageStatus.acked;
+  bool get isTerminal => status == OfflineMessageStatus.acked;
 
   /// Get parsed file IDs
   List<String> get parsedFileIds =>
       fileIds?.split(',').where((id) => id.isNotEmpty).toList() ?? [];
 
   /// Get age of message in seconds
-  int get ageSeconds =>
-      DateTime.now().difference(createdAt).inSeconds;
+  int get ageSeconds => DateTime.now().difference(createdAt).inSeconds;
 }

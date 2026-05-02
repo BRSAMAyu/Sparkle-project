@@ -506,3 +506,13 @@ func TestConvertResponseToJSONOmitsLegacyFields(t *testing.T) {
 	}
 	assert.Equal(t, "rate_limited", errObj["error_code"])
 }
+
+func TestLegacyAcceptedAckPayloadCarriesRequestID(t *testing.T) {
+	payload := legacyAcceptedAckPayload("req-123")
+
+	assert.Equal(t, "ack", payload["type"])
+	assert.Equal(t, "req-123", payload["message_id"])
+	assert.Equal(t, "req-123", payload["request_id"])
+	assert.Equal(t, "received", payload["status"])
+	assert.IsType(t, int64(0), payload["server_ts"])
+}

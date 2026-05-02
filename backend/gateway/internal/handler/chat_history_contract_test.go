@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/gin-gonic/gin"
@@ -13,6 +15,24 @@ import (
 	"github.com/sparkle/gateway/internal/service"
 	"github.com/stretchr/testify/require"
 )
+
+func TestTryAcceptRealtimeRequestDeduplicatesRequestID(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	svc := service.NewChatHistoryService(rdb)
+
+	accepted, err := svc.TryAcceptRealtimeRequest(context.Background(), "user-1", "req-1", time.Minute)
+	require.NoError(t, err)
+	require.True(t, accepted)
+
+	accepted, err = svc.TryAcceptRealtimeRequest(context.Background(), "user-1", "req-1", time.Minute)
+	require.NoError(t, err)
+	require.False(t, accepted)
+
+	accepted, err = svc.TryAcceptRealtimeRequest(context.Background(), "user-1", "req-2", time.Minute)
+	require.NoError(t, err)
+	require.True(t, accepted)
+}
 
 func TestGetConversationHistoryIncludesMobileContractFields(t *testing.T) {
 	gin.SetMode(gin.TestMode)

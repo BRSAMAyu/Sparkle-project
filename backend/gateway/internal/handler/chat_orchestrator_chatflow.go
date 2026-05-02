@@ -140,6 +140,30 @@ func writeWSMessageLogged(writer *wsSafeWriter, operation string, messageType in
 	return true
 }
 
+func sendChatAccepted(responder interface{}, requestID string) bool {
+	if strings.TrimSpace(requestID) == "" {
+		return true
+	}
+	switch r := responder.(type) {
+	case *envelopeResponder:
+		// Envelope frames are ACKed immediately when the frame is decoded.
+		return true
+	case *protobufResponder:
+		r.SendAck()
+		return true
+	case *wsSafeWriter:
+		return writeLegacyJSONLogged(r, "legacy message ack", gin.H{
+			"type":       "message_ack",
+			"message_id": requestID,
+			"request_id": requestID,
+			"status":     "received",
+			"timestamp":  time.Now().UnixMilli(),
+		})
+	default:
+		return true
+	}
+}
+
 func workflowIDForChatMode(mode string) string {
 	normalized := normalizeChatMode(mode)
 	switch normalized {
@@ -296,6 +320,34 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		userID = resolvedUserID
 	}
 
+	reqID := requestID
+	if reqID == "" {
+		reqID = fmt.Sprintf("req_%s", uuid.New().String())
+	}
+	if h.chatHistory != nil {
+		accepted, err := h.chatHistory.TryAcceptRealtimeRequest(ctx, userID, reqID, time.Hour)
+		if err != nil {
+			log.Printf("Failed to record realtime request id user=%s request_id=%s: %v", hashUserIDForLog(userID), reqID, err)
+		} else if !accepted {
+			log.Printf("Duplicate realtime request ignored user=%s request_id=%s", hashUserIDForLog(userID), reqID)
+			if !sendChatAccepted(responder, reqID) {
+				return true
+			}
+			switch r := responder.(type) {
+			case *envelopeResponder:
+				r.SendError("duplicate_request", "Request already accepted; refresh conversation if the response is missing.", false)
+			case *protobufResponder:
+				r.SendError("duplicate_request", "Request already accepted; refresh conversation if the response is missing.", false)
+			case *wsSafeWriter:
+				writeLegacyJSONLogged(r, "duplicate request error", legacyStreamErrorPayload("duplicate_request", "Request already accepted; refresh conversation if the response is missing.", false))
+			}
+			return false
+		}
+	}
+	if !sendChatAccepted(responder, reqID) {
+		return true
+	}
+
 	// Persist user message to Redis history for context pruning
 	if input.SessionID != "" {
 		sessionID := input.SessionID
@@ -368,10 +420,6 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 	}
 
-	reqID := requestID
-	if reqID == "" {
-		reqID = fmt.Sprintf("req_%s", uuid.New().String())
-	}
 	if traceID != "" {
 		log.Printf("Chat request trace_id=%s user_id=%s session_id=%s request_id=%s", traceID, hashUserIDForLog(userID), input.SessionID, reqID)
 	}
@@ -959,10 +1007,10 @@ func countRunes(text string) int {
 
 // Cached env vars to avoid os.Getenv on every request.
 var (
-	dailyQuotaOnce        sync.Once
-	dailyQuotaValue       int64
-	streamTokenSegOnce    sync.Once
-	streamTokenSegValue   int64
+	dailyQuotaOnce      sync.Once
+	dailyQuotaValue     int64
+	streamTokenSegOnce  sync.Once
+	streamTokenSegValue int64
 )
 
 func cachedDailyQuota() int64 {
