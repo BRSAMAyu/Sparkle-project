@@ -668,6 +668,346 @@ def run_daily_goal_reflections(self, limit: int = 500):
         raise self.retry(exc=exc, countdown=300) from exc
 
 
+# ── L4 Async Deep Learning Jobs 2-6 (P0-1: Celery wiring) ──────────────
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_l4_policy_effect_compaction")
+def run_l4_policy_effect_compaction(self, limit: int = 500):
+    """L4 Job 2: PolicyEffectCompaction — compress PolicyEffectLedger → StrategyBelief.
+
+    Scans users with accumulated policy effects and produces confidence-updated
+    strategy beliefs stored as L4 candidates.
+    """
+
+    async def _run():
+        import json
+
+        from app.core.redis_client import get_redis
+        from app.signals.async_deep_learner import AsyncDeepLearner
+
+        redis = get_redis()
+        learner = AsyncDeepLearner(redis)
+        cursor, keys = await redis.scan(match="spine:policy_ledger:*", count=limit)
+        processed = 0
+        generated = 0
+        errors = 0
+
+        for key in keys[:limit]:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            try:
+                raw = await redis.get(key)
+                if not raw:
+                    continue
+                entries = json.loads(raw if isinstance(raw, str) else raw.decode())
+                if not isinstance(entries, list) or not entries:
+                    continue
+                await learner.run_policy_effect_compaction(user_id, entries)
+                generated += 1
+            except Exception as exc:
+                errors += 1
+                logger.warning("PolicyEffectCompaction skipped for user={}: {}", user_id, exc)
+            finally:
+                processed += 1
+
+        return {"users_scanned": len(keys), "processed": processed, "generated": generated, "errors": errors}
+
+    try:
+        result = _run_async(_run())
+        logger.info("L4 policy effect compaction finished: {}", result)
+        return result
+    except Exception as exc:
+        logger.error("L4 policy effect compaction failed: {}", exc)
+        raise self.retry(exc=exc, countdown=600) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_l4_skill_candidate_extraction")
+def run_l4_skill_candidate_extraction(self, limit: int = 500):
+    """L4 Job 3: SkillCandidate — repeated effective strategies → SkillCandidate.
+
+    Scans users with strategy history and identifies strategies that consistently
+    produce positive outcomes, promoting them as skill candidates.
+    """
+
+    async def _run():
+        import json
+
+        from app.core.redis_client import get_redis
+        from app.signals.async_deep_learner import AsyncDeepLearner
+
+        redis = get_redis()
+        learner = AsyncDeepLearner(redis)
+        cursor, keys = await redis.scan(match="spine:strategy_history:*", count=limit)
+        processed = 0
+        generated = 0
+        errors = 0
+
+        for key in keys[:limit]:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            try:
+                raw = await redis.get(key)
+                if not raw:
+                    continue
+                history = json.loads(raw if isinstance(raw, str) else raw.decode())
+                if not isinstance(history, list) or not history:
+                    continue
+                await learner.run_skill_candidate(user_id, history)
+                generated += 1
+            except Exception as exc:
+                errors += 1
+                logger.warning("SkillCandidate skipped for user={}: {}", user_id, exc)
+            finally:
+                processed += 1
+
+        return {"users_scanned": len(keys), "processed": processed, "generated": generated, "errors": errors}
+
+    try:
+        result = _run_async(_run())
+        logger.info("L4 skill candidate extraction finished: {}", result)
+        return result
+    except Exception as exc:
+        logger.error("L4 skill candidate extraction failed: {}", exc)
+        raise self.retry(exc=exc, countdown=600) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_l4_source_effectiveness")
+def run_l4_source_effectiveness(self, limit: int = 500):
+    """L4 Job 4: SourceEffectiveness — which materials work in which context.
+
+    Scans users with source interaction history and tags sources with
+    effectiveness labels like "适合概念压缩", "不适合考前24h".
+    """
+
+    async def _run():
+        import json
+
+        from app.core.redis_client import get_redis
+        from app.signals.async_deep_learner import AsyncDeepLearner
+
+        redis = get_redis()
+        learner = AsyncDeepLearner(redis)
+        cursor, keys = await redis.scan(match="spine:source_interactions:*", count=limit)
+        processed = 0
+        generated = 0
+        errors = 0
+
+        for key in keys[:limit]:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            try:
+                raw = await redis.get(key)
+                if not raw:
+                    continue
+                interactions = json.loads(raw if isinstance(raw, str) else raw.decode())
+                if not isinstance(interactions, list) or not interactions:
+                    continue
+                await learner.run_source_effectiveness(user_id, interactions)
+                generated += 1
+            except Exception as exc:
+                errors += 1
+                logger.warning("SourceEffectiveness skipped for user={}: {}", user_id, exc)
+            finally:
+                processed += 1
+
+        return {"users_scanned": len(keys), "processed": processed, "generated": generated, "errors": errors}
+
+    try:
+        result = _run_async(_run())
+        logger.info("L4 source effectiveness finished: {}", result)
+        return result
+    except Exception as exc:
+        logger.error("L4 source effectiveness failed: {}", exc)
+        raise self.retry(exc=exc, countdown=600) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_l4_community_aggregation")
+def run_l4_community_aggregation(self, limit: int = 200):
+    """L4 Job 5: CommunityAggregation — anonymous common errors + resource quality.
+
+    Aggregates anonymized community signals (same goal/topic cohort) to produce
+    common error patterns and community resource quality scores.
+    """
+
+    async def _run():
+        import json
+
+        from app.core.redis_client import get_redis
+        from app.signals.async_deep_learner import AsyncDeepLearner
+
+        redis = get_redis()
+        learner = AsyncDeepLearner(redis)
+        cursor, keys = await redis.scan(match="spine:community_signals:*", count=limit)
+        processed = 0
+        generated = 0
+        errors = 0
+
+        for key in keys[:limit]:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            try:
+                raw = await redis.get(key)
+                if not raw:
+                    continue
+                signals = json.loads(raw if isinstance(raw, str) else raw.decode())
+                if not isinstance(signals, list) or not signals:
+                    continue
+                await learner.run_community_aggregation(user_id, signals)
+                generated += 1
+            except Exception as exc:
+                errors += 1
+                logger.warning("CommunityAggregation skipped for user={}: {}", user_id, exc)
+            finally:
+                processed += 1
+
+        return {"users_scanned": len(keys), "processed": processed, "generated": generated, "errors": errors}
+
+    try:
+        result = _run_async(_run())
+        logger.info("L4 community aggregation finished: {}", result)
+        return result
+    except Exception as exc:
+        logger.error("L4 community aggregation failed: {}", exc)
+        raise self.retry(exc=exc, countdown=600) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_l4_state_decay_and_retraction")
+def run_l4_state_decay_and_retraction(self, limit: int = 500):
+    """L4 Job 6: StateDecayAndRetraction — decay stale state confidence + find counter-evidence.
+
+    Scans users with active states, decays confidence on old states (>48h),
+    and identifies contradictions between new signals and existing states.
+    """
+
+    async def _run():
+        import json
+
+        from app.core.redis_client import get_redis
+        from app.signals.async_deep_learner import AsyncDeepLearner
+
+        redis = get_redis()
+        learner = AsyncDeepLearner(redis)
+        cursor, keys = await redis.scan(match="spine:active_states:*", count=limit)
+        processed = 0
+        generated = 0
+        errors = 0
+
+        for key in keys[:limit]:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            try:
+                raw = await redis.get(key)
+                if not raw:
+                    continue
+                active_states = json.loads(raw if isinstance(raw, str) else raw.decode())
+                if not isinstance(active_states, list) or not active_states:
+                    continue
+                # Also try to load new signals for retraction check
+                new_signals_raw = await redis.get(f"spine:deep_learning_accumulation:{user_id}")
+                new_signals = json.loads(new_signals_raw) if new_signals_raw else []
+                if isinstance(new_signals, str):
+                    new_signals = json.loads(new_signals)
+                if not isinstance(new_signals, list):
+                    new_signals = []
+
+                await learner.run_state_decay_and_retraction(user_id, active_states, new_signals)
+                generated += 1
+            except Exception as exc:
+                errors += 1
+                logger.warning("StateDecayAndRetraction skipped for user={}: {}", user_id, exc)
+            finally:
+                processed += 1
+
+        return {"users_scanned": len(keys), "processed": processed, "generated": generated, "errors": errors}
+
+    try:
+        result = _run_async(_run())
+        logger.info("L4 state decay and retraction finished: {}", result)
+        return result
+    except Exception as exc:
+        logger.error("L4 state decay and retraction failed: {}", exc)
+        raise self.retry(exc=exc, countdown=600) from exc
+
+
+# ── L4 Async Engine (Aurora runtime) Celery task ───────────────────────
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_l4_async_engine_sweep")
+def run_l4_async_engine_sweep(self, limit: int = 500):
+    """L4AsyncEngine periodic sweep — runs all 6 analysis types for users with
+    sufficient accumulated signals, producing L4PolicyCandidate objects in Redis.
+
+    This closes P0-1: the L4AsyncEngine is no longer dead code — it has a
+    Celery beat entry that periodically feeds Aurora's deepest compute layer.
+    """
+
+    async def _run():
+        import json
+
+        from app.aurora.runtime_v1.l4_async import L4AsyncEngine, L4_ANALYSIS_TYPES
+        from app.core.redis_client import get_redis
+
+        redis = get_redis()
+        engine = L4AsyncEngine(redis_client=redis)
+        analysis_types = [
+            "behavior_trend",
+            "achievement_feedback",
+            "recall_effectiveness",
+            "strategy_effectiveness",
+            "mistake_cluster",
+            "skill_extraction",
+        ]
+
+        cursor, keys = await redis.scan(match="spine:deep_learning_accumulation:*", count=limit)
+        total_candidates = 0
+        users_processed = 0
+        errors = 0
+
+        for key in keys[:limit]:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            try:
+                raw = await redis.get(key)
+                if not raw:
+                    continue
+                signals = json.loads(raw if isinstance(raw, str) else raw.decode())
+                if not isinstance(signals, list) or len(signals) < 3:
+                    continue
+
+                for analysis_type in analysis_types:
+                    candidate = await engine.create_candidate(
+                        user_id=user_id,
+                        analysis_type=analysis_type,
+                        current_policy={},
+                        proposed_policy={},
+                        evidence_summary={"signals": len(signals)},
+                        domain=L4_ANALYSIS_TYPES.get(analysis_type, {}).get("default_domain", "general"),
+                    )
+                    if candidate is not None:
+                        await engine.store_candidate(candidate)
+                        total_candidates += 1
+
+                users_processed += 1
+            except Exception as exc:
+                errors += 1
+                logger.warning("L4AsyncEngine sweep skipped for user={}: {}", user_id, exc)
+
+        return {
+            "users_scanned": len(keys),
+            "users_processed": users_processed,
+            "candidates_generated": total_candidates,
+            "errors": errors,
+        }
+
+    try:
+        result = _run_async(_run())
+        logger.info("L4 async engine sweep finished: {}", result)
+        return result
+    except Exception as exc:
+        logger.error("L4 async engine sweep failed: {}", exc)
+        raise self.retry(exc=exc, countdown=600) from exc
+
+
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_counterfactual_evaluations")
 def run_counterfactual_evaluations(self, limit_users: int = 500):
     """Daily production counterfactual evaluation over eligible InterventionEpisodes."""

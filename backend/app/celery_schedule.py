@@ -57,6 +57,54 @@ def setup_periodic_tasks(sender, **kwargs):
         name='run-daily-goal-reflections-every-day'
     )
 
+    # L4 Job 2: PolicyEffectCompaction — every 6 hours
+    from app.core.celery_tasks import run_l4_policy_effect_compaction
+    sender.add_periodic_task(
+        21600.0,
+        run_l4_policy_effect_compaction.s(),
+        name='run-l4-policy-effect-compaction-every-6h'
+    )
+
+    # L4 Job 3: SkillCandidate extraction — daily
+    from app.core.celery_tasks import run_l4_skill_candidate_extraction
+    sender.add_periodic_task(
+        86400.0,
+        run_l4_skill_candidate_extraction.s(),
+        name='run-l4-skill-candidate-extraction-every-day'
+    )
+
+    # L4 Job 4: SourceEffectiveness analysis — daily
+    from app.core.celery_tasks import run_l4_source_effectiveness
+    sender.add_periodic_task(
+        86400.0,
+        run_l4_source_effectiveness.s(),
+        name='run-l4-source-effectiveness-every-day'
+    )
+
+    # L4 Job 5: CommunityAggregation — every 6 hours
+    from app.core.celery_tasks import run_l4_community_aggregation
+    sender.add_periodic_task(
+        21600.0,
+        run_l4_community_aggregation.s(),
+        name='run-l4-community-aggregation-every-6h'
+    )
+
+    # L4 Job 6: StateDecayAndRetraction — every 6 hours
+    from app.core.celery_tasks import run_l4_state_decay_and_retraction
+    sender.add_periodic_task(
+        21600.0,
+        run_l4_state_decay_and_retraction.s(),
+        name='run-l4-state-decay-and-retraction-every-6h'
+    )
+
+    # L4AsyncEngine (Aurora runtime) periodic sweep — every 4 hours
+    from app.core.celery_tasks import run_l4_async_engine_sweep
+    sender.add_periodic_task(
+        14400.0,
+        run_l4_async_engine_sweep.s(),
+        name='run-l4-async-engine-sweep-every-4h'
+    )
+
     # P4 counterfactual policy evaluation — daily report generation
     from app.core.celery_tasks import run_counterfactual_evaluations
     sender.add_periodic_task(

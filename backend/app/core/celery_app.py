@@ -62,6 +62,7 @@ celery_app = Celery(
         "app.tasks.checkpoint_nudge_task",
         "app.tasks.policy_tasks",
         "workers.signals_learning_worker",
+        "app.aurora.tasks",
     ],
 )
 
