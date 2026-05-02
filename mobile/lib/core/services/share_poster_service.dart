@@ -207,7 +207,7 @@ class _SharePosterCanvas extends StatelessWidget {
                     height: 1.08,
                     fontWeight: FontWeight.w800,
                     color: posterTheme.textPrimary,
-                    letterSpacing: -0.8,
+                    letterSpacing: 0,
                   ),
                 ),
                 if (_summaryText case final summary?)
@@ -723,13 +723,13 @@ class _PosterThemeData {
         ),
       'elegant' => _PosterThemeData(
           background: const [
-            Color(0xFF1A1410),
-            Color(0xFF322116),
-            Color(0xFF6E5430),
+            Color(0xFF09111F),
+            Color(0xFF123247),
+            Color(0xFF5E4A24),
           ],
           accent: const Color(0xFFF0C676),
           textPrimary: const Color(0xFFFFF6E8),
-          textSecondary: const Color(0xFFE8DAB8),
+          textSecondary: const Color(0xFFD2E4E8),
           border: Colors.white.withValues(alpha: 0.14),
         ),
       _ => _PosterThemeData(

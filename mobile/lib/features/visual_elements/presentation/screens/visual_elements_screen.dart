@@ -141,6 +141,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     AppLocalizations l10n,
     VisualElementsState state,
   ) {
+    final palette = VisualElementPalette.of(context);
     final eventElements = state.allElements
         .where(
           (element) => element.unlockSource == VisualElementUnlockSource.event,
@@ -151,18 +152,10 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       child: Container(
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              VisualElementPalette.moonless,
-              VisualElementPalette.inkBlue,
-              VisualElementPalette.surface,
-            ],
-          ),
+          gradient: palette.pageHeaderGradient,
           boxShadow: [
             BoxShadow(
-              color: VisualElementPalette.cyan.withValues(alpha: 0.08),
+              color: palette.cyan.withValues(alpha: 0.08),
               blurRadius: 28,
               offset: const Offset(0, 14),
             ),
@@ -191,7 +184,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       style: TextStyle(
                         fontSize: DS.fontSizeXl,
                         fontWeight: DS.fontWeightBold,
-                        color: VisualElementPalette.textPrimary,
+                        color: palette.textPrimary,
                       ),
                     ),
                   ),
@@ -206,7 +199,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               const SizedBox(height: DS.spacing12),
 
               // 统计面板
-              _buildStatsPanel(state.stats, l10n),
+              _buildStatsPanel(context, state.stats, l10n),
 
               if (eventElements.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing12),
@@ -219,135 +212,133 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     );
   }
 
-  Widget _buildStatsPanel(VisualElementStats stats, AppLocalizations l10n) =>
-      Container(
-        padding: const EdgeInsets.all(DS.spacing12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              VisualElementPalette.panel,
-              VisualElementPalette.surface,
-              VisualElementPalette.blueWash,
-            ],
+  Widget _buildStatsPanel(
+    BuildContext context,
+    VisualElementStats stats,
+    AppLocalizations l10n,
+  ) {
+    final palette = VisualElementPalette.of(context);
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        gradient: palette.panelGradient,
+        borderRadius: DS.borderRadius16,
+        border: Border.all(color: palette.hairline),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
           ),
-          borderRadius: DS.borderRadius16,
-          border: Border.all(color: VisualElementPalette.hairline),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.28),
-              blurRadius: 28,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxWidth < 360;
-            final progressWidth = compact
-                ? constraints.maxWidth
-                : math.max(0.0, constraints.maxWidth - 108);
-            final equippedWidth = compact ? constraints.maxWidth : 96.0;
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 360;
+          final progressWidth = compact
+              ? constraints.maxWidth
+              : math.max(0.0, constraints.maxWidth - 108);
+          final equippedWidth = compact ? constraints.maxWidth : 96.0;
 
-            return Wrap(
-              spacing: DS.spacing12,
-              runSpacing: DS.spacing12,
-              children: [
-                SizedBox(
-                  width: progressWidth,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.visualElementsUnlockProgress,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: DS.fontSizeSm,
-                          color: VisualElementPalette.textSecondary,
-                        ),
+          return Wrap(
+            spacing: DS.spacing12,
+            runSpacing: DS.spacing12,
+            children: [
+              SizedBox(
+                width: progressWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.visualElementsUnlockProgress,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeSm,
+                        color: palette.textSecondary,
                       ),
-                      const SizedBox(height: DS.spacing8),
-                      ClipRRect(
-                        borderRadius: DS.borderRadius8,
-                        child: LinearProgressIndicator(
-                          value: stats.unlockProgress,
-                          backgroundColor: VisualElementPalette.textPrimary
-                              .withValues(alpha: 0.08),
-                          valueColor:
-                              AlwaysStoppedAnimation(VisualElementPalette.gold),
-                          minHeight: 8,
-                        ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    ClipRRect(
+                      borderRadius: DS.borderRadius8,
+                      child: LinearProgressIndicator(
+                        value: stats.unlockProgress,
+                        backgroundColor:
+                            palette.textPrimary.withValues(alpha: 0.08),
+                        valueColor: AlwaysStoppedAnimation(palette.gold),
+                        minHeight: 8,
                       ),
-                      const SizedBox(height: DS.spacing8),
-                      Text(
-                        '${stats.unlockedCount}/${stats.totalCount}',
-                        style: TextStyle(
-                          fontSize: DS.fontSizeSm,
-                          fontWeight: DS.fontWeightMedium,
-                          color: VisualElementPalette.textPrimary,
-                        ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Text(
+                      '${stats.unlockedCount}/${stats.totalCount}',
+                      style: TextStyle(
+                        fontSize: DS.fontSizeSm,
+                        fontWeight: DS.fontWeightMedium,
+                        color: palette.textPrimary,
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: equippedWidth,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing12,
+                  vertical: DS.spacing12,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      palette.gold.withValues(alpha: 0.18),
+                      palette.cyan.withValues(alpha: 0.08),
                     ],
                   ),
-                ),
-                Container(
-                  width: equippedWidth,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing12,
-                    vertical: DS.spacing12,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        VisualElementPalette.gold.withValues(alpha: 0.18),
-                        VisualElementPalette.cyan.withValues(alpha: 0.08),
-                      ],
-                    ),
-                    borderRadius: DS.borderRadius12,
-                    border: Border.all(
-                      color: VisualElementPalette.gold.withValues(alpha: 0.32),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.check_circle,
-                        color: VisualElementPalette.gold,
-                        size: DS.iconSizeMd,
-                      ),
-                      const SizedBox(height: DS.spacing4),
-                      Text(
-                        '${stats.equippedCount}',
-                        style: TextStyle(
-                          fontSize: DS.fontSizeLg,
-                          fontWeight: DS.fontWeightBold,
-                          color: VisualElementPalette.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        l10n.visualElementsEquipped,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: DS.fontSizeXs,
-                          color: VisualElementPalette.textSecondary,
-                        ),
-                      ),
-                    ],
+                  borderRadius: DS.borderRadius12,
+                  border: Border.all(
+                    color: palette.gold.withValues(alpha: 0.32),
                   ),
                 ),
-              ],
-            );
-          },
-        ),
-      );
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.check_circle,
+                      color: palette.gold,
+                      size: DS.iconSizeMd,
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    Text(
+                      '${stats.equippedCount}',
+                      style: TextStyle(
+                        fontSize: DS.fontSizeLg,
+                        fontWeight: DS.fontWeightBold,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      l10n.visualElementsEquipped,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   Widget _buildCurrentShowcase(VisualElementsState state) {
+    final palette = VisualElementPalette.of(context);
     final equipped = [
       state.config?.equippedBackground,
       state.config?.equippedParticle,
@@ -359,15 +350,15 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         width: double.infinity,
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
-          color: VisualElementPalette.panel,
+          color: palette.panel,
           borderRadius: DS.borderRadius16,
-          border: Border.all(color: VisualElementPalette.hairline),
+          border: Border.all(color: palette.hairline),
         ),
         child: Text(
           context.l10n.visualPrestigeEmpty,
           style: TextStyle(
             fontSize: DS.fontSizeSm,
-            color: VisualElementPalette.textSecondary,
+            color: palette.textSecondary,
           ),
         ),
       );
@@ -397,8 +388,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           end: Alignment.bottomRight,
           colors: [
             _elementAccent(primary).withValues(alpha: 0.28),
-            VisualElementPalette.panel,
-            VisualElementPalette.surface,
+            palette.panel,
+            palette.surface,
           ],
         ),
         borderRadius: DS.borderRadius16,
@@ -420,7 +411,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             style: TextStyle(
               fontSize: DS.fontSizeBase,
               fontWeight: DS.fontWeightBold,
-              color: VisualElementPalette.textPrimary,
+              color: palette.textPrimary,
             ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -439,7 +430,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             title,
             style: TextStyle(
               fontSize: DS.fontSizeSm,
-              color: VisualElementPalette.textSecondary,
+              color: palette.textSecondary,
             ),
           ),
         ],
@@ -465,6 +456,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         final cardWidth = _horizontalShowcaseCardWidth(constraints.maxWidth);
         final compact = constraints.maxWidth < 360;
         final cardHeight = compact ? 268.0 : 128.0;
+        final palette = VisualElementPalette.of(context);
 
         return SizedBox(
           height: cardHeight,
@@ -494,8 +486,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       end: Alignment.bottomRight,
                       colors: [
                         _elementAccent(element).withValues(alpha: 0.22),
-                        VisualElementPalette.panel,
-                        VisualElementPalette.surface,
+                        palette.panel,
+                        palette.surface,
                       ],
                     ),
                     borderRadius: DS.borderRadius16,
@@ -541,7 +533,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         style: TextStyle(
                           fontSize: DS.fontSizeBase,
                           fontWeight: DS.fontWeightBold,
-                          color: VisualElementPalette.textPrimary,
+                          color: palette.textPrimary,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -551,7 +543,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         element.description ?? context.l10n.visualHighExposure,
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
-                          color: VisualElementPalette.textSecondary,
+                          color: palette.textSecondary,
                         ),
                         maxLines: compact ? 3 : 2,
                         overflow: TextOverflow.ellipsis,
@@ -584,7 +576,11 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
-            color: Color.lerp(color, VisualElementPalette.textPrimary, 0.18),
+            color: Color.lerp(
+              color,
+              VisualElementPalette.of(context).textPrimary,
+              0.18,
+            ),
             fontWeight: DS.fontWeightMedium,
           ),
         ),
@@ -615,10 +611,11 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     final hex = raw.toString().replaceFirst('#', '');
     final normalized = hex.length == 6 ? 'FF$hex' : hex;
     final value = int.tryParse(normalized, radix: 16);
-    return value == null ? VisualElementPalette.cyan : Color(value);
+    return value == null ? VisualElementPalette.of(context).cyan : Color(value);
   }
 
   Widget _buildTabBar(BuildContext context, AppLocalizations l10n) {
+    final palette = VisualElementPalette.of(context);
     final compact = MediaQuery.sizeOf(context).width < 360;
     return SliverPersistentHeader(
       pinned: true,
@@ -629,19 +626,19 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           tabAlignment: TabAlignment.start,
           indicatorSize: TabBarIndicatorSize.label,
           indicator: BoxDecoration(
-            color: VisualElementPalette.gold.withValues(alpha: 0.92),
+            color: palette.gold.withValues(alpha: 0.92),
             borderRadius: DS.borderRadius8,
             boxShadow: [
               BoxShadow(
-                color: VisualElementPalette.gold.withValues(alpha: 0.18),
+                color: palette.gold.withValues(alpha: 0.18),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
             ],
           ),
           indicatorPadding: const EdgeInsets.symmetric(vertical: DS.spacing8),
-          labelColor: VisualElementPalette.moonless,
-          unselectedLabelColor: VisualElementPalette.textSecondary,
+          labelColor: palette.moonless,
+          unselectedLabelColor: palette.textSecondary,
           labelStyle: const TextStyle(
             fontSize: DS.fontSizeSm,
             fontWeight: DS.fontWeightMedium,
@@ -1122,6 +1119,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     VisualElementsState state,
     AppLocalizations l10n,
   ) {
+    final palette = VisualElementPalette.of(context);
     final endAt = _getEventEndAt(eventElements);
     final countdownText =
         endAt == null ? null : _formatEventCountdown(endAt, l10n);
@@ -1133,17 +1131,16 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            VisualElementPalette.gold.withValues(alpha: 0.18),
-            VisualElementPalette.cyan.withValues(alpha: 0.10),
-            VisualElementPalette.panel,
+            palette.gold.withValues(alpha: 0.18),
+            palette.cyan.withValues(alpha: 0.10),
+            palette.panel,
           ],
         ),
         borderRadius: DS.borderRadius16,
-        border: Border.all(
-            color: VisualElementPalette.gold.withValues(alpha: 0.34)),
+        border: Border.all(color: palette.gold.withValues(alpha: 0.34)),
         boxShadow: [
           BoxShadow(
-            color: VisualElementPalette.gold.withValues(alpha: 0.10),
+            color: palette.gold.withValues(alpha: 0.10),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -1156,7 +1153,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             children: [
               Icon(
                 Icons.timer_outlined,
-                color: VisualElementPalette.gold,
+                color: palette.gold,
                 size: DS.iconSizeSm,
               ),
               const SizedBox(width: DS.spacing8),
@@ -1166,7 +1163,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                   style: TextStyle(
                     fontSize: DS.fontSizeBase,
                     fontWeight: DS.fontWeightBold,
-                    color: VisualElementPalette.textPrimary,
+                    color: palette.textPrimary,
                   ),
                 ),
               ),
@@ -1177,18 +1174,17 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                     vertical: DS.spacing4,
                   ),
                   decoration: BoxDecoration(
-                    color:
-                        VisualElementPalette.moonless.withValues(alpha: 0.58),
+                    color: palette.moonless.withValues(alpha: 0.58),
                     borderRadius: DS.borderRadius8,
                     border: Border.all(
-                      color: VisualElementPalette.gold.withValues(alpha: 0.20),
+                      color: palette.gold.withValues(alpha: 0.20),
                     ),
                   ),
                   child: Text(
                     countdownText,
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
-                      color: VisualElementPalette.textSecondary,
+                      color: palette.textSecondary,
                     ),
                   ),
                 ),
@@ -1341,6 +1337,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                   .where((element) => state.unlockedIds.contains(element.id))
                   .length;
               final accent = _elementAccent(lead);
+              final palette = VisualElementPalette.of(context);
 
               return GestureDetector(
                 onTap: () => _applyDisplaySlotFilter(lead.displaySlot),
@@ -1354,8 +1351,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       end: Alignment.bottomRight,
                       colors: [
                         accent.withValues(alpha: 0.22),
-                        VisualElementPalette.panel,
-                        VisualElementPalette.surface,
+                        palette.panel,
+                        palette.surface,
                       ],
                     ),
                     borderRadius: DS.borderRadius16,
@@ -1381,7 +1378,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         style: TextStyle(
                           fontSize: DS.fontSizeLg,
                           fontWeight: DS.fontWeightBold,
-                          color: VisualElementPalette.textPrimary,
+                          color: palette.textPrimary,
                         ),
                       ),
                       const SizedBox(height: DS.spacing4),
@@ -1392,7 +1389,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: DS.fontSizeSm,
-                          color: VisualElementPalette.textSecondary,
+                          color: palette.textSecondary,
                         ),
                       ),
                       const SizedBox(height: DS.spacing8),
@@ -1431,6 +1428,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         .where((element) => state.unlockedIds.contains(element.id))
         .length;
     final accent = _elementAccent(lead);
+    final palette = VisualElementPalette.of(context);
 
     return GestureDetector(
       onTap: () => _applyDisplaySlotFilter(lead.displaySlot),
@@ -1443,8 +1441,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             end: Alignment.bottomRight,
             colors: [
               accent.withValues(alpha: 0.16),
-              VisualElementPalette.panel,
-              VisualElementPalette.surface,
+              palette.panel,
+              palette.surface,
             ],
           ),
           borderRadius: DS.borderRadius16,
@@ -1467,7 +1465,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               style: TextStyle(
                 fontSize: DS.fontSizeBase,
                 fontWeight: DS.fontWeightBold,
-                color: VisualElementPalette.textPrimary,
+                color: palette.textPrimary,
               ),
             ),
             const SizedBox(height: DS.spacing4),
@@ -1477,7 +1475,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: DS.fontSizeSm,
-                color: VisualElementPalette.textSecondary,
+                color: palette.textSecondary,
               ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -1509,10 +1507,11 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     return Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
-        color: VisualElementPalette.cyan.withValues(alpha: 0.08),
+        color: VisualElementPalette.of(context).cyan.withValues(alpha: 0.08),
         borderRadius: DS.borderRadius16,
         border: Border.all(
-            color: VisualElementPalette.cyan.withValues(alpha: 0.22)),
+          color: VisualElementPalette.of(context).cyan.withValues(alpha: 0.22),
+        ),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -1527,7 +1526,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightBold,
-                  color: VisualElementPalette.textPrimary,
+                  color: VisualElementPalette.of(context).textPrimary,
                 ),
               ),
               const SizedBox(height: DS.spacing4),
@@ -1537,7 +1536,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: DS.fontSizeXs,
-                  color: VisualElementPalette.textSecondary,
+                  color: VisualElementPalette.of(context).textSecondary,
                 ),
               ),
             ],
@@ -1641,7 +1640,7 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) =>
       Container(
-        color: VisualElementPalette.surface,
+        color: VisualElementPalette.of(context).surface,
         child: tabBar,
       );
 
@@ -2004,7 +2003,8 @@ class _RecommendationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _getRarityColors(element.rarity);
+    final palette = VisualElementPalette.of(context);
+    final colors = _getRarityColors(context, element.rarity);
     final actionLabel = element.isBundle
         ? AppLocalizations.of(context)!.visualOneClickEquip
         : context.l10n.visualElementEquip;
@@ -2018,8 +2018,8 @@ class _RecommendationCard extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               colors.border.withValues(alpha: 0.18),
-              VisualElementPalette.panel,
-              VisualElementPalette.surface,
+              palette.panel,
+              palette.surface,
             ],
           ),
           borderRadius: DS.borderRadius16,
@@ -2089,7 +2089,7 @@ class _RecommendationCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: DS.fontSizeSm,
                               fontWeight: DS.fontWeightSemibold,
-                              color: VisualElementPalette.textPrimary,
+                              color: palette.textPrimary,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -2101,15 +2101,18 @@ class _RecommendationCard extends StatelessWidget {
                             children: [
                               if (element.prestigeLabel != null)
                                 _miniInfoChip(
+                                  context,
                                   element.prestigeLabel!,
                                   colors.border,
                                 ),
                               _miniInfoChip(
+                                context,
                                 element.displaySlotLabel,
                                 colors.text,
                               ),
                               if (element.isBundle && bundleTotalCount > 0)
                                 _miniInfoChip(
+                                  context,
                                   AppLocalizations.of(context)!
                                       .visualCollectedCount(
                                           bundleOwnedCount, bundleTotalCount),
@@ -2158,7 +2161,7 @@ class _RecommendationCard extends StatelessWidget {
                               vertical: DS.spacing4,
                             ),
                             decoration: BoxDecoration(
-                              color: VisualElementPalette.gold,
+                              color: palette.gold,
                               borderRadius: DS.borderRadius8,
                             ),
                             child: Text(
@@ -2168,7 +2171,7 @@ class _RecommendationCard extends StatelessWidget {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: DS.fontSizeXs,
-                                color: VisualElementPalette.moonless,
+                                color: palette.moonless,
                                 fontWeight: DS.fontWeightMedium,
                               ),
                             ),
@@ -2184,15 +2187,14 @@ class _RecommendationCard extends StatelessWidget {
                 child: IgnorePointer(
                   child: Container(
                     decoration: BoxDecoration(
-                      color:
-                          VisualElementPalette.moonless.withValues(alpha: 0.76),
+                      color: palette.moonless.withValues(alpha: 0.76),
                       borderRadius: DS.borderRadius16,
                     ),
                     child: Center(
                       child: Icon(
                         Icons.lock,
                         size: DS.iconSizeMd,
-                        color: VisualElementPalette.textSecondary,
+                        color: palette.textSecondary,
                       ),
                     ),
                   ),
@@ -2204,8 +2206,11 @@ class _RecommendationCard extends StatelessWidget {
     );
   }
 
-  VisualElementRarityColors _getRarityColors(VisualElementRarity rarity) =>
-      VisualElementPalette.rarityColors(rarity);
+  VisualElementRarityColors _getRarityColors(
+    BuildContext context,
+    VisualElementRarity rarity,
+  ) =>
+      VisualElementPalette.of(context).rarityColors(rarity);
 
   IconData _getRarityIcon(VisualElementRarity rarity) {
     switch (rarity) {
@@ -2235,7 +2240,8 @@ class _RecommendationCard extends StatelessWidget {
     }
   }
 
-  Widget _miniInfoChip(String label, Color color) => Container(
+  Widget _miniInfoChip(BuildContext context, String label, Color color) =>
+      Container(
         constraints: const BoxConstraints(maxWidth: 112),
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing6,
@@ -2252,7 +2258,11 @@ class _RecommendationCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
-            color: Color.lerp(color, VisualElementPalette.textPrimary, 0.12),
+            color: Color.lerp(
+              color,
+              VisualElementPalette.of(context).textPrimary,
+              0.12,
+            ),
             fontWeight: DS.fontWeightMedium,
           ),
         ),
