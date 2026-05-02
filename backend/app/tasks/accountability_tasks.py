@@ -10,6 +10,7 @@ Accountability Partnership Scheduled Tasks
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
 from celery import shared_task
 from celery.schedules import crontab
@@ -23,7 +24,10 @@ from app.models.accountability import (
     AccountabilityPartnership,
     AccountabilityStatus,
 )
+from app.models.notification import Notification
+from app.models.notification_interaction import NotificationPreferences
 from app.models.user import User
+from app.services.accountability_notification_service import AccountabilityNotificationType
 from app.services.policy_scheduler_service import PolicySchedulerService
 
 
@@ -56,6 +60,177 @@ async def _missed_days_for_user(
     if last_checkin_at is None:
         return 999
     return max(0, (_utcnow().date() - last_checkin_at.date()).days)
+
+
+def _coerce_utc(timestamp: datetime) -> datetime:
+    if timestamp.tzinfo is None:
+        return timestamp.replace(tzinfo=UTC)
+    return timestamp.astimezone(UTC)
+
+
+def _utc_naive(timestamp: datetime) -> datetime:
+    return _coerce_utc(timestamp).replace(tzinfo=None)
+
+
+def _user_timezone_name(user: User | None) -> str:
+    timezone_name = getattr(getattr(user, "push_preference", None), "timezone", None) or "Asia/Shanghai"
+    try:
+        ZoneInfo(timezone_name)
+    except Exception:
+        timezone_name = "Asia/Shanghai"
+    return timezone_name
+
+
+def _local_day_window(timezone_name: str, now: datetime) -> tuple[datetime, datetime]:
+    zone = ZoneInfo(timezone_name)
+    local_now = _coerce_utc(now).astimezone(zone)
+    local_start = local_now.replace(hour=0, minute=0, second=0, microsecond=0)
+    local_end = local_start.replace(hour=23, minute=59, second=59, microsecond=999999)
+    return (
+        local_start.astimezone(UTC).replace(tzinfo=None),
+        local_end.astimezone(UTC).replace(tzinfo=None),
+    )
+
+
+def _local_date(timestamp: datetime, timezone_name: str):
+    return _coerce_utc(timestamp).astimezone(ZoneInfo(timezone_name)).date()
+
+
+def _parse_minutes(value: str | None) -> int | None:
+    if not value or ":" not in value:
+        return None
+    try:
+        hour, minute = (int(part) for part in value.split(":", 1))
+    except ValueError:
+        return None
+    if hour < 0 or hour > 23 or minute < 0 or minute > 59:
+        return None
+    return hour * 60 + minute
+
+
+def _is_in_quiet_hours(
+    *,
+    timezone_name: str,
+    now: datetime,
+    quiet_start: str | None,
+    quiet_end: str | None,
+) -> bool:
+    start_minutes = _parse_minutes(quiet_start)
+    end_minutes = _parse_minutes(quiet_end)
+    if start_minutes is None or end_minutes is None:
+        return False
+
+    local_now = _coerce_utc(now).astimezone(ZoneInfo(timezone_name))
+    current_minutes = local_now.hour * 60 + local_now.minute
+    if start_minutes == end_minutes:
+        return True
+    if start_minutes < end_minutes:
+        return start_minutes <= current_minutes < end_minutes
+    return current_minutes >= start_minutes or current_minutes < end_minutes
+
+
+def _disabled_types(disabled_types: Any) -> set[str]:
+    if not isinstance(disabled_types, list):
+        return set()
+    return {str(item).strip() for item in disabled_types if str(item).strip()}
+
+
+async def _reminder_suppression_reason(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    timezone_name: str,
+    now: datetime,
+) -> str | None:
+    result = await db.execute(select(NotificationPreferences).where(NotificationPreferences.user_id == user_id))
+    preferences = result.scalar_one_or_none()
+    if preferences is None:
+        return None
+
+    reminder_type = AccountabilityNotificationType.DAILY_REMINDER.value
+    disabled = _disabled_types(preferences.disabled_types)
+    if not preferences.enable_system:
+        return "system_notifications_disabled"
+    if str(preferences.notification_level or "").lower() in {"minimal", "off", "silent", "none"}:
+        return "notification_level_suppressed"
+    if reminder_type in disabled or "accountability" in disabled or "accountability_reminders" in disabled:
+        return "accountability_reminder_disabled"
+    if preferences.quiet_hours_enabled and _is_in_quiet_hours(
+        timezone_name=timezone_name,
+        now=now,
+        quiet_start=preferences.quiet_hours_start,
+        quiet_end=preferences.quiet_hours_end,
+    ):
+        return "quiet_hours"
+    return None
+
+
+async def _last_checkin_at(
+    db: AsyncSession,
+    *,
+    partnership_id: UUID,
+    user_id: UUID,
+) -> datetime | None:
+    result = await db.execute(
+        select(AccountabilityCheckin.created_at)
+        .where(
+            and_(
+                AccountabilityCheckin.partnership_id == partnership_id,
+                AccountabilityCheckin.user_id == user_id,
+            )
+        )
+        .order_by(AccountabilityCheckin.created_at.desc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
+def _is_checkin_due_for_cadence(
+    *,
+    partnership: AccountabilityPartnership,
+    last_checkin_at: datetime | None,
+    timezone_name: str,
+    now: datetime,
+) -> bool:
+    cadence_days = max(1, int(partnership.check_in_days or 1))
+    if cadence_days == 1:
+        return True
+
+    reference_at = last_checkin_at or partnership.started_at or partnership.created_at
+    if reference_at is None:
+        return True
+
+    days_since_reference = (_local_date(now, timezone_name) - _local_date(reference_at, timezone_name)).days
+    if last_checkin_at is None:
+        return days_since_reference == 0 or days_since_reference >= cadence_days
+    return days_since_reference >= cadence_days
+
+
+async def _already_sent_reminder_today(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    partnership_id: UUID,
+    day_start: datetime,
+    day_end: datetime,
+) -> bool:
+    result = await db.execute(
+        select(Notification)
+        .where(
+            and_(
+                Notification.user_id == user_id,
+                Notification.type == AccountabilityNotificationType.DAILY_REMINDER.value,
+                Notification.created_at >= day_start,
+                Notification.created_at <= day_end,
+            )
+        )
+        .order_by(Notification.created_at.desc())
+    )
+    for notification in result.scalars().all():
+        data = notification.data or {}
+        if data.get("partnership_id") == str(partnership_id):
+            return True
+    return False
 
 
 # ============================================================================
@@ -193,8 +368,9 @@ def notify_partner_checkin(checkin_id: str, partnership_id: str, checker_id: str
 # 异步实现函数
 # ============================================================================
 
-async def _send_daily_reminders(db: AsyncSession) -> dict[str, Any]:
+async def _send_daily_reminders(db: AsyncSession, *, now: datetime | None = None) -> dict[str, Any]:
     """发送每日打卡提醒的核心逻辑"""
+    now = now or _utcnow()
     # 获取所有活跃的伙伴关系
     active_partnerships_query = select(AccountabilityPartnership).where(
         AccountabilityPartnership.status == AccountabilityStatus.ACTIVE
@@ -202,22 +378,40 @@ async def _send_daily_reminders(db: AsyncSession) -> dict[str, Any]:
     result = await db.execute(active_partnerships_query)
     partnerships = result.scalars().all()
 
-    # 获取今天的开始时间 (timezone.utc)
-    today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-
     reminder_count = 0
     skipped_count = 0
+    skipped_by_cadence = 0
+    skipped_by_preferences = 0
+    skipped_duplicates = 0
 
     for partnership in partnerships:
         # 检查双方是否都已打卡
+        users_by_id: dict[UUID, User | None] = {}
+        for target_user_id in (partnership.initiator_id, partnership.partner_id):
+            users_by_id[target_user_id] = await db.get(User, target_user_id)
+
+        user_day_windows: dict[UUID, tuple[datetime, datetime]] = {
+            target_user_id: _local_day_window(_user_timezone_name(user), now)
+            for target_user_id, user in users_by_id.items()
+        }
+        earliest_day_start = min(day_start for day_start, _ in user_day_windows.values())
+        latest_day_end = max(day_end for _, day_end in user_day_windows.values())
         checkin_query = select(AccountabilityCheckin).where(
             and_(
                 AccountabilityCheckin.partnership_id == partnership.id,
-                AccountabilityCheckin.created_at >= today_start,
+                AccountabilityCheckin.created_at >= earliest_day_start,
+                AccountabilityCheckin.created_at <= latest_day_end,
             )
         )
         checkin_result = await db.execute(checkin_query)
-        today_checkins = {c.user_id for c in checkin_result.scalars().all()}
+        today_checkins = {
+            checkin.user_id
+            for checkin in checkin_result.scalars().all()
+            if user_day_windows.get(checkin.user_id)
+            and user_day_windows[checkin.user_id][0]
+            <= _utc_naive(checkin.created_at)
+            <= user_day_windows[checkin.user_id][1]
+        }
 
         # 确定需要提醒的用户
         users_to_remind = []
@@ -237,14 +431,60 @@ async def _send_daily_reminders(db: AsyncSession) -> dict[str, Any]:
 
         for user_id in users_to_remind:
             try:
+                target_user = users_by_id.get(user_id)
+                if target_user is None:
+                    skipped_by_preferences += 1
+                    continue
+
+                timezone_name = _user_timezone_name(target_user)
+                day_start, day_end = user_day_windows[user_id]
+                last_checkin_at = await _last_checkin_at(
+                    db,
+                    partnership_id=partnership.id,
+                    user_id=user_id,
+                )
+                if not _is_checkin_due_for_cadence(
+                    partnership=partnership,
+                    last_checkin_at=last_checkin_at,
+                    timezone_name=timezone_name,
+                    now=now,
+                ):
+                    skipped_by_cadence += 1
+                    continue
+
+                suppression_reason = await _reminder_suppression_reason(
+                    db,
+                    user_id=user_id,
+                    timezone_name=timezone_name,
+                    now=now,
+                )
+                if suppression_reason:
+                    skipped_by_preferences += 1
+                    logger.debug(
+                        "Skipped accountability reminder for user {} partnership {}: {}",
+                        user_id,
+                        partnership.id,
+                        suppression_reason,
+                    )
+                    continue
+
+                if await _already_sent_reminder_today(
+                    db,
+                    user_id=user_id,
+                    partnership_id=partnership.id,
+                    day_start=day_start,
+                    day_end=day_end,
+                ):
+                    skipped_duplicates += 1
+                    continue
+
                 # 获取伙伴名称
                 partner_id = (
                     partnership.partner_id
                     if user_id == partnership.initiator_id
                     else partnership.initiator_id
                 )
-                partner_result = await db.execute(select(User).where(User.id == partner_id))
-                partner = partner_result.scalar_one_or_none()
+                partner = users_by_id.get(partner_id)
                 partner_name = _user_display_name(partner, "你的责任伙伴")
 
                 await accountability_notification_service.send_daily_reminder(
@@ -272,6 +512,9 @@ async def _send_daily_reminders(db: AsyncSession) -> dict[str, Any]:
     return {
         "sent_reminders": reminder_count,
         "skipped_partnerships": skipped_count,
+        "skipped_by_cadence": skipped_by_cadence,
+        "skipped_by_preferences": skipped_by_preferences,
+        "skipped_duplicates": skipped_duplicates,
         "total_partnerships": len(partnerships),
     }
 
