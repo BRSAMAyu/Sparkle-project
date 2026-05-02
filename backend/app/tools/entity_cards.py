@@ -451,6 +451,122 @@ def build_knowledge_entity_card(
     )
 
 
+def build_source_document_entity_card(
+    source: dict[str, Any],
+    *,
+    tool_name: str,
+    tool_result_id: str | None = None,
+    source_channel: str = "source_tray",
+) -> dict[str, Any]:
+    source_id = (
+        str(source.get("id") or source.get("source_id") or source.get("document_id") or source.get("file_id"))
+        if (source.get("id") or source.get("source_id") or source.get("document_id") or source.get("file_id"))
+        else None
+    )
+    title = (
+        source.get("title")
+        or source.get("name")
+        or source.get("filename")
+        or source.get("file_name")
+        or "来源资料"
+    )
+    summary = source.get("summary") or source.get("snippet") or source.get("reason") or source.get("answer_basis")
+    route_query = _compact_dict(
+        {
+            "sourceId": source_id,
+            "chunkId": source.get("chunk_id") or source.get("chunkId"),
+        }
+    )
+    route = f"/documents?{urlencode(route_query)}" if route_query else "/documents"
+    answer_basis = source.get("answer_basis") or source.get("status") or "source_grounded"
+    return build_entity_card(
+        entity_type="source_document",
+        entity_id=source_id,
+        title=str(title),
+        summary=summary,
+        status=str(answer_basis),
+        execution_state="grounded" if source.get("used") is not False else "available",
+        source=_compact_dict(
+            {
+                "channel": source_channel,
+                "tool_name": tool_name,
+                "context_plan_mode": source.get("context_plan_mode"),
+                "confidence": source.get("confidence"),
+                "source_uncertainty": source.get("source_uncertainty"),
+            }
+        ),
+        primary_action=build_entity_action(
+            action_id="open_source",
+            action_type="open_detail",
+            label="查看资料来源",
+            route=route,
+            payload=_compact_dict({"source_id": source_id, "chunk_id": source.get("chunk_id")}),
+        ),
+        secondary_actions=[
+            build_entity_action(
+                action_id="correct_source",
+                action_type="continue_chat",
+                label="纠正来源",
+                route="/chat",
+                payload=_compact_dict(
+                    {
+                        "prompt": "这条资料引用不准确，请按我的纠正重新选择来源。",
+                        "source_id": source_id,
+                    }
+                ),
+            ),
+            build_entity_action(
+                action_id="create_knowledge_node",
+                action_type="open_detail",
+                label="转成知识点",
+                route="/galaxy",
+                payload=_compact_dict({"source_id": source_id}),
+            ),
+        ],
+        share=(
+            build_share_payload(
+                resource_type="source_document",
+                resource_id=source_id,
+                title=str(title),
+                subtitle=summary,
+                source_receipt=_compact_dict(
+                    {
+                        "answer_basis": source.get("answer_basis"),
+                        "context_plan_mode": source.get("context_plan_mode"),
+                        "confidence": source.get("confidence"),
+                    }
+                ),
+                adoption_action=build_entity_action(
+                    action_id="adopt_source_private_copy",
+                    action_type="adopt_resource",
+                    label="保存为我的资料",
+                    payload={"resource_type": "source_document", "resource_id": source_id},
+                ),
+            )
+            if source_id
+            else None
+        ),
+        feedback=build_feedback_payload(tool_result_id=tool_result_id),
+        linked_entities=_compact_dict(
+            {
+                "knowledge_node_id": source.get("knowledge_node_id"),
+                "graph_node_id": source.get("graph_node_id"),
+                "document_id": source.get("document_id"),
+                "file_id": source.get("file_id"),
+            }
+        ),
+        metrics=_compact_dict(
+            {
+                "confidence": source.get("confidence"),
+                "relevance_score": source.get("relevance_score"),
+                "chunk_index": source.get("chunk_index"),
+            }
+        ),
+        tags=[str(tag) for tag in source.get("tags", [])] if isinstance(source.get("tags"), list) else None,
+        raw=source,
+    )
+
+
 def build_review_entity_card(
     review: dict[str, Any],
     *,

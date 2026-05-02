@@ -6,6 +6,7 @@ from app.tools.entity_cards import (
     build_review_entity_card,
     build_seed_entity_card,
     build_shared_resource_entity_card,
+    build_source_document_entity_card,
     build_task_entity_card,
     build_task_list_entity_card,
     build_unavailable_shared_resource_entity_card,
@@ -102,6 +103,32 @@ def test_build_learning_path_entity_card_links_plan_and_tasks():
     assert len(entity["children"]) == 2
     assert entity["children"][0]["entity_type"] == "plan"
     assert entity["children"][1]["entity_type"] == "task_list"
+
+
+def test_build_source_document_entity_card_is_shareable_and_correctable():
+    entity = build_source_document_entity_card(
+        {
+            "document_id": "doc-1",
+            "chunk_id": "chunk-9",
+            "title": "TCP 资料讲义",
+            "summary": "解释三次握手与状态迁移。",
+            "answer_basis": "source_grounded",
+            "context_plan_mode": "targeted_source_rag",
+            "confidence": 0.86,
+            "knowledge_node_id": "node-1",
+        },
+        tool_name="source_tray",
+        tool_result_id="tool-source-1",
+    )
+
+    assert entity["entity_type"] == "source_document"
+    assert entity["entity_id"] == "doc-1"
+    assert entity["primary_action"]["route"].startswith("/documents?")
+    assert entity["secondary_actions"][0]["id"] == "correct_source"
+    assert entity["share"]["resource_type"] == "source_document"
+    assert entity["share"]["adoption_action"]["type"] == "adopt_resource"
+    assert entity["linked_entities"]["knowledge_node_id"] == "node-1"
+    assert validate_entity_card(entity) == []
 
 
 def test_build_prediction_entity_card_contains_action_metadata():

@@ -79,20 +79,6 @@ from app.orchestration.agent_activity import emit_agent_activity, emit_routing_p
 from app.orchestration.agent_memory import AgentMemoryService  # noqa: F401
 from app.orchestration.agent_scoring import AgentScoringService  # noqa: F401
 from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
-from app.orchestration.memory_helpers import (
-    build_aurora_modeling_memory_summary,
-    build_aurora_runtime_metadata as _build_aurora_runtime_metadata,
-    build_error_memory_summary,
-    extract_completion_state_from_response_data,
-    extract_struggle_score as _extract_struggle_score,
-    first_memory_value as _first_memory_value,
-    memory_dict as _memory_dict,
-    memory_json_dict as _memory_json_dict,
-    memory_text as _memory_text,
-    safe_float as _safe_float,
-    should_record_stressed_session_mood as _should_record_stressed,
-    wake_policy_energy as _wake_policy_energy,
-)
 
 # Multi-Agent Mode Support
 from app.orchestration.chat_modes import (
@@ -124,6 +110,7 @@ from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.execution_engine import ExecutionEngineMixin
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.experience_actuator import ExperienceActuator
+from app.orchestration.experience_packets import attach_goal_realization_context
 from app.orchestration.expert_strategy import ExpertStrategyV1
 from app.orchestration.goal_quality_evaluator import goal_quality_evaluator  # noqa: F401
 from app.orchestration.graph_rag import (
@@ -133,6 +120,38 @@ from app.orchestration.graph_rag import (
 )
 from app.orchestration.grounding_validator import GroundingValidator
 from app.orchestration.lang_graph_planner import LangGraphPlanner
+from app.orchestration.memory_helpers import (
+    build_aurora_modeling_memory_summary,
+    build_error_memory_summary,
+    extract_completion_state_from_response_data,
+)
+from app.orchestration.memory_helpers import (
+    build_aurora_runtime_metadata as _build_aurora_runtime_metadata,
+)
+from app.orchestration.memory_helpers import (
+    extract_struggle_score as _extract_struggle_score,
+)
+from app.orchestration.memory_helpers import (
+    first_memory_value as _first_memory_value,
+)
+from app.orchestration.memory_helpers import (
+    memory_dict as _memory_dict,
+)
+from app.orchestration.memory_helpers import (
+    memory_json_dict as _memory_json_dict,
+)
+from app.orchestration.memory_helpers import (
+    memory_text as _memory_text,
+)
+from app.orchestration.memory_helpers import (
+    safe_float as _safe_float,
+)
+from app.orchestration.memory_helpers import (
+    should_record_stressed_session_mood as _should_record_stressed,
+)
+from app.orchestration.memory_helpers import (
+    wake_policy_energy as _wake_policy_energy,
+)
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config  # noqa: F401
 from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow  # noqa: F401
 from app.orchestration.observability_logger import observability_logger
@@ -2831,6 +2850,10 @@ class ChatOrchestrator(
                         user_context_payload=user_context_payload,
                         state=state,
                     )
+                    user_context_payload = attach_goal_realization_context(
+                        user_context_payload=user_context_payload,
+                        state_context=state.context_data,
+                    )
 
                 # Step 6: Prepare runtime context (transparency, tools)
                 transparency_generator, emit_transparency_event = await self._prepare_runtime_context(
@@ -3283,6 +3306,10 @@ class ChatOrchestrator(
                     ),
                     user_context_payload=user_context_payload,
                     state=state,
+                )
+                user_context_payload = attach_goal_realization_context(
+                    user_context_payload=user_context_payload,
+                    state_context=state.context_data,
                 )
 
                 # Step 11: Plan & validate (langgraph/hybrid mode)

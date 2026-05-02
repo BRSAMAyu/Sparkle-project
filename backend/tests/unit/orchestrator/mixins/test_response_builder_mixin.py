@@ -347,6 +347,33 @@ def test_aurora_everyday_presence_stays_quiet_when_not_needed(orchestrator):
     assert metadata == {}
 
 
+def test_goal_realization_context_metadata_exports_vertical_packets(orchestrator):
+    metadata = orchestrator._goal_realization_metadata(
+        {
+            "goal_realization_context": {
+                "active_goal": {"id": "goal-1", "title": "零基础通过考试"},
+                "aurora": {"current_read": "用户更像是卡在不会做，而不是没时间。"},
+                "source_receipt": {
+                    "context_plan_mode": "targeted_source_rag",
+                    "answer_basis": "source_grounded",
+                },
+                "graph_trace": {
+                    "decision_scope": "goal_realization_turn",
+                    "affects": ["next_task", "rag_scope", "plan_feasibility", "aurora_read"],
+                },
+                "user_visible_summary": "当前目标：零基础通过考试",
+            }
+        }
+    )
+
+    assert "goal_realization_context" in metadata
+    assert "aurora_experience_packet" in metadata
+    assert "knowledge_source_receipt" in metadata
+    assert "graph_decision_trace" in metadata
+    assert metadata["goal_realization_summary"] == "当前目标：零基础通过考试"
+    assert "不会做" in metadata["aurora_experience_packet"]
+
+
 def test_semantic_control_trace_metadata_is_emitted(orchestrator):
     metadata = orchestrator._semantic_control_trace_metadata(
         {

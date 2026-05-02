@@ -501,6 +501,30 @@ class ResponseBuilderMixin:
         return {"aurora_everyday_presence": json.dumps(payload, ensure_ascii=False)}
 
     @staticmethod
+    def _goal_realization_metadata(context_data: dict[str, Any]) -> dict[str, str]:
+        packet = context_data.get("goal_realization_context")
+        if not isinstance(packet, dict):
+            return {}
+
+        metadata: dict[str, str] = {
+            "goal_realization_context": json.dumps(packet, ensure_ascii=False),
+        }
+        for key in ("aurora", "source_receipt", "graph_trace"):
+            value = packet.get(key)
+            if isinstance(value, dict) and value:
+                metadata_key = {
+                    "aurora": "aurora_experience_packet",
+                    "source_receipt": "knowledge_source_receipt",
+                    "graph_trace": "graph_decision_trace",
+                }[key]
+                metadata[metadata_key] = json.dumps(value, ensure_ascii=False)
+
+        summary = str(packet.get("user_visible_summary") or "").strip()
+        if summary:
+            metadata["goal_realization_summary"] = summary
+        return metadata
+
+    @staticmethod
     def _normalize_next_action_receipt(payload: dict[str, Any]) -> dict[str, Any] | None:
         if not payload:
             return None
@@ -1147,6 +1171,7 @@ class ResponseBuilderMixin:
         response_metadata.update(self._dual_core_response_metadata(final_state.context_data))
         response_metadata.update(self._task_stuck_intervention_metadata(final_state.context_data))
         response_metadata.update(self._aurora_everyday_presence_metadata(final_state.context_data))
+        response_metadata.update(self._goal_realization_metadata(final_state.context_data))
         understanding_depth = (
             (user_context_payload or {}).get("understanding_depth") if isinstance(user_context_payload, dict) else None
         )

@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-05-02 (30 CXP 并行打磨完成最终集成: 30/30 报告齐备, CXP 分支/共享工作区补丁已合入 final-closeout integration, Python/Go/Flutter 聚焦验证通过)
+> **最后更新**: 2026-05-02 (纵向体验闭环二次收口完成: Aurora + GoalRealization + Memory + Source Receipt + Graph Trace + Card Protocol 主链已统一接入)
 
 ### P0 Critical — 当前会话修复
 
@@ -28,6 +28,18 @@
 | CXP-01~CXP-30 并行体验/系统打磨 | ✅ 集成完成 | Codex final integrator | 共享工作区补丁提交 `ccf83242e`; 已合并 CXP-01/02/05/07/13/16/17/18/21/23/25 等独立分支; CXP-14 缺失报告已补; 最终验收见 `docs/product/parallel_closeout/SPARKLE_FINAL_INTEGRATION_ACCEPTANCE_REPORT_2026-05-02.md` |
 | Final conflict resolution | ✅ 完成 | Codex | 解决 `time_utils.py` add/add、community API 格式/权限调用、task card 格式、gateway ACK/quota 旧测试语义冲突 |
 | Final verification | ✅ 聚焦通过 | Codex | backend compile + ruff scoped + 74 backend tests; gateway logsafe/handler/middleware tests; Flutter entity-card 11 tests; Flutter focused analyze `--no-fatal-infos` 通过 |
+
+### 2026-05-02 Vertical Experience Closeout
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| VEC-01 AuroraExperiencePacket | ✅ 完成 | Codex | 普通聊天主链输出当前判断、证据、置信度、不确定性、最近纠正、下一步语气/策略 |
+| VEC-02 GoalRealizationContext | ✅ 完成 | Codex | 目标、计划健康、下一步动作、记忆声明、ContextPlan、source receipt、graph trace、Card Protocol 覆盖范围统一为 per-turn contract |
+| VEC-03 KnowledgeSourceReceipt | ✅ 完成 | Codex | RAG/资料使用每轮输出 `context_plan_mode`、`answer_basis`、loaded/skipped/excluded sources 与纠正提示 |
+| VEC-04 GraphDecisionTrace | ✅ 完成 | Codex | Graph 明确影响 `next_task`、`rag_scope`、`plan_feasibility`、`aurora_read` 四类主决策 |
+| VEC-05 Source Document Card Protocol | ✅ 完成 | Codex | 新增 `source_document` entity card，可打开来源、纠正来源、转知识点、分享并让接收方保存私有副本 |
+| VEC-06 Verification | ✅ 通过 | Codex | `py_compile` + scoped `ruff` + `pytest tests/unit/test_goal_realization_experience_packets.py tests/unit/test_entity_cards.py tests/unit/orchestrator/mixins/test_response_builder_mixin.py -q` -> 30 passed |
+| VEC-07 Closeout report | ✅ 完成 | Codex | `docs/product/parallel_closeout/SPARKLE_VERTICAL_EXPERIENCE_CLOSEOUT_REPORT_2026-05-02.md` |
 
 ---
 
