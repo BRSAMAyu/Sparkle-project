@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import time
 from copy import deepcopy
 from datetime import UTC, datetime
 from uuid import UUID
@@ -21,7 +22,7 @@ from loguru import logger
 from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_active_superuser, get_current_user
 from app.api.v1.accountability import (
     _build_leaderboard_summary,
     _build_partnership_achievements_payload,
@@ -34,6 +35,11 @@ from app.api.v1.accountability import (
 )
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.metrics import (
+    observe_product_loop_items,
+    observe_product_loop_latency,
+    record_product_loop_event,
+)
 from app.core.rate_limiting import limiter
 from app.core.security import decode_token
 from app.core.websocket import manager
@@ -207,6 +213,7 @@ from app.tools.entity_cards import (
 
 router = APIRouter()
 
+
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
@@ -230,6 +237,24 @@ def _post_to_response(post: Post) -> dict:
     }
 
 
+def _shared_resource_payload_is_active(resource: SharedResource) -> bool:
+    """Return False when the shared legacy object was soft-deleted."""
+    payloads = (
+        resource.plan,
+        resource.task,
+        resource.knowledge_node,
+        resource.seed_library,
+        resource.seed_item,
+        resource.cognitive_fragment,
+        resource.curiosity_capsule,
+        resource.behavior_pattern,
+    )
+    for payload in payloads:
+        if payload is not None:
+            return not getattr(payload, "is_deleted", False)
+    return resource.card_share_record_id is not None
+
+
 @router.get("/feed", summary="获取社区动态流")
 async def get_feed(
     page: int = Query(default=1, ge=1),
@@ -241,6 +266,8 @@ async def get_feed(
     """获取社区动态列表，按创建时间倒序。支持 scope 筛选。"""
     from sqlalchemy.orm import selectinload
 
+    start_time = time.perf_counter()
+    metric_surface = scope or "global"
     offset = (page - 1) * limit
     stmt = select(Post).options(selectinload(Post.user))
 
@@ -309,14 +336,16 @@ async def get_feed(
             )
             .correlate(None)
         )
-        stmt = stmt.where(
-            Post.user_id.in_(partner_ids_initiated) | Post.user_id.in_(partner_ids_accepted)
-        )
+        stmt = stmt.where(Post.user_id.in_(partner_ids_initiated) | Post.user_id.in_(partner_ids_accepted))
         stmt = stmt.where(friend_visible_posts)
     elif scope == "following":
         stmt = stmt.where(Post.user_id.in_(accepted_friend_ids) | Post.user_id.in_(accepted_friend_ids_alt))
         stmt = stmt.where(friend_visible_posts)
     elif scope is not None:
+        record_product_loop_event("community_feed", metric_surface, "invalid_scope", "bad_scope")
+        observe_product_loop_latency(
+            "community_feed", metric_surface, "invalid_scope", time.perf_counter() - start_time
+        )
         raise HTTPException(status_code=400, detail=f"Unknown scope: {scope}")
     else:
         stmt = stmt.where(Post.visibility == "public")
@@ -326,15 +355,26 @@ async def get_feed(
         select(UserBlock.blocked_id.label("uid"))
         .where(UserBlock.blocker_id == current_user.id, UserBlock.not_deleted_filter())
         .union(
-            select(UserBlock.blocker_id.label("uid"))
-            .where(UserBlock.blocked_id == current_user.id, UserBlock.not_deleted_filter())
-        ).subquery()
+            select(UserBlock.blocker_id.label("uid")).where(
+                UserBlock.blocked_id == current_user.id, UserBlock.not_deleted_filter()
+            )
+        )
+        .subquery()
     )
     stmt = stmt.where(~Post.user_id.in_(select(blocked_uids.c.uid)))
 
     stmt = stmt.order_by(Post.created_at.desc()).offset(offset).limit(limit)
     result = await db.execute(stmt)
     posts = result.scalars().all()
+    post_count = len(posts)
+    record_product_loop_event(
+        "community_feed",
+        metric_surface,
+        "loaded",
+        "empty" if post_count == 0 else "has_posts",
+    )
+    observe_product_loop_items("community_feed", metric_surface, post_count)
+    observe_product_loop_latency("community_feed", metric_surface, "loaded", time.perf_counter() - start_time)
     return [_post_to_response(p) for p in posts]
 
 
@@ -372,12 +412,14 @@ async def toggle_like_post(
     if not post:
         raise HTTPException(status_code=404, detail="动态不存在")
 
-    existing = (await db.execute(
-        select(PostLike).where(
-            PostLike.user_id == current_user.id,
-            PostLike.post_id == post_id,
+    existing = (
+        await db.execute(
+            select(PostLike).where(
+                PostLike.user_id == current_user.id,
+                PostLike.post_id == post_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
 
     if existing:
         await db.delete(existing)
@@ -401,7 +443,7 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
             nickname=msg.sender.nickname,
             avatar_url=msg.sender.avatar_url,
             flame_level=msg.sender.flame_level,
-            flame_brightness=msg.sender.flame_brightness
+            flame_brightness=msg.sender.flame_brightness,
         )
 
     read_receipts = sorted(
@@ -427,13 +469,13 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
         # Simplified quote (1 level recursion)
         quoted_sender = None
         if msg.reply_to.sender:
-             quoted_sender = UserBrief(
+            quoted_sender = UserBrief(
                 id=msg.reply_to.sender.id,
                 username=msg.reply_to.sender.username,
                 nickname=msg.reply_to.sender.nickname,
                 avatar_url=msg.reply_to.sender.avatar_url,
                 flame_level=msg.reply_to.sender.flame_level,
-                flame_brightness=msg.reply_to.sender.flame_brightness
+                flame_brightness=msg.reply_to.sender.flame_brightness,
             )
         quoted_message = MessageInfo(
             id=msg.reply_to.id,
@@ -452,7 +494,7 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
             edited_at=msg.reply_to.edited_at,
             read_by=None,
             read_by_users=None,
-            quoted_message=None # Stop recursion
+            quoted_message=None,  # Stop recursion
         )
 
     return MessageInfo(
@@ -472,7 +514,7 @@ def _build_message_info(msg: GroupMessage) -> MessageInfo:
         edited_at=msg.edited_at,
         read_by=read_by or None,
         read_by_users=read_by_users or None,
-        quoted_message=quoted_message
+        quoted_message=quoted_message,
     )
 
 
@@ -485,18 +527,14 @@ def _build_group_file_info(
     shared_by = None
     uploader_name = None
     if group_file.shared_by:
-        uploader_name = (
-            group_file.shared_by.nickname
-            or group_file.shared_by.full_name
-            or group_file.shared_by.username
-        )
+        uploader_name = group_file.shared_by.nickname or group_file.shared_by.full_name or group_file.shared_by.username
         shared_by = UserBrief(
             id=group_file.shared_by.id,
             username=group_file.shared_by.username,
             nickname=group_file.shared_by.nickname,
             avatar_url=group_file.shared_by.avatar_url,
             flame_level=group_file.shared_by.flame_level,
-            flame_brightness=group_file.shared_by.flame_brightness
+            flame_brightness=group_file.shared_by.flame_brightness,
         )
 
     stored_file = group_file.file
@@ -597,11 +635,7 @@ async def _build_accountability_summary_for_friend(
         stats = await _build_partnership_stats_payload(db, partnership, current_user)
     last_checkin_at = await _get_last_checkin_at(db, partnership.id)
     my_role = "initiator" if str(partnership.initiator_id) == str(current_user.id) else "partner"
-    goal_preview = (
-        partnership.partner_goal
-        if my_role == "initiator"
-        else partnership.initiator_goal
-    )
+    goal_preview = partnership.partner_goal if my_role == "initiator" else partnership.initiator_goal
     return AccountabilityFriendSummary(
         partnership_id=partnership.id,
         slot_type=_slot_type_value(partnership.slot_type),
@@ -655,7 +689,7 @@ def _build_private_message_info(msg: PrivateMessage) -> PrivateMessageInfo:
             edited_at=msg.reply_to.edited_at,
             is_read=msg.reply_to.is_read,
             read_at=msg.reply_to.read_at,
-            quoted_message=None
+            quoted_message=None,
         )
 
     return PrivateMessageInfo(
@@ -676,8 +710,9 @@ def _build_private_message_info(msg: PrivateMessage) -> PrivateMessageInfo:
         edited_at=msg.edited_at,
         is_read=msg.is_read,
         read_at=msg.read_at,
-        quoted_message=quoted_message
+        quoted_message=quoted_message,
     )
+
 
 def _is_self_only_visibility(content_data: dict | None, user_id: UUID) -> bool:
     if not content_data:
@@ -691,6 +726,7 @@ def _is_self_only_visibility(content_data: dict | None, user_id: UUID) -> bool:
         return str(user_id) in [str(item) for item in visible_to]
     return str(visible_to) == str(user_id)
 
+
 def _normalize_self_visibility(content_data: dict | None, user_id: UUID) -> dict | None:
     if not content_data:
         return content_data
@@ -702,6 +738,7 @@ def _normalize_self_visibility(content_data: dict | None, user_id: UUID) -> dict
     updated["visible_to"] = str(user_id)
     return updated
 
+
 def _truncate_text(text: str | None, limit: int = 160) -> str | None:
     if not text:
         return None
@@ -710,76 +747,107 @@ def _truncate_text(text: str | None, limit: int = 160) -> str | None:
         return cleaned
     return f"{cleaned[: max(0, limit - 3)].rstrip()}..."
 
+
 def _compact_dict(data: dict) -> dict:
     return {k: v for k, v in data.items() if v is not None}
+
+
+def _share_owner_payload(user: User | None) -> dict | None:
+    if user is None:
+        return None
+    return _compact_dict(
+        {
+            "user_id": str(user.id),
+            "display_name": user.nickname or user.full_name or user.username,
+            "avatar_url": user.avatar_url,
+        }
+    )
+
 
 def _build_share_meta(resource_type: SharedResourceType, resource: object) -> dict:
     if resource_type == SharedResourceType.PLAN:
         plan = resource
-        return _compact_dict({
-            "plan_type": plan.type.value if plan.type else None,
-            "subject": plan.subject,
-            "progress": plan.progress,
-            "target_date": plan.target_date.isoformat() if plan.target_date else None,
-            "total_estimated_hours": plan.total_estimated_hours,
-        })
+        return _compact_dict(
+            {
+                "plan_type": plan.type.value if plan.type else None,
+                "subject": plan.subject,
+                "progress": plan.progress,
+                "target_date": plan.target_date.isoformat() if plan.target_date else None,
+                "total_estimated_hours": plan.total_estimated_hours,
+            }
+        )
     if resource_type == SharedResourceType.TASK:
         task = resource
-        return _compact_dict({
-            "task_type": task.type.value if task.type else None,
-            "status": task.status.value if task.status else None,
-            "estimated_minutes": task.estimated_minutes,
-            "difficulty": task.difficulty,
-            "tags": task.tags or [],
-            "due_date": task.due_date.isoformat() if task.due_date else None,
-        })
+        return _compact_dict(
+            {
+                "task_type": task.type.value if task.type else None,
+                "status": task.status.value if task.status else None,
+                "estimated_minutes": task.estimated_minutes,
+                "difficulty": task.difficulty,
+                "tags": task.tags or [],
+                "due_date": task.due_date.isoformat() if task.due_date else None,
+            }
+        )
     if resource_type == SharedResourceType.KNOWLEDGE_NODE:
         node = resource
-        return _compact_dict({
-            "importance_level": node.importance_level,
-            "keywords": node.keywords or [],
-            "source_type": node.source_type,
-        })
+        return _compact_dict(
+            {
+                "importance_level": node.importance_level,
+                "keywords": node.keywords or [],
+                "source_type": node.source_type,
+            }
+        )
     if resource_type == SharedResourceType.SEED_LIBRARY:
         library = resource
-        return _compact_dict({
-            "category": library.category,
-            "visibility": library.visibility,
-            "language": library.language,
-            "tags": library.tags or [],
-            "is_official": library.is_official,
-        })
+        return _compact_dict(
+            {
+                "category": library.category,
+                "visibility": library.visibility,
+                "language": library.language,
+                "tags": library.tags or [],
+                "is_official": library.is_official,
+            }
+        )
     if resource_type == SharedResourceType.SEED_ITEM:
         item = resource
-        return _compact_dict({
-            "item_type": item.item_type,
-            "subject": item.subject,
-            "difficulty_level": item.difficulty_level,
-            "tags": item.tags or [],
-            "library_id": str(item.library_id),
-        })
+        return _compact_dict(
+            {
+                "item_type": item.item_type,
+                "subject": item.subject,
+                "difficulty_level": item.difficulty_level,
+                "tags": item.tags or [],
+                "library_id": str(item.library_id),
+            }
+        )
     if resource_type == SharedResourceType.CURIOSITY_CAPSULE:
         capsule = resource
-        return _compact_dict({
-            "related_subject": capsule.related_subject,
-            "related_task_id": str(capsule.related_task_id) if capsule.related_task_id else None,
-        })
+        return _compact_dict(
+            {
+                "related_subject": capsule.related_subject,
+                "related_task_id": str(capsule.related_task_id) if capsule.related_task_id else None,
+            }
+        )
     if resource_type == SharedResourceType.COGNITIVE_PRISM_PATTERN:
         pattern = resource
-        return _compact_dict({
-            "pattern_type": pattern.pattern_type,
-            "confidence_score": pattern.confidence_score,
-            "frequency": pattern.frequency,
-            "is_archived": pattern.is_archived,
-        })
+        return _compact_dict(
+            {
+                "pattern_type": pattern.pattern_type,
+                "confidence_score": pattern.confidence_score,
+                "frequency": pattern.frequency,
+                "is_archived": pattern.is_archived,
+            }
+        )
     fragment = resource
-    return _compact_dict({
-        "source_type": fragment.source_type,
-        "severity": fragment.severity,
-        "tags": fragment.tags,
-        "error_tags": fragment.error_tags,
-        "context_tags": fragment.context_tags,
-    })
+    return _compact_dict(
+        {
+            "source_type": fragment.source_type,
+            "severity": fragment.severity,
+            "tags": fragment.tags,
+            "error_tags": fragment.error_tags,
+            "context_tags": fragment.context_tags,
+        }
+    )
+
 
 def _build_share_brief(resource_type: SharedResourceType, resource: object) -> dict:
     if resource_type == SharedResourceType.PLAN:
@@ -815,11 +883,8 @@ def _build_share_brief(resource_type: SharedResourceType, resource: object) -> d
         title = _truncate_text(fragment.content, 48) or "Cognitive Fragment"
         summary = fragment.content
 
-    return {
-        "title": title,
-        "summary": _truncate_text(summary, 160),
-        "meta": _build_share_meta(resource_type, resource)
-    }
+    return {"title": title, "summary": _truncate_text(summary, 160), "meta": _build_share_meta(resource_type, resource)}
+
 
 def _share_message_type(resource_type: SharedResourceType) -> MessageTypeEnum:
     if resource_type == SharedResourceType.PLAN:
@@ -849,12 +914,8 @@ def _legacy_permission_to_share_permission(permission: str | None) -> SharePermi
         return SharePermission.COMMENT
     return SharePermission.VIEW
 
-async def _get_share_resource(
-    db: AsyncSession,
-    resource_type: SharedResourceType,
-    resource_id: UUID,
-    owner_id: UUID
-):
+
+async def _get_share_resource(db: AsyncSession, resource_type: SharedResourceType, resource_id: UUID, owner_id: UUID):
     seed_service = SeedLibraryService()
     if resource_type == SharedResourceType.PLAN:
         plan = await db.get(Plan, resource_id)
@@ -911,13 +972,14 @@ async def _get_share_resource(
 
 # ============ 好友系统 ============
 
+
 @router.post("/friends/request", summary="发送好友请求")
 @limiter.limit("5/minute")
 async def send_friend_request(
     request: Request,
     data: FriendRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     发送好友请求
@@ -932,9 +994,7 @@ async def send_friend_request(
         raise HTTPException(status_code=403, detail="由于对方的隐私设置，无法发送请求")
 
     try:
-        friendship = await FriendshipService.send_friend_request(
-            db, current_user.id, data.target_user_id
-        )
+        friendship = await FriendshipService.send_friend_request(db, current_user.id, data.target_user_id)
         await db.commit()
 
         if friendship.status == FriendshipStatus.PENDING and str(friendship.initiated_by) == str(current_user.id):
@@ -967,15 +1027,11 @@ async def send_friend_request(
 
 @router.post("/friends/respond", summary="响应好友请求")
 async def respond_to_friend_request(
-    data: FriendResponse,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    data: FriendResponse, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """接受或拒绝好友请求"""
     try:
-        await FriendshipService.respond_to_request(
-            db, current_user.id, data.friendship_id, data.accept
-        )
+        await FriendshipService.respond_to_request(db, current_user.id, data.friendship_id, data.accept)
         await db.commit()
         return {"success": True}
     except ValueError as e:
@@ -984,9 +1040,7 @@ async def respond_to_friend_request(
 
 @router.delete("/friends/{friendship_id}", summary="删除好友")
 async def delete_friend(
-    friendship_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    friendship_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     删除好友关系
@@ -1007,7 +1061,7 @@ async def get_friends(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """获取当前用户的好友列表"""
     friends = await FriendshipService.get_friends(db, current_user.id, limit=limit, offset=offset)
@@ -1018,10 +1072,12 @@ async def get_friends(
             select(AccountabilityPartnership).where(
                 and_(
                     AccountabilityPartnership.slot_type == AccountabilitySlotType.CORE,
-                    AccountabilityPartnership.status.in_([
-                        AccountabilityStatus.ACTIVE,
-                        AccountabilityStatus.PENDING,
-                    ]),
+                    AccountabilityPartnership.status.in_(
+                        [
+                            AccountabilityStatus.ACTIVE,
+                            AccountabilityStatus.PENDING,
+                        ]
+                    ),
                     or_(
                         and_(
                             AccountabilityPartnership.initiator_id == current_user.id,
@@ -1061,10 +1117,7 @@ async def get_friends(
 
 
 @router.get("/friends/pending", response_model=list[FriendshipInfo], summary="获取待处理的好友请求")
-async def get_pending_requests(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_pending_requests(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """获取收到的待处理好友请求"""
     requests = await FriendshipService.get_pending_requests(db, current_user.id)
     return [
@@ -1108,7 +1161,8 @@ async def get_friend_profile(
         raise HTTPException(status_code=404, detail="Friend not found")
 
     partnership_result = await db.execute(
-        select(AccountabilityPartnership).where(
+        select(AccountabilityPartnership)
+        .where(
             and_(
                 AccountabilityPartnership.slot_type == AccountabilitySlotType.CORE,
                 or_(
@@ -1122,7 +1176,8 @@ async def get_friend_profile(
                     ),
                 ),
             )
-        ).order_by(AccountabilityPartnership.updated_at.desc())
+        )
+        .order_by(AccountabilityPartnership.updated_at.desc())
     )
     partnership = partnership_result.scalars().first()
     relationship_summary = None
@@ -1185,7 +1240,7 @@ async def search_users(
     keyword: str = Query(..., min_length=1),
     limit: int = Query(default=20, ge=1, le=20),  # 降低默认搜索结果数量
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     搜索用户（用于添加好友）
@@ -1197,12 +1252,7 @@ async def search_users(
     - 已拉黑当前用户的用户不会出现在结果中
     """
     # 使用带隐私过滤的搜索服务
-    users = await UserSearchService.search_users(
-        db=db,
-        query=keyword,
-        current_user_id=current_user.id,
-        limit=limit
-    )
+    users = await UserSearchService.search_users(db=db, query=keyword, current_user_id=current_user.id, limit=limit)
 
     return [
         UserBrief(
@@ -1212,12 +1262,14 @@ async def search_users(
             avatar_url=user.avatar_url,
             flame_level=user.flame_level,
             flame_brightness=user.flame_brightness,
-            status=user.status
-        ) for user in users
+            status=user.status,
+        )
+        for user in users
     ]
 
 
 # ============ 用户拉黑 API ============
+
 
 @router.post("/users/block", summary="拉黑用户")
 @limiter.limit("10/hour")
@@ -1225,7 +1277,7 @@ async def block_user(
     request: Request,
     data: BlockUserRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     拉黑用户
@@ -1234,10 +1286,7 @@ async def block_user(
     - 拉黑后对方无法发送消息或好友请求
     """
     await UserBlockService.block_user(
-        db=db,
-        blocker_id=current_user.id,
-        blocked_id=data.target_user_id,
-        reason=data.reason
+        db=db, blocker_id=current_user.id, blocked_id=data.target_user_id, reason=data.reason
     )
     await db.commit()
 
@@ -1247,17 +1296,10 @@ async def block_user(
 @router.delete("/users/block/{user_id}", summary="解除拉黑")
 @limiter.limit("20/hour")
 async def unblock_user(
-    request: Request,
-    user_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    request: Request, user_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """解除拉黑用户"""
-    await UserBlockService.unblock_user(
-        db=db,
-        blocker_id=current_user.id,
-        blocked_id=user_id
-    )
+    await UserBlockService.unblock_user(db=db, blocker_id=current_user.id, blocked_id=user_id)
     await db.commit()
 
     return {"success": True, "message": "已解除拉黑"}
@@ -1269,15 +1311,10 @@ async def get_blocked_users(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """获取当前用户拉黑的用户列表"""
-    blocks = await UserBlockService.get_blocked_users(
-        db=db,
-        blocker_id=current_user.id,
-        limit=limit,
-        offset=offset
-    )
+    blocks = await UserBlockService.get_blocked_users(db=db, blocker_id=current_user.id, limit=limit, offset=offset)
 
     return [
         BlockUserInfo(
@@ -1291,9 +1328,9 @@ async def get_blocked_users(
                 avatar_url=block.blocked.avatar_url,
                 flame_level=block.blocked.flame_level,
                 flame_brightness=block.blocked.flame_brightness,
-                status=block.blocked.status
+                status=block.blocked.status,
             ),
-            reason=block.reason
+            reason=block.reason,
         )
         for block in blocks
     ]
@@ -1304,7 +1341,7 @@ async def update_privacy_settings(
     request: Request,
     data: UserPrivacySettings,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     更新用户隐私设置
@@ -1313,11 +1350,7 @@ async def update_privacy_settings(
     - friends: 仅好友可搜索
     - nobody: 不可被搜索
     """
-    await UserSearchService.update_searchability(
-        db=db,
-        user_id=current_user.id,
-        searchable_by=data.searchable_by.value
-    )
+    await UserSearchService.update_searchability(db=db, user_id=current_user.id, searchable_by=data.searchable_by.value)
     await db.commit()
 
     return {"success": True, "searchable_by": data.searchable_by.value}
@@ -1325,15 +1358,10 @@ async def update_privacy_settings(
 
 @router.get("/users/privacy", response_model=UserPrivacySettings, summary="获取用户隐私设置")
 async def get_privacy_settings(
-    request: Request,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """获取当前用户的隐私设置"""
-    searchable_by = await UserSearchService.get_user_searchability(
-        db=db,
-        user_id=current_user.id
-    )
+    searchable_by = await UserSearchService.get_user_searchability(db=db, user_id=current_user.id)
 
     return UserPrivacySettings(searchable_by=SearchVisibilityEnum(searchable_by))
 
@@ -1346,7 +1374,7 @@ async def get_friend_recommendations(
     strategy: FriendMatchStrategyEnum = Query(default=FriendMatchStrategyEnum.COMPATIBILITY),
     target: FriendRecommendationTargetEnum = Query(default=FriendRecommendationTargetEnum.ACCOUNTABILITY),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """基于用户画像、学习轨迹和责任伙伴可用性推荐潜在好友/责任伙伴。"""
     recommendations = await FriendMatchService.get_recommendations(
@@ -1415,12 +1443,10 @@ async def get_recommendation_feedback_insights(
 
 # ============ WebSocket ============
 
+
 @router.websocket("/groups/{group_id}/ws")
 async def websocket_endpoint(
-    websocket: WebSocket,
-    group_id: UUID,
-    token: str | None = Query(None),
-    db: AsyncSession = Depends(get_db)
+    websocket: WebSocket, group_id: UUID, token: str | None = Query(None), db: AsyncSession = Depends(get_db)
 ):
     """
     群组实时通讯 WebSocket 接口
@@ -1442,9 +1468,7 @@ async def websocket_endpoint(
 
         membership_result = await db.execute(
             select(GroupMember).where(
-                GroupMember.group_id == group_id,
-                GroupMember.user_id == UUID(user_id),
-                GroupMember.not_deleted_filter()
+                GroupMember.group_id == group_id, GroupMember.user_id == UUID(user_id), GroupMember.not_deleted_filter()
             )
         )
         if not membership_result.scalar_one_or_none():
@@ -1504,11 +1528,10 @@ def _extract_ws_token(websocket: WebSocket) -> str | None:
 
 # ============ 群组管理 ============
 
+
 @router.post("/groups", response_model=GroupInfo, summary="创建群组")
 async def create_group(
-    data: GroupCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    data: GroupCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     创建学习小队或冲刺群
@@ -1531,7 +1554,7 @@ async def search_groups(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """搜索公开群组"""
     model_type = GroupType(group_type.value) if group_type else None
@@ -1549,27 +1572,29 @@ async def search_groups(
     result = []
     for group_dict in groups:
         days_remaining = None
-        deadline = group_dict.get('deadline')
+        deadline = group_dict.get("deadline")
         if deadline:
             delta = deadline - _utcnow()
             days_remaining = max(0, delta.days)
 
-        result.append(GroupListItem(
-            id=group_dict['id'],
-            name=group_dict['name'],
-            description=group_dict.get('description'),
-            type=GroupTypeEnum(group_dict['type'].value),
-            member_count=group_dict['member_count'],
-            total_flame_power=group_dict['total_flame_power'],
-            today_checkin_count=group_dict.get('today_checkin_count', 0),
-            deadline=deadline,
-            days_remaining=days_remaining,
-            focus_tags=group_dict.get('focus_tags', []),
-            is_public=group_dict.get('is_public', True),
-            join_requires_approval=group_dict.get('join_requires_approval', False),
-            activity_score=group_dict.get('activity_score'),
-            my_role=group_dict.get('my_role'),
-        ))
+        result.append(
+            GroupListItem(
+                id=group_dict["id"],
+                name=group_dict["name"],
+                description=group_dict.get("description"),
+                type=GroupTypeEnum(group_dict["type"].value),
+                member_count=group_dict["member_count"],
+                total_flame_power=group_dict["total_flame_power"],
+                today_checkin_count=group_dict.get("today_checkin_count", 0),
+                deadline=deadline,
+                days_remaining=days_remaining,
+                focus_tags=group_dict.get("focus_tags", []),
+                is_public=group_dict.get("is_public", True),
+                join_requires_approval=group_dict.get("join_requires_approval", False),
+                activity_score=group_dict.get("activity_score"),
+                my_role=group_dict.get("my_role"),
+            )
+        )
     return result
 
 
@@ -1681,11 +1706,7 @@ async def group_recommendations_feedback(
 
 
 @router.get("/groups/{group_id}", response_model=GroupInfo, summary="获取群组详情")
-async def get_group(
-    group_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_group(group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """获取群组详细信息"""
     group = await GroupService.get_group(db, group_id, current_user.id)
     if not group:
@@ -1695,9 +1716,7 @@ async def get_group(
 
 @router.post("/groups/{group_id}/join", summary="加入群组")
 async def join_group(
-    group_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """加入群组"""
     try:
@@ -1705,12 +1724,15 @@ async def join_group(
         await db.commit()
 
         # Broadcast member joined event
-        await manager.broadcast({
-            "type": "member_joined",
-            "group_id": str(group_id),
-            "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
-            "timestamp": datetime.now(UTC).isoformat()
-        }, str(group_id))
+        await manager.broadcast(
+            {
+                "type": "member_joined",
+                "group_id": str(group_id),
+                "user": UserBrief.model_validate(current_user).model_dump(mode="json"),
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            str(group_id),
+        )
 
         return {"success": True}
     except ValueError as e:
@@ -1719,9 +1741,7 @@ async def join_group(
 
 @router.post("/groups/{group_id}/leave", summary="退出群组")
 async def leave_group(
-    group_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """退出群组"""
     try:
@@ -1729,12 +1749,15 @@ async def leave_group(
         await db.commit()
 
         # Broadcast member left event
-        await manager.broadcast({
-            "type": "member_left",
-            "group_id": str(group_id),
-            "user_id": str(current_user.id),
-            "timestamp": datetime.now(UTC).isoformat()
-        }, str(group_id))
+        await manager.broadcast(
+            {
+                "type": "member_left",
+                "group_id": str(group_id),
+                "user_id": str(current_user.id),
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            str(group_id),
+        )
 
         return {"success": True}
     except ValueError as e:
@@ -1743,9 +1766,7 @@ async def leave_group(
 
 @router.delete("/groups/{group_id}", summary="解散群组")
 async def dissolve_group(
-    group_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """解散群组（仅限群主）"""
     try:
@@ -1761,7 +1782,7 @@ async def transfer_group_owner(
     group_id: UUID,
     new_owner_id: UUID = Query(...),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """转让群主身份"""
     try:
@@ -1769,13 +1790,16 @@ async def transfer_group_owner(
         await db.commit()
 
         # Broadcast owner transfer event
-        await manager.broadcast({
-            "type": "owner_transferred",
-            "group_id": str(group_id),
-            "old_owner_id": str(current_user.id),
-            "new_owner_id": str(new_owner_id),
-            "timestamp": datetime.now(UTC).isoformat()
-        }, str(group_id))
+        await manager.broadcast(
+            {
+                "type": "owner_transferred",
+                "group_id": str(group_id),
+                "old_owner_id": str(current_user.id),
+                "new_owner_id": str(new_owner_id),
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            str(group_id),
+        )
 
         return {"success": True}
     except ValueError as e:
@@ -1888,15 +1912,13 @@ async def transfer_group_owner_by_path(
 
 
 @router.get("/groups", response_model=list[GroupListItem], summary="获取我的群组")
-async def get_my_groups(
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
-):
+async def get_my_groups(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """获取当前用户加入的所有群组"""
     return await GroupService.get_my_groups(db, current_user.id)
 
 
 # ============ 群消息 ============
+
 
 @router.post("/groups/{group_id}/messages", response_model=MessageInfo, summary="发送群消息")
 @limiter.limit("30/minute")
@@ -1905,7 +1927,7 @@ async def send_message(
     group_id: UUID,
     data: MessageSend,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """发送群消息"""
     try:
@@ -1919,27 +1941,29 @@ async def send_message(
 
         # 广播消息到 WebSocket
         if not is_self_only:
-            await manager.broadcast(message_info.model_dump(mode='json'), str(group_id))
+            await manager.broadcast(message_info.model_dump(mode="json"), str(group_id))
 
         # 提及通知
         if message.mention_user_ids and not is_self_only:
             for mentioned_id in message.mention_user_ids:
                 if str(mentioned_id) == str(current_user.id):
                     continue
-                await manager.send_personal_message({
-                    "type": "mention",
-                    "group_id": str(group_id),
-                    "message": message_info.model_dump(mode='json')
-                }, str(mentioned_id))
+                await manager.send_personal_message(
+                    {"type": "mention", "group_id": str(group_id), "message": message_info.model_dump(mode="json")},
+                    str(mentioned_id),
+                )
 
         # 回传 ACK 给发送者
         if data.nonce:
-            await manager.send_personal_message({
-                "type": "ack",
-                "nonce": data.nonce,
-                "message_id": str(message.id),
-                "timestamp": message.created_at.isoformat()
-            }, str(current_user.id))
+            await manager.send_personal_message(
+                {
+                    "type": "ack",
+                    "nonce": data.nonce,
+                    "message_id": str(message.id),
+                    "timestamp": message.created_at.isoformat(),
+                },
+                str(current_user.id),
+            )
 
         return message_info
     except ValueError as e:
@@ -1952,7 +1976,7 @@ async def get_messages(
     before_id: UUID | None = None,
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """获取群消息（分页）"""
     try:
@@ -2008,6 +2032,7 @@ async def mark_group_messages_read(
 
 
 # ============ 群文件 ============
+
 
 @router.post("/groups/{group_id}/files", response_model=GroupFileInfo, summary="分享文件到群组")
 async def create_group_file_share(
@@ -2382,7 +2407,9 @@ async def update_group_file_permissions(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
-@router.get("/groups/{group_id}/files/categories", response_model=list[GroupFileCategoryStat], summary="获取群文件分类统计")
+@router.get(
+    "/groups/{group_id}/files/categories", response_model=list[GroupFileCategoryStat], summary="获取群文件分类统计"
+)
 async def get_group_file_categories(
     group_id: UUID,
     current_user: User = Depends(get_current_user),
@@ -2394,13 +2421,14 @@ async def get_group_file_categories(
     except PermissionError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
 
+
 @router.patch("/groups/{group_id}/messages/{message_id}", response_model=MessageInfo, summary="编辑群消息")
 async def edit_group_message(
     group_id: UUID,
     message_id: UUID,
     data: MessageEdit,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """编辑群消息"""
     try:
@@ -2408,10 +2436,9 @@ async def edit_group_message(
         await db.commit()
         message_info = _build_message_info(message)
         if not _is_self_only_visibility(message.content_data, current_user.id):
-            await manager.broadcast({
-                "type": "message_edit",
-                "message": message_info.model_dump(mode='json')
-            }, str(group_id))
+            await manager.broadcast(
+                {"type": "message_edit", "message": message_info.model_dump(mode="json")}, str(group_id)
+            )
         return message_info
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -2419,10 +2446,7 @@ async def edit_group_message(
 
 @router.post("/groups/{group_id}/messages/{message_id}/revoke", response_model=MessageInfo, summary="撤回群消息")
 async def revoke_group_message(
-    group_id: UUID,
-    message_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    group_id: UUID, message_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """撤回群消息"""
     try:
@@ -2434,10 +2458,7 @@ async def revoke_group_message(
         await db.commit()
         message_info = _build_message_info(message)
         if not is_self_only:
-            await manager.broadcast({
-                "type": "message_revoke",
-                "message_id": str(message.id)
-            }, str(group_id))
+            await manager.broadcast({"type": "message_revoke", "message_id": str(message.id)}, str(group_id))
         return message_info
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -2449,25 +2470,19 @@ async def update_group_message_reaction(
     message_id: UUID,
     data: MessageReactionUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """更新群消息表情反应"""
     try:
         message = await GroupMessageService.update_reaction(
-            db,
-            group_id,
-            message_id,
-            current_user.id,
-            data.emoji,
-            data.action == ReactionActionEnum.ADD
+            db, group_id, message_id, current_user.id, data.emoji, data.action == ReactionActionEnum.ADD
         )
         await db.commit()
         if not _is_self_only_visibility(message.content_data, current_user.id):
-            await manager.broadcast({
-                "type": "reaction_update",
-                "message_id": str(message.id),
-                "reactions": message.reactions or {}
-            }, str(group_id))
+            await manager.broadcast(
+                {"type": "reaction_update", "message_id": str(message.id), "reactions": message.reactions or {}},
+                str(group_id),
+            )
         return _build_message_info(message)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -2479,7 +2494,7 @@ async def get_group_thread_messages(
     thread_root_id: UUID,
     limit: int = Query(default=100, ge=1, le=200),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """获取群消息线程"""
     try:
@@ -2495,7 +2510,7 @@ async def search_group_messages(
     keyword: str = Query(min_length=1, max_length=120),
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """搜索群消息"""
     try:
@@ -2507,13 +2522,14 @@ async def search_group_messages(
 
 # ============ 私聊消息 ============
 
+
 @router.post("/messages", response_model=PrivateMessageInfo, summary="发送私信")
 @limiter.limit("30/minute")
 async def send_private_message(
     request: Request,
     data: PrivateMessageSend,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     发送私聊消息
@@ -2535,17 +2551,20 @@ async def send_private_message(
 
         # 推送 WebSocket
         if not is_self_only:
-            await manager.send_personal_message(msg_info.model_dump(mode='json'), str(data.target_user_id))
-        await manager.send_personal_message(msg_info.model_dump(mode='json'), str(current_user.id))
+            await manager.send_personal_message(msg_info.model_dump(mode="json"), str(data.target_user_id))
+        await manager.send_personal_message(msg_info.model_dump(mode="json"), str(current_user.id))
 
         # 回传 ACK 给发送者
         if data.nonce:
-            await manager.send_personal_message({
-                "type": "ack",
-                "nonce": data.nonce,
-                "message_id": str(message.id),
-                "timestamp": message.created_at.isoformat()
-            }, str(current_user.id))
+            await manager.send_personal_message(
+                {
+                    "type": "ack",
+                    "nonce": data.nonce,
+                    "message_id": str(message.id),
+                    "timestamp": message.created_at.isoformat(),
+                },
+                str(current_user.id),
+            )
 
         return msg_info
     except ValueError as e:
@@ -2558,7 +2577,7 @@ async def get_private_messages(
     before_id: UUID | None = None,
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """获取与某位好友的私信记录"""
     # 标记已读
@@ -2578,22 +2597,20 @@ async def edit_private_message(
     message_id: UUID,
     data: MessageEdit,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """编辑私聊消息"""
     try:
         message = await PrivateMessageService.edit_message(db, message_id, current_user.id, data)
         await db.commit()
         msg_info = _build_private_message_info(message)
-        await manager.send_personal_message({
-            "type": "message_edit",
-            "message": msg_info.model_dump(mode='json')
-        }, str(message.sender_id))
+        await manager.send_personal_message(
+            {"type": "message_edit", "message": msg_info.model_dump(mode="json")}, str(message.sender_id)
+        )
         if not _is_self_only_visibility(message.content_data, current_user.id):
-            await manager.send_personal_message({
-                "type": "message_edit",
-                "message": msg_info.model_dump(mode='json')
-            }, str(message.receiver_id))
+            await manager.send_personal_message(
+                {"type": "message_edit", "message": msg_info.model_dump(mode="json")}, str(message.receiver_id)
+            )
         return msg_info
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -2601,9 +2618,7 @@ async def edit_private_message(
 
 @router.post("/messages/{message_id}/revoke", response_model=PrivateMessageInfo, summary="撤回私信")
 async def revoke_private_message(
-    message_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    message_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """撤回私聊消息"""
     try:
@@ -2613,15 +2628,13 @@ async def revoke_private_message(
             is_self_only = _is_self_only_visibility(existing.content_data, current_user.id)
         message = await PrivateMessageService.revoke_message(db, message_id, current_user.id)
         await db.commit()
-        await manager.send_personal_message({
-            "type": "message_revoke",
-            "message_id": str(message.id)
-        }, str(message.sender_id))
+        await manager.send_personal_message(
+            {"type": "message_revoke", "message_id": str(message.id)}, str(message.sender_id)
+        )
         if not is_self_only:
-            await manager.send_personal_message({
-                "type": "message_revoke",
-                "message_id": str(message.id)
-            }, str(message.receiver_id))
+            await manager.send_personal_message(
+                {"type": "message_revoke", "message_id": str(message.id)}, str(message.receiver_id)
+            )
         return _build_private_message_info(message)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -2632,29 +2645,23 @@ async def update_private_message_reaction(
     message_id: UUID,
     data: MessageReactionUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """更新私聊消息表情反应"""
     try:
         message = await PrivateMessageService.update_reaction(
-            db,
-            message_id,
-            current_user.id,
-            data.emoji,
-            data.action == ReactionActionEnum.ADD
+            db, message_id, current_user.id, data.emoji, data.action == ReactionActionEnum.ADD
         )
         await db.commit()
-        await manager.send_personal_message({
-            "type": "reaction_update",
-            "message_id": str(message.id),
-            "reactions": message.reactions or {}
-        }, str(message.sender_id))
+        await manager.send_personal_message(
+            {"type": "reaction_update", "message_id": str(message.id), "reactions": message.reactions or {}},
+            str(message.sender_id),
+        )
         if not _is_self_only_visibility(message.content_data, current_user.id):
-            await manager.send_personal_message({
-                "type": "reaction_update",
-                "message_id": str(message.id),
-                "reactions": message.reactions or {}
-            }, str(message.receiver_id))
+            await manager.send_personal_message(
+                {"type": "reaction_update", "message_id": str(message.id), "reactions": message.reactions or {}},
+                str(message.receiver_id),
+            )
         return _build_private_message_info(message)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -2666,7 +2673,7 @@ async def search_private_messages(
     keyword: str = Query(min_length=1, max_length=120),
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """搜索私聊消息"""
     messages = await PrivateMessageService.search_messages(db, current_user.id, friend_id, keyword, limit)
@@ -2696,9 +2703,7 @@ async def _update_user_status(user_id: str, status: UserStatus):
 
 @router.put("/status", summary="更新在线状态")
 async def update_status(
-    data: UserStatusUpdate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    data: UserStatusUpdate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """手动更新在线状态"""
     # 重新加载以确保 attached
@@ -2718,10 +2723,7 @@ async def update_status(
 
 
 @router.websocket("/ws/connect")
-async def user_websocket_endpoint(
-    websocket: WebSocket,
-    token: str | None = Query(None)
-):
+async def user_websocket_endpoint(websocket: WebSocket, token: str | None = Query(None)):
     """
     用户个人 WebSocket 连接
     用于接收私信通知、系统通知等
@@ -2773,11 +2775,10 @@ async def user_websocket_endpoint(
 
 # ============ 打卡 ============
 
+
 @router.post("/checkin", response_model=CheckinResponse, summary="群组打卡")
 async def checkin(
-    data: CheckinRequest,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    data: CheckinRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     在群组中打卡
@@ -2791,13 +2792,16 @@ async def checkin(
         asyncio.create_task(_refresh_streak_signals(current_user.id))
 
         # Broadcast member checkin event
-        await manager.broadcast({
-            "type": "member_checkin",
-            "group_id": str(data.group_id),
-            "user": UserBrief.model_validate(current_user).model_dump(mode='json'),
-            "duration": data.today_duration_minutes,
-            "timestamp": datetime.now(UTC).isoformat()
-        }, str(data.group_id))
+        await manager.broadcast(
+            {
+                "type": "member_checkin",
+                "group_id": str(data.group_id),
+                "user": UserBrief.model_validate(current_user).model_dump(mode="json"),
+                "duration": data.today_duration_minutes,
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            str(data.group_id),
+        )
 
         return result
     except ValueError as e:
@@ -2815,12 +2819,13 @@ async def _refresh_streak_signals(user_id: UUID) -> None:
 
 # ============ 群任务 ============
 
+
 @router.post("/groups/{group_id}/tasks", response_model=GroupTaskInfo, summary="创建群任务")
 async def create_group_task(
     group_id: UUID,
     data: GroupTaskCreate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """创建群任务（仅群主/管理员）"""
     try:
@@ -2828,17 +2833,20 @@ async def create_group_task(
         await db.commit()
 
         # Broadcast task created event
-        await manager.broadcast({
-            "type": "task_created",
-            "group_id": str(group_id),
-            "task": {
-                "id": str(task.id),
-                "title": task.title,
-                "description": task.description,
-                "creator": UserBrief.model_validate(current_user).model_dump(mode='json')
+        await manager.broadcast(
+            {
+                "type": "task_created",
+                "group_id": str(group_id),
+                "task": {
+                    "id": str(task.id),
+                    "title": task.title,
+                    "description": task.description,
+                    "creator": UserBrief.model_validate(current_user).model_dump(mode="json"),
+                },
+                "timestamp": datetime.now(UTC).isoformat(),
             },
-            "timestamp": datetime.now(UTC).isoformat()
-        }, str(group_id))
+            str(group_id),
+        )
 
         return GroupTaskInfo(
             id=task.id,
@@ -2859,10 +2867,10 @@ async def create_group_task(
                 nickname=current_user.nickname,
                 avatar_url=current_user.avatar_url,
                 flame_level=current_user.flame_level,
-                flame_brightness=current_user.flame_brightness
+                flame_brightness=current_user.flame_brightness,
             ),
             is_claimed_by_me=False,
-            my_completion_status=None
+            my_completion_status=None,
         )
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
@@ -2870,50 +2878,52 @@ async def create_group_task(
 
 @router.get("/groups/{group_id}/tasks", response_model=list[GroupTaskInfo], summary="获取群任务列表")
 async def get_group_tasks(
-    group_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """获取群组的任务列表"""
     tasks = await GroupTaskService.get_group_tasks(db, group_id, current_user.id)
 
     result = []
     for task_dict in tasks:
-        creator = task_dict.get('creator')
-        creator_brief = UserBrief(
-            id=creator.id,
-            username=creator.username,
-            nickname=creator.nickname,
-            avatar_url=creator.avatar_url,
-            flame_level=creator.flame_level,
-            flame_brightness=creator.flame_brightness
-        ) if creator else None
+        creator = task_dict.get("creator")
+        creator_brief = (
+            UserBrief(
+                id=creator.id,
+                username=creator.username,
+                nickname=creator.nickname,
+                avatar_url=creator.avatar_url,
+                flame_level=creator.flame_level,
+                flame_brightness=creator.flame_brightness,
+            )
+            if creator
+            else None
+        )
 
-        result.append(GroupTaskInfo(
-            id=task_dict['id'],
-            created_at=task_dict['created_at'],
-            updated_at=task_dict['updated_at'],
-            title=task_dict['title'],
-            description=task_dict['description'],
-            tags=task_dict['tags'],
-            estimated_minutes=task_dict['estimated_minutes'],
-            difficulty=task_dict['difficulty'],
-            total_claims=task_dict['total_claims'],
-            total_completions=task_dict['total_completions'],
-            completion_rate=task_dict['completion_rate'],
-            due_date=task_dict['due_date'],
-            creator=creator_brief,
-            is_claimed_by_me=task_dict['is_claimed_by_me'],
-            my_completion_status=task_dict['my_completion_status']
-        ))
+        result.append(
+            GroupTaskInfo(
+                id=task_dict["id"],
+                created_at=task_dict["created_at"],
+                updated_at=task_dict["updated_at"],
+                title=task_dict["title"],
+                description=task_dict["description"],
+                tags=task_dict["tags"],
+                estimated_minutes=task_dict["estimated_minutes"],
+                difficulty=task_dict["difficulty"],
+                total_claims=task_dict["total_claims"],
+                total_completions=task_dict["total_completions"],
+                completion_rate=task_dict["completion_rate"],
+                due_date=task_dict["due_date"],
+                creator=creator_brief,
+                is_claimed_by_me=task_dict["is_claimed_by_me"],
+                my_completion_status=task_dict["my_completion_status"],
+            )
+        )
     return result
 
 
 @router.post("/tasks/{task_id}/claim", summary="认领群任务")
 async def claim_group_task(
-    task_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    task_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """认领群任务，会在个人任务系统中创建对应任务"""
     try:
@@ -2926,11 +2936,10 @@ async def claim_group_task(
 
 # ============ 火堆状态 ============
 
+
 @router.get("/groups/{group_id}/flame", response_model=GroupFlameStatus, summary="获取群组火堆状态")
 async def get_group_flame_status(
-    group_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     获取群组火堆可视化数据
@@ -2949,12 +2958,10 @@ async def get_group_flame_status(
 
     # 获取群组成员的火苗数据
     result = await db.execute(
-        select(GroupMember, User).join(
-            User, GroupMember.user_id == User.id
-        ).where(
-            GroupMember.group_id == group_id,
-            GroupMember.not_deleted_filter()
-        ).order_by(GroupMember.flame_contribution.desc())
+        select(GroupMember, User)
+        .join(User, GroupMember.user_id == User.id)
+        .where(GroupMember.group_id == group_id, GroupMember.not_deleted_filter())
+        .order_by(GroupMember.flame_contribution.desc())
     )
 
     flames = []
@@ -2978,32 +2985,30 @@ async def get_group_flame_status(
         else:
             color = "#FF9500"  # 橙色
 
-        flames.append(FlameStatus(
-            user_id=user.id,
-            flame_power=power,
-            flame_color=color,
-            flame_size=size,
-            position_x=math.cos(angle) * radius,
-            position_y=math.sin(angle) * radius
-        ))
+        flames.append(
+            FlameStatus(
+                user_id=user.id,
+                flame_power=power,
+                flame_color=color,
+                flame_size=size,
+                position_x=math.cos(angle) * radius,
+                position_y=math.sin(angle) * radius,
+            )
+        )
 
-    bonfire_level = min(5, (group['total_flame_power'] // 1000) + 1)
+    bonfire_level = min(5, (group["total_flame_power"] // 1000) + 1)
 
     return GroupFlameStatus(
-        group_id=group_id,
-        total_power=group['total_flame_power'],
-        flames=flames,
-        bonfire_level=bonfire_level
+        group_id=group_id, total_power=group["total_flame_power"], flames=flames, bonfire_level=bonfire_level
     )
 
 
 # ============ 资源共享 ============
 
+
 @router.post("/share", response_model=SharedResourceInfo, summary="分享资源")
 async def share_resource(
-    data: SharedResourceCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    data: SharedResourceCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     分享任务、计划或认知碎片给群组或好友
@@ -3055,23 +3060,55 @@ async def share_resource(
             target_group_id=data.target_group_id,
             target_user_id=data.target_user_id,
             permission=data.permission,
-            comment=data.comment
+            comment=data.comment,
         )
         if card_share is not None:
             shared.card_share_record_id = card_share.id
             db.add(shared)
 
-        share_payload = _compact_dict({
-            "resource_type": resource_type.value,
-            "resource_id": str(data.resource_id),
-            "shared_resource_id": str(shared.id),
-            "card_share_record_id": str(card_share.id) if card_share else None,
-            "resource_title": brief["title"],
-            "resource_summary": brief["summary"],
-            "resource_meta": brief["meta"],
-            "permission": shared.permission,
-            "comment": data.comment
-        })
+        owner_payload = _share_owner_payload(current_user)
+        visibility = "group" if data.target_group_id else "direct"
+        adoption_action = _compact_dict(
+            {
+                "id": "adopt_shared_resource",
+                "type": "adopt_resource",
+                "label": "采纳到我的空间",
+                "route": f"/community/shared-resources/{shared.id}/adopt",
+                "payload": {
+                    "shared_resource_id": str(shared.id),
+                    "resource_type": resource_type.value,
+                    "resource_id": str(data.resource_id),
+                },
+            }
+        )
+        source_receipt = _compact_dict(
+            {
+                "channel": "community_share",
+                "shared_resource_id": str(shared.id),
+                "shared_by_user_id": str(current_user.id),
+                "card_share_record_id": str(card_share.id) if card_share else None,
+            }
+        )
+
+        share_payload = _compact_dict(
+            {
+                "resource_type": resource_type.value,
+                "resource_id": str(data.resource_id),
+                "shared_resource_id": str(shared.id),
+                "card_share_record_id": str(card_share.id) if card_share else None,
+                "resource_title": brief["title"],
+                "resource_summary": brief["summary"],
+                "resource_meta": brief["meta"],
+                "permission": shared.permission,
+                "comment": data.comment,
+                "owner": owner_payload,
+                "visibility": visibility,
+                "preview": {"title": brief["title"], "summary": brief["summary"], "meta": brief["meta"]},
+                "source_receipt": source_receipt,
+                "adoption_action": adoption_action,
+                "availability": "available",
+            }
+        )
 
         message_type = _share_message_type(resource_type)
         message_content = data.comment
@@ -3082,11 +3119,7 @@ async def share_resource(
                 db,
                 data.target_group_id,
                 current_user.id,
-                MessageSend(
-                    message_type=message_type,
-                    content=message_content,
-                    content_data=share_payload
-                )
+                MessageSend(message_type=message_type, content=message_content, content_data=share_payload),
             )
             message_info = _build_message_info(message)
             await CommunitySignalBridge(db).handle_resource_shared(
@@ -3104,8 +3137,8 @@ async def share_resource(
                     target_user_id=data.target_user_id,
                     message_type=message_type,
                     content=message_content,
-                    content_data=share_payload
-                )
+                    content_data=share_payload,
+                ),
             )
             message_info = _build_private_message_info(message)
 
@@ -3113,10 +3146,10 @@ async def share_resource(
 
         if message_info:
             if data.target_group_id:
-                await manager.broadcast(message_info.model_dump(mode='json'), str(data.target_group_id))
+                await manager.broadcast(message_info.model_dump(mode="json"), str(data.target_group_id))
             elif data.target_user_id:
-                await manager.send_personal_message(message_info.model_dump(mode='json'), str(data.target_user_id))
-                await manager.send_personal_message(message_info.model_dump(mode='json'), str(current_user.id))
+                await manager.send_personal_message(message_info.model_dump(mode="json"), str(data.target_user_id))
+                await manager.send_personal_message(message_info.model_dump(mode="json"), str(current_user.id))
 
         # Construct response
         return SharedResourceInfo(
@@ -3151,6 +3184,9 @@ async def share_resource(
                 meta=brief["meta"],
                 target_group_id=str(data.target_group_id) if data.target_group_id else None,
                 target_user_id=str(data.target_user_id) if data.target_user_id else None,
+                owner=owner_payload,
+                visibility=visibility,
+                availability="available",
             ),
         )
     except ValueError as e:
@@ -3163,26 +3199,25 @@ async def get_group_resources(
     resource_type: SharedResourceTypeEnum | None = None,
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     获取分享到群组的资源列表
     """
-    # Check if user is member
-    await GroupService.get_group(db, group_id, current_user.id) # Will raise/return None if not accessible?
-    # Actually get_group returns None if not found or not member?
-    # Current implementation of get_group checks permission implicitly or explicitly?
-    # Let's rely on service check or do manual check if strictly needed.
-    # GroupService.get_group returns group info if user is member (based on internal logic usually).
+    try:
+        await GroupService._require_active_member(db, group_id, current_user.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail="不是群组成员") from exc
 
     rtype = SharedResourceType(resource_type.value) if resource_type else None
 
-    resources = await collaboration_service.get_group_resources(
-        db, group_id, rtype, limit
-    )
+    resources = await collaboration_service.get_group_resources(db, group_id, rtype, limit, viewer_id=current_user.id)
 
     result = []
     for res in resources:
+        if not _shared_resource_payload_is_active(res):
+            continue
+
         # Determine strict type string
         r_type_str = "unknown"
         resource_title = None
@@ -3228,45 +3263,64 @@ async def get_group_resources(
             resource_title = brief["title"]
             resource_summary = brief["summary"]
 
-        result.append(SharedResourceInfo(
-            id=res.id,
-            created_at=res.created_at,
-            updated_at=res.updated_at,
-            resource_type=r_type_str,
-            plan_id=res.plan_id,
-            task_id=res.task_id,
-            knowledge_node_id=res.knowledge_node_id,
-            seed_library_id=res.seed_library_id,
-            seed_item_id=res.seed_item_id,
-            cognitive_fragment_id=res.cognitive_fragment_id,
-            curiosity_capsule_id=res.curiosity_capsule_id,
-            behavior_pattern_id=res.behavior_pattern_id,
-            card_share_record_id=res.card_share_record_id,
-            permission=res.permission,
-            comment=res.comment,
-            view_count=res.view_count,
-            save_count=res.save_count,
-            sharer=UserBrief.model_validate(res.sharer) if res.sharer else None,
-            resource_title=resource_title,
-            resource_summary=resource_summary,
-            entity_card=build_shared_resource_entity_card(
-                shared_resource_id=str(res.id),
+        result.append(
+            SharedResourceInfo(
+                id=res.id,
+                created_at=res.created_at,
+                updated_at=res.updated_at,
                 resource_type=r_type_str,
-                resource_id=(
-                    str(res.plan_id or res.task_id or res.knowledge_node_id or res.seed_library_id or res.seed_item_id
-                        or res.cognitive_fragment_id or res.curiosity_capsule_id or res.behavior_pattern_id)
-                    if (
-                        res.plan_id or res.task_id or res.knowledge_node_id or res.seed_library_id or res.seed_item_id
-                        or res.cognitive_fragment_id or res.curiosity_capsule_id or res.behavior_pattern_id
-                    )
-                    else None
-                ),
-                title=resource_title or "共享资源",
-                summary=resource_summary,
+                plan_id=res.plan_id,
+                task_id=res.task_id,
+                knowledge_node_id=res.knowledge_node_id,
+                seed_library_id=res.seed_library_id,
+                seed_item_id=res.seed_item_id,
+                cognitive_fragment_id=res.cognitive_fragment_id,
+                curiosity_capsule_id=res.curiosity_capsule_id,
+                behavior_pattern_id=res.behavior_pattern_id,
+                card_share_record_id=res.card_share_record_id,
                 permission=res.permission,
                 comment=res.comment,
-            ),
-        ))
+                view_count=res.view_count,
+                save_count=res.save_count,
+                sharer=UserBrief.model_validate(res.sharer) if res.sharer else None,
+                resource_title=resource_title,
+                resource_summary=resource_summary,
+                entity_card=build_shared_resource_entity_card(
+                    shared_resource_id=str(res.id),
+                    resource_type=r_type_str,
+                    resource_id=(
+                        str(
+                            res.plan_id
+                            or res.task_id
+                            or res.knowledge_node_id
+                            or res.seed_library_id
+                            or res.seed_item_id
+                            or res.cognitive_fragment_id
+                            or res.curiosity_capsule_id
+                            or res.behavior_pattern_id
+                        )
+                        if (
+                            res.plan_id
+                            or res.task_id
+                            or res.knowledge_node_id
+                            or res.seed_library_id
+                            or res.seed_item_id
+                            or res.cognitive_fragment_id
+                            or res.curiosity_capsule_id
+                            or res.behavior_pattern_id
+                        )
+                        else None
+                    ),
+                    title=resource_title or "共享资源",
+                    summary=resource_summary,
+                    permission=res.permission,
+                    comment=res.comment,
+                    owner=_share_owner_payload(res.sharer),
+                    visibility="group",
+                    availability="available",
+                ),
+            )
+        )
     return result
 
 
@@ -3343,10 +3397,12 @@ async def _clone_seed_library_with_items(
     await db.flush()
 
     items_result = await db.execute(
-        select(SeedItem).where(
+        select(SeedItem)
+        .where(
             SeedItem.library_id == original.id,
             SeedItem.not_deleted_filter(),
-        ).order_by(SeedItem.order_index.asc(), SeedItem.created_at.asc())
+        )
+        .order_by(SeedItem.order_index.asc(), SeedItem.created_at.asc())
     )
     for item in items_result.scalars().all():
         db.add(
@@ -3472,10 +3528,7 @@ async def adopt_shared_resource(
                 or result.root_card.metadata_.get("title")
                 or result.root_card.card_type.value.title()
             )
-            card_summary = (
-                result.root_card.metadata_.get("description")
-                or result.root_card.metadata_.get("objective")
-            )
+            card_summary = result.root_card.metadata_.get("description") or result.root_card.metadata_.get("objective")
             entity_card = _build_adopted_entity_card(
                 resource_type=result.root_card.card_type.value.lower(),
                 resource_id=result.root_card.id,
@@ -3497,6 +3550,7 @@ async def adopt_shared_resource(
     resource_type = ""
     resource_title = ""
     resource_summary = None
+    adoption_next_actions: list[dict] = []
 
     if shared.task_id:
         original = await db.get(Task, shared.task_id)
@@ -3632,7 +3686,9 @@ async def adopt_shared_resource(
             depth_level=original.depth_level,
             generation_method=original.generation_method,
             source_context=deepcopy(original.source_context) if original.source_context else None,
-            personalization_context=deepcopy(original.personalization_context) if original.personalization_context else None,
+            personalization_context=(
+                deepcopy(original.personalization_context) if original.personalization_context else None
+            ),
             quality_score=original.quality_score,
             feedback_count=0,
             share_count=0,
@@ -3652,6 +3708,7 @@ async def adopt_shared_resource(
         resource_type = "seed_library"
         resource_title = new_library.name
         resource_summary = new_library.description
+        adoption_next_actions = await SeedLibraryService().get_library_adoption_actions(db, new_library)
     elif shared.seed_item_id:
         original = await db.get(SeedItem, shared.seed_item_id)
         if not original:
@@ -3689,6 +3746,7 @@ async def adopt_shared_resource(
         resource_type = "seed_item"
         resource_title = new_item.title or "种子内容"
         resource_summary = new_item.content
+        adoption_next_actions = SeedLibraryService().build_item_adoption_actions(new_item)
     elif shared.behavior_pattern_id:
         original = await db.get(BehaviorPattern, shared.behavior_pattern_id)
         if not original:
@@ -3758,16 +3816,16 @@ async def adopt_shared_resource(
         "resource_type": resource_type,
         "new_resource_id": str(new_id),
         "entity_card": entity_card,
+        "adoption_next_actions": adoption_next_actions,
     }
 
 
 # ============ 端到端加密 ============
 
+
 @router.post("/encryption/keys", response_model=EncryptionKeyInfo, summary="注册加密公钥")
 async def register_encryption_key(
-    data: EncryptionKeyCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    data: EncryptionKeyCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """
     注册用户的公钥用于端到端加密
@@ -3786,15 +3844,13 @@ async def register_encryption_key(
         key_type=key.key_type,
         device_id=key.device_id,
         is_active=key.is_active,
-        expires_at=key.expires_at
+        expires_at=key.expires_at,
     )
 
 
 @router.get("/encryption/keys/{user_id}", response_model=list[EncryptionKeyInfo], summary="获取用户公钥")
 async def get_user_encryption_keys(
-    user_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    user_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """获取指定用户的活跃公钥列表"""
     keys = await EncryptionService.get_user_public_keys(db, user_id)
@@ -3807,16 +3863,15 @@ async def get_user_encryption_keys(
             key_type=key.key_type,
             device_id=key.device_id,
             is_active=key.is_active,
-            expires_at=key.expires_at
-        ) for key in keys
+            expires_at=key.expires_at,
+        )
+        for key in keys
     ]
 
 
 @router.delete("/encryption/keys/{key_id}", summary="撤销加密密钥")
 async def revoke_encryption_key(
-    key_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    key_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """撤销指定的加密密钥"""
     success = await EncryptionService.revoke_key(db, current_user.id, key_id)
@@ -3828,12 +3883,13 @@ async def revoke_encryption_key(
 
 # ============ 群管理与风控 ============
 
+
 @router.put("/groups/{group_id}/announcement", summary="更新群公告")
 async def update_group_announcement(
     group_id: UUID,
     data: GroupAnnouncementUpdate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """更新群公告（仅群主/管理员）"""
     try:
@@ -3841,12 +3897,15 @@ async def update_group_announcement(
         await db.commit()
 
         # 广播公告更新
-        await manager.broadcast({
-            "type": "announcement_update",
-            "group_id": str(group_id),
-            "announcement": group.announcement,
-            "updated_at": group.announcement_updated_at.isoformat() if group.announcement_updated_at else None
-        }, str(group_id))
+        await manager.broadcast(
+            {
+                "type": "announcement_update",
+                "group_id": str(group_id),
+                "announcement": group.announcement,
+                "updated_at": group.announcement_updated_at.isoformat() if group.announcement_updated_at else None,
+            },
+            str(group_id),
+        )
 
         return {"success": True, "announcement": group.announcement}
     except ValueError as e:
@@ -3858,7 +3917,7 @@ async def update_group_moderation_settings(
     group_id: UUID,
     data: GroupModerationSettings,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """更新群管理设置（仅群主/管理员）"""
     try:
@@ -3866,18 +3925,21 @@ async def update_group_moderation_settings(
         await db.commit()
 
         # Broadcast settings updated event
-        await manager.broadcast({
-            "type": "group_settings_updated",
-            "group_id": str(group_id),
-            "settings": data.model_dump(mode='json'),
-            "timestamp": datetime.now(UTC).isoformat()
-        }, str(group_id))
+        await manager.broadcast(
+            {
+                "type": "group_settings_updated",
+                "group_id": str(group_id),
+                "settings": data.model_dump(mode="json"),
+                "timestamp": datetime.now(UTC).isoformat(),
+            },
+            str(group_id),
+        )
 
         return {
             "success": True,
             "mute_all": group.mute_all,
             "slow_mode_seconds": group.slow_mode_seconds,
-            "keyword_filters_count": len(group.keyword_filters or [])
+            "keyword_filters_count": len(group.keyword_filters or []),
         }
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
@@ -3889,7 +3951,7 @@ async def mute_group_member(
     user_id: UUID,
     data: MemberMuteRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """禁言群成员（仅群主/管理员）"""
     try:
@@ -3899,12 +3961,15 @@ async def mute_group_member(
         await db.commit()
 
         # 通知被禁言用户
-        await manager.send_personal_message({
-            "type": "muted",
-            "group_id": str(group_id),
-            "mute_until": member.mute_until.isoformat() if member.mute_until else None,
-            "reason": data.reason
-        }, str(user_id))
+        await manager.send_personal_message(
+            {
+                "type": "muted",
+                "group_id": str(group_id),
+                "mute_until": member.mute_until.isoformat() if member.mute_until else None,
+                "reason": data.reason,
+            },
+            str(user_id),
+        )
 
         return {"success": True, "mute_until": member.mute_until}
     except ValueError as e:
@@ -3913,10 +3978,7 @@ async def mute_group_member(
 
 @router.delete("/groups/{group_id}/members/{user_id}/mute", summary="解除禁言")
 async def unmute_group_member(
-    group_id: UUID,
-    user_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    group_id: UUID, user_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """解除成员禁言（仅群主/管理员）"""
     try:
@@ -3924,10 +3986,7 @@ async def unmute_group_member(
         await db.commit()
 
         # 通知用户
-        await manager.send_personal_message({
-            "type": "unmuted",
-            "group_id": str(group_id)
-        }, str(user_id))
+        await manager.send_personal_message({"type": "unmuted", "group_id": str(group_id)}, str(user_id))
 
         return {"success": True}
     except ValueError as e:
@@ -3940,7 +3999,7 @@ async def warn_group_member(
     user_id: UUID,
     data: MemberWarnRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """警告群成员（仅群主/管理员）"""
     try:
@@ -3949,12 +4008,10 @@ async def warn_group_member(
         await db.commit()
 
         # 通知被警告用户
-        await manager.send_personal_message({
-            "type": "warned",
-            "group_id": str(group_id),
-            "reason": data.reason,
-            "warn_count": member.warn_count
-        }, str(user_id))
+        await manager.send_personal_message(
+            {"type": "warned", "group_id": str(group_id), "reason": data.reason, "warn_count": member.warn_count},
+            str(user_id),
+        )
 
         return {"success": True, "warn_count": member.warn_count}
     except ValueError as e:
@@ -3963,13 +4020,14 @@ async def warn_group_member(
 
 # ============ 消息举报 ============
 
+
 @router.post("/reports", response_model=MessageReportInfo, summary="举报消息")
 @limiter.limit("10/minute")
 async def report_message(
     request: Request,
     data: MessageReportCreate,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """举报违规消息"""
     try:
@@ -3986,7 +4044,7 @@ async def report_message(
             status=report.status,
             reviewed_by=None,
             reviewed_at=None,
-            action_taken=None
+            action_taken=None,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -3997,7 +4055,7 @@ async def get_group_pending_reports(
     group_id: UUID,
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """获取群组中待处理的举报（仅群主/管理员）"""
     # 验证管理员权限
@@ -4005,8 +4063,8 @@ async def get_group_pending_reports(
         select(GroupMember).where(
             GroupMember.group_id == group_id,
             GroupMember.user_id == current_user.id,
-            GroupMember.role.in_(['owner', 'admin']),
-            GroupMember.not_deleted_filter()
+            GroupMember.role.in_(["owner", "admin"]),
+            GroupMember.not_deleted_filter(),
         )
     )
     if not result.scalar_one_or_none():
@@ -4024,8 +4082,9 @@ async def get_group_pending_reports(
             status=r.status,
             reviewed_by=None,
             reviewed_at=r.reviewed_at,
-            action_taken=r.action_taken
-        ) for r in reports
+            action_taken=r.action_taken,
+        )
+        for r in reports
     ]
 
 
@@ -4034,7 +4093,7 @@ async def review_message_report(
     report_id: UUID,
     data: MessageReportReview,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """审核消息举报（仅管理员）"""
     try:
@@ -4051,7 +4110,7 @@ async def review_message_report(
             status=report.status,
             reviewed_by=UserBrief.model_validate(current_user),
             reviewed_at=report.reviewed_at,
-            action_taken=report.action_taken
+            action_taken=report.action_taken,
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -4059,11 +4118,10 @@ async def review_message_report(
 
 # ============ 消息收藏 ============
 
+
 @router.post("/favorites", response_model=MessageFavoriteInfo, summary="收藏消息")
 async def add_message_favorite(
-    data: MessageFavoriteCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    data: MessageFavoriteCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """收藏消息"""
     try:
@@ -4105,7 +4163,7 @@ async def get_message_favorites(
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """获取我的消息收藏列表"""
     favorites = await FavoriteService.get_favorites(db, current_user.id, tags, limit, offset)
@@ -4113,7 +4171,8 @@ async def get_message_favorites(
     result = []
     for fav in favorites:
         if fav.group_message and not _is_visible_to(
-            getattr(fav.group_message, "content_data", None), current_user.id,
+            getattr(fav.group_message, "content_data", None),
+            current_user.id,
         ):
             continue
         preview = None
@@ -4122,27 +4181,27 @@ async def get_message_favorites(
         elif fav.private_message and fav.private_message.content:
             preview = fav.private_message.content[:100]
 
-        result.append(MessageFavoriteInfo(
-            id=fav.id,
-            created_at=fav.created_at,
-            updated_at=fav.updated_at,
-            user_id=fav.user_id,
-            group_message_id=fav.group_message_id,
-            private_message_id=fav.private_message_id,
-            note=fav.note,
-            tags=fav.tags,
-            message_preview=preview,
-            group_message=_build_message_info(fav.group_message) if fav.group_message else None,
-            private_message=_build_private_message_info(fav.private_message) if fav.private_message else None,
-        ))
+        result.append(
+            MessageFavoriteInfo(
+                id=fav.id,
+                created_at=fav.created_at,
+                updated_at=fav.updated_at,
+                user_id=fav.user_id,
+                group_message_id=fav.group_message_id,
+                private_message_id=fav.private_message_id,
+                note=fav.note,
+                tags=fav.tags,
+                message_preview=preview,
+                group_message=_build_message_info(fav.group_message) if fav.group_message else None,
+                private_message=_build_private_message_info(fav.private_message) if fav.private_message else None,
+            )
+        )
     return result
 
 
 @router.delete("/favorites/{favorite_id}", summary="取消收藏")
 async def remove_message_favorite(
-    favorite_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    favorite_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """取消消息收藏"""
     success = await FavoriteService.remove_favorite(db, current_user.id, favorite_id)
@@ -4154,11 +4213,10 @@ async def remove_message_favorite(
 
 # ============ 消息转发 ============
 
+
 @router.post("/forward", summary="转发消息")
 async def forward_message(
-    data: MessageForwardRequest,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    data: MessageForwardRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """转发消息到群组或用户"""
     try:
@@ -4168,11 +4226,11 @@ async def forward_message(
         # 构建消息信息并广播
         if data.target_group_id:
             msg_info = _build_message_info(forwarded)
-            await manager.broadcast(msg_info.model_dump(mode='json'), str(data.target_group_id))
+            await manager.broadcast(msg_info.model_dump(mode="json"), str(data.target_group_id))
         elif data.target_user_id:
             msg_info = _build_private_message_info(forwarded)
-            await manager.send_personal_message(msg_info.model_dump(mode='json'), str(data.target_user_id))
-            await manager.send_personal_message(msg_info.model_dump(mode='json'), str(current_user.id))
+            await manager.send_personal_message(msg_info.model_dump(mode="json"), str(data.target_user_id))
+            await manager.send_personal_message(msg_info.model_dump(mode="json"), str(current_user.id))
 
         return {"success": True, "message_id": str(forwarded.id)}
     except ValueError as e:
@@ -4181,11 +4239,10 @@ async def forward_message(
 
 # ============ 跨群广播 ============
 
+
 @router.post("/broadcast", response_model=BroadcastMessageInfo, summary="跨群广播")
 async def create_broadcast_message(
-    data: BroadcastMessageCreate,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    data: BroadcastMessageCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """发送跨群广播消息（需要在所有目标群组中是管理员）"""
     try:
@@ -4194,13 +4251,16 @@ async def create_broadcast_message(
 
         # 广播到所有目标群组
         for group_id in data.target_group_ids:
-            await manager.broadcast({
-                "type": "broadcast",
-                "broadcast_id": str(broadcast.id),
-                "sender_id": str(current_user.id),
-                "content": broadcast.content,
-                "content_data": broadcast.content_data
-            }, str(group_id))
+            await manager.broadcast(
+                {
+                    "type": "broadcast",
+                    "broadcast_id": str(broadcast.id),
+                    "sender_id": str(current_user.id),
+                    "content": broadcast.content,
+                    "content_data": broadcast.content_data,
+                },
+                str(group_id),
+            )
 
         return BroadcastMessageInfo(
             id=broadcast.id,
@@ -4210,7 +4270,7 @@ async def create_broadcast_message(
             content=broadcast.content,
             content_data=broadcast.content_data,
             target_group_ids=data.target_group_ids,
-            delivered_count=broadcast.delivered_count
+            delivered_count=broadcast.delivered_count,
         )
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
@@ -4218,12 +4278,15 @@ async def create_broadcast_message(
 
 # ============ 高级搜索 ============
 
-@router.post("/groups/{group_id}/messages/search/advanced", response_model=MessageSearchResult, summary="高级搜索群消息")
+
+@router.post(
+    "/groups/{group_id}/messages/search/advanced", response_model=MessageSearchResult, summary="高级搜索群消息"
+)
 async def advanced_search_group_messages(
     group_id: UUID,
     data: MessageSearchRequest,
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """
     高级消息搜索
@@ -4239,8 +4302,7 @@ async def advanced_search_group_messages(
         result = await MessageSearchService.search_group_messages(db, group_id, current_user.id, data)
 
         visible_messages = [
-            msg for msg in result["messages"]
-            if _is_visible_to(getattr(msg, "content_data", None), current_user.id)
+            msg for msg in result["messages"] if _is_visible_to(getattr(msg, "content_data", None), current_user.id)
         ]
         messages = [_build_message_info(msg) for msg in visible_messages]
 
@@ -4249,7 +4311,7 @@ async def advanced_search_group_messages(
             total=result["total"],
             page=result["page"],
             page_size=result["page_size"],
-            has_more=result["has_more"]
+            has_more=result["has_more"],
         )
     except ValueError as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
@@ -4257,17 +4319,13 @@ async def advanced_search_group_messages(
 
 @router.get("/groups/{group_id}/topics", summary="获取群组话题列表")
 async def get_group_topics(
-    group_id: UUID,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """获取群组中使用的话题列表及消息数量"""
     # 验证成员身份
     result = await db.execute(
         select(GroupMember).where(
-            GroupMember.group_id == group_id,
-            GroupMember.user_id == current_user.id,
-            GroupMember.not_deleted_filter()
+            GroupMember.group_id == group_id, GroupMember.user_id == current_user.id, GroupMember.not_deleted_filter()
         )
     )
     if not result.scalar_one_or_none():
@@ -4279,11 +4337,12 @@ async def get_group_topics(
 
 # ============ 离线队列 ============
 
+
 @router.get("/offline/pending", response_model=list[OfflineMessageInfo], summary="获取待发送的离线消息")
 async def get_pending_offline_messages(
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """获取当前用户待发送的离线消息"""
     messages = await OfflineQueueService.get_pending_messages(db, current_user.id, limit)
@@ -4297,8 +4356,9 @@ async def get_pending_offline_messages(
             target_id=msg.target_id,
             status=msg.status,
             retry_count=msg.retry_count,
-            error_message=msg.error_message
-        ) for msg in messages
+            error_message=msg.error_message,
+        )
+        for msg in messages
     ]
 
 
@@ -4306,7 +4366,7 @@ async def get_pending_offline_messages(
 async def get_failed_offline_messages(
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
     """获取发送失败的离线消息（用于批量重试UI）"""
     messages = await OfflineQueueService.get_failed_messages(db, current_user.id, limit)
@@ -4320,25 +4380,20 @@ async def get_failed_offline_messages(
             target_id=msg.target_id,
             status=msg.status,
             retry_count=msg.retry_count,
-            error_message=msg.error_message
-        ) for msg in messages
+            error_message=msg.error_message,
+        )
+        for msg in messages
     ]
 
 
 @router.post("/offline/retry", summary="批量重试失败消息")
 async def retry_offline_messages(
-    data: OfflineMessageRetryRequest,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db)
+    data: OfflineMessageRetryRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
 ):
     """批量重试失败的离线消息"""
     messages = await OfflineQueueService.retry_messages(db, current_user.id, data)
     await db.commit()
-    return {
-        "success": True,
-        "retried_count": len(messages),
-        "message_ids": [str(m.id) for m in messages]
-    }
+    return {"success": True, "retried_count": len(messages), "message_ids": [str(m.id) for m in messages]}
 
 
 @router.get("/recommended-resources", summary="Get recommended shared resources from user's groups")
@@ -4376,13 +4431,75 @@ async def get_recommended_resources(
         file_record = await db.get(StoredFile, gf.file_id)
         if not file_record or file_record.is_deleted:
             continue
-        recommendations.append({
-            "file_id": str(gf.file_id),
-            "filename": file_record.file_name,
-            "group_id": str(gf.group_id),
-            "shared_by": str(gf.shared_by_id),
-            "trust_level": str(gf.trust_level),
-            "recommendation_reason": "High quality community resource from your study group",
-        })
+        recommendations.append(
+            {
+                "file_id": str(gf.file_id),
+                "filename": file_record.file_name,
+                "group_id": str(gf.group_id),
+                "shared_by": str(gf.shared_by_id),
+                "trust_level": str(gf.trust_level),
+                "recommendation_reason": "High quality community resource from your study group",
+            }
+        )
 
     return {"recommendations": recommendations, "count": len(recommendations)}
+
+
+# ============ 管理员社区审核 ============
+
+
+@router.get("/admin/reports", summary="获取所有待处理举报（管理员）")
+async def get_all_pending_reports_admin(
+    limit: int = Query(default=50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_active_superuser),
+):
+    """管理员查看所有群组的待处理举报。"""
+    from app.models.community import CommunityMessageReport
+
+    result = await db.execute(
+        select(CommunityMessageReport)
+        .where(CommunityMessageReport.status == "pending")
+        .order_by(CommunityMessageReport.created_at.desc())
+        .limit(limit)
+    )
+    reports = result.scalars().all()
+    return [
+        {
+            "id": str(r.id),
+            "created_at": r.created_at.isoformat() if r.created_at else None,
+            "updated_at": r.updated_at.isoformat() if r.updated_at else None,
+            "reporter_id": str(r.reporter_id) if r.reporter_id else None,
+            "group_id": str(r.group_id) if r.group_id else None,
+            "message_id": str(r.message_id) if r.message_id else None,
+            "reason": r.reason,
+            "description": r.description,
+            "status": r.status,
+            "reviewed_by": str(r.reviewed_by) if r.reviewed_by else None,
+            "reviewed_at": r.reviewed_at.isoformat() if r.reviewed_at else None,
+            "action_taken": r.action_taken,
+        }
+        for r in reports
+    ]
+
+
+@router.put("/admin/reports/{report_id}/resolve", summary="管理员处理举报")
+async def admin_resolve_report(
+    report_id: UUID,
+    data: MessageReportReview,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(get_current_active_superuser),
+):
+    """管理员审核并处理举报（超级管理员可处理任何举报）。"""
+    try:
+        report = await ReportService.review_report(db, _admin.id, report_id, data)
+        await db.commit()
+        return {
+            "id": str(report.id),
+            "status": report.status,
+            "action_taken": report.action_taken,
+            "reviewed_by": str(_admin.id),
+            "reviewed_at": report.reviewed_at.isoformat() if report.reviewed_at else None,
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e

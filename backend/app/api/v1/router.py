@@ -12,6 +12,7 @@ from fastapi import APIRouter
 from app.api.v1 import (
     accountability,
     achievements,
+    admin_dashboard,
     agent_stats,
     analytics,
     assets,
@@ -186,6 +187,7 @@ api_router.include_router(multi_agent.router, tags=["Multi-Agent"])
 # Calendar Events
 api_router.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
 api_router.include_router(accountability.router, prefix="/accountability", tags=["accountability"])
+api_router.include_router(admin_dashboard.router)
 api_router.include_router(aurora_status.router)
 
 
