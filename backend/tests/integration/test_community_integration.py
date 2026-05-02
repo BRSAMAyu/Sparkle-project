@@ -11,7 +11,6 @@
 - WebSocket 和多用户测试标记为跳过
 """
 
-
 import pytest
 import pytest_asyncio
 from fastapi import FastAPI
@@ -34,8 +33,10 @@ from app.models.community import (
     GroupType,
     Post,
     PrivateMessage,
+    SharedResource,
     UserBlock,
 )
+from app.models.task import Task, TaskType
 from app.models.user import User
 
 # ============================================================
@@ -113,9 +114,7 @@ async def community_test_users(db_session: AsyncSession) -> dict[str, User]:
     users = {}
 
     for i, name in enumerate(["Alice", "Bob", "Charlie"], 1):
-        result = await db_session.execute(
-            select(User).where(User.email == f"community_test_{i}@example.com")
-        )
+        result = await db_session.execute(select(User).where(User.email == f"community_test_{i}@example.com"))
         user = result.scalar_one_or_none()
 
         if not user:
@@ -124,7 +123,7 @@ async def community_test_users(db_session: AsyncSession) -> dict[str, User]:
                 username=f"test_user_{i}",
                 nickname=name,
                 hashed_password=pre_hashed_password,
-                is_active=True
+                is_active=True,
             )
             db_session.add(user)
             await db_session.commit()
@@ -139,14 +138,12 @@ async def community_test_users(db_session: AsyncSession) -> dict[str, User]:
 # Tests
 # ============================================================
 
+
 @pytest.mark.asyncio
 async def test_user_search(authenticated_client: TestClient):
     """测试用户搜索接口（需要认证）"""
     # 搜索 bob - path includes /community prefix since router is mounted there
-    response = authenticated_client.get(
-        "/users/search",
-        params={"keyword": "test_user_2"}
-    )
+    response = authenticated_client.get("/users/search", params={"keyword": "test_user_2"})
     # Note: 404 is acceptable if endpoint not mounted correctly
     assert response.status_code in [200, 404]
     if response.status_code == 200:
@@ -157,10 +154,7 @@ async def test_user_search(authenticated_client: TestClient):
 @pytest.mark.asyncio
 async def test_friend_recommendations(authenticated_client: TestClient):
     """测试好友推荐接口"""
-    response = authenticated_client.get(
-        "/friends/recommendations",
-        params={"limit": 10}
-    )
+    response = authenticated_client.get("/friends/recommendations", params={"limit": 10})
     # Note: May return 404 if endpoint not mounted, or 200 with empty list
     assert response.status_code in [200, 404]
     if response.status_code == 200:
@@ -185,13 +179,10 @@ async def test_group_creation(authenticated_client: TestClient):
         "type": "squad",
         "focus_tags": ["python", "testing"],
         "max_members": 10,
-        "is_public": True
+        "is_public": True,
     }
 
-    response = authenticated_client.post(
-        "/groups",
-        json=group_data
-    )
+    response = authenticated_client.post("/groups", json=group_data)
 
     # Note: May fail due to validation or route not found
     assert response.status_code in [200, 201, 422, 404]
@@ -303,7 +294,9 @@ async def test_feed_scoped_shows_public_and_friends(
 
     # Make Alice and Bob friends
     friendship = Friendship(
-        user_id=alice.id, friend_id=bob.id, status=FriendshipStatus.ACCEPTED,
+        user_id=alice.id,
+        friend_id=bob.id,
+        status=FriendshipStatus.ACCEPTED,
         initiated_by=alice.id,
     )
     db_session.add(friendship)
@@ -399,9 +392,166 @@ async def test_feed_excludes_reverse_blocked_users(
     assert "bob visible" not in contents
 
 
+@pytest.mark.asyncio
+async def test_group_resources_reject_non_members(
+    db_session: AsyncSession,
+    community_test_users: dict[str, User],
+):
+    """Group shared resources must not be listable by users outside the group."""
+    alice = community_test_users["alice"]
+    bob = community_test_users["bob"]
+    charlie = community_test_users["charlie"]
+
+    app = FastAPI()
+    app.include_router(community_router, prefix="/api/v1/community")
+
+    async def _override_get_db():
+        yield db_session
+
+    async def _override_get_current_user():
+        return charlie
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _override_get_current_user
+
+    group = Group(name="Private Resource Squad", type=GroupType.SQUAD, max_members=10)
+    db_session.add(group)
+    await db_session.flush()
+    task = Task(
+        user_id=alice.id,
+        title="Do not leak this task",
+        type=TaskType.LEARNING,
+        tags=[],
+        estimated_minutes=25,
+        difficulty=1,
+        energy_cost=1,
+        priority=1,
+    )
+    db_session.add(task)
+    await db_session.flush()
+    db_session.add_all(
+        [
+            GroupMember(group_id=group.id, user_id=alice.id, role=GroupRole.OWNER),
+            GroupMember(group_id=group.id, user_id=bob.id, role=GroupRole.MEMBER),
+            SharedResource(
+                group_id=group.id,
+                shared_by=alice.id,
+                task_id=task.id,
+                permission="view",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    with TestClient(app) as client:
+        response = client.get(f"/api/v1/community/groups/{group.id}/resources")
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "不是群组成员"
+
+
+@pytest.mark.asyncio
+async def test_group_resources_exclude_blocked_and_deleted_payloads(
+    db_session: AsyncSession,
+    community_test_users: dict[str, User],
+):
+    """Group resources must honor block relationships and soft-deleted payloads."""
+    alice = community_test_users["alice"]
+    bob = community_test_users["bob"]
+    charlie = community_test_users["charlie"]
+
+    app = FastAPI()
+    app.include_router(community_router, prefix="/api/v1/community")
+
+    async def _override_get_db():
+        yield db_session
+
+    async def _override_get_current_user():
+        return alice
+
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[get_current_user] = _override_get_current_user
+
+    group = Group(name="Guarded Resource Squad", type=GroupType.SQUAD, max_members=10)
+    db_session.add(group)
+    await db_session.flush()
+
+    visible_task = Task(
+        user_id=charlie.id,
+        title="Visible shared task",
+        type=TaskType.LEARNING,
+        tags=[],
+        estimated_minutes=25,
+        difficulty=1,
+        energy_cost=1,
+        priority=1,
+    )
+    blocked_task = Task(
+        user_id=bob.id,
+        title="Blocked shared task",
+        type=TaskType.LEARNING,
+        tags=[],
+        estimated_minutes=25,
+        difficulty=1,
+        energy_cost=1,
+        priority=1,
+    )
+    deleted_task = Task(
+        user_id=charlie.id,
+        title="Deleted shared task",
+        type=TaskType.LEARNING,
+        tags=[],
+        estimated_minutes=25,
+        difficulty=1,
+        energy_cost=1,
+        priority=1,
+    )
+    deleted_task.soft_delete()
+    db_session.add_all([visible_task, blocked_task, deleted_task])
+    await db_session.flush()
+
+    db_session.add_all(
+        [
+            GroupMember(group_id=group.id, user_id=alice.id, role=GroupRole.OWNER),
+            GroupMember(group_id=group.id, user_id=bob.id, role=GroupRole.MEMBER),
+            GroupMember(group_id=group.id, user_id=charlie.id, role=GroupRole.MEMBER),
+            UserBlock(blocker_id=alice.id, blocked_id=bob.id),
+            SharedResource(
+                group_id=group.id,
+                shared_by=charlie.id,
+                task_id=visible_task.id,
+                permission="view",
+            ),
+            SharedResource(
+                group_id=group.id,
+                shared_by=bob.id,
+                task_id=blocked_task.id,
+                permission="view",
+            ),
+            SharedResource(
+                group_id=group.id,
+                shared_by=charlie.id,
+                task_id=deleted_task.id,
+                permission="view",
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    with TestClient(app) as client:
+        response = client.get(f"/api/v1/community/groups/{group.id}/resources")
+
+    assert response.status_code == 200
+    titles = {item["resource_title"] for item in response.json()}
+    assert "Visible shared task" in titles
+    assert "Blocked shared task" not in titles
+    assert "Deleted shared task" not in titles
+
+
 # ============================================================
 # Cleanup
 # ============================================================
+
 
 @pytest.mark.asyncio
 async def cleanup_test_data(db_session: AsyncSession, community_test_users: dict[str, User]):
@@ -411,29 +561,21 @@ async def cleanup_test_data(db_session: AsyncSession, community_test_users: dict
     user_ids = [str(user.id) for user in community_test_users.values()]
 
     # 删除群成员
-    await db_session.execute(
-        delete(GroupMember).where(GroupMember.user_id.in_(user_ids))
-    )
+    await db_session.execute(delete(GroupMember).where(GroupMember.user_id.in_(user_ids)))
 
     # 删除群消息
-    await db_session.execute(
-        delete(GroupMessage).where(GroupMessage.sender_id.in_(user_ids))
-    )
+    await db_session.execute(delete(GroupMessage).where(GroupMessage.sender_id.in_(user_ids)))
 
     # 删除私信
     await db_session.execute(
         delete(PrivateMessage).where(
-            (PrivateMessage.sender_id.in_(user_ids)) |
-            (PrivateMessage.receiver_id.in_(user_ids))
+            (PrivateMessage.sender_id.in_(user_ids)) | (PrivateMessage.receiver_id.in_(user_ids))
         )
     )
 
     # 删除好友关系
     await db_session.execute(
-        delete(Friendship).where(
-            (Friendship.user_id.in_(user_ids)) |
-            (Friendship.friend_id.in_(user_ids))
-        )
+        delete(Friendship).where((Friendship.user_id.in_(user_ids)) | (Friendship.friend_id.in_(user_ids)))
     )
 
     # 删除群组

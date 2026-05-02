@@ -30,7 +30,7 @@ class CommunityScreen extends ConsumerWidget {
         icon: const Icon(Icons.edit),
         onPressed: () {
           unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
-          context.push(CommunityRoutes.postsCreate);
+          unawaited(context.push(CommunityRoutes.postsCreate));
         },
       ),
       child: SafeArea(
@@ -92,12 +92,22 @@ class CommunityScreen extends ConsumerWidget {
   Widget _buildHeader(BuildContext context, WidgetRef ref) {
     final selectedIndex = ref.watch(_communityFeedFilterProvider);
     final isChinese = Localizations.localeOf(context).languageCode == 'zh';
-    final filters = [
-      isChinese ? '全局动态' : 'Global Feed',
-      isChinese ? '我的小队' : 'My Squad',
-      isChinese ? '目标伙伴' : 'Goal Mates',
-      isChinese ? '我的关注' : 'Following',
-    ];
+    final filters = isChinese
+        ? ['全局动态', '我的小队', '目标伙伴', '我的关注']
+        : ['Global Feed', 'My Squad', 'Goal Mates', 'Following'];
+    final descriptions = isChinese
+        ? [
+            '公开动态，只显示所有人可见的内容',
+            '同小队成员的公开内容，好友内容仍尊重好友可见',
+            '当前责任伙伴和目标同路人的动态',
+            '已互相关注好友的动态',
+          ]
+        : [
+            'Public posts that are visible to everyone',
+            'Posts from squad members, with friend-only privacy preserved',
+            'Updates from active accountability partners',
+            'Posts from accepted friends',
+          ];
     const scopes = [null, 'squad', 'goal_mates', 'following'];
     return Padding(
       padding: const EdgeInsets.all(DS.lg),
@@ -132,12 +142,29 @@ class CommunityScreen extends ConsumerWidget {
                     isSelected: selectedIndex == i,
                     onTap: () {
                       ref.read(_communityFeedFilterProvider.notifier).state = i;
-                      ref.read(feedProvider.notifier).refresh(scope: scopes[i]);
+                      unawaited(
+                        ref.read(feedProvider.notifier).refresh(
+                              scope: scopes[i],
+                              clearScope: scopes[i] == null,
+                            ),
+                      );
                     },
                   ),
                   if (i < filters.length - 1) const SizedBox(width: DS.sm),
                 ],
               ],
+            ),
+          ),
+          const SizedBox(height: DS.sm),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 180),
+            child: Text(
+              descriptions[selectedIndex],
+              key: ValueKey(selectedIndex),
+              style: TextStyle(
+                color: DS.textSecondary,
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -148,43 +175,48 @@ class CommunityScreen extends ConsumerWidget {
   Widget _buildEmptyState(BuildContext context, WidgetRef ref) {
     final isChinese = Localizations.localeOf(context).languageCode == 'zh';
     return ScrollEdgeHaptics(
-        child: ListView(
-          children: [
-            _buildHeader(context, ref),
-            // UX-009: Goal-focused section showing accountability & common mistakes
-            const _GoalFocusSection(),
-            const SizedBox(height: DS.spacing64),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-              child: EmptyState(
-                title: isChinese ? '社区还没有火花' : 'No community spark yet',
-                description: isChinese
-                    ? '分享一个计划、洞察或小胜利，开始这里的第一次对话。'
-                    : 'Share a plan, insight, or small win to start the first conversation here.',
-                icon: Icons.forum_outlined,
-                actionText: isChinese ? '发一条动态' : 'Share a post',
-                onAction: () {
-                  unawaited(
-                    SensoryFeedbackService.emit(
-                      SensoryFeedbackEvent.confirm,
-                    ),
-                  );
-                  context.push(CommunityRoutes.postsCreate);
-                },
-                customAction: SparkleButton.ghost(
-                  label: isChinese ? '刷新动态' : 'Refresh feed',
-                  onPressed: () => ref.read(feedProvider.notifier).refresh(),
-                ),
+      child: ListView(
+        children: [
+          _buildHeader(context, ref),
+          // UX-009: Goal-focused section showing accountability & common mistakes
+          const _GoalFocusSection(),
+          const SizedBox(height: DS.spacing64),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+            child: EmptyState(
+              title: isChinese ? '社区还没有火花' : 'No community spark yet',
+              description: isChinese
+                  ? '分享一个计划、洞察或小胜利，开始这里的第一次对话。'
+                  : 'Share a plan, insight, or small win to start the first conversation here.',
+              icon: Icons.forum_outlined,
+              actionText: isChinese ? '发一条动态' : 'Share a post',
+              onAction: () {
+                unawaited(
+                  SensoryFeedbackService.emit(
+                    SensoryFeedbackEvent.confirm,
+                  ),
+                );
+                unawaited(context.push(CommunityRoutes.postsCreate));
+              },
+              customAction: SparkleButton.ghost(
+                label: isChinese ? '刷新动态' : 'Refresh feed',
+                onPressed: () =>
+                    unawaited(ref.read(feedProvider.notifier).refresh()),
               ),
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
   }
 }
 
 class _FilterChip extends StatelessWidget {
-  const _FilterChip({required this.label, required this.isSelected, required this.onTap});
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
@@ -233,7 +265,11 @@ class _GoalFocusSection extends StatelessWidget {
           const SizedBox(height: DS.md),
           Row(
             children: [
-              Icon(Icons.track_changes_rounded, size: 18, color: DS.brandPrimary),
+              Icon(
+                Icons.track_changes_rounded,
+                size: 18,
+                color: DS.brandPrimary,
+              ),
               const SizedBox(width: DS.sm),
               Text(
                 isChinese ? '目标聚焦' : 'Goal Focus',
@@ -249,22 +285,33 @@ class _GoalFocusSection extends StatelessWidget {
           _GoalFocusCard(
             icon: Icons.people_outline_rounded,
             title: isChinese ? '责任伙伴' : 'Accountability Partners',
-            subtitle: isChinese ? '与目标相近的伙伴结对' : 'Pair up with peers pursuing similar goals',
-            onTap: () => context.push(CommunityRoutes.accountability),
+            subtitle: isChinese
+                ? '与目标相近的伙伴结对'
+                : 'Pair up with peers pursuing similar goals',
+            onTap: () =>
+                unawaited(context.push(CommunityRoutes.accountability)),
           ),
           const SizedBox(height: DS.sm),
           _GoalFocusCard(
             icon: Icons.school_outlined,
             title: isChinese ? '常见错误' : 'Common Mistakes',
-            subtitle: isChinese ? '看看其他人在同一主题上遇到的困难' : 'See what others struggled with on the same topics',
-            onTap: () => context.push('${CommunityRoutes.home}/error-insights'),
+            subtitle: isChinese
+                ? '看看其他人在同一主题上遇到的困难'
+                : 'See what others struggled with on the same topics',
+            onTap: () => unawaited(
+              context.push('${CommunityRoutes.home}/error-insights'),
+            ),
           ),
           const SizedBox(height: DS.sm),
           _GoalFocusCard(
             icon: Icons.star_outline_rounded,
             title: isChinese ? '优质资源' : 'Top Resources',
-            subtitle: isChinese ? '来自同组伙伴评分最高的资料' : 'Highest-rated materials from your cohort',
-            onTap: () => context.push('${CommunityRoutes.home}/top-resources'),
+            subtitle: isChinese
+                ? '来自同组伙伴评分最高的资料'
+                : 'Highest-rated materials from your cohort',
+            onTap: () => unawaited(
+              context.push('${CommunityRoutes.home}/top-resources'),
+            ),
           ),
         ],
       ),
@@ -286,52 +333,50 @@ class _GoalFocusCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(DS.md),
-        decoration: BoxDecoration(
-          color: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
-          borderRadius: BorderRadius.circular(DS.radius12),
-          border: Border.all(color: DS.borderSubtle),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: DS.brandPrimary12,
-                borderRadius: BorderRadius.circular(DS.radius8),
+  Widget build(BuildContext context) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(DS.md),
+          decoration: BoxDecoration(
+            color: DS.surfaceRoleColor(SparkleSurfaceRole.panel),
+            borderRadius: BorderRadius.circular(DS.radius12),
+            border: Border.all(color: DS.borderSubtle),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: DS.brandPrimary12,
+                  borderRadius: BorderRadius.circular(DS.radius8),
+                ),
+                child: Icon(icon, size: 20, color: DS.brandPrimary),
               ),
-              child: Icon(icon, size: 20, color: DS.brandPrimary),
-            ),
-            const SizedBox(width: DS.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: DS.textPrimary,
+              const SizedBox(width: DS.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: DS.textPrimary,
+                      ),
                     ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: TextStyle(fontSize: 12, color: DS.textSecondary),
-                  ),
-                ],
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 12, color: DS.textSecondary),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: DS.textTertiary),
-          ],
+              Icon(Icons.chevron_right_rounded, color: DS.textTertiary),
+            ],
+          ),
         ),
-      ),
-    );
-  }
+      );
 }

@@ -230,6 +230,24 @@ def _post_to_response(post: Post) -> dict:
     }
 
 
+def _shared_resource_payload_is_active(resource: SharedResource) -> bool:
+    """Return False when the shared legacy object was soft-deleted."""
+    payloads = (
+        resource.plan,
+        resource.task,
+        resource.knowledge_node,
+        resource.seed_library,
+        resource.seed_item,
+        resource.cognitive_fragment,
+        resource.curiosity_capsule,
+        resource.behavior_pattern,
+    )
+    for payload in payloads:
+        if payload is not None:
+            return not getattr(payload, "is_deleted", False)
+    return resource.card_share_record_id is not None
+
+
 @router.get("/feed", summary="获取社区动态流")
 async def get_feed(
     page: int = Query(default=1, ge=1),
@@ -3168,21 +3186,22 @@ async def get_group_resources(
     """
     获取分享到群组的资源列表
     """
-    # Check if user is member
-    await GroupService.get_group(db, group_id, current_user.id) # Will raise/return None if not accessible?
-    # Actually get_group returns None if not found or not member?
-    # Current implementation of get_group checks permission implicitly or explicitly?
-    # Let's rely on service check or do manual check if strictly needed.
-    # GroupService.get_group returns group info if user is member (based on internal logic usually).
+    try:
+        await GroupService._require_active_member(db, group_id, current_user.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=403, detail="不是群组成员") from exc
 
     rtype = SharedResourceType(resource_type.value) if resource_type else None
 
     resources = await collaboration_service.get_group_resources(
-        db, group_id, rtype, limit
+        db, group_id, rtype, limit, viewer_id=current_user.id
     )
 
     result = []
     for res in resources:
+        if not _shared_resource_payload_is_active(res):
+            continue
+
         # Determine strict type string
         r_type_str = "unknown"
         resource_title = None
