@@ -190,6 +190,7 @@ from app.models.recommendation import (
     UserSimilarity,
 )
 from app.models.report_snapshot import ReportSnapshot
+from app.models.research_consent import ResearchConsent, ResearchExportUsage
 from app.models.response_feedback import ResponseFeedback
 from app.models.review_system import (
     ArbitrationCase,

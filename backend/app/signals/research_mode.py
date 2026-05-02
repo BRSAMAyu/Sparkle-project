@@ -850,8 +850,9 @@ class ConsentTracker:
         "anonymized_export",      # Export to research datasets
     })
 
-    def __init__(self):
+    def __init__(self, db=None):
         self._consents: dict[str, dict[str, ConsentRecord]] = {}  # user_id → {consent_type → record}
+        self.db = db
 
     def grant_consent(
         self,
@@ -913,3 +914,141 @@ class ConsentTracker:
         """Get all consent records for a user."""
         user_consents = self._consents.get(user_id, {})
         return [r.to_dict() for r in user_consents.values()]
+
+    async def grant_consent_db(
+        self,
+        *,
+        user_id: str,
+        consent_type: str,
+        source: str = "api",
+        version: str = "1.0",
+    ) -> ConsentRecord:
+        """Grant consent and persist it to PostgreSQL."""
+        if self.db is None:
+            return self.grant_consent(user_id=user_id, consent_type=consent_type, source=source, version=version)
+        from sqlalchemy import select
+
+        from app.models.research_consent import ResearchConsent
+
+        uid = uuid.UUID(str(user_id))
+        now = datetime.now(UTC).replace(tzinfo=None)
+        result = await self.db.execute(
+            select(ResearchConsent).where(
+                ResearchConsent.user_id == uid,
+                ResearchConsent.consent_type == consent_type,
+                ResearchConsent.deleted_at.is_(None),
+            )
+        )
+        row = result.scalar_one_or_none()
+        if row is None:
+            row = ResearchConsent(user_id=uid, consent_type=consent_type)
+            self.db.add(row)
+        row.granted = True
+        row.granted_at = now
+        row.revoked_at = None
+        row.version = version
+        row.source = source
+        row.runtime_metadata = {"last_action": "grant", "action_at": now.isoformat()}
+        await self.db.flush()
+        return self._record_from_model(row)
+
+    async def revoke_consent_db(
+        self,
+        *,
+        user_id: str,
+        consent_type: str,
+        source: str = "api",
+    ) -> ConsentRecord | None:
+        """Revoke persisted consent and mark related export usages revoked."""
+        if self.db is None:
+            return self.revoke_consent(user_id=user_id, consent_type=consent_type)
+        from sqlalchemy import select, update
+
+        from app.models.research_consent import ResearchConsent, ResearchExportUsage
+
+        uid = uuid.UUID(str(user_id))
+        now = datetime.now(UTC).replace(tzinfo=None)
+        result = await self.db.execute(
+            select(ResearchConsent).where(
+                ResearchConsent.user_id == uid,
+                ResearchConsent.consent_type == consent_type,
+                ResearchConsent.deleted_at.is_(None),
+            )
+        )
+        row = result.scalar_one_or_none()
+        if row is None:
+            row = ResearchConsent(user_id=uid, consent_type=consent_type)
+            self.db.add(row)
+        row.granted = False
+        row.revoked_at = now
+        row.source = source
+        row.runtime_metadata = {"last_action": "revoke", "action_at": now.isoformat()}
+        await self.db.execute(
+            update(ResearchExportUsage)
+            .where(
+                ResearchExportUsage.user_id == uid,
+                ResearchExportUsage.consent_type == consent_type,
+                ResearchExportUsage.status == "active",
+                ResearchExportUsage.deleted_at.is_(None),
+            )
+            .values(status="revoked", revoked_at=now)
+        )
+        await self.db.flush()
+        return self._record_from_model(row)
+
+    async def has_consent_db(self, user_id: str, consent_type: str) -> bool:
+        if self.db is None:
+            return self.has_consent(user_id, consent_type)
+        from sqlalchemy import select
+
+        from app.models.research_consent import ResearchConsent
+
+        result = await self.db.execute(
+            select(ResearchConsent.granted).where(
+                ResearchConsent.user_id == uuid.UUID(str(user_id)),
+                ResearchConsent.consent_type == consent_type,
+                ResearchConsent.deleted_at.is_(None),
+            )
+        )
+        return bool(result.scalar_one_or_none())
+
+    async def check_all_consents_db(self, user_id: str) -> dict[str, bool]:
+        return {ct: await self.has_consent_db(user_id, ct) for ct in self.REQUIRED_CONSENTS}
+
+    async def can_include_in_research_db(self, user_id: str) -> bool:
+        statuses = await self.check_all_consents_db(user_id)
+        return all(statuses.values())
+
+    async def get_user_consents_db(self, user_id: str) -> list[dict[str, Any]]:
+        if self.db is None:
+            return self.get_user_consents(user_id)
+        from sqlalchemy import select
+
+        from app.models.research_consent import ResearchConsent
+
+        result = await self.db.execute(
+            select(ResearchConsent).where(
+                ResearchConsent.user_id == uuid.UUID(str(user_id)),
+                ResearchConsent.deleted_at.is_(None),
+            )
+        )
+        by_type = {row.consent_type: self._record_from_model(row).to_dict() for row in result.scalars().all()}
+        for consent_type in self.REQUIRED_CONSENTS:
+            by_type.setdefault(
+                consent_type,
+                ConsentRecord(user_id=user_id, consent_type=consent_type, granted=False).to_dict(),
+            )
+        return [by_type[ct] for ct in sorted(by_type)]
+
+    @staticmethod
+    def _record_from_model(row) -> ConsentRecord:
+        return ConsentRecord(
+            consent_id=str(row.id),
+            user_id=str(row.user_id),
+            consent_type=str(row.consent_type),
+            granted=bool(row.granted),
+            granted_at=row.granted_at.isoformat() if row.granted_at else "",
+            revoked_at=row.revoked_at.isoformat() if row.revoked_at else "",
+            version=str(row.version or "1.0"),
+            source=str(row.source or "api"),
+        )

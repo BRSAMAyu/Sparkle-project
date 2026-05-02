@@ -186,7 +186,7 @@
 
 ### P0-1.6：ConsentTracker 使用内存存储
 
-**现状**：`backend/app/signals/research_mode.py` 中的 `ConsentTracker` 使用 `_consents: dict` 内存字典存储用户同意状态。服务重启后所有同意记录丢失。
+**现状**：✅ 2026-05-02 FV-07 已完成 DB 持久化。`ConsentTracker` 保留同步内存 API 兼容旧单测，同时新增 DB-backed async API；`/research/consent` GET/PUT 可让用户查看/修改同意；撤销会将 active `ResearchExportUsage` 标记为 revoked；变更写入 `DataAccessLog` 审计。验收报告见 `docs/product/parallel_closeout/FV-07_research_consent_db_REPORT_2026-05-02.md`。
 
 **5 分标准**：
 1. 同意状态持久化到 PostgreSQL
@@ -197,11 +197,11 @@
 6. 同意变更记录到审计日志
 
 **具体差距**：
-- 内存存储→服务重启丢失
-- 无 DB 模型
-- 无 UI 集成
-- 无撤销追踪
-- 无 API 端点
+- ✅ DB 模型 `research_consents` 已补齐
+- ✅ `/research/consent` API 已补齐
+- ✅ 撤销追踪 `research_export_usages.status=revoked` 已补齐
+- ✅ 同意变更审计 `DataAccessLog` 已补齐
+- 🟡 移动端设置 UI 仍需在后续移动端 FV 卡片中接入该 API
 
 **涉及模块**：`backend/app/signals/research_mode.py`, `backend/app/models/user_memory_settings.py`, `mobile/lib/features/settings/`
 

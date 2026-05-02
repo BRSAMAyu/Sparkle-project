@@ -76,6 +76,7 @@ from app.api.v1 import (
     profile_transparency,
     push_interaction,
     recommendations,
+    research_consent,
     seed_libraries,
     shop,
     signals,
@@ -164,6 +165,7 @@ api_router.include_router(multi_intent.router, prefix="/multi-intent", tags=["mu
 api_router.include_router(prediction.router, prefix="/prediction", tags=["prediction"])
 api_router.include_router(predictive_analytics.router, prefix="/predictive", tags=["predictive"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
+api_router.include_router(research_consent.router)
 api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["leaderboards"])
 api_router.include_router(profile_transparency.router)
 api_router.include_router(user_settings.router)
