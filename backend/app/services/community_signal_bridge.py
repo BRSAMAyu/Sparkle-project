@@ -158,6 +158,19 @@ class CommunitySignalBridge:
         target_group_id: UUID | None,
         share_id: UUID,
     ) -> None:
+        await event_bus.publish(
+            "community.resource_shared",
+            {
+                "event_type": "community.resource_shared",
+                "user_id": str(user_id),
+                "resource_type": resource_type,
+                "resource_id": str(resource_id),
+                "target_group_id": str(target_group_id) if target_group_id else None,
+                "share_id": str(share_id),
+                "timestamp": datetime.utcnow().isoformat(),
+            },
+        )
+
         if resource_type != "knowledge_node" or target_group_id is None:
             return
 

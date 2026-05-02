@@ -21,6 +21,7 @@ from app.models.achievement import (
     VisualEffectType,
 )
 from app.models.base import Base
+from app.models.community import SharedResource
 from app.models.plan import Plan, PlanType
 from app.models.session_completion import SessionCompletion
 from app.models.shop import PhotonTransactionHistory
@@ -710,6 +711,100 @@ async def test_duplicate_task_completion_short_circuits_before_mutation(db_sessi
     assert len(stored_rows) == 1
     assert stored_rows[0].completion_type == "task_completion"
     assert stored_rows[0].source_event == AchievementEvent.TASK_COMPLETED
+
+
+@pytest.mark.asyncio
+async def test_community_share_unlocks_once_and_grants_reward(db_session, test_user):
+    achievement = _achievement(
+        "community_first_share_test",
+        trigger_code="COMMUNITY_SHARE",
+        trigger_config={"count": 1},
+        reward_config=[{"type": "photon", "quantity": 30}],
+    )
+    task = Task(
+        user_id=test_user.id,
+        title="shareable-task",
+        type=TaskType.LEARNING,
+        tags=[],
+        estimated_minutes=25,
+        difficulty=1,
+        energy_cost=1,
+        status=TaskStatus.PENDING,
+    )
+    db_session.add(task)
+    await db_session.flush()
+    shared = SharedResource(
+        shared_by=test_user.id,
+        task_id=task.id,
+        permission="view",
+    )
+    db_session.add_all([achievement, shared])
+    await db_session.commit()
+
+    engine = AchievementEngine(db_session)
+    first = await engine.process_event(
+        user_id=str(test_user.id),
+        event_type=AchievementEvent.COMMUNITY_SHARE,
+        share_id=str(shared.id),
+        resource_type="task",
+    )
+    second = await engine.process_event(
+        user_id=str(test_user.id),
+        event_type=AchievementEvent.COMMUNITY_SHARE,
+        share_id=str(shared.id),
+        resource_type="task",
+    )
+
+    await db_session.refresh(test_user)
+    history_result = await db_session.execute(
+        select(PhotonTransactionHistory).where(
+            PhotonTransactionHistory.user_id == test_user.id,
+            PhotonTransactionHistory.related_item_id == achievement.id,
+        )
+    )
+
+    assert [entry["achievement_id"] for entry in first] == [achievement.id]
+    assert second == []
+    assert test_user.photon_balance == 30
+    assert len(history_result.scalars().all()) == 1
+
+
+@pytest.mark.asyncio
+async def test_aurora_calibration_completion_unlocks_once(db_session, test_user):
+    achievement = _achievement(
+        "aurora_first_calibration_test",
+        trigger_code="AURORA_CALIBRATION",
+        trigger_config={"count": 1},
+        reward_config=[{"type": "photon", "quantity": 80}],
+    )
+    db_session.add(achievement)
+    await db_session.commit()
+
+    engine = AchievementEngine(db_session)
+    first = await engine.process_event(
+        user_id=str(test_user.id),
+        event_type=AchievementEvent.AURORA_CALIBRATION,
+        session_id="aurora-session-1",
+        surface="aurora_modeling",
+    )
+    second = await engine.process_event(
+        user_id=str(test_user.id),
+        event_type=AchievementEvent.AURORA_CALIBRATION,
+        session_id="aurora-session-1",
+        surface="aurora_modeling",
+    )
+
+    await db_session.refresh(test_user)
+    completion_rows = await db_session.execute(
+        select(SessionCompletion).where(SessionCompletion.user_id == test_user.id)
+    )
+    stored_completions = completion_rows.scalars().all()
+
+    assert [entry["achievement_id"] for entry in first] == [achievement.id]
+    assert second == []
+    assert test_user.photon_balance == 80
+    assert len(stored_completions) == 1
+    assert stored_completions[0].completion_type == "aurora_calibration"
 
 
 @pytest.mark.asyncio

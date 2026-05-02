@@ -404,6 +404,42 @@ INITIAL_ACHIEVEMENTS = [
             {"type": "visual_element", "element_id": "effect_mastery_crown"},
         ],
     },
+    # ========== 真实成长回路系列 ==========
+    {
+        "id": "community_first_share",
+        "name": "把火花递出去",
+        "description": "第一次把任务、计划、知识或成就分享给伙伴或小组",
+        "icon_url": "/icons/achievements/community_first_share.png",
+        "type": "social",
+        "rarity": "common",
+        "trigger_code": "COMMUNITY_SHARE",
+        "trigger_config": {"count": 1},
+        "category": "community",
+        "sort_order": 50,
+        "visual_effect_type": "none",
+        "reward_config": [
+            {"type": "photon", "quantity": 30},
+            {"type": "title", "value": "spark_sharer", "display": "火花分享者"},
+        ],
+    },
+    {
+        "id": "aurora_first_calibration",
+        "name": "校准完成",
+        "description": "完成一次 Aurora 深度校准，让系统更懂你的真实状态",
+        "icon_url": "/icons/achievements/aurora_first_calibration.png",
+        "type": "milestone",
+        "rarity": "rare",
+        "trigger_code": "AURORA_CALIBRATION",
+        "trigger_config": {"count": 1},
+        "category": "aurora",
+        "sort_order": 51,
+        "visual_effect_type": "gravity_wave",
+        "visual_config": {"color": "#6CCFF6", "amplitude": 8, "frequency": 1.1},
+        "reward_config": [
+            {"type": "photon", "quantity": 80},
+            {"type": "title", "value": "aurora_calibrated", "display": "已校准"},
+        ],
+    },
     # ========== 隐藏成就 ==========
     {
         "id": "night_owl",
