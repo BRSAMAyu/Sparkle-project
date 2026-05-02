@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/offline/crdt_sync_manager.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/offline_chat_message.dart';
 import 'package:sparkle/core/offline/offline_message_queue_service.dart';
@@ -103,4 +104,13 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
   final engine = SyncEngine(localDb, wsService, apiClient)..start();
   ref.onDispose(engine.stop);
   return engine;
+});
+
+final crdtSyncManagerProvider = Provider<CRDTSyncManager>((ref) {
+  final manager = CRDTSyncManager(
+    ref.watch(localDatabaseProvider),
+    ref.watch(syncEngineProvider),
+  )..initialize();
+  ref.onDispose(manager.dispose);
+  return manager;
 });

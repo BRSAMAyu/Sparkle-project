@@ -7,6 +7,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/offline/conflict_resolver.dart';
 import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/offline/offline_crdt_document.dart';
 import 'package:sparkle/core/offline/outbox_dedupe_key.dart';
 import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/services/performance_monitor.dart';
@@ -27,6 +28,7 @@ class OfflineSyncQueue {
   final PerformanceMonitor _performanceMonitor;
   final ConflictResolver _conflictResolver = ConflictResolver();
   final Uuid _uuid = const Uuid();
+  final String _actorId = const Uuid().v4();
 
   void dispose() {}
 
@@ -43,8 +45,8 @@ class OfflineSyncQueue {
         durationMs: 0,
       );
 
-      // KG-008: Local CRDT merge — max-wins for mastery before queuing
-      final mergedMastery = await _localMergeMastery(nodeId, mastery);
+      final masteryDelta = await _buildMasteryDelta(nodeId, mastery);
+      final mergedMastery = masteryDelta.document.knowledgeMastery(nodeId);
 
       // 1. Immediately store to local DB (Optimistic Update)
       await _localDb.isar.writeTxn(() async {
@@ -76,26 +78,41 @@ class OfflineSyncQueue {
             ..revision = currentRevision,
         );
 
-        await _localDb.isar.outboxItems.put(
-          OutboxItem()
-            ..uuid = _uuid.v4()
-            ..type = 'mastery_update'
-            ..topic = 'knowledge'
-            ..opType = 'update'
-            ..entityType = 'knowledge_node'
-            ..entityId = nodeId
-            ..payloadJson = jsonEncode({
-              'nodeId': nodeId,
-              'mastery': mergedMastery,
-              'revision': currentRevision,
-            })
-            ..dedupeKey = OutboxDedupeKey.knowledgeUpdate(nodeId, requestId)
-            ..createdAt = DateTime.now()
-            ..priority = 10
-            ..requiresAuth = true
-            ..traceId = TracingService.instance.createTraceId()
-            ..status = SyncStatus.pending,
+        await _localDb.isar.localCRDTSnapshots.putByGalaxyId(
+          (await _localDb.isar.localCRDTSnapshots
+                  .getByGalaxyId(masteryDelta.galaxyId) ??
+              LocalCRDTSnapshot())
+            ..galaxyId = masteryDelta.galaxyId
+            ..updateData = masteryDelta.document.toBytes()
+            ..timestamp = DateTime.now()
+            ..synced = false,
         );
+
+        if (masteryDelta.operation != null) {
+          await _localDb.isar.outboxItems.put(
+            OutboxItem()
+              ..uuid = _uuid.v4()
+              ..type = 'crdt_delta'
+              ..topic = 'crdt'
+              ..opType = 'delta'
+              ..entityType = 'knowledge_mastery'
+              ..entityId = nodeId
+              ..payloadJson = jsonEncode(
+                operationsPayload(
+                  galaxyId: masteryDelta.galaxyId,
+                  actorId: masteryDelta.operation!.actorId,
+                  operations: [masteryDelta.operation!],
+                  document: masteryDelta.document,
+                ),
+              )
+              ..dedupeKey = OutboxDedupeKey.knowledgeUpdate(nodeId, requestId)
+              ..createdAt = DateTime.now()
+              ..priority = 10
+              ..requiresAuth = true
+              ..traceId = TracingService.instance.createTraceId()
+              ..status = SyncStatus.pending,
+          );
+        }
       });
 
       // 3. Try sync if online
@@ -123,8 +140,11 @@ class OfflineSyncQueue {
       );
 
       // 报告崩溃
-      _performanceMonitor.reportCrash(e, stackTrace,
-          context: 'queueMasteryUpdate',);
+      _performanceMonitor.reportCrash(
+        e,
+        stackTrace,
+        context: 'queueMasteryUpdate',
+      );
 
       // 重新抛出异常
       rethrow;
@@ -208,25 +228,56 @@ class OfflineSyncQueue {
     });
   }
 
-  /// KG-008: Local CRDT merge for offline mastery updates.
-  /// Max-wins strategy: take the higher of pending local value and new value.
-  Future<int> _localMergeMastery(String nodeId, int newMastery) async {
-    final pending = await _localDb.isar.pendingUpdates
-        .filter()
-        .nodeIdEqualTo(nodeId)
-        .and()
-        .syncedEqualTo(false)
-        .findAll();
+  Future<_MasteryCrdtDelta> _buildMasteryDelta(
+    String nodeId,
+    int newMastery,
+  ) async {
+    const galaxyId = 'default';
+    final snapshot =
+        await _localDb.isar.localCRDTSnapshots.getByGalaxyId(galaxyId);
+    final document = snapshot != null
+        ? OfflineCrdtDocument.fromBytes(snapshot.updateData)
+        : OfflineCrdtDocument.empty();
+    final targetMastery = newMastery.clamp(0, 100);
+    final delta = targetMastery - document.knowledgeMastery(nodeId);
+    if (delta == 0) {
+      return _MasteryCrdtDelta(
+        galaxyId: galaxyId,
+        document: document,
+      );
+    }
 
-    if (pending.isEmpty) return newMastery;
+    final operation = makeKnowledgeMasteryDelta(
+      opId: _uuid.v4(),
+      actorId: _actorId,
+      nodeId: nodeId,
+      delta: delta,
+      lamport: document.nextLamport(_actorId),
+      createdAt: DateTime.now().toUtc(),
+    );
+    document.apply(operation);
 
-    // Max-wins: use the highest pending mastery value
-    final maxPending = pending.map((p) => p.newMastery).reduce((a, b) => a > b ? a : b);
-    return newMastery > maxPending ? newMastery : maxPending;
+    return _MasteryCrdtDelta(
+      galaxyId: galaxyId,
+      document: document,
+      operation: operation,
+    );
   }
 
   Future<bool> _isOnline() async {
     final connectivityResult = await _connectivity.checkConnectivity();
     return !connectivityResult.contains(ConnectivityResult.none);
   }
+}
+
+class _MasteryCrdtDelta {
+  const _MasteryCrdtDelta({
+    required this.galaxyId,
+    required this.document,
+    this.operation,
+  });
+
+  final String galaxyId;
+  final OfflineCrdtDocument document;
+  final OfflineCrdtOperation? operation;
 }
