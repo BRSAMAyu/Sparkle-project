@@ -32,4 +32,4 @@ Make Aurora show up in normal home and chat usage as a compact, correctable judg
 
 ## Commit
 Branch: `codex/CXP-01-aurora-everyday-presence`
-Commit: pending local commit; the active workspace branch was repeatedly switched by other local parallel processes during verification.
+Commit: `1998b080c`
