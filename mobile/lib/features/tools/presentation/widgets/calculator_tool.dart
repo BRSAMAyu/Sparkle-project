@@ -10,6 +10,7 @@ import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class CalculatorTool extends ConsumerStatefulWidget {
   const CalculatorTool({
@@ -129,11 +130,13 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
     if (!mounted) {
       return;
     }
-    AppFeedback.success(context, '结果已复制');
+    AppFeedback.success(
+        context, I18nService.instance.isChinese ? '结果已复制' : 'Result copied');
   }
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final accent = DS.brandPrimary;
     return ToolShell(
       surface: widget.surface,
@@ -146,7 +149,9 @@ class _CalculatorToolState extends ConsumerState<CalculatorTool> {
         ToolHeroChip(
           label: _history.isEmpty
               ? context.l10n.toolsCalcNoHistory
-              : '${_history.length} 条历史',
+              : (zh
+                  ? '${_history.length} 条历史'
+                  : '${_history.length} history entries'),
           accentColor: accent,
           icon: Icons.history_rounded,
         ),

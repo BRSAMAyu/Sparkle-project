@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 enum OpenClawVisualTone {
   connected,
@@ -178,6 +179,7 @@ class OpenClawStatusCapsule extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = openClawToneColor(tone);
+    final zh = I18nService.instance.isChinese;
     return Container(
       width: double.infinity,
       padding: padding ?? const EdgeInsets.all(DS.spacing12),
@@ -267,7 +269,7 @@ class OpenClawStatusCapsule extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        expanded ? '收起细节' : '展开细节',
+                        expanded ? (zh ? '收起细节' : 'Collapse') : (zh ? '展开细节' : 'Expand details'),
                         style: DS.bodySmall.copyWith(
                           color: DS.textSecondary,
                           fontWeight: DS.fontWeightSemiBold,
@@ -331,6 +333,7 @@ class OpenClawSectionSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = openClawToneColor(tone);
+    final zh = I18nService.instance.isChinese;
     return GraphiteCardSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -385,7 +388,7 @@ class OpenClawSectionSurface extends StatelessWidget {
                       : Icons.edit_note_rounded,
                 ),
                 label: Text(
-                  toggleLabel ?? (expanded ? '收起' : '展开'),
+                  toggleLabel ?? (expanded ? (zh ? '收起' : 'Collapse') : (zh ? '展开' : 'Expand')),
                 ),
               ),
             ),

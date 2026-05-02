@@ -1516,9 +1516,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskStatusPaused => 'Paused';
 
   @override
-  String get taskStatusRestore => 'Restored';
-
-  @override
   String get taskStatusStuck => 'Stuck';
 
   @override
@@ -2023,62 +2020,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get streakFreezeCharges => 'Freeze Charges';
-
-  @override
-  String get streakQualityTitle => 'Quality Streak';
-
-  @override
-  String get streakQualitySubtitle =>
-      'Streaks count effective minutes, core tasks, hard breakthroughs, and plan consistency.';
-
-  @override
-  String get streakQualityDaysShort => 'quality';
-
-  @override
-  String get streakQualityTodayBreakdown => 'Today\'s quality breakdown';
-
-  @override
-  String get streakQualityEffectiveMinutes => 'Effective time';
-
-  @override
-  String get streakQualityCoreTasks => 'Core tasks';
-
-  @override
-  String get streakQualityBreakthroughs => 'Breakthroughs';
-
-  @override
-  String get streakQualityPlanConsistency => 'Plan match';
-
-  @override
-  String get streakQualityWeeklyTrend => 'Weekly quality trend';
-
-  @override
-  String get streakQualityEvidence => 'Why this is worth celebrating';
-
-  @override
-  String get streakQualityEmpty =>
-      'Start a learning session and the quality trend will appear here.';
-
-  @override
-  String get streakQualityUnavailable => 'Quality data unavailable';
-
-  @override
-  String get streakQualityViewDetails => 'View streak details';
-
-  @override
-  String streakQualityScoreLabel(Object score) {
-    return 'Quality $score%';
-  }
-
-  @override
-  String streakQualityMinutesValue(Object minutes) {
-    return '$minutes min';
-  }
-
-  @override
-  String streakQualitySemantics(Object currentDays, Object qualityDays) {
-    return 'Quality streak $qualityDays days, current streak $currentDays days. Tap for breakdown.';
-  }
 
   @override
   String get errorNetwork => 'Network error';
@@ -29502,6 +29443,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get toolsNotesSyncedToPrism => 'Synced to Cognitive Prism';
+
+  @override
+  String get taskStatusRestore => 'Restored';
+
+  @override
+  String get streakQualityTitle => 'Quality Streak';
+
+  @override
+  String get streakQualitySubtitle =>
+      'Streaks count effective minutes, core tasks, hard breakthroughs, and plan consistency.';
+
+  @override
+  String get streakQualityDaysShort => 'quality';
+
+  @override
+  String get streakQualityTodayBreakdown => 'Today\'s quality breakdown';
+
+  @override
+  String get streakQualityEffectiveMinutes => 'Effective time';
+
+  @override
+  String get streakQualityCoreTasks => 'Core tasks';
+
+  @override
+  String get streakQualityBreakthroughs => 'Breakthroughs';
+
+  @override
+  String get streakQualityPlanConsistency => 'Plan match';
+
+  @override
+  String get streakQualityWeeklyTrend => 'Weekly quality trend';
+
+  @override
+  String get streakQualityEvidence => 'Why this is worth celebrating';
+
+  @override
+  String get streakQualityEmpty =>
+      'Start a learning session and the quality trend will appear here.';
+
+  @override
+  String get streakQualityUnavailable => 'Quality data unavailable';
+
+  @override
+  String get streakQualityViewDetails => 'View streak details';
+
+  @override
+  String streakQualityScoreLabel(Object score) {
+    return 'Quality $score%';
+  }
+
+  @override
+  String streakQualityMinutesValue(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String streakQualitySemantics(Object currentDays, Object qualityDays) {
+    return 'Quality streak $qualityDays days, current streak $currentDays days. Tap for breakdown.';
+  }
 
   @override
   String get gdChronicleTitle => 'Growth Chronicle';

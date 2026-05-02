@@ -89,8 +89,11 @@ var distributedSlidingWindowScript = redis.NewScript(`
 	local count = redis.call('ZCARD', key)
 
 	if count < limit then
-		-- Add new entry with unique score
-		redis.call('ZADD', key, now, now .. '-' .. math.random())
+		-- Add a unique member even when multiple requests arrive in the same millisecond.
+		local seq_key = key .. ':seq'
+		local seq = redis.call('INCR', seq_key)
+		redis.call('PEXPIRE', seq_key, window_ms)
+		redis.call('ZADD', key, now, now .. '-' .. seq)
 		redis.call('PEXPIRE', key, window_ms)
 		return {1, limit - count - 1}
 	end
@@ -355,6 +358,6 @@ func (rl *RateLimiter) cleanupVisitorsWithInterval(interval time.Duration) {
 				}
 			}
 			rl.mu.Unlock()
+		}
 	}
-}
 }

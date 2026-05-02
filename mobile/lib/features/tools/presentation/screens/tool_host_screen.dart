@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/tool_registry.dart';
 
@@ -90,7 +91,7 @@ class ToolHostScreen extends StatelessWidget {
                 child: tool.embeddedBuilder?.call(request) ??
                     Center(
                       child: Text(
-                        '${tool.title}暂不可用',
+                        I18nService.instance.isChinese ? '${tool.title}暂不可用' : '${tool.title} is currently unavailable',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),
@@ -131,7 +132,7 @@ class ToolHostScreen extends StatelessWidget {
                     ),
                     const Spacer(),
                     Tooltip(
-                      message: '工具库',
+                      message: I18nService.instance.isChinese ? '工具库' : 'Tool Library',
                       child: DecoratedBox(
                         decoration: BoxDecoration(
                           color: DS.surfaceOverlay.withValues(alpha: 0.9),

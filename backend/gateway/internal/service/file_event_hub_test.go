@@ -49,12 +49,15 @@ func TestFileEventHub_FullIntegration(t *testing.T) {
 	upgrader := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 
 	var serverConns []*websocket.Conn
+	var serverConnsMu sync.Mutex
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			return
 		}
+		serverConnsMu.Lock()
 		serverConns = append(serverConns, conn)
+		serverConnsMu.Unlock()
 		hub.Register("test-user", conn)
 	}))
 	defer server.Close()

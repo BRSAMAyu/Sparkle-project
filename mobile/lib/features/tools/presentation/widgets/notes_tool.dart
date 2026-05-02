@@ -11,6 +11,7 @@ import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class NotesTool extends ConsumerStatefulWidget {
   const NotesTool({
@@ -86,7 +87,8 @@ class _NotesToolState extends ConsumerState<NotesTool> {
         _savedAt = null;
         _lastSyncedAt = null;
       });
-      AppFeedback.info(context, '笔记已清空');
+      AppFeedback.info(
+          context, I18nService.instance.isChinese ? '笔记已清空' : 'Notes cleared');
     }
   }
 
@@ -96,14 +98,19 @@ class _NotesToolState extends ConsumerState<NotesTool> {
     }
     await Clipboard.setData(ClipboardData(text: _controller.text.trim()));
     if (mounted) {
-      AppFeedback.success(context, '笔记已复制');
+      AppFeedback.success(
+          context, I18nService.instance.isChinese ? '笔记已复制' : 'Notes copied');
     }
   }
 
   Future<void> _syncToPrism() async {
     final content = _controller.text.trim();
     if (content.isEmpty) {
-      AppFeedback.info(context, '先写下一点内容，再同步到认知棱镜');
+      AppFeedback.info(
+          context,
+          I18nService.instance.isChinese
+              ? '先写下一点内容，再同步到认知棱镜'
+              : 'Write something first, then sync to cognitive prism');
       return;
     }
 
@@ -171,6 +178,7 @@ class _NotesToolState extends ConsumerState<NotesTool> {
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final accent = DS.prismBlue;
     return ToolShell(
       surface: widget.surface,
@@ -182,22 +190,26 @@ class _NotesToolState extends ConsumerState<NotesTool> {
       heroChips: [
         ToolHeroChip(
           label: _savedAt == null
-              ? '自动保存'
-              : '已保存 ${_savedAt!.hour.toString().padLeft(2, '0')}:${_savedAt!.minute.toString().padLeft(2, '0')}',
+              ? (zh ? '自动保存' : 'Auto-save')
+              : (zh
+                  ? '已保存 ${_savedAt!.hour.toString().padLeft(2, '0')}:${_savedAt!.minute.toString().padLeft(2, '0')}'
+                  : 'Saved ${_savedAt!.hour.toString().padLeft(2, '0')}:${_savedAt!.minute.toString().padLeft(2, '0')}'),
           accentColor: accent,
           icon: Icons.cloud_done_rounded,
         ),
         ToolHeroChip(
           label: _charCount == 0
               ? context.l10n.toolsNotesWaiting
-              : '$_charCount 字',
+              : (zh ? '$_charCount 字' : '$_charCount chars'),
           accentColor: accent,
           icon: Icons.notes_rounded,
         ),
         ToolHeroChip(
           label: _lastSyncedAt == null
-              ? '未同步'
-              : '已入棱镜 ${_lastSyncedAt!.hour.toString().padLeft(2, '0')}:${_lastSyncedAt!.minute.toString().padLeft(2, '0')}',
+              ? (zh ? '未同步' : 'Not synced')
+              : (zh
+                  ? '已入棱镜 ${_lastSyncedAt!.hour.toString().padLeft(2, '0')}:${_lastSyncedAt!.minute.toString().padLeft(2, '0')}'
+                  : 'Synced ${_lastSyncedAt!.hour.toString().padLeft(2, '0')}:${_lastSyncedAt!.minute.toString().padLeft(2, '0')}'),
           accentColor: accent,
           icon: Icons.psychology_alt_rounded,
         ),

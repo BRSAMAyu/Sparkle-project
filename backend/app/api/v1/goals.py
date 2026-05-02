@@ -7,6 +7,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
@@ -59,6 +60,32 @@ class GoalResponse(BaseModel):
     target_date: date | None = None
     metadata: dict[str, Any] | None = None
     minimum_acceptance_criteria: list[dict[str, Any]] | None = None
+
+
+# route-tier: authed
+@router.get("", response_model=list[GoalResponse])
+@router.get("/", response_model=list[GoalResponse])
+async def list_goals(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> list[GoalResponse]:
+    from app.models.goal import Goal
+    stmt = select(Goal).where(Goal.user_id == current_user.id, Goal.deleted_at.is_(None)).order_by(Goal.created_at.desc())
+    result = await db.execute(stmt)
+    goals = result.scalars().all()
+    return [
+        GoalResponse(
+            id=str(g.id),
+            title=g.title,
+            goal_type=g.goal_type,
+            description=g.description,
+            status=g.status,
+            target_date=g.target_date,
+            metadata=g.metadata_payload,
+            minimum_acceptance_criteria=g.minimum_acceptance_criteria,
+        )
+        for g in goals
+    ]
 
 
 # route-tier: authed

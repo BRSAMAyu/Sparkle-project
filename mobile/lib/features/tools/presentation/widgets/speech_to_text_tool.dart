@@ -5,6 +5,7 @@ import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.da
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class SpeechToTextTool extends StatefulWidget {
   const SpeechToTextTool({
@@ -37,11 +38,13 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
     if (!mounted) {
       return;
     }
-    AppFeedback.success(context, '转写文本已复制');
+    AppFeedback.success(context,
+        I18nService.instance.isChinese ? '转写文本已复制' : 'Transcript copied');
   }
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final accent = DS.info;
     final hasText = _transcript.trim().isNotEmpty;
 
@@ -54,14 +57,18 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
       compactHeader: true,
       heroChips: [
         ToolHeroChip(
-          label: hasText ? context.l10n.toolsSttCharCount(_charCount) : context.l10n.toolsSttRecordingInfo,
+          label: hasText
+              ? context.l10n.toolsSttCharCount(_charCount)
+              : context.l10n.toolsSttRecordingInfo,
           accentColor: accent,
           icon: Icons.graphic_eq_rounded,
         ),
         ToolHeroChip(
           label: _lastCapturedAt == null
-              ? '实时转写'
-              : '${_lastCapturedAt!.hour.toString().padLeft(2, '0')}:${_lastCapturedAt!.minute.toString().padLeft(2, '0')} 更新',
+              ? (zh ? '实时转写' : 'Live transcription')
+              : (zh
+                  ? '${_lastCapturedAt!.hour.toString().padLeft(2, '0')}:${_lastCapturedAt!.minute.toString().padLeft(2, '0')} 更新'
+                  : '${_lastCapturedAt!.hour.toString().padLeft(2, '0')}:${_lastCapturedAt!.minute.toString().padLeft(2, '0')} updated'),
           accentColor: accent,
           icon: Icons.bolt_rounded,
         ),
@@ -75,14 +82,14 @@ class _SpeechToTextToolState extends State<SpeechToTextTool> {
                 value: '$_charCount',
                 accentColor: accent,
                 icon: Icons.notes_rounded,
-                caption: '适合直接发送或整理',
+                caption: zh ? '适合直接发送或整理' : 'Ready to send or organize',
               ),
               ToolMetricCard(
                 label: context.l10n.toolsSttWordCountLabel,
                 value: '$_wordCount',
                 accentColor: accent,
                 icon: Icons.subject_rounded,
-                caption: '便于快速判断长度',
+                caption: zh ? '便于快速判断长度' : 'Quick length reference',
               ),
             ],
           ),

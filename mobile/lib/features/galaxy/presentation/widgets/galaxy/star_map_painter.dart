@@ -2498,12 +2498,33 @@ class StarMapPainter extends CustomPainter {
   }
 
   Color _nodeCanvasColor(GalaxyNodeModel node) {
-    final blended = galaxyMasteryNodeColor(
-      masteryScore: node.masteryScore,
+    final sectorColor = SectorConfig.resolveNodeBaseColor(
+      node: node,
       isDarkMode: isDarkMode,
     );
+    final masteryRatio = galaxyMasteryRatio(node.masteryScore);
+    if (masteryRatio < 0.05) {
+      final grayed = Color.lerp(
+        isDarkMode ? const Color(0xFF3A404A) : const Color(0xFFB8BFC8),
+        sectorColor,
+        0.35,
+      )!;
+      return SectorConfig.applyImportanceRamp(
+        grayed,
+        importance: node.importance,
+        isDarkMode: isDarkMode,
+      );
+    }
+    final desaturated = Color.lerp(
+      sectorColor,
+      galaxyMasteryNodeColor(
+        masteryScore: node.masteryScore,
+        isDarkMode: isDarkMode,
+      ),
+      0.45,
+    )!;
     return SectorConfig.applyImportanceRamp(
-      blended,
+      desaturated,
       importance: node.importance,
       isDarkMode: isDarkMode,
     );

@@ -10096,9 +10096,7 @@
   "memQuietHours": "静默时段",
   "memCurrentTimezone": "当前时区：{timezone}",
   "@memCurrentTimezone": {
-    "placeholders": [
-      {"name": "timezone", "type": "String"}
-    ]
+    "placeholders": {"timezone": {"type": "String"}}
   },
   "memTypes": "记忆类型",
   "memCaptureIntensity": "捕获强度",

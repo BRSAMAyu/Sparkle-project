@@ -58,7 +58,8 @@ class RetryInterceptor extends Interceptor {
 }
 
 class AuthInterceptor extends Interceptor {
-  AuthInterceptor(this._ref);
+  AuthInterceptor(this._ref, {Dio? retryDioForTesting})
+      : _retryDio = retryDioForTesting;
   final Ref _ref;
 
   // Lock for preventing concurrent token refresh

@@ -27,7 +27,7 @@ final transparencyPreferencesProvider =
 typedef TransparencyPreferencesRef
     = AutoDisposeFutureProviderRef<TransparencyPreferences>;
 String _$transparencyPreferencesNotifierHash() =>
-    r'66a636e0050fa51508256fe38fbf34d734af9ec4';
+    r'a431b2c81d8f2485d56519d95951e368982b13c5';
 
 /// Notifier for transparency preferences
 ///

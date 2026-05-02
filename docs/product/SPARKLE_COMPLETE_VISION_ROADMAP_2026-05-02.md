@@ -1062,6 +1062,32 @@ Phase 4 (P3): Saga/混沌/归档/SLO响应/压测/研究工具
   → 长期稳定性和竞争力
 ```
 
+## 5.2.1 Phase 2 Closeout Update — 2026-05-03
+
+Phase 2 integration is now represented on `codex/phase2-integration-2026-05-02`.
+
+Completed or integrated:
+- TASK-002 paused/resume UI
+- KG-005 error pattern → task template flow
+- KG-009 why-this-today priority reasoning
+- GOAL-012 strategy migration + goal creation wizard
+- COM-011 similar goal pursuers + community resource quality badges
+- Source lifecycle badge + TASK-014 directive audit UI
+- A-003 i18n batch 2 cleanup
+- A-006 gateway coverage expansion
+- A-007 Flutter core-service test additions
+- K/AS/AT/AX/I18N rule guard repair
+
+Verification status:
+- Rule guards: `64/64` passed.
+- Tech-debt budget: passed.
+- Backend contract focused rerun: `11 passed`.
+- Gateway targeted race rerun for failed packages: passed.
+- Focused P2 Flutter widgets: passed.
+- Full Flutter suite: still requires environment/baseline cleanup because local IsarCore download/runtime failures and existing smoke-test drift block a clean run.
+
+Conclusion: mark the Phase 2 functional items as integrated, with final release merge gated on shared-worktree ownership review and Flutter environment/full-suite stabilization.
+
 ## 5.3 完全体达标后的状态
 
 当所有 P0-P3 条目完成后：

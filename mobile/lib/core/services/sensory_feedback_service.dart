@@ -325,12 +325,18 @@ class SensoryFeedbackService {
 
     if (soundAllowed &&
         _consumeBudget(
-            _recentSoundEvents, _soundBudgetWindow, _soundBudgetLimit)) {
+          _recentSoundEvents,
+          _soundBudgetWindow,
+          _soundBudgetLimit,
+        )) {
       unawaited(_playSound(event));
     }
     if (hapticAllowed &&
         _consumeBudget(
-            _recentHapticEvents, _hapticBudgetWindow, _hapticBudgetLimit)) {
+          _recentHapticEvents,
+          _hapticBudgetWindow,
+          _hapticBudgetLimit,
+        )) {
       unawaited(_playHaptic(event));
     }
   }
@@ -375,6 +381,7 @@ class SensoryFeedbackService {
       _feedbackEventForAurora(event);
 
   @visibleForTesting
+  // ignore: use_setters_to_change_properties
   static void debugSetAuroraLinkageEnabledCache(bool enabled) {
     _auroraLinkageEnabledCache = enabled;
   }
@@ -477,6 +484,9 @@ class SensoryFeedbackService {
     _lastEmission.clear();
     _recentSoundEvents.clear();
     _recentHapticEvents.clear();
+    _missingSoundAssets.clear();
+    _prefs = null;
+    _auroraLinkageEnabledCache = true;
   }
 
   // ---------------------------------------------------------------------------

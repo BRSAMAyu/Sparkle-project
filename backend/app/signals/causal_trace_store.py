@@ -30,7 +30,7 @@ _USER_COMPACT_KEY = "spine:user_traces_compact:{user_id}"
 _ACTIVE_DIRECTIVE_KEY = "spine:directive:{user_id}"
 _TRACE_TTL = 30 * 24 * 3600  # 30 days
 _COMPACT_TTL = 90 * 24 * 3600  # 90 days for compacted summaries
-_DIRECTIVE_TTL = 48 * 3600   # 48 hours
+_DIRECTIVE_TTL = 48 * 3600  # 48 hours
 _MAX_USER_TRACES = 50
 _MAX_LIST_ITEMS = 20  # max items per trace list field (prevents unbounded growth)
 _COMPACT_BATCH_SIZE = 10  # compact when traces exceed this many
@@ -53,7 +53,7 @@ class CausalTraceStore:
         """Append item to list, trimming oldest entries if over limit."""
         lst.append(item)
         if len(lst) > _MAX_LIST_ITEMS:
-            del lst[:len(lst) - _MAX_LIST_ITEMS]
+            del lst[: len(lst) - _MAX_LIST_ITEMS]
 
     async def get_trace(self, trace_id: str) -> CausalTrace | None:
         raw = await self.redis.get(_TRACE_KEY.format(trace_id=trace_id))
@@ -69,6 +69,7 @@ class CausalTraceStore:
         self._bounded_append(trace.signal_ids, signal.signal_id)
         self._bounded_append(trace.state_keys_changed, signal.state_key)
         from datetime import UTC, datetime
+
         trace.updated_at = datetime.now(UTC).isoformat()
         await self._save_trace(trace)
 
@@ -80,6 +81,7 @@ class CausalTraceStore:
         trace.policy_decision_id = decision.policy_decision_id
         # Policy is singular — no list append needed
         from datetime import UTC, datetime
+
         trace.updated_at = datetime.now(UTC).isoformat()
         await self._save_trace(trace)
         # Store policy object for timeline retrieval
@@ -93,6 +95,7 @@ class CausalTraceStore:
             return
         self._bounded_append(trace.directive_ids, directive.directive_id)
         from datetime import UTC, datetime
+
         trace.updated_at = datetime.now(UTC).isoformat()
         await self._save_trace(trace)
         # Store directive object for timeline retrieval
@@ -111,8 +114,14 @@ class CausalTraceStore:
             return
         self._bounded_append(trace.audit_ids, audit.audit_id)
         from datetime import UTC, datetime
+
         trace.updated_at = datetime.now(UTC).isoformat()
         await self._save_trace(trace)
+        await self.redis.set(
+            f"spine:audit_by_id:{audit.audit_id}",
+            json.dumps(audit.to_dict()),
+            ex=_TRACE_TTL,
+        )
 
     async def append_receipt(self, trace_id: str, receipt: UserVisibleReceipt) -> None:
         trace = await self.get_trace(trace_id)
@@ -121,6 +130,7 @@ class CausalTraceStore:
             return
         self._bounded_append(trace.receipt_ids, receipt.receipt_id)
         from datetime import UTC, datetime
+
         trace.updated_at = datetime.now(UTC).isoformat()
         await self._save_trace(trace)
 
@@ -236,7 +246,9 @@ class CausalTraceStore:
 
         logger.info(
             "TraceCompaction: user={} compacted={} traces, kept {} summaries",
-            user_id, summary["traces_compacted"], len(existing_summaries),
+            user_id,
+            summary["traces_compacted"],
+            len(existing_summaries),
         )
         return summary
 

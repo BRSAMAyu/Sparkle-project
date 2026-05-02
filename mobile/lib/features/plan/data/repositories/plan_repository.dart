@@ -421,11 +421,12 @@ class PlanRepository {
       final now = DateTime.now();
       final generatedTasks = List.generate(count, (taskIndex) {
         final taskNumber = taskIndex + 1;
+        final zh = I18nService.instance.isChinese;
         return TaskModel(
           id: 'demo_plan_task_${planId}_${taskNumber}_${now.millisecondsSinceEpoch}',
           userId: demoService.demoUser.id,
           planId: planId,
-          title: '${plan.name} - 第$taskNumber阶段任务',
+          title: zh ? '${plan.name} - 第$taskNumber阶段任务' : '${plan.name} - Phase $taskNumber Task',
           type: taskIndex.isEven ? TaskType.learning : TaskType.training,
           tags: [plan.subject ?? plan.name, 'Generated'],
           estimatedMinutes: 25 + (taskIndex * 10),

@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 
 Color _mix(Color a, Color b, double t) => Color.lerp(a, b, t) ?? a;
@@ -210,7 +211,7 @@ class _ToolShellState extends State<ToolShell> {
                           ),
                           const SizedBox(height: DS.spacing4),
                           Text(
-                            '先直接使用核心功能，说明已收在下方。',
+                            I18nService.instance.isChinese ? '先直接使用核心功能，说明已收在下方。' : 'Use the core features directly. Details are below.',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.bodySmall
@@ -500,7 +501,9 @@ class _ToolIntroSection extends StatelessWidget {
                     const SizedBox(width: DS.spacing8),
                     Expanded(
                       child: Text(
-                        expanded ? '收起工具说明' : '展开工具说明',
+                        I18nService.instance.isChinese
+                            ? (expanded ? '收起工具说明' : '展开工具说明')
+                            : (expanded ? 'Collapse guide' : 'Expand guide'),
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
                               color: DS.textPrimary,
                               fontWeight: DS.fontWeightSemiBold,

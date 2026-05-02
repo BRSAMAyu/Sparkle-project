@@ -515,7 +515,7 @@ class _NotificationAnalyticsScreenState
               ],
               Text(
                 title == context.l10n.notificationSourceIntervention
-                    ? '${context.l10n.notificationAnalyticsViewRate}: ${stats.viewRate.toStringAsFixed(1)}% · 接受率: ${stats.acceptanceRate.toStringAsFixed(1)}% · 行动率: ${stats.actionRate.toStringAsFixed(1)}%'
+                    ? '${context.l10n.notificationAnalyticsViewRate}: ${stats.viewRate.toStringAsFixed(1)}% · ${I18nService.instance.isChinese ? '接受率' : 'Acceptance'}: ${stats.acceptanceRate.toStringAsFixed(1)}% · ${I18nService.instance.isChinese ? '行动率' : 'Action'}: ${stats.actionRate.toStringAsFixed(1)}%'
                     : '${context.l10n.notificationAnalyticsViewRate}: ${stats.viewRate.toStringAsFixed(1)}%',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,

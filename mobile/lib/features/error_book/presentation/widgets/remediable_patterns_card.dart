@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/error_book/data/models/remediable_pattern.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';

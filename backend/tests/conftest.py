@@ -1,4 +1,5 @@
 import os
+import sys
 from urllib.parse import urlparse, urlunparse
 import pytest
 import pytest_asyncio
@@ -7,6 +8,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import StaticPool
 from app.config import settings
 from app.core.redis_utils import resolve_redis_password
+
+APP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))
+if APP_DIR not in sys.path:
+    sys.path.insert(0, APP_DIR)
+APP_GEN_DIR = os.path.join(APP_DIR, "gen")
+if APP_GEN_DIR not in sys.path:
+    sys.path.insert(0, APP_GEN_DIR)
 
 from tests._credentials import (  # noqa: F401 — re-exported for legacy imports
     TEST_HASHED_PASSWORD,
@@ -94,6 +102,7 @@ from app.models.shop import (  # noqa: F401
     ConsumableEffectType,
 )
 from app.models.simulation_run import SimulationRun  # noqa: F401
+from app.models.strategy_belief import StrategyBeliefSnapshot  # noqa: F401
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

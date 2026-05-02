@@ -10,6 +10,7 @@ import 'package:sparkle/features/focus/presentation/widgets/focus_stats_session_
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class FocusStatsTool extends ConsumerStatefulWidget {
   const FocusStatsTool({
@@ -48,6 +49,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final state = ref.watch(feature.focusStatisticsProvider);
     final accent = DS.prismBlue;
     final totalSessions = state.sessionHistory.length;
@@ -76,7 +78,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
           icon: Icons.local_fire_department_rounded,
         ),
         ToolHeroChip(
-          label: totalSessions == 0 ? context.l10n.toolsStatsWaitingData : '$totalSessions 条最近记录',
+          label: totalSessions == 0 ? context.l10n.toolsStatsWaitingData : (zh ? '$totalSessions 条最近记录' : '$totalSessions recent sessions'),
           accentColor: accent,
           icon: Icons.history_rounded,
         ),
@@ -102,7 +104,7 @@ class _FocusStatsToolState extends ConsumerState<FocusStatsTool> {
                       ),
                       ToolMetricCard(
                         label: context.l10n.toolsStatsDailyAvg,
-                        value: '$averageDaily 分',
+                        value: zh ? '$averageDaily 分' : '$averageDaily min',
                         accentColor: accent,
                         icon: Icons.stacked_line_chart_rounded,
                       ),

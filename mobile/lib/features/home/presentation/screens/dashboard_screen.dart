@@ -457,6 +457,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   children: [
                     SparkleButton.primary(
                       label: context.l10n.dashboardStartWithAI,
+                      onPressed: () => context.go('/goals/new'),
+                    ),
+                    SparkleButton.ghost(
+                      label: I18nService.instance.isChinese
+                          ? '快速创建'
+                          : 'Quick create',
                       onPressed: () => context.go('/chat'),
                     ),
                     SparkleButton.ghost(

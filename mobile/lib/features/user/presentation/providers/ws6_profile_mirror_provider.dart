@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/client_observability_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/user/presentation/models/ws6_profile_mirror_models.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
@@ -329,6 +330,7 @@ class Ws6ProfileMirrorAdapter {
         (focusValue + energyValue + commitmentValue + memoryValue) / 4);
     final presenceValue = presenceFromRelationship ?? presenceFallback;
     final presenceLabel = _presenceLabel(presenceValue);
+    final zh = I18nService.instance.isChinese;
 
     return Ws6MirrorBarModel(
       enabled: true,
@@ -342,7 +344,7 @@ class Ws6ProfileMirrorAdapter {
           subtitle: _dimensionSubtitle(
             currentState['focus'],
             layer1['goals'],
-            fallback: '当前关注点和目标聚焦',
+            fallback: zh ? '当前关注点和目标聚焦' : 'Current focus and goal alignment',
           ),
           sourceLabel: _sourceLabel(
             [
@@ -361,7 +363,9 @@ class Ws6ProfileMirrorAdapter {
           subtitle: _dimensionSubtitle(
             currentState['energy'],
             readiness['energy'],
-            fallback: '系统对当前能量状态的保守估计',
+            fallback: zh
+                ? '系统对当前能量状态的保守估计'
+                : 'Conservative estimate of current energy',
           ),
           sourceLabel: _sourceLabel(
             [
@@ -382,7 +386,9 @@ class Ws6ProfileMirrorAdapter {
           subtitle: _dimensionSubtitle(
             currentState['commitment'],
             knowledgeSummary['active_learning_subjects'],
-            fallback: '当前承诺与任务执行节奏',
+            fallback: zh
+                ? '当前承诺与任务执行节奏'
+                : 'Current commitments and task execution rhythm',
           ),
           sourceLabel: _sourceLabel(
             [
@@ -401,7 +407,9 @@ class Ws6ProfileMirrorAdapter {
           subtitle: _dimensionSubtitle(
             knowledgeSummary['overall_mastery'],
             cognitiveSummary['active_patterns'],
-            fallback: '最近记忆与模式的保守投影',
+            fallback: zh
+                ? '最近记忆与模式的保守投影'
+                : 'Conservative projection from recent memory and patterns',
           ),
           sourceLabel: _sourceLabel(
             [
@@ -620,14 +628,23 @@ class Ws6ProfileMirrorAdapter {
     if (explicitSummary != null && explicitSummary.isNotEmpty) {
       return explicitSummary;
     }
-    final lead = visibleItems.isNotEmpty ? visibleItems.first.label : '你的画像';
+    final zh = I18nService.instance.isChinese;
+    final lead = visibleItems.isNotEmpty
+        ? visibleItems.first.label
+        : (zh ? '你的画像' : 'your profile');
     final mediatedCount = mediatedItems.length;
     final relationshipPart = relationshipState != null
-        ? '协作成熟度约 ${_clamp01(_numericFrom(relationshipState['relationship_maturity']) ?? 0.0) * 100}%'
-        : '协作成熟度暂未接入';
-    return '当前透明画像以「$lead」为主，'
-        '可见条目 ${visibleItems.length} 条，中介条目 $mediatedCount 条，'
-        '隐藏条目 $hiddenItemCount 条。$relationshipPart。';
+        ? (zh
+            ? '协作成熟度约 ${_clamp01(_numericFrom(relationshipState['relationship_maturity']) ?? 0.0) * 100}%'
+            : 'collaboration maturity about ${_clamp01(_numericFrom(relationshipState['relationship_maturity']) ?? 0.0) * 100}%')
+        : (zh ? '协作成熟度暂未接入' : 'collaboration maturity is not connected yet');
+    return zh
+        ? '当前透明画像以「$lead」为主，'
+            '可见条目 ${visibleItems.length} 条，中介条目 $mediatedCount 条，'
+            '隐藏条目 $hiddenItemCount 条。$relationshipPart。'
+        : 'Your transparent profile is currently led by "$lead", '
+            'with ${visibleItems.length} visible items, $mediatedCount mediated items, '
+            'and $hiddenItemCount hidden items. $relationshipPart.';
   }
 
   List<dynamic> _asList(dynamic value) {

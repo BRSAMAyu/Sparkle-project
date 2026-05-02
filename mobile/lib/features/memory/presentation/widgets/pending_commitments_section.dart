@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class PendingCommitmentsSection extends StatelessWidget {
   const PendingCommitmentsSection({
@@ -26,7 +27,7 @@ class PendingCommitmentsSection extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(DS.md, DS.md, DS.md, DS.sm),
           child: Text(
-            '待处理承诺',
+            I18nService.instance.isChinese ? '待处理承诺' : 'Pending Commitments',
             style: DS.labelLarge.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightSemibold,
@@ -35,7 +36,8 @@ class PendingCommitmentsSection extends StatelessWidget {
         ),
         ...items.map(
           (c) => Card(
-            margin: const EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.xs),
+            margin:
+                const EdgeInsets.symmetric(horizontal: DS.md, vertical: DS.xs),
             child: Padding(
               padding: const EdgeInsets.all(DS.sm),
               child: Row(
@@ -46,8 +48,11 @@ class PendingCommitmentsSection extends StatelessWidget {
                       children: [
                         Text(c.summary, style: DS.bodySmall),
                         Text(
-                          '截止: ${c.dueAt}',
-                          style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                          I18nService.instance.isChinese
+                              ? '截止: ${c.dueAt}'
+                              : 'Due: ${c.dueAt}',
+                          style:
+                              DS.labelSmall.copyWith(color: DS.textSecondary),
                         ),
                       ],
                     ),

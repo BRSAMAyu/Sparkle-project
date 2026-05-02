@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/task/data/repositories/task_repository.dart';
@@ -109,13 +110,17 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
         regenerate: regenerate,
       );
       if (!mounted) return;
+      final zh = I18nService.instance.isChinese;
       AppFeedback.success(
         context,
-        regenerate ? '$label已刷新' : '$label已生成',
+        regenerate
+            ? (zh ? '$label已刷新' : '$label refreshed')
+            : (zh ? '$label已生成' : '$label generated'),
       );
     } catch (error) {
       if (!mounted) return;
-      AppFeedback.error(context, context.l10n.taskGuidanceFailed(label, error.toString()));
+      AppFeedback.error(
+          context, context.l10n.taskGuidanceFailed(label, error.toString()));
     }
   }
 
@@ -207,8 +212,9 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
               if (guidance != null)
                 _MetaPill(
                   icon: Icons.update_rounded,
-                  label:
-                      context.l10n.taskGuidanceUpdatedAt(DateFormat('MM-dd HH:mm').format(guidance.updatedAt.toLocal())),
+                  label: context.l10n.taskGuidanceUpdatedAt(
+                      DateFormat('MM-dd HH:mm')
+                          .format(guidance.updatedAt.toLocal())),
                 ),
               if (guidance != null)
                 _MetaPill(
@@ -255,8 +261,12 @@ class _TaskGuidanceSurfaceState extends ConsumerState<TaskGuidanceSurface> {
                           : Icons.auto_awesome_rounded,
                     ),
                     label: _selectedAudience == TaskGuidanceAudience.human
-                        ? (hasContent ? context.l10n.taskGuidanceRefreshUser : context.l10n.taskGuidanceGenerateUser)
-                        : (hasContent ? context.l10n.taskGuidanceRefreshAi : context.l10n.taskGuidanceGenerateAi),
+                        ? (hasContent
+                            ? context.l10n.taskGuidanceRefreshUser
+                            : context.l10n.taskGuidanceGenerateUser)
+                        : (hasContent
+                            ? context.l10n.taskGuidanceRefreshAi
+                            : context.l10n.taskGuidanceGenerateAi),
                   ),
                 ),
               ],
@@ -345,7 +355,9 @@ class _GuidanceEmptyState extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            isHuman ? context.l10n.taskGuidanceNoUserYet : context.l10n.taskGuidanceNoAiYet,
+            isHuman
+                ? context.l10n.taskGuidanceNoUserYet
+                : context.l10n.taskGuidanceNoAiYet,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: DS.fontWeightBold,
                 ),
@@ -369,7 +381,9 @@ class _GuidanceEmptyState extends StatelessWidget {
               icon: Icon(
                 isHuman ? Icons.auto_awesome_rounded : Icons.smart_toy_outlined,
               ),
-              label: isHuman ? context.l10n.taskGuidanceGenerateNow : context.l10n.taskGuidanceGenerateAiOnDemand,
+              label: isHuman
+                  ? context.l10n.taskGuidanceGenerateNow
+                  : context.l10n.taskGuidanceGenerateAiOnDemand,
             ),
           ],
         ],

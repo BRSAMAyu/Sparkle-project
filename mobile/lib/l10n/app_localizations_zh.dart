@@ -1484,9 +1484,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskStatusPaused => '已暂停';
 
   @override
-  String get taskStatusRestore => '已恢复';
-
-  @override
   String get taskStatusStuck => '卡住了';
 
   @override
@@ -1980,60 +1977,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get streakFreezeCharges => '冻结次数';
-
-  @override
-  String get streakQualityTitle => '高质量连胜';
-
-  @override
-  String get streakQualitySubtitle => '连胜会参考有效时长、核心任务、难点突破和计划一致性。';
-
-  @override
-  String get streakQualityDaysShort => '质量日';
-
-  @override
-  String get streakQualityTodayBreakdown => '今日质量拆解';
-
-  @override
-  String get streakQualityEffectiveMinutes => '有效时长';
-
-  @override
-  String get streakQualityCoreTasks => '核心任务';
-
-  @override
-  String get streakQualityBreakthroughs => '难点突破';
-
-  @override
-  String get streakQualityPlanConsistency => '计划一致性';
-
-  @override
-  String get streakQualityWeeklyTrend => '本周质量趋势';
-
-  @override
-  String get streakQualityEvidence => '为什么值得庆祝';
-
-  @override
-  String get streakQualityEmpty => '开始一次学习后，这里会显示质量趋势。';
-
-  @override
-  String get streakQualityUnavailable => '质量数据暂不可用';
-
-  @override
-  String get streakQualityViewDetails => '查看连胜详情';
-
-  @override
-  String streakQualityScoreLabel(Object score) {
-    return '质量 $score%';
-  }
-
-  @override
-  String streakQualityMinutesValue(Object minutes) {
-    return '$minutes 分钟';
-  }
-
-  @override
-  String streakQualitySemantics(Object currentDays, Object qualityDays) {
-    return '高质量连胜 $qualityDays 天，当前连续 $currentDays 天。点按查看拆解。';
-  }
 
   @override
   String get errorNetwork => '网络错误';
@@ -28282,6 +28225,63 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get toolsNotesSyncedToPrism => '已同步到认知棱镜';
+
+  @override
+  String get taskStatusRestore => '已恢复';
+
+  @override
+  String get streakQualityTitle => '高质量连胜';
+
+  @override
+  String get streakQualitySubtitle => '连胜会参考有效时长、核心任务、难点突破和计划一致性。';
+
+  @override
+  String get streakQualityDaysShort => '质量日';
+
+  @override
+  String get streakQualityTodayBreakdown => '今日质量拆解';
+
+  @override
+  String get streakQualityEffectiveMinutes => '有效时长';
+
+  @override
+  String get streakQualityCoreTasks => '核心任务';
+
+  @override
+  String get streakQualityBreakthroughs => '难点突破';
+
+  @override
+  String get streakQualityPlanConsistency => '计划一致性';
+
+  @override
+  String get streakQualityWeeklyTrend => '本周质量趋势';
+
+  @override
+  String get streakQualityEvidence => '为什么值得庆祝';
+
+  @override
+  String get streakQualityEmpty => '开始一次学习后，这里会显示质量趋势。';
+
+  @override
+  String get streakQualityUnavailable => '质量数据暂不可用';
+
+  @override
+  String get streakQualityViewDetails => '查看连胜详情';
+
+  @override
+  String streakQualityScoreLabel(Object score) {
+    return '质量 $score%';
+  }
+
+  @override
+  String streakQualityMinutesValue(Object minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String streakQualitySemantics(Object currentDays, Object qualityDays) {
+    return '高质量连胜 $qualityDays 天，当前连续 $currentDays 天。点按查看拆解。';
+  }
 
   @override
   String get gdChronicleTitle => '成长编年史';

@@ -94,6 +94,19 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		tasks.POST("/:id/resources", h.proxyWithHeaders)
 		tasks.DELETE("/:id/resources/:resourceId", h.proxyWithHeaders)
 		// route-tier: authed
+		tasks.GET("/:id/card-protocol", h.proxyWithHeaders)
+		tasks.GET("/:id/priority-reasoning", h.proxyWithHeaders)
+		// route-tier: authed
+	}
+
+	// ==================== Error Book Extended Routes ====================
+	errors := api.Group("/errors")
+	errors.Use(authMiddleware)
+	{
+		errors.GET("/remediable-patterns", h.proxyWithHeaders)
+		errors.POST("/patterns/:pattern_id/generate-template", h.proxyWithHeaders)
+		errors.POST("/patterns/:pattern_id/accept-template", h.proxyWithHeaders)
+		// route-tier: authed
 		tasks.POST("/:id/generate-guide", h.proxyWithHeaders)
 		tasks.POST("/:id/start", h.proxyWithHeaders)
 		tasks.POST("/:id/complete", h.proxyWithHeaders)
@@ -290,8 +303,24 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered multi-agent proxy routes")
 
-	// NOTE: /goals and /reflections routes are intentionally omitted —
-	// no Python backend implementation exists yet. Add here when implemented.
+	// ==================== Goals Routes ====================
+	goals := api.Group("/goals")
+	goals.Use(authMiddleware)
+	{
+		goals.GET("/", h.proxyWithHeaders)
+		goals.POST("/", h.proxyWithHeaders)
+		goals.POST("/decompose-preview", h.proxyWithHeaders)
+		goals.GET("/:id", h.proxyWithHeaders)
+		goals.PUT("/:id", h.proxyWithHeaders)
+		goals.DELETE("/:id", h.proxyWithHeaders)
+	}
+
+	// ==================== Insights Routes ====================
+	insights := api.Group("/insights")
+	insights.Use(authMiddleware)
+	{
+		insights.GET("/recent-directives", h.proxyWithHeaders)
+	}
 
 	// ==================== Capsules Routes ====================
 	capsules := api.Group("/capsules")

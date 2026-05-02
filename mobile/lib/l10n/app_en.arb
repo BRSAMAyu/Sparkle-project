@@ -10731,7 +10731,7 @@
   "memCurrentTimezone": "Timezone: {timezone}",
   "@memCurrentTimezone": {
     "placeholders": {
-      "timezone": {}
+      "timezone": {"type": "String"}
     }
   },
   "memTypes": "Memory Types",

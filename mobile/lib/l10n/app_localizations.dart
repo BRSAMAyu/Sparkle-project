@@ -2936,12 +2936,6 @@ abstract class AppLocalizations {
   /// **'已暂停'**
   String get taskStatusPaused;
 
-  /// No description provided for @taskStatusRestore.
-  ///
-  /// In zh, this message translates to:
-  /// **'已恢复'**
-  String get taskStatusRestore;
-
   /// No description provided for @taskStatusStuck.
   ///
   /// In zh, this message translates to:
@@ -3817,102 +3811,6 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'冻结次数'**
   String get streakFreezeCharges;
-
-  /// No description provided for @streakQualityTitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'高质量连胜'**
-  String get streakQualityTitle;
-
-  /// No description provided for @streakQualitySubtitle.
-  ///
-  /// In zh, this message translates to:
-  /// **'连胜会参考有效时长、核心任务、难点突破和计划一致性。'**
-  String get streakQualitySubtitle;
-
-  /// No description provided for @streakQualityDaysShort.
-  ///
-  /// In zh, this message translates to:
-  /// **'质量日'**
-  String get streakQualityDaysShort;
-
-  /// No description provided for @streakQualityTodayBreakdown.
-  ///
-  /// In zh, this message translates to:
-  /// **'今日质量拆解'**
-  String get streakQualityTodayBreakdown;
-
-  /// No description provided for @streakQualityEffectiveMinutes.
-  ///
-  /// In zh, this message translates to:
-  /// **'有效时长'**
-  String get streakQualityEffectiveMinutes;
-
-  /// No description provided for @streakQualityCoreTasks.
-  ///
-  /// In zh, this message translates to:
-  /// **'核心任务'**
-  String get streakQualityCoreTasks;
-
-  /// No description provided for @streakQualityBreakthroughs.
-  ///
-  /// In zh, this message translates to:
-  /// **'难点突破'**
-  String get streakQualityBreakthroughs;
-
-  /// No description provided for @streakQualityPlanConsistency.
-  ///
-  /// In zh, this message translates to:
-  /// **'计划一致性'**
-  String get streakQualityPlanConsistency;
-
-  /// No description provided for @streakQualityWeeklyTrend.
-  ///
-  /// In zh, this message translates to:
-  /// **'本周质量趋势'**
-  String get streakQualityWeeklyTrend;
-
-  /// No description provided for @streakQualityEvidence.
-  ///
-  /// In zh, this message translates to:
-  /// **'为什么值得庆祝'**
-  String get streakQualityEvidence;
-
-  /// No description provided for @streakQualityEmpty.
-  ///
-  /// In zh, this message translates to:
-  /// **'开始一次学习后，这里会显示质量趋势。'**
-  String get streakQualityEmpty;
-
-  /// No description provided for @streakQualityUnavailable.
-  ///
-  /// In zh, this message translates to:
-  /// **'质量数据暂不可用'**
-  String get streakQualityUnavailable;
-
-  /// No description provided for @streakQualityViewDetails.
-  ///
-  /// In zh, this message translates to:
-  /// **'查看连胜详情'**
-  String get streakQualityViewDetails;
-
-  /// No description provided for @streakQualityScoreLabel.
-  ///
-  /// In zh, this message translates to:
-  /// **'质量 {score}%'**
-  String streakQualityScoreLabel(Object score);
-
-  /// No description provided for @streakQualityMinutesValue.
-  ///
-  /// In zh, this message translates to:
-  /// **'{minutes} 分钟'**
-  String streakQualityMinutesValue(Object minutes);
-
-  /// No description provided for @streakQualitySemantics.
-  ///
-  /// In zh, this message translates to:
-  /// **'高质量连胜 {qualityDays} 天，当前连续 {currentDays} 天。点按查看拆解。'**
-  String streakQualitySemantics(Object currentDays, Object qualityDays);
 
   /// No description provided for @errorNetwork.
   ///
@@ -51454,6 +51352,108 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'已同步到认知棱镜'**
   String get toolsNotesSyncedToPrism;
+
+  /// No description provided for @taskStatusRestore.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复'**
+  String get taskStatusRestore;
+
+  /// No description provided for @streakQualityTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'高质量连胜'**
+  String get streakQualityTitle;
+
+  /// No description provided for @streakQualitySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'连胜会参考有效时长、核心任务、难点突破和计划一致性。'**
+  String get streakQualitySubtitle;
+
+  /// No description provided for @streakQualityDaysShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'质量日'**
+  String get streakQualityDaysShort;
+
+  /// No description provided for @streakQualityTodayBreakdown.
+  ///
+  /// In zh, this message translates to:
+  /// **'今日质量拆解'**
+  String get streakQualityTodayBreakdown;
+
+  /// No description provided for @streakQualityEffectiveMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'有效时长'**
+  String get streakQualityEffectiveMinutes;
+
+  /// No description provided for @streakQualityCoreTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'核心任务'**
+  String get streakQualityCoreTasks;
+
+  /// No description provided for @streakQualityBreakthroughs.
+  ///
+  /// In zh, this message translates to:
+  /// **'难点突破'**
+  String get streakQualityBreakthroughs;
+
+  /// No description provided for @streakQualityPlanConsistency.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划一致性'**
+  String get streakQualityPlanConsistency;
+
+  /// No description provided for @streakQualityWeeklyTrend.
+  ///
+  /// In zh, this message translates to:
+  /// **'本周质量趋势'**
+  String get streakQualityWeeklyTrend;
+
+  /// No description provided for @streakQualityEvidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么值得庆祝'**
+  String get streakQualityEvidence;
+
+  /// No description provided for @streakQualityEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始一次学习后，这里会显示质量趋势。'**
+  String get streakQualityEmpty;
+
+  /// No description provided for @streakQualityUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'质量数据暂不可用'**
+  String get streakQualityUnavailable;
+
+  /// No description provided for @streakQualityViewDetails.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看连胜详情'**
+  String get streakQualityViewDetails;
+
+  /// No description provided for @streakQualityScoreLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'质量 {score}%'**
+  String streakQualityScoreLabel(Object score);
+
+  /// No description provided for @streakQualityMinutesValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟'**
+  String streakQualityMinutesValue(Object minutes);
+
+  /// No description provided for @streakQualitySemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'高质量连胜 {qualityDays} 天，当前连续 {currentDays} 天。点按查看拆解。'**
+  String streakQualitySemantics(Object currentDays, Object qualityDays);
 
   /// No description provided for @gdChronicleTitle.
   ///

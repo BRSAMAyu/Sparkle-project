@@ -77,8 +77,7 @@ Map<String, dynamic> _$SeedLibraryToJson(SeedLibrary instance) =>
       'user_rating_avg': instance.userRatingAvg,
       'user_rating_count': instance.userRatingCount,
       'current_user_rating': instance.currentUserRating,
-      'adoption_next_actions':
-          instance.adoptionNextActions.map((e) => e.toJson()).toList(),
+      'adoption_next_actions': instance.adoptionNextActions,
       'item_count': instance.itemCount,
       'subscriber_count': instance.subscriberCount,
       'created_at': instance.createdAt.toIso8601String(),
@@ -131,8 +130,7 @@ Map<String, dynamic> _$SeedItemToJson(SeedItem instance) => <String, dynamic>{
       'difficulty_level': _$DifficultyLevelEnumMap[instance.difficultyLevel],
       'tags': instance.tags,
       'order_index': instance.orderIndex,
-      'adoption_next_actions':
-          instance.adoptionNextActions.map((e) => e.toJson()).toList(),
+      'adoption_next_actions': instance.adoptionNextActions,
       'is_active': instance.isActive,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
@@ -187,8 +185,7 @@ Map<String, dynamic> _$UserLibrarySubscriptionToJson(
       'notes': instance.notes,
       'subscribed_at': instance.subscribedAt.toIso8601String(),
       'last_used_at': instance.lastUsedAt?.toIso8601String(),
-      'adoption_next_actions':
-          instance.adoptionNextActions.map((e) => e.toJson()).toList(),
+      'adoption_next_actions': instance.adoptionNextActions,
       'community_share': instance.communityShare,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),

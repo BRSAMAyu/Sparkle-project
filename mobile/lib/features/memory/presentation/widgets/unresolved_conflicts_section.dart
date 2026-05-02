@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class UnresolvedConflictsSection extends StatelessWidget {
   const UnresolvedConflictsSection({
@@ -29,7 +30,7 @@ class UnresolvedConflictsSection extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.fromLTRB(DS.md, DS.md, DS.md, DS.sm),
           child: Text(
-            '冲突记录',
+            I18nService.instance.isChinese ? '冲突记录' : 'Conflict Records',
             style: DS.labelLarge.copyWith(
               color: DS.textPrimary,
               fontWeight: DS.fontWeightSemibold,

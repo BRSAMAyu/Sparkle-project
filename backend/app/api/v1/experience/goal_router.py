@@ -15,6 +15,7 @@ from app.models.accountability import AccountabilityCheckin, AccountabilityPartn
 from app.models.file_storage import StoredFile
 from app.models.goal import Goal
 from app.models.plan import Plan
+from app.models.strategy_belief import StrategyBeliefSnapshot
 from app.models.task import Task, TaskStatus
 from app.models.task_document import TaskDocument
 from app.models.user import User
@@ -87,6 +88,13 @@ class RelatedSourcePayload(BaseModel):
     relevance: float = 0.0
 
 
+class StrategyBeliefPayload(BaseModel):
+    strategy_id: str
+    title: str
+    confidence: float
+    counter_evidence: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class GoalDetailPayload(BaseModel):
     goal: GoalSummaryPayload
     minimum_acceptance_criteria: MinimumAcceptanceCriteriaPayload
@@ -96,6 +104,7 @@ class GoalDetailPayload(BaseModel):
     knowledge_bottlenecks: list[KnowledgeBottleneckPayload] = Field(default_factory=list)
     accountability_status: AccountabilityStatusPayload
     related_sources: list[RelatedSourcePayload] = Field(default_factory=list)
+    strategy_belief: StrategyBeliefPayload | None = None
 
 
 # route-tier: authed
@@ -115,6 +124,7 @@ async def get_goal_detail(
     graph_payload = await _load_graph_payload(db, user_id=current_user.id, goal_id=goal.id)
     accountability = await _accountability_status(db, current_user.id)
     sources = await _related_sources(db, user_id=current_user.id, plan_id=goal.plan_id)
+    strategy_belief = await _strategy_belief_payload(db, user_id=current_user.id, goal=goal)
 
     return GoalDetailPayload(
         goal=GoalSummaryPayload(
@@ -134,6 +144,7 @@ async def get_goal_detail(
         knowledge_bottlenecks=_bottleneck_payloads(graph_payload),
         accountability_status=accountability,
         related_sources=sources,
+        strategy_belief=strategy_belief,
     )
 
 
@@ -159,6 +170,59 @@ async def _load_plan(db: AsyncSession, goal: Goal) -> Plan | None:
         )
     )
     return result.scalar_one_or_none()
+
+
+async def _strategy_belief_payload(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    goal: Goal,
+) -> StrategyBeliefPayload | None:
+    metadata = goal.metadata_payload if isinstance(goal.metadata_payload, dict) else {}
+    current_strategy = metadata.get("current_strategy_id") or metadata.get("strategy_key")
+    query = select(StrategyBeliefSnapshot).where(
+        StrategyBeliefSnapshot.user_id == str(user_id),
+        StrategyBeliefSnapshot.deleted_at.is_(None),
+    )
+    if current_strategy:
+        query = query.where(StrategyBeliefSnapshot.strategy_key == str(current_strategy))
+    result = await db.execute(query.order_by(StrategyBeliefSnapshot.updated_at.desc()))
+    beliefs = list(result.scalars().all())
+    candidates = [
+        belief
+        for belief in beliefs
+        if belief.belief_score < 0.4 and _counter_evidence_payload(belief.counter_evidence)
+    ]
+    if not candidates:
+        return None
+
+    belief = sorted(candidates, key=lambda item: item.belief_score)[0]
+    return StrategyBeliefPayload(
+        strategy_id=belief.strategy_key,
+        title=belief.strategy_key.replace("_", " ").title(),
+        confidence=round(belief.belief_score, 3),
+        counter_evidence=_counter_evidence_payload(belief.counter_evidence),
+    )
+
+
+def _counter_evidence_payload(raw: Any) -> list[dict[str, Any]]:
+    if not isinstance(raw, list):
+        return []
+    payload: list[dict[str, Any]] = []
+    for item in raw:
+        if isinstance(item, dict):
+            reason = str(item.get("reason") or item.get("detail") or item.get("evidence_id") or "").strip()
+            if reason:
+                payload.append(
+                    {
+                        "reason": reason,
+                        "weight": float(item.get("weight") or 1.0),
+                        "source": str(item.get("source") or "counter_evidence"),
+                    }
+                )
+        elif str(item).strip():
+            payload.append({"reason": str(item).strip(), "weight": 1.0, "source": "counter_evidence"})
+    return payload
 
 
 async def _task_counts(db: AsyncSession, *, user_id: UUID, plan_id: UUID | None) -> dict[str, int]:

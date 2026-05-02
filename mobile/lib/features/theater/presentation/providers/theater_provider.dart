@@ -7,6 +7,7 @@ import 'package:sparkle/features/galaxy/data/repositories/galaxy_repository.dart
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/theater/data/models/theater_models.dart';
 import 'package:sparkle/features/theater/data/repositories/theater_repository.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 final theaterOverlayProvider = StateProvider<TheaterGalaxyOverlay?>(
   (ref) => null,
@@ -115,9 +116,10 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
     Object error, {
     required String fallbackMessage,
   }) {
+    final zh = I18nService.instance.isChinese;
     if (error is TheaterRepositoryException) {
       if (error.isTimeout) {
-        return '这次推演花的时间有点长。你可以把目标说得更具体一点，或者稍后再试。';
+        return zh ? '这次推演花的时间有点长。你可以把目标说得更具体一点，或者稍后再试。' : 'This prediction is taking longer than expected. Try being more specific, or try again later.';
       }
       return error.message;
     }
@@ -195,7 +197,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         loadingStage: 'idle',
         error: _resolveErrorMessage(
           e,
-          fallbackMessage: '这次推演没有成功生成，你可以稍后再试。',
+          fallbackMessage: I18nService.instance.isChinese ? '这次推演没有成功生成，你可以稍后再试。' : 'Failed to generate this prediction. You can try again later.',
         ),
       );
     }
@@ -238,7 +240,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         loadingStage: 'idle',
         error: _resolveErrorMessage(
           e,
-          fallbackMessage: '读取这次推演失败了，你可以稍后再试。',
+          fallbackMessage: I18nService.instance.isChinese ? '读取这次推演失败了，你可以稍后再试。' : 'Failed to load this prediction. You can try again later.',
         ),
       );
     }
@@ -302,7 +304,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         isLoading: false,
         error: _resolveErrorMessage(
           e,
-          fallbackMessage: '这次假设推演没有成功生成，你可以稍后再试。',
+          fallbackMessage: I18nService.instance.isChinese ? '这次假设推演没有成功生成，你可以稍后再试。' : 'Failed to generate this what-if scenario. You can try again later.',
         ),
       );
     }
@@ -333,7 +335,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         isLoading: false,
         error: _resolveErrorMessage(
           e,
-          fallbackMessage: '记录推演结果失败，你可以稍后再试。',
+          fallbackMessage: I18nService.instance.isChinese ? '记录推演结果失败，你可以稍后再试。' : 'Failed to record prediction results. You can try again later.',
         ),
       );
     }
@@ -361,7 +363,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         isSavingSnapshot: false,
         error: _resolveErrorMessage(
           e,
-          fallbackMessage: '保存推演快照失败，你可以稍后再试。',
+          fallbackMessage: I18nService.instance.isChinese ? '保存推演快照失败，你可以稍后再试。' : 'Failed to save prediction snapshot. You can try again later.',
         ),
       );
     }
@@ -406,7 +408,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         isAdopting: false,
         error: _resolveErrorMessage(
           e,
-          fallbackMessage: '采纳这条推演路径失败了，你可以稍后再试。',
+          fallbackMessage: I18nService.instance.isChinese ? '采纳这条推演路径失败了，你可以稍后再试。' : 'Failed to adopt this prediction path. You can try again later.',
         ),
       );
     }
@@ -424,7 +426,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
       state = state.copyWith(
         error: _resolveErrorMessage(
           e,
-          fallbackMessage: '读取推演准确度失败，你可以稍后再试。',
+          fallbackMessage: I18nService.instance.isChinese ? '读取推演准确度失败，你可以稍后再试。' : 'Failed to load prediction accuracy. You can try again later.',
         ),
       );
     }
@@ -438,7 +440,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
       state = state.copyWith(
         error: _resolveErrorMessage(
           e,
-          fallbackMessage: '读取推演校准概览失败，你可以稍后再试。',
+          fallbackMessage: I18nService.instance.isChinese ? '读取推演校准概览失败，你可以稍后再试。' : 'Failed to load calibration overview. You can try again later.',
         ),
       );
     }
@@ -481,7 +483,7 @@ class TheaterNotifier extends StateNotifier<TheaterState> {
         isPromotingNode: false,
         error: _resolveErrorMessage(
           e,
-          fallbackMessage: '将节点同步到知识星图失败，你可以稍后再试。',
+          fallbackMessage: I18nService.instance.isChinese ? '将节点同步到知识星图失败，你可以稍后再试。' : 'Failed to sync node to knowledge galaxy. You can try again later.',
         ),
       );
       return null;

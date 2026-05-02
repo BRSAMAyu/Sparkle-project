@@ -965,6 +965,7 @@ class DS {
   static const double fontSizeXs = 12.0;
   static const double fontSizeSm = 14.0;
   static const double fontSizeBase = 16.0;
+  static const double fontSizeMd = fontSizeBase;
   static const double fontSizeLg = fontSizeBase * _fontRatio;
   static const double fontSizeXl = fontSizeLg * _fontRatio;
   static const double fontSize2xl = fontSizeXl * _fontRatio;
