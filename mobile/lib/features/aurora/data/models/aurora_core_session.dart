@@ -182,6 +182,105 @@ class AuroraCalibrationResult {
       };
 }
 
+class AuroraCoreAgendaItem {
+  const AuroraCoreAgendaItem({
+    required this.id,
+    required this.label,
+    required this.status,
+    required this.messageStage,
+  });
+
+  factory AuroraCoreAgendaItem.fromJson(Map<String, dynamic> json) =>
+      AuroraCoreAgendaItem(
+        id: json['id'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        status: json['status'] as String? ?? 'pending',
+        messageStage: json['message_stage'] as String? ?? '',
+      );
+
+  final String id;
+  final String label;
+  final String status;
+  final String messageStage;
+
+  bool get isDone => status == 'done';
+  bool get isInProgress => status == 'in_progress';
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'label': label,
+        'status': status,
+        'message_stage': messageStage,
+      };
+}
+
+class AuroraCoreAgenda {
+  const AuroraCoreAgenda({
+    required this.sessionId,
+    required this.scope,
+    required this.status,
+    required this.currentStage,
+    required this.interruptionPolicy,
+    required this.interruptionPolicyLabel,
+    required this.resumeHint,
+    required this.estimatedMinutes,
+    required this.preview,
+    required this.items,
+  });
+
+  factory AuroraCoreAgenda.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['items'] as List<dynamic>? ?? const [];
+    final rawPreview = json['preview'] as List<dynamic>? ?? const [];
+    return AuroraCoreAgenda(
+      sessionId: json['session_id'] as String? ?? '',
+      scope: json['scope'] as String? ?? '',
+      status: json['status'] as String? ?? 'active',
+      currentStage: json['current_stage'] as String? ?? 'declare',
+      interruptionPolicy:
+          json['interruption_policy'] as String? ?? 'answer_then_resume',
+      interruptionPolicyLabel:
+          json['interruption_policy_label'] as String? ?? '',
+      resumeHint: json['resume_hint'] as String? ?? '',
+      estimatedMinutes: (json['estimated_minutes'] as num?)?.toInt() ?? 4,
+      preview: rawPreview.map((item) => '$item').toList(),
+      items: rawItems
+          .whereType<Map<String, dynamic>>()
+          .map(AuroraCoreAgendaItem.fromJson)
+          .toList(),
+    );
+  }
+
+  final String sessionId;
+  final String scope;
+  final String status;
+  final String currentStage;
+  final String interruptionPolicy;
+  final String interruptionPolicyLabel;
+  final String resumeHint;
+  final int estimatedMinutes;
+  final List<String> preview;
+  final List<AuroraCoreAgendaItem> items;
+
+  bool get hasContent =>
+      items.isNotEmpty ||
+      interruptionPolicyLabel.isNotEmpty ||
+      resumeHint.isNotEmpty ||
+      preview.isNotEmpty;
+
+  Map<String, dynamic> toJson() => {
+        'session_id': sessionId,
+        'scope': scope,
+        'status': status,
+        'current_stage': currentStage,
+        'interruption_policy': interruptionPolicy,
+        'interruption_policy_label': interruptionPolicyLabel,
+        'resume_hint': resumeHint,
+        'estimated_minutes': estimatedMinutes,
+        'preview': preview,
+        'items': items.map((item) => item.toJson()).toList(),
+      };
+}
+
 class AuroraCoreSession {
   const AuroraCoreSession({
     required this.sessionId,
@@ -193,6 +292,7 @@ class AuroraCoreSession {
     required this.scope,
     required this.sessionType,
     required this.entryReason,
+    required this.agenda,
     required this.resumeToken,
     required this.messages,
     required this.calibrationResult,
@@ -210,6 +310,7 @@ class AuroraCoreSession {
     final rawGroups =
         json['pending_option_groups'] as List<dynamic>? ?? const [];
     final rawEntryReason = json['entry_reason'];
+    final rawAgenda = json['agenda'];
     return AuroraCoreSession(
       sessionId: json['session_id'] as String? ?? '',
       userId: json['user_id'] as String? ?? '',
@@ -225,6 +326,11 @@ class AuroraCoreSession {
               ? AuroraCoreSessionEntryReason.fromJson(
                   Map<String, dynamic>.from(rawEntryReason),
                 )
+              : null,
+      agenda: rawAgenda is Map<String, dynamic>
+          ? AuroraCoreAgenda.fromJson(rawAgenda)
+          : rawAgenda is Map
+              ? AuroraCoreAgenda.fromJson(Map<String, dynamic>.from(rawAgenda))
               : null,
       resumeToken: json['resume_token'] as String? ?? '',
       messages: rawMessages
@@ -255,6 +361,7 @@ class AuroraCoreSession {
   final String scope;
   final String sessionType;
   final AuroraCoreSessionEntryReason? entryReason;
+  final AuroraCoreAgenda? agenda;
   final String resumeToken;
   final List<AuroraCoreMessage> messages;
   final AuroraCalibrationResult? calibrationResult;
@@ -298,6 +405,7 @@ class AuroraCoreSession {
         'scope': scope,
         'session_type': sessionType,
         'entry_reason': entryReason?.toJson(),
+        'agenda': agenda?.toJson(),
         'resume_token': resumeToken,
         'messages': messages.map((message) => message.toJson()).toList(),
         'calibration_result': calibrationResult?.toJson(),

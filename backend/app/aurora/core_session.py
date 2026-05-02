@@ -256,6 +256,9 @@ class AuroraCoreSession:
 
     def agenda_snapshot(self) -> dict[str, Any]:
         """Return the backend-authoritative agenda projection for the UI."""
+        entry_reason = self.entry_reason if isinstance(self.entry_reason, dict) else {}
+        estimated_minutes = entry_reason.get("estimated_minutes") or 4
+        agenda_preview = entry_reason.get("suggested_agenda_preview") or []
         items = [
             {
                 "id": "enter_session",
@@ -294,6 +297,10 @@ class AuroraCoreSession:
             "status": self.status,
             "current_stage": self.stage,
             "interruption_policy": "answer_then_resume",
+            "interruption_policy_label": "可以随时暂停；回来后从当前问题继续",
+            "resume_hint": "暂停后 Aurora 会保留阶段、消息和待确认问题，不需要你重讲。",
+            "estimated_minutes": int(estimated_minutes) if isinstance(estimated_minutes, (int, float)) else 4,
+            "preview": [str(item) for item in agenda_preview[:4]],
             "items": items,
         }
 
@@ -1252,6 +1259,7 @@ class AuroraCoreSessionService:
     def _derive_strategy_changes(self, session: AuroraCoreSession) -> list[str]:
         changes: list[str] = []
         seen_semantics = {msg.semantic_value for msg in session.messages if msg.role == "user" and msg.semantic_value}
+        correction_profile = self._interpret_freeform_corrections(session)
         if "available_time_30" in seen_semantics:
             changes.append("今晚按 30 分钟处理任务")
         elif "available_time_45" in seen_semantics:
@@ -1266,11 +1274,14 @@ class AuroraCoreSessionService:
             changes.append("后续任务颗粒度调小")
         if "duration_chronic" in seen_semantics:
             changes.append("该问题已持续一周以上，调整为长期策略")
+        if correction_profile.get("blocker_type") == "skill_gap":
+            changes.append("先按能力缺口处理，不再把它当作时间不够")
         return changes
 
     def _derive_state_patches(self, session: AuroraCoreSession) -> list[dict[str, Any]]:
         patches: list[dict[str, Any]] = []
         seen_semantics = [msg.semantic_value for msg in session.messages if msg.role == "user" and msg.semantic_value]
+        correction_profile = self._interpret_freeform_corrections(session)
         semantic_map = {
             "available_time_30": ("available_time_today", "unknown", "30_minutes", "用户确认今晚可用时间约 30 分钟"),
             "available_time_45": ("available_time_today", "unknown", "45_minutes", "用户确认今晚可用时间约 45 分钟"),
@@ -1297,6 +1308,35 @@ class AuroraCoreSessionService:
                     "confidence": 0.72,
                 }
             )
+        if correction_profile.get("blocker_type") == "skill_gap":
+            skill_reason = correction_profile.get("reason") or "用户明确说明卡住原因是不会做，而不是时间不足"
+            blocker_patches = [
+                {
+                    "state_key": "current_blocker",
+                    "old_value": "time_or_effort_unclear",
+                    "new_value": "skill_gap",
+                    "reason": skill_reason,
+                    "confidence": 0.82,
+                },
+                {
+                    "state_key": "policy_directive",
+                    "old_value": "push_current_task",
+                    "new_value": "diagnose_prerequisite_first",
+                    "reason": "自由校正要求 Aurora 先定位前置能力缺口，再继续建议",
+                    "confidence": 0.78,
+                },
+                {
+                    "state_key": "task_adjustment",
+                    "old_value": "continue_original_card",
+                    "new_value": "create_prerequisite_micro_task",
+                    "reason": "当前任务需要降级成可开始的前置练习卡",
+                    "confidence": 0.76,
+                },
+            ]
+            for patch in blocker_patches:
+                if any(p["state_key"] == patch["state_key"] and p["new_value"] == patch["new_value"] for p in patches):
+                    continue
+                patches.append(patch)
         if not patches:
             patches.append(
                 {
@@ -1317,10 +1357,57 @@ class AuroraCoreSessionService:
         state_patches: list[dict[str, Any]],
     ) -> list[str]:
         if changes:
-            return [f"接下来的计划会{change}" for change in changes[:3]]
+            next_steps = [f"接下来的计划会{change}" for change in changes[:3]]
+        else:
+            next_steps = []
+        if any(p.get("new_value") == "skill_gap" for p in state_patches):
+            next_steps.extend(
+                [
+                    "下一张任务卡会先定位不会做的前置点，而不是催你挤时间",
+                    "Aurora 以后遇到相似卡顿会先问能力缺口，再判断时间安排",
+                ]
+            )
+        if next_steps:
+            deduped: list[str] = []
+            for step in next_steps:
+                if step not in deduped:
+                    deduped.append(step)
+            return deduped[:4]
         if any(p.get("state_key") == "aurora_assumption" for p in state_patches):
             return ["后续回复会降低刚才那类推断的权重", "需要确认时会优先问你，而不是直接下判断"]
         return [f"后续会按「{session.scope}」重新判断任务节奏", "状态带会继续观察这个校准是否有效"]
+
+    def _interpret_freeform_corrections(self, session: AuroraCoreSession) -> dict[str, Any]:
+        """Extract durable intent from short freeform corrections without requiring an LLM."""
+        freeform_texts = [
+            msg.content.strip()
+            for msg in session.messages
+            if msg.role == "user" and (msg.is_freeform or msg.semantic_value == "freeform_correction")
+        ]
+        if not freeform_texts:
+            return {}
+        joined = "。".join(freeform_texts)
+        skill_gap_markers = (
+            "不会",
+            "不懂",
+            "没学会",
+            "看不懂",
+            "完全不会做",
+            "不知道怎么",
+            "基础不行",
+            "前置",
+            "知识点",
+        )
+        not_time_markers = ("不是没时间", "不是时间", "不是太忙", "不是拖延", "不是懒")
+        has_skill_gap = any(marker in joined for marker in skill_gap_markers)
+        contrasts_time = any(marker in joined for marker in not_time_markers)
+        if has_skill_gap:
+            return {
+                "blocker_type": "skill_gap",
+                "reason": ("用户自由校正说问题是不会做" + ("，并明确排除了时间不足" if contrasts_time else "")),
+                "raw_text": joined[:240],
+            }
+        return {"raw_text": joined[:240]}
 
     # ── Scope inference ────────────────────────────────────────────
 
