@@ -1,0 +1,17 @@
+FV-10: DataMinimizationAuditor 扩覆盖 + fail-closed
+Status: DONE_WITH_EXTERNAL_BLOCKER
+Branch: codex/FV-10-data-minimization
+Modified files:
+- backend/app/core/data_minimization.py
+- scripts/guards/check_data_minimization_coverage.py
+- scripts/rule_guard_manifest.tsv
+- backend/tests/unit/test_data_minimization.py
+- docs/product/parallel_closeout/FV-10_data_minimization_REPORT_2026-05-02.md
+- .claude/fix-progress/FV-10.done
+Verification:
+- backend/.venv/bin/python -m py_compile backend/app/core/data_minimization.py scripts/guards/check_data_minimization_coverage.py: PASS
+- cd backend && ../backend/.venv/bin/python -m pytest --confcutdir=tests/unit tests/unit/test_data_minimization.py -q: PASS (7 passed)
+- bash scripts/run_all_rule_guards.sh --rule GOV-DATA-MIN: PASS (15 canonical scopes, 44 high-risk model aliases)
+- cd backend && ../backend/.venv/bin/python -m pytest tests/unit/test_data_minimization.py -q: BLOCKED by pre-existing app/models/community_privacy.py SQLAlchemy reserved metadata attribute
+User-visible change: production data minimization now fails closed for unregistered storage targets and strips non-scope fields for registered long-lived/cross-user models.
+Architect handoff: Resolve existing community_privacy.metadata collection blocker before full backend pytest replay.
