@@ -164,6 +164,12 @@ class TaskAbandon(BaseModel):
     reason: str | None = Field(default=None, description="Abandon reason")
 
 
+class TaskPause(BaseModel):
+    """Pause task without counting it as success or failure."""
+
+    reason: str | None = Field(default=None, max_length=500, description="Pause reason")
+
+
 class TaskQuickActionRequest(BaseModel):
     """Lightweight task-card action request."""
 

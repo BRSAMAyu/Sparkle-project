@@ -240,7 +240,26 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         elapsedMinutes: elapsedMinutes,
       ),
     );
+    if (shouldPop ?? false) {
+      await _autoPauseIfLongExit(elapsedSeconds);
+    }
     return shouldPop ?? false;
+  }
+
+  Future<void> _autoPauseIfLongExit(int elapsedSeconds) async {
+    final task = ref.read(activeTaskProvider);
+    if (task == null || isLocalOnlyTaskId(task.id)) return;
+    if (task.status != TaskStatus.inProgress &&
+        task.status != TaskStatus.stuck) {
+      return;
+    }
+    final expectedSeconds = (task.estimatedMinutes * 60).clamp(60, 86400);
+    if (elapsedSeconds < (expectedSeconds / 2).ceil()) return;
+
+    await ref.read(taskListProvider.notifier).pauseTask(
+          task.id,
+          reason: 'auto_paused_after_long_exit',
+        );
   }
 
   Future<void> _handleCompletion(int minutes, String? note) async {
@@ -1496,6 +1515,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
         isClawConnected &&
         task.status != TaskStatus.completed &&
         task.status != TaskStatus.abandoned &&
+        task.status != TaskStatus.paused &&
         (executionIntent == null || executionIntent.isTerminal) &&
         !isHandoffLoading;
     final canQueueHandoff = supportsAiHandoff &&
@@ -1503,6 +1523,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
         isClawConfigured &&
         task.status != TaskStatus.completed &&
         task.status != TaskStatus.abandoned &&
+        task.status != TaskStatus.paused &&
         (executionIntent == null || executionIntent.isTerminal) &&
         !isHandoffLoading;
     final showExecutionStatus =
@@ -2019,6 +2040,9 @@ class _BottomControls extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isPaused = task.status == TaskStatus.paused;
+    final canPause =
+        task.status == TaskStatus.inProgress || task.status == TaskStatus.stuck;
     return GraphiteCardSurface(
       borderColor: DS.borderSubtle,
       padding: const EdgeInsets.all(DS.spacing16),
@@ -2031,12 +2055,36 @@ class _BottomControls extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: DS.spacing16),
+          if (canPause) ...[
+            Expanded(
+              child: CustomButton.secondary(
+                text: context.l10n.taskActionPause,
+                onPressed: () {
+                  unawaited(
+                    ref.read(taskListProvider.notifier).pauseTask(
+                          task.id,
+                          reason: 'user_paused_from_execution_controls',
+                        ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: DS.spacing16),
+          ],
           Expanded(
             flex: 2,
             child: CustomButton.primary(
-              text: context.l10n.taskExecutionCompleteTitle,
+              text: isPaused
+                  ? context.l10n.taskActionResume
+                  : context.l10n.taskExecutionCompleteTitle,
               customGradient: _taskWarmActionGradient(context),
-              onPressed: () => _showCompleteDialog(context),
+              onPressed: isPaused
+                  ? () {
+                      unawaited(
+                        ref.read(taskListProvider.notifier).resumeTask(task.id),
+                      );
+                    }
+                  : () => _showCompleteDialog(context),
             ),
           ),
         ],

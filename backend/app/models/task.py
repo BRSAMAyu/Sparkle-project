@@ -46,6 +46,7 @@ class TaskType(enum.StrEnum):
 class TaskStatus(enum.StrEnum):
     PENDING = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
+    PAUSED = "PAUSED"
     STUCK = "STUCK"
     COMPLETED = "COMPLETED"
     ABANDONED = "ABANDONED"

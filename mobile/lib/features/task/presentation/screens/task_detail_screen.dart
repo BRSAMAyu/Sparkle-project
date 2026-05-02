@@ -23,6 +23,7 @@ import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
+import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/guidance/task_guidance_surface.dart';
@@ -80,6 +81,8 @@ class _TaskDetailView extends ConsumerWidget {
                       child: SparkleStaggerList(
                         gap: DS.spacing24,
                         children: [
+                          if (task.status == TaskStatus.paused)
+                            _buildPausedRecoveryCard(context, ref),
                           _buildInfoSection(context, ref),
                           if (task.guideJson != null ||
                               (task.aiPrompt ?? '').trim().isNotEmpty)
@@ -125,6 +128,40 @@ class _TaskDetailView extends ConsumerWidget {
           _BottomActionBar(task: task),
         ],
       );
+
+  Widget _buildPausedRecoveryCard(BuildContext context, WidgetRef ref) {
+    final pauseState = task.guideJson?['pause_state'];
+    final pausedAtRaw =
+        pauseState is Map ? pauseState['paused_at']?.toString() : null;
+    final pausedAt =
+        pausedAtRaw == null ? null : DateTime.tryParse(pausedAtRaw);
+    final elapsedMinutes = pausedAt == null
+        ? 120
+        : DateTime.now().difference(pausedAt).inMinutes.clamp(1, 10080);
+
+    return StaleRecoveryCard(
+      elapsedMinutes: elapsedMinutes,
+      pendingTaskStatus: context.l10n.taskStatusPaused,
+      resumeOptions: [
+        context.l10n.taskActionResume,
+        context.l10n.taskActionEdit,
+      ],
+      onOptionSelected: (option) {
+        if (option == context.l10n.taskActionResume) {
+          unawaited(() async {
+            await ref.read(taskListProvider.notifier).resumeTask(task.id);
+            if (!context.mounted) return;
+            ref.read(activeTaskProvider.notifier).state = task.copyWith(
+              status: TaskStatus.inProgress,
+              startedAt: task.startedAt ?? DateTime.now(),
+            );
+            context.go('/tasks/${task.id}/execute');
+          }());
+        }
+      },
+      onDismiss: () {},
+    );
+  }
 
   Widget _buildNoteSection(BuildContext context) => GraphiteCardSurface(
         child: Column(
@@ -188,7 +225,8 @@ class _TaskDetailView extends ConsumerWidget {
             const SizedBox(width: DS.spacing12),
             Expanded(
               child: Text(
-                context.l10n.taskDetailSubtasks(subtaskState.completed, subtaskState.total),
+                context.l10n.taskDetailSubtasks(
+                    subtaskState.completed, subtaskState.total),
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -208,7 +246,8 @@ class _TaskDetailView extends ConsumerWidget {
                 ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
                 : subtaskState.error != null && subtaskState.total == 0
                     ? Text(
-                        context.l10n.taskDetailSubtaskLoadFailed(subtaskState.error ?? ''),
+                        context.l10n.taskDetailSubtaskLoadFailed(
+                            subtaskState.error ?? ''),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: DS.error,
                             ),
@@ -684,6 +723,8 @@ class _TaskDetailView extends ConsumerWidget {
         return l10n.taskStatusPending;
       case TaskStatus.inProgress:
         return l10n.taskStatusInProgress;
+      case TaskStatus.paused:
+        return l10n.taskStatusPaused;
       case TaskStatus.stuck:
         return l10n.taskStatusStuck;
       case TaskStatus.completed:
@@ -698,6 +739,7 @@ class _TaskDetailView extends ConsumerWidget {
       case TaskStatus.pending:
         return DS.warning;
       case TaskStatus.inProgress:
+      case TaskStatus.paused:
       case TaskStatus.stuck:
         return DS.info;
       case TaskStatus.completed:
@@ -861,15 +903,29 @@ class _BottomActionBar extends ConsumerWidget {
                 Expanded(
                   flex: 2,
                   child: CustomButton.primary(
-                    text: context.l10n.taskStart,
-                    icon: Icons.play_arrow_rounded,
+                    text: task.status == TaskStatus.paused
+                        ? context.l10n.taskActionResume
+                        : context.l10n.taskStart,
+                    icon: task.status == TaskStatus.paused
+                        ? Icons.restart_alt_rounded
+                        : Icons.play_arrow_rounded,
                     onPressed: () {
                       unawaited(
                         SensoryFeedbackService.emit(
                           SensoryFeedbackEvent.confirm,
                         ),
                       );
-                      ref.read(activeTaskProvider.notifier).state = task;
+                      if (task.status == TaskStatus.paused) {
+                        unawaited(
+                          ref
+                              .read(taskListProvider.notifier)
+                              .resumeTask(task.id),
+                        );
+                      }
+                      ref.read(activeTaskProvider.notifier).state =
+                          task.status == TaskStatus.paused
+                              ? task.copyWith(status: TaskStatus.inProgress)
+                              : task;
                       // P0-1: Auto-switch plan context when starting task
                       ref
                           .read(activePlanProvider.notifier)
@@ -1006,7 +1062,8 @@ class _StructuredGuideSection extends StatelessWidget {
             _GuideInfoRow(
               icon: Icons.timer_outlined,
               label: context.l10n.taskEstimatedTime,
-              value: context.l10n.taskDetailStepMinutesValue(guide['time_estimate_minutes'] as int),
+              value: context.l10n.taskDetailStepMinutesValue(
+                  guide['time_estimate_minutes'] as int),
             ),
           if ((task.successCriteria ??
                   guide['success_criteria']?.toString() ??
@@ -1082,16 +1139,16 @@ class _StructuredGuideSection extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: DS.spacing8),
-                  Expanded(
-                    child: SparkleButton(
-                      label: context.l10n.taskOpenAiAssistant,
-                      variant: ButtonVariant.secondary,
-                      icon: const Icon(Icons.smart_toy_outlined, size: 16),
-                      onPressed: () => unawaited(
-                        context.push('/tasks/${task.id}/execute?panel=assistant'),
-                      ),
+                Expanded(
+                  child: SparkleButton(
+                    label: context.l10n.taskOpenAiAssistant,
+                    variant: ButtonVariant.secondary,
+                    icon: const Icon(Icons.smart_toy_outlined, size: 16),
+                    onPressed: () => unawaited(
+                      context.push('/tasks/${task.id}/execute?panel=assistant'),
                     ),
                   ),
+                ),
               ],
             ),
           ],
@@ -1172,7 +1229,8 @@ class _GenerateGuideButtonState extends ConsumerState<_GenerateGuideButton> {
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, context.l10n.taskDetailGuideGenerateFailed('$e'));
+        AppFeedback.error(
+            context, context.l10n.taskDetailGuideGenerateFailed('$e'));
       }
     } finally {
       if (mounted) setState(() => _isGenerating = false);

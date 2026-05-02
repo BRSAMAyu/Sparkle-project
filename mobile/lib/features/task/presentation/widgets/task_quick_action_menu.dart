@@ -10,6 +10,8 @@ import 'package:sparkle/features/task/presentation/providers/task_provider.dart'
 import 'package:sparkle/shared/entities/task_model.dart';
 
 enum _TaskQuickAction {
+  pause,
+  resume,
   snooze,
   tooHard,
   skip,
@@ -32,6 +34,27 @@ Future<void> showTaskQuickActionMenu({
   }
 
   switch (action) {
+    case _TaskQuickAction.pause:
+      await _runTaskVoidAction(
+        context: context,
+        action: () => ref.read(taskListProvider.notifier).pauseTask(
+              task.id,
+              reason: 'user_paused_from_quick_action',
+            ),
+        loadingMessage: context.l10n.taskActionPause,
+        successMessage: context.l10n.taskStatusPaused,
+        onChanged: onChanged,
+      );
+      return;
+    case _TaskQuickAction.resume:
+      await _runTaskVoidAction(
+        context: context,
+        action: () => ref.read(taskListProvider.notifier).resumeTask(task.id),
+        loadingMessage: context.l10n.taskActionResume,
+        successMessage: context.l10n.taskStatusInProgress,
+        onChanged: onChanged,
+      );
+      return;
     case _TaskQuickAction.snooze:
       await _runTaskAction(
         context: context,
@@ -65,6 +88,28 @@ Future<void> showTaskQuickActionMenu({
     case _TaskQuickAction.help:
       _openTaskHelpChat(context, task);
       return;
+  }
+}
+
+Future<void> _runTaskVoidAction({
+  required BuildContext context,
+  required Future<void> Function() action,
+  required String loadingMessage,
+  required String successMessage,
+  Future<void> Function()? onChanged,
+}) async {
+  AppFeedback.loading(context, loadingMessage);
+  try {
+    await action();
+    if (!context.mounted) return;
+    AppFeedback.success(context, successMessage);
+    await onChanged?.call();
+  } catch (error) {
+    if (!context.mounted) return;
+    AppFeedback.error(
+      context,
+      error.toString().replaceFirst(RegExp(r'^Exception:\s*'), ''),
+    );
   }
 }
 
@@ -174,6 +219,21 @@ class _TaskQuickActionSheet extends StatelessWidget {
                   ),
                 ),
               ),
+              if (task.status == TaskStatus.inProgress ||
+                  task.status == TaskStatus.stuck)
+                _QuickActionTile(
+                  icon: Icons.pause_rounded,
+                  label: context.l10n.taskActionPause,
+                  onTap: () =>
+                      Navigator.of(context).pop(_TaskQuickAction.pause),
+                ),
+              if (task.status == TaskStatus.paused)
+                _QuickActionTile(
+                  icon: Icons.restart_alt_rounded,
+                  label: context.l10n.taskActionResume,
+                  onTap: () =>
+                      Navigator.of(context).pop(_TaskQuickAction.resume),
+                ),
               _QuickActionTile(
                 icon: Icons.event_repeat_rounded,
                 label: context.l10n.taskQuickActionSnooze,

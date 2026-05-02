@@ -1,0 +1,28 @@
+FV-16: 任务 PAUSED 状态 + 恢复工作流
+Status: DONE
+Branch: codex/FV-16-task-paused-status
+Modified files:
+- backend/app/models/task.py
+- backend/app/services/task_service.py
+- backend/app/api/v1/tasks.py
+- backend/app/schemas/task.py
+- backend/alembic/versions/c21_20260502_task_paused_status.py
+- backend/tests/test_plan_task_service_production.py
+- backend/tests/api/test_task_quick_actions_api.py
+- mobile/lib/shared/entities/task_model.dart
+- mobile/lib/shared/entities/task_model.g.dart
+- mobile/lib/shared/utils/entity_card_payloads.dart
+- mobile/lib/core/network/api_endpoints.dart
+- mobile/lib/core/services/task_notification_scheduler.dart
+- mobile/lib/features/task/
+- mobile/lib/features/home/presentation/widgets/calendar/compact_task_card.dart
+- mobile/lib/features/plan/presentation/widgets/plan_context_summary.dart
+- mobile/lib/features/plan/presentation/screens/plan_detail_screen.dart
+- mobile/lib/features/calendar/presentation/providers/calendar_provider.dart
+Verification:
+- cd backend && pytest tests/test_plan_task_service_production.py -k "pause or resume": PASS
+- cd backend && pytest tests/api/test_task_quick_actions_api.py -k "pause_and_resume": PASS
+- cd backend && python3 -m py_compile app/models/task.py app/schemas/task.py app/services/task_service.py app/api/v1/tasks.py alembic/versions/c21_20260502_task_paused_status.py: PASS
+- cd mobile && flutter analyze --no-fatal-infos <FV16 touched dart files>: PASS (info-level lint only)
+User-visible change: Users can pause tasks, resume from a recovery card, and avoid having pauses counted as failures.
+Architect handoff: Re-run Alembic heads / make sync-db after the parallel community_privacy metadata model issue is resolved.

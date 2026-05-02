@@ -36,6 +36,7 @@ from app.schemas.task import (
     TaskDocumentLinkCreate,
     TaskDocumentSuggestion,
     TaskDocumentUnlinkRequest,
+    TaskPause,
     TaskQuickActionRequest,
     TaskRecommendationResponse,
     TaskReorderRequest,
@@ -846,6 +847,36 @@ async def start_task(
     return {"data": TaskDetail.model_validate(task)}
 
 
+@router.post("/{task_id}/pause", response_model=dict[str, Any])
+async def pause_task(
+    task_id: UUID = Path(..., description="Task ID"),
+    request: TaskPause | None = None,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Pause task without counting it as success or failure."""
+    reason = request.reason if request else None
+    try:
+        task = await TaskService.pause_task(db=db, task_id=task_id, user_id=current_user.id, reason=reason)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"data": TaskDetail.model_validate(task)}
+
+
+@router.post("/{task_id}/resume", response_model=dict[str, Any])
+async def resume_task(
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Resume a paused task."""
+    try:
+        task = await TaskService.resume_task(db=db, task_id=task_id, user_id=current_user.id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"data": TaskDetail.model_validate(task)}
+
+
 @router.post("/{task_id}/abandon", response_model=dict[str, Any])
 async def abandon_task(
     task_id: UUID = Path(..., description="Task ID"),
@@ -914,9 +945,7 @@ async def complete_task(
 
     if not task:
         record_product_loop_event("task_execution", "task_complete", "not_found", "missing_task")
-        observe_product_loop_latency(
-            "task_execution", "task_complete", "not_found", time.perf_counter() - start_time
-        )
+        observe_product_loop_latency("task_execution", "task_complete", "not_found", time.perf_counter() - start_time)
         raise NotFoundError(message="Task not found")
 
     if task.status == TaskStatus.COMPLETED:
@@ -1020,9 +1049,7 @@ async def complete_task(
     # ============================================
 
     record_product_loop_event("task_execution", "task_complete", "completed", "user_action")
-    observe_product_loop_latency(
-        "task_execution", "task_complete", "completed", time.perf_counter() - start_time
-    )
+    observe_product_loop_latency("task_execution", "task_complete", "completed", time.perf_counter() - start_time)
 
     # 返回数据
     return {
