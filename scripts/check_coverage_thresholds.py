@@ -74,11 +74,18 @@ def parse_go_coverprofile_scopes(path: Path) -> dict[str, tuple[int, int]]:
             continue
         file_part, statement_count, hit_count = parts
         file_path = _normalize_path(file_part.split(":", 1)[0])
+        if _is_generated_go_package(file_path):
+            continue
         statements = int(statement_count)
         covered = statements if int(hit_count) > 0 else 0
         counters[file_path][0] += covered
         counters[file_path][1] += statements
     return {path_key: (counts[0], counts[1]) for path_key, counts in counters.items()}
+
+
+def _is_generated_go_package(file_path: str) -> bool:
+    normalized = f"/{_normalize_path(file_path)}"
+    return "/gen/" in normalized
 
 
 def parse_python_xml_scopes(path: Path) -> dict[str, tuple[int, int]]:

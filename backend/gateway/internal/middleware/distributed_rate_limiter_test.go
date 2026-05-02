@@ -121,38 +121,42 @@ func TestSlidingWindowRateLimiter_AllowRejectAndRecover(t *testing.T) {
 		_ = rdb.Close()
 	})
 
-	limiter := NewSlidingWindowRateLimiter(rdb, 20*time.Millisecond, 2, "ratelimit-test")
+	limiter := NewSlidingWindowRateLimiter(rdb, 500*time.Millisecond, 2, "ratelimit-test")
 	ctx := context.Background()
 
-	tests := []struct {
-		name              string
-		waitBeforeRequest time.Duration
-		wantAllowed       bool
-		wantRemaining     int
-	}{
-		{name: "first request allowed", wantAllowed: true, wantRemaining: 1},
-		{name: "second request allowed", wantAllowed: true, wantRemaining: 0},
-		{name: "third request rejected", wantAllowed: false, wantRemaining: 0},
-		{name: "request after window allowed", waitBeforeRequest: 30 * time.Millisecond, wantAllowed: true, wantRemaining: 1},
+	allowed, remaining, err := limiter.Allow(ctx, "sliding")
+	if err != nil {
+		t.Fatalf("first Allow(): %v", err)
+	}
+	if !allowed || remaining != 1 {
+		t.Fatalf("first request allowed=%v remaining=%d, want allowed true remaining 1", allowed, remaining)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.waitBeforeRequest > 0 {
-				time.Sleep(tt.waitBeforeRequest)
-			}
+	time.Sleep(10 * time.Millisecond)
+	allowed, remaining, err = limiter.Allow(ctx, "sliding")
+	if err != nil {
+		t.Fatalf("second Allow(): %v", err)
+	}
+	if !allowed || remaining != 0 {
+		t.Fatalf("second request allowed=%v remaining=%d, want allowed true remaining 0", allowed, remaining)
+	}
 
-			allowed, remaining, err := limiter.Allow(ctx, "sliding")
-			if err != nil {
-				t.Fatalf("Allow(): %v", err)
-			}
-			if allowed != tt.wantAllowed {
-				t.Fatalf("allowed = %v, want %v", allowed, tt.wantAllowed)
-			}
-			if remaining != tt.wantRemaining {
-				t.Fatalf("remaining = %d, want %d", remaining, tt.wantRemaining)
-			}
-		})
+	time.Sleep(10 * time.Millisecond)
+	allowed, remaining, err = limiter.Allow(ctx, "sliding")
+	if err != nil {
+		t.Fatalf("third Allow(): %v", err)
+	}
+	if allowed || remaining != 0 {
+		t.Fatalf("third request allowed=%v remaining=%d, want allowed false remaining 0", allowed, remaining)
+	}
+
+	time.Sleep(550 * time.Millisecond)
+	allowed, remaining, err = limiter.Allow(ctx, "sliding")
+	if err != nil {
+		t.Fatalf("post-window Allow(): %v", err)
+	}
+	if !allowed || remaining != 1 {
+		t.Fatalf("post-window request allowed=%v remaining=%d, want allowed true remaining 1", allowed, remaining)
 	}
 }
 

@@ -1,7 +1,7 @@
 {
   "metadata": {
     "version": 1,
-    "updated_at": "2026-02-07T00:00:00Z",
+    "updated_at": "2026-05-02T00:00:00Z",
     "policy": "No metric is allowed to increase above budget in feature-freeze period"
   },
   "budgets": [
@@ -32,6 +32,13 @@
       "command": "rg -n \"min_items=\" backend/app backend/tests | wc -l",
       "max": 3,
       "severity": "P1"
+    },
+    {
+      "id": "gateway_go_coverage_shortfall_bp",
+      "description": "Go gateway handwritten coverage shortfall to 65% target, in basis points; generated protobuf packages are excluded",
+      "command": "python3 scripts/gateway_go_coverage_gap.py",
+      "max": 2852,
+      "severity": "P2"
     }
   ]
 }
