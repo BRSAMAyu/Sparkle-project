@@ -300,6 +300,53 @@ def test_unified_aurora_receipts_keep_social_receipt_privacy_boundary(orchestrat
     assert "不需要参考他的进度" in receipt["correction_actions"][0]["label"]
 
 
+def test_aurora_everyday_presence_becomes_correctable_receipt(orchestrator):
+    metadata = orchestrator._aurora_everyday_presence_metadata(
+        {
+            "aurora_everyday_presence": {
+                "overall_status": "needs_confirm",
+                "summary": "Aurora 有一个判断需要你确认。",
+                "chat_hint": "我可能在误读当前状态：你现在更像是卡在不会做，而不是没时间。",
+                "uncertainty_level": "high",
+                "scene_alignment": "matched",
+                "evidence_chain": ["最近两次任务都停在第一步", "薄弱点：TCP 状态机"],
+                "memory_references": ["最近目标锚点：把 TCP 状态迁移彻底吃透"],
+                "next_step_suggestion": "先确认卡住原因，再拆一个 10 分钟动作。",
+                "last_correction_effect": {
+                    "visible": True,
+                    "affected_state_keys": ["difficulty_assumption", "support_level"],
+                },
+                "should_surface": True,
+            }
+        }
+    )
+
+    assert "aurora_everyday_presence" in metadata
+    receipts = orchestrator._build_unified_aurora_receipts(metadata)
+
+    assert len(receipts) == 1
+    receipt = receipts[0]
+    assert receipt["receipt_type"] == "aurora_experience_receipt"
+    assert receipt["source_key"] == "aurora_everyday_presence"
+    assert receipt["uncertainty_level"] == "high"
+    assert "误读当前状态" in receipt["summary"]
+    assert receipt["evidence_chain"][0] == "最近两次任务都停在第一步"
+    assert receipt["correction_actions"][0]["label"] == "这个判断不对"
+
+
+def test_aurora_everyday_presence_stays_quiet_when_not_needed(orchestrator):
+    metadata = orchestrator._aurora_everyday_presence_metadata(
+        {
+            "aurora_everyday_presence": {
+                "chat_hint": "我会按当前目标继续推进。",
+                "should_surface": False,
+            }
+        }
+    )
+
+    assert metadata == {}
+
+
 def test_semantic_control_trace_metadata_is_emitted(orchestrator):
     metadata = orchestrator._semantic_control_trace_metadata(
         {

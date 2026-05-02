@@ -57,6 +57,7 @@ from app.state_aggregator.service import StateAggregatorService
 # Mixin
 # ---------------------------------------------------------------------------
 
+
 class ContextBuilderMixin:
     """Mixin providing context building methods for ChatOrchestrator."""
 
@@ -594,6 +595,91 @@ class ContextBuilderMixin:
                 cognitive_context["recent_corrections"] = recent_corrections
         return payload
 
+    async def _build_aurora_everyday_presence_context(
+        self,
+        *,
+        user_id: str,
+        db_session: AsyncSession,
+        conversation_id: str | None,
+        returning_context: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        """Summarize Aurora's current judgment for ordinary chat surfaces.
+
+        This is a thin product-facing readout of the existing control surface,
+        not a separate Aurora state model.
+        """
+        try:
+            from app.services.aurora_control_surface_service import AuroraControlSurfaceService
+
+            snapshot = await AuroraControlSurfaceService(db_session, self.redis).build_snapshot(
+                user_id=uuid.UUID(user_id),
+                conversation_id=conversation_id,
+            )
+        except Exception as exc:
+            logger.debug(f"Aurora everyday presence context unavailable: {exc}")
+            return None
+
+        if not isinstance(snapshot, dict) or not snapshot:
+            return None
+
+        status = str(snapshot.get("overall_status") or "sensing").strip()
+        summary = str(snapshot.get("summary") or "").strip()
+        scene_alignment = str(snapshot.get("scene_alignment") or "matched").strip()
+        evidence = [
+            str(item).strip() for item in list(snapshot.get("status_evidence_chain") or [])[:3] if str(item).strip()
+        ]
+        memory_references = [
+            str(item).strip() for item in list(snapshot.get("memory_references") or [])[:2] if str(item).strip()
+        ]
+        last_correction = (
+            snapshot.get("last_correction_effect") if isinstance(snapshot.get("last_correction_effect"), dict) else {}
+        )
+        return_tier = str((returning_context or {}).get("resume_tier") or "").strip()
+
+        uncertainty_level = "low"
+        if status in {"risk_found", "needs_confirm"} or scene_alignment == "fallback":
+            uncertainty_level = "high"
+        elif status in {"sensing", "calibration_available"}:
+            uncertainty_level = "medium"
+        if bool(last_correction.get("visible")):
+            uncertainty_level = "medium"
+
+        if scene_alignment == "fallback":
+            chat_hint = "我可能接的是最近一次上下文，而不是这一轮的完整状态；如果方向不对，你可以直接纠正我。"
+        elif bool(last_correction.get("visible")):
+            chat_hint = "我已经按你刚才的纠正调整判断；这轮会先保守确认，不直接把旧假设当事实。"
+        elif return_tier in {"personalized_return", "checkpoint_debrief"}:
+            chat_hint = "你离开了一段时间，我会先接住上次进度和当前未完成项；如果我读错重点，直接告诉我。"
+        elif status in {"risk_found", "needs_confirm"}:
+            chat_hint = f"我可能在误读当前状态：{summary or '这个判断还需要你确认'}"
+        elif status == "calibrated":
+            chat_hint = "我会按当前目标、情景和记忆继续帮你推进；重要判断仍然可以随时改。"
+        else:
+            chat_hint = "我还在轻量感知当前上下文，会先少下结论、多留纠正空间。"
+
+        should_surface = bool(
+            status in {"risk_found", "needs_confirm"}
+            or scene_alignment == "fallback"
+            or bool(last_correction.get("visible"))
+            or return_tier in {"personalized_return", "checkpoint_debrief"}
+        )
+
+        return {
+            "source": "aurora_control_surface",
+            "overall_status": status,
+            "energy_level": str(snapshot.get("energy_level") or "L0"),
+            "summary": summary,
+            "chat_hint": chat_hint,
+            "uncertainty_level": uncertainty_level,
+            "scene_alignment": scene_alignment,
+            "evidence_chain": evidence,
+            "memory_references": memory_references,
+            "next_step_suggestion": str(snapshot.get("next_step_suggestion") or "").strip(),
+            "last_correction_effect": last_correction,
+            "return_tier": return_tier,
+            "should_surface": should_surface,
+        }
+
     # ------------------------------------------------------------------
     # _get_recent_sentiment_distribution
     # ------------------------------------------------------------------
@@ -820,6 +906,15 @@ class ContextBuilderMixin:
                     "seed_library": seed_library_context,
                     "learning_gaps_summary": learning_gaps_summary,
                 }
+                aurora_presence = await self._build_aurora_everyday_presence_context(
+                    user_id=user_id,
+                    db_session=db_session,
+                    conversation_id=session_id,
+                    returning_context=returning_context,
+                )
+                if aurora_presence is not None:
+                    payload["aurora_everyday_presence"] = aurora_presence
+                    cognitive_context_payload["aurora_everyday_presence"] = aurora_presence
                 payload = await self._attach_stage34_memory_context(
                     payload,
                     user_id=user_id,
@@ -1095,7 +1190,11 @@ class ContextBuilderMixin:
 
             if silence_gap < timedelta(hours=8):
                 resume_tier = "light_resume"
-                welcome_back = "我接着刚才的上下文继续。" if locale.startswith("zh") else "I will continue from the recent context."
+                welcome_back = (
+                    "我接着刚才的上下文继续。"
+                    if locale.startswith("zh")
+                    else "I will continue from the recent context."
+                )
                 briefing_text = welcome_back
             elif silence_gap < timedelta(days=3):
                 resume_tier = "personalized_return"
