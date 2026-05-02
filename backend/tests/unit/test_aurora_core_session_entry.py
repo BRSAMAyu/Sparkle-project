@@ -162,6 +162,35 @@ async def test_core_session_freeform_correction_closure_has_visible_result() -> 
 
 
 @pytest.mark.asyncio
+async def test_core_session_freeform_skill_gap_changes_policy_and_task_behavior() -> None:
+    service = AuroraCoreSessionService(FakeRedis())
+    session = await service.start_session(
+        user_id="u-skill-gap",
+        conversation_id="c1",
+        band_status="needs_confirm",
+        wake_reasons=["task_time_overrun"],
+    )
+
+    await service.respond(
+        user_id="u-skill-gap",
+        session_id=session.session_id,
+        content="不是没时间，是完全不会做。",
+        semantic_value="freeform_correction",
+        is_freeform=True,
+    )
+
+    closed = await service.close_session(user_id="u-skill-gap", session_id=session.session_id)
+    result = closed.calibration_result
+    assert result is not None
+    state_updates = {patch["state_key"]: patch["new_value"] for patch in result.state_patches}
+    assert state_updates["current_blocker"] == "skill_gap"
+    assert state_updates["policy_directive"] == "diagnose_prerequisite_first"
+    assert state_updates["task_adjustment"] == "create_prerequisite_micro_task"
+    assert any("能力缺口" in change for change in result.strategy_changes)
+    assert any("不会做的前置点" in change for change in result.next_changes)
+
+
+@pytest.mark.asyncio
 async def test_core_session_loads_from_postgres_when_redis_misses(db_session) -> None:
     redis = FakeRedis()
     service = AuroraCoreSessionService(redis, db=db_session)

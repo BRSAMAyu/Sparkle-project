@@ -734,6 +734,8 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
           if (_openedFromResumeState && session.isActive)
             _buildResumeNotice(context.l10n.auroraCoreSessionResumed),
           if (session.isPaused) _buildPausedResumeCard(),
+          if (session.agenda?.hasContent ?? false)
+            _buildAgendaCard(session.agenda!),
           ...session.messages.asMap().entries.map(
                 (entry) => SparkleStaggerItem(
                   index: entry.key,
@@ -744,6 +746,107 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
           if (session.isExited && session.calibrationResult != null)
             _buildCalibrationResult(session.calibrationResult!),
           const SizedBox(height: DS.spacing16),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAgendaCard(AuroraCoreAgenda agenda) {
+    final activeIndex =
+        agenda.items.indexWhere((item) => item.status == 'in_progress');
+    return Container(
+      margin: const EdgeInsets.only(bottom: DS.spacing14),
+      padding: const EdgeInsets.all(DS.spacing14),
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: BorderRadius.circular(DS.radius12),
+        border: Border.all(color: DS.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.fact_check_outlined, size: 18, color: DS.brandPrimary),
+              const SizedBox(width: DS.spacing8),
+              Expanded(
+                child: Text(
+                  agenda.scope.isEmpty
+                      ? context.l10n.auroraCoreSessionTitle
+                      : agenda.scope,
+                  style: DS.bodyMedium.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (agenda.estimatedMinutes > 0)
+                Text(
+                  '${agenda.estimatedMinutes} min',
+                  style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                ),
+            ],
+          ),
+          if (agenda.preview.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing8),
+            Text(
+              agenda.preview.take(3).join(' · '),
+              style: DS.bodySmall.copyWith(
+                color: DS.textSecondary,
+                height: 1.35,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+          if (agenda.items.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing12),
+            ...agenda.items.asMap().entries.map(
+                  (entry) => _AgendaStepRow(
+                    item: entry.value,
+                    isLast: entry.key == agenda.items.length - 1,
+                    isActive: entry.key == activeIndex,
+                  ),
+                ),
+          ],
+          if (agenda.interruptionPolicyLabel.isNotEmpty ||
+              agenda.resumeHint.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing10),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: DS.info.withValues(alpha: 0.07),
+                borderRadius: BorderRadius.circular(DS.radius8),
+                border: Border.all(color: DS.info.withValues(alpha: 0.14)),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(DS.spacing10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.pause_circle_outline_rounded,
+                      size: 16,
+                      color: DS.info,
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    Expanded(
+                      child: Text(
+                        agenda.interruptionPolicyLabel.isNotEmpty
+                            ? agenda.interruptionPolicyLabel
+                            : agenda.resumeHint,
+                        style: DS.bodySmall.copyWith(
+                          color: DS.textPrimary,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1293,6 +1396,71 @@ class _ResultBullet extends StatelessWidget {
           ],
         ),
       );
+}
+
+class _AgendaStepRow extends StatelessWidget {
+  const _AgendaStepRow({
+    required this.item,
+    required this.isLast,
+    required this.isActive,
+  });
+
+  final AuroraCoreAgendaItem item;
+  final bool isLast;
+  final bool isActive;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = item.isDone
+        ? DS.success
+        : isActive
+            ? DS.brandPrimary
+            : DS.textTertiary;
+    final icon = item.isDone
+        ? Icons.check_circle_rounded
+        : isActive
+            ? Icons.radio_button_checked_rounded
+            : Icons.radio_button_unchecked_rounded;
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              Icon(icon, size: 16, color: color),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 1,
+                    margin: const EdgeInsets.symmetric(vertical: 2),
+                    color: DS.borderSubtle,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(width: DS.spacing8),
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(
+                bottom: isLast ? 0 : DS.spacing8,
+              ),
+              child: Text(
+                item.label,
+                style: DS.bodySmall.copyWith(
+                  color: item.isDone || isActive
+                      ? DS.textPrimary
+                      : DS.textSecondary,
+                  fontWeight:
+                      isActive ? DS.fontWeightSemibold : DS.fontWeightRegular,
+                  height: 1.3,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ── Message bubbles ────────────────────────────────────────────────────────────
