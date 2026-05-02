@@ -1,9 +1,5 @@
-from datetime import timezone, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
-
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc).replace(tzinfo=None)
-
 
 import pytest
 from sqlalchemy import select
@@ -14,6 +10,10 @@ from app.core.context_pack import ContextPackBuilder
 from app.models.memory import MemoryPreference
 from app.models.user import User
 from app.services.memory_service import MemoryService
+
+
+def _utcnow() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 @pytest.mark.asyncio
@@ -114,3 +114,67 @@ async def test_context_pack_soft_caps(db_session, monkeypatch):
 
     assert len(pack.goals) <= 1
     assert len(pack.episodic_memories) <= 1
+
+
+@pytest.mark.asyncio
+async def test_context_pack_marks_inferred_claims_and_correction_actions(db_session, monkeypatch):
+    monkeypatch.setattr(settings, "ENABLE_CONTEXT_RANKING", True, raising=False)
+    monkeypatch.setattr(settings, "CONTEXT_RANKING_SOFT_CAP_EPISODIC", 10, raising=False)
+
+    user_id = uuid4()
+    user = User(
+        id=user_id,
+        username=f"user_{user_id.hex[:8]}",
+        email=f"{user_id.hex[:8]}@example.com",
+        hashed_password="test",
+    )
+    db_session.add(user)
+    await db_session.commit()
+
+    now = _utcnow()
+    memory_service = MemoryService(db_session)
+    confirmed = await memory_service.create_episodic_memory(
+        user_id=user_id,
+        summary="TCP flow control is the current networking sprint blocker",
+        source_type="task",
+        source_id="task_tcp",
+        occurred_at=now - timedelta(days=2),
+        importance_score=0.9,
+        confidence=0.92,
+        tags=["networking", "tcp"],
+        evidence_refs=[{"type": "task", "id": "task_tcp"}],
+        semantic_key="networking_sprint",
+        emit_system_update=False,
+    )
+    inferred = await memory_service.create_episodic_memory(
+        user_id=user_id,
+        summary="User probably prefers ambient music while studying",
+        source_type="ai_inferred",
+        source_id="infer_music",
+        source_lane="inferred_extraction",
+        occurred_at=now - timedelta(hours=1),
+        importance_score=0.2,
+        confidence=0.4,
+        tags=["music"],
+        evidence_refs=[{"type": "ai_inferred", "id": "infer_music"}],
+        emit_system_update=False,
+    )
+
+    scheduler = ContextBudgetScheduler(
+        budgets={"chat": {"preferences": 50, "goals": 80, "episodic": 2000}}
+    )
+    builder = ContextPackBuilder(db_session, scheduler=scheduler)
+    pack = await builder.build(user_id, intent="chat", query_text="TCP networking sprint")
+
+    assert confirmed is not None
+    assert inferred is not None
+    assert pack.episodic_memories[0]["id"] == str(confirmed.id)
+    by_id = {item["id"]: item for item in pack.episodic_memories}
+    assert by_id[str(confirmed.id)]["claim_status"] == "confirmed"
+    assert by_id[str(inferred.id)]["claim_status"] == "inferred"
+    assert by_id[str(inferred.id)]["user_confirmed"] is False
+    assert by_id[str(inferred.id)]["source_label"] == "AI 推断，待你确认"
+    assert by_id[str(inferred.id)]["correction_actions"][0]["endpoint"] == "/memory/episodic"
+    assert by_id[str(inferred.id)]["correction_actions"][1]["payload"]["action"] == "lower_confidence"
+    assert pack.metadata is not None
+    assert pack.metadata["memory_claims"]["episodic"][0]["correction_actions"]
