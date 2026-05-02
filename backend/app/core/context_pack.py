@@ -264,6 +264,100 @@ def _serialize_focus_value(value: Any) -> str:
     return str(value)
 
 
+def _memory_evidence_types(item: Any) -> set[str]:
+    refs = getattr(item, "evidence_refs", None) or []
+    if not isinstance(refs, list):
+        return set()
+    return {str(ref.get("type") or "").strip().lower() for ref in refs if isinstance(ref, dict)}
+
+
+def _is_inferred_memory(item: Any) -> bool:
+    source_lane = str(getattr(item, "source_lane", "") or "").strip().lower()
+    source_type = str(getattr(item, "source_type", "") or "").strip().lower()
+    return (
+        source_lane == "inferred_extraction"
+        or source_type == "ai_inferred"
+        or "ai_inferred" in _memory_evidence_types(item)
+    )
+
+
+def _memory_claim_status(item: Any) -> str:
+    if _is_inferred_memory(item):
+        return "inferred"
+    if bool(getattr(item, "evidence_missing", False)):
+        return "needs_evidence"
+    if int(getattr(item, "correction_count", 0) or 0) > 0:
+        return "user_corrected"
+    confidence = getattr(item, "confidence", None)
+    if confidence is not None:
+        try:
+            if float(confidence) < 0.5:
+                return "uncertain"
+        except (TypeError, ValueError):
+            pass
+    return "confirmed"
+
+
+def _memory_source_label(item: Any) -> str:
+    status = _memory_claim_status(item)
+    if status == "inferred":
+        return "AI 推断，待你确认"
+    if status == "needs_evidence":
+        return "证据不足，建议核对"
+    if status == "user_corrected":
+        return "已按你的纠错降权"
+    if status == "uncertain":
+        return "低置信度记忆"
+    return "已确认记忆"
+
+
+def _memory_correction_actions(kind: str, memory_id: str) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": f"inspect_{kind}_{memory_id}",
+            "type": "inspect",
+            "label": "查看依据",
+            "method": "GET",
+            "endpoint": f"/memory/{'episodic' if kind == 'episodic' else kind + 's'}",
+            "payload": {"type": kind, "id": memory_id},
+        },
+        {
+            "id": f"lower_confidence_{kind}_{memory_id}",
+            "type": "correct",
+            "label": "不太对，降低置信度",
+            "method": "POST",
+            "endpoint": "/memory/correct",
+            "payload": {"type": kind, "id": memory_id, "action": "lower_confidence"},
+        },
+        {
+            "id": f"reject_{kind}_{memory_id}",
+            "type": "correct",
+            "label": "不是事实，撤回",
+            "method": "POST",
+            "endpoint": "/memory/correct",
+            "payload": {"type": kind, "id": memory_id, "action": "reject"},
+        },
+    ]
+
+
+def _memory_rank_factors(item: Any, score: float) -> dict[str, Any]:
+    return {
+        "score": score,
+        "evidence_score": getattr(item, "evidence_score", None),
+        "confidence": getattr(item, "confidence", None),
+        "correction_count": int(getattr(item, "correction_count", 0) or 0),
+        "importance_score": getattr(item, "importance_score", None),
+        "goal_linked": bool(
+            getattr(item, "linked_goal_id", None)
+            or getattr(item, "linked_plan_id", None)
+            or getattr(item, "linked_task_id", None)
+            or getattr(item, "semantic_key", None)
+            or _memory_evidence_types(item).intersection({"goal", "plan", "task", "practice_outcome", "error"})
+        ),
+        "claim_status": _memory_claim_status(item),
+    }
+
+
 def _build_semantic_text(item: Any, section: str) -> str:
     if section == "preferences":
         return f"{getattr(item, 'pref_key', '')} {_serialize_focus_value(getattr(item, 'pref_value', ''))}".strip()
@@ -1104,9 +1198,14 @@ class ContextPackBuilder:
             weights = await policy_service.get_policy(intent, user_id)
 
         if ranking_enabled:
-            ranked_preferences = rank_items(preference_records, kind="preferences", weights=weights)
-            ranked_goals = rank_items(goals, kind="goals", weights=weights)
-            ranked_episodic = rank_items(episodic, kind="episodic", weights=weights)
+            ranked_preferences = rank_items(
+                preference_records,
+                kind="preferences",
+                weights=weights,
+                query_text=query_text,
+            )
+            ranked_goals = rank_items(goals, kind="goals", weights=weights, query_text=query_text)
+            ranked_episodic = rank_items(episodic, kind="episodic", weights=weights, query_text=query_text)
 
             selected_goals = _select_with_diversity(
                 ranked_goals,
@@ -1158,17 +1257,17 @@ class ContextPackBuilder:
             preferences = {item.pref_key: item.pref_value for item in preference_records}
 
         ranked_preferences = (
-            rank_items(resolved_pref_records, kind="preferences", weights=weights)
+            rank_items(resolved_pref_records, kind="preferences", weights=weights, query_text=query_text)
             if ranking_enabled
             else _normalized_ranked(resolved_pref_records)
         )
         ranked_goals = (
-            rank_items(resolved_goals, kind="goals", weights=weights)
+            rank_items(resolved_goals, kind="goals", weights=weights, query_text=query_text)
             if ranking_enabled
             else _normalized_ranked(resolved_goals)
         )
         ranked_episodic = (
-            rank_items(resolved_episodic, kind="episodic", weights=weights)
+            rank_items(resolved_episodic, kind="episodic", weights=weights, query_text=query_text)
             if ranking_enabled
             else _normalized_ranked(resolved_episodic)
         )
@@ -1198,6 +1297,14 @@ class ContextPackBuilder:
                 "title": entry.item.title,
                 "status": entry.item.status,
                 "target_date": entry.item.target_date,
+                "linked_task_id": str(entry.item.linked_task_id) if entry.item.linked_task_id else None,
+                "linked_plan_id": str(entry.item.linked_plan_id) if entry.item.linked_plan_id else None,
+                "evidence_score": getattr(entry.item, "evidence_score", None),
+                "correction_count": int(getattr(entry.item, "correction_count", 0) or 0),
+                "claim_status": _memory_claim_status(entry.item),
+                "source_label": _memory_source_label(entry.item),
+                "rank_factors": _memory_rank_factors(entry.item, entry.score),
+                "correction_actions": _memory_correction_actions("goal", str(entry.item.id)),
             }
             for entry in ranked_goals
         ]
@@ -1213,7 +1320,11 @@ class ContextPackBuilder:
                 "confidence": getattr(entry.item, "confidence", None),
                 "evidence_score": getattr(entry.item, "evidence_score", None),
                 "correction_count": int(getattr(entry.item, "correction_count", 0) or 0),
-                "user_confirmed": str(getattr(entry.item, "source_lane", "") or "").strip() != "inferred_extraction",
+                "user_confirmed": _memory_claim_status(entry.item) == "confirmed",
+                "claim_status": _memory_claim_status(entry.item),
+                "source_label": _memory_source_label(entry.item),
+                "rank_factors": _memory_rank_factors(entry.item, entry.score),
+                "correction_actions": _memory_correction_actions("episodic", str(entry.item.id)),
                 "tags": getattr(entry.item, "tags", None) or [],
             }
             for entry in ranked_episodic
@@ -1283,15 +1394,59 @@ class ContextPackBuilder:
         if ranking_enabled:
             metadata["ranking"] = {
                 "preferences": [
-                    {"key": key, "score": trimmed_pref_scores.get(key, 0.0)}
-                    for key in list(trimmed_preferences.keys())[:10]
-                ],
+                    {
+                        "key": key,
+                        "score": trimmed_pref_scores.get(key, 0.0),
+                        "claim_status": _memory_claim_status(entry.item),
+                        "source_label": _memory_source_label(entry.item),
+                        "rank_factors": _memory_rank_factors(entry.item, trimmed_pref_scores.get(key, 0.0)),
+                        "correction_actions": _memory_correction_actions("preference", str(entry.item.id)),
+                    }
+                    for entry in ranked_preferences
+                    if (key := entry.item.pref_key) in trimmed_preferences
+                ][:10],
                 "goals": [
                     {"id": payload.get("id"), "score": goal_scores.get(payload.get("id"), 0.0)}
                     for payload in trimmed_goals[:10]
                 ],
                 "episodic": [
                     {"id": payload.get("id"), "score": episodic_scores.get(payload.get("id"), 0.0)}
+                    for payload in trimmed_episodic[:10]
+                ],
+            }
+            metadata["memory_claims"] = {
+                "preferences": [
+                    {
+                        "type": "preference",
+                        "id": str(entry.item.id),
+                        "key": entry.item.pref_key,
+                        "status": _memory_claim_status(entry.item),
+                        "source_label": _memory_source_label(entry.item),
+                        "correction_actions": _memory_correction_actions("preference", str(entry.item.id)),
+                    }
+                    for entry in ranked_preferences
+                    if entry.item.pref_key in trimmed_preferences
+                ][:10],
+                "goals": [
+                    {
+                        "type": "goal",
+                        "id": payload.get("id"),
+                        "title": payload.get("title"),
+                        "status": payload.get("claim_status"),
+                        "source_label": payload.get("source_label"),
+                        "correction_actions": payload.get("correction_actions") or [],
+                    }
+                    for payload in trimmed_goals[:10]
+                ],
+                "episodic": [
+                    {
+                        "type": "episodic",
+                        "id": payload.get("id"),
+                        "summary": payload.get("summary"),
+                        "status": payload.get("claim_status"),
+                        "source_label": payload.get("source_label"),
+                        "correction_actions": payload.get("correction_actions") or [],
+                    }
                     for payload in trimmed_episodic[:10]
                 ],
             }
