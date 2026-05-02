@@ -760,6 +760,10 @@ class SharedResourceInfo(BaseSchema):
     view_count: int
     save_count: int
 
+    # FV-22: Quality scoring
+    quality_score: float = 0.0
+    quality_hidden: bool = False
+
     sharer: UserBrief
 
     # Embedded Briefs (Optional)

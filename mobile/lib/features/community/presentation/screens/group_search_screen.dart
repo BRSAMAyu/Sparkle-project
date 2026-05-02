@@ -51,7 +51,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
           controller: _searchController,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: 'Search groups...',
+            hintText: I18nService.instance.isChinese ? '搜索社群...' : 'Search groups...',
             filled: true,
             fillColor: Color.alphaBlend(
               DS.info.withValues(alpha: 0.03),
@@ -80,7 +80,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
           if (groups.isEmpty) {
             return const Center(
               child: CompactEmptyState(
-                message: 'Search for squads or sprint groups',
+                message: I18nService.instance.isChinese ? '搜索学习小组或冲刺小组' : 'Search for squads or sprint groups',
                 icon: Icons.search,
               ),
             );
@@ -109,7 +109,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
                       ),
                       title: Text(group.name),
                       subtitle: Text(
-                        '${group.memberCount} members • ${group.totalFlamePower} flame',
+                        '${group.memberCount} ${I18nService.instance.isChinese ? '成员' : 'members'} \u2022 ${group.totalFlamePower} ${I18nService.instance.isChinese ? '火焰' : 'flame'}',
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {

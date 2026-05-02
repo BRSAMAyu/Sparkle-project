@@ -1,0 +1,15 @@
+FV-19: 危机模式 FSM 化
+Status: DONE
+Branch: codex/FV-19-crisis-mode-fsm
+Modified files:
+- backend/app/signals/crisis_mode_fsm.py
+- backend/app/signals/exam_rescue_detector.py
+- backend/app/signals/policy_engine.py
+- backend/tests/unit/spine/test_crisis_mode_fsm.py
+- docs/product/parallel_closeout/FV-19_crisis_mode_fsm_REPORT_2026-05-02.md
+Verification:
+- python3.11 -m py_compile backend/app/signals/crisis_mode_fsm.py backend/app/signals/exam_rescue_detector.py backend/app/signals/policy_engine.py backend/tests/unit/spine/test_crisis_mode_fsm.py: PASS
+- FV-19 direct smoke path (FSM -> detector -> PolicyEngine): PASS
+- pytest tests/unit/spine/test_crisis_mode_fsm.py: BLOCKED by pre-existing app/models/community_privacy.py SQLAlchemy metadata reserved attribute
+User-visible change: 考试危机场景现在进入可解释的“危机模式中”，任务压到 15 分钟内并关闭加压型提醒。
+Architect handoff: Resolve pre-existing community_privacy.metadata collection blocker before full pytest replay.

@@ -20847,6 +20847,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationRetractableTo => 'Retractable to';
 
   @override
+  String get notificationRecallWhyTitle => 'Why this reminder';
+
+  @override
+  String get notificationRecallGoalValue => 'Goal value';
+
+  @override
+  String get notificationRecallReason => 'Why now';
+
+  @override
+  String get notificationRecallEffort => 'Effort';
+
+  @override
+  String get notificationRecallDeadlinePressure => 'Time pressure';
+
+  @override
+  String get notificationRecallScore => 'Recall score';
+
+  @override
+  String get notificationRecallInaccurate => 'This reminder is inaccurate';
+
+  @override
+  String get notificationRecallFeedbackSaved =>
+      'Thanks. This reminder will be tuned.';
+
+  @override
+  String get notificationRecallFeedbackRecorded => 'Feedback recorded';
+
+  @override
   String get notificationSendEncouragement => 'Send encouragement';
 
   @override

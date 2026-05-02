@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/aurora_correction_payload.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -678,7 +679,10 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
       entryReason: AuroraCoreSessionEntryReason.fromSnapshot(
         snapshot: snapshot,
         triggerSource: 'status_bar',
-        agendaPreview: const ['确认状态带里的判断', '决定下一步是否调整计划'],
+        agendaPreview: [
+          I18nService.instance.isChinese ? '确认状态带里的判断' : 'Confirm status bar judgment',
+          I18nService.instance.isChinese ? '决定下一步是否调整计划' : 'Decide whether to adjust the plan',
+        ],
       ),
       conversationId: widget.conversationId,
       scope: wake.suggestedScope.isNotEmpty ? wake.suggestedScope : null,
@@ -707,9 +711,9 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
           health.label,
           if (health.subtitle.trim().isNotEmpty) health.subtitle,
         ],
-        suggestedAgendaPreview: const [
-          '确认任务卡点的主要原因',
-          '把下一张任务卡调小一点',
+        suggestedAgendaPreview: [
+          I18nService.instance.isChinese ? '确认任务卡点的主要原因' : 'Identify the main cause of the task block',
+          I18nService.instance.isChinese ? '把下一张任务卡调小一点' : 'Make the next task card smaller',
         ],
         whyNow: context.l10n.auroraTaskStuckWhyNow,
         estimatedMinutes: 2,

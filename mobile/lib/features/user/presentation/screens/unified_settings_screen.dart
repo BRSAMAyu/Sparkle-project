@@ -6,29 +6,31 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
     show TaskReminderConfig;
 import 'package:sparkle/core/utils/chaos/chaos_control_dialog.dart';
+import 'package:sparkle/features/aurora/presentation/providers/aurora_preferences_provider.dart';
+import 'package:sparkle/features/aurora/presentation/providers/emotion_state_provider.dart';
 import 'package:sparkle/features/cognitive/data/repositories/capsule_repository.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/capsule_provider.dart';
 import 'package:sparkle/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart';
 import 'package:sparkle/features/documents/documents_routes.dart';
+import 'package:sparkle/features/settings/presentation/screens/accessibility_settings_screen.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 import 'package:sparkle/features/user/presentation/screens/ai_ops_analysis_screen.dart';
 import 'package:sparkle/features/user/presentation/widgets/learning_mode_control.dart';
 import 'package:sparkle/features/user/presentation/widgets/weekly_agenda_grid.dart';
-import 'package:sparkle/features/aurora/presentation/providers/aurora_preferences_provider.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/features/visual_elements/visual_elements_routes.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 const Map<String, Set<String>> _notificationTypeAliases = {
   'reminder': {
@@ -392,6 +394,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ref.watch(showChatTransparencyCapsuleProvider);
     final chatPureMode = ref.watch(chatPureModeProvider);
     final motionIntensityLevel = ref.watch(motionIntensityLevelProvider);
+    final emotionState = ref.watch(emotionStateProvider);
     final aiUsageSummary = ref.watch(aiUsageSummaryProvider);
     final aiOpsDashboard = ref.watch(aiOpsDashboardProvider);
     final predictionAnalytics = ref.watch(predictionAnalyticsDashboardProvider);
@@ -541,6 +544,29 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       duration: const Duration(milliseconds: 250),
                     ),
                   ],
+                ),
+              ),
+              const SizedBox(height: DS.spacing16),
+              GraphiteCardSurface(
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.accessibility_new_rounded),
+                  title: Text(
+                    I18nService.instance.isChinese
+                        ? '无障碍与低负荷'
+                        : 'Accessibility',
+                  ),
+                  subtitle: Text(
+                    I18nService.instance.isChinese
+                        ? '字体、对比度、屏幕阅读、触控、动效、TTS 与震动反馈'
+                        : 'Font scale, contrast, screen reader, touch, motion, TTS, and haptics',
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const AccessibilitySettingsScreen(),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: DS.spacing16),
@@ -1018,6 +1044,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               aiReasoningMode,
                             ),
                           ),
+                          const SizedBox(height: DS.spacing16),
+                          _buildEmotionAdaptiveModeControl(emotionState),
                           const SizedBox(height: DS.spacing16),
                           SwitchListTile(
                             contentPadding: EdgeInsets.zero,
@@ -2319,6 +2347,75 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           ),
         ),
       );
+
+  Widget _buildEmotionAdaptiveModeControl(EmotionState state) {
+    final zh = I18nService.instance.isChinese;
+    final mode = state.mode;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: const Icon(Icons.self_improvement_rounded),
+          title: Text(zh ? '情绪适应模式' : 'Emotion adaptive mode'),
+          subtitle: Text(
+            zh
+                ? '根据疲劳、压力和认知负荷调低刺激，或手动固定。'
+                : 'Lower visual stimulus from fatigue, stress, and load signals, or keep a manual override.',
+          ),
+        ),
+        Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: [
+            ChoiceChip(
+              label: Text(zh ? '自动' : 'Auto'),
+              selected: mode == EmotionAdaptiveMode.auto,
+              onSelected: (_) => unawaited(
+                ref
+                    .read(emotionStateProvider.notifier)
+                    .setMode(EmotionAdaptiveMode.auto),
+              ),
+            ),
+            ChoiceChip(
+              label: Text(zh ? '低刺激' : 'Low stimulus'),
+              selected: mode == EmotionAdaptiveMode.alwaysLow,
+              onSelected: (_) => unawaited(
+                ref
+                    .read(emotionStateProvider.notifier)
+                    .setMode(EmotionAdaptiveMode.alwaysLow),
+              ),
+            ),
+            ChoiceChip(
+              label: Text(zh ? '标准' : 'Normal'),
+              selected: mode == EmotionAdaptiveMode.alwaysNormal,
+              onSelected: (_) => unawaited(
+                ref
+                    .read(emotionStateProvider.notifier)
+                    .setMode(EmotionAdaptiveMode.alwaysNormal),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: DS.spacing10),
+        _buildSelectionPreviewCard(
+          icon: state.responsiveConfig.isLowStimulus
+              ? Icons.nightlight_round
+              : Icons.wb_sunny_outlined,
+          title: state.responsiveConfig.isLowStimulus
+              ? (zh ? '当前：低刺激界面' : 'Current: low-stimulus UI')
+              : (zh ? '当前：标准界面' : 'Current: normal UI'),
+          description: state.responsiveConfig.isLowStimulus
+              ? (zh
+                  ? '字体略放大、动画减少、卡片层级更轻、挑战徽章会收起。'
+                  : 'Text is slightly larger, motion is reduced, surfaces are calmer, and challenge badges are hidden.')
+              : (zh
+                  ? '界面保持常规动效、色温和信息密度。'
+                  : 'The interface keeps normal motion, color temperature, and density.'),
+        ),
+      ],
+    );
+  }
 
   Widget _buildSectionHeader(IconData icon, String title) => Row(
         children: [

@@ -133,7 +133,28 @@ class DocumentLibraryRepository {
   }
 
   Future<void> deleteDocument(String fileId) async {
-    await _dio.delete<void>(ApiEndpoints.file(fileId));
+    await _dio.delete<void>(ApiEndpoints.sourceDelete(fileId));
+  }
+
+  Future<void> archiveDocument(String fileId) async {
+    await _dio.post<Map<String, dynamic>>(
+      ApiEndpoints.sourceArchive(fileId),
+      data: const {'reason': 'mobile_archive'},
+    );
+  }
+
+  Future<void> restoreDocument(String fileId) async {
+    await _dio.post<Map<String, dynamic>>(
+      ApiEndpoints.sourceRestore(fileId),
+      data: const {'reason': 'mobile_restore'},
+    );
+  }
+
+  Future<void> revokeDocument(String fileId) async {
+    await _dio.post<Map<String, dynamic>>(
+      ApiEndpoints.sourceRevoke(fileId),
+      data: const {'reason': 'mobile_revoke'},
+    );
   }
 
   Future<void> shareDocumentToGroup({
@@ -192,10 +213,12 @@ class DocumentLibraryRepository {
         if (item is! Map<String, dynamic>) continue;
         final widgets = _extractWidgets(item);
         if (widgets.isEmpty) continue;
-        final messageTime = _readDateTime(item['created_at']) ?? session.updatedAt;
+        final messageTime =
+            _readDateTime(item['created_at']) ?? session.updatedAt;
         for (final widget in widgets) {
           if (widget['type']?.toString() != 'source_summary') continue;
-          final citationList = (widget['data'] as Map<String, dynamic>?)?['citations'];
+          final citationList =
+              (widget['data'] as Map<String, dynamic>?)?['citations'];
           if (citationList is! List) continue;
 
           for (final rawCitation in citationList) {
@@ -281,8 +304,7 @@ class _ConversationSummary {
         DateTime.tryParse(json['created_at']?.toString() ?? '') ??
         DateTime.now();
     return _ConversationSummary(
-      sessionId:
-          json['id']?.toString() ?? json['session_id']?.toString() ?? '',
+      sessionId: json['id']?.toString() ?? json['session_id']?.toString() ?? '',
       updatedAt: updatedAt,
     );
   }

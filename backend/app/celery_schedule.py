@@ -1,3 +1,4 @@
+from celery.schedules import crontab
 
 from app.workers.cleanup_worker import cleanup_galaxy_outbox, cleanup_outbox_events
 
@@ -56,6 +57,14 @@ def setup_periodic_tasks(sender, **kwargs):
         name='run-daily-goal-reflections-every-day'
     )
 
+    # P4 counterfactual policy evaluation — daily report generation
+    from app.core.celery_tasks import run_counterfactual_evaluations
+    sender.add_periodic_task(
+        86400.0,
+        run_counterfactual_evaluations.s(),
+        name='run-counterfactual-evaluations-every-day'
+    )
+
     # State decay/retraction maintenance — prevents stale short-term state from becoming identity
     from app.core.celery_tasks import apply_memory_decay, spine_auto_deprecate_skills, spine_expire_stale_states
     sender.add_periodic_task(
@@ -72,4 +81,20 @@ def setup_periodic_tasks(sender, **kwargs):
         86400.0,
         apply_memory_decay.s(),
         name='apply-memory-decay-every-day'
+    )
+
+    # SafeExperiment guardrail monitor — pause unsafe canaries/live experiments within 30 minutes
+    from app.core.celery_tasks import monitor_safe_experiment_guardrails
+    sender.add_periodic_task(
+        1800.0,
+        monitor_safe_experiment_guardrails.s(),
+        name='monitor-safe-experiment-guardrails-every-30min'
+    )
+
+    # FV-03: SparkleGoalBench regression benchmark — Sundays at 03:00.
+    from app.core.celery_tasks import run_weekly_benchmark
+    sender.add_periodic_task(
+        crontab(day_of_week='sun', hour=3, minute=0),
+        run_weekly_benchmark.s('full'),
+        name='run-weekly-sparkle-goal-bench'
     )

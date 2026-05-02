@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -19,6 +21,9 @@ import 'package:sparkle/shared/entities/galaxy_model.dart';
 /// 5. High contrast mode detection
 class GalaxyAccessibilityService {
   GalaxyAccessibilityService();
+
+  static const String _centralAccessibilitySettingsKey =
+      'settings_accessibility_central';
 
   bool _isScreenReaderEnabled = false;
   bool _reduceMotionEnabled = false;
@@ -42,6 +47,7 @@ class GalaxyAccessibilityService {
     _isScreenReaderEnabled = mediaQuery.accessibleNavigation;
     _reduceMotionEnabled = mediaQuery.disableAnimations;
     _highContrastEnabled = mediaQuery.highContrast;
+    unawaited(_applyCentralDefaults());
   }
 
   /// Update accessibility settings
@@ -57,6 +63,52 @@ class GalaxyAccessibilityService {
     if (reduceMotion != null) _reduceMotionEnabled = reduceMotion;
     if (highContrast != null) _highContrastEnabled = highContrast;
     if (hapticEnabled != null) this.hapticEnabled = hapticEnabled;
+  }
+
+  Future<void> _applyCentralDefaults() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_centralAccessibilitySettingsKey);
+      if (raw == null || raw.isEmpty) {
+        return;
+      }
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) {
+        return;
+      }
+      update(
+        screenReaderEnabled: _readBool(
+          decoded['screen_reader_optimized'],
+          fallback: _isScreenReaderEnabled,
+        ),
+        reduceMotion: _readBool(
+          decoded['reduce_motion'],
+          fallback: _reduceMotionEnabled,
+        ),
+        highContrast: _readBool(
+          decoded['high_contrast'],
+          fallback: _highContrastEnabled,
+        ),
+        hapticEnabled: _readBool(
+          decoded['haptic_feedback'],
+          fallback: hapticEnabled,
+        ),
+      );
+    } catch (_) {
+      // Per-feature settings remain available if central defaults cannot load.
+    }
+  }
+
+  bool _readBool(Object? rawValue, {required bool fallback}) {
+    if (rawValue is bool) {
+      return rawValue;
+    }
+    final value = rawValue?.toString().trim().toLowerCase();
+    return switch (value) {
+      'true' || '1' || 'yes' || 'on' => true,
+      'false' || '0' || 'no' || 'off' => false,
+      _ => fallback,
+    };
   }
 
   // ============================================

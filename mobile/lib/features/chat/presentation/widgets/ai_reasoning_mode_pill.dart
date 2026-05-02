@@ -262,14 +262,14 @@ class _ReasoningModeVisuals {
     switch (mode) {
       case 'fast':
         return _ReasoningModeVisuals(
-          label: '敏捷',
+          label: I18nService.instance.isChinese ? '敏捷' : 'Fast',
           caption: S.chatModeFastDesc,
           icon: Icons.flash_on_rounded,
           color: DS.warning,
         );
       case 'deep':
         return _ReasoningModeVisuals(
-          label: '深思',
+          label: I18nService.instance.isChinese ? '深思' : 'Deep',
           caption: S.chatModeStrongAnalysisDesc,
           icon: Icons.psychology_alt_rounded,
           color: DS.info,
@@ -277,7 +277,7 @@ class _ReasoningModeVisuals {
       case 'balanced':
       default:
         return _ReasoningModeVisuals(
-          label: '均衡',
+          label: I18nService.instance.isChinese ? '均衡' : 'Balanced',
           caption: S.chatModeBalancedDesc,
           icon: Icons.tune_rounded,
           color: DS.success,

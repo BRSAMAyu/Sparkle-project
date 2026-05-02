@@ -21,6 +21,7 @@ from app.schemas.unified_notification import (
     NotificationPreferencesResponse,
     NotificationPreferencesUpdate,
     PushNotificationActionRequest,
+    RecallNotificationFeedbackRequest,
     UnifiedNotificationResponse,
 )
 from app.services.notification_analytics_service import NotificationAnalyticsService
@@ -215,6 +216,30 @@ async def transition_push_notification(
             detail=f"Push notification not found: {notification_id}",
         )
     return {"message": f"Push action applied: {request.action}"}
+
+
+# route-tier: internal
+@router.post("/notifications/{notification_id}/recall-feedback")
+async def record_recall_notification_feedback(
+    notification_id: UUID,
+    request: RecallNotificationFeedbackRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    service = NotificationCenterService(db)
+    success = await service.record_recall_notification_feedback(
+        user_id=current_user.id,
+        notification_id=notification_id,
+        is_accurate=request.is_accurate,
+        feedback_reason=request.feedback_reason,
+        action_payload=request.action_payload or {},
+    )
+    if not success:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Recall notification not found: {notification_id}",
+        )
+    return {"message": "Recall notification feedback recorded"}
 
 
 # route-tier: internal

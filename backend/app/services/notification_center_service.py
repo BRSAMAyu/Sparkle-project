@@ -48,6 +48,29 @@ SPACED_REPETITION_MIN_COOLDOWN_DAYS = 1
 SPACED_REPETITION_ESTIMATED_MINUTES = 10
 
 
+class _OutcomeCacheAdapter:
+    """Minimal Redis-like adapter for OutcomeRecorder when Redis is unavailable."""
+
+    async def get(self, key: str) -> Any:
+        from app.core.cache import cache_service
+
+        return await cache_service.get(key)
+
+    async def set(
+        self,
+        key: str,
+        value: Any,
+        ex: int | None = None,
+        nx: bool = False,
+    ) -> bool:
+        from app.core.cache import cache_service
+
+        if nx and await cache_service.get(key):
+            return False
+        await cache_service.set(key, value, ttl=ex)
+        return True
+
+
 class NotificationCenterService:
     """
     Unified notification service combining system notifications and intervention requests.
@@ -680,6 +703,61 @@ class NotificationCenterService:
             await self.db.rollback()
             return False
 
+    async def record_recall_notification_feedback(
+        self,
+        user_id: UUID,
+        notification_id: UUID,
+        is_accurate: bool,
+        feedback_reason: str | None = None,
+        action_payload: dict[str, Any] | None = None,
+    ) -> bool:
+        """Record explicit user feedback for an explainable recall notification."""
+        payload = dict(action_payload or {})
+        try:
+            stmt = select(Notification).where(
+                and_(
+                    Notification.id == notification_id,
+                    Notification.user_id == user_id,
+                    Notification.not_deleted_filter(),
+                )
+            )
+            result = await self.db.execute(stmt)
+            notification = result.scalar_one_or_none()
+            if not notification:
+                return False
+
+            data = dict(notification.data or {})
+            data["recall_feedback"] = {
+                "is_accurate": is_accurate,
+                "feedback_reason": feedback_reason,
+                "source": payload.get("source", "notification_center_card"),
+                "recorded_at": _utcnow().isoformat(),
+            }
+            notification.data = data
+            if not notification.is_read:
+                notification.is_read = True
+                notification.read_at = _utcnow()
+
+            await self._record_interaction(
+                user_id=user_id,
+                notification_type="recall",
+                notification_id=notification_id,
+                action_type="accurate" if is_accurate else "inaccurate",
+                created_at=notification.created_at,
+            )
+            await self._record_recall_feedback_outcome(
+                notification=notification,
+                is_accurate=is_accurate,
+                feedback_reason=feedback_reason,
+                action_payload=payload,
+            )
+            await self.db.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error recording recall notification feedback: {e}")
+            await self.db.rollback()
+            return False
+
     async def transition_intervention_record(
         self,
         user_id: UUID,
@@ -1129,6 +1207,51 @@ class NotificationCenterService:
             }:
                 snooze_hours = int(payload.get("snooze_hours", 24))
                 await service.mark_snoozed(record.id, snooze_hours=snooze_hours)
+
+    async def _record_recall_feedback_outcome(
+        self,
+        *,
+        notification: Notification,
+        is_accurate: bool,
+        feedback_reason: str | None,
+        action_payload: dict[str, Any],
+    ) -> None:
+        try:
+            from app.core.cache import cache_service
+            from app.signals.outcome_recorder import OutcomeRecorder
+            from app.signals.types import CausalTrace
+
+            data = dict(notification.data or {})
+            redis_like = cache_service.redis or _OutcomeCacheAdapter()
+            trace_id = str(data.get("causal_trace_id") or data.get("trace_id") or f"recall_feedback:{notification.id}")
+            recorder = OutcomeRecorder(redis_like)
+            await recorder.record_outcome(
+                trace=CausalTrace(
+                    trace_id=trace_id,
+                    raw_event_ids=[str(notification.id)],
+                    outcome_to_measure=["recall_notification_accuracy"],
+                ),
+                intervention="recall_notification",
+                reason=str(
+                    data.get("trigger_type") or data.get("value_reason") or data.get("reasoning") or notification.type
+                ),
+                expected_outcome="user_wellbeing",
+                actual_outcome={
+                    "user_reported_negative": not is_accurate,
+                    "recall_feedback": "accurate" if is_accurate else "inaccurate",
+                    "feedback_reason": feedback_reason,
+                    "notification_id": str(notification.id),
+                    "trigger_type": data.get("trigger_type"),
+                    "recall_score": data.get("recall_score"),
+                    **action_payload,
+                },
+            )
+        except Exception:
+            logger.debug(
+                "Recall feedback OutcomeRecorder write skipped for notification={}",
+                notification.id,
+                exc_info=True,
+            )
 
     async def _materialize_specialized_repair_task_if_needed(
         self,

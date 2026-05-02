@@ -24,6 +24,7 @@ from app.core.security import get_password_hash, set_user_revoked_before, verify
 from app.db.session import get_db
 from app.models.auth_security import AuthAuditAction, AuthAuditLog
 from app.models.user import PushPreference, User, UserStatus
+from app.models.user_settings import UserSettings
 from app.schemas.user import (
     AuthAuditLogInfo,
     AvatarStatus,
@@ -42,6 +43,7 @@ from app.schemas.user import (
 )
 from app.services.auth_session_service import auth_session_service
 from app.services.profile_write_service import ProfileWriteService
+from app.services.user_settings_service import UserSettingsService
 from app.utils.helpers import save_upload_file
 
 router = APIRouter()
@@ -69,6 +71,10 @@ async def _get_push_pref(db: AsyncSession, user_id: str) -> PushPreference | Non
     return result.scalar_one_or_none()
 
 
+async def _get_user_settings(db: AsyncSession, user_id: str) -> UserSettings:
+    return await UserSettingsService(db).get_or_create(user_id)
+
+
 def _push_pref_response(push_pref: PushPreference | None) -> PushPreferenceResponse:
     if push_pref:
         return PushPreferenceResponse(
@@ -87,7 +93,11 @@ def _push_pref_response(push_pref: PushPreference | None) -> PushPreferenceRespo
     )
 
 
-def _build_user_profile(user: User, push_pref: PushPreference | None) -> UserProfile:
+def _build_user_profile(
+    user: User,
+    push_pref: PushPreference | None,
+    user_settings: UserSettings | None = None,
+) -> UserProfile:
     return UserProfile(
         id=user.id,
         username=user.username,
@@ -117,6 +127,7 @@ def _build_user_profile(user: User, push_pref: PushPreference | None) -> UserPro
         linked_providers=_linked_providers(user),
         tos_version=user.tos_version,
         privacy_version=user.privacy_version,
+        current_goal_id=user_settings.current_goal_id if user_settings else None,
         push_preferences=_push_pref_response(push_pref),
     )
 
@@ -152,7 +163,8 @@ async def get_me(
     Get current user profile.
     """
     push_pref = await _get_push_pref(db, current_user.id)
-    return _build_user_profile(current_user, push_pref)
+    user_settings = await _get_user_settings(db, current_user.id)
+    return _build_user_profile(current_user, push_pref, user_settings)
 
 
 @router.put("/me", response_model=UserProfile)
@@ -185,6 +197,13 @@ async def update_me(
     if obj_in.curiosity_preference is not None:
         pref_updates["curiosity_preference"] = obj_in.curiosity_preference
 
+    user_settings: UserSettings | None = None
+    if "current_goal_id" in obj_in.model_fields_set:
+        user_settings = await UserSettingsService(db).update_settings(
+            current_user.id,
+            {"current_goal_id": obj_in.current_goal_id},
+        )
+
     db.add(current_user)
     await db.commit()
     if pref_updates:
@@ -202,7 +221,9 @@ async def update_me(
             )
     await db.refresh(current_user)
     push_pref = await _get_push_pref(db, current_user.id)
-    return _build_user_profile(current_user, push_pref)
+    if user_settings is None:
+        user_settings = await _get_user_settings(db, current_user.id)
+    return _build_user_profile(current_user, push_pref, user_settings)
 
 
 @router.post("/me/avatar", response_model=UserProfile)
@@ -242,7 +263,8 @@ async def update_avatar(
     await db.refresh(current_user)
 
     push_pref = await _get_push_pref(db, current_user.id)
-    return _build_user_profile(current_user, push_pref)
+    user_settings = await _get_user_settings(db, current_user.id)
+    return _build_user_profile(current_user, push_pref, user_settings)
 
 
 @router.post("/me/password")
@@ -605,7 +627,8 @@ async def update_my_preferences(
     await db.refresh(current_user)
 
     push_pref = await _get_push_pref(db, current_user.id)
-    return _build_user_profile(current_user, push_pref)
+    user_settings = await _get_user_settings(db, current_user.id)
+    return _build_user_profile(current_user, push_pref, user_settings)
 
 
 @router.get("/me/push-preference", response_model=PushPreferenceResponse)
@@ -688,7 +711,8 @@ async def update_schedule_preferences(
     await db.refresh(current_user)
 
     push_pref = await _get_push_pref(db, current_user.id)
-    return _build_user_profile(current_user, push_pref)
+    user_settings = await _get_user_settings(db, current_user.id)
+    return _build_user_profile(current_user, push_pref, user_settings)
 
 
 @router.get("/{user_id}", summary="获取用户公开资料")

@@ -1,0 +1,22 @@
+FV-03: SimulationLab/SparkleGoalBench CI 门禁
+Status: DONE
+Branch: codex/FV-03-simulation-benchmark
+Modified files:
+- .github/workflows/ci.yml
+- backend/app/celery_schedule.py
+- backend/app/core/celery_tasks.py
+- backend/app/services/simulation_runner.py
+- backend/app/signals/simulation_lab.py
+- backend/scripts/run_simulation_benchmark.py
+- backend/tests/services/test_simulation_runner.py
+- docs/benchmarks/2026-05-02_local-fv03-final.md
+- docs/product/parallel_closeout/FV-03_simulation_benchmark_REPORT_2026-05-02.md
+- monitoring/grafana/dashboards/simulation_lab.json
+- monitoring/prometheus.yml
+Verification:
+- ruff check FV-03 touched Python files: PASS
+- cd backend && pytest tests/services/test_simulation_runner.py -q: PASS (3 passed)
+- cd backend && pytest tests/unit/test_signal_spine.py -q -k "p4_3": PASS (18 passed)
+- python -m backend.scripts.run_simulation_benchmark --suite=full --skip-db: PASS (24/24)
+User-visible change: Strategy/Aurora/Marketplace/Skill-sensitive PRs now get a SparkleGoalBench regression gate with persisted benchmark reports.
+Architect handoff: Verify celery_schedule.py is wired into production beat; worktree contains unrelated FV changes from other agents and was not cleaned by FV-03.

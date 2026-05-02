@@ -217,6 +217,28 @@ class NotificationCenter extends _$NotificationCenter {
     }
   }
 
+  Future<void> markRecallInaccurate(UnifiedNotification notification) async {
+    if (!notification.hasRecallValueDetails) {
+      return;
+    }
+    try {
+      await _repository.sendRecallFeedback(
+        notification.id,
+        isAccurate: false,
+        feedbackReason: 'user_marked_recall_inaccurate',
+        actionPayload: {
+          'source': 'notification_center_card',
+          'surface': 'notification_center',
+          'trigger_type': notification.metadata['trigger_type'],
+          'recall_score': notification.recallScore,
+        },
+      );
+      _updateRecallFeedbackLocalState(notification.id, 'inaccurate');
+    } catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
   Future<Map<String, dynamic>> sendAccountabilityEncouragement(
     UnifiedNotification notification,
   ) async {
@@ -399,6 +421,29 @@ class NotificationCenter extends _$NotificationCenter {
                   metadata: metadata,
                 );
               }).toList();
+
+    final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
+    state = state.copyWith(
+      notifications: updatedNotifications,
+      unreadCount: unreadCount,
+    );
+  }
+
+  void _updateRecallFeedbackLocalState(String notificationId, String status) {
+    final updatedNotifications = state.notifications.map((n) {
+      if (n.id != notificationId) {
+        return n;
+      }
+      final metadata = Map<String, dynamic>.from(n.metadata)
+        ..['recall_feedback_status'] = status
+        ..['recall_feedback'] = {
+          'is_accurate': status == 'accurate',
+        };
+      return n.copyWith(
+        isRead: true,
+        metadata: metadata,
+      );
+    }).toList();
 
     final unreadCount = updatedNotifications.where((n) => !n.isRead).length;
     state = state.copyWith(

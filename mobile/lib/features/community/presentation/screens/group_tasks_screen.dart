@@ -30,7 +30,7 @@ class GroupTasksScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text('Group Tasks'),
+        title: Text(I18nService.instance.isChinese ? '社群任务' : 'Group Tasks'),
       ),
       floatingActionButton: SparkleIconButton(
         icon: const Icon(Icons.add),
@@ -44,7 +44,7 @@ class GroupTasksScreen extends ConsumerWidget {
           if (tasks.isEmpty) {
             return const Center(
               child: CompactEmptyState(
-                message: 'No tasks yet',
+                message: I18nService.instance.isChinese ? '还没有任务' : 'No tasks yet',
                 icon: Icons.assignment_outlined,
               ),
             );
@@ -89,7 +89,7 @@ class GroupTasksScreen extends ConsumerWidget {
                                   .completeTask(entry.$2.id);
                               ref.invalidate(groupTasksProvider(groupId));
                               if (context.mounted) {
-                                AppFeedback.success(context, 'Task completed!');
+                                AppFeedback.success(context, I18nService.instance.isChinese ? '任务已完成！' : 'Task completed!');
                               }
                             } catch (e) {
                               if (context.mounted) {

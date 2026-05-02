@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/interactive_task_card.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -32,6 +33,8 @@ class PriorityView extends ConsumerWidget {
       }
     }
 
+    final zh = I18nService.instance.isChinese;
+
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -43,7 +46,7 @@ class PriorityView extends ConsumerWidget {
           case 0:
             return highPriority.isNotEmpty
                 ? _PrioritySection(
-                    title: '高优先级',
+                    title: zh ? '高优先级' : 'High Priority',
                     color: DS.error,
                     tasks: highPriority,
                   )
@@ -51,7 +54,7 @@ class PriorityView extends ConsumerWidget {
           case 1:
             return mediumPriority.isNotEmpty
                 ? _PrioritySection(
-                    title: '中优先级',
+                    title: zh ? '中优先级' : 'Medium Priority',
                     color: DS.warning,
                     tasks: mediumPriority,
                   )
@@ -59,7 +62,7 @@ class PriorityView extends ConsumerWidget {
           case 2:
             return lowPriority.isNotEmpty
                 ? _PrioritySection(
-                    title: '低优先级',
+                    title: zh ? '低优先级' : 'Low Priority',
                     color: DS.success,
                     tasks: lowPriority,
                   )
@@ -82,7 +85,7 @@ class PriorityView extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            '暂无任务',
+            I18nService.instance.isChinese ? '暂无任务' : 'No tasks',
             style: context.sparkleTypography.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),

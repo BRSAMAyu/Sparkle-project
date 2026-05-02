@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -599,7 +600,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                       },
                     ),
                     _PreviewActionButton(
-                      label: '取消',
+                      label: I18nService.instance.isChinese ? '取消' : 'Cancel',
                       onTap: () => Navigator.of(sheetContext).pop(),
                     ),
                   ],
@@ -610,7 +611,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                   runSpacing: DS.spacing8,
                   children: [
                     _PreviewActionButton(
-                      label: '取消',
+                      label: I18nService.instance.isChinese ? '取消' : 'Cancel',
                       onTap: () => Navigator.of(sheetContext).pop(),
                     ),
                     _PreviewActionButton(

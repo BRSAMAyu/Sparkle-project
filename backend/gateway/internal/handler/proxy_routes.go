@@ -647,6 +647,13 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered documents proxy routes")
 
+	sources := api.Group("/sources")
+	sources.Use(authMiddleware)
+	{
+		sources.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered sources proxy routes")
+
 	// ==================== STT Batch Transcription ====================
 	stt := api.Group("/stt")
 	stt.Use(authMiddleware)

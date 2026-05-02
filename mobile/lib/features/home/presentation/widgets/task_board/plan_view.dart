@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/interactive_task_card.dart';
@@ -92,7 +93,9 @@ class PlanView extends ConsumerWidget {
           const SizedBox(height: DS.spacing12),
           Text(
             isFiltered
-                ? '${selectedPlanName ?? context.l10n.planViewCurrentPlan} 暂无任务'
+                ? (I18nService.instance.isChinese
+                    ? '${selectedPlanName ?? context.l10n.planViewCurrentPlan} 暂无任务'
+                    : '${selectedPlanName ?? context.l10n.planViewCurrentPlan} has no tasks')
                 : context.l10n.planViewNoPlanTasks,
             style: context.sparkleTypography.bodyMedium.copyWith(
               color: DS.textSecondary,

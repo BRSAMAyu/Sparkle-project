@@ -88,7 +88,7 @@ class _GroupModerationScreenState
             ),
           );
       if (!mounted) return;
-      AppFeedback.success(context, 'Settings saved');
+      AppFeedback.success(context, I18nService.instance.isChinese ? '设置已保存' : 'Settings saved');
     } catch (e) {
       if (!mounted) return;
       AppFeedback.error(
@@ -111,7 +111,7 @@ class _GroupModerationScreenState
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text('Group Moderation'),
+        title: Text(I18nService.instance.isChinese ? '社群管理' : 'Group Moderation'),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -132,7 +132,7 @@ class _GroupModerationScreenState
               ),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: 'Retry',
+                label: I18nService.instance.isChinese ? '重试' : 'Retry',
                 onPressed: () => ref
                     .read(groupModerationProvider(widget.groupId).notifier)
                     .load(),
@@ -161,8 +161,8 @@ class _GroupModerationScreenState
                     child: Column(
                       children: [
                         SwitchListTile(
-                          title: Text('Mute All'),
-                          subtitle: Text('Only admins can speak when enabled'),
+                          title: Text(I18nService.instance.isChinese ? '全员禁言' : 'Mute All'),
+                          subtitle: Text(I18nService.instance.isChinese ? '开启后仅管理员可发言' : 'Only admins can speak when enabled'),
                           value: _muteAll,
                           onChanged: (v) {
                             unawaited(
@@ -191,7 +191,7 @@ class _GroupModerationScreenState
                         children: [
                         Row(
                           children: [
-                            Text('Slow Mode',
+                            Text(I18nService.instance.isChinese ? '慢速模式' : 'Slow Mode',
                                 style: TextStyle(
                                     fontWeight: DS.fontWeightBold,
                                     fontSize: DS.fontSizeBase,),),
@@ -248,7 +248,7 @@ class _GroupModerationScreenState
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                        Text('Keyword Filter',
+                        Text(I18nService.instance.isChinese ? '关键词过滤' : 'Keyword Filter',
                             style: TextStyle(
                                 fontWeight: DS.fontWeightBold,
                                 fontSize: DS.fontSizeBase,),),
@@ -282,7 +282,7 @@ class _GroupModerationScreenState
                               child: TextField(
                                 controller: _keywordController,
                                 decoration: const InputDecoration(
-                                  hintText: 'Add keyword',
+                                  hintText: I18nService.instance.isChinese ? '添加关键词' : 'Add keyword',
                                   border: OutlineInputBorder(),
                                 ),
                                 onSubmitted: (_) => _addKeyword(),
@@ -309,7 +309,7 @@ class _GroupModerationScreenState
                 ),
                 const SizedBox(height: DS.spacing24),
                 SparkleButton.primary(
-                  label: 'Save',
+                  label: I18nService.instance.isChinese ? '保存' : 'Save',
                   onPressed: _save,
                 ),
               ],

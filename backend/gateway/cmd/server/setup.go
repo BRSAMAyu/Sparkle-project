@@ -21,6 +21,7 @@ import (
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/chaos"
 	"github.com/sparkle/gateway/internal/config"
+	"github.com/sparkle/gateway/internal/cqrs"
 	cqrsEvent "github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/cqrs/metrics"
 	"github.com/sparkle/gateway/internal/cqrs/outbox"
@@ -96,6 +97,7 @@ type cqrsBundle struct {
 	snapshotManager    *projection.SnapshotManager
 	projectionBuilder  *projection.Builder
 	dlqHandler         *cqrsWorker.DLQHandler
+	sagaCoordinator    *cqrs.SagaCoordinator
 	commSyncWorker     *worker.CommunitySyncWorker
 	taskSyncWorker     *worker.TaskSyncWorker
 	galaxySyncWorker   *worker.GalaxySyncWorker
@@ -299,6 +301,34 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, logger *zap.Logger) *cqrsBundle {
 	cqrsMetrics := metrics.NewCQRSMetrics("sparkle")
 	eventBus := cqrsEvent.NewRedisEventBus(rdb)
+
+	// FV-20: Initialize Saga coordinator for distributed transactions
+	sagaCoordinator := cqrs.NewSagaCoordinator(dbh.pool, eventBus, logger)
+	if err := sagaCoordinator.EnsureSchema(ctx); err != nil {
+		logger.Error("Failed to ensure saga schema", zap.Error(err))
+	}
+	// Register the 4 cross-service saga definitions
+	sagaCoordinator.Register(cqrs.NewTaskCreateSaga(
+		cqrs.StepFunc{StepName: "create_task"},
+		cqrs.StepFunc{StepName: "send_notification"},
+		cqrs.StepFunc{StepName: "crdt_sync"},
+	))
+	sagaCoordinator.Register(cqrs.NewSourceUploadSaga(
+		cqrs.StepFunc{StepName: "upload_source"},
+		cqrs.StepFunc{StepName: "parse_content"},
+		cqrs.StepFunc{StepName: "mount_nodes"},
+	))
+	sagaCoordinator.Register(cqrs.NewExperimentPromotionSaga(
+		cqrs.StepFunc{StepName: "promote_experiment"},
+		cqrs.StepFunc{StepName: "notify_stakeholders"},
+		cqrs.StepFunc{StepName: "write_audit"},
+	))
+	sagaCoordinator.Register(cqrs.NewSkillPublishSaga(
+		cqrs.StepFunc{StepName: "publish_skill"},
+		cqrs.StepFunc{StepName: "register_marketplace"},
+		cqrs.StepFunc{StepName: "send_notification"},
+	))
+
 	outboxRepo := outbox.NewPostgresRepository(dbh.pool)
 	outboxPublisher := outbox.NewPublisher(outboxRepo, eventBus, cqrsMetrics, logger)
 	outboxCleaner := outbox.NewCleaner(outboxRepo, cqrsMetrics, logger)
@@ -363,6 +393,7 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 		snapshotManager:   snapshotManager,
 		projectionBuilder: projectionBuilder,
 		dlqHandler:        dlqHandler,
+		sagaCoordinator:   sagaCoordinator,
 		commSyncWorker:    commSyncWorker,
 		taskSyncWorker:    taskSyncWorker,
 		galaxySyncWorker:  galaxySyncWorker,
@@ -539,6 +570,10 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		internal.POST("/interventions/push", handlers.interventionPushHandler.HandlePush)
 		internal.POST("/signals/push", handlers.signalPushHandler.HandlePush)
 	}
+
+	// FV-24: Network resilience middleware for upstream proxy routes
+	resilienceCfg := middleware.DefaultNetworkResilienceConfig()
+	r.Use(middleware.NetworkResilienceMiddleware(resilienceCfg))
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

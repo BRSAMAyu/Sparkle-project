@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.file_storage import StoredFile
+from app.models.file_storage import SourceLifecycleStatus, StoredFile
 from app.models.galaxy import KnowledgeNode, KnowledgeNodeDocument
 from app.models.plan import Plan
 from app.models.subject import Subject
@@ -34,6 +34,7 @@ class TaskDocumentService:
             .where(Task.user_id == user_id)
             .where(TaskDocument.deleted_at.is_(None))
             .where(StoredFile.deleted_at.is_(None))
+            .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
             .order_by(TaskDocument.created_at.asc(), StoredFile.file_name.asc())
         )
         return list(result.all())
@@ -232,6 +233,7 @@ class TaskDocumentService:
                     .where(KnowledgeNodeDocument.node_id.in_(node_ids))
                     .where(KnowledgeNodeDocument.deleted_at.is_(None))
                     .where(StoredFile.deleted_at.is_(None))
+                    .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
                     .order_by(KnowledgeNodeDocument.is_primary.desc(), StoredFile.updated_at.desc())
                 )
             ).all()
@@ -267,6 +269,7 @@ class TaskDocumentService:
                 .where(KnowledgeNodeDocument.user_id == task.user_id)
                 .where(KnowledgeNodeDocument.deleted_at.is_(None))
                 .where(StoredFile.deleted_at.is_(None))
+                .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
                 .where(
                     and_(
                         Subject.name.is_not(None),
@@ -308,6 +311,7 @@ class TaskDocumentService:
             .where(StoredFile.id == file_id)
             .where(StoredFile.user_id == user_id)
             .where(StoredFile.deleted_at.is_(None))
+            .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
         )
         if file_record is None:
             raise LookupError("Document not found")

@@ -1,0 +1,24 @@
+FV-06: DB/Redis 权限隔离 + RBAC
+Status: DONE
+Branch: codex/FV-06-db-redis-rbac
+Modified files:
+- .env.production.example
+- backend/alembic/versions/c17_20260502_create_service_roles.py
+- backend/app/config/settings.py
+- backend/app/core/database.py
+- backend/gateway/internal/config/config.go
+- backend/gateway/internal/config/config_rbac_test.go
+- backend/test_fv06_rbac_contract.py
+- docker-compose.yml
+- docker-compose.prod.yml
+- redis.conf
+- docs/engineering/SECURITY_RBAC_2026-05-02.md
+- docs/product/parallel_closeout/FV-06_db_redis_rbac_REPORT_2026-05-02.md
+Verification:
+- cd backend && pytest test_fv06_rbac_contract.py -q: PASS
+- cd backend && python3 -m py_compile alembic/versions/c17_20260502_create_service_roles.py app/config/settings.py app/core/database.py: PASS
+- cd backend/gateway && go test ./internal/config: PASS
+- docker compose -f docker-compose.yml config --quiet (with required local env): PASS
+- docker compose --env-file .env.production.example -f docker-compose.prod.yml config --quiet: PASS
+User-visible change: Production canary deploys can isolate database, Redis, and MinIO credentials by service while local/dev keeps the legacy single-account path.
+Architect handoff: Merge Alembic heads with concurrent FV cards and canary Redis ACL key prefixes before broad prod rollout.

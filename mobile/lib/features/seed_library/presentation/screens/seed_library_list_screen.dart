@@ -86,6 +86,13 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
+            icon: const Icon(Icons.storefront_outlined),
+            onPressed: () => unawaited(
+              context.push(SeedLibraryRoutes.marketplace),
+            ),
+          ),
+          SparkleIconButton(
+            variant: ButtonVariant.ghost,
             icon: const Icon(Icons.refresh),
             onPressed: _applyFilters,
           ),
@@ -322,8 +329,10 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(context.l10n.seedLibraryCategory,
-                  style: const TextStyle(fontWeight: DS.fontWeightBold)),
+              Text(
+                context.l10n.seedLibraryCategory,
+                style: const TextStyle(fontWeight: DS.fontWeightBold),
+              ),
               const SizedBox(height: DS.spacing8),
               Wrap(
                 spacing: DS.spacing8,
@@ -341,8 +350,10 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
                 }).toList(),
               ),
               const SizedBox(height: DS.spacing16),
-              Text(context.l10n.seedLibraryVisibility,
-                  style: const TextStyle(fontWeight: DS.fontWeightBold)),
+              Text(
+                context.l10n.seedLibraryVisibility,
+                style: const TextStyle(fontWeight: DS.fontWeightBold),
+              ),
               const SizedBox(height: DS.spacing8),
               Wrap(
                 spacing: DS.spacing8,

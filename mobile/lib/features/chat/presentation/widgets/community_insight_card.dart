@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
@@ -193,7 +194,7 @@ class _CommunityInsightCardState extends State<CommunityInsightCard>
                             border: Border.all(color: DS.borderSubtle),
                           ),
                           child: Text(
-                            '忽略',
+                            I18nService.instance.isChinese ? '忽略' : 'Ignore',
                             style: DS.labelSmall.copyWith(
                               color: DS.textTertiary,
                             ),

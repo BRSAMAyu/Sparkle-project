@@ -65,15 +65,15 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
           borderRadius: BorderRadius.circular(20),
           side: BorderSide(color: DS.border.withValues(alpha: 0.5)),
         ),
-        title: Text('Discard group creation?'),
-        content: Text('You have unsaved changes. Discard?'),
+        title: Text(I18nService.instance.isChinese ? '放弃创建社群？' : 'Discard group creation?'),
+        content: Text(I18nService.instance.isChinese ? '你有未保存的更改，确定放弃？' : 'You have unsaved changes. Discard?'),
         actions: [
           SparkleButton.ghost(
-            label: 'Keep Editing',
+            label: I18nService.instance.isChinese ? '继续编辑' : 'Keep Editing',
             onPressed: () => Navigator.of(context).pop(false),
           ),
           SparkleButton.destructive(
-            label: 'Discard',
+            label: I18nService.instance.isChinese ? '放弃' : 'Discard',
             onPressed: () => Navigator.of(context).pop(true),
           ),
         ],
@@ -165,7 +165,7 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
               onPressed: () =>
                   context.canPop() ? context.pop() : context.go('/community'),
             ),
-            title: Text('Create Group'),
+            title: Text(I18nService.instance.isChinese ? '创建社群' : 'Create Group'),
           ),
           body: ContentConstraint(
             child: SingleChildScrollView(

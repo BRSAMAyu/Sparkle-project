@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_superuser, get_db
 from app.core.cache import cache_service
+from app.middleware.admin_audit import audit_admin_action
 from app.schemas.dlq import DlqEntry, DlqReplayRequest
 from app.services.analytics.cognitive_stream_worker import CognitiveStreamWorker
 
@@ -13,6 +14,7 @@ router = APIRouter(prefix="/dlq", tags=["DLQ"])
 
 
 @router.get("/", response_model=list[DlqEntry])
+@audit_admin_action(category="dlq_inspection", risk="medium", action="list_dlq_events")
 async def list_dlq_events(
     limit: int = 50,
     _admin=Depends(get_current_active_superuser),
@@ -36,6 +38,7 @@ async def list_dlq_events(
 
 
 @router.post("/replay", response_model=dict[str, Any])
+@audit_admin_action(category="dlq_replay", risk="high", action="replay_dlq_events")
 async def replay_dlq_events(
     request: DlqReplayRequest,
     db: AsyncSession = Depends(get_db),

@@ -59,20 +59,31 @@ class UnifiedNotification {
 
   static Map<String, dynamic> _normalizeMetadata(Map<String, dynamic> json) {
     final metadata = json['metadata'];
+    final recallFields = <String, dynamic>{
+      for (final key in [
+        'recall_reason',
+        'reasoning',
+        'value_reason',
+        'effort_estimate',
+        'deadline_pressure_label',
+        'recall_score',
+      ])
+        if (json[key] != null) key: json[key],
+    };
     if (metadata is Map<String, dynamic>) {
-      return metadata;
+      return {...metadata, ...recallFields};
     }
     if (metadata is Map) {
-      return Map<String, dynamic>.from(metadata);
+      return {...Map<String, dynamic>.from(metadata), ...recallFields};
     }
     final data = json['data'];
     if (data is Map<String, dynamic>) {
-      return data;
+      return {...data, ...recallFields};
     }
     if (data is Map) {
-      return Map<String, dynamic>.from(data);
+      return {...Map<String, dynamic>.from(data), ...recallFields};
     }
-    return const {};
+    return recallFields;
   }
 
   Map<String, dynamic> toJson() => {
@@ -194,6 +205,41 @@ class UnifiedNotification {
   String? get retractableUntil => metadata['retractable_until'] as String?;
   String? get pushStatus => metadata['push_status'] as String?;
 
+  String? get recallReason =>
+      _stringValue(metadata['recall_reason']) ??
+      _stringValue(metadata['reasoning']) ??
+      _stringValue(_contextVariables['recall_reason']) ??
+      _stringValue(_contextVariables['reasoning']);
+
+  String? get valueReason =>
+      _stringValue(metadata['value_reason']) ??
+      _stringValue(_contextVariables['value_reason']);
+
+  String? get effortEstimate =>
+      _stringValue(metadata['effort_estimate']) ??
+      _stringValue(_contextVariables['effort_estimate']);
+
+  String? get deadlinePressureLabel =>
+      _stringValue(metadata['deadline_pressure_label']) ??
+      _stringValue(_contextVariables['deadline_pressure_label']);
+
+  double? get recallScore =>
+      _doubleValue(metadata['recall_score']) ??
+      _doubleValue(_contextVariables['recall_score']);
+
+  bool get hasRecallValueDetails =>
+      _hasText(recallReason) ||
+      _hasText(valueReason) ||
+      _hasText(effortEstimate) ||
+      _hasText(deadlinePressureLabel) ||
+      recallScore != null;
+
+  bool get canMarkRecallInaccurate =>
+      hasRecallValueDetails &&
+      _stringValue(metadata['recall_feedback_status']) != 'inaccurate' &&
+      (metadata['recall_feedback'] is! Map ||
+          (metadata['recall_feedback'] as Map)['is_accurate'] != false);
+
   String? get interactionState =>
       metadata['client_intervention_state'] as String? ??
       metadata['acceptance_status'] as String? ??
@@ -272,6 +318,26 @@ class UnifiedNotification {
       return Map<String, dynamic>.from(raw);
     }
     return const {};
+  }
+
+  static bool _hasText(String? value) =>
+      value != null && value.trim().isNotEmpty;
+
+  static String? _stringValue(Object? value) {
+    if (value is String && value.trim().isNotEmpty) {
+      return value.trim();
+    }
+    return null;
+  }
+
+  static double? _doubleValue(Object? value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+    if (value is String) {
+      return double.tryParse(value);
+    }
+    return null;
   }
 
   UnifiedNotification copyWith({

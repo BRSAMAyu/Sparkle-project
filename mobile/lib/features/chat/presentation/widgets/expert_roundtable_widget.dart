@@ -2,8 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 
 class AssistantAgentBadge extends StatelessWidget {
   const AssistantAgentBadge({
@@ -195,7 +196,9 @@ class _CollapsedExpertRoundtable extends StatelessWidget {
           icon: Icons.forum_rounded,
           label: experts.isEmpty
               ? context.l10n.chatRoundtableExpertCollab
-              : '专家协作 ${experts.length}位',
+              : (I18nService.instance.isChinese
+                  ? '专家协作 ${experts.length}位'
+                  : 'Expert collab ${experts.length}'),
           emphasize: true,
           onTap: onExpand,
           trailing: Icon(
@@ -304,7 +307,7 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
                   ),
                   splashRadius: 18,
                   color: DS.textSecondary,
-                  tooltip: '收起',
+                  tooltip: I18nService.instance.isChinese ? '收起' : 'Collapse',
                 ),
               ),
             ],
@@ -448,7 +451,7 @@ String _labelForAgent(BuildContext context, String raw) {
     case 'error_analyst':
       return context.l10n.chatRoundtableErrorSpecialist;
     case 'study_buddy':
-      return '学伴';
+      return I18nService.instance.isChinese ? '学伴' : 'Study Buddy';
     case 'math_agent':
       return context.l10n.chatExpertMath;
     case 'code_agent':

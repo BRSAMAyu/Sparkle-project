@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 
@@ -60,7 +61,7 @@ class FavoritesScreen extends ConsumerWidget {
           onPressed: () =>
               context.canPop() ? context.pop() : context.go('/community'),
         ),
-        title: Text('My Favorites'),
+        title: Text(I18nService.instance.isChinese ? '我的收藏' : 'My Favorites'),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -75,10 +76,10 @@ class FavoritesScreen extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('加载失败: $e', style: TextStyle(color: DS.error)),
+              Text(I18nService.instance.isChinese ? '加载失败: $e' : 'Load failed: $e', style: TextStyle(color: DS.error)),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: 'Retry',
+                label: I18nService.instance.isChinese ? '重试' : 'Retry',
                 onPressed: () => ref.read(favoritesProvider.notifier).load(),
               ),
             ],
@@ -88,7 +89,7 @@ class FavoritesScreen extends ConsumerWidget {
           if (favorites.isEmpty) {
             return const Center(
               child: CompactEmptyState(
-                message: 'No favorites yet',
+                message: I18nService.instance.isChinese ? '还没有收藏' : 'No favorites yet',
                 icon: Icons.bookmark_border,
               ),
             );
@@ -118,8 +119,8 @@ class _FavoriteTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final content = favorite.groupMessage?.content ??
         favorite.privateMessage?.content ??
-        '（富媒体消息）';
-    final sender = favorite.groupMessage?.sender?.displayName ?? '未知用户';
+        (I18nService.instance.isChinese ? '（富媒体消息）' : '(Rich media message)');
+    final sender = favorite.groupMessage?.sender?.displayName ?? (I18nService.instance.isChinese ? '未知用户' : 'Unknown User');
     final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(favorite.createdAt);
 
     return GraphiteCardSurface(
@@ -143,15 +144,15 @@ class _FavoriteTile extends ConsumerWidget {
             final confirmed = await showSensoryDialog<bool>(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: Text('Remove Favorite'),
-                content: Text('Are you sure you want to remove this favorite?'),
+                title: Text(I18nService.instance.isChinese ? '移除收藏' : 'Remove Favorite'),
+                content: Text(I18nService.instance.isChinese ? '确定要移除这条收藏吗？' : 'Are you sure you want to remove this favorite?'),
                 actions: [
                   SparkleButton.ghost(
-                    label: 'Cancel',
+                    label: I18nService.instance.isChinese ? '取消' : 'Cancel',
                     onPressed: () => Navigator.pop(ctx, false),
                   ),
                   SparkleButton.primary(
-                    label: 'Confirm',
+                    label: I18nService.instance.isChinese ? '确定' : 'Confirm',
                     onPressed: () => Navigator.pop(ctx, true),
                   ),
                 ],
@@ -164,10 +165,10 @@ class _FavoriteTile extends ConsumerWidget {
                     .remove(favorite.id)
                     .then((_) {
                   if (!context.mounted) return;
-                  AppFeedback.success(context, 'Favorite removed');
+                  AppFeedback.success(context, I18nService.instance.isChinese ? '已移除收藏' : 'Favorite removed');
                 }).catchError((Object e) {
                   if (!context.mounted) return;
-                  AppFeedback.error(context, '操作失败: $e');
+                  AppFeedback.error(context, I18nService.instance.isChinese ? '操作失败: $e' : 'Operation failed: $e');
                 }),
               );
             }
@@ -178,11 +179,11 @@ class _FavoriteTile extends ConsumerWidget {
             showSensoryDialog<void>(
               context: context,
               builder: (ctx) => AlertDialog(
-                title: Text('Favorite Note'),
+                title: Text(I18nService.instance.isChinese ? '收藏备注' : 'Favorite Note'),
                 content: Text(favorite.note!),
                 actions: [
                   SparkleButton.ghost(
-                    label: 'Close',
+                    label: I18nService.instance.isChinese ? '关闭' : 'Close',
                     onPressed: () => Navigator.pop(ctx),
                   ),
                 ],

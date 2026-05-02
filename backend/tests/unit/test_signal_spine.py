@@ -8866,7 +8866,7 @@ def test_external_tool_context():
 
 
 def test_counterfactual_baseline_method():
-    from app.signals.research_grade import CounterfactualEngine
+    from app.signals.research_grade import CounterfactualEngine  # noqa: DEPRECATED v1
     from app.signals.types import OutcomeRecord
     engine = CounterfactualEngine()
     outcome = OutcomeRecord(
@@ -8886,7 +8886,7 @@ def test_counterfactual_baseline_method():
 
 
 def test_counterfactual_high_baseline():
-    from app.signals.research_grade import CounterfactualEngine
+    from app.signals.research_grade import CounterfactualEngine  # noqa: DEPRECATED v1
     from app.signals.types import OutcomeRecord
     engine = CounterfactualEngine()
     outcome = OutcomeRecord(
@@ -8902,7 +8902,7 @@ def test_counterfactual_high_baseline():
 
 
 def test_counterfactual_rule_based():
-    from app.signals.research_grade import CounterfactualEngine
+    from app.signals.research_grade import CounterfactualEngine  # noqa: DEPRECATED v1
     from app.signals.types import OutcomeRecord
     engine = CounterfactualEngine()
     outcome = OutcomeRecord(
@@ -8922,7 +8922,7 @@ def test_counterfactual_rule_based():
 
 
 def test_counterfactual_aggregate():
-    from app.signals.research_grade import CounterfactualEngine, CounterfactualResult
+    from app.signals.research_grade import CounterfactualEngine, CounterfactualResult  # noqa: DEPRECATED v1
     engine = CounterfactualEngine()
     results = [
         CounterfactualResult("r1", "ct1", "effective", "insufficient", 1.0, 0.8, "", "baseline"),
@@ -8937,7 +8937,7 @@ def test_counterfactual_aggregate():
 
 
 def test_user_simulator_basic():
-    from app.signals.research_grade import UserSimulator, SimulatedUserProfile
+    from app.signals.research_grade import UserSimulator, SimulatedUserProfile  # noqa: DEPRECATED v1
     sim = UserSimulator()
     profile = SimulatedUserProfile(
         profile_id="sim_1",
@@ -8952,7 +8952,7 @@ def test_user_simulator_basic():
 
 
 def test_user_simulator_sequence():
-    from app.signals.research_grade import UserSimulator, SimulatedUserProfile
+    from app.signals.research_grade import UserSimulator, SimulatedUserProfile  # noqa: DEPRECATED v1
     sim = UserSimulator()
     profile = SimulatedUserProfile(
         profile_id="sim_2",
@@ -8971,7 +8971,7 @@ def test_user_simulator_sequence():
 
 
 def test_user_simulator_compare():
-    from app.signals.research_grade import UserSimulator, SimulatedUserProfile
+    from app.signals.research_grade import UserSimulator, SimulatedUserProfile  # noqa: DEPRECATED v1
     sim = UserSimulator()
     profile = SimulatedUserProfile(
         profile_id="sim_3",
@@ -8991,7 +8991,7 @@ def test_user_simulator_compare():
 
 
 def test_domain_pack_validate():
-    from app.signals.research_grade import DomainPack, DomainPackMarketplace
+    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1, DomainPackMarketplace  # noqa: DEPRECATED v1
     redis = MagicMock()
     marketplace = DomainPackMarketplace(redis)
 
@@ -9025,7 +9025,7 @@ def test_domain_pack_validate():
 
 
 def test_domain_pack_score():
-    from app.signals.research_grade import DomainPack, DomainPackMarketplace
+    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1, DomainPackMarketplace  # noqa: DEPRECATED v1
     redis = MagicMock()
     marketplace = DomainPackMarketplace(redis)
 
@@ -9044,7 +9044,7 @@ def test_domain_pack_score():
 
 
 def test_domain_pack_filter():
-    from app.signals.research_grade import DomainPack, DomainPackMarketplace
+    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1, DomainPackMarketplace  # noqa: DEPRECATED v1
     redis = MagicMock()
     marketplace = DomainPackMarketplace(redis)
 
@@ -9062,7 +9062,7 @@ def test_domain_pack_filter():
 
 
 def test_domain_pack_serialization():
-    from app.signals.research_grade import DomainPack
+    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1
     pack = DomainPack(
         pack_id="p_ser", name="Test", description="Test pack", goal_type="exam",
         domain="cs", author_id="a1", strategy_templates=[{"key": "val"}],

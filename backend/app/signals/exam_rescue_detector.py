@@ -18,6 +18,7 @@ from typing import Any
 
 from loguru import logger
 
+from app.signals.crisis_mode_fsm import CrisisModeFSM, CrisisModeSnapshot, CrisisSignals
 from app.signals.types import ActionableSignal, _uid
 
 # ── 紧迫信号模式 ──────────────────────────────────────────────────
@@ -113,6 +114,16 @@ _ENEMY_OF_GOOD_ENOUGH = (
     r"(冲高分|90\s*分|95\s*分|满分|first\s*class|distinction|A\+?)",
 )
 
+_STRESS_PATTERNS = (
+    r"(压力大|焦虑|崩溃|慌了|害怕|完蛋|救命|来不及|撑不住)",
+    r"\b(stressed|panic|panicking|anxious|overwhelmed|scared)\b",
+)
+
+_RECOVERY_DECLARATION_PATTERNS = (
+    r"(我恢复了|已经恢复|状态恢复|不用危机模式)",
+    r"\b(i am ok|i'm ok|recovered|back to normal)\b",
+)
+
 
 @dataclass
 class FirstMinuteSnapshot:
@@ -126,6 +137,7 @@ class FirstMinuteSnapshot:
     first_user_visible_hypothesis: str  # 60 秒啊哈
     confidence: float
     signal_id: str | None = None    # 如果生成了 ActionableSignal
+    crisis_mode: CrisisModeSnapshot | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -138,6 +150,7 @@ class FirstMinuteSnapshot:
             "first_user_visible_hypothesis": self.first_user_visible_hypothesis,
             "confidence": self.confidence,
             "signal_id": self.signal_id,
+            "crisis_mode": self.crisis_mode.to_dict() if self.crisis_mode else None,
         }
 
 
@@ -301,6 +314,13 @@ class ExamRescueDetector:
             has_subject=subject is not None,
         )
 
+        crisis_mode = self._evaluate_crisis_mode(
+            text=text,
+            deadline_days=deadline_days,
+            has_weak_baseline=has_weak_baseline,
+            conversation_context=conversation_context,
+        )
+
         snapshot = FirstMinuteSnapshot(
             detected_mode=detected_mode,
             path_mode=path_mode,
@@ -310,6 +330,7 @@ class ExamRescueDetector:
             next_best_action=next_best_action,
             first_user_visible_hypothesis=hypothesis,
             confidence=confidence,
+            crisis_mode=crisis_mode,
         )
 
         logger.info(
@@ -328,8 +349,11 @@ class ExamRescueDetector:
     ) -> ActionableSignal | None:
         """
         将 FirstMinuteSnapshot 转为 ActionableSignal。
-        只有 exam_rescue 模式才生成 signal。
+        危机模式优先生成 crisis_mode signal；否则 exam_rescue 生成常规 signal。
         """
+        if snapshot.crisis_mode and snapshot.crisis_mode.state.value == "crisis":
+            return self.to_crisis_actionable_signal(snapshot, user_id=user_id, message_id=message_id)
+
         if snapshot.detected_mode != "exam_rescue":
             return None
 
@@ -361,6 +385,40 @@ class ExamRescueDetector:
 
         snapshot.signal_id = signal.signal_id
         logger.info("ExamRescue signal: {} for user={}", signal.signal_id, user_id)
+        return signal
+
+    def to_crisis_actionable_signal(
+        self,
+        snapshot: FirstMinuteSnapshot,
+        *,
+        user_id: str,
+        message_id: str = "",
+    ) -> ActionableSignal | None:
+        """Emit a dedicated crisis signal when the FSM is in crisis state."""
+        if not snapshot.crisis_mode or snapshot.crisis_mode.state.value != "crisis":
+            return None
+
+        signal = ActionableSignal(
+            signal_id=_uid("sig"),
+            source_event_ids=[message_id] if message_id else [],
+            source_system="crisis_mode_fsm",
+            state_key="crisis_mode",
+            claim="crisis_mode_active",
+            confidence=max(snapshot.confidence, 0.85),
+            scope="current_sprint",
+            ttl_hours=24,
+            evidence_summary=snapshot.crisis_mode.status_band_explanation,
+            possible_effects=[
+                "cap_task_duration_15_min",
+                "avoid_new_chapter",
+                "minimal_pass_retrieval",
+                "suppress_challenge_achievements",
+                "disable_aurora_l3_proactive_wake",
+            ],
+            priority="high",
+        )
+        snapshot.signal_id = signal.signal_id
+        logger.info("CrisisMode signal: {} for user={}", signal.signal_id, user_id)
         return signal
 
     def _suggest_next_action(
@@ -418,3 +476,51 @@ class ExamRescueDetector:
         if has_subject:
             score += 0.15
         return min(score, 0.95)
+
+    def _evaluate_crisis_mode(
+        self,
+        *,
+        text: str,
+        deadline_days: int | None,
+        has_weak_baseline: bool,
+        conversation_context: dict[str, Any] | None,
+    ) -> CrisisModeSnapshot | None:
+        context = conversation_context or {}
+        signals = CrisisSignals(
+            deadline_pressure=self._deadline_pressure(deadline_days, context),
+            knowledge_gap=str(context.get("knowledge_gap") or ("major" if has_weak_baseline else "none")),
+            fatigue=str(context.get("fatigue") or context.get("fatigue_level") or "none"),
+            stress=self._stress_level(text, context),
+            deadline_passed=bool(context.get("deadline_passed", False)),
+            user_declared_recovered=bool(context.get("user_declared_recovered", False))
+            or bool(re.search("|".join(_RECOVERY_DECLARATION_PATTERNS), text, flags=re.IGNORECASE)),
+        )
+        current_state = str(context.get("crisis_state") or "normal")
+        snapshot = CrisisModeFSM.transition(current_state=current_state, signals=signals)
+        if snapshot.state.value == "normal" and snapshot.previous_state.value == "normal":
+            return None
+        return snapshot
+
+    @staticmethod
+    def _deadline_pressure(deadline_days: int | None, context: dict[str, Any]) -> str:
+        explicit = context.get("deadline_pressure")
+        if explicit:
+            return str(explicit)
+        if deadline_days is None:
+            return "none"
+        if deadline_days <= 5:
+            return "critical"
+        if deadline_days <= 14:
+            return "high"
+        return "medium"
+
+    @staticmethod
+    def _stress_level(text: str, context: dict[str, Any]) -> str:
+        explicit = context.get("stress") or context.get("stress_level")
+        if explicit:
+            return str(explicit)
+        if context.get("high_pressure") is True:
+            return "high"
+        if re.search("|".join(_STRESS_PATTERNS), text, flags=re.IGNORECASE):
+            return "high"
+        return "none"

@@ -39,6 +39,10 @@ class ApiEndpoints {
   static String documentConfirmUpload(String fileId) =>
       '/documents/$fileId/confirm-upload';
   static String documentStatus(String fileId) => '/documents/$fileId/status';
+  static String sourceArchive(String fileId) => '/sources/$fileId/archive';
+  static String sourceRestore(String fileId) => '/sources/$fileId/restore';
+  static String sourceRevoke(String fileId) => '/sources/$fileId/revoke';
+  static String sourceDelete(String fileId) => '/sources/$fileId';
 
   // Vocabulary / Dictionary
   static const String vocabularyLookup = '/vocabulary/lookup';

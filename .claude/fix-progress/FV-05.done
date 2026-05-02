@@ -1,0 +1,29 @@
+FV-05: PrivacyPreservingCommunityEngine 接入
+Status: DONE_WITH_EXTERNAL_TEST_BLOCKER
+Branch: codex/FV-05-privacy-community-intelligence
+Modified files:
+- backend/alembic/versions/c16_20260502_community_aggregates.py
+- backend/app/models/community_privacy.py
+- backend/app/signals/privacy_community_intelligence.py
+- backend/app/services/community_signal_bridge.py
+- backend/app/api/v1/community_aggregates.py
+- backend/app/core/metrics.py
+- backend/app/config/settings.py
+- backend/app/models/user_settings.py
+- backend/app/schemas/user_settings.py
+- backend/app/services/user_settings_service.py
+- backend/app/api/v1/user_settings.py
+- backend/app/api/v1/router.py
+- backend/app/models/__init__.py
+- backend/app/signals/__init__.py
+- monitoring/prometheus.yml
+- monitoring/grafana/dashboards/community_privacy.json
+- backend/tests/unit/test_community_privacy_fv05.py
+- docs/product/parallel_closeout/FV-05_privacy_community_REPORT_2026-05-02.md
+Verification:
+- ./.venv/bin/python -m py_compile app/models/community_privacy.py app/api/v1/community_aggregates.py app/services/community_signal_bridge.py app/signals/privacy_community_intelligence.py: PASS
+- ./.venv/bin/python -m py_compile alembic/versions/c16_20260502_community_aggregates.py: PASS
+- direct privacy-engine smoke: PASS
+- ./.venv/bin/pytest tests/unit/test_community_privacy_fv05.py -q: BLOCKED by unrelated FV-04 MarketplaceSkill.adoptions mapper missing FK
+User-visible change: 社群洞察现在通过 k>=5、DP 噪声、持久化 epsilon 预算和用户 opt-out 隔离后才进入匿名提示。
+Architect handoff: Fix FV-04 marketplace mapper, then rerun FV-05 pytest; sync Grafana dashboard path if provisioning only reads monitoring/grafana-dashboards.

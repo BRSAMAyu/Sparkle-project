@@ -39,8 +39,7 @@ class DocumentLibraryState {
     return DocumentLibraryState(
       documents: documents ?? this.documents,
       searchQuery: searchQuery ?? this.searchQuery,
-      statusFilter:
-          statusFilter != null ? statusFilter() : this.statusFilter,
+      statusFilter: statusFilter != null ? statusFilter() : this.statusFilter,
       dateFilter: dateFilter ?? this.dateFilter,
       highlyCitedOnly: highlyCitedOnly ?? this.highlyCitedOnly,
       subjectFilter:
@@ -67,16 +66,19 @@ class DocumentLibraryState {
           (doc.subjectArea ?? '').toUpperCase() == subjectFilter;
       final matchesNode = nodeFilterId == null ||
           doc.attachedNodes.any((node) => node.nodeId == nodeFilterId);
+      final matchesLifecycle =
+          doc.lifecycleStatus != SourceLifecycleStatus.revoked;
       return matchesQuery &&
           matchesStatus &&
           matchesDate &&
           matchesCitation &&
           matchesSubject &&
-          matchesNode;
+          matchesNode &&
+          matchesLifecycle;
     }).toList()
       ..sort((left, right) {
-        final statusCompare =
-            _statusRank(left.effectiveStatus).compareTo(_statusRank(right.effectiveStatus));
+        final statusCompare = _statusRank(left.effectiveStatus)
+            .compareTo(_statusRank(right.effectiveStatus));
         if (statusCompare != 0) return statusCompare;
         final citationCompare = right.citationInsight.referencesThisWeek
             .compareTo(left.citationInsight.referencesThisWeek);
@@ -199,7 +201,8 @@ class DocumentLibraryNotifier extends StateNotifier<DocumentLibraryState> {
   }
 
   Future<void> deleteDocument(String fileId) async {
-    final previous = state.documents.valueOrNull ?? const <DocumentLibraryItem>[];
+    final previous =
+        state.documents.valueOrNull ?? const <DocumentLibraryItem>[];
     final updated = previous.where((doc) => doc.fileId != fileId).toList();
     final nextExpanded = Set<String>.from(state.expandedDocumentIds)
       ..remove(fileId);
@@ -215,6 +218,54 @@ class DocumentLibraryNotifier extends StateNotifier<DocumentLibraryState> {
       state = state.copyWith(
         documents: AsyncValue.data(previous),
       );
+      rethrow;
+    }
+  }
+
+  Future<void> archiveDocument(String fileId) async {
+    await _applyLifecycleAction(
+      fileId,
+      nextStatus: SourceLifecycleStatus.archived,
+      action: () => _repository.archiveDocument(fileId),
+    );
+  }
+
+  Future<void> restoreDocument(String fileId) async {
+    await _applyLifecycleAction(
+      fileId,
+      nextStatus: SourceLifecycleStatus.active,
+      action: () => _repository.restoreDocument(fileId),
+    );
+  }
+
+  Future<void> revokeDocument(String fileId) async {
+    await _applyLifecycleAction(
+      fileId,
+      nextStatus: SourceLifecycleStatus.revoked,
+      action: () => _repository.revokeDocument(fileId),
+    );
+  }
+
+  Future<void> _applyLifecycleAction(
+    String fileId, {
+    required SourceLifecycleStatus nextStatus,
+    required Future<void> Function() action,
+  }) async {
+    final previous =
+        state.documents.valueOrNull ?? const <DocumentLibraryItem>[];
+    final updated = previous
+        .map(
+          (doc) => doc.fileId == fileId
+              ? doc.copyWith(lifecycleStatus: nextStatus)
+              : doc,
+        )
+        .toList();
+    state = state.copyWith(documents: AsyncValue.data(updated));
+
+    try {
+      await action();
+    } on Exception {
+      state = state.copyWith(documents: AsyncValue.data(previous));
       rethrow;
     }
   }

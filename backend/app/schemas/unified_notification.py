@@ -3,6 +3,7 @@ Unified Notification Schemas
 
 Combines system notifications and intervention requests into a single API format.
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -10,11 +11,12 @@ from typing import Any, Generic, TypeVar
 
 from pydantic import UUID4, BaseModel, ConfigDict, Field
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class UnifiedNotificationResponse(BaseModel):
     """Unified notification format combining system and intervention notifications"""
+
     id: str = Field(..., description="Notification ID (UUID as string)")
     source_type: str = Field(..., description="Source type: 'system' or 'intervention'")
     title: str
@@ -31,6 +33,7 @@ class UnifiedNotificationResponse(BaseModel):
 
 class NotificationInteractionCreate(BaseModel):
     """Create a notification interaction record"""
+
     notification_type: str = Field(..., description="system or intervention")
     notification_id: UUID4
     action_type: str = Field(..., description="viewed, clicked, dismissed")
@@ -39,6 +42,7 @@ class NotificationInteractionCreate(BaseModel):
 
 class NotificationInteractionResponse(BaseModel):
     """Notification interaction response"""
+
     id: UUID4
     user_id: UUID4
     notification_type: str
@@ -75,8 +79,17 @@ class PushNotificationActionRequest(BaseModel):
     action_payload: dict[str, Any] = Field(default_factory=dict)
 
 
+class RecallNotificationFeedbackRequest(BaseModel):
+    """User feedback on whether an explainable recall reminder was accurate."""
+
+    is_accurate: bool = Field(..., description="Whether the recall reminder felt accurate")
+    feedback_reason: str | None = Field(None, max_length=500)
+    action_payload: dict[str, Any] = Field(default_factory=dict)
+
+
 class NotificationPreferencesUpdate(BaseModel):
     """Update notification preferences"""
+
     enable_system: bool | None = None
     enable_interventions: bool | None = None
     disabled_types: list[str] | None = Field(None, description="Notification type/category keys disabled by the user")
@@ -88,6 +101,7 @@ class NotificationPreferencesUpdate(BaseModel):
 
 class NotificationPreferencesResponse(BaseModel):
     """Notification preferences response"""
+
     user_id: UUID4
     enable_system: bool
     enable_interventions: bool
@@ -103,6 +117,7 @@ class NotificationPreferencesResponse(BaseModel):
 
 class NotificationHistoryFilters(BaseModel):
     """Filters for notification history query"""
+
     type: str | None = Field(None, description="all, system, intervention")
     start_date: datetime | None = None
     end_date: datetime | None = None
@@ -111,8 +126,10 @@ class NotificationHistoryFilters(BaseModel):
 
 # Analytics Schemas
 
+
 class NotificationAnalyticsSummary(BaseModel):
     """Summary statistics for notifications"""
+
     total_sent: int = 0
     total_viewed: int = 0
     total_clicked: int = 0
@@ -127,6 +144,7 @@ class NotificationAnalyticsSummary(BaseModel):
 
 class NotificationTypeStats(BaseModel):
     """Statistics for a specific notification type"""
+
     type: str
     sent: int
     viewed: int
@@ -141,6 +159,7 @@ class NotificationTypeStats(BaseModel):
 
 class NotificationTrendData(BaseModel):
     """Trend data point (date + metrics)"""
+
     date: str  # ISO date string
     sent: int
     viewed: int
@@ -184,6 +203,7 @@ class InterventionTimeToActionBucket(BaseModel):
 
 class NotificationAnalyticsResponse(BaseModel):
     """Complete analytics response"""
+
     summary: NotificationAnalyticsSummary
     by_type: dict[str, NotificationTypeStats]
     trends: list[NotificationTrendData]
@@ -195,8 +215,10 @@ class NotificationAnalyticsResponse(BaseModel):
 
 # Pagination
 
+
 class PaginatedResponse(BaseModel, Generic[T]):
     """Generic paginated response"""
+
     items: list[T]
     total: int
     page: int

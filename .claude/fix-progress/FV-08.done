@@ -1,0 +1,24 @@
+FV-08: 管理操作审计日志
+Status: DONE
+Branch: codex/FV-08-admin-audit
+Modified files:
+- backend/app/middleware/admin_audit.py
+- backend/app/models/audit_log.py
+- backend/app/models/__init__.py
+- backend/alembic/versions/c19_20260502_admin_audit_extensions.py
+- backend/app/api/v1/audit.py
+- backend/app/api/v1/admin_dashboard.py
+- backend/app/api/v1/feedback_admin.py
+- backend/app/api/v1/dlq_admin.py
+- backend/app/api/v1/executions_admin.py
+- backend/app/api/v1/memory_admin.py
+- backend/app/main.py
+- backend/tests/unit/test_admin_audit.py
+- docs/product/parallel_closeout/FV-08_admin_audit_REPORT_2026-05-02.md
+- .claude/fix-progress/FV-08.done
+Verification:
+- python3 -m py_compile backend/app/middleware/admin_audit.py backend/app/models/audit_log.py backend/app/api/v1/audit.py backend/app/api/v1/admin_dashboard.py backend/app/api/v1/feedback_admin.py backend/app/api/v1/dlq_admin.py backend/app/api/v1/executions_admin.py backend/app/api/v1/memory_admin.py backend/app/main.py backend/tests/unit/test_admin_audit.py: PASS
+- cd backend && pytest tests/unit/test_admin_audit.py -q: PASS (3 passed)
+- cd backend && alembic heads: PASS (c19_20260502 appears as one concurrent FV head)
+User-visible change: 管理员操作现在进入统一、不可篡改的 admin_audit_log，super-admin 可查询并执行 90 天对象存储归档。
+Architect handoff: Merge with concurrent FV migration heads; FV-01/FV-02/FV-04/FV-05 can use @audit_admin_action(category="...", risk="high") on new admin endpoints.

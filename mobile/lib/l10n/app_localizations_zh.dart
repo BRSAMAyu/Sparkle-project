@@ -19999,6 +19999,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationRetractableTo => '可撤回至';
 
   @override
+  String get notificationRecallWhyTitle => '为什么提醒你';
+
+  @override
+  String get notificationRecallGoalValue => '对目标的价值';
+
+  @override
+  String get notificationRecallReason => '为什么是现在';
+
+  @override
+  String get notificationRecallEffort => '预计投入';
+
+  @override
+  String get notificationRecallDeadlinePressure => '时间压力';
+
+  @override
+  String get notificationRecallScore => '召回评分';
+
+  @override
+  String get notificationRecallInaccurate => '这个提醒不准确';
+
+  @override
+  String get notificationRecallFeedbackSaved => '已记录，之后会调准这类提醒';
+
+  @override
+  String get notificationRecallFeedbackRecorded => '反馈已记录';
+
+  @override
   String get notificationSendEncouragement => '发个鼓励';
 
   @override
@@ -24017,13 +24044,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memControl => '记忆控制';
 
   @override
-  String get memControlDesc => '控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。';
+  String get memControlDesc =>
+      '控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。';
 
   @override
   String get memSocialToggles => '社交语义子开关';
 
   @override
-  String get memSocialTogglesDesc => 'Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。';
+  String get memSocialTogglesDesc =>
+      'Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。';
 
   @override
   String get memProactiveReminders => '主动提醒';

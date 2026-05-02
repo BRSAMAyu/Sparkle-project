@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
 
@@ -75,9 +76,9 @@ class AuroraNudgeEntry extends StatelessWidget {
                       entryReason: AuroraCoreSessionEntryReason(
                         triggerSource: 'checkpoint_card',
                         observedSignals: [description],
-                        suggestedAgendaPreview: const [
-                          '确认 checkpoint 进度差异',
-                          '校准接下来的计划节奏',
+                        suggestedAgendaPreview: [
+                          I18nService.instance.isChinese ? '确认 checkpoint 进度差异' : 'Confirm checkpoint progress gap',
+                          I18nService.instance.isChinese ? '校准接下来的计划节奏' : 'Calibrate upcoming plan pace',
                         ],
                         whyNow: context.l10n.auroraCheckpointWhyNow,
                         estimatedMinutes: 4,

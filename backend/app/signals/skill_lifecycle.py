@@ -200,6 +200,8 @@ class SkillLifecycleManager:
         skill.evidence["promoted_at"] = now
 
         await self.store_skill(user_id, skill)
+        if to_scope == "system":
+            await self._register_system_skill_in_marketplace(skill, user_id=user_id)
         logger.info(
             "SkillLifecycle: promoted skill={} user={} {}→{}",
             skill.skill_id,
@@ -208,6 +210,22 @@ class SkillLifecycleManager:
             to_scope,
         )
         return skill
+
+    async def _register_system_skill_in_marketplace(self, skill: SkillEntry, *, user_id: str) -> None:
+        """Best-effort production handoff from lifecycle promotion to marketplace listing."""
+        try:
+            from app.db.session import AsyncSessionLocal
+            from app.signals.marketplace import MarketplacePersistenceService
+
+            async with AsyncSessionLocal() as session:
+                await MarketplacePersistenceService(session).register_system_skill(skill, user_id=user_id)
+                await session.commit()
+        except Exception:
+            logger.warning(
+                "SkillLifecycle: marketplace registration failed for system skill={}",
+                skill.skill_id,
+                exc_info=True,
+            )
 
     async def deprecate_skill(self, user_id: str, skill_id: str, reason: str) -> None:
         """Mark a skill as deprecated without deleting it."""

@@ -28,6 +28,8 @@ from app.api.v1 import (
     client_telemetry,
     cognitive,
     community,
+    community_aggregates,
+    counterfactual,
     dashboard,
     data_export,
     # graph_monitor,
@@ -57,6 +59,7 @@ from app.api.v1 import (
     leaderboards,
     learning_paths,
     learning_reports,
+    marketplace,
     memory,
     memory_admin,
     memory_settings,
@@ -76,10 +79,14 @@ from app.api.v1 import (
     profile_transparency,
     push_interaction,
     recommendations,
+    research_consent,
+    release_approvals,
+    safe_experiments,
     seed_libraries,
     shop,
     signals,
     simulation,
+    sources,
     skills,
     statistics,
     stt,
@@ -107,6 +114,7 @@ api_router.include_router(documents.router, prefix="/documents", tags=["document
 api_router.include_router(ingestion.router, prefix="/documents", tags=["ingestion"])
 api_router.include_router(ingestion.router, prefix="/ingestion", tags=["ingestion"])
 api_router.include_router(files.router, tags=["files"])
+api_router.include_router(sources.router)
 api_router.include_router(interventions.router, tags=["interventions"])
 api_router.include_router(events.router, tags=["events"])
 api_router.include_router(nightly_reviews.router, tags=["nightly_reviews"])
@@ -133,7 +141,9 @@ api_router.include_router(notifications.router, prefix="/notifications", tags=["
 api_router.include_router(observability.router)
 api_router.include_router(capsules.router, prefix="/capsules", tags=["capsules"])
 api_router.include_router(community.router, prefix="/community", tags=["community"])
+api_router.include_router(community_aggregates.router)
 api_router.include_router(cognitive.router, prefix="/cognitive", tags=["cognitive"])
+api_router.include_router(counterfactual.router)
 api_router.include_router(omnibar.router, prefix="/omnibar", tags=["omnibar"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(growth.router, prefix="/growth", tags=["growth"])
@@ -156,14 +166,18 @@ api_router.include_router(memory_settings.router, tags=["memory"])
 api_router.include_router(memory_admin.router)
 api_router.include_router(skills.router)
 api_router.include_router(preferences.router)
+api_router.include_router(research_consent.router)
 api_router.include_router(push_interaction.router)
 api_router.include_router(seed_libraries.router, tags=["seed-libraries"])
+api_router.include_router(marketplace.router, tags=["marketplace"])
 api_router.include_router(experiments.router, prefix="/experiments", tags=["experiments"])
+api_router.include_router(safe_experiments.router, prefix="/safe-experiments", tags=["safe-experiments"])
 api_router.include_router(achievements.router, prefix="/achievements", tags=["achievements"])
 api_router.include_router(multi_intent.router, prefix="/multi-intent", tags=["multi-intent"])
 api_router.include_router(prediction.router, prefix="/prediction", tags=["prediction"])
 api_router.include_router(predictive_analytics.router, prefix="/predictive", tags=["predictive"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
+api_router.include_router(release_approvals.router)
 api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["leaderboards"])
 api_router.include_router(profile_transparency.router)
 api_router.include_router(user_settings.router)

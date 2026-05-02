@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 
@@ -103,7 +104,7 @@ class _AssistantMessageMetadataTrayState
       badges.add(
         _MetadataBadge(
           icon: Icons.timer_outlined,
-          label: '耗时',
+          label: I18nService.instance.isChinese ? '耗时' : 'Time',
           selected: _expandedKey == 'timing',
           onTap: () => _toggle('timing'),
           iconOnlyWhenCollapsed: true,
@@ -305,10 +306,13 @@ class _TimingContent extends StatelessWidget {
       if (meta.modelTier?.isNotEmpty ?? false)
         MapEntry(context.l10n.chatMetaModelTier, meta.modelTier!),
       if (meta.reasoningMode?.isNotEmpty ?? false)
-        MapEntry('档位', meta.reasoningMode!),
+        MapEntry(I18nService.instance.isChinese ? '档位' : 'Tier', meta.reasoningMode!),
       if (meta.isCacheHit != null)
         MapEntry(
-            '缓存', meta.isCacheHit! ? '命中' : context.l10n.chatMetaCacheMiss),
+            I18nService.instance.isChinese ? '缓存' : 'Cache',
+            meta.isCacheHit!
+                ? (I18nService.instance.isChinese ? '命中' : 'Hit')
+                : context.l10n.chatMetaCacheMiss),
     ];
 
     return Column(

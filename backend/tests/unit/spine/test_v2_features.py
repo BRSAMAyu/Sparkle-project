@@ -318,6 +318,32 @@ class TestV24StrategyBeliefConsumption:
         decision, _ = result
         assert "belief_biased_to" not in decision.soft_biases
 
+    @pytest.mark.asyncio
+    async def test_belief_invalid_after_three_counter_evidence_items(self, engine):
+        signal = ActionableSignal(
+            signal_id="s1", source_event_ids=["e1"], source_system="test",
+            state_key="task_granularity_fit",
+            claim="recent_task_too_large", confidence=0.8,
+            scope="current_sprint", ttl_hours=24,
+            evidence_summary="test", possible_effects=["test"],
+            priority="high",
+        )
+        from app.signals.learning_base import LearningBase, StrategyBelief
+
+        lb = LearningBase()
+        weak_current = StrategyBelief(strategy_key="recover_execution_rhythm", alpha=2, beta=8, evidence_count=10)
+        for reason in ("用户拒绝", "outcome=harmful", "用户纠正"):
+            lb.add_counter_evidence(weak_current, source="user_correction", reason=reason)
+
+        beliefs = [
+            weak_current,
+            StrategyBelief(strategy_key="repair_knowledge_gap", alpha=8, beta=2, evidence_count=10),
+        ]
+        result = await engine.evaluate(signal, strategy_beliefs=beliefs)
+        assert result is not None
+        decision, _ = result
+        assert "belief_biased_to" not in decision.soft_biases
+
 
 class TestV24PolicyExperimentFullLoop:
     """v2.4: Experiment creation → outcome recording → promotion suggestion."""
@@ -848,5 +874,4 @@ class TestV25SpineGoalGraphIntegration:
 # ══════════════════════════════════════════════════════════════════════
 # E2E Test Matrix — 12 required scenarios from v2.1 Unified Causal Runtime
 # ══════════════════════════════════════════════════════════════════════
-
 

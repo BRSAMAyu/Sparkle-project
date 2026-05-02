@@ -33,6 +33,8 @@ type Config struct {
 	PostgresUser                string   `mapstructure:"POSTGRES_USER"`
 	PostgresPassword            string   `mapstructure:"POSTGRES_PASSWORD"`
 	PostgresDB                  string   `mapstructure:"POSTGRES_DB"`
+	SparkleRBACEnabled          bool     `mapstructure:"SPARKLE_RBAC_ENABLED"`
+	SparkleGatewayDatabaseURL   string   `mapstructure:"SPARKLE_GATEWAY_DATABASE_URL"`
 	AgentAddress                string   `mapstructure:"AGENT_ADDRESS"`
 	AgentTLSEnabled             bool     `mapstructure:"AGENT_TLS_ENABLED"`
 	AgentTLSCACertPath          string   `mapstructure:"AGENT_TLS_CA_CERT"`
@@ -378,6 +380,8 @@ func Load() *Config {
 		"POSTGRES_USER",
 		"POSTGRES_PASSWORD",
 		"POSTGRES_DB",
+		"SPARKLE_RBAC_ENABLED",
+		"SPARKLE_GATEWAY_DATABASE_URL",
 		"AGENT_ADDRESS",
 		"AGENT_TLS_ENABLED",
 		"AGENT_TLS_CA_CERT",
@@ -449,6 +453,8 @@ func Load() *Config {
 	viper.SetDefault("POSTGRES_USER", "postgres")
 	viper.SetDefault("POSTGRES_PASSWORD", "")
 	viper.SetDefault("POSTGRES_DB", "sparkle")
+	viper.SetDefault("SPARKLE_RBAC_ENABLED", false)
+	viper.SetDefault("SPARKLE_GATEWAY_DATABASE_URL", "")
 	viper.SetDefault("AGENT_ADDRESS", "localhost:50051")
 	viper.SetDefault("AGENT_TLS_ENABLED", false)
 	viper.SetDefault("AGENT_TLS_CA_CERT", "")
@@ -590,6 +596,9 @@ func Load() *Config {
 		}
 	}
 
+	if cfg.SparkleRBACEnabled && strings.TrimSpace(cfg.SparkleGatewayDatabaseURL) != "" {
+		cfg.DatabaseURL = strings.TrimSpace(cfg.SparkleGatewayDatabaseURL)
+	}
 	if cfg.DatabaseURL == "" {
 		host := normalizeLocalDockerHost(cfg.PostgresHost)
 		cfg.DatabaseURL = "postgresql://" + cfg.PostgresUser + ":" + cfg.PostgresPassword + "@" + host + ":" + strconv.Itoa(cfg.PostgresPort) + "/" + cfg.PostgresDB

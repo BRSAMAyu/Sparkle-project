@@ -1874,9 +1874,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                             context.l10n
                                                                 .auroraCalibrationObserved,
                                                           ],
-                                                          suggestedAgendaPreview: const [
-                                                            '确认聊天纠错反馈',
-                                                            '调整后续回复策略',
+                                                          suggestedAgendaPreview: [
+                                                            I18nService.instance.isChinese ? '确认聊天纠错反馈' : 'Confirm chat correction feedback',
+                                                            I18nService.instance.isChinese ? '调整后续回复策略' : 'Adjust subsequent reply strategy',
                                                           ],
                                                           whyNow: context.l10n
                                                               .auroraCalibrationJudgment,
@@ -1887,9 +1887,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                                           snapshot: snapshot,
                                                           triggerSource:
                                                               'chat_correction_chip',
-                                                          agendaPreview: const [
-                                                            '确认聊天纠错反馈',
-                                                            '调整后续回复策略',
+                                                          agendaPreview: [
+                                                            I18nService.instance.isChinese ? '确认聊天纠错反馈' : 'Confirm chat correction feedback',
+                                                            I18nService.instance.isChinese ? '调整后续回复策略' : 'Adjust subsequent reply strategy',
                                                           ],
                                                         ),
                                                   conversationId: ref
@@ -2806,7 +2806,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     entryReason: AuroraCoreSessionEntryReason.fromSnapshot(
                       snapshot: aurora,
                       triggerSource: 'status_bar',
-                      agendaPreview: const ['确认顶部提醒里的判断', '决定下一步是否调整'],
+                      agendaPreview: [
+                        I18nService.instance.isChinese ? '确认顶部提醒里的判断' : 'Confirm status bar judgment',
+                        I18nService.instance.isChinese ? '决定下一步是否调整' : 'Decide whether to adjust next steps',
+                      ],
                     ),
                     conversationId: chatState.conversationId,
                   ));

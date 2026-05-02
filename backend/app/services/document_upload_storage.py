@@ -89,6 +89,9 @@ class DocumentUploadStorage:
             CopySource={"Bucket": self.bucket, "Key": source_object_key},
         )
 
+    def delete_object(self, *, object_key: str) -> None:
+        _internal_client().delete_object(Bucket=self.bucket, Key=object_key)
+
     def head_object(self, *, object_key: str) -> dict:
         return _internal_client().head_object(Bucket=self.bucket, Key=object_key)
 

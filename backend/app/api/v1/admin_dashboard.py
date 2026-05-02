@@ -21,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_active_superuser, get_db
 from app.config import settings
 from app.core.cache import cache_service
+from app.middleware.admin_audit import audit_admin_action
 from app.models.user import User
 
 router = APIRouter(
@@ -173,6 +174,7 @@ async def _queue_health() -> dict[str, Any]:
 
 
 @router.get("/dashboard")
+@audit_admin_action(category="admin_dashboard", risk="medium", action="view_admin_dashboard")
 async def admin_dashboard(
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
@@ -209,6 +211,7 @@ async def admin_dashboard(
 
 
 @router.get("/dashboard/kill-switches")
+@audit_admin_action(category="kill_switch", risk="medium", action="audit_kill_switches")
 async def admin_kill_switch_audit() -> dict[str, Any]:
     """Detailed kill switch audit — all Aurora stage modes with readiness evaluation."""
     from app.services.kill_switch_readiness_service import KillSwitchReadinessService

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
@@ -541,7 +542,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
                               : TextInputAction.newline,
                           keyboardType: TextInputType.multiline,
                           decoration: InputDecoration(
-                            hintText: widget.hintText ?? 'Type a message...',
+                            hintText: widget.hintText ?? (I18nService.instance.isChinese ? '输入消息...' : 'Type a message...'),
                             hintStyle: TextStyle(color: DS.textSecondary),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: DS.spacing16,

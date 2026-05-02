@@ -7,20 +7,21 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/errors/failures.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/aurora_correction_payload.dart';
-import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
-import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
+import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_calibration_strip.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/chat/chat_routes.dart';
 import 'package:sparkle/features/chat/data/services/message_notification_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
-import 'package:sparkle/features/chat/chat_routes.dart';
 import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/aurora_status_band.dart';
 import 'package:sparkle/features/home/presentation/widgets/compact_status_bar.dart';
@@ -28,9 +29,11 @@ import 'package:sparkle/features/home/presentation/widgets/daily_context_line.da
 import 'package:sparkle/features/home/presentation/widgets/dashboard_card_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/exam_sprint_dashboard_card.dart';
+import 'package:sparkle/features/home/presentation/widgets/goal_switcher.dart';
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/learning_heatmap_widget.dart';
 import 'package:sparkle/features/home/presentation/widgets/metrics_row.dart';
+import 'package:sparkle/features/home/presentation/widgets/multi_goal_dashboard_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
@@ -42,7 +45,6 @@ import 'package:sparkle/features/reviews/presentation/providers/nightly_review_p
 import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_panel.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Shows a text input dialog for freeform Aurora correction.
@@ -453,6 +455,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             _staggeredSection(
               index: growthSectionIndex++,
+              child: const _DashboardGoalSwitcherBand(),
+            ),
+            _staggeredSection(
+              index: growthSectionIndex++,
               child: DailyContextLine(
                 text: dailyContextLine?.text,
                 isLoading:
@@ -479,6 +485,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ? null
                     : () => _openBottleneckChat(activeBottleneck),
               ),
+            ),
+            _staggeredSection(
+              index: growthSectionIndex++,
+              child: const MultiGoalDashboardCard(),
             ),
             if (examSprintDashboard != null)
               _staggeredSection(
@@ -829,6 +839,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
     );
   }
+}
+
+class _DashboardGoalSwitcherBand extends StatelessWidget {
+  const _DashboardGoalSwitcherBand();
+
+  @override
+  Widget build(BuildContext context) => ContentConstraint(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            0,
+            DS.spacing16,
+            DS.spacing10,
+          ),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: GoalSwitcher(dense: true),
+          ),
+        ),
+      );
 }
 
 String _formatDeadlineLabel({

@@ -11,7 +11,6 @@ Celery 任务模块 - 任务包装器
 创建时间: 2026-01-03
 """
 
-
 from datetime import UTC, datetime
 
 from loguru import logger
@@ -669,6 +668,32 @@ def run_daily_goal_reflections(self, limit: int = 500):
         raise self.retry(exc=exc, countdown=300) from exc
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_counterfactual_evaluations")
+def run_counterfactual_evaluations(self, limit_users: int = 500):
+    """Daily production counterfactual evaluation over eligible InterventionEpisodes."""
+
+    async def _run():
+        from app.core.redis_client import get_redis
+        from app.db.session import AsyncSessionLocal
+        from app.signals.counterfactual_evaluation import CounterfactualReportService
+
+        redis = get_redis()
+        async with AsyncSessionLocal() as session:
+            service = CounterfactualReportService(session, redis)
+            result = await service.run_daily_evaluations(limit_users=limit_users)
+            logger.info("Counterfactual evaluation sweep complete: {}", result)
+            return result
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        from app.core.metrics import COUNTERFACTUAL_EVALUATION_FAILURE_TOTAL
+
+        COUNTERFACTUAL_EVALUATION_FAILURE_TOTAL.labels(source="celery_daily").inc()
+        logger.error("run_counterfactual_evaluations failed: %s", exc)
+        raise self.retry(exc=exc, countdown=300) from exc
+
+
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.generate_weekly_growth_digests")
 def generate_weekly_growth_digests(self, limit: int = 200, deliver: bool = False):
     """Generate weekly growth digests, optionally delivering them immediately."""
@@ -749,7 +774,9 @@ def pack_quality_analysis_task(self, pack_id: str):
             service = ExamSprintReviewService(session, cache_service.redis)
             alerts = await service.analyze_pack_node_effectiveness(pack_id)
             eligible_alerts = [
-                alert for alert in alerts if int(getattr(alert, "evidence_count", 0)) >= service.PACK_QUALITY_MIN_EVIDENCE_COUNT
+                alert
+                for alert in alerts
+                if int(getattr(alert, "evidence_count", 0)) >= service.PACK_QUALITY_MIN_EVIDENCE_COUNT
             ]
             report = await service.build_pack_quality_report(pack_id, alerts=eligible_alerts)
             cache_key = service.build_pack_quality_alerts_cache_key(pack_id)
@@ -1673,9 +1700,7 @@ def comeback_nudge_task(self, user_id: str):
                 return {"status": "skipped", "reason": "not_eligible"}
 
             plan_id = str(payload.get("plan_id") or "").strip()
-            destination_route = (
-                f"/plans/{plan_id}?source=comeback_nudge" if plan_id else "/chat?entry=comeback_nudge"
-            )
+            destination_route = f"/plans/{plan_id}?source=comeback_nudge" if plan_id else "/chat?entry=comeback_nudge"
             if await _has_recent_notification(
                 session,
                 user_id=UUID(user_id),
@@ -2064,9 +2089,7 @@ def purge_deleted_account(self, user_id: str) -> dict:
             ]
             counts: dict[str, int] = {}
             for model, field in tables:
-                result = await session.execute(
-                    sql_delete(model).where(getattr(model, field) == uid)
-                )
+                result = await session.execute(sql_delete(model).where(getattr(model, field) == uid))
                 counts[model.__tablename__] = result.rowcount
 
             await session.delete(user)
@@ -2147,7 +2170,9 @@ def aurora_wake_deliver_task(self, wake_id: str, user_id: str):
 
             logger.info(
                 "Aurora wake delivered: user=%s wake=%s surface=%s",
-                user_id, wake_id, surface,
+                user_id,
+                wake_id,
+                surface,
             )
             return {"status": "delivered", "wake_id": wake_id, "user_id": user_id}
 
@@ -2176,7 +2201,8 @@ def scan_aurora_scheduled_wakes(self, limit: int = 200):
                 dispatched += 1
             logger.info(
                 "Aurora wake scan: %d due wakes found, %d dispatched",
-                len(due), dispatched,
+                len(due),
+                dispatched,
             )
             return {"scanned": len(due), "dispatched": dispatched}
 
@@ -2250,6 +2276,12 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
                         "cooldown_until": message.cooldown_until,
                         "frequency_tag": message.frequency_tag,
                         "deep_link": deep_link,
+                        "reasoning": message.reasoning,
+                        "recall_reason": message.reasoning,
+                        "value_reason": message.value_reason,
+                        "effort_estimate": message.effort_estimate,
+                        "deadline_pressure_label": message.deadline_pressure_label,
+                        "recall_score": message.recall_score,
                     },
                 ),
                 push_via_websocket=True,
@@ -2257,7 +2289,9 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
 
         logger.info(
             "Recall notification sent: user=%s trigger=%s strategy=%s",
-            user_id, trigger_type, message.strategy,
+            user_id,
+            trigger_type,
+            message.strategy,
         )
         return {"status": "sent", "user_id": user_id, "trigger_type": trigger_type}
 
@@ -2333,7 +2367,9 @@ def scan_recall_notifications(self, limit: int = 500):
 
         logger.info(
             "Recall scan: %d users × %d triggers = %d tasks dispatched",
-            len(user_ids), len(TRIGGER_TYPES), dispatched,
+            len(user_ids),
+            len(TRIGGER_TYPES),
+            dispatched,
         )
         return {"users": len(user_ids), "dispatched": dispatched}
 
@@ -2377,6 +2413,7 @@ def spine_snapshot_task(self, user_id: str):
     - Recent policy effects
     - Known skills
     """
+
     async def _run():
         from app.core.redis_client import get_redis
         from app.signals.spine_orchestrator import SpineOrchestrator
@@ -2463,6 +2500,7 @@ def compact_user_traces(self, user_id: str):
     Aggregates signal types, directive types, and outcome stats into a
     compact summary. Individual traces are deleted to free Redis memory.
     """
+
     async def _run():
         from app.core.redis_client import get_redis
         from app.signals.causal_trace_store import CausalTraceStore
@@ -2494,7 +2532,9 @@ def scan_trace_compaction(self, limit: int = 500):
         dispatched = 0
         while True:
             cursor, keys = await redis.scan(
-                cursor=cursor, match="spine:user_traces:*", count=100,
+                cursor=cursor,
+                match="spine:user_traces:*",
+                count=100,
             )
             for key in keys:
                 key_str = key if isinstance(key, str) else key.decode()
@@ -2588,7 +2628,9 @@ def scan_community_cohort_signals(self, limit: int = 200):
             node_cursor = "0"
             while True:
                 node_cursor, node_keys = await redis.scan(
-                    cursor=node_cursor, match=f"galaxy:user_nodes:{user_id}:*", count=50,
+                    cursor=node_cursor,
+                    match=f"galaxy:user_nodes:{user_id}:*",
+                    count=50,
                 )
                 for nk in node_keys:
                     nk_str = nk if isinstance(nk, str) else nk.decode()
@@ -2742,4 +2784,117 @@ def apply_memory_decay(self, batch_size: int = 200):
         return _run_async(_run())
     except Exception as exc:
         logger.error("apply_memory_decay failed: %s", exc)
+        raise self.retry(exc=exc, countdown=300) from exc
+
+
+@celery_app.task(bind=True, max_retries=1, name="app.core.celery_tasks.run_weekly_benchmark")
+def run_weekly_benchmark(self, suite_name: str = "full"):
+    """Run the weekly SparkleGoalBench regression benchmark and persist the report."""
+
+    async def _run():
+        from app.db.session import AsyncSessionLocal
+        from app.services.simulation_runner import run_benchmark_suite
+
+        async with AsyncSessionLocal() as session:
+            report = await run_benchmark_suite(suite_name, session=session, write_report=True)
+            return {
+                "run_id": report.run_id,
+                "suite_name": report.suite_name,
+                "status": report.status,
+                "pass_rate": report.pass_rate,
+                "markdown_path": report.markdown_path,
+                "simulation_run_id": report.simulation_run_id,
+            }
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("run_weekly_benchmark failed: %s", exc)
+        raise self.retry(exc=exc, countdown=900) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.monitor_safe_experiment_guardrails")
+def monitor_safe_experiment_guardrails(self):
+    """Sweep active safe experiments, pause on guardrail violations, and queue promotion candidates."""
+
+    async def _run():
+        from sqlalchemy import select
+
+        from app.core.cache import cache_service
+        from app.core.metrics import (
+            SAFE_EXPERIMENT_GUARDRAIL_VIOLATIONS_TOTAL,
+            SAFE_EXPERIMENT_PROMOTION_CANDIDATES,
+        )
+        from app.db.session import AsyncSessionLocal
+        from app.models.safe_experiment import SafeExperiment
+        from app.signals.intervention_episode import OutcomeVector
+        from app.signals.safe_experiment_platform import ExperimentGuardrails
+        from app.signals.safe_experiment_promotion_gate import (
+            enqueue_promotion_candidate,
+            evaluate_safe_experiment_promotion,
+        )
+
+        checked = 0
+        paused = 0
+        candidates = 0
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(
+                select(SafeExperiment).where(
+                    SafeExperiment.status.in_(("shadow", "canary", "safe_live", "concluded")),
+                    SafeExperiment.deleted_at.is_(None),
+                )
+            )
+            records = list(result.scalars().all())
+            for record in records:
+                checked += 1
+                guardrails = ExperimentGuardrails(
+                    **{
+                        k: v
+                        for k, v in (record.guardrails or {}).items()
+                        if k in ExperimentGuardrails.__dataclass_fields__
+                    }
+                )
+                recent_outcomes = [
+                    OutcomeVector.from_dict(outcome)
+                    for outcome in (record.outcome_history or [])[-20:]
+                    if isinstance(outcome, dict)
+                ]
+                guardrail_result = guardrails.check(recent_outcomes)
+                if guardrail_result.get("violations"):
+                    for violation in guardrail_result["violations"]:
+                        SAFE_EXPERIMENT_GUARDRAIL_VIOLATIONS_TOTAL.labels(
+                            violation.get("guardrail", "unknown"),
+                            violation.get("action", "unknown"),
+                        ).inc()
+                    if record.status in {"canary", "safe_live"}:
+                        record.status = "paused"
+                        record.incident_trace = [
+                            *(record.incident_trace or []),
+                            {
+                                "type": "guardrail_auto_pause",
+                                "result": guardrail_result,
+                                "source": "monitor_safe_experiment_guardrails",
+                                "at": datetime.now(UTC).isoformat(),
+                            },
+                        ]
+                        paused += 1
+                        session.add(record)
+                        continue
+
+                gate = evaluate_safe_experiment_promotion(record)
+                if gate.eligible and gate.candidate_payload:
+                    record.promotion_candidate = gate.candidate_payload
+                    await enqueue_promotion_candidate(cache_service.redis, gate.candidate_payload)
+                    candidates += 1
+                    session.add(record)
+
+            SAFE_EXPERIMENT_PROMOTION_CANDIDATES.set(candidates)
+            await session.commit()
+
+        return {"checked": checked, "paused": paused, "promotion_candidates": candidates}
+
+    try:
+        return _run_async(_run())
+    except Exception as exc:
+        logger.error("monitor_safe_experiment_guardrails failed: %s", exc)
         raise self.retry(exc=exc, countdown=300) from exc

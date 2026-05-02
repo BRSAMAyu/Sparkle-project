@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/features/focus/data/services/candidate_feedback_service.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
@@ -169,7 +170,7 @@ class _IntentPredictionBarState extends ConsumerState<IntentPredictionBar> {
               const SizedBox(width: DS.spacing8),
               Expanded(
                 child: Text(
-                  '建议下一步',
+                  I18nService.instance.isChinese ? '建议下一步' : 'Suggested next step',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: context.sparkleTypography.labelSmall.copyWith(

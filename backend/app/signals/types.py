@@ -12,7 +12,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, ClassVar
 
 
 def _utcnow() -> str:
@@ -100,6 +100,105 @@ class StateEntry:
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> StateEntry:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class CounterEvidence:
+    """Evidence that a strategy belief should be discounted."""
+
+    reason: str
+    source: str = "outcome"  # user_rejection / harmful_outcome / user_correction / outcome
+    weight: float = 1.0
+    evidence_id: str = field(default_factory=lambda: _uid("ce"))
+    created_at: str = field(default_factory=_utcnow)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "evidence_id": self.evidence_id,
+            "source": self.source,
+            "reason": self.reason,
+            "weight": self.weight,
+            "created_at": self.created_at,
+            "metadata": self.metadata,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> CounterEvidence:
+        if isinstance(d, str):
+            return cls(reason=d)
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class StrategyBelief:
+    """Bayesian belief about a strategy's effectiveness."""
+
+    strategy_key: str
+    alpha: float = 1.0    # prior "successes" (Beta distribution)
+    beta: float = 1.0     # prior "failures"
+    evidence_count: int = 0
+    last_updated: str = ""
+    counter_evidence: list[CounterEvidence] = field(default_factory=list)
+
+    COUNTER_EVIDENCE_PENALTY_PER_ITEM: ClassVar[float] = 0.05
+    MAX_COUNTER_EVIDENCE_PENALTY: ClassVar[float] = 0.3
+
+    @property
+    def raw_expected_effectiveness(self) -> float:
+        """Posterior mean before counter-evidence discount."""
+        total = self.alpha + self.beta
+        if total == 0:
+            return 0.5
+        return self.alpha / total
+
+    @property
+    def counter_evidence_penalty(self) -> float:
+        """FV-18: each counter-evidence item discounts belief score by 0.05, capped at 0.3."""
+        return min(
+            len(self.counter_evidence) * self.COUNTER_EVIDENCE_PENALTY_PER_ITEM,
+            self.MAX_COUNTER_EVIDENCE_PENALTY,
+        )
+
+    @property
+    def belief_score(self) -> float:
+        """Counter-evidence-adjusted strategy effectiveness score."""
+        return max(0.0, self.raw_expected_effectiveness - self.counter_evidence_penalty)
+
+    @property
+    def expected_effectiveness(self) -> float:
+        """Backward-compatible alias for policy consumers."""
+        return self.belief_score
+
+    @property
+    def confidence(self) -> float:
+        """How confident we are in the estimate (0-1)."""
+        total = self.alpha + self.beta
+        if total < 2:
+            return 0.0
+        return min(total / (total + 10), 1.0)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "strategy_key": self.strategy_key,
+            "alpha": self.alpha,
+            "beta": self.beta,
+            "evidence_count": self.evidence_count,
+            "last_updated": self.last_updated,
+            "counter_evidence": [e.to_dict() for e in self.counter_evidence],
+            "belief_score": self.belief_score,
+            "raw_expected_effectiveness": self.raw_expected_effectiveness,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> StrategyBelief:
+        fields = {k: v for k, v in d.items() if k in cls.__dataclass_fields__}
+        raw_counter_evidence = fields.get("counter_evidence") or []
+        fields["counter_evidence"] = [
+            item if isinstance(item, CounterEvidence) else CounterEvidence.from_dict(item)
+            for item in raw_counter_evidence
+        ]
+        return cls(**fields)
 
 
 @dataclass
@@ -765,6 +864,7 @@ class SourceAsset:
     goal_id: str = ""
     owner: str = "user"               # user / community / system
     visibility: str = "private"       # private / cohort / public
+    lifecycle_status: str = "active"  # active / archived / revoked / orphaned
     parsed_status: str = "parsed"     # pending / parsed / failed
     quality_score: float = 1.0        # 0.0 - 1.0
     mapped_nodes: list[str] | None = None
@@ -781,6 +881,7 @@ class SourceAsset:
             "goal_id": self.goal_id,
             "owner": self.owner,
             "visibility": self.visibility,
+            "lifecycle_status": self.lifecycle_status,
             "parsed_status": self.parsed_status,
             "quality_score": self.quality_score,
         }

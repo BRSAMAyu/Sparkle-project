@@ -23,6 +23,7 @@ from app.models.plan import Plan  # noqa: F401
 from app.models.task import Task  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.response_feedback import ResponseFeedback  # noqa: F401
+from app.models.research_consent import ResearchConsentRecord  # noqa: F401
 from app.models.report_snapshot import ReportSnapshot  # noqa: F401
 from app.models.intervention import InterventionRequest  # noqa: F401
 from app.models.nightly_review import NightlyReview  # noqa: F401

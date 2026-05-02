@@ -36513,6 +36513,60 @@ abstract class AppLocalizations {
   /// **'可撤回至'**
   String get notificationRetractableTo;
 
+  /// No description provided for @notificationRecallWhyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么提醒你'**
+  String get notificationRecallWhyTitle;
+
+  /// No description provided for @notificationRecallGoalValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'对目标的价值'**
+  String get notificationRecallGoalValue;
+
+  /// No description provided for @notificationRecallReason.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么是现在'**
+  String get notificationRecallReason;
+
+  /// No description provided for @notificationRecallEffort.
+  ///
+  /// In zh, this message translates to:
+  /// **'预计投入'**
+  String get notificationRecallEffort;
+
+  /// No description provided for @notificationRecallDeadlinePressure.
+  ///
+  /// In zh, this message translates to:
+  /// **'时间压力'**
+  String get notificationRecallDeadlinePressure;
+
+  /// No description provided for @notificationRecallScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'召回评分'**
+  String get notificationRecallScore;
+
+  /// No description provided for @notificationRecallInaccurate.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个提醒不准确'**
+  String get notificationRecallInaccurate;
+
+  /// No description provided for @notificationRecallFeedbackSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已记录，之后会调准这类提醒'**
+  String get notificationRecallFeedbackSaved;
+
+  /// No description provided for @notificationRecallFeedbackRecorded.
+  ///
+  /// In zh, this message translates to:
+  /// **'反馈已记录'**
+  String get notificationRecallFeedbackRecorded;
+
   /// No description provided for @notificationSendEncouragement.
   ///
   /// In zh, this message translates to:

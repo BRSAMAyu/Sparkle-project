@@ -1,0 +1,64 @@
+{
+  "title": "Sparkle Simulation Lab",
+  "uid": "sparkle-simulation-lab",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5m",
+  "tags": ["sparkle", "simulation", "goalbench"],
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Latest Pass Rate",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "sparkle_simulation_benchmark_pass_rate",
+          "legendFormat": "{{suite}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {"color": "red", "value": null},
+              {"color": "yellow", "value": 0.9},
+              {"color": "green", "value": 0.98}
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Benchmark Runs By Gate Status",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+      "targets": [
+        {
+          "expr": "sum by (suite, status) (increase(sparkle_simulation_benchmark_runs_total[7d]))",
+          "legendFormat": "{{suite}} · {{status}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Estimated Scenario Latency",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, suite) (rate(sparkle_simulation_benchmark_latency_seconds_bucket[30d])))",
+          "legendFormat": "p95 · {{suite}}"
+        }
+      ]
+    }
+  ]
+}

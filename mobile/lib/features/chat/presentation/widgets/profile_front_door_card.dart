@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
-import 'package:sparkle/core/models/memory_models.dart';
-import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/models/memory_models.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 
 class ProfileFrontDoorCard extends StatelessWidget {
   const ProfileFrontDoorCard({
@@ -375,7 +376,8 @@ class _ClaimTile extends StatelessWidget {
                 final actionType = action['type']?.toString() ?? 'prompt';
                 final payload = Map<String, dynamic>.from(action);
                 return CustomButton.secondary(
-                  text: action['label']?.toString() ?? '继续',
+                  text: action['label']?.toString() ??
+                      (I18nService.instance.isChinese ? '继续' : 'Continue'),
                   onPressed: () => unawaited(onAction!(actionType, payload)),
                   size: CustomButtonSize.small,
                 );

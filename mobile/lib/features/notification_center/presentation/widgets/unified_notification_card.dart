@@ -16,6 +16,7 @@ class UnifiedNotificationCard extends StatelessWidget {
     this.onSnooze,
     this.onPushDismiss,
     this.onPushDisableCategory,
+    this.onRecallInaccurate,
     this.onAccountabilityEncourage,
     super.key,
   });
@@ -28,6 +29,7 @@ class UnifiedNotificationCard extends StatelessWidget {
   final VoidCallback? onSnooze;
   final VoidCallback? onPushDismiss;
   final VoidCallback? onPushDisableCategory;
+  final VoidCallback? onRecallInaccurate;
   final VoidCallback? onAccountabilityEncourage;
 
   @override
@@ -37,6 +39,7 @@ class UnifiedNotificationCard extends StatelessWidget {
     final snoozeAction = onSnooze;
     final pushDismissAction = onPushDismiss;
     final pushDisableCategoryAction = onPushDisableCategory;
+    final recallInaccurateAction = onRecallInaccurate;
     final accountabilityEncourageAction = onAccountabilityEncourage;
 
     return Dismissible(
@@ -164,6 +167,13 @@ class UnifiedNotificationCard extends StatelessWidget {
                         _buildSourceBadge(context),
                       ],
                     ),
+                    if (notification.hasRecallValueDetails) ...[
+                      const SizedBox(height: DS.sm),
+                      _buildRecallValueDisclosure(
+                        context,
+                        onInaccurate: recallInaccurateAction,
+                      ),
+                    ],
                     if (notification.isIntervention) ...[
                       const SizedBox(height: DS.sm),
                       Wrap(
@@ -279,6 +289,93 @@ class UnifiedNotificationCard extends StatelessWidget {
           fontSize: 10,
           color: badgeColor,
           fontWeight: DS.fontWeightMedium,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecallValueDisclosure(
+    BuildContext context, {
+    VoidCallback? onInaccurate,
+  }) {
+    final score = notification.recallScore;
+    final boundedScore = score == null ? null : score.clamp(0.0, 1.0);
+    return Container(
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: DS.border),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: DS.spacing12),
+          childrenPadding: const EdgeInsets.fromLTRB(
+            DS.spacing12,
+            0,
+            DS.spacing12,
+            DS.spacing12,
+          ),
+          title: Text(
+            context.l10n.notificationRecallWhyTitle,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+          ),
+          children: [
+            if (_hasText(notification.valueReason))
+              _buildDetailRow(
+                context,
+                context.l10n.notificationRecallGoalValue,
+                notification.valueReason!,
+              ),
+            if (_hasText(notification.recallReason)) ...[
+              const SizedBox(height: DS.spacing8),
+              _buildDetailRow(
+                context,
+                context.l10n.notificationRecallReason,
+                notification.recallReason!,
+              ),
+            ],
+            if (_hasText(notification.effortEstimate)) ...[
+              const SizedBox(height: DS.spacing8),
+              _buildDetailRow(
+                context,
+                context.l10n.notificationRecallEffort,
+                notification.effortEstimate!,
+              ),
+            ],
+            if (_hasText(notification.deadlinePressureLabel)) ...[
+              const SizedBox(height: DS.spacing8),
+              _buildDetailRow(
+                context,
+                context.l10n.notificationRecallDeadlinePressure,
+                notification.deadlinePressureLabel!,
+              ),
+            ],
+            if (boundedScore != null) ...[
+              const SizedBox(height: DS.spacing8),
+              _buildDetailRow(
+                context,
+                context.l10n.notificationRecallScore,
+                '${(boundedScore * 100).round()}%',
+              ),
+            ],
+            const SizedBox(height: DS.spacing12),
+            if (onInaccurate != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SparkleButton.ghost(
+                  onPressed: onInaccurate,
+                  label: context.l10n.notificationRecallInaccurate,
+                ),
+              )
+            else
+              Text(
+                context.l10n.notificationRecallFeedbackRecorded,
+                style: DS.bodySmall.copyWith(color: DS.success),
+              ),
+          ],
         ),
       ),
     );
@@ -471,6 +568,8 @@ class UnifiedNotificationCard extends StatelessWidget {
           Text(value),
         ],
       );
+
+  bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
 
   String _labelForInteractionState(BuildContext context, String state) {
     switch (state) {

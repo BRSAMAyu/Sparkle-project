@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
 
@@ -136,9 +137,9 @@ class TaskStuckCard extends StatelessWidget {
           : AuroraCoreSessionEntryReason(
               triggerSource: 'task_stuck_card',
               observedSignals: [pattern.isNotEmpty ? pattern : message],
-              suggestedAgendaPreview: const [
-                '确认卡点更像时间、难度还是启动问题',
-                '把下一张任务卡调成更容易开始的版本',
+              suggestedAgendaPreview: [
+                I18nService.instance.isChinese ? '确认卡点更像时间、难度还是启动问题' : 'Identify if the block is time, difficulty, or getting started',
+                I18nService.instance.isChinese ? '把下一张任务卡调成更容易开始的版本' : 'Adjust the next task card to be easier to start',
               ],
               whyNow: context.l10n.auroraTaskStuckWhyNow,
               estimatedMinutes: 2,

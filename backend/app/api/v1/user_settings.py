@@ -34,8 +34,12 @@ async def get_user_settings(
         transparency_level=record.transparency_level,
         system_update_level=record.system_update_level,
         ai_reasoning_mode=record.ai_reasoning_mode,
+        current_goal_id=record.current_goal_id,
         task_reminders_enabled=record.task_reminders_enabled,
         task_reminder_times=record.task_reminder_times,
+        safe_experiments_opt_out=record.safe_experiments_opt_out,
+        community_intelligence_enabled=record.community_intelligence_enabled,
+        accessibility_settings=record.accessibility_settings or {},
         notification_preferences=await _load_notification_preferences(current_user.id, db),
         created_at=record.created_at,
         updated_at=record.updated_at,
@@ -54,10 +58,14 @@ async def _update_user_settings_impl(
         "transparency_level": old_record.transparency_level,
         "system_update_level": old_record.system_update_level,
         "ai_reasoning_mode": old_record.ai_reasoning_mode,
+        "current_goal_id": old_record.current_goal_id,
         "task_reminders_enabled": old_record.task_reminders_enabled,
         "task_reminder_times": old_record.task_reminder_times,
+        "safe_experiments_opt_out": old_record.safe_experiments_opt_out,
+        "community_intelligence_enabled": old_record.community_intelligence_enabled,
+        "accessibility_settings": old_record.accessibility_settings or {},
     }
-    submitted = payload.model_dump(exclude_none=True)
+    submitted = payload.model_dump(exclude_unset=True)
 
     record = await service.update_settings(current_user.id, submitted)
 
@@ -88,8 +96,12 @@ async def _update_user_settings_impl(
         transparency_level=record.transparency_level,
         system_update_level=record.system_update_level,
         ai_reasoning_mode=record.ai_reasoning_mode,
+        current_goal_id=record.current_goal_id,
         task_reminders_enabled=record.task_reminders_enabled,
         task_reminder_times=record.task_reminder_times,
+        safe_experiments_opt_out=record.safe_experiments_opt_out,
+        community_intelligence_enabled=record.community_intelligence_enabled,
+        accessibility_settings=record.accessibility_settings or {},
         notification_preferences=await _load_notification_preferences(current_user.id, db),
         created_at=record.created_at,
         updated_at=record.updated_at,

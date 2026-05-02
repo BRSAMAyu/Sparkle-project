@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/attachment_picker_sheet.dart';
@@ -450,7 +451,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               : TextInputAction.newline,
                           keyboardType: TextInputType.multiline,
                           decoration: InputDecoration(
-                            hintText: widget.hintText ?? 'Type a message...',
+                            hintText: widget.hintText ?? (I18nService.instance.isChinese ? '输入消息...' : 'Type a message...'),
                             hintStyle: TextStyle(color: DS.textSecondary),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: DS.spacing16,
@@ -630,15 +631,15 @@ class _SourceTrayPill extends StatelessWidget {
         ),
       DocumentContextMode.userSelected => (
           Icons.playlist_add_check_rounded,
-          'My Sources',
+          I18nService.instance.isChinese ? '我的资料' : 'My Sources',
         ),
       DocumentContextMode.taskScope => (
           Icons.task_alt_rounded,
-          'Task Scope',
+          I18nService.instance.isChinese ? '任务范围' : 'Task Scope',
         ),
       DocumentContextMode.goalScope => (
           Icons.flag_rounded,
-          'Goal Scope',
+          I18nService.instance.isChinese ? '目标范围' : 'Goal Scope',
         ),
       DocumentContextMode.off => (
           Icons.menu_book_outlined,

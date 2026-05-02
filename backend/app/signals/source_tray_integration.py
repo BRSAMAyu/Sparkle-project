@@ -64,6 +64,10 @@ async def compute_retrieval_plan(
     for source in available:
         sid = source.source_id
 
+        if getattr(source, "lifecycle_status", "active") != "active":
+            do_not_load.append({"source_id": sid, "reason": f"lifecycle_{source.lifecycle_status}"})
+            continue
+
         # SRC-014: Skip sources blocked by user correction
         if blocked_source_ids and sid in blocked_source_ids:
             do_not_load.append({"source_id": sid, "reason": "user_correction_blocked"})
@@ -289,7 +293,9 @@ def _receipt_candidate_ids(
     }
     directive_candidates = set(retrieval_directive.must_load or []) | set(retrieval_directive.may_load or [])
     available_candidates = {
-        source.source_id for source in (source_tray.available_sources or []) if source.parsed_status != "failed"
+        source.source_id
+        for source in (source_tray.available_sources or [])
+        if source.parsed_status != "failed" and getattr(source, "lifecycle_status", "active") == "active"
     }
     return (selected_includes | directive_candidates | available_candidates) - loaded_ids - excluded_ids
 
@@ -298,6 +304,8 @@ def _receipt_skip_reason(source_id: str, sources_by_id: dict[str, SourceAsset]) 
     source = sources_by_id.get(source_id)
     if source and source.parsed_status == "failed":
         return "parse_failed"
+    if source and getattr(source, "lifecycle_status", "active") != "active":
+        return f"lifecycle_{source.lifecycle_status}"
     return "not_loaded"
 
 

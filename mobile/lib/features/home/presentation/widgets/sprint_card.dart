@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
 /// SprintCard - Sprint Progress Card for v2.3 dashboard
@@ -40,6 +41,7 @@ class SprintCard extends ConsumerWidget {
     final progress = sprint.progress.clamp(0.0, 1.0);
     final daysLeft = sprint.daysLeft;
     final isUrgent = daysLeft <= 3;
+    final zh = I18nService.instance.isChinese;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,7 +49,7 @@ class SprintCard extends ConsumerWidget {
       children: [
         // Header
         Text(
-          '冲刺',
+          zh ? '冲刺' : 'Sprint',
           style: context.sparkleTypography.labelSmall.copyWith(
             color: DS.textSecondary,
             fontWeight: DS.fontWeightMedium,
@@ -99,7 +101,7 @@ class SprintCard extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        '天',
+                        zh ? '天' : 'd',
                         style: context.sparkleTypography.labelSmall.copyWith(
                           fontSize: ringSize * 0.17,
                           color: DS.textSecondary,
@@ -129,7 +131,7 @@ class SprintCard extends ConsumerWidget {
         SparkleStaggerItem(
           index: 1,
           child: Text(
-            '${(progress * 100).toInt()}% 完成',
+            '${(progress * 100).toInt()}${zh ? '% 完成' : '% done'}',
             style: context.sparkleTypography.labelSmall.copyWith(
               fontSize: 10,
               color: DS.textSecondary,
@@ -140,7 +142,9 @@ class SprintCard extends ConsumerWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) => Column(
+  Widget _buildEmptyState(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
+    return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -158,7 +162,7 @@ class SprintCard extends ConsumerWidget {
           ),
           const Expanded(child: SizedBox()),
           Text(
-            '无冲刺计划',
+            zh ? '无冲刺计划' : 'No Sprint',
             style: context.sparkleTypography.labelSmall.copyWith(
               fontSize: 13,
               fontWeight: DS.fontWeightSemibold,
@@ -167,7 +171,7 @@ class SprintCard extends ConsumerWidget {
           ),
           const SizedBox(height: DS.xs),
           Text(
-            '点击创建',
+            zh ? '点击创建' : 'Tap to create',
             style: TextStyle(
               fontSize: 11,
               color: DS.textSecondary,
@@ -175,6 +179,7 @@ class SprintCard extends ConsumerWidget {
           ),
         ],
       );
+  }
 }
 
 class _CircularProgressPainter extends CustomPainter {

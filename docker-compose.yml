@@ -109,6 +109,7 @@ services:
       - "${SPARKLE_API_PORT:-8000}:8000"
     environment:
       # Override localhost URLs from .env with correct Docker service names
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
       - POSTGRES_HOST=sparkle_db
@@ -200,6 +201,7 @@ services:
       - "${SPARKLE_AGENT_PORT:-50051}:50051"
     environment:
       # Override localhost URLs from .env with correct Docker service names
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
       - POSTGRES_HOST=sparkle_db
@@ -287,6 +289,7 @@ services:
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
       # Override localhost URLs from .env with correct Docker service names
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
@@ -329,6 +332,7 @@ services:
     command: celery -A app.core.celery_app worker -l info -Q glm_batch --autoscale=6,2 --hostname=glm-batch@%h
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
@@ -375,6 +379,7 @@ services:
       - "${SPARKLE_GATEWAY_PORT:-8080}:8080"
     environment:
       # Explicit container-internal addresses (override .env localhost values)
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - POSTGRES_HOST=sparkle_db
       - POSTGRES_PORT=5432

@@ -29,6 +29,7 @@ from app.core.business_metrics import (
 from app.core.cache import cache_service
 from app.core.celery_app import get_celery_status
 from app.core.context_budget import DEFAULT_BUDGETS, _apply_min_budget, _normalize_budget
+from app.middleware.admin_audit import audit_admin_action
 from app.models.memory import EpisodicMemory, MemoryGoal, MemoryPreference
 from app.models.user import User
 from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
@@ -189,6 +190,7 @@ async def memory_health_snapshot(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/health/run")
+@audit_admin_action(category="memory_governance", risk="high", action="run_memory_health")
 async def run_memory_health(
     user_id: UUID,
     limit: int = Query(default=50, ge=1, le=200),
@@ -203,6 +205,7 @@ async def run_memory_health(
 
 
 @router.post("/adjustments/run")
+@audit_admin_action(category="memory_governance", risk="high", action="run_memory_adjustments")
 async def run_adjustments(db: AsyncSession = Depends(get_db)):
     _ensure_governance_enabled()
     summary = {}
@@ -245,6 +248,7 @@ async def memory_jobs_status(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/jobs/run")
+@audit_admin_action(category="memory_governance", risk="high", action="run_memory_job")
 async def run_memory_job(
     payload: dict = Body(...),
     db: AsyncSession = Depends(get_db),
@@ -273,6 +277,7 @@ async def run_memory_job(
 
 # route-tier: internal
 @router.post("/inferred/revoke")
+@audit_admin_action(category="memory_governance", risk="high", action="revoke_inferred_memory_lane")
 async def revoke_inferred_memory_lane(
     payload: dict = Body(default={}),
     db: AsyncSession = Depends(get_db),
@@ -298,6 +303,7 @@ async def get_stage18_kill_switches():
 
 # route-tier: internal
 @router.put("/stage18/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage18_kill_switches")
 async def update_stage18_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage18KillSwitchService()
     flags = await service.set_flags(
@@ -319,6 +325,7 @@ async def get_stage19_kill_switches():
 
 # route-tier: internal
 @router.put("/stage19/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage19_kill_switches")
 async def update_stage19_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage19KillSwitchService()
     flags = await service.set_flags(
@@ -340,6 +347,7 @@ async def get_stage21_kill_switches():
 
 # route-tier: internal
 @router.put("/stage21/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage21_kill_switches")
 async def update_stage21_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage21KillSwitchService()
     flags = await service.set_flags(
@@ -360,6 +368,7 @@ async def get_stage23_kill_switches():
 
 # route-tier: internal
 @router.put("/stage23/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage23_kill_switches")
 async def update_stage23_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage23KillSwitchService()
     mode = payload.get("bayesian_mode", payload.get("mode"))
@@ -376,6 +385,7 @@ async def get_stage24_kill_switches():
 
 # route-tier: internal
 @router.put("/stage24/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage24_kill_switches")
 async def update_stage24_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage24PolicyKillSwitchService()
     mode = payload.get("policy_compiler_mode", payload.get("mode"))
@@ -392,6 +402,7 @@ async def get_stage25_kill_switches():
 
 # route-tier: internal
 @router.put("/stage25/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage25_kill_switches")
 async def update_stage25_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage25ReflectionKillSwitchService()
     mode = payload.get("reflection_wire_mode", payload.get("mode"))
@@ -411,6 +422,7 @@ async def get_stage26_kill_switches():
 
 # route-tier: internal
 @router.put("/stage26/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage26_kill_switches")
 async def update_stage26_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage26SceneKillSwitchService()
     if payload.get("mode") is not None:
@@ -426,6 +438,7 @@ async def get_stage27_kill_switches():
 
 # route-tier: internal
 @router.put("/stage27/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage27_kill_switches")
 async def update_stage27_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage27ForesightKillSwitchService()
     if payload.get("mode") is not None:
@@ -451,6 +464,7 @@ async def get_stage28_kill_switches():
 
 # route-tier: internal
 @router.put("/stage28/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage28_kill_switches")
 async def update_stage28_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage28TraitsKillSwitchService()
     if payload.get("mode") is not None:
@@ -470,6 +484,7 @@ async def get_stage29_kill_switches():
 
 # route-tier: internal
 @router.put("/stage29/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage29_kill_switches")
 async def update_stage29_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage29SRLKillSwitchService()
     if payload.get("mode") is not None:
@@ -500,6 +515,7 @@ async def get_stage30_kill_switches():
 
 # route-tier: internal
 @router.put("/stage30/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage30_kill_switches")
 async def update_stage30_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage30MetacognitionKillSwitchService()
     if payload.get("mode") is not None:
@@ -519,6 +535,7 @@ async def get_stage31_kill_switches():
 
 # route-tier: internal
 @router.put("/stage31/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage31_kill_switches")
 async def update_stage31_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage31IdiographicKillSwitchService()
     if payload.get("mode") is not None:
@@ -534,6 +551,7 @@ async def get_stage33_kill_switches():
 
 # route-tier: internal
 @router.put("/stage33/killswitch")
+@audit_admin_action(category="kill_switch", risk="high", action="update_stage33_kill_switches")
 async def update_stage33_kill_switches(payload: dict = Body(default={})):
     service = AuroraStage33KillSwitchService()
     if payload.get("mode") is not None:
@@ -579,6 +597,7 @@ async def get_release_gate(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/release-gate/run")
+@audit_admin_action(category="release_gate", risk="high", action="run_ltm_release_gate")
 async def run_release_gate(db: AsyncSession = Depends(get_db)):
     _ensure_governance_enabled()
     gate = LtmReleaseGate(db)
@@ -704,6 +723,7 @@ async def ai_phases_status(user_id: str | None = Query(default=None)):
 
 
 @router.post("/budgets/reset")
+@audit_admin_action(category="memory_governance", risk="high", action="reset_budget_profiles")
 async def reset_budget_profiles(db: AsyncSession = Depends(get_db)):
     _ensure_governance_enabled()
     tuning = BudgetTuningService(db)
@@ -715,6 +735,7 @@ async def reset_budget_profiles(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/eval/run")
+@audit_admin_action(category="memory_governance", risk="high", action="run_ltm_eval")
 async def run_ltm_eval(
     payload: dict = Body(default=None),
     db: AsyncSession = Depends(get_db),
@@ -759,6 +780,7 @@ async def list_rank_policies(db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/rank-policies")
+@audit_admin_action(category="memory_governance", risk="high", action="upsert_rank_policy")
 async def upsert_rank_policy(
     payload: dict = Body(...),
     db: AsyncSession = Depends(get_db),
@@ -783,6 +805,7 @@ async def upsert_rank_policy(
 
 
 @router.delete("/rank-policies/{policy_id}")
+@audit_admin_action(category="memory_governance", risk="high", action="delete_rank_policy")
 async def delete_rank_policy(
     policy_id: UUID,
     db: AsyncSession = Depends(get_db),

@@ -19,7 +19,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from loguru import logger
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_superuser, get_current_user
@@ -3197,6 +3197,7 @@ async def share_resource(
 async def get_group_resources(
     group_id: UUID,
     resource_type: SharedResourceTypeEnum | None = None,
+    sort: str = Query(default="recent", description="排序方式: recent | quality"),
     limit: int = Query(default=50, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
@@ -3212,12 +3213,17 @@ async def get_group_resources(
     rtype = SharedResourceType(resource_type.value) if resource_type else None
 
     resources = await collaboration_service.get_group_resources(
-        db, group_id, rtype, limit, viewer_id=current_user.id
+        db, group_id, rtype, limit=limit * 2 if sort == "quality" else limit, viewer_id=current_user.id
     )
+
+    if sort == "quality":
+        resources = sorted(resources, key=lambda r: r.quality_score or 0.0, reverse=True)
 
     result = []
     for res in resources:
         if not _shared_resource_payload_is_active(res):
+            continue
+        if res.quality_hidden and sort != "quality":
             continue
 
         # Determine strict type string
@@ -3287,6 +3293,8 @@ async def get_group_resources(
                 sharer=UserBrief.model_validate(res.sharer) if res.sharer else None,
                 resource_title=resource_title,
                 resource_summary=resource_summary,
+                quality_score=res.quality_score or 0.0,
+                quality_hidden=res.quality_hidden or False,
                 entity_card=build_shared_resource_entity_card(
                     shared_resource_id=str(res.id),
                     resource_type=r_type_str,
@@ -4445,6 +4453,116 @@ async def get_recommended_resources(
         )
 
     return {"recommendations": recommendations, "count": len(recommendations)}
+
+
+# ============ FV-22: Resource Quality Ranking ============
+
+
+@router.get("/resources", summary="Get community resources ranked by quality")
+async def get_community_resources_ranked(
+    sort: str = Query(default="quality", description="排序方式: quality | recent"),
+    resource_type: SharedResourceTypeEnum | None = None,
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Retrieve community-shared resources ranked by quality score.
+    Low-quality resources (score < 0.3) are hidden by default unless sort=quality.
+    """
+    from app.models.community import GroupMembership
+    from app.services.community_service import CommunityResourceScorer
+
+    user_groups = await db.execute(
+        select(GroupMembership.group_id).where(
+            GroupMembership.user_id == current_user.id,
+            GroupMembership.deleted_at.is_(None),
+        )
+    )
+    group_ids = [row[0] for row in user_groups]
+    if not group_ids:
+        return {"resources": [], "total": 0, "offset": offset, "limit": limit}
+
+    stmt = select(SharedResource).where(
+        SharedResource.group_id.in_(group_ids),
+        SharedResource.deleted_at.is_(None),
+    )
+
+    # Auto-hide low quality unless explicitly sorting by quality
+    if sort != "quality":
+        stmt = stmt.where(
+            or_(
+                SharedResource.quality_hidden.is_(False),
+                SharedResource.quality_hidden.is_(None),
+            )
+        )
+
+    if resource_type:
+        rtype = SharedResourceType(resource_type.value)
+        if rtype == SharedResourceType.PLAN:
+            stmt = stmt.where(SharedResource.plan_id.isnot(None))
+        elif rtype == SharedResourceType.TASK:
+            stmt = stmt.where(SharedResource.task_id.isnot(None))
+        elif rtype == SharedResourceType.KNOWLEDGE_NODE:
+            stmt = stmt.where(SharedResource.knowledge_node_id.isnot(None))
+
+    # Count total
+    count_stmt = select(func.count()).select_from(stmt.subquery())
+    total = (await db.execute(count_stmt)).scalar() or 0
+
+    # Apply sorting
+    if sort == "quality":
+        stmt = stmt.order_by(SharedResource.quality_score.desc().nulls_last(), SharedResource.created_at.desc())
+    else:
+        stmt = stmt.order_by(SharedResource.created_at.desc())
+
+    stmt = stmt.offset(offset).limit(limit)
+    result = await db.execute(stmt)
+    resources = result.scalars().all()
+
+    items = []
+    for res in resources:
+        items.append(
+            {
+                "id": str(res.id),
+                "group_id": str(res.group_id) if res.group_id else None,
+                "shared_by": str(res.shared_by),
+                "quality_score": res.quality_score or 0.0,
+                "quality_hidden": res.quality_hidden or False,
+                "adoption_count": res.adoption_count or 0,
+                "view_count": res.view_count or 0,
+                "save_count": res.save_count or 0,
+                "created_at": res.created_at.isoformat() if res.created_at else None,
+                "resource_type": "plan" if res.plan_id else "task" if res.task_id else "knowledge_node" if res.knowledge_node_id else "other",
+            }
+        )
+
+    return {"resources": items, "total": total, "offset": offset, "limit": limit}
+
+
+@router.post("/shared-resources/{resource_id}/flag-misleading", summary="标记资源为误导")
+async def flag_resource_misleading(
+    resource_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Flag a shared resource as misleading.
+    Immediately applies a quality penalty and may auto-hide the resource.
+    """
+    from app.services.community_service import CommunityResourceScorer
+
+    new_score = await CommunityResourceScorer.flag_misleading(db, resource_id, current_user.id)
+    if new_score is None:
+        raise HTTPException(status_code=404, detail="共享资源不存在")
+
+    await db.commit()
+
+    from app.core.metrics import COMMUNITY_RESOURCE_MISLEADING_FLAGS_TOTAL
+    COMMUNITY_RESOURCE_MISLEADING_FLAGS_TOTAL.labels(resource_id=str(resource_id)).inc()
+
+    return {"success": True, "quality_score": new_score, "resource_id": str(resource_id)}
 
 
 # ============ 管理员社区审核 ============

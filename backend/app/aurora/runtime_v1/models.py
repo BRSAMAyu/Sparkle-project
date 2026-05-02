@@ -183,3 +183,46 @@ class GrowthChronicleSnapshot(BaseModel):
     __table_args__ = (
         Index("idx_growth_chronicle_user_saved", "user_id", "last_saved_at"),
     )
+
+
+class CounterfactualReport(BaseModel):
+    """Durable counterfactual policy evaluation report.
+
+    Reports are immutable evidence artifacts. If a newer evaluation supersedes
+    the same user/context/policy pair, the older row points to the replacement.
+    """
+
+    __tablename__ = "counterfactual_evaluation_reports"
+
+    user_id = Column(String(128), nullable=False, index=True)
+    context_signature = Column(JSONBCompat, nullable=False, default=dict)
+    context_hash = Column(String(64), nullable=False, index=True)
+    policy_a = Column(String(128), nullable=False, index=True)
+    policy_b = Column(String(128), nullable=False, index=True)
+    estimate = Column(JSONBCompat, nullable=False, default=dict)
+    confidence = Column(Float, nullable=False, default=0.0)
+    evidence_grade = Column(Integer, nullable=False, default=0, index=True)
+    generated_at = Column(DateTime, nullable=False, index=True)
+    replaced_by_id = Column(GUID(), ForeignKey("counterfactual_evaluation_reports.id"), nullable=True, index=True)
+    promotion_candidate = Column(JSONBCompat, nullable=False, default=dict)
+    promotion_status = Column(String(32), nullable=False, default="not_ready", index=True)
+    iron_law_compliance = Column(JSONBCompat, nullable=False, default=dict)
+    runtime_metadata = Column("metadata", JSONBCompat, nullable=False, default=dict)
+
+    replaced_by = relationship("CounterfactualReport", remote_side="CounterfactualReport.id")
+
+    __table_args__ = (
+        Index(
+            "idx_counterfactual_report_user_context_policies",
+            "user_id",
+            "context_hash",
+            "policy_a",
+            "policy_b",
+            "generated_at",
+        ),
+        Index(
+            "idx_counterfactual_report_pending",
+            "promotion_status",
+            "generated_at",
+        ),
+    )

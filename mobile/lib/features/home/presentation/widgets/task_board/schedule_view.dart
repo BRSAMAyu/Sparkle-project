@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/interactive_task_card.dart';
 
@@ -40,14 +41,14 @@ class ScheduleView extends ConsumerWidget {
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            '暂无任务',
+            I18nService.instance.isChinese ? '暂无任务' : 'No tasks',
             style: context.sparkleTypography.bodyMedium.copyWith(
               color: DS.textSecondary,
             ),
           ),
           const SizedBox(height: DS.spacing6),
           Text(
-            '在 OmniBar 中输入创建新任务',
+            I18nService.instance.isChinese ? '在 OmniBar 中输入创建新任务' : 'Type in the OmniBar to create a new task',
             style: context.sparkleTypography.labelSmall.copyWith(
               color: DS.textTertiary,
             ),

@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class FileMessageBubbleWithThumbnail extends ConsumerStatefulWidget {
   const FileMessageBubbleWithThumbnail({
@@ -225,7 +225,7 @@ class _FileMessageBubbleWithThumbnailState
             children: [
               Expanded(
                 child: _ActionPill(
-                  label: '查看',
+                  label: I18nService.instance.isChinese ? '查看' : 'View',
                   icon: Icons.open_in_new_rounded,
                   onTap: _openFile,
                   accentColor: accentColor,

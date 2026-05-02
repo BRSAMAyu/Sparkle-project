@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 
 /// Task view switcher - Tab switcher for task board views
@@ -157,10 +158,13 @@ class _ViewTab extends StatelessWidget {
         TaskViewMode.sprint => Icons.flash_on_rounded,
       };
 
-  String _getLabel(TaskViewMode mode) => switch (mode) {
-        TaskViewMode.schedule => '日程',
-        TaskViewMode.priority => '重要性',
-        TaskViewMode.plan => '方案',
-        TaskViewMode.sprint => '冲刺',
-      };
+  String _getLabel(TaskViewMode mode) {
+    final zh = I18nService.instance.isChinese;
+    return switch (mode) {
+      TaskViewMode.schedule => zh ? '日程' : 'Schedule',
+      TaskViewMode.priority => zh ? '重要性' : 'Priority',
+      TaskViewMode.plan => zh ? '方案' : 'Plan',
+      TaskViewMode.sprint => zh ? '冲刺' : 'Sprint',
+    };
+  }
 }

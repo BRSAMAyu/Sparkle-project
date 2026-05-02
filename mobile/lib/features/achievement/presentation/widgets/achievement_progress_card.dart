@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -229,7 +230,8 @@ class _AchievementRow extends StatelessWidget {
                             ),
                           ),
                         ),
-                        if (visualRewards.isNotEmpty) ...[
+                        if (visualRewards.isNotEmpty &&
+                            !context.hideChallengeBadges) ...[
                           const SizedBox(width: DS.spacing8),
                           _VisualRewardBadge(
                             rewards: visualRewards,

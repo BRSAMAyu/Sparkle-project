@@ -94,8 +94,10 @@ services:
     environment:
       - PORT=8080
       - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - SPARKLE_GATEWAY_DATABASE_URL=${SPARKLE_GATEWAY_DATABASE_URL}
+      - REDIS_URL=${SPARKLE_GATEWAY_REDIS_URL:-${REDIS_URL}}
+      - REDIS_PASSWORD=${SPARKLE_GATEWAY_REDIS_PASSWORD:-${REDIS_PASSWORD}}
       - AGENT_ADDRESS=agent:50051
       - BACKEND_URL=${BACKEND_URL}
       - JWT_SECRET=${JWT_SECRET}
@@ -103,9 +105,9 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - MINIO_BUCKET=${MINIO_BUCKET}
+      - MINIO_ACCESS_KEY=${MINIO_UPLOADS_ACCESS_KEY:-${MINIO_ACCESS_KEY}}
+      - MINIO_SECRET_KEY=${MINIO_UPLOADS_SECRET_KEY:-${MINIO_SECRET_KEY}}
+      - MINIO_BUCKET=${MINIO_UPLOADS_BUCKET:-${MINIO_BUCKET}}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - MINIO_AUTO_CREATE_BUCKET=${MINIO_AUTO_CREATE_BUCKET:-true}
       - FILE_MAX_UPLOAD_SIZE=${FILE_MAX_UPLOAD_SIZE:-52428800}
@@ -116,8 +118,12 @@ services:
       - CHAOS_ENABLED=${CHAOS_ENABLED:-false}
       - CHAOS_ALLOW_PROD=${CHAOS_ALLOW_PROD:-false}
     depends_on:
-      - backend
-      - agent
+      backend:
+        condition: service_started
+      agent:
+        condition: service_started
+      minio_rbac_init:
+        condition: service_completed_successfully
     networks:
       - edge
       - app
@@ -138,8 +144,10 @@ services:
     environment:
       - PORT=8080
       - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - SPARKLE_GATEWAY_DATABASE_URL=${SPARKLE_GATEWAY_DATABASE_URL}
+      - REDIS_URL=${SPARKLE_GATEWAY_REDIS_URL:-${REDIS_URL}}
+      - REDIS_PASSWORD=${SPARKLE_GATEWAY_REDIS_PASSWORD:-${REDIS_PASSWORD}}
       - AGENT_ADDRESS=agent:50051
       - BACKEND_URL=${BACKEND_URL}
       - JWT_SECRET=${JWT_SECRET}
@@ -147,9 +155,9 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - MINIO_ENDPOINT=${MINIO_ENDPOINT}
-      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
-      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
-      - MINIO_BUCKET=${MINIO_BUCKET}
+      - MINIO_ACCESS_KEY=${MINIO_UPLOADS_ACCESS_KEY:-${MINIO_ACCESS_KEY}}
+      - MINIO_SECRET_KEY=${MINIO_UPLOADS_SECRET_KEY:-${MINIO_SECRET_KEY}}
+      - MINIO_BUCKET=${MINIO_UPLOADS_BUCKET:-${MINIO_BUCKET}}
       - MINIO_USE_SSL=${MINIO_USE_SSL:-false}
       - MINIO_AUTO_CREATE_BUCKET=${MINIO_AUTO_CREATE_BUCKET:-true}
       - FILE_MAX_UPLOAD_SIZE=${FILE_MAX_UPLOAD_SIZE:-52428800}
@@ -160,8 +168,12 @@ services:
       - CHAOS_ENABLED=${CHAOS_ENABLED:-false}
       - CHAOS_ALLOW_PROD=${CHAOS_ALLOW_PROD:-false}
     depends_on:
-      - backend
-      - agent
+      backend:
+        condition: service_started
+      agent:
+        condition: service_started
+      minio_rbac_init:
+        condition: service_completed_successfully
     networks:
       - edge
       - app
@@ -181,7 +193,10 @@ services:
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - SPARKLE_ENGINE_DATABASE_URL=${SPARKLE_ENGINE_DATABASE_URL}
+      - REDIS_URL=${SPARKLE_ENGINE_REDIS_URL:-${REDIS_URL}}
+      - REDIS_PASSWORD=${SPARKLE_ENGINE_REDIS_PASSWORD:-${REDIS_PASSWORD}}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://tempo:4317}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
@@ -251,7 +266,10 @@ services:
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - SPARKLE_ENGINE_DATABASE_URL=${SPARKLE_ENGINE_DATABASE_URL}
+      - REDIS_URL=${SPARKLE_ENGINE_REDIS_URL:-${REDIS_URL}}
+      - REDIS_PASSWORD=${SPARKLE_ENGINE_REDIS_PASSWORD:-${REDIS_PASSWORD}}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - ENVIRONMENT=production
@@ -316,9 +334,13 @@ services:
     command: celery -A app.core.celery_app worker -l warning -Q high_priority,default,low_priority --concurrency=4
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
-      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - SPARKLE_ENGINE_DATABASE_URL=${SPARKLE_ENGINE_DATABASE_URL}
+      - SPARKLE_CELERY_DATABASE_URL=${SPARKLE_CELERY_DATABASE_URL}
+      - REDIS_URL=${SPARKLE_CELERY_REDIS_URL:-${REDIS_URL}}
+      - REDIS_PASSWORD=${SPARKLE_CELERY_REDIS_PASSWORD:-${REDIS_PASSWORD}}
+      - CELERY_BROKER_URL=${SPARKLE_CELERY_BROKER_URL:-${CELERY_BROKER_URL}}
+      - CELERY_RESULT_BACKEND=${SPARKLE_CELERY_RESULT_BACKEND:-${CELERY_RESULT_BACKEND}}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - ENVIRONMENT=production
       - SERVICE_ROLE=worker
@@ -345,9 +367,13 @@ services:
     command: celery -A app.core.celery_app beat -l warning
     environment:
       - DATABASE_URL=${DATABASE_URL}
-      - REDIS_URL=${REDIS_URL}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
-      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
+      - SPARKLE_ENGINE_DATABASE_URL=${SPARKLE_ENGINE_DATABASE_URL}
+      - SPARKLE_CELERY_DATABASE_URL=${SPARKLE_CELERY_DATABASE_URL}
+      - REDIS_URL=${SPARKLE_CELERY_REDIS_URL:-${REDIS_URL}}
+      - REDIS_PASSWORD=${SPARKLE_CELERY_REDIS_PASSWORD:-${REDIS_PASSWORD}}
+      - CELERY_BROKER_URL=${SPARKLE_CELERY_BROKER_URL:-${CELERY_BROKER_URL}}
+      - CELERY_RESULT_BACKEND=${SPARKLE_CELERY_RESULT_BACKEND:-${CELERY_RESULT_BACKEND}}
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - ENVIRONMENT=production
       - SERVICE_ROLE=beat
@@ -408,8 +434,19 @@ services:
     container_name: sparkle_redis
     restart: unless-stopped
     environment:
-      - REDIS_ARGS=--requirepass ${REDIS_PASSWORD}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_GATEWAY_PASSWORD=${SPARKLE_GATEWAY_REDIS_PASSWORD:-${REDIS_PASSWORD}}
+      - REDIS_ENGINE_PASSWORD=${SPARKLE_ENGINE_REDIS_PASSWORD:-${REDIS_PASSWORD}}
+      - REDIS_CELERY_PASSWORD=${SPARKLE_CELERY_REDIS_PASSWORD:-${REDIS_PASSWORD}}
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      cat >/tmp/users.acl <<EOF
+      user default on >$${REDIS_PASSWORD} ~* +@all
+      user gateway on >$${REDIS_GATEWAY_PASSWORD} ~gateway:* ~chat:* ~session:* ~auth:* ~ws:* ~file:* ~cqrs:* ~rate:* ~ratelimit:* ~health:* +@read +@write +@connection +@pubsub -@admin -@dangerous
+      user engine on >$${REDIS_ENGINE_PASSWORD} ~engine:* ~aurora:* ~galaxy:* ~signals:* ~context:* ~user:* ~cache:* ~memory:* ~llm:* ~health:* +@read +@write +@connection +@pubsub -@admin -@dangerous
+      user celery on >$${REDIS_CELERY_PASSWORD} ~celery* ~_kombu* ~kombu* ~engine:* ~aurora:* ~signals:* ~jobs:* ~health:* +@read +@write +@connection +@pubsub +@stream -@admin -@dangerous
+      EOF
+      exec redis-stack-server /redis-stack.conf
     volumes:
       - ./redis_data:/data
       - ./redis.conf:/redis-stack.conf
@@ -444,6 +481,51 @@ services:
       start_period: 20s
     deploy:
       resources: *resources_minio
+
+  minio_rbac_init:
+    image: minio/mc:RELEASE.2025-09-07T16-13-09Z
+    container_name: sparkle_minio_rbac_init
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:?MINIO_ROOT_USER must be set}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
+      - MINIO_UPLOADS_BUCKET=${MINIO_UPLOADS_BUCKET:-${MINIO_BUCKET}}
+      - MINIO_EXPORTS_BUCKET=${MINIO_EXPORTS_BUCKET:-sparkle-exports}
+      - MINIO_BACKUPS_BUCKET=${MINIO_BACKUPS_BUCKET:-sparkle-backups}
+      - MINIO_UPLOADS_ACCESS_KEY=${MINIO_UPLOADS_ACCESS_KEY:-${MINIO_ACCESS_KEY}}
+      - MINIO_UPLOADS_SECRET_KEY=${MINIO_UPLOADS_SECRET_KEY:-${MINIO_SECRET_KEY}}
+      - MINIO_EXPORTS_ACCESS_KEY=${MINIO_EXPORTS_ACCESS_KEY:-sparkle_exports}
+      - MINIO_EXPORTS_SECRET_KEY=${MINIO_EXPORTS_SECRET_KEY:-${MINIO_SECRET_KEY}}
+      - MINIO_BACKUPS_ACCESS_KEY=${MINIO_BACKUPS_ACCESS_KEY:-sparkle_backups}
+      - MINIO_BACKUPS_SECRET_KEY=${MINIO_BACKUPS_SECRET_KEY:-${MINIO_SECRET_KEY}}
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      set -eu
+      mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
+      mc mb -p "local/$$MINIO_UPLOADS_BUCKET" "local/$$MINIO_EXPORTS_BUCKET" "local/$$MINIO_BACKUPS_BUCKET"
+      cat >/tmp/uploads-policy.json <<EOF
+      {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket"],"Resource":["arn:aws:s3:::$$MINIO_UPLOADS_BUCKET","arn:aws:s3:::$$MINIO_UPLOADS_BUCKET/*"]}]}
+      EOF
+      cat >/tmp/exports-policy.json <<EOF
+      {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket"],"Resource":["arn:aws:s3:::$$MINIO_EXPORTS_BUCKET","arn:aws:s3:::$$MINIO_EXPORTS_BUCKET/*"]}]}
+      EOF
+      cat >/tmp/backups-policy.json <<EOF
+      {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket"],"Resource":["arn:aws:s3:::$$MINIO_BACKUPS_BUCKET","arn:aws:s3:::$$MINIO_BACKUPS_BUCKET/*"]}]}
+      EOF
+      mc admin user add local "$$MINIO_UPLOADS_ACCESS_KEY" "$$MINIO_UPLOADS_SECRET_KEY" || true
+      mc admin user add local "$$MINIO_EXPORTS_ACCESS_KEY" "$$MINIO_EXPORTS_SECRET_KEY" || true
+      mc admin user add local "$$MINIO_BACKUPS_ACCESS_KEY" "$$MINIO_BACKUPS_SECRET_KEY" || true
+      mc admin policy create local sparkle-uploads /tmp/uploads-policy.json || mc admin policy update local sparkle-uploads /tmp/uploads-policy.json
+      mc admin policy create local sparkle-exports /tmp/exports-policy.json || mc admin policy update local sparkle-exports /tmp/exports-policy.json
+      mc admin policy create local sparkle-backups /tmp/backups-policy.json || mc admin policy update local sparkle-backups /tmp/backups-policy.json
+      mc admin policy attach local sparkle-uploads --user "$$MINIO_UPLOADS_ACCESS_KEY"
+      mc admin policy attach local sparkle-exports --user "$$MINIO_EXPORTS_ACCESS_KEY"
+      mc admin policy attach local sparkle-backups --user "$$MINIO_BACKUPS_ACCESS_KEY"
+    networks:
+      - app
 
   tempo:
     image: grafana/tempo:2.4.1

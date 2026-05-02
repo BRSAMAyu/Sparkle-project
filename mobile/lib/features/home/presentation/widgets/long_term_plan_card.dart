@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
 class LongTermPlanCard extends ConsumerWidget {
@@ -51,7 +52,7 @@ class LongTermPlanCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '长期计划',
+                I18nService.instance.isChinese ? '长期计划' : 'Long-term Plan',
                 style: TextStyle(
                   fontSize: dense ? 10 : (compact ? 11 : 12),
                   fontWeight: DS.fontWeightMedium,
@@ -116,7 +117,7 @@ class LongTermPlanCard extends ConsumerWidget {
         SparkleStaggerItem(
           index: 4,
           child: Text(
-            dense
+            I18nService.instance.isChinese
                 ? '掌握 ${(growth.masteryLevel * 100).toInt()}%'
                 : 'Mastery: ${(growth.masteryLevel * 100).toInt()}%',
             style: TextStyle(
@@ -144,7 +145,7 @@ class LongTermPlanCard extends ConsumerWidget {
         ),
         const SizedBox(height: DS.smConst),
         Text(
-          '创建长期计划',
+          I18nService.instance.isChinese ? '创建长期计划' : 'Create Long-term Plan',
           style: TextStyle(
             fontSize: dense ? 10 : (compact ? 11 : 12),
             color: DS.textSecondary,

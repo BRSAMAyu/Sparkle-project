@@ -18,10 +18,19 @@ and applies validated improvements.
 
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
+
+from sqlalchemy import desc, select
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.db.session import AsyncSessionLocal
+from app.models.research_consent import ResearchConsentRecord
 
 
 def _uid(prefix: str = "") -> str:
@@ -30,6 +39,10 @@ def _uid(prefix: str = "") -> str:
 
 def _utcnow() -> str:
     return datetime.now(UTC).isoformat()
+
+
+def _utcnow_dt() -> datetime:
+    return datetime.now(UTC).replace(tzinfo=None)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -814,8 +827,13 @@ class ConsentRecord:
     granted: bool = False
     granted_at: str = ""
     revoked_at: str = ""
+    scope: list[str] = field(default_factory=list)
+    evidence: dict[str, Any] = field(default_factory=dict)
     version: str = "1.0"         # Consent version (for policy changes)
     source: str = ""             # "settings_page" | "onboarding" | "api"
+    reason: str = ""
+    initiator: str = "user"      # "user" | "system" | "admin"
+    ip_hash: str = ""
 
     def __post_init__(self):
         if not self.consent_id:
@@ -829,9 +847,37 @@ class ConsentRecord:
             "granted": self.granted,
             "granted_at": self.granted_at,
             "revoked_at": self.revoked_at,
+            "protocol_id": self.consent_type,
+            "scope": self.scope,
+            "evidence": self.evidence,
             "version": self.version,
             "source": self.source,
+            "reason": self.reason,
+            "initiator": self.initiator,
+            "ip_hash": self.ip_hash,
         }
+
+    @classmethod
+    def from_model(cls, row: ResearchConsentRecord) -> ConsentRecord:
+        granted = row.revoked_at is None
+        reason = row.grant_reason if granted else row.revoke_reason
+        initiator = row.grant_initiator if granted else row.revoke_initiator
+        ip_hash = row.grant_ip_hash if granted else row.revoke_ip_hash
+        return cls(
+            consent_id=str(row.id),
+            user_id=str(row.user_id),
+            consent_type=str(row.protocol_id),
+            granted=granted,
+            granted_at=row.granted_at.isoformat() if row.granted_at else "",
+            revoked_at=row.revoked_at.isoformat() if row.revoked_at else "",
+            scope=list(row.scope or []),
+            evidence=dict(row.evidence or {}),
+            version=str(row.version),
+            source=str(row.source),
+            reason=reason or "",
+            initiator=initiator or "user",
+            ip_hash=ip_hash or "",
+        )
 
 
 class ConsentTracker:
@@ -850,8 +896,128 @@ class ConsentTracker:
         "anonymized_export",      # Export to research datasets
     })
 
-    def __init__(self):
-        self._consents: dict[str, dict[str, ConsentRecord]] = {}  # user_id → {consent_type → record}
+    def __init__(self, session_factory: async_sessionmaker[AsyncSession] | None = None):
+        self._session_factory = session_factory or AsyncSessionLocal
+        self._consent_cache: dict[str, list[dict[str, Any]]] = {}
+
+    @staticmethod
+    def _hash_ip(ip_address: str | None = None, ip_hash: str | None = None) -> str | None:
+        if ip_hash:
+            return ip_hash
+        if not ip_address:
+            return None
+        return hashlib.sha256(ip_address.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _normalize_protocol(consent_type: str | None = None, protocol_id: str | None = None) -> str:
+        resolved = protocol_id or consent_type
+        if not resolved:
+            raise ValueError("consent_type or protocol_id is required")
+        return resolved
+
+    @staticmethod
+    def _validate_initiator(initiator: str) -> str:
+        if initiator not in {"user", "system", "admin"}:
+            raise ValueError("initiator must be one of: user, system, admin")
+        return initiator
+
+    def _invalidate_user_cache(self, user_id: str) -> None:
+        self._consent_cache.pop(str(user_id), None)
+
+    async def _with_session(self, fn, db: AsyncSession | None = None):
+        if db is not None:
+            return await fn(db)
+        async with self._session_factory() as session:
+            try:
+                result = await fn(session)
+                await session.commit()
+                return result
+            except Exception:
+                await session.rollback()
+                raise
+
+    async def _get_active_record(
+        self,
+        db: AsyncSession,
+        *,
+        user_id: str,
+        protocol_id: str,
+        for_update: bool = False,
+    ) -> ResearchConsentRecord | None:
+        query = (
+            select(ResearchConsentRecord)
+            .where(
+                ResearchConsentRecord.user_id == str(user_id),
+                ResearchConsentRecord.protocol_id == protocol_id,
+                ResearchConsentRecord.revoked_at.is_(None),
+            )
+            .order_by(desc(ResearchConsentRecord.granted_at))
+            .limit(1)
+        )
+        if for_update:
+            query = query.with_for_update()
+        result = await db.execute(query)
+        return result.scalar_one_or_none()
+
+    async def grant_consent_async(
+        self,
+        *,
+        user_id: str,
+        consent_type: str | None = None,
+        protocol_id: str | None = None,
+        source: str = "api",
+        version: str = "1.0",
+        scope: list[str] | None = None,
+        evidence: dict[str, Any] | None = None,
+        reason: str = "",
+        initiator: str = "user",
+        ip_address: str | None = None,
+        ip_hash: str | None = None,
+        db: AsyncSession | None = None,
+    ) -> ConsentRecord:
+        """Grant durable consent for a research protocol."""
+        protocol = self._normalize_protocol(consent_type, protocol_id)
+        initiator = self._validate_initiator(initiator)
+        hashed_ip = self._hash_ip(ip_address, ip_hash)
+        now = _utcnow_dt()
+
+        async def _grant(session: AsyncSession) -> ConsentRecord:
+            row = await self._get_active_record(session, user_id=str(user_id), protocol_id=protocol, for_update=True)
+            if row is None:
+                row = ResearchConsentRecord(
+                    user_id=str(user_id),
+                    protocol_id=protocol,
+                    granted_at=now,
+                    revoked_at=None,
+                    scope=list(scope or [protocol]),
+                    evidence=dict(evidence or {}),
+                    version=version,
+                    source=source,
+                    grant_reason=reason,
+                    grant_initiator=initiator,
+                    grant_ip_hash=hashed_ip,
+                )
+                session.add(row)
+            else:
+                row.scope = list(scope or row.scope or [protocol])
+                row.evidence = dict(evidence or row.evidence or {})
+                row.version = version
+                row.source = source
+                row.grant_reason = reason
+                row.grant_initiator = initiator
+                row.grant_ip_hash = hashed_ip
+            try:
+                await session.flush()
+            except IntegrityError:
+                await session.rollback()
+                row = await self._get_active_record(session, user_id=str(user_id), protocol_id=protocol)
+                if row is None:
+                    raise
+            await session.refresh(row)
+            self._invalidate_user_cache(str(user_id))
+            return ConsentRecord.from_model(row)
+
+        return await self._with_session(_grant, db)
 
     def grant_consent(
         self,
@@ -860,56 +1026,177 @@ class ConsentTracker:
         consent_type: str,
         source: str = "api",
         version: str = "1.0",
+        scope: list[str] | None = None,
+        evidence: dict[str, Any] | None = None,
+        reason: str = "",
+        initiator: str = "user",
+        ip_address: str | None = None,
+        ip_hash: str | None = None,
     ) -> ConsentRecord:
-        """Grant consent for a specific research usage."""
-        record = ConsentRecord(
-            user_id=user_id,
-            consent_type=consent_type,
-            granted=True,
-            granted_at=_utcnow(),
-            version=version,
-            source=source,
+        """Sync compatibility wrapper for scripts; async code should use grant_consent_async."""
+        return self._run_sync(
+            self.grant_consent_async(
+                user_id=user_id,
+                consent_type=consent_type,
+                source=source,
+                version=version,
+                scope=scope,
+                evidence=evidence,
+                reason=reason,
+                initiator=initiator,
+                ip_address=ip_address,
+                ip_hash=ip_hash,
+            )
         )
-        if user_id not in self._consents:
-            self._consents[user_id] = {}
-        self._consents[user_id][consent_type] = record
-        return record
+
+    async def revoke_consent_async(
+        self,
+        *,
+        user_id: str,
+        consent_type: str | None = None,
+        protocol_id: str | None = None,
+        reason: str = "",
+        initiator: str = "user",
+        ip_address: str | None = None,
+        ip_hash: str | None = None,
+        db: AsyncSession | None = None,
+    ) -> ConsentRecord | None:
+        """Revoke consent immediately in the database source of truth."""
+        protocol = self._normalize_protocol(consent_type, protocol_id)
+        initiator = self._validate_initiator(initiator)
+        hashed_ip = self._hash_ip(ip_address, ip_hash)
+
+        async def _revoke(session: AsyncSession) -> ConsentRecord | None:
+            row = await self._get_active_record(session, user_id=str(user_id), protocol_id=protocol, for_update=True)
+            if row is None:
+                return None
+            row.revoked_at = _utcnow_dt()
+            row.revoke_reason = reason
+            row.revoke_initiator = initiator
+            row.revoke_ip_hash = hashed_ip
+            await session.flush()
+            await session.refresh(row)
+            self._invalidate_user_cache(str(user_id))
+            return ConsentRecord.from_model(row)
+
+        return await self._with_session(_revoke, db)
 
     def revoke_consent(
         self,
         *,
         user_id: str,
         consent_type: str,
+        reason: str = "",
+        initiator: str = "user",
+        ip_address: str | None = None,
+        ip_hash: str | None = None,
     ) -> ConsentRecord | None:
-        """Revoke consent for a specific research usage."""
-        user_consents = self._consents.get(user_id, {})
-        record = user_consents.get(consent_type)
-        if record:
-            record.granted = False
-            record.revoked_at = _utcnow()
-        return record
+        """Sync compatibility wrapper for scripts; async code should use revoke_consent_async."""
+        return self._run_sync(
+            self.revoke_consent_async(
+                user_id=user_id,
+                consent_type=consent_type,
+                reason=reason,
+                initiator=initiator,
+                ip_address=ip_address,
+                ip_hash=ip_hash,
+            )
+        )
+
+    async def has_consent_async(
+        self,
+        user_id: str,
+        consent_type: str | None = None,
+        *,
+        protocol_id: str | None = None,
+        db: AsyncSession | None = None,
+    ) -> bool:
+        """Check the DB source of truth so revocations are observed immediately."""
+        protocol = self._normalize_protocol(consent_type, protocol_id)
+
+        async def _has(session: AsyncSession) -> bool:
+            row = await self._get_active_record(session, user_id=str(user_id), protocol_id=protocol)
+            return row is not None
+
+        return await self._with_session(_has, db)
 
     def has_consent(self, user_id: str, consent_type: str) -> bool:
-        """Check if user has granted consent for a specific type."""
-        user_consents = self._consents.get(user_id, {})
-        record = user_consents.get(consent_type)
-        return record is not None and record.granted
+        """Sync compatibility wrapper for scripts; async code should use has_consent_async."""
+        return self._run_sync(self.has_consent_async(user_id, consent_type))
 
-    def check_all_consents(self, user_id: str) -> dict[str, bool]:
-        """Check all required consent types for a user."""
+    async def check_all_consents_async(
+        self,
+        user_id: str,
+        *,
+        db: AsyncSession | None = None,
+    ) -> dict[str, bool]:
         return {
-            ct: self.has_consent(user_id, ct)
+            ct: await self.has_consent_async(str(user_id), ct, db=db)
             for ct in self.REQUIRED_CONSENTS
         }
 
+    def check_all_consents(self, user_id: str) -> dict[str, bool]:
+        """Sync compatibility wrapper for scripts; async code should use check_all_consents_async."""
+        return self._run_sync(self.check_all_consents_async(user_id))
+
+    async def can_include_in_research_async(
+        self,
+        user_id: str,
+        *,
+        db: AsyncSession | None = None,
+    ) -> bool:
+        statuses = await self.check_all_consents_async(str(user_id), db=db)
+        return all(statuses.values())
+
     def can_include_in_research(self, user_id: str) -> bool:
-        """Check if user can be included in research datasets."""
-        return all(
-            self.has_consent(user_id, ct)
-            for ct in self.REQUIRED_CONSENTS
-        )
+        """Sync compatibility wrapper for scripts; async code should use can_include_in_research_async."""
+        return self._run_sync(self.can_include_in_research_async(user_id))
+
+    async def get_user_consents_async(
+        self,
+        user_id: str,
+        *,
+        db: AsyncSession | None = None,
+        include_revoked: bool = True,
+    ) -> list[dict[str, Any]]:
+        async def _list(session: AsyncSession) -> list[dict[str, Any]]:
+            query = (
+                select(ResearchConsentRecord)
+                .where(ResearchConsentRecord.user_id == str(user_id))
+                .order_by(desc(ResearchConsentRecord.granted_at))
+            )
+            if not include_revoked:
+                query = query.where(ResearchConsentRecord.revoked_at.is_(None))
+            result = await session.execute(query)
+            records = [ConsentRecord.from_model(row).to_dict() for row in result.scalars().all()]
+            if include_revoked:
+                self._consent_cache[str(user_id)] = records
+            return records
+
+        return await self._with_session(_list, db)
 
     def get_user_consents(self, user_id: str) -> list[dict[str, Any]]:
-        """Get all consent records for a user."""
-        user_consents = self._consents.get(user_id, {})
-        return [r.to_dict() for r in user_consents.values()]
+        """Sync compatibility wrapper for scripts; async code should use get_user_consents_async."""
+        return self._run_sync(self.get_user_consents_async(user_id))
+
+    async def is_consented_async(
+        self,
+        user_id: str,
+        consent_type: str | None = None,
+        *,
+        protocol_id: str | None = None,
+        db: AsyncSession | None = None,
+    ) -> bool:
+        return await self.has_consent_async(user_id, consent_type, protocol_id=protocol_id, db=db)
+
+    def is_consented(self, user_id: str, consent_type: str) -> bool:
+        return self.has_consent(user_id, consent_type)
+
+    @staticmethod
+    def _run_sync(awaitable):
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(awaitable)
+        awaitable.close()
+        raise RuntimeError("ConsentTracker sync methods cannot run inside an active event loop; use *_async methods")

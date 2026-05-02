@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 
@@ -143,7 +144,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '这个操作不可撤销，所有与账号绑定的个人数据、偏好和历史记录都将永久移除。',
+                    I18nService.instance.isChinese ? '这个操作不可撤销，所有与账号绑定的个人数据、偏好和历史记录都将永久移除。' : 'This action cannot be undone. All personal data, preferences, and history linked to your account will be permanently removed.',
                     style:
                         Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
                               color: DS.textSecondary,
@@ -214,12 +215,12 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                         children: [
                           _buildFlag(
                             icon: Icons.warning_amber_rounded,
-                            label: '高风险操作',
+                            label: I18nService.instance.isChinese ? '高风险操作' : 'High Risk',
                             color: DS.warning,
                           ),
                           _buildFlag(
                             icon: Icons.auto_delete_rounded,
-                            label: '不可恢复',
+                            label: I18nService.instance.isChinese ? '不可恢复' : 'Irreversible',
                             color: DS.error,
                           ),
                         ],
@@ -259,7 +260,7 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
-                        '请输入确认信息后再继续，这一步只在你明确要删除账号时才建议操作。',
+                        I18nService.instance.isChinese ? '请输入确认信息后再继续，这一步只在你明确要删除账号时才建议操作。' : 'Please enter the confirmation text to proceed. Only do this if you are certain about deleting your account.',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.textSecondary,
                               height: 1.4,

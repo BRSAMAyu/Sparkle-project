@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/collaboration_timeline.dart';
@@ -48,8 +49,8 @@ class AgentMessageRenderer extends ConsumerWidget {
   /// Map of widget type strings to their collapsible chip config.
   Map<String, _WidgetTypeConfig> _widgetConfigs(BuildContext context) =>
       <String, _WidgetTypeConfig>{
-        'task_card': const _WidgetTypeConfig(
-          label: '任务',
+        'task_card': _WidgetTypeConfig(
+          label: I18nService.instance.isChinese ? '任务' : 'Task',
           icon: Icons.check_circle_outline,
         ),
         'knowledge_card': _WidgetTypeConfig(
@@ -60,8 +61,8 @@ class AgentMessageRenderer extends ConsumerWidget {
           label: context.l10n.chatActionTaskList,
           icon: Icons.list_alt,
         ),
-        'plan_card': const _WidgetTypeConfig(
-          label: '计划',
+        'plan_card': _WidgetTypeConfig(
+          label: I18nService.instance.isChinese ? '计划' : 'Plan',
           icon: Icons.map_outlined,
         ),
         'plan_context_summary': _WidgetTypeConfig(
@@ -77,12 +78,12 @@ class AgentMessageRenderer extends ConsumerWidget {
           icon: Icons.psychology_outlined,
         ),
         'achievement_card': _WidgetTypeConfig(
-          label: '成就',
+          label: I18nService.instance.isChinese ? '成就' : 'Achievement',
           icon: Icons.emoji_events_outlined,
           accentColor: DS.warning,
         ),
-        'error_card': const _WidgetTypeConfig(
-          label: '错题',
+        'error_card': _WidgetTypeConfig(
+          label: I18nService.instance.isChinese ? '错题' : 'Error',
           icon: Icons.menu_book_outlined,
         ),
       };
@@ -297,7 +298,7 @@ class AgentMessageRenderer extends ConsumerWidget {
   Widget _buildErrorBookCard(BuildContext context, Map<String, dynamic> data) {
     final subject = (data['subject'] ?? data['subject_code'] ?? '').toString();
     final question =
-        (data['question_text'] ?? data['title'] ?? '错题').toString();
+        (data['question_text'] ?? data['title'] ?? (I18nService.instance.isChinese ? '错题' : 'Error')).toString();
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(

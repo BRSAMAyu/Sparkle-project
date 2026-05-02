@@ -30,7 +30,7 @@ from app.core.event_bus import event_bus
 from app.gen.sparkle.rag.v1 import evidence_pb2
 from app.models.document_chunks import DocumentChunk
 from app.models.error_book import ErrorRecord
-from app.models.file_storage import StoredFile
+from app.models.file_storage import SourceLifecycleStatus, StoredFile
 from app.models.galaxy import KnowledgeNode, KnowledgeNodeDocument, NodeRelation, StudyRecord, UserNodeStatus
 from app.models.task import Task, TaskStatus
 from app.models.task_resources import TaskKnowledgeLink
@@ -756,6 +756,7 @@ class GalaxyService:
                 .where(KnowledgeNodeDocument.node_id == node_id)
                 .where(KnowledgeNodeDocument.deleted_at.is_(None))
                 .where(StoredFile.deleted_at.is_(None))
+                .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
                 .order_by(KnowledgeNodeDocument.is_primary.desc(), StoredFile.file_name.asc())
             )
         ).all()
@@ -864,6 +865,7 @@ class GalaxyService:
                 .where(KnowledgeNodeDocument.deleted_at.is_(None))
                 .where(KnowledgeNode.deleted_at.is_(None))
                 .where(StoredFile.deleted_at.is_(None))
+                .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
             )
         ).all()
 
@@ -897,6 +899,7 @@ class GalaxyService:
                 .where(KnowledgeNode.source_file_id.is_not(None))
                 .where(KnowledgeNode.deleted_at.is_(None))
                 .where(StoredFile.deleted_at.is_(None))
+                .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
             )
         ).all()
         for node, file_record, status in legacy_rows:
@@ -1803,6 +1806,7 @@ class GalaxyService:
             .where(DocumentChunk.file_id.in_(file_ids))
             .where(DocumentChunk.deleted_at.is_(None))
             .where(StoredFile.deleted_at.is_(None))
+            .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
         )
         if conditions:
             count_stmt = count_stmt.where(or_(*conditions))
@@ -1816,6 +1820,7 @@ class GalaxyService:
             .where(DocumentChunk.file_id.in_(file_ids))
             .where(DocumentChunk.deleted_at.is_(None))
             .where(StoredFile.deleted_at.is_(None))
+            .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
             .order_by(DocumentChunk.chunk_index.asc())
             .offset((page - 1) * page_size)
             .limit(page_size)
@@ -1870,6 +1875,7 @@ class GalaxyService:
             .where(DocumentChunk.file_id.in_(file_ids))
             .where(DocumentChunk.deleted_at.is_(None))
             .where(StoredFile.deleted_at.is_(None))
+            .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
             .order_by(DocumentChunk.chunk_index.asc())
         )
         if conditions:

@@ -37,6 +37,7 @@ groups:
           severity: warning
           tier: P2
           service: backend
+          alertgroup: slo_auto_response
         annotations:
           summary: "Backend 5xx rate high"
           description: "5xx ratio > 2% for 10m"
@@ -53,6 +54,7 @@ groups:
           severity: warning
           tier: P2
           service: backend
+          alertgroup: slo_auto_response
         annotations:
           summary: "Backend P95 latency high"
           description: "P95 latency exceeds 1.5s for 10m"
@@ -65,6 +67,7 @@ groups:
           severity: warning
           tier: P2
           service: backend
+          alertgroup: slo_auto_response
         annotations:
           summary: "Event stream lag high"
           description: "Event stream lag above 120s for 5m"
@@ -272,6 +275,7 @@ groups:
           severity: warning
           tier: P2
           service: database
+          alertgroup: slo_auto_response
         annotations:
           summary: "Database connection pool nearly exhausted"
           description: "PostgreSQL connection count for sparkle database has exceeded 25 for 5 minutes. Pool exhaustion will cause request failures."
@@ -296,6 +300,7 @@ groups:
           severity: warning
           tier: P2
           service: infrastructure
+          alertgroup: slo_auto_response
         annotations:
           summary: "Container memory usage above 90%"
           description: "A container is using over 90% of its memory limit. Risk of OOM kills."

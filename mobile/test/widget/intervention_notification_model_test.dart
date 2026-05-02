@@ -3,7 +3,6 @@ import 'package:sparkle/features/notification_center/data/models/unified_notific
 import '../shared/i18n_test_helper.dart';
 
 void main() {
-
   setUp(setUpI18nForTesting);
   test('infers intervention source type from intervention_push notifications',
       () {
@@ -44,6 +43,33 @@ void main() {
 
     expect(notification.previewText, contains('建议动作'));
     expect(notification.previewText, contains('等温与绝热'));
+  });
+
+  test('deserializes recall value fields from metadata and top-level payload',
+      () {
+    final notification = UnifiedNotification.fromJson({
+      'id': 'recall-1',
+      'source_type': 'push',
+      'title': '任务等你开始',
+      'content': '今天的第一个任务还没开始，要不要先看一眼？',
+      'type': 'recall_notification',
+      'created_at': DateTime.utc(2026, 5, 2).toIso8601String(),
+      'value_reason': '轻量启动能帮助系统校准任务粒度。',
+      'metadata': {
+        'reasoning': '今天的计划中有待办任务。',
+        'effort_estimate': '预计 5 分钟',
+        'deadline_pressure_label': '今日节奏待启动',
+        'recall_score': '0.72',
+      },
+    });
+
+    expect(notification.hasRecallValueDetails, isTrue);
+    expect(notification.valueReason, '轻量启动能帮助系统校准任务粒度。');
+    expect(notification.recallReason, '今天的计划中有待办任务。');
+    expect(notification.effortEstimate, '预计 5 分钟');
+    expect(notification.deadlinePressureLabel, '今日节奏待启动');
+    expect(notification.recallScore, 0.72);
+    expect(notification.canMarkRecallInaccurate, isTrue);
   });
 
   test('intervention interaction state gates accept and act affordances', () {

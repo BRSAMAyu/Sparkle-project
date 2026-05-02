@@ -2938,3 +2938,103 @@ class UserSearchService:
 
         await db.flush()
         return True
+
+
+# ============ FV-22: Resource Quality Scoring ============
+
+# Cohort aggregation minimum k — raised from 3 to 5 per FV-22 / FV-05 coordination.
+COHORT_AGGREGATION_MIN_K = 5
+
+# Quality score threshold below which resources are auto-hidden.
+_QUALITY_HIDE_THRESHOLD = 0.3
+
+# Weight constants for quality scoring formula.
+_W_ADOPTION = 0.3
+_W_OUTCOME = 0.3
+_W_NEGATIVE = 0.25
+_W_SCOPE = 0.15
+
+
+class CommunityResourceScorer:
+    """Scores shared community resources based on adoption, outcome, feedback, and scope fit."""
+
+    @staticmethod
+    def compute_quality_score(
+        *,
+        adoption_count: int,
+        outcome_effectiveness: float,
+        negative_feedback_rate: float,
+        scope_match: float,
+    ) -> float:
+        """
+        Quality = W_ADOPTION * f(adoption) + W_OUTCOME * outcome_effectiveness
+                  - W_NEGATIVE * negative_feedback_rate + W_SCOPE * scope_match
+
+        All components are in [0, 1]. Result clamped to [0, 1].
+        """
+        adoption_norm = min(adoption_count / 20.0, 1.0)
+        score = (
+            _W_ADOPTION * adoption_norm
+            + _W_OUTCOME * min(max(outcome_effectiveness, 0.0), 1.0)
+            - _W_NEGATIVE * min(max(negative_feedback_rate, 0.0), 1.0)
+            + _W_SCOPE * min(max(scope_match, 0.0), 1.0)
+        )
+        return round(min(max(score, 0.0), 1.0), 4)
+
+    @staticmethod
+    def should_hide(quality_score: float) -> bool:
+        return quality_score < _QUALITY_HIDE_THRESHOLD
+
+    @staticmethod
+    async def update_resource_quality(db: AsyncSession, resource_id: UUID) -> float | None:
+        """Recalculate and persist quality score for a single SharedResource."""
+        stmt = select(SharedResource).where(SharedResource.id == resource_id)
+        result = await db.execute(stmt)
+        resource = result.scalar_one_or_none()
+        if resource is None:
+            return None
+
+        adoption_count = resource.adoption_count or 0
+        neg_count = resource.negative_feedback_count or 0
+        view_count = max(resource.view_count or 1, 1)
+
+        outcome_effectiveness = min(resource.save_count / max(view_count, 1), 1.0)
+        negative_feedback_rate = neg_count / view_count
+        scope_match = 1.0 if adoption_count > 0 else 0.5
+
+        score = CommunityResourceScorer.compute_quality_score(
+            adoption_count=adoption_count,
+            outcome_effectiveness=outcome_effectiveness,
+            negative_feedback_rate=negative_feedback_rate,
+            scope_match=scope_match,
+        )
+
+        resource.quality_score = score
+        resource.quality_hidden = CommunityResourceScorer.should_hide(score)
+        await db.flush()
+        return score
+
+    @staticmethod
+    async def flag_misleading(db: AsyncSession, resource_id: UUID, reporter_id: UUID) -> float | None:
+        """Mark a resource as misleading — immediately decrements quality and re-scores."""
+        stmt = (
+            select(SharedResource)
+            .where(SharedResource.id == resource_id, SharedResource.deleted_at.is_(None))
+            .with_for_update()
+        )
+        result = await db.execute(stmt)
+        resource = result.scalar_one_or_none()
+        if resource is None:
+            return None
+
+        resource.negative_feedback_count = (resource.negative_feedback_count or 0) + 1
+
+        # Immediate penalty: each misleading flag = -0.15 on top of formula
+        base_score = await CommunityResourceScorer.update_resource_quality(db, resource_id)
+        if base_score is not None:
+            penalty = max(base_score - 0.15, 0.0)
+            resource.quality_score = round(penalty, 4)
+            resource.quality_hidden = CommunityResourceScorer.should_hide(resource.quality_score)
+            await db.flush()
+            return resource.quality_score
+        return None

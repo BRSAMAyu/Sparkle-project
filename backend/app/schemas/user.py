@@ -74,6 +74,7 @@ class UserUpdate(BaseModel):
     pending_avatar_url: str | None = Field(default=None, max_length=500, description="Pending Avatar URL")
     depth_preference: float | None = Field(default=None, ge=0.0, le=1.0, description="Depth preference")
     curiosity_preference: float | None = Field(default=None, ge=0.0, le=1.0, description="Curiosity preference")
+    current_goal_id: str | None = Field(default=None, max_length=64, description="Selected current focus goal")
     status: UserStatusEnum | None = Field(default=None, description="Status update") # Allow update here too?
     equipped_skin: str | None = Field(default=None, max_length=50, description="Equipped skin ID")
     equipped_title: str | None = Field(default=None, max_length=50, description="Equipped title ID")
@@ -200,6 +201,7 @@ class UserProfile(UserBase):
     linked_providers: list[str] = Field(default_factory=list, description="Linked social providers")
     tos_version: str | None = Field(default=None, description="Accepted terms version")
     privacy_version: str | None = Field(default=None, description="Accepted privacy version")
+    current_goal_id: str | None = Field(default=None, description="Selected current focus goal")
 
 
 class SocialAccountStatus(BaseModel):

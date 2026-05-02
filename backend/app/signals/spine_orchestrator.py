@@ -2593,11 +2593,8 @@ class SpineOrchestrator:
             logger.warning("record_outcome: _consume_aurora_decisions_for_attribution failed", exc_info=True)
 
         # v2.5: Counterfactual shadow evaluation (research-grade)
-        try:
-            if user_id and record.attribution in ("effective", "insufficient"):
-                await self._run_counterfactual_shadow(user_id, record, actual_outcome)
-        except Exception:
-            logger.warning("record_outcome: _run_counterfactual_shadow failed", exc_info=True)
+        if user_id and record.attribution in ("effective", "insufficient"):
+            await self._run_counterfactual_shadow(user_id, record, actual_outcome)
 
         return record
 
@@ -2852,19 +2849,27 @@ class SpineOrchestrator:
         try:
             from app.signals.intervention_episode import ContextSignature
             from app.signals.safe_experiment_platform import SafeBanditController
+            from app.core.metrics import SAFE_EXPERIMENT_BANDIT_BLOCK_TOTAL
             ctx_sig = ContextSignature(
                 goal_mode="standard",
                 failure_type=signal.claim,
                 cognitive_load="medium" if signal.priority == "high" else "low",
                 user_id=user_id,
             )
+            user_opted_out = False
+            raw_opt_out = await self.redis.get(f"spine:safe_experiments:opt_out:{user_id}")
+            if raw_opt_out is not None:
+                user_opted_out = str(raw_opt_out.decode() if isinstance(raw_opt_out, bytes) else raw_opt_out) == "1"
             candidate_strategies = [decision.primary_strategy, "reduce_pace", "reinforce_without_overpressure"]
             bandit = SafeBanditController()
-            result = bandit.select_action(
+            result = bandit.select_arm(
                 candidate_actions=candidate_strategies,
                 context=ctx_sig,
                 risk_level=decision.risk_level or "low",
+                user_opted_out=user_opted_out,
             )
+            if result.get("blocked"):
+                SAFE_EXPERIMENT_BANDIT_BLOCK_TOTAL.labels(result.get("reason", "unknown")).inc()
             if result and result.get("selected_action") != decision.primary_strategy:
                 await self.redis.set(
                     f"spine:bandit_suggestion:{user_id}:latest",
@@ -2874,8 +2879,9 @@ class SpineOrchestrator:
                     }),
                     ex=24 * 3600,
                 )
-        except Exception:
-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
+        except Exception as exc:
+            logger.exception("_enrich_pipeline_post_policy: safe_experiment failed")
+            raise RuntimeError("safe_experiment_enrichment_failed") from exc
 
 
     # ── Aurora → Spine Return Path ────────────────────────────────────
@@ -2953,25 +2959,26 @@ class SpineOrchestrator:
         later policy improvement without affecting live decisions.
         """
         import json
+
+        from app.core.metrics import COUNTERFACTUAL_EVALUATION_FAILURE_TOTAL
+        from app.signals.counterfactual_evaluation import MatchedContextEvaluator
+        from app.signals.intervention_episode import ContextSignature
+
+        evaluator = MatchedContextEvaluator()
+        actual_strategy = getattr(outcome_record, "intervention", "unknown")
+        ctx = ContextSignature(
+            goal_mode=actual_outcome.get("goal_mode", "standard"),
+            failure_type=actual_outcome.get("failure_type", ""),
+            cognitive_load="medium",
+        )
+        alternatives = ["reduce_pace", "simplify_task", "worked_example_first"]
+        results: list[dict[str, Any]] = []
         try:
-            from app.signals.counterfactual_evaluation import MatchedContextEvaluator
-            from app.signals.intervention_episode import ContextSignature
-            evaluator = MatchedContextEvaluator()
-            # Build a synthetic episode from the outcome
-            actual_strategy = getattr(outcome_record, "intervention", "unknown")
-            ctx = ContextSignature(
-                goal_mode=actual_outcome.get("goal_mode", "standard"),
-                failure_type=actual_outcome.get("failure_type", ""),
-                cognitive_load="medium",
-            )
-            # Compare against common alternatives
-            alternatives = ["reduce_pace", "simplify_task", "worked_example_first"]
-            results: list[dict[str, Any]] = []
             for alt in alternatives:
                 estimate = evaluator.evaluate(
                     actual_policy=actual_strategy,
                     alternative_policy=alt,
-                    episodes=[],  # Shadow mode — no real episodes yet
+                    episodes=[],
                     target_context=ctx,
                 )
                 results.append({
@@ -2986,7 +2993,8 @@ class SpineOrchestrator:
                 await self.redis.ltrim(f"spine:counterfactual_shadow:{user_id}", -50, -1)
                 await self.redis.expire(f"spine:counterfactual_shadow:{user_id}", 90 * 24 * 3600)
         except Exception:
-            logger.warning("_run_counterfactual_shadow: operation failed", exc_info=True)
+            COUNTERFACTUAL_EVALUATION_FAILURE_TOTAL.labels(source="spine_shadow").inc()
+            raise
 
     # ── P1: Divine Moment Enrichers ──────────────────────────────────
 

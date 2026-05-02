@@ -95,17 +95,19 @@ type CompleteUploadRequest struct {
 }
 
 type FileResponse struct {
-	ID         string    `json:"id"`
-	UserID     string    `json:"user_id"`
-	FileName   string    `json:"file_name"`
-	MimeType   string    `json:"mime_type"`
-	FileSize   int64     `json:"file_size"`
-	Bucket     string    `json:"bucket"`
-	ObjectKey  string    `json:"object_key"`
-	Status     string    `json:"status"`
-	Visibility string    `json:"visibility"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID                 string     `json:"id"`
+	UserID             string     `json:"user_id"`
+	FileName           string     `json:"file_name"`
+	MimeType           string     `json:"mime_type"`
+	FileSize           int64      `json:"file_size"`
+	Bucket             string     `json:"bucket"`
+	ObjectKey          string     `json:"object_key"`
+	Status             string     `json:"status"`
+	Visibility         string     `json:"visibility"`
+	LifecycleStatus    string     `json:"lifecycle_status"`
+	ArchiveReviewDueAt *time.Time `json:"archive_review_due_at,omitempty"`
+	CreatedAt          time.Time  `json:"created_at"`
+	UpdatedAt          time.Time  `json:"updated_at"`
 }
 
 func (h *FileHandler) PrepareUpload(c *gin.Context) {
@@ -476,17 +478,19 @@ func (h *FileHandler) SearchMyFiles(c *gin.Context) {
 
 func fileToResponse(file service.StoredFile) FileResponse {
 	return FileResponse{
-		ID:         file.ID.String(),
-		UserID:     file.UserID.String(),
-		FileName:   file.FileName,
-		MimeType:   file.MimeType,
-		FileSize:   file.FileSize,
-		Bucket:     file.Bucket,
-		ObjectKey:  file.ObjectKey,
-		Status:     file.Status,
-		Visibility: file.Visibility,
-		CreatedAt:  file.CreatedAt,
-		UpdatedAt:  file.UpdatedAt,
+		ID:                 file.ID.String(),
+		UserID:             file.UserID.String(),
+		FileName:           file.FileName,
+		MimeType:           file.MimeType,
+		FileSize:           file.FileSize,
+		Bucket:             file.Bucket,
+		ObjectKey:          file.ObjectKey,
+		Status:             file.Status,
+		Visibility:         file.Visibility,
+		LifecycleStatus:    file.LifecycleStatus,
+		ArchiveReviewDueAt: file.ArchiveReviewDueAt,
+		CreatedAt:          file.CreatedAt,
+		UpdatedAt:          file.UpdatedAt,
 	}
 }
 

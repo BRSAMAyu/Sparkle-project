@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_active_superuser, get_db
 from app.core.cache import cache_service
 from app.learning.prompt_bandit import PromptBandit
+from app.middleware.admin_audit import audit_admin_action
 from app.services.response_feedback_service import ResponseFeedbackService
 
 router = APIRouter(prefix="/admin", tags=["Admin Feedback"], dependencies=[Depends(get_current_active_superuser)])
@@ -30,6 +31,7 @@ def _parse_window(value: str) -> timedelta:
 
 
 @router.get("/feedback/summary")
+@audit_admin_action(category="feedback_governance", risk="medium", action="view_feedback_summary")
 async def feedback_summary(
     window: str = Query("24h"),
     db: AsyncSession = Depends(get_db),
@@ -40,6 +42,7 @@ async def feedback_summary(
 
 
 @router.get("/bandit/prompt")
+@audit_admin_action(category="experiment_diagnostics", risk="medium", action="view_prompt_bandit_state")
 async def bandit_prompt_state(
     workflow_id: str = Query(..., min_length=1),
     arms: str | None = Query(None, description="Comma-separated list of prompt versions"),

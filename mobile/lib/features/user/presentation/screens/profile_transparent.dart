@@ -5,6 +5,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/models/ws6_profile_mirror_models.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
@@ -32,7 +33,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
       ref.invalidate(ws6TransparentProfileViewProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SparkleSnackBar.success('已记录「$targetId」的画像调整。'),
+          SparkleSnackBar.success(I18nService.instance.isChinese ? '已记录「$targetId」的画像调整。' : 'Recorded profile adjustment for "$targetId".'),
         );
       }
     }
@@ -200,7 +201,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
           if (view.hiddenItemCount > 0) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              '隐藏条目 ${view.hiddenItemCount} 条，未进入透明面板。',
+              I18nService.instance.isChinese ? '隐藏条目 ${view.hiddenItemCount} 条，未进入透明面板。' : '${view.hiddenItemCount} hidden items, not shown on transparent profile.',
               style: DS.labelSmall.copyWith(color: DS.textSecondary),
             ),
           ],
@@ -546,7 +547,7 @@ class _RevertActionCard extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing4),
           Text(
-            '建议：${action.suggestedSummary}',
+            I18nService.instance.isChinese ? '建议：${action.suggestedSummary}' : 'Suggestion: ${action.suggestedSummary}',
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing4),

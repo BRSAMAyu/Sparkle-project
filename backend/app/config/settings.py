@@ -138,6 +138,11 @@ class Settings(BaseSettings):
     # Community Settings
     MESSAGE_REVOKE_TIME_LIMIT_SECONDS: int = 120  # 消息撤回时间限制（秒），默认2分钟
     MESSAGE_SEND_MAX_RETRIES: int = 3  # 消息发送最大重试次数
+    COMMUNITY_PRIVACY_MIN_COHORT_SIZE: int = 5
+    COMMUNITY_PRIVACY_DP_ENABLED: bool = True
+    COMMUNITY_PRIVACY_DP_EPSILON: float = 0.5
+    COMMUNITY_PRIVACY_QUERY_COST: float = 0.1
+    COMMUNITY_PRIVACY_MAX_EPSILON: float = 10.0
 
     # Database (canonical envs: POSTGRES_*)
     DATABASE_URL: str = ""
@@ -146,6 +151,9 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = Field("postgres", validation_alias=AliasChoices("POSTGRES_USER", "DB_USER"))
     POSTGRES_PASSWORD: str = Field("", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
     POSTGRES_DB: str = Field("sparkle", validation_alias=AliasChoices("POSTGRES_DB", "DB_NAME"))
+    SPARKLE_RBAC_ENABLED: bool = False
+    SPARKLE_ENGINE_DATABASE_URL: str = ""
+    SPARKLE_CELERY_DATABASE_URL: str = ""
 
     # Redis (canonical envs: REDIS_*)
     REDIS_URL: str = ""
@@ -366,6 +374,11 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     EMAIL_FROM: str = ""
     EMAIL_FROM_NAME: str = "Sparkle"
+
+    # Release approval governance
+    # JSON env example:
+    # {"policy_publish":["ops@example.com"],"experiment_promote":["admin@example.com"],"*":["cto@example.com"]}
+    RELEASE_APPROVERS_BY_CATEGORY: dict[str, list[str]] = Field(default_factory=dict)
 
     # WeChat Configuration
     WECHAT_APP_ID: str = ""
@@ -754,6 +767,13 @@ class Settings(BaseSettings):
     INTERNAL_API_KEY: str = ""
     GATEWAY_INTERNAL_URL: str = ""
 
+    # FV-24: SLO auto-degrade kill switch modes (off=normal, live=degraded)
+    SLO_AUTO_LLM_DEGRADE_MODE: str = "off"
+    SLO_AUTO_REDIS_FALLBACK_MODE: str = "off"
+    SLO_AUTO_DB_THROTTLE_MODE: str = "off"
+    SLO_AUTO_EVENT_BUS_THROTTLE_MODE: str = "off"
+    SLO_AUTO_RATE_LIMIT_TIGHTEN_MODE: str = "off"
+
     # Production URL (used for Flutter deeplinks, CORS, and email links)
     PRODUCTION_URL: str = ""  # e.g. https://sparkle.example.com
 
@@ -883,7 +903,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def finalize_urls(self):
-        if not self.DATABASE_URL:
+        rbac_database_url = self._service_database_url()
+        if rbac_database_url:
+            self.DATABASE_URL = normalize_database_url(rbac_database_url)
+        elif not self.DATABASE_URL:
             host = _normalize_local_docker_host(self.POSTGRES_HOST)
             self.DATABASE_URL = normalize_database_url(
                 f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{host}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -899,6 +922,14 @@ class Settings(BaseSettings):
                 f"redis://:{self.REDIS_PASSWORD}@{host}:{self.REDIS_PORT}/{self.REDIS_DB}"
             )
         return self
+
+    def _service_database_url(self) -> str:
+        if not self.SPARKLE_RBAC_ENABLED:
+            return ""
+        role = (self.SERVICE_ROLE or "").strip().lower()
+        if role in {"celery", "celery-glm-batch", "worker", "beat"}:
+            return self.SPARKLE_CELERY_DATABASE_URL or self.SPARKLE_ENGINE_DATABASE_URL
+        return self.SPARKLE_ENGINE_DATABASE_URL
 
     @field_validator("LLM_API_KEY", mode="before")
     @classmethod

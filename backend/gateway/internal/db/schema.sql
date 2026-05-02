@@ -4359,7 +4359,9 @@ CREATE TABLE user_settings (
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
     deleted_at timestamp without time zone,
-    ai_reasoning_mode character varying(16) DEFAULT 'balanced'::character varying NOT NULL
+    ai_reasoning_mode character varying(16) DEFAULT 'balanced'::character varying NOT NULL,
+    current_goal_id character varying(64),
+    accessibility_settings json DEFAULT '{}'::json NOT NULL
 );
 
 

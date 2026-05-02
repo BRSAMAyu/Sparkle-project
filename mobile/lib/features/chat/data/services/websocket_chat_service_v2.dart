@@ -16,6 +16,7 @@ import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/offline_chat_message.dart';
 import 'package:sparkle/core/offline/offline_message_queue_service.dart';
+import 'package:sparkle/features/aurora/presentation/providers/emotion_state_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
@@ -143,6 +144,19 @@ Map<String, dynamic>? _extractDagExecutionMetadata(
   return null;
 }
 
+Map<String, dynamic> _extractAuroraStateBandPayload(
+  Map<String, dynamic> data,
+) {
+  final payload = data['payload'] ?? data['data'] ?? data['state'];
+  if (payload is Map<String, dynamic>) {
+    return payload;
+  }
+  if (payload is Map) {
+    return Map<String, dynamic>.from(payload);
+  }
+  return data;
+}
+
 /// Parse JSON event in isolate to avoid blocking main thread
 ChatStreamEvent _parseChatEvent(String jsonString) {
   try {
@@ -166,6 +180,18 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
     final finishReason = _normalizeFinishReason(data['finish_reason']);
 
     switch (type) {
+      case 'aurora_state_band':
+        final metadata = _normalizeMetadata(data['metadata']);
+        return AuroraStateBandEvent(
+          stateData: _extractAuroraStateBandPayload(data),
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+          metadata: metadata,
+          sessionId: sessionId,
+        );
+
       case 'delta':
         final metadata = _normalizeMetadata(data['metadata']);
         final dagData = _extractDagExecutionMetadata(metadata);
@@ -1958,6 +1984,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         _isStreamActive = true;
       }
       _routeEventToRequest(requestId, event);
+      if (event is AuroraStateBandEvent) {
+        _container
+            .read(emotionStateProvider.notifier)
+            .updateFromAuroraStateBand(event.stateData);
+      }
 
       // DoneEvent 到达时清除流活跃标记
       if (event is DoneEvent) {

@@ -3,6 +3,7 @@ import 'package:fl_chart/fl_chart.dart';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/agent_avatar_switcher.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -33,14 +34,16 @@ class AgentStatsDashboard extends StatelessWidget {
         children: [
           // Header
           Text(
-            'Agent 协作统计',
+            I18nService.instance.isChinese ? 'Agent 协作统计' : 'Agent Collaboration Stats',
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: DS.fontWeightBold,
             ),
           ),
           const SizedBox(height: DS.sm),
           Text(
-            '过去 ${statsData['period_days'] ?? 30} 天',
+            I18nService.instance.isChinese
+                ? '过去 ${statsData['period_days'] ?? 30} 天'
+                : 'Past ${statsData['period_days'] ?? 30} days',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -54,7 +57,7 @@ class AgentStatsDashboard extends StatelessWidget {
           // Usage Pie Chart
           if (byAgent.isNotEmpty) ...[
             Text(
-              'Agent 使用分布',
+              I18nService.instance.isChinese ? 'Agent 使用分布' : 'Agent Usage Distribution',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: DS.fontWeightBold,
               ),
@@ -67,7 +70,7 @@ class AgentStatsDashboard extends StatelessWidget {
           // Top Agents List
           if (byAgent.isNotEmpty) ...[
             Text(
-              'Top Agents',
+              I18nService.instance.isChinese ? '常用 Agent' : 'Top Agents',
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: DS.fontWeightBold,
               ),
@@ -239,7 +242,7 @@ class AgentStatsDashboard extends StatelessWidget {
                     ),
                     const SizedBox(width: DS.xs),
                     Text(
-                      '$count 次执行',
+                      I18nService.instance.isChinese ? '$count 次执行' : '$count executions',
                       style: theme.textTheme.bodySmall,
                     ),
                     const SizedBox(width: DS.lg),
@@ -336,7 +339,7 @@ class AgentPerformanceChart extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '性能趋势',
+            I18nService.instance.isChinese ? '性能趋势' : 'Performance Trends',
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: DS.fontWeightBold,
             ),

@@ -367,7 +367,7 @@ async def test_e2e_expanded_error_types_trigger_replan():
 
 
 @pytest.mark.asyncio
-async def test_e2e_consent_required_before_research_inclusion():
+async def test_e2e_consent_required_before_research_inclusion(db_session):
     """
     User must have all required consents before data can be included in research.
     Tests P4-RES-005 consent tracking.
@@ -377,16 +377,16 @@ async def test_e2e_consent_required_before_research_inclusion():
     tracker = ConsentTracker()
 
     # Initially should not have consent
-    has = tracker.has_consent("u_e2e", "data_collection")
+    has = await tracker.has_consent_async("u_e2e", "data_collection", db=db_session)
     assert has is False
 
     # Grant consent
-    tracker.grant_consent(user_id="u_e2e", consent_type="data_collection")
-    has = tracker.has_consent("u_e2e", "data_collection")
+    await tracker.grant_consent_async(user_id="u_e2e", consent_type="data_collection", db=db_session)
+    has = await tracker.has_consent_async("u_e2e", "data_collection", db=db_session)
     assert has is True
 
     # Should not be research-eligible without all consents
-    can = tracker.can_include_in_research("u_e2e")
+    can = await tracker.can_include_in_research_async("u_e2e", db=db_session)
     assert can is False  # Missing other required consents
 
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class DailyContextLine extends StatelessWidget {
   const DailyContextLine({
@@ -29,7 +30,9 @@ class DailyContextLine extends StatelessWidget {
               ? const _DailyContextLineSkeleton()
               : Text(
                   line == null || line.isEmpty
-                      ? '早上好，今天先从一小步开始，把节奏找回来就很好。'
+                      ? (I18nService.instance.isChinese
+                          ? '早上好，今天先从一小步开始，把节奏找回来就很好。'
+                          : 'Good morning. Start with one small step today—finding your rhythm is enough.')
                       : line,
                   key: ValueKey(line),
                   maxLines: 3,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
 class DashboardCuriosityCard extends ConsumerWidget {
@@ -57,7 +58,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
             ),
             const Spacer(),
             Text(
-              cognitive.weeklyPattern ?? '探索未知',
+              cognitive.weeklyPattern ?? (I18nService.instance.isChinese ? '探索未知' : 'Explore the unknown'),
               style: context.sparkleTypography.labelLarge.copyWith(
                 fontSize: dense ? 13 : null,
                 fontWeight: DS.fontWeightBold,
@@ -68,7 +69,7 @@ class DashboardCuriosityCard extends ConsumerWidget {
             ),
             const SizedBox(height: DS.xs),
             Text(
-              '好奇心胶囊',
+              I18nService.instance.isChinese ? '好奇心胶囊' : 'Curiosity Capsule',
               style: context.sparkleTypography.labelSmall.copyWith(
                 color: DS.textSecondary,
               ),

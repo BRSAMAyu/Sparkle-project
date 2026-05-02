@@ -18,7 +18,7 @@ from app.core.redis_search_client import redis_search_client
 from app.db.extensions import is_vector_extension_available
 from app.models.community import GroupMember
 from app.models.document_chunks import DocumentChunk
-from app.models.file_storage import StoredFile
+from app.models.file_storage import SourceLifecycleStatus, StoredFile
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.group_files import GroupFile
 from app.schemas.galaxy import NodeBase, SearchResultItem, UserStatusInfo
@@ -452,6 +452,7 @@ class KnowledgeRetrievalService:
                 )
             )
             .where(DocumentChunk.file_id.in_(file_ids))
+            .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
             .where(DocumentChunk.embedding.isnot(None))
             .order_by("distance")
             .limit(limit * 5)
