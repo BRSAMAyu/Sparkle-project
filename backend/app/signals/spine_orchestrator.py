@@ -22,6 +22,7 @@ from app.aurora.runtime_v1.aurora_spine_confluence import (
 )
 from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
 from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider
+from app.aurora.runtime_v1.l0_rules import L0RuleEngine
 from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
 from app.core.cost_controller import is_aurora_within_budget, record_aurora_cost
 from app.core.error_taxonomy import ErrorCategory, ErrorSeverity, classify_error
@@ -47,6 +48,7 @@ from app.signals.intervention_episode import (
     InterventionEpisodeLedger,
 )
 from app.signals.learning_base import LearningBase
+from app.signals.learning_guard import LearningGuard
 from app.signals.material_signal import MaterialSignalDetector
 from app.signals.mistake_signal import MistakeSignalDetector
 from app.signals.multi_goal_arbitration import MultiGoalArbitrator
@@ -161,6 +163,10 @@ class SpineOrchestrator:
         self.source_effectiveness = SourceEffectivenessTracker(redis_client)
         self.goal_graph = GoalWorldGraphService(redis_client)
         self.goal_arbitrator = MultiGoalArbitrator(redis_client)
+
+        # P1-10/11: Previously orphaned — now wired into pipeline
+        self.learning_guard = LearningGuard(redis_client)
+        self.l0_engine = L0RuleEngine(redis_client)
 
         # EA-1~EA-4: Governance modules — wired into production pipeline
         from app.core.research_isolation import ResearchIsolationGuard
@@ -1299,6 +1305,18 @@ class SpineOrchestrator:
         await resilient_redis_call(
             "spine_pipeline", self.metrics.record_signal_entered_state(),
         )
+
+        # P1-11: L0 deterministic rule evaluation — inject deadline_pressure + quiet_hours signals
+        try:
+            l0_signals = await self.l0_engine.evaluate_all(user_id)
+            for l0_signal in l0_signals:
+                await resilient_redis_call(
+                    "state_register",
+                    self.state_register.upsert_from_signal(user_id, l0_signal),
+                )
+                logger.debug("L0 signal injected: {} for user={}", l0_signal.state_key, user_id)
+        except Exception:
+            logger.debug("L0 rule evaluation failed for user={}", user_id, exc_info=True)
 
         # L2 Mid Aurora: Check for escalation patterns and trigger interventions
         l2_escalation = await resilient_redis_call(
@@ -2508,6 +2526,18 @@ class SpineOrchestrator:
             actual_outcome=actual_outcome,
         )
         await self.metrics.record_outcome_recorded(effective=record.attribution == "effective")
+
+        # P1-10: LearningGuard — gate auto strategy learning on outcome quality
+        guard_verdict = self.learning_guard.get_guard_verdict(record)
+        if not guard_verdict["should_learn"]:
+            logger.debug(
+                "LearningGuard blocked learning from outcome={} action={}",
+                record.outcome_id, guard_verdict["action"],
+            )
+            if guard_verdict["should_retract"]:
+                trace.raw_event_ids.append(f"policy_retraction:{record.intervention}")
+                logger.info("LearningGuard retraction triggered for policy={} user={}", record.intervention, user_id)
+            return record
 
         # V-9: Auto strategy learning — update belief from outcome
         if user_id and record.intervention:

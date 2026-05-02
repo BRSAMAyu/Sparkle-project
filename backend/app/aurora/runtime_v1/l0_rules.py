@@ -135,3 +135,47 @@ class L0RuleEngine:
             return int(parts[0]) * 60 + int(parts[1])
         except (ValueError, TypeError):
             return 0
+
+    async def evaluate_all(
+        self,
+        user_id: UUID | str,
+        *,
+        upcoming_deadlines: list[dict[str, Any]] | None = None,
+        quiet_start: str = "22:00",
+        quiet_end: str = "08:00",
+    ) -> list[ActionableSignal]:
+        """Evaluate all L0 deterministic rules and return generated signals.
+
+        P1-11: Wired into SpineOrchestrator._run_signal_pipeline for L0→Spine integration.
+        """
+        signals: list[ActionableSignal] = []
+
+        # Deadline pressure
+        if upcoming_deadlines:
+            dp = await self.evaluate_deadline_pressure(
+                user_id, upcoming_deadlines=upcoming_deadlines,
+            )
+            if dp:
+                signals.append(dp)
+
+        # Quiet hours — generate a suppression signal rather than a state
+        is_quiet = await self.evaluate_quiet_hours(
+            user_id, quiet_start=quiet_start, quiet_end=quiet_end,
+        )
+        if is_quiet:
+            quiet_signal = ActionableSignal(
+                signal_id=_uid("l0"),
+                source_event_ids=[f"l0_quiet:{user_id}"],
+                source_system="aurora_l0.quiet_hours",
+                state_key="quiet_hours_active",
+                claim="current_time_in_quiet_hours",
+                confidence=0.95,
+                scope="session",
+                ttl_hours=2,
+                evidence_summary=f"Current time is within quiet hours ({quiet_start}–{quiet_end}).",
+                possible_effects=["suppress_notifications", "reduce_intervention_intensity"],
+                priority="medium",
+            )
+            signals.append(quiet_signal)
+
+        return signals
