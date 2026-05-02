@@ -1,3 +1,6 @@
+from datetime import timedelta
+
+from app.core.time_utils import utcnow
 from app.orchestration.plan_quality_contract import PLAN_MODE_FULL, PLAN_MODE_NEXT_STEP_ONLY, PLAN_MODE_PROVISIONAL
 from app.orchestration.planning_strategy_compiler import PlanningStrategyCompiler
 
@@ -86,3 +89,24 @@ def test_planning_strategy_compiler_uses_predicted_overload_risk() -> None:
     assert strategy.overload_signal is True
     assert strategy.plan_type == "recovery"
     assert strategy.plan_depth == "standard"
+
+
+def test_planning_strategy_compiler_flags_impossible_deadline_capacity() -> None:
+    compiler = PlanningStrategyCompiler()
+    target_date = (utcnow().date() + timedelta(days=3)).isoformat()
+
+    strategy = compiler.compile(
+        situation_brief={
+            "vision": {"primary_goal": "Pass exam", "target_date": target_date},
+            "current_state": {"snapshot": "Need a plan"},
+            "decision_context": {"planning_readiness_action": "proceed", "planning_readiness": "high"},
+        },
+        plan_context={"daily_available_minutes": 45},
+        planning_constraints={"route_intent": "create_plan"},
+    )
+
+    assert strategy.workload_fit == "impossible"
+    assert "impossible_schedule_risk" in strategy.feasibility_flags
+    assert strategy.fallback_policy == "shrink_scope_then_retry"
+    assert strategy.checkpoint_cadence == "daily"
+    assert strategy.first_review_after_days == 1

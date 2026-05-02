@@ -364,6 +364,8 @@ class PlanQualityGate:
         tool_calls = self._tool_calls(plan)
         overload_signal = bool(planning_strategy.get("overload_signal"))
         max_session_minutes = planning_strategy.get("max_session_minutes")
+        workload_fit = _strip(planning_strategy.get("workload_fit"))
+        feasibility_flags = {_strip(item) for item in _as_list(planning_strategy.get("feasibility_flags")) if _strip(item)}
         estimated_minutes = 0
         for tool_call in tool_calls:
             params = _as_dict(getattr(tool_call, "params", None))
@@ -373,6 +375,39 @@ class PlanQualityGate:
                 continue
 
         score = 0.88
+        if workload_fit == "impossible" or "impossible_schedule_risk" in feasibility_flags:
+            score -= 0.42
+            issues.append(
+                PlanQualityIssue(
+                    code="impossible_schedule_risk",
+                    message=(
+                        "Deadline and daily capacity do not support a credible full plan; shrink scope or ask "
+                        "for a tradeoff before presenting it as feasible."
+                    ),
+                    severity="critical",
+                )
+            )
+        elif workload_fit == "tight" or "deadline_with_low_capacity" in feasibility_flags:
+            score -= 0.16
+            issues.append(
+                PlanQualityIssue(
+                    code="tight_schedule_requires_review_cadence",
+                    message=(
+                        "The schedule is tight; the plan should include a short review cadence and a "
+                        "scope-reduction fallback."
+                    ),
+                    severity="warning",
+                )
+            )
+        if "daily_capacity_missing" in feasibility_flags and planning_strategy.get("deadline_days") is not None:
+            score -= 0.12
+            issues.append(
+                PlanQualityIssue(
+                    code="deadline_without_capacity",
+                    message="A deadline is known but daily capacity is missing, so workload confidence should stay provisional.",
+                    severity="warning",
+                )
+            )
         if overload_signal and len(tool_calls) > 4:
             score -= 0.32
             issues.append(
