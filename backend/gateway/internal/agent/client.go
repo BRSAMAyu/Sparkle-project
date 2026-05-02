@@ -3,8 +3,10 @@ package agent
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
-	"log"
+	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/sparkle/gateway/internal/config"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/trace"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
@@ -34,10 +37,10 @@ type Client struct {
 	config *config.Config
 	connMu sync.RWMutex
 
-	reconnectMu      sync.Mutex
-	lastReconnectAt  time.Time
-	minReconnectGap  time.Duration // R5-G07: minimum gap between reconnect attempts
-	dialOptions      []grpc.DialOption
+	reconnectMu     sync.Mutex
+	lastReconnectAt time.Time
+	minReconnectGap time.Duration // R5-G07: minimum gap between reconnect attempts
+	dialOptions     []grpc.DialOption
 
 	// Health checker (optional)
 	healthChecker *AgentHealthChecker
@@ -76,7 +79,10 @@ func NewClient(cfg *config.Config) (*Client, error) {
 
 	conn, err := grpc.DialContext(ctx, cfg.AgentAddress, dialOptions...)
 	if err != nil {
-		log.Printf("Failed to connect to agent service at %s: %v", cfg.AgentAddress, err)
+		zap.L().Error("Failed to connect to agent service",
+			zap.String("address", cfg.AgentAddress),
+			zap.Error(err),
+		)
 		return nil, err
 	}
 
@@ -92,19 +98,43 @@ func NewClient(cfg *config.Config) (*Client, error) {
 func buildDialOptions(cfg *config.Config) ([]grpc.DialOption, error) {
 	creds := insecure.NewCredentials()
 	if cfg.AgentTLSEnabled {
+		tlsCfg := &tls.Config{
+			ServerName:         cfg.AgentTLSServerName,
+			InsecureSkipVerify: cfg.AgentTLSInsecure,
+		}
+		// Load CA cert for server verification
 		if cfg.AgentTLSCACertPath != "" {
-			tlsCreds, err := credentials.NewClientTLSFromFile(cfg.AgentTLSCACertPath, cfg.AgentTLSServerName)
+			caCert, err := os.ReadFile(cfg.AgentTLSCACertPath)
 			if err != nil {
-				log.Printf("Failed to load agent TLS CA cert: %v", err)
+				zap.L().Error("Failed to read agent TLS CA cert",
+					zap.String("ca_cert_path", cfg.AgentTLSCACertPath),
+					zap.Error(err),
+				)
 				return nil, err
 			}
-			creds = tlsCreds
-		} else {
-			creds = credentials.NewTLS(&tls.Config{
-				ServerName:         cfg.AgentTLSServerName,
-				InsecureSkipVerify: cfg.AgentTLSInsecure,
-			})
+			tlsCfg.RootCAs = x509.NewCertPool()
+			if !tlsCfg.RootCAs.AppendCertsFromPEM(caCert) {
+				zap.L().Error("Failed to parse agent TLS CA cert",
+					zap.String("ca_cert_path", cfg.AgentTLSCACertPath),
+				)
+				return nil, fmt.Errorf("failed to parse CA cert: %s", cfg.AgentTLSCACertPath)
+			}
+			tlsCfg.InsecureSkipVerify = false
 		}
+		// P2-28: Load client cert for mTLS
+		if cfg.AgentTLSClientCertPath != "" && cfg.AgentTLSClientKeyPath != "" {
+			clientCert, err := tls.LoadX509KeyPair(cfg.AgentTLSClientCertPath, cfg.AgentTLSClientKeyPath)
+			if err != nil {
+				zap.L().Error("Failed to load agent mTLS client cert/key",
+					zap.String("cert_path", cfg.AgentTLSClientCertPath),
+					zap.String("key_path", cfg.AgentTLSClientKeyPath),
+					zap.Error(err),
+				)
+				return nil, err
+			}
+			tlsCfg.Certificates = []tls.Certificate{clientCert}
+		}
+		creds = credentials.NewTLS(tlsCfg)
 	}
 
 	// Retry policy configuration
@@ -131,6 +161,10 @@ func buildDialOptions(cfg *config.Config) ([]grpc.DialOption, error) {
 			Timeout:             10 * time.Second,
 			PermitWithoutStream: true,
 		}),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(50*1024*1024),
+			grpc.MaxCallSendMsgSize(50*1024*1024),
+		),
 	}, nil
 }
 
@@ -181,7 +215,10 @@ func (c *Client) reconnect(ctx context.Context) error {
 
 	newConn, err := grpc.DialContext(reconnectCtx, c.config.AgentAddress, c.dialOptions...)
 	if err != nil {
-		log.Printf("[AgentClient] Reconnect to %s failed: %v", c.config.AgentAddress, err)
+		zap.L().Error("Agent client reconnect failed",
+			zap.String("address", c.config.AgentAddress),
+			zap.Error(err),
+		)
 		return err
 	}
 
@@ -195,7 +232,9 @@ func (c *Client) reconnect(ctx context.Context) error {
 		_ = oldConn.Close()
 	}
 
-	log.Printf("[AgentClient] Reconnected to agent service at %s", c.config.AgentAddress)
+	zap.L().Info("Agent client reconnected",
+		zap.String("address", c.config.AgentAddress),
+	)
 	return nil
 }
 
@@ -233,7 +272,10 @@ func NewClientWithHealthCheck(cfg *config.Config, healthCheckInterval, healthChe
 	c.healthChecker = NewAgentHealthChecker(c, healthCheckInterval, healthCheckTimeout, cbConfig)
 	c.healthChecker.Start()
 
-	log.Printf("[AgentClient] Health checker started (interval: %v, timeout: %v)", healthCheckInterval, healthCheckTimeout)
+	zap.L().Info("Agent health checker started",
+		zap.Duration("interval", healthCheckInterval),
+		zap.Duration("timeout", healthCheckTimeout),
+	)
 
 	return c, nil
 }
@@ -312,7 +354,9 @@ func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agen
 	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
 		return nil, err
 	}
-	return c.currentAPI().StreamChat(outCtx, req)
+	// Use fresh context with fresh timeout after reconnection
+	retryCtx := c.injectMetadata(ctx, req.UserId)
+	return c.currentAPI().StreamChat(retryCtx, req)
 }
 
 func (c *Client) SubmitResponseFeedback(ctx context.Context, req *agentv1.ResponseFeedbackRequest) (*agentv1.ResponseFeedbackResponse, error) {

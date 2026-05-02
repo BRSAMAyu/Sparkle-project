@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 
 /// Seed Library Card Widget
@@ -56,7 +57,7 @@ class SeedLibraryCard extends StatelessWidget {
                                 .textTheme
                                 .titleMedium
                                 ?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: DS.fontWeightBold,
                                 ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -132,29 +133,32 @@ class SeedLibraryCard extends StatelessWidget {
                       context,
                       Icons.article_outlined,
                       '${library.itemCount}',
-                      '内容',
+                      I18nService.instance.isChinese ? '内容' : 'Items',
                     ),
                     const SizedBox(width: DS.spacing16),
                     _buildStat(
                       context,
                       Icons.people_outline,
                       '${library.subscriberCount}',
-                      '订阅',
+                      I18nService.instance.isChinese ? '订阅' : 'Subs',
                     ),
                     const SizedBox(width: DS.spacing16),
                     _buildStat(
                       context,
                       Icons.visibility_outlined,
                       '${library.usageCount}',
-                      '使用',
+                      I18nService.instance.isChinese ? '使用' : 'Uses',
                     ),
                     const Spacer(),
                     if (library.qualityScore != null)
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.star,
-                              size: DS.iconSizeXs, color: DS.warning,),
+                          Icon(
+                            Icons.star,
+                            size: DS.iconSizeXs,
+                            color: DS.warning,
+                          ),
                           const SizedBox(width: DS.spacing4),
                           Text(
                             library.qualityScore!.toStringAsFixed(1),
@@ -162,7 +166,7 @@ class SeedLibraryCard extends StatelessWidget {
                                 .textTheme
                                 .bodyMedium
                                 ?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: DS.fontWeightBold,
                                   color: DS.warningLight,
                                 ),
                           ),
@@ -204,7 +208,11 @@ class SeedLibraryCard extends StatelessWidget {
       );
 
   Widget _buildStat(
-          BuildContext context, IconData icon, String value, String label,) =>
+    BuildContext context,
+    IconData icon,
+    String value,
+    String label,
+  ) =>
       Row(
         mainAxisSize: MainAxisSize.min,
         children: [

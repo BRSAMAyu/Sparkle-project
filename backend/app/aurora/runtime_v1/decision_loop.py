@@ -18,7 +18,7 @@ from app.aurora.runtime_v1.dashboard import (
 )
 from app.aurora.runtime_v1.state import AuroraTeachingStrategy
 from app.core.agent_profiles import AgentRole, TaskType
-from app.services.llm_service import get_configured_llm_service
+# get_configured_llm_service imported lazily to break circular import (llm_service → aurora runtime → decision_loop)
 
 ALLOWED_ACTIONS = {
     "emit_message",
@@ -1766,6 +1766,8 @@ class AuroraDecisionLoop:
         return service_or_awaitable
 
     async def _default_llm_factory(self) -> Any:
+        from app.services.llm_service import get_configured_llm_service  # lazy import to avoid circular dependency
+
         return await get_configured_llm_service(AgentRole.ORCHESTRATOR, TaskType.QUICK_QUERY)
 
     def _fallback_decision(self, readout: DashboardReadout, *, reason: str) -> AuroraDecision:

@@ -3,15 +3,109 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/i18n"
+	"github.com/sparkle/gateway/internal/service"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+func TestChatOrchestratorIdleTimeoutClosesFromHandlerLoop(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := &config.Config{
+		Environment:            "development",
+		WSIdleTimeoutSeconds:   1,
+		WSPingIntervalSeconds:  10,
+		WSPongWaitSeconds:      10,
+		WSGlobalMaxConnections: 10,
+		WSMaxConnections:       10,
+		StreamMaxConcurrent:    2,
+		WSMaxMessageBytes:      1024,
+		WSMessageRateRPS:       10,
+		WSMessageRateBurst:     10,
+	}
+	orchestrator := newLifecycleTestOrchestrator(cfg)
+
+	router := gin.New()
+	router.GET("/ws/chat", func(c *gin.Context) {
+		c.Set("user_id", "idle-user")
+		orchestrator.HandleWebSocket(c)
+	})
+	server := httptest.NewServer(router)
+	defer server.Close()
+
+	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
+	require.NoError(t, err)
+	defer conn.Close()
+
+	require.NoError(t, conn.SetReadDeadline(time.Now().Add(3*time.Second)))
+	_, _, err = conn.ReadMessage()
+	require.True(t, websocket.IsCloseError(err, websocket.CloseGoingAway), "expected idle timeout close, got %v", err)
+}
+
+func TestChatOrchestratorClientDisconnectClosesWithoutPanic(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	cfg := &config.Config{
+		Environment:            "development",
+		WSIdleTimeoutSeconds:   30,
+		WSPingIntervalSeconds:  30,
+		WSPongWaitSeconds:      30,
+		WSGlobalMaxConnections: 10,
+		WSMaxConnections:       10,
+		StreamMaxConcurrent:    2,
+		WSMaxMessageBytes:      1024,
+		WSMessageRateRPS:       10,
+		WSMessageRateBurst:     10,
+	}
+	orchestrator := newLifecycleTestOrchestrator(cfg)
+
+	router := gin.New()
+	router.GET("/ws/chat", func(c *gin.Context) {
+		c.Set("user_id", "disconnect-user")
+		orchestrator.HandleWebSocket(c)
+	})
+	server := httptest.NewServer(router)
+	defer server.Close()
+
+	conn, _, err := websocket.DefaultDialer.Dial("ws"+strings.TrimPrefix(server.URL, "http")+"/ws/chat", nil)
+	require.NoError(t, err)
+	require.NoError(t, conn.Close())
+
+	require.Eventually(t, func() bool {
+		_, ok := orchestrator.getConnection("disconnect-user")
+		return !ok
+	}, 2*time.Second, 10*time.Millisecond)
+}
+
+func newLifecycleTestOrchestrator(cfg *config.Config) *ChatOrchestrator {
+	return NewChatOrchestrator(
+		nil,
+		nil,
+		(service.UserIdentityService)(nil),
+		(*service.ChatHistoryService)(nil),
+		(*service.QuotaService)(nil),
+		(*service.SemanticCacheService)(nil),
+		(*service.CostCalculator)(nil),
+		NewWebSocketFactory(cfg),
+		cfg,
+		(*service.UserContextService)(nil),
+		(*service.TaskCommandService)(nil),
+		"http://localhost:8000",
+		(*service.SignalHub)(nil),
+	)
+}
 
 func TestChatInputUnmarshalWithFiles(t *testing.T) {
 	payload := []byte(`{
@@ -229,6 +323,30 @@ func TestConvertResponseToJSONDecodesExecutionProgressMetadata(t *testing.T) {
 	assert.Equal(t, 0.55, progress["progress_hint"])
 }
 
+func TestConvertResponseToJSONDecodesCalibrationReceiptMetadata(t *testing.T) {
+	resp := &agentv1.ChatResponse{
+		ResponseId: "resp-calibration-receipt",
+		RequestId:  "req-calibration-receipt",
+		Metadata: map[string]string{
+			"calibration_receipt": `{"correction_id":"corr_1","what_changed":"我下调了判断","why_changed":"因为你纠正了我","next_time":"下次先确认","affected_states":["strategy_confidence"],"confidence_delta":-0.15}`,
+		},
+		Content: &agentv1.ChatResponse_FullText{
+			FullText: "done",
+		},
+	}
+
+	result := convertResponseToJSON(context.Background(), resp)
+	meta, ok := result["metadata"].(map[string]interface{})
+	assert.True(t, ok)
+	receipt, ok := meta["calibration_receipt"].(map[string]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, "corr_1", receipt["correction_id"])
+	assert.Equal(t, -0.15, receipt["confidence_delta"])
+	affected, ok := receipt["affected_states"].([]interface{})
+	assert.True(t, ok)
+	assert.Equal(t, []interface{}{"strategy_confidence"}, affected)
+}
+
 func TestConvertResponseToJSONMarksDoneOnFinishOnlyResponse(t *testing.T) {
 	resp := &agentv1.ChatResponse{
 		ResponseId:   "resp-done",
@@ -387,4 +505,14 @@ func TestConvertResponseToJSONOmitsLegacyFields(t *testing.T) {
 		t.Fatal("did not expect legacy error.code in v2-only mode")
 	}
 	assert.Equal(t, "rate_limited", errObj["error_code"])
+}
+
+func TestLegacyAcceptedAckPayloadCarriesRequestID(t *testing.T) {
+	payload := legacyAcceptedAckPayload("req-123")
+
+	assert.Equal(t, "ack", payload["type"])
+	assert.Equal(t, "req-123", payload["message_id"])
+	assert.Equal(t, "req-123", payload["request_id"])
+	assert.Equal(t, "received", payload["status"])
+	assert.IsType(t, int64(0), payload["server_ts"])
 }

@@ -2,9 +2,24 @@ package handler
 
 import (
 	"testing"
+	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/sparkle/gateway/internal/service"
 )
+
+type testRegistryWriter struct {
+	writes int
+}
+
+func (w *testRegistryWriter) WriteJSON(payload interface{}) error {
+	w.writes++
+	return nil
+}
+
+func (w *testRegistryWriter) Close() error {
+	return nil
+}
 
 func TestConnectionRegistryRegisterGetUnregister(t *testing.T) {
 	registry := NewConnectionRegistry(nil, nil, 0, 0)
@@ -81,5 +96,39 @@ func TestConnectionRegistryPerUserLimit(t *testing.T) {
 	registry.Unregister("user-1", connA)
 	if !registry.Register("user-1", connC, nil) {
 		t.Fatal("user-1 should be able to connect after unregistering one")
+	}
+}
+
+func TestConnectionRegistryUnregisterIsIdempotent(t *testing.T) {
+	registry := NewConnectionRegistry(nil, nil, 0, 0)
+	conn := &websocket.Conn{}
+
+	registry.Register("user-1", conn, nil)
+	registry.Unregister("user-1", conn)
+	registry.Unregister("user-1", conn)
+
+	if got := registry.Count(); got != 0 {
+		t.Fatalf("expected count 0 after idempotent unregister, got %d", got)
+	}
+}
+
+func TestConnectionRegistryDrainAllClearsSignalHub(t *testing.T) {
+	hub := service.NewSignalHub()
+	registry := NewConnectionRegistry(hub, nil, 0, 0)
+	var conn *websocket.Conn
+	writer := &testRegistryWriter{}
+
+	if !registry.Register("user-1", conn, writer) {
+		t.Fatal("register should succeed")
+	}
+
+	registry.DrainAll(10 * time.Millisecond)
+	hub.Send("user-1", map[string]string{"type": "probe"})
+
+	if got := registry.Count(); got != 0 {
+		t.Fatalf("expected registry count 0 after drain, got %d", got)
+	}
+	if writer.writes != 0 {
+		t.Fatalf("expected drained SignalHub to have 0 writes, got %d", writer.writes)
 	}
 }

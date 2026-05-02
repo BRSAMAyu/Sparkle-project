@@ -26,6 +26,10 @@ TaskModel _$TaskModelFromJson(Map<String, dynamic> json) => TaskModel(
       sourcePlanningSessionId: json['source_planning_session_id'] as String?,
       phaseIndex: (json['phase_index'] as num?)?.toInt(),
       successCriteria: json['success_criteria'] as String?,
+      pausedReason: json['paused_reason'] as String?,
+      pausedAt: json['paused_at'] == null
+          ? null
+          : DateTime.parse(json['paused_at'] as String),
       startedAt: json['started_at'] == null
           ? null
           : DateTime.parse(json['started_at'] as String),
@@ -41,6 +45,13 @@ TaskModel _$TaskModelFromJson(Map<String, dynamic> json) => TaskModel(
       orderIndex: (json['order_index'] as num?)?.toInt() ?? 0,
       subtasksTotal: (json['subtasks_total'] as num?)?.toInt() ?? 0,
       subtasksCompleted: (json['subtasks_completed'] as num?)?.toInt() ?? 0,
+      boundSources: (json['bound_sources'] as List<dynamic>?)
+              ?.map(
+                  (e) => SourceAssetBinding.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <SourceAssetBinding>[],
+      metadata: json['metadata'] as Map<String, dynamic>? ??
+          const <String, dynamic>{},
     );
 
 Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
@@ -59,6 +70,8 @@ Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
       'source_planning_session_id': instance.sourcePlanningSessionId,
       'phase_index': instance.phaseIndex,
       'success_criteria': instance.successCriteria,
+      'paused_reason': instance.pausedReason,
+      'paused_at': instance.pausedAt?.toIso8601String(),
       'status': _$TaskStatusEnumMap[instance.status]!,
       'started_at': instance.startedAt?.toIso8601String(),
       'completed_at': instance.completedAt?.toIso8601String(),
@@ -70,6 +83,8 @@ Map<String, dynamic> _$TaskModelToJson(TaskModel instance) => <String, dynamic>{
       'order_index': instance.orderIndex,
       'subtasks_total': instance.subtasksTotal,
       'subtasks_completed': instance.subtasksCompleted,
+      'bound_sources': instance.boundSources,
+      'metadata': instance.metadata,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };
@@ -87,6 +102,8 @@ const _$TaskTypeEnumMap = {
 const _$TaskStatusEnumMap = {
   TaskStatus.pending: 'PENDING',
   TaskStatus.inProgress: 'IN_PROGRESS',
+  TaskStatus.paused: 'PAUSED',
+  TaskStatus.restore: 'RESTORE',
   TaskStatus.stuck: 'STUCK',
   TaskStatus.completed: 'COMPLETED',
   TaskStatus.abandoned: 'ABANDONED',

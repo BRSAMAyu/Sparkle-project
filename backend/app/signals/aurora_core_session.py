@@ -25,7 +25,104 @@ from loguru import logger
 
 from app.signals.types import AuroraAgenda, AuroraAgendaItem, _uid
 
+# ── AuroraCoreSessionEntryReason ───────────────────────────────────
+
+_TRIGGER_SOURCE_LABELS: dict[str, str] = {
+    "status_bar": "状态带提示",
+    "status_bar_correction_chip": "状态带纠错",
+    "chat_correction_chip": "聊天里的纠错反馈",
+    "checkpoint_card": "阶段检查提醒",
+    "task_stuck_prompt": "任务卡点提示",
+    "user_initiated": "你主动打开的校准入口",
+}
+
+_WAKE_REASON_LABELS: dict[str, str] = {
+    "task_time_overrun": "最近的任务用时明显超过预估",
+    "repeated_mistake_cluster": "同一类错误重复出现",
+    "state_conflict": "你的实际推进和我之前的判断不一致",
+    "self_model_confidence_drop": "我对当前判断的置信度下降",
+    "plan_drift": "当前计划开始偏离原来的目标",
+    "user_distress": "你最近的状态压力偏高",
+    "standard_layer_uncertainty": "普通对话层不足以稳妥处理这个判断",
+    "checkpoint_due": "现在到了适合复盘进度的检查点",
+    "task_stuck": "当前任务出现了明确卡点",
+}
+
+
+@dataclass
+class AuroraCoreSessionEntryReason:
+    """Standardized entry protocol for any Aurora Core Session trigger."""
+
+    trigger_source: str
+    observed_signals: list[str] = field(default_factory=list)
+    suggested_agenda_preview: list[str] = field(default_factory=list)
+    why_now: str = ""
+    estimated_minutes: int = 3
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any] | None) -> AuroraCoreSessionEntryReason | None:
+        if not data:
+            return None
+        return cls(
+            trigger_source=str(data.get("trigger_source") or "user_initiated"),
+            observed_signals=[str(item).strip() for item in data.get("observed_signals", []) if str(item).strip()][:5],
+            suggested_agenda_preview=[
+                str(item).strip() for item in data.get("suggested_agenda_preview", []) if str(item).strip()
+            ][:5],
+            why_now=str(data.get("why_now") or "").strip(),
+            estimated_minutes=max(1, min(10, int(data.get("estimated_minutes") or 3))),
+        )
+
+    @classmethod
+    def from_context(
+        cls,
+        *,
+        trigger_source: str,
+        wake_reason: str = "",
+        wake_reasons: list[str] | None = None,
+        active_states: list[dict[str, Any]] | None = None,
+        current_plan_summary: str = "",
+    ) -> AuroraCoreSessionEntryReason:
+        raw_reasons = [wake_reason, *(wake_reasons or [])]
+        observed = [_WAKE_REASON_LABELS.get(reason, reason.replace("_", " ")) for reason in raw_reasons if reason]
+        for state in active_states or []:
+            key = str(state.get("state_key") or "").strip()
+            value = str(state.get("value") or "").strip()
+            if key and value:
+                observed.append(f"{key} 现在显示为 {value}")
+        if not observed and current_plan_summary:
+            observed.append(current_plan_summary)
+        why_now = _TRIGGER_SOURCE_LABELS.get(trigger_source, trigger_source.replace("_", " "))
+        if observed:
+            why_now = f"{why_now}里出现了需要当场校准的信号"
+        return cls(
+            trigger_source=trigger_source,
+            observed_signals=observed[:5],
+            suggested_agenda_preview=["先确认我看到的信号", "再校准接下来的策略"],
+            why_now=why_now,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "trigger_source": self.trigger_source,
+            "observed_signals": self.observed_signals,
+            "suggested_agenda_preview": self.suggested_agenda_preview,
+            "why_now": self.why_now,
+            "estimated_minutes": self.estimated_minutes,
+        }
+
+    def opening_message(self) -> str:
+        observed = "、".join(self.observed_signals[:3]) if self.observed_signals else "这里有一个判断需要重新确认"
+        why_now = (self.why_now or "现在校准一下，后面的推进会更贴近你的真实情况").rstrip("。！？.!?")
+        return (
+            f"我注意到你最近{observed}。"
+            f"现在聊这个是因为{why_now}。"
+            f"这大概需要 {self.estimated_minutes} 分钟，你也可以随时暂停或跳过。"
+        )
+
+
 # ── AuroraCaseFile ──────────────────────────────────────────────────
+
 
 @dataclass
 class AuroraCaseFile:
@@ -44,6 +141,7 @@ class AuroraCaseFile:
     relationship_notes: list[str] = field(default_factory=list)
     suggested_questions: list[str] = field(default_factory=list)
     wake_reason: str = ""
+    entry_reason: AuroraCoreSessionEntryReason | None = None
     created_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
@@ -61,15 +159,18 @@ class AuroraCaseFile:
             "relationship_notes": self.relationship_notes,
             "suggested_questions": self.suggested_questions,
             "wake_reason": self.wake_reason,
+            "entry_reason": self.entry_reason.to_dict() if self.entry_reason else None,
             "created_at": self.created_at,
         }
 
 
 # ── SessionClosure ──────────────────────────────────────────────────
 
+
 @dataclass
 class StatePatch:
     """A single state change from Aurora calibration."""
+
     state_key: str
     old_value: str
     new_value: str
@@ -89,6 +190,7 @@ class StatePatch:
 @dataclass
 class PolicyChange:
     """A policy strategy change from Aurora calibration."""
+
     signal_state_key: str
     old_strategy: str
     new_strategy: str
@@ -106,10 +208,12 @@ class PolicyChange:
 @dataclass
 class SessionClosure:
     """Output of a completed Aurora Core Session."""
+
     session_id: str
     state_patches: list[StatePatch] = field(default_factory=list)
     policy_changes: list[PolicyChange] = field(default_factory=list)
     directives_to_regenerate: list[str] = field(default_factory=list)
+    next_changes: list[str] = field(default_factory=list)
     user_visible_summary: str = ""
     aurora_returns_to_background: bool = True
     model_write_candidates: list[dict[str, Any]] = field(default_factory=list)
@@ -120,6 +224,7 @@ class SessionClosure:
             "state_patches": [p.to_dict() for p in self.state_patches],
             "policy_changes": [p.to_dict() for p in self.policy_changes],
             "directives_to_regenerate": self.directives_to_regenerate,
+            "next_changes": self.next_changes,
             "user_visible_summary": self.user_visible_summary,
             "aurora_returns_to_background": self.aurora_returns_to_background,
             "model_write_candidates": self.model_write_candidates,
@@ -128,9 +233,11 @@ class SessionClosure:
 
 # ── PredictedReplyOption ────────────────────────────────────────────
 
+
 @dataclass
 class PredictedReplyOption:
     """A predicted reply option for an agenda item. Always includes free-text."""
+
     option_id: str
     label: str
     expected_effect: str = ""  # what happens if user picks this
@@ -153,8 +260,8 @@ _SESSION_TTL = 24 * 3600  # 24h
 
 # Session lifecycle transitions — only these transitions are valid
 _SESSION_TRANSITIONS: dict[str, set[str]] = {
-    "active":    {"paused", "completed"},
-    "paused":    {"active", "completed", "abandoned"},
+    "active": {"paused", "completed"},
+    "paused": {"active", "completed", "abandoned"},
     "completed": {"reflected"},
     "reflected": set(),
     "abandoned": set(),
@@ -178,14 +285,29 @@ class AuroraCoreSessionService:
         goal_summary: str,
         current_plan_summary: str,
         wake_reason: str,
+        entry_reason: AuroraCoreSessionEntryReason | dict[str, Any] | None = None,
+        trigger_source: str = "user_initiated",
         active_states: list[dict[str, Any]] | None = None,
         recent_outcomes: list[dict[str, Any]] | None = None,
         recent_corrections: list[dict[str, Any]] | None = None,
+        wake_reasons: list[str] | None = None,
     ) -> AuroraCaseFile:
         """Build a case file from current context."""
         active_states = active_states or []
         recent_outcomes = recent_outcomes or []
         recent_corrections = recent_corrections or []
+        if isinstance(entry_reason, AuroraCoreSessionEntryReason):
+            normalized_entry_reason = entry_reason
+        else:
+            normalized_entry_reason = AuroraCoreSessionEntryReason.from_dict(entry_reason)
+        if normalized_entry_reason is None:
+            normalized_entry_reason = AuroraCoreSessionEntryReason.from_context(
+                trigger_source=trigger_source,
+                wake_reason=wake_reason,
+                wake_reasons=wake_reasons,
+                active_states=active_states,
+                current_plan_summary=current_plan_summary,
+            )
 
         hypotheses: list[str] = []
         conflicts: list[str] = []
@@ -207,7 +329,8 @@ class AuroraCoreSessionService:
 
         failures = [
             {"outcome": o.get("attribution", ""), "strategy": o.get("strategy", "")}
-            for o in recent_outcomes if o.get("attribution") == "insufficient"
+            for o in recent_outcomes
+            if o.get("attribution") == "insufficient"
         ][-5:]
 
         return AuroraCaseFile(
@@ -220,6 +343,7 @@ class AuroraCoreSessionService:
             active_hypotheses=hypotheses,
             conflicts_to_resolve=conflicts,
             wake_reason=wake_reason,
+            entry_reason=normalized_entry_reason,
         )
 
     def build_agenda_from_case_file(
@@ -231,60 +355,83 @@ class AuroraCoreSessionService:
         items: list[AuroraAgendaItem] = []
 
         # Item 1: Enter session
-        items.append(AuroraAgendaItem(
-            item_id=_uid("ai"),
-            item_type="enter_session",
-            status="pending",
-            payload={
-                "message": "我需要重新校准一个判断。" if case_file.conflicts_to_resolve else "我想跟你确认一下当前的方向。",
-            },
-        ))
+        items.append(
+            AuroraAgendaItem(
+                item_id=_uid("ai"),
+                item_type="enter_session",
+                status="pending",
+                payload={
+                    "message": (
+                        case_file.entry_reason.opening_message()
+                        if case_file.entry_reason
+                        else (
+                            "我需要重新校准一个判断。"
+                            if case_file.conflicts_to_resolve
+                            else "我想跟你确认一下当前的方向。"
+                        )
+                    ),
+                    "entry_reason": case_file.entry_reason.to_dict() if case_file.entry_reason else None,
+                },
+            )
+        )
 
         # Item 2: Explain conflict
         if case_file.conflicts_to_resolve:
             conflict_text = case_file.conflicts_to_resolve[0]
-            items.append(AuroraAgendaItem(
-                item_id=_uid("ai"),
-                item_type="explain_conflict",
-                status="pending",
-                payload={
-                    "message": f"我之前{case_file.active_hypotheses[0] if case_file.active_hypotheses else '做了一个判断'}，但你的反馈说明可能是{conflict_text}。",
-                },
-            ))
+            items.append(
+                AuroraAgendaItem(
+                    item_id=_uid("ai"),
+                    item_type="explain_conflict",
+                    status="pending",
+                    payload={
+                        "message": f"我之前{case_file.active_hypotheses[0] if case_file.active_hypotheses else '做了一个判断'}，但你的反馈说明可能是{conflict_text}。",
+                    },
+                )
+            )
 
         # Item 3: Ask confirmation
-        items.append(AuroraAgendaItem(
-            item_id=_uid("ai"),
-            item_type="ask_confirmation",
-            status="pending",
-            payload={
-                "question": "更接近哪一种？",
-                "options": [
-                    PredictedReplyOption(_uid("opt"), "确实任务太大", "保持缩短任务策略").to_dict(),
-                    PredictedReplyOption(_uid("opt"), "不是任务大，是我不会", "切换到 worked_example 策略").to_dict(),
-                    PredictedReplyOption(_uid("opt"), "只是这几天忙", "临时调整，不改变长期策略").to_dict(),
-                    PredictedReplyOption(_uid("opt"), "都不对，我解释一下", "等待用户自由输入", is_free_text=True).to_dict(),
-                ],
-            },
-        ))
+        items.append(
+            AuroraAgendaItem(
+                item_id=_uid("ai"),
+                item_type="ask_confirmation",
+                status="pending",
+                payload={
+                    "question": "更接近哪一种？",
+                    "options": [
+                        PredictedReplyOption(_uid("opt"), "确实任务太大", "保持缩短任务策略").to_dict(),
+                        PredictedReplyOption(
+                            _uid("opt"), "不是任务大，是我不会", "切换到 worked_example 策略"
+                        ).to_dict(),
+                        PredictedReplyOption(_uid("opt"), "只是这几天忙", "临时调整，不改变长期策略").to_dict(),
+                        PredictedReplyOption(
+                            _uid("opt"), "都不对，我解释一下", "等待用户自由输入", is_free_text=True
+                        ).to_dict(),
+                    ],
+                },
+            )
+        )
 
         # Item 4: Apply update
-        items.append(AuroraAgendaItem(
-            item_id=_uid("ai"),
-            item_type="apply_update",
-            status="pending",
-            payload={"expected_state_patch": {}},
-        ))
+        items.append(
+            AuroraAgendaItem(
+                item_id=_uid("ai"),
+                item_type="apply_update",
+                status="pending",
+                payload={"expected_state_patch": {}},
+            )
+        )
 
         # Item 5: Close session
-        items.append(AuroraAgendaItem(
-            item_id=_uid("ai"),
-            item_type="close_session",
-            status="pending",
-            payload={
-                "message": "好的，我更新了判断。接下来的任务会按新的理解来安排。",
-            },
-        ))
+        items.append(
+            AuroraAgendaItem(
+                item_id=_uid("ai"),
+                item_type="close_session",
+                status="pending",
+                payload={
+                    "message": "好的，我更新了判断。接下来的任务会按新的理解来安排。",
+                },
+            )
+        )
 
         scope_desc = case_file.conflicts_to_resolve[0] if case_file.conflicts_to_resolve else case_file.wake_reason
 
@@ -329,7 +476,9 @@ class AuroraCoreSessionService:
 
         logger.info(
             "AuroraCoreSession: created session={} user={} type={}",
-            agenda.session_id, user_id, case_file.wake_reason,
+            agenda.session_id,
+            user_id,
+            case_file.wake_reason,
         )
         return session_data
 
@@ -415,7 +564,9 @@ class AuroraCoreSessionService:
 
         logger.info(
             "AuroraCoreSession: closed session={} patches={} policy_changes={}",
-            session_id, len(closure.state_patches), len(closure.policy_changes),
+            session_id,
+            len(closure.state_patches),
+            len(closure.policy_changes),
         )
         return session
 
@@ -437,7 +588,9 @@ class AuroraCoreSessionService:
         if new_status not in valid_next:
             logger.warning(
                 "AuroraCoreSession: invalid transition {} → {} for session={}",
-                current, new_status, session_id,
+                current,
+                new_status,
+                session_id,
             )
             return None
 
@@ -468,7 +621,9 @@ class AuroraCoreSessionService:
 
         logger.info(
             "AuroraCoreSession: transitioned session={} {} → {}",
-            session_id, current, new_status,
+            session_id,
+            current,
+            new_status,
         )
         return session
 
@@ -504,7 +659,4 @@ class AuroraCoreSessionService:
 
     def get_reply_count(self, session: dict[str, Any]) -> int:
         """Count how many agenda items have been completed."""
-        return sum(
-            1 for item in session.get("agenda", {}).get("agenda_items", [])
-            if item.get("status") == "done"
-        )
+        return sum(1 for item in session.get("agenda", {}).get("agenda_items", []) if item.get("status") == "done")

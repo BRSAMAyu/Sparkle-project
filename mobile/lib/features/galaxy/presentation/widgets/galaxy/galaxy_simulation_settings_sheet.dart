@@ -39,12 +39,15 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
     final maxSheetHeight = MediaQuery.of(context).size.height * 0.82;
     final backgroundColor = isDarkMode
         ? const Color(0xEE0E1523)
-        : Colors.white.withValues(alpha: 0.95);
+        : DS.neutral0.withValues(alpha: 0.95);
     final borderColor = isDarkMode
-        ? Colors.white.withValues(alpha: 0.1)
-        : Colors.black.withValues(alpha: 0.08);
-    final titleColor = isDarkMode ? Colors.white : Colors.black87;
-    final bodyColor = isDarkMode ? Colors.white70 : Colors.black54;
+        ? DS.neutral0.withValues(alpha: 0.1)
+        : DS.galaxyShadow.withValues(alpha: 0.08);
+    final titleColor =
+        isDarkMode ? DS.neutral0 : DS.neutral900.withValues(alpha: 0.87);
+    final bodyColor = isDarkMode
+        ? DS.neutral0.withValues(alpha: 0.7)
+        : DS.neutral900.withValues(alpha: 0.54);
 
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
@@ -68,7 +71,8 @@ class GalaxySimulationSettingsSheet extends StatelessWidget {
             border: Border(top: BorderSide(color: borderColor)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDarkMode ? 0.26 : 0.08),
+                color:
+                    DS.galaxyShadow.withValues(alpha: isDarkMode ? 0.26 : 0.08),
                 blurRadius: 26,
                 offset: const Offset(0, -8),
               ),
@@ -260,7 +264,9 @@ class _SectionTitle extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: isDarkMode ? Colors.white : Colors.black87,
+                    color: isDarkMode
+                        ? DS.neutral0
+                        : DS.neutral900.withValues(alpha: 0.87),
                     fontWeight: FontWeight.w800,
                   ),
             ),
@@ -268,7 +274,9 @@ class _SectionTitle extends StatelessWidget {
             Text(
               subtitle,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: isDarkMode ? Colors.white60 : Colors.black54,
+                    color: isDarkMode
+                        ? DS.neutral0.withValues(alpha: 0.6)
+                        : DS.neutral900.withValues(alpha: 0.54),
                     height: 1.35,
                   ),
             ),
@@ -376,8 +384,12 @@ class _ExpandablePanel extends StatelessWidget {
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 14),
           childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-          iconColor: isDarkMode ? Colors.white70 : colorScheme.primary,
-          collapsedIconColor: isDarkMode ? Colors.white54 : colorScheme.primary,
+          iconColor: isDarkMode
+              ? DS.neutral0.withValues(alpha: 0.7)
+              : colorScheme.primary,
+          collapsedIconColor: isDarkMode
+              ? DS.neutral0.withValues(alpha: 0.54)
+              : colorScheme.primary,
           title: Text(
             title,
             style: Theme.of(context).textTheme.titleSmall?.copyWith(

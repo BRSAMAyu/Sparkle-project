@@ -733,18 +733,30 @@ class PlanningWorkflowManager:
     ) -> None:
         state = await self._load_onboarding_state(conversation_id)
         collected = _as_dict(state.get("collected"))
-        if collected:
-            await self._persist_profile_payload(
-                db=db,
-                user_id=user_id,
-                key=PLANNING_PROFILE_KEYS["cold_start_context"],
-                value=self._build_cold_start_context(collected),
-            )
+        cold_start = self._build_cold_start_context(collected)
+        cold_start.update(
+            {
+                "source": "onboarding_skip",
+                "skipped": True,
+                "safe_default": not bool(collected),
+            }
+        )
+        await self._persist_profile_payload(
+            db=db,
+            user_id=user_id,
+            key=PLANNING_PROFILE_KEYS["cold_start_context"],
+            value=cold_start,
+        )
         await self._persist_profile_payload(
             db=db,
             user_id=user_id,
             key=PLANNING_PROFILE_KEYS["onboarding_modeling_state"],
-            value={"completed": False, "skipped": True, "conversation_id": conversation_id},
+            value={
+                "completed": False,
+                "skipped": True,
+                "conversation_id": conversation_id,
+                "safe_default": not bool(collected),
+            },
         )
         await self._save_onboarding_state(conversation_id, {})
 
@@ -808,6 +820,27 @@ class PlanningWorkflowManager:
                     value=self._build_cold_start_context(session.collected),
                 )
             if auto_generate_from_modeling:
+                try:
+                    from app.services.north_star_metrics_service import (
+                        NorthStarMetricsService,
+                        NorthStarMetricType,
+                    )
+
+                    await NorthStarMetricsService(db).record_cold_start_milestone(
+                        user_id=user_id,
+                        milestone=NorthStarMetricType.FIRST_PLAN_REQUESTED,
+                        source="modeling_complete_bridge",
+                        payload={
+                            "planning_session_id": session.planning_session_id,
+                            "goal_type": _strip(session.collected.get("goal_type")),
+                            "subject": _strip(session.collected.get("subject") or session.collected.get("exam_scope")),
+                            "cold_start_completeness": self._build_cold_start_context(session.collected).get(
+                                "completeness"
+                            ),
+                        },
+                    )
+                except Exception as exc:
+                    logger.warning("Failed to record first plan North Star metric for user {}: {}", user_id, exc)
                 return await self._handle_generating(
                     db=db,
                     user_id=user_id,
@@ -2534,6 +2567,7 @@ class PlanningWorkflowManager:
                     "scheduled_start_time",
                     "scheduled_end_time",
                     "calendar_avoidance",
+                    "calendar_capacity_receipt",
                     "target_date",
                     "date",
                 }
@@ -2543,6 +2577,8 @@ class PlanningWorkflowManager:
             guide_json["calendar_avoidance"] = _as_dict((day_spec or {}).get("calendar_avoidance"))
             guide_json["scheduled_start_time"] = _strip((day_spec or {}).get("scheduled_start_time"))
             guide_json["scheduled_end_time"] = _strip((day_spec or {}).get("scheduled_end_time"))
+        if (day_spec or {}).get("calendar_capacity_receipt"):
+            guide_json["calendar_capacity_receipt"] = _as_dict((day_spec or {}).get("calendar_capacity_receipt"))
         if (day_spec or {}).get("compressed"):
             guide_json["compressed"] = True
             guide_json["compression_reason"] = _strip((day_spec or {}).get("compression_reason"))
@@ -4649,6 +4685,9 @@ class PlanningWorkflowManager:
             return specs
 
         today = _utcnow().date()
+        capacity = _as_dict(calendar_context.get("capacity_summary"))
+        available_by_date = _as_dict(calendar_context.get("available_minutes_by_date"))
+        lower_intensity = _strip(capacity.get("planning_intensity_hint")) == "lower"
         scheduled_specs: list[dict[str, Any]] = []
         for raw_spec in specs:
             spec = dict(raw_spec)
@@ -4657,6 +4696,27 @@ class PlanningWorkflowManager:
             if not target_date:
                 target_date = (today + timedelta(days=max(day_number - 1, 0))).isoformat()
                 spec["target_date"] = target_date
+            available_minutes = _safe_int(available_by_date.get(target_date))
+            current_minutes = _safe_int(spec.get("estimated_minutes")) or 60
+            if lower_intensity and available_minutes is not None and current_minutes > max(30, available_minutes):
+                adjusted_minutes = max(30, min(current_minutes, available_minutes))
+                spec["estimated_minutes"] = adjusted_minutes
+                receipt = {
+                    "applied": True,
+                    "reason": (
+                        "未来 3 天日程较满，已降低当天任务强度，避免把时间压力误判成执行力问题。"
+                    ),
+                    "available_minutes": available_minutes,
+                    "original_estimated_minutes": current_minutes,
+                    "adjusted_estimated_minutes": adjusted_minutes,
+                }
+                spec["calendar_capacity_receipt"] = receipt
+                method_steps = [_strip(item) for item in list(spec.get("method_steps") or []) if _strip(item)]
+                note = receipt["reason"]
+                if note not in method_steps:
+                    method_steps.append(note)
+                if method_steps:
+                    spec["method_steps"] = method_steps
             if spec.get("scheduled_start_time") and spec.get("scheduled_end_time"):
                 scheduled_specs.append(spec)
                 continue
@@ -4861,23 +4921,41 @@ class PlanningWorkflowManager:
             return f"每天约 {minutes} 分钟"
         return ""
 
+    @staticmethod
+    def _normalize_onboarding_baseline(value: Any) -> str:
+        text = _strip(value)
+        mapping = {
+            "zero": "完全没学过",
+            "near_zero": "完全没学过",
+            "beginner": "完全没学过",
+            "class_only": "上过课但没复习",
+            "intermediate": "上过课但没复习",
+            "partial": "已经学过一部分",
+            "advanced": "已经学过一部分",
+        }
+        return mapping.get(text, text)
+
     def _build_cold_start_context(self, collected: dict[str, Any]) -> dict[str, Any]:
+        subject = _strip(collected.get("subject"))
+        exam_scope = _strip(collected.get("exam_scope"))
+        goal_type = _strip(collected.get("goal_type")) or ("exam" if subject or exam_scope else "learning")
+        baseline = self._normalize_onboarding_baseline(collected.get("knowledge_baseline"))
         fields = [
             bool(_strip(collected.get("goal_raw") or collected.get("primary_goal_description"))),
-            bool(_strip(collected.get("subject") or collected.get("exam_scope"))),
+            bool(subject or exam_scope),
             bool(_safe_int(collected.get("time_constraint_days"))),
-            bool(_strip(collected.get("knowledge_baseline"))),
+            bool(baseline),
             bool(_safe_int(collected.get("daily_available_hours"))),
         ]
         completeness = round(sum(1 for item in fields if item) / len(fields), 2)
         return {
             "primary_goal_description": _strip(collected.get("goal_raw") or collected.get("primary_goal_description")),
-            "goal_type": "exam",
-            "subject": _strip(collected.get("subject")),
-            "exam_scope": _strip(collected.get("exam_scope")),
+            "goal_type": goal_type,
+            "subject": subject,
+            "exam_scope": exam_scope,
             "exam_date": _strip(collected.get("exam_date")),
             "time_constraint_days": _safe_int(collected.get("time_constraint_days")) or 7,
-            "knowledge_baseline": _strip(collected.get("knowledge_baseline")),
+            "knowledge_baseline": baseline,
             "daily_available_hours": _safe_int(collected.get("daily_available_hours")) or 0,
             "blocked_days": collected.get("blocked_days") or [],
             "available_materials": collected.get("available_materials") or [],
@@ -4895,6 +4973,8 @@ class PlanningWorkflowManager:
             EXAM_SPRINT_FAST_TRACK_FLAG: bool(collected.get(EXAM_SPRINT_FAST_TRACK_FLAG)),
             "collected_at": _utcnow().isoformat(),
             "completeness": completeness,
+            "source": "onboarding_modeling",
+            "assumptions_correctable": True,
         }
 
     async def _persist_profile_payload(
@@ -4956,13 +5036,20 @@ class PlanningWorkflowManager:
         elif turn == 2:
             day_match = re.search(r"(\d+)\s*(天|day|days|周)", lowered)
             if day_match:
-                collected["time_constraint_days"] = int(day_match.group(1))
+                days = int(day_match.group(1))
+                if "周" in day_match.group(2):
+                    days *= 7
+                collected["time_constraint_days"] = days
+            elif "两周" in lowered or "俩周" in lowered:
+                collected["time_constraint_days"] = 14
+            elif "一周" in lowered:
+                collected["time_constraint_days"] = 7
             if any(token in lowered for token in ("没学过", "零基础", "完全不会")):
-                collected["knowledge_baseline"] = "zero"
+                collected["knowledge_baseline"] = "完全没学过"
             elif any(token in lowered for token in ("上过课", "没复习", "忘了")):
-                collected["knowledge_baseline"] = "class_only"
+                collected["knowledge_baseline"] = "上过课但没复习"
             elif any(token in lowered for token in ("会一些", "学过一些", "一半")):
-                collected["knowledge_baseline"] = "partial"
+                collected["knowledge_baseline"] = "已经学过一部分"
         elif turn == 3:
             time_match = re.search(r"(\d+(?:\.\d+)?)\s*(小时|h|hour)", lowered)
             minute_match = re.search(r"(\d+)\s*分钟", lowered)
@@ -4984,9 +5071,10 @@ class PlanningWorkflowManager:
 
     def _build_onboarding_summary(self, collected: dict[str, Any]) -> str:
         subject = _strip(collected.get("subject") or "这个目标")
-        baseline = _strip(collected.get("knowledge_baseline") or "当前基础")
+        baseline = self._normalize_onboarding_baseline(collected.get("knowledge_baseline")) or "当前基础"
         hours = _safe_int(collected.get("daily_available_hours")) or 0
+        time_copy = f"每天大概能拿出 {hours} 小时" if hours else "时间安排还不确定"
         return (
             f"好，我大概了解了：你现在主要想推进的是「{subject}」，目前属于 {baseline} 状态，"
-            f"每天大概能拿出 {hours} 小时。等你开始规划的时候，我会按这个节奏帮你定制方案。"
+            f"{time_copy}。等你开始规划的时候，我会按这个节奏帮你定制方案；这些判断之后都可以改。"
         )

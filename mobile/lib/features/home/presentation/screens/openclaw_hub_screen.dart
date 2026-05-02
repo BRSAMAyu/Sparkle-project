@@ -5,17 +5,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/openclaw_automation_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/features/home/presentation/widgets/openclaw_automation_panel.dart';
 import 'package:sparkle/features/home/presentation/widgets/openclaw_connection_diagnostics_sheet.dart';
 import 'package:sparkle/features/home/presentation/widgets/openclaw_node_management_panel.dart';
+import 'package:sparkle/features/openclaw/presentation/providers/openclaw_module_provider.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/settings/presentation/widgets/openclaw_connection_panel.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 enum OpenClawHubSection {
   overview,
@@ -156,7 +157,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
     if (!service.isConnected) {
       _showSnackBar(
         service.hasExecutionPermissionIssue
-            ?             context.l10n.openclawHubGatewayNoPermission
+            ? context.l10n.openclawHubGatewayNoPermission
             : service.hasExecutionEndpointIssue
                 ? context.l10n.openclawHubEndpointUnavailable
                 : context.l10n.openclawHubEngineNotConnected,
@@ -168,7 +169,9 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
         await ref.read(taskListProvider.notifier).drainQueuedAiHandoffs();
     if (!mounted) return;
     _showSnackBar(
-      dispatched > 0 ? context.l10n.openclawHubRetryQueuedSuccess(dispatched) : context.l10n.openclawHubNoRetryQueuedItems,
+      dispatched > 0
+          ? context.l10n.openclawHubRetryQueuedSuccess(dispatched)
+          : context.l10n.openclawHubNoRetryQueuedItems,
     );
   }
 
@@ -193,6 +196,19 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => OpenClawConnectionDiagnosticsSheet(service: service),
     );
+  }
+
+  Future<void> _openSetupGuide(Uri setupGuideUrl) async {
+    final opened = await launchUrl(
+      setupGuideUrl,
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened && mounted) {
+      _showSnackBar(
+        context.l10n.openclawHubSetupGuideUnavailable,
+        isError: true,
+      );
+    }
   }
 
   Color _statusIndicatorColor(OpenClawConnectionService connection) {
@@ -243,6 +259,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
   Widget build(BuildContext context) {
     final connection = ref.watch(openClawConnectionProvider);
     final automation = ref.watch(openClawAutomationProvider);
+    final moduleState = ref.watch(openClawModuleProvider);
     final taskState = ref.watch(taskListProvider);
     final info = connection.info;
 
@@ -307,8 +324,10 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
       (true, _, _, _, _) => context.l10n.openclawHubOverviewGatewayNoPermission,
       (false, true, _, _, _) => context.l10n.openclawHubOverviewEndpointIssue,
       (false, false, true, _, _) => context.l10n.openclawHubOverviewReady,
-      (false, false, false, true, _) => context.l10n.openclawHubOverviewTasksWaiting,
-      (false, false, false, false, true) => context.l10n.openclawHubOverviewConfigSaved,
+      (false, false, false, true, _) =>
+        context.l10n.openclawHubOverviewTasksWaiting,
+      (false, false, false, false, true) =>
+        context.l10n.openclawHubOverviewConfigSaved,
       _ => context.l10n.openclawHubOverviewConnectFirst,
     };
     final overviewSubtitle = switch ((
@@ -323,10 +342,13 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
       (false, true, _, _, _) =>
         context.l10n.openclawHubOverviewEndpointIssueDesc,
       (false, false, true, true, _) =>
-        context.l10n.openclawHubLastExecutionStatus(latestIntent?.statusLabel ?? context.l10n.openclawHubStatusRecorded),
-      (false, false, true, false, _) => context.l10n.openclawHubOverviewConnectedDesc,
-      (false, false, false, _, true) =>
-        context.l10n.openclawHubPendingDelegationsDesc(connection.queuedRequestCount),
+        context.l10n.openclawHubLastExecutionStatus(
+          latestIntent?.statusLabel ?? context.l10n.openclawHubStatusRecorded,
+        ),
+      (false, false, true, false, _) =>
+        context.l10n.openclawHubOverviewConnectedDesc,
+      (false, false, false, _, true) => context.l10n
+          .openclawHubPendingDelegationsDesc(connection.queuedRequestCount),
       _ => context.l10n.openclawHubOverviewDefaultDesc,
     };
     final primaryActionHint = switch ((
@@ -337,9 +359,12 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
     )) {
       (true, _, _, _) => context.l10n.openclawHubActionHintPermission,
       (false, true, _, _) => context.l10n.openclawHubActionHintEndpoint,
-      (false, false, true, true) => context.l10n.openclawHubActionHintRetryQueue,
-      (false, false, false, true) => context.l10n.openclawHubActionHintReconnect,
-      (false, false, true, false) => context.l10n.openclawHubActionHintNewDelegation,
+      (false, false, true, true) =>
+        context.l10n.openclawHubActionHintRetryQueue,
+      (false, false, false, true) =>
+        context.l10n.openclawHubActionHintReconnect,
+      (false, false, true, false) =>
+        context.l10n.openclawHubActionHintNewDelegation,
       _ => context.l10n.openclawHubActionHintCompleteConnection,
     };
 
@@ -402,7 +427,8 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     label: connection.hasExecutionPermissionIssue
                         ? context.l10n.openclawHubMetricConnectedNoPermission
                         : connection.hasExecutionEndpointIssue
-                            ? context.l10n.openclawHubMetricConnectedEndpointIssue
+                            ? context
+                                .l10n.openclawHubMetricConnectedEndpointIssue
                             : isGatewayReachable
                                 ? context.l10n.openclawHubMetricConnected
                                 : context.l10n.openclawHubMetricNotConnected,
@@ -416,7 +442,9 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                   ),
                   OpenClawMetricPill(
                     icon: Icons.schedule_rounded,
-                    label: context.l10n.openclawHubQueuedTasksCount(connection.queuedRequestCount),
+                    label: context.l10n.openclawHubQueuedTasksCount(
+                      connection.queuedRequestCount,
+                    ),
                     tone: connection.queuedRequestCount > 0
                         ? OpenClawVisualTone.offline
                         : OpenClawVisualTone.active,
@@ -439,7 +467,9 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     icon: connection.config.isPaired
                         ? Icons.devices_rounded
                         : Icons.key_rounded,
-                    label: connection.config.isPaired ? context.l10n.openclawHubMetricPairedDevice : context.l10n.openclawHubMetricTokenAuth,
+                    label: connection.config.isPaired
+                        ? context.l10n.openclawHubMetricPairedDevice
+                        : context.l10n.openclawHubMetricTokenAuth,
                     tone: connection.config.isPaired
                         ? OpenClawVisualTone.connected
                         : OpenClawVisualTone.attention,
@@ -461,7 +491,8 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                             () => setState(() => _connectionExpanded = true),
                           ),
                           icon: const Icon(Icons.settings_rounded),
-                          label: Text(context.l10n.openclawHubButtonContinueSetup),
+                          label:
+                              Text(context.l10n.openclawHubButtonContinueSetup),
                         ),
                         OutlinedButton.icon(
                           onPressed: () => _focusSection(
@@ -489,6 +520,17 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                           icon: const Icon(Icons.task_alt_rounded),
                           label: Text(context.l10n.openclawHubButtonViewTasks),
                         ),
+                        if (moduleState.needsSetup ||
+                            moduleState.needsAttention)
+                          TextButton.icon(
+                            onPressed: () => unawaited(
+                              _openSetupGuide(moduleState.setupGuideUrl),
+                            ),
+                            icon: const Icon(Icons.menu_book_rounded),
+                            label: Text(
+                              context.l10n.openclawHubButtonOpenSetupGuide,
+                            ),
+                          ),
                       ],
                     ),
                     const SizedBox(height: DS.spacing12),
@@ -499,6 +541,17 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                             color: DS.textPrimary,
                           ),
                     ),
+                    if (moduleState.isLoading) ...[
+                      const SizedBox(height: DS.spacing10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          minHeight: 4,
+                          backgroundColor: DS.surfaceSecondary,
+                          color: DS.info,
+                        ),
+                      ),
+                    ],
                     if ((info.capabilities ?? const []).isNotEmpty) ...[
                       const SizedBox(height: DS.spacing10),
                       Wrap(
@@ -538,7 +591,9 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     ? OpenClawVisualTone.connected
                     : OpenClawVisualTone.attention,
                 expanded: _connectionExpanded,
-                toggleLabel: _connectionExpanded ? context.l10n.openclawHubCollapseConnectionEdit : context.l10n.openclawHubExpandConnectionEdit,
+                toggleLabel: _connectionExpanded
+                    ? context.l10n.openclawHubCollapseConnectionEdit
+                    : context.l10n.openclawHubExpandConnectionEdit,
                 onToggle: () {
                   setState(() => _connectionExpanded = !_connectionExpanded);
                 },
@@ -552,7 +607,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                         OpenClawMetricPill(
                           icon: Icons.public_rounded,
                           label: connection.config.isConfigured
-                               ? connection.config.normalizedGatewayUrl
+                              ? connection.config.normalizedGatewayUrl
                               : context.l10n.openclawHubGatewayUrlEmpty,
                           tone: connection.config.isConfigured
                               ? OpenClawVisualTone.active
@@ -579,12 +634,16 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                       connection.hasExecutionPermissionIssue
                           ? context.l10n.openclawHubConnectionSummaryPermission
                           : connection.hasExecutionEndpointIssue
-                              ? context.l10n.openclawHubConnectionSummaryEndpoint
+                              ? context
+                                  .l10n.openclawHubConnectionSummaryEndpoint
                               : connection.isConnected
-                                  ? context.l10n.openclawHubConnectionSummaryConnected
+                                  ? context.l10n
+                                      .openclawHubConnectionSummaryConnected
                                   : connection.config.isConfigured
-                                      ? context.l10n.openclawHubConnectionSummaryConfigured
-                                      : context.l10n.openclawHubConnectionSummaryFirstTime,
+                                      ? context.l10n
+                                          .openclawHubConnectionSummaryConfigured
+                                      : context.l10n
+                                          .openclawHubConnectionSummaryFirstTime,
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,
@@ -604,13 +663,17 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     ? OpenClawVisualTone.active
                     : OpenClawVisualTone.offline,
                 expanded: _devicesExpanded,
-                toggleLabel: _devicesExpanded ? context.l10n.openclawHubCollapseDeviceDetails : context.l10n.openclawHubExpandDeviceDetails,
+                toggleLabel: _devicesExpanded
+                    ? context.l10n.openclawHubCollapseDeviceDetails
+                    : context.l10n.openclawHubExpandDeviceDetails,
                 onToggle: () {
                   setState(() => _devicesExpanded = !_devicesExpanded);
                 },
                 summary: Text(
                   (info.nodeCount ?? 0) > 0
-                      ? context.l10n.openclawHubDevicesSummaryActiveWithCount(info.nodeCount!)
+                      ? context.l10n.openclawHubDevicesSummaryActiveWithCount(
+                          info.nodeCount!,
+                        )
                       : context.l10n.openclawHubDevicesSummaryEmpty,
                   style: DS.bodySmall.copyWith(
                     color: DS.textSecondary,
@@ -629,7 +692,9 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     ? OpenClawVisualTone.offline
                     : OpenClawVisualTone.active,
                 expanded: _delegateExpanded,
-                toggleLabel: _delegateExpanded ? context.l10n.openclawHubCollapseQueueDetails : context.l10n.openclawHubExpandQueueDetails,
+                toggleLabel: _delegateExpanded
+                    ? context.l10n.openclawHubCollapseQueueDetails
+                    : context.l10n.openclawHubExpandQueueDetails,
                 onToggle: () {
                   setState(() => _delegateExpanded = !_delegateExpanded);
                 },
@@ -644,8 +709,10 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                                   connection.queuedRequests.isNotEmpty
                               ? context.l10n.openclawHubQueueSummaryNotConnected
                               : connection.isConnected
-                                  ? context.l10n.openclawHubQueueSummaryConnectedEmpty
-                                  : context.l10n.openclawHubQueueSummaryNotConnectedEmpty,
+                                  ? context.l10n
+                                      .openclawHubQueueSummaryConnectedEmpty
+                                  : context.l10n
+                                      .openclawHubQueueSummaryNotConnectedEmpty,
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,
@@ -685,7 +752,9 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                             child: OutlinedButton(
                               onPressed: () =>
                                   unawaited(_retryQueuedRequests(connection)),
-                              child: Text(context.l10n.openclawHubButtonRetryQueue),
+                              child: Text(
+                                context.l10n.openclawHubButtonRetryQueue,
+                              ),
                             ),
                           ),
                           const SizedBox(width: DS.spacing12),
@@ -742,11 +811,14 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                 icon: Icons.auto_awesome_motion_rounded,
                 title: context.l10n.openclawHubSectionAutomationTitle,
                 subtitle: context.l10n.openclawHubSectionAutomationSubtitle,
-                tone: automation.schedules.isNotEmpty || automation.latestBatch != null
+                tone: automation.schedules.isNotEmpty ||
+                        automation.latestBatch != null
                     ? OpenClawVisualTone.connected
                     : OpenClawVisualTone.active,
                 expanded: _automationExpanded,
-                toggleLabel: _automationExpanded ? context.l10n.openclawHubCollapseAutomationDetails : context.l10n.openclawHubExpandAutomationDetails,
+                toggleLabel: _automationExpanded
+                    ? context.l10n.openclawHubCollapseAutomationDetails
+                    : context.l10n.openclawHubExpandAutomationDetails,
                 onToggle: () {
                   setState(() => _automationExpanded = !_automationExpanded);
                 },
@@ -756,7 +828,10 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     Text(
                       automation.schedules.isEmpty
                           ? context.l10n.openclawHubAutomationSummaryEmpty
-                          : context.l10n.openclawHubAutomationSummaryActiveWithCount(automation.schedules.length),
+                          : context.l10n
+                              .openclawHubAutomationSummaryActiveWithCount(
+                              automation.schedules.length,
+                            ),
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,
@@ -769,7 +844,9 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                       children: [
                         OpenClawMetricPill(
                           icon: Icons.schedule_rounded,
-                          label: context.l10n.openclawHubAutomationCount(automation.schedules.length),
+                          label: context.l10n.openclawHubAutomationCount(
+                            automation.schedules.length,
+                          ),
                           tone: automation.schedules.isNotEmpty
                               ? OpenClawVisualTone.connected
                               : OpenClawVisualTone.active,
@@ -777,11 +854,10 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                         if (automation.latestBatch != null)
                           OpenClawMetricPill(
                             icon: Icons.playlist_add_check_circle_rounded,
-                            label:
-                                context.l10n.openclawHubLatestBatch(
-                                    automation.latestBatch!.completedCount,
-                                    automation.latestBatch!.taskIds.length,
-                                  ),
+                            label: context.l10n.openclawHubLatestBatch(
+                              automation.latestBatch!.completedCount,
+                              automation.latestBatch!.taskIds.length,
+                            ),
                             tone: OpenClawVisualTone.attention,
                           ),
                       ],
@@ -800,7 +876,9 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                     ? OpenClawVisualTone.connected
                     : OpenClawVisualTone.active,
                 expanded: _activityExpanded,
-                toggleLabel: _activityExpanded ? context.l10n.openclawHubCollapseActivityDetails : context.l10n.openclawHubExpandActivityDetails,
+                toggleLabel: _activityExpanded
+                    ? context.l10n.openclawHubCollapseActivityDetails
+                    : context.l10n.openclawHubExpandActivityDetails,
                 onToggle: () {
                   setState(() => _activityExpanded = !_activityExpanded);
                 },
@@ -854,7 +932,8 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                 Padding(
                   padding: const EdgeInsets.only(left: DS.spacing4),
                   child: Text(
-                    context.l10n.openclawHubLastTrustLabel(latestRecord.trustLabel),
+                    context.l10n
+                        .openclawHubLastTrustLabel(latestRecord.trustLabel),
                     style: DS.bodySmall.copyWith(
                       color: DS.textSecondary,
                     ),
@@ -921,7 +1000,8 @@ class _QueuePreviewCard extends StatelessWidget {
             Text(
               [
                 if ((request.templateId ?? '').isNotEmpty)
-                  context.l10n.openclawHubTaskLabelTemplate(request.templateId!),
+                  context.l10n
+                      .openclawHubTaskLabelTemplate(request.templateId!),
                 context.l10n.openclawHubTaskLabelSource(request.source),
               ].join(' · '),
               style: DS.bodySmall.copyWith(
@@ -986,7 +1066,8 @@ class _ActivityTimelineCard extends StatelessWidget {
                     ),
                     const SizedBox(width: DS.spacing8),
                     OpenClawMetricPill(
-                      label: intent?.statusLabel ?? context.l10n.openclawHubStatusRecorded,
+                      label: intent?.statusLabel ??
+                          context.l10n.openclawHubStatusRecorded,
                       tone: switch (intent?.status) {
                         ExecutionIntentStatus.succeeded =>
                           OpenClawVisualTone.connected,

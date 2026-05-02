@@ -101,7 +101,7 @@ class CuriosityCapsuleCard extends ConsumerWidget {
                       context.l10n.capsuleNewDiscovery,
                       style: context.sparkleTypography.labelSmall.copyWith(
                         color: context.sparkleColors.brandPrimary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ),

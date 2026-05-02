@@ -24,36 +24,40 @@ class IntentAnalysisButton extends ConsumerWidget {
   final VoidCallback onConfirm;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => InkWell(
-        onTap: () => _showIntentPreview(context),
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+  Widget build(BuildContext context, WidgetRef ref) => Semantics(
+        button: true,
+        label: 'Chat intent analysis button control 1',
+        child: InkWell(
+          onTap: () => _showIntentPreview(context),
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+              ),
             ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.auto_awesome,
-                size: 16,
-                color: Theme.of(context).primaryColor,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                context.l10n.intentAnalysisLabel,
-                style: TextStyle(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  size: 16,
                   color: Theme.of(context).primaryColor,
-                  fontSize: 13,
-                  fontWeight: DS.fontWeightMedium,
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                Text(
+                  context.l10n.intentAnalysisLabel,
+                  style: TextStyle(
+                    color: Theme.of(context).primaryColor,
+                    fontSize: 13,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -128,36 +132,40 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
       );
     }
 
-    return InkWell(
-      onTap: _analyzeIntents,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+    return Semantics(
+      button: true,
+      label: 'Chat intent analysis button control 2',
+      child: InkWell(
+        onTap: _analyzeIntents,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
+            ),
           ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.auto_awesome,
-              size: 14,
-              color: Theme.of(context).primaryColor,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              context.l10n.intentAnalysisMultiIntent,
-              style: TextStyle(
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.auto_awesome,
+                size: 14,
                 color: Theme.of(context).primaryColor,
-                fontSize: 12,
-                fontWeight: DS.fontWeightMedium,
               ),
-            ),
-          ],
+              const SizedBox(width: 6),
+              Text(
+                context.l10n.intentAnalysisMultiIntent,
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontSize: 12,
+                  fontWeight: DS.fontWeightMedium,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -178,7 +186,8 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
       if (mounted) {
         setState(() => _isAnalyzing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SparkleSnackBar.error(context.l10n.intentAnalysisFailed(e.toString())),
+          SparkleSnackBar.error(
+              context.l10n.intentAnalysisFailed(e.toString())),
         );
       }
     }

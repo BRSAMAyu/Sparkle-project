@@ -402,7 +402,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                             Text(
                               l10n.taskSuggestedKnowledge,
                               style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                                fontWeight: DS.fontWeightBold,
                                 fontSize: 12,
                               ),
                             ),
@@ -710,7 +710,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                                 Text(
                                   l10n.taskNudgeTitle,
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: DS.fontWeightBold,
                                     fontSize: 14,
                                   ),
                                 ),

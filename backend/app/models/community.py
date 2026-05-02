@@ -24,6 +24,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -504,6 +505,12 @@ class SharedResource(BaseModel):
     # 计数
     view_count = Column(Integer, default=0)
     save_count = Column(Integer, default=0)  # 被转存/fork次数
+    adoption_count = Column(Integer, default=0)
+    negative_feedback_count = Column(Integer, default=0)
+
+    # 质量评分 (FV-22)
+    quality_score = Column(Float, default=0.0)
+    quality_hidden = Column(Boolean, default=False)  # auto-hide when score < 0.3
 
     # 关系
     group = relationship("Group")

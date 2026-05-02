@@ -1,9 +1,10 @@
 package handler
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
+	"errors"
 	"log"
 	"net/http"
 	"time"
@@ -13,22 +14,31 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/sparkle/gateway/internal/config"
-	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/service"
 )
 
 type AuthHandler struct {
-	cfg              *config.Config
-	queries          *db.Queries
-	appleAuthService *service.AppleAuthService
+	cfg                 *config.Config
+	appleTokenVerifier  appleTokenVerifier
+	appleAccountService appleAccountService
 }
 
-func NewAuthHandler(cfg *config.Config, queries *db.Queries, appleAuthService *service.AppleAuthService) *AuthHandler {
+type appleTokenVerifier interface {
+	VerifyToken(tokenStr string) (*service.AppleClaims, error)
+}
+
+type appleAccountService interface {
+	FindOrCreateUser(ctx context.Context, claims *service.AppleClaims) (service.AppleAuthenticatedUser, error)
+	UpdateLastLogin(ctx context.Context, userID pgtype.UUID) error
+	UpsertUserSession(ctx context.Context, userID pgtype.UUID, sessionID string, metadata service.AppleSessionMetadata) error
+}
+
+func NewAuthHandler(cfg *config.Config, appleTokenVerifier appleTokenVerifier, appleAccountService appleAccountService) *AuthHandler {
 	return &AuthHandler{
-		cfg:              cfg,
-		queries:          queries,
-		appleAuthService: appleAuthService,
+		cfg:                 cfg,
+		appleTokenVerifier:  appleTokenVerifier,
+		appleAccountService: appleAccountService,
 	}
 }
 
@@ -40,7 +50,7 @@ type SocialLoginRequest struct {
 func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	var req SocialLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusBadRequest, err, "auth.apple_login.bind")
 		return
 	}
 
@@ -50,69 +60,26 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	}
 
 	// 1. Verify Apple Token
-	claims, err := h.appleAuthService.VerifyToken(req.Token)
+	claims, err := h.appleTokenVerifier.VerifyToken(req.Token)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": i18n.T(c.Request.Context(), "auth.apple_verify_failed", map[string]string{"error": err.Error()})})
+		sanitizeErrorResponse(c, http.StatusUnauthorized, err, "auth.apple_login.verify_token")
 		return
 	}
 
 	// 2. Find or Create User
 	ctx := c.Request.Context()
-	userNeedsLink := false
-	// Priority 1: Check by apple_id (sub)
-	user, err := h.queries.GetUserByAppleID(ctx, pgtype.Text{String: claims.Subject, Valid: true})
+	user, err := h.appleAccountService.FindOrCreateUser(ctx, claims)
 	if err != nil {
-		// Priority 2: Check by email if provided
-		if claims.Email != "" {
-			user, err = h.queries.GetUserByEmail(ctx, claims.Email)
-			if err == nil {
-				userNeedsLink = true
-			}
-		}
-
-		// If still not found, create new user
-		if err != nil {
-			username := fmt.Sprintf("apple_%s", h.randomString(8))
-			email := claims.Email
-			if email == "" {
-				email = fmt.Sprintf("%s@apple-user.com", username)
-			}
-
-			newID := uuid.New()
-			var pgID pgtype.UUID
-			copy(pgID.Bytes[:], newID[:])
-			pgID.Valid = true
-
-			user, err = h.queries.CreateSocialUser(ctx, db.CreateSocialUserParams{
-				ID:                 pgID,
-				Username:           username,
-				Email:              email,
-				HashedPassword:     h.randomString(32),
-				Nickname:           pgtype.Text{String: claims.Name, Valid: claims.Name != ""},
-				RegistrationSource: "apple",
-				IsActive:           true,
-				AppleID:            pgtype.Text{String: claims.Subject, Valid: true},
-			})
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(c.Request.Context(), "auth.create_user_failed")})
-				return
-			}
-		}
-	}
-
-	if err == nil && (userNeedsLink || !user.AppleID.Valid) {
-		user, err = h.queries.LinkAppleUser(ctx, db.LinkAppleUserParams{
-			ID:      user.ID,
-			AppleID: pgtype.Text{String: claims.Subject, Valid: true},
-		})
-		if err != nil {
+		if errors.Is(err, service.ErrAppleUserLinkFailed) {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(c.Request.Context(), "auth.link_apple_failed")})
 			return
 		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": i18n.T(c.Request.Context(), "auth.create_user_failed")})
+		return
 	}
 
 	// Update last login
-	if err := h.queries.UpdateUserLastLogin(ctx, user.ID); err != nil {
+	if err := h.appleAccountService.UpdateLastLogin(ctx, user.ID); err != nil {
 		log.Printf("[WARN] UpdateUserLastLogin failed for user %s: %v", h.uuidToString(user.ID), err)
 	}
 
@@ -130,21 +97,13 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 	}
 
 	// 4. Persist session to user_sessions table
-	sessionUUID := uuid.New()
-	var pgSessionID pgtype.UUID
-	copy(pgSessionID.Bytes[:], sessionUUID[:])
-	pgSessionID.Valid = true
-
-	_, err = h.queries.UpsertUserSession(ctx, db.UpsertUserSessionParams{
-		ID:              pgSessionID,
-		UserID:          user.ID,
-		SessionID:       sessionID,
-		DeviceID:        pgtype.Text{String: c.GetHeader("X-Device-ID"), Valid: c.GetHeader("X-Device-ID") != ""},
-		DeviceName:      pgtype.Text{String: c.GetHeader("X-Device-Name"), Valid: c.GetHeader("X-Device-Name") != ""},
-		DeviceType:      pgtype.Text{String: c.GetHeader("X-Device-Platform"), Valid: c.GetHeader("X-Device-Platform") != ""},
-		IpAddress:       pgtype.Text{String: c.ClientIP(), Valid: true},
-		UserAgent:       pgtype.Text{String: c.GetHeader("User-Agent"), Valid: c.GetHeader("User-Agent") != ""},
-		RefreshTokenJti: pgtype.Text{String: refreshJTI, Valid: true},
+	err = h.appleAccountService.UpsertUserSession(ctx, user.ID, sessionID, service.AppleSessionMetadata{
+		DeviceID:        c.GetHeader("X-Device-ID"),
+		DeviceName:      c.GetHeader("X-Device-Name"),
+		DeviceType:      c.GetHeader("X-Device-Platform"),
+		IPAddress:       c.ClientIP(),
+		UserAgent:       c.GetHeader("User-Agent"),
+		RefreshTokenJTI: refreshJTI,
 	})
 	if err != nil {
 		// Session persistence failure should not block login

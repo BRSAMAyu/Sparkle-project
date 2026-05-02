@@ -8,20 +8,22 @@ class StuckHelpSheet extends StatelessWidget {
     required this.task,
     super.key,
     this.onChatPressed,
+    this.onCoreSessionPressed,
     this.onContinuePressed,
   });
 
   final TaskModel task;
   final VoidCallback? onChatPressed;
+  final VoidCallback? onCoreSessionPressed;
   final VoidCallback? onContinuePressed;
 
   static List<String> genericSuggestions(BuildContext context) => [
-    context.l10n.stuckHelpSuggestion1,
-    context.l10n.stuckHelpSuggestion2,
-    context.l10n.stuckHelpSuggestion3,
-    context.l10n.stuckHelpSuggestion4,
-    context.l10n.stuckHelpSuggestion5,
-  ];
+        context.l10n.stuckHelpSuggestion1,
+        context.l10n.stuckHelpSuggestion2,
+        context.l10n.stuckHelpSuggestion3,
+        context.l10n.stuckHelpSuggestion4,
+        context.l10n.stuckHelpSuggestion5,
+      ];
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +32,8 @@ class StuckHelpSheet extends StatelessWidget {
       task.guideJson?['fallback_if_stuck'],
     );
     final ifStuck = _readList(task.guideJson?['if_stuck']);
-    final suggestions = ifStuck.isNotEmpty ? ifStuck : genericSuggestions(context);
+    final suggestions =
+        ifStuck.isNotEmpty ? ifStuck : genericSuggestions(context);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.68,
@@ -105,6 +108,18 @@ class StuckHelpSheet extends StatelessWidget {
                         onPressed: onChatPressed,
                       ),
                     ),
+                    if (onCoreSessionPressed != null) ...[
+                      const SizedBox(height: DS.spacing8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: SparkleButton(
+                          label: context.l10n.auroraCoreTaskStuckCta,
+                          variant: ButtonVariant.outline,
+                          icon: const Icon(Icons.auto_fix_high_rounded),
+                          onPressed: onCoreSessionPressed,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

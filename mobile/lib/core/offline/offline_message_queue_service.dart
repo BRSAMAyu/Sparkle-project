@@ -11,8 +11,6 @@ class OfflineMessageQueueService {
 
   Isar? get _isar => _localDb.isarOrNull;
 
-  bool get _isReady => _isar?.isOpen == true;
-
   /// Persist a message to the offline queue (status = pending).
   Future<void> enqueue({
     required String requestId,
@@ -67,6 +65,32 @@ class OfflineMessageQueueService {
     }
   }
 
+  /// Mark a message as failed but keep it available for user/manual retry.
+  Future<void> markFailed(String requestId, String error) async {
+    final db = _isar;
+    if (db == null || !db.isOpen) return;
+    final msg = await db.offlineChatMessages.getByRequestId(requestId);
+    if (msg != null) {
+      msg.markAsFailed(error);
+      await db.writeTxn(() async {
+        await db.offlineChatMessages.putByRequestId(msg);
+      });
+    }
+  }
+
+  /// Move a retryable failed/sent message back to pending before replay.
+  Future<void> prepareForRetry(String requestId) async {
+    final db = _isar;
+    if (db == null || !db.isOpen) return;
+    final msg = await db.offlineChatMessages.getByRequestId(requestId);
+    if (msg != null) {
+      msg.resetForRetry();
+      await db.writeTxn(() async {
+        await db.offlineChatMessages.putByRequestId(msg);
+      });
+    }
+  }
+
   /// Load all pending messages (not yet sent), ordered by creation time.
   Future<List<OfflineChatMessage>> loadPending() async {
     final db = _isar;
@@ -75,9 +99,37 @@ class OfflineMessageQueueService {
         .filter()
         .statusEqualTo(OfflineMessageStatus.pending)
         .findAll();
-    results.sort((OfflineChatMessage a, OfflineChatMessage b) =>
-        a.createdAt.compareTo(b.createdAt));
+    results.sort(
+      (OfflineChatMessage a, OfflineChatMessage b) =>
+          a.createdAt.compareTo(b.createdAt),
+    );
     return results;
+  }
+
+  /// Load retryable outgoing messages for one user.
+  ///
+  /// Includes:
+  /// - pending: never accepted by the socket
+  /// - sent: written to the socket but no server ACK was observed before drop
+  /// - failed: user-visible failure that still has retry budget
+  Future<List<OfflineChatMessage>> loadRetryableForUser(String userId) async {
+    final db = _isar;
+    if (db == null || !db.isOpen) return <OfflineChatMessage>[];
+    final results =
+        await db.offlineChatMessages.filter().userIdEqualTo(userId).findAll();
+    final retryable = results
+        .where(
+          (OfflineChatMessage msg) =>
+              msg.status == OfflineMessageStatus.pending ||
+              msg.status == OfflineMessageStatus.sent ||
+              msg.canRetry,
+        )
+        .toList();
+    retryable.sort(
+      (OfflineChatMessage a, OfflineChatMessage b) =>
+          a.createdAt.compareTo(b.createdAt),
+    );
+    return retryable;
   }
 
   /// Remove a message from the offline queue.
@@ -97,6 +149,24 @@ class OfflineMessageQueueService {
         .and()
         .statusEqualTo(OfflineMessageStatus.pending)
         .count();
+  }
+
+  /// Load all non-acked messages for a user so UI can explain delivery state.
+  Future<List<OfflineChatMessage>> loadActiveForUser(String userId) async {
+    final db = _isar;
+    if (db == null || !db.isOpen) return <OfflineChatMessage>[];
+    final results =
+        await db.offlineChatMessages.filter().userIdEqualTo(userId).findAll();
+    final active = results
+        .where(
+          (OfflineChatMessage msg) => msg.status != OfflineMessageStatus.acked,
+        )
+        .toList()
+      ..sort(
+        (OfflineChatMessage a, OfflineChatMessage b) =>
+            a.createdAt.compareTo(b.createdAt),
+      );
+    return active;
   }
 
   /// Delete acked messages older than 24 hours.

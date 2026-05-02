@@ -1,6 +1,7 @@
 from datetime import datetime
 
 import pytest
+from tests._credentials import TEST_INTERNAL_API_KEY
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy import and_, select
@@ -202,7 +203,7 @@ def test_unlock_internal_requires_internal_token(visual_client):
         hashed_password="hashed",
     )
 
-    with patch("app.api.v1.visual_elements.settings.INTERNAL_API_KEY", "secret-key"):
+    with patch("app.api.v1.visual_elements.settings.INTERNAL_API_KEY", TEST_INTERNAL_API_KEY):
         response = client.post(
             "/visual-elements/unlock",
             json={

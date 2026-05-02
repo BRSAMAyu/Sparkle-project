@@ -788,8 +788,8 @@ class ProductionChatOrchestrator:
                                     _retrieval_top_k = max(1, min(20, _ret_dir.token_budget // 600))
                                     if _ret_dir.pollution_guard == "strict":
                                         _retrieval_depth = 1
-                            except Exception:
-                                pass
+                            except Exception as exc:
+                                logger.warning("Spine retrieval directive fetch failed for user={}: {}", user_id, exc)
 
                             # 使用 GraphKnowledgeService 进行增强的 GraphRAG 检索
                             graph_ks = GraphKnowledgeService(active_db)
@@ -1109,8 +1109,8 @@ class ProductionChatOrchestrator:
                             _stale_card = _spine.stale_guard.build_recovery_card(_stale_packet, _tc)
                             if _stale_card:
                                 _spine_stale_card = _stale_card
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.debug("Spine stale-state card enrichment skipped for user={}: {}", user_id, exc)
 
                 # Growth chronicle → inject recent narrative for AI awareness
                 try:
@@ -1122,8 +1122,8 @@ class ProductionChatOrchestrator:
                             f"{e.title}（{e.narrative[:60]}）"
                             for e in _chronicle_entries
                         )
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Spine growth chronicle enrichment skipped for user={}: {}", user_id, exc)
 
                 # Fatigue + crisis → inject tone modulation
                 try:
@@ -1137,8 +1137,8 @@ class ProductionChatOrchestrator:
                             ).get("fatigue_level")
                         if _crisis_raw:
                             _spine_fatigue_context["crisis_mode"] = True
-                except Exception:
-                    pass
+                except Exception as exc:
+                    logger.debug("Spine fatigue/crisis context enrichment skipped for user={}: {}", user_id, exc)
 
                 # Record current timestamp for next stale check
                 import json as _json
@@ -1160,8 +1160,8 @@ class ProductionChatOrchestrator:
                 _skill_dir = await _spine_quick.get_skill_directive(str(user_id))
                 if _skill_dir:
                     user_context_data["spine_skill_directive"] = _skill_dir.to_dict()
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.debug("Spine community/skill directive enrichment skipped for user={}: {}", user_id, exc)
 
             base_system_prompt = build_system_prompt(
                 user_context_data,

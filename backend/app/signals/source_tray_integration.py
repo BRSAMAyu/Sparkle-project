@@ -47,6 +47,7 @@ async def compute_retrieval_plan(
     do_not_load: list[dict[str, Any]] = []
     relevance_scores: dict[str, float] = {}
     token_budget_used = 0
+    budget_exceeded = False
 
     available = source_tray.available_sources or []
     selections = source_tray.selections or []
@@ -56,12 +57,18 @@ async def compute_retrieval_plan(
     for sel in selections:
         selected_actions[sel.source_id] = sel.action
 
-    # Guard: pollution_guard = strict means only user-pinned or high-relevance
-    strict_mode = retrieval_directive.pollution_guard == "strict"
+    # Guard: pollution_guard controls relevance filtering threshold
+    pg_mode = retrieval_directive.pollution_guard
+    strict_mode = pg_mode == "strict"
+    moderate_mode = pg_mode == "moderate"
     token_budget = retrieval_directive.token_budget
 
     for source in available:
         sid = source.source_id
+
+        if getattr(source, "lifecycle_status", "active") != "active":
+            do_not_load.append({"source_id": sid, "reason": f"lifecycle_{source.lifecycle_status}"})
+            continue
 
         # SRC-014: Skip sources blocked by user correction
         if blocked_source_ids and sid in blocked_source_ids:
@@ -84,6 +91,8 @@ async def compute_retrieval_plan(
             relevance = source.relevance_for_nodes(target_nodes)
         relevance_scores[sid] = relevance
 
+        estimate = _estimate_tokens(source)
+
         # Check explicit user action
         explicit_action = selected_actions.get(sid)
         if explicit_action == "include":
@@ -91,8 +100,10 @@ async def compute_retrieval_plan(
                 "source_id": sid,
                 "relevance": relevance,
                 "reason": "user_explicitly_included",
+                "estimated_tokens": estimate,
             })
-            token_budget_used += _estimate_tokens(source)
+            token_budget_used += estimate
+            budget_exceeded = budget_exceeded or token_budget_used > token_budget
             continue
         elif explicit_action == "exclude":
             do_not_load.append({"source_id": sid, "reason": "user_explicitly_excluded"})
@@ -104,8 +115,10 @@ async def compute_retrieval_plan(
                 "source_id": sid,
                 "relevance": relevance,
                 "reason": "directive_required",
+                "estimated_tokens": estimate,
             })
-            token_budget_used += _estimate_tokens(source)
+            token_budget_used += estimate
+            budget_exceeded = budget_exceeded or token_budget_used > token_budget
         elif retrieval_directive.do_not_load and sid in retrieval_directive.do_not_load:
             do_not_load.append({"source_id": sid, "reason": "directive_excluded"})
         elif strict_mode and relevance < 0.3:
@@ -113,13 +126,26 @@ async def compute_retrieval_plan(
                 "source_id": sid,
                 "reason": f"low_relevance({relevance:.2f})_strict_guard",
             })
-        elif token_budget_used < token_budget:
+        elif moderate_mode and relevance < 0.15:
+            do_not_load.append({
+                "source_id": sid,
+                "reason": f"low_relevance({relevance:.2f})_moderate_guard",
+            })
+        elif token_budget_used + estimate <= token_budget:
             may_load.append({
                 "source_id": sid,
                 "relevance": relevance,
                 "reason": "available_within_budget",
+                "estimated_tokens": estimate,
             })
-            token_budget_used += _estimate_tokens(source)
+            token_budget_used += estimate
+        else:
+            do_not_load.append({
+                "source_id": sid,
+                "reason": "token_budget_exceeded",
+                "estimated_tokens": estimate,
+            })
+            budget_exceeded = True
 
     logger.info(
         "SourceTrayIntegration: must={} may={} skip={} budget={}/{}",
@@ -133,6 +159,9 @@ async def compute_retrieval_plan(
         "do_not_load": do_not_load,
         "relevance_scores": relevance_scores,
         "token_budget_used": token_budget_used,
+        "token_budget": token_budget,
+        "token_budget_remaining": max(0, token_budget - token_budget_used),
+        "budget_exceeded": budget_exceeded,
     }
 
 
@@ -189,7 +218,11 @@ def build_source_receipt(
         "loaded": loaded,
         "skipped": skipped,
         "excluded": excluded,
+        "answer_basis": "source_grounded" if loaded else "general_reasoning",
+        "source_uncertainty": _build_source_uncertainty(loaded, skipped, excluded),
+        "can_correct_sources": bool(loaded),
         "reason_for_user": _build_receipt_reason(len(loaded), skipped),
+        "correction_hint": _build_correction_hint(bool(loaded)),
     }
 
 
@@ -267,7 +300,9 @@ def _receipt_candidate_ids(
     }
     directive_candidates = set(retrieval_directive.must_load or []) | set(retrieval_directive.may_load or [])
     available_candidates = {
-        source.source_id for source in (source_tray.available_sources or []) if source.parsed_status != "failed"
+        source.source_id
+        for source in (source_tray.available_sources or [])
+        if source.parsed_status != "failed" and getattr(source, "lifecycle_status", "active") == "active"
     }
     return (selected_includes | directive_candidates | available_candidates) - loaded_ids - excluded_ids
 
@@ -276,6 +311,8 @@ def _receipt_skip_reason(source_id: str, sources_by_id: dict[str, SourceAsset]) 
     source = sources_by_id.get(source_id)
     if source and source.parsed_status == "failed":
         return "parse_failed"
+    if source and getattr(source, "lifecycle_status", "active") != "active":
+        return f"lifecycle_{source.lifecycle_status}"
     return "not_loaded"
 
 
@@ -434,9 +471,9 @@ class SourceEffectivenessTracker:
 def _build_receipt_reason(loaded_count: int, skipped: list[dict[str, Any]]) -> str:
     skipped_count = len(skipped)
     if loaded_count == 0 and skipped_count == 0:
-        return "这轮没有加载资料。"
+        return "这轮没有加载资料，回答会基于通用推理而不是你的资料。"
     if loaded_count == 0:
-        return f"这轮没有加载资料，跳过了 {skipped_count} 份。"
+        return f"这轮没有加载资料，跳过了 {skipped_count} 份，回答会基于通用推理。"
     if skipped_count == 0:
         return f"使用了你选的 {loaded_count} 份资料。"
 
@@ -444,3 +481,23 @@ def _build_receipt_reason(loaded_count: int, skipped: list[dict[str, Any]]) -> s
     if parse_failed_count:
         return f"使用了你选的 {loaded_count} 份资料，跳过了 {skipped_count} 份（解析失败）。"
     return f"使用了你选的 {loaded_count} 份资料，跳过了 {skipped_count} 份。"
+
+
+def _build_source_uncertainty(
+    loaded: list[dict[str, Any]],
+    skipped: list[dict[str, Any]],
+    excluded: list[dict[str, Any]],
+) -> str:
+    if not loaded and not skipped and not excluded:
+        return "no_sources_available"
+    if not loaded:
+        return "no_sources_loaded"
+    if skipped:
+        return "some_sources_not_loaded"
+    return "sources_loaded"
+
+
+def _build_correction_hint(has_loaded_sources: bool) -> str:
+    if has_loaded_sources:
+        return "如果引用不对，可以把对应资料标记为不相关，后续检索会降低它的优先级。"
+    return "这轮没有引用资料；如果你想让回答基于文件，请在资料来源中选择要使用的材料。"

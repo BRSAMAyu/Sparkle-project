@@ -90,11 +90,16 @@ async def test_recall_notification_build_and_store():
     assert "5" in message.body
     assert "2" in message.body
     assert message.message_id.startswith("rmsg_")
+    assert message.value_reason
+    assert message.effort_estimate
+    assert message.deadline_pressure_label
+    assert message.recall_score == 0.0
 
     # Verify stored in Redis
     stored = await spine.get_recall_notification("u1")
     assert stored is not None
     assert stored.message_id == message.message_id
+    assert stored.value_reason == message.value_reason
 
 
 @pytest.mark.asyncio
@@ -187,10 +192,34 @@ async def test_recall_notification_builder_user_preference_schema():
     assert schema["task_missed"]["max_per_day"] == 2
 
 
+def test_recall_notification_builder_surfaces_value_fields():
+    builder = RecallNotificationBuilder()
+
+    message = builder.build_message(
+        trigger_type="task_not_started",
+        message_strategy="low_effort_next_step",
+        context={
+            "value_reason": "启动第一张任务卡能帮计划产生反馈。",
+            "effort_estimate": "预计先投入 5 分钟。",
+            "deadline_pressure_label": "今日节奏待启动",
+            "recall_score": 0.84,
+        },
+    )
+
+    assert message is not None
+    assert message.value_reason == "启动第一张任务卡能帮计划产生反馈。"
+    assert message.effort_estimate == "预计先投入 5 分钟。"
+    assert message.deadline_pressure_label == "今日节奏待启动"
+    assert message.recall_score == 0.84
+    assert message.to_dict()["value_reason"] == message.value_reason
+    assert message.to_dict()["recall_reason"] == message.reasoning
+
+
 @pytest.mark.asyncio
 async def test_celery_recall_task_import():
     """Celery recall tasks are importable and registered."""
     from app.core.celery_tasks import recall_notification_task, scan_recall_notifications
+
     assert recall_notification_task.name == "app.core.celery_tasks.recall_notification_task"
     assert scan_recall_notifications.name == "app.core.celery_tasks.scan_recall_notifications"
 
@@ -202,6 +231,7 @@ async def test_celery_recall_task_import():
 
 def test_policy_experiment_create():
     from app.signals.policy_experiments import PolicyExperiment
+
     exp = PolicyExperiment(
         experiment_id="exp_1",
         user_id="u1",
@@ -218,6 +248,7 @@ def test_policy_experiment_create():
 
 async def test_policy_experiment_record_trial():
     from app.signals.policy_experiments import PolicyExperimentManager
+
     redis = MagicMock()
     redis.set = AsyncMock()
     redis.lrem = AsyncMock()
@@ -238,6 +269,7 @@ async def test_policy_experiment_record_trial():
 
     # Simulate recording a trial
     import json
+
     redis.get = AsyncMock(return_value=json.dumps(exp.to_dict()))
     updated = await mgr.record_trial(exp.experiment_id, primary_outcome="effective", shadow_hypothesis="effective")
     assert updated is not None
@@ -247,6 +279,7 @@ async def test_policy_experiment_record_trial():
 
 async def test_policy_experiment_no_alternative():
     from app.signals.policy_experiments import PolicyExperimentManager
+
     redis = MagicMock()
     mgr = PolicyExperimentManager(redis)
     exp = await mgr.create_experiment(
@@ -260,6 +293,7 @@ async def test_policy_experiment_no_alternative():
 
 def test_policy_experiment_evaluate_shadow():
     from app.signals.policy_experiments import PolicyExperimentManager
+
     redis = MagicMock()
     mgr = PolicyExperimentManager(redis)
 
@@ -269,14 +303,16 @@ def test_policy_experiment_evaluate_shadow():
 
     # Primary insufficient with pressure issue — shadow "gentle" better suited
     result = mgr.evaluate_shadow_outcome(
-        "insufficient", "recover_execution_rhythm",
+        "insufficient",
+        "recover_execution_rhythm",
         {"new_hypothesis": "user feeling overwhelmed by pressure"},
     )
     assert result == "effective"  # gentle approach better for pressure
 
     # Primary insufficient with no matching reason — shadow also insufficient
     result = mgr.evaluate_shadow_outcome(
-        "insufficient", "recover_execution_rhythm",
+        "insufficient",
+        "recover_execution_rhythm",
         {"new_hypothesis": "unrelated issue"},
     )
     assert result == "insufficient"
@@ -284,6 +320,7 @@ def test_policy_experiment_evaluate_shadow():
 
 def test_policy_experiment_suggest_promotions():
     from app.signals.policy_experiments import PolicyExperiment, PolicyExperimentManager
+
     redis = MagicMock()
     mgr = PolicyExperimentManager(redis)
 
@@ -306,6 +343,7 @@ def test_policy_experiment_suggest_promotions():
 
 def test_policy_experiment_suggest_no_promotion():
     from app.signals.policy_experiments import PolicyExperiment, PolicyExperimentManager
+
     redis = MagicMock()
     mgr = PolicyExperimentManager(redis)
 
@@ -327,6 +365,7 @@ def test_policy_experiment_suggest_no_promotion():
 
 def test_policy_experiment_conclude():
     from app.signals.policy_experiments import PolicyExperiment
+
     exp = PolicyExperiment(
         experiment_id="exp_conc",
         user_id="u1",
@@ -339,6 +378,7 @@ def test_policy_experiment_conclude():
         total_trials=10,
     )
     from app.signals.policy_experiments import PolicyExperimentManager
+
     PolicyExperimentManager._conclude(exp)
     assert exp.status == "concluded"
     assert exp.conclusion == "shadow_outperforms"
@@ -351,6 +391,7 @@ def test_policy_experiment_conclude():
 
 def test_strategy_belief_update():
     from app.signals.learning_base import LearningBase, StrategyBelief
+
     lb = LearningBase()
     belief = StrategyBelief(strategy_key="test_strategy")
     assert belief.expected_effectiveness == 0.5  # 1.0 / 2.0
@@ -366,6 +407,7 @@ def test_strategy_belief_update():
 
 def test_strategy_belief_effectiveness():
     from app.signals.learning_base import StrategyBelief
+
     # 10 effective, 2 insufficient → high effectiveness
     belief = StrategyBelief(strategy_key="good", alpha=11.0, beta=3.0, evidence_count=12)
     assert belief.expected_effectiveness > 0.7
@@ -373,6 +415,7 @@ def test_strategy_belief_effectiveness():
 
 def test_learning_base_batch_update():
     from app.signals.learning_base import LearningBase, StrategyBelief
+
     lb = LearningBase()
     beliefs = [StrategyBelief(strategy_key="s1"), StrategyBelief(strategy_key="s2")]
     outcomes = [
@@ -388,6 +431,7 @@ def test_learning_base_batch_update():
 
 def test_learning_base_select_strategy():
     from app.signals.learning_base import LearningBase, StrategyBelief
+
     lb = LearningBase()
     beliefs = [
         StrategyBelief(strategy_key="good", alpha=10.0, beta=2.0, evidence_count=12),
@@ -400,13 +444,15 @@ def test_learning_base_select_strategy():
 
 def test_learning_base_select_cold_start():
     from app.signals.learning_base import LearningBase, StrategyBelief
+
     lb = LearningBase()
     beliefs = [
         StrategyBelief(strategy_key="a", alpha=1.0, beta=1.0, evidence_count=0),
         StrategyBelief(strategy_key="b", alpha=1.0, beta=1.0, evidence_count=0),
     ]
     result = lb.select_strategy(
-        beliefs, ["a", "b"],
+        beliefs,
+        ["a", "b"],
         prefer_rules=True,
         rule_ranking=["b", "a"],
     )
@@ -416,6 +462,7 @@ def test_learning_base_select_cold_start():
 
 def test_learning_base_ranking():
     from app.signals.learning_base import LearningBase, StrategyBelief
+
     lb = LearningBase()
     beliefs = [
         StrategyBelief(strategy_key="s1", alpha=8.0, beta=2.0, evidence_count=10),
@@ -429,6 +476,7 @@ def test_learning_base_ranking():
 
 def test_learning_base_snapshot():
     from app.signals.learning_base import LearningBase, StrategyBelief
+
     lb = LearningBase()
     beliefs = [
         StrategyBelief(strategy_key="warm", alpha=5.0, beta=3.0, evidence_count=8),
@@ -441,6 +489,7 @@ def test_learning_base_snapshot():
 
 def test_learning_base_serialization():
     from app.signals.learning_base import StrategyBelief
+
     belief = StrategyBelief(strategy_key="test", alpha=5.0, beta=3.0, evidence_count=8)
     d = belief.to_dict()
     restored = StrategyBelief.from_dict(d)
@@ -517,13 +566,15 @@ def test_calendar_time_context():
     now = datetime.now(UTC)
     events = [
         CalendarEvent(
-            event_id="e1", title="考试",
+            event_id="e1",
+            title="考试",
             start_time=(now + timedelta(hours=48)).isoformat(),
             end_time=(now + timedelta(hours=50)).isoformat(),
             event_type="exam",
         ),
         CalendarEvent(
-            event_id="e2", title="开会",
+            event_id="e2",
+            title="开会",
             start_time=(now + timedelta(hours=6)).isoformat(),
             end_time=(now + timedelta(hours=7)).isoformat(),
             event_type="meeting",
@@ -538,9 +589,13 @@ def test_calendar_time_context():
 
 def test_calendar_serialization():
     from app.signals.external_integration import CalendarEvent
+
     event = CalendarEvent(
-        event_id="e1", title="Test", start_time="2026-01-01T10:00:00Z",
-        end_time="2026-01-01T12:00:00Z", event_type="exam",
+        event_id="e1",
+        title="Test",
+        start_time="2026-01-01T10:00:00Z",
+        end_time="2026-01-01T12:00:00Z",
+        event_type="exam",
     )
     d = event.to_dict()
     restored = CalendarEvent.from_dict(d)
@@ -549,6 +604,7 @@ def test_calendar_serialization():
 
 def test_external_tool_study_session():
     from app.signals.external_integration import ExternalToolBridge, ExternalToolSignal
+
     bridge = ExternalToolBridge()
     signals = [
         ExternalToolSignal(tool_id="ide", tool_type="ide", activity_type="active", timestamp="2026-01-01T10:00:00Z"),
@@ -562,9 +618,12 @@ def test_external_tool_study_session():
 
 def test_external_tool_no_study():
     from app.signals.external_integration import ExternalToolBridge, ExternalToolSignal
+
     bridge = ExternalToolBridge()
     signals = [
-        ExternalToolSignal(tool_id="browser", tool_type="browser", activity_type="idle", timestamp="2026-01-01T10:00:00Z"),
+        ExternalToolSignal(
+            tool_id="browser", tool_type="browser", activity_type="idle", timestamp="2026-01-01T10:00:00Z"
+        ),
     ]
     result = bridge.detect_study_session(signals)
     assert result is None
@@ -572,6 +631,7 @@ def test_external_tool_no_study():
 
 def test_external_tool_context():
     from app.signals.external_integration import ExternalToolBridge, ExternalToolSignal
+
     bridge = ExternalToolBridge()
     signals = [
         ExternalToolSignal(tool_id="ide", tool_type="ide", activity_type="active", timestamp="2026-01-01T10:00:00Z"),
@@ -587,8 +647,9 @@ def test_external_tool_context():
 
 
 def test_counterfactual_baseline_method():
-    from app.signals.research_grade import CounterfactualEngine
+    from app.signals.research_grade import CounterfactualEngine  # noqa: DEPRECATED v1
     from app.signals.types import OutcomeRecord
+
     engine = CounterfactualEngine()
     outcome = OutcomeRecord(
         outcome_id="o1",
@@ -607,13 +668,17 @@ def test_counterfactual_baseline_method():
 
 
 def test_counterfactual_high_baseline():
-    from app.signals.research_grade import CounterfactualEngine
+    from app.signals.research_grade import CounterfactualEngine  # noqa: DEPRECATED v1
     from app.signals.types import OutcomeRecord
+
     engine = CounterfactualEngine()
     outcome = OutcomeRecord(
-        outcome_id="o2", causal_trace_id="ct2",
-        intervention="strategy", reason="test",
-        expected_outcome="done", actual_outcome={},
+        outcome_id="o2",
+        causal_trace_id="ct2",
+        intervention="strategy",
+        reason="test",
+        expected_outcome="done",
+        actual_outcome={},
         attribution="effective",
     )
     # High baseline → counterfactual also effective
@@ -623,13 +688,17 @@ def test_counterfactual_high_baseline():
 
 
 def test_counterfactual_rule_based():
-    from app.signals.research_grade import CounterfactualEngine
+    from app.signals.research_grade import CounterfactualEngine  # noqa: DEPRECATED v1
     from app.signals.types import OutcomeRecord
+
     engine = CounterfactualEngine()
     outcome = OutcomeRecord(
-        outcome_id="o3", causal_trace_id="ct3",
-        intervention="strategy", reason="test",
-        expected_outcome="done", actual_outcome={},
+        outcome_id="o3",
+        causal_trace_id="ct3",
+        intervention="strategy",
+        reason="test",
+        expected_outcome="done",
+        actual_outcome={},
         attribution="effective",
     )
     similar = [
@@ -643,7 +712,8 @@ def test_counterfactual_rule_based():
 
 
 def test_counterfactual_aggregate():
-    from app.signals.research_grade import CounterfactualEngine, CounterfactualResult
+    from app.signals.research_grade import CounterfactualEngine, CounterfactualResult  # noqa: DEPRECATED v1
+
     engine = CounterfactualEngine()
     results = [
         CounterfactualResult("r1", "ct1", "effective", "insufficient", 1.0, 0.8, "", "baseline"),
@@ -658,7 +728,8 @@ def test_counterfactual_aggregate():
 
 
 def test_user_simulator_basic():
-    from app.signals.research_grade import UserSimulator, SimulatedUserProfile
+    from app.signals.research_grade import UserSimulator, SimulatedUserProfile  # noqa: DEPRECATED v1
+
     sim = UserSimulator()
     profile = SimulatedUserProfile(
         profile_id="sim_1",
@@ -673,7 +744,8 @@ def test_user_simulator_basic():
 
 
 def test_user_simulator_sequence():
-    from app.signals.research_grade import UserSimulator, SimulatedUserProfile
+    from app.signals.research_grade import UserSimulator, SimulatedUserProfile  # noqa: DEPRECATED v1
+
     sim = UserSimulator()
     profile = SimulatedUserProfile(
         profile_id="sim_2",
@@ -692,7 +764,8 @@ def test_user_simulator_sequence():
 
 
 def test_user_simulator_compare():
-    from app.signals.research_grade import UserSimulator, SimulatedUserProfile
+    from app.signals.research_grade import UserSimulator, SimulatedUserProfile  # noqa: DEPRECATED v1
+
     sim = UserSimulator()
     profile = SimulatedUserProfile(
         profile_id="sim_3",
@@ -712,7 +785,8 @@ def test_user_simulator_compare():
 
 
 def test_domain_pack_validate():
-    from app.signals.research_grade import DomainPack, DomainPackMarketplace
+    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1, DomainPackMarketplace  # noqa: DEPRECATED v1
+
     redis = MagicMock()
     marketplace = DomainPackMarketplace(redis)
 
@@ -746,36 +820,62 @@ def test_domain_pack_validate():
 
 
 def test_domain_pack_score():
-    from app.signals.research_grade import DomainPack, DomainPackMarketplace
+    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1, DomainPackMarketplace  # noqa: DEPRECATED v1
+
     redis = MagicMock()
     marketplace = DomainPackMarketplace(redis)
 
     popular = DomainPack(
-        pack_id="p1", name="Popular", description="d", goal_type="exam",
-        domain="cs", author_id="a1", strategy_templates=[{}],
-        rating=4.8, download_count=200, review_count=30,
+        pack_id="p1",
+        name="Popular",
+        description="d",
+        goal_type="exam",
+        domain="cs",
+        author_id="a1",
+        strategy_templates=[{}],
+        rating=4.8,
+        download_count=200,
+        review_count=30,
     )
     new_pack = DomainPack(
-        pack_id="p2", name="New", description="d", goal_type="exam",
-        domain="cs", author_id="a2", strategy_templates=[{}],
-        rating=4.0, download_count=5, review_count=1,
+        pack_id="p2",
+        name="New",
+        description="d",
+        goal_type="exam",
+        domain="cs",
+        author_id="a2",
+        strategy_templates=[{}],
+        rating=4.0,
+        download_count=5,
+        review_count=1,
     )
     ranked = marketplace.rank_packs([new_pack, popular], goal_type="exam")
     assert ranked[0]["pack_id"] == "p1"  # popular first
 
 
 def test_domain_pack_filter():
-    from app.signals.research_grade import DomainPack, DomainPackMarketplace
+    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1, DomainPackMarketplace  # noqa: DEPRECATED v1
+
     redis = MagicMock()
     marketplace = DomainPackMarketplace(redis)
 
     exam_pack = DomainPack(
-        pack_id="p1", name="Exam", description="d", goal_type="exam",
-        domain="cs", author_id="a1", strategy_templates=[{}],
+        pack_id="p1",
+        name="Exam",
+        description="d",
+        goal_type="exam",
+        domain="cs",
+        author_id="a1",
+        strategy_templates=[{}],
     )
     project_pack = DomainPack(
-        pack_id="p2", name="Project", description="d", goal_type="project",
-        domain="cs", author_id="a2", strategy_templates=[{}],
+        pack_id="p2",
+        name="Project",
+        description="d",
+        goal_type="project",
+        domain="cs",
+        author_id="a2",
+        strategy_templates=[{}],
     )
     ranked = marketplace.rank_packs([exam_pack, project_pack], goal_type="project")
     assert len(ranked) == 1
@@ -783,10 +883,16 @@ def test_domain_pack_filter():
 
 
 def test_domain_pack_serialization():
-    from app.signals.research_grade import DomainPack
+    from app.signals.research_grade import DomainPack  # noqa: DEPRECATED v1
+
     pack = DomainPack(
-        pack_id="p_ser", name="Test", description="Test pack", goal_type="exam",
-        domain="cs", author_id="a1", strategy_templates=[{"key": "val"}],
+        pack_id="p_ser",
+        name="Test",
+        description="Test pack",
+        goal_type="exam",
+        domain="cs",
+        author_id="a1",
+        strategy_templates=[{"key": "val"}],
         rating=4.5,
     )
     d = pack.to_dict()
@@ -804,6 +910,7 @@ def test_domain_pack_serialization():
 async def test_spine_aurora_bridge_get_context():
     """SpineAuroraBridge fetches Spine context for Aurora."""
     from app.signals.spine_aurora_bridge import SpineAuroraBridge
+
     redis = AsyncMock()
     redis.get = AsyncMock(return_value=None)
     redis.smembers = AsyncMock(return_value=set())
@@ -821,6 +928,7 @@ async def test_spine_aurora_bridge_get_context_with_directive():
     """SpineAuroraBridge returns active directive when present."""
     import json
     from app.signals.spine_aurora_bridge import SpineAuroraBridge
+
     redis = AsyncMock()
     directive = {"directive_type": "execution", "strategy_key": "repair_transfer", "user_visible_reason": "test"}
     redis.get = AsyncMock(return_value=json.dumps(directive).encode())
@@ -838,6 +946,7 @@ async def test_spine_aurora_bridge_feed_decision():
     """SpineAuroraBridge feeds Aurora decision back to Spine."""
     import json
     from app.signals.spine_aurora_bridge import SpineAuroraBridge
+
     redis = AsyncMock()
     redis.rpush = AsyncMock(return_value=1)
     redis.ltrim = AsyncMock(return_value=True)
@@ -861,6 +970,7 @@ async def test_spine_aurora_bridge_feed_decision():
 async def test_spine_aurora_bridge_handles_redis_failure():
     """Bridge gracefully handles Redis failures."""
     from app.signals.spine_aurora_bridge import SpineAuroraBridge
+
     redis = AsyncMock()
     redis.get = AsyncMock(side_effect=Exception("Redis down"))
 
@@ -873,6 +983,7 @@ def test_dashboard_readout_has_spine_signals_field():
     """DashboardReadout includes spine_signals field."""
     from app.aurora.runtime_v1.dashboard import DashboardReadout
     from app.aurora.runtime_v1.control_surface import AuroraHardBounds
+
     readout = DashboardReadout(
         surface="aurora_modeling",
         user_id="u1",
@@ -890,6 +1001,7 @@ def test_dashboard_readout_spine_signals_in_payload():
     """spine_signals appears in to_llm_payload for emit_message action."""
     from app.aurora.runtime_v1.dashboard import DashboardReadout
     from app.aurora.runtime_v1.control_surface import AuroraHardBounds
+
     readout = DashboardReadout(
         surface="aurora_modeling",
         user_id="u1",
@@ -913,6 +1025,7 @@ def test_dashboard_readout_spine_signals_in_payload():
 def test_spine_orchestrator_instantiates_orphan_modules():
     """SpineOrchestrator now instantiates previously orphaned modules."""
     from app.signals.spine_orchestrator import SpineOrchestrator
+
     redis = MagicMock()
     spine = SpineOrchestrator(redis)
     assert hasattr(spine, "policy_analytics")
@@ -935,6 +1048,7 @@ def test_spine_orchestrator_instantiates_orphan_modules():
 async def test_divine_moment_see_persistence():
     """神性时刻1: 看见坚持 — achievement → growth chronicle entry."""
     from app.signals.spine_orchestrator import SpineOrchestrator
+
     redis = AsyncMock()
     redis.set = AsyncMock(return_value=True)
     redis.get = AsyncMock(return_value=None)
@@ -956,6 +1070,7 @@ async def test_divine_moment_admit_mistake():
     """神性时刻2: 承认误判 — user correction → state patch."""
     import json
     from app.signals.spine_orchestrator import SpineOrchestrator
+
     redis = AsyncMock()
     redis.set = AsyncMock(return_value=True)
     redis.get = AsyncMock(return_value=None)
@@ -981,6 +1096,7 @@ async def test_divine_moment_remember_time():
     """神性时刻4: 记得时间 — recovery card for returning user."""
     import json
     from app.signals.spine_orchestrator import SpineOrchestrator
+
     redis = AsyncMock()
     redis.set = AsyncMock(return_value=True)
     spine = SpineOrchestrator(redis)
@@ -1001,6 +1117,7 @@ async def test_divine_moment_remember_time():
 async def test_divine_moment_context_receipt():
     """神性时刻3: 知道不用资料 — context receipt."""
     from app.signals.spine_orchestrator import SpineOrchestrator
+
     redis = AsyncMock()
     redis.set = AsyncMock(return_value=True)
     spine = SpineOrchestrator(redis)
@@ -1027,6 +1144,7 @@ async def test_experience_envelope_basic():
     """ExperienceEnvelope aggregates cards, receipts, and status."""
     import json
     from app.signals.spine_orchestrator import SpineOrchestrator
+
     redis = AsyncMock()
     redis.get = AsyncMock(return_value=None)
     redis.lrange = AsyncMock(return_value=[])
@@ -1047,6 +1165,7 @@ async def test_experience_envelope_with_recovery_card():
     """ExperienceEnvelope includes recovery card when present."""
     import json
     from app.signals.spine_orchestrator import SpineOrchestrator
+
     redis = AsyncMock()
 
     recovery_card = {"type": "recovery_card", "urgency": "high", "options": []}
@@ -1074,6 +1193,7 @@ async def test_experience_envelope_with_recovery_card():
 async def test_fatigue_guard_low():
     """Fatigue guard returns low for normal usage."""
     from app.signals.spine_orchestrator import SpineOrchestrator
+
     redis = AsyncMock()
     spine = SpineOrchestrator(redis)
 
@@ -1090,6 +1210,7 @@ async def test_fatigue_guard_low():
 async def test_fatigue_guard_critical():
     """Fatigue guard detects critical fatigue."""
     from app.signals.spine_orchestrator import SpineOrchestrator
+
     redis = AsyncMock()
     spine = SpineOrchestrator(redis)
 
@@ -1113,6 +1234,7 @@ async def test_fatigue_guard_critical():
 async def test_crisis_mode_detection():
     """Crisis mode detected for zero-base + short deadline."""
     from app.signals.spine_orchestrator import SpineOrchestrator
+
     redis = AsyncMock()
     spine = SpineOrchestrator(redis)
 
@@ -1131,6 +1253,7 @@ async def test_crisis_mode_detection():
 async def test_crisis_mode_not_triggered_for_high_mastery():
     """Crisis mode not triggered when mastery is sufficient."""
     from app.signals.spine_orchestrator import SpineOrchestrator
+
     redis = AsyncMock()
     spine = SpineOrchestrator(redis)
 
@@ -1153,6 +1276,7 @@ async def test_save_spine_snapshot():
     """Spine snapshot saves state summary."""
     import json
     from app.signals.spine_orchestrator import SpineOrchestrator
+
     redis = AsyncMock()
     redis.set = AsyncMock(return_value=True)
     redis.get = AsyncMock(return_value=None)
@@ -1192,6 +1316,7 @@ async def test_goal_scoped_key():
 async def test_pipeline_fatigue_detection_on_task_completion():
     """Fatigue check runs during pipeline and stores result when high."""
     import json
+
     redis = FakeRedis()
     # Simulate 35 interactions in 24h (high fatigue)
     await redis.set("spine:interaction_count:u1:24h", "35")
@@ -1217,6 +1342,7 @@ async def test_pipeline_fatigue_detection_on_task_completion():
 async def test_pipeline_crisis_mode_stored_for_exam_user():
     """Crisis mode check runs during pipeline for exam users."""
     import json
+
     redis = FakeRedis()
     # Simulate exam user with 3-day deadline
     await redis.set("spine:exam_sprint:u1:goal_mode", "exam_rescue")
@@ -1251,16 +1377,20 @@ async def test_fatigue_levels_correct():
 
     # Medium (accuracy declining)
     med = await spine.check_fatigue(
-        user_id="u1", interactions_last_24h=8,
-        consecutive_hours=2.0, accuracy_trend=[0.9, 0.7, 0.5],
+        user_id="u1",
+        interactions_last_24h=8,
+        consecutive_hours=2.0,
+        accuracy_trend=[0.9, 0.7, 0.5],
     )
     assert med["fatigue_level"] == "medium"
     assert med["recommended_policy"] == "reduce_pace"
 
     # High (high interactions + late night)
     high = await spine.check_fatigue(
-        user_id="u1", interactions_last_24h=20,
-        consecutive_hours=1.0, is_late_night=True,
+        user_id="u1",
+        interactions_last_24h=20,
+        consecutive_hours=1.0,
+        is_late_night=True,
     )
     assert high["fatigue_level"] in ("high", "medium")
     assert "avoid_new_chapter" not in high.get("hard_constraints", {})
@@ -1279,7 +1409,10 @@ async def test_crisis_mode_boundary_conditions():
     assert await spine.detect_crisis_mode(user_id="u1", days_to_deadline=3, baseline_mastery=40) is None
 
     # Non-exam → None
-    assert await spine.detect_crisis_mode(user_id="u1", days_to_deadline=3, baseline_mastery=10, goal_type="fitness") is None
+    assert (
+        await spine.detect_crisis_mode(user_id="u1", days_to_deadline=3, baseline_mastery=10, goal_type="fitness")
+        is None
+    )
 
     # Borderline: 5 days, low mastery → should trigger
     border = await spine.detect_crisis_mode(user_id="u1", days_to_deadline=5, baseline_mastery=25)
@@ -1296,6 +1429,7 @@ async def test_crisis_mode_boundary_conditions():
 async def test_experience_envelope_aggregates_all_cards():
     """ExperienceEnvelope collects recovery, growth, and community cards."""
     import json
+
     redis = FakeRedis()
 
     recovery = {"type": "recovery_card", "urgency": "high"}
@@ -1324,6 +1458,7 @@ async def test_experience_envelope_aggregates_all_cards():
 async def test_trace_compaction_below_threshold():
     """Compaction skipped when traces below 50."""
     from app.signals.causal_trace_store import CausalTraceStore
+
     redis = FakeRedis()
     store = CausalTraceStore(redis)
 
@@ -1340,6 +1475,7 @@ async def test_trace_compaction_below_threshold():
 async def test_trace_compaction_aggregates_stats():
     """Compaction aggregates signal types and directive types."""
     from app.signals.causal_trace_store import CausalTraceStore, _USER_TRACES_KEY
+
     redis = FakeRedis()
     store = CausalTraceStore(redis)
     key = _USER_TRACES_KEY.format(user_id="u1")
@@ -1367,6 +1503,7 @@ async def test_trace_compaction_aggregates_stats():
 async def test_trace_compaction_preserves_recent():
     """Compaction keeps most recent 50 traces intact."""
     from app.signals.causal_trace_store import CausalTraceStore, _USER_TRACES_KEY
+
     redis = FakeRedis()
     store = CausalTraceStore(redis)
     key = _USER_TRACES_KEY.format(user_id="u1")
@@ -1389,6 +1526,7 @@ async def test_trace_compaction_preserves_recent():
 async def test_trace_compaction_full_history():
     """get_full_trace_history returns both active and compacted."""
     from app.signals.causal_trace_store import CausalTraceStore, _USER_TRACES_KEY
+
     redis = FakeRedis()
     store = CausalTraceStore(redis)
     key = _USER_TRACES_KEY.format(user_id="u1")
@@ -1410,6 +1548,7 @@ async def test_trace_compaction_full_history():
 async def test_trace_compaction_celery_task_registered():
     """Celery compaction task is registered."""
     from app.core.celery_tasks import compact_user_traces
+
     assert compact_user_traces.name == "app.core.celery_tasks.compact_user_traces"
 
 
@@ -1422,6 +1561,7 @@ async def test_trace_compaction_celery_task_registered():
 async def test_circuit_breaker_transitions():
     """Circuit breaker transitions closed → open → half_open → closed."""
     from app.signals.redis_resilience import CircuitBreaker
+
     cb = CircuitBreaker("test", failure_threshold=3, recovery_timeout=0.01)
 
     assert cb.state == "closed"
@@ -1436,6 +1576,7 @@ async def test_circuit_breaker_transitions():
 
     # Wait for recovery timeout
     import asyncio
+
     await asyncio.sleep(0.02)
     assert cb.state == "half_open"
     assert cb.allow_request() is True
@@ -1461,6 +1602,7 @@ async def test_resilient_redis_call_success():
 async def test_resilient_redis_call_fallback():
     """resilient_redis_call returns fallback on failure."""
     from app.signals.redis_resilience import resilient_redis_call, CircuitBreaker
+
     # Use a breaker that's already open
     breaker = CircuitBreaker("test_open", failure_threshold=1, recovery_timeout=60.0)
     breaker.record_failure()  # 1 failure
@@ -1506,5 +1648,3 @@ async def test_circuit_breaker_named_breakers():
     bx = get_breaker("unknown")
     assert bx.name == "unknown"
     assert bx.state == "closed"
-
-

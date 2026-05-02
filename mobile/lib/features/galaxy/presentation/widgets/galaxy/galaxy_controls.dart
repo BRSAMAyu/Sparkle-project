@@ -37,11 +37,12 @@ class GalaxyControls extends StatelessWidget {
     final l10n = context.l10n;
     final backgroundColor = isDarkMode
         ? const Color(0xAA0F1726)
-        : Colors.white.withValues(alpha: 0.78);
+        : DS.neutral0.withValues(alpha: 0.78);
     final borderColor = isDarkMode
-        ? Colors.white.withValues(alpha: 0.12)
-        : Colors.black.withValues(alpha: 0.08);
-    final iconColor = isDarkMode ? Colors.white : Colors.black87;
+        ? DS.neutral0.withValues(alpha: 0.12)
+        : DS.galaxyShadow.withValues(alpha: 0.08);
+    final iconColor =
+        isDarkMode ? DS.neutral0 : DS.neutral900.withValues(alpha: 0.87);
     final glowColor =
         isDarkMode ? const Color(0xFF78A7FF) : const Color(0xFF2A5BD7);
 
@@ -66,7 +67,8 @@ class GalaxyControls extends StatelessWidget {
             border: Border.all(color: borderColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: isDarkMode ? 0.22 : 0.1),
+                color:
+                    DS.galaxyShadow.withValues(alpha: isDarkMode ? 0.22 : 0.1),
                 blurRadius: 28,
                 offset: const Offset(0, 14),
               ),
@@ -167,7 +169,7 @@ class GalaxySectorIndicator extends StatelessWidget {
         opacity: 1,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            color: (isDarkMode ? const Color(0xCC101722) : Colors.white)
+            color: (isDarkMode ? const Color(0xCC101722) : DS.neutral0)
                 .withValues(alpha: 0.88),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: color.withValues(alpha: 0.35)),
@@ -189,7 +191,9 @@ class GalaxySectorIndicator extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    color: isDarkMode ? Colors.white : Colors.black87,
+                    color: isDarkMode
+                        ? DS.neutral0
+                        : DS.neutral900.withValues(alpha: 0.87),
                     fontSize: 13,
                     fontWeight: DS.fontWeightBold,
                     letterSpacing: 0.2,
@@ -229,8 +233,12 @@ class _ControlButton extends StatelessWidget {
           decoration: BoxDecoration(
             color: isActive
                 ? (activeGlowColor ?? iconColor).withValues(alpha: 0.14)
-                : (Colors.white.withValues(
-                    alpha: isActive ? 0 : (Theme.of(context).brightness == Brightness.dark ? 0.02 : 0.015),
+                : (DS.neutral0.withValues(
+                    alpha: isActive
+                        ? 0
+                        : (Theme.of(context).brightness == Brightness.dark
+                            ? 0.02
+                            : 0.015),
                   )),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
@@ -279,7 +287,7 @@ class _ControlGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
         decoration: BoxDecoration(
-          color: (isDarkMode ? Colors.white : Colors.black)
+          color: (isDarkMode ? DS.neutral0 : DS.neutral900)
               .withValues(alpha: isDarkMode ? 0.04 : 0.03),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: borderColor.withValues(alpha: 0.75)),

@@ -10,7 +10,7 @@ from redis.asyncio import Redis
 
 from app.core.cache import cache_service
 from app.models.document_chunks import DocumentChunk
-from app.models.file_storage import StoredFile
+from app.models.file_storage import SourceLifecycleStatus, StoredFile
 from app.models.galaxy import KnowledgeNode
 from app.models.group_files import GroupFile
 
@@ -105,6 +105,7 @@ def build_document_chunk_document(
         "section_title": section_title,
         "quality_score": chunk.quality_score if chunk.quality_score is not None else 1.0,
         "pipeline_version": chunk.pipeline_version or "",
+        "lifecycle_status": file_record.lifecycle_status or SourceLifecycleStatus.ACTIVE.value,
     }
     vector_list = vector_to_list(chunk.embedding)
     if vector_list is not None and (expected_vector_dim is None or len(vector_list) == expected_vector_dim):
@@ -186,6 +187,12 @@ async def index_document_chunks(
     *,
     replace_existing: bool = True,
 ) -> int:
+    if (file_record.lifecycle_status or SourceLifecycleStatus.ACTIVE.value) != SourceLifecycleStatus.ACTIVE.value:
+        if replace_existing:
+            deleted = await delete_document_chunk_keys(redis, file_record.id)
+            if deleted:
+                logger.info(f"Deleted {deleted} Redis document chunks for inactive source {file_record.id}")
+        return 0
     if replace_existing:
         deleted = await delete_document_chunk_keys(redis, file_record.id)
         if deleted:
@@ -205,6 +212,14 @@ async def index_group_document_chunks(
     trust_level: str,
     replace_existing: bool = True,
 ) -> int:
+    if (file_record.lifecycle_status or SourceLifecycleStatus.ACTIVE.value) != SourceLifecycleStatus.ACTIVE.value:
+        if replace_existing:
+            deleted = await delete_group_document_chunk_keys(redis, group_file.group_id, file_record.id)
+            if deleted:
+                logger.info(
+                    f"Deleted {deleted} Redis group document chunks for inactive source {file_record.id}"
+                )
+        return 0
     if replace_existing:
         deleted = await delete_group_document_chunk_keys(redis, group_file.group_id, file_record.id)
         if deleted:

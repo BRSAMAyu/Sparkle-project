@@ -164,7 +164,7 @@ class ChatModeDeepAnalysis extends ChatMode {
       : super(
           apiValue: 'deep_analysis',
           icon: Icons.psychology,
-          color: const Color(0xFF9C27B0),
+          color: DS.brandSecondary,
         );
 }
 
@@ -191,7 +191,7 @@ class ChatModeExpertAuto extends ChatMode {
       : super(
           apiValue: 'expert_auto',
           icon: Icons.auto_awesome_mosaic,
-          color: const Color(0xFF00897B),
+          color: DS.success,
         );
 }
 
@@ -202,7 +202,7 @@ class ChatModeExpert extends ChatMode {
   }) : super(
           apiValue: '$expertChatModePrefix$expertId',
           icon: Icons.person_search,
-          color: const Color(0xFF1565C0),
+          color: DS.info,
         );
 
   final String expertId;
@@ -230,7 +230,7 @@ class ChatModeTeam extends ChatMode {
             teamId,
           ),
           icon: Icons.groups_rounded,
-          color: const Color(0xFF5C6BC0),
+          color: DS.brandSecondary,
         );
 
   final List<String> selectedAgents;

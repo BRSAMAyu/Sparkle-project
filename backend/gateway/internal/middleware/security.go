@@ -11,7 +11,9 @@ func SecurityHeadersMiddleware(cfg ...*config.Config) gin.HandlerFunc {
 		// Content-Security-Policy: 更严格的策略
 		// 注意: 移除了 script-src 的 'unsafe-inline' 和 'unsafe-eval'
 		// 如果前端需要内联脚本，需要使用 nonce 或 hash 机制
-		// style-src 保留 'unsafe-inline' 因为很多 CSS 框架需要
+		// style-src keeps 'unsafe-inline' for framework/runtime-injected styles.
+		// Inline scripts stay blocked above; migrate styles to nonce/hash when the
+		// Flutter web/admin surfaces no longer require dynamic style attributes.
 		c.Header("Content-Security-Policy",
 			"default-src 'self'; "+
 				"script-src 'self'; "+
@@ -43,6 +45,10 @@ func SecurityHeadersMiddleware(cfg ...*config.Config) gin.HandlerFunc {
 
 		// Permissions-Policy: restrict browser features
 		c.Header("Permissions-Policy", "geolocation=(), camera=(), microphone=(), payment=()")
+
+		// Cross-Origin isolation: prevent cross-origin information leaks
+		c.Header("Cross-Origin-Opener-Policy", "same-origin")
+		c.Header("Cross-Origin-Resource-Policy", "same-origin")
 
 		c.Next()
 	}

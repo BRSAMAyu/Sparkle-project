@@ -1,0 +1,26 @@
+FV-01: Counterfactual Evaluation 接入生产管道
+Status: DONE
+Branch: codex/FV-01-counterfactual-production
+Modified files:
+- backend/alembic/versions/c13_20260502_counterfactual_reports.py
+- backend/app/api/v1/counterfactual.py
+- backend/app/api/v1/router.py
+- backend/app/aurora/runtime_v1/models.py
+- backend/app/celery_schedule.py
+- backend/app/core/celery_tasks.py
+- backend/app/core/metrics.py
+- backend/app/signals/__init__.py
+- backend/app/signals/counterfactual_evaluation.py
+- backend/app/signals/research_grade.py
+- backend/app/signals/spine_orchestrator.py
+- backend/tests/unit/test_counterfactual_production.py
+- monitoring/prometheus.yml
+- monitoring/grafana/dashboards/counterfactual.json
+Verification:
+- py_compile FV-01 backend files: PASS
+- git diff --check FV-01 touched files: PASS
+- c13 migration long-line scan: PASS
+- pytest tests/unit/test_counterfactual_production.py: BLOCKED by backend/app/models/community_privacy.py:36 reserved SQLAlchemy metadata attribute outside FV-01
+- alembic heads: BLOCKED by backend/app/models/community_privacy.py:36 reserved SQLAlchemy metadata attribute outside FV-01
+User-visible change: Counterfactual policy reports are now durable, queryable, observable, and promotion-gated instead of silent shadow-only artifacts.
+Architect handoff: Resolve FV-05 community_privacy SQLAlchemy metadata mapper error before running full backend pytest/Alembic verification.

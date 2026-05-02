@@ -60,7 +60,7 @@ class FriendsHubView extends ConsumerWidget {
           const SizedBox(height: 18),
           Text(
             context.l10n.communityFriends,
-            style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+            style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
           ),
           const SizedBox(height: 10),
           if (friendsAsync.hasError)
@@ -165,7 +165,7 @@ class _PartnerHero extends ConsumerWidget {
                       Text(
                         context.l10n.communityCorePartner,
                         style: DS.titleLarge.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -235,7 +235,7 @@ class _PartnerHero extends ConsumerWidget {
                           : partnerDisplay.characters.first,
                       style: TextStyle(
                         color: DS.brandPrimary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ),
@@ -256,7 +256,7 @@ class _PartnerHero extends ConsumerWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: DS.titleLarge.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: DS.fontWeightBold,
                                 ),
                               ),
                             ),
@@ -606,7 +606,7 @@ class _MetricChip extends StatelessWidget {
                 '$label · $value',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: DS.bodySmall.copyWith(fontWeight: FontWeight.bold),
+                style: DS.bodySmall.copyWith(fontWeight: DS.fontWeightBold),
               ),
             ),
           ],
@@ -691,7 +691,7 @@ class _EmptyFriendsCard extends StatelessWidget {
           const SizedBox(height: 12),
           Text(
             hasPending ? context.l10n.communityPendingFirst : context.l10n.communityNoFriendsYet,
-            style: DS.bodyLarge.copyWith(fontWeight: FontWeight.bold),
+            style: DS.bodyLarge.copyWith(fontWeight: DS.fontWeightBold),
           ),
           const SizedBox(height: 6),
           Text(

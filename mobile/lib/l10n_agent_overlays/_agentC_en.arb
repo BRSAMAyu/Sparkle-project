@@ -1,0 +1,6 @@
+{
+  "understandingPanelTitle": "Sparkle understands me",
+  "understandingPanelSemanticLabel": "Sparkle understanding snapshot",
+  "understandingCorrectionTitle": "Correct this read",
+  "understandingChatDrawerTitle": "Current self-model"
+}

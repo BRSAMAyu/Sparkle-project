@@ -22,6 +22,7 @@ from app.aurora.runtime_v1.aurora_spine_confluence import (
 )
 from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
 from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider
+from app.aurora.runtime_v1.l0_rules import L0RuleEngine
 from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
 from app.core.cost_controller import is_aurora_within_budget, record_aurora_cost
 from app.core.error_taxonomy import ErrorCategory, ErrorSeverity, classify_error
@@ -47,6 +48,7 @@ from app.signals.intervention_episode import (
     InterventionEpisodeLedger,
 )
 from app.signals.learning_base import LearningBase
+from app.signals.learning_guard import LearningGuard
 from app.signals.material_signal import MaterialSignalDetector
 from app.signals.mistake_signal import MistakeSignalDetector
 from app.signals.multi_goal_arbitration import MultiGoalArbitrator
@@ -64,6 +66,8 @@ from app.signals.self_model import SparkleSelfModelService
 from app.signals.signal_ranker import SignalRanker
 from app.signals.skill_extraction import SkillExtractionService
 from app.signals.skill_lifecycle import SkillLifecycleManager
+from app.signals.citation_validator import CitationValidator
+from app.signals.low_yield_guard import LowYieldGuard
 from app.signals.source_tray_integration import SourceEffectivenessTracker
 from app.signals.spine_metrics import SpineMetricsCollector
 from app.signals.stale_state_guard import StaleStateGuard
@@ -128,8 +132,8 @@ class SpineOrchestrator:
         self.card_store = CardStore(redis_client, self.community_loops)
         self.reply_engine = SpineReplyOptionEngine()
         self.wake_judge = AuroraWakeJudge()
-        self.signal_ranker = SignalRanker()
         self.state_register = StateRegister(redis_client)
+        self.signal_ranker = SignalRanker(state_register=self.state_register)
         self.outcome_recorder = OutcomeRecorder(redis_client)
         self.outcome_tracker = OutcomeTracker(redis_client)
         self.metrics = SpineMetricsCollector(redis_client)
@@ -161,6 +165,14 @@ class SpineOrchestrator:
         self.source_effectiveness = SourceEffectivenessTracker(redis_client)
         self.goal_graph = GoalWorldGraphService(redis_client)
         self.goal_arbitrator = MultiGoalArbitrator(redis_client)
+
+        # P1-10/11: Previously orphaned — now wired into pipeline
+        self.learning_guard = LearningGuard(redis_client)
+        self.l0_engine = L0RuleEngine(redis_client)
+
+        # P1-16/17: Citation validation + low-yield guarding
+        self.citation_validator = CitationValidator(redis_client)
+        self.low_yield_guard = LowYieldGuard(redis_client)
 
         # EA-1~EA-4: Governance modules — wired into production pipeline
         from app.core.research_isolation import ResearchIsolationGuard
@@ -229,8 +241,8 @@ class SpineOrchestrator:
         _post_lock_key = f"spine:task_completed_lock:{user_id}"
         try:
             await self.redis.set(_post_lock_key, "1", nx=True, ex=15)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Task-completed post lock acquisition failed for user={}: {}", user_id, exc)
 
         # Step 3a: Record Aurora energy level decision in trace (T3.1.6)
         try:
@@ -303,8 +315,8 @@ class SpineOrchestrator:
         # Release task-completed lock
         try:
             await self.redis.delete(_post_lock_key)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Task-completed post lock release failed for user={}: {}", user_id, exc)
 
         return trace
 
@@ -1300,6 +1312,18 @@ class SpineOrchestrator:
             "spine_pipeline", self.metrics.record_signal_entered_state(),
         )
 
+        # P1-11: L0 deterministic rule evaluation — inject deadline_pressure + quiet_hours signals
+        try:
+            l0_signals = await self.l0_engine.evaluate_all(user_id)
+            for l0_signal in l0_signals:
+                await resilient_redis_call(
+                    "state_register",
+                    self.state_register.upsert_from_signal(user_id, l0_signal),
+                )
+                logger.debug("L0 signal injected: {} for user={}", l0_signal.state_key, user_id)
+        except Exception:
+            logger.debug("L0 rule evaluation failed for user={}", user_id, exc_info=True)
+
         # L2 Mid Aurora: Check for escalation patterns and trigger interventions
         l2_escalation = await resilient_redis_call(
             "spine_pipeline",
@@ -1389,6 +1413,29 @@ class SpineOrchestrator:
 
         # Overlay ExamSprintPolicy constraints if user is in exam_rescue mode
         directive = await self._apply_exam_sprint_overlay(user_id, directive)
+
+        # P1-17: Low-yield gentle block — redirect low-yield activities under deadline pressure
+        try:
+            task_type = getattr(directive, "task_type", None) or getattr(directive, "suggested_activity", None)
+            if task_type:
+                dl_hours = await self._estimate_deadline_hours(user_id)
+                yield_result = self.low_yield_guard.check_activity(
+                    str(task_type),
+                    deadline_hours=dl_hours,
+                    is_exam_context=getattr(signal, "goal_type", "") in ("exam_sprint", "exam_rescue", "exam_build"),
+                )
+                if not yield_result.passed:
+                    alt = self.low_yield_guard.get_best_alternative(str(task_type))
+                    logger.info(
+                        "LowYieldGuard: redirecting {} → {} for user={}",
+                        task_type, alt, user_id,
+                    )
+                    trace.raw_event_ids.append(f"low_yield_block:{task_type}")
+                    if hasattr(directive, "task_type"):
+                        directive.task_type = alt
+        except Exception:
+            logger.debug("LowYieldGuard check failed for user={}", user_id, exc_info=True)
+
         await self.trace_store.set_active_directive(user_id, directive)
         await self._link_directive_to_active_session(user_id, directive.directive_id)
 
@@ -1416,6 +1463,21 @@ class SpineOrchestrator:
                     trace.raw_event_ids.append(f"fabrication:{len(flagged)}")
             except Exception:
                 logger.debug("Fabrication scan failed for user={}", user_id, exc_info=True)
+
+            # P1-16: Citation validation — verify citations against retrieved sources
+            try:
+                response_text = response_dir.message if hasattr(response_dir, "message") else ""
+                if response_text:
+                    citation_result = self.citation_validator.validate_response(
+                        response_text,
+                        is_exam_context=signal.goal_type in ("exam_sprint", "exam_rescue", "exam_build") if hasattr(signal, "goal_type") else False,
+                    )
+                    if not citation_result.passed:
+                        note = self.citation_validator.get_verification_note(citation_result)
+                        logger.warning("CitationValidator: {} for user={}", note, user_id)
+                        trace.raw_event_ids.append(f"citation_warning:{len(citation_result.unverifiable)}")
+            except Exception:
+                logger.debug("Citation validation failed for user={}", user_id, exc_info=True)
 
         # Build and store NotificationDirective
         notif_dir = self.policy_engine.build_notification_directive(decision, signal)
@@ -1946,7 +2008,8 @@ class SpineOrchestrator:
                 {"state_key": e.state_key, "value": e.value, "confidence": e.confidence, "scope": e.scope}
                 for e in entries
             ]
-        except Exception:
+        except Exception as exc:
+            logger.debug("_get_active_states_dicts degraded for user={}: {}", user_id, exc)
             return []
 
     # ── T5.1.2: Research-Grade InterventionEpisode Generation ──────────
@@ -2250,6 +2313,20 @@ class SpineOrchestrator:
             return goal_mode, None
         return goal_mode, days
 
+    async def _estimate_deadline_hours(self, user_id: str) -> float | None:
+        """Estimate hours until nearest deadline from exam sprint context or goals."""
+        try:
+            _, days = await self._get_exam_sprint_context(user_id)
+            if days is not None:
+                return float(days * 24)
+            # Fall back to state register
+            deadline_state = await self.state_register.get_state(user_id, "deadline_pressure")
+            if deadline_state and deadline_state.value:
+                return float(deadline_state.value) * 24
+        except Exception:
+            pass
+        return None
+
     async def _apply_exam_sprint_overlay(
         self,
         user_id: str,
@@ -2508,6 +2585,18 @@ class SpineOrchestrator:
         )
         await self.metrics.record_outcome_recorded(effective=record.attribution == "effective")
 
+        # P1-10: LearningGuard — gate auto strategy learning on outcome quality
+        guard_verdict = self.learning_guard.get_guard_verdict(record)
+        if not guard_verdict["should_learn"]:
+            logger.debug(
+                "LearningGuard blocked learning from outcome={} action={}",
+                record.outcome_id, guard_verdict["action"],
+            )
+            if guard_verdict["should_retract"]:
+                trace.raw_event_ids.append(f"policy_retraction:{record.intervention}")
+                logger.info("LearningGuard retraction triggered for policy={} user={}", record.intervention, user_id)
+            return record
+
         # V-9: Auto strategy learning — update belief from outcome
         if user_id and record.intervention:
             try:
@@ -2592,11 +2681,8 @@ class SpineOrchestrator:
             logger.warning("record_outcome: _consume_aurora_decisions_for_attribution failed", exc_info=True)
 
         # v2.5: Counterfactual shadow evaluation (research-grade)
-        try:
-            if user_id and record.attribution in ("effective", "insufficient"):
-                await self._run_counterfactual_shadow(user_id, record, actual_outcome)
-        except Exception:
-            logger.warning("record_outcome: _run_counterfactual_shadow failed", exc_info=True)
+        if user_id and record.attribution in ("effective", "insufficient"):
+            await self._run_counterfactual_shadow(user_id, record, actual_outcome)
 
         return record
 
@@ -2851,19 +2937,27 @@ class SpineOrchestrator:
         try:
             from app.signals.intervention_episode import ContextSignature
             from app.signals.safe_experiment_platform import SafeBanditController
+            from app.core.metrics import SAFE_EXPERIMENT_BANDIT_BLOCK_TOTAL
             ctx_sig = ContextSignature(
                 goal_mode="standard",
                 failure_type=signal.claim,
                 cognitive_load="medium" if signal.priority == "high" else "low",
                 user_id=user_id,
             )
+            user_opted_out = False
+            raw_opt_out = await self.redis.get(f"spine:safe_experiments:opt_out:{user_id}")
+            if raw_opt_out is not None:
+                user_opted_out = str(raw_opt_out.decode() if isinstance(raw_opt_out, bytes) else raw_opt_out) == "1"
             candidate_strategies = [decision.primary_strategy, "reduce_pace", "reinforce_without_overpressure"]
             bandit = SafeBanditController()
-            result = bandit.select_action(
+            result = bandit.select_arm(
                 candidate_actions=candidate_strategies,
                 context=ctx_sig,
                 risk_level=decision.risk_level or "low",
+                user_opted_out=user_opted_out,
             )
+            if result.get("blocked"):
+                SAFE_EXPERIMENT_BANDIT_BLOCK_TOTAL.labels(result.get("reason", "unknown")).inc()
             if result and result.get("selected_action") != decision.primary_strategy:
                 await self.redis.set(
                     f"spine:bandit_suggestion:{user_id}:latest",
@@ -2873,8 +2967,9 @@ class SpineOrchestrator:
                     }),
                     ex=24 * 3600,
                 )
-        except Exception:
-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
+        except Exception as exc:
+            logger.exception("_enrich_pipeline_post_policy: safe_experiment failed")
+            raise RuntimeError("safe_experiment_enrichment_failed") from exc
 
 
     # ── Aurora → Spine Return Path ────────────────────────────────────
@@ -2952,25 +3047,26 @@ class SpineOrchestrator:
         later policy improvement without affecting live decisions.
         """
         import json
+
+        from app.core.metrics import COUNTERFACTUAL_EVALUATION_FAILURE_TOTAL
+        from app.signals.counterfactual_evaluation import MatchedContextEvaluator
+        from app.signals.intervention_episode import ContextSignature
+
+        evaluator = MatchedContextEvaluator()
+        actual_strategy = getattr(outcome_record, "intervention", "unknown")
+        ctx = ContextSignature(
+            goal_mode=actual_outcome.get("goal_mode", "standard"),
+            failure_type=actual_outcome.get("failure_type", ""),
+            cognitive_load="medium",
+        )
+        alternatives = ["reduce_pace", "simplify_task", "worked_example_first"]
+        results: list[dict[str, Any]] = []
         try:
-            from app.signals.counterfactual_evaluation import MatchedContextEvaluator
-            from app.signals.intervention_episode import ContextSignature
-            evaluator = MatchedContextEvaluator()
-            # Build a synthetic episode from the outcome
-            actual_strategy = getattr(outcome_record, "intervention", "unknown")
-            ctx = ContextSignature(
-                goal_mode=actual_outcome.get("goal_mode", "standard"),
-                failure_type=actual_outcome.get("failure_type", ""),
-                cognitive_load="medium",
-            )
-            # Compare against common alternatives
-            alternatives = ["reduce_pace", "simplify_task", "worked_example_first"]
-            results: list[dict[str, Any]] = []
             for alt in alternatives:
                 estimate = evaluator.evaluate(
                     actual_policy=actual_strategy,
                     alternative_policy=alt,
-                    episodes=[],  # Shadow mode — no real episodes yet
+                    episodes=[],
                     target_context=ctx,
                 )
                 results.append({
@@ -2985,7 +3081,8 @@ class SpineOrchestrator:
                 await self.redis.ltrim(f"spine:counterfactual_shadow:{user_id}", -50, -1)
                 await self.redis.expire(f"spine:counterfactual_shadow:{user_id}", 90 * 24 * 3600)
         except Exception:
-            logger.warning("_run_counterfactual_shadow: operation failed", exc_info=True)
+            COUNTERFACTUAL_EVALUATION_FAILURE_TOTAL.labels(source="spine_shadow").inc()
+            raise
 
     # ── P1: Divine Moment Enrichers ──────────────────────────────────
 
@@ -3105,8 +3202,8 @@ class SpineOrchestrator:
                     freeform_text=f"{original_claim} → {corrected_understanding}",
                     telemetry_id=trace_id or "",
                 )
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Correction feedback processing failed for user={}: {}", user_id, exc)
 
             # Store correction event for Aurora
             correction_event = {
@@ -3217,8 +3314,8 @@ class SpineOrchestrator:
 
             try:
                 await record_aurora_cost(tier="l3_full_core")
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("Aurora L3 cost recording failed for user={}: {}", user_id, exc)
 
             return session
         except Exception:

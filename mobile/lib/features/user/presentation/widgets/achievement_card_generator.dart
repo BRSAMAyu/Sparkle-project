@@ -101,7 +101,7 @@ class _MilestoneCard extends StatelessWidget {
                   style: TextStyle(
                     color: DS.brandPrimaryConst,
                     fontSize: 48,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     letterSpacing: 2,
                   ),
                 ),
@@ -126,7 +126,7 @@ class _MilestoneCard extends StatelessWidget {
                     style: TextStyle(
                       color: DS.brandPrimaryConst,
                       fontSize: 72,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ),
@@ -281,7 +281,7 @@ class _StreakRecordCard extends StatelessWidget {
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 48,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: 40),
@@ -291,7 +291,7 @@ class _StreakRecordCard extends StatelessWidget {
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 120,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: 40),
@@ -370,7 +370,7 @@ class _MasteryAchievementCard extends StatelessWidget {
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 48,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: 40),
@@ -380,7 +380,7 @@ class _MasteryAchievementCard extends StatelessWidget {
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 72,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: 20),
@@ -468,7 +468,7 @@ class _TaskCompletionCard extends StatelessWidget {
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 48,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: 40),
@@ -488,7 +488,7 @@ class _TaskCompletionCard extends StatelessWidget {
               style: TextStyle(
                 color: DS.brandPrimaryConst,
                 fontSize: 72,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
             const SizedBox(height: 40),

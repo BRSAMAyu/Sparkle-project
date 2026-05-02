@@ -466,7 +466,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             color: DS.warning,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                       ],

@@ -165,20 +165,25 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
               ),
               if (sourceBadge != null) _MetaBadge(label: sourceBadge),
               if (sourceBadge != null) const SizedBox(width: DS.spacing8),
-              InkWell(
-                borderRadius: BorderRadius.circular(999),
-                onTap: () {
-                  unawaited(
-                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-                  );
-                  unawaited(_setExpanded(false));
-                },
-                child: Padding(
-                  padding: const EdgeInsets.all(2),
-                  child: Icon(
-                    Icons.visibility_off_rounded,
-                    size: 17,
-                    color: DS.textSecondary,
+              Semantics(
+                button: true,
+                label: 'Chat chat prediction dock control 1',
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection),
+                    );
+                    unawaited(_setExpanded(false));
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(2),
+                    child: Icon(
+                      Icons.visibility_off_rounded,
+                      size: 17,
+                      color: DS.textSecondary,
+                    ),
                   ),
                 ),
               ),
@@ -233,7 +238,9 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
     required bool isLoading,
   }) {
     if (isLoading) {
-      return isTyping ? context.l10n.chatPredictionUnderstandingInput : context.l10n.chatPredictionUpdatingByBehavior;
+      return isTyping
+          ? context.l10n.chatPredictionUnderstandingInput
+          : context.l10n.chatPredictionUpdatingByBehavior;
     }
     if (insight != null) {
       if (!isTyping) {
@@ -267,7 +274,9 @@ class _ChatPredictionDockState extends ConsumerState<ChatPredictionDock> {
         return compact;
       }
     }
-    return isTyping ? context.l10n.chatPredictionGuessingNext : context.l10n.chatPredictionMostLikelyAction;
+    return isTyping
+        ? context.l10n.chatPredictionGuessingNext
+        : context.l10n.chatPredictionMostLikelyAction;
   }
 
   String? _sourceBadge(PredictionInsightData? insight,
@@ -334,46 +343,50 @@ class _CollapsedDock extends StatelessWidget {
           horizontal: compact ? DS.spacing10 : 12,
           vertical: compact ? DS.spacing6 : DS.spacing8,
         ),
-        child: InkWell(
-          borderRadius: DS.borderRadius16,
-          onTap: onExpand,
-          child: Row(
-            children: [
-              Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: DS.info.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 13,
-                  color: DS.info,
-                ),
-              ),
-              const SizedBox(width: DS.spacing8),
-              Expanded(
-                child: Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: DS.labelSmall.copyWith(
-                    color: DS.textPrimary,
-                    fontWeight: DS.fontWeightBold,
+        child: Semantics(
+          button: true,
+          label: 'Chat chat prediction dock control 2',
+          child: InkWell(
+            borderRadius: DS.borderRadius16,
+            onTap: onExpand,
+            child: Row(
+              children: [
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    color: DS.info.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome_rounded,
+                    size: 13,
+                    color: DS.info,
                   ),
                 ),
-              ),
-              if (sourceBadge != null) ...[
-                _MetaBadge(label: sourceBadge!),
                 const SizedBox(width: DS.spacing8),
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DS.labelSmall.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                ),
+                if (sourceBadge != null) ...[
+                  _MetaBadge(label: sourceBadge!),
+                  const SizedBox(width: DS.spacing8),
+                ],
+                Icon(
+                  Icons.unfold_more_rounded,
+                  size: 18,
+                  color: DS.textSecondary,
+                ),
               ],
-              Icon(
-                Icons.unfold_more_rounded,
-                size: 18,
-                color: DS.textSecondary,
-              ),
-            ],
+            ),
           ),
         ),
       );
@@ -429,55 +442,59 @@ class _DockActionChipState extends State<_DockActionChip> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) => setState(() => _isPressed = false),
-      onTapCancel: () => setState(() => _isPressed = false),
-      onTap: widget.onTap,
-      child: AnimatedScale(
-        scale: _isPressed ? 0.98 : 1,
-        duration: DS.durationFast,
-        curve: DS.curveEaseOut,
-        child: Container(
-          constraints: const BoxConstraints(
-            minHeight: 34,
-            maxWidth: 220,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing8,
-            vertical: DS.spacing6,
-          ),
-          decoration: BoxDecoration(
-            color: isDark
-                ? DS.surfaceTertiary.withValues(alpha: 0.94)
-                : DS.surfaceOverlay,
-            borderRadius: DS.borderRadius16,
-            border: Border.all(
-              color: widget.color.withValues(alpha: _isPressed ? 0.28 : 0.18),
+    return Semantics(
+      button: true,
+      label: 'Chat chat prediction dock control 3',
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTap: widget.onTap,
+        child: AnimatedScale(
+          scale: _isPressed ? 0.98 : 1,
+          duration: DS.durationFast,
+          curve: DS.curveEaseOut,
+          child: Container(
+            constraints: const BoxConstraints(
+              minHeight: 34,
+              maxWidth: 220,
             ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                widget.icon,
-                size: DS.iconSizeXs,
-                color: widget.color,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing8,
+              vertical: DS.spacing6,
+            ),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? DS.surfaceTertiary.withValues(alpha: 0.94)
+                  : DS.surfaceOverlay,
+              borderRadius: DS.borderRadius16,
+              border: Border.all(
+                color: widget.color.withValues(alpha: _isPressed ? 0.28 : 0.18),
               ),
-              const SizedBox(width: DS.spacing6),
-              Flexible(
-                child: Text(
-                  widget.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: DS.labelSmall.copyWith(
-                    fontSize: 11,
-                    color: DS.textPrimary,
-                    fontWeight: DS.fontWeightMedium,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  widget.icon,
+                  size: DS.iconSizeXs,
+                  color: widget.color,
+                ),
+                const SizedBox(width: DS.spacing6),
+                Flexible(
+                  child: Text(
+                    widget.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: DS.labelSmall.copyWith(
+                      fontSize: 11,
+                      color: DS.textPrimary,
+                      fontWeight: DS.fontWeightMedium,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/social_auth_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/models/account_security_model.dart';
@@ -258,13 +259,16 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
                             _buildInfoChip(
                               context,
                               icon: Icons.link_rounded,
-                              label:
-                                  '已绑定 ${_accounts.where((item) => item.linked).length} 项',
+                              label: (I18nService.instance.isChinese
+                                  ? '已绑定 ${_accounts.where((item) => item.linked).length} 项'
+                                  : '${_accounts.where((item) => item.linked).length} linked'),
                             ),
                             _buildInfoChip(
                               context,
                               icon: Icons.security_rounded,
-                              label: '登录方式统一管理',
+                              label: I18nService.instance.isChinese
+                                  ? '登录方式统一管理'
+                                  : 'Unified login management',
                             ),
                           ],
                         ),
@@ -484,7 +488,9 @@ class _AccountStatusPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        linked ? '已连接' : '未连接',
+        linked
+            ? (I18nService.instance.isChinese ? '已连接' : 'Connected')
+            : (I18nService.instance.isChinese ? '未连接' : 'Not connected'),
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
               color: color,
               fontWeight: DS.fontWeightBold,

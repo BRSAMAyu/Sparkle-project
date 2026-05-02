@@ -66,7 +66,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
                   child: Text(
                     I18nService.instance.isChinese ? '官方' : 'Official',
                     style: context.sparkleTypography.labelSmall.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                       fontSize: 9,
                       color: DS.success,
                     ),
@@ -80,7 +80,7 @@ class SeedLibraryDashboardCard extends ConsumerWidget {
               I18nService.instance.isChinese ? '种子库' : 'Seed Library',
               style: context.sparkleTypography.labelLarge.copyWith(
                 fontSize: dense ? 13 : null,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
               ),
               maxLines: 1,

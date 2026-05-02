@@ -238,7 +238,17 @@ class GraphStructureService:
                 UserNodeStatus, and_(UserNodeStatus.node_id == KnowledgeNode.id, UserNodeStatus.user_id == user_id)
             )
             .outerjoin(Subject, KnowledgeNode.subject_id == Subject.id)
-            .where(or_(KnowledgeNode.status.is_(None), KnowledgeNode.status == "published"))
+            .where(
+                or_(
+                    KnowledgeNode.status.is_(None),
+                    KnowledgeNode.status == "published",
+                    and_(
+                        KnowledgeNode.status == "draft",
+                        UserNodeStatus.user_id == user_id,
+                        UserNodeStatus.is_unlocked.is_(True),
+                    ),
+                )
+            )
         )
 
         # LOD Filtering

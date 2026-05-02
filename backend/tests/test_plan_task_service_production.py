@@ -14,6 +14,7 @@ These tests validate REAL business rules discovered from the source code:
 - Sentiment inference from user notes
 - Ownership enforcement on all operations
 """
+
 import pytest
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
@@ -64,9 +65,7 @@ def mock_task_deps(monkeypatch):
         MagicMock(auto_link_from_task_context=AsyncMock()),
     )
     monkeypatch.setattr("app.services.task_service.cache_service", MagicMock(redis=None))
-    monkeypatch.setattr(
-        "app.services.task_service.event_bus_reliable", MagicMock(publish=AsyncMock())
-    )
+    monkeypatch.setattr("app.services.task_service.event_bus_reliable", MagicMock(publish=AsyncMock()))
     monkeypatch.setattr("app.services.task_service.publish_srl_event", AsyncMock())
 
 
@@ -169,8 +168,15 @@ async def test_plan_sprint_auto_archive_on_all_complete(db_session, mock_plan_de
     await db_session.commit()
     for _ in range(2):
         db_session.add(
-            Task(id=uuid4(), user_id=user_id, plan_id=plan.id, title="t", type=TaskType.LEARNING,
-                 status=TaskStatus.COMPLETED, estimated_minutes=30)
+            Task(
+                id=uuid4(),
+                user_id=user_id,
+                plan_id=plan.id,
+                title="t",
+                type=TaskType.LEARNING,
+                status=TaskStatus.COMPLETED,
+                estimated_minutes=30,
+            )
         )
     await db_session.commit()
     monkeypatch.setattr("app.services.plan_state_service.PlanStateService", MagicMock())
@@ -186,10 +192,28 @@ async def test_plan_sprint_no_auto_archive_incomplete(db_session, mock_plan_deps
     plan = Plan(id=uuid4(), user_id=user_id, name="s", type=PlanType.SPRINT, is_active=True, progress=0.0)
     db_session.add(plan)
     await db_session.commit()
-    db_session.add(Task(id=uuid4(), user_id=user_id, plan_id=plan.id, title="done", type=TaskType.LEARNING,
-                        status=TaskStatus.COMPLETED, estimated_minutes=30))
-    db_session.add(Task(id=uuid4(), user_id=user_id, plan_id=plan.id, title="todo", type=TaskType.LEARNING,
-                        status=TaskStatus.PENDING, estimated_minutes=30))
+    db_session.add(
+        Task(
+            id=uuid4(),
+            user_id=user_id,
+            plan_id=plan.id,
+            title="done",
+            type=TaskType.LEARNING,
+            status=TaskStatus.COMPLETED,
+            estimated_minutes=30,
+        )
+    )
+    db_session.add(
+        Task(
+            id=uuid4(),
+            user_id=user_id,
+            plan_id=plan.id,
+            title="todo",
+            type=TaskType.LEARNING,
+            status=TaskStatus.PENDING,
+            estimated_minutes=30,
+        )
+    )
     await db_session.commit()
     progress = await PlanService.update_progress(db_session, plan.id, user_id)
     await db_session.refresh(plan)
@@ -203,8 +227,17 @@ async def test_plan_growth_never_auto_archives(db_session, mock_plan_deps):
     plan = Plan(id=uuid4(), user_id=user_id, name="g", type=PlanType.GROWTH, is_active=True, progress=0.0)
     db_session.add(plan)
     await db_session.commit()
-    db_session.add(Task(id=uuid4(), user_id=user_id, plan_id=plan.id, title="done", type=TaskType.LEARNING,
-                        status=TaskStatus.COMPLETED, estimated_minutes=30))
+    db_session.add(
+        Task(
+            id=uuid4(),
+            user_id=user_id,
+            plan_id=plan.id,
+            title="done",
+            type=TaskType.LEARNING,
+            status=TaskStatus.COMPLETED,
+            estimated_minutes=30,
+        )
+    )
     await db_session.commit()
     progress = await PlanService.update_progress(db_session, plan.id, user_id)
     await db_session.refresh(plan)
@@ -218,7 +251,9 @@ async def test_plan_growth_never_auto_archives(db_session, mock_plan_deps):
 @pytest.mark.asyncio
 async def test_plan_update_priority(db_session, mock_plan_deps):
     user_id = uuid4()
-    plan = Plan(id=uuid4(), user_id=user_id, name="p", type=PlanType.SPRINT, is_active=True, priority=PlanPriority.NORMAL)
+    plan = Plan(
+        id=uuid4(), user_id=user_id, name="p", type=PlanType.SPRINT, is_active=True, priority=PlanPriority.NORMAL
+    )
     db_session.add(plan)
     await db_session.commit()
     updated = await PlanService.update_priority(db_session, plan.id, user_id, PlanPriority.HIGH)
@@ -297,8 +332,12 @@ async def test_task_create_defaults(db_session, mock_task_deps):
 @pytest.mark.asyncio
 async def test_task_create_order_decrements(db_session, mock_task_deps):
     user_id = uuid4()
-    t1 = await TaskService.create(db_session, TaskCreate(title="a", type=TaskType.LEARNING, estimated_minutes=25, difficulty=1), user_id)
-    t2 = await TaskService.create(db_session, TaskCreate(title="b", type=TaskType.LEARNING, estimated_minutes=25, difficulty=1), user_id)
+    t1 = await TaskService.create(
+        db_session, TaskCreate(title="a", type=TaskType.LEARNING, estimated_minutes=25, difficulty=1), user_id
+    )
+    t2 = await TaskService.create(
+        db_session, TaskCreate(title="b", type=TaskType.LEARNING, estimated_minutes=25, difficulty=1), user_id
+    )
     assert t2.order_index < t1.order_index
 
 
@@ -310,8 +349,15 @@ async def test_task_complete_updates_plan_progress(db_session, mock_task_deps, m
     user_id = uuid4()
     plan = Plan(id=uuid4(), user_id=user_id, name="p", type=PlanType.GROWTH, is_active=True, progress=0.0)
     db_session.add(plan)
-    task = Task(id=uuid4(), user_id=user_id, plan_id=plan.id, title="t", type=TaskType.LEARNING,
-                status=TaskStatus.PENDING, estimated_minutes=30)
+    task = Task(
+        id=uuid4(),
+        user_id=user_id,
+        plan_id=plan.id,
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PENDING,
+        estimated_minutes=30,
+    )
     db_session.add_all([plan, task])
     await db_session.commit()
     completed = await TaskService.complete(db_session, task, 28, "完成了")
@@ -324,8 +370,14 @@ async def test_task_complete_updates_plan_progress(db_session, mock_task_deps, m
 
 @pytest.mark.asyncio
 async def test_task_complete_sets_timestamps(db_session, mock_task_deps):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.IN_PROGRESS, estimated_minutes=30)
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.IN_PROGRESS,
+        estimated_minutes=30,
+    )
     db_session.add(task)
     await db_session.commit()
     before = _utcnow()
@@ -340,8 +392,14 @@ async def test_task_complete_sets_timestamps(db_session, mock_task_deps):
 
 @pytest.mark.asyncio
 async def test_task_stuck_raises_for_completed(db_session):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.COMPLETED, estimated_minutes=30)
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.COMPLETED,
+        estimated_minutes=30,
+    )
     db_session.add(task)
     await db_session.commit()
     with pytest.raises(ValueError, match="Completed or abandoned"):
@@ -350,8 +408,14 @@ async def test_task_stuck_raises_for_completed(db_session):
 
 @pytest.mark.asyncio
 async def test_task_stuck_raises_for_abandoned(db_session):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.ABANDONED, estimated_minutes=30)
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.ABANDONED,
+        estimated_minutes=30,
+    )
     db_session.add(task)
     await db_session.commit()
     with pytest.raises(ValueError, match="Completed or abandoned"):
@@ -360,8 +424,9 @@ async def test_task_stuck_raises_for_abandoned(db_session):
 
 @pytest.mark.asyncio
 async def test_task_stuck_sets_status_and_diagnosis(db_session, mock_task_deps, monkeypatch):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.PENDING, estimated_minutes=30)
+    task = Task(
+        id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30
+    )
     db_session.add(task)
     await db_session.commit()
 
@@ -375,13 +440,82 @@ async def test_task_stuck_sets_status_and_diagnosis(db_session, mock_task_deps, 
     assert "stuck_help" in (updated.guide_json or {})
 
 
+# ── TaskService: Pause / Resume ─────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_task_pause_sets_paused_without_completion(db_session, mock_task_deps):
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.IN_PROGRESS,
+        estimated_minutes=30,
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    paused = await TaskService.pause(db_session, task, reason="break")
+
+    assert paused.status == TaskStatus.PAUSED
+    assert paused.completed_at is None
+    assert paused.user_note == "Paused: break"
+    assert paused.guide_json["pause_state"]["paused_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_task_resume_requires_paused_and_returns_in_progress(db_session, mock_task_deps):
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PAUSED,
+        estimated_minutes=30,
+        guide_json={"pause_state": {"paused_count": 1}},
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    resumed = await TaskService.resume(db_session, task)
+
+    assert resumed.status == TaskStatus.IN_PROGRESS
+    assert resumed.started_at is not None
+    assert resumed.guide_json["pause_state"]["resumed_at"] is not None
+
+
+@pytest.mark.asyncio
+async def test_task_pause_rejects_terminal_status(db_session, mock_task_deps):
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.COMPLETED,
+        estimated_minutes=30,
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    with pytest.raises(ValueError, match="Completed or abandoned"):
+        await TaskService.pause(db_session, task)
+
+
 # ── TaskService: Abandon ─────────────────────────────────────────────
 
 
 @pytest.mark.asyncio
 async def test_task_abandon_with_reason(db_session, mock_task_deps):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.IN_PROGRESS, estimated_minutes=30, started_at=_utcnow() - timedelta(minutes=10))
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.IN_PROGRESS,
+        estimated_minutes=30,
+        started_at=_utcnow() - timedelta(minutes=10),
+    )
     db_session.add(task)
     await db_session.commit()
     abandoned = await TaskService.abandon(db_session, task, reason="太难了")
@@ -391,8 +525,9 @@ async def test_task_abandon_with_reason(db_session, mock_task_deps):
 
 @pytest.mark.asyncio
 async def test_task_abandon_without_reason(db_session, mock_task_deps):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.PENDING, estimated_minutes=30)
+    task = Task(
+        id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30
+    )
     db_session.add(task)
     await db_session.commit()
     abandoned = await TaskService.abandon(db_session, task)
@@ -405,12 +540,22 @@ async def test_task_abandon_without_reason(db_session, mock_task_deps):
 
 @pytest.mark.asyncio
 async def test_task_focus_auto_complete(db_session, mock_task_deps):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.IN_PROGRESS, estimated_minutes=30, actual_minutes=20)
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.IN_PROGRESS,
+        estimated_minutes=30,
+        actual_minutes=20,
+    )
     db_session.add(task)
     await db_session.commit()
     result = await TaskService.apply_focus_progress(
-        db_session, task_id=task.id, user_id=task.user_id, duration_minutes=15,
+        db_session,
+        task_id=task.id,
+        user_id=task.user_id,
+        duration_minutes=15,
         started_at=_utcnow() - timedelta(minutes=15),
     )
     assert result.status == TaskStatus.COMPLETED
@@ -418,12 +563,22 @@ async def test_task_focus_auto_complete(db_session, mock_task_deps):
 
 @pytest.mark.asyncio
 async def test_task_focus_no_auto_complete_under_est(db_session, mock_task_deps):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.IN_PROGRESS, estimated_minutes=60, actual_minutes=10)
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.IN_PROGRESS,
+        estimated_minutes=60,
+        actual_minutes=10,
+    )
     db_session.add(task)
     await db_session.commit()
     result = await TaskService.apply_focus_progress(
-        db_session, task_id=task.id, user_id=task.user_id, duration_minutes=15,
+        db_session,
+        task_id=task.id,
+        user_id=task.user_id,
+        duration_minutes=15,
         started_at=_utcnow() - timedelta(minutes=15),
     )
     assert result.status == TaskStatus.IN_PROGRESS
@@ -432,8 +587,15 @@ async def test_task_focus_no_auto_complete_under_est(db_session, mock_task_deps)
 
 @pytest.mark.asyncio
 async def test_task_focus_zero_duration(db_session):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.IN_PROGRESS, estimated_minutes=30, actual_minutes=10)
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.IN_PROGRESS,
+        estimated_minutes=30,
+        actual_minutes=10,
+    )
     db_session.add(task)
     await db_session.commit()
     result = await TaskService.apply_focus_progress(
@@ -444,12 +606,22 @@ async def test_task_focus_zero_duration(db_session):
 
 @pytest.mark.asyncio
 async def test_task_focus_auto_starts_pending(db_session, mock_task_deps):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.PENDING, estimated_minutes=60, actual_minutes=0)
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PENDING,
+        estimated_minutes=60,
+        actual_minutes=0,
+    )
     db_session.add(task)
     await db_session.commit()
     result = await TaskService.apply_focus_progress(
-        db_session, task_id=task.id, user_id=task.user_id, duration_minutes=10,
+        db_session,
+        task_id=task.id,
+        user_id=task.user_id,
+        duration_minutes=10,
         started_at=_utcnow() - timedelta(minutes=10),
     )
     assert result.status == TaskStatus.IN_PROGRESS
@@ -458,12 +630,22 @@ async def test_task_focus_auto_starts_pending(db_session, mock_task_deps):
 
 @pytest.mark.asyncio
 async def test_task_focus_completed_unchanged(db_session, mock_task_deps):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.COMPLETED, estimated_minutes=30, actual_minutes=30)
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.COMPLETED,
+        estimated_minutes=30,
+        actual_minutes=30,
+    )
     db_session.add(task)
     await db_session.commit()
     result = await TaskService.apply_focus_progress(
-        db_session, task_id=task.id, user_id=task.user_id, duration_minutes=15,
+        db_session,
+        task_id=task.id,
+        user_id=task.user_id,
+        duration_minutes=15,
         started_at=_utcnow() - timedelta(minutes=15),
     )
     assert result.status == TaskStatus.COMPLETED
@@ -480,12 +662,22 @@ async def test_task_focus_nonexistent_returns_none(db_session, mock_task_deps):
 
 @pytest.mark.asyncio
 async def test_task_focus_zero_estimated_no_auto_complete(db_session, mock_task_deps):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.IN_PROGRESS, estimated_minutes=0, actual_minutes=0)
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.IN_PROGRESS,
+        estimated_minutes=0,
+        actual_minutes=0,
+    )
     db_session.add(task)
     await db_session.commit()
     result = await TaskService.apply_focus_progress(
-        db_session, task_id=task.id, user_id=task.user_id, duration_minutes=60,
+        db_session,
+        task_id=task.id,
+        user_id=task.user_id,
+        duration_minutes=60,
         started_at=_utcnow() - timedelta(minutes=60),
     )
     assert result.status == TaskStatus.IN_PROGRESS
@@ -497,8 +689,24 @@ async def test_task_focus_zero_estimated_no_auto_complete(db_session, mock_task_
 @pytest.mark.asyncio
 async def test_task_reorder_deduplicates(db_session):
     user_id = uuid4()
-    t1 = Task(id=uuid4(), user_id=user_id, title="a", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30, order_index=1000)
-    t2 = Task(id=uuid4(), user_id=user_id, title="b", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30, order_index=2000)
+    t1 = Task(
+        id=uuid4(),
+        user_id=user_id,
+        title="a",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PENDING,
+        estimated_minutes=30,
+        order_index=1000,
+    )
+    t2 = Task(
+        id=uuid4(),
+        user_id=user_id,
+        title="b",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PENDING,
+        estimated_minutes=30,
+        order_index=2000,
+    )
     db_session.add_all([t1, t2])
     await db_session.commit()
     reordered = await TaskService.reorder_tasks(db_session, user_id=user_id, ordered_task_ids=[t1.id, t2.id, t1.id])
@@ -521,8 +729,12 @@ async def test_task_reorder_empty_list(db_session):
 @pytest.mark.asyncio
 async def test_task_reorder_ascending_order(db_session):
     user_id = uuid4()
-    t1 = Task(id=uuid4(), user_id=user_id, title="a", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30)
-    t2 = Task(id=uuid4(), user_id=user_id, title="b", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30)
+    t1 = Task(
+        id=uuid4(), user_id=user_id, title="a", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30
+    )
+    t2 = Task(
+        id=uuid4(), user_id=user_id, title="b", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30
+    )
     db_session.add_all([t1, t2])
     await db_session.commit()
     reordered = await TaskService.reorder_tasks(db_session, user_id=user_id, ordered_task_ids=[t2.id, t1.id])
@@ -539,9 +751,33 @@ async def test_task_reorder_ascending_order(db_session):
 async def test_task_confirm_batch(db_session, mock_task_deps):
     user_id = uuid4()
     tid = "tool_abc"
-    t1 = Task(id=uuid4(), user_id=user_id, title="a", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=25, tool_result_id=tid)
-    t2 = Task(id=uuid4(), user_id=user_id, title="b", type=TaskType.TRAINING, status=TaskStatus.PENDING, estimated_minutes=20, tool_result_id=tid)
-    t3 = Task(id=uuid4(), user_id=user_id, title="c", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30, tool_result_id="other")
+    t1 = Task(
+        id=uuid4(),
+        user_id=user_id,
+        title="a",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PENDING,
+        estimated_minutes=25,
+        tool_result_id=tid,
+    )
+    t2 = Task(
+        id=uuid4(),
+        user_id=user_id,
+        title="b",
+        type=TaskType.TRAINING,
+        status=TaskStatus.PENDING,
+        estimated_minutes=20,
+        tool_result_id=tid,
+    )
+    t3 = Task(
+        id=uuid4(),
+        user_id=user_id,
+        title="c",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PENDING,
+        estimated_minutes=30,
+        tool_result_id="other",
+    )
     db_session.add_all([t1, t2, t3])
     await db_session.commit()
     confirmed = await TaskService.confirm_tasks_by_tool_result(db_session, tid, user_id)
@@ -562,8 +798,24 @@ async def test_task_confirm_batch_empty(db_session):
 async def test_task_confirm_batch_skips_non_pending(db_session, mock_task_deps):
     user_id = uuid4()
     tid = "tool_skip"
-    pending = Task(id=uuid4(), user_id=user_id, title="p", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=25, tool_result_id=tid)
-    in_prog = Task(id=uuid4(), user_id=user_id, title="ip", type=TaskType.LEARNING, status=TaskStatus.IN_PROGRESS, estimated_minutes=20, tool_result_id=tid)
+    pending = Task(
+        id=uuid4(),
+        user_id=user_id,
+        title="p",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PENDING,
+        estimated_minutes=25,
+        tool_result_id=tid,
+    )
+    in_prog = Task(
+        id=uuid4(),
+        user_id=user_id,
+        title="ip",
+        type=TaskType.LEARNING,
+        status=TaskStatus.IN_PROGRESS,
+        estimated_minutes=20,
+        tool_result_id=tid,
+    )
     db_session.add_all([pending, in_prog])
     await db_session.commit()
     confirmed = await TaskService.confirm_tasks_by_tool_result(db_session, tid, user_id)
@@ -576,8 +828,9 @@ async def test_task_confirm_batch_skips_non_pending(db_session, mock_task_deps):
 
 @pytest.mark.asyncio
 async def test_task_start_sets_status(db_session, mock_task_deps):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING,
-                status=TaskStatus.PENDING, estimated_minutes=30)
+    task = Task(
+        id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30
+    )
     db_session.add(task)
     await db_session.commit()
     started = await TaskService.start(db_session, task)
@@ -590,10 +843,24 @@ async def test_task_delete_removes_and_updates_plan(db_session, mock_plan_deps):
     user_id = uuid4()
     plan = Plan(id=uuid4(), user_id=user_id, name="p", type=PlanType.GROWTH, is_active=True, progress=0.0)
     db_session.add(plan)
-    t_done = Task(id=uuid4(), user_id=user_id, plan_id=plan.id, title="done", type=TaskType.LEARNING,
-                  status=TaskStatus.COMPLETED, estimated_minutes=30)
-    t_del = Task(id=uuid4(), user_id=user_id, plan_id=plan.id, title="del", type=TaskType.LEARNING,
-                 status=TaskStatus.PENDING, estimated_minutes=30)
+    t_done = Task(
+        id=uuid4(),
+        user_id=user_id,
+        plan_id=plan.id,
+        title="done",
+        type=TaskType.LEARNING,
+        status=TaskStatus.COMPLETED,
+        estimated_minutes=30,
+    )
+    t_del = Task(
+        id=uuid4(),
+        user_id=user_id,
+        plan_id=plan.id,
+        title="del",
+        type=TaskType.LEARNING,
+        status=TaskStatus.PENDING,
+        estimated_minutes=30,
+    )
     db_session.add_all([plan, t_done, t_del])
     await db_session.commit()
     await TaskService.delete(db_session, t_del)
@@ -607,7 +874,9 @@ async def test_task_delete_removes_and_updates_plan(db_session, mock_plan_deps):
 @pytest.mark.asyncio
 async def test_task_ownership_enforced(db_session):
     user_a, user_b = uuid4(), uuid4()
-    task = Task(id=uuid4(), user_id=user_a, title="t", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30)
+    task = Task(
+        id=uuid4(), user_id=user_a, title="t", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30
+    )
     db_session.add(task)
     await db_session.commit()
     assert await TaskService.get_by_id(db_session, task.id, user_b) is None
@@ -616,20 +885,31 @@ async def test_task_ownership_enforced(db_session):
 
 @pytest.mark.asyncio
 async def test_task_start_task_wrong_user(db_session):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30)
+    task = Task(
+        id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING, status=TaskStatus.PENDING, estimated_minutes=30
+    )
     db_session.add(task)
     await db_session.commit()
     from app.core.exceptions import NotFoundError
+
     with pytest.raises(NotFoundError):
         await TaskService.start_task(db_session, task.id, uuid4())
 
 
 @pytest.mark.asyncio
 async def test_task_complete_task_wrong_user(db_session):
-    task = Task(id=uuid4(), user_id=uuid4(), title="t", type=TaskType.LEARNING, status=TaskStatus.IN_PROGRESS, estimated_minutes=30)
+    task = Task(
+        id=uuid4(),
+        user_id=uuid4(),
+        title="t",
+        type=TaskType.LEARNING,
+        status=TaskStatus.IN_PROGRESS,
+        estimated_minutes=30,
+    )
     db_session.add(task)
     await db_session.commit()
     from app.core.exceptions import NotFoundError
+
     with pytest.raises(NotFoundError):
         await TaskService.complete_task(db_session, task.id, uuid4(), 30)
 

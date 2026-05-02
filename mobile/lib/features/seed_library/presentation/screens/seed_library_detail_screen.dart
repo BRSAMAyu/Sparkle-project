@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -500,6 +501,14 @@ class _SeedLibraryDetailScreenState
                                     ),
                               ),
                             ],
+                            if (_candidateActions(library, state)
+                                .isNotEmpty) ...[
+                              const SizedBox(height: DS.spacing12),
+                              _buildAdoptionActions(
+                                context,
+                                _candidateActions(library, state),
+                              ),
+                            ],
                           ],
                         ),
                       ),
@@ -683,12 +692,15 @@ class _SeedLibraryDetailScreenState
                               SensoryFeedbackEvent.sheetOpen,
                             ),
                           );
-                          showShareResourceSheet(
-                            context,
-                            resourceType: 'seed_item',
-                            resourceId: item.id,
-                            title: item.title ?? item.itemTypeLabel(context.l10n),
-                            subtitle: item.content,
+                          unawaited(
+                            showShareResourceSheet(
+                              context,
+                              resourceType: 'seed_item',
+                              resourceId: item.id,
+                              title: item.title ??
+                                  item.itemTypeLabel(context.l10n),
+                              subtitle: item.content,
+                            ),
                           );
                         },
                       ),
@@ -718,7 +730,7 @@ class _SeedLibraryDetailScreenState
           Text(
             value,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                 ),
           ),
           const SizedBox(width: 2),
@@ -761,6 +773,80 @@ class _SeedLibraryDetailScreenState
           ],
         ),
       );
+
+  List<SeedAdoptionAction> _candidateActions(
+    SeedLibrary library,
+    SeedLibraryDetailState state,
+  ) {
+    final subscriptionActions =
+        state.subscription?.adoptionNextActions ?? const <SeedAdoptionAction>[];
+    if (subscriptionActions.isNotEmpty) {
+      return subscriptionActions;
+    }
+    return library.adoptionNextActions;
+  }
+
+  Widget _buildAdoptionActions(
+    BuildContext context,
+    List<SeedAdoptionAction> actions,
+  ) =>
+      Wrap(
+        spacing: DS.spacing8,
+        runSpacing: DS.spacing8,
+        children: actions
+            .take(5)
+            .map(
+              (action) => ActionChip(
+                avatar:
+                    Icon(_actionIcon(action.actionType), size: DS.iconSizeXs),
+                label: Text(action.label),
+                tooltip: action.description,
+                onPressed: () => _handleAdoptionAction(context, action),
+              ),
+            )
+            .toList(),
+      );
+
+  IconData _actionIcon(String actionType) => switch (actionType) {
+        'create_plan' => Icons.flag_outlined,
+        'create_task' => Icons.add_task,
+        'create_knowledge_node' => Icons.hub_outlined,
+        'start_review' => Icons.rate_review_outlined,
+        'share_to_community' => Icons.ios_share_outlined,
+        'query_seed' => Icons.auto_awesome_outlined,
+        _ => Icons.open_in_new,
+      };
+
+  void _handleAdoptionAction(
+    BuildContext context,
+    SeedAdoptionAction action,
+  ) {
+    if (action.actionType == 'share_to_community') {
+      unawaited(
+        showShareResourceSheet(
+          context,
+          resourceType: action.resourceType,
+          resourceId: action.resourceId ?? widget.libraryId,
+          title: action.payload['library_name']?.toString() ??
+              ref
+                  .read(seedLibraryDetailProvider(widget.libraryId))
+                  .library
+                  ?.name ??
+              context.l10n.seedLibraryDetailFallbackName,
+          subtitle: action.description,
+        ),
+      );
+      return;
+    }
+
+    final route = action.route;
+    if (route != null && route.trim().isNotEmpty) {
+      unawaited(context.push(route));
+      return;
+    }
+
+    AppFeedback.info(context, action.description ?? action.label);
+  }
 
   String _buildUsageExplanation(
     SeedLibrary library,
@@ -1038,7 +1124,9 @@ class _SeedLibraryDetailScreenState
                     Chip(label: Text(item.itemTypeLabel(context.l10n))),
                     if (item.subject != null) Chip(label: Text(item.subject!)),
                     if (item.difficultyLevel != null)
-                      Chip(label: Text(item.difficultyLevelLabel(context.l10n)!)),
+                      Chip(
+                          label:
+                              Text(item.difficultyLevelLabel(context.l10n)!)),
                     ...?item.tags?.map((tag) => Chip(label: Text(tag))),
                   ],
                 ),

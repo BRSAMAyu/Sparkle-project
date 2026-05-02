@@ -92,7 +92,7 @@ class _ReflectionDialogState extends ConsumerState<ReflectionDialog> {
           context.l10n.focusReflectionTitle,
           style: TextStyle(
             color: DS.brandPrimaryConst,
-            fontWeight: FontWeight.bold,
+            fontWeight: DS.fontWeightBold,
           ),
         ),
         content: Column(

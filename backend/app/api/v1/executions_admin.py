@@ -12,6 +12,7 @@ from app.api.v1.executions import (
     ExecutionQualitySummaryResponse,
     ExecutionQualityVariantResponse,
 )
+from app.middleware.admin_audit import audit_admin_action
 from app.services.execution_profile_service import ExecutionProfileService
 from app.services.execution_service import ExecutionService
 
@@ -52,6 +53,7 @@ class AdminExecutionDashboardResponse(BaseModel):
 
 
 @router.get("/health", response_model=AdminExecutionHealthResponse)
+@audit_admin_action(category="execution_governance", risk="medium", action="view_execution_health")
 async def execution_admin_health(
     db: AsyncSession = Depends(get_db),
 ):
@@ -60,6 +62,7 @@ async def execution_admin_health(
 
 
 @router.get("/nodes", response_model=list[ExecutionNodeResponse])
+@audit_admin_action(category="execution_governance", risk="medium", action="list_execution_nodes")
 async def list_execution_nodes(
     connected_only: bool = True,
     last_connected: str | None = None,
@@ -71,6 +74,7 @@ async def list_execution_nodes(
 
 
 @router.get("/quality/summary", response_model=ExecutionQualitySummaryResponse)
+@audit_admin_action(category="execution_governance", risk="medium", action="view_execution_quality_summary")
 async def execution_quality_summary(
     db: AsyncSession = Depends(get_db),
 ):
@@ -90,6 +94,7 @@ async def execution_quality_summary(
 
 
 @router.get("/dashboard", response_model=AdminExecutionDashboardResponse)
+@audit_admin_action(category="execution_governance", risk="medium", action="view_execution_dashboard")
 async def execution_dashboard(
     days: int = 30,
     db: AsyncSession = Depends(get_db),

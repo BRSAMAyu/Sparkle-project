@@ -45,6 +45,7 @@ from app.core.websocket import manager
 from app.db.extensions import ensure_database_extensions
 from app.db.init_db import init_db
 from app.db.session import AsyncSessionLocal
+from app.middleware.admin_audit import AdminAuditMiddleware
 from app.orchestration.summarization_worker import create_summarization_worker
 from app.services.achievement_event_consumer import AchievementEventConsumer
 from app.services.billing_worker import BillingWorker
@@ -687,6 +688,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestContextMiddleware)
+app.add_middleware(AdminAuditMiddleware)
 
 # Configure CORS
 app.add_middleware(
@@ -734,6 +736,10 @@ async def readiness_probe():
 
 # Include API routers
 app.include_router(api_router, prefix="/api/v1")
+
+# FV-24: Internal API for SLO auto-response
+from app.api.internal.auto_degrade import router as auto_degrade_router
+app.include_router(auto_degrade_router, prefix="/api/internal", tags=["Internal SLO"])
 if settings.ENABLE_AGENT_GRAPH_V2:
     try:
         from importlib import import_module

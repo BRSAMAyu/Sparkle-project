@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
 /// FocusCard - Deep Dive Entry Card for Project Cockpit
@@ -77,7 +78,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
               children: [
                 Expanded(
                   child: Text(
-                    '专注核心',
+                    I18nService.instance.isChinese ? '专注核心' : 'Focus Core',
                     style: context.sparkleTypography.labelSmall.copyWith(
                       color: DS.textSecondary,
                       fontWeight: DS.fontWeightSemibold,
@@ -97,7 +98,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                   child: Text(
                     'Lv.$flameLevel',
                     style: context.sparkleTypography.labelSmall.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                       fontSize: 10,
                       color: DS.textPrimary,
                     ),
@@ -172,7 +173,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                             style:
                                 context.sparkleTypography.titleLarge.copyWith(
                               fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                               color: DS.textPrimary,
                             ),
                           ),
@@ -184,7 +185,7 @@ class _FocusCardState extends ConsumerState<FocusCard>
                             ),
                           ),
                           Text(
-                            '$tasksCompleted完成',
+                            I18nService.instance.isChinese ? '$tasksCompleted完成' : '$tasksCompleted done',
                             style:
                                 context.sparkleTypography.labelSmall.copyWith(
                               fontSize: 10,

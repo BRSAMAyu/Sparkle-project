@@ -10,18 +10,20 @@ import (
 )
 
 type StoredFile struct {
-	ID         uuid.UUID
-	UserID     uuid.UUID
-	FileName   string
-	MimeType   string
-	FileSize   int64
-	Bucket     string
-	ObjectKey  string
-	Status     string
-	Visibility string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	DeletedAt  *time.Time
+	ID                 uuid.UUID
+	UserID             uuid.UUID
+	FileName           string
+	MimeType           string
+	FileSize           int64
+	Bucket             string
+	ObjectKey          string
+	Status             string
+	Visibility         string
+	LifecycleStatus    string
+	ArchiveReviewDueAt *time.Time
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+	DeletedAt          *time.Time
 }
 
 type FileMetadataService struct {
@@ -49,7 +51,7 @@ func (s *FileMetadataService) CreatePendingFile(
 			$1, $2, $3, $4, $5, $6, $7, 'uploading', 'private', 'standard', NOW(), NOW()
 		)
 		RETURNING id, user_id, file_name, mime_type, file_size, bucket, object_key,
-			status, visibility, created_at, updated_at, deleted_at
+			status, visibility, lifecycle_status, archive_review_due_at, created_at, updated_at, deleted_at
 	`, fileID, userID, fileName, mimeType, fileSize, bucket, objectKey)
 
 	return scanStoredFile(row)
@@ -71,7 +73,7 @@ func (s *FileMetadataService) UpdateFileStatus(
 			AND user_id = $4
 			AND deleted_at IS NULL
 		RETURNING id, user_id, file_name, mime_type, file_size, bucket, object_key,
-			status, visibility, created_at, updated_at, deleted_at
+			status, visibility, lifecycle_status, archive_review_due_at, created_at, updated_at, deleted_at
 	`, status, visibility, fileID, userID)
 
 	return scanStoredFile(row)
@@ -80,7 +82,7 @@ func (s *FileMetadataService) UpdateFileStatus(
 func (s *FileMetadataService) GetFile(ctx context.Context, fileID uuid.UUID, userID uuid.UUID) (StoredFile, error) {
 	row := s.pool.QueryRow(ctx, `
 		SELECT id, user_id, file_name, mime_type, file_size, bucket, object_key,
-			status, visibility, created_at, updated_at, deleted_at
+			status, visibility, lifecycle_status, archive_review_due_at, created_at, updated_at, deleted_at
 		FROM stored_files
 		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
 	`, fileID, userID)
@@ -91,7 +93,7 @@ func (s *FileMetadataService) GetFile(ctx context.Context, fileID uuid.UUID, use
 func (s *FileMetadataService) GetFileByID(ctx context.Context, fileID uuid.UUID) (StoredFile, error) {
 	row := s.pool.QueryRow(ctx, `
 		SELECT id, user_id, file_name, mime_type, file_size, bucket, object_key,
-			status, visibility, created_at, updated_at, deleted_at
+			status, visibility, lifecycle_status, archive_review_due_at, created_at, updated_at, deleted_at
 		FROM stored_files
 		WHERE id = $1 AND deleted_at IS NULL
 	`, fileID)
@@ -107,7 +109,7 @@ func (s *FileMetadataService) GetFileForGroupView(
 ) (StoredFile, error) {
 	row := s.pool.QueryRow(ctx, `
 		SELECT sf.id, sf.user_id, sf.file_name, sf.mime_type, sf.file_size, sf.bucket, sf.object_key,
-			sf.status, sf.visibility, sf.created_at, sf.updated_at, sf.deleted_at
+			sf.status, sf.visibility, sf.lifecycle_status, sf.archive_review_due_at, sf.created_at, sf.updated_at, sf.deleted_at
 		FROM stored_files sf
 		JOIN group_files gf ON gf.file_id = sf.id AND gf.deleted_at IS NULL
 		JOIN group_members gm ON gm.group_id = gf.group_id AND gm.user_id = $3 AND gm.deleted_at IS NULL
@@ -130,7 +132,7 @@ func (s *FileMetadataService) GetFileForGroupDownload(
 ) (StoredFile, error) {
 	row := s.pool.QueryRow(ctx, `
 		SELECT sf.id, sf.user_id, sf.file_name, sf.mime_type, sf.file_size, sf.bucket, sf.object_key,
-			sf.status, sf.visibility, sf.created_at, sf.updated_at, sf.deleted_at
+			sf.status, sf.visibility, sf.lifecycle_status, sf.archive_review_due_at, sf.created_at, sf.updated_at, sf.deleted_at
 		FROM stored_files sf
 		JOIN group_files gf ON gf.file_id = sf.id AND gf.deleted_at IS NULL
 		JOIN group_members gm ON gm.group_id = gf.group_id AND gm.user_id = $3 AND gm.deleted_at IS NULL
@@ -166,7 +168,7 @@ func (s *FileMetadataService) ListFiles(
 	if status == "" {
 		rows, err = s.pool.Query(ctx, `
 			SELECT id, user_id, file_name, mime_type, file_size, bucket, object_key,
-				status, visibility, created_at, updated_at, deleted_at
+				status, visibility, lifecycle_status, archive_review_due_at, created_at, updated_at, deleted_at
 			FROM stored_files
 			WHERE user_id = $1 AND deleted_at IS NULL
 			ORDER BY created_at DESC
@@ -175,7 +177,7 @@ func (s *FileMetadataService) ListFiles(
 	} else {
 		rows, err = s.pool.Query(ctx, `
 			SELECT id, user_id, file_name, mime_type, file_size, bucket, object_key,
-				status, visibility, created_at, updated_at, deleted_at
+				status, visibility, lifecycle_status, archive_review_due_at, created_at, updated_at, deleted_at
 			FROM stored_files
 			WHERE user_id = $1 AND status = $2 AND deleted_at IS NULL
 			ORDER BY created_at DESC
@@ -212,7 +214,7 @@ func (s *FileMetadataService) SearchFiles(
 
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, user_id, file_name, mime_type, file_size, bucket, object_key,
-			status, visibility, created_at, updated_at, deleted_at
+			status, visibility, lifecycle_status, archive_review_due_at, created_at, updated_at, deleted_at
 		FROM stored_files
 		WHERE user_id = $1
 			AND deleted_at IS NULL
@@ -244,7 +246,7 @@ func (s *FileMetadataService) SoftDeleteFile(ctx context.Context, fileID uuid.UU
 			updated_at = NOW()
 		WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
 		RETURNING id, user_id, file_name, mime_type, file_size, bucket, object_key,
-			status, visibility, created_at, updated_at, deleted_at
+			status, visibility, lifecycle_status, archive_review_due_at, created_at, updated_at, deleted_at
 	`, fileID, userID)
 
 	return scanStoredFile(row)
@@ -258,7 +260,7 @@ func (s *FileMetadataService) ListStaleFiles(ctx context.Context, cutoff time.Ti
 
 	rows, err := s.pool.Query(ctx, `
 		SELECT id, user_id, file_name, mime_type, file_size, bucket, object_key,
-			status, visibility, created_at, updated_at, deleted_at
+			status, visibility, lifecycle_status, archive_review_due_at, created_at, updated_at, deleted_at
 		FROM stored_files
 		WHERE (
 			status IN ('uploading', 'failed') AND created_at < $1
@@ -301,6 +303,8 @@ func scanStoredFile(row pgx.Row) (StoredFile, error) {
 		&file.ObjectKey,
 		&file.Status,
 		&file.Visibility,
+		&file.LifecycleStatus,
+		&file.ArchiveReviewDueAt,
 		&file.CreatedAt,
 		&file.UpdatedAt,
 		&file.DeletedAt,

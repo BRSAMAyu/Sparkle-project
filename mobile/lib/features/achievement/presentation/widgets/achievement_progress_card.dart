@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -28,7 +29,8 @@ class _AchievementProgressCardState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(homeCloseToUnlockProvider.notifier).fetch();
+      if (!mounted) return;
+      unawaited(ref.read(homeCloseToUnlockProvider.notifier).fetch());
     });
   }
 
@@ -196,7 +198,8 @@ class _AchievementRow extends StatelessWidget {
                         Expanded(
                           child: Text(
                             achievement.name,
-                            style: context.sparkleTypography.labelSmall.copyWith(
+                            style:
+                                context.sparkleTypography.labelSmall.copyWith(
                               color: DS.textPrimary,
                             ),
                             maxLines: 1,
@@ -222,12 +225,13 @@ class _AchievementRow extends StatelessWidget {
                               value: progress,
                               minHeight: 4,
                               backgroundColor: DS.neutral200,
-                              valueColor:
-                                  AlwaysStoppedAnimation<Color>(_rarityColor(rarity)),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                  _rarityColor(rarity)),
                             ),
                           ),
                         ),
-                        if (visualRewards.isNotEmpty) ...[
+                        if (visualRewards.isNotEmpty &&
+                            !context.hideChallengeBadges) ...[
                           const SizedBox(width: DS.spacing8),
                           _VisualRewardBadge(
                             rewards: visualRewards,
@@ -254,11 +258,13 @@ class _AchievementRow extends StatelessWidget {
     if (rewardConfig == null || rewardConfig.isEmpty) return [];
 
     return rewardConfig
-        .where((r) =>
-            r['type'] == 'visual_element' ||
-            r['type'] == 'background' ||
-            r['type'] == 'particle' ||
-            r['type'] == 'effect',)
+        .where(
+          (r) =>
+              r['type'] == 'visual_element' ||
+              r['type'] == 'background' ||
+              r['type'] == 'particle' ||
+              r['type'] == 'effect',
+        )
         .toList();
   }
 
@@ -346,11 +352,11 @@ class _VisualRewardBadgeState extends State<_VisualRewardBadge>
   }
 
   VisualElementRarity _parseRarity(String rarity) => switch (rarity) {
-      'legendary' => VisualElementRarity.legendary,
-      'epic' => VisualElementRarity.epic,
-      'rare' => VisualElementRarity.rare,
-      _ => VisualElementRarity.common,
-    };
+        'legendary' => VisualElementRarity.legendary,
+        'epic' => VisualElementRarity.epic,
+        'rare' => VisualElementRarity.rare,
+        _ => VisualElementRarity.common,
+      };
 
   String _getRarityName(VisualElementRarity rarity) {
     switch (rarity) {

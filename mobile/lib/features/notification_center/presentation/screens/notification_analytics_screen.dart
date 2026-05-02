@@ -412,7 +412,7 @@ class _NotificationAnalyticsScreenState
                 child: Text(
                   value,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
               ),
@@ -515,7 +515,7 @@ class _NotificationAnalyticsScreenState
               ],
               Text(
                 title == context.l10n.notificationSourceIntervention
-                    ? '${context.l10n.notificationAnalyticsViewRate}: ${stats.viewRate.toStringAsFixed(1)}% · 接受率: ${stats.acceptanceRate.toStringAsFixed(1)}% · 行动率: ${stats.actionRate.toStringAsFixed(1)}%'
+                    ? '${context.l10n.notificationAnalyticsViewRate}: ${stats.viewRate.toStringAsFixed(1)}% · ${I18nService.instance.isChinese ? '接受率' : 'Acceptance'}: ${stats.acceptanceRate.toStringAsFixed(1)}% · ${I18nService.instance.isChinese ? '行动率' : 'Action'}: ${stats.actionRate.toStringAsFixed(1)}%'
                     : '${context.l10n.notificationAnalyticsViewRate}: ${stats.viewRate.toStringAsFixed(1)}%',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
@@ -538,7 +538,7 @@ class _NotificationAnalyticsScreenState
             Text(label, style: const TextStyle(fontSize: 12)),
             Text(
               '$value (${percentage.toStringAsFixed(0)}%)',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              style: const TextStyle(fontSize: 12, fontWeight: DS.fontWeightBold),
             ),
           ],
         ),

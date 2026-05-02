@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
@@ -55,10 +56,7 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isChinese = Localizations.localeOf(context)
-        .languageCode
-        .toLowerCase()
-        .startsWith('zh');
+    final zh = I18nService.instance.isChinese;
     final notificationState = ref.watch(notificationCenterProvider);
     final systemUpdates = ref.watch(systemUpdatesProvider).maybeWhen(
           data: (items) => items,
@@ -137,10 +135,10 @@ class _RecentInsightsCardState extends ConsumerState<RecentInsightsCard> {
                 accentColor: DS.brandPrimary,
                 title: context.l10n.recentInsightsTitle,
                 summary: _isCollapsed
-                    ? (isChinese
+                    ? (zh
                         ? '已收起最近洞察，需要时可随时展开查看。'
                         : 'Recent insights are collapsed. Expand them whenever you want another look.')
-                    : (isChinese
+                    : (zh
                         ? '最近 ${recentEntries.length} 条与你学习动线相关的更新。'
                         : 'Latest ${recentEntries.length} updates related to your learning flow.'),
                 trailing: Row(

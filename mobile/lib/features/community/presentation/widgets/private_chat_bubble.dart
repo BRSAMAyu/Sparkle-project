@@ -73,40 +73,40 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
         child: ScaleTransition(
           scale: _scaleAnimation,
           child: Padding(
-            padding:
-                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
             child: Row(
-            mainAxisAlignment:
-                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              if (!isMe) ...[
-                _buildAvatar(widget.message.sender),
-                const SizedBox(width: DS.sm),
-              ],
-              Flexible(
-                child: Column(
-                  crossAxisAlignment:
-                      isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                  children: [
-                    _buildContent(context, isMe),
-                    const SizedBox(height: 2),
-                    if (isMe && widget.message.isRead)
-                      Text(
-                        'Read',
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: context.sparkleColors.textSecondary,
+              mainAxisAlignment:
+                  isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (!isMe) ...[
+                  _buildAvatar(widget.message.sender),
+                  const SizedBox(width: DS.sm),
+                ],
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: isMe
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
+                    children: [
+                      _buildContent(context, isMe),
+                      const SizedBox(height: 2),
+                      if (isMe && widget.message.isRead)
+                        Text(
+                          'Read',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: context.sparkleColors.textSecondary,
+                          ),
                         ),
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              if (isMe) ...[
-                const SizedBox(width: DS.sm),
-                _buildAvatar(widget.message.sender),
+                if (isMe) ...[
+                  const SizedBox(width: DS.sm),
+                  _buildAvatar(widget.message.sender),
+                ],
               ],
-            ],
             ),
           ),
         ),
@@ -220,24 +220,23 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
             : DS.shadowSm);
 
     return SparkleTappable(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 260),
-          decoration: BoxDecoration(
-            color: wrapperColor,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: wrapperShadow,
-            border: isLightMode || isMe
-                ? null
-                : Border.all(color: DS.borderSubtle),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: child,
-          ),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 260),
+        decoration: BoxDecoration(
+          color: wrapperColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: wrapperShadow,
+          border:
+              isLightMode || isMe ? null : Border.all(color: DS.borderSubtle),
         ),
-      );
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: child,
+        ),
+      ),
+    );
   }
 
   void _handleSharedResourceTap(UniversalSharePayload payload) {
@@ -290,7 +289,10 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
       if (!context.mounted) {
         return;
       }
-      AppFeedback.error(context, '采纳失败: $e');
+      AppFeedback.error(
+        context,
+        context.isChinese ? '采纳失败: $e' : 'Adoption failed: $e',
+      );
     }
   }
 
@@ -309,9 +311,10 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
           boxShadow: isMe
               ? [
                   BoxShadow(
-                      color: DS.chatBubbleUser.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),),
+                    color: DS.chatBubbleUser.withValues(alpha: 0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
                 ]
               : DS.shadowSm,
           border: isMe ? null : Border.all(color: DS.neutral100),
@@ -320,8 +323,8 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
           content: widget.message.content ?? '',
           textColor: isMe ? DS.chatBubbleUserText : DS.chatBubbleOtherText,
           codeBackgroundColor:
-              isMe ? Colors.white.withValues(alpha: 0.12) : DS.surfaceTertiary,
-          linkColor: isMe ? Colors.white : DS.brandPrimary,
+              isMe ? DS.neutral0.withValues(alpha: 0.12) : DS.surfaceTertiary,
+          linkColor: isMe ? DS.neutral0 : DS.brandPrimary,
           contentRole: SparkleMarkdownRole.chatBubble,
         ),
       );

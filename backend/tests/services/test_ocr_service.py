@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from app.services.ocr_service import OCRService
+from tests._credentials import TEST_SF_API_KEY, TEST_ZHIPU_API_KEY
 
 
 @pytest.mark.asyncio
@@ -80,8 +81,8 @@ async def test_ocr_falls_back_to_backup_provider_on_primary_failure():
     service = OCRService()
     service.primary_provider = "zhipu"
     service.backup_provider = "siliconflow"
-    service.api_key = "zhipu-key"
-    service.siliconflow_api_key = "sf-key"
+    service.api_key = TEST_ZHIPU_API_KEY
+    service.siliconflow_api_key = TEST_SF_API_KEY
     service._zhipu_ocr_from_url = AsyncMock(side_effect=RuntimeError("primary down"))
     service._siliconflow_ocr_from_url = AsyncMock(return_value="backup text")
 

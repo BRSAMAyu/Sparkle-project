@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.cache import cache_service
+from app.core.metrics import record_product_loop_event
 from app.db.session import get_db
 from app.models.user import User
 from app.services.push_feedback_service import PushFeedbackService
@@ -36,7 +37,8 @@ async def record_push_interaction(
     db: AsyncSession = Depends(get_db),
 ):
     action = payload.action.strip().lower()
-    if action not in {"opened", "dismissed", "ignored"}:
+    if action not in {"opened", "dismissed", "ignored", "wrong", "not_useful", "too_much", "bad_timing"}:
+        record_product_loop_event("push_judgment", "push_interaction", "invalid", "bad_action")
         raise HTTPException(status_code=400, detail="Invalid action")
 
     service = PushFeedbackService(db, cache_service.redis)
@@ -46,4 +48,12 @@ async def record_push_interaction(
         action=action,
         timestamp=payload.timestamp or _utcnow(),
     )
+    reason = (
+        "positive"
+        if action == "opened"
+        else "negative"
+        if action in {"dismissed", "ignored", "wrong", "not_useful", "too_much", "bad_timing"}
+        else "neutral"
+    )
+    record_product_loop_event("push_judgment", "push_interaction", action, reason)
     return {"success": True}

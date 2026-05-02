@@ -314,7 +314,7 @@ void main() {
           'type': 'ack',
           'message_id': 'msg-1',
           'status': 'received',
-          'timestamp': 1234567890,
+          'server_ts': 1234567890,
           'request_id': 'req-1',
         };
 
@@ -322,6 +322,7 @@ void main() {
         expect(event, isA<AckEvent>());
         final ackEvent = event as AckEvent;
         expect(ackEvent.messageId, equals('msg-1'));
+        expect(ackEvent.timestamp, equals(1234567890));
         expect(ackEvent.status, equals('received'));
         expect(ackEvent.isReceived, isTrue);
       });
@@ -464,7 +465,8 @@ class WebSocketChatServiceV2Parser {
         return AckEvent(
           messageId: json['message_id']?.toString() ?? '',
           status: json['status']?.toString() ?? '',
-          timestamp: json['timestamp'] as int? ?? 0,
+          timestamp:
+              json['timestamp'] as int? ?? json['server_ts'] as int? ?? 0,
           responseId: json['request_id']?.toString(),
         );
 

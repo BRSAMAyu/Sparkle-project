@@ -192,7 +192,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                   ListTile(
                     leading: Icon(Icons.flag_outlined, color: DS.error),
                     title: Text(
-                      context.l10n.communityReport, // TODO: i18n - this is inside a Text widget already using style
+                      context.l10n
+                          .communityReport, // TODO: i18n - this is inside a Text widget already using style
                       style: TextStyle(color: DS.error),
                     ),
                     onTap: () {
@@ -542,8 +543,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       content: rawContent,
       textColor: textColor,
       codeBackgroundColor:
-          isMe ? Colors.white.withValues(alpha: 0.12) : DS.surfaceTertiary,
-      linkColor: isMe ? Colors.white : DS.brandPrimary,
+          isMe ? DS.neutral0.withValues(alpha: 0.12) : DS.surfaceTertiary,
+      linkColor: isMe ? DS.neutral0 : DS.brandPrimary,
       contentRole: SparkleMarkdownRole.chatBubble,
     );
   }
@@ -560,13 +561,13 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
         color: isMe
-            ? Colors.white.withValues(alpha: 0.12)
+            ? DS.neutral0.withValues(alpha: 0.12)
             : DS.surfacePrimaryElevated,
         borderRadius: BorderRadius.circular(8),
         border: Border(
           left: BorderSide(
             color:
-                isMe ? Colors.white.withValues(alpha: 0.52) : DS.brandSecondary,
+                isMe ? DS.neutral0.withValues(alpha: 0.52) : DS.brandSecondary,
             width: 3,
           ),
         ),
@@ -579,9 +580,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
               quotedSender,
               style: TextStyle(
                 fontSize: 10,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: isMe
-                    ? Colors.white.withValues(alpha: 0.9)
+                    ? DS.neutral0.withValues(alpha: 0.9)
                     : DS.textSecondary,
               ),
             ),
@@ -592,9 +593,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
               fontSize: 12,
-              color: isMe
-                  ? Colors.white.withValues(alpha: 0.84)
-                  : DS.textSecondary,
+              color:
+                  isMe ? DS.neutral0.withValues(alpha: 0.84) : DS.textSecondary,
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -661,13 +661,13 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
                         color: isMe
-                            ? Colors.white.withValues(alpha: 0.16)
+                            ? DS.neutral0.withValues(alpha: 0.16)
                             : DS.brandSecondary.withValues(alpha: 0.14),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         Icons.bolt,
-                        color: isMe ? Colors.white : DS.brandSecondary,
+                        color: isMe ? DS.neutral0 : DS.brandSecondary,
                         size: 18,
                       ),
                     ),
@@ -675,9 +675,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     Text(
                       context.l10n.communityDailyCheckIn,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         fontSize: 14,
-                        color: isMe ? Colors.white : DS.textPrimary,
+                        color: isMe ? DS.neutral0 : DS.textPrimary,
                       ),
                     ),
                   ],
@@ -711,7 +711,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                     padding: const EdgeInsets.all(DS.sm),
                     decoration: BoxDecoration(
                       color: isMe
-                          ? Colors.white.withValues(alpha: 0.12)
+                          ? DS.neutral0.withValues(alpha: 0.12)
                           : DS.surfaceOverlay,
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -719,7 +719,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       widget.message.content!,
                       style: TextStyle(
                         color: isMe
-                            ? Colors.white.withValues(alpha: 0.9)
+                            ? DS.neutral0.withValues(alpha: 0.9)
                             : DS.textSecondary,
                         fontStyle: FontStyle.italic,
                         fontSize: 13,
@@ -740,18 +740,17 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
           Text(
             value,
             style: TextStyle(
-              fontWeight: FontWeight.bold,
+              fontWeight: DS.fontWeightBold,
               fontSize: 16,
-              color: isMe ? Colors.white : DS.textPrimary,
+              color: isMe ? DS.neutral0 : DS.textPrimary,
             ),
           ),
           Text(
             label,
             style: TextStyle(
               fontSize: 10,
-              color: isMe
-                  ? Colors.white.withValues(alpha: 0.72)
-                  : DS.textSecondary,
+              color:
+                  isMe ? DS.neutral0.withValues(alpha: 0.72) : DS.textSecondary,
             ),
           ),
         ],
@@ -764,8 +763,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
     final payload = UniversalSharePayload(
       contentType: ShareableContentType.taskCompletion,
       resourceId: data['resource_id'] as String? ?? '',
-      title:
-          data['resource_title'] as String? ?? widget.message.content ?? context.l10n.communityTaskFallback,
+      title: data['resource_title'] as String? ??
+          widget.message.content ??
+          context.l10n.communityTaskFallback,
       subtitle: data['resource_summary'] as String?,
       metadata: {
         'duration': meta['estimated_minutes'],
@@ -795,8 +795,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
     final payload = UniversalSharePayload(
       contentType: ShareableContentType.planProgress,
       resourceId: data['resource_id'] as String? ?? '',
-      title:
-          data['resource_title'] as String? ?? widget.message.content ?? context.l10n.communityPlanFallback,
+      title: data['resource_title'] as String? ??
+          widget.message.content ??
+          context.l10n.communityPlanFallback,
       subtitle: progress != null
           ? '进度: ${(progress * 100).toStringAsFixed(0)}%'
           : null,
@@ -830,7 +831,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
         title: data['resource_title'] as String? ??
             data['title'] as String? ??
             widget.message.content ??
-            '知识节点',
+            (context.isChinese ? '知识节点' : 'Knowledge node'),
         subtitle:
             data['resource_summary'] as String? ?? data['summary'] as String?,
         metadata: {
@@ -863,7 +864,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       title: data['resource_title'] as String? ??
           data['title'] as String? ??
           widget.message.content ??
-          '时光胶囊',
+          (context.isChinese ? '时光胶囊' : 'Time capsule'),
       subtitle:
           data['resource_summary'] as String? ?? data['summary'] as String?,
       metadata: {
@@ -889,7 +890,9 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
     final resourceType = data['resource_type'] as String? ?? 'seed_item';
     final title = data['resource_title'] as String? ??
         widget.message.content ??
-        (resourceType == 'seed_library' ? context.l10n.communitySeedLibrary : context.l10n.communitySeedContent);
+        (resourceType == 'seed_library'
+            ? context.l10n.communitySeedLibrary
+            : context.l10n.communitySeedContent);
     final summary = data['resource_summary'] as String?;
 
     return Container(
@@ -910,7 +913,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                   resourceType == 'seed_library'
                       ? Icons.inventory_2
                       : Icons.auto_stories,
-                  color: isMe ? Colors.white : DS.brandPrimary,
+                  color: isMe ? DS.neutral0 : DS.brandPrimary,
                   size: 20,
                 ),
               ),
@@ -924,16 +927,18 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: isMe ? Colors.white : DS.textPrimary,
+                        fontWeight: DS.fontWeightBold,
+                        color: isMe ? DS.neutral0 : DS.textPrimary,
                       ),
                     ),
                     Text(
-                      resourceType == 'seed_library' ? context.l10n.communitySeedLibraryShare : context.l10n.communitySeedContentShare,
+                      resourceType == 'seed_library'
+                          ? context.l10n.communitySeedLibraryShare
+                          : context.l10n.communitySeedContentShare,
                       style: TextStyle(
                         fontSize: 12,
                         color: isMe
-                            ? Colors.white.withValues(alpha: 0.72)
+                            ? DS.neutral0.withValues(alpha: 0.72)
                             : DS.textSecondary,
                       ),
                     ),
@@ -951,7 +956,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
               style: TextStyle(
                 fontSize: 13,
                 color: isMe
-                    ? Colors.white.withValues(alpha: 0.92)
+                    ? DS.neutral0.withValues(alpha: 0.92)
                     : DS.textSecondary,
               ),
             ),
@@ -1015,7 +1020,10 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
       }
     } catch (e) {
       if (!context.mounted) return;
-      AppFeedback.error(context, '采纳失败: $e');
+      AppFeedback.error(
+        context,
+        context.isChinese ? '采纳失败: $e' : 'Adoption failed: $e',
+      );
     }
   }
 
@@ -1081,7 +1089,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                   ),
                   child: Icon(
                     Icons.psychology,
-                    color: isMe ? Colors.white : DS.prismPurple,
+                    color: isMe ? DS.neutral0 : DS.prismPurple,
                     size: 20,
                   ),
                 ),
@@ -1095,15 +1103,16 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: isMe
-                              ? Colors.white.withValues(alpha: 0.7)
+                              ? DS.neutral0.withValues(alpha: 0.7)
                               : DS.textTertiary,
                         ),
                       ),
                       Text(
-                        data['title'] as String? ?? context.l10n.communityLearningModeAnalysis,
+                        data['title'] as String? ??
+                            context.l10n.communityLearningModeAnalysis,
                         style: TextStyle(
                           fontWeight: DS.fontWeightBold,
-                          color: isMe ? Colors.white : DS.textPrimary,
+                          color: isMe ? DS.neutral0 : DS.textPrimary,
                         ),
                       ),
                     ],
@@ -1125,7 +1134,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                         ),
                         decoration: BoxDecoration(
                           color: isMe
-                              ? Colors.white.withValues(alpha: 0.15)
+                              ? DS.neutral0.withValues(alpha: 0.15)
                               : DS.prismPurple.withValues(alpha: 0.1),
                           borderRadius: DS.borderRadius4,
                         ),
@@ -1133,7 +1142,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                           p.toString(),
                           style: TextStyle(
                             fontSize: DS.fontSizeXs,
-                            color: isMe ? Colors.white : DS.prismPurple,
+                            color: isMe ? DS.neutral0 : DS.prismPurple,
                           ),
                         ),
                       ),
@@ -1166,7 +1175,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                   ),
                   child: Icon(
                     Icons.emoji_events,
-                    color: isMe ? Colors.white : DS.warning,
+                    color: isMe ? DS.neutral0 : DS.warning,
                     size: 20,
                   ),
                 ),
@@ -1180,15 +1189,16 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: isMe
-                              ? Colors.white.withValues(alpha: 0.7)
+                              ? DS.neutral0.withValues(alpha: 0.7)
                               : DS.textTertiary,
                         ),
                       ),
                       Text(
-                        data['name'] as String? ?? context.l10n.communityNewAchievement,
+                        data['name'] as String? ??
+                            context.l10n.communityNewAchievement,
                         style: TextStyle(
                           fontWeight: DS.fontWeightBold,
-                          color: isMe ? Colors.white : DS.textPrimary,
+                          color: isMe ? DS.neutral0 : DS.textPrimary,
                         ),
                       ),
                     ],

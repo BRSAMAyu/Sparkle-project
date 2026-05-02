@@ -1,4 +1,5 @@
 import os
+import sys
 from urllib.parse import urlparse, urlunparse
 import pytest
 import pytest_asyncio
@@ -8,11 +9,29 @@ from sqlalchemy.pool import StaticPool
 from app.config import settings
 from app.core.redis_utils import resolve_redis_password
 
+APP_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "app"))
+if APP_DIR not in sys.path:
+    sys.path.insert(0, APP_DIR)
+APP_GEN_DIR = os.path.join(APP_DIR, "gen")
+if APP_GEN_DIR not in sys.path:
+    sys.path.insert(0, APP_GEN_DIR)
+
+from tests._credentials import (  # noqa: F401 — re-exported for legacy imports
+    TEST_HASHED_PASSWORD,
+    TEST_HY_API_KEY,
+    TEST_INTERNAL_API_KEY,
+    TEST_SF_API_KEY,
+    TEST_XUNFEI_API_KEY,
+    TEST_XUNFEI_API_SECRET,
+    TEST_ZHIPU_API_KEY,
+)
+
 from app.models.base import Base
 from app.models.plan import Plan  # noqa: F401
 from app.models.task import Task  # noqa: F401
 from app.models.user import User  # noqa: F401
 from app.models.response_feedback import ResponseFeedback  # noqa: F401
+from app.models.research_consent import ResearchConsentRecord  # noqa: F401
 from app.models.report_snapshot import ReportSnapshot  # noqa: F401
 from app.models.intervention import InterventionRequest  # noqa: F401
 from app.models.nightly_review import NightlyReview  # noqa: F401
@@ -42,6 +61,7 @@ from app.models.file_storage import StoredFile  # noqa: F401
 from app.models.task_feedback import TaskFeedback  # noqa: F401
 from app.models.session_completion import SessionCompletion  # noqa: F401
 from app.models.srl_phase_state import SRLPhaseStateRecord  # noqa: F401
+from app.models.north_star_metrics import NorthStarMetricEvent  # noqa: F401
 from app.models.notification import Notification, PushHistory  # noqa: F401
 from app.models.push_delivery_record import PushDeliveryRecord  # noqa: F401
 from app.models.aurora_stage20 import (  # noqa: F401
@@ -82,6 +102,7 @@ from app.models.shop import (  # noqa: F401
     ConsumableEffectType,
 )
 from app.models.simulation_run import SimulationRun  # noqa: F401
+from app.models.strategy_belief import StrategyBeliefSnapshot  # noqa: F401
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

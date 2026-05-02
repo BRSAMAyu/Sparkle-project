@@ -5,6 +5,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/models/ws6_profile_mirror_models.dart';
 import 'package:sparkle/features/user/presentation/providers/profile_context_provider.dart';
@@ -32,7 +33,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
       ref.invalidate(ws6TransparentProfileViewProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SparkleSnackBar.success('已记录「$targetId」的画像调整。'),
+          SparkleSnackBar.success(I18nService.instance.isChinese ? '已记录「$targetId」的画像调整。' : 'Recorded profile adjustment for "$targetId".'),
         );
       }
     }
@@ -90,6 +91,16 @@ class ProfileTransparentScreen extends ConsumerWidget {
                   targetId: action.key,
                   action: 'wrong',
                   reason: action.reason,
+                ),
+              ),
+              const SizedBox(height: DS.spacing12),
+              _buildCorrectionHistorySection(
+                context,
+                view,
+                onUndo: (item) => submitInsightControl(
+                  targetId: item.targetId,
+                  action: 'reset_override',
+                  reason: 'User reverted a previous Aurora correction.',
                 ),
               ),
               const SizedBox(height: DS.spacing12),
@@ -190,7 +201,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
           if (view.hiddenItemCount > 0) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              '隐藏条目 ${view.hiddenItemCount} 条，未进入透明面板。',
+              I18nService.instance.isChinese ? '隐藏条目 ${view.hiddenItemCount} 条，未进入透明面板。' : '${view.hiddenItemCount} hidden items, not shown on transparent profile.',
               style: DS.labelSmall.copyWith(color: DS.textSecondary),
             ),
           ],
@@ -319,6 +330,52 @@ class ProfileTransparentScreen extends ConsumerWidget {
                 : view.bindingNotes.join(' · '),
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCorrectionHistorySection(
+    BuildContext context,
+    Ws6TransparentProfileViewModel view, {
+    Future<void> Function(Ws6ProfileCorrectionHistoryItemModel item)? onUndo,
+  }) {
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.panel,
+      padding: const EdgeInsets.all(DS.spacing16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            context.l10n.userCorrectionHistoryTitle,
+            style: DS.labelLarge.copyWith(
+              color: DS.textPrimary,
+              fontWeight: DS.fontWeightSemibold,
+            ),
+          ),
+          const SizedBox(height: DS.spacing4),
+          Text(
+            context.l10n.userCorrectionHistoryHint,
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing12),
+          if (view.recentCorrections.isEmpty)
+            Text(
+              context.l10n.userCorrectionHistoryEmpty,
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            )
+          else
+            ...view.recentCorrections.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: DS.spacing10),
+                child: _CorrectionHistoryCard(
+                  item: item,
+                  onUndo: item.canUndo && onUndo != null
+                      ? () => onUndo(item)
+                      : null,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -490,7 +547,7 @@ class _RevertActionCard extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing4),
           Text(
-            '建议：${action.suggestedSummary}',
+            I18nService.instance.isChinese ? '建议：${action.suggestedSummary}' : 'Suggestion: ${action.suggestedSummary}',
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing4),
@@ -504,9 +561,74 @@ class _RevertActionCard extends StatelessWidget {
               Expanded(
                 child: OutlinedButton(
                   onPressed: onMarkWrong == null ? null : () => onMarkWrong!(),
-                  child: Text(action.requiresDialogue ? context.l10n.userMarkNeedsRecalibration : context.l10n.userMarkInaccurate),
+                  child: Text(action.requiresDialogue
+                      ? context.l10n.userMarkNeedsRecalibration
+                      : context.l10n.userMarkInaccurate),
                 ),
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CorrectionHistoryCard extends StatelessWidget {
+  const _CorrectionHistoryCard({
+    required this.item,
+    this.onUndo,
+  });
+
+  final Ws6ProfileCorrectionHistoryItemModel item;
+  final Future<void> Function()? onUndo;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: DS.surfacePrimaryElevated,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: DS.borderSubtle),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  item.fieldName,
+                  style: DS.bodyMedium.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+                ),
+              ),
+              if (item.createdAtLabel.isNotEmpty)
+                Text(
+                  item.createdAtLabel,
+                  style: DS.labelSmall.copyWith(color: DS.textTertiary),
+                ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing6),
+          Text(
+            item.summary,
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+          const SizedBox(height: DS.spacing8),
+          Row(
+            children: [
+              _ModePill(label: item.action, color: const Color(0xFF78D1C0)),
+              const Spacer(),
+              if (item.canUndo)
+                TextButton(
+                  onPressed: onUndo == null ? null : () => onUndo!(),
+                  child: Text(context.l10n.userCorrectionHistoryUndo),
+                ),
             ],
           ),
         ],

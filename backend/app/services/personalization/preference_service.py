@@ -40,6 +40,7 @@ class PreferenceService:
         "enable_push": True,
         "enable_curiosity_push": True,
         "share_achievements_to_community": True,
+        "use_social_signals": True,
     }
 
     def __init__(self, db: AsyncSession, redis=None):

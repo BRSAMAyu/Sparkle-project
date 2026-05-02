@@ -55,6 +55,7 @@ NODE_RANK_WEIGHTS = [1.0, 0.6, 0.3]
 REVIEW_PERFORMANCE_IMPACT: dict[str, int] = {
     "remembered": 4,
     "fuzzy": 1,
+    "forgotten": -2,
     "forgot": -2,
 }
 NO_LINKED_NODE_HINT = {
@@ -185,6 +186,7 @@ class ErrorBookMasterySyncService:
             return []
 
         results: list[dict] = []
+        impacted_plan_ids: set[UUID] = set()
         for node_id in linked_ids[:3]:
             node_result = await self._update_node_mastery(
                 user_id=user_id,
@@ -196,6 +198,14 @@ class ErrorBookMasterySyncService:
             )
             if node_result:
                 results.append(node_result)
+                if performance in {"forgotten", "forgot", "fuzzy"}:
+                    impacted_plan_ids.update(
+                        await self._identify_error_pressure_impacted_plans(
+                            user_id=user_id,
+                            node_id=node_id,
+                            new_mastery=int(node_result["new_mastery"]),
+                        )
+                    )
 
         if results:
             logger.info(
@@ -203,6 +213,14 @@ class ErrorBookMasterySyncService:
                 getattr(error_record, "id", "?"),
                 performance,
                 len(results),
+            )
+
+        if impacted_plan_ids:
+            await self._evaluate_impacted_plans(
+                user_id=user_id,
+                plan_ids=impacted_plan_ids,
+                trigger="error_review_pressure",
+                feedback_category=f"review_{performance}",
             )
 
         return results

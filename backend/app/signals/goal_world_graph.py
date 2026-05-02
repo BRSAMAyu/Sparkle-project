@@ -15,7 +15,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
+
+from loguru import logger
+from sqlalchemy import select
 
 from app.signals.types import _uid
 
@@ -132,8 +136,9 @@ class GoalWorldGraph:
 class GoalWorldGraphService:
     """Manage per-goal dependency graphs for the Signal Spine."""
 
-    def __init__(self, redis_client: Any):
+    def __init__(self, redis_client: Any, db_session: Any | None = None):
         self.redis = redis_client
+        self.db = db_session
 
     async def create_graph(
         self,
@@ -157,9 +162,12 @@ class GoalWorldGraphService:
     async def get_graph(self, user_id: str, goal_id: str) -> GoalWorldGraph | None:
         key = _GRAPH_KEY.format(user_id=user_id, goal_id=goal_id)
         raw = await self.redis.get(key)
-        if not raw:
-            return None
-        return GoalWorldGraph.from_dict(json.loads(raw if isinstance(raw, str) else raw.decode()))
+        if raw:
+            return GoalWorldGraph.from_dict(json.loads(raw if isinstance(raw, str) else raw.decode()))
+        graph = await self._load_durable(user_id, goal_id)
+        if graph is not None:
+            await self.redis.set(key, json.dumps(graph.to_dict()), ex=_GRAPH_TTL)
+        return graph
 
     async def update_node_mastery(
         self,
@@ -318,6 +326,62 @@ class GoalWorldGraphService:
     async def _save(self, graph: GoalWorldGraph) -> None:
         key = _GRAPH_KEY.format(user_id=graph.user_id, goal_id=graph.goal_id)
         await self.redis.set(key, json.dumps(graph.to_dict()), ex=_GRAPH_TTL)
+        await self._save_durable(graph)
+
+    async def _save_durable(self, graph: GoalWorldGraph) -> None:
+        if self.db is None:
+            return
+        try:
+            from app.aurora.runtime_v1.models import GoalWorldGraphSnapshot
+
+            result = await self.db.execute(
+                select(GoalWorldGraphSnapshot).where(
+                    GoalWorldGraphSnapshot.user_id == graph.user_id,
+                    GoalWorldGraphSnapshot.goal_id == graph.goal_id,
+                    GoalWorldGraphSnapshot.deleted_at.is_(None),
+                )
+            )
+            record = result.scalar_one_or_none()
+            if record is None:
+                record = GoalWorldGraphSnapshot(user_id=graph.user_id, goal_id=graph.goal_id)
+            record.graph_id = graph.graph_id
+            record.goal_type = graph.goal_type
+            record.coverage = graph.coverage
+            record.payload = graph.to_dict()
+            record.last_saved_at = datetime.now(UTC).replace(tzinfo=None)
+            record.runtime_metadata = {
+                "source": "goal_world_graph_service",
+                "node_count": len(graph.nodes),
+                "bottleneck_node_id": graph.bottleneck_node_id,
+            }
+            self.db.add(record)
+            await self.db.commit()
+        except Exception as exc:
+            logger.warning("GoalWorldGraph durable save skipped user={} goal={}: {}", graph.user_id, graph.goal_id, exc)
+
+    async def _load_durable(self, user_id: str, goal_id: str) -> GoalWorldGraph | None:
+        if self.db is None:
+            return None
+        try:
+            from app.aurora.runtime_v1.models import GoalWorldGraphSnapshot
+
+            result = await self.db.execute(
+                select(GoalWorldGraphSnapshot)
+                .where(
+                    GoalWorldGraphSnapshot.user_id == user_id,
+                    GoalWorldGraphSnapshot.goal_id == goal_id,
+                    GoalWorldGraphSnapshot.deleted_at.is_(None),
+                )
+                .order_by(GoalWorldGraphSnapshot.last_saved_at.desc())
+                .limit(1)
+            )
+            record = result.scalar_one_or_none()
+            if record is None or not isinstance(record.payload, dict):
+                return None
+            return GoalWorldGraph.from_dict(record.payload)
+        except Exception as exc:
+            logger.warning("GoalWorldGraph durable load skipped user={} goal={}: {}", user_id, goal_id, exc)
+            return None
 
     # GOAL-006: Deferred nodes with explainable reasons
 

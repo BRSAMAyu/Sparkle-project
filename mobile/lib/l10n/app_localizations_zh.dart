@@ -153,6 +153,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sensoryHapticSubtitle => '关闭后，成就、星图等所有触感反馈都会停止';
 
   @override
+  String get sensoryAuroraLinkTitle => 'Aurora 感官联动';
+
+  @override
+  String get sensoryAuroraLinkSubtitle => '允许 Aurora 根据状态轻柔调整音乐、触感和庆祝反馈';
+
+  @override
   String get sensoryAmbientSceneTitle => '专注环境音';
 
   @override
@@ -5153,6 +5159,44 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatRead => '已读';
 
   @override
+  String chatOfflineQueuePending(int count) {
+    return '$count 条消息等待发送';
+  }
+
+  @override
+  String chatOfflineQueueSending(int count) {
+    return '正在发送 $count 条排队消息...';
+  }
+
+  @override
+  String get chatOfflineQueueComplete => '已全部发送';
+
+  @override
+  String chatOfflineQueuePendingSemantic(int count) {
+    return '离线队列中有 $count 条消息等待发送';
+  }
+
+  @override
+  String chatOfflineQueueSendingSemantic(int count) {
+    return '网络已恢复，正在发送 $count 条排队消息';
+  }
+
+  @override
+  String get chatOfflineQueueCompleteSemantic => '排队消息已全部发送';
+
+  @override
+  String get chatMessageQueued => '等待发送';
+
+  @override
+  String get chatMessageSending => '正在发送';
+
+  @override
+  String get chatMessageSendFailed => '发送失败';
+
+  @override
+  String get chatMessageRetrySend => '重试';
+
+  @override
   String get chatAgentNavigator => '星图导航';
 
   @override
@@ -5404,6 +5448,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get errorBookNoReviewHint => '做得很好！继续保持';
 
   @override
+  String get errorBookNoReviewDescription => '做得很好！继续保持。先补记最近做错的一题，系统才会安排后续复习。';
+
+  @override
+  String get errorBookRecordFirstError => '去记录第一道错题';
+
+  @override
   String get errorBookDeleteSuccess => '删除成功';
 
   @override
@@ -5514,6 +5564,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String errorBookCognitiveFilter(Object dimension) {
     return '正针对 \"$dimension\" 维度进行针对性复习';
   }
+
+  @override
+  String errorBookKnowledgePointFilter(String node) {
+    return '知识点：$node';
+  }
+
+  @override
+  String get errorBookCognitiveDimension => '认知维度';
+
+  @override
+  String get errorBookKnowledgeNodeFallback => '知识节点';
 
   @override
   String errorBookReviewCount(Object count) {
@@ -6877,6 +6938,20 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get photonTransactionAdminAdjustment => '管理员调整';
+
+  @override
+  String get photonTransactionsEmpty => '暂无交易记录';
+
+  @override
+  String get photonTransactionsEnd => '没有更多记录了';
+
+  @override
+  String photonTransactionDaysAgo(int days) {
+    return '$days天前';
+  }
+
+  @override
+  String get photonTransactionNoNote => '无备注';
 
   @override
   String get shopItemTypeSkin => '皮肤';
@@ -10690,6 +10765,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatContinueInChat => '继续在对话里';
+
+  @override
+  String get chatNewMessagesDivider => '新消息';
 
   @override
   String get chatViewLatestReport => '查看最新学习报告';
@@ -14701,6 +14779,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get openclawHubButtonViewTasks => '查看任务';
 
   @override
+  String get openclawHubButtonOpenSetupGuide => '打开接入指南';
+
+  @override
+  String get openclawHubSetupGuideUnavailable => '暂时无法打开接入指南';
+
+  @override
   String get openclawHubSectionConnectionTitle => '连接与控制';
 
   @override
@@ -18292,7 +18376,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auroraCalibrationConfirm => '需要你确认';
 
   @override
-  String get auroraCalibrationComplete => '校准完成，回到标准层。';
+  String get auroraCalibrationComplete => '校准完成';
 
   @override
   String get auroraCalibrationExit => 'Aurora 已退回后台';
@@ -18301,13 +18385,127 @@ class AppLocalizationsZh extends AppLocalizations {
   String get auroraCorrectNotRight => '不是这个方向';
 
   @override
+  String get auroraCorrectNotRightSubtitle => '判断偏了';
+
+  @override
   String get auroraCorrectShorter => '更短一点';
+
+  @override
+  String get auroraCorrectShorterSubtitle => '收短回复';
 
   @override
   String get auroraCorrectDirect => '直接出题';
 
   @override
+  String get auroraCorrectDirectSubtitle => '切到练习';
+
+  @override
   String get auroraCorrectRecalibrate => '重新校准';
+
+  @override
+  String get auroraCorrectRecalibrateSubtitle => '深度检查';
+
+  @override
+  String get auroraCorrectionRiskFalsePositive => '我其实不焦虑，只是忙';
+
+  @override
+  String get auroraCorrectionRiskOverstated => '没那么严重';
+
+  @override
+  String get auroraCorrectionRiskSubtitle => '判断偏高';
+
+  @override
+  String get auroraCorrectionJudgmentOff => '这次判断不太准';
+
+  @override
+  String get auroraCorrectionJudgmentSubtitle => '更新判断';
+
+  @override
+  String get auroraCorrectionTemporaryBusy => '只是临时忙';
+
+  @override
+  String get auroraCorrectionTemporarySubtitle => '临时情境';
+
+  @override
+  String get auroraCorrectionStrategyAdjust => '方向需要调整';
+
+  @override
+  String get auroraCorrectionStrategyFaster => '可以再快一点';
+
+  @override
+  String get auroraCorrectionStrategySubtitle => '调整策略';
+
+  @override
+  String get auroraCorrectionKnowledgeBlocker => '我是内容卡住';
+
+  @override
+  String get auroraCorrectionKnowledgeSubtitle => '改判断原因';
+
+  @override
+  String get auroraCorrectionCareless => '这次是粗心';
+
+  @override
+  String get auroraCorrectionCarelessSubtitle => '不是概念问题';
+
+  @override
+  String get auroraCorrectionGenericDisconfirm => '这不太对';
+
+  @override
+  String get auroraCorrectionGenericConfirm => '这个方向对';
+
+  @override
+  String get auroraCorrectionFactSubtitle => '确认事实';
+
+  @override
+  String get auroraCorrectionToneSubtitle => '调整语气';
+
+  @override
+  String get auroraCorrectionFreeformLabel => 'Aurora 理解错了？';
+
+  @override
+  String get auroraCorrectionFreeformSubtitle => '我来说明';
+
+  @override
+  String get auroraCorrectionReceivedTitle => '已收到';
+
+  @override
+  String get auroraCorrectionReceivedSubtitle => 'Aurora 正在更新理解';
+
+  @override
+  String get auroraCorrectionApplied => '上次纠正已生效';
+
+  @override
+  String get calibrationReceiptExpand => '展开校准回执详情';
+
+  @override
+  String get calibrationReceiptCollapse => '收起校准回执详情';
+
+  @override
+  String get calibrationReceiptDismiss => '隐藏这条校准回执';
+
+  @override
+  String get calibrationReceiptWhatChanged => '调整了什么';
+
+  @override
+  String get calibrationReceiptWhyChanged => '为什么调整';
+
+  @override
+  String get calibrationReceiptNextTime => '下次会怎样';
+
+  @override
+  String get auroraCorrectionInputTitle => '想让 Aurora 知道什么？';
+
+  @override
+  String get auroraCorrectionInputHint => '哪里判断错了？说说你的纠正…';
+
+  @override
+  String get auroraCorrectionInputCancel => '取消';
+
+  @override
+  String get auroraCorrectionInputSend => '发送';
+
+  @override
+  String get auroraCorrectionSubmitted => '已收到，Aurora 正在更新理解。';
 
   @override
   String auroraSourceBadge(Object source) {
@@ -18349,6 +18547,81 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get auroraBandCoolingDown => 'Aurora 校准冷却中';
+
+  @override
+  String get auroraBandShortSensing => '在感知';
+
+  @override
+  String get auroraBandShortCalibrated => '节奏不错';
+
+  @override
+  String get auroraBandShortRiskFound => '可能卡住';
+
+  @override
+  String get auroraBandShortNeedsConfirm => '需你确认';
+
+  @override
+  String get auroraBandShortCalibrationAvailable => '可深聊';
+
+  @override
+  String get auroraBandShortCoolingDown => '稍后再聊';
+
+  @override
+  String get auroraLayerJudgmentPrefix => '我觉得现在';
+
+  @override
+  String get auroraLayerCorrectionQuestion => '可能是因为';
+
+  @override
+  String get auroraCorrectionTimeNotEnough => '时间不够';
+
+  @override
+  String get auroraCorrectionTooHard => '内容太难';
+
+  @override
+  String get auroraCorrectionLowEnergy => '最近状态不好';
+
+  @override
+  String get auroraCorrectionNoneOfThese => '都不是';
+
+  @override
+  String get auroraCorrectionRecorded => '已记录，下轮会按这个校准。';
+
+  @override
+  String get auroraActionDeepConversation => '进入深度对话';
+
+  @override
+  String get auroraActionWakeDeepConversation => '唤醒 Aurora 深度对话';
+
+  @override
+  String get auroraLayerCurrentStatus => '当前状态';
+
+  @override
+  String get auroraLayerMemoryReferences => '记忆引用';
+
+  @override
+  String get auroraLayerNextSuggestion => '下一步建议';
+
+  @override
+  String get auroraLayerSelfEvaluation => 'Aurora 自评';
+
+  @override
+  String get auroraLayerMemoryFallback => '还没有足够可靠的近因记忆。';
+
+  @override
+  String get auroraLayerNextSuggestionFallback => '先做一个 10 分钟的最小推进。';
+
+  @override
+  String get auroraLayerNextSuggestionTimeConflict => '先快速调整这个时间冲突。';
+
+  @override
+  String get auroraLayerSelfEvalFallback => '我会先保持轻量判断，等更多信号再加深校准。';
+
+  @override
+  String get auroraLayerExpand => '展开';
+
+  @override
+  String get auroraLayerCollapse => '收起';
 
   @override
   String auroraWakeAvailable(Object count) {
@@ -19726,6 +19999,33 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationRetractableTo => '可撤回至';
 
   @override
+  String get notificationRecallWhyTitle => '为什么提醒你';
+
+  @override
+  String get notificationRecallGoalValue => '对目标的价值';
+
+  @override
+  String get notificationRecallReason => '为什么是现在';
+
+  @override
+  String get notificationRecallEffort => '预计投入';
+
+  @override
+  String get notificationRecallDeadlinePressure => '时间压力';
+
+  @override
+  String get notificationRecallScore => '召回评分';
+
+  @override
+  String get notificationRecallInaccurate => '这个提醒不准确';
+
+  @override
+  String get notificationRecallFeedbackSaved => '已记录，之后会调准这类提醒';
+
+  @override
+  String get notificationRecallFeedbackRecorded => '反馈已记录';
+
+  @override
   String get notificationSendEncouragement => '发个鼓励';
 
   @override
@@ -20187,6 +20487,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatContextDetail => '上下文资料详情';
 
   @override
+  String get chatSocialContextDetail => '社群参考详情';
+
+  @override
+  String get chatSocialContextUsed => '参考了学习伙伴的动态';
+
+  @override
+  String get chatSocialContextDisableAction => '不需要参考他的进度';
+
+  @override
+  String get chatSocialContextDisablePrompt => '以后请不要参考学习伙伴的进度来调整回复。';
+
+  @override
   String chatContextUnused(Object count) {
     return '未使用 ($count)';
   }
@@ -20481,6 +20793,28 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatMemoryOriginalTurn => '原 turn';
+
+  @override
+  String get chatMemoryReferenceCorrectFailed => '记忆纠正失败';
+
+  @override
+  String get chatMemoryReferenceDetailTitle => '相关记忆';
+
+  @override
+  String get chatMemoryReferenceNeedsConfirmation => '待确认';
+
+  @override
+  String get chatMemoryReferenceNotRight => '不对';
+
+  @override
+  String chatMemoryReferenceReceiptLabel(Object count) {
+    return 'Aurora 引用了 $count 条相关记忆';
+  }
+
+  @override
+  String chatMemoryReferenceUsed(Object count) {
+    return '引用了 $count 条相关记忆';
+  }
 
   @override
   String chatMemorySessionCount(Object count) {
@@ -22703,6 +23037,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get simGenFailed => '模拟生成失败';
 
   @override
+  String get simRealtimeConnectionRecovered => '实时连接中断，已恢复到最近一次保存的模拟进度。';
+
+  @override
+  String get simInteractionStreamRecovered => '互动流中断了，但我已经帮你恢复到最近一轮状态。';
+
+  @override
+  String simRoundProgressSummary(int round) {
+    return '讨论已推进到第 $round 轮，正在汇总关键分歧与共识。';
+  }
+
+  @override
+  String get simDraftInsightSummary => '模拟进行中，正在汇总当前讨论洞察...';
+
+  @override
   String get simStudyGroup => '学习小组';
 
   @override
@@ -23490,6 +23838,15 @@ class AppLocalizationsZh extends AppLocalizations {
   String get ebRememberedHint => '延长复习间隔';
 
   @override
+  String get ebReviewMasteryPrompt => '你对这道题的掌握情况？';
+
+  @override
+  String get ebReviewMasterySheetTitle => '评价你的掌握情况';
+
+  @override
+  String get ebReviewMasterySheetDesc => '根据你的评价，系统会智能调整下次复习时间';
+
+  @override
   String get ebPerfectRecall => '完全记住了 ✓';
 
   @override
@@ -23681,6 +24038,55 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memSkip => '跳过';
 
   @override
+  String get memSettingsUpdated => '记忆设置已更新';
+
+  @override
+  String get memControl => '记忆控制';
+
+  @override
+  String get memControlDesc =>
+      '控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。';
+
+  @override
+  String get memSocialToggles => '社交语义子开关';
+
+  @override
+  String get memSocialTogglesDesc =>
+      'Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。';
+
+  @override
+  String get memProactiveReminders => '主动提醒';
+
+  @override
+  String get memQuietHours => '静默时段';
+
+  @override
+  String memCurrentTimezone(String timezone) {
+    return '当前时区：$timezone';
+  }
+
+  @override
+  String get memTypes => '记忆类型';
+
+  @override
+  String get memCaptureIntensity => '捕获强度';
+
+  @override
+  String get memCaptureLow => '低';
+
+  @override
+  String get memCaptureMedium => '中';
+
+  @override
+  String get memCaptureHigh => '高';
+
+  @override
+  String get memBlockingPrefs => '屏蔽偏好';
+
+  @override
+  String get memBlockedSources => '屏蔽来源';
+
+  @override
   String get seedDetailFailed => '种子库详情加载失败，请稍后再试';
 
   @override
@@ -23832,6 +24238,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get transWordCard => '生词卡';
 
   @override
+  String get transAddedToFlashcardsReviewLater => '已加入生词卡，24小时后复习';
+
+  @override
+  String get transTranslationFailed => '翻译失败';
+
+  @override
   String get auroraObserving => 'Aurora · 观察中';
 
   @override
@@ -23865,6 +24277,83 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get auroraSend => '发送';
+
+  @override
+  String get auroraCoreSessionTitle => 'Aurora 深度校准';
+
+  @override
+  String auroraTurnsRemaining(int count) {
+    return '剩余 $count 轮';
+  }
+
+  @override
+  String get auroraPauseCalibration => '暂停校准';
+
+  @override
+  String get auroraResumeTitle => '继续上次的深度对话';
+
+  @override
+  String get auroraResumeSubtitle => 'Aurora 还保留着你暂停时的阶段和消息。';
+
+  @override
+  String get auroraResumeBannerSubtitle => '从上次停下的位置继续，不用重新开始';
+
+  @override
+  String get auroraResumeAction => '继续';
+
+  @override
+  String get auroraCoreSessionResumed => '继续我们刚才聊的。Aurora 保留了前面的阶段和消息。';
+
+  @override
+  String get auroraSessionExpiredTitle => '上次的深度对话已结束';
+
+  @override
+  String get auroraSessionExpiredSubtitle => '它已经超过可恢复时间，Aurora 不会从过期状态里继续判断。';
+
+  @override
+  String get auroraLastSessionSummary => '上次摘要';
+
+  @override
+  String get auroraJustChat => '只是聊天';
+
+  @override
+  String get auroraStartNewSession => '开始新的深度对话';
+
+  @override
+  String get auroraExpandSheet => '展开校准面板';
+
+  @override
+  String get auroraShrinkSheet => '收起校准面板';
+
+  @override
+  String get auroraStatePatchesTitle => '已更新的状态';
+
+  @override
+  String get auroraNextChangesTitle => '接下来会变化什么';
+
+  @override
+  String get auroraReturnedToBackground => 'Aurora 已退回后台';
+
+  @override
+  String get auroraViewAdjustedPlan => '查看调整后的计划';
+
+  @override
+  String get auroraExplainPrompt => '解释一下';
+
+  @override
+  String get auroraFreeformLabel => '自由描述';
+
+  @override
+  String get auroraCoreCheckpointCta => '深入校准';
+
+  @override
+  String get auroraCheckpointWhyNow => '这个 checkpoint 正好适合确认计划和真实进度是否还对齐';
+
+  @override
+  String get auroraCoreTaskStuckCta => '和 Aurora 深度校准';
+
+  @override
+  String get auroraTaskStuckWhyNow => '任务已经出现卡点，现在校准可以避免下一步继续建立在错误判断上';
 
   @override
   String get settingsQueueCleared => '等待队列已清空';
@@ -25417,6 +25906,21 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String communityWeeksAgo(Object count) {
+    return '$count周前';
+  }
+
+  @override
+  String communityMonthsAgo(Object count) {
+    return '$count个月前';
+  }
+
+  @override
+  String communityBadgeUnlockedOn(Object date) {
+    return '解锁于 $date';
+  }
+
+  @override
   String get communityQuickShare => '快捷分享';
 
   @override
@@ -25442,6 +25946,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get communityNoKnowledgeYet => '还没有学习知识节点';
+
+  @override
+  String get communityTaskPaused => '已暂停';
 
   @override
   String get communityTaskCompleted => '已完成';
@@ -26468,6 +26975,18 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get userNoRevertibleActions => '暂无可回退动作。';
+
+  @override
+  String get userCorrectionHistoryTitle => '我纠正过 Aurora 什么';
+
+  @override
+  String get userCorrectionHistoryHint => '最近会影响后续判断的画像和聊天纠正。';
+
+  @override
+  String get userCorrectionHistoryEmpty => '还没有 Aurora 纠正记录。';
+
+  @override
+  String get userCorrectionHistoryUndo => '恢复原判断';
 
   @override
   String get userTransparentNotEnabled => '透明画像暂未接入';
@@ -27679,4 +28198,713 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get ebLoadError => '加载错题失败，请重试';
+
+  @override
+  String chatContextReceiptSummary(int used, int skipped) {
+    return 'Aurora · 使用 $used 个上下文 / 跳过 $skipped 个';
+  }
+
+  @override
+  String chatContextUsedTools(int count) {
+    return '使用的工具上下文（$count）';
+  }
+
+  @override
+  String toolsContextEffectMessage(String tool) {
+    return '已让 Aurora 知道这次$tool';
+  }
+
+  @override
+  String get toolsContextEffectUndo => '不让 Aurora 知道';
+
+  @override
+  String get toolsContextEffectUndone => '已撤回这次工具上下文';
+
+  @override
+  String get toolsContextEffectUndoFailed => '撤回失败，请稍后再试';
+
+  @override
+  String get toolsNotesSyncedToPrism => '已同步到认知棱镜';
+
+  @override
+  String get taskStatusRestore => '已恢复';
+
+  @override
+  String get streakQualityTitle => '高质量连胜';
+
+  @override
+  String get streakQualitySubtitle => '连胜会参考有效时长、核心任务、难点突破和计划一致性。';
+
+  @override
+  String get streakQualityDaysShort => '质量日';
+
+  @override
+  String get streakQualityTodayBreakdown => '今日质量拆解';
+
+  @override
+  String get streakQualityEffectiveMinutes => '有效时长';
+
+  @override
+  String get streakQualityCoreTasks => '核心任务';
+
+  @override
+  String get streakQualityBreakthroughs => '难点突破';
+
+  @override
+  String get streakQualityPlanConsistency => '计划一致性';
+
+  @override
+  String get streakQualityWeeklyTrend => '本周质量趋势';
+
+  @override
+  String get streakQualityEvidence => '为什么值得庆祝';
+
+  @override
+  String get streakQualityEmpty => '开始一次学习后，这里会显示质量趋势。';
+
+  @override
+  String get streakQualityUnavailable => '质量数据暂不可用';
+
+  @override
+  String get streakQualityViewDetails => '查看连胜详情';
+
+  @override
+  String streakQualityScoreLabel(Object score) {
+    return '质量 $score%';
+  }
+
+  @override
+  String streakQualityMinutesValue(Object minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String streakQualitySemantics(Object currentDays, Object qualityDays) {
+    return '高质量连胜 $qualityDays 天，当前连续 $currentDays 天。点按查看拆解。';
+  }
+
+  @override
+  String get gdChronicleTitle => '成长编年史';
+
+  @override
+  String get gdChronicleSubtitle => '查看 Sparkle 认为重要的里程碑、转折点和模式。';
+
+  @override
+  String get gdLearningDashboardTitle => '学习仪表板';
+
+  @override
+  String get gdLearningDashboardSubtitle => '查看时间、效率、薄弱点、知识变化和计划稳定性。';
+
+  @override
+  String get gdGrowthStory => '成长故事';
+
+  @override
+  String get gdStorySummary => '周叙事';
+
+  @override
+  String get gdKeyInsights => '关键洞察';
+
+  @override
+  String get gdNextWeekSuggestion => '下周建议';
+
+  @override
+  String get gdEvidenceChain => '证据链';
+
+  @override
+  String get gdConfirm => '确认';
+
+  @override
+  String get gdEdit => '编辑';
+
+  @override
+  String get gdReject => '驳回';
+
+  @override
+  String get gdUndo => '撤销';
+
+  @override
+  String get gdEntryConfirmed => '已确认这条成长记录。';
+
+  @override
+  String get gdEntryEdited => '已标记为需要编辑。';
+
+  @override
+  String get gdEntryRejected => '已驳回这条成长记录。';
+
+  @override
+  String get gdPending => '待确认';
+
+  @override
+  String get gdConfirmed => '已确认';
+
+  @override
+  String get gdEdited => '已编辑';
+
+  @override
+  String get gdRejected => '已驳回';
+
+  @override
+  String get gdMilestone => '里程碑';
+
+  @override
+  String get gdTurningPoint => '转折点';
+
+  @override
+  String get gdPattern => '模式';
+
+  @override
+  String get gdReflection => '反思';
+
+  @override
+  String get gdCategoryLearning => '学习';
+
+  @override
+  String get gdCategoryTraining => '训练';
+
+  @override
+  String get gdCategoryErrorFix => '错题修复';
+
+  @override
+  String get gdCategoryReflection => '复盘';
+
+  @override
+  String get gdCategorySocial => '社群';
+
+  @override
+  String get gdCategoryPlanning => '规划';
+
+  @override
+  String get gdCategoryOcr => '资料录入';
+
+  @override
+  String get gdCategoryUnassigned => '未分类';
+
+  @override
+  String get gdEmptyChronicleTitle => '还没有成长记录';
+
+  @override
+  String get gdEmptyChronicleDesc =>
+      '当你完成、失败、纠正或复盘一件重要的事后，Sparkle 会把证据整理成可编辑的故事。';
+
+  @override
+  String get gdOpenChronicle => '打开编年史';
+
+  @override
+  String get gdOpenDashboard => '打开仪表板';
+
+  @override
+  String get gdTimeDistribution => '时间分布';
+
+  @override
+  String get gdEfficiency => '效率指标';
+
+  @override
+  String get gdWeaknessRadar => '薄弱点雷达';
+
+  @override
+  String get gdKnowledgeChanges => '知识变化';
+
+  @override
+  String get gdPlanStability => '计划稳定性';
+
+  @override
+  String gdTasksCompletedCount(int count) {
+    return '$count 个任务';
+  }
+
+  @override
+  String gdAvgMinutes(String minutes) {
+    return '平均 $minutes 分钟';
+  }
+
+  @override
+  String gdOnTimeRate(String percent) {
+    return '$percent% 准时';
+  }
+
+  @override
+  String gdInterruptionsCount(int count) {
+    return '$count 次中断';
+  }
+
+  @override
+  String gdAdjustmentsCount(int count) {
+    return '$count 次调整';
+  }
+
+  @override
+  String gdAbandonmentRate(String percent) {
+    return '$percent% 放弃';
+  }
+
+  @override
+  String get gdNoDataTitle => '学习仪表板正在积累信号';
+
+  @override
+  String get gdNoDataDesc => '完成几次专注和任务后，这里会展示可靠模式，而不是猜测。';
+
+  @override
+  String get gdModelReceiptTitle => 'Sparkle 学到了什么';
+
+  @override
+  String get gdTriggerEvent => '触发事件';
+
+  @override
+  String get gdSparkleLearned => '学到';
+
+  @override
+  String get gdWhatChanged => '改变';
+
+  @override
+  String get gdNotWritten => '未写入';
+
+  @override
+  String get gdRemembered => '记住了';
+
+  @override
+  String get gdCorrect => '纠正';
+
+  @override
+  String get gdReceiptRemembered => '已标记为记住。';
+
+  @override
+  String get gdReceiptCorrectPrompt => '收到，Sparkle 会把这条回执视为需要纠正。';
+
+  @override
+  String get gdChronicleSemantics => '成长编年史时间线';
+
+  @override
+  String get gdDashboardSemantics => '学习仪表板指标';
+
+  @override
+  String gdTimeHours(String hours) {
+    return '$hours 小时';
+  }
+
+  @override
+  String gdMasteryMove(String before, String after) {
+    return '$before% 到 $after%';
+  }
+
+  @override
+  String gdGap(String percent) {
+    return '差距 $percent%';
+  }
+
+  @override
+  String gdCurrentTarget(String current, String target) {
+    return '当前 $current% · 目标 $target%';
+  }
+
+  @override
+  String get gdRetry => '重试';
+
+  @override
+  String get gdLoadFailed => '无法加载成长仪表板';
+
+  @override
+  String get sourceExplanationSemantics => '本次回答的资料来源说明';
+
+  @override
+  String sourceExplanationUsedSummary(int count) {
+    return '本次回答使用了 $count 个资料来源';
+  }
+
+  @override
+  String get sourceExplanationUsedSources => '已使用资料';
+
+  @override
+  String sourceExplanationUnusedSources(int count) {
+    return '$count 个未使用资料';
+  }
+
+  @override
+  String get sourceExplanationUnusedSourcesTitle => '未使用资料';
+
+  @override
+  String get sourceExplanationNoSources => '暂时没有资料细节';
+
+  @override
+  String sourceExplanationRelevance(int percent) {
+    return '相关性 $percent%';
+  }
+
+  @override
+  String sourceExplanationConfidence(int percent) {
+    return '置信度 $percent%';
+  }
+
+  @override
+  String get sourceExplanationCorrectSource => '纠正这个资料判断';
+
+  @override
+  String get sourceExplanationCorrectionSent => '已记录资料纠错';
+
+  @override
+  String get sourceExplanationCorrectionFailed => '暂时无法记录纠错';
+
+  @override
+  String get sourceExplanationUndo => '撤销';
+
+  @override
+  String get goalGraphPanelSemantics => '打开目标知识图谱面板';
+
+  @override
+  String get goalGraphPanelTitle => '目标图谱';
+
+  @override
+  String get goalGraphNoGoal => '选择当前目标后，可以看到每个知识点为什么重要。';
+
+  @override
+  String get goalGraphLoading => '正在加载目标图谱';
+
+  @override
+  String get goalGraphRetry => '重试';
+
+  @override
+  String get goalGraphEmpty => '暂时没有目标图谱节点。';
+
+  @override
+  String get goalGraphBottlenecks => '瓶颈节点';
+
+  @override
+  String get goalGraphLearning => '待学习';
+
+  @override
+  String get goalGraphMastered => '已掌握';
+
+  @override
+  String goalGraphLegendBottleneck(int count) {
+    return '$count 个瓶颈';
+  }
+
+  @override
+  String goalGraphLegendLearning(int count) {
+    return '$count 个待学习';
+  }
+
+  @override
+  String goalGraphLegendMastered(int count) {
+    return '$count 个已掌握';
+  }
+
+  @override
+  String goalGraphNodeSemantics(String node) {
+    return '打开 $node 的详情';
+  }
+
+  @override
+  String goalGraphMasteryPercent(int percent) {
+    return '掌握度 $percent%';
+  }
+
+  @override
+  String get goalGraphNodeType => '类型';
+
+  @override
+  String get goalGraphMastery => '掌握度';
+
+  @override
+  String get goalGraphRelationship => '为什么重要';
+
+  @override
+  String get goalGraphExamWeight => '考试权重';
+
+  @override
+  String get goalGraphDifficulty => '难度';
+
+  @override
+  String get goalGraphTrainability => '可训练性';
+
+  @override
+  String get goalGraphMistakes => '错题数';
+
+  @override
+  String goalGraphPercentValue(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get taskPausedPanelTitle => '暂停上下文';
+
+  @override
+  String taskPausedPanelSemantics(String title) {
+    return '$title 的暂停任务详情';
+  }
+
+  @override
+  String get taskPauseReasonLabel => '暂停原因：';
+
+  @override
+  String get taskPauseReasonFallback => 'Sparkle 暂停了这个任务，用来保护当前计划节奏。';
+
+  @override
+  String get taskRestoreConditionLabel => '恢复条件：';
+
+  @override
+  String get taskRestoreConditionFallback => '当你准备继续，或阻塞条件解除时即可恢复。';
+
+  @override
+  String taskRestoreConditionDueDate(String date) {
+    return '$date 前恢复，当然你也可以现在继续。';
+  }
+
+  @override
+  String get taskResumeQueued => '已请求恢复任务。';
+
+  @override
+  String get taskPausedDurationUnknown => '已暂停';
+
+  @override
+  String get taskPausedDurationNow => '刚刚暂停';
+
+  @override
+  String taskPausedDurationMinutes(int count) {
+    return '已暂停 $count 分钟';
+  }
+
+  @override
+  String taskPausedDurationHours(int count) {
+    return '已暂停 $count 小时';
+  }
+
+  @override
+  String taskPausedDurationDays(int count) {
+    return '已暂停 $count 天';
+  }
+
+  @override
+  String get taskRestoreDialogTitle => '任务已恢复';
+
+  @override
+  String taskRestoreDialogBody(String title) {
+    return '“$title” 已从放弃或归档状态恢复。';
+  }
+
+  @override
+  String get taskRestoreDialogNextStepLabel => '建议下一步';
+
+  @override
+  String get taskRestoreDialogNextStepFallback => '先看一眼任务上下文，再从最小可推进的一步重新开始。';
+
+  @override
+  String get lowYieldCardSemantics => '温和的优先级建议';
+
+  @override
+  String get lowYieldCardTitle => '现在更值得做的一步';
+
+  @override
+  String get lowYieldActivityFallback => '这件事';
+
+  @override
+  String get lowYieldReasonFallback => '你当前的截止日期和目标优先级';
+
+  @override
+  String get lowYieldSuggestionFallback => '建议任务';
+
+  @override
+  String lowYieldCardMessage(
+      String activity, String reason, String suggestion) {
+    return '我注意到你正在做 $activity。考虑到 $reason，现在更值得做的可能是 $suggestion。';
+  }
+
+  @override
+  String get lowYieldActionSwitch => '好的，切换';
+
+  @override
+  String get lowYieldActionContinue => '我知道，继续';
+
+  @override
+  String get lowYieldActionCorrect => '不对，纠正';
+
+  @override
+  String get understandingPanelTitle => 'Sparkle 懂我';
+
+  @override
+  String get understandingPanelSemanticLabel => 'Sparkle 对我的理解快照';
+
+  @override
+  String understandingPanelSubtitle(int count, int ratio) {
+    return '$count 条判断 · $ratio% 高置信';
+  }
+
+  @override
+  String get understandingPanelEmptySubtitle => '还没有稳定判断';
+
+  @override
+  String get understandingPanelEmptyBody =>
+      '当你制定计划、聊天和完成任务后，Sparkle 会把具体假设放在这里，方便你纠正。';
+
+  @override
+  String get understandingPanelLoading => '正在读取当前自我模型';
+
+  @override
+  String get understandingPanelError => '暂时无法加载理解快照';
+
+  @override
+  String get understandingPanelExpand => '展开理解快照';
+
+  @override
+  String get understandingPanelCollapse => '收起理解快照';
+
+  @override
+  String get understandingPanelMemoryTitle => '当前正在使用的理解';
+
+  @override
+  String get understandingCorrect => '纠正';
+
+  @override
+  String get understandingConfidenceHigh => '高置信';
+
+  @override
+  String get understandingConfidenceMedium => '中置信';
+
+  @override
+  String get understandingConfidenceLow => '低置信';
+
+  @override
+  String understandingClaimSemantic(String claim, int confidence) {
+    return '$claim。置信度 $confidence%。';
+  }
+
+  @override
+  String understandingStyleSummary(
+      String tone, String verbosity, String reason) {
+    return '$tone · $verbosity。$reason';
+  }
+
+  @override
+  String understandingRecentlyCorrected(String correction) {
+    return '已根据你的纠正更新：$correction';
+  }
+
+  @override
+  String get understandingCorrectionTitle => '纠正这条判断';
+
+  @override
+  String get understandingCorrectionHint => 'Sparkle 应该怎样理解？';
+
+  @override
+  String get understandingCorrectionScopeTitle => '这次纠正应该影响哪里？';
+
+  @override
+  String understandingCorrectionUpdated(String effect) {
+    return '已更新：$effect';
+  }
+
+  @override
+  String get understandingCorrectionFailed => '这次纠正更新失败';
+
+  @override
+  String get understandingCorrectionGenericEffect => '自我模型';
+
+  @override
+  String get understandingScopeMemoryClaim => '记忆判断';
+
+  @override
+  String get understandingScopeRoutingPolicy => '路由策略';
+
+  @override
+  String get understandingScopeTaskGranularity => '任务粒度';
+
+  @override
+  String get understandingScopePlanRisk => '计划风险';
+
+  @override
+  String get understandingScopeKnowledgeBottleneck => '知识瓶颈';
+
+  @override
+  String get understandingScopeWakePolicy => '唤醒策略';
+
+  @override
+  String get understandingChatDrawerTitle => '当前自我模型';
+
+  @override
+  String understandingChatDrawerSubtitle(int count) {
+    return '$count 条可纠正判断';
+  }
+
+  @override
+  String get understandingChatDrawerSubtitleEmpty => '查看 Sparkle 当前怎么理解你';
+
+  @override
+  String get understandingChatDrawerOpen => '打开当前自我模型';
+
+  @override
+  String get cahTitle => '问责空间';
+
+  @override
+  String get cahSubtitle => '承诺、伙伴进度和共同目标都在这里';
+
+  @override
+  String get cahMyCommitments => '我的承诺';
+
+  @override
+  String get cahPartnerProgress => '伙伴进度';
+
+  @override
+  String get cahSharedGoals => '共同目标';
+
+  @override
+  String get cahNeedsAttention => '需要关注';
+
+  @override
+  String get cahHelpable => '我可以帮助';
+
+  @override
+  String get cahFeedEntry => '进入动态 Feed';
+
+  @override
+  String get cahFeedEntryHint => 'Feed 保留为二级入口，用来分享和浏览动态';
+
+  @override
+  String get cahAllowReminder => '允许提醒';
+
+  @override
+  String get cahDoNotDisturb => '暂时勿扰';
+
+  @override
+  String get cahAcceptReminder => '接受提醒';
+
+  @override
+  String get cahDeclineReminder => '拒绝';
+
+  @override
+  String get cahLaterReminder => '稍后';
+
+  @override
+  String get cahTooFrequentReminder => '太频繁';
+
+  @override
+  String get goalDetailTitle => '目标详情';
+
+  @override
+  String get goalDetailProgress => '总体进度';
+
+  @override
+  String get goalDetailMastery => '掌握度';
+
+  @override
+  String get goalDetailTargetDate => '目标日期';
+
+  @override
+  String get goalDetailPriority => '优先级';
+
+  @override
+  String get goalDetailMinimumLine => '最低达标线';
+
+  @override
+  String get goalDetailBottlenecks => '知识瓶颈';
+
+  @override
+  String get goalDetailTodayStep => '今日最小下一步';
+
+  @override
+  String get goalDetailPlanHealth => '计划健康状态';
+
+  @override
+  String get goalDetailAccountability => '社群问责';
+
+  @override
+  String get goalDetailRelatedSources => '相关资料来源';
 }

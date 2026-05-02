@@ -29,6 +29,16 @@ class NodeStatus(StrEnum):
     COLLAPSED = "collapsed"  # 坍缩
 
 
+class LearningGraphState(StrEnum):
+    UNKNOWN = "unknown"
+    LEARNING = "learning"
+    WEAK = "weak"
+    READY_FOR_REVIEW = "ready_for_review"
+    MASTERED = "mastered"
+    CONNECTED_TO_GOAL = "connected_to_goal"
+    BLOCKED_BY_PREREQUISITE = "blocked_by_prerequisite"
+
+
 # ==========================================
 # 请求模型
 # ==========================================
@@ -292,6 +302,12 @@ class NodeWithStatus(NodeBase):
     """节点 + 用户状态"""
 
     user_status: UserStatusInfo | None = None
+    learning_state: LearningGraphState = LearningGraphState.UNKNOWN
+    learning_state_reason: str = "No personal learning signal has reached this node yet."
+    recommended_action: str = "start"
+    recommendation_reason: str = "Start this concept when it becomes relevant to your goal."
+    blocked_by_prerequisite_node_ids: list[UUID] = Field(default_factory=list)
+    graph_event_sources: list[dict[str, Any]] = Field(default_factory=list)
 
     # 布局信息
     position_angle: float  # 在星域中的角度
@@ -300,8 +316,28 @@ class NodeWithStatus(NodeBase):
     position_y: float
 
     @classmethod
-    def from_models(cls, node, status, recent_error_count: int = 0, review_signal=None):
+    def from_models(
+        cls,
+        node,
+        status,
+        recent_error_count: int = 0,
+        review_signal=None,
+        *,
+        goal_node_ids: set[UUID] | None = None,
+        blocked_by_prerequisite_node_ids: list[UUID] | None = None,
+    ):
         user_status = None
+        blocked_by_prerequisite_node_ids = blocked_by_prerequisite_node_ids or []
+        goal_node_ids = goal_node_ids or set()
+        graph_event_sources = cls._graph_event_sources(status)
+        learning_state, learning_state_reason, recommended_action, recommendation_reason = cls._learning_state(
+            node=node,
+            status=status,
+            recent_error_count=recent_error_count,
+            review_signal=review_signal,
+            is_goal_connected=node.id in goal_node_ids,
+            blocked_by_prerequisite_node_ids=blocked_by_prerequisite_node_ids,
+        )
         if status:
             # 计算视觉状态
             visual_status = cls._calculate_status(status)
@@ -374,11 +410,101 @@ class NodeWithStatus(NodeBase):
             tags=cls._build_auto_tags(node, sector_code),
             global_spark_count=node.global_spark_count,
             user_status=user_status,
+            learning_state=learning_state,
+            learning_state_reason=learning_state_reason,
+            recommended_action=recommended_action,
+            recommendation_reason=recommendation_reason,
+            blocked_by_prerequisite_node_ids=blocked_by_prerequisite_node_ids,
+            graph_event_sources=graph_event_sources,
             position_angle=position_angle,
             position_radius=position_radius,
             position_x=position_x,
             position_y=position_y,
         )
+
+    @classmethod
+    def _learning_state(
+        cls,
+        *,
+        node,
+        status,
+        recent_error_count: int,
+        review_signal,
+        is_goal_connected: bool,
+        blocked_by_prerequisite_node_ids: list[UUID],
+    ) -> tuple[LearningGraphState, str, str, str]:
+        if blocked_by_prerequisite_node_ids:
+            return (
+                LearningGraphState.BLOCKED_BY_PREREQUISITE,
+                "A prerequisite node is still weak, so this concept is not the next best move.",
+                "complete_prerequisite",
+                "Review the blocking prerequisite first, then return here.",
+            )
+        if status is None or not bool(getattr(status, "is_unlocked", False)):
+            return (
+                LearningGraphState.UNKNOWN,
+                "Sparkle has not seen enough personal evidence for this node yet.",
+                "start",
+                "Open the node or attach source material to begin building evidence.",
+            )
+
+        mastery = max(0.0, min(float(getattr(status, "mastery_score", 0.0) or 0.0), 100.0))
+        if mastery >= 95.0:
+            return (
+                LearningGraphState.MASTERED,
+                "Recent mastery evidence is high enough to treat this as stable knowledge.",
+                "maintain",
+                "Keep it warm with occasional review or use it to unlock harder concepts.",
+            )
+
+        keywords = [str(keyword) for keyword in (getattr(node, "keywords", None) or [])]
+        if recent_error_count > 0 or "signal:weak_at" in keywords or (getattr(status, "study_count", 0) and mastery < 35):
+            return (
+                LearningGraphState.WEAK,
+                "Recent mistakes or low mastery suggest this concept is fragile.",
+                "repair",
+                "Do a targeted practice or review the source that introduced the gap.",
+            )
+
+        if bool(getattr(review_signal, "is_recommended", False)):
+            reason = str(getattr(review_signal, "reason", "") or "review_window")
+            return (
+                LearningGraphState.READY_FOR_REVIEW,
+                f"Review urgency is high because of {reason.replace('_', ' ')}.",
+                "review",
+                "A short review now should protect this memory before it fades.",
+            )
+
+        if is_goal_connected:
+            return (
+                LearningGraphState.CONNECTED_TO_GOAL,
+                "This node is linked to an active goal or task path.",
+                "continue",
+                "Continue here because it supports the plan you are working on.",
+            )
+
+        return (
+            LearningGraphState.LEARNING,
+            "This node has personal learning evidence but is not mastered yet.",
+            "continue",
+            "Continue with a small task or source-backed review.",
+        )
+
+    @staticmethod
+    def _graph_event_sources(status) -> list[dict[str, Any]]:
+        if status is None:
+            return []
+        snapshot = getattr(status, "learning_path_snapshot", None)
+        if not isinstance(snapshot, dict):
+            return []
+        raw_sources = snapshot.get("graph_event_sources") or []
+        if not isinstance(raw_sources, list):
+            return []
+        sources: list[dict[str, Any]] = []
+        for item in raw_sources[:5]:
+            if isinstance(item, dict):
+                sources.append({str(key): value for key, value in item.items() if value is not None})
+        return sources
 
     @staticmethod
     def _calculate_status(status) -> NodeStatus:

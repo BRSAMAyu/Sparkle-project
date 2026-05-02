@@ -132,7 +132,7 @@ class _PartnershipCard extends ConsumerWidget {
                           .toUpperCase(),
                       style: TextStyle(
                         color: DS.brandPrimary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         fontSize: 18,
                       ),
                     ),
@@ -145,7 +145,7 @@ class _PartnershipCard extends ConsumerWidget {
                         Text(
                           partner?.displayName ?? (I18nService.instance.isChinese ? '未知用户' : 'Unknown User'),
                           style: const TextStyle(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                             fontSize: DS.fontSizeBase,
                           ),
                         ),
@@ -276,7 +276,7 @@ class _StatusChip extends StatelessWidget {
         style: TextStyle(
           fontSize: DS.fontSizeXs,
           color: color,
-          fontWeight: FontWeight.bold,
+          fontWeight: DS.fontWeightBold,
         ),
       ),
     );

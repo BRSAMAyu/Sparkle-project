@@ -119,7 +119,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                       _formatDateTime(context, nextActiveTime),
                       style: TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         color: DS.brandPrimary.shade700,
                       ),
                     ),
@@ -407,7 +407,7 @@ class PredictiveInsightsCard extends StatelessWidget {
               '${(confidence * 100).toInt()}%',
               style: TextStyle(
                 fontSize: 12,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: confidence > 0.7
                     ? DS.success.shade700
                     : DS.brandPrimary.shade700,
@@ -427,7 +427,7 @@ class PredictiveInsightsCard extends StatelessWidget {
           _getDifficultyLabel(score),
           style: TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.bold,
+            fontWeight: DS.fontWeightBold,
             color: _getDifficultyColor(score),
           ),
         ),
@@ -443,7 +443,7 @@ class PredictiveInsightsCard extends StatelessWidget {
           _getRiskLevelText(level),
           style: TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.bold,
+            fontWeight: DS.fontWeightBold,
             color: _getRiskColor(level),
           ),
         ),

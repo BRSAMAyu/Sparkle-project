@@ -116,19 +116,18 @@ extension ChatNotifierHistory on ChatNotifier {
       if (loadingConversationId != conversationId) {
         return;
       }
-      final l10n = I18nService.instance.l10n;
-      final errorMessage = ErrorMessages.getUserFriendlyMessage(
-        'UNKNOWN',
-        l10n.chatHistoryLoadFailed('$e'),
+      final failure = AppFailureMapper.from(
+        e,
+        fallbackMessage: I18nService.instance.l10n.chatHistoryLoadFailed('$e'),
       );
 
       state = state.copyWith(
         isLoading: false,
         messages: previousMessages,
         conversationId: previousConversationId,
-        error: errorMessage,
-        errorCode: 'UNKNOWN',
-        isErrorRetryable: true,
+        error: failure.userMessage,
+        errorCode: failure.errorCode,
+        isErrorRetryable: failure.isRetryable,
       );
     } finally {
       if (loadingConversationId == conversationId) {
@@ -215,17 +214,17 @@ extension ChatNotifierHistory on ChatNotifier {
         );
         return;
       }
-      final l10n = I18nService.instance.l10n;
-      final errorMessage = ErrorMessages.getUserFriendlyMessage(
-        'UNKNOWN',
-        l10n.chatHistoryLoadMoreFailed('$e'),
+      final failure = AppFailureMapper.from(
+        e,
+        fallbackMessage:
+            I18nService.instance.l10n.chatHistoryLoadMoreFailed('$e'),
       );
 
       state = state.copyWith(
         isLoadingMore: false,
-        error: errorMessage,
-        errorCode: 'UNKNOWN',
-        isErrorRetryable: true,
+        error: failure.userMessage,
+        errorCode: failure.errorCode,
+        isErrorRetryable: failure.isRetryable,
       );
     }
   }

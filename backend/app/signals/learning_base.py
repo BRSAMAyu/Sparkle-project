@@ -15,47 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.signals.types import SkillEntry
-
-
-@dataclass
-class StrategyBelief:
-    """Bayesian belief about a strategy's effectiveness."""
-    strategy_key: str
-    alpha: float = 1.0    # prior "successes" (Beta distribution)
-    beta: float = 1.0     # prior "failures"
-    evidence_count: int = 0
-    last_updated: str = ""
-
-    @property
-    def expected_effectiveness(self) -> float:
-        """Posterior mean: alpha / (alpha + beta)."""
-        total = self.alpha + self.beta
-        if total == 0:
-            return 0.5
-        return self.alpha / total
-
-    @property
-    def confidence(self) -> float:
-        """How confident we are in the estimate (0-1)."""
-        total = self.alpha + self.beta
-        if total < 2:
-            return 0.0
-        # Confidence increases with evidence, asymptotically approaches 1
-        return min(total / (total + 10), 1.0)
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "strategy_key": self.strategy_key,
-            "alpha": self.alpha,
-            "beta": self.beta,
-            "evidence_count": self.evidence_count,
-            "last_updated": self.last_updated,
-        }
-
-    @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> StrategyBelief:
-        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+from app.signals.types import CounterEvidence, SkillEntry, StrategyBelief
 
 
 @dataclass
@@ -90,16 +50,92 @@ class LearningBase:
     # Minimum evidence before trusting Bayesian over rules
     COLD_START_THRESHOLD = 5
 
+    COUNTER_EVIDENCE_OUTCOMES = frozenset({
+        "harmful",
+        "user_rejected",
+        "rejected",
+        "dismissed",
+        "user_corrected",
+        "corrected",
+        "correction",
+    })
+
+    def add_counter_evidence(
+        self,
+        belief: StrategyBelief,
+        *,
+        reason: str,
+        source: str = "outcome",
+        weight: float = 1.0,
+        metadata: dict[str, Any] | None = None,
+    ) -> StrategyBelief:
+        """Attach counter-evidence to a belief without discarding Bayesian history."""
+        belief.counter_evidence.append(
+            CounterEvidence(
+                source=source,
+                reason=reason,
+                weight=weight,
+                metadata=metadata or {},
+            ),
+        )
+        return belief
+
+    def _maybe_record_counter_evidence(
+        self,
+        belief: StrategyBelief,
+        outcome: str,
+        *,
+        reason: str = "",
+        metadata: dict[str, Any] | None = None,
+    ) -> bool:
+        normalized = outcome.strip().lower()
+        if normalized not in self.COUNTER_EVIDENCE_OUTCOMES:
+            return False
+
+        source = "outcome"
+        if normalized in {"user_rejected", "rejected", "dismissed"}:
+            source = "user_rejection"
+        elif normalized == "harmful":
+            source = "harmful_outcome"
+        elif normalized in {"user_corrected", "corrected", "correction"}:
+            source = "user_correction"
+
+        self.add_counter_evidence(
+            belief,
+            source=source,
+            reason=reason or normalized,
+            metadata=metadata,
+        )
+        return True
+
     def update_belief(
         self,
         belief: StrategyBelief,
         outcome: str,  # "effective" | "insufficient"
         weight: float = 1.0,
+        *,
+        reason: str = "",
+        metadata: dict[str, Any] | None = None,
     ) -> StrategyBelief:
         """Update a belief with a new observation."""
-        if outcome == "effective":
+        normalized = outcome.strip().lower()
+        if normalized in {"success", "sufficient"}:
+            normalized = "effective"
+        elif normalized in {"failure", "ineffective"}:
+            normalized = "insufficient"
+
+        self._maybe_record_counter_evidence(
+            belief,
+            normalized,
+            reason=reason,
+            metadata=metadata,
+        )
+
+        if normalized == "effective":
             belief.alpha += weight
-        elif outcome == "insufficient":
+        elif normalized == "insufficient":
+            belief.beta += weight
+        elif normalized == "harmful":
             belief.beta += weight
         else:
             return belief
@@ -122,13 +158,35 @@ class LearningBase:
             key = outcome.get("strategy_key", "")
             attr = outcome.get("attribution", "")
             weight = outcome.get("weight", 1.0)
+            feedback = str(outcome.get("user_feedback_signal") or outcome.get("feedback") or "")
+            event_type = str(outcome.get("event_type") or outcome.get("type") or "")
+            reason = str(outcome.get("reason") or feedback or event_type or attr)
+            metadata = {k: v for k, v in outcome.items() if k not in {"strategy_key", "attribution", "weight"}}
 
             if key not in belief_map:
                 belief_map[key] = StrategyBelief(strategy_key=key)
 
-            self.update_belief(belief_map[key], attr, weight)
+            counter_signal = self._counter_signal_from_payload(attr, feedback, event_type)
+            self.update_belief(
+                belief_map[key],
+                counter_signal or attr,
+                weight,
+                reason=reason,
+                metadata=metadata,
+            )
 
         return list(belief_map.values())
+
+    @staticmethod
+    def _counter_signal_from_payload(attribution: str, feedback: str, event_type: str) -> str:
+        normalized = " ".join([attribution, feedback, event_type]).lower()
+        if "harmful" in normalized:
+            return "harmful"
+        if "correct" in normalized or "correction" in normalized or "纠正" in normalized:
+            return "user_corrected"
+        if "reject" in normalized or "dismiss" in normalized or "拒绝" in normalized:
+            return "user_rejected"
+        return ""
 
     def select_strategy(
         self,

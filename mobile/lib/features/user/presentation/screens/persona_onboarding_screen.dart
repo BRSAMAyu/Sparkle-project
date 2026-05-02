@@ -317,7 +317,7 @@ class _PersonaOnboardingScreenState
     } catch (_) {
       if (!mounted || requestId != _previewRequestId) return;
       setState(() {
-        _previewMessage = '我已经理解你想先推进「$goal」，接下来会根据你的目标和时间给出第一版学习建议。';
+        _previewMessage = context.l10n.userOnboardingPreviewMessage(goal);
         _previewLoading = false;
       });
     }
@@ -359,7 +359,7 @@ class _PersonaOnboardingScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'AI 已开始理解你的目标',
+                  context.l10n.userOnboardingAIUnderstanding,
                   style: textTheme.labelLarge?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -367,7 +367,7 @@ class _PersonaOnboardingScreenState
                 const SizedBox(height: DS.spacing4),
                 if (_previewLoading)
                   Text(
-                    '正在生成第一版理解与建议...',
+                    context.l10n.userOnboardingGenerating,
                     style: textTheme.bodySmall,
                   )
                 else

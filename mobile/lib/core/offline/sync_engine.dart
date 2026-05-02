@@ -105,13 +105,17 @@ class SyncEngine {
     );
   }
 
-  Future<void> processNow(
-      {bool force = false, bool skipConnectivity = false,}) async {
+  Future<void> processNow({
+    bool force = false,
+    bool skipConnectivity = false,
+  }) async {
     await _processOutbox(force: force, skipConnectivity: skipConnectivity);
   }
 
-  Future<void> _processOutbox(
-      {bool force = false, bool skipConnectivity = false,}) async {
+  Future<void> _processOutbox({
+    bool force = false,
+    bool skipConnectivity = false,
+  }) async {
     if (_isProcessing) return;
 
     // Check connectivity
@@ -183,7 +187,7 @@ class SyncEngine {
         case 'knowledge':
           await _sendMasteryUpdate(payload, item);
         case 'crdt':
-          await _sendCrdtUpdate(payload);
+          await _sendCrdtUpdate(payload, item);
         case 'cognitive':
           await _sendCognitiveFragmentCreate(payload, item);
         case 'intervention_requests':
@@ -194,6 +198,9 @@ class SyncEngine {
           await _sendInterventionPassiveSignal(payload);
         case 'intervention_outcomes':
           await _sendInterventionOutcome(payload);
+        case 'task':
+          // TASK-013: offline task lifecycle (start/pause/resume/complete/abandon)
+          await _sendTaskOperation(descriptor.opType, payload, item);
         default:
           _logger.w(
             'Unknown outbox item: ${descriptor.topic}/${descriptor.opType}',
@@ -213,13 +220,15 @@ class SyncEngine {
         return;
       }
 
-      // Success: delete or mark synced
+      // Success: delete ACK-backed CRDT deltas so reconnect replay only sends
+      // operations that still need a server acknowledgment.
       await _localDb.isar.writeTxn(() async {
-        current.status = SyncStatus.synced;
-        // Option A: Delete to keep table small
-        // await _localDb.isar.outboxItems.delete(item.id);
-        // Option B: Keep for history (with TTL cleaner)
-        await _localDb.isar.outboxItems.put(current);
+        if (descriptor.topic == 'crdt') {
+          await _localDb.isar.outboxItems.delete(current.id);
+        } else {
+          current.status = SyncStatus.synced;
+          await _localDb.isar.outboxItems.put(current);
+        }
       });
       await _recordSuccess();
     } catch (e) {
@@ -243,7 +252,9 @@ class SyncEngine {
   }
 
   Future<void> _sendMasteryUpdate(
-      Map<String, dynamic> payload, OutboxItem item,) async {
+    Map<String, dynamic> payload,
+    OutboxItem item,
+  ) async {
     // P3: Use Protobuf Binary Protocol
     final traceId = item.traceId ?? TracingService.instance.createTraceId();
     final requestId = item.uuid ?? item.id.toString();
@@ -268,19 +279,40 @@ class SyncEngine {
 
     _wsService.send(wsMsg);
 
-    await _waitForAck(requestId).timeout(
+    await _waitForAck(
+      requestId,
+      ackTypes: const {'ack_node_mastery'},
+      errorTypes: const {'error_node_mastery'},
+    ).timeout(
       const Duration(seconds: 5),
       onTimeout: () => throw SyncFailure('ACK_TIMEOUT', 'Ack timeout'),
     );
   }
 
-  Future<void> _sendCrdtUpdate(Map<String, dynamic> payload) async {
-    final traceId = TracingService.instance.createTraceId();
+  Future<void> _sendCrdtUpdate(
+    Map<String, dynamic> payload,
+    OutboxItem item,
+  ) async {
+    final traceId = item.traceId ?? TracingService.instance.createTraceId();
+    final requestId = item.uuid ?? item.id.toString();
     _wsService.send({
       'type': 'crdt_update',
+      'request_id': requestId,
       'trace_id': traceId,
-      'payload': payload,
+      'payload': {
+        ...payload,
+        'requestId': requestId,
+      },
     });
+
+    await _waitForAck(
+      requestId,
+      ackTypes: const {'ack_crdt_update', 'crdt_ack', 'ack_crdt'},
+      errorTypes: const {'error_crdt_update', 'crdt_error'},
+    ).timeout(
+      const Duration(seconds: 5),
+      onTimeout: () => throw SyncFailure('ACK_TIMEOUT', 'CRDT ack timeout'),
+    );
   }
 
   Future<void> _sendCognitiveFragmentCreate(
@@ -319,7 +351,8 @@ class SyncEngine {
   }
 
   Future<void> _sendInterventionPassiveSignal(
-      Map<String, dynamic> payload,) async {
+    Map<String, dynamic> payload,
+  ) async {
     await _apiClient.post<dynamic>(
       ApiEndpoints.interventionsPassiveSignals,
       data: payload,
@@ -331,6 +364,59 @@ class SyncEngine {
       ApiEndpoints.interventionsOutcomes,
       data: payload,
     );
+  }
+
+  /// TASK-013: Replay a task lifecycle operation captured offline.
+  ///
+  /// Op types: 'start' / 'pause' / 'resume' / 'complete' / 'abandon'.
+  /// Server is idempotent on these (status transitions reject duplicates with
+  /// 409, which we treat as success since the desired state is already there).
+  Future<void> _sendTaskOperation(
+    String opType,
+    Map<String, dynamic> payload,
+    OutboxItem item,
+  ) async {
+    final taskId = (payload['task_id'] as String?) ?? '';
+    if (taskId.isEmpty) {
+      throw SyncFailure('MISSING_TASK_ID', 'Missing task_id for offline replay');
+    }
+
+    String? endpoint;
+    Map<String, dynamic>? body;
+    switch (opType) {
+      case 'start':
+        endpoint = ApiEndpoints.startTask(taskId);
+        body = null;
+      case 'pause':
+        endpoint = ApiEndpoints.pauseTask(taskId);
+        body = (payload['reason'] != null) ? {'reason': payload['reason']} : null;
+      case 'resume':
+        endpoint = ApiEndpoints.resumeTask(taskId);
+        body = null;
+      case 'complete':
+        endpoint = ApiEndpoints.completeTask(taskId);
+        body = (payload['completion'] as Map?)?.cast<String, dynamic>();
+      case 'abandon':
+        endpoint = '/tasks/$taskId/abandon';
+        body = (payload['reason'] != null) ? {'reason': payload['reason']} : null;
+      default:
+        throw SyncFailure(
+          'UNKNOWN_TASK_OP',
+          'Unknown task op type: $opType',
+        );
+    }
+
+    try {
+      await _apiClient.post<dynamic>(endpoint, data: body);
+    } on DioException catch (e) {
+      // 409 = already in target state from a previous (possibly retried) call.
+      // Treat as success so we don't retry forever after partial network glitch.
+      if (e.response?.statusCode == 409) {
+        _logger.i('Task op $opType already applied for $taskId, treating as success');
+        return;
+      }
+      rethrow;
+    }
   }
 
   _OutboxDescriptor _describeItem(OutboxItem item) {
@@ -389,23 +475,35 @@ class SyncEngine {
     return error.runtimeType.toString();
   }
 
-  Future<void> _waitForAck(String requestId) {
+  Future<void> _waitForAck(
+    String requestId, {
+    required Set<String> ackTypes,
+    required Set<String> errorTypes,
+  }) {
     final completer = Completer<void>();
     late final StreamSubscription<dynamic> subscription;
 
     subscription = _wsService.stream.listen((message) {
       if (message is Map) {
-        final type = message['type'];
+        final type = message['type']?.toString();
         final payload = message['payload'];
-        if (payload is! Map || payload['requestId'] != requestId) return;
+        final payloadRequestId = payload is Map
+            ? payload['requestId'] ?? payload['request_id']
+            : null;
+        final topLevelRequestId = message['requestId'] ?? message['request_id'];
+        if (payloadRequestId != requestId && topLevelRequestId != requestId) {
+          return;
+        }
 
-        if (type == 'ack_node_mastery') {
+        if (ackTypes.contains(type)) {
           completer.complete();
-        } else if (type == 'error_node_mastery') {
+        } else if (errorTypes.contains(type)) {
           completer.completeError(
             SyncFailure(
               'ACK_ERROR',
-              (payload['error'] as String?) ?? 'Ack error',
+              payload is Map
+                  ? (payload['error'] as String?) ?? 'Ack error'
+                  : 'Ack error',
             ),
           );
         }

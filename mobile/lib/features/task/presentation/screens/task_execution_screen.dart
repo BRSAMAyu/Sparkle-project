@@ -10,10 +10,13 @@ import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
+import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
     as focus_stats;
 import 'package:sparkle/features/home/home_routes.dart';
@@ -31,14 +34,19 @@ import 'package:sparkle/features/task/presentation/widgets/blocking_interceptor_
 import 'package:sparkle/features/task/presentation/widgets/execution_approval_card.dart';
 import 'package:sparkle/features/task/presentation/widgets/execution_status_indicator.dart';
 import 'package:sparkle/features/task/presentation/widgets/execution_template_card.dart';
+import 'package:sparkle/features/task/presentation/widgets/paused_task_status_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dart';
+import 'package:sparkle/features/task/presentation/widgets/source_lifecycle_badge.dart';
 import 'package:sparkle/features/task/presentation/widgets/stuck_help_sheet.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_completion_celebration.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_guide_panel.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_offline_indicator.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_protocol_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
+import 'package:sparkle/features/task/presentation/widgets/why_this_today_panel.dart';
 import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
@@ -238,7 +246,26 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         elapsedMinutes: elapsedMinutes,
       ),
     );
+    if (shouldPop ?? false) {
+      await _autoPauseIfLongExit(elapsedSeconds);
+    }
     return shouldPop ?? false;
+  }
+
+  Future<void> _autoPauseIfLongExit(int elapsedSeconds) async {
+    final task = ref.read(activeTaskProvider);
+    if (task == null || isLocalOnlyTaskId(task.id)) return;
+    if (task.status != TaskStatus.inProgress &&
+        task.status != TaskStatus.stuck) {
+      return;
+    }
+    final expectedSeconds = (task.estimatedMinutes * 60).clamp(60, 86400);
+    if (elapsedSeconds < (expectedSeconds / 2).ceil()) return;
+
+    await ref.read(taskListProvider.notifier).pauseTask(
+          task.id,
+          reason: 'auto_paused_after_long_exit',
+        );
   }
 
   Future<void> _handleCompletion(int minutes, String? note) async {
@@ -482,6 +509,46 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           Navigator.of(sheetContext).pop();
           _openStuckChat(sheetTask);
         },
+        onCoreSessionPressed: () {
+          Navigator.of(sheetContext).pop();
+          _openStuckCoreSession(sheetTask);
+        },
+      ),
+    );
+  }
+
+  void _openStuckCoreSession(TaskModel task) {
+    final guide = task.guideJson ?? const <String, dynamic>{};
+    final fallbackLines = _guideFallbackLines(guide['fallback_if_stuck']);
+    final observed = <String>[
+      task.title,
+      ..._guideStepNames(guide).take(2),
+      ...fallbackLines.take(2),
+    ].where((item) => item.trim().isNotEmpty).toList();
+    unawaited(
+      showAuroraCoreSession(
+        context: context,
+        bandStatus: 'risk_found',
+        wakeReasons: const ['task_stuck'],
+        entryReason: AuroraCoreSessionEntryReason(
+          triggerSource: 'task_stuck_prompt',
+          observedSignals: observed.isEmpty ? [task.title] : observed,
+          suggestedAgendaPreview: [
+            I18nService.instance.isChinese
+                ? '确认卡点发生在哪里'
+                : 'Confirm where the block happened',
+            I18nService.instance.isChinese
+                ? '判断是任务太大还是知识点没接上'
+                : 'Determine if the task is too big or a knowledge gap',
+            I18nService.instance.isChinese
+                ? '给出下一步可执行调整'
+                : 'Suggest an actionable next step',
+          ],
+          whyNow: context.l10n.auroraTaskStuckWhyNow,
+          estimatedMinutes: 4,
+        ),
+        scope: task.title,
+        sessionType: 'strategy_recalibration',
       ),
     );
   }
@@ -815,9 +882,37 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               const SizedBox(height: DS.spacing16),
+                              // TASK-013: offline / pending sync banner
+                              const TaskOfflineIndicator(),
+                              if (activeTask.status == TaskStatus.paused) ...[
+                                const SizedBox(height: DS.spacing12),
+                                PausedTaskBanner(
+                                  task: activeTask,
+                                  onResume: () {
+                                    unawaited(
+                                      ref
+                                          .read(taskListProvider.notifier)
+                                          .resumeTask(activeTask.id),
+                                    );
+                                  },
+                                ),
+                              ],
+                              if (activeTask.boundSources.isNotEmpty) ...[
+                                const SizedBox(height: DS.spacing12),
+                                SourceLifecycleBadgeGroup(
+                                  sources: activeTask.boundSources,
+                                  maxVisible: 2,
+                                ),
+                              ],
                               // 1. Focus Mode Entry Card (Prominent)
+                              const SizedBox(height: DS.spacing16),
                               _buildFocusEntryCard(context, activeTask),
-                              const SizedBox(height: DS.spacing24),
+                              const SizedBox(height: DS.spacing16),
+                              // TASK-001: structured TaskCardProtocol panel
+                              // (why_this_task / materials / fallback)
+                              TaskProtocolPanel(taskId: activeTask.id),
+                              WhyThisTodayPanel(taskId: activeTask.id),
+                              const SizedBox(height: DS.spacing16),
                               TaskGuidePanel(
                                 task: activeTask,
                                 onAuroraTriggerPressed: (trigger) =>
@@ -1460,6 +1555,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
         isClawConnected &&
         task.status != TaskStatus.completed &&
         task.status != TaskStatus.abandoned &&
+        task.status != TaskStatus.paused &&
         (executionIntent == null || executionIntent.isTerminal) &&
         !isHandoffLoading;
     final canQueueHandoff = supportsAiHandoff &&
@@ -1467,6 +1563,7 @@ class _ExecutionAssistPanel extends ConsumerWidget {
         isClawConfigured &&
         task.status != TaskStatus.completed &&
         task.status != TaskStatus.abandoned &&
+        task.status != TaskStatus.paused &&
         (executionIntent == null || executionIntent.isTerminal) &&
         !isHandoffLoading;
     final showExecutionStatus =
@@ -1983,6 +2080,9 @@ class _BottomControls extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final isPaused = task.status == TaskStatus.paused;
+    final canPause =
+        task.status == TaskStatus.inProgress || task.status == TaskStatus.stuck;
     return GraphiteCardSurface(
       borderColor: DS.borderSubtle,
       padding: const EdgeInsets.all(DS.spacing16),
@@ -1995,12 +2095,36 @@ class _BottomControls extends ConsumerWidget {
             ),
           ),
           const SizedBox(width: DS.spacing16),
+          if (canPause) ...[
+            Expanded(
+              child: CustomButton.secondary(
+                text: context.l10n.taskActionPause,
+                onPressed: () {
+                  unawaited(
+                    ref.read(taskListProvider.notifier).pauseTask(
+                          task.id,
+                          reason: 'user_paused_from_execution_controls',
+                        ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: DS.spacing16),
+          ],
           Expanded(
             flex: 2,
             child: CustomButton.primary(
-              text: context.l10n.taskExecutionCompleteTitle,
+              text: isPaused
+                  ? context.l10n.taskActionResume
+                  : context.l10n.taskExecutionCompleteTitle,
               customGradient: _taskWarmActionGradient(context),
-              onPressed: () => _showCompleteDialog(context),
+              onPressed: isPaused
+                  ? () {
+                      unawaited(
+                        ref.read(taskListProvider.notifier).resumeTask(task.id),
+                      );
+                    }
+                  : () => _showCompleteDialog(context),
             ),
           ),
         ],
@@ -2211,7 +2335,7 @@ class _TaskExitConfirmationDialogState
                         style: TextStyle(
                           color: DS.neutral900,
                           fontSize: 20,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                         ),
                         textAlign: TextAlign.center,
                       ),

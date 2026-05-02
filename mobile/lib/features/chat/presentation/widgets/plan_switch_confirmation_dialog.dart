@@ -55,13 +55,7 @@ class PlanSwitchConfirmationDialog extends StatelessWidget {
               border: Border.all(
                 color: DS.borderSubtle,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+              boxShadow: DS.shadowMd,
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,

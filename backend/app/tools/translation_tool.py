@@ -222,6 +222,36 @@ class TranslateTextTool(BaseTool):
                     "terminology_notes": unique_notes,
                     "cache_hit": result.cache_hit,
                     "show_save_button": True,  # Allow saving to knowledge graph
+                    "actions": [
+                        {
+                            "type": "save_to_vocabulary",
+                            "endpoint": "/api/v1/vocabulary/wordbook",
+                            "payload": {
+                                "word": params.text[:100],
+                                "definition": full_translation,
+                                "source_translation_id": params.fingerprint,
+                                "create_learning_asset": True,
+                                "save_to_knowledge": False,
+                                "language": source_lang,
+                                "target_language": target_lang,
+                                "domain": params.domain,
+                            },
+                        },
+                        {
+                            "type": "create_knowledge_card",
+                            "endpoint": "/api/v1/vocabulary/wordbook",
+                            "payload": {
+                                "word": params.text[:100],
+                                "definition": full_translation,
+                                "source_translation_id": params.fingerprint,
+                                "create_learning_asset": True,
+                                "save_to_knowledge": True,
+                                "language": source_lang,
+                                "target_language": target_lang,
+                                "domain": params.domain,
+                            },
+                        },
+                    ],
                 }
             )
 

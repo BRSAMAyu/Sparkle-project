@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -8,19 +7,32 @@ import 'package:sparkle/features/error_book/presentation/screens/review_screen.d
 import 'package:sparkle/features/galaxy/galaxy_routes.dart';
 import 'package:sparkle/features/insights/insights_routes.dart';
 import 'package:sparkle/features/memory/memory_routes.dart';
+import 'package:sparkle/features/reviews/reviews_routes.dart';
 import 'package:sparkle/features/shop/shop_routes.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
 void main() {
   group('J6: Error Book & Review chain', () {
-    test('error book routes define all 4 required paths', () {
+    test('error book routes define all required paths', () {
       final routes = ErrorBookRoutes.routes;
       final paths = routes.whereType<GoRoute>().map((r) => r.path).toSet();
 
       expect(paths.contains('/errors'), isTrue, reason: 'error list route');
       expect(paths.contains('/errors/new'), isTrue, reason: 'add error route');
-      expect(paths.contains('/errors/:id'), isTrue, reason: 'error detail route');
-      expect(paths.contains('/review'), isTrue, reason: 'review route');
+      expect(paths.contains('/errors/:id/edit'), isTrue,
+          reason: 'edit error route');
+      expect(paths.contains('/errors/:id'), isTrue,
+          reason: 'error detail route');
+    });
+
+    test('review routes define the hub and active review paths', () {
+      final routes = ReviewRoutes.routes;
+      final paths = routes.whereType<GoRoute>().map((r) => r.path).toSet();
+
+      expect(paths.contains(ReviewRoutes.planHub), isTrue,
+          reason: 'review hub route');
+      expect(paths.contains(ReviewRoutes.review), isTrue,
+          reason: 'review session route');
     });
 
     test('ReviewMode enum covers all 4 learning modes', () {
@@ -84,7 +96,8 @@ void main() {
       final paths = routes.whereType<GoRoute>().map((r) => r.path).toSet();
 
       expect(paths.contains('/memory'), isTrue, reason: 'memory panel');
-      expect(paths.contains('/memory/settings'), isTrue, reason: 'memory settings');
+      expect(paths.contains('/memory/settings'), isTrue,
+          reason: 'memory settings');
       expect(paths.contains('/memory/detail'), isTrue, reason: 'memory detail');
     });
 

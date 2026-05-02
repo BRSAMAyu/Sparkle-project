@@ -1,9 +1,9 @@
 global:
   resolve_timeout: 5m
-  smtp_from: sparkle-alerts@example.com
-  smtp_smarthost: smtp.example.com:587
-  smtp_auth_username: sparkle-alerts@example.com
-  smtp_auth_password: change-me
+  smtp_from: ${ALERTMANAGER_EMAIL_FROM:-sparkle-alerts@example.com}
+  smtp_smarthost: ${ALERTMANAGER_SMTP_SMARTHOST:-smtp.example.com:587}
+  smtp_auth_username: ${ALERTMANAGER_SMTP_AUTH_USERNAME:-}
+  smtp_auth_password: ${ALERTMANAGER_SMTP_AUTH_PASSWORD:-}
 
 route:
   receiver: default-webhook
@@ -20,24 +20,39 @@ route:
         - severity="warning"
       receiver: warning-webhook
       continue: true
+    # FV-24: SLO auto-response — route SLO-breach alerts to auto-degrade handler
+    - matchers:
+        - alertgroup="slo_auto_response"
+      receiver: slo-auto-response-webhook
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 30m
 
 receivers:
   - name: default-webhook
     webhook_configs:
-      - url: http://host.docker.internal:19093/alerts/default
+      - url: ${ALERTMANAGER_DEFAULT_WEBHOOK_URL:?ALERTMANAGER_DEFAULT_WEBHOOK_URL must be set}
         send_resolved: true
   - name: critical-webhook
     webhook_configs:
-      - url: http://host.docker.internal:19093/alerts/critical
+      - url: ${ALERTMANAGER_CRITICAL_WEBHOOK_URL:?ALERTMANAGER_CRITICAL_WEBHOOK_URL must be set}
         send_resolved: true
   - name: warning-webhook
     webhook_configs:
-      - url: http://host.docker.internal:19093/alerts/warning
+      - url: ${ALERTMANAGER_WARNING_WEBHOOK_URL:?ALERTMANAGER_WARNING_WEBHOOK_URL must be set}
         send_resolved: true
   - name: email-fallback
     email_configs:
-      - to: ops@example.com
+      - to: ${ALERTMANAGER_EMAIL_TO:-ops@example.com}
         send_resolved: true
+  # FV-24: Auto-degrade webhook for SLO auto-response
+  - name: slo-auto-response-webhook
+    webhook_configs:
+      - url: ${SLO_AUTO_DEGRADE_WEBHOOK_URL:-http://sparkle_api:8000/api/internal/auto-degrade/webhook}
+        send_resolved: true
+        http_config:
+          headers:
+            X-Internal-API-Key: ${INTERNAL_API_KEY:-}
 
 inhibit_rules:
   - source_matchers:

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/reviews/reviews_routes.dart';
 
 /// Expanded toolbar section - Quick action tools
 class ExpandedToolbarSection extends ConsumerWidget {
@@ -27,7 +29,7 @@ class ExpandedToolbarSection extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '快捷工具',
+            I18nService.instance.isChinese ? '快捷工具' : 'Quick Tools',
             style: context.sparkleTypography.labelLarge.copyWith(
               color: DS.textSecondary,
               fontWeight: DS.fontWeightSemibold,
@@ -40,53 +42,53 @@ class ExpandedToolbarSection extends ConsumerWidget {
             crossAxisCount: crossAxisCount,
             mainAxisSpacing: DS.spacing12,
             crossAxisSpacing: DS.spacing12,
-            children: const [
+            children: [
               _ToolButton(
-                key: ValueKey('tool_focus_mode'),
+                key: const ValueKey('tool_focus_mode'),
                 icon: Icons.center_focus_strong_rounded,
-                label: '专注模式',
+                label: I18nService.instance.isChinese ? '专注模式' : 'Focus Mode',
                 route: '/focus',
               ),
               _ToolButton(
-                key: ValueKey('tool_pomodoro'),
+                key: const ValueKey('tool_pomodoro'),
                 icon: Icons.timer_rounded,
-                label: '番茄钟',
+                label: I18nService.instance.isChinese ? '番茄钟' : 'Pomodoro',
                 route: '/focus',
               ),
               _ToolButton(
-                key: ValueKey('tool_quick_note'),
+                key: const ValueKey('tool_quick_note'),
                 icon: Icons.edit_note_rounded,
-                label: '闪念笔记',
+                label: I18nService.instance.isChinese ? '闪念笔记' : 'Quick Note',
                 route: '/memory',
               ),
               _ToolButton(
-                key: ValueKey('tool_error_book'),
+                key: const ValueKey('tool_error_book'),
                 icon: Icons.assignment_late_rounded,
-                label: '错题本',
+                label: I18nService.instance.isChinese ? '错题本' : 'Error Book',
                 route: '/errors',
               ),
               _ToolButton(
-                key: ValueKey('tool_cognitive'),
+                key: const ValueKey('tool_cognitive'),
                 icon: Icons.psychology_rounded,
-                label: '认知模式',
+                label: I18nService.instance.isChinese ? '认知模式' : 'Cognitive Mode',
                 route: '/cognitive/patterns',
               ),
               _ToolButton(
-                key: ValueKey('tool_curiosity'),
+                key: const ValueKey('tool_curiosity'),
                 icon: Icons.lightbulb_rounded,
-                label: '好奇心胶囊',
+                label: I18nService.instance.isChinese ? '好奇心胶囊' : 'Curiosity Capsule',
                 route: '/curiosity-capsule',
               ),
               _ToolButton(
-                key: ValueKey('tool_review'),
+                key: const ValueKey('tool_review'),
                 icon: Icons.event_note_rounded,
-                label: '复习计划',
-                route: '/review',
+                label: I18nService.instance.isChinese ? '复习计划' : 'Review Plan',
+                route: ReviewRoutes.planHub,
               ),
               _ToolButton(
-                key: ValueKey('tool_forecast'),
+                key: const ValueKey('tool_forecast'),
                 icon: Icons.show_chart_rounded,
-                label: '学习预测',
+                label: I18nService.instance.isChinese ? '学习预测' : 'Learning Forecast',
                 route: '/learning/forecast',
               ),
             ],
@@ -99,7 +101,10 @@ class ExpandedToolbarSection extends ConsumerWidget {
 
 class _ToolButton extends StatelessWidget {
   const _ToolButton({
-    required this.icon, required this.label, required this.route, super.key,
+    required this.icon,
+    required this.label,
+    required this.route,
+    super.key,
   });
 
   final IconData icon;

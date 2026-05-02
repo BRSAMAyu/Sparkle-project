@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-05-01 (R8 全部修复: 社区 feed scope 后端闭环, GoalFocus i18n, 类边界, mock 签名, scope 持久化; 全栈愿景审计 22 section PASS; 7001 tests passed)
+> **最后更新**: 2026-05-02 (FV-05 Privacy Community Intelligence 已从库能力接入生产链路: k 匿名 + DP 预算账本 + opt-out + 匿名洞察 API + 指标)
 
 ### P0 Critical — 当前会话修复
 
@@ -13,6 +13,40 @@
 | P0-4: 632 commits未合入main | 🟡 待决定 | — | 需用户/产品决策: merge 或 squash-merge roadmapv3→main |
 > **对应 Roadmap**: `docs/product/SPARKLE_ROADMAP_v3_2026-04-28.md`
 > **用途**: 记录所有已完成、进行中、待做的工作, 支持并行推进与阶段审查
+
+### 2026-05-01 Closeout Dispatch Updates
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| C16: Flutter Typed Failure Model | ✅ 完成 | Codex | `AppFailure` typed mapper added; auth/chat/dashboard paths adopted; chat/dashboard UI differentiates offline/auth/server/validation recovery; `flutter test test/core/errors/failures_test.dart` 4/4 passed |
+| R18: Aurora 完全体体验收口 | ✅ 完成 | Codex | Legacy `SPARKLE_*` 配套开关默认全开并纳入配置一致性守卫；聊天 freeform 纠错进入可见对话+结构化链；状态带第三层小屏可滚动、纠正/详情 chip 更稳；后端 Aurora 51 tests + 移动端聚焦 61 tests + secret/diff checks passed |
+
+### 2026-05-02 Parallel CXP Final Integration
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| CXP-01~CXP-30 并行体验/系统打磨 | ✅ 集成完成 | Codex final integrator | 共享工作区补丁提交 `ccf83242e`; 已合并 CXP-01/02/05/07/13/16/17/18/21/23/25 等独立分支; CXP-14 缺失报告已补; 最终验收见 `docs/product/parallel_closeout/SPARKLE_FINAL_INTEGRATION_ACCEPTANCE_REPORT_2026-05-02.md` |
+| Final conflict resolution | ✅ 完成 | Codex | 解决 `time_utils.py` add/add、community API 格式/权限调用、task card 格式、gateway ACK/quota 旧测试语义冲突 |
+| Final verification | ✅ 聚焦通过 | Codex | backend compile + ruff scoped + 74 backend tests; gateway logsafe/handler/middleware tests; Flutter entity-card 11 tests; Flutter focused analyze `--no-fatal-infos` 通过 |
+
+### 2026-05-02 Vertical Experience Closeout
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| VEC-01 AuroraExperiencePacket | ✅ 完成 | Codex | 普通聊天主链输出当前判断、证据、置信度、不确定性、最近纠正、下一步语气/策略 |
+| VEC-02 GoalRealizationContext | ✅ 完成 | Codex | 目标、计划健康、下一步动作、记忆声明、ContextPlan、source receipt、graph trace、Card Protocol 覆盖范围统一为 per-turn contract |
+| VEC-03 KnowledgeSourceReceipt | ✅ 完成 | Codex | RAG/资料使用每轮输出 `context_plan_mode`、`answer_basis`、loaded/skipped/excluded sources 与纠正提示 |
+| VEC-04 GraphDecisionTrace | ✅ 完成 | Codex | Graph 明确影响 `next_task`、`rag_scope`、`plan_feasibility`、`aurora_read` 四类主决策 |
+| VEC-05 Source Document Card Protocol | ✅ 完成 | Codex | 新增 `source_document` entity card，可打开来源、纠正来源、转知识点、分享并让接收方保存私有副本 |
+| VEC-06 Verification | ✅ 通过 | Codex | `py_compile` + scoped `ruff` + `pytest tests/unit/test_goal_realization_experience_packets.py tests/unit/test_entity_cards.py tests/unit/orchestrator/mixins/test_response_builder_mixin.py -q` -> 30 passed |
+| VEC-07 Closeout report | ✅ 完成 | Codex | `docs/product/parallel_closeout/SPARKLE_VERTICAL_EXPERIENCE_CLOSEOUT_REPORT_2026-05-02.md` |
+
+### 2026-05-02 Full Vision Final Polish
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| FV-05 PrivacyPreservingCommunityEngine 接入 | ✅ 完成 | Codex | 在独立分支 `codex/FV-05-privacy-community-production` 完成: `community_aggregate_signals` + `privacy_budget_ledger` + `community_intelligence_enabled` 用户开关; CommunitySignalBridge 统一执行 k>=5、DP Laplace 噪声、预算扣减、opt-out 双向隔离; 新增 `/community/aggregates/*` API、Prometheus 指标、Grafana dashboard、4 个聚焦单测 |
+| FV-05 验收报告 | ✅ 完成 | Codex | `docs/product/parallel_closeout/FV-05_privacy_community_intelligence_REPORT_2026-05-02.md`; 验证: py_compile、ruff scoped、pytest 4 passed、Grafana JSON、diff check、Alembic head `c16_20260502` |
 
 ---
 
@@ -53,7 +87,8 @@
 | T0.3.1 settings.py production secret 校验 | ✅ 完成 | main | SECRET_KEY+POSTGRES+REDIS+MINIO+INTERNAL_API+LLM |
 | T0.3.2 MinIO 默认值改为空 | ✅ 完成 | main | "minioadmin" → "" |
 | T0.3.3 .env.example placeholder 注释 | ✅ 完成 | main | 头部警告 + REQUIRED 注释 |
-| T0.3.4 check_production_secrets.py 脚本 | ✅ 完成 | main | 含引号去除, 开发跳过 |
+| T0.3.4 check_production_secrets.py 脚本 | ✅ 完成 | C05 | 含引号去除, 开发跳过; 2026-05-01 增加 tracked-file provider pattern scan 且不打印 secret 值 |
+| T0.3.5 Secret rotation runbook | ✅ 完成 | C05 | `docs/ops/secret_rotation_runbook.md`; provider 管理员仍需轮换历史暴露凭据 |
 
 ### 0.4 基础设施安全加固
 | 任务 | 状态 | 负责人 | 备注 |
@@ -63,6 +98,7 @@
 | T0.4.3 MinIO credentials 从 env | ✅ 完成 | main | docker compose/gateway/init_minio_buckets 均要求显式 env, 不回退 minioadmin |
 | T0.4.4 PRODUCTION_URL setting | ✅ 完成 | main | settings.py + .env.example |
 | T0.4.5 Grafana 8 dashboard 预配置 | ✅ 完成 | main | provisioning 目录现有 8 个 dashboard JSON |
+| T0.4.6 API 容器非 root 运行 | ✅ 完成 | Codex C07 | backend/gateway image 固定 `sparkle` UID/GID 10001; local/prod compose pin `SPARKLE_APP_UID:GID`; logs/uploads/cache 用可写 volume；compose config + Dockerfile check 通过 |
 
 ### 0.5 邮件服务配置
 | 任务 | 状态 | 负责人 | 备注 |
@@ -153,6 +189,12 @@
 | M-01-FIX: structured_cognitive_adjustments Flutter 解析 | ✅ R2 验证通过 | — | T1.2.5 已完成 WS→Provider→State 数据管道, UI 渲染留 Phase 4 |
 | M-02-FIX: dual_core_router 消费 Spine StateRegister | ✅ 完成 | Claude+Codex | DualCoreRoutingInput 增加 spine_active_states; RoutingEngine 从 StateRegister 读取活跃状态; route() 消费 fatigue/cognitive_load/execution/knowledge 状态并影响 mode/strategy/debug; 38 tests passed |
 
+### Closeout Dispatch — 2026-05-01
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| C01: DualCoreRouter 生产接线复核 | ✅ 完成 | Codex | 当前支持运行时为 `ChatOrchestrator.process_stream()` → `_apply_dual_core_routing()` → `dual_core_router.route()`; legacy `ProductionChatOrchestrator` 默认不可构造。新增 live process-stream 回归证明 router 被调用并影响 route/prompt/metadata; Response metadata 现在暴露 bounded `dual_core_decision`; 34 focused tests + scoped ruff passed |
+
 ---
 
 ## Phase 3.5: Aurora 全面审计修复 (🔴 2026-04-29)
@@ -218,6 +260,7 @@
 
 | 日期 | Phase | 审查类型 | 发现问题 | 修复状态 |
 |------|-------|----------|----------|----------|
+| 2026-05-01 | Closeout C03 | Codex Dispatch | AdaptiveReplanner 对 `task.abandoned` / `task.stuck` 缺少直接生产触发，用户可见 adaptation 文案没有显式 reason 字段 | ✅ 已修: TaskEventConsumer 将 abandoned/stuck 事件接入 `evaluate_plan_health_now`; adaptation update 标题/description/metadata 显式说明真实进展与触发原因; 11 focused tests passed, scoped ruff passed |
 | 2026-04-29 | Phase 6/7 | Codex R4 Final Acceptance | Tracker 宣称 Phase 0-6 完成, 但 T6.1.6 100 并发压测仍未开始; Phase 7 仍有人工/运维真实门槛 | ✅ T6.1.6 已补 k6 压测脚本; Phase 7 runbook 与人工验收证据仍待补 |
 | 2026-04-29 | Phase 6/7 | Codex R4 Final Acceptance | `blue_green_switch.sh` 不是生产流量切换证据; 正式路径应对齐 `deploy-prod.sh` 或 `deploy_k8s.sh` | 🟡 待对齐: 选择生产部署路径并做实演练 |
 | 2026-04-29 | Phase 6 | Codex R4 Final Acceptance | RAG/Aurora 成本熔断只在 `cost_controller.py` 与单测中存在, 未接入生产 RAG/Aurora 主链 | ✅ 已修: is_rag_within_budget 接入 graph_rag.retrieve(); is_aurora_within_budget 接入 L3/L4 |
@@ -412,11 +455,11 @@
 |------|------|--------|------|
 | T7.3.1 服务器准备 | ⬜ 待运维 | — | K8s / Docker Swarm |
 | T7.3.2 域名 + SSL | ⬜ 待运维 | — | Let's Encrypt + nginx |
-| T7.3.3 生产 .env 配置 | ⬜ 待运维 | — | 所有 secret 替换 |
+| T7.3.3 生产 .env 配置 | 🟡 待运维轮换 | C05 | 仓库已清理为 placeholder/examples; 生产 secret 需按 rotation runbook 在 secret store 中替换并吊销旧值 |
 | T7.3.4 DB 迁移 + 种子数据 | ⬜ 待运维 | — | alembic upgrade head + seed |
 | T7.3.5 蓝绿部署验证 | 🟡 待正式路径演练 | Claude | R4: blue_green_switch.sh 不足以证明生产流量切换; 需 deploy-prod.sh 或 K8s 实演练 |
 | T7.3.6 监控验证 | ✅ 完成 | Claude | sparkle_t6_slo_alerts.yml + recording_rules + Loki retention |
-| T7.3.7 备份恢复演练 | ⬜ 待运维 | — | pg_dump + restore 验证 |
+| T7.3.7 备份恢复演练 | 🟡 Runbook/脚本就绪，待首次演练 | Codex C09 | `docs/ops/disaster_recovery_runbook.md`; backup/restore 脚本已补 Redis auth + checksum；DR-C09-2 跟踪首次 staging 演练 |
 
 ---
 
@@ -662,7 +705,7 @@
 |----|------|------|------|
 | EA-8 | `.github/workflows/load-test.yml` 有 `|| true` 且无 services 启动 app | 添加 app startup 步骤, 移除 `|| true`, 使负载测试真正验证 | ✅ 已修 (34636342) |
 | EA-9 | CI 覆盖率阈值不一致: env vars 设 15/40/20 但实际 config 为 14/35/15 | 统一为一致值并写入配置单一来源 | ✅ 已修 (34636342) |
-| EA-10 | `.env` 包含真实 API key (LLM_API_KEY, JWT_SECRET 等) | 确认 .gitignore 覆盖, 添加 pre-commit gitleaks 检查 | ✅ 已验证: .gitignore 覆盖, 未入库 |
+| EA-10 | `.env` 包含真实 API key (LLM_API_KEY, JWT_SECRET 等) | 确认 .gitignore 覆盖, 添加 pre-commit gitleaks 检查 | ✅ C05 加固: runtime `.env*` 转为忽略/示例, tracked scan 通过, rotation runbook 已补 |
 
 ### R6.5 测试真实性提升
 
@@ -678,7 +721,7 @@
 |-------|-------------------|----------------|------|
 | stage37 (LLM Safety) | `aurora_stage37_llm_safety_kill_switch_service.py` | 缺失 → 已加 | ✅ 已修 (a6cf4051) |
 | stage39 (Scaffolding/Cogload/Galaxy) | `aurora_stage39_kill_switch_service.py` | 缺失 → 已加 | ✅ 已修 (a6cf4051) |
-| privacy (PII Redaction) | `aurora/privacy.py` (settings-based) | 缺失 → 已加 | ✅ 已修 (a6cf4051) |
+| privacy (PII Redaction) | `aurora/privacy.py` (settings-based) | 缺失 → 已加；C06 复验修复 shadow 模式 raw text 泄露，新增 name/mixed PII + safe telemetry tests | ✅ 已修 (a6cf4051 + 2026-05-01 C06 closeout) |
 
 **结论**: 全部 47 个 Aurora kill switch 默认 `live`, "25 个从未生产运行" 的说法已过时。3 个 drill gap 已补齐。
 
@@ -741,7 +784,7 @@
 | R8-P1 | Aurora | 首页状态带 telemetry 契约、结构化纠偏上下文、Aurora 成本记账已复验通过 |
 | R8-P2 | 画像/资料/知识星图 | `profile_transparency / profile_context / galaxy_node_sources / source_state_*` 抽样通过 |
 | R8-P3 | 卡片/分享/群任务 | `card/share/community_group_tasks/capsule_share` 抽样通过 |
-| R8-P4 | Gateway | `go test ./internal/middleware/... ./internal/agent/...` 通过 |
+| R8-P4 | Gateway | `go test ./internal/middleware/...` 通过; C15 adds WS auth and Redis limiter regression coverage (`-cover`: 41.8%) |
 | R8-P5 | CI/部署口径 | `load-test.yml`、`blue_green_switch.sh`、`docs/product/愿景验收清单` 路径修复已复验通过 |
 
 ### R8.2 新发现问题
@@ -957,8 +1000,8 @@
 
 | ID | 严重度 | 模块 | 问题 | 状态 |
 |----|--------|------|------|------|
-| A-R13-2 | P1 | Aurora freeform 纠正 | 首页状态带 freeform chip 仍未捕获用户文字解释，当前 telemetry 的 `freeform_text` 为空，跳转聊天也是空消息 | 🔴 Open |
-| A-R13-3 | P1 | 聊天内纠正 chip | `ContextualCorrectionBar` 只发送普通文本，没有记录结构化 chip telemetry，CorrectionFeedbackProcessor 无法稳定消费聊天内纠正语义 | 🔴 Open |
+| A-R13-2 | P1 | Aurora freeform 纠正 | 首页状态带 freeform chip 现在先收集用户解释，Cancel 返回 `null` 且不发送；Submit 后 telemetry 携带真实 `freeform_text` | ✅ Fixed by C12 |
+| A-R13-3 | P1 | 聊天内纠正 chip | `ContextualCorrectionBar` / ChatScreen 现在走“用户可读 label 作为聊天文本 + 结构化 chip telemetry/context”双通道 | ✅ Fixed by C12 |
 
 ### R13.3 本轮代码变更
 
@@ -980,6 +1023,496 @@
 
 ### R13.5 下一轮优先级
 
-1. **先修 A-R13-2**: freeform 状态带纠正必须先让用户输入“哪里不对”，再把 `freeform_text` 送入 `/aurora/telemetry/chip-selected`。
-2. **再修 A-R13-3**: Chat 内 correction chip 必须调用 `AuroraTelemetryService.recordChipSelected()` 或等价结构化通道，同时继续发送自然语言消息。
-3. **随后扩展到任务卡协议体验**: 检查 `why/materials/stuck/aurora_triggers` 是否不仅存在于 `guide_json`，还在任务执行主屏被用户看见、使用并反馈。
+1. **A-R13-2 / A-R13-3 已由 C12 收口**: freeform 真实文字进入 `/aurora/telemetry/chip-selected`，聊天 chip 走自然语言 + 结构化 telemetry 双通道。
+2. **随后扩展到任务卡协议体验**: 检查 `why/materials/stuck/aurora_triggers` 是否不仅存在于 `guide_json`，还在任务执行主屏被用户看见、使用并反馈。
+3. **继续验收长期学习效果**: 观察纠正是否改变未来 Aurora 主动判断、后验置信度和多端触达策略。
+
+---
+
+## R14 Aurora 纠偏链复验 (2026-05-01)
+
+> **来源**: Codex 对用户当前 Aurora 前端修复的继续深审
+> **方法**: 顺着 `状态带 → 聊天 → telemetry → CorrectionFeedbackProcessor` 主链复验结构化纠偏是否真的被 Aurora 消费。
+
+### R14.1 已复验通过
+
+| ID | 模块 | 结论 |
+|----|------|------|
+| R14-P1 | 聊天内 correction chip | predicted option 已接入 `AuroraTelemetryService.recordChipSelected()`，不再只是纯文本 |
+| R14-P2 | 首页 freeform 入口 | 状态带 freeform 纠正已新增输入对话框，不再直接空跳转 |
+
+### R14.2 新发现问题
+
+| ID | 严重度 | 问题 | 文件/证据 | 状态 |
+|----|--------|------|-----------|------|
+| R14-1 | P1 | 首页 freeform 纠正不再发送空 telemetry；提交后 `recordStatusBandCorrection(... freeformText: text)` 进入 `/aurora/telemetry/chip-selected`，后端 test 证明文本到达 CorrectionFeedbackProcessor | `dashboard_screen.dart`, `aurora_telemetry_service.dart`, `backend/tests/unit/test_t33_predicted_reply_correction.py` | ✅ Fixed by C12 |
+| R14-2 | P1 | 聊天内 predicted correction chip 使用 `option.label` 作为用户消息，内部 `semanticValue` 只保留在 telemetry/context 中 | `chat_screen.dart`, `contextual_correction_bar.dart`, `contextual_correction_bar_test.dart` | ✅ Fixed by C12 |
+
+### R14.3 本轮实测
+
+| 命令 | 结果 |
+|------|------|
+| `cd mobile && flutter test test/app/main_actions_smoke_test.dart test/widget/aurora_daily_startup_retry_test.dart` | ✅ 全部通过 |
+| `cd backend && pytest tests/unit/test_t33_predicted_reply_correction.py -q` | ✅ `34 passed` |
+
+### R14.4 C12 收口验证 (2026-05-01)
+
+| 命令 | 结果 |
+|------|------|
+| `cd mobile && flutter test test/features/aurora/data/services/aurora_telemetry_service_test.dart test/widget/aurora_freeform_correction_dialog_test.dart test/features/chat/presentation/widgets/contextual_correction_bar_test.dart` | ✅ `4 passed` |
+| `cd backend && pytest tests/unit/test_t33_predicted_reply_correction.py -q` | ✅ `38 passed, 13 warnings` |
+| `cd backend && ruff check app/api/v1/aurora.py app/aurora/runtime_v1/correction_feedback.py tests/unit/test_t33_predicted_reply_correction.py` | ✅ 通过 |
+| `cd mobile && flutter analyze --no-fatal-infos ...C12 touched Dart files...` | ✅ 无 error；仅既有/info lint |
+
+### R14.5 阶段判断修正
+
+当前更准确的说法是：
+
+> **Aurora 纠偏链的 C12 核心断点已收口：用户解释会进入 telemetry / correction processor，聊天内 chip 也不再把内部语义 token 当作用户消息。**
+
+下一轮优先顺序应转向：
+
+1. 扩展更多 Aurora 主动触达场景的接受/拒绝/纠正回流。
+2. 验证多端主动感知、任务卡协议、社区/看板衔接是否形成长期可用体验。
+
+---
+
+## R15 Gateway Shutdown / Aurora UX 收口 (2026-05-01)
+
+> **来源**: Codex 对上一轮未闭环生产问题的直接修复
+
+### R15.1 已完成
+
+| ID | 模块 | 结果 |
+|----|------|------|
+| R15-P1 | Gateway shutdown | 已修复：shutdown 时先 `StartDraining()` 拒绝新 WS，再并发触发 `srv.Shutdown()` 停止新 HTTP 接入，随后 drain chat registry + proxy live WS |
+| R15-P2 | WebSocketProxy | 已修复：`ProxyDrainAll(timeout)` 不再只是清空 `activeByUser`，而是关闭真实 live proxy 连接并等待 goroutine 退出 |
+| R15-P3 | Aurora close-session UX | 已修复：close 失败时不再强退面板，用户会停留原地并看到重试提示 |
+| R15-P4 | Vocabulary offline UX | 已修复：词典包加载失败现在会显示错误说明和 retry 按钮，而不是仅内部 `_loadError=true` |
+
+### R15.2 本轮验证
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend/gateway && go test ./internal/handler/...` | ✅ 通过 |
+| `cd backend/gateway && go test ./cmd/server/...` | ✅ 通过 |
+| `cd mobile && flutter analyze lib/features/aurora/presentation/widgets/aurora_core_session_sheet.dart lib/features/tools/presentation/widgets/vocabulary_lookup_tool.dart` | ✅ 无 error；仅剩既有 info lint |
+
+### R15.3 下一阶段重点
+
+本轮是工程收口，不是愿景终点。下一阶段优先级仍然是：
+
+1. Aurora freeform 纠正文本进入真正的 learning/correction 主链；
+2. 聊天内 correction chip 全量改成“结构化 telemetry + 用户可读自然语言”双通道；
+3. 多端主动交互、任务卡协议、社区/看板衔接做真实体验验收，而不只是接口存在。
+
+---
+
+## R16 C02 Clarify Stage Closeout (2026-05-01)
+
+> **来源**: `SPARKLE_PARALLEL_CODEX_CLOSEOUT_DISPATCH_2026-05-01.md` C02
+> **范围**: `SufficiencyChecker` + `GoalQualityEvaluator` 在生产聊天编排里的真实 gate 行为。
+
+### R16.1 Gate 行为
+
+| Gate | 触发位置 | 行为 |
+|------|----------|------|
+| Phase A planning preflight | `ChatOrchestrator.process_stream()` → `_check_sufficiency()` | 对 planning-like 且 readiness action 为 `ask` 的回合，在 route/plan 前 hard-stop；metadata: `requires_clarification=true`, `clarification_source=phase_a`, `phase_a_guardrail=ask_before_plan` |
+| Field/material sufficiency | `_check_sufficiency()` → `SufficiencyChecker.check()` | 对缺关键字段、资料缺口或 LLM 判定不足的计划回合，发出一次高价值澄清；metadata: `requires_clarification=true` |
+| Goal quality | `_check_goal_quality()` | 对 `create_plan` / `set_goal` / `time_planning` 的低质量目标，在 planning 前要求补充 specificity、measurability、time bound；metadata: `requires_goal_clarification=true` |
+| Normal chat | `_check_sufficiency()` | `knowledge_query` 等普通聊天通过，不发澄清 spam；非规划 intent 的 goal quality 标记为 skipped |
+
+### R16.2 本轮代码变更
+
+| 文件 | 变更 |
+|------|------|
+| `backend/app/orchestration/goal_quality_evaluator.py` | `GoalQualityEvaluator.TRIGGER_INTENTS` 增加 `time_planning` |
+| `backend/app/orchestration/validation_engine.py` | `_check_goal_quality()` 对 `time_planning` 启用语义目标质量 gate |
+| `backend/tests/orchestration/test_orchestrator_process_stream_integration.py` | 增加 normal chat 不澄清、具体目标放行、弱 time_planning 目标澄清的回归测试 |
+
+### R16.3 本轮验证
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/orchestration/test_orchestrator_process_stream_integration.py::test_process_stream_phase_a_hard_stops_cold_start_plan_before_planning tests/orchestration/test_orchestrator_process_stream_integration.py::test_sufficiency_gate_allows_normal_chat_without_clarification tests/orchestration/test_orchestrator_process_stream_integration.py::test_goal_quality_gate_allows_specific_planning_goal tests/orchestration/test_orchestrator_process_stream_integration.py::test_goal_quality_gate_clarifies_weak_time_planning_goal tests/unit/test_goal_quality_evaluator.py -q` | PASS: 6 passed |
+| `cd backend && ruff check app/orchestration/goal_quality_evaluator.py app/orchestration/validation_engine.py tests/orchestration/test_orchestrator_process_stream_integration.py tests/unit/test_goal_quality_evaluator.py` | PASS |
+
+---
+
+## C10 North Star Metrics Closeout (2026-05-01)
+
+> **来源**: `SPARKLE_PARALLEL_CODEX_CLOSEOUT_DISPATCH_2026-05-01.md` C10
+
+### C10.1 已完成
+
+| ID | 模块 | 结果 |
+|----|------|------|
+| C10-P1 | Metric store | 新增 `north_star_metric_events` 持久表与 `c10_20260501` migration，按 `event_key` 幂等写入 |
+| C10-P2 | Exam pass metrics | exam sprint intake 写入 pass probability；post-exam review 写入 pass outcome，支持显式 `exam_passed` 与旧版 `result_rating` proxy |
+| C10-P3 | 7-day completion | <=7 day / `seven_day_survival` intake 写入 goal started；completion check 与 auto-archive 写入 goal completed |
+| C10-P4 | Dashboard/API | 新增 `GET /api/v1/analytics/north-star/trends` 返回 definitions、summary 和 daily series |
+| C10-P5 | Documentation | 新增 `docs/product/SPARKLE_NORTH_STAR_METRICS_2026-05-01.md` |
+
+### C10.2 验证
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/services/test_north_star_metrics_service.py` | ✅ `2 passed` |
+| `cd backend && ruff check app/models/north_star_metrics.py app/schemas/north_star_metrics.py app/services/north_star_metrics_service.py app/services/exam_sprint_intake_service.py app/services/exam_sprint_review_service.py app/services/plan_service.py app/api/v1/analytics.py tests/services/test_north_star_metrics_service.py` | ✅ 通过 |
+| `python3 -m compileall backend/app/models/north_star_metrics.py backend/app/services/north_star_metrics_service.py backend/app/services/exam_sprint_intake_service.py backend/app/services/exam_sprint_review_service.py backend/app/services/plan_service.py backend/app/api/v1/analytics.py` | ✅ 通过 |
+| `cd backend && alembic heads` | ✅ `c10_20260501 (head)` |
+
+### C10.3 剩余风险
+
+当前 trend API 是产品分析/dashboard 查询面；Grafana 面板尚未单独新增。若运营要在 Grafana 里直接看 North Star，需要把该 API 或表查询接入现有 dashboard provisioning。
+
+---
+
+## C11 Aurora Bayesian Learner Closeout (2026-05-01)
+
+> **来源**: `SPARKLE_PARALLEL_CODEX_CLOSEOUT_DISPATCH_2026-05-01.md` C11
+
+### C11.1 已完成
+
+| ID | 模块 | 结果 |
+|----|------|------|
+| C11-P1 | Stage 23 Bayesian learner | 新增 `AuroraBayesianLearner`，用 Beta/Bernoulli posterior 跟踪 visible_intervention / hold 策略结果 |
+| C11-P2 | Outcome/correction 更新 | runtime telemetry outcome backfill 与 correction/freeform chip 现在都会写入 persisted posterior |
+| C11-P3 | 持久化 | 复用 `PersistentBayesianLearner` 的 Redis `setex` 存储，新 service instance 可读回同一 posterior |
+| C11-P4 | 下游策略消费 | `SparkleSelfModelService` 输出 `bayesian_policy`，并用 posterior uncertainty 调整 `strategy_confidence`，供 Aurora wake/intervention policy 消费 |
+
+### C11.2 验证
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/unit/test_aurora_bayesian_learner.py` | ✅ `4 passed` |
+| `cd backend && pytest tests/unit/test_aurora_runtime_self_model.py tests/unit/test_aurora_runtime_telemetry.py tests/unit/test_t33_predicted_reply_correction.py` | ✅ `50 passed` |
+| `cd backend && python3.11 -m compileall app/aurora/bayesian app/aurora/runtime_v1/telemetry.py app/aurora/runtime_v1/correction_feedback.py app/aurora/runtime_v1/self_model.py` | ✅ 通过 |
+
+### C11.3 剩余风险
+
+当前 posterior 先以 Redis 持久化满足 Stage 23 closeout；若后续要做长期审计、离线分析或跨设备 cold-start 聚合，仍应把汇总 posterior 周期性落到 Postgres/analytics store。
+
+---
+
+## C17 Flutter Design System / Dark Mode Closeout (2026-05-01)
+
+> **来源**: `SPARKLE_PARALLEL_CODEX_CLOSEOUT_DISPATCH_2026-05-01.md` C17
+
+### C17.1 已完成
+
+| ID | 模块 | 结果 |
+|----|------|------|
+| C17-P1 | Chat feature DS sweep | `mobile/lib/features/chat` 中的直接 `Colors.white` / `Colors.black` 已迁移为 DS text/surface/shadow/contrast tokens |
+| C17-P2 | Dynamic contrast token | `DS.onColor(Color background)` 提供动态 badge/check/CTA 的对比安全前景色 |
+| C17-P3 | Regression guard | 新增 `mobile/test/widget/chat_design_system_dark_mode_test.dart`，覆盖代表性 dark chat surfaces，并用 source scan 阻止 chat feature 新增 raw black/white |
+
+### C17.2 验证
+
+| 命令 | 结果 |
+|------|------|
+| `rg -n --pcre2 "Colors\\.(white\\|black)(?![A-Za-z0-9_])" mobile/lib/features/chat -g '*.dart'` | ✅ 无匹配 |
+| `cd mobile && flutter test test/widget/chat_design_system_dark_mode_test.dart` | ⚠️ OpenClaw l10n getters 已由 C19 重新生成；当前阻塞于 dirty `mobile/lib/features/chat/presentation/screens/chat_screen.dart` 语法错误 |
+
+### C17.3 剩余风险
+
+本轮只关闭 chat feature slice。Galaxy、community、achievement、home 等 feature folder 仍有 raw black/white 债务，需要按同样方式分批迁移并保留每批 widget/golden/source-scan evidence。
+
+---
+
+## C19 OpenClaw Module Closeout (2026-05-01)
+
+> **来源**: `SPARKLE_PARALLEL_CODEX_CLOSEOUT_DISPATCH_2026-05-01.md` C19
+
+### C19.1 已完成
+
+| ID | 模块 | 结果 |
+|----|------|------|
+| C19-P1 | Feature route | `/openclaw` moved under `mobile/lib/features/openclaw/openclaw_routes.dart`; app router now spreads `OpenClawRoutes.routes` |
+| C19-P2 | Screen ownership | Added `OpenClawScreen` as the feature-owned shell while preserving the existing hub UX |
+| C19-P3 | Provider/state | Added `openClawModuleProvider` with setup/loading/ready/attention phases derived from connection and automation services |
+| C19-P4 | Setup path | Hub shows a localized setup-guide action linking to `docs/openclaw/OPENCLAW_CONNECTION_GUIDE.md` when OpenClaw is not ready |
+| C19-P5 | Real flow | Hub keeps connection setup, diagnostics, queued retry/clear, device affinity, automation, recent activity, chat, and task exits reachable |
+
+### C19.2 验证
+
+| 命令 | 结果 |
+|------|------|
+| `cd mobile && flutter gen-l10n` | ✅ 通过 |
+| `cd mobile && flutter test test/widget/openclaw_module_state_test.dart test/features/aurora/data/services test/features/chat/presentation/widgets/contextual_correction_bar_test.dart test/widget/aurora_freeform_correction_dialog_test.dart test/features/reviews` | ✅ `8 passed` |
+| `cd mobile && flutter test test/app/router_smoke_test.dart test/widget/full_route_coverage_test.dart test/widget/j6_additional_chains_test.dart` | ✅ `45 passed` |
+
+### C19.3 剩余风险
+
+OpenClaw mobile closeout is code-complete for route/screen/provider/setup flow. Router smoke now initializes Isar from the bundled local native library, so route verification is no longer blocked by network download.
+
+---
+
+## C04 Cognitive/Profile Production Loop Closeout (2026-05-01)
+
+> **来源**: `SPARKLE_PARALLEL_CODEX_CLOSEOUT_DISPATCH_2026-05-01.md` C04
+
+### C04.1 已完成
+
+| ID | 模块 | 结果 |
+|----|------|------|
+| C04-P1 | Live profile write | `ChatSignalCollector` 从聊天偏好/纠正语句提取明确偏好，并通过 `ProfileWriteService.set_explicit_preferences()` 写入 `UserPreferencesCenter` 与 preference history |
+| C04-P2 | Cognitive evidence | 偏好/纠正/高复杂度 turn 创建 `CognitiveService.create_fragment(..., generate_embedding=False)` 行为碎片，保留 conversation/turn/evidence metadata |
+| C04-P3 | Later read path | `ProfileContextService.get_profile_context()` 可在后续请求读取刚写入的 explicit preference，供 orchestration context/prompt/profile payload 消费 |
+| C04-P4 | Guardrail | `ProfileWriteService.update_inferred_preference()` 为推断偏好补充 `<key>_confidence` / `<key>_status`; 低于 0.7 的信号标记 `tentative` |
+
+### C04.2 验证
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/unit/test_chat_signal_collector_profile_loop.py tests/unit/test_profile_write_service.py tests/unit/test_cognitive_service_regression.py tests/services/test_profile_context_service.py -q` | ✅ `16 passed` |
+| `cd backend && ruff check app/services/chat_signal_collector.py app/services/profile_write_service.py app/services/cognitive_service.py tests/unit/test_chat_signal_collector_profile_loop.py` | ✅ 通过 |
+
+### C04.3 剩余风险
+
+当前规则覆盖明确的 concise/detail/step-by-step/focus-duration 偏好和窗口级行为信号；更细粒度的自然语言偏好抽取仍应逐步接入 LLM/semantic extractor，并继续通过 confidence/status 元数据保护低置信推断。
+
+---
+
+## C13 Aurora Proactive Multi-Device Closeout (2026-05-01)
+
+> **来源**: `SPARKLE_PARALLEL_CODEX_CLOSEOUT_DISPATCH_2026-05-01.md` C13
+
+### C13.1 已完成
+
+| ID | 模块 | 结果 |
+|----|------|------|
+| C13-P1 | Proactive reason | `PushPolicyCompiler` 为 commitment follow-up / engagement recovery 输出用户可读 `proactive_reason`、`destination_route`、`primary_action` |
+| C13-P2 | Multi-device context | `StateDrivenPushService` 读取 active devices，将数量、平台、last-active device 写入 nudge metadata |
+| C13-P3 | Respectful cooldown | 7 天内 1 次 dismiss 将 `intrusiveness_level` 降为 `reduced`; 2 次及以上 suppress 同类 proactive nudge |
+| C13-P4 | Cross-device consistency | `PushDeliveryService.apply_action()` 仍以同一 notification/record 为状态源；任一设备 dismiss/delete 会让通知中心跨设备一致收敛 |
+| C13-P5 | User-facing why | Notification Center push detail 优先展示 `proactive_reason`，用户能看到 Aurora 出现的原因而不是内部 token |
+
+### C13.2 验证
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/unit/test_push_policy_compiler.py tests/unit/test_state_driven_push_service.py tests/unit/test_push_delivery_service.py` | ✅ `14 passed` |
+| `cd backend && ruff check app/services/push_policy_compiler.py app/services/state_driven_push_service.py app/services/push_delivery_service.py tests/unit/test_push_policy_compiler.py tests/unit/test_state_driven_push_service.py tests/unit/test_push_delivery_service.py` | ✅ 通过 |
+| `cd mobile && flutter analyze --no-fatal-infos lib/features/notification_center/data/models/unified_notification_model.dart lib/features/notification_center/presentation/widgets/unified_notification_card.dart` | ✅ 退出码 0; 仅剩既有 `discarded_futures` info |
+
+### C13.3 剩余风险
+
+本轮关闭 proactive push 的 policy/metadata/notification-center 可解释性闭环；真实 FCM/APNs 多设备送达率仍需在设备农场或 staging push credentials 下做一次手动验收。
+
+---
+
+## C08 gRPC Registration Tracker Update (2026-05-01)
+
+| ID | 严重度 | 模块 | 状态 |
+|----|--------|------|------|
+| C08-P1 | P0 | Python gRPC registration | ✅ Closed: Agent/ErrorBook/Galaxy/STT/Inference are registered and listed by reflection test |
+| C08-P2 | P0 | Community proto mismatch | ✅ Closed by explicit deprecation: `CommunityService` is REST-only/CQRS and not listed by reflection |
+| C08-P3 | P0 | Regression evidence | ✅ `tests/unit/services/test_grpc_service_registration.py` covers reflection, STT method, Inference method, and Community descriptor deprecation |
+
+---
+
+## C20 Reviews Route Integration Tracker Update (2026-05-01)
+
+| ID | 严重度 | 模块 | 状态 |
+|----|--------|------|------|
+| C20-P1 | P1 | Reviews route ownership | ✅ Implemented: `ReviewRoutes` owns `/review-plan` and `/review`; app router registers the feature-owned routes |
+| C20-P2 | P1 | User entry points | ✅ Implemented: nightly review, cognitive hub, expanded toolbar, and `review_plan` tool launch enter the review hub |
+| C20-P3 | P1 | State/error coverage | ✅ Closed: review hub empty/error state tests now run in the focused mobile acceptance suite; route-chain coverage also passes |
+
+---
+
+## C18 Accessibility / Semantics Closeout (2026-05-01)
+
+| ID | 严重度 | 模块 | 状态 |
+|----|--------|------|------|
+| C18-P1 | P1 | Chat correction chips | ✅ Closed: correction chips expose explicit button semantics and 44dp minimum targets |
+| C18-P2 | P1 | Dashboard Aurora status band | ✅ Closed: status band exposes semantic status/hint/action, Enter/Space activation, and semantic correction options |
+| C18-P3 | P1 | Task execution | ✅ Closed: quick tools/status expose semantics; execution status lifecycle no longer reads `MediaQuery` before dependencies |
+| C18-P4 | P1 | Community feed | ✅ Closed: post card/action/topic semantics and 44dp action targets added |
+| C18-P5 | P1 | Verification | ✅ `flutter test --no-pub test/widget/c18_accessibility_semantics_test.dart` passed; scoped `dart analyze` on C18 files passed with no issues |
+
+Full mobile analyzer still reports broad existing lint debt outside C18 (`6327 issues found`), so C30 should use scoped evidence until the shared Flutter lint baseline is cleaned up.
+
+---
+
+## R17 Final Integration Closeout (2026-05-01)
+
+| ID | 严重度 | 模块 | 状态 |
+|----|--------|------|------|
+| R17-1 | P0 | Gateway chat history | ✅ Closed: `SaveMessage()` no longer deletes session metadata on every message, preserving user-derived conversation titles through assistant turns |
+| R17-2 | P1 | Mobile router smoke | ✅ Closed: router smoke uses bundled Isar native library and includes `OfflineChatMessageSchema`; route-chain suite now passes |
+| R17-3 | P1 | Dashboard route stability | ✅ Closed: achievement post-frame fetch is mounted-guarded; exam sprint task header no longer overflows under route smoke viewport |
+| R17-4 | P1 | Reviews hub verification | ✅ Closed: empty/error review hub test now accounts for lazy ListView construction and passes in the focused mobile suite |
+| R17-5 | P1 | Final evidence | ✅ `go test ./...`, focused backend pytest/ruff, focused Aurora/OpenClaw/reviews/mobile route tests, C18/dark-mode tests, `git diff --check`, and tracked-secret scan all passed |
+
+**剩余风险**: Full `flutter analyze` remains noisy because of repo-wide info lint debt, but no analyzer errors appeared in the focused closeout slices. C30 production readiness should still include device visual QA, staging push/APNs/FCM verification, and the previously documented legal/ops manual launch checks.
+
+---
+
+## 2026-05-01 Aurora Closeout Verification
+
+> **来源**: `SPARKLE_INDEPENDENT_VERIFICATION_REPORT_2026-05-01.md` + `SPARKLE_AURORA_CLOSEOUT_EXECUTION_PLAN_2026-05-01.md` T15
+> **状态口径**: `verified fixed` 表示已验证无须继续修复或已由既有收口关闭；`fixed in this pass` 表示本轮 T15/closeout worktree 提供新证据；`deferred with reason` 表示保留为后续工程任务并记录原因。
+
+### 真实问题与修复状态
+
+| 报告编号 | 任务 | 状态标记 | Roadmap 追踪 |
+|----------|------|----------|--------------|
+| R-01 idleTimer 竞态 | T01 | fixed in this pass | WebSocket close 幂等化、WriteControl timeout、idleTimer 主 handler 协调已落地 |
+| R-02 `err.Error()` 泄露 | T02 | fixed in this pass | Go handler 统一 sanitizer 已落地，raw err 仅保留 dev/test/internal paths |
+| R-03 Handler 直接访问 DB/Redis | T03 | fixed in this pass | auth/group/data_consistency handler 已改为 service interface |
+| R-04 Python silent swallow | T13 | fixed in this pass | 优先文件与 Aurora runtime optional imports 已修复；repo-wide residual silent swallow 留后续债务 |
+| R-05 session_id fallback | T12 | fixed in this pass | fallback helper 记录 warning 并递增 `sparkle_session_id_fallback_total` |
+| R-06 Provider keepAlive | T10 | fixed in this pass | 核心 provider registry 使用非 autoDispose/manual keepAlive 方案 |
+| R-07 Offline queue UI | T09 | fixed in this pass | chat offline queue indicator/provider snapshot/bubble delivery states 已落地 |
+| R-08 SlidingWindow Lua script | T06 | fixed in this pass | 包级 `distributedSlidingWindowScript` 已落地；focused middleware test 通过 |
+| R-09 Flutter version drift | T14 | fixed in this pass | e2e/benchmark 已统一到 Flutter 3.24.0 |
+| R-10 Postgres version drift | T14 | fixed in this pass | e2e/benchmark 已统一到 pg16+pgvector |
+| R-11 stale GitHub Actions | T14 | fixed in this pass | e2e actions 已同步到 CI 版本线 |
+| R-12 Python lockfile | T14 | fixed in this pass | `backend/requirements.lock` 已新增并被 CI/e2e/benchmark 使用；`backend/uv.lock` 也已存在 |
+| R-13 docker latest tags | T14 | fixed in this pass | redis/minio 已锁定具体镜像标签 |
+| R-14 Semantics coverage | C18 / follow-up UI | fixed in this pass | C18 first-pass closed audited core surfaces; broad app coverage remains future sweep |
+| R-15 Aurora runtime imports | T13 | fixed in this pass | 11 个 optional import 已改为 logger.debug evidence |
+| R-16 BGM service size | 后续专项 | deferred with reason | 不在 T01-T15 本轮范围，保留为 later refactor |
+| B5 cold-start transition | T11 | deferred with reason | `cold_start_route_transition_test.dart` fails because `ColdStartRouteTransition` is not found |
+
+### T01-T15 Closeout State
+
+| 任务 | 状态 | 下一步 |
+|------|------|--------|
+| T01 | FIXED-IN-PASS | Keep WS close/idempotency regression tests in handler suite |
+| T02 | FIXED-IN-PASS | Keep sanitizer production/dev/i18n tests in handler suite |
+| T03 | FIXED-IN-PASS | Keep auth/group/data consistency service tests as boundary guard |
+| T04 | FIXED-IN-PASS | Keep backend/Dart payload normalization tests aligned |
+| T05 | FIXED-IN-PASS | Verify calibration receipt appears in metadata and recent correction memory in full E2E |
+| T06 | FIXED-IN-PASS | Keep existing focused test in gateway middleware suite |
+| T07 | FIXED-IN-PASS | Keep all new correction entrances on shared Dart payload helper |
+| T08 | FIXED-IN-PASS | Keep calibration receipt chip coverage with dark/semantics QA |
+| T09 | FIXED-IN-PASS | Add device QA for offline queue state transitions |
+| T10 | FIXED-IN-PASS | Add logout/invalidation QA for manual keepAlive registry |
+| T11 | DEFERRED | Fix cold-start route wiring so `ColdStartRouteTransition` is present and testable |
+| T12 | FIXED-IN-PASS | Monitor fallback counter in staging to ensure it stays near zero |
+| T13 | FIXED-IN-PASS | Continue repo-wide silent swallow cleanup beyond priority scope |
+| T14 | FIXED-IN-PASS | Keep lockfile refresh policy documented before dependency bumps |
+| T15 | FIXED-IN-PASS | Ledger/tracker updated; report and execution plan added to Git index |
+
+### 假阳性清单
+
+| 原声明 | 状态标记 | 复核结论 |
+|--------|----------|----------|
+| DualCoreRouter 未调用 | verified fixed | False positive: mixin route path calls `dual_core_router.route()` |
+| SufficiencyChecker 死代码 | verified fixed | False positive: `ValidationEngineMixin` calls `sufficiency_checker.check()` |
+| GoalQualityEvaluator 死代码 | verified fixed | False positive: goal-quality gate is active through validation mixin |
+| AdaptiveReplanner 无触发 | verified fixed | False positive: EventBus/service-driven replanner paths exist |
+| CognitiveService/ProfileWriteService 未接入 | verified fixed | False positive: profile/cognitive reads and writes are connected through orchestration/planning paths |
+| sparkle_api root 运行 | verified fixed | False positive: compose and Dockerfile use non-root UID/user |
+| PII shadow 泄露未脱敏文本 | verified fixed | False positive: shadow/live both call `_redact_pii_text()` unless mode is explicitly off |
+| Prometheus/alertmanager/Celery/legal/DR 缺失 | verified fixed | False positive: corresponding config/docs/services exist |
+| Go AB/BA deadlock and per-connection limiter absence | verified fixed | False positive: write paths hold one lock; STT/proxy per-connection limiters exist |
+| ws_auth/distributed_rate_limiter no tests | verified fixed | False positive: existing tests cover these middleware paths; T06 added a focused sliding-window test |
+
+### Verification Evidence
+
+| Evidence | Result |
+|----------|--------|
+| `cd backend/gateway && go test ./internal/middleware -run TestSlidingWindowRateLimiter_AllowRejectAndRecover` | PASS |
+| `cd backend/gateway && go test ./internal/handler -run 'Test(WSSafeWriter\|ErrorSanitizer)'` | PASS |
+| `cd backend && pytest tests/unit/test_aurora_correction_payload.py -q` | PASS: 4 passed |
+| `cd mobile && flutter test test/features/chat/presentation/widgets/calibration_receipt_chip_test.dart test/widget/cold_start_route_transition_test.dart` | PARTIAL: calibration receipt tests passed; cold-start route transition test failed because `ColdStartRouteTransition` was not found |
+| `SPARKLE_FINAL_ACCEPTANCE_LEDGER_2026-05-01.md` Section 20 addendum | Added T01-T15 state and R-01/R-16 finding status markers |
+| `SPARKLE_INDEPENDENT_VERIFICATION_REPORT_2026-05-01.md` | Added to Git tracking without changing factual report content |
+| `SPARKLE_AURORA_CLOSEOUT_EXECUTION_PLAN_2026-05-01.md` | Added to Git tracking as the T01-T15 execution source |
+
+---
+
+## 2026-05-02 Aurora Session Continuity Recovery
+
+> **来源**: Codex TD-008/P1/P3 review + `docs/product/AURORA_SESSION_STATE_ANALYSIS.md`
+> **目标**: 把 Aurora 深度校准和标准对话从 Redis-only 易失状态推进到可恢复、可解释、用户可感知的连续体验。
+
+### Recovery Tasks
+
+| ID | 严重度 | 模块 | 状态 | 证据 |
+|----|--------|------|------|------|
+| ASC-01 | P0 | StateGraph checkpoint | FIXED-IN-PASS | Same-request interrupted-only resume；不恢复不同 request；不覆盖 fresh message / volatile context |
+| ASC-02 | P1 | FSM Redis miss fallback | FIXED-IN-PASS | `DurableSessionStateSnapshot` + recoverable-only PG fallback；`DONE` 不恢复 |
+| ASC-03 | P1 | L3 Core Session durability | FIXED-IN-PASS | `AuroraCoreSessionSnapshot` + session/latest/resume-token hash PG fallback |
+| ASC-04 | P1 | L3 idle experience | FIXED-IN-PASS | 10min idle 变为 paused，不直接 expired；用户可继续深度校准 |
+| ASC-05 | P1 | Returning UX tiers | FIXED-IN-PASS | `silent_resume` / `light_resume` / `personalized_return` / `checkpoint_debrief` |
+| ASC-06 | P2 | Alembic schema | FIXED-IN-PASS | `c11_20260502_add_session_recovery_snapshots.py`; `alembic heads` -> `c11_20260502` |
+
+### Verification Evidence
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/orchestration/test_statechart_engine.py::TestStateGraphBasicExecution::test_interrupted_checkpoint_resume_preserves_fresh_message_and_volatile_context tests/orchestration/test_statechart_engine.py::TestStateGraphBasicExecution::test_checkpoint_resume_does_not_run_for_new_turn_request -q` | PASS |
+| `cd backend && pytest tests/unit/test_session_recovery_persistence.py -q` | PASS |
+| `cd backend && pytest tests/unit/test_aurora_core_session_entry.py::test_core_session_loads_from_postgres_when_redis_misses tests/unit/test_aurora_core_session_entry.py::test_core_session_idle_timeout_pauses_instead_of_expiring -q` | PASS |
+| `cd backend && alembic heads` | PASS: `c11_20260502 (head)` |
+
+### Boundary
+
+P4 多设备强一致继续 deferred；当前 pass 只保证 latest Aurora state、resume token fallback、returning context 可恢复和可解释，不引入跨设备全局锁。
+
+---
+
+## 2026-05-02 Aurora Complete Experience Closed Loop
+
+> **来源**: Aurora 完全体落地收口计划 + `AURORA_SGW_CLOSED_LOOP_SPECS_2026-05-02.md`
+> **目标**: 把 Aurora 从“路由时调 prompt”推进为“每轮判断可记录、可评估、可反馈到 SGW，并能在 L3 会话里被用户看见和校准”的体验闭环。
+
+### Closed Loop Tasks
+
+| ID | 严重度 | 模块 | 状态 | 证据 |
+|----|--------|------|------|------|
+| ACL-01 | P0 | DualCore signal scores | FIXED-IN-PASS | `DualCoreDecision` 暴露 `signal_scores`、`routing_trace_id`、`scaffolding_zone` |
+| ACL-02 | P0 | SGW routing passive signal | FIXED-IN-PASS | `RoutingOutcomeRecorder` 每次路由写入 `PassiveSignal(signal_type="routing_decision")` |
+| ACL-03 | P0 | Routing outcome feedback | FIXED-IN-PASS | `RoutingOutcomeEvaluator` 生成 `BehavioralOutcome(outcome_type="routing_effectiveness")` 并调用 `ScaffoldingFSM.apply_feedback()` |
+| ACL-04 | P1 | L3 API durability wiring | FIXED-IN-PASS | `/aurora/core-session/*` 主路径把 `db` 注入 `AuroraCoreSessionService`，PG fallback 不再只停留在服务层 |
+| ACL-05 | P1 | L3 CaseFile/Agenda | FIXED-IN-PASS | `AuroraCoreSession` 持久化 `case_file` 并输出 backend-authoritative `agenda` |
+| ACL-06 | P1 | Correction observability | FIXED-IN-PASS | `sparkle_aurora_correction_to_state_change_total` 记录纠正是否产生 state/self-model/correction 变化 |
+| ACL-07 | P2 | Returning memory ranking | FIXED-IN-PASS | Stage34 episodic memory 从最近 5 条升级为按 correction/importance/confidence 排序后取 Top 5 |
+| ACL-08 | P2 | Scheduled evaluation | FIXED-IN-PASS | Celery beat 每小时运行 `evaluate_routing_outcomes` |
+| ACL-09 | P2 | Grafana observability | FIXED-IN-PASS | Spine outcome dashboard 增加 Aurora routing/session/correction/returning panels |
+
+### Verification Evidence
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/unit/test_dual_core_router_real_engine.py tests/unit/test_aurora_closed_loop.py tests/unit/test_session_recovery_persistence.py tests/orchestration/test_statechart_engine.py tests/unit/test_aurora_core_session_entry.py -q` | PASS: `69 passed` |
+| `cd backend && ruff check app/orchestration/dual_core_router.py app/orchestration/routing_engine.py app/services/routing_outcome_service.py app/api/v1/aurora.py app/aurora/core_session.py app/orchestration/context_builder.py app/aurora/runtime_v1/correction_feedback.py app/core/celery_tasks.py app/celery_schedule.py tests/unit/test_dual_core_router_real_engine.py tests/unit/test_aurora_closed_loop.py` | PASS |
+
+### Boundary
+
+本轮完成的是 Aurora 判断闭环和 L3 主路径体验收口；多设备强一致、全量语义向量召回、全 Flutter 视觉 QA 继续作为后续打磨项，但核心链路现在已经从“可运行”推进到“可学习、可解释、可观测”。
+
+---
+
+## 2026-05-02 User-Visible Experience Bridge
+
+> **来源**: `Sparkle 产品体验全景文档：现状、愿景与差距` + 完全体体验收口计划
+> **目标**: 把 Aurora / Spine / Goal / Growth / Community 的后端能力变成首页和社区首屏可感知的体验，而不是停留在后端链路里。
+
+### Experience Bridge Tasks
+
+| ID | 严重度 | 模块 | 状态 | 证据 |
+|----|--------|------|------|------|
+| UVE-01 | P0 | Understanding Snapshot | FIXED-IN-PASS | `GET /experience/understanding-snapshot` + `UnderstandingSnapshotCard`，展示理解摘要、置信度、证据、开放问题、纠正入口 |
+| UVE-02 | P0 | Goal Detail Snapshot | FIXED-IN-PASS | `GET /experience/goal-detail/current` 聚合 Goal ORM、minimum_acceptance_criteria、Plan、Task、GoalWorldGraph |
+| UVE-03 | P1 | Growth Quality | FIXED-IN-PASS | `GET /experience/growth-dashboard` + `GrowthQualityCard`，连胜质量由任务完成、专注分钟、当前 streak 和 stuck 状态共同计算 |
+| UVE-04 | P1 | Community Accountability Frame | FIXED-IN-PASS | `GET /experience/community-accountability` + `CommunityAccountabilityHubCard`，社区首屏强化承诺/伙伴/进度，不再只解释 feed tabs |
+| UVE-05 | P1 | Home Compile Health | FIXED-IN-PASS | 清理未接线的 `_UnderstandingExpansionSlot` / `_CommunityAccountabilitySlot` / `_WeeklyNarrativeSlot` 等孤立占位，避免 analyzer 硬错误 |
+
+### Verification Evidence
+
+| 命令 | 结果 |
+|------|------|
+| `python3 -m py_compile backend/app/api/v1/experience.py backend/app/api/v1/router.py` | PASS |
+| `cd backend && ruff check app/api/v1/experience.py app/api/v1/router.py` | PASS |
+| `cd backend && black --check app/api/v1/experience.py app/api/v1/router.py` | PASS |
+| `cd mobile && flutter analyze --no-fatal-infos lib/features/experience/... dashboard_screen.dart community_screen.dart` | PASS: info-only style findings remain |
+
+### Boundary
+
+本轮优先完成“用户能看见 Sparkle 如何理解、如何推进目标、如何衡量坚持质量”的体验桥接。SourceExplanationCard 专名化、独立 Goal route、社区真实 commitment/partner 数据增强、全设备视觉 QA 继续作为后续体验打磨项。

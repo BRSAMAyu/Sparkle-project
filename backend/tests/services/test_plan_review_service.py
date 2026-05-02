@@ -1,18 +1,12 @@
-"""
-Unit tests for PlanReviewService enhancements.
+"""Unit tests for PlanReviewService enhancements."""
 
-Tests the new retry mechanism and intelligent fallback strategy.
-"""
-import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime
+from unittest.mock import patch
 
 import pytest
 
 from app.orchestration.plan_review_service import (
     PlanReviewService,
     ReviewDecision,
-    ReviewComment,
 )
 from app.orchestration.schemas import ExecutablePlan, ToolCallSpec
 
@@ -215,6 +209,76 @@ class TestLLMReviewFallback:
 
         assert result["decision"] == "approved"
         assert result["confidence"] == 1.0
+
+
+class TestPlanningFeasibilityGuard:
+    """Test deterministic planning feasibility checks."""
+
+    @pytest.mark.asyncio
+    async def test_review_plan_blocks_mastery_promise_with_insufficient_capacity(self):
+        service = PlanReviewService()
+        plan = ExecutablePlan(
+            schema_version="5.0",
+            plan_id="test-plan-impossible-schedule",
+            snapshot_id="snap-1",
+            context_version="v1",
+            source="langgraph",
+            confidence=0.98,
+            rationale="Seven day mastery plan",
+            tool_calls=[
+                ToolCallSpec(
+                    id="call_1",
+                    name="create_plan",
+                    params={
+                        "title": "一周精通 C++",
+                        "total_days": 7,
+                        "daily_hours": 1,
+                        "difficulty": "expert",
+                    },
+                    timeout_ms=10000,
+                )
+            ],
+        )
+
+        result = await service.review_plan(
+            plan=plan,
+            user_message="我每天只有1小时，帮我一周精通 C++",
+            user_context={"available_hours_per_day": 1, "current_plan_count": 0},
+        )
+
+        assert result.decision == ReviewDecision.NEEDS_MODIFICATION.value
+        assert result.auto_approved is False
+        assert any("总可用时间" in comment.message for comment in result.comments)
+
+    def test_feasibility_guard_requires_review_cadence_for_short_plan(self):
+        service = PlanReviewService()
+        plan = ExecutablePlan(
+            schema_version="5.0",
+            plan_id="test-plan-tight-no-review",
+            snapshot_id="snap-1",
+            context_version="v1",
+            source="langgraph",
+            confidence=0.8,
+            rationale="Tight sprint plan",
+            tool_calls=[
+                ToolCallSpec(
+                    id="call_1",
+                    name="create_plan",
+                    params={
+                        "title": "7 天考试冲刺",
+                        "total_days": 7,
+                        "daily_hours": 2,
+                        "planned_daily_minutes": 90,
+                    },
+                    timeout_ms=10000,
+                )
+            ],
+        )
+
+        comments = service._collect_feasibility_comments(plan=plan, user_context={})
+
+        assert any(comment.category == "completeness" and "复盘节奏" in comment.message for comment in comments)
+        assert not any(comment.severity == "critical" for comment in comments)
 
 
 if __name__ == "__main__":

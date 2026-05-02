@@ -141,11 +141,15 @@ class _Header extends StatelessWidget {
                 ),
               ),
             ),
-            IconButton(
-              icon: Icon(Icons.close, size: 15, color: DS.textTertiary),
-              onPressed: onDismiss,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            Semantics(
+              button: true,
+              label: 'Chat spine receipt card control 1',
+              child: IconButton(
+                icon: Icon(Icons.close, size: 15, color: DS.textTertiary),
+                onPressed: onDismiss,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
             ),
           ],
         ),
@@ -211,22 +215,26 @@ class _CorrectionChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-          decoration: BoxDecoration(
-            color: DS.warning.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-              color: DS.warning.withValues(alpha: 0.28),
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Chat spine receipt card control 2',
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+            decoration: BoxDecoration(
+              color: DS.warning.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: DS.warning.withValues(alpha: 0.28),
+              ),
             ),
-          ),
-          child: Text(
-            label,
-            style: DS.labelSmall.copyWith(
-              color: DS.warning,
-              fontWeight: FontWeight.w500,
+            child: Text(
+              label,
+              style: DS.labelSmall.copyWith(
+                color: DS.warning,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ),

@@ -10,11 +10,11 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/sparkle/gateway/internal/db"
 	wsmetrics "github.com/sparkle/gateway/internal/metrics"
@@ -110,6 +110,60 @@ func writeLegacyJSON(writer *wsSafeWriter, payload interface{}) error {
 	return writer.WriteJSON(payload)
 }
 
+func logWebSocketWriteError(operation string, err error) {
+	if err != nil {
+		log.Printf("Failed to write WebSocket %s: %v", operation, err)
+	}
+}
+
+func writeLegacyJSONLogged(writer *wsSafeWriter, operation string, payload interface{}) bool {
+	if err := writeLegacyJSON(writer, payload); err != nil {
+		logWebSocketWriteError(operation, err)
+		return false
+	}
+	return true
+}
+
+func writeWSJSONLogged(writer *wsSafeWriter, operation string, payload interface{}) bool {
+	if err := writer.WriteJSON(payload); err != nil {
+		logWebSocketWriteError(operation, err)
+		return false
+	}
+	return true
+}
+
+func writeWSMessageLogged(writer *wsSafeWriter, operation string, messageType int, data []byte) bool {
+	if err := writer.WriteMessage(messageType, data); err != nil {
+		logWebSocketWriteError(operation, err)
+		return false
+	}
+	return true
+}
+
+func sendChatAccepted(responder interface{}, requestID string) bool {
+	if strings.TrimSpace(requestID) == "" {
+		return true
+	}
+	switch r := responder.(type) {
+	case *envelopeResponder:
+		// Envelope frames are ACKed immediately when the frame is decoded.
+		return true
+	case *protobufResponder:
+		r.SendAck()
+		return true
+	case *wsSafeWriter:
+		return writeLegacyJSONLogged(r, "legacy message ack", gin.H{
+			"type":       "message_ack",
+			"message_id": requestID,
+			"request_id": requestID,
+			"status":     "received",
+			"timestamp":  time.Now().UnixMilli(),
+		})
+	default:
+		return true
+	}
+}
+
 func workflowIDForChatMode(mode string) string {
 	normalized := normalizeChatMode(mode)
 	switch normalized {
@@ -140,21 +194,21 @@ func workflowIDForChatMode(mode string) string {
 
 func (h *ChatOrchestrator) resolveUserIdentity(ctx context.Context, userID string) (uuid.UUID, string, *db.User, error) {
 	if parsed, err := uuid.Parse(userID); err == nil {
-		if h.queries == nil {
+		if h.userIdentity == nil {
 			return parsed, userID, nil, nil
 		}
-		user, err := h.queries.GetUser(ctx, pgtype.UUID{Bytes: parsed, Valid: true})
+		user, err := h.userIdentity.GetUserByUUID(ctx, parsed)
 		if err != nil {
 			return parsed, userID, nil, nil
 		}
 		return parsed, userID, &user, nil
 	}
 
-	if h.queries == nil {
+	if h.userIdentity == nil {
 		return uuid.Nil, userID, nil, nil
 	}
 
-	user, err := h.queries.GetUserByEmail(ctx, userID)
+	user, err := h.userIdentity.GetUserByEmail(ctx, userID)
 	if err != nil {
 		return uuid.Nil, userID, nil, nil
 	}
@@ -237,6 +291,24 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(timeoutSeconds)*time.Second)
 	defer cancel()
 
+	// Admission control: block until a stream slot is available.
+	// This prevents unbounded concurrent gRPC streams from exhausting resources.
+	select {
+	case h.streamSem <- struct{}{}:
+		defer func() { <-h.streamSem }()
+	default:
+		// All stream slots occupied — reject immediately.
+		switch r := responder.(type) {
+		case *envelopeResponder:
+			r.SendError("resource_exhausted", "Server busy, please retry", true)
+		case *protobufResponder:
+			r.SendError("resource_exhausted", "Server busy, please retry", true)
+		case *wsSafeWriter:
+			writeLegacyJSONLogged(r, "resource exhausted error", legacyStreamErrorPayload("resource_exhausted", "Server busy, please retry", true))
+		}
+		return false
+	}
+
 	// Sanitize Input (Security Hygiene) - reuse global sanitizer
 	input.Message = sanitizer.Sanitize(input.Message)
 
@@ -248,11 +320,39 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		userID = resolvedUserID
 	}
 
+	reqID := requestID
+	if reqID == "" {
+		reqID = fmt.Sprintf("req_%s", uuid.New().String())
+	}
+	if h.chatHistory != nil {
+		accepted, err := h.chatHistory.TryAcceptRealtimeRequest(ctx, userID, reqID, time.Hour)
+		if err != nil {
+			log.Printf("Failed to record realtime request id user=%s request_id=%s: %v", hashUserIDForLog(userID), reqID, err)
+		} else if !accepted {
+			log.Printf("Duplicate realtime request ignored user=%s request_id=%s", hashUserIDForLog(userID), reqID)
+			if !sendChatAccepted(responder, reqID) {
+				return true
+			}
+			switch r := responder.(type) {
+			case *envelopeResponder:
+				r.SendError("duplicate_request", "Request already accepted; refresh conversation if the response is missing.", false)
+			case *protobufResponder:
+				r.SendError("duplicate_request", "Request already accepted; refresh conversation if the response is missing.", false)
+			case *wsSafeWriter:
+				writeLegacyJSONLogged(r, "duplicate request error", legacyStreamErrorPayload("duplicate_request", "Request already accepted; refresh conversation if the response is missing.", false))
+			}
+			return false
+		}
+	}
+	if !sendChatAccepted(responder, reqID) {
+		return true
+	}
+
 	// Persist user message to Redis history for context pruning
 	if input.SessionID != "" {
 		sessionID := input.SessionID
 		message := input.Message
-		h.saveMessage(userID, sessionID, "user", message, nil)
+		h.saveMessage(ctx, userID, sessionID, "user", message, nil)
 	}
 
 	startTime := time.Now()
@@ -265,7 +365,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	var profileSnapshot *service.ChatUserProfileSnapshot
 	if h.userContext != nil && userUUID != uuid.Nil {
 		if snapshot, err := h.userContext.GetChatUserProfileSnapshot(ctx, userUUID); err != nil {
-			log.Printf("Failed to fetch chat user profile for user=%s: %v", userID, err)
+			log.Printf("Failed to fetch chat user profile for user=%s: %v", hashUserIDForLog(userID), err)
 		} else {
 			profileSnapshot = snapshot
 		}
@@ -283,7 +383,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 		if err != nil {
 			log.Printf("[CONTEXT] Failed to fetch user context for user=%s, latency=%dms, error=%v",
-				userID, contextFetchLatency.Milliseconds(), err)
+				hashUserIDForLog(userID), contextFetchLatency.Milliseconds(), err)
 			// Non-fatal: continue with empty context
 		} else {
 			userContextJSON = contextData
@@ -311,21 +411,17 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 				}
 
 				log.Printf("[CONTEXT] User=%s, PendingTasks=%d, ActivePlans=%d, FocusMinutes=%dm, RecentProgress=%d, Size=%dB, Latency=%dms",
-					userID, pendingTasksCount, activePlansCount, focusMinutes, recentProgressCount,
+					hashUserIDForLog(userID), pendingTasksCount, activePlansCount, focusMinutes, recentProgressCount,
 					len(userContextJSON), contextFetchLatency.Milliseconds())
 			} else {
 				log.Printf("[CONTEXT] User=%s, Size=%dB, Latency=%dms (JSON parse error: %v)",
-					userID, len(userContextJSON), contextFetchLatency.Milliseconds(), jsonErr)
+					hashUserIDForLog(userID), len(userContextJSON), contextFetchLatency.Milliseconds(), jsonErr)
 			}
 		}
 	}
 
-	reqID := requestID
-	if reqID == "" {
-		reqID = fmt.Sprintf("req_%s", uuid.New().String())
-	}
 	if traceID != "" {
-		log.Printf("Chat request trace_id=%s user_id=%s session_id=%s request_id=%s", traceID, userID, input.SessionID, reqID)
+		log.Printf("Chat request trace_id=%s user_id=%s session_id=%s request_id=%s", traceID, hashUserIDForLog(userID), input.SessionID, reqID)
 	}
 
 	// P0: Semantic Cache Check (scoped by user + mode, after context resolution)
@@ -389,7 +485,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			}
 			sessionHasHistory = len(historyMessages) > 0
 		} else {
-			log.Printf("[chatflow] history load failed for session=%s user=%s: %v", input.SessionID, userID, histErr)
+			log.Printf("[chatflow] history load failed for session=%s user=%s: %v", input.SessionID, hashUserIDForLog(userID), histErr)
 		}
 	}
 
@@ -417,7 +513,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 		if err == nil && cachedResp != "" {
 			isCacheHit = true
-			log.Printf("Semantic cache hit for user=%s scope=%s", userID, cacheScope)
+			log.Printf("Semantic cache hit for user=%s scope=%s", hashUserIDForLog(userID), cacheScope)
 
 			// Construct cached response
 			now := time.Now()
@@ -436,26 +532,42 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			// Send response
 			switch r := responder.(type) {
 			case *envelopeResponder:
-				_ = r.SendChatResponse(resp)
-				_ = r.SendMeta(map[string]interface{}{
+				if err := r.SendChatResponse(resp); err != nil {
+					logWebSocketWriteError("cached envelope chat response", err)
+					return true
+				}
+				if err := r.SendMeta(map[string]interface{}{
 					"latency_ms":   time.Since(startTime).Milliseconds(),
 					"is_cache_hit": true,
-				})
+				}); err != nil {
+					logWebSocketWriteError("cached envelope metadata", err)
+					return true
+				}
 			case *protobufResponder:
-				_ = r.SendChatResponse(resp)
-				_ = r.SendMeta(map[string]interface{}{
+				if err := r.SendChatResponse(resp); err != nil {
+					logWebSocketWriteError("cached protobuf chat response", err)
+					return true
+				}
+				if err := r.SendMeta(map[string]interface{}{
 					"latency_ms":   time.Since(startTime).Milliseconds(),
 					"is_cache_hit": true,
-				})
+				}); err != nil {
+					logWebSocketWriteError("cached protobuf metadata", err)
+					return true
+				}
 			case *wsSafeWriter:
-				_ = writeLegacyJSON(r, convertResponseToJSON(ctx, resp))
-				_ = writeLegacyJSON(r, gin.H{
+				if !writeLegacyJSONLogged(r, "cached legacy chat response", convertResponseToJSON(ctx, resp)) {
+					return true
+				}
+				if !writeLegacyJSONLogged(r, "cached legacy metadata", gin.H{
 					"type": "meta",
 					"meta": map[string]interface{}{
 						"latency_ms":   time.Since(startTime).Milliseconds(),
 						"is_cache_hit": true,
 					},
-				})
+				}) {
+					return true
+				}
 			}
 
 			return false
@@ -465,7 +577,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	var dailyLimit int64
 	var dailyUsageStart int64
 	if h.quota != nil {
-		dailyLimit = getEnvInt64("DAILY_QUOTA", 100000)
+		dailyLimit = cachedDailyQuota()
 		if dailyLimit > 0 && !isDevelopmentEnv() {
 			if usage, err := h.quota.GetDailyUsage(ctx, userID); err == nil {
 				dailyUsageStart = usage
@@ -475,11 +587,16 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 	}
 
+	sessionID := input.SessionID
+	if sessionID == "" {
+		sessionID = uuid.New().String()
+		log.Printf("Generated new session_id=%s for user=%s (client sent empty)", sessionID, hashUserIDForLog(userID))
+	}
 	// Build ChatRequest
 	req := &agentv1.ChatRequest{
 		RequestId:         reqID,
 		UserId:            userID,
-		SessionId:         input.SessionID,
+		SessionId:         sessionID,
 		History:           historyMessages,
 		FileIds:           input.FileIds,
 		DocumentFilter:    documentFilter,
@@ -520,7 +637,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		case *protobufResponder:
 			r.SendError("unavailable", "AI Service Unavailable", true)
 		case *wsSafeWriter:
-			_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "AI Service Unavailable"})
+			writeLegacyJSONLogged(r, "agent unavailable error", gin.H{"type": "error", "message": "AI Service Unavailable"})
 		}
 		return false
 	}
@@ -538,7 +655,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		case *protobufResponder:
 			r.SendError("unavailable", "AI Service Unavailable", true)
 		case *wsSafeWriter:
-			_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "AI Service Unavailable"})
+			writeLegacyJSONLogged(r, "agent call unavailable error", gin.H{"type": "error", "message": "AI Service Unavailable"})
 		}
 		return false
 	}
@@ -562,7 +679,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	var sawUpstreamFinishReason bool
 	var firstEventAt time.Time
 	var firstTokenAt time.Time
-	segmentSize := getEnvInt64("STREAM_TOKEN_SEGMENT", 200)
+	segmentSize := cachedStreamTokenSegment()
 	for {
 		// Trace each streaming response
 		_, streamSpan := tracer.Start(ctx, "stream.receive")
@@ -613,7 +730,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			estimatedTokens := estimateTokensFromRunes(outputRuneCount)
 			for estimatedTokens-segmentRecorded >= segmentSize {
 				if dailyLimit > 0 && dailyUsageStart+segmentRecorded+segmentSize > dailyLimit {
-					log.Printf("Daily quota exceeded mid-stream user=%s request=%s", userID, reqID)
+					log.Printf("Daily quota exceeded mid-stream user=%s request=%s", hashUserIDForLog(userID), reqID)
 					cancel()
 					switch r := responder.(type) {
 					case *envelopeResponder:
@@ -621,7 +738,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 					case *protobufResponder:
 						r.SendError("resource_exhausted", "Daily quota exceeded", false)
 					case *wsSafeWriter:
-						_ = writeLegacyJSON(r, gin.H{"type": "error", "message": "Daily quota exceeded"})
+						writeLegacyJSONLogged(r, "daily quota error", gin.H{"type": "error", "message": "Daily quota exceeded"})
 					}
 					return false
 				}
@@ -681,7 +798,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			log.Printf("Failed to record usage: %v", err)
 		}
 		if delta == 0 {
-			log.Printf("Usage missing for request=%s user=%s", reqID, userID)
+			log.Printf("Usage missing for request=%s user=%s", reqID, hashUserIDForLog(userID))
 		}
 	}
 
@@ -730,15 +847,23 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 
 	switch r := responder.(type) {
 	case *envelopeResponder:
-		_ = r.SendMeta(meta)
+		if err := r.SendMeta(meta); err != nil {
+			logWebSocketWriteError("envelope metadata", err)
+			return true
+		}
 	case *protobufResponder:
-		_ = r.SendMeta(meta)
+		if err := r.SendMeta(meta); err != nil {
+			logWebSocketWriteError("protobuf metadata", err)
+			return true
+		}
 	case *wsSafeWriter:
 		// Send final metadata
-		_ = writeLegacyJSON(r, gin.H{
+		if !writeLegacyJSONLogged(r, "legacy metadata", gin.H{
 			"type": "meta",
 			"meta": meta,
-		})
+		}) {
+			return true
+		}
 	}
 
 	doneResp := &agentv1.ChatResponse{
@@ -756,11 +881,19 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	if shouldEmitSyntheticDone(sawAuroraRuntime, sawUpstreamFinishReason) {
 		switch r := responder.(type) {
 		case *envelopeResponder:
-			_ = r.SendChatResponse(doneResp)
+			if err := r.SendChatResponse(doneResp); err != nil {
+				logWebSocketWriteError("envelope synthetic done", err)
+				return true
+			}
 		case *protobufResponder:
-			_ = r.SendChatResponse(doneResp)
+			if err := r.SendChatResponse(doneResp); err != nil {
+				logWebSocketWriteError("protobuf synthetic done", err)
+				return true
+			}
 		case *wsSafeWriter:
-			_ = writeLegacyJSON(r, convertResponseToJSON(ctx, doneResp))
+			if !writeLegacyJSONLogged(r, "legacy synthetic done", convertResponseToJSON(ctx, doneResp)) {
+				return true
+			}
 		}
 	}
 
@@ -773,7 +906,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		queryText := input.Message
 		result := fullText
 
-		h.saveMessage(userID, sessionID, "assistant", result, map[string]interface{}{
+		h.saveMessage(ctx, userID, sessionID, "assistant", result, map[string]interface{}{
 			"meta":           meta,
 			"workflow_id":    doneResp.WorkflowId,
 			"prompt_version": doneResp.PromptVersion,
@@ -804,7 +937,7 @@ func respondStreamRecvError(responder interface{}, err error) {
 	case *protobufResponder:
 		r.SendError(code, message, retryable)
 	case *wsSafeWriter:
-		_ = writeLegacyJSON(r, legacyStreamErrorPayload(code, message, retryable))
+		writeLegacyJSONLogged(r, "stream error", legacyStreamErrorPayload(code, message, retryable))
 	}
 }
 
@@ -817,7 +950,7 @@ func grpcStreamErrorDetails(err error) (string, string, bool) {
 
 	st, ok := grpcstatus.FromError(err)
 	if !ok {
-		return "unknown", err.Error(), retryable
+		return "unknown", defaultWSInternalMessage, retryable
 	}
 
 	if strings.TrimSpace(st.Message()) != "" {
@@ -842,9 +975,9 @@ func grpcStreamErrorDetails(err error) (string, string, bool) {
 	case codes.Unavailable:
 		return "unavailable", message, true
 	case codes.Internal, codes.DataLoss:
-		return "internal", message, true
+		return "internal", publicStreamErrorMessage("internal", message), true
 	default:
-		return "unknown", message, retryable
+		return "unknown", publicStreamErrorMessage("unknown", message), retryable
 	}
 }
 
@@ -870,4 +1003,26 @@ func estimateTokensFromRunes(runes int) int64 {
 
 func countRunes(text string) int {
 	return len([]rune(text))
+}
+
+// Cached env vars to avoid os.Getenv on every request.
+var (
+	dailyQuotaOnce      sync.Once
+	dailyQuotaValue     int64
+	streamTokenSegOnce  sync.Once
+	streamTokenSegValue int64
+)
+
+func cachedDailyQuota() int64 {
+	dailyQuotaOnce.Do(func() {
+		dailyQuotaValue = getEnvInt64("DAILY_QUOTA", 100000)
+	})
+	return dailyQuotaValue
+}
+
+func cachedStreamTokenSegment() int64 {
+	streamTokenSegOnce.Do(func() {
+		streamTokenSegValue = getEnvInt64("STREAM_TOKEN_SEGMENT", 200)
+	})
+	return streamTokenSegValue
 }

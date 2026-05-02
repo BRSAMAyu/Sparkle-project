@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/navigation/sensory_navigation_observer.dart';
 import 'package:sparkle/core/navigation/shell_navigation.dart';
+import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
@@ -18,13 +19,16 @@ import 'package:sparkle/features/documents/documents.dart';
 import 'package:sparkle/features/error_book/error_book.dart';
 import 'package:sparkle/features/focus/focus.dart';
 import 'package:sparkle/features/galaxy/galaxy.dart';
+import 'package:sparkle/features/goal/goal.dart';
 import 'package:sparkle/features/home/home.dart';
 import 'package:sparkle/features/insights/insights.dart';
 import 'package:sparkle/features/memory/memory.dart';
 import 'package:sparkle/features/notification_center/notification_center.dart';
+import 'package:sparkle/features/openclaw/openclaw.dart';
 import 'package:sparkle/features/photon/photon_routes.dart';
 import 'package:sparkle/features/plan/plan.dart';
 import 'package:sparkle/features/report/report_routes.dart';
+import 'package:sparkle/features/reviews/reviews.dart';
 import 'package:sparkle/features/seed_library/seed_library_routes.dart';
 import 'package:sparkle/features/shop/shop_routes.dart';
 import 'package:sparkle/features/simulation/simulation_routes.dart';
@@ -122,8 +126,12 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       // Root shell route for tab navigation
       StatefulShellRoute.indexedStack(
-        builder: (context, state, navigationShell) => MainNavigationShell(
-          navigationShell: navigationShell,
+        pageBuilder: (context, state, navigationShell) =>
+            buildColdStartTransitionPage(
+          state: state,
+          child: MainNavigationShell(
+            navigationShell: navigationShell,
+          ),
         ),
         branches: [
           // Branch 0: Home / Dashboard
@@ -226,8 +234,8 @@ final routerProvider = Provider<GoRouter>((ref) {
                         state.uri.queryParameters['related_error_count']!,
                       ),
                   };
-                  return NoTransitionPage<void>(
-                    key: state.pageKey,
+                  return buildColdStartTransitionPage(
+                    state: state,
                     child: SceneAudioScope(
                       policy: ExperienceProfiles.assistantFlow.audioPolicy(),
                       child: ChatScreen(
@@ -288,6 +296,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...SplashRoutes.routes,
       ...AuthRoutes.routes,
       // Other feature routes (at root level, outside shell)
+      ...OpenClawRoutes.routes,
       ...HomeRoutes.routes,
       ...TaskRoutes.routes,
       ...PlanRoutes.routes,
@@ -299,7 +308,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...CalendarRoutes.routes,
       ...ChatRoutes.routes,
       ...ErrorBookRoutes.routes,
+      ...ReviewRoutes.routes,
       ...GalaxyRoutes.routes,
+      ...GoalRoutes.routes,
       ...CognitiveRoutes.routes,
       ...CommunityRoutes.routes,
       ...DocumentLibraryRoutes.routes,

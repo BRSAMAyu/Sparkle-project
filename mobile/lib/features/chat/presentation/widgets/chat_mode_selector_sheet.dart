@@ -8,6 +8,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/expert_catalog_provider.dart';
+
 /// Chat Mode Selector Sheet
 ///
 /// Bottom sheet for selecting a chat mode.
@@ -23,10 +24,12 @@ class ChatModeSelectorSheet extends ConsumerWidget {
     final expertModes = catalog.when(
       data: (value) => value.experts
           .where((expert) => expert.enabled)
-          .map((expert) => ChatModeExpert(
-                expertId: expert.id,
-                displayName: expert.displayName,
-              ),)
+          .map(
+            (expert) => ChatModeExpert(
+              expertId: expert.id,
+              displayName: expert.displayName,
+            ),
+          )
           .toList(),
       loading: () => <ChatMode>[],
       error: (_, __) => <ChatMode>[],
@@ -87,10 +90,14 @@ class ChatModeSelectorSheet extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
-                  SparkleIconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                    variant: ButtonVariant.ghost,
+                  Semantics(
+                    button: true,
+                    label: 'Chat chat mode selector sheet control 1',
+                    child: SparkleIconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      variant: ButtonVariant.ghost,
+                    ),
                   ),
                 ],
               ),
@@ -213,64 +220,68 @@ class _TeamEntryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = context.colorExtensions.chatModeIndigo;
-    return InkWell(
-      onTap: () {
-        unawaited(
-          SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
-        );
-        // Pop with sentinel string — the caller (pill) handles opening
-        // the team sheet to avoid using a dead context.
-        Navigator.pop(context, openTeamBuilderSentinel);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing20,
-          vertical: DS.spacing16,
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(DS.spacing12),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: DS.borderRadius12,
+    return Semantics(
+      button: true,
+      label: 'Chat chat mode selector sheet control 2',
+      child: InkWell(
+        onTap: () {
+          unawaited(
+            SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
+          );
+          // Pop with sentinel string — the caller (pill) handles opening
+          // the team sheet to avoid using a dead context.
+          Navigator.pop(context, openTeamBuilderSentinel);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing20,
+            vertical: DS.spacing16,
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(DS.spacing12),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: DS.borderRadius12,
+                ),
+                child: Icon(
+                  Icons.groups_rounded,
+                  color: color,
+                  size: DS.iconSizeBase,
+                ),
               ),
-              child: Icon(
-                Icons.groups_rounded,
-                color: color,
+              const SizedBox(width: DS.spacing16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      context.l10n.chatModeCustomTeamTitle,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeBase,
+                        fontWeight: DS.fontWeightMedium,
+                        color: isDark ? DS.textPrimary : DS.neutral900,
+                      ),
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    Text(
+                      context.l10n.chatModeCustomTeamSubtitle,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: DS.neutral500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: DS.neutral400,
                 size: DS.iconSizeBase,
               ),
-            ),
-            const SizedBox(width: DS.spacing16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    context.l10n.chatModeCustomTeamTitle,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeBase,
-                      fontWeight: DS.fontWeightMedium,
-                      color: isDark ? DS.textPrimary : DS.neutral900,
-                    ),
-                  ),
-                  const SizedBox(height: DS.spacing4),
-                  Text(
-                    context.l10n.chatModeCustomTeamSubtitle,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeXs,
-                      color: DS.neutral500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: DS.neutral400,
-              size: DS.iconSizeBase,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -289,83 +300,87 @@ class _ModeListTile extends StatelessWidget {
   final bool isDark;
 
   @override
-  Widget build(BuildContext context) => InkWell(
-        onTap: () {
-          unawaited(
-            SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-          );
-          Navigator.pop(context, mode);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing20,
-            vertical: DS.spacing16,
-          ),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? mode.color.withValues(alpha: 0.1)
-                : DS.surfacePrimary.withValues(alpha: 0),
-            border: Border(
-              left: BorderSide(
-                color: isSelected
-                    ? mode.color
-                    : DS.surfacePrimary.withValues(alpha: 0),
-                width: 4,
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Chat chat mode selector sheet control 3',
+        child: InkWell(
+          onTap: () {
+            unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+            );
+            Navigator.pop(context, mode);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing20,
+              vertical: DS.spacing16,
+            ),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? mode.color.withValues(alpha: 0.1)
+                  : DS.surfacePrimary.withValues(alpha: 0),
+              border: Border(
+                left: BorderSide(
+                  color: isSelected
+                      ? mode.color
+                      : DS.surfacePrimary.withValues(alpha: 0),
+                  width: 4,
+                ),
               ),
             ),
-          ),
-          child: Row(
-            children: [
-              // Icon container
-              Container(
-                padding: const EdgeInsets.all(DS.spacing12),
-                decoration: BoxDecoration(
-                  color: mode.color.withValues(alpha: 0.15),
-                  borderRadius: DS.borderRadius12,
+            child: Row(
+              children: [
+                // Icon container
+                Container(
+                  padding: const EdgeInsets.all(DS.spacing12),
+                  decoration: BoxDecoration(
+                    color: mode.color.withValues(alpha: 0.15),
+                    borderRadius: DS.borderRadius12,
+                  ),
+                  child: Icon(
+                    mode.icon,
+                    color: mode.color,
+                    size: DS.iconSizeBase,
+                  ),
                 ),
-                child: Icon(
-                  mode.icon,
-                  color: mode.color,
-                  size: DS.iconSizeBase,
-                ),
-              ),
-              const SizedBox(width: DS.spacing16),
+                const SizedBox(width: DS.spacing16),
 
-              // Text content
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      mode.label,
-                      style: TextStyle(
-                        fontSize: DS.fontSizeBase,
-                        fontWeight: isSelected
-                            ? DS.fontWeightSemibold
-                            : DS.fontWeightMedium,
-                        color: isDark ? DS.textPrimary : DS.neutral900,
+                // Text content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        mode.label,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeBase,
+                          fontWeight: isSelected
+                              ? DS.fontWeightSemibold
+                              : DS.fontWeightMedium,
+                          color: isDark ? DS.textPrimary : DS.neutral900,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: DS.spacing4),
-                    Text(
-                      mode.description,
-                      style: TextStyle(
-                        fontSize: DS.fontSizeXs,
-                        color: DS.neutral500,
+                      const SizedBox(height: DS.spacing4),
+                      Text(
+                        mode.description,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeXs,
+                          color: DS.neutral500,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
 
-              // Selection indicator
-              if (isSelected)
-                Icon(
-                  Icons.check_circle,
-                  color: mode.color,
-                  size: DS.iconSizeBase,
-                ),
-            ],
+                // Selection indicator
+                if (isSelected)
+                  Icon(
+                    Icons.check_circle,
+                    color: mode.color,
+                    size: DS.iconSizeBase,
+                  ),
+              ],
+            ),
           ),
         ),
       );

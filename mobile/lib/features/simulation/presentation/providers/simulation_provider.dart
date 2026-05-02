@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
 import 'package:sparkle/features/simulation/data/repositories/simulation_repository.dart';
 
@@ -254,7 +255,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
     } catch (e) {
       final recovered = await _recoverSession(
         state.sessionId,
-        fallbackMessage: '实时连接中断，已恢复到最近一次保存的模拟进度。',
+        fallbackMessage: S.simRealtimeConnectionRecovered,
       );
       if (!recovered) {
         state = state.copyWith(isLoading: false, error: e.toString());
@@ -345,7 +346,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
     } catch (e) {
       final recovered = await _recoverSession(
         sessionId,
-        fallbackMessage: '互动流中断了，但我已经帮你恢复到最近一轮状态。',
+        fallbackMessage: S.simInteractionStreamRecovered,
       );
       if (!recovered) {
         state = state.copyWith(
@@ -406,7 +407,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
           engineState: event.state,
           progress: event.progress ?? state.progress,
           rounds: updatedRounds,
-          insightSummary: '讨论已推进到第 ${updatedRounds.length} 轮，正在汇总关键分歧与共识。',
+          insightSummary: S.simRoundProgressSummary(updatedRounds.length),
           interactionPrompt:
               event.interactionPrompt ?? state.liveInteractionPrompt,
           suggestedReplies: event.suggestedReplies.isNotEmpty
@@ -496,7 +497,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
         state = state.copyWith(
           isLoading: false,
           isContinuing: false,
-          error: event.message ?? '模拟生成失败',
+          error: event.message ?? S.simGenFailed,
         );
         return;
       case 'done':
@@ -584,7 +585,7 @@ class SimulationNotifier extends StateNotifier<SimulationState> {
                 participants: state.liveParticipants,
                 rounds: state.liveRounds,
                 insightSummary:
-                    state.liveInsightSummary ?? '模拟进行中，正在汇总当前讨论洞察...',
+                    state.liveInsightSummary ?? S.simDraftInsightSummary,
                 interactionPrompt: state.liveInteractionPrompt,
                 suggestedReplies: state.liveSuggestedReplies,
                 pendingInteraction: state.activeInteraction,

@@ -1,9 +1,17 @@
 from app.tools.entity_cards import (
+    build_knowledge_entity_card,
     build_learning_path_entity_card,
     build_plan_entity_card,
     build_prediction_entity_card,
+    build_review_entity_card,
+    build_seed_entity_card,
+    build_shared_resource_entity_card,
+    build_source_document_entity_card,
     build_task_entity_card,
     build_task_list_entity_card,
+    build_unavailable_shared_resource_entity_card,
+    build_vocabulary_entity_card,
+    validate_entity_card,
     wrap_widget_payload,
 )
 
@@ -97,6 +105,32 @@ def test_build_learning_path_entity_card_links_plan_and_tasks():
     assert entity["children"][1]["entity_type"] == "task_list"
 
 
+def test_build_source_document_entity_card_is_shareable_and_correctable():
+    entity = build_source_document_entity_card(
+        {
+            "document_id": "doc-1",
+            "chunk_id": "chunk-9",
+            "title": "TCP 资料讲义",
+            "summary": "解释三次握手与状态迁移。",
+            "answer_basis": "source_grounded",
+            "context_plan_mode": "targeted_source_rag",
+            "confidence": 0.86,
+            "knowledge_node_id": "node-1",
+        },
+        tool_name="source_tray",
+        tool_result_id="tool-source-1",
+    )
+
+    assert entity["entity_type"] == "source_document"
+    assert entity["entity_id"] == "doc-1"
+    assert entity["primary_action"]["route"].startswith("/documents?")
+    assert entity["secondary_actions"][0]["id"] == "correct_source"
+    assert entity["share"]["resource_type"] == "source_document"
+    assert entity["share"]["adoption_action"]["type"] == "adopt_resource"
+    assert entity["linked_entities"]["knowledge_node_id"] == "node-1"
+    assert validate_entity_card(entity) == []
+
+
 def test_build_prediction_entity_card_contains_action_metadata():
     entity = build_prediction_entity_card(
         prediction_id="prediction-1",
@@ -122,3 +156,129 @@ def test_build_prediction_entity_card_contains_action_metadata():
     assert entity["entity_type"] == "prediction"
     assert entity["metrics"]["confidence"] == 0.82
     assert entity["primary_action"]["payload"]["suggested_prompt"] == "帮我继续今天的重点任务"
+
+
+def test_ai_conversation_card_protocol_builders_validate_core_journeys():
+    cards = [
+        build_task_entity_card(
+            {"id": "task-1", "title": "做一组错题", "status": "PENDING"},
+            tool_name="create_task",
+        ),
+        build_plan_entity_card(
+            {"id": "plan-1", "title": "7 天概率论冲刺", "type": "sprint"},
+            tool_name="create_plan",
+        ),
+        build_knowledge_entity_card(
+            {"id": "node-1", "title": "条件概率", "mastery_level": 42},
+            tool_name="create_knowledge_node",
+        ),
+        build_shared_resource_entity_card(
+            shared_resource_id="share-1",
+            resource_type="plan",
+            resource_id="plan-1",
+            title="可采纳的冲刺计划",
+            permission="adoptable",
+        ),
+        build_review_entity_card(
+            {
+                "review_id": "review-1",
+                "title": "今天复盘条件概率",
+                "plan_id": "plan-1",
+                "score": 0.7,
+            },
+            tool_name="create_review",
+        ),
+        build_vocabulary_entity_card(
+            {
+                "word_id": "word-1",
+                "word": "derive",
+                "definition": "to obtain from a source",
+                "in_wordbook": True,
+            },
+            tool_name="vocabulary_lookup",
+        ),
+        build_seed_entity_card(
+            {
+                "library_id": "seed-1",
+                "name": "概率论高频错题种子",
+                "description": "可生成复盘任务的题型包",
+            },
+            tool_name="seed_library",
+        ),
+    ]
+
+    for card in cards:
+        assert validate_entity_card(card) == [], card
+        assert card["schema_version"] == "v1"
+        assert card["primary_action"]["route"].startswith("/")
+
+    assert cards[3]["secondary_actions"][0]["type"] == "adopt_resource"
+    assert cards[4]["primary_action"]["route"].startswith("/review?")
+    assert cards[5]["primary_action"]["route"].startswith("/tools/vocabulary_lookup")
+    assert cards[6]["primary_action"]["route"] == "/seed-libraries/seed-1"
+
+
+def test_entity_card_validation_catches_inert_actions():
+    invalid = {
+        "schema_version": "v1",
+        "entity_type": "task",
+        "entity_id": "task-1",
+        "title": "No route",
+        "primary_action": {
+            "id": "open_task",
+            "type": "open_detail",
+            "label": "Open",
+        },
+    }
+
+    assert "missing_primary_action_route" in validate_entity_card(invalid)
+
+
+def test_shared_resource_entity_cards_preserve_first_class_share_protocol():
+    shareable_types = [
+        "plan",
+        "task",
+        "achievement",
+        "knowledge_node",
+        "seed_library",
+        "vocabulary_set",
+        "review_result",
+    ]
+
+    for resource_type in shareable_types:
+        entity = build_shared_resource_entity_card(
+            shared_resource_id=f"share-{resource_type}",
+            resource_type=resource_type,
+            resource_id=f"{resource_type}-1",
+            title=f"{resource_type} card",
+            summary="可采纳的上下文",
+            permission="adopt",
+            owner={"user_id": "user-1", "display_name": "Ada"},
+            visibility="group",
+            availability="available",
+        )
+
+        share = entity["share"]
+        assert share["resource_type"] == resource_type
+        assert share["owner"]["user_id"] == "user-1"
+        assert share["visibility"] == "group"
+        assert share["preview"]["title"] == f"{resource_type} card"
+        assert share["source_receipt"]["shared_resource_id"] == f"share-{resource_type}"
+        assert share["adoption_action"]["payload"]["resource_type"] == resource_type
+        assert entity["secondary_actions"][0]["type"] == "adopt_resource"
+
+
+def test_unavailable_shared_resource_degrades_without_adoption_action():
+    entity = build_unavailable_shared_resource_entity_card(
+        shared_resource_id="share-revoked",
+        resource_type="plan",
+        title="这张分享已不可用",
+        reason="分享已撤回，无法继续采纳。",
+        owner={"user_id": "user-1", "display_name": "Ada"},
+        visibility="direct",
+        revoked_at="2026-05-02T09:00:00",
+    )
+
+    assert entity["execution_state"] == "revoked"
+    assert entity["share"]["availability"] == "revoked"
+    assert "secondary_actions" not in entity

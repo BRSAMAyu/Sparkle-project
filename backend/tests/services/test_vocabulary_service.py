@@ -6,6 +6,7 @@ import pytest
 from datetime import timezone, datetime, timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 from app.services.vocabulary_service import VocabularyService
 
@@ -263,3 +264,71 @@ async def test_get_review_list_applies_default_batch_limit():
 
     stmt = db.execute.await_args.args[0]
     assert stmt._limit_clause.value == VocabularyService.DEFAULT_REVIEW_BATCH_SIZE
+
+
+def test_build_learning_loop_summary_surfaces_review_graph_and_asset_links():
+    word_id = uuid4()
+    node_id = uuid4()
+    asset_id = uuid4()
+    next_review_at = _utcnow() + timedelta(days=1)
+    word_book = SimpleNamespace(
+        id=word_id,
+        word="polymorphism",
+        source_translation_id="tx-123",
+        next_review_at=next_review_at,
+        importance=5,
+        review_count=0,
+        tags=[
+            {
+                "type": "learning_loop",
+                "knowledge_node_id": str(node_id),
+                "knowledge_status": "draft",
+                "learning_asset_id": str(asset_id),
+                "learning_asset_status": "ACTIVE",
+            }
+        ],
+    )
+
+    summary = VocabularyService.build_learning_loop_summary(word_book)
+
+    assert summary["vocabulary_card"]["word_id"] == str(word_id)
+    assert summary["review"]["scheduled"] is True
+    assert summary["review"]["next_review_at"] == next_review_at.isoformat()
+    assert summary["knowledge_card"] == {
+        "created": True,
+        "node_id": str(node_id),
+        "status": "draft",
+    }
+    assert summary["learning_asset"]["asset_id"] == str(asset_id)
+    assert summary["task_recommendation_hint"]["eligible"] is True
+
+
+@pytest.mark.asyncio
+async def test_attach_learning_links_replaces_prior_loop_tag():
+    db = AsyncMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    node_id = uuid4()
+    asset_id = uuid4()
+    word_book = SimpleNamespace(
+        tags=[
+            "exam",
+            {"type": "learning_loop", "knowledge_node_id": "old"},
+        ]
+    )
+
+    result = await VocabularyService.attach_learning_links(
+        db,
+        word_book,
+        graph_node_id=node_id,
+        graph_status="draft",
+        learning_asset_id=asset_id,
+        learning_asset_status="ACTIVE",
+    )
+
+    assert result.tags[0] == "exam"
+    assert len([tag for tag in result.tags if isinstance(tag, dict) and tag.get("type") == "learning_loop"]) == 1
+    assert result.tags[1]["knowledge_node_id"] == str(node_id)
+    assert result.tags[1]["learning_asset_id"] == str(asset_id)
+    db.commit.assert_awaited_once()
+    db.refresh.assert_awaited_once_with(word_book)

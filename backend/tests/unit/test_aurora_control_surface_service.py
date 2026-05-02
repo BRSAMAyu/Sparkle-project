@@ -191,19 +191,23 @@ async def test_control_surface_builds_four_real_facets(monkeypatch):
     assert snapshot["overall_status"] == "calibration_available"
     assert snapshot["scene_alignment"] == "matched"
     assert snapshot["progress"] == {"ready_count": 4, "active_count": 4, "total": 4}
+    assert snapshot["status_evidence_chain"]
+    assert any("TCP 状态机" in item for item in snapshot["status_evidence_chain"])
+    assert snapshot["memory_references"]
+    assert "next_step_suggestion" in snapshot
+    assert snapshot["self_evaluation"]["confidence"] == pytest.approx(0.74)
+    assert snapshot["self_evaluation"]["why"]
 
     facets = {item["key"]: item for item in snapshot["facets"]}
     assert set(facets) == {"user_model", "self_model", "scene_model", "goal_model"}
     assert facets["user_model"]["status"] == "ready"
+    assert facets["user_model"]["meta"]["evidence_chain"]
     assert "TCP 状态机" in facets["user_model"]["summary"]
     assert facets["self_model"]["status"] == "ready"
     assert facets["scene_model"]["status"] == "ready"
     assert facets["scene_model"]["meta"]["conversation_match"] is True
     assert facets["goal_model"]["status"] == "ready"
-    assert any(
-        "TCP 状态机" in signal or "目标" in signal
-        for signal in facets["goal_model"]["signals"]
-    )
+    assert any("TCP 状态机" in signal or "目标" in signal for signal in facets["goal_model"]["signals"])
 
 
 class _RecalibratingSelfModelService(_FakeSelfModelService):

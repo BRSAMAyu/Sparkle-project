@@ -584,7 +584,7 @@ class ValidationEngineMixin:
         stream_callback,
         state: WorkflowState,
     ) -> bool:
-        if intent_type not in {"create_plan", "set_goal"}:
+        if intent_type not in {"create_plan", "set_goal", "time_planning"}:
             state.context_data["goal_quality"] = {"passed": True, "skipped": True}
             return False
 

@@ -131,6 +131,12 @@ class SkillExtractionService:
             "intervention_summary": latest.intervention_summary,
             "policy_key": policy_key,
         }
+        contraindications = [
+            "avoid_if:user_explicitly_declines",
+            "avoid_if:active_crisis_without_support",
+        ]
+        if policy_key in {"recover_execution_rhythm", "repair_knowledge_gap", "task_granularity_fit"}:
+            contraindications.append("avoid_if:current_context=free_exploration")
 
         # Build applicable_when from context
         applicable_when: dict[str, Any] = {}
@@ -156,6 +162,7 @@ class SkillExtractionService:
             applicable_when=applicable_when,
             evidence=evidence,
             privacy={"contains_personal_data": scope == "personal", "shareable": scope != "personal"},
+            contraindications=contraindications,
             effective_count=consecutive_count,
             sample_size=len(effective_entries),
         )

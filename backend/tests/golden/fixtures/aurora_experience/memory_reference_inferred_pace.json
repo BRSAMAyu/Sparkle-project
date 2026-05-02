@@ -1,0 +1,15 @@
+{
+  "id": "memory_reference_inferred_pace",
+  "family": "memory_reference",
+  "kind": "memory_reference",
+  "title": "记忆引用：推断的节奏偏好",
+  "input": {
+    "memory": "你在晚间更适合 25 分钟以内的小任务",
+    "time_ago": "上周",
+    "source_label": "从任务完成情况推断的",
+    "confidence": 0.82,
+    "user_confirmed": false,
+    "current_need": "今晚恢复一点进度",
+    "next_step": "一张 20 分钟听力错因卡"
+  }
+}

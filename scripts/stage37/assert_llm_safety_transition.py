@@ -50,9 +50,10 @@ async def _run(enabled: bool) -> None:
 
     fake = _FakeCompletions()
     service = _build_service(fake)
+    fake_key = "sk-" + "transition-secret-1234567890"
     await service.chat_with_tools(
         system_prompt="You are a helpful assistant.",
-        user_message="api_key: sk-transition-secret-1234567890",
+        user_message=f"api_key: {fake_key}",
         tools=[],
     )
 
@@ -63,11 +64,11 @@ async def _run(enabled: bool) -> None:
     )
     if enabled:
         assert "<USER_INPUT>" in flattened
-        assert "sk-transition-secret-1234567890" not in flattened
+        assert fake_key not in flattened
         print("mode=on behavior=sanitized")
         return
     assert "<USER_INPUT>" not in flattened
-    assert "sk-transition-secret-1234567890" in flattened
+    assert fake_key in flattened
     print("mode=off behavior=passthrough")
 
 

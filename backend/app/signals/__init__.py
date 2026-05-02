@@ -81,6 +81,7 @@ from app.signals.privacy_community_intelligence import (
     CohortDriftReport,
     FederatedInsight,
     PrivacyBudget,
+    PrivacyBudgetExceeded,
     PrivacyPreservingCohort,
     PrivacyPreservingCommunityEngine,
     SecureAggregationEngine,
@@ -96,12 +97,10 @@ from app.signals.research_experiment_platform import (
     UserSegment,
 )
 from app.signals.research_grade import (
-    CounterfactualEngine,
-    CounterfactualResult,
-    DomainPack,
-    DomainPackMarketplace,
-    SimulatedUserProfile,
-    UserSimulator,
+    DomainPack as DomainPack_v1,  # DEPRECATED: use SkillCard from marketplace
+    DomainPackMarketplace as DomainPackMarketplace_v1,  # DEPRECATED: use MarketplaceRegistry from marketplace
+    SimulatedUserProfile as SimulatedUserProfile_v1,  # DEPRECATED: use Persona from simulation_lab
+    UserSimulator as UserSimulator_v1,  # DEPRECATED: use SyntheticPersonaSimulator from simulation_lab
 )
 from app.signals.research_mode import (
     ContinuousImprovementLoop,
@@ -202,13 +201,11 @@ __all__ = [
     "CommunityDirective",
     "CommunityLoopManager",
     "ContextSignature",
-    "CounterfactualEngine",
     "CounterfactualEstimate",
     "CounterfactualIronLawEnforcer",
-    "CounterfactualResult",
     "DirectiveApplicationAudit",
-    "DomainPack",
-    "DomainPackMarketplace",
+    "DomainPack_v1",  # DEPRECATED: use SkillCard
+    "DomainPackMarketplace_v1",  # DEPRECATED: use MarketplaceRegistry
     "DomainPackReview",
     "EmailDeadlineExtractor",
     "EmailDeadlineHint",
@@ -272,6 +269,7 @@ __all__ = [
     "PolicyUpdateCandidateBuilder",
     "PromotionGate",
     "PrivacyBudget",
+    "PrivacyBudgetExceeded",
     "PrivacyPreservingCohort",
     "PrivacyPreservingCommunityEngine",
     "QualityCheck",
@@ -295,7 +293,7 @@ __all__ = [
     "SecureAggregationEngine",
     "SelfHealingAction",
     "SelfHealingController",
-    "SimulatedUserProfile",
+    "SimulatedUserProfile_v1",  # DEPRECATED: use Persona from simulation_lab
     "SparkleGoalBench",
     "SyntheticPersonaSimulator",
     "SkillCard",
@@ -323,7 +321,7 @@ __all__ = [
     "TrustOutcome",
     "TASK_TYPE_NODE_BINDINGS",
     "UserSegment",
-    "UserSimulator",
+    "UserSimulator_v1",  # DEPRECATED: use SyntheticPersonaSimulator from simulation_lab
     "UserVisibleReceipt",
     "UXDirective",
     "WhyThisTask",

@@ -1,0 +1,16 @@
+FV-14: 集中式无障碍设置面板
+Status: DONE
+Branch: codex/FV-14-accessibility-settings
+Modified files:
+- mobile/lib/features/settings/presentation/providers/accessibility_provider.dart
+- mobile/lib/features/settings/presentation/screens/accessibility_settings_screen.dart
+- mobile/lib/features/user/presentation/screens/unified_settings_screen.dart
+- mobile/test/features/settings/presentation/providers/accessibility_provider_test.dart
+- mobile/test/widget/accessibility_settings_screen_test.dart
+- mobile/test/goldens/accessibility_settings_golden_test.dart
+- docs/product/parallel_closeout/FV-14_accessibility_settings_REPORT_2026-05-02.md
+Verification:
+- cd mobile && dart analyze lib/features/settings/presentation/providers/accessibility_provider.dart lib/features/settings/presentation/screens/accessibility_settings_screen.dart test/features/settings/presentation/providers/accessibility_provider_test.dart test/widget/accessibility_settings_screen_test.dart test/goldens/accessibility_settings_golden_test.dart: PASS
+- cd mobile && flutter test test/features/settings/presentation/providers/accessibility_provider_test.dart test/widget/accessibility_settings_screen_test.dart test/goldens/accessibility_settings_golden_test.dart: BLOCKED by unrelated TaskStatus.paused / OpenClaw const compile errors
+User-visible change: Settings now has a dedicated Accessibility / low-load panel for global font, contrast, screen reader, touch target, motion, color, TTS, haptic, and low-load defaults.
+Architect handoff: Re-run Flutter tests after unrelated FV-16/OpenClaw compile blockers are resolved; confirm backend user_settings accepts nested accessibility_settings payload.

@@ -9,7 +9,9 @@ from typing import Any
 from app.services.struggle_signal_aggregator import StruggleSignalAggregator
 
 WAKE_COOLDOWN_KEY_TEMPLATE = "aurora:wake_cooldown:{user_id}"
+WAKE_FEEDBACK_KEY_TEMPLATE = "aurora:wake_feedback:{user_id}"
 WAKE_COOLDOWN_TTL_SECONDS = 3 * 24 * 60 * 60
+WAKE_FEEDBACK_TTL_SECONDS = 14 * 24 * 60 * 60
 SILENT_THRESHOLD = 0.45
 FULL_THRESHOLD = 0.72
 DEFAULT_EXPECTED_COMPLETION_RATE = 0.75
@@ -149,6 +151,46 @@ class ModerateDiagnosticSignal:
 
 
 @dataclass(slots=True, frozen=True)
+class WakeReason:
+    kind: str
+    label: str
+    explanation: str
+    evidence: dict[str, Any]
+    confidence: float
+    user_control: str = "not_this_time"
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "kind": self.kind,
+            "label": self.label,
+            "explanation": self.explanation,
+            "evidence": self.evidence,
+            "confidence": self.confidence,
+            "user_control": self.user_control,
+        }
+
+
+@dataclass(slots=True, frozen=True)
+class WakeFeedbackProfile:
+    negative_count_14d: int = 0
+    ignored_count_14d: int = 0
+    positive_count_14d: int = 0
+    confidence_multiplier: float = 1.0
+    last_negative_at: str | None = None
+    suppressed_kinds: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "negative_count_14d": self.negative_count_14d,
+            "ignored_count_14d": self.ignored_count_14d,
+            "positive_count_14d": self.positive_count_14d,
+            "confidence_multiplier": self.confidence_multiplier,
+            "last_negative_at": self.last_negative_at,
+            "suppressed_kinds": list(self.suppressed_kinds),
+        }
+
+
+@dataclass(slots=True, frozen=True)
 class WakeDecision:
     energy: str
     wake_score: float
@@ -163,6 +205,9 @@ class WakeDecision:
     light_adjustment_triggered: bool = False
     risk_override_triggered: bool = False
     diagnostic_signal: ModerateDiagnosticSignal = field(default_factory=ModerateDiagnosticSignal)
+    wake_reasons: tuple[WakeReason, ...] = ()
+    feedback_profile: WakeFeedbackProfile = field(default_factory=WakeFeedbackProfile)
+    raw_wake_score: float | None = None
     pass_probability: float | None = None
     plan_completion_rate: float | None = None
     days_left: int | None = None
@@ -225,6 +270,7 @@ class WakeDecision:
         return {
             "energy": self.energy,
             "wake_score": self.wake_score,
+            "raw_wake_score": self.raw_wake_score if self.raw_wake_score is not None else self.wake_score,
             "components": self.components.to_dict(),
             "cooldown_policy": self.cooldown_policy.to_dict(),
             "cooldown_status": self.cooldown_status.to_dict(),
@@ -237,6 +283,8 @@ class WakeDecision:
             "risk_override_triggered": self.risk_override_triggered,
             "diagnostic_signal": self.diagnostic_signal.to_dict(),
             "diagnostic_prompt": self.prompt_instruction(),
+            "wake_reasons": [reason.to_dict() for reason in self.wake_reasons],
+            "feedback_profile": self.feedback_profile.to_dict(),
             "pass_probability": self.pass_probability,
             "plan_completion_rate": self.plan_completion_rate,
             "days_left": self.days_left,
@@ -331,8 +379,14 @@ class AuroraWakePolicyService:
             and actual_completion_rate is not None
             and actual_completion_rate < 0.5
         )
+        feedback_profile = await self._resolve_feedback_profile(
+            user_id=user_id,
+            request_extra_context=request_extra_context,
+            user_context_payload=user_context_payload,
+        )
+        adjusted_wake_score = round(components.wake_score * feedback_profile.confidence_multiplier, 4)
         full_candidate = bool(
-            user_requested_full_wake or risk_override_triggered or components.wake_score >= FULL_THRESHOLD
+            user_requested_full_wake or risk_override_triggered or adjusted_wake_score >= FULL_THRESHOLD
         )
         cooldown_policy = self._select_cooldown_policy(days_left)
         cooldown_status = await self._cooldown_status(user_id=user_id, policy=cooldown_policy, now=now)
@@ -340,16 +394,29 @@ class AuroraWakePolicyService:
 
         if full_allowed:
             energy = "full"
-        elif full_candidate or components.wake_score >= SILENT_THRESHOLD:
+        elif full_candidate or adjusted_wake_score >= SILENT_THRESHOLD:
             energy = "moderate"
         elif light_adjustment_triggered:
             energy = "light"
         else:
             energy = "silent"
+        wake_reasons = self._build_wake_reasons(
+            components=components,
+            risk_override_triggered=risk_override_triggered,
+            user_requested_full_wake=user_requested_full_wake,
+            diagnostic_signal=diagnostic_signal,
+            pass_probability=pass_probability,
+            plan_completion_rate=actual_completion_rate,
+            expected_completion_rate=expected_completion_rate,
+            days_left=days_left,
+            request_extra_context=request_extra_context,
+            user_context_payload=user_context_payload,
+            feedback_profile=feedback_profile,
+        )
 
         return WakeDecision(
             energy=energy,
-            wake_score=components.wake_score,
+            wake_score=adjusted_wake_score,
             components=components,
             cooldown_policy=cooldown_policy,
             cooldown_status=cooldown_status,
@@ -361,6 +428,9 @@ class AuroraWakePolicyService:
             light_adjustment_triggered=light_adjustment_triggered,
             risk_override_triggered=risk_override_triggered,
             diagnostic_signal=diagnostic_signal,
+            wake_reasons=tuple(wake_reasons),
+            feedback_profile=feedback_profile,
+            raw_wake_score=components.wake_score,
             pass_probability=pass_probability,
             plan_completion_rate=actual_completion_rate,
             days_left=days_left,
@@ -386,8 +456,42 @@ class AuroraWakePolicyService:
         payload["policy_name"] = policy.policy_name
         await self._store_cooldown_payload(user_id, payload)
 
+    async def record_wake_feedback(
+        self,
+        *,
+        user_id: str,
+        wake_kind: str,
+        outcome: str,
+        now: datetime | None = None,
+    ) -> WakeFeedbackProfile:
+        now = now or _utcnow()
+        payload = await self._load_feedback_payload(user_id)
+        outcome = str(outcome or "").strip().lower()
+        wake_kind = str(wake_kind or "unknown").strip().lower() or "unknown"
+        kind_counts = _as_dict(payload.get("kind_counts"))
+        kind_payload = _as_dict(kind_counts.get(wake_kind))
+
+        if outcome in {"wrong", "not_useful", "too_much", "dismissed"}:
+            payload["negative_count_14d"] = int(payload.get("negative_count_14d") or 0) + 1
+            payload["last_negative_at"] = now.isoformat()
+            kind_payload["negative"] = int(kind_payload.get("negative") or 0) + 1
+        elif outcome in {"ignored", "expired"}:
+            payload["ignored_count_14d"] = int(payload.get("ignored_count_14d") or 0) + 1
+            kind_payload["ignored"] = int(kind_payload.get("ignored") or 0) + 1
+        elif outcome in {"useful", "acted", "accepted", "opened"}:
+            payload["positive_count_14d"] = int(payload.get("positive_count_14d") or 0) + 1
+            kind_payload["positive"] = int(kind_payload.get("positive") or 0) + 1
+
+        kind_counts[wake_kind] = kind_payload
+        payload["kind_counts"] = kind_counts
+        await self._store_feedback_payload(user_id, payload)
+        return self._feedback_profile_from_payload(payload)
+
     def cooldown_key(self, user_id: str) -> str:
         return WAKE_COOLDOWN_KEY_TEMPLATE.format(user_id=str(user_id))
+
+    def feedback_key(self, user_id: str) -> str:
+        return WAKE_FEEDBACK_KEY_TEMPLATE.format(user_id=str(user_id))
 
     async def _cooldown_status(
         self,
@@ -437,6 +541,75 @@ class AuroraWakePolicyService:
             self.cooldown_key(user_id),
             WAKE_COOLDOWN_TTL_SECONDS,
             json.dumps(payload, ensure_ascii=False, default=str),
+        )
+
+    async def _load_feedback_payload(self, user_id: str) -> dict[str, Any]:
+        if self.redis is None:
+            return {}
+        raw = await self._redis_call("get", self.feedback_key(user_id))
+        if isinstance(raw, bytes):
+            raw = raw.decode("utf-8")
+        if not raw:
+            return {}
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+
+    async def _store_feedback_payload(self, user_id: str, payload: dict[str, Any]) -> None:
+        if self.redis is None:
+            return
+        await self._redis_call(
+            "setex",
+            self.feedback_key(user_id),
+            WAKE_FEEDBACK_TTL_SECONDS,
+            json.dumps(payload, ensure_ascii=False, default=str),
+        )
+
+    async def _resolve_feedback_profile(
+        self,
+        *,
+        user_id: str,
+        request_extra_context: dict[str, Any],
+        user_context_payload: dict[str, Any],
+    ) -> WakeFeedbackProfile:
+        payload = await self._load_feedback_payload(user_id)
+        context_feedback = _as_dict(
+            request_extra_context.get("wake_feedback")
+            or request_extra_context.get("aurora_wake_feedback")
+            or user_context_payload.get("wake_feedback")
+            or user_context_payload.get("aurora_wake_feedback")
+        )
+        if context_feedback:
+            payload = {**payload, **context_feedback}
+        return self._feedback_profile_from_payload(payload)
+
+    def _feedback_profile_from_payload(self, payload: dict[str, Any]) -> WakeFeedbackProfile:
+        negative_count = max(
+            _safe_int(payload.get("negative_count_14d")) or 0,
+            _safe_int(payload.get("wrong_count_14d")) or 0,
+            _safe_int(payload.get("dismissed_count_14d")) or 0,
+        )
+        ignored_count = _safe_int(payload.get("ignored_count_14d")) or 0
+        positive_count = _safe_int(payload.get("positive_count_14d")) or 0
+        multiplier = 1.0 - (negative_count * 0.18) - (ignored_count * 0.10) + (positive_count * 0.05)
+        suppressed_kinds: list[str] = []
+        for kind, counts in _as_dict(payload.get("kind_counts")).items():
+            count_payload = _as_dict(counts)
+            if int(count_payload.get("negative") or 0) >= 2:
+                suppressed_kinds.append(str(kind))
+        for item in _as_list(payload.get("suppressed_kinds")):
+            normalized = str(item or "").strip()
+            if normalized:
+                suppressed_kinds.append(normalized)
+        return WakeFeedbackProfile(
+            negative_count_14d=negative_count,
+            ignored_count_14d=ignored_count,
+            positive_count_14d=positive_count,
+            confidence_multiplier=round(max(0.35, min(1.1, multiplier)), 4),
+            last_negative_at=str(payload.get("last_negative_at")) if payload.get("last_negative_at") else None,
+            suppressed_kinds=tuple(sorted(set(suppressed_kinds))),
         )
 
     async def _redis_call(self, method: str, *args: Any) -> Any:
@@ -515,6 +688,102 @@ class AuroraWakePolicyService:
         ]
         return round(max(signals), 4)
 
+    def _build_wake_reasons(
+        self,
+        *,
+        components: WakeScoreComponents,
+        risk_override_triggered: bool,
+        user_requested_full_wake: bool,
+        diagnostic_signal: ModerateDiagnosticSignal,
+        pass_probability: float | None,
+        plan_completion_rate: float | None,
+        expected_completion_rate: float | None,
+        days_left: int | None,
+        request_extra_context: dict[str, Any],
+        user_context_payload: dict[str, Any],
+        feedback_profile: WakeFeedbackProfile,
+    ) -> list[WakeReason]:
+        reasons: list[WakeReason] = []
+        suppressed = set(feedback_profile.suppressed_kinds)
+
+        def add(reason: WakeReason) -> None:
+            if reason.kind not in suppressed:
+                reasons.append(reason)
+
+        if risk_override_triggered or (days_left is not None and days_left <= 3 and components.exam_urgency >= 0.7):
+            add(
+                WakeReason(
+                    kind="risk",
+                    label="Risk drift",
+                    explanation="考试或截止日期很近，当前通过率或完成率信号偏低，所以 Aurora 应该说明风险而不是泛泛打气。",
+                    evidence={
+                        "days_left": days_left,
+                        "pass_probability": pass_probability,
+                        "plan_completion_rate": plan_completion_rate,
+                    },
+                    confidence=max(components.exam_urgency, 0.55),
+                    user_control="wrong_risk_signal",
+                )
+            )
+
+        if components.plan_drift >= 0.25:
+            add(
+                WakeReason(
+                    kind="plan_drift",
+                    label="Missed plan drift",
+                    explanation="计划进度低于预期，提醒应聚焦在重排最小下一步，而不是催促。",
+                    evidence={
+                        "plan_completion_rate": plan_completion_rate,
+                        "expected_completion_rate": expected_completion_rate or DEFAULT_EXPECTED_COMPLETION_RATE,
+                        "drift_score": components.plan_drift,
+                    },
+                    confidence=components.plan_drift,
+                    user_control="plan_is_not_drifting",
+                )
+            )
+
+        hours_away = self._extract_hours_since_last_active(request_extra_context, user_context_payload)
+        if hours_away is not None and hours_away >= 24:
+            add(
+                WakeReason(
+                    kind="comeback",
+                    label="Return after silence",
+                    explanation="用户隔了一段时间回来，Aurora 应该接住上次上下文，并给一个低压力重启动作。",
+                    evidence={"hours_since_last_active": hours_away},
+                    confidence=_clamp_unit(min(hours_away / 96.0, 1.0), default=0.25),
+                    user_control="not_a_good_return_moment",
+                )
+            )
+
+        if diagnostic_signal.triggered:
+            add(
+                WakeReason(
+                    kind="recall",
+                    label="Useful recall",
+                    explanation="同类错误和正确率下滑同时出现，提醒应回到具体卡点或复习节点。",
+                    evidence=diagnostic_signal.to_dict(),
+                    confidence=max(components.learning_failure, 0.5),
+                    user_control="recall_not_useful",
+                )
+            )
+
+        if user_requested_full_wake or components.state_conflict >= 0.45:
+            add(
+                WakeReason(
+                    kind="calibration",
+                    label="Calibration opportunity",
+                    explanation="当前策略信心不足或用户明确要求重新校准，Aurora 可以解释判断并询问是否调整。",
+                    evidence={
+                        "state_conflict": components.state_conflict,
+                        "user_requested_full_wake": user_requested_full_wake,
+                    },
+                    confidence=max(components.state_conflict, 0.6 if user_requested_full_wake else 0.0),
+                    user_control="do_not_calibrate_now",
+                )
+            )
+
+        return sorted(reasons, key=lambda reason: reason.confidence, reverse=True)
+
     def _select_cooldown_policy(self, days_left: int | None) -> WakeCooldownPolicy:
         if days_left is not None and days_left <= 2:
             return WakeCooldownPolicy(cooldown_minutes=90, daily_limit=4, policy_name="exam_48h")
@@ -579,6 +848,34 @@ class AuroraWakePolicyService:
             _clamp_unit(actual) if actual is not None else None,
             _clamp_unit(expected, default=DEFAULT_EXPECTED_COMPLETION_RATE) if expected is not None else None,
         )
+
+    def _extract_hours_since_last_active(
+        self,
+        request_extra_context: dict[str, Any],
+        user_context_payload: dict[str, Any],
+    ) -> float | None:
+        explicit = self._first_numeric(
+            request_extra_context.get("hours_since_last_active"),
+            user_context_payload.get("hours_since_last_active"),
+            _as_dict(request_extra_context.get("comeback_context")).get("hours_since_last_active"),
+            _as_dict(user_context_payload.get("comeback_context")).get("hours_since_last_active"),
+        )
+        if explicit is not None and explicit >= 0:
+            return round(float(explicit), 2)
+
+        last_active_raw = (
+            request_extra_context.get("last_active_at")
+            or user_context_payload.get("last_active_at")
+            or _as_dict(request_extra_context.get("engagement_state")).get("last_active_at")
+            or _as_dict(user_context_payload.get("engagement_state")).get("last_active_at")
+            or _as_dict(request_extra_context.get("comeback_context")).get("last_active_at")
+            or _as_dict(user_context_payload.get("comeback_context")).get("last_active_at")
+        )
+        last_active = self._parse_datetime(last_active_raw)
+        if last_active is None:
+            return None
+        delta = _utcnow() - last_active
+        return round(max(0.0, delta.total_seconds() / 3600.0), 2)
 
     def _extract_pass_probability(
         self, request_extra_context: dict[str, Any], user_context_payload: dict[str, Any]

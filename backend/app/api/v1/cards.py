@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -8,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user
 from app.core.event_bus import event_bus as _event_bus
+from app.core.time_utils import utcnow
 from app.db.session import get_db
 from app.models.card_protocol import (
     BindingMode,
@@ -78,6 +80,7 @@ class ShareCardRequest(BaseModel):
     include_children: bool = True
     max_depth: int = Field(default=3, ge=1, le=8)
     metadata: dict | None = None
+    expires_at: datetime | None = None
 
 
 class AdoptShareRequest(BaseModel):
@@ -361,6 +364,9 @@ async def share_card(
 ):
     service = ShareService(db, event_bus=_event_bus)
     try:
+        metadata = dict(request.metadata or {})
+        if request.expires_at is not None:
+            metadata["expires_at"] = request.expires_at.isoformat()
         share = await service.share_card(
             card_id=card_id,
             user_id=current_user.id,
@@ -370,7 +376,7 @@ async def share_card(
             message=request.message,
             include_children=request.include_children,
             max_depth=request.max_depth,
-            metadata=request.metadata,
+            metadata=metadata,
         )
         await db.commit()
         return {
@@ -382,6 +388,8 @@ async def share_card(
                 "scope": share.scope.value,
                 "permission": share.permission.value,
                 "message": share.message,
+                "expires_at": metadata.get("expires_at"),
+                "revoked_at": share.revoked_at.isoformat() if share.revoked_at else None,
             },
         }
     except ValueError as exc:
@@ -402,6 +410,15 @@ async def get_card_share(
         raise HTTPException(status_code=404, detail="Share record not found")
     if share.target_user_id and share.target_user_id != current_user.id and share.shared_by_user_id != current_user.id:
         raise HTTPException(status_code=403, detail="No access to this share")
+    expires_at = (share.metadata_ or {}).get("expires_at")
+    expires_at_dt = service._metadata_datetime(expires_at)
+    availability = (
+        "revoked"
+        if share.revoked_at
+        else "expired"
+        if expires_at_dt is not None and expires_at_dt <= utcnow()
+        else "available"
+    )
     return {
         "success": True,
         "data": {
@@ -416,6 +433,9 @@ async def get_card_share(
             "message": share.message,
             "adoption_count": share.adoption_count,
             "view_count": share.view_count,
+            "expires_at": expires_at,
+            "revoked_at": share.revoked_at.isoformat() if share.revoked_at else None,
+            "availability": availability,
             "snapshot_payload": dict(share.snapshot.payload or {}) if share.snapshot else {},
         },
     }

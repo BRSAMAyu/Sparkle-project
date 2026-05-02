@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
@@ -89,7 +90,9 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
         },
         loading: () => LoadingIndicator.circular(
           showText: true,
-          loadingText: '正在整理这枚胶囊...',
+          loadingText: I18nService.instance.isChinese
+              ? '正在整理这枚胶囊...'
+              : 'Preparing this capsule...',
         ),
         error: (err, _) => CustomErrorWidget.page(
           context: context,
@@ -183,8 +186,7 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
                         side: BorderSide(color: DS.border, width: 0.5),
                         padding:
                             const EdgeInsets.symmetric(horizontal: DS.spacing4),
-                        materialTapTargetSize:
-                            MaterialTapTargetSize.shrinkWrap,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ],
                   ),
@@ -296,7 +298,8 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
           subtitle: capsule.content.split('\n').first,
           description: capsule.content,
           metadata: {
-            'type': '好奇心胶囊',
+            'type':
+                I18nService.instance.isChinese ? '好奇心胶囊' : 'Curiosity capsule',
             'depth': switch (capsule.depthLevelEnum) {
               CapsuleDepthLevel.shallow => 1,
               CapsuleDepthLevel.medium => 2,
@@ -703,7 +706,8 @@ class _FeedbackBottomSheetState extends State<_FeedbackBottomSheet> {
                 labelStyle: TextStyle(
                   fontSize: 12,
                   color: selected ? DS.brandPrimary : DS.textPrimary,
-                  fontWeight: selected ? DS.fontWeightSemibold : FontWeight.normal,
+                  fontWeight:
+                      selected ? DS.fontWeightSemibold : FontWeight.normal,
                 ),
                 side: BorderSide(
                   color: selected

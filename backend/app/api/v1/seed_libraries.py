@@ -51,6 +51,7 @@ async def _enrich_library_info(
     *,
     user_id: UUID | None,
     stats: dict[str, int] | None = None,
+    include_item_actions: bool = False,
 ) -> LibraryInfo:
     lib_info = LibraryInfo.model_validate(library)
     stats = stats or {"item_count": 0, "subscriber_count": 0}
@@ -66,7 +67,36 @@ async def _enrich_library_info(
         rating_summary["user_rating_avg"],
         rating_summary["user_rating_count"],
     )
+    if include_item_actions:
+        lib_info.adoption_next_actions = await service.get_library_adoption_actions(db, library)
+    else:
+        lib_info.adoption_next_actions = service.build_library_adoption_actions(library)
     return lib_info
+
+
+async def _subscription_info(db: AsyncSession, subscription, library) -> SubscriptionInfo:
+    actions = await service.get_library_adoption_actions(db, library) if library else []
+    return SubscriptionInfo(
+        id=subscription.id,
+        adoption_id=subscription.id,
+        user_id=subscription.user_id,
+        library_id=subscription.library_id,
+        library_name=library.name if library else "",
+        is_enabled=subscription.is_enabled,
+        priority=subscription.priority,
+        notes=subscription.notes,
+        adoption_next_actions=actions,
+        community_share={
+            "resource_type": "seed_library",
+            "resource_id": str(subscription.library_id),
+            "permission": "adopt",
+            "privacy": "recipient_gets_private_copy",
+        },
+        subscribed_at=subscription.subscribed_at,
+        last_used_at=subscription.last_used_at,
+        created_at=subscription.created_at,
+        updated_at=subscription.updated_at,
+    )
 
 
 # ============ 库管理接口 ============
@@ -165,6 +195,7 @@ async def list_libraries(
             rating_summary["user_rating_avg"],
             rating_summary["user_rating_count"],
         )
+        lib_info.adoption_next_actions = service.build_library_adoption_actions(lib)
         data.append(lib_info)
 
     total_pages = (total + page_size - 1) // page_size if total > 0 else 0
@@ -197,7 +228,13 @@ async def get_library(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
 
     stats = await service.get_library_stats(db, library_id)
-    lib_info = await _enrich_library_info(db, library, user_id=current_user.id, stats=stats)
+    lib_info = await _enrich_library_info(
+        db,
+        library,
+        user_id=current_user.id,
+        stats=stats,
+        include_item_actions=True,
+    )
     return LibraryResponse(data=lib_info)
 
 
@@ -376,7 +413,11 @@ async def get_items(
         has_prev=page > 1,
     )
 
-    data = [ItemInfo.model_validate(item) for item in items]
+    data = []
+    for item in items:
+        item_info = ItemInfo.model_validate(item)
+        item_info.adoption_next_actions = service.build_item_adoption_actions(item)
+        data.append(item_info)
     return ItemListResponse(data=data, meta=meta)
 
 
@@ -488,21 +529,8 @@ async def subscribe_library(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Library not found")
         await db.commit()
 
-        # 构建响应
         library = await service.get_library(db, library_id)
-        sub_info = SubscriptionInfo(
-            id=subscription.id,
-            adoption_id=subscription.id,
-            user_id=subscription.user_id,
-            library_id=subscription.library_id,
-            library_name=library.name if library else "",
-            is_enabled=subscription.is_enabled,
-            priority=subscription.priority,
-            notes=subscription.notes,
-            subscribed_at=subscription.subscribed_at,
-            last_used_at=subscription.last_used_at,
-            created_at=subscription.created_at,
-        )
+        sub_info = await _subscription_info(db, subscription, library)
         return SubscriptionResponse(data=sub_info)
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid request parameters") from e
@@ -549,21 +577,7 @@ async def update_library_subscription(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
     await db.commit()
     library = await service.get_library(db, library_id)
-    return SubscriptionResponse(
-        data=SubscriptionInfo(
-            id=subscription.id,
-            adoption_id=subscription.id,
-            user_id=subscription.user_id,
-            library_id=subscription.library_id,
-            library_name=library.name if library else "",
-            is_enabled=subscription.is_enabled,
-            priority=subscription.priority,
-            notes=subscription.notes,
-            subscribed_at=subscription.subscribed_at,
-            last_used_at=subscription.last_used_at,
-            created_at=subscription.created_at,
-        )
-    )
+    return SubscriptionResponse(data=await _subscription_info(db, subscription, library))
 
 
 @router.post(
@@ -653,19 +667,7 @@ async def get_my_subscriptions(
 
     data = []
     for sub in subscriptions:
-        sub_info = SubscriptionInfo(
-            id=sub.id,
-            adoption_id=sub.id,
-            user_id=sub.user_id,
-            library_id=sub.library_id,
-            library_name=sub.library.name if sub.library else "",
-            is_enabled=sub.is_enabled,
-            priority=sub.priority,
-            notes=sub.notes,
-            subscribed_at=sub.subscribed_at,
-            last_used_at=sub.last_used_at,
-            created_at=sub.created_at,
-        )
+        sub_info = await _subscription_info(db, sub, sub.library)
         data.append(sub_info)
 
     return SubscriptionListResponse(data=data)

@@ -177,7 +177,8 @@ class ContentReviewResult {
   final bool requiresReflection;
   final String?
       reflectionStatus; // "pending", "in_progress", "completed", "failed"
-  final String? scoreLabel; // "优秀", "良好", "及格", context.l10n.chatReviewNeedsImprove
+  final String?
+      scoreLabel; // "优秀", "良好", "及格", context.l10n.chatReviewNeedsImprove
 
   static ContentReviewResult fromJson(Map<String, dynamic> json) =>
       ContentReviewResult(
@@ -566,21 +567,28 @@ class _ContentReviewCardState extends State<ContentReviewCard>
             ),
           ),
           // Expand/collapse button
-          InkWell(
-            onTap: () => setState(() => _isExpanded = !_isExpanded),
-            child: Icon(
-              _isExpanded
-                  ? Icons.expand_less_rounded
-                  : Icons.expand_more_rounded,
-              size: 20,
-              color: DS.neutral400,
+          Semantics(
+            button: true,
+            label: 'Chat content review card control 1',
+            child: InkWell(
+              onTap: () => setState(() => _isExpanded = !_isExpanded),
+              child: Icon(
+                _isExpanded
+                    ? Icons.expand_less_rounded
+                    : Icons.expand_more_rounded,
+                size: 20,
+                color: DS.neutral400,
+              ),
             ),
           ),
         ],
       );
 
   Widget _buildScoreBar(
-      BuildContext context, Color color, AppLocalizations l10n,) {
+    BuildContext context,
+    Color color,
+    AppLocalizations l10n,
+  ) {
     final score = widget.review.overallScore;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -700,20 +708,32 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (criticalIssues.isNotEmpty) ...[
-          _buildIssueGroup(context, l10n.contentReviewCriticalIssues,
-              criticalIssues, DS.error,),
+          _buildIssueGroup(
+            context,
+            l10n.contentReviewCriticalIssues,
+            criticalIssues,
+            DS.error,
+          ),
           if (warningIssues.isNotEmpty || infoIssues.isNotEmpty)
             const SizedBox(height: DS.spacing8),
         ],
         if (warningIssues.isNotEmpty) ...[
           _buildIssueGroup(
-              context, l10n.contentReviewWarnings, warningIssues, DS.warning,),
+            context,
+            l10n.contentReviewWarnings,
+            warningIssues,
+            DS.warning,
+          ),
           if (infoIssues.isNotEmpty) const SizedBox(height: DS.spacing8),
         ],
         if (infoIssues.isNotEmpty &&
             widget.review.decision != ContentReviewDecision.passed)
           _buildIssueGroup(
-              context, l10n.contentReviewHints, infoIssues, DS.info,),
+            context,
+            l10n.contentReviewHints,
+            infoIssues,
+            DS.info,
+          ),
       ],
     );
   }
@@ -927,7 +947,9 @@ class _ContentReviewCardState extends State<ContentReviewCard>
   }
 
   _ReflectionStatusInfo _getReflectionStatusInfo(
-      String status, AppLocalizations l10n,) {
+    String status,
+    AppLocalizations l10n,
+  ) {
     switch (status) {
       case 'pending':
         return _ReflectionStatusInfo(
@@ -1043,7 +1065,10 @@ class _ContentReviewCardState extends State<ContentReviewCard>
 
   /// Phase 2e: 更多操作菜单
   Widget _buildMoreActionsMenu(
-          BuildContext context, Color color, AppLocalizations l10n,) =>
+    BuildContext context,
+    Color color,
+    AppLocalizations l10n,
+  ) =>
       PopupMenuButton<String>(
         icon: Icon(
           Icons.more_horiz_rounded,
@@ -1097,7 +1122,10 @@ class _ContentReviewCardState extends State<ContentReviewCard>
       );
 
   void _handleMenuAction(
-      BuildContext context, String action, AppLocalizations l10n,) {
+    BuildContext context,
+    String action,
+    AppLocalizations l10n,
+  ) {
     if (action == 'override') {
       _showOverrideDialog(context, l10n);
     } else if (action == 'appeal') {
@@ -1114,98 +1142,12 @@ class _ContentReviewCardState extends State<ContentReviewCard>
             : 'failed';
     final newDecision = currentDecision == 'passed' ? 'failed' : 'passed';
 
-    unawaited(showSensoryModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      builder: (context) => Container(
-        margin: const EdgeInsets.all(DS.spacing16),
-        padding: const EdgeInsets.all(DS.spacing16),
-        decoration: BoxDecoration(
-          color: DS.surfaceSecondary,
-          borderRadius: DS.borderRadius16,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              currentDecision == 'passed'
-                  ? l10n.contentReviewDisagreePassTitle
-                  : l10n.contentReviewAgreePassTitle,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: DS.fontWeightBold,
-                  ),
-            ),
-            const SizedBox(height: DS.spacing12),
-            Text(
-              l10n.contentReviewReasonPrompt,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.neutral600,
-                  ),
-            ),
-            const SizedBox(height: DS.spacing8),
-            TextField(
-              controller: reasonController,
-              maxLines: 3,
-              decoration: InputDecoration(
-                hintText: l10n.contentReviewReasonHint,
-                filled: true,
-                fillColor: DS.neutral100,
-                border: const OutlineInputBorder(
-                  borderRadius: DS.borderRadius8,
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: DS.spacing16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                SparkleButton.ghost(
-                  label: l10n.contentReviewCancel,
-                  onPressed: () => Navigator.pop(context),
-                ),
-                const SizedBox(width: DS.spacing8),
-                SparkleButton.primary(
-                  label: l10n.contentReviewConfirm,
-                  onPressed: () async {
-                    final reason = reasonController.text.trim();
-                    if (reason.isEmpty) {
-                      AppFeedback.error(
-                          context, l10n.contentReviewReasonRequired,);
-                      return;
-                    }
-                    Navigator.pop(context);
-                    await widget.onOverride?.call(newDecision, reason);
-                  },
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    ),);
-  }
-
-  /// 显示申诉对话框
-  void _showAppealDialog(BuildContext context, AppLocalizations l10n) {
-    final reasonController = TextEditingController();
-    final selectedIssues = <String>[];
-    final issueOptions = [
-      l10n.contentReviewAppealUnreasonableStandard,
-      l10n.contentReviewAppealScoreError,
-      l10n.contentReviewAppealContextIgnored,
-      l10n.contentReviewAppealDescriptionInaccurate,
-      l10n.contentReviewAppealSuggestionNotFeasible,
-    ];
-
-    unawaited(showSensoryModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => Container(
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        builder: (context) => Container(
           margin: const EdgeInsets.all(DS.spacing16),
           padding: const EdgeInsets.all(DS.spacing16),
           decoration: BoxDecoration(
@@ -1217,63 +1159,16 @@ class _ContentReviewCardState extends State<ContentReviewCard>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                l10n.contentReviewReportIssue,
+                currentDecision == 'passed'
+                    ? l10n.contentReviewDisagreePassTitle
+                    : l10n.contentReviewAgreePassTitle,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
               ),
               const SizedBox(height: DS.spacing12),
               Text(
-                l10n.contentReviewAppealSelectType,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: DS.neutral600,
-                    ),
-              ),
-              const SizedBox(height: DS.spacing8),
-              Wrap(
-                spacing: DS.spacing8,
-                runSpacing: DS.spacing8,
-                children: issueOptions.map((issue) {
-                  final isSelected = selectedIssues.contains(issue);
-                  return GestureDetector(
-                    onTap: () {
-                      setDialogState(() {
-                        if (isSelected) {
-                          selectedIssues.remove(issue);
-                        } else {
-                          selectedIssues.add(issue);
-                        }
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing10,
-                        vertical: DS.spacing6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? DS.warning.withValues(alpha: 0.15)
-                            : DS.neutral100,
-                        borderRadius: DS.borderRadius20,
-                        border: Border.all(
-                          color: isSelected
-                              ? DS.warning.withValues(alpha: 0.5)
-                              : DS.neutral300,
-                        ),
-                      ),
-                      child: Text(
-                        issue,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: isSelected ? DS.warning : DS.neutral700,
-                            ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: DS.spacing12),
-              Text(
-                l10n.contentReviewAppealDetail,
+                l10n.contentReviewReasonPrompt,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.neutral600,
                     ),
@@ -1283,7 +1178,7 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                 controller: reasonController,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: l10n.contentReviewAppealDetailHint,
+                  hintText: l10n.contentReviewReasonHint,
                   filled: true,
                   fillColor: DS.neutral100,
                   border: const OutlineInputBorder(
@@ -1302,21 +1197,18 @@ class _ContentReviewCardState extends State<ContentReviewCard>
                   ),
                   const SizedBox(width: DS.spacing8),
                   SparkleButton.primary(
-                    label: l10n.contentReviewAppealSubmit,
+                    label: l10n.contentReviewConfirm,
                     onPressed: () async {
                       final reason = reasonController.text.trim();
                       if (reason.isEmpty) {
                         AppFeedback.error(
-                            context, l10n.contentReviewAppealDetailRequired,);
-                        return;
-                      }
-                      if (selectedIssues.isEmpty) {
-                        AppFeedback.error(
-                            context, l10n.contentReviewAppealTypeRequired,);
+                          context,
+                          l10n.contentReviewReasonRequired,
+                        );
                         return;
                       }
                       Navigator.pop(context);
-                      await widget.onAppeal?.call(reason, selectedIssues);
+                      await widget.onOverride?.call(newDecision, reason);
                     },
                   ),
                 ],
@@ -1325,7 +1217,161 @@ class _ContentReviewCardState extends State<ContentReviewCard>
           ),
         ),
       ),
-    ),);
+    );
+  }
+
+  /// 显示申诉对话框
+  void _showAppealDialog(BuildContext context, AppLocalizations l10n) {
+    final reasonController = TextEditingController();
+    final selectedIssues = <String>[];
+    final issueOptions = [
+      l10n.contentReviewAppealUnreasonableStandard,
+      l10n.contentReviewAppealScoreError,
+      l10n.contentReviewAppealContextIgnored,
+      l10n.contentReviewAppealDescriptionInaccurate,
+      l10n.contentReviewAppealSuggestionNotFeasible,
+    ];
+
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        builder: (context) => StatefulBuilder(
+          builder: (context, setDialogState) => Container(
+            margin: const EdgeInsets.all(DS.spacing16),
+            padding: const EdgeInsets.all(DS.spacing16),
+            decoration: BoxDecoration(
+              color: DS.surfaceSecondary,
+              borderRadius: DS.borderRadius16,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.contentReviewReportIssue,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing12),
+                Text(
+                  l10n.contentReviewAppealSelectType,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.neutral600,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing8),
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: issueOptions.map((issue) {
+                    final isSelected = selectedIssues.contains(issue);
+                    return Semantics(
+                      button: true,
+                      label: 'Chat content review card control 2',
+                      child: GestureDetector(
+                        onTap: () {
+                          setDialogState(() {
+                            if (isSelected) {
+                              selectedIssues.remove(issue);
+                            } else {
+                              selectedIssues.add(issue);
+                            }
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing10,
+                            vertical: DS.spacing6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? DS.warning.withValues(alpha: 0.15)
+                                : DS.neutral100,
+                            borderRadius: DS.borderRadius20,
+                            border: Border.all(
+                              color: isSelected
+                                  ? DS.warning.withValues(alpha: 0.5)
+                                  : DS.neutral300,
+                            ),
+                          ),
+                          child: Text(
+                            issue,
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color:
+                                      isSelected ? DS.warning : DS.neutral700,
+                                ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: DS.spacing12),
+                Text(
+                  l10n.contentReviewAppealDetail,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: DS.neutral600,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing8),
+                TextField(
+                  controller: reasonController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    hintText: l10n.contentReviewAppealDetailHint,
+                    filled: true,
+                    fillColor: DS.neutral100,
+                    border: const OutlineInputBorder(
+                      borderRadius: DS.borderRadius8,
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: DS.spacing16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    SparkleButton.ghost(
+                      label: l10n.contentReviewCancel,
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    const SizedBox(width: DS.spacing8),
+                    SparkleButton.primary(
+                      label: l10n.contentReviewAppealSubmit,
+                      onPressed: () async {
+                        final reason = reasonController.text.trim();
+                        if (reason.isEmpty) {
+                          AppFeedback.error(
+                            context,
+                            l10n.contentReviewAppealDetailRequired,
+                          );
+                          return;
+                        }
+                        if (selectedIssues.isEmpty) {
+                          AppFeedback.error(
+                            context,
+                            l10n.contentReviewAppealTypeRequired,
+                          );
+                          return;
+                        }
+                        Navigator.pop(context);
+                        await widget.onAppeal?.call(reason, selectedIssues);
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

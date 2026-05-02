@@ -65,7 +65,7 @@ class SeedItemCard extends StatelessWidget {
                                   .textTheme
                                   .titleSmall
                                   ?.copyWith(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: DS.fontWeightBold,
                                   ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,

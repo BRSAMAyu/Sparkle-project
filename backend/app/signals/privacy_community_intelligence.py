@@ -13,9 +13,13 @@ Key principles:
 
 from __future__ import annotations
 
+import math
+import random
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+import math
+import random
 from typing import Any
 
 from loguru import logger
@@ -27,6 +31,10 @@ def _uid(prefix: str = "") -> str:
 
 def _utcnow() -> str:
     return datetime.now(UTC).isoformat()
+
+
+class PrivacyBudgetExceeded(RuntimeError):
+    """Raised when a privacy-preserving aggregate would exceed epsilon budget."""
 
 
 @dataclass
@@ -176,6 +184,25 @@ class PrivacyPreservingCommunityEngine:
         }
         return budget.can_answer(costs.get(query, 0.1))
 
+    def spend_privacy_budget(self, user_id: str, query: str, *, query_cost: float | None = None) -> PrivacyBudget:
+        """Spend in-memory privacy budget or raise if the query is exhausted.
+
+        Production callers persist the same spend in ``privacy_budget_ledger``.
+        The in-memory path remains useful for simulation and unit tests.
+        """
+        budget = self.get_or_create_budget(user_id)
+        costs = {
+            "cohort_lookup": 0.05,
+            "trend_detection": 0.1,
+            "pattern_mining": 0.5,
+        }
+        cost = query_cost if query_cost is not None else costs.get(query, 0.1)
+        if not budget.spend(cost):
+            raise PrivacyBudgetExceeded(
+                f"privacy budget exhausted for user={user_id} query={query} cost={cost}"
+            )
+        return budget
+
     # ── Cohort Management ────────────────────────────────────────────────
 
     def create_cohort(
@@ -211,11 +238,11 @@ class PrivacyPreservingCommunityEngine:
 
         Returns (noised_value, noise_std).
         """
-        import math
-        import random
-
         scale = sensitivity / epsilon
-        noise = random.uniform(-1, 1) * scale  # Simplified: Laplace approximation
+        # Inverse-CDF Laplace sampling keeps the production path aligned with
+        # the documented differential-privacy contract.
+        u = random.random() - 0.5
+        noise = -scale * (1 if u >= 0 else -1) * math.log(1 - 2 * abs(u))
         noise_std = math.sqrt(2) * scale
 
         return value + noise, noise_std
@@ -227,6 +254,8 @@ class PrivacyPreservingCommunityEngine:
         *,
         epsilon: float = 1.0,
         sensitivity: float = 1.0,
+        min_cohort_size: int | None = None,
+        dp_enabled: bool = True,
     ) -> AnonymizedCohortStat:
         """Compute a differentially private aggregate statistic.
 
@@ -234,16 +263,22 @@ class PrivacyPreservingCommunityEngine:
         Only the anonymized aggregate is returned.
         """
         n = len(raw_values)
-        if n < PrivacyPreservingCohort.PRIVACY_FLOOR:
+        privacy_floor = min_cohort_size or PrivacyPreservingCohort.PRIVACY_FLOOR
+        if n < privacy_floor:
             return AnonymizedCohortStat(
                 stat_id=_uid("astat"),
                 stat_name=stat_name,
                 cohort_size=n,
+                min_cohort_size=privacy_floor,
                 is_reliable=False,
             )
 
         avg = sum(raw_values) / n
-        noised_avg, noise_std = self.add_laplace_noise(avg, sensitivity, epsilon)
+        if dp_enabled:
+            noised_avg, noise_std = self.add_laplace_noise(avg, sensitivity, epsilon)
+            noised_avg = max(min(raw_values) - (2 * sensitivity), min(max(raw_values) + (2 * sensitivity), noised_avg))
+        else:
+            noised_avg, noise_std = avg, 0.0
 
         ci_half = 1.96 * noise_std / (n ** 0.5) if n > 0 else 0
         ci_lower = noised_avg - ci_half
@@ -253,11 +288,72 @@ class PrivacyPreservingCommunityEngine:
             stat_id=_uid("astat"),
             stat_name=stat_name,
             cohort_size=n,
+            min_cohort_size=privacy_floor,
             value=noised_avg,
             noise_std=noise_std,
             confidence_interval=(ci_lower, ci_upper),
             is_reliable=True,
         )
+
+    def aggregate_cohort_signal(
+        self,
+        *,
+        requester_id: str,
+        cohort_criteria: dict[str, str],
+        raw_values: list[float],
+        stat_name: str,
+        query_type: str = "pattern_mining",
+        epsilon: float = 1.0,
+        sensitivity: float = 1.0,
+        min_cohort_size: int = PrivacyPreservingCohort.PRIVACY_FLOOR,
+    ) -> dict[str, Any]:
+        """Apply the full privacy envelope for one production cohort signal.
+
+        The caller hands in raw numeric values; this method spends budget,
+        applies the k-anonymity floor, adds DP noise, and returns only an
+        anonymized candidate observation. Raw values are never retained.
+        """
+        query_costs = {
+            "cohort_lookup": 0.05,
+            "trend_detection": 0.1,
+            "pattern_mining": 0.5,
+        }
+        query_cost = query_costs.get(query_type, 0.1)
+        budget = self.get_or_create_budget(requester_id, epsilon=epsilon)
+        if not budget.spend(query_cost):
+            return {
+                "allowed": False,
+                "reason": "privacy_budget_exhausted",
+                "privacy_cost": query_cost,
+                "budget": budget.to_dict(),
+            }
+
+        cohort = self.create_cohort(cohort_criteria, len(raw_values))
+        cohort.PRIVACY_FLOOR = min_cohort_size
+        cohort.__post_init__()
+        stat = self.compute_anonymized_stat(
+            stat_name,
+            raw_values,
+            epsilon=epsilon,
+            sensitivity=sensitivity,
+        )
+        stat.min_cohort_size = min_cohort_size
+        stat.is_reliable = stat.cohort_size >= min_cohort_size
+        cohort.stats.append(stat)
+
+        pattern = self.detect_cohort_pattern(cohort, stat)
+        observation = self.to_external_observation(pattern, cohort_criteria, user_id=requester_id)
+
+        return {
+            "allowed": stat.is_reliable and pattern.get("pattern") not in {"unknown", "suppressed"},
+            "reason": "ok" if stat.is_reliable else "below_privacy_floor",
+            "privacy_cost": query_cost,
+            "budget": budget.to_dict(),
+            "cohort": cohort.to_dict(),
+            "stat": stat.to_dict(),
+            "pattern": pattern,
+            "observation": observation,
+        }
 
     # ── Pattern Detection ────────────────────────────────────────────────
 

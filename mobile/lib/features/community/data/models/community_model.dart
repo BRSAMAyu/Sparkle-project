@@ -1732,6 +1732,35 @@ enum SharedResourceType {
   file,
 }
 
+String _sharedResourceTypeWireValue(SharedResourceType value) {
+  switch (value) {
+    case SharedResourceType.task:
+      return 'task';
+    case SharedResourceType.plan:
+      return 'plan';
+    case SharedResourceType.knowledgeNode:
+      return 'knowledge_node';
+    case SharedResourceType.seedLibrary:
+      return 'seed_library';
+    case SharedResourceType.seedItem:
+      return 'seed_item';
+    case SharedResourceType.cognitiveFragment:
+      return 'cognitive_fragment';
+    case SharedResourceType.curiosityCapsule:
+      return 'curiosity_capsule';
+    case SharedResourceType.cognitivePrismPattern:
+      return 'cognitive_prism_pattern';
+    case SharedResourceType.fragment:
+      return 'fragment';
+    case SharedResourceType.capsule:
+      return 'capsule';
+    case SharedResourceType.achievement:
+      return 'achievement';
+    case SharedResourceType.file:
+      return 'file';
+  }
+}
+
 class SharedResourceInfo {
   SharedResourceInfo({
     required this.id,
@@ -1754,13 +1783,18 @@ class SharedResourceInfo {
     this.resourceTitle,
     this.resourceSummary,
     this.entityCard,
+    this.qualityScore,
+    this.qualityHidden,
+    this.adoptionCount,
+    this.avgRating,
   });
 
   factory SharedResourceInfo.fromJson(Map<String, dynamic> json) {
     SharedResourceType parseResourceType(dynamic raw) {
       final key = raw?.toString();
       return SharedResourceType.values.firstWhere(
-        (value) => value.name == key,
+        (value) =>
+            value.name == key || _sharedResourceTypeWireValue(value) == key,
         orElse: () => SharedResourceType.task,
       );
     }
@@ -1802,12 +1836,18 @@ class SharedResourceInfo {
       resourceTitle: json['resource_title'] as String?,
       resourceSummary: json['resource_summary'] as String?,
       entityCard: json['entity_card'] is Map<String, dynamic>
-          ? Map<String, dynamic>.from(json['entity_card'] as Map<String, dynamic>)
+          ? Map<String, dynamic>.from(
+              json['entity_card'] as Map<String, dynamic>,
+            )
           : json['entity_card'] is Map
               ? Map<String, dynamic>.from(
                   json['entity_card'] as Map<Object?, Object?>,
                 )
               : null,
+      qualityScore: (json['quality_score'] as num?)?.toDouble(),
+      qualityHidden: json['quality_hidden'] as bool?,
+      adoptionCount: (json['adoption_count'] as num?)?.toInt(),
+      avgRating: (json['avg_rating'] as num?)?.toDouble(),
     );
   }
   final String id;
@@ -1846,6 +1886,14 @@ class SharedResourceInfo {
   final String? resourceSummary;
   @JsonKey(name: 'entity_card')
   final Map<String, dynamic>? entityCard;
+  @JsonKey(name: 'quality_score')
+  final double? qualityScore;
+  @JsonKey(name: 'quality_hidden')
+  final bool? qualityHidden;
+  @JsonKey(name: 'adoption_count')
+  final int? adoptionCount;
+  @JsonKey(name: 'avg_rating')
+  final double? avgRating;
 
   String? get resourceId =>
       planId ??
@@ -1859,7 +1907,7 @@ class SharedResourceInfo {
 
   Map<String, dynamic> toJson() => <String, dynamic>{
         'id': id,
-        'resource_type': resourceType.name,
+        'resource_type': _sharedResourceTypeWireValue(resourceType),
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt?.toIso8601String(),
         'plan_id': planId,
@@ -1878,6 +1926,10 @@ class SharedResourceInfo {
         'resource_title': resourceTitle,
         'resource_summary': resourceSummary,
         'entity_card': entityCard,
+        'quality_score': qualityScore,
+        'quality_hidden': qualityHidden,
+        'adoption_count': adoptionCount,
+        'avg_rating': avgRating,
       };
 }
 

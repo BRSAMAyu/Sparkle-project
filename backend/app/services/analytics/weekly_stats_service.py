@@ -1,4 +1,3 @@
-# DEPRECATED: no active importers — candidate for removal in next cleanup
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -14,6 +13,9 @@ class WeeklyStatsService:
     """
     Weekly Statistics Aggregation Service
     Aggregates data for the weekly learning report.
+
+    Active dependency: weekly_digest_service and weekly_synthesis_service use
+    this for user-facing weekly summaries.
     """
 
     def __init__(self, db: AsyncSession):

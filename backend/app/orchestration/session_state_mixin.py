@@ -867,15 +867,23 @@ class SessionStateMixin:
         except Exception as exc:
             logger.debug(f"Failed to persist context plan to routing_decision_log: {exc}")
 
-    async def _update_state(self, session_id: str, state: str, details: str = ""):
+    async def _update_state(
+        self,
+        session_id: str,
+        state: str,
+        details: str = "",
+        *,
+        request_id: str | None = None,
+        user_id: str | None = None,
+    ):
         """Update FSM State in Redis with persistence"""
         if self.state_manager:
             await self.state_manager.update_state(
                 session_id=session_id,
                 state=state,
                 details=details,
-                request_id=None,  # Will be set in process_stream
-                user_id=None
+                request_id=request_id,
+                user_id=user_id,
             )
         logger.info(f"Session {session_id} State: {state} ({details})")
 

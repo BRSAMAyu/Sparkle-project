@@ -135,7 +135,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       if (mounted) {
         AppFeedback.success(
           context,
-          context.l10n.calTaskRescheduled(task.title, _formatMonthDay(newDueDate)),
+          context.l10n
+              .calTaskRescheduled(task.title, _formatMonthDay(newDueDate)),
         );
       }
     }
@@ -151,12 +152,16 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
   @override
   Widget build(BuildContext context) {
     final notifier = ref.read(calendarProvider.notifier);
+    final calendarState = ref.watch(calendarProvider);
+    final taskCalendarState = ref.watch(taskCalendarProvider);
     // Cache isDark once per build so helper methods don't each call Theme.of(context),
     // which would register multiple InheritedWidget listeners and cause redundant rebuilds.
     _isDark = Theme.of(context).brightness == Brightness.dark;
     // For list below calendar (only shown in non-year mode)
-    final selectedEvents =
-        notifier.getEventsForDay(_selectedDay ?? _focusedDay);
+    final selectedEvents = calendarState.events
+        .where((event) =>
+            notifier.isSameDay(event.startTime, _selectedDay ?? _focusedDay))
+        .toList();
     final taskState = ref.watch(taskListProvider);
     final selectedTasks = taskState.tasks.where((task) {
       final dueDate = task.dueDate;
@@ -199,7 +204,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                               ? _buildInsightsView()
                               : Column(
                                   children: [
-                                    _buildTableCalendar(notifier),
+                                    _buildTableCalendar(
+                                      notifier,
+                                      taskCalendarState.taskSummaries,
+                                    ),
                                     Divider(color: DS.brandPrimary10),
                                     Expanded(
                                       child: _buildAgendaList(
@@ -237,7 +245,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               context.l10n.calendarTitle,
               style: TextStyle(
                 fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
               ),
             ),
@@ -359,7 +367,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                         _formatMonthLabel(index + 1),
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                           color: isCurrentMonth
                               ? DS.textPrimary
                               : DS.textSecondary,
@@ -414,7 +422,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                       : isDark
                           ? DS.textSecondary
                           : DS.textPrimary,
-                  fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                  fontWeight: isToday ? DS.fontWeightBold : FontWeight.normal,
                 ),
               ),
             );
@@ -424,7 +432,10 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     );
   }
 
-  Widget _buildTableCalendar(CalendarNotifier notifier) =>
+  Widget _buildTableCalendar(
+    CalendarNotifier notifier,
+    Map<DateTime, TaskDaySummary> taskSummaries,
+  ) =>
       TableCalendar<CalendarEventModel>(
         firstDay: DateTime.utc(2020, 10, 16),
         lastDay: DateTime.utc(2030, 3, 14),
@@ -493,7 +504,6 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
         ),
         calendarBuilders: CalendarBuilders(
           markerBuilder: (context, date, events) {
-            final taskSummaries = ref.watch(taskCalendarProvider).taskSummaries;
             final normalizedDate = DateTime(date.year, date.month, date.day);
             final taskSummary = taskSummaries[normalizedDate];
 
@@ -559,7 +569,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                       style: TextStyle(
                         color: textColor,
                         fontSize: 8,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                       textAlign: TextAlign.center,
                     ),
@@ -646,7 +656,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   : isToday
                       ? DS.primaryBase
                       : DS.textPrimary,
-              fontWeight: FontWeight.bold,
+              fontWeight: DS.fontWeightBold,
             ),
           ),
           if (lunarData.isFestival || lunarData.term.isNotEmpty)
@@ -657,7 +667,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 color: isSelected
                     ? DS.textOnPrimary.withValues(alpha: 0.7)
                     : DS.warning,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -698,7 +708,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   ),
                   style: TextStyle(
                     color: DS.brandPrimary70Const,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 SparkleButton.ghost(
@@ -719,7 +729,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
             child: events.isEmpty && tasks.isEmpty
                 ? Center(
                     child: Text(
-                      I18nService.instance.isChinese ? '这一天还没有安排任务或日程' : 'No tasks or events scheduled for this day',
+                      I18nService.instance.isChinese
+                          ? '这一天还没有安排任务或日程'
+                          : 'No tasks or events scheduled for this day',
                       style: TextStyle(color: DS.textTertiary),
                     ),
                   )
@@ -828,7 +840,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
     }
 
     if (unifiedState.isLoading && aggregate == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const _CalendarInsightsLoadingSkeleton();
     }
 
     if (aggregate == null) {
@@ -865,21 +877,27 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               _buildInsightMetric(
                 label: context.l10n.calStreakDays,
                 value: '${streakStats.currentStreak}',
-                detail: I18nService.instance.isChinese ? '保持你的成就节奏' : 'Keep your achievement rhythm',
+                detail: I18nService.instance.isChinese
+                    ? '保持你的成就节奏'
+                    : 'Keep your achievement rhythm',
                 icon: Icons.local_fire_department_rounded,
                 color: DS.warningAccent,
               ),
               _buildInsightMetric(
                 label: context.l10n.calActiveDays,
                 value: '${aggregate.activeDays}',
-                detail: I18nService.instance.isChinese ? '本月有行动的日期' : 'Active days this month',
+                detail: I18nService.instance.isChinese
+                    ? '本月有行动的日期'
+                    : 'Active days this month',
                 icon: Icons.calendar_month_rounded,
                 color: DS.info,
               ),
               _buildInsightMetric(
                 label: context.l10n.calCompletedTasks,
                 value: '${aggregate.totalCompletedTasks}',
-                detail: I18nService.instance.isChinese ? '本月完成的任务数' : 'Tasks completed this month',
+                detail: I18nService.instance.isChinese
+                    ? '本月完成的任务数'
+                    : 'Tasks completed this month',
                 icon: Icons.task_alt_rounded,
                 color: DS.success,
               ),
@@ -887,7 +905,9 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 label: context.l10n.calFocusDuration,
                 value:
                     '${(aggregate.totalFocusMinutes / 60).toStringAsFixed(1)}h',
-                detail: I18nService.instance.isChinese ? '本月累计专注' : 'Total focus time this month',
+                detail: I18nService.instance.isChinese
+                    ? '本月累计专注'
+                    : 'Total focus time this month',
                 icon: Icons.bolt_rounded,
                 color: DS.prismPurple,
               ),
@@ -905,13 +925,15 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                   I18nService.instance.isChinese ? '学习热力' : 'Learning Heatmap',
                   style: TextStyle(
                     color: DS.textPrimary,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     fontSize: 16,
                   ),
                 ),
                 SizedBox(height: DS.spacing6),
                 Text(
-                  I18nService.instance.isChinese ? '用热力看连续性、完成度和学习投入，而不是重复浏览日程表。' : 'View continuity, completion, and learning engagement through heatmaps, instead of repeatedly browsing the schedule.',
+                  I18nService.instance.isChinese
+                      ? '用热力看连续性、完成度和学习投入，而不是重复浏览日程表。'
+                      : 'View continuity, completion, and learning engagement through heatmaps, instead of repeatedly browsing the schedule.',
                   style: TextStyle(color: DS.textSecondary, fontSize: 12),
                 ),
                 const SizedBox(height: DS.spacing16),
@@ -954,10 +976,12 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  I18nService.instance.isChinese ? '月度亮点' : 'Monthly Highlights',
+                  I18nService.instance.isChinese
+                      ? '月度亮点'
+                      : 'Monthly Highlights',
                   style: TextStyle(
                     color: DS.textPrimary,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     fontSize: 16,
                   ),
                 ),
@@ -972,14 +996,21 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 _buildInsightLine(
                   icon: Icons.flag_rounded,
                   title: context.l10n.calCurrentMainGoal,
-                  value: aggregate.activePlan?.name ?? (I18nService.instance.isChinese ? '本月暂无活跃计划' : 'No active plan this month'),
+                  value: aggregate.activePlan?.name ??
+                      (I18nService.instance.isChinese
+                          ? '本月暂无活跃计划'
+                          : 'No active plan this month'),
                 ),
                 _buildInsightLine(
                   icon: Icons.emoji_events_rounded,
                   title: context.l10n.calAchievementMomentum,
                   value: streakStats.currentStreak >= 7
-                      ? (I18nService.instance.isChinese ? '连续状态很好，适合冲刺里程碑' : 'Great streak! Time to sprint for milestones')
-                      : (I18nService.instance.isChinese ? '先把连续性拉起来，会更容易触发成就闭环' : 'Build your consistency first to trigger achievement loops'),
+                      ? (I18nService.instance.isChinese
+                          ? '连续状态很好，适合冲刺里程碑'
+                          : 'Great streak! Time to sprint for milestones')
+                      : (I18nService.instance.isChinese
+                          ? '先把连续性拉起来，会更容易触发成就闭环'
+                          : 'Build your consistency first to trigger achievement loops'),
                 ),
               ],
             ),
@@ -1012,7 +1043,7 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
                 style: TextStyle(
                   color: DS.textPrimary,
                   fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
               const SizedBox(height: DS.spacing4),
@@ -1153,6 +1184,8 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       TaskStatus.inProgress => DS.info,
       TaskStatus.stuck => DS.warning,
       TaskStatus.pending => DS.warning,
+      TaskStatus.paused => DS.warning,
+      TaskStatus.restore => DS.info,
       TaskStatus.abandoned => DS.textSecondary,
     };
 
@@ -1185,7 +1218,11 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
           ),
         ),
         subtitle: Text(
-          context.l10n.calTaskWithDue(task.planId != null ? context.l10n.calTaskTypeTask : context.l10n.calTaskTypeTodo, dueLabel),
+          context.l10n.calTaskWithDue(
+              task.planId != null
+                  ? context.l10n.calTaskTypeTask
+                  : context.l10n.calTaskTypeTodo,
+              dueLabel),
           style: TextStyle(color: DS.textSecondary),
         ),
         trailing: Icon(
@@ -1228,6 +1265,133 @@ class _CalendarStatsScreenState extends ConsumerState<CalendarStatsScreen> {
       ),
     );
   }
+}
+
+class _CalendarInsightsLoadingSkeleton extends StatelessWidget {
+  const _CalendarInsightsLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing16,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: DS.spacing10,
+              runSpacing: DS.spacing10,
+              children: List.generate(
+                4,
+                (_) => SizedBox(
+                  width: 156,
+                  child: MaterialStyler(
+                    material: AppMaterials.ceramic(context),
+                    borderRadius: DS.borderRadius16,
+                    padding: const EdgeInsets.all(DS.spacing12),
+                    child: const _CalendarSkeletonMetric(),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: DS.spacing16),
+            MaterialStyler(
+              material: AppMaterials.ceramic(context),
+              borderRadius: DS.borderRadius20,
+              padding: const EdgeInsets.all(DS.spacing16),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _CalendarSkeletonBar(widthFactor: 0.36),
+                  SizedBox(height: DS.spacing10),
+                  _CalendarSkeletonBar(widthFactor: 0.82, height: 12),
+                  SizedBox(height: DS.spacing16),
+                  AspectRatio(
+                    aspectRatio: 7 / 5,
+                    child: _CalendarSkeletonGrid(),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+}
+
+class _CalendarSkeletonMetric extends StatelessWidget {
+  const _CalendarSkeletonMetric();
+
+  @override
+  Widget build(BuildContext context) => const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _CalendarSkeletonDot(),
+          SizedBox(height: DS.spacing10),
+          _CalendarSkeletonBar(widthFactor: 0.44, height: 20),
+          SizedBox(height: DS.spacing8),
+          _CalendarSkeletonBar(widthFactor: 0.72, height: 12),
+        ],
+      );
+}
+
+class _CalendarSkeletonGrid extends StatelessWidget {
+  const _CalendarSkeletonGrid();
+
+  @override
+  Widget build(BuildContext context) => GridView.count(
+        crossAxisCount: 7,
+        crossAxisSpacing: DS.spacing6,
+        mainAxisSpacing: DS.spacing6,
+        physics: const NeverScrollableScrollPhysics(),
+        children: List.generate(
+          35,
+          (index) => DecoratedBox(
+            decoration: BoxDecoration(
+              color: index.isEven ? DS.surfaceTertiary : DS.surfaceSecondary,
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+        ),
+      );
+}
+
+class _CalendarSkeletonDot extends StatelessWidget {
+  const _CalendarSkeletonDot();
+
+  @override
+  Widget build(BuildContext context) => DecoratedBox(
+        decoration: BoxDecoration(
+          color: DS.surfaceTertiary,
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: const SizedBox(width: 18, height: 18),
+      );
+}
+
+class _CalendarSkeletonBar extends StatelessWidget {
+  const _CalendarSkeletonBar({
+    required this.widthFactor,
+    this.height = 16,
+  });
+
+  final double widthFactor;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => FractionallySizedBox(
+        widthFactor: widthFactor,
+        alignment: Alignment.centerLeft,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: DS.surfaceTertiary,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: SizedBox(height: height),
+        ),
+      );
 }
 
 class _EventEditDialog extends ConsumerStatefulWidget {
@@ -1350,10 +1514,12 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                     Text(
                       widget.initialEvent == null
                           ? context.l10n.calendarCreateEvent
-                          : (I18nService.instance.isChinese ? '编辑日程' : 'Edit Event'),
+                          : (I18nService.instance.isChinese
+                              ? '编辑日程'
+                              : 'Edit Event'),
                       style: TextStyle(
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         color: DS.textPrimary,
                       ),
                     ),
@@ -1452,7 +1618,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                       Formatters.formatDateTime(_startTime),
                       style: TextStyle(
                         color: DS.textPrimary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ],
@@ -1484,7 +1650,7 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
                       Formatters.formatDateTime(_endTime),
                       style: TextStyle(
                         color: DS.textPrimary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ],
@@ -1690,18 +1856,23 @@ class _EventEditDialogState extends ConsumerState<_EventEditDialog> {
         await ref.read(calendarProvider.notifier).updateEvent(event);
         if (!mounted) return;
         context.pop();
-        AppFeedback.success(context, I18nService.instance.isChinese ? '日程已更新' : 'Event updated');
+        AppFeedback.success(context,
+            I18nService.instance.isChinese ? '日程已更新' : 'Event updated');
         return;
       }
       final result = await ref.read(calendarProvider.notifier).addEvent(event);
       if (!mounted) return;
       context.pop();
       if (result.persistedRemotely) {
-        AppFeedback.success(context, I18nService.instance.isChinese ? '日程已创建' : 'Event created');
+        AppFeedback.success(context,
+            I18nService.instance.isChinese ? '日程已创建' : 'Event created');
       } else {
         AppFeedback.info(
           context,
-          result.message ?? (I18nService.instance.isChinese ? '已保存到本地，稍后会自动同步到云端。' : 'Saved locally, will sync to cloud automatically.'),
+          result.message ??
+              (I18nService.instance.isChinese
+                  ? '已保存到本地，稍后会自动同步到云端。'
+                  : 'Saved locally, will sync to cloud automatically.'),
         );
       }
     } catch (e) {

@@ -111,10 +111,30 @@ func main() {
 	logger.Log.Info("Shutdown signal received, draining connections...",
 		zap.Int("timeout_seconds", shutdownTimeout))
 
-	// Phase 1: Drain WebSocket connections (1/3 of total timeout)
+	// Phase 1: stop admitting new WebSocket work immediately.
+	handlers.chatOrchestrator.StartDraining()
+	if handlers.wsProxy != nil {
+		handlers.wsProxy.StartDraining()
+	}
+
+	// Phase 2: stop accepting new HTTP requests while existing WebSockets drain.
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Duration(shutdownTimeout)*time.Second)
+	defer shutdownCancel()
+	shutdownErrCh := make(chan error, 1)
+	go func() {
+		shutdownErrCh <- srv.Shutdown(shutdownCtx)
+	}()
+
+	// Phase 3: Drain WebSocket connections (1/3 of total timeout)
 	drainTimeout := time.Duration(shutdownTimeout/3) * time.Second
 	if drainTimeout < 2*time.Second {
 		drainTimeout = 2 * time.Second
+	}
+	if handlers.wsProxy != nil {
+		logger.Log.Info("Draining proxied WebSocket connections",
+			zap.Duration("drain_timeout", drainTimeout))
+		handlers.wsProxy.ProxyDrainAll(drainTimeout)
+		logger.Log.Info("Proxied WebSocket connections drained")
 	}
 	if registry := handlers.chatOrchestrator.Registry(); registry != nil {
 		connCount := registry.Count()
@@ -125,11 +145,8 @@ func main() {
 		logger.Log.Info("WebSocket connections drained")
 	}
 
-	// Phase 2: Shutdown HTTP server (remaining time)
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), time.Duration(shutdownTimeout)*time.Second)
-	defer shutdownCancel()
-
-	if err := srv.Shutdown(shutdownCtx); err != nil {
+	// Phase 4: wait for HTTP shutdown to settle now that all upgraded sockets are closed.
+	if err := <-shutdownErrCh; err != nil {
 		logger.Log.Error("Server forced to shutdown", zap.Error(err))
 	}
 

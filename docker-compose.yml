@@ -52,7 +52,7 @@ services:
           memory: 256M
 
   redis:
-    image: redis/redis-stack-server:latest
+    image: redis/redis-stack-server:7.4.0-v8
     container_name: sparkle_redis
     ports:
       - "6379:6379"
@@ -70,7 +70,7 @@ services:
       retries: 5
 
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: sparkle_minio
     hostname: minio
     entrypoint: ["minio"]
@@ -83,6 +83,13 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD must be set}
     volumes:
       - sparkle_minio_data:/data
+    user: "${SPARKLE_MINIO_UID:-1000}:${SPARKLE_MINIO_GID:-1000}"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     deploy:
       resources:
         limits:
@@ -97,10 +104,12 @@ services:
     container_name: sparkle_api
     env_file:
       - .env
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     ports:
       - "${SPARKLE_API_PORT:-8000}:8000"
     environment:
       # Override localhost URLs from .env with correct Docker service names
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
       - POSTGRES_HOST=sparkle_db
@@ -113,45 +122,48 @@ services:
       - OPENCLAW_DEFAULT_WORKDIR=${PWD}
       - SERVICE_ROLE=api
       - RUN_MIGRATIONS=true
-      - ENABLE_AURORA_RUNTIME_V1=true
+      - ENABLE_AURORA_RUNTIME_V1=${ENABLE_AURORA_RUNTIME_V1:-true}
       # Aurora shadow→live: Bayesian, Idiographic, Stage33-35, Stage38, DocContext
-      - AURORA_BAYESIAN_MODE=live
-      - AURORA_IDIOGRAPHIC_MODE=live
-      - AURORA_STAGE33_MODE=live
-      - AURORA_STAGE33_EVENTS_MODE=live
-      - AURORA_STAGE33_SRL_MODE=live
-      - AURORA_STAGE33_WM_PROMPT_MODE=live
-      - AURORA_STAGE34_MODE=live
-      - AURORA_STAGE34_CAPSULE_MODE=live
-      - AURORA_STAGE34_ERROR_BRIDGE_MODE=live
-      - AURORA_STAGE35_MODE=live
-      - AURORA_STAGE35_METACOG_ROUTER_MODE=live
-      - AURORA_STAGE38_ERR_REPLAN_MODE=live
-      - AURORA_STAGE38_PUSH_SCHEDULER_MODE=live
-      - AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE=live
+      - AURORA_BAYESIAN_MODE=${AURORA_BAYESIAN_MODE:-live}
+      - AURORA_IDIOGRAPHIC_MODE=${AURORA_IDIOGRAPHIC_MODE:-live}
+      - AURORA_STAGE33_MODE=${AURORA_STAGE33_MODE:-live}
+      - AURORA_STAGE33_EVENTS_MODE=${AURORA_STAGE33_EVENTS_MODE:-live}
+      - AURORA_STAGE33_SRL_MODE=${AURORA_STAGE33_SRL_MODE:-live}
+      - AURORA_STAGE33_WM_PROMPT_MODE=${AURORA_STAGE33_WM_PROMPT_MODE:-live}
+      - AURORA_STAGE34_MODE=${AURORA_STAGE34_MODE:-live}
+      - AURORA_STAGE34_CAPSULE_MODE=${AURORA_STAGE34_CAPSULE_MODE:-live}
+      - AURORA_STAGE34_ERROR_BRIDGE_MODE=${AURORA_STAGE34_ERROR_BRIDGE_MODE:-live}
+      - AURORA_STAGE35_MODE=${AURORA_STAGE35_MODE:-live}
+      - AURORA_STAGE35_METACOG_ROUTER_MODE=${AURORA_STAGE35_METACOG_ROUTER_MODE:-live}
+      - AURORA_STAGE38_ERR_REPLAN_MODE=${AURORA_STAGE38_ERR_REPLAN_MODE:-live}
+      - AURORA_STAGE38_PUSH_SCHEDULER_MODE=${AURORA_STAGE38_PUSH_SCHEDULER_MODE:-live}
+      - AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE=${AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE:-live}
       # Aurora off→live: PushPolicy, Traits, SRL (3 critical)
-      - AURORA_STAGE18_PUSH_POLICY_MODE=live
-      - AURORA_STAGE18_PUSH_DELIVERY_MODE=live
-      - AURORA_TRAITS_MODE=live
-      - AURORA_TRAITS_COLDSTART_MODE=live
-      - AURORA_SRL_MODE=live
-      - AURORA_SRL_BRIDGE_MODE=live
-      - AURORA_SRL_TRACKER_MODE=live
-      - AURORA_SRL_SCAFFOLDING_CONSUME_MODE=live
-      - AURORA_FORESIGHT_MODE=live
-      - AURORA_METACOG_MODE=live
-      - AURORA_POLICY_COMPILER_MODE=live
-      - AURORA_REFLECTION_WIRE_MODE=live
-      - AURORA_SCENE_MODE=live
-      - AURORA_STAGE19_CONSOLIDATION_MODE=live
-      - AURORA_STAGE19_LLM_EXTRACTOR_MODE=live
-      - AURORA_STAGE19_WORKING_MEMORY_MODE=live
-      - AURORA_STAGE21_SKILL_SELECTION_MODE=live
-      - AURORA_STAGE21_SKILL_SHARE_MODE=live
-      - AURORA_TRAITS_NLP_MODE=live
+      - AURORA_STAGE18_PUSH_POLICY_MODE=${AURORA_STAGE18_PUSH_POLICY_MODE:-live}
+      - AURORA_STAGE18_PUSH_DELIVERY_MODE=${AURORA_STAGE18_PUSH_DELIVERY_MODE:-live}
+      - AURORA_TRAITS_MODE=${AURORA_TRAITS_MODE:-live}
+      - AURORA_TRAITS_COLDSTART_MODE=${AURORA_TRAITS_COLDSTART_MODE:-live}
+      - AURORA_SRL_MODE=${AURORA_SRL_MODE:-live}
+      - AURORA_SRL_BRIDGE_MODE=${AURORA_SRL_BRIDGE_MODE:-live}
+      - AURORA_SRL_TRACKER_MODE=${AURORA_SRL_TRACKER_MODE:-live}
+      - AURORA_SRL_SCAFFOLDING_CONSUME_MODE=${AURORA_SRL_SCAFFOLDING_CONSUME_MODE:-live}
+      - AURORA_FORESIGHT_MODE=${AURORA_FORESIGHT_MODE:-live}
+      - AURORA_METACOG_MODE=${AURORA_METACOG_MODE:-live}
+      - AURORA_POLICY_COMPILER_MODE=${AURORA_POLICY_COMPILER_MODE:-live}
+      - AURORA_REFLECTION_WIRE_MODE=${AURORA_REFLECTION_WIRE_MODE:-live}
+      - AURORA_SCENE_MODE=${AURORA_SCENE_MODE:-live}
+      - AURORA_STAGE19_CONSOLIDATION_MODE=${AURORA_STAGE19_CONSOLIDATION_MODE:-live}
+      - AURORA_STAGE19_LLM_EXTRACTOR_MODE=${AURORA_STAGE19_LLM_EXTRACTOR_MODE:-live}
+      - AURORA_STAGE19_WORKING_MEMORY_MODE=${AURORA_STAGE19_WORKING_MEMORY_MODE:-live}
+      - AURORA_STAGE21_SKILL_SELECTION_MODE=${AURORA_STAGE21_SKILL_SELECTION_MODE:-live}
+      - AURORA_STAGE21_SKILL_SHARE_MODE=${AURORA_STAGE21_SKILL_SHARE_MODE:-live}
+      - AURORA_TRAITS_NLP_MODE=${AURORA_TRAITS_NLP_MODE:-live}
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://sparkle_tempo:4317
     volumes:
       - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_uploads:/app/uploads
+      - sparkle_backend_cache:/app/.cache
       - ./data/dictionaries:/app/data/dictionaries:ro
       - ${HOME}/.openclaw/sparkle-backend:/app/.openclaw:ro
     extra_hosts:
@@ -163,7 +175,6 @@ services:
         condition: service_completed_successfully
       redis:
         condition: service_healthy
-    user: root
     deploy:
       resources:
         limits:
@@ -185,10 +196,12 @@ services:
     env_file:
       - .env
     command: python grpc_server.py
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     ports:
       - "${SPARKLE_AGENT_PORT:-50051}:50051"
     environment:
       # Override localhost URLs from .env with correct Docker service names
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
       - POSTGRES_HOST=sparkle_db
@@ -201,44 +214,47 @@ services:
       - INTERNAL_API_KEY=${INTERNAL_API_KEY}
       - JWT_SECRET=${JWT_SECRET}
       - SERVICE_ROLE=grpc
-      - ENABLE_AURORA_RUNTIME_V1=true
+      - ENABLE_AURORA_RUNTIME_V1=${ENABLE_AURORA_RUNTIME_V1:-true}
       # Aurora shadow→live: Bayesian, Idiographic, Stage33-35, Stage38, DocContext
-      - AURORA_BAYESIAN_MODE=live
-      - AURORA_IDIOGRAPHIC_MODE=live
-      - AURORA_STAGE33_MODE=live
-      - AURORA_STAGE33_EVENTS_MODE=live
-      - AURORA_STAGE33_SRL_MODE=live
-      - AURORA_STAGE33_WM_PROMPT_MODE=live
-      - AURORA_STAGE34_MODE=live
-      - AURORA_STAGE34_CAPSULE_MODE=live
-      - AURORA_STAGE34_ERROR_BRIDGE_MODE=live
-      - AURORA_STAGE35_MODE=live
-      - AURORA_STAGE35_METACOG_ROUTER_MODE=live
-      - AURORA_STAGE38_ERR_REPLAN_MODE=live
-      - AURORA_STAGE38_PUSH_SCHEDULER_MODE=live
-      - AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE=live
+      - AURORA_BAYESIAN_MODE=${AURORA_BAYESIAN_MODE:-live}
+      - AURORA_IDIOGRAPHIC_MODE=${AURORA_IDIOGRAPHIC_MODE:-live}
+      - AURORA_STAGE33_MODE=${AURORA_STAGE33_MODE:-live}
+      - AURORA_STAGE33_EVENTS_MODE=${AURORA_STAGE33_EVENTS_MODE:-live}
+      - AURORA_STAGE33_SRL_MODE=${AURORA_STAGE33_SRL_MODE:-live}
+      - AURORA_STAGE33_WM_PROMPT_MODE=${AURORA_STAGE33_WM_PROMPT_MODE:-live}
+      - AURORA_STAGE34_MODE=${AURORA_STAGE34_MODE:-live}
+      - AURORA_STAGE34_CAPSULE_MODE=${AURORA_STAGE34_CAPSULE_MODE:-live}
+      - AURORA_STAGE34_ERROR_BRIDGE_MODE=${AURORA_STAGE34_ERROR_BRIDGE_MODE:-live}
+      - AURORA_STAGE35_MODE=${AURORA_STAGE35_MODE:-live}
+      - AURORA_STAGE35_METACOG_ROUTER_MODE=${AURORA_STAGE35_METACOG_ROUTER_MODE:-live}
+      - AURORA_STAGE38_ERR_REPLAN_MODE=${AURORA_STAGE38_ERR_REPLAN_MODE:-live}
+      - AURORA_STAGE38_PUSH_SCHEDULER_MODE=${AURORA_STAGE38_PUSH_SCHEDULER_MODE:-live}
+      - AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE=${AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE:-live}
       # Aurora off→live: PushPolicy, Traits, SRL (3 critical)
-      - AURORA_STAGE18_PUSH_POLICY_MODE=live
-      - AURORA_STAGE18_PUSH_DELIVERY_MODE=live
-      - AURORA_TRAITS_MODE=live
-      - AURORA_TRAITS_COLDSTART_MODE=live
-      - AURORA_SRL_MODE=live
-      - AURORA_SRL_BRIDGE_MODE=live
-      - AURORA_SRL_TRACKER_MODE=live
-      - AURORA_SRL_SCAFFOLDING_CONSUME_MODE=live
-      - AURORA_FORESIGHT_MODE=live
-      - AURORA_METACOG_MODE=live
-      - AURORA_POLICY_COMPILER_MODE=live
-      - AURORA_REFLECTION_WIRE_MODE=live
-      - AURORA_SCENE_MODE=live
-      - AURORA_STAGE19_CONSOLIDATION_MODE=live
-      - AURORA_STAGE19_LLM_EXTRACTOR_MODE=live
-      - AURORA_STAGE19_WORKING_MEMORY_MODE=live
-      - AURORA_STAGE21_SKILL_SELECTION_MODE=live
-      - AURORA_STAGE21_SKILL_SHARE_MODE=live
-      - AURORA_TRAITS_NLP_MODE=live
+      - AURORA_STAGE18_PUSH_POLICY_MODE=${AURORA_STAGE18_PUSH_POLICY_MODE:-live}
+      - AURORA_STAGE18_PUSH_DELIVERY_MODE=${AURORA_STAGE18_PUSH_DELIVERY_MODE:-live}
+      - AURORA_TRAITS_MODE=${AURORA_TRAITS_MODE:-live}
+      - AURORA_TRAITS_COLDSTART_MODE=${AURORA_TRAITS_COLDSTART_MODE:-live}
+      - AURORA_SRL_MODE=${AURORA_SRL_MODE:-live}
+      - AURORA_SRL_BRIDGE_MODE=${AURORA_SRL_BRIDGE_MODE:-live}
+      - AURORA_SRL_TRACKER_MODE=${AURORA_SRL_TRACKER_MODE:-live}
+      - AURORA_SRL_SCAFFOLDING_CONSUME_MODE=${AURORA_SRL_SCAFFOLDING_CONSUME_MODE:-live}
+      - AURORA_FORESIGHT_MODE=${AURORA_FORESIGHT_MODE:-live}
+      - AURORA_METACOG_MODE=${AURORA_METACOG_MODE:-live}
+      - AURORA_POLICY_COMPILER_MODE=${AURORA_POLICY_COMPILER_MODE:-live}
+      - AURORA_REFLECTION_WIRE_MODE=${AURORA_REFLECTION_WIRE_MODE:-live}
+      - AURORA_SCENE_MODE=${AURORA_SCENE_MODE:-live}
+      - AURORA_STAGE19_CONSOLIDATION_MODE=${AURORA_STAGE19_CONSOLIDATION_MODE:-live}
+      - AURORA_STAGE19_LLM_EXTRACTOR_MODE=${AURORA_STAGE19_LLM_EXTRACTOR_MODE:-live}
+      - AURORA_STAGE19_WORKING_MEMORY_MODE=${AURORA_STAGE19_WORKING_MEMORY_MODE:-live}
+      - AURORA_STAGE21_SKILL_SELECTION_MODE=${AURORA_STAGE21_SKILL_SELECTION_MODE:-live}
+      - AURORA_STAGE21_SKILL_SHARE_MODE=${AURORA_STAGE21_SKILL_SHARE_MODE:-live}
+      - AURORA_TRAITS_NLP_MODE=${AURORA_TRAITS_NLP_MODE:-live}
     volumes:
       - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_uploads:/app/uploads
+      - sparkle_backend_cache:/app/.cache
       - ${HOME}/.openclaw/sparkle-backend:/app/.openclaw:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -270,8 +286,10 @@ services:
     env_file:
       - .env
     command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=4
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
       # Override localhost URLs from .env with correct Docker service names
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
@@ -289,6 +307,9 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_uploads:/app/uploads
+      - sparkle_backend_cache:/app/.cache
     deploy:
       resources:
         limits:
@@ -309,7 +330,9 @@ services:
     env_file:
       - .env
     command: celery -A app.core.celery_app worker -l info -Q glm_batch --autoscale=6,2 --hostname=glm-batch@%h
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     environment:
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - REDIS_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/0
       - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD}@sparkle_redis:6379/1
@@ -328,6 +351,9 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - sparkle_backend_logs:/app/logs
+      - sparkle_backend_uploads:/app/uploads
+      - sparkle_backend_cache:/app/.cache
     deploy:
       resources:
         limits:
@@ -348,10 +374,12 @@ services:
     container_name: sparkle_gateway
     env_file:
       - .env
+    user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
     ports:
       - "${SPARKLE_GATEWAY_PORT:-8080}:8080"
     environment:
       # Explicit container-internal addresses (override .env localhost values)
+      - SPARKLE_RBAC_ENABLED=${SPARKLE_RBAC_ENABLED:-false}
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@sparkle_db:5432/${POSTGRES_DB}
       - POSTGRES_HOST=sparkle_db
       - POSTGRES_PORT=5432
@@ -416,6 +444,9 @@ services:
       - ./monitoring/celery_alerts.yml:/etc/prometheus/celery_alerts.yml:ro
       - ./monitoring/sparkle_slo_alerts.yml:/etc/prometheus/sparkle_slo_alerts.yml:ro
       - ./monitoring/sparkle_production_baseline_alerts.yml:/etc/prometheus/sparkle_production_baseline_alerts.yml:ro
+      - ./monitoring/sparkle_t6_slo_alerts.yml:/etc/prometheus/sparkle_t6_slo_alerts.yml:ro
+      - ./monitoring/sparkle_recording_rules.yml:/etc/prometheus/sparkle_recording_rules.yml:ro
+      - ./monitoring/sqam_alerts.yml:/etc/prometheus/sqam_alerts.yml:ro
     ports:
       - "9090:9090"
     depends_on:
@@ -433,7 +464,9 @@ services:
     image: prom/alertmanager:v0.27.0
     container_name: sparkle_alertmanager
     command:
-      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "/bin/sh"
+      - "-c"
+      - "envsubst < /etc/alertmanager/alertmanager.yml > /tmp/alertmanager.yml && /bin/alertmanager --config.file=/tmp/alertmanager.yml"
     volumes:
       - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     ports:
@@ -475,7 +508,7 @@ services:
     container_name: sparkle_grafana
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD must be set for security}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - ./monitoring/grafana-provisioning/datasources:/etc/grafana/provisioning/datasources:ro
@@ -496,3 +529,6 @@ services:
 
 volumes:
   sparkle_minio_data:
+  sparkle_backend_logs:
+  sparkle_backend_uploads:
+  sparkle_backend_cache:

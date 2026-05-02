@@ -21,6 +21,7 @@ from app.models.community import Group, GroupMember, GroupTaskClaim
 from app.schemas.error_book import ErrorQueryParams
 from app.schemas.task import TaskListQuery, TaskStatus
 from app.services.aurora_stage40_calendar_kill_switch_service import AuroraStage40CalendarKillSwitchService
+from app.services.calendar_service import CalendarService
 from app.services.capsule_favorite_service import CapsuleFavoriteService
 from app.services.error_book_service import ErrorBookService
 from app.services.focus_service import focus_service
@@ -738,101 +739,7 @@ class ContextOrchestrator:
             CALENDAR_FALLBACK_TOTAL.labels(reason="mode_off", mode=mode).inc()
             return {}
 
-        now = _utcnow()
-        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        today_end = today_start + timedelta(days=1)
-        week_end = now + timedelta(days=7)
-
-        today_result = await db.execute(
-            select(CalendarEvent)
-            .where(
-                CalendarEvent.user_id == user_id,
-                CalendarEvent.deleted_at.is_(None),
-                CalendarEvent.start_time < today_end,
-                CalendarEvent.end_time > today_start,
-            )
-            .order_by(CalendarEvent.start_time)
-        )
-        week_result = await db.execute(
-            select(CalendarEvent)
-            .where(
-                CalendarEvent.user_id == user_id,
-                CalendarEvent.deleted_at.is_(None),
-                CalendarEvent.start_time < week_end,
-                CalendarEvent.end_time > today_start,
-            )
-            .order_by(CalendarEvent.start_time)
-        )
-
-        today_events = list(today_result.scalars().all())
-        week_events = list(week_result.scalars().all())
-        preferences = await self._get_preference_service(db).get_preferences(user_id)
-        merged_prefs: dict[str, Any] = {}
-        if preferences:
-            merged_prefs.update(dict(preferences.inferred or {}))
-            merged_prefs.update(dict(preferences.explicit or {}))
-        exam_urgency = merged_prefs.get("exam_urgency") if isinstance(merged_prefs.get("exam_urgency"), dict) else {}
-
-        upcoming_deadlines = []
-        for event in week_events[:6]:
-            event_kind = self._calendar_event_kind(event)
-            if event.task_id is None and event.plan_id is None and event_kind not in {"exam", "deadline"}:
-                continue
-            upcoming_deadlines.append(
-                {
-                    "title": event.title,
-                    "start_time": event.start_time.isoformat(),
-                    "end_time": event.end_time.isoformat(),
-                    "source": "task" if event.task_id else "plan" if event.plan_id else "calendar",
-                    "kind": event_kind,
-                }
-            )
-
-        time_blocks_today = self._derive_available_time_blocks(today_events, reference_day=today_start.date())
-        busy_events_today = self._serialize_busy_calendar_events(today_events)
-        busy_events_by_date: dict[str, list[dict[str, Any]]] = {}
-        time_blocks_by_date: dict[str, list[dict[str, str]]] = {}
-        for offset in range(7):
-            target_day = today_start.date() + timedelta(days=offset)
-            day_events = [
-                event
-                for event in week_events
-                if (event.start_time.replace(tzinfo=None) if event.start_time.tzinfo else event.start_time).date()
-                == target_day
-            ]
-            if offset == 0:
-                day_events = today_events
-            day_key = target_day.isoformat()
-            serialized = self._serialize_busy_calendar_events(day_events)
-            if serialized:
-                busy_events_by_date[day_key] = serialized
-            blocks = self._derive_available_time_blocks(day_events, reference_day=target_day)
-            if blocks:
-                time_blocks_by_date[day_key] = blocks
-        workload_density = self._derive_workload_density(week_events)
-
-        if (
-            not upcoming_deadlines
-            and not time_blocks_today
-            and not busy_events_today
-            and not busy_events_by_date
-            and not workload_density
-            and not exam_urgency
-        ):
-            if mode != "live":
-                return {"_stage40_mode": mode}
-            return {}
-
-        payload = {
-            "today": today_start.date().isoformat(),
-            "upcoming_deadlines": upcoming_deadlines,
-            "time_blocks_today": time_blocks_today,
-            "time_blocks_by_date": time_blocks_by_date,
-            "busy_events": busy_events_today,
-            "busy_events_by_date": busy_events_by_date,
-            "workload_density": workload_density,
-            "exam_urgency": exam_urgency or {},
-        }
+        payload = await CalendarService(db).get_busy_free_context(user_id, days=7)
         if mode != "live":
             payload["_stage40_mode"] = mode
         return payload

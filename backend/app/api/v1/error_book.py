@@ -17,15 +17,21 @@ from app.schemas.error_book import (
     ErrorRecordListResponse,
     ErrorRecordResponse,
     ErrorRecordUpdate,
+    ErrorReviewCardsResponse,
     ErrorTypeEnum,
+    RemediablePattern,
     ReviewAction,
     ReviewStatsResponse,
     SubjectEnum,
+    TaskTemplate,
 )
 from app.schemas.semantic_memory import ErrorSemanticSummary
+from app.schemas.task import TaskDetail
 from app.services.error_book_service import ErrorBookService
+from app.services.error_pattern_template_service import ErrorPatternTemplateService
 
 router = APIRouter(prefix="/errors", tags=["Error Book"])
+error_book_router = APIRouter(prefix="/error-book", tags=["Error Book"])
 
 
 async def _analyze_error_task(error_id: UUID, user_id: UUID, db_session_factory) -> None:
@@ -41,6 +47,13 @@ async def get_error_service(
     return ErrorBookService(db)
 
 
+async def get_error_pattern_template_service(
+    db: AsyncSession = Depends(get_db),
+) -> ErrorPatternTemplateService:
+    return ErrorPatternTemplateService(db)
+
+
+# route-tier: authed
 @router.post("", response_model=ErrorRecordResponse, status_code=201)
 async def create_error(
     data: ErrorRecordCreate,
@@ -58,6 +71,7 @@ async def create_error(
     return error
 
 
+# route-tier: authed
 @router.get("", response_model=ErrorRecordListResponse)
 async def list_errors(
     subject: SubjectEnum | None = Query(None, description="按科目筛选"),
@@ -98,6 +112,7 @@ async def list_errors(
     )
 
 
+# route-tier: authed
 @router.get("/stats", response_model=ReviewStatsResponse)
 async def get_stats(
     user_id: str = Depends(get_current_user_id), service: ErrorBookService = Depends(get_error_service)
@@ -107,6 +122,7 @@ async def get_stats(
     return ReviewStatsResponse(**stats)
 
 
+# route-tier: authed
 @router.get("/today-review", response_model=ErrorRecordListResponse)
 async def get_today_review_list(
     page: int = Query(1, ge=1),
@@ -124,6 +140,63 @@ async def get_today_review_list(
     )
 
 
+# route-tier: authed
+@router.get("/review-cards", response_model=ErrorReviewCardsResponse)
+async def get_review_cards(
+    limit: int = Query(8, ge=1, le=20),
+    lookback_days: int = Query(90, ge=7, le=365),
+    user_id: str = Depends(get_current_user_id),
+    service: ErrorBookService = Depends(get_error_service),
+):
+    """Get clustered, actionable review cards built from recent real mistakes."""
+    return await service.get_review_cards(UUID(user_id), limit=limit, lookback_days=lookback_days)
+
+
+# route-tier: authed
+@router.get("/remediable-patterns", response_model=list[RemediablePattern])
+@error_book_router.get("/remediable-patterns", response_model=list[RemediablePattern])
+async def list_remediable_patterns(
+    limit: int = Query(3, ge=1, le=20),
+    lookback_days: int = Query(14, ge=1, le=90),
+    user_id: str = Depends(get_current_user_id),
+    service: ErrorPatternTemplateService = Depends(get_error_pattern_template_service),
+):
+    """List repeated ErrorBook patterns that can become remediation tasks."""
+    return await service.identify_remediable_patterns(UUID(user_id), lookback_days=lookback_days, limit=limit)
+
+
+# route-tier: authed
+@router.post("/patterns/{pattern_id}/generate-template", response_model=TaskTemplate)
+@error_book_router.post("/patterns/{pattern_id}/generate-template", response_model=TaskTemplate)
+async def generate_remedial_task_template(
+    pattern_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: ErrorPatternTemplateService = Depends(get_error_pattern_template_service),
+):
+    """Preview the task template for a remediable error pattern."""
+    patterns = await service.identify_remediable_patterns(UUID(user_id), min_confidence=0.0, limit=50)
+    pattern = next((item for item in patterns if item.id == pattern_id), None)
+    if pattern is None:
+        raise HTTPException(status_code=404, detail="没有找到这个可补救错因模式")
+    return service.generate_task_template(pattern)
+
+
+# route-tier: authed
+@router.post("/patterns/{pattern_id}/accept-template", response_model=TaskDetail, status_code=201)
+@error_book_router.post("/patterns/{pattern_id}/accept-template", response_model=TaskDetail, status_code=201)
+async def accept_remedial_task_template(
+    pattern_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: ErrorPatternTemplateService = Depends(get_error_pattern_template_service),
+):
+    """Accept a remediable pattern template and create a real task."""
+    try:
+        return await service.accept_template(UUID(user_id), pattern_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+# route-tier: authed
 @router.get("/{error_id}", response_model=ErrorRecordResponse)
 async def get_error(
     error_id: UUID, user_id: str = Depends(get_current_user_id), service: ErrorBookService = Depends(get_error_service)
@@ -137,6 +210,7 @@ async def get_error(
     return error
 
 
+# route-tier: authed
 @router.patch("/{error_id}", response_model=ErrorRecordResponse)
 async def update_error(
     error_id: UUID,
@@ -151,6 +225,7 @@ async def update_error(
     return error
 
 
+# route-tier: authed
 @router.delete("/{error_id}", status_code=204)
 async def delete_error(
     error_id: UUID, user_id: str = Depends(get_current_user_id), service: ErrorBookService = Depends(get_error_service)
@@ -161,6 +236,7 @@ async def delete_error(
         raise HTTPException(status_code=404, detail="没有找到这个错题，可能已经删除了")
 
 
+# route-tier: authed
 @router.post("/{error_id}/analyze", response_model=dict)
 async def re_analyze_error(
     error_id: UUID,
@@ -180,6 +256,7 @@ async def re_analyze_error(
     return {"message": "分析任务已提交，请稍后刷新查看结果~"}
 
 
+# route-tier: authed
 @router.post("/{error_id}/review", response_model=ErrorRecordResponse)
 async def submit_review(
     error_id: UUID,
@@ -197,6 +274,7 @@ async def submit_review(
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/{error_id}/semantic", response_model=ErrorSemanticSummary)
 async def get_error_semantic_summary(
     error_id: UUID,

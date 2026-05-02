@@ -525,6 +525,17 @@ class UserRepository {
         'ai_reasoning_mode': 'balanced',
         'task_reminders_enabled': true,
         'task_reminder_times': [1440, 60, 15],
+        'accessibility_settings': <String, dynamic>{
+          'font_scale': 1.0,
+          'high_contrast': false,
+          'screen_reader_optimized': false,
+          'touch_target_size': 'comfortable',
+          'reduce_motion': false,
+          'color_blind_friendly': false,
+          'tts_enabled': false,
+          'haptic_feedback': true,
+          'low_load_mode': false,
+        },
       };
     }
     final response = await _apiClient.get<Map<String, dynamic>>(

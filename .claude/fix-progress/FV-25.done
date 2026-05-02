@@ -1,0 +1,16 @@
+FV-25: v1/v2 旧代码清理 + 文档同步
+Status: DONE
+Branch: codex/FV-17-source-lifecycle
+Modified files:
+- backend/app/signals/research_grade.py (DEPRECATED headers on all v1 classes)
+- backend/app/signals/__init__.py (v1 exports renamed to _v1 suffix)
+- docs/adr/0007-research-grade-v2-migration-and-deprecation.md (migration ADR)
+- docs/adr/0008-full-vision-completion-2026-05-02.md (full vision completion ADR)
+- CLAUDE.md (version + FV program completion reflected)
+- docs/00_项目概览/02_技术架构.md (updated)
+Verification:
+- cd backend && pytest tests/unit/test_signal_spine.py -v -k "v1" --no-header: PASS (v1 tests annotated with DEPRECATED)
+- git grep CounterfactualEngine backend/app/signals/__init__.py: 0 (not exported)
+- git grep "from app.signals.research_grade" backend/tests/ -- '*.py': present with # noqa: DEPRECATED v1 comments
+User-visible change: Old v1 research-grade modules marked deprecated, v2 implementations active. Full vision ADR records architecture decisions.
+Architect handoff: N/A — FV-25 complete. v1 module scheduled for deletion in next sprint.

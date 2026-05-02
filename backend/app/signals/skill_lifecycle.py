@@ -91,6 +91,8 @@ class SkillLifecycleManager:
                 continue
             if not self._matches_context(skill, context):
                 continue
+            if self._is_contraindicated(skill, context):
+                continue
             applicable.append(skill)
 
         return sorted(
@@ -153,6 +155,8 @@ class SkillLifecycleManager:
             issues.append("missing_intervention_summary")
         elif not skill.strategy.get("intervention_summary"):
             issues.append("missing_intervention_summary")
+        if not skill.contraindications:
+            issues.append("missing_contraindications")
         if skill.effective_count < 3:
             issues.append("insufficient_effective_count")
             issues.append("effective_count_below_threshold")
@@ -196,6 +200,8 @@ class SkillLifecycleManager:
         skill.evidence["promoted_at"] = now
 
         await self.store_skill(user_id, skill)
+        if to_scope == "system":
+            await self._register_system_skill_in_marketplace(skill, user_id=user_id)
         logger.info(
             "SkillLifecycle: promoted skill={} user={} {}→{}",
             skill.skill_id,
@@ -204,6 +210,22 @@ class SkillLifecycleManager:
             to_scope,
         )
         return skill
+
+    async def _register_system_skill_in_marketplace(self, skill: SkillEntry, *, user_id: str) -> None:
+        """Best-effort production handoff from lifecycle promotion to marketplace listing."""
+        try:
+            from app.db.session import AsyncSessionLocal
+            from app.signals.marketplace import MarketplacePersistenceService
+
+            async with AsyncSessionLocal() as session:
+                await MarketplacePersistenceService(session).register_system_skill(skill, user_id=user_id)
+                await session.commit()
+        except Exception:
+            logger.warning(
+                "SkillLifecycle: marketplace registration failed for system skill={}",
+                skill.skill_id,
+                exc_info=True,
+            )
 
     async def deprecate_skill(self, user_id: str, skill_id: str, reason: str) -> None:
         """Mark a skill as deprecated without deleting it."""
@@ -325,6 +347,42 @@ class SkillLifecycleManager:
             if expected is not None and actual is not None and expected != actual:
                 return False
         return True
+
+    @staticmethod
+    def _is_contraindicated(skill: SkillEntry, context: dict[str, Any]) -> bool:
+        """Return true when current context matches a skill's avoid rule.
+
+        Supported forms:
+        - ``avoid_if:key``: blocks when context[key] is truthy
+        - ``avoid_if:key=value``: blocks on exact string match
+        - ``context["contraindications"]`` / ``context["avoid_flags"]`` may
+          contain the full token or the key for caller-provided safety signals.
+        """
+        active_flags = {
+            str(item)
+            for item in (
+                list(context.get("contraindications") or [])
+                + list(context.get("avoid_flags") or [])
+            )
+        }
+        for rule in skill.contraindications:
+            token = str(rule or "").strip()
+            if not token:
+                continue
+            if token in active_flags:
+                return True
+            if not token.startswith("avoid_if:"):
+                continue
+            condition = token.removeprefix("avoid_if:")
+            if condition in active_flags:
+                return True
+            if "=" in condition:
+                key, expected = condition.split("=", 1)
+                if str(context.get(key)) == expected:
+                    return True
+            elif context.get(condition):
+                return True
+        return False
 
     @staticmethod
     def _recent_outcomes(skill: SkillEntry) -> list[Any]:

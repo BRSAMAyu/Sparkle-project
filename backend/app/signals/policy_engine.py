@@ -88,6 +88,30 @@ _RULE_TABLE: dict[str, dict[str, dict[str, Any]]] = {
             "reasoning_template": "检测到考试紧急情况，进入抢救模式。",
         },
     },
+    "crisis_mode": {
+        "crisis_mode_active": {
+            "primary_strategy": "enforce_crisis_mode",
+            "secondary_strategy": "minimum_pass_only",
+            "hard_constraints": {
+                "max_task_duration_min": 15,
+                "avoid_new_chapter": True,
+                "retrieval_mode": "minimal_pass",
+                "source_scope": "task_bound",
+                "suppress_challenge_achievement_notifications": True,
+                "aurora_l3_proactive_allowed": False,
+            },
+            "soft_biases": {
+                "tone": "calm_urgent",
+                "status_band_label": "危机模式中",
+                "status_band_explanation": "只保留最低过线路径，先把压力和任务体量降下来。",
+                "challenge_achievement_reminders": "off",
+                "aurora_l3_proactive_wake": "off",
+            },
+            "visibility": "status_band",
+            "requires_user_confirmation": False,
+            "reasoning_template": "危机模式中：任务压到 15 分钟内，不开新章节，只调用最低过线相关资料。",
+        },
+    },
     "knowledge_transfer": {
         "transfer_failure": {
             "primary_strategy": "repair_knowledge_bottleneck",
@@ -350,6 +374,7 @@ _RISK_LEVEL_MAP: dict[str, str] = {
     "user_correction": "high",
     "deadline_pressure": "high",
     "exam_rescue": "critical",
+    "crisis_mode": "critical",
     "goal_mode": "high",
     "task_granularity_fit": "medium",
     "knowledge_transfer": "medium",
@@ -374,6 +399,9 @@ _WHICH_DIRECTIVES: dict[str, dict[str, bool]] = {
     },
     "goal_mode": {
         "response": True, "execution": True, "plan": True, "ux": True, "model_write": True,
+    },
+    "crisis_mode": {
+        "response": True, "execution": True, "retrieval": True, "plan": True, "ux": True,
     },
     "knowledge_transfer": {
         "response": True, "execution": True, "retrieval": True, "ux": True, "model_write": True, "skill": True,
@@ -488,13 +516,21 @@ class PolicyEngine:
         if not strategy_beliefs:
             return rule
 
+        counter_evidence_threshold = 3
         belief_map = {}
         for b in strategy_beliefs:
             key = getattr(b, "strategy_key", None)
             if key:
+                counter_evidence_count = len(getattr(b, "counter_evidence", []) or [])
+                if counter_evidence_count >= counter_evidence_threshold:
+                    continue
                 eff = getattr(b, "expected_effectiveness", 0.5)
                 evidence = getattr(b, "evidence_count", 0)
-                belief_map[key] = {"effectiveness": eff, "evidence": evidence}
+                belief_map[key] = {
+                    "effectiveness": eff,
+                    "evidence": evidence,
+                    "counter_evidence": counter_evidence_count,
+                }
 
         current_strategy = rule.get("primary_strategy", "")
         current_info = belief_map.get(current_strategy)
@@ -737,6 +773,8 @@ class PolicyEngine:
             must_acknowledge = ["repeated_errors"]
         elif signal.state_key == "goal_mode":
             must_acknowledge = ["exam_situation"]
+        elif signal.state_key == "crisis_mode":
+            must_acknowledge = ["crisis_mode_active"]
 
         # Derive avoid list from tone
         avoid: list[str] = []
@@ -746,6 +784,8 @@ class PolicyEngine:
             avoid = ["generic_encouragement"]
         if tone == "recognition_not_praise":
             avoid = ["empty_praise", "generic_encouragement"]
+        if signal.state_key == "crisis_mode":
+            avoid = sorted(set(avoid + ["pressure_language", "challenge_framing", "full_syllabus_plan"]))
 
         # Only produce ResponseDirective for receipt/inline visibility
         if decision.visibility == "status_band":
@@ -837,6 +877,12 @@ class PolicyEngine:
             "pollution_guard": "strict",
             "reason": "考试抢救模式下只加载与任务直接相关的资料。",
         },
+        "crisis_mode_active": {
+            "retrieval_mode": "minimal_pass",
+            "source_scope": "task_bound",
+            "pollution_guard": "strict",
+            "reason": "危机模式中，只调用最低过线路径所需资料，避免扩大压力。",
+        },
         "transfer_failure": {
             "retrieval_mode": "task_bound_graph_rag",
             "source_scope": "task_bound",
@@ -846,7 +892,7 @@ class PolicyEngine:
         "pre_exam_silence": {
             "retrieval_mode": "task_bound_graph_rag",
             "source_scope": "task_bound",
-            "pollution_guard": "permissive",
+            "pollution_guard": "moderate",
             "reason": "考前快速复习，加载高收益资料。",
         },
     }
@@ -905,6 +951,19 @@ class PolicyEngine:
                 "preserve_deadline_strategy": True,
                 "prefer_high_yield": True,
                 "max_task_duration_min": 30,
+            },
+        },
+        "crisis_mode_active": {
+            "plan_action": "local_replan",
+            "scope": "current_sprint",
+            "constraints": {
+                "preserve_deadline_strategy": True,
+                "prefer_high_yield": True,
+                "max_task_duration_min": 15,
+                "avoid_new_chapter": True,
+                "minimal_pass_only": True,
+                "disable_challenge_achievements": True,
+                "aurora_l3_proactive_allowed": False,
             },
         },
         "momentum_stalled": {
@@ -1079,6 +1138,12 @@ class PolicyEngine:
             "status_band_state": "strategy_active",
             "show_strategy_receipt": True,
             "allow_full_aurora_wake": True,
+        },
+        "crisis_mode_active": {
+            "status_band_state": "crisis_mode_active",
+            "show_context_receipt": True,
+            "show_strategy_receipt": True,
+            "allow_full_aurora_wake": False,
         },
         "momentum_high": {
             "status_band_state": "milestone",

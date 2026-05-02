@@ -120,28 +120,32 @@ class _StrategyInterventionCardState extends State<StrategyInterventionCard>
                 child: Row(
                   children: [
                     Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.selection,
-                          );
-                          widget.onAdjust();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: DS.warning.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: DS.warning.withValues(alpha: 0.25),
+                      child: Semantics(
+                        button: true,
+                        label: 'Chat strategy intervention card control 1',
+                        child: GestureDetector(
+                          onTap: () {
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            );
+                            widget.onAdjust();
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: DS.warning.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: DS.warning.withValues(alpha: 0.25),
+                              ),
                             ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              widget.suggestedAction,
-                              style: DS.labelSmall.copyWith(
-                                color: DS.warning,
-                                fontWeight: FontWeight.w500,
+                            child: Center(
+                              child: Text(
+                                widget.suggestedAction,
+                                style: DS.labelSmall.copyWith(
+                                  color: DS.warning,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ),
                           ),
@@ -149,25 +153,29 @@ class _StrategyInterventionCardState extends State<StrategyInterventionCard>
                       ),
                     ),
                     const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
-                        widget.onDismiss();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: DS.surfaceHigh,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: DS.borderSubtle),
-                        ),
-                        child: Text(
-                          context.l10n.chatInterventionIgnore,
-                          style: DS.labelSmall.copyWith(
-                            color: DS.textTertiary,
+                    Semantics(
+                      button: true,
+                      label: 'Chat strategy intervention card control 2',
+                      child: GestureDetector(
+                        onTap: () {
+                          SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
+                          widget.onDismiss();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          decoration: BoxDecoration(
+                            color: DS.surfaceHigh,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: DS.borderSubtle),
+                          ),
+                          child: Text(
+                            context.l10n.chatInterventionIgnore,
+                            style: DS.labelSmall.copyWith(
+                              color: DS.textTertiary,
+                            ),
                           ),
                         ),
                       ),
@@ -219,11 +227,15 @@ class _Header extends StatelessWidget {
                 ),
               ),
             ),
-            IconButton(
-              icon: Icon(Icons.close, size: 15, color: DS.textTertiary),
-              onPressed: onDismiss,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            Semantics(
+              button: true,
+              label: 'Chat strategy intervention card control 3',
+              child: IconButton(
+                icon: Icon(Icons.close, size: 15, color: DS.textTertiary),
+                onPressed: onDismiss,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
             ),
           ],
         ),

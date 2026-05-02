@@ -81,9 +81,10 @@ func (h *FileEventHandler) HandleWebSocket(c *gin.Context) {
 		msgRate = h.cfg.WSMessageRateRPS
 		msgBurst = h.cfg.WSMessageRateBurst
 	}
-	if readLimit > 0 {
-		conn.SetReadLimit(readLimit)
+	if readLimit <= 0 {
+		readLimit = wsDefaultMaxMessageBytes
 	}
+	conn.SetReadLimit(readLimit)
 	if msgRate <= 0 {
 		msgRate = 1
 	}

@@ -133,7 +133,8 @@ class AgentWorkflowPanel extends StatelessWidget {
         return mode;
       }
     }
-    final activeCount = entries.where((entry) => entry.status == 'active').length;
+    final activeCount =
+        entries.where((entry) => entry.status == 'active').length;
     return activeCount > 1 ? 'parallel' : 'sequential';
   }
 }
@@ -442,7 +443,8 @@ class _DelegationTree extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final lead = entries.first;
-    final delegates = entries.length > 1 ? entries.sublist(1) : const <_AgentEntry>[];
+    final delegates =
+        entries.length > 1 ? entries.sublist(1) : const <_AgentEntry>[];
     return _WorkflowShell(
       title: context.l10n.chatWorkflowDelegationTitle,
       icon: Icons.hub_rounded,
@@ -605,7 +607,8 @@ class _ParallelAgentCard extends StatelessWidget {
               ),
             ),
           ],
-          if (entry.resultSummary != null && entry.resultSummary!.isNotEmpty) ...[
+          if (entry.resultSummary != null &&
+              entry.resultSummary!.isNotEmpty) ...[
             const SizedBox(height: DS.spacing4),
             Text(
               entry.resultSummary!,
@@ -675,7 +678,8 @@ class _AgentTimelineRow extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Icon(_mapAgentIcon(entry.icon), size: 13, color: agentColor),
+                      Icon(_mapAgentIcon(entry.icon),
+                          size: 13, color: agentColor),
                       const SizedBox(width: DS.spacing4),
                       Expanded(
                         child: Text(
@@ -700,7 +704,8 @@ class _AgentTimelineRow extends StatelessWidget {
                       ],
                     ],
                   ),
-                  if (entry.resultSummary != null && entry.resultSummary!.isNotEmpty) ...[
+                  if (entry.resultSummary != null &&
+                      entry.resultSummary!.isNotEmpty) ...[
                     const SizedBox(height: DS.spacing4),
                     Text(
                       entry.resultSummary!,
@@ -781,7 +786,7 @@ class _StatusDot extends StatelessWidget {
       );
     }
     if (status == 'error') {
-      return const Icon(Icons.error, size: size, color: Colors.red);
+      return Icon(Icons.error, size: size, color: DS.error);
     }
     return Container(
       width: size,
@@ -792,7 +797,7 @@ class _StatusDot extends StatelessWidget {
         border: Border.all(color: color, width: 1.5),
       ),
       child: status == 'completed'
-          ? const Icon(Icons.check, size: 11, color: Colors.white)
+          ? Icon(Icons.check, size: 11, color: DS.onColor(color))
           : null,
     );
   }
@@ -822,26 +827,28 @@ class _StatusLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-      decoration: BoxDecoration(
-        color: status == 'error'
-            ? Colors.red.withValues(alpha: 0.1)
-            : color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        _label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: DS.fontWeightMedium,
-          color: status == 'error' ? Colors.red : color,
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+        decoration: BoxDecoration(
+          color: status == 'error'
+              ? DS.error.withValues(alpha: 0.1)
+              : color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          _label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: DS.fontWeightMedium,
+            color: status == 'error' ? DS.error : color,
           ),
         ),
       );
 }
 
 double? _totalDuration(List<_AgentEntry> entries, {bool parallel = false}) {
-  final durations = entries.where((entry) => entry.durationMs != null).map((entry) => entry.durationMs!);
+  final durations = entries
+      .where((entry) => entry.durationMs != null)
+      .map((entry) => entry.durationMs!);
   if (durations.isEmpty) {
     return null;
   }

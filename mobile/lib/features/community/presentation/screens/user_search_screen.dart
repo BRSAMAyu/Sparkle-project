@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -214,7 +215,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                               style: TextStyle(
                                 color: DS.warning.shade700,
                                 fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: DS.fontWeightBold,
                               ),
                             ),
                           ),
@@ -245,7 +246,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
             children: [
               Icon(Icons.error_outline, size: 48, color: DS.error),
               const SizedBox(height: DS.lg),
-              Text('搜索失败，请检查网络后重试', style: TextStyle(color: DS.textSecondary)),
+              Text(I18nService.instance.isChinese ? '搜索失败，请检查网络后重试' : 'Search failed, check your network and retry', style: TextStyle(color: DS.textSecondary)),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
                 label: '重试',

@@ -162,7 +162,9 @@ class _NodeDetailSheetState extends ConsumerState<NodeDetailSheet> {
     final uri = Uri(
       path: '/chat',
       queryParameters: {
-        'prompt': '带我复习「$label」。请先基于这个知识节点定位我最该补的薄弱点，再给我一组短练习。',
+        'prompt': I18nService.instance.isChinese
+            ? '带我复习「$label」。请先基于这个知识节点定位我最该补的薄弱点，再给我一组短练习。'
+            : 'Help me review "$label". First identify the weakest point around this knowledge node, then give me a short practice set.',
         'chat_mode': 'study_plan',
         'review_node': widget.nodeId,
         'node_label': label,
@@ -325,7 +327,9 @@ class _HistoryContent extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                history.mastery <= 0 ? context.l10n.galaxyNodeNotLearned : '$percent%',
+                history.mastery <= 0
+                    ? context.l10n.galaxyNodeNotLearned
+                    : '$percent%',
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       color: history.mastery <= 0 ? DS.textSecondary : DS.info,
                       fontWeight: FontWeight.w800,
@@ -360,11 +364,13 @@ class _HistoryContent extends StatelessWidget {
                 icon: Icons.schedule_rounded,
                 label: history.lastStudiedAt == null
                     ? context.l10n.galaxyNodeNoRecord
-                    : context.l10n.galaxyNodeLastStudy(_relativeTime(history.lastStudiedAt!)),
+                    : context.l10n.galaxyNodeLastStudy(
+                        _relativeTime(history.lastStudiedAt!)),
               ),
               _MetricChip(
                 icon: Icons.assignment_late_rounded,
-                label: context.l10n.galaxyNodeRelatedErrors(history.relatedErrors.length),
+                label: context.l10n
+                    .galaxyNodeRelatedErrors(history.relatedErrors.length),
               ),
             ],
           ),
@@ -403,7 +409,9 @@ class _HistoryContent extends StatelessWidget {
                         ? Icons.school_rounded
                         : Icons.play_arrow_rounded,
                   ),
-                  label: Text(history.mastery <= 0 ? context.l10n.galaxyNodeStartLearn : context.l10n.galaxyNodeStartReview),
+                  label: Text(history.mastery <= 0
+                      ? context.l10n.galaxyNodeStartLearn
+                      : context.l10n.galaxyNodeStartReview),
                 ),
               ),
               const SizedBox(width: DS.spacing12),
@@ -1406,7 +1414,8 @@ class _SourceMaterialsCopy {
       pageLabel: context.l10n.galaxyNodePageLabel,
       pagesLabel: context.l10n.galaxyNodePagesLabel,
       excerptLabel: context.l10n.galaxyNodeExcerptLabel,
-      summaryLabel: context.l10n.galaxyNodeUploadDateLabel,  // TODO: check this mapping
+      summaryLabel:
+          context.l10n.galaxyNodeUploadDateLabel, // TODO: check this mapping
       uploadDateLabel: context.l10n.galaxyNodeUploadDateLabel,
       emptyBodyLabel: context.l10n.galaxyNodeEmptySourceBody,
       addNotesLabel: context.l10n.galaxyNodeAddNotesLabel,
@@ -1436,7 +1445,9 @@ class _SourceMaterialsCopy {
     if (uploadDateLabel == 'Uploaded') {
       return '$documents documents · $chunks knowledge chunks';
     }
-    return '$documents 份文档 · $chunks 个知识片段';
+    return I18nService.instance.isChinese
+        ? '$documents 份文档 · $chunks 个知识片段'
+        : '$documents documents · $chunks knowledge chunks';
   }
 
   String uploadDate(String date) => '$uploadDateLabel $date';
@@ -1448,7 +1459,9 @@ class _SourceMaterialsCopy {
     if (uploadDateLabel == 'Uploaded') {
       return 'Add your own notes about $topic to make the knowledge node traceable.';
     }
-    return '为「$topic」补充自己的讲义或笔记，让知识真正可追溯。';
+    return I18nService.instance.isChinese
+        ? '为「$topic」补充自己的讲义或笔记，让知识真正可追溯。'
+        : 'Add your own notes about $topic to make the knowledge node traceable.';
   }
 
   String addNotes(String topic) {
@@ -1458,7 +1471,9 @@ class _SourceMaterialsCopy {
     if (uploadDateLabel == 'Uploaded') {
       return '$addNotesLabel $topic';
     }
-    return '$addNotesLabel「$topic」的笔记';
+    return I18nService.instance.isChinese
+        ? '$addNotesLabel「$topic」的笔记'
+        : '$addNotesLabel $topic';
   }
 
   String uploadSaved(String filename) {
@@ -1472,14 +1487,18 @@ class _SourceMaterialsCopy {
     if (uploadDateLabel == 'Uploaded') {
       return '$pageLabel $number';
     }
-    return '$pageLabel $number 页';
+    return I18nService.instance.isChinese
+        ? '$pageLabel $number 页'
+        : '$pageLabel $number';
   }
 
   String pages(String pages) {
     if (uploadDateLabel == 'Uploaded') {
       return '$pagesLabel $pages';
     }
-    return '$pagesLabel $pages 页';
+    return I18nService.instance.isChinese
+        ? '$pagesLabel $pages 页'
+        : '$pagesLabel $pages';
   }
 
   String excerpt(int index) => '$excerptLabel $index';
@@ -1562,7 +1581,8 @@ class _FocusReasonSection extends StatelessWidget {
       children: [
         Row(
           children: [
-            Icon(Icons.lightbulb_outline_rounded, size: DS.iconSizeSm, color: DS.warning),
+            Icon(Icons.lightbulb_outline_rounded,
+                size: DS.iconSizeSm, color: DS.warning),
             const SizedBox(width: DS.spacing8),
             Text(
               'Why today?',
@@ -1584,7 +1604,10 @@ class _FocusReasonSection extends StatelessWidget {
           ),
           child: Text(
             reason,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: DS.textSecondary),
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: DS.textSecondary),
           ),
         ),
       ],
@@ -1592,9 +1615,12 @@ class _FocusReasonSection extends StatelessWidget {
   }
 
   String _computeReason(double m) {
-    if (m <= 0) return 'You haven\'t started this yet — it\'s unblocked and ready to begin.';
-    if (m < 0.3) return 'Early stage — building a foundation here will unlock dependent topics.';
-    if (m < 0.7) return 'Making progress! Reviewing now will solidify your understanding.';
+    if (m <= 0)
+      return 'You haven\'t started this yet — it\'s unblocked and ready to begin.';
+    if (m < 0.3)
+      return 'Early stage — building a foundation here will unlock dependent topics.';
+    if (m < 0.7)
+      return 'Making progress! Reviewing now will solidify your understanding.';
     return 'Almost mastered — a final review will help lock this in.';
   }
 }
@@ -1629,10 +1655,12 @@ class _CommunityInsightContent extends ConsumerStatefulWidget {
   final String nodeId;
 
   @override
-  ConsumerState<_CommunityInsightContent> createState() => _CommunityInsightContentState();
+  ConsumerState<_CommunityInsightContent> createState() =>
+      _CommunityInsightContentState();
 }
 
-class _CommunityInsightContentState extends ConsumerState<_CommunityInsightContent> {
+class _CommunityInsightContentState
+    extends ConsumerState<_CommunityInsightContent> {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<Map<String, dynamic>?>(
@@ -1641,7 +1669,10 @@ class _CommunityInsightContentState extends ConsumerState<_CommunityInsightConte
         if (!snapshot.hasData || snapshot.data == null) {
           return Text(
             'No community data yet',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: DS.textSecondary),
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: DS.textSecondary),
           );
         }
         final signal = snapshot.data!;
@@ -1649,7 +1680,10 @@ class _CommunityInsightContentState extends ConsumerState<_CommunityInsightConte
         if (patterns.isEmpty) {
           return Text(
             'No community data yet',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: DS.textSecondary),
+            style: Theme.of(context)
+                .textTheme
+                .bodyMedium
+                ?.copyWith(color: DS.textSecondary),
           );
         }
         return Column(
@@ -1665,7 +1699,10 @@ class _CommunityInsightContentState extends ConsumerState<_CommunityInsightConte
                   Expanded(
                     child: Text(
                       '${p['error_type'] ?? 'Unknown'}: ${p['user_count']} users',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: DS.textSecondary),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: DS.textSecondary),
                     ),
                   ),
                 ],
@@ -1679,7 +1716,9 @@ class _CommunityInsightContentState extends ConsumerState<_CommunityInsightConte
 
   Future<Map<String, dynamic>?> _fetchCommunitySignal() async {
     try {
-      final detailResult = await ref.read(enhancedGalaxyRepositoryProvider).getNodeDetail(widget.nodeId);
+      final detailResult = await ref
+          .read(enhancedGalaxyRepositoryProvider)
+          .getNodeDetail(widget.nodeId);
       if (detailResult.isSuccess && detailResult.data != null) {
         return detailResult.data!.node.communitySignal;
       }

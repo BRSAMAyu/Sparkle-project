@@ -5,8 +5,9 @@ import 'package:async/async.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -30,6 +31,7 @@ import 'package:sparkle/features/chat/presentation/providers/agent_session_provi
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/providers/guidance_mode_provider.dart';
+import 'package:sparkle/features/chat/presentation/providers/low_yield_block_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/content_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_switch_confirmation_dialog.dart';
@@ -565,6 +567,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
   ) {
     if (metadata == null || metadata.isEmpty) return;
 
+    final taskStuck = _parseJsonMap(metadata['task_stuck_intervention']);
+    if (taskStuck != null && taskStuck.isNotEmpty) {
+      _upsertWidget(target, 'task_stuck_card', taskStuck);
+    }
+
     final suggestion = _parseJsonMap(metadata['execution_suggestion']);
     if (suggestion != null && suggestion['task_id'] != null) {
       final taskId = suggestion['task_id'].toString();
@@ -970,6 +977,64 @@ class ChatNotifier extends StateNotifier<ChatState> {
       accumulatedRawMetadata['structured_cognitive_adjustments'] = adjustments;
     }
 
+    Map<String, dynamic>? extractLowYieldPayload(
+      Map<String, dynamic>? metadata,
+    ) {
+      if (metadata == null || metadata.isEmpty) {
+        return null;
+      }
+      const keys = [
+        'low_yield_gentle_block',
+        'low_yield_block',
+        'low_yield_guard',
+        'yield_check',
+      ];
+      for (final key in keys) {
+        final value = metadata[key];
+        if (value is Map<String, dynamic>) {
+          return value;
+        }
+        if (value is Map) {
+          return Map<String, dynamic>.from(value);
+        }
+      }
+      if (metadata['event_type'] == 'low_yield_block') {
+        final payload = metadata['event_payload'];
+        if (payload is Map<String, dynamic>) {
+          return payload;
+        }
+        if (payload is Map) {
+          return Map<String, dynamic>.from(payload);
+        }
+        return metadata;
+      }
+      return null;
+    }
+
+    void captureLowYieldBlock(Map<String, dynamic>? metadata) {
+      final payload = extractLowYieldPayload(metadata);
+      if (payload == null || payload.isEmpty) {
+        return;
+      }
+      _ref.read(lowYieldBlockProvider.notifier).ingestPayload(payload);
+      final blockId = payload['id']?.toString() ??
+          payload['block_id']?.toString() ??
+          payload['intervention_id']?.toString();
+      final alreadyAdded = accumulatedWidgets.any(
+        (widget) =>
+            widget.type == 'low_yield_gentle_block' &&
+            (blockId == null ||
+                widget.data['id']?.toString() == blockId ||
+                widget.data['block_id']?.toString() == blockId ||
+                widget.data['intervention_id']?.toString() == blockId),
+      );
+      if (!alreadyAdded) {
+        accumulatedWidgets.add(
+          WidgetPayload(type: 'low_yield_gentle_block', data: payload),
+        );
+      }
+    }
+
     void flushPending({bool immediate = false}) {
       void applyPending() {
         if (_isDisposed || !isCurrentRequest()) return;
@@ -1238,6 +1303,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             _appendExecutionWidgets(accumulatedWidgets, metadata);
             captureCitationMetadata(metadata['citations']);
             captureStructuredAdjustments(metadata);
+            captureLowYieldBlock(metadata);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
@@ -1432,6 +1498,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             _appendExecutionWidgets(accumulatedWidgets, metadata);
             captureCitationMetadata(metadata['citations']);
             captureStructuredAdjustments(metadata);
+            captureLowYieldBlock(metadata);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
@@ -1595,6 +1662,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
           accumulatedWidgets.add(
             _normalizeWidgetPayload(event.widgetType, event.widgetData),
           );
+          if (event.widgetType == 'low_yield_gentle_block') {
+            _ref
+                .read(lowYieldBlockProvider.notifier)
+                .ingestPayload(event.widgetData);
+          }
         } else if (event is ToolStartEvent) {
           // 显示"正在使用工具: xxx"
           lastAiStatus = 'EXECUTING_TOOL';
@@ -1623,6 +1695,11 @@ class ChatNotifier extends StateNotifier<ChatState> {
             }
             accumulatedWidgets
                 .add(_normalizeWidgetPayload(widgetType, widgetData));
+            if (widgetType == 'low_yield_gentle_block') {
+              _ref
+                  .read(lowYieldBlockProvider.notifier)
+                  .ingestPayload(widgetData);
+            }
           }
         } else if (event is CitationEvent) {
           upsertSourceSummaryCitations(event.citations);
@@ -1637,6 +1714,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
           accumulatedMeta.addAll(event.meta);
           accumulatedRawMetadata.addAll(event.meta);
           captureCitationMetadata(event.meta['citations']);
+          captureLowYieldBlock(event.meta);
           captureStructuredAdjustments(event.meta);
           flushPending();
         } else if (event is ReasoningStepEvent) {
@@ -1846,16 +1924,16 @@ class ChatNotifier extends StateNotifier<ChatState> {
       }
       _streamDebouncer.cancel();
       // 捕获未处理的异常，提供友好的错误提示
-      final errorMessage = ErrorMessages.getUserFriendlyMessage(
-        'UNKNOWN',
-        e.toString(),
+      final failure = AppFailureMapper.from(
+        e,
+        fallbackMessage: 'Could not send this message.',
       );
 
       finalizeRun(
         phase: ChatRunPhase.failed,
-        errorMessage: errorMessage,
-        errorCode: 'UNKNOWN',
-        isRetryable: true,
+        errorMessage: failure.userMessage,
+        errorCode: failure.errorCode,
+        isRetryable: failure.isRetryable,
         restoreAttachments: hasQueuedAttachments,
       );
     } finally {

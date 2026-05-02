@@ -48,6 +48,8 @@ var jsonMetadataKeys = map[string]bool{
 	"continuity_banner":      true,
 	"mode_explanation":       true,
 	"collaboration_summary":  true,
+	"calibration_receipt":    true,
+	"aurora_receipts":        true,
 }
 
 func isTerminalFinishReason(reason agentv1.FinishReason) bool {
@@ -616,7 +618,7 @@ func (h *ChatOrchestrator) handleProtobufMessage(writer *wsSafeWriter, msg []byt
 }
 
 func (h *ChatOrchestrator) handleUpdateNodeMasteryProto(ctx context.Context, responder *protobufResponder, req *pbws.UpdateNodeMasteryRequest, userID string) {
-	log.Printf("Received mastery update (proto) for user %s, node %s, mastery %d", userID, req.NodeId, req.Mastery)
+	log.Printf("Received mastery update (proto) for user %s, node %s, mastery %d", hashUserIDForLog(userID), req.NodeId, req.Mastery)
 
 	if h.galaxyClient == nil {
 		log.Printf("Galaxy gRPC client not initialized")

@@ -13,202 +13,232 @@ class FeedPostCard extends StatelessWidget {
   final VoidCallback? onLike;
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        padding: const EdgeInsets.all(DS.lg),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              DS.surfacePrimary,
-              Color.lerp(DS.surfaceSecondary, DS.brandPrimary, 0.03) ??
-                  DS.surfaceSecondary,
+  Widget build(BuildContext context) => Semantics(
+        container: true,
+        explicitChildNodes: true,
+        label: '${post.user.username}. ${post.content}',
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(DS.lg),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                DS.surfacePrimary,
+                Color.lerp(DS.surfaceSecondary, DS.brandPrimary, 0.03) ??
+                    DS.surfaceSecondary,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: DS.border.withValues(alpha: 0.4),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: DS.textPrimary.withValues(alpha: 0.06),
+                blurRadius: 18,
+                offset: const Offset(0, 8),
+              ),
             ],
           ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: DS.border.withValues(alpha: 0.4),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: DS.textPrimary.withValues(alpha: 0.06),
-              blurRadius: 18,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: DS.avatarFallbackBackground,
-                        backgroundImage: post.user.avatarUrl != null
-                            ? NetworkImage(post.user.avatarUrl!)
-                            : null,
-                        child: post.user.avatarUrl == null
-                            ? Text(
-                                post.user.username[0].toUpperCase(),
-                                style: TextStyle(
-                                  color: DS.avatarFallbackForeground,
-                                ),
-                              )
-                            : null,
-                      ),
-                      const SizedBox(width: DS.md),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              post.user.username,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: DS.textPrimary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Text(
-                              timeago.format(post.createdAt),
-                              style: TextStyle(
-                                color: DS.textSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: DS.sm),
-                if (post.isOptimistic)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: DS.info.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: DS.info.withValues(alpha: 0.22),
-                      ),
-                    ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
                     child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(
-                          width: 12,
-                          height: 12,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: DS.avatarFallbackBackground,
+                          backgroundImage: post.user.avatarUrl != null
+                              ? NetworkImage(post.user.avatarUrl!)
+                              : null,
+                          child: post.user.avatarUrl == null
+                              ? Text(
+                                  post.user.username[0].toUpperCase(),
+                                  style: TextStyle(
+                                    color: DS.avatarFallbackForeground,
+                                  ),
+                                )
+                              : null,
                         ),
-                        const SizedBox(width: DS.xs),
-                        Text(
-                          'Posting...',
-                          style: TextStyle(
-                            color: DS.info,
-                            fontSize: 10,
+                        const SizedBox(width: DS.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                post.user.username,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: DS.textPrimary,
+                                  fontWeight: DS.fontWeightBold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Text(
+                                timeago.format(post.createdAt),
+                                style: TextStyle(
+                                  color: DS.textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-              ],
-            ),
-            const SizedBox(height: DS.md),
-            Text(
-              post.content,
-              style: TextStyle(
-                color: DS.textPrimary,
-                fontSize: 15,
-                height: 1.4,
-              ),
-            ),
-            if (post.imageUrls != null && post.imageUrls!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: SparkleNetworkImage(
-                  imageUrl: post.imageUrls!.first,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: 200,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            const SizedBox(height: DS.lg),
-            Wrap(
-              spacing: DS.lg,
-              runSpacing: DS.sm,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                _ActionButton(
-                  icon: Icons.favorite_border,
-                  label: '${post.likeCount}',
-                  onTap: onLike,
-                ),
-                _ActionButton(
-                  icon: Icons.chat_bubble_outline,
-                  label: context.l10n.communityTabPlans,
-                ),
-                if (post.topic != null)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: DS.secondaryBase.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: DS.secondaryBase.withValues(alpha: 0.22),
+                  const SizedBox(width: DS.sm),
+                  if (post.isOptimistic)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.info.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: DS.info.withValues(alpha: 0.22),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          const SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          const SizedBox(width: DS.xs),
+                          Text(
+                            'Posting...',
+                            style: TextStyle(
+                              color: DS.info,
+                              fontSize: 10,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Text(
-                      '#${post.topic}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: DS.secondaryBase,
-                        fontSize: 12,
-                      ),
-                    ),
+                ],
+              ),
+              const SizedBox(height: DS.md),
+              Text(
+                post.content,
+                style: TextStyle(
+                  color: DS.textPrimary,
+                  fontSize: 15,
+                  height: 1.4,
+                ),
+              ),
+              if (post.imageUrls != null && post.imageUrls!.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: SparkleNetworkImage(
+                    imageUrl: post.imageUrls!.first,
+                    width: double.infinity,
+                    height: 200,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-              ],
-            ),
-          ],
+                ),
+              const SizedBox(height: DS.lg),
+              Wrap(
+                spacing: DS.lg,
+                runSpacing: DS.sm,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _ActionButton(
+                    icon: Icons.favorite_border,
+                    label: '${post.likeCount}',
+                    semanticLabel: context.l10n.communityLikesCount(
+                      post.likeCount,
+                    ),
+                    onTap: onLike,
+                  ),
+                  _ActionButton(
+                    icon: Icons.chat_bubble_outline,
+                    label: context.l10n.communityTabPlans,
+                    semanticLabel: context.l10n.communityTabPlans,
+                  ),
+                  if (post.topic != null)
+                    Semantics(
+                      label: '#${post.topic}',
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 32),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: DS.secondaryBase.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: DS.secondaryBase.withValues(alpha: 0.22),
+                          ),
+                        ),
+                        child: ExcludeSemantics(
+                          child: Text(
+                            '#${post.topic}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: DS.secondaryBase,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
         ),
       );
 }
 
 class _ActionButton extends StatelessWidget {
-  const _ActionButton({required this.icon, required this.label, this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    this.semanticLabel,
+    this.onTap,
+  });
   final IconData icon;
   final String label;
+  final String? semanticLabel;
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) => SparklePressable(
-        onTap: onTap,
-        feedbackEvent: SensoryFeedbackEvent.selection,
-        padding: EdgeInsets.zero,
-        child: Row(
-          children: [
-            Icon(icon, color: DS.textSecondary, size: 20),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: TextStyle(
-                color: DS.textSecondary,
-                fontSize: 14,
-              ),
+  Widget build(BuildContext context) => ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        child: SparklePressable(
+          onTap: onTap,
+          feedbackEvent: SensoryFeedbackEvent.selection,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          semanticLabel: semanticLabel ?? label,
+          child: ExcludeSemantics(
+            child: Row(
+              children: [
+                Icon(icon, color: DS.textSecondary, size: 20),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: DS.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       );
 }

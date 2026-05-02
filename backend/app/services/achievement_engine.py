@@ -105,6 +105,8 @@ class AchievementEvent:
     CONTRACT_COMPLETED = "contract_completed"
     CONTRACT_FAILED = "contract_failed"
     MUTUAL_STUDY = "mutual_study"  # 与搭子同时学习
+    COMMUNITY_SHARE = "community_share"
+    AURORA_CALIBRATION = "aurora_calibration"
     HIDDEN_TRIGGER = "hidden_trigger"  # 隐藏成就特殊触发
     # Sprint events
     SPRINT_STARTED = "sprint_started"
@@ -149,6 +151,8 @@ class AchievementEngine:
         "WEEKEND_WARRIOR",
         "MUTUAL_STUDY",
         "MUTUAL_STUDY_DAYS",
+        "COMMUNITY_SHARE",
+        "AURORA_CALIBRATION",
         "HIDDEN_TRIGGER",
     }
     SUPPORTED_REWARD_TYPES = {"freeze_charge", "galaxy_skin", "photon", "title", "visual_element"}
@@ -235,6 +239,16 @@ class AchievementEngine:
             group_task_id = kwargs.get("group_task_id")
             if group_task_id:
                 return (f"{user_id}:{event_type}:group_task:{group_task_id}", "group_task_completion")
+
+        if event_type == AchievementEvent.COMMUNITY_SHARE:
+            share_id = kwargs.get("share_id") or kwargs.get("shared_resource_id") or kwargs.get("card_share_record_id")
+            if share_id:
+                return (f"{user_id}:{event_type}:share:{share_id}", "community_share")
+
+        if event_type == AchievementEvent.AURORA_CALIBRATION:
+            session_id = kwargs.get("session_id") or kwargs.get("aurora_session_id")
+            if session_id:
+                return (f"{user_id}:{event_type}:session:{session_id}", "aurora_calibration")
 
         return None
 
@@ -472,6 +486,12 @@ class AchievementEngine:
                 case AchievementEvent.MUTUAL_STUDY:
                     if trigger_code in ["MUTUAL_STUDY", "MUTUAL_STUDY_DAYS"]:
                         relevant.append(achievement)
+                case AchievementEvent.COMMUNITY_SHARE:
+                    if trigger_code == "COMMUNITY_SHARE":
+                        relevant.append(achievement)
+                case AchievementEvent.AURORA_CALIBRATION:
+                    if trigger_code == "AURORA_CALIBRATION":
+                        relevant.append(achievement)
                 case AchievementEvent.HIDDEN_TRIGGER:
                     hidden_trigger_code = str(kwargs.get("hidden_trigger_code") or "").strip()
                     hidden_trigger_codes = {str(item).strip() for item in kwargs.get("hidden_trigger_codes") or []}
@@ -511,6 +531,12 @@ class AchievementEngine:
                         relevant.append(achievement)
                 case AchievementEvent.CONTRACT_FAILED:
                     if trigger_code in ["CONTRACT_FAILED", "CONTRACTS_FAILED"]:
+                        relevant.append(achievement)
+                case AchievementEvent.ACHIEVEMENT_COMBO:
+                    if trigger_code in ["ACHIEVEMENT_COMBO", "COMBOS_TOTAL"]:
+                        relevant.append(achievement)
+                case AchievementEvent.PROGRESS_MILESTONE:
+                    if trigger_code in ["PROGRESS_MILESTONE", "MILESTONES_REACHED"]:
                         relevant.append(achievement)
         return relevant
 
@@ -880,6 +906,43 @@ class AchievementEngine:
                     )
                     current = int(buddy_result.scalar_one_or_none() or 0)
                 current = max(current, 1)
+                return (min(current / max(target, 1), 1.0), current, max(target, 1))
+
+            case "COMMUNITY_SHARE":
+                from app.models.community import SharedResource
+
+                target = int(config.get("count") or 1)
+                progress_record = await self._get_user_achievement_progress(user_id, achievement.id)
+                current = int(progress_record.progress_value if progress_record else 0)
+
+                shared_result = await self.db.execute(
+                    select(func.count()).select_from(SharedResource).where(SharedResource.shared_by == user_id)
+                )
+                current = max(current, int(shared_result.scalar_one() or 0))
+
+                achievement_share_result = await self.db.execute(
+                    select(func.coalesce(func.sum(UserAchievement.share_count), 0)).where(
+                        UserAchievement.user_id == user_id
+                    )
+                )
+                current = max(current, int(achievement_share_result.scalar_one() or 0))
+                current = max(current, int(kwargs.get("share_count") or 0))
+
+                if kwargs.get("share_id") or kwargs.get("shared_resource_id") or kwargs.get("card_share_record_id"):
+                    current = max(current, 1)
+
+                return (min(current / max(target, 1), 1.0), current, max(target, 1))
+
+            case "AURORA_CALIBRATION":
+                target = int(config.get("count") or 1)
+                progress_record = await self._get_user_achievement_progress(user_id, achievement.id)
+                stored_current = int(progress_record.progress_value if progress_record else 0)
+                supplied_current = int(kwargs.get("calibration_count") or 0)
+                current = max(stored_current, supplied_current)
+
+                if kwargs.get("session_id") or kwargs.get("aurora_session_id"):
+                    current += 1
+
                 return (min(current / max(target, 1), 1.0), current, max(target, 1))
 
             # 完美主义者（单节点100%掌握度）

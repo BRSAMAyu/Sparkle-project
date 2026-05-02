@@ -206,7 +206,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                                 Text(
                                   widget.notification.senderName,
                                   style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: DS.fontWeightBold,
                                   ),
                                 ),
                                 const SizedBox(width: DS.sm),
@@ -297,7 +297,7 @@ class MessageBadge extends ConsumerWidget {
                 style: TextStyle(
                   color: DS.brandPrimaryConst,
                   fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                 ),
                 textAlign: TextAlign.center,
               ),

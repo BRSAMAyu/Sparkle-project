@@ -272,6 +272,90 @@ PROJECT_DELIVERY_PACK = DomainPack(
     outcome_metrics=["artifacts_completed", "scope_deviation", "deadline_adherence", "stakeholder_satisfaction"],
 )
 
+FITNESS_PACK = DomainPack(
+    domain_pack_id="fitness_pack_v1",
+    domain="fitness",
+    supported_goal_modes=["fitness_routine", "habit_formation", "milestone_training"],
+    node_schema=[
+        NodeSchemaEntry("habit", required=True),
+        NodeSchemaEntry("metric", required=True),
+        NodeSchemaEntry("milestone", required=False),
+        NodeSchemaEntry("risk", required=False),
+    ],
+    task_templates=[
+        {"task_type": "workout", "focus": "complete_session"},
+        {"task_type": "track", "focus": "log_metrics"},
+        {"task_type": "review", "focus": "weekly_progress"},
+    ],
+    feedback_taxonomy=[
+        FeedbackTaxonomyEntry("plateau", "指标停滞", triggers_aurora=True, strategy_effect="vary_routine"),
+        FeedbackTaxonomyEntry("injury", "受伤", strategy_effect="rest_and_recover"),
+        FeedbackTaxonomyEntry("skip_streak", "连续跳过", strategy_effect="reduce_milestone_ambition"),
+    ],
+    risk_patterns=[
+        RiskPatternEntry("burnout", "过度训练", "intensity_spike > 50% OR skip_count >= 4", "reduce_load", "high"),
+        RiskPatternEntry("plateau", "平台期", "metric_flat_for >= 14_days", "cross_training_variation", "medium"),
+    ],
+    checkpoint_rules=[
+        CheckpointRule("week_1", trigger_after_tasks=5, checks=["habit_adherence >= 0.7", "no_injury"]),
+        CheckpointRule("milestone_check", trigger_after_tasks=20, checks=["metric_improvement > 0"], user_visible=True),
+    ],
+    aurora_trigger_rules=[
+        AuroraTriggerRule("long_plateau", "metric_flat_for >= 21_days", quota_override="sprint"),
+        AuroraTriggerRule("injury_risk", "skip_count >= 4 AND intensity_spike > 30%", quota_override="sprint"),
+    ],
+    skill_library=[
+        SkillTemplate("progressive_overload", "渐进式增加负荷", ["plateau"], "连续2周指标提升"),
+        SkillTemplate("habit_stacking", "习惯叠加法", ["skip_streak"], "连续21天不间断"),
+    ],
+    source_types=["workout_plans", "nutrition_guides", "recovery_protocols", "progress_logs"],
+    outcome_metrics=["adherence_rate", "metric_improvement", "rest_days_adhered", "injury_free_days"],
+)
+
+RESEARCH_PACK = DomainPack(
+    domain_pack_id="research_pack_v1",
+    domain="research",
+    supported_goal_modes=["literature_review", "experiment_design", "paper_writing", "defense_prep"],
+    node_schema=[
+        NodeSchemaEntry("hypothesis", required=True),
+        NodeSchemaEntry("experiment", required=True),
+        NodeSchemaEntry("dataset", required=False),
+        NodeSchemaEntry("finding", required=True),
+        NodeSchemaEntry("risk", required=False),
+    ],
+    task_templates=[
+        {"task_type": "read", "focus": "literature_synthesis"},
+        {"task_type": "design", "focus": "experiment_protocol"},
+        {"task_type": "execute", "focus": "run_experiment"},
+        {"task_type": "write", "focus": "draft_section"},
+        {"task_type": "review", "focus": "peer_feedback"},
+    ],
+    feedback_taxonomy=[
+        FeedbackTaxonomyEntry("null_result", "实验无显著结果", triggers_aurora=True, strategy_effect="refine_hypothesis"),
+        FeedbackTaxonomyEntry("methodology_flaw", "方法有问题", strategy_effect="redesign_protocol"),
+        FeedbackTaxonomyEntry("literature_gap", "文献遗漏", strategy_effect="expand_search_scope"),
+    ],
+    risk_patterns=[
+        RiskPatternEntry("scope_creep", "研究范围膨胀", "hypothesis_count_growth > 3x", "freeze_scope", "high"),
+        RiskPatternEntry("reading_loop", "只读不做", "read_count >> experiment_count", "force_experiment_step", "high"),
+        RiskPatternEntry("writer_block", "写作停滞", "days_since_last_draft > 7", "outline_first_approach", "medium"),
+    ],
+    checkpoint_rules=[
+        CheckpointRule("hypothesis_formed", trigger_after_tasks=10, checks=["hypothesis_written", "literature_synthesized"]),
+        CheckpointRule("first_result", trigger_after_tasks=25, checks=["at_least_one_result", "methodology_documented"], user_visible=True),
+    ],
+    aurora_trigger_rules=[
+        AuroraTriggerRule("prolonged_null", "null_result_count >= 3", quota_override="sprint"),
+        AuroraTriggerRule("deadline_pressure", "days_until_submission <= 14 AND draft_progress < 0.5", quota_override="crisis"),
+    ],
+    skill_library=[
+        SkillTemplate("systematic_review", "系统性文献阅读法", ["literature_gap"], "阅读量覆盖目标领域"),
+        SkillTemplate("incremental_writing", "增量写作法", ["writer_block"], "每日产出至少200词"),
+    ],
+    source_types=["papers", "datasets", "experiment_logs", "reviewer_feedback", "methodology_guides"],
+    outcome_metrics=["papers_read", "experiments_completed", "words_written", "findings_validated"],
+)
+
 
 # ── DomainPack Registry ──────────────────────────────────────────────
 
@@ -287,6 +371,15 @@ _PACK_REGISTRY: dict[str, DomainPack] = {
     "mvp_sprint": PROJECT_DELIVERY_PACK,
     "thesis_delivery": PROJECT_DELIVERY_PACK,
     "feature_ship": PROJECT_DELIVERY_PACK,
+    "fitness": FITNESS_PACK,
+    "fitness_routine": FITNESS_PACK,
+    "habit_formation": FITNESS_PACK,
+    "milestone_training": FITNESS_PACK,
+    "research": RESEARCH_PACK,
+    "literature_review": RESEARCH_PACK,
+    "experiment_design": RESEARCH_PACK,
+    "paper_writing": RESEARCH_PACK,
+    "defense_prep": RESEARCH_PACK,
 }
 
 

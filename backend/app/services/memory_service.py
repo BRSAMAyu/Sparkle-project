@@ -9,11 +9,13 @@ from __future__ import annotations
 import json
 from collections.abc import Iterable
 from datetime import UTC, date, datetime
+from app.core.time_utils import utcnow
 from typing import Any
 from uuid import UUID
 
 from loguru import logger
 from sqlalchemy import func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -44,15 +46,22 @@ ALLOWED_EVIDENCE_TYPES = {
 
 INACTIVE_GOAL_STATUSES = {"completed", "archived", "cancelled"}
 CONFIDENCE_DECREMENT = 0.1
+MEMORY_REFERENCE_OUTCOMES = {"accepted", "corrected", "ignored", "denied"}
 SUMMARY_MAX_LEN = 48
 SESSION_MOOD_TTL_SECONDS = 7 * 24 * 60 * 60
 SESSION_MOOD_LAST_KEY_TEMPLATE = "memory:session_mood:{user_id}:last"
 SESSION_MOOD_SESSION_KEY_TEMPLATE = "memory:session_mood:{user_id}:{session_id}"
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
+RECENT_CALIBRATION_RECEIPTS_KEY_TEMPLATE = "aurora:recent_corrections:{user_id}"
+LAST_CALIBRATION_RECEIPT_KEY_TEMPLATE = "aurora:last_calibration_receipt:{user_id}"
+RECENT_CALIBRATION_RECEIPTS_TTL_SECONDS = 7 * 24 * 60 * 60
+NON_CRITICAL_SERVICE_ERRORS = (
+    AttributeError,
+    ImportError,
+    RuntimeError,
+    TypeError,
+    ValueError,
+    SQLAlchemyError,
+)
 
 def _truncate_summary(value: str) -> str:
     if not value:
@@ -60,7 +69,6 @@ def _truncate_summary(value: str) -> str:
     if len(value) <= SUMMARY_MAX_LEN:
         return value
     return f"{value[:SUMMARY_MAX_LEN - 1]}…"
-
 
 class MemoryService:
     def __init__(self, db: AsyncSession | None, redis_client=None):
@@ -119,7 +127,7 @@ class MemoryService:
             select(func.max(MemoryPreference.version)).where(
                 MemoryPreference.user_id == user_id,
                 MemoryPreference.pref_key == pref_key,
-            )
+            ).with_for_update()
         )
         max_version = version_result.scalar_one_or_none() or 0
         version = max_version + 1
@@ -141,7 +149,7 @@ class MemoryService:
 
         if latest is not None:
             latest.replaced_by_id = record.id
-            latest.updated_at = _utcnow()
+            latest.updated_at = utcnow()
 
         await self.db.commit()
         await self.db.refresh(record)
@@ -175,7 +183,7 @@ class MemoryService:
                 change_reason=change_reason,
                 workflow_id=source_type,
             )
-        except Exception as exc:
+        except NON_CRITICAL_SERVICE_ERRORS as exc:
             logger.warning(f"Failed to track preference evolution: {exc}")
 
         adaptation_record = self._build_preference_adaptation_record(
@@ -270,9 +278,71 @@ class MemoryService:
             from app.core.cache import cache_service
 
             return cache_service.redis
-        except Exception as exc:
+        except (AttributeError, ImportError, RuntimeError) as exc:
             logger.debug("Unable to resolve Redis for session mood memory: {}", exc)
             return None
+
+    def _calibration_receipt_redis(self):
+        if self.redis is not None:
+            return self.redis
+        try:
+            from app.core.cache import cache_service
+
+            return cache_service.redis
+        except (AttributeError, ImportError, RuntimeError) as exc:
+            logger.debug("Unable to resolve Redis for calibration receipt memory: {}", exc)
+            return None
+
+    async def record_calibration_receipt(
+        self,
+        *,
+        user_id: UUID | str,
+        receipt: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        redis = self._calibration_receipt_redis()
+        if redis is None or not isinstance(receipt, dict) or not receipt:
+            return None
+
+        payload = {
+            **receipt,
+            "user_id": str(user_id),
+            "recorded_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+        }
+        encoded = json.dumps(payload, ensure_ascii=False, default=str)
+        recent_key = RECENT_CALIBRATION_RECEIPTS_KEY_TEMPLATE.format(user_id=user_id)
+        last_key = LAST_CALIBRATION_RECEIPT_KEY_TEMPLATE.format(user_id=user_id)
+        await redis.lpush(recent_key, encoded)
+        await redis.ltrim(recent_key, 0, 9)
+        await redis.expire(recent_key, RECENT_CALIBRATION_RECEIPTS_TTL_SECONDS)
+        await redis.setex(last_key, RECENT_CALIBRATION_RECEIPTS_TTL_SECONDS, encoded)
+        return payload
+
+    async def list_recent_calibration_receipts(
+        self,
+        user_id: UUID | str,
+        limit: int = 3,
+    ) -> list[dict[str, Any]]:
+        redis = self._calibration_receipt_redis()
+        if redis is None:
+            return []
+
+        safe_limit = max(1, min(int(limit or 3), 10))
+        raw_items = await redis.lrange(
+            RECENT_CALIBRATION_RECEIPTS_KEY_TEMPLATE.format(user_id=user_id),
+            0,
+            safe_limit - 1,
+        )
+        receipts: list[dict[str, Any]] = []
+        for raw in raw_items or []:
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8", errors="replace")
+            try:
+                payload = json.loads(raw) if isinstance(raw, str) else raw
+            except (TypeError, json.JSONDecodeError):
+                continue
+            if isinstance(payload, dict):
+                receipts.append(payload)
+        return receipts
 
     async def create_goal(
         self,
@@ -386,11 +456,13 @@ class MemoryService:
         **updates: Any,
     ) -> MemoryGoal | None:
         result = await self.db.execute(
-            select(MemoryGoal).where(
+            select(MemoryGoal)
+            .where(
                 MemoryGoal.user_id == user_id,
                 MemoryGoal.id == goal_id,
                 MemoryGoal.deleted_at.is_(None),
-            ).with_for_update()
+            )
+            .with_for_update()
         )
         record = result.scalar_one_or_none()
         if record is None:
@@ -448,12 +520,12 @@ class MemoryService:
                 change_reason="user_edit",
                 workflow_id="update_goal",
             )
-        except Exception as exc:
+        except NON_CRITICAL_SERVICE_ERRORS as exc:
             logger.warning(f"Failed to track goal evolution: {exc}")
         return record
 
     async def list_active_goals(self, user_id: UUID, now: datetime | None = None) -> list[MemoryGoal]:
-        now = now or _utcnow()
+        now = now or utcnow()
         result = await self.db.execute(
             select(MemoryGoal).where(
                 MemoryGoal.user_id == user_id,
@@ -592,7 +664,7 @@ class MemoryService:
         include_expired: bool = False,
         limit: int = 20,
     ) -> list[MemoryGoal]:
-        now = _utcnow()
+        now = utcnow()
         stmt = select(MemoryGoal).where(
             MemoryGoal.user_id == user_id,
             MemoryGoal.deleted_at.is_(None),
@@ -715,7 +787,7 @@ class MemoryService:
         try:
             await self.db.commit()
             await self.db.refresh(record)
-        except Exception as exc:
+        except SQLAlchemyError as exc:
             await self.db.rollback()
             if not self._is_vector_runtime_error(exc):
                 raise
@@ -751,7 +823,7 @@ class MemoryService:
                 try:
                     await self.db.commit()
                     await self.db.refresh(record)
-                except Exception as retry_exc:
+                except SQLAlchemyError as retry_exc:
                     await self.db.rollback()
                     if not self._is_vector_runtime_error(retry_exc):
                         raise
@@ -781,7 +853,7 @@ class MemoryService:
         if record.subject_type == "commitment" and record.due_at is not None:
             try:
                 await PolicyCompilerService(self.db).compile_for_commitment(record, persist=True)
-            except Exception as exc:
+            except NON_CRITICAL_SERVICE_ERRORS as exc:
                 logger.warning(f"Failed to compile accountability policies for commitment {record.id}: {exc}")
         MEMORY_WRITE_TOTAL.labels(type="episodic", status="ok").inc()
         return record
@@ -842,7 +914,7 @@ class MemoryService:
         *,
         now: datetime | None = None,
     ) -> list[EpisodicMemory]:
-        reference_time = now or _utcnow()
+        reference_time = now or utcnow()
         result = await self.db.execute(
             select(EpisodicMemory)
             .where(
@@ -878,8 +950,8 @@ class MemoryService:
         record = result.scalar_one_or_none()
         if record is None:
             return None
-        record.resolved_at = resolved_at or _utcnow()
-        record.updated_at = _utcnow()
+        record.resolved_at = resolved_at or utcnow()
+        record.updated_at = utcnow()
         await self.db.commit()
         await self.db.refresh(record)
         try:
@@ -887,7 +959,7 @@ class MemoryService:
                 commitment_id=record.id,
                 user_id=user_id,
             )
-        except Exception as exc:
+        except NON_CRITICAL_SERVICE_ERRORS as exc:
             logger.warning(f"Failed to revoke accountability policies for commitment {record.id}: {exc}")
         return record
 
@@ -1011,7 +1083,7 @@ class MemoryService:
             else:
                 current_score = record.evidence_score or 0.0
                 record.evidence_score = max(0.0, current_score - CONFIDENCE_DECREMENT)
-            record.updated_at = _utcnow()
+            record.updated_at = utcnow()
         else:
             raise ValueError(f"Unsupported correction action: {action}")
 
@@ -1044,7 +1116,7 @@ class MemoryService:
                 reason=reason or action,
                 source="memory_correction",
             )
-        except Exception as exc:
+        except NON_CRITICAL_SERVICE_ERRORS as exc:
             logger.warning("Failed to update Aurora self model for memory correction {}: {}", record.id, exc)
         await SystemUpdateService().enqueue(
             user_id,
@@ -1063,6 +1135,92 @@ class MemoryService:
         )
         return record
 
+    async def record_memory_reference_outcome(
+        self,
+        *,
+        kind: str,
+        memory_id: UUID,
+        user_id: UUID,
+        outcome: str,
+        response_id: str | None = None,
+        reason: str | None = None,
+    ) -> dict[str, Any] | None:
+        """Record how a memory reference landed without changing the storage schema.
+
+        Outcomes are stored as trace rows and folded back into confidence so future
+        prompt selection can become quieter after denial/correction.
+        """
+        normalized_outcome = str(outcome or "").strip().lower()
+        if normalized_outcome not in MEMORY_REFERENCE_OUTCOMES:
+            raise ValueError(f"Unsupported memory reference outcome: {outcome}")
+
+        model = {
+            "preference": MemoryPreference,
+            "goal": MemoryGoal,
+            "episodic": EpisodicMemory,
+        }.get(kind)
+        if model is None:
+            raise ValueError(f"Unsupported memory kind: {kind}")
+
+        result = await self.db.execute(
+            select(model).where(
+                model.id == memory_id,
+                model.user_id == user_id,
+                model.deleted_at.is_(None),
+            )
+        )
+        record = result.scalar_one_or_none()
+        if record is None:
+            return None
+
+        now = utcnow()
+        if hasattr(record, "last_consumed_at"):
+            record.last_consumed_at = now
+
+        if normalized_outcome == "accepted":
+            if hasattr(record, "confidence") and record.confidence is not None:
+                record.confidence = min(1.0, float(record.confidence or 0.0) + 0.03)
+            if hasattr(record, "evidence_score"):
+                record.evidence_score = min(1.0, float(record.evidence_score or 0.0) + 0.02)
+        elif normalized_outcome in {"corrected", "denied"}:
+            if hasattr(record, "confidence") and record.confidence is not None:
+                record.confidence = max(0.0, float(record.confidence or 0.0) - CONFIDENCE_DECREMENT)
+            if hasattr(record, "evidence_score"):
+                record.evidence_score = max(0.0, float(record.evidence_score or 0.0) - CONFIDENCE_DECREMENT)
+            record.correction_count = (record.correction_count or 0) + 1
+            if normalized_outcome == "denied" and isinstance(record, EpisodicMemory):
+                snapshot = record.evidence_snapshot or {}
+                if not isinstance(snapshot, dict):
+                    snapshot = {"history": snapshot}
+                snapshot["reference_denied_at"] = now.isoformat()
+                snapshot["reference_denial_reason"] = reason or "memory_reference_denied"
+                record.evidence_snapshot = snapshot
+        record.updated_at = now
+
+        trace_reason = reason or normalized_outcome
+        if response_id:
+            trace_reason = f"{trace_reason}; response_id={response_id}"
+        correction_entry = MemoryCorrection(
+            user_id=user_id,
+            memory_type=kind,
+            memory_id=record.id,
+            action=f"memory_reference_{normalized_outcome}",
+            reason=trace_reason,
+        )
+        self.db.add(correction_entry)
+        await self.db.commit()
+        await self.db.refresh(record)
+
+        return {
+            "memory_reference_outcome": normalized_outcome,
+            "memory_type": kind,
+            "memory_id": str(record.id),
+            "response_id": response_id,
+            "confidence": getattr(record, "confidence", None),
+            "evidence_score": getattr(record, "evidence_score", None),
+            "correction_count": getattr(record, "correction_count", None),
+        }
+
     def _apply_retraction(self, record: Any, reason: str | None) -> None:
         updated_refs = []
         for ref in record.evidence_refs or []:
@@ -1073,12 +1231,12 @@ class MemoryService:
             updated_refs.append(ref_copy)
 
         record.evidence_refs = updated_refs
-        now = _utcnow()
+        now = utcnow()
         if isinstance(record, EpisodicMemory) and getattr(record, "source_lane", "") == "inferred_extraction":
             record.revoked_at = now
         else:
             record.retracted_at = now
-        record.updated_at = _utcnow()
+        record.updated_at = utcnow()
 
         if isinstance(record, EpisodicMemory):
             snapshot = record.evidence_snapshot or {}
@@ -1123,7 +1281,6 @@ class MemoryService:
             return True
         rollout = LtmRolloutService(self.db)
         return await rollout.is_enabled(user_id)
-
 
 def _normalize_evidence_refs(
     evidence_refs: Iterable[Any],

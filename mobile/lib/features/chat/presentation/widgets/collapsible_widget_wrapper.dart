@@ -42,8 +42,7 @@ class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        widget.accentColor ?? Theme.of(context).colorScheme.primary;
+    final accent = widget.accentColor ?? Theme.of(context).colorScheme.primary;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AnimatedSize(
@@ -57,64 +56,62 @@ class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
           // Collapsed chip / expand-collapse header
           Material(
             color: Colors.transparent,
-            child: InkWell(
-              onTap: () => setState(() {
-                _expanded = !_expanded;
-              }),
-              borderRadius: BorderRadius.circular(999),
-              child: AnimatedContainer(
-                duration: _animationDuration,
-                padding: EdgeInsets.symmetric(
-                  horizontal: _expanded ? DS.spacing10 : DS.spacing10,
-                  vertical: DS.spacing6,
-                ),
-                decoration: BoxDecoration(
-                  color: _expanded
-                      ? accent.withValues(alpha: isDark ? 0.12 : 0.08)
-                      : DS.surfacePanel,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: _expanded
-                        ? accent.withValues(alpha: 0.26)
-                        : DS.borderSubtle,
+            child: Semantics(
+              button: true,
+              label: 'Chat collapsible widget wrapper control 1',
+              child: InkWell(
+                onTap: () => setState(() {
+                  _expanded = !_expanded;
+                }),
+                borderRadius: BorderRadius.circular(999),
+                child: AnimatedContainer(
+                  duration: _animationDuration,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: _expanded ? DS.spacing10 : DS.spacing10,
+                    vertical: DS.spacing6,
                   ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      widget.icon,
-                      size: 14,
+                  decoration: BoxDecoration(
+                    color: _expanded
+                        ? accent.withValues(alpha: isDark ? 0.12 : 0.08)
+                        : DS.surfacePanel,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
                       color: _expanded
-                          ? accent
-                          : DS.textSecondary,
+                          ? accent.withValues(alpha: 0.26)
+                          : DS.borderSubtle,
                     ),
-                    const SizedBox(width: DS.spacing6),
-                    Text(
-                      widget.label,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            fontSize: DS.fontSizeXs,
-                            color: _expanded
-                                ? accent
-                                : DS.textSecondary,
-                            fontWeight: _expanded
-                                ? DS.fontWeightSemibold
-                                : DS.fontWeightMedium,
-                          ),
-                    ),
-                    const SizedBox(width: DS.spacing4),
-                    AnimatedRotation(
-                      duration: _animationDuration,
-                      turns: _expanded ? 0.5 : 0,
-                      child: Icon(
-                        Icons.keyboard_arrow_down,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        widget.icon,
                         size: 14,
-                        color: _expanded
-                            ? accent
-                            : DS.textSecondary,
+                        color: _expanded ? accent : DS.textSecondary,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: DS.spacing6),
+                      Text(
+                        widget.label,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              fontSize: DS.fontSizeXs,
+                              color: _expanded ? accent : DS.textSecondary,
+                              fontWeight: _expanded
+                                  ? DS.fontWeightSemibold
+                                  : DS.fontWeightMedium,
+                            ),
+                      ),
+                      const SizedBox(width: DS.spacing4),
+                      AnimatedRotation(
+                        duration: _animationDuration,
+                        turns: _expanded ? 0.5 : 0,
+                        child: Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 14,
+                          color: _expanded ? accent : DS.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -140,21 +137,25 @@ class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
                   right: DS.spacing4,
                   child: Material(
                     color: Colors.transparent,
-                    child: InkWell(
-                      onTap: () => setState(() {
-                        _expanded = false;
-                      }),
-                      borderRadius: BorderRadius.circular(999),
-                      child: Container(
-                        padding: const EdgeInsets.all(DS.spacing4),
-                        decoration: BoxDecoration(
-                          color: DS.surfacePanel.withValues(alpha: 0.9),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.close,
-                          size: 14,
-                          color: DS.textSecondary,
+                    child: Semantics(
+                      button: true,
+                      label: 'Chat collapsible widget wrapper control 2',
+                      child: InkWell(
+                        onTap: () => setState(() {
+                          _expanded = false;
+                        }),
+                        borderRadius: BorderRadius.circular(999),
+                        child: Container(
+                          padding: const EdgeInsets.all(DS.spacing4),
+                          decoration: BoxDecoration(
+                            color: DS.surfacePanel.withValues(alpha: 0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.close,
+                            size: 14,
+                            color: DS.textSecondary,
+                          ),
                         ),
                       ),
                     ),

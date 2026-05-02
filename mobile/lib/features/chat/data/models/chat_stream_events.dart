@@ -141,6 +141,20 @@ class MetaEvent extends ChatStreamEvent {
   final Map<String, dynamic> meta;
 }
 
+class AuroraStateBandEvent extends ChatStreamEvent {
+  const AuroraStateBandEvent({
+    required this.stateData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+    super.metadata,
+    super.sessionId,
+  });
+
+  final Map<String, dynamic> stateData;
+}
+
 /// 状态更新事件（THINKING, GENERATING 等）
 class StatusUpdateEvent extends ChatStreamEvent {
   StatusUpdateEvent({
@@ -894,6 +908,20 @@ class AchievementUnlockEvent extends ChatStreamEvent {
           .toList() ??
       const [];
 
+  Map<String, dynamic>? get contextSnapshot {
+    final raw = achievementData['context_snapshot'];
+    if (raw is Map<String, dynamic>) return raw;
+    if (raw is Map) return Map<String, dynamic>.from(raw);
+    return null;
+  }
+
+  String? get contextStory {
+    final raw = achievementData['context_story'];
+    if (raw == null) return null;
+    final text = '$raw'.trim();
+    return text.isEmpty ? null : text;
+  }
+
   /// 转换为AchievementUnlockEvent模型用于弹窗显示
   AchievementUnlockModel toUnlockModel() => AchievementUnlockModel(
         achievementId: achievementId,
@@ -907,6 +935,8 @@ class AchievementUnlockEvent extends ChatStreamEvent {
         rewardPreview: rewardPreview,
         surfacePreview: surfacePreview,
         gloryLines: gloryLines,
+        contextSnapshot: contextSnapshot,
+        contextStory: contextStory,
       );
 }
 
@@ -924,6 +954,8 @@ class AchievementUnlockModel {
     this.rewardPreview = const [],
     this.surfacePreview = const [],
     this.gloryLines = const [],
+    this.contextSnapshot,
+    this.contextStory,
   });
 
   final String achievementId;
@@ -937,6 +969,8 @@ class AchievementUnlockModel {
   final List<String> rewardPreview;
   final List<String> surfacePreview;
   final List<String> gloryLines;
+  final Map<String, dynamic>? contextSnapshot;
+  final String? contextStory;
 }
 
 /// ============================================
@@ -1683,14 +1717,21 @@ class StaleRecoveryEvent extends ChatStreamEvent {
   List<String> get resumeOptions {
     final raw = staleData['resume_options'];
     if (raw is List) return raw.map((e) => e.toString()).toList();
-    return [S.chatCompleted, S.chatStreamStuck, S.chatStreamNotStarted, S.chatStreamSwitchTask];
+    return [
+      S.chatCompleted,
+      S.chatStreamStuck,
+      S.chatStreamNotStarted,
+      S.chatStreamSwitchTask,
+    ];
   }
 
   String get formattedElapsed {
     if (elapsedMinutes < 60) return S.chatStreamMinutes(elapsedMinutes);
     final hours = elapsedMinutes ~/ 60;
     final mins = elapsedMinutes % 60;
-    return mins > 0 ? S.chatStreamHoursMins(hours, mins) : S.chatStreamHoursOnly(hours);
+    return mins > 0
+        ? S.chatStreamHoursMins(hours, mins)
+        : S.chatStreamHoursOnly(hours);
   }
 }
 
@@ -1708,7 +1749,8 @@ class UXWarningEvent extends ChatStreamEvent {
 
   final Map<String, dynamic> warningData;
 
-  String get label => warningData['label'] as String? ?? S.chatStreamStrategyRisk;
+  String get label =>
+      warningData['label'] as String? ?? S.chatStreamStrategyRisk;
   String get reason => warningData['reason'] as String? ?? '';
   String get suggestedAction =>
       warningData['suggested_action'] as String? ?? S.chatStreamAdjustStrategy;
@@ -1735,7 +1777,8 @@ class CommunityHintEvent extends ChatStreamEvent {
   final Map<String, dynamic> hintData;
 
   String get hintType => hintData['hint_type'] as String? ?? 'cohort_mistake';
-  String get title => hintData['title'] as String? ?? S.chatStreamCommunityInsight;
+  String get title =>
+      hintData['title'] as String? ?? S.chatStreamCommunityInsight;
   String get anonymousSummary => hintData['anonymous_summary'] as String? ?? '';
   String get tip => hintData['tip'] as String? ?? '';
 
@@ -1785,7 +1828,8 @@ class GrowthCardEvent extends ChatStreamEvent {
 
   final Map<String, dynamic> cardData;
 
-  String get title => cardData['title'] as String? ?? S.chatStreamSeePersistence;
+  String get title =>
+      cardData['title'] as String? ?? S.chatStreamSeePersistence;
   String get narrative => cardData['narrative'] as String? ?? '';
   int get streakDays => cardData['streak_days'] as int? ?? 0;
   String get strategyEffect => cardData['strategy_effect'] as String? ?? '';
@@ -1812,11 +1856,9 @@ class GoalArbitrationEvent extends ChatStreamEvent {
 
   final Map<String, dynamic> arbData;
 
-  String get primaryGoalId =>
-      arbData['primary_goal_id'] as String? ?? '';
+  String get primaryGoalId => arbData['primary_goal_id'] as String? ?? '';
 
-  String get primaryGoalTitle =>
-      arbData['primary_goal_title'] as String? ?? '';
+  String get primaryGoalTitle => arbData['primary_goal_title'] as String? ?? '';
 
   String get reason => arbData['reason'] as String? ?? '';
 

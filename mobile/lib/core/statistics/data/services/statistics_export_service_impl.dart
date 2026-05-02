@@ -250,7 +250,7 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     final titleStyle = TextStyle(
       color: DS.onBrandPrimary,
       fontSize: 48,
-      fontWeight: FontWeight.bold,
+      fontWeight: DS.fontWeightBold,
       fontFamilyFallback: sparkleFontFallback,
     );
     final titlePainter = TextPainter(

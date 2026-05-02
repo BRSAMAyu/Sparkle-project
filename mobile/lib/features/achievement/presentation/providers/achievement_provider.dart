@@ -278,7 +278,8 @@ Map<String, dynamic>? _decodeAchievementEventPayload(dynamic event) {
       if (decoded is Map) {
         return Map<String, dynamic>.from(decoded);
       }
-    } catch (_) {
+    } catch (e) {
+      debugPrint('Achievement event payload decode failed: $e');
       return null;
     }
   }

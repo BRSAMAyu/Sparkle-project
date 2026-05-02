@@ -141,6 +141,34 @@ async def translate_text(
                 "latency_ms": result.data.get("latency_ms", 0),
                 "domain": request.domain,
                 "style": request.style,
+                "actions": [
+                    {
+                        "type": "save_to_vocabulary",
+                        "method": "POST",
+                        "endpoint": "/api/v1/vocabulary/wordbook",
+                        "payload": {
+                            "word": request.text[:100],
+                            "definition": result.data.get("translation", ""),
+                            "context_sentence": request.context_before or request.text[:1000],
+                            "source_translation_id": request.fingerprint,
+                            "save_to_knowledge": False,
+                            "create_learning_asset": True,
+                            "language": source_lang,
+                            "target_language": target_lang,
+                            "domain": request.domain,
+                            "source_document_id": request.source_file_id,
+                        },
+                    },
+                    {
+                        "type": "create_knowledge_card",
+                        "method": "POST",
+                        "endpoint": "/api/v1/vocabulary/wordbook",
+                        "payload_overrides": {
+                            "save_to_knowledge": True,
+                            "create_learning_asset": True,
+                        },
+                    },
+                ],
             }
 
             # 构建片段列表
@@ -177,6 +205,14 @@ async def translate_text(
                 segments=[],
                 meta={
                     "error": result.error_message or "Translation failed",
+                    "retryable": True,
+                    "fallback_actions": [
+                        {
+                            "type": "dictionary_lookup",
+                            "method": "GET",
+                            "endpoint": "/api/v1/vocabulary/lookup",
+                        }
+                    ],
                 },
             )
 

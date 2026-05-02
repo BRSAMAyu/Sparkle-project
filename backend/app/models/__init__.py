@@ -31,7 +31,7 @@ from app.models.achievement import (
     VisualEffectType,
 )
 from app.models.analytics import UserDailyMetric
-from app.models.audit_log import ComplianceCheckLog, DataAccessLog, SecurityAuditLog, SystemConfigChangeLog
+from app.models.audit_log import AdminAuditLog, ComplianceCheckLog, DataAccessLog, SecurityAuditLog, SystemConfigChangeLog
 from app.models.aurora_stage20 import (
     AuroraJudgmentRecord,
     ConflictResolutionRecord,
@@ -100,6 +100,7 @@ from app.models.community import (
     PrivateMessage,
     SharedResource,
 )
+from app.models.community_privacy import CommunityAggregateSignal, PrivacyBudgetLedger
 from app.models.compliance import (
     CryptoShreddingCertificate,
     DlqReplayAuditLog,
@@ -138,6 +139,7 @@ from app.models.experiment import (
 )
 from app.models.file_storage import StoredFile
 from app.models.focus import FocusSession, FocusStatus, FocusType
+from app.models.goal import Goal
 from app.models.galaxy import (
     ExpansionFeedback,
     KnowledgeNode,
@@ -171,8 +173,10 @@ from app.models.memory_evolution import (
     MemoryEvolution,
 )
 from app.models.memory_rank_policy import MemoryRankPolicy
+from app.models.marketplace import MarketplacePack, MarketplaceSkill, PackAdoptionHistory, UserSkillAdoption
 from app.models.next_action_selection import NextActionSelection
 from app.models.nightly_review import NightlyReview
+from app.models.north_star_metrics import NorthStarMetricEvent
 from app.models.notification import Notification, PushHistory
 from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
 from app.models.plan import Plan, PlanStage, PlanType
@@ -187,6 +191,7 @@ from app.models.recommendation import (
     UserLearningProfile,
     UserSimilarity,
 )
+from app.models.research_consent import ResearchConsentRecord
 from app.models.report_snapshot import ReportSnapshot
 from app.models.response_feedback import ResponseFeedback
 from app.models.review_system import (
@@ -207,6 +212,7 @@ from app.models.seed_content import (
     UserLibrarySubscription,
 )
 from app.models.semantic_memory import SemanticLink, StrategyNode
+from app.models.safe_experiment import SafeExperiment, SafeExperimentEpisode
 from app.models.session_completion import SessionCompletion
 from app.models.shop import PhotonTransactionHistory, ShopItem, ShopPurchase, UserConsumable
 from app.models.simulation_run import SimulationRun
@@ -255,6 +261,7 @@ __all__ = [
     "UserSession",
     "AuthAuditLog",
     "AuthAuditAction",
+    "AdminAuditLog",
     "PushPreference",
     "UserDevice",
     "Task",
@@ -357,6 +364,7 @@ __all__ = [
     "BehavioralOutcome",
     "InterventionTemplate",
     "ResponseFeedback",
+    "ResearchConsentRecord",
     "UserSimilarity",
     "ItemSimilarity",
     "UserItemInteraction",
@@ -378,6 +386,8 @@ __all__ = [
     "UserPushOptIn",
     "UserSettings",
     "UserPreferencesCenter",
+    "CommunityAggregateSignal",
+    "PrivacyBudgetLedger",
     "DecisionRecord",
     "DistilledStrategyCacheEntry",
     "DocumentRetrievalFeedback",
@@ -478,4 +488,10 @@ __all__ = [
     "InterventionAcceptanceStatus",
     "InterventionOutcomeStatus",
     "InterventionStrategyOutcome",
+    "MarketplacePack",
+    "MarketplaceSkill",
+    "PackAdoptionHistory",
+    "UserSkillAdoption",
+    "SafeExperiment",
+    "SafeExperimentEpisode",
 ]

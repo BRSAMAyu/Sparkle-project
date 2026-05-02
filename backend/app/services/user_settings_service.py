@@ -16,8 +16,10 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "transparency_level": 0,
     "system_update_level": 1,
     "ai_reasoning_mode": "balanced",
+    "current_goal_id": None,
     "task_reminders_enabled": True,
     "task_reminder_times": [1440, 60, 15],  # 1 day, 1 hour, 15 minutes
+    "community_intelligence_enabled": True,
 }
 
 
@@ -43,7 +45,7 @@ class UserSettingsService:
     ) -> UserSettings:
         record = await self.get_or_create(user_id)
         for key, value in updates.items():
-            if value is None:
+            if value is None and key != "current_goal_id":
                 continue
             if hasattr(record, key):
                 setattr(record, key, value)

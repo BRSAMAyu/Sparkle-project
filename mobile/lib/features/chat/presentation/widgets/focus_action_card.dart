@@ -40,8 +40,11 @@ class FocusActionCard extends StatelessWidget {
                     gradient: DS.secondaryGradient,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.timer_rounded,
-                      color: DS.brandPrimaryConst, size: 18,),
+                  child: Icon(
+                    Icons.timer_rounded,
+                    color: DS.brandPrimaryConst,
+                    size: 18,
+                  ),
                 ),
                 const SizedBox(width: DS.md),
                 Expanded(
@@ -89,7 +92,9 @@ class FocusActionCard extends StatelessWidget {
 
   Widget _buildDurationChip(BuildContext context, int minutes) => Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing8, vertical: DS.spacing4,),
+          horizontal: DS.spacing8,
+          vertical: DS.spacing4,
+        ),
         decoration: BoxDecoration(
           color: DS.secondaryBase.withValues(alpha: 0.1),
           borderRadius: DS.borderRadius12,
@@ -127,7 +132,9 @@ class FocusActionCard extends StatelessWidget {
   }
 
   Map<String, dynamic> _normalizeTaskData(
-      Map<String, dynamic> data, int duration,) {
+    Map<String, dynamic> data,
+    int duration,
+  ) {
     final normalized = Map<String, dynamic>.from(data);
     normalized['user_id'] ??= 'focus_user';
     normalized['tags'] ??= <String>[];

@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/sparkle/gateway/internal/i18n"
+	"github.com/sparkle/gateway/internal/logsafe"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -41,6 +42,7 @@ type planReviewStatusSender interface {
 
 // saveMessage persists a chat message to the database
 func (h *ChatOrchestrator) saveMessage(
+	parentCtx context.Context,
 	userID,
 	sessionID,
 	role,
@@ -48,7 +50,7 @@ func (h *ChatOrchestrator) saveMessage(
 	extra map[string]interface{},
 ) {
 	tracer := otel.Tracer("chat-orchestrator")
-	ctx, span := tracer.Start(context.Background(), "redis.save_message")
+	ctx, span := tracer.Start(parentCtx, "redis.save_message")
 	defer span.End()
 
 	payload := map[string]interface{}{
@@ -211,7 +213,7 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 	}
 
 	log.Printf("Action feedback from user %s: action=%s, widget_type=%s, tool_result_id=%s",
-		userID, action, widgetType, toolResultID)
+		hashUserIDForLog(userID), action, widgetType, toolResultID)
 
 	// Parse user ID
 	userUUID, err := uuid.Parse(userID)
@@ -225,15 +227,15 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 	case "task_list", "create_task":
 		if action == "confirm" {
 			// Handle task list confirmation (tasks were created)
-			log.Printf("Task list creation confirmed for user %s, tool_result_id=%s", userID, toolResultID)
+			log.Printf("Task list creation confirmed for user %s, tool_result_id=%s", hashUserIDForLog(userID), toolResultID)
 
 			// [P0.1 FIX]: Call TaskCommand to confirm tasks in database
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			taskCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 
-			err := h.taskCommand.ConfirmGeneratedTasks(ctx, userUUID, toolResultID)
+			err := h.taskCommand.ConfirmGeneratedTasks(taskCtx, userUUID, toolResultID)
 			if err != nil {
-				log.Printf("❌ Failed to confirm tasks for user %s: %v", userID, err)
+				log.Printf("❌ Failed to confirm tasks for user %s: %v", hashUserIDForLog(userID), err)
 				sender.SendActionStatus(toolResultID, "failed", map[string]interface{}{
 					"message": i18n.T(ctx, "feedback.action_confirm_failed"),
 				})
@@ -247,7 +249,7 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 			})
 		} else if action == "dismiss" {
 			// Handle task list dismissal (user rejected generated tasks)
-			log.Printf("Task list creation dismissed by user %s", userID)
+			log.Printf("Task list creation dismissed by user %s", hashUserIDForLog(userID))
 
 			// TRACKED(TD-009): In future, could mark tasks as rejected in DB
 			// For now, just send status update
@@ -257,17 +259,17 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 			})
 		}
 
-		case "plan_card", "create_plan":
+	case "plan_card", "create_plan":
 		if action == "confirm" {
 			// Handle plan confirmation
-			log.Printf("Plan creation confirmed for user %s", userID)
+			log.Printf("Plan creation confirmed for user %s", hashUserIDForLog(userID))
 
 			sender.SendActionStatus(toolResultID, "confirmed", map[string]interface{}{
 				"message":     i18n.T(ctx, "feedback.plan_confirmed"),
 				"widget_type": widgetType,
 			})
 		} else if action == "dismiss" {
-			log.Printf("Plan creation dismissed by user %s", userID)
+			log.Printf("Plan creation dismissed by user %s", hashUserIDForLog(userID))
 
 			sender.SendActionStatus(toolResultID, "dismissed", map[string]interface{}{
 				"message":     i18n.T(ctx, "feedback.plan_dismissed"),
@@ -278,14 +280,14 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 	case "focus_card":
 		if action == "confirm" {
 			// Handle focus session start confirmation
-			log.Printf("Focus session start confirmed for user %s", userID)
+			log.Printf("Focus session start confirmed for user %s", hashUserIDForLog(userID))
 
 			sender.SendActionStatus(toolResultID, "confirmed", map[string]interface{}{
 				"message":     i18n.T(ctx, "feedback.focus_started"),
 				"widget_type": widgetType,
 			})
 		} else if action == "dismiss" {
-			log.Printf("Focus session dismissed by user %s", userID)
+			log.Printf("Focus session dismissed by user %s", hashUserIDForLog(userID))
 
 			sender.SendActionStatus(toolResultID, "dismissed", map[string]interface{}{
 				"message":     i18n.T(ctx, "feedback.focus_cancelled"),
@@ -376,7 +378,7 @@ func (h *ChatOrchestrator) handleExecutionSummaryActionWithResponder(
 	resp, err := h.httpClient.Do(req)
 	if err != nil {
 		sender.SendActionStatus(recordID, "failed", map[string]interface{}{
-			"message":     i18n.T(ctx, "feedback.execution.callback_failed", map[string]string{"error": err.Error()}),
+			"message":     sanitizeWebSocketError(ctx, err, "chat_orchestrator_feedback.execution_callback"),
 			"widget_type": widgetType,
 		})
 		return
@@ -539,7 +541,7 @@ func (h *ChatOrchestrator) persistActionFeedback(authToken, toolResultID, widget
 	return nil
 }
 
-func (h *ChatOrchestrator) handleUpdateNodeMasteryWithResponder(responder updateNodeResponder, msgMap map[string]interface{}, userID string) {
+func (h *ChatOrchestrator) handleUpdateNodeMasteryWithResponder(ctx context.Context, responder updateNodeResponder, msgMap map[string]interface{}, userID string) {
 	payload, ok := msgMap["payload"].(map[string]interface{})
 	if !ok {
 		log.Printf("Invalid update_node_mastery: missing payload")
@@ -584,7 +586,7 @@ func (h *ChatOrchestrator) handleUpdateNodeMasteryWithResponder(responder update
 		return
 	}
 
-	log.Printf("Received mastery update for user %s, node %s, mastery %d, version %s", userID, nodeID, mastery, versionStr)
+	log.Printf("Received mastery update for user %s, node %s, mastery %d, version %s", hashUserIDForLog(userID), nodeID, mastery, versionStr)
 
 	// Call Python Backend via gRPC
 	if h.galaxyClient == nil {
@@ -593,10 +595,10 @@ func (h *ChatOrchestrator) handleUpdateNodeMasteryWithResponder(responder update
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	masteryCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	resp, err := h.galaxyClient.UpdateNodeMastery(ctx, userID, nodeID, mastery, version, "offline_sync")
+	resp, err := h.galaxyClient.UpdateNodeMastery(masteryCtx, userID, nodeID, mastery, version, "offline_sync")
 
 	if err != nil {
 		log.Printf("gRPC mastery update failed: %v", err)
@@ -755,7 +757,7 @@ func (h *ChatOrchestrator) handleResponseFeedbackWithResponder(ctx context.Conte
 		return
 	}
 
-	log.Printf("Response feedback from user %s: response_id=%s trace_id=%s", userID, responseID, traceID)
+	log.Printf("Response feedback from user %s: response_id=%s trace_id=%s", hashUserIDForLog(userID), responseID, traceID)
 
 	req := &agentv1.ResponseFeedbackRequest{
 		UserId:        userID,
@@ -857,7 +859,7 @@ func (h *ChatOrchestrator) handlePlanReviewFeedbackWithResponder(ctx context.Con
 	userComment, _ := msgMap["user_comment"].(string)
 
 	log.Printf("Plan review feedback from user %s: review_id=%s, plan_id=%s, decision=%s, comment=%s",
-		userID, reviewID, planID, userDecision, userComment)
+		hashUserIDForLog(userID), reviewID, planID, userDecision, logsafe.RedactText(userComment))
 
 	// Map string decision to proto enum
 	var decision agentv1.PlanReviewDecision
@@ -958,7 +960,7 @@ func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, u
 	}
 
 	log.Printf("Focus session completed: user=%s, session_id=%s, duration=%d minutes, completed_tasks=%d",
-		userID, sessionID, int(actualDuration), len(completedTaskIDs))
+		hashUserIDForLog(userID), sessionID, int(actualDuration), len(completedTaskIDs))
 
 	if h.backendURL == "" || authToken == "" {
 		log.Printf("Focus completion not persisted: backendURL or auth token missing")
@@ -1023,8 +1025,8 @@ func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, u
 }
 
 // handleUpdateNodeMastery forwards mastery updates to Python backend via gRPC and sends ACK
-func (h *ChatOrchestrator) handleUpdateNodeMastery(writer *wsSafeWriter, msgMap map[string]interface{}, userID string) {
-	h.handleUpdateNodeMasteryWithResponder(legacyUpdateNodeResponder{writer: writer}, msgMap, userID)
+func (h *ChatOrchestrator) handleUpdateNodeMastery(writer *wsSafeWriter, msgMap map[string]interface{}, userID string, ctx context.Context) {
+	h.handleUpdateNodeMasteryWithResponder(ctx, legacyUpdateNodeResponder{writer: writer}, msgMap, userID)
 }
 
 func (h *ChatOrchestrator) sendError(writer *wsSafeWriter, opType, nodeID, version, message string) {

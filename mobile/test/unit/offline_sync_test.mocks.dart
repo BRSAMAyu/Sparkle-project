@@ -139,10 +139,16 @@ class MockLocalDatabase extends _i1.Mock implements _i5.LocalDatabase {
       ) as _i2.Isar);
 
   @override
-  set isar(_i2.Isar? _isar) => super.noSuchMethod(
+  bool get isInitialized => (super.noSuchMethod(
+        Invocation.getter(#isInitialized),
+        returnValue: false,
+      ) as bool);
+
+  @override
+  set isar(_i2.Isar? value) => super.noSuchMethod(
         Invocation.setter(
           #isar,
-          _isar,
+          value,
         ),
         returnValueForMissingStub: null,
       );

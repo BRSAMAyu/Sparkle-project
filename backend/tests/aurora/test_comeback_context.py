@@ -6,7 +6,7 @@ from uuid import uuid4
 import pytest
 
 from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
-from app.models.chat import ChatMessage, MessageRole
+from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.focus import FocusSession, FocusStatus, FocusType
 from app.models.plan import Plan, PlanStage, PlanType
 from app.models.task import Task, TaskStatus, TaskType
@@ -77,6 +77,53 @@ async def _seed_comeback_fixture(
     return user, plan
 
 
+async def _seed_chat_continuity_fixture(
+    db_session,
+    *,
+    inactive_delta: timedelta,
+    last_assistant_question: str = "那你想先从函数极限还是导数开始？",
+) -> tuple[User, str]:
+    now = datetime.now(UTC).replace(tzinfo=None)
+    user = User(
+        id=uuid4(),
+        username=f"continuity_{uuid4().hex[:8]}",
+        email=f"continuity_{uuid4().hex[:8]}@example.com",
+        hashed_password="hashed",
+    )
+    session_id = uuid4()
+    user_message_at = now - inactive_delta
+    assistant_message_at = user_message_at + timedelta(minutes=1)
+    db_session.add(user)
+    db_session.add(
+        ChatSession(
+            id=session_id,
+            user_id=user.id,
+            title="函数极限复盘",
+            last_message_at=assistant_message_at,
+        )
+    )
+    db_session.add(
+        ChatMessage(
+            user_id=user.id,
+            session_id=session_id,
+            role=MessageRole.USER,
+            content="我想继续复盘函数极限，刚才卡在夹逼准则。",
+            created_at=user_message_at,
+        )
+    )
+    db_session.add(
+        ChatMessage(
+            user_id=user.id,
+            session_id=session_id,
+            role=MessageRole.ASSISTANT,
+            content=last_assistant_question,
+            created_at=assistant_message_at,
+        )
+    )
+    await db_session.commit()
+    return user, str(session_id)
+
+
 @pytest.mark.asyncio
 async def test_get_comeback_context_returns_warm_message_after_six_days(db_session):
     user, plan = await _seed_comeback_fixture(
@@ -100,6 +147,49 @@ async def test_get_comeback_context_returns_warm_message_after_six_days(db_sessi
     assert "3 天" in payload["message"]
     assert "来得及" in payload["message"]
     assert "30分钟保底版" in payload["message"]
+
+
+@pytest.mark.asyncio
+async def test_get_comeback_context_light_resume_after_two_hours(db_session):
+    user, session_id = await _seed_chat_continuity_fixture(
+        db_session,
+        inactive_delta=timedelta(hours=2),
+    )
+    service = AuroraRuntimeV1Service()
+
+    payload = await service.get_comeback_context(
+        active_db=db_session,
+        user_id=user.id,
+        include_short_gaps=True,
+    )
+
+    assert payload is not None
+    assert payload["comeback_kind"] == "light_resume"
+    assert payload["conversation_id"] == session_id
+    assert "函数极限" in payload["topic_summary"]
+    assert "上次 Aurora 问的是" in payload["message"]
+    assert payload["unfinished_items"][0]["type"] == "pending_question"
+
+
+@pytest.mark.asyncio
+async def test_get_comeback_context_silent_resume_under_thirty_minutes(db_session):
+    user, session_id = await _seed_chat_continuity_fixture(
+        db_session,
+        inactive_delta=timedelta(minutes=12),
+    )
+    service = AuroraRuntimeV1Service()
+
+    payload = await service.get_comeback_context(
+        active_db=db_session,
+        user_id=user.id,
+        include_short_gaps=True,
+    )
+
+    assert payload is not None
+    assert payload["comeback_kind"] == "silent_resume"
+    assert payload["conversation_id"] == session_id
+    assert payload["message"] == ""
+    assert payload["should_show_message"] is False
 
 
 @pytest.mark.asyncio

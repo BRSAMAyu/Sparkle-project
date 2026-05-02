@@ -382,7 +382,7 @@ class _ErrorDetailProviderElement
   String get errorId => (origin as ErrorDetailProvider).errorId;
 }
 
-String _$todayReviewListHash() => r'090e622ea4780be460353bec84dace5bfd00cd74';
+String _$todayReviewListHash() => r'c964bb3217590a4f62045468abc4f2308e11bd86';
 
 /// 今日待复习列表 Provider
 ///

@@ -19,12 +19,15 @@ from datetime import UTC, datetime, timedelta
 import grpc
 from google.protobuf.json_format import MessageToDict
 from loguru import logger
+from redis.exceptions import RedisError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.metrics import (
     FEEDBACK_TO_EFFECT_SECONDS,
     PROTO_ERROR_CODE_FALLBACK_TOTAL,
     PROTO_FIELD_READ_TOTAL,
+    SESSION_ID_FALLBACK_TOTAL,
 )
 from app.core.safe_error_messages import build_safe_chat_error
 from app.gen.agent.v1 import agent_service_pb2, agent_service_pb2_grpc
@@ -97,6 +100,49 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             return "expert_team_workflow"
         return "standard_chat"
 
+    async def _process_aurora_correction_metadata(
+        self,
+        *,
+        user_id: str,
+        request_extra_context: dict[str, object],
+    ) -> dict[str, object] | None:
+        raw_payload = request_extra_context.get("aurora_correction")
+        if not isinstance(raw_payload, dict) or not user_id:
+            return None
+        try:
+            from app.aurora.correction_types import AuroraCorrectionPayload
+            from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
+
+            payload = AuroraCorrectionPayload.normalize(raw_payload)
+            if not payload.is_disconfirming and not payload.is_freeform:
+                return None
+            processor = CorrectionFeedbackProcessor(self.orchestrator.redis, self.db_session_factory)
+            result = await processor.process(
+                user_id=user_id,
+                correction_payload=payload,
+            )
+            return result.calibration_receipt or None
+        except (ImportError, TypeError, ValueError, KeyError, AttributeError, SQLAlchemyError, RedisError) as exc:
+            logger.warning("Failed to process Aurora correction metadata: {}", exc, exc_info=True)
+            return None
+
+    @staticmethod
+    def _attach_calibration_receipt_metadata(
+        response: agent_service_pb2.ChatResponse,
+        receipt: dict[str, object] | None,
+    ) -> None:
+        if not receipt:
+            return
+        encoded = json.dumps(receipt, ensure_ascii=False, default=str)
+        response.metadata["calibration_receipt"] = encoded
+        if "aurora_receipts" not in response.metadata:
+            unified = {
+                **receipt,
+                "receipt_type": "calibration_receipt",
+                "source_key": "calibration_receipt",
+            }
+            response.metadata["aurora_receipts"] = json.dumps([unified], ensure_ascii=False, default=str)
+
     @staticmethod
     def _normalize_v2_response(response: agent_service_pb2.ChatResponse) -> agent_service_pb2.ChatResponse:
         service = "agent_grpc_service"
@@ -115,6 +161,36 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     direction="enum_missing_defaulted",
                 ).inc()
         return response
+
+    @staticmethod
+    def _ensure_response_session_id(
+        response: agent_service_pb2.ChatResponse,
+        request_session_id: str,
+        *,
+        request_id: str,
+        trace_id: str,
+    ) -> str:
+        response_session_id = str(response.session_id or "").strip()
+        if response_session_id:
+            return response_session_id
+
+        request_session_id = str(request_session_id or "").strip()
+        if request_session_id:
+            logger.warning(
+                "Orchestrator emitted response without session_id; reusing request session_id "
+                f"request_id={request_id} trace_id={trace_id} session_id={request_session_id}"
+            )
+            response.session_id = request_session_id
+            return request_session_id
+
+        fallback_session_id = str(uuid.uuid4())
+        logger.warning(
+            "Generated StreamChat session_id fallback because both request and orchestrator response were empty "
+            f"request_id={request_id} trace_id={trace_id} fallback_session_id={fallback_session_id}"
+        )
+        SESSION_ID_FALLBACK_TOTAL.labels(source="grpc_stream_chat").inc()
+        response.session_id = fallback_session_id
+        return fallback_session_id
 
     async def _require_admin(
         self,
@@ -144,7 +220,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     context.set_code(grpc.StatusCode.PERMISSION_DENIED)
                     context.set_details("Admin access required")
                     return None
-        except Exception as e:
+        except (SQLAlchemyError, ValueError, TypeError) as e:
+            logger.error("Admin authorization lookup failed for user_id={}: {}", user_id, e, exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
             context.set_details(str(e))
             return None
@@ -185,11 +262,16 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             if request.HasField("extra_context"):
                 try:
                     request_extra_context = MessageToDict(request.extra_context)
-                except Exception as exc:
+                except (TypeError, ValueError, AttributeError) as exc:
                     logger.warning(f"Failed to parse request extra_context in StreamChat: {exc}")
             reasoning_mode = str(request_extra_context.get("reasoning_mode") or "balanced").strip().lower()
             if reasoning_mode not in {"fast", "balanced", "deep"}:
                 reasoning_mode = "balanced"
+            calibration_receipt = await self._process_aurora_correction_metadata(
+                user_id=user_id,
+                request_extra_context=request_extra_context,
+            )
+            calibration_receipt_attached = False
             logger.info(f"📋 Chat mode: {chat_mode}")
             workflow_id = self._resolve_workflow_id(chat_mode)
 
@@ -197,8 +279,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             try:
                 bandit = PromptBandit(redis_client=self.orchestrator.redis)
                 prompt_version = await bandit.select(workflow_id, prompt_versions)
-            except Exception as e:
-                logger.warning(f"Prompt bandit selection failed: {e}")
+            except (RedisError, ConnectionError, TimeoutError, KeyError, TypeError, ValueError) as e:
+                logger.warning(f"Prompt bandit selection failed: {e}", exc_info=True)
 
             await self._observe_feedback_effect(user_id, workflow_id, prompt_version, trace_id=trace_id)
 
@@ -209,6 +291,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             # Create a dedicated DB session for this stream
             has_text_content = False
+            effective_session_id = str(request.session_id or "").strip()
             async with self.db_session_factory() as db_session:
                 try:
                     # Delegate to Orchestrator
@@ -231,11 +314,21 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                         if not response.prompt_version:
                             response.prompt_version = prompt_version
                         # Ensure session_id is always set for conversation continuity
-                        if not response.session_id:
-                            response.session_id = request.session_id
+                        effective_session_id = self._ensure_response_session_id(
+                            response,
+                            effective_session_id,
+                            request_id=request.request_id,
+                            trace_id=trace_id,
+                        )
+                        if not request.session_id:
+                            request.session_id = effective_session_id
+                        if calibration_receipt and not calibration_receipt_attached:
+                            self._attach_calibration_receipt_metadata(response, calibration_receipt)
+                            calibration_receipt_attached = True
                         yield self._normalize_v2_response(response)
                     await db_session.commit()
-                except Exception:
+                except Exception as exc:
+                    logger.warning("StreamChat transaction failed; rolling back db session: {}", exc, exc_info=True)
                     await db_session.rollback()
                     raise
 
@@ -254,6 +347,8 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                     full_text="(System) No valid response generated. Please try again later.",
                     finish_reason=agent_service_pb2.STOP,
                 )
+                if calibration_receipt and not calibration_receipt_attached:
+                    self._attach_calibration_receipt_metadata(fallback, calibration_receipt)
                 fallback.event_time.FromDatetime(datetime.now(UTC))
                 yield fallback
 
@@ -263,6 +358,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
             if user_id:
                 try:
                     from app.services.push_scheduler import PushScheduler
+
                     async with self.db_session_factory() as recall_db:
                         push_scheduler = PushScheduler(recall_db)
                         await push_scheduler.enqueue_session_end_recall(
@@ -272,8 +368,10 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                                 "diagnosed_files_count": 0,
                             },
                         )
-                except Exception as recall_err:
-                    logger.debug(f"Session-end recall check failed (non-fatal): {recall_err}")
+                except ImportError as recall_err:
+                    logger.debug(f"Session-end recall skipped; push scheduler unavailable: {recall_err}")
+                except (SQLAlchemyError, ValueError, TypeError, AttributeError) as recall_err:
+                    logger.warning(f"Session-end recall check failed (non-fatal): {recall_err}", exc_info=True)
 
         except Exception as e:
             logger.error(f"StreamChat error: {e}", exc_info=True)
@@ -430,7 +528,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 },
             )
             await self.orchestrator.redis.delete(key)
-        except Exception:
+        except (RedisError, ConnectionError, TimeoutError, TypeError, ValueError) as exc:
+            logger.warning(
+                "Failed to observe feedback effect user_id={} workflow_id={} prompt_version={}: {}",
+                user_id,
+                workflow_id,
+                prompt_version,
+                exc,
+                exc_info=True,
+            )
             return
 
     async def RetrieveMemory(
@@ -472,9 +578,11 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 for result in search_results:
                     # Build metadata
                     metadata = {
-                        "sector_code": result.node.sector_code.value
-                        if hasattr(result.node.sector_code, "value")
-                        else str(result.node.sector_code),
+                        "sector_code": (
+                            result.node.sector_code.value
+                            if hasattr(result.node.sector_code, "value")
+                            else str(result.node.sector_code)
+                        ),
                         "importance_level": str(result.node.importance_level),
                         "is_seed": str(result.node.is_seed),
                     }
@@ -697,8 +805,10 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                             logger.info(
                                 f"Phase rollback will be triggered for plan {plan_id} (rejection_count={count})"
                             )
-                except Exception as e:
-                    logger.warning(f"Failed to track rejection for plan {plan_id}: {e}")
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Failed to track rejection for plan {plan_id}: invalid id: {e}")
+                except (SQLAlchemyError, RedisError, ConnectionError, TimeoutError) as e:
+                    logger.warning(f"Failed to track rejection for plan {plan_id}: {e}", exc_info=True)
 
             if proto_decision == agent_service_pb2.APPROVE:
                 # Resume plan execution after approval with db_session for task generation
@@ -856,15 +966,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                                 f"[ContentReviewFeedback] Learning analysis complete: "
                                 f"misclassification_rate={report.misclassification_rate:.2%}"
                             )
-                        except Exception as e:
-                            logger.warning(f"[ContentReviewFeedback] Learning analysis failed: {e}")
+                        except (SQLAlchemyError, ValueError, TypeError, AttributeError) as e:
+                            logger.warning(f"[ContentReviewFeedback] Learning analysis failed: {e}", exc_info=True)
 
                     # Don't await - run in background
                     asyncio.create_task(run_learning())
                 except ImportError:
                     logger.debug("[ContentReviewFeedback] Learning service not available")
-                except Exception as e:
-                    logger.warning(f"[ContentReviewFeedback] Failed to trigger learning: {e}")
+                except (SQLAlchemyError, ValueError, TypeError, AttributeError) as e:
+                    logger.warning(f"[ContentReviewFeedback] Failed to trigger learning: {e}", exc_info=True)
 
             return agent_service_pb2.ContentReviewFeedbackResponse(
                 success=True,

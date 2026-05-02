@@ -223,7 +223,9 @@ class MockCommunityRepository implements CommunityRepository {
           contentData: {
             'resource_type': 'plan',
             'resource_title': zh ? '晚间语言复盘计划' : 'Evening Language Review Plan',
-            'resource_summary': zh ? '精读 + 跟说 + 5 分钟短复盘' : 'Intensive reading + Shadowing + 5-min short review',
+            'resource_summary': zh
+                ? '精读 + 跟说 + 5 分钟短复盘'
+                : 'Intensive reading + Shadowing + 5-min short review',
             'resource_meta': {
               'progress': 0.42,
               'target_date': DateTime.now()
@@ -315,8 +317,12 @@ class MockCommunityRepository implements CommunityRepository {
             'resource_summary': zh
                 ? '主动检索比重复看起来更费力，但正因为费力才更能留下记忆...'
                 : 'Active retrieval feels more effortful than repetition, but precisely because it\'s effortful, it sticks better...',
-            'resource_meta': {'related_subject': zh ? '学习策略' : 'Learning Strategies'},
-            'comment': zh ? '我觉得这条很适合理工错题回看时用' : 'I think this is great for reviewing STEM errors',
+            'resource_meta': {
+              'related_subject': zh ? '学习策略' : 'Learning Strategies'
+            },
+            'comment': zh
+                ? '我觉得这条很适合理工错题回看时用'
+                : 'I think this is great for reviewing STEM errors',
           },
           readBy: [charlie.id],
         ),
@@ -453,7 +459,9 @@ class MockCommunityRepository implements CommunityRepository {
                 ? '我发现只要任务没有明确的下一步，就会开始刷手机...'
                 : 'I found that whenever a task lacks clear next steps, I start scrolling my phone...',
             'resource_meta': {'source_type': 'capsule', 'severity': 2},
-            'comment': zh ? '帮我看看有没有更好的拆解方式' : 'Help me see if there\'s a better way to break it down',
+            'comment': zh
+                ? '帮我看看有没有更好的拆解方式'
+                : 'Help me see if there\'s a better way to break it down',
           },
         ),
       ],
@@ -1030,7 +1038,8 @@ class MockCommunityRepository implements CommunityRepository {
   }) async {}
   @override
   Future<void> respondToRequest(String friendshipId, bool accept) async {
-    final index = _mockPendingRequests.indexWhere((item) => item.id == friendshipId);
+    final index =
+        _mockPendingRequests.indexWhere((item) => item.id == friendshipId);
     if (index < 0) return;
     final request = _mockPendingRequests.removeAt(index);
     if (accept) {
@@ -1047,8 +1056,10 @@ class MockCommunityRepository implements CommunityRepository {
       ];
     }
   }
+
   @override
-  Future<List<FriendshipInfo>> getPendingRequests() async => _mockPendingRequests;
+  Future<List<FriendshipInfo>> getPendingRequests() async =>
+      _mockPendingRequests;
   @override
   Future<List<FriendRecommendation>> getFriendRecommendations({
     int limit = 10,
@@ -1058,104 +1069,116 @@ class MockCommunityRepository implements CommunityRepository {
   }) async {
     final zh = I18nService.instance.isChinese;
     return (strategy == FriendMatchStrategy.complementary
-              ? [
-                  FriendRecommendation(
-                    user:
-                        _mockUsers.firstWhere((user) => user.id == 'user_bob'),
-                    matchScore: 0.91,
-                    matchReasons: const [
-                      'TA 的执行节奏更稳定，适合做监督型伙伴',
-                      '你们都在准备语言与考试相关目标，互补关系更容易落地',
-                    ],
-                    strategy: strategy.name,
-                    target: target.name,
-                    summary: '更适合做监督型责任伙伴，先建立好友关系会更顺畅。',
-                    scoreBreakdown: const {
-                      'support_strength': 0.28,
-                      'subject_bridge': 0.18,
-                      'stability': 0.14,
-                    },
-                  ),
-                  FriendRecommendation(
-                    user:
-                        _mockUsers.firstWhere((user) => user.id == 'user_eva'),
-                    matchScore: 0.83,
-                    matchReasons: const [
-                      'TA 的规划习惯更强，适合在关键节点提醒你',
-                      '学习风格差异能带来新的推进方式',
-                    ],
-                    strategy: strategy.name,
-                    target: target.name,
-                    summary: '适合作为互补型学习搭子。',
-                    scoreBreakdown: const {
-                      'support_strength': 0.25,
-                      'diversity': 0.12,
-                      'stability': 0.11,
-                    },
-                  ),
-                ]
-              : [
-                  FriendRecommendation(
-                    user: _mockUsers
-                        .firstWhere((user) => user.id == 'user_alice'),
-                    matchScore: 0.94,
-                    matchReasons: zh
-                        ? const [
-                            '你们关注的学习主题高度重合',
-                            '学习节奏和专注偏好比较接近',
-                            '你们已经是好友，建立责任伙伴关系会更顺手',
-                          ]
-                        : const [
-                            'Your learning topics highly overlap',
-                            'Similar learning rhythm and focus preferences',
-                            'Already friends—building an accountability partnership will be smoother',
-                          ],
-                    strategy: strategy.name,
-                    target: target.name,
-                    summary: zh
-                        ? '契合度很高，适合直接发展成核心责任伙伴。'
-                        : 'Highly compatible—suitable for developing directly into a core accountability partner.',
-                    relationshipStatus: 'accepted',
-                    isExistingFriend: true,
-                    canInviteAccountability: true,
-                    recommendedAction: 'invite_accountability',
-                    scoreBreakdown: const {
-                      'subject_overlap': 0.26,
-                      'preference_alignment': 0.23,
-                      'relationship_readiness': 0.05,
-                    },
-                  ),
-                  FriendRecommendation(
-                    user: _mockUsers
-                        .firstWhere((user) => user.id == 'user_charlie'),
-                    matchScore: 0.86,
-                    matchReasons: zh
-                        ? const [
-                            '你们在相同社群里有共同经历',
-                            '你们处理学习任务的方式比较契合',
-                          ]
-                        : const [
-                            'Shared experiences in the same communities',
-                            'Your approaches to learning tasks align well',
-                          ],
-                    strategy: strategy.name,
-                    target: target.name,
-                    summary: zh
-                        ? '已有默契基础，适合深入协作。'
-                        : 'Already have a rapport foundation—suitable for deeper collaboration.',
-                    relationshipStatus: 'accepted',
-                    isExistingFriend: true,
-                    canInviteAccountability: true,
-                    recommendedAction: 'invite_accountability',
-                    scoreBreakdown: const {
-                      'group_affinity': 0.14,
-                      'cognitive_alignment': 0.09,
-                      'stability': 0.07,
-                    },
-                  ),
-                ])
-          .take(limit)
-          .toList();
+            ? [
+                FriendRecommendation(
+                  user: _mockUsers.firstWhere((user) => user.id == 'user_bob'),
+                  matchScore: 0.91,
+                  matchReasons: zh
+                      ? const [
+                          'TA 的执行节奏更稳定，适合做监督型伙伴',
+                          '你们都在准备语言与考试相关目标，互补关系更容易落地',
+                        ]
+                      : const [
+                          'Their execution rhythm is steadier, making them a good accountability partner',
+                          'You are both preparing language and exam-related goals, so the partnership can land more easily',
+                        ],
+                  strategy: strategy.name,
+                  target: target.name,
+                  summary: zh
+                      ? '更适合做监督型责任伙伴，先建立好友关系会更顺畅。'
+                      : 'Better suited as an accountability partner; starting as friends will be smoother.',
+                  scoreBreakdown: const {
+                    'support_strength': 0.28,
+                    'subject_bridge': 0.18,
+                    'stability': 0.14,
+                  },
+                ),
+                FriendRecommendation(
+                  user: _mockUsers.firstWhere((user) => user.id == 'user_eva'),
+                  matchScore: 0.83,
+                  matchReasons: zh
+                      ? const [
+                          'TA 的规划习惯更强，适合在关键节点提醒你',
+                          '学习风格差异能带来新的推进方式',
+                        ]
+                      : const [
+                          'Their planning habits are stronger, useful for reminders at key moments',
+                          'Different learning styles can bring new ways to move forward',
+                        ],
+                  strategy: strategy.name,
+                  target: target.name,
+                  summary: zh
+                      ? '适合作为互补型学习搭子。'
+                      : 'Suitable as a complementary study partner.',
+                  scoreBreakdown: const {
+                    'support_strength': 0.25,
+                    'diversity': 0.12,
+                    'stability': 0.11,
+                  },
+                ),
+              ]
+            : [
+                FriendRecommendation(
+                  user:
+                      _mockUsers.firstWhere((user) => user.id == 'user_alice'),
+                  matchScore: 0.94,
+                  matchReasons: zh
+                      ? const [
+                          '你们关注的学习主题高度重合',
+                          '学习节奏和专注偏好比较接近',
+                          '你们已经是好友，建立责任伙伴关系会更顺手',
+                        ]
+                      : const [
+                          'Your learning topics highly overlap',
+                          'Similar learning rhythm and focus preferences',
+                          'Already friends—building an accountability partnership will be smoother',
+                        ],
+                  strategy: strategy.name,
+                  target: target.name,
+                  summary: zh
+                      ? '契合度很高，适合直接发展成核心责任伙伴。'
+                      : 'Highly compatible—suitable for developing directly into a core accountability partner.',
+                  relationshipStatus: 'accepted',
+                  isExistingFriend: true,
+                  canInviteAccountability: true,
+                  recommendedAction: 'invite_accountability',
+                  scoreBreakdown: const {
+                    'subject_overlap': 0.26,
+                    'preference_alignment': 0.23,
+                    'relationship_readiness': 0.05,
+                  },
+                ),
+                FriendRecommendation(
+                  user: _mockUsers
+                      .firstWhere((user) => user.id == 'user_charlie'),
+                  matchScore: 0.86,
+                  matchReasons: zh
+                      ? const [
+                          '你们在相同社群里有共同经历',
+                          '你们处理学习任务的方式比较契合',
+                        ]
+                      : const [
+                          'Shared experiences in the same communities',
+                          'Your approaches to learning tasks align well',
+                        ],
+                  strategy: strategy.name,
+                  target: target.name,
+                  summary: zh
+                      ? '已有默契基础，适合深入协作。'
+                      : 'Already have a rapport foundation—suitable for deeper collaboration.',
+                  relationshipStatus: 'accepted',
+                  isExistingFriend: true,
+                  canInviteAccountability: true,
+                  recommendedAction: 'invite_accountability',
+                  scoreBreakdown: const {
+                    'group_affinity': 0.14,
+                    'cognitive_alignment': 0.09,
+                    'stability': 0.07,
+                  },
+                ),
+              ])
+        .take(limit)
+        .toList();
   }
 
   @override
@@ -1200,7 +1223,8 @@ class MockCommunityRepository implements CommunityRepository {
       positiveSignals: selectedStrengths ?? const [],
       negativeSignals: [
         ...?selectedIssues,
-        if ((freeText ?? '').contains(zh ? '不够相似' : 'not similar enough')) 'too_dissimilar',
+        if ((freeText ?? '').contains(zh ? '不够相似' : 'not similar enough'))
+          'too_dissimilar',
       ],
       featureBoosts: {
         'subject_overlap':
@@ -1450,7 +1474,8 @@ class MockCommunityRepository implements CommunityRepository {
 
   // === CommunityRepository interface methods ===
   @override
-  Future<List<Post>> getFeed({int page = 1, int limit = 20, String? scope}) async {
+  Future<List<Post>> getFeed(
+      {int page = 1, int limit = 20, String? scope}) async {
     // Return empty list for mock - feed would be handled by community_providers
     return [];
   }
@@ -1533,7 +1558,8 @@ class MockCommunityRepository implements CommunityRepository {
       positiveSignals: selectedStrengths ?? const [],
       negativeSignals: [
         ...?selectedIssues,
-        if ((freeText ?? '').contains(zh ? '标签不准' : 'inaccurate tags')) 'want_more_tag_match',
+        if ((freeText ?? '').contains(zh ? '标签不准' : 'inaccurate tags'))
+          'want_more_tag_match',
       ],
       featureBoosts: {
         'tag_score':
@@ -1600,7 +1626,8 @@ class MockCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<UserBrief> getUserProfile(String userId) async => UserBrief(id: userId, username: 'mock_user');
+  Future<UserBrief> getUserProfile(String userId) async =>
+      UserBrief(id: userId, username: 'mock_user');
 
   void _updateInsight(
     RecommendationItemType itemType, {
@@ -1667,51 +1694,52 @@ class MockCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<FriendProfileDetail> getFriendProfile(String userId) async => FriendProfileDetail(
-      user: UserBrief(
-        id: userId,
-        username: 'mock_user',
-        nickname: 'Mock Partner',
-      ),
-      friendship: {
-        'id': 'friendship_$userId',
-        'status': 'accepted',
-        'initiated_by_me': false,
-        'created_at': DateTime.now().toIso8601String(),
-      },
-      accountability: userId == 'user_alice'
-          ? const {
-              'id': 'demo_core_partner',
-              'partnership_id': 'demo_core_partner',
-              'status': 'active',
-              'slot_type': 'core',
-            }
-          : userId == 'user_charlie'
-              ? const {
-                  'id': 'demo_pending_partner',
-                  'partnership_id': 'demo_pending_partner',
-                  'status': 'pending',
-                  'slot_type': 'core',
-                }
-              : const {},
-      relationshipSummary: {
-        'partner_name': 'Mock Partner',
-        'days_together': 12,
-        'my_streak_days': 5,
-        'partner_streak_days': 4,
-      },
-      achievementsSummary: const {
-        'my_total_unlocked': 2,
-        'partner_total_unlocked': 1,
-      },
-      leaderboardSummary: const {},
-      quickActions: {
-        'can_invite_accountability': false,
-        'can_open_dashboard': userId == 'user_alice',
-        'can_chat': true,
-        'can_share': true,
-      },
-    );
+  Future<FriendProfileDetail> getFriendProfile(String userId) async =>
+      FriendProfileDetail(
+        user: UserBrief(
+          id: userId,
+          username: 'mock_user',
+          nickname: 'Mock Partner',
+        ),
+        friendship: {
+          'id': 'friendship_$userId',
+          'status': 'accepted',
+          'initiated_by_me': false,
+          'created_at': DateTime.now().toIso8601String(),
+        },
+        accountability: userId == 'user_alice'
+            ? const {
+                'id': 'demo_core_partner',
+                'partnership_id': 'demo_core_partner',
+                'status': 'active',
+                'slot_type': 'core',
+              }
+            : userId == 'user_charlie'
+                ? const {
+                    'id': 'demo_pending_partner',
+                    'partnership_id': 'demo_pending_partner',
+                    'status': 'pending',
+                    'slot_type': 'core',
+                  }
+                : const {},
+        relationshipSummary: {
+          'partner_name': 'Mock Partner',
+          'days_together': 12,
+          'my_streak_days': 5,
+          'partner_streak_days': 4,
+        },
+        achievementsSummary: const {
+          'my_total_unlocked': 2,
+          'partner_total_unlocked': 1,
+        },
+        leaderboardSummary: const {},
+        quickActions: {
+          'can_invite_accountability': false,
+          'can_open_dashboard': userId == 'user_alice',
+          'can_chat': true,
+          'can_share': true,
+        },
+      );
 
   @override
   Future<void> updateAnnouncement(String groupId, String? announcement) async {
@@ -1828,7 +1856,8 @@ class MockCommunityRepository implements CommunityRepository {
   // ── Privacy Settings ──────────────────────────────────────────────────────
 
   @override
-  Future<UserPrivacySettings> getPrivacySettings() async => UserPrivacySettings(searchableBy: SearchVisibility.everyone);
+  Future<UserPrivacySettings> getPrivacySettings() async =>
+      UserPrivacySettings(searchableBy: SearchVisibility.everyone);
 
   @override
   Future<void> updatePrivacySettings(UserPrivacySettings settings) async {
@@ -1840,15 +1869,16 @@ class MockCommunityRepository implements CommunityRepository {
   @override
   Future<BroadcastMessageInfo> createBroadcast(
     BroadcastMessageCreate request,
-  ) async => BroadcastMessageInfo(
-      id: const Uuid().v4(),
-      senderId: currentUserId,
-      content: request.content,
-      contentData: request.contentData,
-      targetGroupIds: request.targetGroupIds,
-      deliveredCount: request.targetGroupIds.length,
-      createdAt: DateTime.now(),
-    );
+  ) async =>
+      BroadcastMessageInfo(
+        id: const Uuid().v4(),
+        senderId: currentUserId,
+        content: request.content,
+        contentData: request.contentData,
+        targetGroupIds: request.targetGroupIds,
+        deliveredCount: request.targetGroupIds.length,
+        createdAt: DateTime.now(),
+      );
 
   // ── Offline Queue ──────────────────────────────────────────────────────────
 
@@ -1868,16 +1898,17 @@ class MockCommunityRepository implements CommunityRepository {
   @override
   Future<EncryptionKeyInfo> registerEncryptionKey(
     EncryptionKeyCreate request,
-  ) async => EncryptionKeyInfo(
-      id: const Uuid().v4(),
-      userId: currentUserId,
-      publicKey: request.publicKey,
-      keyType: request.keyType,
-      deviceId: request.deviceId,
-      isActive: true,
-      createdAt: DateTime.now(),
-      expiresAt: request.expiresAt,
-    );
+  ) async =>
+      EncryptionKeyInfo(
+        id: const Uuid().v4(),
+        userId: currentUserId,
+        publicKey: request.publicKey,
+        keyType: request.keyType,
+        deviceId: request.deviceId,
+        isActive: true,
+        createdAt: DateTime.now(),
+        expiresAt: request.expiresAt,
+      );
 
   @override
   Future<List<EncryptionKeyInfo>> getUserPublicKeys(String userId) async => [];
@@ -1895,66 +1926,74 @@ class MockCommunityRepository implements CommunityRepository {
     String? category,
     int limit = 50,
     int offset = 0,
-  }) async => [];
+  }) async =>
+      [];
 
   @override
   Future<GroupFileInfo> shareFileToGroup(
     String groupId,
     GroupFileShareRequest request,
-  ) async => GroupFileInfo(
-      id: const Uuid().v4(),
-      groupId: groupId,
-      uploaderId: currentUserId,
-      fileName: 'mock_file.pdf',
-      fileSize: 1024,
-      mimeType: 'application/pdf',
-      fileUrl: 'https://example.com/mock_file.pdf',
-      description: request.description,
-      category: request.category,
-      tags: request.tags,
-      permissions: GroupFilePermissions(),
-      createdAt: DateTime.now(),
-    );
+  ) async =>
+      GroupFileInfo(
+        id: const Uuid().v4(),
+        groupId: groupId,
+        uploaderId: currentUserId,
+        fileName: 'mock_file.pdf',
+        fileSize: 1024,
+        mimeType: 'application/pdf',
+        fileUrl: 'https://example.com/mock_file.pdf',
+        description: request.description,
+        category: request.category,
+        tags: request.tags,
+        permissions: GroupFilePermissions(),
+        createdAt: DateTime.now(),
+      );
 
   @override
   Future<GroupFileInfo> updateGroupFilePermissions(
     String groupId,
     String fileId,
     GroupFilePermissionUpdate permissions,
-  ) async => GroupFileInfo(
-      id: fileId,
-      groupId: groupId,
-      uploaderId: currentUserId,
-      fileName: 'mock_file.pdf',
-      fileSize: 1024,
-      mimeType: 'application/pdf',
-      fileUrl: 'https://example.com/mock_file.pdf',
-      permissions: GroupFilePermissions(
-        canView: permissions.canView ?? [],
-        canDownload: permissions.canDownload ?? [],
-        canDelete: permissions.canDelete ?? [],
-      ),
-      createdAt: DateTime.now(),
-    );
+  ) async =>
+      GroupFileInfo(
+        id: fileId,
+        groupId: groupId,
+        uploaderId: currentUserId,
+        fileName: 'mock_file.pdf',
+        fileSize: 1024,
+        mimeType: 'application/pdf',
+        fileUrl: 'https://example.com/mock_file.pdf',
+        permissions: GroupFilePermissions(
+          canView: permissions.canView ?? [],
+          canDownload: permissions.canDownload ?? [],
+          canDelete: permissions.canDelete ?? [],
+        ),
+        createdAt: DateTime.now(),
+      );
 
   @override
   Future<List<GroupFileCategoryStat>> getGroupFileCategories(
     String groupId,
-  ) async => [];
+  ) async =>
+      [];
 
   // ── Shared Resources ───────────────────────────────────────────────────────
 
   @override
-  Future<SharedResourceInfo> shareResource(SharedResourceCreate request) async => SharedResourceInfo(
-      id: const Uuid().v4(),
-      resourceType: request.resourceType,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-      taskId:
-          request.resourceType == SharedResourceType.task ? request.resourceId : null,
-      planId:
-          request.resourceType == SharedResourceType.plan ? request.resourceId : null,
-    );
+  Future<SharedResourceInfo> shareResource(
+          SharedResourceCreate request) async =>
+      SharedResourceInfo(
+        id: const Uuid().v4(),
+        resourceType: request.resourceType,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        taskId: request.resourceType == SharedResourceType.task
+            ? request.resourceId
+            : null,
+        planId: request.resourceType == SharedResourceType.plan
+            ? request.resourceId
+            : null,
+      );
 
   @override
   Future<List<SharedResourceInfo>> getGroupResources(
@@ -1962,7 +2001,8 @@ class MockCommunityRepository implements CommunityRepository {
     SharedResourceType? type,
     int limit = 50,
     int offset = 0,
-  }) async => [];
+  }) async =>
+      [];
 
   @override
   Future<void> adoptSharedResource(String shareId) async {
@@ -1978,16 +2018,17 @@ class MockCommunityRepository implements CommunityRepository {
   Future<MessageReportInfo> reviewReport(
     String reportId,
     MessageReportReview review,
-  ) async => MessageReportInfo(
-      id: reportId,
-      reporterId: currentUserId,
-      reason: ReportReason.other,
-      status: review.status,
-      createdAt: DateTime.now(),
-      reviewedBy: currentUserId,
-      reviewedAt: DateTime.now(),
-      actionTaken: review.actionTaken,
-    );
+  ) async =>
+      MessageReportInfo(
+        id: reportId,
+        reporterId: currentUserId,
+        reason: ReportReason.other,
+        status: review.status,
+        createdAt: DateTime.now(),
+        reviewedBy: currentUserId,
+        reviewedAt: DateTime.now(),
+        actionTaken: review.actionTaken,
+      );
 
   // ── Group File Library Copy ────────────────────────────────────────────────
 

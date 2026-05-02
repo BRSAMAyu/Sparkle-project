@@ -1815,7 +1815,7 @@ class ExecutionEngineMixin:
     ) -> AsyncGenerator[agent_service_pb2.ChatResponse, None]:
         logger.info("🚀 Launching StateGraph Execution")
         graph_task = await task_manager.spawn(
-            self.graph.invoke(state),
+            self.graph.invoke(state, resume_policy="interrupted_only"),
             task_name="orchestrator_graph",
             user_id=str(user_id),
         )

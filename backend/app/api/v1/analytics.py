@@ -1,14 +1,17 @@
 import os
-from typing import Any
+from datetime import date
+from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.models.user import User
+from app.schemas.north_star_metrics import NorthStarTrendResponse
 from app.services.analytics.weekly_synthesis_service import WeeklySynthesisService
 from app.services.llm_service import llm_service
+from app.services.north_star_metrics_service import NorthStarMetricsService
 
 router = APIRouter()
 
@@ -34,6 +37,7 @@ async def _build_weekly_report_payload(
         "download_url": f"/api/v1/analytics/reports/download/{filename}",
     }
 
+# route-tier: internal
 @router.post("/reports/generate", response_model=dict[str, Any])
 async def generate_weekly_report(
     background_tasks: BackgroundTasks,
@@ -54,6 +58,7 @@ async def generate_weekly_report(
         raise HTTPException(status_code=500, detail="Report generation failed") from e
 
 
+# route-tier: internal
 @router.get("/report", response_model=dict[str, Any])
 async def get_weekly_report_alias(
     background_tasks: BackgroundTasks,
@@ -70,6 +75,25 @@ async def get_weekly_report_alias(
     except Exception as e:
         raise HTTPException(status_code=500, detail="Report generation failed") from e
 
+
+# route-tier: internal
+@router.get("/north-star/trends", response_model=NorthStarTrendResponse)
+async def get_north_star_trends(
+    days: Annotated[int, Query(ge=1, le=365)] = 30,
+    start_date: date | None = Query(default=None),
+    end_date: date | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return exam pass and 7-day goal completion trends for the current user."""
+    return await NorthStarMetricsService(db).get_trends(
+        user_id=current_user.id,
+        start_date=start_date,
+        end_date=end_date,
+        days=days,
+    )
+
+# route-tier: internal
 @router.get("/reports/download/{filename}")
 async def download_report(
     filename: str,

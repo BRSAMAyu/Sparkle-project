@@ -1,0 +1,12 @@
+{
+  "id": "correction_tone_adjustment",
+  "family": "correction_reply",
+  "kind": "correction_reply",
+  "title": "纠正回复：语气调整",
+  "input": {
+    "correction_type": "tone_adjustment",
+    "original_assumption": "需要我继续追问原因",
+    "user_correction": "先给一个直接步骤",
+    "next_change": "我先给可执行的一步，原因解释收在后面"
+  }
+}

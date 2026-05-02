@@ -1,0 +1,21 @@
+FV-07: ConsentTracker DB persistence
+Status: CODE_COMPLETE_VALIDATION_BLOCKED
+Branch: codex/FV-07-consent-tracker-db
+Modified files:
+- backend/alembic/versions/c18_20260502_consent_records.py
+- backend/app/models/research_consent.py
+- backend/app/signals/research_mode.py
+- backend/app/api/v1/research_consent.py
+- backend/app/api/v1/router.py
+- backend/app/models/__init__.py
+- backend/alembic/env.py
+- backend/tests/conftest.py
+- backend/tests/unit/test_research_consent_tracker.py
+- backend/tests/unit/spine/test_specialized_features.py
+- backend/tests/unit/spine/test_e2e_pipeline.py
+- docs/product/parallel_closeout/FV-07_consent_tracker_db_REPORT_2026-05-02.md
+Verification:
+- python3 -m compileall -q backend/app/models/research_consent.py backend/app/signals/research_mode.py backend/app/api/v1/research_consent.py backend/tests/unit/test_research_consent_tracker.py: PASS
+- cd backend && pytest FV-07 selection: BLOCKED by backend/app/models/community_privacy.py reserved SQLAlchemy attribute metadata
+- cd backend && alembic heads: BLOCKED by backend/app/models/community_privacy.py reserved SQLAlchemy attribute metadata
+User-visible change: Users can view research consent grants and revoke an active protocol through /api/v1/research/consent.

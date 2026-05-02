@@ -144,7 +144,7 @@ class _TaskReminderSettingsScreenState
                 style: TextStyle(
                   color: DS.textPrimary,
                   fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
             ),
@@ -244,7 +244,7 @@ class _TaskReminderSettingsScreenState
                     context.l10n.taskReminderInfoTitle,
                     style: TextStyle(
                       color: DS.textPrimary,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ],

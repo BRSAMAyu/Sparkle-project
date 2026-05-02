@@ -746,6 +746,31 @@ class AuroraDecisionTelemetryService:
         previous.outcome_reason = classified.reason
         previous.outcome_filled_at = observed_at
         previous.request_id = previous.request_id or (_strip(request_id) or None)
+        await self._update_bayesian_policy_from_outcome(previous=previous, outcome=classified.outcome)
+
+    async def _update_bayesian_policy_from_outcome(
+        self,
+        *,
+        previous: AuroraDecisionTelemetry,
+        outcome: str,
+    ) -> None:
+        if self.redis is None:
+            return
+        try:
+            from app.aurora.bayesian import AuroraBayesianLearner
+
+            await AuroraBayesianLearner(self.redis).record_outcome(
+                user_id=str(previous.user_id),
+                action=str(previous.action or ""),
+                outcome=outcome,
+            )
+        except Exception as exc:
+            logger.warning(
+                "Aurora Bayesian policy update failed for user {} decision {}: {}",
+                previous.user_id,
+                previous.decision_id,
+                exc,
+            )
 
     async def _cleanup_expired(self, *, now: datetime) -> None:
         cutoff = now - timedelta(days=self.retention_days)

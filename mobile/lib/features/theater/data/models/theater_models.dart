@@ -485,6 +485,8 @@ class TheaterPrediction {
     this.semanticMatches = const <TheaterSemanticMatch>[],
     this.disclaimer,
     this.accuracyTracking,
+    this.evidenceSummary = const <String, dynamic>{},
+    this.recommendedNextAction = const <String, dynamic>{},
   });
 
   factory TheaterPrediction.fromJson(Map<String, dynamic> json) {
@@ -539,6 +541,12 @@ class TheaterPrediction {
               json['accuracy_tracking'] as Map<String, dynamic>,
             )
           : null,
+      evidenceSummary: json['evidence_summary'] is Map
+          ? Map<String, dynamic>.from(json['evidence_summary'] as Map)
+          : const <String, dynamic>{},
+      recommendedNextAction: json['recommended_next_action'] is Map
+          ? Map<String, dynamic>.from(json['recommended_next_action'] as Map)
+          : const <String, dynamic>{},
     );
   }
 
@@ -558,6 +566,8 @@ class TheaterPrediction {
   final List<TheaterSemanticMatch> semanticMatches;
   final String? disclaimer;
   final TheaterAccuracyTracking? accuracyTracking;
+  final Map<String, dynamic> evidenceSummary;
+  final Map<String, dynamic> recommendedNextAction;
 
   bool get hasMappedGalaxyReferences =>
       graphNodes.any((node) => (node.mappedGalaxyNodeId ?? '').isNotEmpty) ||
@@ -588,6 +598,8 @@ class TheaterPrediction {
         semanticMatches: semanticMatches,
         disclaimer: disclaimer,
         accuracyTracking: accuracyTracking,
+        evidenceSummary: evidenceSummary,
+        recommendedNextAction: recommendedNextAction,
       );
 }
 

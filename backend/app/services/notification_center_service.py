@@ -48,6 +48,29 @@ SPACED_REPETITION_MIN_COOLDOWN_DAYS = 1
 SPACED_REPETITION_ESTIMATED_MINUTES = 10
 
 
+class _OutcomeCacheAdapter:
+    """Minimal Redis-like adapter for OutcomeRecorder when Redis is unavailable."""
+
+    async def get(self, key: str) -> Any:
+        from app.core.cache import cache_service
+
+        return await cache_service.get(key)
+
+    async def set(
+        self,
+        key: str,
+        value: Any,
+        ex: int | None = None,
+        nx: bool = False,
+    ) -> bool:
+        from app.core.cache import cache_service
+
+        if nx and await cache_service.get(key):
+            return False
+        await cache_service.set(key, value, ttl=ex)
+        return True
+
+
 class NotificationCenterService:
     """
     Unified notification service combining system notifications and intervention requests.
@@ -100,6 +123,10 @@ class NotificationCenterService:
             }
         )
         route = f"/chat?{route_query}"
+        proactive_reason = (
+            f"「{display_name}」距离上次复习已有 {interval_days} 天，"
+            f"掌握度约 {int(round(float(mastery) * 100))}%，现在复习能降低遗忘风险。"
+        )
 
         return await NotificationService.create(
             self.db,
@@ -116,6 +143,10 @@ class NotificationCenterService:
                     "mastery": round(float(mastery), 4),
                     "interval_days": interval_days,
                     "estimated_minutes": estimated_minutes,
+                    "proactive_reason": proactive_reason,
+                    "wake_type": "recall",
+                    "intrusiveness_level": "standard",
+                    "respectfulness_reason": "spaced_repetition_window",
                     "destination_route": route,
                     "deep_link": route,
                     "route": route,
@@ -404,25 +435,25 @@ class NotificationCenterService:
             if system_rows:
                 system_ids = [row.id for row in system_rows]
                 await self.db.execute(
-                    sa_update(Notification)
-                    .where(Notification.id.in_(system_ids))
-                    .values(is_read=True, read_at=now)
+                    sa_update(Notification).where(Notification.id.in_(system_ids)).values(is_read=True, read_at=now)
                 )
                 count += len(system_ids)
 
                 # Batch INSERT interactions
-                self.db.add_all([
-                    NotificationInteraction(
-                        id=uuid4(),
-                        user_id=user_id,
-                        notification_type="system",
-                        notification_id=row.id,
-                        action_type="viewed",
-                        action_time=now,
-                        time_to_action=max(0, int((now - row.created_at).total_seconds())),
-                    )
-                    for row in system_rows
-                ])
+                self.db.add_all(
+                    [
+                        NotificationInteraction(
+                            id=uuid4(),
+                            user_id=user_id,
+                            notification_type="system",
+                            notification_id=row.id,
+                            action_type="viewed",
+                            action_time=now,
+                            time_to_action=max(0, int((now - row.created_at).total_seconds())),
+                        )
+                        for row in system_rows
+                    ]
+                )
 
             # --- Intervention notifications: must loop for side effects ---
             intervention_notification_stmt = select(Notification).where(
@@ -474,18 +505,20 @@ class NotificationCenterService:
                 count += len(intervention_ids)
 
                 # Batch INSERT interactions
-                self.db.add_all([
-                    NotificationInteraction(
-                        id=uuid4(),
-                        user_id=user_id,
-                        notification_type="intervention",
-                        notification_id=row.id,
-                        action_type="viewed",
-                        action_time=now,
-                        time_to_action=max(0, int((now - row.created_at).total_seconds())),
-                    )
-                    for row in intervention_rows
-                ])
+                self.db.add_all(
+                    [
+                        NotificationInteraction(
+                            id=uuid4(),
+                            user_id=user_id,
+                            notification_type="intervention",
+                            notification_id=row.id,
+                            action_type="viewed",
+                            action_time=now,
+                            time_to_action=max(0, int((now - row.created_at).total_seconds())),
+                        )
+                        for row in intervention_rows
+                    ]
+                )
 
             await self.db.commit()
             return count
@@ -670,6 +703,61 @@ class NotificationCenterService:
             await self.db.rollback()
             return False
 
+    async def record_recall_notification_feedback(
+        self,
+        user_id: UUID,
+        notification_id: UUID,
+        is_accurate: bool,
+        feedback_reason: str | None = None,
+        action_payload: dict[str, Any] | None = None,
+    ) -> bool:
+        """Record explicit user feedback for an explainable recall notification."""
+        payload = dict(action_payload or {})
+        try:
+            stmt = select(Notification).where(
+                and_(
+                    Notification.id == notification_id,
+                    Notification.user_id == user_id,
+                    Notification.not_deleted_filter(),
+                )
+            )
+            result = await self.db.execute(stmt)
+            notification = result.scalar_one_or_none()
+            if not notification:
+                return False
+
+            data = dict(notification.data or {})
+            data["recall_feedback"] = {
+                "is_accurate": is_accurate,
+                "feedback_reason": feedback_reason,
+                "source": payload.get("source", "notification_center_card"),
+                "recorded_at": _utcnow().isoformat(),
+            }
+            notification.data = data
+            if not notification.is_read:
+                notification.is_read = True
+                notification.read_at = _utcnow()
+
+            await self._record_interaction(
+                user_id=user_id,
+                notification_type="recall",
+                notification_id=notification_id,
+                action_type="accurate" if is_accurate else "inaccurate",
+                created_at=notification.created_at,
+            )
+            await self._record_recall_feedback_outcome(
+                notification=notification,
+                is_accurate=is_accurate,
+                feedback_reason=feedback_reason,
+                action_payload=payload,
+            )
+            await self.db.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Error recording recall notification feedback: {e}")
+            await self.db.rollback()
+            return False
+
     async def transition_intervention_record(
         self,
         user_id: UUID,
@@ -767,9 +855,7 @@ class NotificationCenterService:
                         Notification.id.in_(notification_ids),
                     )
                 )
-                notifications_by_id = {
-                    notification.id: notification for notification in linked_result.scalars().all()
-                }
+                notifications_by_id = {notification.id: notification for notification in linked_result.scalars().all()}
 
             for record in push_records:
                 record.deleted_at = _utcnow()
@@ -893,7 +979,9 @@ class NotificationCenterService:
             if filters.end_date:
                 intervention_stmt = intervention_stmt.where(InterventionRequest.created_at <= filters.end_date)
             if filters.search:
-                intervention_stmt = intervention_stmt.where(InterventionRequest.topic.ilike(f"%{_escape_like(filters.search)}%"))
+                intervention_stmt = intervention_stmt.where(
+                    InterventionRequest.topic.ilike(f"%{_escape_like(filters.search)}%")
+                )
 
             # Count total
             count_stmt = select(func.count()).select_from(intervention_stmt.subquery())
@@ -1062,6 +1150,9 @@ class NotificationCenterService:
             return
 
         if action == "accepted":
+            if record.acceptance_status == InterventionAcceptanceStatus.CREATED:
+                await service.mark_delivered(record.id)
+                record = await self.db.get(InterventionRecord, record_id) or record
             if record.acceptance_status in {
                 InterventionAcceptanceStatus.DELIVERED,
                 InterventionAcceptanceStatus.SEEN,
@@ -1076,6 +1167,9 @@ class NotificationCenterService:
             return
 
         if action == "acted":
+            if record.acceptance_status == InterventionAcceptanceStatus.CREATED:
+                await service.mark_delivered(record.id)
+                record = await self.db.get(InterventionRecord, record_id) or record
             if record.acceptance_status in {
                 InterventionAcceptanceStatus.DELIVERED,
                 InterventionAcceptanceStatus.SEEN,
@@ -1092,6 +1186,9 @@ class NotificationCenterService:
             return
 
         if action == "dismissed":
+            if record.acceptance_status == InterventionAcceptanceStatus.CREATED:
+                await service.mark_delivered(record.id)
+                record = await self.db.get(InterventionRecord, record_id) or record
             if record.acceptance_status in {
                 InterventionAcceptanceStatus.DELIVERED,
                 InterventionAcceptanceStatus.SEEN,
@@ -1101,12 +1198,60 @@ class NotificationCenterService:
             return
 
         if action == "snoozed":
+            if record.acceptance_status == InterventionAcceptanceStatus.CREATED:
+                await service.mark_delivered(record.id)
+                record = await self.db.get(InterventionRecord, record_id) or record
             if record.acceptance_status in {
                 InterventionAcceptanceStatus.DELIVERED,
                 InterventionAcceptanceStatus.SEEN,
             }:
                 snooze_hours = int(payload.get("snooze_hours", 24))
                 await service.mark_snoozed(record.id, snooze_hours=snooze_hours)
+
+    async def _record_recall_feedback_outcome(
+        self,
+        *,
+        notification: Notification,
+        is_accurate: bool,
+        feedback_reason: str | None,
+        action_payload: dict[str, Any],
+    ) -> None:
+        try:
+            from app.core.cache import cache_service
+            from app.signals.outcome_recorder import OutcomeRecorder
+            from app.signals.types import CausalTrace
+
+            data = dict(notification.data or {})
+            redis_like = cache_service.redis or _OutcomeCacheAdapter()
+            trace_id = str(data.get("causal_trace_id") or data.get("trace_id") or f"recall_feedback:{notification.id}")
+            recorder = OutcomeRecorder(redis_like)
+            await recorder.record_outcome(
+                trace=CausalTrace(
+                    trace_id=trace_id,
+                    raw_event_ids=[str(notification.id)],
+                    outcome_to_measure=["recall_notification_accuracy"],
+                ),
+                intervention="recall_notification",
+                reason=str(
+                    data.get("trigger_type") or data.get("value_reason") or data.get("reasoning") or notification.type
+                ),
+                expected_outcome="user_wellbeing",
+                actual_outcome={
+                    "user_reported_negative": not is_accurate,
+                    "recall_feedback": "accurate" if is_accurate else "inaccurate",
+                    "feedback_reason": feedback_reason,
+                    "notification_id": str(notification.id),
+                    "trigger_type": data.get("trigger_type"),
+                    "recall_score": data.get("recall_score"),
+                    **action_payload,
+                },
+            )
+        except Exception:
+            logger.debug(
+                "Recall feedback OutcomeRecorder write skipped for notification={}",
+                notification.id,
+                exc_info=True,
+            )
 
     async def _materialize_specialized_repair_task_if_needed(
         self,

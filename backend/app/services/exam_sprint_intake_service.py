@@ -36,6 +36,7 @@ from app.schemas.exam_sprint import (
 )
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate, coerce_task_type
+from app.services.north_star_metrics_service import NorthStarMetricsService
 from app.services.plan_service import PlanService
 from app.services.profile_write_service import ProfileWriteService
 from app.services.task_service import TaskService
@@ -148,6 +149,15 @@ class ExamSprintIntakeService:
             goal_model=goal_model,
             assessment=assessment,
             selected_pack=selected_pack,
+        )
+        await self._record_north_star_intake_metrics(
+            user_id=user_id,
+            plan_id=UUID(generated.plan_id),
+            request=request,
+            goal_model=goal_model,
+            assessment=assessment,
+            selected_pack=selected_pack,
+            strategy=strategy,
         )
 
         session.state = "DONE"
@@ -403,6 +413,48 @@ class ExamSprintIntakeService:
             first_day_focus=first_day_focus or "先把考试范围和高频保底线稳住。",
             first_day_output=first_day_output or "完成一次闭卷输出和最小检查。",
         )
+
+    async def _record_north_star_intake_metrics(
+        self,
+        *,
+        user_id: UUID,
+        plan_id: UUID,
+        request: ExamSprintIntakeRequest,
+        goal_model: ExamSprintGoalModel,
+        assessment: ExamSprintAssessment,
+        selected_pack: ExamSprintPackSelection,
+        strategy: dict[str, Any],
+    ) -> None:
+        metrics = NorthStarMetricsService(self.db)
+        sprint_policy = self._as_dict(strategy.get("sprint_policy"))
+        payload = {
+            "subject": request.subject,
+            "exam_date": request.exam_date.isoformat(),
+            "target_mode": goal_model.target_mode,
+            "recommended_mode": goal_model.recommended_mode,
+            "days_left": goal_model.days_left,
+            "estimated_score_now": goal_model.estimated_score_now,
+            "target_score_hint": goal_model.target_score_hint,
+            "selected_pack": selected_pack.model_dump(mode="json"),
+            "sprint_mode": str(sprint_policy.get("sprint_mode") or "standard_exam_sprint"),
+        }
+        try:
+            await metrics.record_exam_pass_probability(
+                user_id=user_id,
+                plan_id=plan_id,
+                pass_probability=assessment.pass_probability,
+                source="exam_sprint_intake",
+                payload=payload,
+            )
+            if goal_model.days_left <= 7 or payload["sprint_mode"] == "seven_day_survival":
+                await metrics.record_seven_day_goal_started(
+                    user_id=user_id,
+                    plan_id=plan_id,
+                    source="exam_sprint_intake",
+                    payload=payload,
+                )
+        except Exception as exc:
+            logger.warning("North Star intake metric recording failed for plan {}: {}", plan_id, exc)
 
     def _build_user_model(
         self,

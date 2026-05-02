@@ -16,6 +16,7 @@ import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/offline_chat_message.dart';
 import 'package:sparkle/core/offline/offline_message_queue_service.dart';
+import 'package:sparkle/features/aurora/presentation/providers/emotion_state_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
@@ -143,6 +144,19 @@ Map<String, dynamic>? _extractDagExecutionMetadata(
   return null;
 }
 
+Map<String, dynamic> _extractAuroraStateBandPayload(
+  Map<String, dynamic> data,
+) {
+  final payload = data['payload'] ?? data['data'] ?? data['state'];
+  if (payload is Map<String, dynamic>) {
+    return payload;
+  }
+  if (payload is Map) {
+    return Map<String, dynamic>.from(payload);
+  }
+  return data;
+}
+
 /// Parse JSON event in isolate to avoid blocking main thread
 ChatStreamEvent _parseChatEvent(String jsonString) {
   try {
@@ -166,6 +180,18 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
     final finishReason = _normalizeFinishReason(data['finish_reason']);
 
     switch (type) {
+      case 'aurora_state_band':
+        final metadata = _normalizeMetadata(data['metadata']);
+        return AuroraStateBandEvent(
+          stateData: _extractAuroraStateBandPayload(data),
+          responseId: responseId,
+          traceId: traceId,
+          workflowId: workflowId,
+          promptVersion: promptVersion,
+          metadata: metadata,
+          sessionId: sessionId,
+        );
+
       case 'delta':
         final metadata = _normalizeMetadata(data['metadata']);
         final dagData = _extractDagExecutionMetadata(metadata);
@@ -723,6 +749,20 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
             promptVersion: promptVersion,
           );
         }
+        final topLevelCode =
+            (data['error_code'] as String?) ?? (data['code'] as String?);
+        final topLevelMessage = data['message'] as String?;
+        if (topLevelCode != null || topLevelMessage != null) {
+          return ErrorEvent(
+            code: topLevelCode ?? 'UNKNOWN',
+            message: topLevelMessage ?? S.chatWsUnknownError,
+            retryable: data['retryable'] as bool? ?? false,
+            responseId: responseId,
+            traceId: traceId,
+            workflowId: workflowId,
+            promptVersion: promptVersion,
+          );
+        }
         return ErrorEvent(
           code: 'UNKNOWN',
           message: S.chatWsUnknownError,
@@ -788,8 +828,9 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
       case 'ack':
         final messageId = data['message_id'] as String?;
         final status = data['status'] as String? ?? 'received';
-        final timestamp =
-            data['timestamp'] as int? ?? DateTime.now().millisecondsSinceEpoch;
+        final timestamp = data['timestamp'] as int? ??
+            data['server_ts'] as int? ??
+            DateTime.now().millisecondsSinceEpoch;
         if (messageId != null) {
           return AckEvent(
             messageId: messageId,
@@ -1428,6 +1469,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
     // 发送或排队
     if (isConnected) {
+      _persistOutgoingMessage(messagePayload);
       _sendMessage(messagePayload);
     } else {
       _log('⏳ Message queued (not connected yet)');
@@ -1669,11 +1711,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       // 启动心跳
       _startHeartbeat();
 
-      // Restore pending messages from offline DB (R3 O-01)
-      unawaited(_restorePendingFromDb());
-
-      // 发送待发送的消息
-      _flushPendingMessages();
+      // Restore pending messages from offline DB, then flush all pending
+      // (must complete DB restore before flush to avoid message ordering issues)
+      _restorePendingFromDb().then((_) => _flushPendingMessages());
 
       _log('✅ WebSocket connected');
     } catch (e) {
@@ -1837,8 +1877,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         droppedPayload,
         ErrorEvent(
           code: 'PENDING_QUEUE_OVERFLOW',
-          message:
-              '有未发送消息因队列已满被丢弃 / A pending message was dropped because the queue is full.',
+          message: I18nService.instance.isChinese
+              ? '有未发送消息因队列已满被丢弃。'
+              : 'A pending message was dropped because the queue is full.',
           retryable: false,
         ),
       );
@@ -1850,7 +1891,10 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     }
     _pendingMessages.add(payload);
 
-    // Persist to offline DB so messages survive app kill (R3 O-01)
+    _persistOutgoingMessage(payload);
+  }
+
+  void _persistOutgoingMessage(Map<String, dynamic> payload) {
     final requestId = payload['request_id']?.toString();
     if (requestId != null && requestId.isNotEmpty) {
       unawaited(_offlineQueue.enqueue(
@@ -1890,10 +1934,10 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         payload,
         ErrorEvent(code: code, message: message, retryable: false),
       );
-      // Remove from offline DB (R3 O-01)
+      // Keep the failed row so it can be retried after reconnect/manual retry.
       final reqId = payload['request_id']?.toString();
       if (reqId != null && reqId.isNotEmpty) {
-        unawaited(_offlineQueue.remove(reqId));
+        unawaited(_offlineQueue.markFailed(reqId, message));
       }
     }
   }
@@ -1903,6 +1947,13 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         .then((_) => _handleIncomingMessage(data))
         .catchError((Object error, StackTrace stackTrace) {
       _log('❌ Incoming message queue error: $error');
+      _broadcastErrorToActiveRequests(ErrorEvent(
+        code: 'MESSAGE_PARSE_ERROR',
+        message: I18nService.instance.isChinese
+            ? '消息解析失败'
+            : 'Failed to parse incoming message',
+        retryable: false,
+      ));
     });
   }
 
@@ -1936,6 +1987,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         _isStreamActive = true;
       }
       _routeEventToRequest(requestId, event);
+      if (event is AuroraStateBandEvent) {
+        _container
+            .read(emotionStateProvider.notifier)
+            .updateFromAuroraStateBand(event.stateData);
+      }
 
       // DoneEvent 到达时清除流活跃标记
       if (event is DoneEvent) {
@@ -2375,11 +2431,19 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   /// Restore pending messages from offline Isar DB into the in-memory queue (R3 O-01).
   Future<void> _restorePendingFromDb() async {
     if (_currentUserId == null) return;
-    final pending = await _offlineQueue.loadPending();
+    final pending = await _offlineQueue.loadRetryableForUser(_currentUserId!);
     if (pending.isEmpty) return;
 
     _log('📨 Restoring ${pending.length} offline messages from DB');
+    final queuedIds = _pendingMessages
+        .map((payload) => payload['request_id']?.toString())
+        .whereType<String>()
+        .toSet();
     for (final msg in pending) {
+      if (queuedIds.contains(msg.requestId)) {
+        continue;
+      }
+      unawaited(_offlineQueue.prepareForRetry(msg.requestId));
       final payload = <String, dynamic>{
         'message': msg.message,
         'session_id': msg.sessionId,
@@ -2390,7 +2454,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
           'file_ids': msg.parsedFileIds,
         if (msg.chatMode != null) 'chat_mode': msg.chatMode,
       };
-      _pendingMessages.insert(0, payload);
+      _pendingMessages.add(payload);
+      queuedIds.add(msg.requestId);
     }
   }
 

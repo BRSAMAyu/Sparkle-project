@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/auth/auth.dart';
@@ -261,7 +262,9 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                     children: [
                       FilterChip(
                         selected: _agentMode,
-                        label: Text(_agentMode ? context.l10n.chatPrivateAiAssistantOn : context.l10n.chatPrivateAiAssistant),
+                        label: Text(_agentMode
+                            ? context.l10n.chatPrivateAiAssistantOn
+                            : context.l10n.chatPrivateAiAssistant),
                         avatar: Icon(
                           Icons.auto_awesome,
                           size: DS.iconSizeXs,
@@ -360,7 +363,8 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                             ),
                             TextButton(
                               onPressed: _restoreOriginalDraft,
-                              child: Text(context.l10n.chatPrivateRestoreOriginal),
+                              child:
+                                  Text(context.l10n.chatPrivateRestoreOriginal),
                             ),
                           ],
                         ),
@@ -479,7 +483,8 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
     if (!mounted) return;
     if (draft == null || draft.trim().isEmpty) {
       final error = ref.read(privateChatAgentProvider(widget.friendId)).error;
-      AppFeedback.error(context, error ?? context.l10n.chatPrivateGenerationFailed);
+      AppFeedback.error(
+          context, error ?? context.l10n.chatPrivateGenerationFailed);
       return;
     }
     await _showDraftPreview(
@@ -579,7 +584,8 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                                 .notifier)
                             .saveSelfVisibleDraft(content: draft);
                         if (!mounted) return;
-                        AppFeedback.success(context, context.l10n.chatPrivateSavedOnlyToMe);
+                        AppFeedback.success(
+                            context, context.l10n.chatPrivateSavedOnlyToMe);
                       },
                     ),
                     _PreviewActionButton(
@@ -594,7 +600,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                       },
                     ),
                     _PreviewActionButton(
-                      label: '取消',
+                      label: I18nService.instance.isChinese ? '取消' : 'Cancel',
                       onTap: () => Navigator.of(sheetContext).pop(),
                     ),
                   ],
@@ -605,7 +611,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                   runSpacing: DS.spacing8,
                   children: [
                     _PreviewActionButton(
-                      label: '取消',
+                      label: I18nService.instance.isChinese ? '取消' : 'Cancel',
                       onTap: () => Navigator.of(sheetContext).pop(),
                     ),
                     _PreviewActionButton(
@@ -767,7 +773,7 @@ class _PreviewActionButton extends StatelessWidget {
           backgroundColor: primary
               ? DS.brandPrimary
               : DS.surfaceSecondary.withValues(alpha: 0.9),
-          foregroundColor: primary ? Colors.white : DS.neutral800,
+          foregroundColor: primary ? DS.textOnPrimary : DS.neutral800,
           padding: const EdgeInsets.symmetric(
             horizontal: DS.spacing12,
             vertical: DS.spacing10,

@@ -11,6 +11,7 @@ import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_pro
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class WordbookTool extends ConsumerStatefulWidget {
   const WordbookTool({
@@ -99,7 +100,11 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
         _isReviewMode = false;
         _sessionWords = [];
       });
-      AppFeedback.success(context, '本轮复习已完成');
+      AppFeedback.success(
+          context,
+          I18nService.instance.isChinese
+              ? '本轮复习已完成'
+              : 'Review session completed');
       return;
     }
 
@@ -344,9 +349,16 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
             icon: isReviewList
                 ? Icons.check_circle_outline_rounded
                 : Icons.library_books_outlined,
-            title: isReviewList ? context.l10n.toolsWbEmptyNoDue : context.l10n.toolsWbEmpty,
-            description:
-                isReviewList ? '继续通过查词工具积累新词，或者稍后再来复习。' : '先去查词，把值得反复看的词条收进来。',
+            title: isReviewList
+                ? context.l10n.toolsWbEmptyNoDue
+                : context.l10n.toolsWbEmpty,
+            description: isReviewList
+                ? (I18nService.instance.isChinese
+                    ? '继续通过查词工具积累新词，或者稍后再来复习。'
+                    : 'Keep adding words with the lookup tool, or come back later to review.')
+                : (I18nService.instance.isChinese
+                    ? '先去查词，把值得反复看的词条收进来。'
+                    : 'Look up words first and save the ones worth reviewing.'),
             accentColor: isReviewList ? DS.warning : DS.success,
           ),
         ),
@@ -366,7 +378,8 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
               context: context,
               builder: (context) => AlertDialog(
                 title: Text(context.l10n.toolsWbDeleteTitle),
-                content: Text('${context.l10n.toolsWbDeleteConfirm} "${word['word']}"${context.l10n.toolsWbDeleteSuffix}'),
+                content: Text(
+                    '${context.l10n.toolsWbDeleteConfirm} "${word['word']}"${context.l10n.toolsWbDeleteSuffix}'),
                 actions: [
                   SparkleButton.ghost(
                     label: context.l10n.toolsWbCancel,
@@ -410,7 +423,9 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
           icon: Icons.layers_rounded,
         ),
         ToolHeroChip(
-          label: _showAnswer ? context.l10n.toolsWbAnswerRevealed : context.l10n.toolsWbTapForAnswer,
+          label: _showAnswer
+              ? context.l10n.toolsWbAnswerRevealed
+              : context.l10n.toolsWbTapForAnswer,
           accentColor: DS.warning,
           icon: Icons.visibility_rounded,
         ),
@@ -448,7 +463,14 @@ class _WordbookToolState extends ConsumerState<WordbookTool>
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            _showAnswer ? (definition ?? '暂无释义') : '点击显示释义',
+                            _showAnswer
+                                ? (definition ??
+                                    (I18nService.instance.isChinese
+                                        ? '暂无释义'
+                                        : 'No definition yet'))
+                                : (I18nService.instance.isChinese
+                                    ? '点击显示释义'
+                                    : 'Tap to reveal definition'),
                             textAlign: TextAlign.center,
                             style: Theme.of(context)
                                 .textTheme
@@ -610,7 +632,10 @@ class _WordCard extends StatelessWidget {
                       ],
                       const SizedBox(height: DS.spacing8),
                       Text(
-                        word['definition'] as String? ?? '暂无释义',
+                        word['definition'] as String? ??
+                            (I18nService.instance.isChinese
+                                ? '暂无释义'
+                                : 'No definition yet'),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -625,14 +650,20 @@ class _WordCard extends StatelessWidget {
                         children: [
                           ToolHeroChip(
                             label: _isDueForReview
-                                ? '今天到期'
-                                : '还有 ${_daysUntilReview ?? 0} 天',
+                                ? (I18nService.instance.isChinese
+                                    ? '今天到期'
+                                    : 'Due today')
+                                : (I18nService.instance.isChinese
+                                    ? '还有 ${_daysUntilReview ?? 0} 天'
+                                    : '${_daysUntilReview ?? 0} days left'),
                             accentColor:
                                 _isDueForReview ? DS.warning : DS.success,
                             icon: Icons.schedule_rounded,
                           ),
                           ToolHeroChip(
-                            label: '${context.l10n.toolsWbStarCount} ${word['importance'] ?? 3}',
+                            label: context.l10n.toolsWbStarCount(
+                              word['importance'] as int? ?? 3,
+                            ),
                             accentColor: DS.warning,
                             icon: Icons.star_rounded,
                           ),

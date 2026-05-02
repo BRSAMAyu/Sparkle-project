@@ -5,6 +5,7 @@ Handle plan business logic
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID
 
 from loguru import logger
@@ -280,9 +281,70 @@ class PlanService:
         except Exception as exc:
             logger.warning("Failed to archive completed sprint plan state {}: {}", plan.id, exc)
 
+        try:
+            tasks_result = await db.execute(select(Task).where(Task.plan_id == plan.id))
+            tasks = list(tasks_result.scalars().all())
+            if PlanService._is_completed_seven_day_sprint(tasks):
+                from app.services.north_star_metrics_service import NorthStarMetricsService
+
+                await NorthStarMetricsService(db).record_seven_day_goal_completed(
+                    user_id=plan.user_id,
+                    plan_id=plan.id,
+                    source="plan_service_auto_archive",
+                    occurred_at=now,
+                    payload={
+                        "plan_name": plan.name,
+                        "subject": plan.subject,
+                        "exam_date": plan.target_date.isoformat() if plan.target_date else None,
+                        "completed_tasks": completed_tasks,
+                        "total_tasks": total_tasks,
+                        "task_completion_rate": 1.0,
+                    },
+                )
+        except Exception as exc:
+            logger.warning("Failed to record completed sprint North Star metric {}: {}", plan.id, exc)
+
         await db.refresh(plan)
         logger.info("Auto-archived completed sprint plan: {}", plan.id)
         return True
+
+    @staticmethod
+    def _is_completed_seven_day_sprint(tasks: list[Task]) -> bool:
+        if not tasks:
+            return False
+        days = {PlanService._task_day_index(task) for task in tasks}
+        return set(range(1, 8)).issubset(days) and all(task.status == TaskStatus.COMPLETED for task in tasks)
+
+    @staticmethod
+    def _task_day_index(task: Task) -> int:
+        guide_json = PlanService._as_dict(task.guide_json)
+        for key in ("day", "day_number", "day_index"):
+            value = PlanService._safe_int(guide_json.get(key))
+            if value:
+                return value
+        tags = task.tags if isinstance(task.tags, list) else []
+        for tag in tags:
+            text = str(tag or "")
+            if text.startswith("day:"):
+                value = PlanService._safe_int(text.split(":", 1)[1])
+                if value:
+                    return value
+        order_index = PlanService._safe_int(task.order_index)
+        if order_index:
+            return max(1, order_index // 1000)
+        return 1
+
+    @staticmethod
+    def _as_dict(value: Any) -> dict[str, Any]:
+        return value if isinstance(value, dict) else {}
+
+    @staticmethod
+    def _safe_int(value: Any) -> int | None:
+        try:
+            parsed = int(float(value))
+        except (TypeError, ValueError):
+            return None
+        return parsed if parsed > 0 else None
 
     @staticmethod
     async def archive(

@@ -1111,7 +1111,9 @@ def test_build_source_receipt_empty():
     assert receipt["loaded"] == []
     assert receipt["skipped"] == []
     assert receipt["excluded"] == []
-    assert receipt["reason_for_user"] == "这轮没有加载资料。"
+    assert receipt["answer_basis"] == "general_reasoning"
+    assert receipt["source_uncertainty"] == "no_sources_available"
+    assert "通用推理" in receipt["reason_for_user"]
 
 
 def test_build_source_receipt_mixed():
@@ -1144,7 +1146,39 @@ def test_build_source_receipt_mixed():
     assert receipt["loaded"][0]["source_id"] == "src_1"
     assert receipt["skipped"] == [{"source_id": "bad", "title": "Corrupt PDF", "reason": "parse_failed"}]
     assert receipt["excluded"] == [{"source_id": "old", "title": "Old Notes", "reason": "user_excluded"}]
+    assert receipt["answer_basis"] == "source_grounded"
+    assert receipt["source_uncertainty"] == "some_sources_not_loaded"
+    assert receipt["can_correct_sources"] is True
     assert "解析失败" in receipt["reason_for_user"]
+
+
+async def test_source_tray_auto_sources_respect_token_budget():
+    """Auto-loaded sources stay inside the directive budget and expose skipped reasons."""
+    from app.signals.types import RetrievalDirective, SourceAsset, SourceTrayState
+    from app.signals.source_tray_integration import compute_retrieval_plan
+
+    tray = SourceTrayState(
+        mode="auto",
+        available_sources=[
+            SourceAsset(source_id="src_1", title="Short Notes", source_type="notes"),
+            SourceAsset(source_id="src_2", title="Extra Notes", source_type="notes"),
+        ],
+    )
+    directive = RetrievalDirective(
+        directive_id="rd_budget",
+        policy_decision_id="pd_budget",
+        pollution_guard="permissive",
+        token_budget=500,
+    )
+
+    plan = await compute_retrieval_plan(retrieval_directive=directive, source_tray=tray)
+
+    assert [item["source_id"] for item in plan["may_load"]] == ["src_1"]
+    assert plan["do_not_load"][0]["source_id"] == "src_2"
+    assert plan["do_not_load"][0]["reason"] == "token_budget_exceeded"
+    assert plan["token_budget_used"] == 500
+    assert plan["token_budget_remaining"] == 0
+    assert plan["budget_exceeded"] is True
 
 
 def test_validate_source_tray_removes_invalid():
@@ -3264,4 +3298,3 @@ async def test_recall_notification_pre_exam_silence_template():
     assert message is not None
     assert "2" in message.body
     assert message.deep_link == "/review?mode=quick"
-

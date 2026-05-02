@@ -26,7 +26,7 @@ class NotificationListScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
           variant: ButtonVariant.ghost,
         ),
-        title: Text(I18nService.instance.isChinese ? 'Notifications' : 'Notifications'),
+        title: Text(I18nService.instance.isChinese ? '通知' : 'Notifications'),
       ),
       child: notificationsAsync.when(
         data: (notifications) {
@@ -92,7 +92,7 @@ class NotificationItem extends ConsumerWidget {
           child: ListTile(
             title: Text(
               notification.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: DS.fontWeightBold),
             ),
             subtitle: Text(notification.content),
             trailing: !notification.isRead

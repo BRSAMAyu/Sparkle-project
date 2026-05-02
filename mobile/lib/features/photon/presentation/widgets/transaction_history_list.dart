@@ -4,11 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
 import 'package:sparkle/shared/entities/photon_model.dart';
 
 /// Transaction History List Widget
-/// 交易历史列表组件
 class TransactionHistoryList extends ConsumerStatefulWidget {
   const TransactionHistoryList({super.key});
 
@@ -29,15 +29,18 @@ class _TransactionHistoryListState
 
   @override
   void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
+    _scrollController
+      ..removeListener(_onScroll)
+      ..dispose();
     super.dispose();
   }
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent * 0.8) {
-      ref.read(photonTransactionsProvider.notifier).loadTransactions();
+      unawaited(
+        ref.read(photonTransactionsProvider.notifier).loadTransactions(),
+      );
     }
   }
 
@@ -69,9 +72,11 @@ class _TransactionHistoryListState
             ),
             const SizedBox(height: DS.lg),
             SparkleButton(
-              label: '重试',
+              label: context.l10n.commonRetry,
               onPressed: () {
-                ref.read(photonTransactionsProvider.notifier).refresh();
+                unawaited(
+                  ref.read(photonTransactionsProvider.notifier).refresh(),
+                );
               },
             ),
           ],
@@ -91,7 +96,7 @@ class _TransactionHistoryListState
             ),
             const SizedBox(height: DS.lg),
             Text(
-              '暂无交易记录',
+              context.l10n.photonTransactionsEmpty,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -113,7 +118,7 @@ class _TransactionHistoryListState
             (state.hasMore ? 0 : 1),
         itemBuilder: (context, index) {
           // Loading indicator at the bottom
-          if (index == state.transactions.length) {
+          if (index == state.transactions.length && state.isLoading) {
             return const Padding(
               padding: EdgeInsets.all(DS.lg),
               child: Center(
@@ -123,12 +128,12 @@ class _TransactionHistoryListState
           }
 
           // End of list indicator
-          if (index == state.transactions.length + 1 && !state.hasMore) {
+          if (index == state.transactions.length && !state.hasMore) {
             return Padding(
               padding: const EdgeInsets.all(DS.lg),
               child: Center(
                 child: Text(
-                  '没有更多记录了',
+                  context.l10n.photonTransactionsEnd,
                   style: TextStyle(
                     color: DS.textSecondary,
                     fontSize: 14,
@@ -156,7 +161,7 @@ class _TransactionHistoryListState
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   child: Text(
-                    _formatDateHeader(transaction.createdAt),
+                    _formatDateHeader(context, transaction.createdAt),
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
                           color: DS.textSecondary,
                           fontWeight: DS.fontWeightSemibold,
@@ -177,7 +182,7 @@ class _TransactionHistoryListState
       date1.month == date2.month &&
       date1.day == date2.day;
 
-  String _formatDateHeader(DateTime date) {
+  String _formatDateHeader(BuildContext context, DateTime date) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final transactionDate = DateTime(date.year, date.month, date.day);
@@ -185,13 +190,13 @@ class _TransactionHistoryListState
     final difference = today.difference(transactionDate).inDays;
 
     if (difference == 0) {
-      return '今天';
+      return context.l10n.timeToday;
     } else if (difference == 1) {
-      return '昨天';
+      return context.l10n.timeYesterday;
     } else if (difference < 7) {
-      return '$difference天前';
+      return context.l10n.photonTransactionDaysAgo(difference);
     } else {
-      return DateFormat('yyyy年MM月dd日').format(date);
+      return DateFormat.yMMMd(context.locale.toLanguageTag()).format(date);
     }
   }
 }
@@ -250,7 +255,7 @@ class _TransactionItem extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    transaction.source ?? '无备注',
+                    transaction.source ?? context.l10n.photonTransactionNoNote,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: DS.textSecondary,
                         ),
@@ -268,7 +273,7 @@ class _TransactionItem extends StatelessWidget {
                   style: TextStyle(
                     color: isIncome ? DS.success : DS.warning,
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 const SizedBox(height: 4),

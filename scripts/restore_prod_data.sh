@@ -14,12 +14,30 @@ REDIS_CONTAINER="${REDIS_CONTAINER:-sparkle_redis}"
 MINIO_CONTAINER="${MINIO_CONTAINER:-sparkle_minio}"
 MINIO_DATA_PATH="${MINIO_DATA_PATH:-/data}"
 
+verify_checksums() {
+  if [[ ! -f "${BACKUP_DIR}/sha256sums.txt" ]]; then
+    echo "[restore] checksum file missing; continuing with legacy backup"
+    return 0
+  fi
+
+  echo "[restore] verifying checksums..."
+  if command -v sha256sum >/dev/null 2>&1; then
+    (cd "${BACKUP_DIR}" && sha256sum -c sha256sums.txt)
+  elif command -v shasum >/dev/null 2>&1; then
+    (cd "${BACKUP_DIR}" && shasum -a 256 -c sha256sums.txt)
+  else
+    echo "[restore] checksum tool not found; install sha256sum or shasum" >&2
+    return 1
+  fi
+}
+
 if [[ ! -d "${BACKUP_DIR}" ]]; then
   echo "Backup directory not found: ${BACKUP_DIR}"
   exit 1
 fi
 
 echo "[restore] source=${BACKUP_DIR}"
+verify_checksums
 
 if [[ -f "${BACKUP_DIR}/postgres.sql.gz" ]]; then
   echo "[restore] restoring postgres..."

@@ -74,7 +74,7 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
             Text(
               context.l10n.communityMonthlyCheckinView(widget.year),
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             _buildLegend(context),
@@ -124,7 +124,8 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
                 padding: EdgeInsets.only(right: index == 11 ? 0 : 8),
                 child: ChoiceChip(
                   selected: selected,
-                  label: Text(context.l10n.communityMonthDayCount(_monthLabels(context)[index], count)),
+                  label: Text(context.l10n.communityMonthDayCount(
+                      _monthLabels(context)[index], count)),
                   onSelected: (_) {
                     unawaited(
                       _pageController.animateToPage(
@@ -175,7 +176,8 @@ class _AccountabilityHeatmapState extends State<AccountabilityHeatmap> {
           Expanded(
             child: Center(
               child: Text(
-                context.l10n.communityYearMonth(widget.year, _currentMonthPage + 1),
+                context.l10n
+                    .communityYearMonth(widget.year, _currentMonthPage + 1),
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: DS.fontWeightBold,
                     ),
@@ -314,7 +316,7 @@ class MonthlyHeatmap extends StatelessWidget {
                   child: Text(
                     _weekdayLabels(context)[index],
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                         ),
                   ),
                 ),
@@ -382,7 +384,7 @@ class _DayCell extends StatelessWidget {
             ? const Color(0xFF2E7D32)
             : const Color(0xFF9BE9A8);
 
-    final textColor = totalCheckins == 0 ? null : Colors.white;
+    final textColor = totalCheckins == 0 ? null : DS.neutral0;
 
     return Container(
       height: 44,
@@ -398,8 +400,9 @@ class _DayCell extends StatelessWidget {
               '$dayNumber',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: textColor,
-                    fontWeight:
-                        totalCheckins == 0 ? DS.fontWeightMedium : DS.fontWeightBold,
+                    fontWeight: totalCheckins == 0
+                        ? DS.fontWeightMedium
+                        : DS.fontWeightBold,
                   ),
             ),
           ),
@@ -411,8 +414,8 @@ class _DayCell extends StatelessWidget {
                 width: 8,
                 height: 8,
                 decoration: BoxDecoration(
-                  color: Colors.white
-                      .withValues(alpha: bothCheckedIn ? 0.92 : 0.7),
+                  color:
+                      DS.neutral0.withValues(alpha: bothCheckedIn ? 0.92 : 0.7),
                   shape: BoxShape.circle,
                 ),
               ),

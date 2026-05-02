@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
-/// 复习性能评价按钮组
+/// Review performance rating button group.
 ///
-/// 用于复习页面，让用户评价自己对错题的掌握情况
-/// 三个选项：记住了(remembered)、有点模糊(fuzzy)、忘记了(forgotten)
+/// Used on the review page so users can rate mastery for an error record.
+/// Options: remembered, fuzzy, and forgotten.
 class ReviewPerformanceButtons extends StatelessWidget {
   const ReviewPerformanceButtons({
     required this.onPerformanceSelected,
@@ -25,7 +25,7 @@ class ReviewPerformanceButtons extends StatelessWidget {
           SparkleStaggerItem(
             index: 0,
             child: Text(
-              '你对这道题的掌握情况？',
+              context.l10n.ebReviewMasteryPrompt,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: DS.fontWeightSemibold,
                   ),
@@ -39,21 +39,21 @@ class ReviewPerformanceButtons extends StatelessWidget {
                 child: SparkleStaggerItem(
                   index: 1,
                   child: _PerformanceButton(
-                  performance: 'forgotten',
-                  label: context.l10n.ebForgot,
-                  icon: Icons.close,
-                  color: DS.error,
-                  description: context.l10n.ebForgotHint,
-                  isLoading: isLoading,
-                  onTap: () {
-                    unawaited(
-                      SensoryFeedbackService.emit(
-                        SensoryFeedbackEvent.warning,
-                      ),
-                    );
-                    onPerformanceSelected('forgotten');
-                  },
-                ),
+                    performance: 'forgotten',
+                    label: context.l10n.ebForgot,
+                    icon: Icons.close,
+                    color: DS.error,
+                    description: context.l10n.ebForgotHint,
+                    isLoading: isLoading,
+                    onTap: () {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.warning,
+                        ),
+                      );
+                      onPerformanceSelected('forgotten');
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: DS.spacing12),
@@ -61,21 +61,21 @@ class ReviewPerformanceButtons extends StatelessWidget {
                 child: SparkleStaggerItem(
                   index: 2,
                   child: _PerformanceButton(
-                  performance: 'fuzzy',
-                  label: context.l10n.ebFuzzy,
-                  icon: Icons.remove,
-                  color: DS.warningLight,
-                  description: context.l10n.ebFuzzyHint,
-                  isLoading: isLoading,
-                  onTap: () {
-                    unawaited(
-                      SensoryFeedbackService.emit(
-                        SensoryFeedbackEvent.selection,
-                      ),
-                    );
-                    onPerformanceSelected('fuzzy');
-                  },
-                ),
+                    performance: 'fuzzy',
+                    label: context.l10n.ebFuzzy,
+                    icon: Icons.remove,
+                    color: DS.warningLight,
+                    description: context.l10n.ebFuzzyHint,
+                    isLoading: isLoading,
+                    onTap: () {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection,
+                        ),
+                      );
+                      onPerformanceSelected('fuzzy');
+                    },
+                  ),
                 ),
               ),
               const SizedBox(width: DS.spacing12),
@@ -83,21 +83,21 @@ class ReviewPerformanceButtons extends StatelessWidget {
                 child: SparkleStaggerItem(
                   index: 3,
                   child: _PerformanceButton(
-                  performance: 'remembered',
-                  label: context.l10n.ebRemembered,
-                  icon: Icons.check,
-                  color: DS.success,
-                  description: context.l10n.ebRememberedHint,
-                  isLoading: isLoading,
-                  onTap: () {
-                    unawaited(
-                      SensoryFeedbackService.emit(
-                        SensoryFeedbackEvent.success,
-                      ),
-                    );
-                    onPerformanceSelected('remembered');
-                  },
-                ),
+                    performance: 'remembered',
+                    label: context.l10n.ebRemembered,
+                    icon: Icons.check,
+                    color: DS.success,
+                    description: context.l10n.ebRememberedHint,
+                    isLoading: isLoading,
+                    onTap: () {
+                      unawaited(
+                        SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.success,
+                        ),
+                      );
+                      onPerformanceSelected('remembered');
+                    },
+                  ),
                 ),
               ),
             ],
@@ -177,9 +177,9 @@ class _PerformanceButton extends StatelessWidget {
   }
 }
 
-/// 复习性能选择对话框（备选方案）
+/// Review performance selector bottom sheet.
 ///
-/// 可以作为底部弹窗使用，提供更详细的说明
+/// Provides a more detailed alternative to the inline button group.
 class ReviewPerformanceBottomSheet extends StatelessWidget {
   const ReviewPerformanceBottomSheet({
     required this.onPerformanceSelected,
@@ -212,15 +212,15 @@ class ReviewPerformanceBottomSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              '评价你的掌握情况',
+              context.l10n.ebReviewMasterySheetTitle,
               style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              '根据你的评价，系统会智能调整下次复习时间',
+              context.l10n.ebReviewMasterySheetDesc,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

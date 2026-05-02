@@ -57,49 +57,115 @@ enum DifficultyLevel {
 
 /// Extensions for enumerations
 extension LibraryCategoryExtension on LibraryCategory {
+  String get apiValue => switch (this) {
+        LibraryCategory.fewShot => 'few_shot',
+        LibraryCategory.teachingContent => 'teaching_content',
+        LibraryCategory.replyTemplate => 'reply_template',
+        LibraryCategory.custom => 'custom',
+      };
+
   String label(AppLocalizations l10n) => switch (this) {
-    LibraryCategory.fewShot => l10n.seedCatFewShot,
-    LibraryCategory.teachingContent => l10n.seedCatTeaching,
-    LibraryCategory.replyTemplate => l10n.seedCatReplyTemplate,
-    LibraryCategory.custom => l10n.seedCatCustom,
-  };
+        LibraryCategory.fewShot => l10n.seedCatFewShot,
+        LibraryCategory.teachingContent => l10n.seedCatTeaching,
+        LibraryCategory.replyTemplate => l10n.seedCatReplyTemplate,
+        LibraryCategory.custom => l10n.seedCatCustom,
+      };
 }
 
 extension LibraryVisibilityExtension on LibraryVisibility {
+  String get apiValue => switch (this) {
+        LibraryVisibility.private => 'private',
+        LibraryVisibility.public => 'public',
+        LibraryVisibility.official => 'official',
+      };
+
   String label(AppLocalizations l10n) => switch (this) {
-    LibraryVisibility.private => l10n.seedVisPrivate,
-    LibraryVisibility.public => l10n.seedVisPublic,
-    LibraryVisibility.official => l10n.seedVisOfficial,
-  };
+        LibraryVisibility.private => l10n.seedVisPrivate,
+        LibraryVisibility.public => l10n.seedVisPublic,
+        LibraryVisibility.official => l10n.seedVisOfficial,
+      };
 }
 
 extension ItemTypeExtension on ItemType {
+  String get apiValue => switch (this) {
+        ItemType.example => 'example',
+        ItemType.exercise => 'exercise',
+        ItemType.knowledge => 'knowledge',
+        ItemType.template => 'template',
+        ItemType.flashcard => 'flashcard',
+      };
+
   String label(AppLocalizations l10n) => switch (this) {
-    ItemType.example => l10n.seedTypeExample,
-    ItemType.exercise => l10n.seedTypeExercise,
-    ItemType.knowledge => l10n.seedTypeKnowledge,
-    ItemType.template => l10n.seedTypeTemplate,
-    ItemType.flashcard => l10n.seedTypeFlashcard,
-  };
+        ItemType.example => l10n.seedTypeExample,
+        ItemType.exercise => l10n.seedTypeExercise,
+        ItemType.knowledge => l10n.seedTypeKnowledge,
+        ItemType.template => l10n.seedTypeTemplate,
+        ItemType.flashcard => l10n.seedTypeFlashcard,
+      };
 }
 
 extension DifficultyLevelExtension on DifficultyLevel {
+  String get apiValue => switch (this) {
+        DifficultyLevel.beginner => 'beginner',
+        DifficultyLevel.intermediate => 'intermediate',
+        DifficultyLevel.advanced => 'advanced',
+        DifficultyLevel.expert => 'expert',
+      };
+
   String label(AppLocalizations l10n) => switch (this) {
-    DifficultyLevel.beginner => l10n.seedDiffBeginner,
-    DifficultyLevel.intermediate => l10n.seedDiffIntermediate,
-    DifficultyLevel.advanced => l10n.seedDiffAdvanced,
-    DifficultyLevel.expert => l10n.seedDiffExpert,
-  };
+        DifficultyLevel.beginner => l10n.seedDiffBeginner,
+        DifficultyLevel.intermediate => l10n.seedDiffIntermediate,
+        DifficultyLevel.advanced => l10n.seedDiffAdvanced,
+        DifficultyLevel.expert => l10n.seedDiffExpert,
+      };
+}
+
+@JsonSerializable()
+class SeedAdoptionAction {
+  SeedAdoptionAction({
+    required this.actionType,
+    required this.label,
+    required this.resourceType,
+    this.description,
+    this.resourceId,
+    this.route,
+    this.payload = const <String, dynamic>{},
+  });
+
+  factory SeedAdoptionAction.fromJson(Map<String, dynamic> json) =>
+      _$SeedAdoptionActionFromJson(json);
+
+  @JsonKey(name: 'action_type')
+  final String actionType;
+  final String label;
+  final String? description;
+  @JsonKey(name: 'resource_type')
+  final String resourceType;
+  @JsonKey(name: 'resource_id')
+  final String? resourceId;
+  final String? route;
+  final Map<String, dynamic> payload;
+
+  Map<String, dynamic> toJson() => _$SeedAdoptionActionToJson(this);
 }
 
 /// Seed Library model
 @JsonSerializable()
 class SeedLibrary {
-
   SeedLibrary({
     required this.id,
     required this.name,
-    required this.category, required this.visibility, required this.language, required this.isOfficial, required this.isFeatured, required this.usageCount, required this.itemCount, required this.subscriberCount, required this.createdAt, required this.updatedAt, this.description,
+    required this.category,
+    required this.visibility,
+    required this.language,
+    required this.isOfficial,
+    required this.isFeatured,
+    required this.usageCount,
+    required this.itemCount,
+    required this.subscriberCount,
+    required this.createdAt,
+    required this.updatedAt,
+    this.description,
     this.ownerId,
     this.tags,
     this.extraMetadata,
@@ -108,6 +174,7 @@ class SeedLibrary {
     this.userRatingAvg,
     this.userRatingCount,
     this.currentUserRating,
+    this.adoptionNextActions = const <SeedAdoptionAction>[],
     this.isSubscribed,
     this.subscriptionPriority,
   });
@@ -143,6 +210,8 @@ class SeedLibrary {
   final int? userRatingCount;
   @JsonKey(name: 'current_user_rating')
   final double? currentUserRating;
+  @JsonKey(name: 'adoption_next_actions')
+  final List<SeedAdoptionAction> adoptionNextActions;
   @JsonKey(name: 'item_count')
   final int itemCount;
   @JsonKey(name: 'subscriber_count')
@@ -161,11 +230,11 @@ class SeedLibrary {
   Map<String, dynamic> toJson() => _$SeedLibraryToJson(this);
 
   String categoryLabel(AppLocalizations l10n) => switch (category) {
-    LibraryCategory.fewShot => l10n.seedCatFewShotFull,
-    LibraryCategory.teachingContent => l10n.seedCatTeaching,
-    LibraryCategory.replyTemplate => l10n.seedCatReplyTemplate,
-    LibraryCategory.custom => l10n.seedCatCustom,
-  };
+        LibraryCategory.fewShot => l10n.seedCatFewShotFull,
+        LibraryCategory.teachingContent => l10n.seedCatTeaching,
+        LibraryCategory.replyTemplate => l10n.seedCatReplyTemplate,
+        LibraryCategory.custom => l10n.seedCatCustom,
+      };
 
   String visibilityLabel(AppLocalizations l10n) => visibility.label(l10n);
 
@@ -192,54 +261,60 @@ class SeedLibrary {
     double? userRatingAvg,
     int? userRatingCount,
     double? currentUserRating,
+    List<SeedAdoptionAction>? adoptionNextActions,
     int? itemCount,
     int? subscriberCount,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? isSubscribed,
     int? subscriptionPriority,
-  }) => SeedLibrary(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      description: description ?? this.description,
-      category: category ?? this.category,
-      visibility: visibility ?? this.visibility,
-      ownerId: ownerId ?? this.ownerId,
-      language: language ?? this.language,
-      tags: tags ?? this.tags,
-      extraMetadata: extraMetadata ?? this.extraMetadata,
-      isOfficial: isOfficial ?? this.isOfficial,
-      isFeatured: isFeatured ?? this.isFeatured,
-      usageCount: usageCount ?? this.usageCount,
-      qualityScore: qualityScore ?? this.qualityScore,
-      systemQualityScore: systemQualityScore ?? this.systemQualityScore,
-      userRatingAvg: userRatingAvg ?? this.userRatingAvg,
-      userRatingCount: userRatingCount ?? this.userRatingCount,
-      currentUserRating: currentUserRating ?? this.currentUserRating,
-      itemCount: itemCount ?? this.itemCount,
-      subscriberCount: subscriberCount ?? this.subscriberCount,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      isSubscribed: isSubscribed ?? this.isSubscribed,
-      subscriptionPriority: subscriptionPriority ?? this.subscriptionPriority,
-    );
+  }) =>
+      SeedLibrary(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        description: description ?? this.description,
+        category: category ?? this.category,
+        visibility: visibility ?? this.visibility,
+        ownerId: ownerId ?? this.ownerId,
+        language: language ?? this.language,
+        tags: tags ?? this.tags,
+        extraMetadata: extraMetadata ?? this.extraMetadata,
+        isOfficial: isOfficial ?? this.isOfficial,
+        isFeatured: isFeatured ?? this.isFeatured,
+        usageCount: usageCount ?? this.usageCount,
+        qualityScore: qualityScore ?? this.qualityScore,
+        systemQualityScore: systemQualityScore ?? this.systemQualityScore,
+        userRatingAvg: userRatingAvg ?? this.userRatingAvg,
+        userRatingCount: userRatingCount ?? this.userRatingCount,
+        currentUserRating: currentUserRating ?? this.currentUserRating,
+        adoptionNextActions: adoptionNextActions ?? this.adoptionNextActions,
+        itemCount: itemCount ?? this.itemCount,
+        subscriberCount: subscriberCount ?? this.subscriberCount,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        isSubscribed: isSubscribed ?? this.isSubscribed,
+        subscriptionPriority: subscriptionPriority ?? this.subscriptionPriority,
+      );
 }
 
 /// Seed Item model
 @JsonSerializable()
 class SeedItem {
-
   SeedItem({
     required this.id,
     required this.libraryId,
     required this.itemType,
-    required this.isActive, required this.createdAt, required this.updatedAt, this.title,
+    required this.isActive,
+    required this.createdAt,
+    required this.updatedAt,
+    this.title,
     this.content,
     this.contentData,
     this.subject,
     this.difficultyLevel,
     this.tags,
     this.orderIndex,
+    this.adoptionNextActions = const <SeedAdoptionAction>[],
   });
 
   factory SeedItem.fromJson(Map<String, dynamic> json) =>
@@ -259,6 +334,8 @@ class SeedItem {
   final List<String>? tags;
   @JsonKey(name: 'order_index')
   final int? orderIndex;
+  @JsonKey(name: 'adoption_next_actions')
+  final List<SeedAdoptionAction> adoptionNextActions;
   @JsonKey(name: 'is_active')
   final bool isActive;
   @JsonKey(name: 'created_at')
@@ -284,38 +361,45 @@ class SeedItem {
     DifficultyLevel? difficultyLevel,
     List<String>? tags,
     int? orderIndex,
+    List<SeedAdoptionAction>? adoptionNextActions,
     bool? isActive,
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) => SeedItem(
-      id: id ?? this.id,
-      libraryId: libraryId ?? this.libraryId,
-      itemType: itemType ?? this.itemType,
-      title: title ?? this.title,
-      content: content ?? this.content,
-      contentData: contentData ?? this.contentData,
-      subject: subject ?? this.subject,
-      difficultyLevel: difficultyLevel ?? this.difficultyLevel,
-      tags: tags ?? this.tags,
-      orderIndex: orderIndex ?? this.orderIndex,
-      isActive: isActive ?? this.isActive,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
+  }) =>
+      SeedItem(
+        id: id ?? this.id,
+        libraryId: libraryId ?? this.libraryId,
+        itemType: itemType ?? this.itemType,
+        title: title ?? this.title,
+        content: content ?? this.content,
+        contentData: contentData ?? this.contentData,
+        subject: subject ?? this.subject,
+        difficultyLevel: difficultyLevel ?? this.difficultyLevel,
+        tags: tags ?? this.tags,
+        orderIndex: orderIndex ?? this.orderIndex,
+        adoptionNextActions: adoptionNextActions ?? this.adoptionNextActions,
+        isActive: isActive ?? this.isActive,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+      );
 }
 
 /// User Library Subscription model
 @JsonSerializable()
 class UserLibrarySubscription {
-
   UserLibrarySubscription({
     required this.id,
     required this.userId,
     required this.libraryId,
     required this.isEnabled,
     required this.priority,
-    required this.subscribedAt, required this.createdAt, required this.updatedAt, this.notes,
+    required this.subscribedAt,
+    required this.createdAt,
+    required this.updatedAt,
+    this.notes,
     this.lastUsedAt,
+    this.adoptionNextActions = const <SeedAdoptionAction>[],
+    this.communityShare,
     this.library,
   });
 
@@ -334,6 +418,10 @@ class UserLibrarySubscription {
   final DateTime subscribedAt;
   @JsonKey(name: 'last_used_at')
   final DateTime? lastUsedAt;
+  @JsonKey(name: 'adoption_next_actions')
+  final List<SeedAdoptionAction> adoptionNextActions;
+  @JsonKey(name: 'community_share')
+  final Map<String, dynamic>? communityShare;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
@@ -354,22 +442,27 @@ class UserLibrarySubscription {
     String? notes,
     DateTime? subscribedAt,
     DateTime? lastUsedAt,
+    List<SeedAdoptionAction>? adoptionNextActions,
+    Map<String, dynamic>? communityShare,
     DateTime? createdAt,
     DateTime? updatedAt,
     SeedLibrary? library,
-  }) => UserLibrarySubscription(
-      id: id ?? this.id,
-      userId: userId ?? this.userId,
-      libraryId: libraryId ?? this.libraryId,
-      isEnabled: isEnabled ?? this.isEnabled,
-      priority: priority ?? this.priority,
-      notes: notes ?? this.notes,
-      subscribedAt: subscribedAt ?? this.subscribedAt,
-      lastUsedAt: lastUsedAt ?? this.lastUsedAt,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-      library: library ?? this.library,
-    );
+  }) =>
+      UserLibrarySubscription(
+        id: id ?? this.id,
+        userId: userId ?? this.userId,
+        libraryId: libraryId ?? this.libraryId,
+        isEnabled: isEnabled ?? this.isEnabled,
+        priority: priority ?? this.priority,
+        notes: notes ?? this.notes,
+        subscribedAt: subscribedAt ?? this.subscribedAt,
+        lastUsedAt: lastUsedAt ?? this.lastUsedAt,
+        adoptionNextActions: adoptionNextActions ?? this.adoptionNextActions,
+        communityShare: communityShare ?? this.communityShare,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        library: library ?? this.library,
+      );
 }
 
 @JsonSerializable()
@@ -410,7 +503,6 @@ class RateLibraryRequest {
 /// Paginated response model
 @JsonSerializable(genericArgumentFactories: true)
 class PaginatedResponse<T> {
-
   PaginatedResponse({
     required this.items,
     required this.total,
@@ -438,10 +530,11 @@ class PaginatedResponse<T> {
 /// Create library request model
 @JsonSerializable()
 class CreateLibraryRequest {
-
   CreateLibraryRequest({
     required this.name,
-    required this.category, required this.visibility, this.description,
+    required this.category,
+    required this.visibility,
+    this.description,
     this.language = 'zh',
     this.tags,
     this.extraMetadata,
@@ -464,7 +557,6 @@ class CreateLibraryRequest {
 /// Update library request model
 @JsonSerializable()
 class UpdateLibraryRequest {
-
   UpdateLibraryRequest({
     this.name,
     this.description,

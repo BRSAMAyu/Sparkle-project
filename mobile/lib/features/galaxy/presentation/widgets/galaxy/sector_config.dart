@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui' show lerpDouble;
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
 
@@ -502,7 +503,7 @@ class SectorConfig {
 
   static Color _averageColors(List<(Color, double)> weightedColors) {
     if (weightedColors.isEmpty) {
-      return Colors.white;
+      return DS.neutral0;
     }
 
     var totalWeight = 0.0;

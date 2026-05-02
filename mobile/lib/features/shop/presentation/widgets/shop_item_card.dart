@@ -104,7 +104,7 @@ class ShopItemCard extends StatelessWidget {
                               style: TextStyle(
                                 color: _badgeTextColor(DS.success),
                                 fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: DS.fontWeightBold,
                               ),
                             ),
                           ),
@@ -129,7 +129,7 @@ class ShopItemCard extends StatelessWidget {
                               style: TextStyle(
                                 color: _badgeTextColor(DS.error),
                                 fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: DS.fontWeightBold,
                               ),
                             ),
                           ),
@@ -161,7 +161,7 @@ class ShopItemCard extends StatelessWidget {
                                       : DS.neutral500,
                                 ),
                                 fontSize: 10,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: DS.fontWeightBold,
                               ),
                             ),
                           ),
@@ -180,7 +180,7 @@ class ShopItemCard extends StatelessWidget {
                       Text(
                         item.name,
                         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                             ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -202,7 +202,7 @@ class ShopItemCard extends StatelessWidget {
                             style: TextStyle(
                               color: DS.warning,
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                             ),
                           ),
                           if (item.originalPrice != null) ...[

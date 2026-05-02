@@ -148,6 +148,19 @@ class CompactTaskCard extends ConsumerWidget {
           onTap: () => context
               .push(TaskRoutes.taskExecution.replaceFirst(':id', task.id)),
         );
+      case TaskStatus.paused:
+      case TaskStatus.restore:
+        return _ActionButton(
+          icon: Icons.restart_alt_rounded,
+          color: DS.brandPrimaryConst,
+          onTap: () async {
+            await ref.read(taskListProvider.notifier).resumeTask(task.id);
+            if (!context.mounted) return;
+            await context.push(
+              TaskRoutes.taskExecution.replaceFirst(':id', task.id),
+            );
+          },
+        );
       case TaskStatus.completed:
         return _ActionButton(
           icon: Icons.check_circle_rounded,

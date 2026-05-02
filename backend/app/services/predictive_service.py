@@ -23,7 +23,13 @@ from loguru import logger
 from prometheus_client import Counter as PrometheusCounter
 from prometheus_client import Histogram
 from sqlalchemy import and_, func, select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+try:
+    from redis.exceptions import RedisError
+except ImportError:  # pragma: no cover - redis is optional in unit tests
+    RedisError = ConnectionError  # type: ignore[assignment]
 
 from app.aurora.privacy import redact_pii
 from app.config import settings
@@ -61,6 +67,27 @@ FORESIGHT_SNAPSHOT_LATENCY_SECONDS = get_or_create_metric(
     "Foresight snapshot generation latency",
     ["mode"],
     buckets=[0.01, 0.025, 0.05, 0.08, 0.12, 0.15, 0.2, 0.35, 0.5, 1.0],
+)
+PREDICTION_DATA_ERRORS = (
+    ArithmeticError,
+    SQLAlchemyError,
+    TypeError,
+    ValueError,
+    statistics.StatisticsError,
+)
+PREDICTION_MODEL_ERRORS = (
+    ConnectionError,
+    OSError,
+    RuntimeError,
+    TimeoutError,
+    TypeError,
+    ValueError,
+)
+PREDICTION_CACHE_ERRORS = (
+    ConnectionError,
+    OSError,
+    RedisError,
+    TimeoutError,
 )
 
 
@@ -376,7 +403,7 @@ class PredictiveService:
                 risk_level=risk_level,
             )
 
-        except Exception as e:
+        except PREDICTION_DATA_ERRORS as e:
             logger.error(f"参与度预测失败: {e}")
             return EngagementForecast(
                 next_active_time=self._get_current_time().replace(tzinfo=None)
@@ -505,7 +532,7 @@ class PredictiveService:
                 estimated_time_hours=estimated_hours,
             )
 
-        except Exception as e:
+        except PREDICTION_DATA_ERRORS as e:
             logger.error(f"难度预测失败: {e}")
             # 返回默认中等难度
             return DifficultyPrediction(
@@ -620,7 +647,7 @@ class PredictiveService:
                 "confidence": round(confidence, 4),
             }
 
-        except Exception as e:
+        except PREDICTION_DATA_ERRORS as e:
             logger.error(f"最佳时间推荐失败: {e}")
             return {
                 "best_hours": [],
@@ -743,7 +770,7 @@ class PredictiveService:
                 },
             }
 
-        except Exception as e:
+        except PREDICTION_DATA_ERRORS as e:
             logger.error(f"辍学风险检测失败: {e}")
             return {
                 "risk_score": 0,
@@ -855,12 +882,12 @@ class PredictiveService:
                         f"model={model_key}, route={route_reason}"
                     )
                     return enriched
-                except Exception as exc:
+                except PREDICTION_MODEL_ERRORS as exc:
                     logger.warning(
                         f"Long horizon model attempt failed for user {user_id}: "
                         f"model={model_key}, route={route_reason}, error={exc}"
                     )
-        except Exception as exc:
+        except PREDICTION_MODEL_ERRORS as exc:
             logger.warning(f"Long horizon prediction failed for user {user_id}: {exc}")
 
         fallback = await self._maybe_attach_within_category_preference(
@@ -1259,7 +1286,7 @@ class PredictiveService:
                     f"Realtime prediction model returned no usable payload for user {user_id}: "
                     f"model={model_key}, tier={source_tier.value}"
                 )
-            except Exception as exc:
+            except PREDICTION_MODEL_ERRORS as exc:
                 logger.info(
                     f"Realtime prediction tier skipped for user {user_id}: "
                     f"model={model_key}, tier={source_tier.value}, error={exc}"
@@ -1703,7 +1730,7 @@ class PredictiveService:
                 CandidateActionFeedback.deleted_at.is_(None),
             )
             rows = (await self.db.execute(stmt)).scalars().all()
-        except Exception as exc:
+        except SQLAlchemyError as exc:
             if "candidate_action_feedback" in str(exc).lower():
                 await self.db.rollback()
                 logger.warning(
@@ -1864,7 +1891,7 @@ class PredictiveService:
                 return None
             payload = json.loads(raw)
             return payload if isinstance(payload, dict) else None
-        except Exception as exc:
+        except (TypeError, json.JSONDecodeError, UnicodeDecodeError, *PREDICTION_CACHE_ERRORS) as exc:
             logger.warning(f"Failed to read predictive cache {cache_key}: {exc}")
             return None
 
@@ -1877,7 +1904,7 @@ class PredictiveService:
             await cache_service.redis.setex(
                 cache_key, ttl_seconds, json.dumps(payload, ensure_ascii=False)
             )
-        except Exception as exc:
+        except (TypeError, ValueError, *PREDICTION_CACHE_ERRORS) as exc:
             logger.warning(f"Failed to cache predictive forecast {cache_key}: {exc}")
 
     async def _schedule_long_horizon_refresh(self, user_id: UUID) -> None:
@@ -1903,11 +1930,13 @@ class PredictiveService:
                     lock_key=lock_key,
                     reason="debug_local_fallback",
                 )
-        except Exception as exc:
+        except (ImportError, RuntimeError, *PREDICTION_CACHE_ERRORS) as exc:
             try:
                 await cache_service.redis.delete(lock_key)
-            except Exception:
-                pass
+            except PREDICTION_CACHE_ERRORS as cleanup_exc:
+                logger.warning(
+                    f"Failed to release long horizon refresh lock after schedule failure for user {user_id}: {cleanup_exc}"
+                )
             logger.warning(
                 f"Failed to schedule long horizon prediction for user {user_id}: {exc}"
             )
@@ -1925,7 +1954,7 @@ class PredictiveService:
                 async with AsyncSessionLocal() as session:
                     service = PredictiveService(session)
                     await service.generate_long_horizon_forecast(user_id)
-            except Exception as exc:
+            except (RuntimeError, ValueError, SQLAlchemyError) as exc:
                 logger.warning(
                     f"Local long horizon refresh failed for user {user_id}: {exc}"
                 )
@@ -1933,7 +1962,7 @@ class PredictiveService:
                 if cache_service.redis:
                     try:
                         await cache_service.redis.delete(lock_key)
-                    except Exception as exc:
+                    except PREDICTION_CACHE_ERRORS as exc:
                         logger.warning(
                             f"Failed to release long horizon refresh lock for user {user_id}: {exc}"
                         )

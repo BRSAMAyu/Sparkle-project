@@ -11,6 +11,9 @@ import 'package:sparkle/features/insights/insights.dart';
 class InsightsRoutes {
   static const String learningInsightsOverview = '/learning/insights';
   static const String learningInsightsForecast = '/learning/forecast';
+  static const String growthChronicle = '/learning/insights/growth-chronicle';
+  static const String learningDashboard = '/learning/insights/dashboard';
+  static const String directiveAudit = '/learning/insights/directives';
 
   static String overviewLocation({String? initialPanel}) {
     if (initialPanel == null || initialPanel.isEmpty) {
@@ -51,6 +54,54 @@ class InsightsRoutes {
                 atmosphereOverride: ExperienceAtmosphere.insightsMist,
               ),
               child: const LearningForecastScreen(),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: growthChronicle,
+          name: 'growth-chronicle',
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            motionToken: SparkleMotionToken.scene,
+            type: SharedAxisTransitionType.scaled,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.insights,
+                atmosphereOverride: ExperienceAtmosphere.insightsMist,
+              ),
+              child: const GrowthChroniclePage(),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: learningDashboard,
+          name: 'learning-dashboard',
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            motionToken: SparkleMotionToken.scene,
+            type: SharedAxisTransitionType.scaled,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.insights,
+                atmosphereOverride: ExperienceAtmosphere.insightsMist,
+              ),
+              child: const LearningDashboardPage(),
+            ),
+          ),
+        ),
+        GoRoute(
+          path: directiveAudit,
+          name: 'directive-audit',
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            motionToken: SparkleMotionToken.scene,
+            type: SharedAxisTransitionType.scaled,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.insights,
+                atmosphereOverride: ExperienceAtmosphere.insightsMist,
+              ),
+              child: const DirectiveAuditScreen(),
             ),
           ),
         ),

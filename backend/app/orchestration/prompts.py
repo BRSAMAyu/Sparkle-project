@@ -44,6 +44,10 @@ from app.core.metrics import SPARKLE_PROMPT_FIELD_RENDER_COVERAGE_RATIO
 from app.core.plan_context import merge_plan_context
 from app.core.user_insight_state import UserInsightState
 from app.orchestration.ai_strategy_renderer import build_semantic_control, format_semantic_control_lines
+from app.orchestration.aurora_language_principles import (
+    render_aurora_language_contract,
+    scenario_from_chat_mode,
+)
 from app.orchestration.context_focus import ContextFocusDecision
 from app.orchestration.situation_brief import format_situation_brief_section
 from app.orchestration.social_context_renderer import render_social_context_lines
@@ -73,6 +77,7 @@ _TIER_PROMPT_BUDGET: dict[str, int] = {
 
 _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
     "situation_brief_section": (140, 0.12),
+    "aurora_language_contract_section": (220, 0.12),
     "decision_policy_section": (110, 0.08),
     "user_material_grounding_section": (120, 0.08),
     "intervention_language_contract_section": (90, 0.06),
@@ -99,10 +104,12 @@ _SECTION_BUDGET_RATIO: dict[str, tuple[int, float]] = {
     "orchestration_context_section": (60, 0.05),
     "collaboration_narrative_section": (60, 0.05),
     "seed_library_section": (40, 0.04),
+    "behavior_pattern_section": (80, 0.06),
 }
 
 _PROMPT_UTILIZATION_SECTION_ALIASES: dict[str, str] = {
     "situation_brief_section": "situation_brief",
+    "aurora_language_contract_section": "aurora_language_contract",
     "decision_policy_section": "decision_policy",
     "planning_strategy_section": "planning_strategy",
     "user_material_grounding_section": "user_material_grounding",
@@ -319,14 +326,14 @@ def _format_intervention_language_contract_section(
     lines = [
         "## 干预语言契约 [L2 引导]",
         "适用：近期痛点 / 近期进展 / `learning_state_fragment`。",
-        "关系：Sparkle 是朋友，不是教练、工具或队友；像 a friend helping me restart。",
+        "关系：沿用 Aurora 语言契约的同侧朋友感；真诚但不表演，不把推进写成训话。",
     ]
     if signal_note:
         lines.append(signal_note)
     lines.extend(
         [
             "Anchor §3.3：不审判；不羞辱；不替用户做道德评价；不先说“你又失败了”；先站到用户同侧；优先好奇和重新启动，不造羞耻和焦虑。",
-            "执行：先承接已有进展，再给最小可行改动。",
+            "执行：每次温柔表达都绑定真实观察、可纠正判断和最小可行动作。",
         ]
     )
     return "\n".join(lines)
@@ -388,9 +395,7 @@ def _apply_prompt_budget(
     # 如果仍超限，则从低优先级开始继续向下压到保底 token
     for priority in sorted(set(priority_map.values()), reverse=True):
         section_names = [
-            name
-            for name in adjusted
-            if priority_map.get(name) == priority and str(adjusted.get(name) or "").strip()
+            name for name in adjusted if priority_map.get(name) == priority and str(adjusted.get(name) or "").strip()
         ]
         for section_name in section_names:
             text = str(adjusted.get(section_name) or "").strip()
@@ -462,6 +467,8 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 
 {task_awareness_section}
 
+{aurora_language_contract_section}
+
 {persona_section}
 
 {companion_persona_section}
@@ -515,6 +522,8 @@ AGENT_SYSTEM_PROMPT = """你是 Sparkle（星火），一个智能学习助手�
 {agent_memory_section}
 
 {cognitive_prism_section}
+
+{behavior_pattern_section}
 
 {seed_library_section}
 
@@ -997,6 +1006,11 @@ def build_system_prompt(
     else:
         base_prompt = MODE_SYSTEM_PROMPTS.get(chat_mode, AGENT_SYSTEM_PROMPT)
 
+    aurora_language_contract_section = render_aurora_language_contract(
+        scenario=scenario_from_chat_mode(chat_mode),
+        include_examples=False,
+    )
+
     # 2. 格式化上下文
 
     formatted_user_context, prompt_signal_telemetry = _render_user_context_content(
@@ -1159,6 +1173,9 @@ def build_system_prompt(
     # 2.7 格式化认知棱镜指令
     cognitive_prism_section = _format_cognitive_prism_section(user_context, context_focus=context_focus)
 
+    # Behavior patterns from dual-core router cognitive signals
+    behavior_pattern_section = _format_behavior_pattern_section(user_context=user_context)
+
     # 2.8 格式化种子库 few-shot 示例
     seed_library_section = ""
     seed_lib = user_context.get("seed_library") if isinstance(user_context, dict) else None
@@ -1260,6 +1277,7 @@ def build_system_prompt(
     )
     section_map = {
         "situation_brief_section": situation_brief_section,
+        "aurora_language_contract_section": aurora_language_contract_section,
         "decision_policy_section": decision_policy_section,
         "planning_strategy_section": planning_strategy_section,
         "user_material_grounding_section": user_material_grounding_section,
@@ -1288,6 +1306,7 @@ def build_system_prompt(
         "agent_memory_section": agent_memory_section,
         "aurora_planning_sidecar_section": aurora_planning_sidecar_section,
         "cognitive_prism_section": cognitive_prism_section,
+        "behavior_pattern_section": behavior_pattern_section,
         "seed_library_section": seed_library_section,
         "conversation_history_section": (
             f"[优先级：L3 背景]\n{conversation_history_section}".strip() if conversation_history_section else ""
@@ -1312,6 +1331,7 @@ def build_system_prompt(
         section_map,
         priority_map={
             "situation_brief_section": 0,
+            "aurora_language_contract_section": 0,
             "decision_policy_section": 1,
             "planning_strategy_section": 1,
             "user_material_grounding_section": 1,
@@ -1340,6 +1360,7 @@ def build_system_prompt(
             "agent_memory_section": 2,
             "aurora_planning_sidecar_section": 2,
             "cognitive_prism_section": cognitive_priority,
+            "behavior_pattern_section": 2,
             "seed_library_section": 3,
             "conversation_history_section": 3,
             "task_awareness_section": 3,
@@ -1347,6 +1368,7 @@ def build_system_prompt(
         budget_tokens=_prompt_budget,
     )
     situation_brief_section = section_map["situation_brief_section"]
+    aurora_language_contract_section = section_map["aurora_language_contract_section"]
     decision_policy_section = section_map["decision_policy_section"]
     planning_strategy_section = section_map["planning_strategy_section"]
     user_material_grounding_section = section_map["user_material_grounding_section"]
@@ -1399,7 +1421,9 @@ def build_system_prompt(
             for key, meta in prompt_signal_telemetry["high_value_fields"].items()
             if meta.get("collected") and not meta.get("prompt_visible")
         ]
-        prompt_signal_telemetry["model_facing_section_sizes"] = dict(prompt_signal_telemetry.get("section_sizes", {}).items())
+        prompt_signal_telemetry["model_facing_section_sizes"] = dict(
+            prompt_signal_telemetry.get("section_sizes", {}).items()
+        )
         prompt_signal_telemetry["utilization"] = _build_prompt_utilization_snapshot(
             pre_budget_section_map=pre_budget_section_map,
             model_facing_section_map=section_map,
@@ -1435,6 +1459,7 @@ def build_system_prompt(
                 orchestration_context_section=orchestration_context_section,
                 collaboration_narrative_section=collaboration_narrative_section,
                 mode_strategy_section=mode_strategy_section,
+                aurora_language_contract_section=aurora_language_contract_section,
                 persona_section=persona_section,
                 companion_persona_section=companion_persona_section,
                 constitution_guardrail_section=constitution_guardrail_section,
@@ -1460,6 +1485,7 @@ def build_system_prompt(
             ordered_sections = [
                 mode_strategy_section,
                 task_awareness_section,
+                aurora_language_contract_section,
                 persona_section,
                 companion_persona_section,
                 constitution_guardrail_section,
@@ -1505,6 +1531,7 @@ def build_system_prompt(
                 query=user_context.get("current_query", ""),
                 context_briefing_section=context_briefing_section,
                 visible_intelligence_section=visible_intelligence_section,
+                aurora_language_contract_section=aurora_language_contract_section,
                 companion_persona_section=companion_persona_section,
                 constitution_guardrail_section=constitution_guardrail_section,
                 situation_brief_section=situation_brief_section,
@@ -1522,6 +1549,7 @@ def build_system_prompt(
         ordered_sections = [
             mode_strategy_section,
             task_awareness_section,
+            aurora_language_contract_section,
             persona_section,
             companion_persona_section,
             constitution_guardrail_section,
@@ -2817,12 +2845,25 @@ def _format_stage33_social_signal_section(payload: dict[str, Any] | None) -> str
             summary_lines.append(f"当前有 {relationship_count} 条关系型背景需要在建议里保持边界感。")
         if pending_commitments_count > 0:
             summary_lines.append(f"目前有 {pending_commitments_count} 条到期承诺待跟进。")
-    if not summary_lines:
+    high_relevance_events = [
+        item
+        for item in (payload.get("high_relevance_events") or [])
+        if isinstance(item, dict) and str(item.get("summary_line") or "").strip()
+    ]
+    tone_guidance = [str(item).strip() for item in (payload.get("tone_guidance") or []) if str(item).strip()]
+    if not summary_lines and not high_relevance_events and not tone_guidance:
         return ""
 
     lines = ["## 社群信号 [L2 引导]"]
-    lines.extend(f"- {item}" for item in summary_lines[:3])
+    lines.extend(f"- {item}" for item in summary_lines[:4])
+    if high_relevance_events:
+        lines.append("### 高相关社群动态")
+        lines.extend(f"- {str(item.get('summary_line') or '').strip()}" for item in high_relevance_events[:3])
+    if tone_guidance:
+        lines.append("### 语气校准")
+        lines.extend(f"- {item}" for item in tone_guidance[:4])
     lines.append("- 这些信号只用于帮助保持协作边界和启动方式，不代表必须把学习社交化。")
+    lines.append("- 不要暴露伙伴姓名、群聊原文或其他用户的个人数据；默认只说“学习伙伴/责任伙伴/学习群”。")
     return "\n".join(lines)
 
 
@@ -2891,6 +2932,31 @@ def _format_working_memory_section(payload: dict[str, Any] | None) -> str:
     return _truncate_section("\n".join(lines), target_tokens=300)
 
 
+def _format_recent_corrections_section(items: Any) -> str:
+    if not isinstance(items, list) or not items:
+        return ""
+
+    lines = ["## 近期 Aurora 校准回执 [L2 引导]"]
+    kept = 0
+    for item in items[:3]:
+        if not isinstance(item, dict):
+            continue
+        what = str(item.get("what_changed") or "").strip()
+        why = str(item.get("why_changed") or "").strip()
+        next_time = str(item.get("next_time") or "").strip()
+        if not what and not next_time:
+            continue
+        parts = [part for part in (what, why, next_time) if part]
+        lines.append("- " + " ".join(parts))
+        kept += 1
+
+    if kept == 0:
+        return ""
+
+    lines.append("- 回应时自然体现这些校准；只有当前对话相关时才简短提及，不要暴露内部 state key 或 semantic token。")
+    return _truncate_section("\n".join(lines), target_tokens=240)
+
+
 def _has_signal_payload(value: Any) -> bool:
     if value is None:
         return False
@@ -2913,6 +2979,7 @@ def _build_prompt_signal_telemetry(context: dict[str, Any], normalized: dict[str
         "focus_stats",
         "achievement_summary",
         "calendar_context",
+        "episodic_memories",
         "idiographic_summary",
         "social_context",
         "social_signals_summary",
@@ -3354,12 +3421,19 @@ def _render_user_context_content(
 
     episodic_memories = normalized.get("episodic_memories") or []
     if episodic_memories and section_weights.get("episodic", "medium") != "off":
-        lines.append("【近期相关记忆】")
-        memory_limit = section_caps.get("episodic") or (1 if context_level == "light" else 5)
-        for memory in episodic_memories[:memory_limit]:
-            summary = str(memory.get("summary") or "").strip()
-            if summary:
-                lines.append(f"- {summary}")
+        memory_limit = min(int(section_caps.get("episodic") or (1 if context_level == "light" else 5)), 5)
+        memory_section = _format_natural_memory_context_section(
+            episodic_memories,
+            limit=memory_limit,
+            title="【近期相关记忆】",
+        )
+        if memory_section:
+            lines.append(memory_section)
+            _mark_rendered("episodic_memories")
+            telemetry["section_sizes"]["episodic_memories"] = {
+                "items": min(len(episodic_memories), memory_limit),
+                "approx_tokens": _estimate_prompt_tokens(memory_section),
+            }
 
     last_session_mood = normalized.get("last_session_mood")
     if isinstance(last_session_mood, dict) and last_session_mood:
@@ -3374,6 +3448,24 @@ def _render_user_context_content(
     if normalized.get("preferred_tools"):
         lines.append("【工具偏好】")
         lines.append(f"- 常用工具: {', '.join(normalized['preferred_tools'])}")
+
+    recent_tool_usage = normalized.get("recent_tool_usage") or []
+    if recent_tool_usage:
+        lines.append("【刚刚使用过的工具】")
+        limit = 2 if context_level == "light" else 4
+        for item in recent_tool_usage[:limit]:
+            if not isinstance(item, dict):
+                continue
+            label = str(item.get("label") or item.get("tool_name") or "工具").strip()
+            summary = str(item.get("summary") or "").strip()
+            privacy_note = str(item.get("privacy_note") or "").strip()
+            if not summary:
+                continue
+            line = f"- {label}: {summary}"
+            if privacy_note:
+                line += f"（{privacy_note}）"
+            lines.append(line)
+        lines.append("如果这些工具动作与当前问题相关，可以自然衔接；不相关时不要硬提。")
 
     stage33_social_mode = _resolve_stage33_feature_mode(context, "social")
     if stage33_social_mode == "live":
@@ -3436,13 +3528,13 @@ def _render_user_context_content(
             _mark_rendered(_agg_key)
     _traits = normalized.get("traits_prior")
     if isinstance(_traits, dict) and _traits:
-        lines.append(f"【特质基线】\n" + "\n".join(f"- {k}: {v}" for k, v in list(_traits.items())[:5] if v))
+        lines.append("【特质基线】\n" + "\n".join(f"- {k}: {v}" for k, v in list(_traits.items())[:5] if v))
         _mark_rendered("traits_prior")
     _scenes = normalized.get("recent_scenes")
     if isinstance(_scenes, list) and _scenes:
         _scene_lines = [f"- {s}" for s in _scenes[:3]]
         if _scene_lines:
-            lines.append(f"【近期场景】\n" + "\n".join(_scene_lines))
+            lines.append("【近期场景】\n" + "\n".join(_scene_lines))
             _mark_rendered("recent_scenes")
 
     working_memory_mode = _resolve_stage33_feature_mode(context, "wm_prompt")
@@ -3462,6 +3554,14 @@ def _render_user_context_content(
                 "approx_tokens": _estimate_prompt_tokens(working_memory_section),
             }
 
+    recent_corrections_section = _format_recent_corrections_section(normalized.get("recent_corrections"))
+    if recent_corrections_section:
+        lines.append(recent_corrections_section)
+        telemetry["section_sizes"]["recent_corrections"] = {
+            "items": min(len(normalized.get("recent_corrections") or []), 3),
+            "approx_tokens": _estimate_prompt_tokens(recent_corrections_section),
+        }
+
     calendar_context = normalized.get("calendar_context") or {}
     calendar_mode = _resolve_stage40_calendar_mode(calendar_context if isinstance(calendar_context, dict) else None)
     calendar_lines = _format_calendar_context_lines(calendar_context if isinstance(calendar_context, dict) else {})
@@ -3480,6 +3580,7 @@ def _render_user_context_content(
         # DF-9: Telemetry for shadow mode suppression
         try:
             from app.core.business_metrics import AURORA_SHADOW_SUPPRESSION_TOTAL
+
             AURORA_SHADOW_SUPPRESSION_TOTAL.labels(subsystem="calendar").inc()
         except Exception:
             pass
@@ -3547,6 +3648,149 @@ def format_user_context(
     return rendered
 
 
+def _memory_field(item: Any, *names: str, default: Any = None) -> Any:
+    if isinstance(item, dict):
+        for name in names:
+            value = item.get(name)
+            if value not in (None, ""):
+                return value
+        return default
+    for name in names:
+        value = getattr(item, name, None)
+        if value not in (None, ""):
+            return value
+    return default
+
+
+def _coerce_memory_confidence(item: Any) -> float:
+    for key in ("confidence", "reference_confidence", "evidence_score", "importance_score", "score", "relevance_score"):
+        value = _memory_field(item, key)
+        if value is None:
+            continue
+        try:
+            parsed = float(value)
+        except (TypeError, ValueError):
+            continue
+        if parsed > 1.0:
+            parsed = parsed / 100.0
+        return max(0.0, min(1.0, parsed))
+    return 0.5
+
+
+def _coerce_memory_user_confirmed(item: Any) -> bool:
+    explicit = _memory_field(item, "user_confirmed", "confirmed", "explicitly_confirmed")
+    if isinstance(explicit, bool):
+        return explicit
+    if isinstance(explicit, str):
+        lowered = explicit.strip().lower()
+        if lowered in {"true", "1", "yes", "confirmed", "user_confirmed"}:
+            return True
+        if lowered in {"false", "0", "no", "inferred", "system_inferred"}:
+            return False
+
+    source_lane = str(_memory_field(item, "source_lane", default="") or "").strip().lower()
+    source_type = str(_memory_field(item, "source_type", "source", default="") or "").strip().lower()
+    if source_lane in {"inferred_extraction", "ai_inferred", "auto_inferred"}:
+        return False
+    if source_type in {"ai_inferred", "analysis", "prediction", "system_inferred"}:
+        return False
+    return source_type in {"chat_turn", "user_state", "event", "manual", "direct_capture", "user_confirmed"}
+
+
+def _format_memory_source_label(item: Any) -> str:
+    source_lane = str(_memory_field(item, "source_lane", default="") or "").strip().lower()
+    source_type = str(_memory_field(item, "source_type", "source", default="") or "").strip().lower()
+    subject_type = str(_memory_field(item, "subject_type", default="") or "").strip().lower()
+    if source_lane in {"inferred_extraction", "ai_inferred", "auto_inferred"} or source_type in {
+        "ai_inferred",
+        "analysis",
+        "system_inferred",
+    }:
+        return "从对话里推断的"
+    if source_type in {"task", "practice_outcome"} or subject_type in {"task", "commitment"}:
+        return "从任务完成情况推断的"
+    if source_type in {"chat_turn", "user_state", "event", "manual", "direct_capture", "user_confirmed"}:
+        return "你告诉我的"
+    return "上下文里整理出的"
+
+
+def _memory_relevance_sort_key(entry: tuple[int, Any]) -> tuple[float, int]:
+    index, item = entry
+    for key in ("relevance_score", "rank_score", "score", "importance_score", "confidence", "evidence_score"):
+        value = _memory_field(item, key)
+        if value is None:
+            continue
+        try:
+            score = float(value)
+        except (TypeError, ValueError):
+            continue
+        return (-score, index)
+    return (0.0, index)
+
+
+def _format_natural_memory_context_section(
+    memories: list[Any],
+    *,
+    limit: int = 5,
+    title: str = "## 相关记忆 [L2 引导]",
+) -> str:
+    if not isinstance(memories, list) or not memories:
+        return ""
+
+    normalized_items = [
+        item
+        for item in memories
+        if str(_memory_field(item, "summary", "content", "text", "title", default="") or "").strip()
+    ]
+    if not normalized_items:
+        return ""
+
+    selected = [
+        item
+        for _, item in sorted(
+            enumerate(normalized_items),
+            key=_memory_relevance_sort_key,
+        )[: max(0, min(limit, 5))]
+    ]
+    if not selected:
+        return ""
+
+    lines = [
+        title,
+        "引用规则: 只在能推进当前目标、承接情绪或减少用户重复说明时使用；否则保持安静。",
+        "表达方式: 自然带入相关事实，不要用“我记得你说过...”开场，也不要像检索结果一样枚举。",
+        "不确定记忆: confidence < 0.70 时用试探语气，并优先轻量确认；用户否认后停止引用该记忆。",
+        f"top_memory_count: {len(selected)}",
+    ]
+    for index, item in enumerate(selected, start=1):
+        content = str(_memory_field(item, "summary", "content", "text", "title", default="") or "").strip()
+        if not content:
+            continue
+        occurred_at = _memory_field(item, "occurred_at", "last_seen_at", "updated_at", "created_at")
+        time_ago = _format_memory_recency_label(occurred_at) or "时间未知"
+        source = _format_memory_source_label(item)
+        confidence = _coerce_memory_confidence(item)
+        user_confirmed = _coerce_memory_user_confirmed(item)
+        subject = str(_memory_field(item, "subject_type", default="") or "").strip()
+        source_type = str(_memory_field(item, "source_type", "source", default="") or "").strip()
+        qualifiers = [label for label in (time_ago, subject, source_type) if label]
+        natural_line = f"[{' / '.join(qualifiers)}] {content}" if qualifiers else content
+        lines.extend(
+            [
+                f"memory_{index}:",
+                f"  content: {content}",
+                f"  time_ago: {time_ago}",
+                f"  source: {source}",
+                f"  confidence: {confidence:.2f}",
+                f"  user_confirmed: {'true' if user_confirmed else 'false'}",
+                f"  natural_line: {natural_line}",
+            ]
+        )
+        if confidence < 0.7:
+            lines.append("  confirmation_hint: 需要轻量确认，不要当成确定事实。")
+    return "\n".join(lines)
+
+
 def _format_past_session_memory_section(user_context: dict[str, Any] | None) -> str:
     if not isinstance(user_context, dict):
         return ""
@@ -3554,7 +3798,7 @@ def _format_past_session_memory_section(user_context: dict[str, Any] | None) -> 
     if not isinstance(raw_items, list):
         return ""
 
-    lines: list[str] = []
+    candidates: list[dict[str, Any]] = []
     seen: set[str] = set()
     for item in raw_items:
         summary = ""
@@ -3583,28 +3827,33 @@ def _format_past_session_memory_section(user_context: dict[str, Any] | None) -> 
         if not summary or summary in seen:
             continue
         seen.add(summary)
-        qualifiers = [
-            label
-            for label in (
-                _format_memory_recency_label(occurred_at),
-                subject,
-                source,
-            )
-            if label
-        ]
-        prefix = f"[{' / '.join(qualifiers)}] " if qualifiers else ""
         tag_suffix = f" tags={', '.join(tags[:3])}" if tags else ""
-        lines.append(f"{prefix}{summary}{tag_suffix}")
-        if len(lines) >= 3:
+        candidates.append(
+            {
+                "summary": f"{summary}{tag_suffix}",
+                "subject_type": subject,
+                "source_type": source,
+                "occurred_at": occurred_at,
+                "confidence": _coerce_memory_confidence(item),
+                "user_confirmed": _coerce_memory_user_confirmed(item),
+            }
+        )
+        if len(candidates) >= 3:
             break
 
-    if not lines:
+    if not candidates:
         return ""
-    return (
-        "## 跨会话记忆 [L2 引导]\n"
-        "当用户问候、含糊开场、请求继续学习，或本轮内容与以下记忆相关时，"
-        "请自然衔接上次内容；不要生硬复述，也不要引用与当前请求无关的记忆。\n"
-        + "\n".join(f"- {line}" for line in lines)
+    section = _format_natural_memory_context_section(
+        candidates,
+        limit=3,
+        title="## 跨会话记忆 [L2 引导]",
+    )
+    if not section:
+        return ""
+    return section.replace(
+        "引用规则: 只在能推进当前目标、承接情绪或减少用户重复说明时使用；否则保持安静。",
+        "当用户问候、含糊开场、请求继续学习，或本轮内容与以下记忆相关时，请自然衔接上次内容；不要生硬复述，也不要引用与当前请求无关的记忆。",
+        1,
     )
 
 
@@ -3970,6 +4219,9 @@ def _normalize_user_context(context: dict) -> dict:
     if context.get("preferred_tools"):
         normalized["preferred_tools"] = context["preferred_tools"]
 
+    if isinstance(context.get("recent_tool_usage"), list) and context["recent_tool_usage"]:
+        normalized["recent_tool_usage"] = context["recent_tool_usage"]
+
     if context.get("learning_gaps_summary"):
         normalized["learning_gaps_summary"] = str(context["learning_gaps_summary"])
 
@@ -3987,6 +4239,8 @@ def _normalize_user_context(context: dict) -> dict:
 
     if isinstance(context.get("last_session_mood"), dict):
         normalized["last_session_mood"] = context["last_session_mood"]
+    if isinstance(context.get("recent_corrections"), list) and context["recent_corrections"]:
+        normalized["recent_corrections"] = context["recent_corrections"]
 
     if isinstance(context.get("understanding_depth"), dict):
         normalized["understanding_depth"] = context["understanding_depth"]
@@ -4020,9 +4274,7 @@ def _normalize_user_context(context: dict) -> dict:
         "idiographic_summary",
     ):
         _agg_val = context.get(_agg_key)
-        if isinstance(_agg_val, dict) and _agg_val:
-            normalized[_agg_key] = _agg_val
-        elif isinstance(_agg_val, str) and _agg_val.strip():
+        if (isinstance(_agg_val, dict) and _agg_val) or (isinstance(_agg_val, str) and _agg_val.strip()):
             normalized[_agg_key] = _agg_val
     if isinstance(context.get("recent_scenes"), list) and context["recent_scenes"]:
         normalized["recent_scenes"] = context["recent_scenes"]
@@ -4152,6 +4404,48 @@ def _format_cognitive_prism_section(user_context: dict, context_focus: dict[str,
     lines.append("这不是强制要求，而是要在合适的对话时机自然地展示。")
 
     return "\n".join(lines)
+
+
+def _format_behavior_pattern_section(*, user_context: dict) -> str:
+    """Inject detected behavior patterns as actionable guidance for the LLM."""
+    patterns = user_context.get("behavior_patterns") or user_context.get("cognitive_insights", {}).get(
+        "recent_patterns", []
+    )
+    if not patterns:
+        return ""
+
+    behavior_types = user_context.get("behavior_pattern_types") or {}
+    details = user_context.get("behavior_pattern_details") or []
+    if not isinstance(details, list):
+        details = []
+
+    lines = ["## 行为模式信号 [L2 行为响应]"]
+    lines.append("以下是最近检测到的用户行为模式，请在回答中主动适应：")
+
+    for pat in details[:5]:
+        if not isinstance(pat, dict):
+            continue
+        name = pat.get("name") or pat.get("pattern_name") or ""
+        confidence = pat.get("confidence") or pat.get("match_score") or 0
+        guidance = pat.get("guidance") or pat.get("recommended_action") or ""
+        if not name:
+            continue
+        label = f"{name}（置信度 {confidence:.0%}）" if confidence else name
+        entry = f"- {label}"
+        if guidance:
+            entry += f" → {guidance}"
+        lines.append(entry)
+
+    # Summarize type distribution if available
+    if behavior_types:
+        type_names = {"cognitive": "认知", "emotional": "情绪", "execution": "执行", "social": "社交"}
+        parts = [f"{type_names.get(k, k)}{v}个" for k, v in behavior_types.items() if v > 0]
+        if parts:
+            lines.append(f"- 分布: {', '.join(parts)}")
+
+    lines.append("")
+    lines.append("这些模式意味着用户的真实行为倾向。请根据上述模式自然调整回答策略，而非忽略。")
+    return "\n" + "\n".join(lines)
 
 
 def _is_query_plan_related(query_text: str, plan_context: dict[str, Any]) -> bool:

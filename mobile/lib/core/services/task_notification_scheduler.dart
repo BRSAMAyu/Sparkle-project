@@ -178,6 +178,25 @@ class TaskNotificationScheduler {
     return scheduleTaskReminders(task, config: config);
   }
 
+  Future<void> showTaskResumeReminder(TaskModel task) async {
+    final payload = {
+      'type': 'task_resume',
+      'taskId': task.id,
+      'taskTitle': task.title,
+      'destination_route': '/tasks/${task.id}',
+      'deep_link': '/tasks/${task.id}',
+    };
+    try {
+      await _notificationService.showSmartPush(
+        title: '任务已暂停',
+        body: '你刚暂停了「${task.title}」。回来时可以从恢复卡继续。',
+        payload: payload,
+      );
+    } catch (e) {
+      _logger.e('Failed to show resume reminder for task ${task.id}: $e');
+    }
+  }
+
   /// Refresh all pending task reminders
   ///
   /// Call this on app startup to ensure all pending tasks have reminders

@@ -7,10 +7,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/galaxy/data/models/node_expansion_models.dart';
 import 'package:sparkle/features/knowledge/data/models/knowledge_detail_model.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 final galaxyRepositoryProvider = Provider<GalaxyRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -42,7 +42,8 @@ class GalaxyRepository {
           defaultMessage: 'Failed to load galaxy graph',
         ),
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('GalaxyRepository.getGraph unexpected error: $e');
       throw Exception('An unexpected error occurred');
     }
   }
@@ -84,8 +85,9 @@ class GalaxyRepository {
       final stream = response.data;
       if (stream == null) return;
       final buffer = StringBuffer();
-      await for (final chunk in stream.stream) {
-        buffer.write(utf8.decode(chunk, allowMalformed: true));
+      await for (final chunk
+          in stream.stream.cast<List<int>>().transform(utf8.decoder)) {
+        buffer.write(chunk);
         while (buffer.toString().contains('\n\n')) {
           final content = buffer.toString();
           final idx = content.indexOf('\n\n');
@@ -136,7 +138,8 @@ class GalaxyRepository {
           defaultMessage: 'Failed to load node detail',
         ),
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint('GalaxyRepository.getNodeDetail unexpected error: $e');
       throw Exception('An unexpected error occurred');
     }
   }
@@ -155,7 +158,8 @@ class GalaxyRepository {
       if (payload == null) return null;
       return KnowledgeDetailResponse.fromJson(payload);
     } catch (e) {
-      // It's okay if prediction fails, just return null
+      debugPrint('GalaxyRepository.predictNextNode failed: $e');
+      // It's okay if prediction fails, just return null.
       return null;
     }
   }
@@ -173,9 +177,11 @@ class GalaxyRepository {
       if (payload == null) return [];
       final searchResponse = GalaxySearchResponse.fromJson(payload);
       return searchResponse.results;
-    } on DioException {
+    } on DioException catch (e) {
+      debugPrint('GalaxyRepository.searchNodes request failed: $e');
       return [];
-    } catch (_) {
+    } catch (e) {
+      debugPrint('GalaxyRepository.searchNodes unexpected error: $e');
       return [];
     }
   }
@@ -274,7 +280,10 @@ class GalaxyRepository {
           defaultMessage: 'Failed to generate node expansion candidates',
         ),
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint(
+        'GalaxyRepository.generateExpansionCandidates unexpected error: $e',
+      );
       throw Exception('An unexpected error occurred');
     }
   }
@@ -346,7 +355,10 @@ class GalaxyRepository {
           defaultMessage: 'Failed to apply node expansion candidates',
         ),
       );
-    } catch (_) {
+    } catch (e) {
+      debugPrint(
+        'GalaxyRepository.applyExpansionCandidates unexpected error: $e',
+      );
       throw Exception('An unexpected error occurred');
     }
   }

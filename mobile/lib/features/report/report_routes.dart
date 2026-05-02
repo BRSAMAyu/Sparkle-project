@@ -1,4 +1,5 @@
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/scene_audio_policy.dart';
@@ -16,11 +17,13 @@ class ReportRoutes {
           pageBuilder: (context, state) {
             final report = state.extra is LearningReport
                 ? state.extra as LearningReport
-                : const LearningReport(
+                : LearningReport(
                     reportId: 'empty',
-                    markdown: '暂无学习报告数据。',
-                    sections: <String>[],
-                    mastery: <LearningMasteryDatum>[],
+                    markdown: I18nService.instance.isChinese
+                        ? '暂无学习报告数据。'
+                        : 'No learning report data available.',
+                    sections: const <String>[],
+                    mastery: const <LearningMasteryDatum>[],
                   );
             return buildSparkleTransitionPage(
               state: state,

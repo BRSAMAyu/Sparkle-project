@@ -1414,6 +1414,45 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                   }
                   return;
                 }
+
+                // GOAL-009: Confirm high-risk status changes (active → completed,
+                // active → cancelled, archived → active). Title-only edits skip
+                // confirmation since they're easily reversible.
+                final isStatusChange = nextStatus != status;
+                final isHighRisk = isStatusChange &&
+                    (nextStatus == 'completed' ||
+                        nextStatus == 'cancelled' ||
+                        nextStatus == 'archived' ||
+                        (status == 'archived' && nextStatus == 'active'));
+
+                if (isHighRisk) {
+                  final isZh = I18nService.instance.isChinese;
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (dialogCtx) => AlertDialog(
+                      title: Text(
+                        isZh ? '确认修改目标状态？' : 'Confirm goal status change?',
+                      ),
+                      content: Text(
+                        isZh
+                            ? '将"${nextTitle.isNotEmpty ? nextTitle : '此目标'}"的状态从「$status」改为「$nextStatus」。\n\n这会影响相关计划、任务和提醒，且不会自动撤销。'
+                            : 'Change status of "${nextTitle.isNotEmpty ? nextTitle : "this goal"}" from "$status" to "$nextStatus".\n\nThis will affect related plans, tasks and reminders, and cannot be auto-reverted.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(dialogCtx).pop(false),
+                          child: Text(isZh ? '取消' : 'Cancel'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.of(dialogCtx).pop(true),
+                          child: Text(isZh ? '确认修改' : 'Confirm change'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed != true) return;
+                }
+
                 try {
                   await repo.updateGoal(
                     goalId: goalId,

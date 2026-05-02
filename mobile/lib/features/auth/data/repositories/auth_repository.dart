@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
+import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -55,10 +56,12 @@ class AuthRepository {
       await saveTokens(tokenResponse);
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      final message = _extractErrorMessage(e.response?.data);
-      throw Exception(message ?? 'Registration failed');
+      throw AppFailureMapper.fromDio(e, fallbackMessage: 'Registration failed');
     } catch (e) {
-      throw Exception('An unexpected error occurred: $e');
+      throw AppFailureMapper.from(
+        e,
+        fallbackMessage: 'Registration failed',
+      );
     }
   }
 
@@ -93,10 +96,9 @@ class AuthRepository {
 
       return UserModel.fromJson(data['user'] as Map<String, dynamic>);
     } on DioException catch (e) {
-      final message = _extractErrorMessage(e.response?.data);
-      throw Exception(message ?? 'Login failed');
+      throw AppFailureMapper.fromDio(e, fallbackMessage: 'Login failed');
     } catch (e) {
-      throw Exception('An unexpected error occurred: $e');
+      throw AppFailureMapper.from(e, fallbackMessage: 'Login failed');
     }
   }
 
@@ -151,10 +153,9 @@ class AuthRepository {
       }
       return UserModel.fromJson(userData);
     } on DioException catch (e) {
-      final message = _extractErrorMessage(e.response?.data);
-      throw Exception(message ?? 'Social login failed');
+      throw AppFailureMapper.fromDio(e, fallbackMessage: 'Social login failed');
     } catch (e) {
-      throw Exception('An unexpected error occurred: $e');
+      throw AppFailureMapper.from(e, fallbackMessage: 'Social login failed');
     }
   }
 
@@ -204,7 +205,10 @@ class AuthRepository {
     final currentRefreshToken = await getRefreshToken();
     if (currentRefreshToken == null || currentRefreshToken.isEmpty) {
       await clearTokens();
-      throw Exception('Session expired. Please log in again.');
+      throw const AuthFailure(
+        message: 'Session expired. Please log in again.',
+        code: 'TOKEN_EXPIRED',
+      );
     }
     try {
       final response = await _apiClient.post<Map<String, dynamic>>(
@@ -226,14 +230,16 @@ class AuthRepository {
       return tokenResponse;
     } on DioException catch (e) {
       await clearTokens(); // Clear tokens if refresh fails
-      final detail =
-          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
-      throw Exception(
-        detail ?? 'Session expired. Please log in again.',
+      throw AppFailureMapper.fromDio(
+        e,
+        fallbackMessage: 'Session expired. Please log in again.',
       );
     } catch (e) {
       await clearTokens();
-      throw Exception('An unexpected error occurred during token refresh.');
+      throw AppFailureMapper.from(
+        e,
+        fallbackMessage: 'Session expired. Please log in again.',
+      );
     }
   }
 
@@ -246,11 +252,15 @@ class AuthRepository {
           await _apiClient.get<Map<String, dynamic>>(ApiEndpoints.me);
       return UserModel.fromJson(response.data!);
     } on DioException catch (e) {
-      final detail =
-          (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
-      throw Exception(detail ?? 'Could not fetch user profile.');
+      throw AppFailureMapper.fromDio(
+        e,
+        fallbackMessage: 'Could not fetch user profile.',
+      );
     } catch (e) {
-      throw Exception('An unexpected error occurred');
+      throw AppFailureMapper.from(
+        e,
+        fallbackMessage: 'Could not fetch user profile.',
+      );
     }
   }
 
@@ -325,13 +335,18 @@ class AuthRepository {
   Future<String> setPassword(String newPassword) async {
     try {
       if (DemoDataService.isDemoMode) {
-        return I18nService.instance.isChinese ? '密码设置成功' : 'Password set successfully';
+        return I18nService.instance.isChinese
+            ? '密码设置成功'
+            : 'Password set successfully';
       }
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.setPassword,
         data: {'new_password': newPassword},
       );
-      return _extractErrorMessage(response.data) ?? (I18nService.instance.isChinese ? '密码设置成功' : 'Password set successfully');
+      return _extractErrorMessage(response.data) ??
+          (I18nService.instance.isChinese
+              ? '密码设置成功'
+              : 'Password set successfully');
     } on DioException catch (e) {
       final detail =
           (e.response?.data as Map<String, dynamic>?)?['detail'] as String?;
@@ -347,7 +362,10 @@ class AuthRepository {
         ApiEndpoints.forgotPassword,
         data: {'email': email},
       );
-      return _extractErrorMessage(response.data) ?? (I18nService.instance.isChinese ? '如果该邮箱已注册，重置邮件已发送' : 'If this email is registered, a reset link has been sent');
+      return _extractErrorMessage(response.data) ??
+          (I18nService.instance.isChinese
+              ? '如果该邮箱已注册，重置邮件已发送'
+              : 'If this email is registered, a reset link has been sent');
     } on DioException catch (e) {
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ?? 'Could not request password reset.');
@@ -368,7 +386,10 @@ class AuthRepository {
           'new_password': newPassword,
         },
       );
-      return _extractErrorMessage(response.data) ?? (I18nService.instance.isChinese ? '密码已重置，请重新登录' : 'Password reset, please log in again');
+      return _extractErrorMessage(response.data) ??
+          (I18nService.instance.isChinese
+              ? '密码已重置，请重新登录'
+              : 'Password reset, please log in again');
     } on DioException catch (e) {
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ?? 'Could not reset password.');
@@ -382,7 +403,10 @@ class AuthRepository {
       final response = await _apiClient.post<Map<String, dynamic>>(
         ApiEndpoints.sendVerification,
       );
-      return _extractErrorMessage(response.data) ?? (I18nService.instance.isChinese ? '验证邮件已发送' : 'Verification email sent');
+      return _extractErrorMessage(response.data) ??
+          (I18nService.instance.isChinese
+              ? '验证邮件已发送'
+              : 'Verification email sent');
     } on DioException catch (e) {
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ?? 'Could not send verification email.');
@@ -397,7 +421,10 @@ class AuthRepository {
         ApiEndpoints.verifyEmail,
         data: {'token': token},
       );
-      return _extractErrorMessage(response.data) ?? (I18nService.instance.isChinese ? '邮箱验证成功' : 'Email verified successfully');
+      return _extractErrorMessage(response.data) ??
+          (I18nService.instance.isChinese
+              ? '邮箱验证成功'
+              : 'Email verified successfully');
     } on DioException catch (e) {
       final message = _extractErrorMessage(e.response?.data);
       throw Exception(message ?? 'Could not verify email.');
@@ -430,7 +457,10 @@ class AuthRepository {
           if (openid != null) 'openid': openid,
         },
       );
-      return _extractErrorMessage(response.data) ?? (I18nService.instance.isChinese ? '绑定成功' : 'Account linked successfully');
+      return _extractErrorMessage(response.data) ??
+          (I18nService.instance.isChinese
+              ? '绑定成功'
+              : 'Account linked successfully');
     } on DioException catch (e) {
       throw Exception(
         _extractErrorMessage(e.response?.data) ??
@@ -445,7 +475,10 @@ class AuthRepository {
         ApiEndpoints.unlinkSocial,
         data: {'provider': provider},
       );
-      return _extractErrorMessage(response.data) ?? (I18nService.instance.isChinese ? '解绑成功' : 'Account unlinked successfully');
+      return _extractErrorMessage(response.data) ??
+          (I18nService.instance.isChinese
+              ? '解绑成功'
+              : 'Account unlinked successfully');
     } on DioException catch (e) {
       throw Exception(
         _extractErrorMessage(e.response?.data) ??
@@ -469,7 +502,8 @@ class AuthRepository {
       final response = await _apiClient.delete<Map<String, dynamic>>(
         '${ApiEndpoints.userSessions}/$sessionId',
       );
-      return _extractErrorMessage(response.data) ?? (I18nService.instance.isChinese ? '设备已下线' : 'Device logged out');
+      return _extractErrorMessage(response.data) ??
+          (I18nService.instance.isChinese ? '设备已下线' : 'Device logged out');
     } on DioException catch (e) {
       throw Exception(
         _extractErrorMessage(e.response?.data) ?? 'Could not revoke session.',
@@ -482,7 +516,10 @@ class AuthRepository {
       final response = await _apiClient.delete<Map<String, dynamic>>(
         ApiEndpoints.userSessions,
       );
-      return _extractErrorMessage(response.data) ?? (I18nService.instance.isChinese ? '其他设备已下线' : 'Other devices logged out');
+      return _extractErrorMessage(response.data) ??
+          (I18nService.instance.isChinese
+              ? '其他设备已下线'
+              : 'Other devices logged out');
     } on DioException catch (e) {
       throw Exception(
         _extractErrorMessage(e.response?.data) ??
@@ -526,7 +563,8 @@ class AuthRepository {
             'provider_token': providerToken,
         },
       );
-      return _extractErrorMessage(response.data) ?? (I18nService.instance.isChinese ? '账号已注销' : 'Account deleted');
+      return _extractErrorMessage(response.data) ??
+          (I18nService.instance.isChinese ? '账号已注销' : 'Account deleted');
     } on DioException catch (e) {
       throw Exception(
         _extractErrorMessage(e.response?.data) ?? 'Could not delete account.',
@@ -703,7 +741,8 @@ class AuthRepository {
         return DemoDataService().demoUser;
       }
       final message = _extractErrorMessage(e.response?.data);
-      throw Exception(message ?? (I18nService.instance.isChinese ? '访客登录失败' : 'Guest login failed'));
+      throw Exception(message ??
+          (I18nService.instance.isChinese ? '访客登录失败' : 'Guest login failed'));
     } catch (e) {
       if (DemoDataService.isDemoMode) {
         debugPrint('⚠️ Guest API failed, using demo user as fallback: $e');

@@ -6,6 +6,7 @@ Tests: Auth → WebSocket → Go Gateway → Python gRPC → LLM → Response
 
 import asyncio
 import json
+import os
 import time
 import uuid
 import sys
@@ -17,9 +18,9 @@ BASE = "http://localhost:8000"
 WS_URL = "ws://localhost:8080/ws/chat"
 GATEWAY_BASE = "http://localhost:8080"
 
-USERNAME = "e2etest"
-EMAIL = "e2e@sparkle.dev"
-PASSWORD = "Test123456!"
+USERNAME = os.getenv("LOCAL_SMOKE_USERNAME", "e2etest")
+EMAIL = os.getenv("LOCAL_SMOKE_EMAIL", "e2e@sparkle.dev")
+PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", "Test123456!")
 
 
 def log_section(title):

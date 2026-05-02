@@ -28,8 +28,10 @@ class EvidenceCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text('${item.type} · ${item.id}',
-                    style: Theme.of(context).textTheme.bodyMedium,),
+                Text(
+                  '${item.type} · ${item.id}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
                 const Spacer(),
                 _StatusBadge(status: item.status),
               ],
@@ -60,65 +62,81 @@ class EvidenceCard extends StatelessWidget {
     final payload = item.payload ?? const {};
     if (payload['event'] != null) {
       final event = payload['event'] as Map<String, dynamic>;
-      return _KeyValueList(items: {
-        'Type': event['event_type']?.toString() ?? '-',
-        'Timestamp': event['ts_ms']?.toString() ?? '-',
-      },);
+      return _KeyValueList(
+        items: {
+          'Type': event['event_type']?.toString() ?? '-',
+          'Timestamp': event['ts_ms']?.toString() ?? '-',
+        },
+      );
     }
     if (payload['chat_turn'] != null) {
       final chatTurn = payload['chat_turn'] as Map<String, dynamic>;
-      return _KeyValueList(items: {
-        'Role': chatTurn['role']?.toString() ?? '-',
-        'Created': chatTurn['created_at']?.toString() ?? '-',
-        'Content': chatTurn['content']?.toString() ?? '-',
-      },);
+      return _KeyValueList(
+        items: {
+          'Role': chatTurn['role']?.toString() ?? '-',
+          'Created': chatTurn['created_at']?.toString() ?? '-',
+          'Content': chatTurn['content']?.toString() ?? '-',
+        },
+      );
     }
     if (payload['error'] != null) {
       final error = payload['error'] as Map<String, dynamic>;
-      return _KeyValueList(items: {
-        'Subject': error['subject_code']?.toString() ?? '-',
-        'Root Cause': error['root_cause']?.toString() ?? '-',
-        'Suggestion': error['study_suggestion']?.toString() ?? '-',
-      },);
+      return _KeyValueList(
+        items: {
+          'Subject': error['subject_code']?.toString() ?? '-',
+          'Root Cause': error['root_cause']?.toString() ?? '-',
+          'Suggestion': error['study_suggestion']?.toString() ?? '-',
+        },
+      );
     }
     if (payload['practice_outcome'] != null) {
       final outcome = payload['practice_outcome'] as Map<String, dynamic>;
-      return _KeyValueList(items: {
-        'Performance': outcome['review_performance']?.toString() ?? '-',
-        'Mastery': outcome['mastery_level']?.toString() ?? '-',
-        'Reviewed': outcome['reviewed_at']?.toString() ?? '-',
-        'Summary': outcome['summary']?.toString() ?? '-',
-      },);
+      return _KeyValueList(
+        items: {
+          'Performance': outcome['review_performance']?.toString() ?? '-',
+          'Mastery': outcome['mastery_level']?.toString() ?? '-',
+          'Reviewed': outcome['reviewed_at']?.toString() ?? '-',
+          'Summary': outcome['summary']?.toString() ?? '-',
+        },
+      );
     }
     if (payload['concept'] != null) {
       final concept = payload['concept'] as Map<String, dynamic>;
-      return _KeyValueList(items: {
-        'Name': concept['name']?.toString() ?? '-',
-        'Description': concept['description']?.toString() ?? '-',
-      },);
+      return _KeyValueList(
+        items: {
+          'Name': concept['name']?.toString() ?? '-',
+          'Description': concept['description']?.toString() ?? '-',
+        },
+      );
     }
     if (payload['task'] != null) {
       final task = payload['task'] as Map<String, dynamic>;
-      return _KeyValueList(items: {
-        'Title': task['title']?.toString() ?? '-',
-        'Status': task['status']?.toString() ?? '-',
-        'Due': task['due_date']?.toString() ?? '-',
-      },);
+      return _KeyValueList(
+        items: {
+          'Title': task['title']?.toString() ?? '-',
+          'Status': task['status']?.toString() ?? '-',
+          'Due': task['due_date']?.toString() ?? '-',
+        },
+      );
     }
     if (payload['summary'] != null) {
       final summary = payload['summary'] as Map<String, dynamic>;
-      return _KeyValueList(items: {
-        'Date': summary['review_date']?.toString() ?? '-',
-        'Summary': summary['summary_text']?.toString() ?? '-',
-      },);
+      return _KeyValueList(
+        items: {
+          'Date': summary['review_date']?.toString() ?? '-',
+          'Summary': summary['summary_text']?.toString() ?? '-',
+        },
+      );
     }
     if (payload['state'] != null) {
       final state = payload['state'] as Map<String, dynamic>;
-      return _KeyValueList(items: {
-        'Focus': state['focus_mode']?.toString() ?? '-',
-        'Load': state['cognitive_load']?.toString() ?? '-',
-        'Sprint': state['sprint_mode']?.toString() ?? '-',
-      },);
+      return _KeyValueList(
+        items: {
+          'Focus': state['focus_mode']?.toString() ?? '-',
+          'Load': state['cognitive_load']?.toString() ?? '-',
+          'Sprint': state['sprint_mode']?.toString() ?? '-',
+        },
+      );
     }
     return Text(context.l10n.memEvidenceRecord);
   }
@@ -244,10 +262,11 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final label = switch (status) {
       'ok' => 'OK',
-      'redacted' => '已隐藏',
-      _ => '缺失',
+      'redacted' => zh ? '已隐藏' : 'Redacted',
+      _ => zh ? '缺失' : 'Missing',
     };
     final color = switch (status) {
       'ok' => DS.semanticSuccess,

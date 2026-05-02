@@ -24,6 +24,10 @@ enum TaskStatus {
   pending,
   @JsonValue('IN_PROGRESS')
   inProgress,
+  @JsonValue('PAUSED')
+  paused,
+  @JsonValue('RESTORE')
+  restore,
   @JsonValue('STUCK')
   stuck,
   @JsonValue('COMPLETED')
@@ -36,6 +40,79 @@ enum TaskSyncStatus {
   synced,
   pending,
   failed,
+}
+
+enum SourceLifecycleStatus {
+  active,
+  archived,
+  revoked,
+  orphaned,
+}
+
+class SourceAssetBinding {
+  const SourceAssetBinding({
+    required this.id,
+    required this.title,
+    required this.lifecycleStatus,
+    this.sourceType = 'file',
+    this.linkedBy,
+    this.reason,
+    this.status,
+    this.lifecycleReason,
+    this.updatedAt,
+  });
+
+  factory SourceAssetBinding.fromJson(Map<String, dynamic> json) {
+    final rawStatus =
+        (json['lifecycle_status'] ?? json['lifecycleStatus'] ?? 'active')
+            .toString()
+            .toLowerCase();
+    final lifecycleStatus = SourceLifecycleStatus.values.firstWhere(
+      (status) => status.name == rawStatus,
+      orElse: () => SourceLifecycleStatus.active,
+    );
+    return SourceAssetBinding(
+      id: (json['id'] ?? json['source_id'] ?? json['sourceId'] ?? '')
+          .toString(),
+      title: (json['title'] ?? json['file_name'] ?? json['fileName'] ?? '')
+          .toString(),
+      lifecycleStatus: lifecycleStatus,
+      sourceType:
+          (json['source_type'] ?? json['sourceType'] ?? 'file').toString(),
+      linkedBy: json['linked_by']?.toString() ?? json['linkedBy']?.toString(),
+      reason: json['reason']?.toString(),
+      status: json['status']?.toString(),
+      lifecycleReason: json['lifecycle_reason']?.toString() ??
+          json['lifecycleReason']?.toString(),
+      updatedAt: DateTime.tryParse(
+        (json['updated_at'] ?? json['updatedAt'] ?? '').toString(),
+      ),
+    );
+  }
+
+  final String id;
+  final String title;
+  final SourceLifecycleStatus lifecycleStatus;
+  final String sourceType;
+  final String? linkedBy;
+  final String? reason;
+  final String? status;
+  final String? lifecycleReason;
+  final DateTime? updatedAt;
+
+  bool get needsAttention => lifecycleStatus != SourceLifecycleStatus.active;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'lifecycle_status': lifecycleStatus.name,
+        'source_type': sourceType,
+        if (linkedBy != null) 'linked_by': linkedBy,
+        if (reason != null) 'reason': reason,
+        if (status != null) 'status': status,
+        if (lifecycleReason != null) 'lifecycle_reason': lifecycleReason,
+        if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+      };
 }
 
 @JsonSerializable()
@@ -60,6 +137,8 @@ class TaskModel {
     this.sourcePlanningSessionId,
     this.phaseIndex,
     this.successCriteria,
+    this.pausedReason,
+    this.pausedAt,
     this.startedAt,
     this.completedAt,
     this.actualMinutes,
@@ -69,6 +148,8 @@ class TaskModel {
     this.orderIndex = 0,
     this.subtasksTotal = 0,
     this.subtasksCompleted = 0,
+    this.boundSources = const <SourceAssetBinding>[],
+    this.metadata = const <String, dynamic>{},
     this.syncStatus = TaskSyncStatus.synced,
     this.syncError,
     this.retryToken,
@@ -101,6 +182,10 @@ class TaskModel {
   final int? phaseIndex;
   @JsonKey(name: 'success_criteria')
   final String? successCriteria;
+  @JsonKey(name: 'paused_reason')
+  final String? pausedReason;
+  @JsonKey(name: 'paused_at')
+  final DateTime? pausedAt;
   final TaskStatus status;
   @JsonKey(name: 'started_at')
   final DateTime? startedAt;
@@ -121,6 +206,9 @@ class TaskModel {
   final int subtasksTotal;
   @JsonKey(name: 'subtasks_completed')
   final int subtasksCompleted;
+  @JsonKey(name: 'bound_sources')
+  final List<SourceAssetBinding> boundSources;
+  final Map<String, dynamic> metadata;
   @JsonKey(name: 'created_at')
   final DateTime createdAt;
   @JsonKey(name: 'updated_at')
@@ -151,6 +239,8 @@ class TaskModel {
     String? sourcePlanningSessionId,
     int? phaseIndex,
     String? successCriteria,
+    String? pausedReason,
+    DateTime? pausedAt,
     TaskStatus? status,
     DateTime? startedAt,
     DateTime? completedAt,
@@ -162,6 +252,8 @@ class TaskModel {
     int? orderIndex,
     int? subtasksTotal,
     int? subtasksCompleted,
+    List<SourceAssetBinding>? boundSources,
+    Map<String, dynamic>? metadata,
     DateTime? createdAt,
     DateTime? updatedAt,
     TaskSyncStatus? syncStatus,
@@ -185,6 +277,8 @@ class TaskModel {
             sourcePlanningSessionId ?? this.sourcePlanningSessionId,
         phaseIndex: phaseIndex ?? this.phaseIndex,
         successCriteria: successCriteria ?? this.successCriteria,
+        pausedReason: pausedReason ?? this.pausedReason,
+        pausedAt: pausedAt ?? this.pausedAt,
         status: status ?? this.status,
         startedAt: startedAt ?? this.startedAt,
         completedAt: completedAt ?? this.completedAt,
@@ -196,6 +290,8 @@ class TaskModel {
         orderIndex: orderIndex ?? this.orderIndex,
         subtasksTotal: subtasksTotal ?? this.subtasksTotal,
         subtasksCompleted: subtasksCompleted ?? this.subtasksCompleted,
+        boundSources: boundSources ?? this.boundSources,
+        metadata: metadata ?? this.metadata,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         syncStatus: syncStatus ?? this.syncStatus,

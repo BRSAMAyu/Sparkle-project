@@ -11,7 +11,7 @@
 ### 1. XiaoMi MIMO (小米米默) - 快速响应
 
 ```bash
-XIAOMI_MIMO_API_KEY=sk-cmwqykkej4amo184uyqf700glf5xcqiuahremcrg2j2kb8o6o
+XIAOMI_MIMO_API_KEY=replace_with_provider_api_key
 XIAOMI_MIMO_BASE_URL=https://api.xiaomimimo.com/v1
 XIAOMI_CHAT_MODEL=mimo-v2-flash
 XIAOMI_TEMPERATURE=0.3
@@ -25,7 +25,7 @@ XIAOMI_TEMPERATURE=0.3
 ### 2. Zhipu GLM (智谱AI) - 编程/工具
 
 ```bash
-ZHIPU_API_KEY=e78e70c5f139453c9d0df15b848fa084.W31a9cNerGcSYDTt
+ZHIPU_API_KEY=replace_with_zhipu_api_key
 ZHIPU_BASE_URL=https://open.bigmodel.cn/api/paas/v4
 ZHIPU_CHAT_MODEL=glm-4.7
 ZHIPU_TOOLS_MODEL=glm-4.7
@@ -45,7 +45,7 @@ ZHIPU_TEMPERATURE=0.3
 ### 3. DashScope (阿里云百炼) - 通义千问
 
 ```bash
-DASHSCOPE_API_KEY=sk-cd9af6e3b7da44c9b67de53c69f2fae8
+DASHSCOPE_API_KEY=replace_with_provider_api_key
 DASHSCOPE_BASE_HTTP_API_URL=https://dashscope.aliyuncs.com/api/v1
 DASHSCOPE_BASE_URL_COMPATIBLE=https://dashscope.aliyuncs.com/compatible-mode/v1
 DASHSCOPE_CHAT_MODEL=qwen-plus
@@ -67,7 +67,7 @@ DASHSCOPE_RERANK_MODEL=qwen3-rerank
 ### 4. DeepSeek - 深度推理
 
 ```bash
-DEEPSEEK_API_KEY=sk-29c29c1c5a9447949b09762140a210ef
+DEEPSEEK_API_KEY=replace_with_provider_api_key
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DEEPSEEK_CHAT_MODEL=deepseek-chat
 DEEPSEEK_REASON_MODEL=deepseek-reasoner
@@ -84,7 +84,7 @@ DEEPSEEK_REASON_MODEL=deepseek-reasoner
 ### 5. SiliconFlow (硅基流动) - 专家模型
 
 ```bash
-SILICONFLOW_API_KEY=sk-wregwpyfxrafholmzwrrbucyyvtfgepffgqfysmljdutoqpx
+SILICONFLOW_API_KEY=replace_with_provider_api_key
 SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1
 SILICONFLOW_OCR_MODEL=deepseek-ai/DeepSeek-OCR
 SILICONFLOW_EMBEDDING_MODEL=Qwen/Qwen3-Embedding-4B
@@ -103,7 +103,7 @@ SILICONFLOW_RERANK_MODEL=Qwen/Qwen3-Reranker-4B
 ### 6. Hunyuan Translation (via SiliconFlow)
 
 ```bash
-HUNYUAN_API_KEY=sk-wregwpyfxrafholmzwrrbucyyvtfgepffgqfysmljdutoqpx
+HUNYUAN_API_KEY=replace_with_provider_api_key
 HUNYUAN_BASE_URL=https://api.siliconflow.cn/v1
 HUNYUAN_TRANSLATE_MODEL=tencent/Hunyuan-MT-7B
 ```
@@ -116,8 +116,8 @@ HUNYUAN_TRANSLATE_MODEL=tencent/Hunyuan-MT-7B
 ### 7. XunFei STT (科大讯飞) - 语音转文字
 
 ```bash
-XUNFEI_API_KEY=f53891ea367c5f58d38dcfc6e27a902c
-XUNFEI_API_SECRET=MDZmNzlkZDk2NWRmYWM1M2M5OTExYjVi
+XUNFEI_API_KEY=your_xunfei_key
+XUNFEI_API_SECRET=your_xunfei_secret
 XUNFEI_STT_DOMAIN=iat
 XUNFEI_STT_LANGUAGE=zh-CN
 XUNFEI_STT_SAMPLE_RATE=16000

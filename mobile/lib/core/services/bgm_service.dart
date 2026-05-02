@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -49,6 +50,34 @@ enum BgmLibrarySourceKind {
   curated,
   imported,
   bundled,
+}
+
+enum AuroraBgmStatus {
+  sensing,
+  calibrated,
+  riskFound,
+  needsConfirm,
+  calibrationAvailable,
+  coolingDown,
+}
+
+@immutable
+class AuroraBgmStrategy {
+  const AuroraBgmStrategy({
+    required this.status,
+    required this.duckFactor,
+    required this.description,
+    this.trackOverride,
+    this.switchBehavior = SceneBgmSwitchBehavior.retainIfAdjacent,
+    this.highlightPulse = false,
+  });
+
+  final AuroraBgmStatus status;
+  final BgmTrack? trackOverride;
+  final double duckFactor;
+  final SceneBgmSwitchBehavior switchBehavior;
+  final bool highlightPulse;
+  final String description;
 }
 
 enum BgmTrack {
@@ -594,6 +623,27 @@ class _BgmLibraryDirectories {
   final Directory rootDirectory;
   final Directory importDirectory;
   final Directory downloadDirectory;
+}
+
+/// Small Riverpod facade for the static BGM service.
+///
+/// Core keepAlive provider: BGM preferences and playback controls are global
+/// app state, so this provider intentionally uses a non-autoDispose provider.
+final bgmServiceProvider = Provider<BgmServiceController>(
+  (ref) => const BgmServiceController(),
+);
+
+@immutable
+class BgmServiceController {
+  const BgmServiceController();
+
+  Future<void> init() => BgmService.init();
+  Future<bool> isEnabled() => BgmService.isEnabled();
+  Future<void> setEnabled(bool enabled) => BgmService.setEnabled(enabled);
+  Future<double> getVolume() => BgmService.getVolume();
+  Future<void> setVolume(double volume) => BgmService.setVolume(volume);
+  Future<BgmMode> getMode() => BgmService.getMode();
+  Future<void> setMode(BgmMode mode) => BgmService.setMode(mode);
 }
 
 class BgmService {
@@ -1176,6 +1226,112 @@ class BgmService {
     await _applyDynamicMix(duration: duration);
   }
 
+  static AuroraBgmStrategy auroraStrategyForStatus(
+    String? rawStatus, {
+    BgmTrack? sceneTrack,
+  }) {
+    final status = _parseAuroraStatus(rawStatus);
+    return switch (status) {
+      AuroraBgmStatus.sensing => const AuroraBgmStrategy(
+          status: AuroraBgmStatus.sensing,
+          duckFactor: 1.0,
+          description: '保持当前页面环境音',
+        ),
+      AuroraBgmStatus.calibrated => AuroraBgmStrategy(
+          status: AuroraBgmStatus.calibrated,
+          trackOverride: sceneTrack ?? BgmTrack.dashboard,
+          duckFactor: 1.0,
+          description: '切换到轻快、稳定的氛围',
+        ),
+      AuroraBgmStatus.riskFound => const AuroraBgmStrategy(
+          status: AuroraBgmStatus.riskFound,
+          trackOverride: BgmTrack.thinking,
+          duckFactor: 0.62,
+          description: '降低复杂度并转向舒缓思考感',
+        ),
+      AuroraBgmStatus.needsConfirm => const AuroraBgmStrategy(
+          status: AuroraBgmStatus.needsConfirm,
+          duckFactor: 0.18,
+          description: '淡出背景音乐，让用户聚焦确认',
+        ),
+      AuroraBgmStatus.calibrationAvailable => const AuroraBgmStrategy(
+          status: AuroraBgmStatus.calibrationAvailable,
+          trackOverride: BgmTrack.visualUnlock,
+          duckFactor: 0.86,
+          highlightPulse: true,
+          description: '加入微妙高亮点缀，提示可校准',
+        ),
+      AuroraBgmStatus.coolingDown => const AuroraBgmStrategy(
+          status: AuroraBgmStatus.coolingDown,
+          trackOverride: BgmTrack.focusDeep,
+          duckFactor: 0.42,
+          description: '保持安静、低密度的环境音',
+        ),
+    };
+  }
+
+  static Future<Object?> applyAuroraStatus({
+    required String? status,
+    required Object? token,
+    BgmTrack? sceneTrack,
+    bool enabled = true,
+  }) async {
+    if (!enabled || status == null || status.trim().isEmpty) {
+      return clearAuroraStatus(token);
+    }
+
+    final strategy = auroraStrategyForStatus(status, sceneTrack: sceneTrack);
+    await setPersistentDuckFactor(
+      strategy.duckFactor,
+      duration: const Duration(milliseconds: 360),
+    );
+
+    if (strategy.highlightPulse) {
+      unawaited(
+        boostTemporarily(
+          factor: 1.08,
+          holdDuration: const Duration(milliseconds: 420),
+          fadeDuration: const Duration(milliseconds: 180),
+        ),
+      );
+    }
+
+    final trackOverride = strategy.trackOverride;
+    if (trackOverride == null) {
+      if (token != null) {
+        await deactivate(token);
+      }
+      return null;
+    }
+
+    if (token == null) {
+      return activate(
+        trackOverride,
+        priority: BgmPriority.component,
+        switchBehavior: strategy.switchBehavior,
+      );
+    }
+
+    await update(
+      token,
+      track: trackOverride,
+      priority: BgmPriority.component,
+      switchBehavior: strategy.switchBehavior,
+    );
+    return token;
+  }
+
+  static Future<Object?> clearAuroraStatus(Object? token) async {
+    await setPersistentDuckFactor(
+      1.0,
+      duration: const Duration(milliseconds: 280),
+    );
+    if (token != null) {
+      await deactivate(token);
+    }
+    return null;
+  }
+
   static Future<void> previewPalette(
     BgmPalette palette, {
     Duration segmentDuration = const Duration(milliseconds: 1100),
@@ -1663,6 +1819,24 @@ class BgmService {
         return true;
       default:
         return false;
+    }
+  }
+
+  static AuroraBgmStatus _parseAuroraStatus(String? rawStatus) {
+    switch (rawStatus?.trim()) {
+      case 'calibrated':
+        return AuroraBgmStatus.calibrated;
+      case 'risk_found':
+        return AuroraBgmStatus.riskFound;
+      case 'needs_confirm':
+        return AuroraBgmStatus.needsConfirm;
+      case 'calibration_available':
+        return AuroraBgmStatus.calibrationAvailable;
+      case 'cooling_down':
+        return AuroraBgmStatus.coolingDown;
+      case 'sensing':
+      default:
+        return AuroraBgmStatus.sensing;
     }
   }
 

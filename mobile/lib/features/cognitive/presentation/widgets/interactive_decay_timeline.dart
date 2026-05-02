@@ -162,7 +162,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
               Text(
                 l10n.cognitiveTimeMachine,
                 style: theme.textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                 ),
               ),
               const Spacer(),

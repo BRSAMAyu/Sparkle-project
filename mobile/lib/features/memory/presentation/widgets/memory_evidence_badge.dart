@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 enum MemoryEvidenceStatus {
   ok,
@@ -14,10 +15,11 @@ class MemoryEvidenceBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final label = switch (status) {
       MemoryEvidenceStatus.ok => 'OK',
-      MemoryEvidenceStatus.redacted => '已隐藏',
-      MemoryEvidenceStatus.missing => '缺失',
+      MemoryEvidenceStatus.redacted => zh ? '已隐藏' : 'Redacted',
+      MemoryEvidenceStatus.missing => zh ? '缺失' : 'Missing',
     };
     final color = switch (status) {
       MemoryEvidenceStatus.ok => DS.semanticSuccess,

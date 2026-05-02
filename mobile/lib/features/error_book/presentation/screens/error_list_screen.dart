@@ -10,16 +10,17 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/remediable_patterns_card.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 import 'package:sparkle/features/galaxy/galaxy_routes.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
-/// 错题列表页面
+/// Error list page.
 ///
-/// 设计原则：
-/// 1. 筛选灵活：科目、章节、掌握度、需复习等多维度筛选
-/// 2. 状态清晰：loading/empty/error 状态都有明确提示
-/// 3. 性能优化：分页加载、滑动删除
+/// Design notes:
+/// 1. Flexible filters across subject, chapter, mastery, and due reviews.
+/// 2. Clear loading, empty, and error states.
+/// 3. Paged loading and swipe deletion for performance.
 class ErrorListScreen extends ConsumerStatefulWidget {
   const ErrorListScreen({
     super.key,
@@ -46,7 +47,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
-    // 初始化时如果传入了认知维度，立即设置筛选
+    // Apply the initial cognitive dimension filter when provided.
     if (widget.filterByDimension != null) {
       ref
           .read(errorFilterProvider.notifier)
@@ -77,13 +78,13 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
             filterState.showOnlyNeedReview ||
             filterState.cognitiveDimension != null;
 
-    // 构建查询参数
+    // Build query parameters.
     final query = filterState.toQuery();
 
-    // 获取错题列表
+    // Fetch error records.
     final errorListAsync = ref.watch(errorListProvider(query));
 
-    // 获取统计数据
+    // Fetch statistics.
     final statsAsync = ref.watch(errorStatsProvider);
 
     return SparklePageScaffold(
@@ -165,7 +166,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
       child: ContentConstraint(
         child: Column(
           children: [
-            // 如果有认知维度筛选，显示提示条
+            // Show a filter hint when a cognitive dimension is active.
             if (filterState.cognitiveDimension != null)
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -188,7 +189,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                       ),
                       style: TextStyle(
                         color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         fontSize: 12,
                       ),
                     ),
@@ -225,12 +226,14 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                     const SizedBox(width: DS.spacing8),
                     Expanded(
                       child: Text(
-                        '知识点：${filterState.nodeLabel ?? filterState.nodeId}',
+                        context.l10n.errorBookKnowledgePointFilter(
+                          filterState.nodeLabel ?? filterState.nodeId!,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: theme.colorScheme.secondary,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                           fontSize: 12,
                         ),
                       ),
@@ -248,7 +251,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 ),
               ),
 
-            // 科目筛选条
+            // Subject filter bar.
             ColoredBox(
               color: theme.colorScheme.surface,
               child: Column(
@@ -266,16 +269,17 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 ],
               ),
             ),
+            const RemediablePatternsCard(),
 
-            // 列表内容
+            // List content.
             Expanded(
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  // 全部错题
+                  // All errors.
                   _buildErrorList(errorListAsync, query),
 
-                  // 待复习错题
+                  // Errors due for review.
                   _buildErrorList(
                     ref.watch(
                       errorListProvider(
@@ -302,7 +306,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
             border: InputBorder.none,
           ),
           onChanged: (value) {
-            // 防抖搜索
+            // Debounced search.
             unawaited(
               Future.delayed(
                 const Duration(milliseconds: 500),
@@ -343,7 +347,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               style: TextStyle(
                 color: DS.textOnPrimary,
                 fontSize: 11,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
               ),
             ),
           );
@@ -444,9 +448,11 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
               ? context.l10n.errorBookNoReview
               : context.l10n.errorBookNoErrors,
           description: isReviewTab
-              ? '${context.l10n.errorBookNoReviewHint} 先补记最近做错的一题，系统才会安排后续复习。'
+              ? context.l10n.errorBookNoReviewDescription
               : context.l10n.errorBookNoErrorsHint,
-          actionText: isReviewTab ? '去记录第一道错题' : context.l10n.errorBookAddFirst,
+          actionText: isReviewTab
+              ? context.l10n.errorBookRecordFirstError
+              : context.l10n.errorBookAddFirst,
           onAction: () => _navigateToAddError(context),
         ),
       );
@@ -495,7 +501,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
     final result = await context.push<bool>('/errors/new');
 
     if ((result ?? false) && mounted) {
-      // 刷新列表
+      // Refresh the list.
       ref
         ..invalidate(errorListProvider)
         ..invalidate(errorStatsProvider);
@@ -505,7 +511,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
   Future<void> _navigateToDetail(BuildContext context, String errorId) async {
     await context.push('/errors/$errorId');
 
-    // 详情页可能会更新错题，返回时刷新列表
+    // Details may update the record, so refresh on return.
     if (mounted) {
       ref
         ..invalidate(errorListProvider)
@@ -565,8 +571,8 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                   decoration: InputDecoration(
                     labelText: context.l10n.ebChapter,
                     hintText: context.l10n.ebChapterFilterHint,
-                    prefixIcon: Icon(Icons.folder_outlined),
-                    border: OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.folder_outlined),
+                    border: const OutlineInputBorder(),
                   ),
                 ),
                 const SizedBox(height: DS.spacing16),
@@ -583,7 +589,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 ),
                 const SizedBox(height: DS.spacing12),
                 Text(
-                  '认知维度',
+                  context.l10n.errorBookCognitiveDimension,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontWeight: DS.fontWeightSemibold,
                       ),
@@ -661,7 +667,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
   }
 }
 
-/// ErrorListQuery 的 copyWith 扩展
+/// copyWith extension for ErrorListQuery.
 extension ErrorListQueryCopyWith on ErrorListQuery {
   ErrorListQuery copyWith({
     String? subject,

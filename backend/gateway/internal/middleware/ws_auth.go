@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"github.com/sparkle/gateway/internal/config"
+	"github.com/sparkle/gateway/internal/logsafe"
 	"github.com/sparkle/gateway/internal/metrics"
 )
 
@@ -44,10 +45,10 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 				if err != nil {
 					log.Printf("[WsAuth] JWT header validation failed: %v", err)
 					metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_header", "invalid_token").Inc()
-					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+					abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_expired_token", "Invalid or expired token")
 					return
 				}
-				log.Printf("[WsAuth] JWT header validation success for user: %s", userID)
+				log.Printf("[WsAuth] JWT header validation success for user: %s", logsafe.UserIDHash(userID))
 				c.Set("user_id", userID)
 				c.Set("is_admin", isAdmin)
 				c.Set("auth_token", tokenString)
@@ -65,10 +66,10 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 				if err != nil {
 					log.Printf("[WsAuth] JWT query validation failed: %v", err)
 					metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "jwt_query", "invalid_token").Inc()
-					c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+					abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_expired_token", "Invalid or expired token")
 					return
 				}
-				log.Printf("[WsAuth] JWT query validation success for user: %s", userID)
+				log.Printf("[WsAuth] JWT query validation success for user: %s", logsafe.UserIDHash(userID))
 				c.Set("user_id", userID)
 				c.Set("is_admin", isAdmin)
 				c.Set("auth_token", queryToken)
@@ -81,7 +82,7 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 		ticket := extractWSTicket(c, cfg.AllowWsQueryToken)
 		if ticket == "" {
 			metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "unknown", "missing_credentials").Inc()
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization token required"})
+			abortWithAPIError(c, http.StatusUnauthorized, "authorization_token_required", "Authorization token required")
 			return
 		}
 
@@ -93,7 +94,7 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 		if err != nil || val == nil {
 			metrics.WSTicketConsumeFailure.WithLabelValues("invalid_or_expired").Inc()
 			metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "ticket", "invalid_or_expired").Inc()
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired ticket"})
+			abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_expired_ticket", "Invalid or expired ticket")
 			return
 		}
 
@@ -101,7 +102,7 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 		if !ok || valStr == "" {
 			metrics.WSTicketConsumeFailure.WithLabelValues("invalid_payload").Inc()
 			metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "ticket", "invalid_payload").Inc()
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid ticket payload"})
+			abortWithAPIError(c, http.StatusUnauthorized, "invalid_ticket_payload", "Invalid ticket payload")
 			return
 		}
 		payload := wsTicketPayload{UserID: valStr}
@@ -110,7 +111,7 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 			if err := json.Unmarshal([]byte(trimmed), &payload); err != nil {
 				metrics.WSTicketConsumeFailure.WithLabelValues("invalid_payload").Inc()
 				metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "ticket", "invalid_payload").Inc()
-				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid ticket payload"})
+				abortWithAPIError(c, http.StatusUnauthorized, "invalid_ticket_payload", "Invalid ticket payload")
 				return
 			}
 		}
@@ -118,7 +119,7 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 		if userID == "" {
 			metrics.WSTicketConsumeFailure.WithLabelValues("invalid_payload").Inc()
 			metrics.WSConnectionError.WithLabelValues(wsEndpointLabel(c), "ticket", "invalid_payload").Inc()
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid ticket payload"})
+			abortWithAPIError(c, http.StatusUnauthorized, "invalid_ticket_payload", "Invalid ticket payload")
 			return
 		}
 

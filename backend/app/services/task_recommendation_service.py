@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID
 
-from sqlalchemy import nullsfirst, select
+from sqlalchemy import nullsfirst, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
@@ -74,7 +74,10 @@ class TaskRecommendationService:
             .where(
                 UserNodeStatus.user_id == user_id,
                 UserNodeStatus.mastery_score < priority_threshold,
-                UserNodeStatus.mastery_score > 5,
+                or_(
+                    UserNodeStatus.mastery_score > 5,
+                    KnowledgeNode.source_type == "translation",
+                ),
             )
             .order_by(nullsfirst(UserNodeStatus.next_review_at.asc()))
             .limit(10)

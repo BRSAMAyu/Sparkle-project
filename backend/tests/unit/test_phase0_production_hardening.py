@@ -8,6 +8,7 @@ import pytest
 from app.config import settings
 from app.config.settings import Settings
 from app.core.email_service import EmailService
+from tests._credentials import TEST_INTERNAL_API_KEY
 
 
 def _production_settings(**overrides):
@@ -18,7 +19,7 @@ def _production_settings(**overrides):
         "DATABASE_URL": "postgresql+asyncpg://postgres:secret@sparkle_db:5432/sparkle",
         "POSTGRES_PASSWORD": "postgres_secret",
         "REDIS_PASSWORD": "redis_secret",
-        "INTERNAL_API_KEY": "internal_secret",
+        "INTERNAL_API_KEY": TEST_INTERNAL_API_KEY,
         "MINIO_ACCESS_KEY": "minio_access",
         "MINIO_SECRET_KEY": "minio_secret",
         "LLM_API_KEY": "llm_secret",

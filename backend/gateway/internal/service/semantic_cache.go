@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -100,11 +101,17 @@ func (s *SemanticCacheService) Search(ctx context.Context, vector []float32, lan
 	// The structure depends on the driver's parsing of the array.
 	// go-redis usually returns []interface{}
 	results, ok := res.([]interface{})
-	if !ok || len(results) < 2 {
-		return "", nil // No results
+	if !ok {
+		return "", fmt.Errorf("unexpected FT.SEARCH response type %T", res)
+	}
+	if len(results) == 0 {
+		return "", fmt.Errorf("empty FT.SEARCH response")
 	}
 
-	count := results[0].(int64)
+	count, err := redisSearchResultCount(results[0])
+	if err != nil {
+		return "", err
+	}
 	if count == 0 {
 		return "", nil
 	}
@@ -117,18 +124,71 @@ func (s *SemanticCacheService) Search(ctx context.Context, vector []float32, lan
 
 	// In some go-redis versions/configurations, FT.SEARCH returns a complex structure.
 	// We'll traverse carefully.
-	if len(results) > 2 {
-		fields, ok := results[2].([]interface{})
-		if ok {
-			for i := 0; i < len(fields); i += 2 {
-				key, _ := fields[i].(string)
-				if key == "payload" {
-					val, _ := fields[i+1].(string)
-					return val, nil
-				}
-			}
-		}
+	if len(results) < 3 {
+		return "", fmt.Errorf("FT.SEARCH response missing fields for %d result(s)", count)
 	}
 
-	return "", nil
+	return redisSearchPayload(results[2])
+}
+
+func redisSearchResultCount(raw interface{}) (int64, error) {
+	switch v := raw.(type) {
+	case int64:
+		return v, nil
+	case int:
+		return int64(v), nil
+	case int32:
+		return int64(v), nil
+	case uint64:
+		if v > math.MaxInt64 {
+			return 0, fmt.Errorf("FT.SEARCH result count overflows int64: %d", v)
+		}
+		return int64(v), nil
+	case string:
+		count, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("invalid FT.SEARCH result count %q: %w", v, err)
+		}
+		return count, nil
+	default:
+		return 0, fmt.Errorf("unexpected FT.SEARCH result count type %T", raw)
+	}
+}
+
+func redisSearchPayload(raw interface{}) (string, error) {
+	switch fields := raw.(type) {
+	case []interface{}:
+		if len(fields)%2 != 0 {
+			return "", fmt.Errorf("malformed FT.SEARCH fields: odd field count %d", len(fields))
+		}
+		for i := 0; i < len(fields); i += 2 {
+			key, ok := fields[i].(string)
+			if !ok {
+				return "", fmt.Errorf("unexpected FT.SEARCH field name type at index %d: %T", i, fields[i])
+			}
+			if key != "payload" {
+				continue
+			}
+			val, ok := fields[i+1].(string)
+			if !ok {
+				return "", fmt.Errorf("unexpected FT.SEARCH payload type %T", fields[i+1])
+			}
+			return val, nil
+		}
+		return "", fmt.Errorf("FT.SEARCH result missing payload field")
+	case map[string]interface{}:
+		rawPayload, ok := fields["payload"]
+		if !ok {
+			return "", fmt.Errorf("FT.SEARCH result missing payload field")
+		}
+		payload, ok := rawPayload.(string)
+		if !ok {
+			return "", fmt.Errorf("unexpected FT.SEARCH payload type %T", rawPayload)
+		}
+		return payload, nil
+	case nil:
+		return "", fmt.Errorf("nil FT.SEARCH fields")
+	default:
+		return "", fmt.Errorf("unexpected FT.SEARCH fields type %T", raw)
+	}
 }

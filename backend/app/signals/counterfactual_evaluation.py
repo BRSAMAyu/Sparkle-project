@@ -24,6 +24,8 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+import hashlib
+import json
 from typing import Any
 
 from app.signals.intervention_episode import (
@@ -794,3 +796,333 @@ class CounterfactualIronLawEnforcer:
                 for name, (compliant, violations) in results.items()
             },
         }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 8. Production pipeline helpers
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class CounterfactualReportService:
+    """Production persistence and promotion boundary for counterfactual reports."""
+
+    DEFAULT_ALTERNATIVES = ("reduce_pace", "simplify_task", "worked_example_first")
+
+    def __init__(self, db: Any, redis: Any | None = None):
+        self.db = db
+        self.redis = redis
+
+    async def run_daily_evaluations(
+        self,
+        *,
+        user_ids: list[str] | None = None,
+        limit_users: int = 500,
+        max_pairs_per_user: int = 8,
+    ) -> dict[str, Any]:
+        """Scan eligible InterventionEpisode groups and persist comparison reports."""
+        from sqlalchemy import select
+
+        from app.models.user import User
+
+        if user_ids is None:
+            discovered = await self._discover_user_ids_from_redis(limit=limit_users)
+            if discovered:
+                user_ids = discovered[:limit_users]
+            else:
+                result = await self.db.execute(
+                    select(User.id).where(User.is_active.is_(True)).limit(limit_users),
+                )
+                user_ids = [str(row[0]) for row in result.all()]
+
+        generated = 0
+        skipped_users = 0
+        policy_pairs = 0
+        violations: list[str] = []
+
+        for user_id in user_ids[:limit_users]:
+            episodes = await self.load_user_episodes(user_id)
+            if len(episodes) < 2:
+                skipped_users += 1
+                continue
+            for policy_a, policy_b, pair_episodes in self._eligible_policy_pairs(
+                episodes,
+                max_pairs=max_pairs_per_user,
+            ):
+                policy_pairs += 1
+                report = await self.create_report_from_episodes(
+                    user_id=user_id,
+                    policy_a=policy_a,
+                    policy_b=policy_b,
+                    episodes=pair_episodes,
+                )
+                compliance = report.iron_law_compliance if isinstance(report.iron_law_compliance, dict) else {}
+                violations.extend(compliance.get("violations") or [])
+                generated += 1
+
+        await self.db.commit()
+        await self.refresh_pending_metric()
+        return {
+            "users_scanned": len(user_ids),
+            "users_skipped": skipped_users,
+            "policy_pairs_evaluated": policy_pairs,
+            "reports_generated": generated,
+            "iron_law_violations": sorted(set(violations)),
+        }
+
+    async def create_report_from_episodes(
+        self,
+        *,
+        user_id: str,
+        policy_a: str,
+        policy_b: str,
+        episodes: list[InterventionEpisode],
+    ) -> Any:
+        """Evaluate one policy pair, enforce iron laws, and persist a report row."""
+        from app.aurora.runtime_v1.models import CounterfactualReport
+        from app.core.metrics import (
+            COUNTERFACTUAL_EVIDENCE_GRADE,
+            COUNTERFACTUAL_REPORTS_GENERATED,
+        )
+
+        target_context = self._dominant_context(episodes)
+        estimate = MatchedContextEvaluator.evaluate(
+            actual_policy=policy_a,
+            alternative_policy=policy_b,
+            episodes=episodes,
+            target_context=target_context,
+        )
+        candidate = PolicyUpdateCandidateBuilder.from_estimate(
+            estimate,
+            distinct_users_actual=self._distinct_users_for_policy(episodes, policy_a),
+            distinct_users_alternative=self._distinct_users_for_policy(episodes, policy_b),
+            guardrail_passed=self._guardrails_passed(episodes),
+        )
+        is_high_risk = any(ep.risk_level in {"high", "critical"} for ep in episodes)
+        compliance = CounterfactualIronLawEnforcer.enforce_all(
+            estimate,
+            is_high_risk=is_high_risk,
+            candidate=candidate,
+        )
+        confidence = self._estimate_confidence(estimate)
+        context_signature = estimate.target_context.to_dict()
+        context_hash = self._context_hash(context_signature)
+        promotion_status = self._promotion_status(candidate, compliance)
+
+        report = CounterfactualReport(
+            user_id=user_id,
+            context_signature=context_signature,
+            context_hash=context_hash,
+            policy_a=policy_a,
+            policy_b=policy_b,
+            estimate=estimate.to_dict(),
+            confidence=confidence,
+            evidence_grade=estimate.evidence_grade.grade,
+            generated_at=datetime.now(UTC).replace(tzinfo=None),
+            promotion_candidate=candidate.to_dict(),
+            promotion_status=promotion_status,
+            iron_law_compliance=compliance,
+            runtime_metadata={
+                "episode_count": len(episodes),
+                "source": "daily_counterfactual_evaluation",
+            },
+        )
+        self.db.add(report)
+        await self.db.flush()
+        await self._mark_replaced_reports(report)
+        await self.db.flush()
+        COUNTERFACTUAL_REPORTS_GENERATED.labels(status=promotion_status).inc()
+        COUNTERFACTUAL_EVIDENCE_GRADE.observe(estimate.evidence_grade.grade)
+        return report
+
+    async def list_reports(
+        self,
+        *,
+        user_id: str,
+        include_replaced: bool = False,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[Any]:
+        from sqlalchemy import desc, select
+
+        from app.aurora.runtime_v1.models import CounterfactualReport
+
+        stmt = select(CounterfactualReport).where(
+            CounterfactualReport.user_id == user_id,
+            CounterfactualReport.deleted_at.is_(None),
+        )
+        if not include_replaced:
+            stmt = stmt.where(CounterfactualReport.replaced_by_id.is_(None))
+        stmt = stmt.order_by(desc(CounterfactualReport.generated_at)).offset(offset).limit(limit)
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_report(self, report_id: str, *, user_id: str | None = None) -> Any | None:
+        from uuid import UUID
+
+        from sqlalchemy import select
+
+        from app.aurora.runtime_v1.models import CounterfactualReport
+
+        stmt = select(CounterfactualReport).where(
+            CounterfactualReport.id == UUID(str(report_id)),
+            CounterfactualReport.deleted_at.is_(None),
+        )
+        if user_id is not None:
+            stmt = stmt.where(CounterfactualReport.user_id == user_id)
+        result = await self.db.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def promote_report(self, report_id: str, *, admin_user_id: str) -> Any:
+        report = await self.get_report(report_id)
+        if report is None:
+            raise ValueError("counterfactual_report_not_found")
+
+        candidate = dict(report.promotion_candidate or {})
+        compliance = dict(report.iron_law_compliance or {})
+        blocked = list(candidate.get("promotion_blocked_reasons") or [])
+        if not compliance.get("compliant", False) or blocked:
+            raise ValueError(
+                "counterfactual_promotion_blocked:"
+                + ",".join(sorted(set(blocked + list(compliance.get("violations") or [])))),
+            )
+
+        report.promotion_status = "pending_review"
+        metadata = dict(report.runtime_metadata or {})
+        metadata["promotion_requested_by"] = admin_user_id
+        metadata["promotion_requested_at"] = datetime.now(UTC).isoformat()
+        report.runtime_metadata = metadata
+        self.db.add(report)
+        await self.db.commit()
+        await self.db.refresh(report)
+        await self.refresh_pending_metric()
+        return report
+
+    async def refresh_pending_metric(self) -> int:
+        from sqlalchemy import func, select
+
+        from app.aurora.runtime_v1.models import CounterfactualReport
+        from app.core.metrics import COUNTERFACTUAL_PROMOTION_PENDING
+
+        result = await self.db.execute(
+            select(func.count()).select_from(CounterfactualReport).where(
+                CounterfactualReport.promotion_status == "pending_review",
+                CounterfactualReport.deleted_at.is_(None),
+            ),
+        )
+        pending = int(result.scalar() or 0)
+        COUNTERFACTUAL_PROMOTION_PENDING.set(pending)
+        return pending
+
+    async def load_user_episodes(self, user_id: str) -> list[InterventionEpisode]:
+        if self.redis is None:
+            return []
+        key = f"spine:episodes:{user_id}"
+        raw_ids = await self.redis.lrange(key, 0, -1)
+        episodes: list[InterventionEpisode] = []
+        for raw_id in raw_ids or []:
+            episode_id = self._decode(raw_id)
+            raw_episode = await self.redis.get(f"spine:episode:{user_id}:{episode_id}")
+            if not raw_episode:
+                continue
+            try:
+                episodes.append(InterventionEpisode.from_dict(json.loads(self._decode(raw_episode))))
+            except Exception:
+                continue
+        return episodes
+
+    async def _discover_user_ids_from_redis(self, *, limit: int) -> list[str]:
+        if self.redis is None or not hasattr(self.redis, "scan_iter"):
+            return []
+        user_ids: list[str] = []
+        async for raw_key in self.redis.scan_iter(match="spine:episodes:*", count=200):
+            key = self._decode(raw_key)
+            user_id = key.rsplit(":", 1)[-1]
+            if user_id and user_id not in user_ids:
+                user_ids.append(user_id)
+            if len(user_ids) >= limit:
+                break
+        return user_ids
+
+    async def _mark_replaced_reports(self, new_report: Any) -> None:
+        from sqlalchemy import desc, select
+
+        from app.aurora.runtime_v1.models import CounterfactualReport
+
+        result = await self.db.execute(
+            select(CounterfactualReport)
+            .where(
+                CounterfactualReport.user_id == new_report.user_id,
+                CounterfactualReport.context_hash == new_report.context_hash,
+                CounterfactualReport.policy_a == new_report.policy_a,
+                CounterfactualReport.policy_b == new_report.policy_b,
+                CounterfactualReport.id != new_report.id,
+                CounterfactualReport.replaced_by_id.is_(None),
+                CounterfactualReport.deleted_at.is_(None),
+            )
+            .order_by(desc(CounterfactualReport.generated_at)),
+        )
+        old_reports = list(result.scalars().all())
+        for old_report in old_reports:
+            old_report.replaced_by_id = new_report.id
+            self.db.add(old_report)
+
+    @classmethod
+    def _eligible_policy_pairs(
+        cls,
+        episodes: list[InterventionEpisode],
+        *,
+        max_pairs: int,
+    ) -> list[tuple[str, str, list[InterventionEpisode]]]:
+        grouped = InterventionEpisodeLedger.group_by_policy(episodes)
+        policies = sorted(policy for policy, items in grouped.items() if policy and items)
+        pairs: list[tuple[str, str, list[InterventionEpisode]]] = []
+        for i, policy_a in enumerate(policies):
+            for policy_b in policies[i + 1 :]:
+                pair_episodes = grouped[policy_a] + grouped[policy_b]
+                pairs.append((policy_a, policy_b, pair_episodes))
+                if len(pairs) >= max_pairs:
+                    return pairs
+        return pairs
+
+    @staticmethod
+    def _dominant_context(episodes: list[InterventionEpisode]) -> ContextSignature:
+        if not episodes:
+            return ContextSignature()
+        return episodes[-1].context_signature
+
+    @staticmethod
+    def _estimate_confidence(estimate: CounterfactualEstimate) -> float:
+        if not estimate.estimated_effects:
+            return 0.0
+        return round(max(effect.confidence for effect in estimate.estimated_effects), 4)
+
+    @staticmethod
+    def _distinct_users_for_policy(episodes: list[InterventionEpisode], policy: str) -> int:
+        return len({ep.user_id for ep in episodes if ep.selected_policy == policy and ep.user_id})
+
+    @staticmethod
+    def _guardrails_passed(episodes: list[InterventionEpisode]) -> bool:
+        for episode in episodes:
+            violated, _ = episode.outcome_vector.has_guardrail_violation()
+            if violated or episode.risk_level in {"high", "critical"}:
+                return False
+        return True
+
+    @staticmethod
+    def _promotion_status(candidate: PolicyUpdateCandidate, compliance: dict[str, Any]) -> str:
+        if not compliance.get("compliant", False):
+            return "blocked"
+        if candidate.promotion_blocked_reasons:
+            return "not_ready"
+        return "candidate_ready"
+
+    @staticmethod
+    def _context_hash(context_signature: dict[str, Any]) -> str:
+        payload = json.dumps(context_signature, sort_keys=True, ensure_ascii=True)
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _decode(raw: Any) -> str:
+        if isinstance(raw, bytes):
+            return raw.decode("utf-8")
+        return str(raw)

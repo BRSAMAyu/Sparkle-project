@@ -1,0 +1,14 @@
+{
+  "@@locale": "en",
+  "goalDetailTitle": "Goal detail",
+  "goalDetailProgress": "Overall progress",
+  "goalDetailMastery": "Mastery",
+  "goalDetailTargetDate": "Target date",
+  "goalDetailPriority": "Priority",
+  "goalDetailMinimumLine": "Minimum bar",
+  "goalDetailBottlenecks": "Knowledge bottlenecks",
+  "goalDetailTodayStep": "Today’s smallest next step",
+  "goalDetailPlanHealth": "Plan health",
+  "goalDetailAccountability": "Accountability",
+  "goalDetailRelatedSources": "Related sources"
+}

@@ -196,7 +196,7 @@ class _ShareResourceSheetState extends ConsumerState<ShareResourceSheet>
               widget.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: DS.fontWeightBold),
             ),
             if (widget.subtitle != null && widget.subtitle!.isNotEmpty) ...[
               const SizedBox(height: 4),

@@ -1,0 +1,19 @@
+FV-22: 社群资源质量评分 + cohort 阈值上调
+Status: DONE
+Branch: codex/FV-17-source-lifecycle
+Modified files:
+- backend/app/services/community_service.py
+- backend/app/api/v1/community.py
+- backend/app/core/metrics.py
+- backend/app/models/community.py
+- backend/tests/test_fv22_resource_quality.py
+- scripts/rule_guard_manifest.tsv (i18n guard, not FV-22 specific)
+Verification:
+- pytest tests/test_fv22_resource_quality.py: 20 PASSED
+- pytest tests/integration/test_community_integration.py: 22 PASSED, 2 SKIPPED
+- COHORT_AGGREGATION_MIN_K == 5: CONFIRMED
+- CommunityResourceScorer with compute_quality_score / should_hide / update_resource_quality / flag_misleading: CONFIRMED
+- API GET /resources?sort=quality: CONFIRMED
+- Prometheus metrics sparkle_community_resource_quality_score + sparkle_community_resource_misleading_flags_total: CONFIRMED
+User-visible change: 社群资源现在按质量评分排序，低评分自动隐藏，用户可标记"误导我"使其立即降权
+Architect handoff: N/A

@@ -1,14 +1,14 @@
 """
 Core: execution
 Phase: adapt
-Stage: P4 Research-Grade — Counterfactual evaluation + User Simulator + Domain Pack
+Stage: P4 Research-Grade — DEPRECATED v1 module
 
-Three research-grade capabilities:
-1. CounterfactualEngine — "what would have happened without intervention?"
-2. UserSimulator — synthetic user for strategy testing
-3. DomainPackMarketplace — user-contributed domain strategy packs
+DEPRECATED: This module contains v1 implementations replaced by v2 modules.
+- CounterfactualEngine → app.signals.counterfactual_evaluation (MatchedContextEvaluator, CounterfactualReportService)
+- UserSimulator / SimulatedUserProfile → app.signals.simulation_lab (SyntheticPersonaSimulator, ScenarioSimulator)
+- DomainPack / DomainPackMarketplace → app.signals.marketplace (SkillCard, MarketplaceRegistry, MarketplaceIronLaws)
 
-All pure computation, no external I/O.
+This file will be removed in the next sprint. Do not add new code here.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from typing import Any
 from app.signals.types import OutcomeRecord, _uid
 
 # ═══════════════════════════════════════════════════════════════════════
-# 1. Counterfactual Engine
+# 1. Counterfactual Engine — DEPRECATED: use counterfactual_evaluation.py
 # ═══════════════════════════════════════════════════════════════════════
 
 
@@ -49,7 +49,9 @@ class CounterfactualResult:
 
 
 class CounterfactualEngine:
-    """Estimate what would have happened without intervention.
+    """DEPRECATED: replaced by counterfactual_evaluation.py — use MatchedContextEvaluator + CounterfactualReportService.
+
+    Estimate what would have happened without intervention.
 
     Uses three methods, selected by data availability:
     - baseline_comparison: compare to user's baseline rate
@@ -195,13 +197,16 @@ class CounterfactualEngine:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# 2. User Simulator
+# 2. User Simulator — DEPRECATED: use simulation_lab.py (SyntheticPersonaSimulator)
 # ═══════════════════════════════════════════════════════════════════════
 
 
 @dataclass
 class SimulatedUserProfile:
-    """A synthetic user for testing strategy effectiveness."""
+    """DEPRECATED: replaced by simulation_lab.py Persona class.
+
+    A synthetic user for testing strategy effectiveness.
+    """
     profile_id: str
     baseline_ability: float      # 0-1
     consistency: float           # 0-1 (how predictable)
@@ -223,7 +228,10 @@ class SimulatedUserProfile:
 
 
 class UserSimulator:
-    """Simulate user responses to test strategy effectiveness."""
+    """DEPRECATED: replaced by simulation_lab.py — use SyntheticPersonaSimulator + ScenarioSimulator.
+
+    Simulate user responses to test strategy effectiveness.
+    """
 
     def simulate_outcome(
         self,
@@ -335,12 +343,13 @@ class UserSimulator:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# 3. Domain Pack Marketplace
+# 3. Domain Pack Marketplace — DEPRECATED: use marketplace.py (SkillCard, MarketplaceRegistry)
 # ═══════════════════════════════════════════════════════════════════════
 
 
 @dataclass
 class DomainPack:
+    """DEPRECATED: replaced by marketplace.py SkillCard class."""
     pack_id: str
     name: str
     description: str
@@ -374,7 +383,10 @@ class DomainPack:
 
 
 class DomainPackMarketplace:
-    """Manage user-contributed domain strategy packs."""
+    """DEPRECATED: replaced by marketplace.py — use MarketplaceRegistry + MarketplaceIronLaws.
+
+    Manage user-contributed domain strategy packs.
+    """
 
     def __init__(self, redis_client: Any):
         self.redis = redis_client

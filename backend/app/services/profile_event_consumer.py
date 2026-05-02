@@ -21,6 +21,7 @@ from app.core.event_types import (
     CAPSULE_FEEDBACK_SUBMITTED,
     CAPSULE_REGENERATE_REQUESTED,
     TOOL_HISTORY_RECORDED,
+    TOOL_USAGE_EVENT,
 )
 from app.db.session import AsyncSessionLocal
 from app.models.seed_content import SeedLibrary
@@ -51,6 +52,7 @@ class ProfileEventConsumer:
         CAPSULE_FAVORITE_UPDATED,
         CAPSULE_CONTENT_UPDATED,
         TOOL_HISTORY_RECORDED,
+        TOOL_USAGE_EVENT,
         ACCOUNTABILITY_PARTNERSHIP_UPDATED,
         ACCOUNTABILITY_CHECKIN_CREATED,
     }
@@ -88,13 +90,13 @@ class ProfileEventConsumer:
             await self._handle_behavior_pattern_updated(event)
         elif event_type == "focus.session.completed":
             await self._handle_focus_session_completed(event)
-        elif event_type in {"error_created", "error.created"}:
+        elif event_type == "error_created":
             await self._handle_error_created(event)
         elif event_type in {"seed.created", "seed.consumed"}:
             await self._handle_seed_library_event(event)
         elif event_type == CAPSULE_FAVORITE_UPDATED:
             await self._handle_capsule_favorite_updated(event)
-        elif event_type == TOOL_HISTORY_RECORDED:
+        elif event_type == TOOL_USAGE_EVENT:
             await self._handle_tool_history_recorded(event)
         elif event_type in self.INSIGHT_SIGNAL_EVENTS:
             await self._handle_insight_signal_family_updated(event)
@@ -274,7 +276,8 @@ class ProfileEventConsumer:
             return None
         try:
             return await db.get(SeedLibrary, UUID(str(library_id)))
-        except Exception:
+        except Exception as db_exc:
+            logger.warning("Failed to load SeedLibrary %s: %s", library_id, db_exc)
             return None
 
     async def _invalidate_context_cache(self, user_id: str) -> None:

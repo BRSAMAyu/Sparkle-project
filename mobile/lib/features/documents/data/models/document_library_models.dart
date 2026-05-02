@@ -18,6 +18,39 @@ enum DocumentStatus {
   }
 }
 
+enum SourceLifecycleStatus {
+  active,
+  archived,
+  revoked,
+  orphaned;
+
+  static SourceLifecycleStatus fromRaw(String? value) {
+    switch ((value ?? '').trim().toLowerCase()) {
+      case 'archived':
+        return SourceLifecycleStatus.archived;
+      case 'revoked':
+        return SourceLifecycleStatus.revoked;
+      case 'orphaned':
+        return SourceLifecycleStatus.orphaned;
+      default:
+        return SourceLifecycleStatus.active;
+    }
+  }
+
+  String get label {
+    switch (this) {
+      case SourceLifecycleStatus.active:
+        return '可用';
+      case SourceLifecycleStatus.archived:
+        return '已归档';
+      case SourceLifecycleStatus.revoked:
+        return '已撤权';
+      case SourceLifecycleStatus.orphaned:
+        return '目标已结束';
+    }
+  }
+}
+
 enum DocumentDateFilter {
   all,
   last7Days,
@@ -171,6 +204,8 @@ class DocumentLibraryItem {
     this.processingStatus,
     this.attachedNodes = const <DocumentGalaxyNode>[],
     this.citationInsight = const DocumentCitationInsight(),
+    this.lifecycleStatus = SourceLifecycleStatus.active,
+    this.archiveReviewDueAt,
     this.qualityScore,
     this.subjectArea,
     this.errorMessage,
@@ -190,6 +225,9 @@ class DocumentLibraryItem {
           ) ??
           DateTime.now(),
       visibility: json['visibility']?.toString() ?? 'private',
+      lifecycleStatus:
+          SourceLifecycleStatus.fromRaw(json['lifecycle_status']?.toString()),
+      archiveReviewDueAt: _readDateTime(json['archive_review_due_at']),
       fileSizeBytes: (json['file_size'] as num?)?.toInt(),
       errorMessage: json['error_message']?.toString(),
       qualityScore: (json['document_quality_score'] as num?)?.toDouble(),
@@ -206,6 +244,8 @@ class DocumentLibraryItem {
   final DocumentProcessingStatus? processingStatus;
   final List<DocumentGalaxyNode> attachedNodes;
   final DocumentCitationInsight citationInsight;
+  final SourceLifecycleStatus lifecycleStatus;
+  final DateTime? archiveReviewDueAt;
   final String? subjectArea;
   final double? qualityScore;
   final String? errorMessage;
@@ -221,6 +261,8 @@ class DocumentLibraryItem {
     DocumentProcessingStatus? processingStatus,
     List<DocumentGalaxyNode>? attachedNodes,
     DocumentCitationInsight? citationInsight,
+    SourceLifecycleStatus? lifecycleStatus,
+    DateTime? archiveReviewDueAt,
     String? subjectArea,
     double? qualityScore,
     String? errorMessage,
@@ -236,6 +278,8 @@ class DocumentLibraryItem {
       processingStatus: processingStatus ?? this.processingStatus,
       attachedNodes: attachedNodes ?? this.attachedNodes,
       citationInsight: citationInsight ?? this.citationInsight,
+      lifecycleStatus: lifecycleStatus ?? this.lifecycleStatus,
+      archiveReviewDueAt: archiveReviewDueAt ?? this.archiveReviewDueAt,
       subjectArea: subjectArea ?? this.subjectArea,
       qualityScore: qualityScore ?? this.qualityScore,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -243,6 +287,8 @@ class DocumentLibraryItem {
   }
 
   DocumentStatus get effectiveStatus => processingStatus?.status ?? rawStatus;
+
+  bool get participatesInRag => lifecycleStatus == SourceLifecycleStatus.active;
 
   int get knowledgeStarCount {
     final attachedCount = attachedNodes.length;
@@ -273,7 +319,8 @@ class DocumentLibraryItem {
   bool matchesQuery(String query) {
     final normalized = query.trim().toLowerCase();
     if (normalized.isEmpty) return true;
-    return searchCorpus.any((entry) => entry.toLowerCase().contains(normalized));
+    return searchCorpus
+        .any((entry) => entry.toLowerCase().contains(normalized));
   }
 }
 

@@ -100,6 +100,26 @@ class Ws6ProfileRevertActionModel {
   final bool requiresDialogue;
 }
 
+class Ws6ProfileCorrectionHistoryItemModel {
+  const Ws6ProfileCorrectionHistoryItemModel({
+    required this.id,
+    required this.targetId,
+    required this.fieldName,
+    required this.action,
+    required this.summary,
+    required this.createdAtLabel,
+    required this.canUndo,
+  });
+
+  final String id;
+  final String targetId;
+  final String fieldName;
+  final String action;
+  final String summary;
+  final String createdAtLabel;
+  final bool canUndo;
+}
+
 class Ws6TransparentProfileViewModel {
   const Ws6TransparentProfileViewModel({
     required this.enabled,
@@ -109,6 +129,7 @@ class Ws6TransparentProfileViewModel {
     required this.mediatedItems,
     required this.hiddenItemCount,
     required this.revertActions,
+    required this.recentCorrections,
     required this.calibrationPosture,
     required this.unknowns,
     required this.bindingNotes,
@@ -126,6 +147,7 @@ class Ws6TransparentProfileViewModel {
         mediatedItems: const <Ws6TransparentProfileItemModel>[],
         hiddenItemCount: 0,
         revertActions: const <Ws6ProfileRevertActionModel>[],
+        recentCorrections: const <Ws6ProfileCorrectionHistoryItemModel>[],
         calibrationPosture: '',
         unknowns: const <String>[],
         bindingNotes: List<String>.unmodifiable(bindingNotes),
@@ -138,6 +160,7 @@ class Ws6TransparentProfileViewModel {
   final List<Ws6TransparentProfileItemModel> mediatedItems;
   final int hiddenItemCount;
   final List<Ws6ProfileRevertActionModel> revertActions;
+  final List<Ws6ProfileCorrectionHistoryItemModel> recentCorrections;
   final String calibrationPosture;
   final List<String> unknowns;
   final List<String> bindingNotes;
@@ -151,6 +174,7 @@ class Ws6TransparentProfileViewModel {
         mediatedItems: mediatedItems,
         hiddenItemCount: hiddenItemCount,
         revertActions: revertActions,
+        recentCorrections: recentCorrections,
         calibrationPosture: calibrationPosture,
         unknowns: unknowns,
         bindingNotes: List<String>.unmodifiable(notes),

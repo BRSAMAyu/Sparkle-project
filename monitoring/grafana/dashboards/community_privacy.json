@@ -1,0 +1,118 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "sum(rate(sparkle_community_privacy_aggregates_total[5m])) by (stat_name, privacy_tier, result)",
+          "legendFormat": "{{stat_name}}/{{privacy_tier}}/{{result}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Privacy Aggregates",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum(rate(sparkle_community_privacy_budget_spent_total[5m])) by (query_type, status)",
+          "legendFormat": "{{query_type}}/{{status}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Epsilon Spend Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 8
+      },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "min(sparkle_community_privacy_budget_remaining) by (query_type)",
+          "legendFormat": "{{query_type}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Minimum Budget Remaining",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum(rate(sparkle_community_privacy_cohort_size_bucket[5m])) by (le, stat_name, privacy_tier))",
+          "legendFormat": "p50 {{stat_name}}/{{privacy_tier}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Cohort Size p50",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "sparkle",
+    "community",
+    "privacy"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Sparkle Community Privacy",
+  "uid": "sparkle-community-privacy",
+  "version": 1,
+  "weekStart": ""
+}

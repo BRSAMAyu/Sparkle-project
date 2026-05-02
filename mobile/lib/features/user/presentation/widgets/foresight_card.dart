@@ -13,6 +13,7 @@ class ForesightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final value = hint?.value;
     final confidenceItems =
         value?.attractorConfidences ?? const <ForesightConfidenceItem>[];
@@ -43,9 +44,12 @@ class ForesightCard extends StatelessWidget {
               Text(
                 [
                   if ((value?.deviationCount ?? 0) > 0)
-                    '偏离 ${value!.deviationCount} 个',
+                    (zh
+                        ? '偏离 ${value!.deviationCount} 个'
+                        : '${value!.deviationCount} deviations'),
                   if (value?.generatedAt != null)
-                    DateFormat('M月d日 HH:mm').format(value!.generatedAt!),
+                    DateFormat(zh ? 'M月d日 HH:mm' : 'MMM d, HH:mm')
+                        .format(value!.generatedAt!),
                 ].join(' · '),
                 style: DS.bodySmall.copyWith(color: DS.textSecondary),
               ),

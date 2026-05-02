@@ -342,7 +342,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                         overflow: TextOverflow.ellipsis,
                         style:
                             Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: DS.fontWeightBold,
                                   color: node.isTarget
                                       ? Theme.of(context).primaryColor
                                       : null,

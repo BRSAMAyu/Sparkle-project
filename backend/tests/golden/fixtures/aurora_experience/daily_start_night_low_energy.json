@@ -1,0 +1,19 @@
+{
+  "id": "daily_start_night_low_energy",
+  "family": "daily_start",
+  "kind": "daily_start",
+  "title": "每日开场：夜间低能量",
+  "input": {
+    "greeting": "晚上好",
+    "display_name": "Rae",
+    "plan_name": "英语六级冲刺",
+    "subject": "英语六级",
+    "day_index": 7,
+    "today_focus": "听力错因整理",
+    "estimated_minutes": 25,
+    "completion_rate": 0.3,
+    "adjustment_reason": "昨天完成率 30%，今天先缩小任务切口，优先完成核心任务。",
+    "day_recommendation": "只保留一段听力和 5 个错因标签",
+    "calendar_note": "今天日程比较满，我会把开场压短一点"
+  }
+}

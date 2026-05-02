@@ -10,7 +10,9 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
 import 'package:sparkle/features/knowledge/presentation/providers/vocabulary_provider.dart';
+import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/features/vocabulary/data/services/offline_dictionary_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -35,6 +37,7 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
   final FocusNode _focusNode = FocusNode();
   bool _isInLocalWordbook = false;
   bool _isDownloadingDictionary = false;
+  bool _loadError = false;
   int _installedPackageCount = 0;
   List<DictionaryPackageInfo> _availablePackages = const [];
   List<InstalledDictionaryPackage> _installedPackages = const [];
@@ -56,6 +59,11 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
   }
 
   Future<void> _refreshDictionaryPackages() async {
+    if (mounted && _loadError) {
+      setState(() {
+        _loadError = false;
+      });
+    }
     try {
       final repository = ref.read(vocabularyRepositoryProvider);
       final installed = await repository.getInstalledDictionaryPackageDetails();
@@ -67,8 +75,15 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
         _installedPackageCount = installed.length;
         _installedPackages = installed;
         _availablePackages = available;
+        _loadError = false;
       });
-    } catch (_) {}
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadError = true;
+        });
+      }
+    }
   }
 
   Future<void> _lookup() async {
@@ -91,6 +106,23 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
     await notifier.lookup(word);
     if (!mounted) {
       return;
+    }
+    if (ref.read(vocabularyProvider).lookupResult != null) {
+      final contextEventId = await ref
+          .read(toolHistoryRepositoryProvider)
+          .recordVocabularyLookupCompleted(
+            lookupTerm: word,
+            surface: widget.surface.name,
+          );
+      if (!mounted) {
+        return;
+      }
+      ToolContextEffectFeedback.show(
+        context: context,
+        ref: ref,
+        toolLabel: context.l10n.vocabularyLookupTitle,
+        eventId: contextEventId,
+      );
     }
     notifier.fetchAssociations(word);
   }
@@ -139,7 +171,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
 
     if (mounted) {
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
-      AppFeedback.success(context, context.l10n.vocabularyLookupAddedToWordbook(word));
+      AppFeedback.success(
+          context, context.l10n.vocabularyLookupAddedToWordbook(word));
     }
   }
 
@@ -162,7 +195,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       }
       setState(() => _isInLocalWordbook = false);
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
-      AppFeedback.info(context, context.l10n.vocabularyLookupRemovedFromWordbook(word));
+      AppFeedback.info(
+          context, context.l10n.vocabularyLookupRemovedFromWordbook(word));
     }
   }
 
@@ -186,11 +220,13 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       await repository.downloadDictionaryPackage(targetId);
       await _refreshDictionaryPackages();
       if (mounted) {
-        AppFeedback.success(context, context.l10n.vocabularyLookupOfflineDownloaded);
+        AppFeedback.success(
+            context, context.l10n.vocabularyLookupOfflineDownloaded);
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, context.l10n.vocabularyLookupOfflineDownloadFailed(e.toString()));
+        AppFeedback.error(context,
+            context.l10n.vocabularyLookupOfflineDownloadFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -215,7 +251,8 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, context.l10n.vocabularyLookupOfflineRemoveFailed(e.toString()));
+      AppFeedback.error(context,
+          context.l10n.vocabularyLookupOfflineRemoveFailed(e.toString()));
     }
   }
 
@@ -249,14 +286,18 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  I18nService.instance.isChinese ? '离线词典包' : 'Offline Dictionary Packages',
+                  I18nService.instance.isChinese
+                      ? '离线词典包'
+                      : 'Offline Dictionary Packages',
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 const SizedBox(height: DS.spacing8),
                 Text(
-                  I18nService.instance.isChinese ? '优先使用本地 Oxford 词典，减少网络依赖，也能减轻云端服务器压力。' : 'Prefer local Oxford dictionary to reduce network dependency and cloud server load.',
+                  I18nService.instance.isChinese
+                      ? '优先使用本地 Oxford 词典，减少网络依赖，也能减轻云端服务器压力。'
+                      : 'Prefer local Oxford dictionary to reduce network dependency and cloud server load.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: DS.textSecondary,
                     height: 1.5,
@@ -310,7 +351,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                         borderRadius: DS.borderRadiusFull,
                                       ),
                                       child: Text(
-                                        I18nService.instance.isChinese ? '已安装' : 'Installed',
+                                        I18nService.instance.isChinese
+                                            ? '已安装'
+                                            : 'Installed',
                                         style: theme.textTheme.labelSmall
                                             ?.copyWith(
                                           color: DS.prismBlue,
@@ -323,7 +366,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                               const SizedBox(height: DS.spacing6),
                               Text(
                                 package.description.isEmpty
-                                    ? (I18nService.instance.isChinese ? 'Oxford 优先离线词典包' : 'Oxford Preferred Offline Dictionary Package')
+                                    ? (I18nService.instance.isChinese
+                                        ? 'Oxford 优先离线词典包'
+                                        : 'Oxford Preferred Offline Dictionary Package')
                                     : package.description,
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: DS.textSecondary,
@@ -335,7 +380,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                 spacing: DS.spacing8,
                                 runSpacing: DS.spacing8,
                                 children: [
-                                  _buildMetaChip(context.l10n.toolsVocabEntryCount(package.entryCount)),
+                                  _buildMetaChip(context.l10n
+                                      .toolsVocabEntryCount(
+                                          package.entryCount)),
                                   _buildMetaChip(package.packageScope),
                                   if (package.sizeBytes != null)
                                     _buildMetaChip(
@@ -352,8 +399,13 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                                 children: [
                                   Expanded(
                                     child: SparkleButton(
-                                      label:
-                                          installed != null ? (I18nService.instance.isChinese ? '重新下载' : 'Redownload') : (I18nService.instance.isChinese ? '下载到本地' : 'Download Locally'),
+                                      label: installed != null
+                                          ? (I18nService.instance.isChinese
+                                              ? '重新下载'
+                                              : 'Redownload')
+                                          : (I18nService.instance.isChinese
+                                              ? '下载到本地'
+                                              : 'Download Locally'),
                                       onPressed: _isDownloadingDictionary
                                           ? null
                                           : () async {
@@ -425,7 +477,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
       compactHeader: true,
       heroChips: [
         ToolHeroChip(
-          label: _isInLocalWordbook ? context.l10n.toolsVocabInWordbook : context.l10n.toolsVocabAddToWordbook,
+          label: _isInLocalWordbook
+              ? context.l10n.toolsVocabInWordbook
+              : context.l10n.toolsVocabAddToWordbook,
           accentColor: accent,
           icon: _isInLocalWordbook
               ? Icons.bookmark_added_rounded
@@ -433,7 +487,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
         ),
         ToolHeroChip(
           label: state.associations.isEmpty
-              ? (I18nService.instance.isChinese ? '等待关联词' : 'Waiting for associations')
+              ? (I18nService.instance.isChinese
+                  ? '等待关联词'
+                  : 'Waiting for associations')
               : '${state.associations.length} ${I18nService.instance.isChinese ? '个关联词' : 'associations'}',
           accentColor: accent,
           icon: Icons.hub_rounded,
@@ -441,7 +497,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
         ToolHeroChip(
           label: _installedPackageCount > 0
               ? '$_installedPackageCount ${I18nService.instance.isChinese ? '个离线词典包' : 'offline dictionaries'}'
-              : (I18nService.instance.isChinese ? '未下载离线词典' : 'No offline dictionary'),
+              : (I18nService.instance.isChinese
+                  ? '未下载离线词典'
+                  : 'No offline dictionary'),
           accentColor: accent,
           icon: _installedPackageCount > 0
               ? Icons.download_done_rounded
@@ -455,7 +513,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
             title: context.l10n.toolsVocabInput,
             subtitle: context.l10n.toolsVocabInputDesc,
             trailing: SparkleButton(
-              label: _installedPackageCount > 0 ? context.l10n.toolsVocabManageOffline : context.l10n.toolsVocabDownloadOffline,
+              label: _installedPackageCount > 0
+                  ? context.l10n.toolsVocabManageOffline
+                  : context.l10n.toolsVocabDownloadOffline,
               onPressed: _isDownloadingDictionary
                   ? null
                   : (_installedPackageCount > 0
@@ -476,6 +536,10 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (_loadError) ...[
+                        _buildOfflineDictionaryError(context),
+                        const SizedBox(height: DS.spacing12),
+                      ],
                       TextField(
                         controller: _controller,
                         focusNode: _focusNode,
@@ -499,17 +563,27 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                 }
 
                 return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: TextField(
-                        controller: _controller,
-                        focusNode: _focusNode,
-                        decoration: InputDecoration(
-                          hintText: context.l10n.toolsVocabInputHint,
-                          prefixIcon: Icon(Icons.menu_book_rounded),
-                        ),
-                        textInputAction: TextInputAction.search,
-                        onSubmitted: (_) => _lookup(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (_loadError) ...[
+                            _buildOfflineDictionaryError(context),
+                            const SizedBox(height: DS.spacing12),
+                          ],
+                          TextField(
+                            controller: _controller,
+                            focusNode: _focusNode,
+                            decoration: InputDecoration(
+                              hintText: context.l10n.toolsVocabInputHint,
+                              prefixIcon: Icon(Icons.menu_book_rounded),
+                            ),
+                            textInputAction: TextInputAction.search,
+                            onSubmitted: (_) => _lookup(),
+                          ),
+                        ],
                       ),
                     ),
                     const SizedBox(width: DS.spacing12),
@@ -534,7 +608,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
               child: result == null
                   ? ToolEmptyState(
                       icon: Icons.travel_explore_rounded,
-                      title: error == null ? context.l10n.toolsVocabStartHint : context.l10n.toolsVocabSearchFailed,
+                      title: error == null
+                          ? context.l10n.toolsVocabStartHint
+                          : context.l10n.toolsVocabSearchFailed,
                       description: error ?? context.l10n.toolsVocabResultHint,
                       accentColor: accent,
                     )
@@ -633,7 +709,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                           const SizedBox(height: DS.spacing16),
                           if (definitions != null) ...[
                             Text(
-                              I18nService.instance.isChinese ? '释义' : 'Definitions',
+                              I18nService.instance.isChinese
+                                  ? '释义'
+                                  : 'Definitions',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
@@ -648,7 +726,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                           if (examples is List && examples.isNotEmpty) ...[
                             const SizedBox(height: DS.spacing16),
                             Text(
-                              I18nService.instance.isChinese ? '词典例句' : 'Dictionary Examples',
+                              I18nService.instance.isChinese
+                                  ? '词典例句'
+                                  : 'Dictionary Examples',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
@@ -697,7 +777,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                           if (state.exampleSentence != null) ...[
                             const SizedBox(height: DS.spacing16),
                             Text(
-                              I18nService.instance.isChinese ? '模型生成例句' : 'Model Generated Example',
+                              I18nService.instance.isChinese
+                                  ? '模型生成例句'
+                                  : 'Model Generated Example',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
@@ -721,7 +803,9 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
                           if (state.associations.isNotEmpty) ...[
                             const SizedBox(height: DS.spacing16),
                             Text(
-                              I18nService.instance.isChinese ? '关联词汇' : 'Related Words',
+                              I18nService.instance.isChinese
+                                  ? '关联词汇'
+                                  : 'Related Words',
                               style: Theme.of(context)
                                   .textTheme
                                   .titleSmall
@@ -839,6 +923,59 @@ class _VocabularyLookupToolState extends ConsumerState<VocabularyLookupTool> {
             ),
       ),
     ];
+  }
+
+  Widget _buildOfflineDictionaryError(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: DS.semanticError.withValues(alpha: 0.08),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(
+          color: DS.semanticError.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(DS.spacing12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.error_outline_rounded,
+              color: DS.semanticError,
+              size: 18,
+            ),
+            const SizedBox(width: DS.spacing10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.networkErrorRetry,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: DS.textPrimary,
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                  ),
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    context.l10n.vocabularyLookupOfflineDesc,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DS.textSecondary,
+                          height: 1.45,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: DS.spacing8),
+            TextButton(
+              onPressed: _refreshDictionaryPackages,
+              child: Text(context.l10n.retry),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildMetaChip(String label) => DecoratedBox(

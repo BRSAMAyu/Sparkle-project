@@ -1609,6 +1609,9 @@ Return ONLY a JSON array of entity names."""
         source_type = str(GraphRAGRetriever._redis_doc_field(doc, "source_type", "") or "")
         if source_type != "document_chunk" or not user_id:
             return True
+        lifecycle_status = str(GraphRAGRetriever._redis_doc_field(doc, "lifecycle_status", "active") or "active")
+        if lifecycle_status != "active":
+            return False
         doc_group_id = str(GraphRAGRetriever._redis_doc_field(doc, "group_id", "") or "").strip()
         if doc_group_id:
             return doc_group_id in (allowed_group_ids or set())
@@ -1661,6 +1664,7 @@ Return ONLY a JSON array of entity names."""
                 "page_numbers",
                 "section_title",
                 "quality_score",
+                "lifecycle_status",
             )
             .with_scores()
             .dialect(2)

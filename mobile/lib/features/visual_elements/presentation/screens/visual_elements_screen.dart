@@ -10,6 +10,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/visual_elements/domain/services/visual_recommendation_service.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_recommendation_provider.dart';
+import 'package:sparkle/features/visual_elements/presentation/shared/visual_element_palette.dart';
 import 'package:sparkle/features/visual_elements/presentation/widgets/visual_element_card.dart';
 import 'package:sparkle/features/visual_elements/presentation/widgets/visual_element_preview_dialog.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -140,6 +141,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     AppLocalizations l10n,
     VisualElementsState state,
   ) {
+    final palette = VisualElementPalette.of(context);
     final eventElements = state.allElements
         .where(
           (element) => element.unlockSource == VisualElementUnlockSource.event,
@@ -150,18 +152,10 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       child: Container(
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              _VisualInk.moonless,
-              _VisualInk.inkBlue,
-              _VisualInk.surface,
-            ],
-          ),
+          gradient: palette.pageHeaderGradient,
           boxShadow: [
             BoxShadow(
-              color: _VisualInk.cyan.withValues(alpha: 0.08),
+              color: palette.cyan.withValues(alpha: 0.08),
               blurRadius: 28,
               offset: const Offset(0, 14),
             ),
@@ -190,7 +184,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       style: TextStyle(
                         fontSize: DS.fontSizeXl,
                         fontWeight: DS.fontWeightBold,
-                        color: _VisualInk.textPrimary,
+                        color: palette.textPrimary,
                       ),
                     ),
                   ),
@@ -205,7 +199,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               const SizedBox(height: DS.spacing12),
 
               // 统计面板
-              _buildStatsPanel(state.stats, l10n),
+              _buildStatsPanel(context, state.stats, l10n),
 
               if (eventElements.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing12),
@@ -218,134 +212,133 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     );
   }
 
-  Widget _buildStatsPanel(VisualElementStats stats, AppLocalizations l10n) =>
-      Container(
-        padding: const EdgeInsets.all(DS.spacing12),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              _VisualInk.panel,
-              _VisualInk.surface,
-              _VisualInk.blueWash,
-            ],
+  Widget _buildStatsPanel(
+    BuildContext context,
+    VisualElementStats stats,
+    AppLocalizations l10n,
+  ) {
+    final palette = VisualElementPalette.of(context);
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        gradient: palette.panelGradient,
+        borderRadius: DS.borderRadius16,
+        border: Border.all(color: palette.hairline),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
           ),
-          borderRadius: DS.borderRadius16,
-          border: Border.all(color: _VisualInk.hairline),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.28),
-              blurRadius: 28,
-              offset: const Offset(0, 16),
-            ),
-          ],
-        ),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final compact = constraints.maxWidth < 360;
-            final progressWidth = compact
-                ? constraints.maxWidth
-                : math.max(0.0, constraints.maxWidth - 108);
-            final equippedWidth = compact ? constraints.maxWidth : 96.0;
+        ],
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact = constraints.maxWidth < 360;
+          final progressWidth = compact
+              ? constraints.maxWidth
+              : math.max(0.0, constraints.maxWidth - 108);
+          final equippedWidth = compact ? constraints.maxWidth : 96.0;
 
-            return Wrap(
-              spacing: DS.spacing12,
-              runSpacing: DS.spacing12,
-              children: [
-                SizedBox(
-                  width: progressWidth,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.visualElementsUnlockProgress,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: DS.fontSizeSm,
-                          color: _VisualInk.textSecondary,
-                        ),
+          return Wrap(
+            spacing: DS.spacing12,
+            runSpacing: DS.spacing12,
+            children: [
+              SizedBox(
+                width: progressWidth,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.visualElementsUnlockProgress,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeSm,
+                        color: palette.textSecondary,
                       ),
-                      const SizedBox(height: DS.spacing8),
-                      ClipRRect(
-                        borderRadius: DS.borderRadius8,
-                        child: LinearProgressIndicator(
-                          value: stats.unlockProgress,
-                          backgroundColor:
-                              _VisualInk.textPrimary.withValues(alpha: 0.08),
-                          valueColor: AlwaysStoppedAnimation(_VisualInk.gold),
-                          minHeight: 8,
-                        ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    ClipRRect(
+                      borderRadius: DS.borderRadius8,
+                      child: LinearProgressIndicator(
+                        value: stats.unlockProgress,
+                        backgroundColor:
+                            palette.textPrimary.withValues(alpha: 0.08),
+                        valueColor: AlwaysStoppedAnimation(palette.gold),
+                        minHeight: 8,
                       ),
-                      const SizedBox(height: DS.spacing8),
-                      Text(
-                        '${stats.unlockedCount}/${stats.totalCount}',
-                        style: TextStyle(
-                          fontSize: DS.fontSizeSm,
-                          fontWeight: DS.fontWeightMedium,
-                          color: _VisualInk.textPrimary,
-                        ),
+                    ),
+                    const SizedBox(height: DS.spacing8),
+                    Text(
+                      '${stats.unlockedCount}/${stats.totalCount}',
+                      style: TextStyle(
+                        fontSize: DS.fontSizeSm,
+                        fontWeight: DS.fontWeightMedium,
+                        color: palette.textPrimary,
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                width: equippedWidth,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing12,
+                  vertical: DS.spacing12,
+                ),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      palette.gold.withValues(alpha: 0.18),
+                      palette.cyan.withValues(alpha: 0.08),
                     ],
                   ),
-                ),
-                Container(
-                  width: equippedWidth,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing12,
-                    vertical: DS.spacing12,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        _VisualInk.gold.withValues(alpha: 0.18),
-                        _VisualInk.cyan.withValues(alpha: 0.08),
-                      ],
-                    ),
-                    borderRadius: DS.borderRadius12,
-                    border: Border.all(
-                      color: _VisualInk.gold.withValues(alpha: 0.32),
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.check_circle,
-                        color: _VisualInk.gold,
-                        size: DS.iconSizeMd,
-                      ),
-                      const SizedBox(height: DS.spacing4),
-                      Text(
-                        '${stats.equippedCount}',
-                        style: TextStyle(
-                          fontSize: DS.fontSizeLg,
-                          fontWeight: DS.fontWeightBold,
-                          color: _VisualInk.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        l10n.visualElementsEquipped,
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: DS.fontSizeXs,
-                          color: _VisualInk.textSecondary,
-                        ),
-                      ),
-                    ],
+                  borderRadius: DS.borderRadius12,
+                  border: Border.all(
+                    color: palette.gold.withValues(alpha: 0.32),
                   ),
                 ),
-              ],
-            );
-          },
-        ),
-      );
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.check_circle,
+                      color: palette.gold,
+                      size: DS.iconSizeMd,
+                    ),
+                    const SizedBox(height: DS.spacing4),
+                    Text(
+                      '${stats.equippedCount}',
+                      style: TextStyle(
+                        fontSize: DS.fontSizeLg,
+                        fontWeight: DS.fontWeightBold,
+                        color: palette.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      l10n.visualElementsEquipped,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeXs,
+                        color: palette.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
 
   Widget _buildCurrentShowcase(VisualElementsState state) {
+    final palette = VisualElementPalette.of(context);
     final equipped = [
       state.config?.equippedBackground,
       state.config?.equippedParticle,
@@ -357,15 +350,15 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         width: double.infinity,
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
-          color: _VisualInk.panel,
+          color: palette.panel,
           borderRadius: DS.borderRadius16,
-          border: Border.all(color: _VisualInk.hairline),
+          border: Border.all(color: palette.hairline),
         ),
         child: Text(
           context.l10n.visualPrestigeEmpty,
           style: TextStyle(
             fontSize: DS.fontSizeSm,
-            color: _VisualInk.textSecondary,
+            color: palette.textSecondary,
           ),
         ),
       );
@@ -395,8 +388,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           end: Alignment.bottomRight,
           colors: [
             _elementAccent(primary).withValues(alpha: 0.28),
-            _VisualInk.panel,
-            _VisualInk.surface,
+            palette.panel,
+            palette.surface,
           ],
         ),
         borderRadius: DS.borderRadius16,
@@ -418,12 +411,14 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             style: TextStyle(
               fontSize: DS.fontSizeBase,
               fontWeight: DS.fontWeightBold,
-              color: _VisualInk.textPrimary,
+              color: palette.textPrimary,
             ),
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            setName.isNotEmpty ? setName.first.key : context.l10n.visualMixMatch,
+            setName.isNotEmpty
+                ? setName.first.key
+                : context.l10n.visualMixMatch,
             style: TextStyle(
               fontSize: DS.fontSizeLg,
               fontWeight: DS.fontWeightBold,
@@ -435,7 +430,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             title,
             style: TextStyle(
               fontSize: DS.fontSizeSm,
-              color: _VisualInk.textSecondary,
+              color: palette.textSecondary,
             ),
           ),
         ],
@@ -461,6 +456,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         final cardWidth = _horizontalShowcaseCardWidth(constraints.maxWidth);
         final compact = constraints.maxWidth < 360;
         final cardHeight = compact ? 268.0 : 128.0;
+        final palette = VisualElementPalette.of(context);
 
         return SizedBox(
           height: cardHeight,
@@ -490,8 +486,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       end: Alignment.bottomRight,
                       colors: [
                         _elementAccent(element).withValues(alpha: 0.22),
-                        _VisualInk.panel,
-                        _VisualInk.surface,
+                        palette.panel,
+                        palette.surface,
                       ],
                     ),
                     borderRadius: DS.borderRadius16,
@@ -518,12 +514,15 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                             _elementAccent(element),
                           ),
                           _miniChip(
-                            isUnlocked ? context.l10n.visualUnlocked : context.l10n.visualLocked,
+                            isUnlocked
+                                ? context.l10n.visualUnlocked
+                                : context.l10n.visualLocked,
                             isUnlocked ? DS.success : DS.warning,
                           ),
                           if (totalCount > 0)
                             _miniChip(
-                              context.l10n.visualCollectedCount(ownedCount, totalCount),
+                              context.l10n
+                                  .visualCollectedCount(ownedCount, totalCount),
                               ownedCount == totalCount ? DS.success : DS.info,
                             ),
                         ],
@@ -534,7 +533,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         style: TextStyle(
                           fontSize: DS.fontSizeBase,
                           fontWeight: DS.fontWeightBold,
-                          color: _VisualInk.textPrimary,
+                          color: palette.textPrimary,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
@@ -544,7 +543,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         element.description ?? context.l10n.visualHighExposure,
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
-                          color: _VisualInk.textSecondary,
+                          color: palette.textSecondary,
                         ),
                         maxLines: compact ? 3 : 2,
                         overflow: TextOverflow.ellipsis,
@@ -577,7 +576,11 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
-            color: Color.lerp(color, _VisualInk.textPrimary, 0.18),
+            color: Color.lerp(
+              color,
+              VisualElementPalette.of(context).textPrimary,
+              0.18,
+            ),
             fontWeight: DS.fontWeightMedium,
           ),
         ),
@@ -608,10 +611,11 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     final hex = raw.toString().replaceFirst('#', '');
     final normalized = hex.length == 6 ? 'FF$hex' : hex;
     final value = int.tryParse(normalized, radix: 16);
-    return value == null ? _VisualInk.cyan : Color(value);
+    return value == null ? VisualElementPalette.of(context).cyan : Color(value);
   }
 
   Widget _buildTabBar(BuildContext context, AppLocalizations l10n) {
+    final palette = VisualElementPalette.of(context);
     final compact = MediaQuery.sizeOf(context).width < 360;
     return SliverPersistentHeader(
       pinned: true,
@@ -622,19 +626,19 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           tabAlignment: TabAlignment.start,
           indicatorSize: TabBarIndicatorSize.label,
           indicator: BoxDecoration(
-            color: _VisualInk.gold.withValues(alpha: 0.92),
+            color: palette.gold.withValues(alpha: 0.92),
             borderRadius: DS.borderRadius8,
             boxShadow: [
               BoxShadow(
-                color: _VisualInk.gold.withValues(alpha: 0.18),
+                color: palette.gold.withValues(alpha: 0.18),
                 blurRadius: 16,
                 offset: const Offset(0, 6),
               ),
             ],
           ),
           indicatorPadding: const EdgeInsets.symmetric(vertical: DS.spacing8),
-          labelColor: _VisualInk.moonless,
-          unselectedLabelColor: _VisualInk.textSecondary,
+          labelColor: palette.moonless,
+          unselectedLabelColor: palette.textSecondary,
           labelStyle: const TextStyle(
             fontSize: DS.fontSizeSm,
             fontWeight: DS.fontWeightMedium,
@@ -1115,6 +1119,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     VisualElementsState state,
     AppLocalizations l10n,
   ) {
+    final palette = VisualElementPalette.of(context);
     final endAt = _getEventEndAt(eventElements);
     final countdownText =
         endAt == null ? null : _formatEventCountdown(endAt, l10n);
@@ -1126,16 +1131,16 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            _VisualInk.gold.withValues(alpha: 0.18),
-            _VisualInk.cyan.withValues(alpha: 0.10),
-            _VisualInk.panel,
+            palette.gold.withValues(alpha: 0.18),
+            palette.cyan.withValues(alpha: 0.10),
+            palette.panel,
           ],
         ),
         borderRadius: DS.borderRadius16,
-        border: Border.all(color: _VisualInk.gold.withValues(alpha: 0.34)),
+        border: Border.all(color: palette.gold.withValues(alpha: 0.34)),
         boxShadow: [
           BoxShadow(
-            color: _VisualInk.gold.withValues(alpha: 0.10),
+            color: palette.gold.withValues(alpha: 0.10),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -1148,7 +1153,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             children: [
               Icon(
                 Icons.timer_outlined,
-                color: _VisualInk.gold,
+                color: palette.gold,
                 size: DS.iconSizeSm,
               ),
               const SizedBox(width: DS.spacing8),
@@ -1158,7 +1163,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                   style: TextStyle(
                     fontSize: DS.fontSizeBase,
                     fontWeight: DS.fontWeightBold,
-                    color: _VisualInk.textPrimary,
+                    color: palette.textPrimary,
                   ),
                 ),
               ),
@@ -1169,17 +1174,17 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                     vertical: DS.spacing4,
                   ),
                   decoration: BoxDecoration(
-                    color: _VisualInk.moonless.withValues(alpha: 0.58),
+                    color: palette.moonless.withValues(alpha: 0.58),
                     borderRadius: DS.borderRadius8,
                     border: Border.all(
-                      color: _VisualInk.gold.withValues(alpha: 0.20),
+                      color: palette.gold.withValues(alpha: 0.20),
                     ),
                   ),
                   child: Text(
                     countdownText,
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
-                      color: _VisualInk.textSecondary,
+                      color: palette.textSecondary,
                     ),
                   ),
                 ),
@@ -1332,6 +1337,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                   .where((element) => state.unlockedIds.contains(element.id))
                   .length;
               final accent = _elementAccent(lead);
+              final palette = VisualElementPalette.of(context);
 
               return GestureDetector(
                 onTap: () => _applyDisplaySlotFilter(lead.displaySlot),
@@ -1345,8 +1351,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                       end: Alignment.bottomRight,
                       colors: [
                         accent.withValues(alpha: 0.22),
-                        _VisualInk.panel,
-                        _VisualInk.surface,
+                        palette.panel,
+                        palette.surface,
                       ],
                     ),
                     borderRadius: DS.borderRadius16,
@@ -1372,17 +1378,18 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                         style: TextStyle(
                           fontSize: DS.fontSizeLg,
                           fontWeight: DS.fontWeightBold,
-                          color: _VisualInk.textPrimary,
+                          color: palette.textPrimary,
                         ),
                       ),
                       const SizedBox(height: DS.spacing4),
                       Text(
-                        context.l10n.visualOwnedCount(unlockedCount, elements.length),
+                        context.l10n
+                            .visualOwnedCount(unlockedCount, elements.length),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           fontSize: DS.fontSizeSm,
-                          color: _VisualInk.textSecondary,
+                          color: palette.textSecondary,
                         ),
                       ),
                       const SizedBox(height: DS.spacing8),
@@ -1421,6 +1428,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
         .where((element) => state.unlockedIds.contains(element.id))
         .length;
     final accent = _elementAccent(lead);
+    final palette = VisualElementPalette.of(context);
 
     return GestureDetector(
       onTap: () => _applyDisplaySlotFilter(lead.displaySlot),
@@ -1433,8 +1441,8 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             end: Alignment.bottomRight,
             colors: [
               accent.withValues(alpha: 0.16),
-              _VisualInk.panel,
-              _VisualInk.surface,
+              palette.panel,
+              palette.surface,
             ],
           ),
           borderRadius: DS.borderRadius16,
@@ -1457,7 +1465,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               style: TextStyle(
                 fontSize: DS.fontSizeBase,
                 fontWeight: DS.fontWeightBold,
-                color: _VisualInk.textPrimary,
+                color: palette.textPrimary,
               ),
             ),
             const SizedBox(height: DS.spacing4),
@@ -1467,7 +1475,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: DS.fontSizeSm,
-                color: _VisualInk.textSecondary,
+                color: palette.textSecondary,
               ),
             ),
             const SizedBox(height: DS.spacing8),
@@ -1499,9 +1507,11 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     return Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
-        color: _VisualInk.cyan.withValues(alpha: 0.08),
+        color: VisualElementPalette.of(context).cyan.withValues(alpha: 0.08),
         borderRadius: DS.borderRadius16,
-        border: Border.all(color: _VisualInk.cyan.withValues(alpha: 0.22)),
+        border: Border.all(
+          color: VisualElementPalette.of(context).cyan.withValues(alpha: 0.22),
+        ),
       ),
       child: LayoutBuilder(
         builder: (context, constraints) {
@@ -1516,7 +1526,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightBold,
-                  color: _VisualInk.textPrimary,
+                  color: VisualElementPalette.of(context).textPrimary,
                 ),
               ),
               const SizedBox(height: DS.spacing4),
@@ -1526,7 +1536,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   fontSize: DS.fontSizeXs,
-                  color: _VisualInk.textSecondary,
+                  color: VisualElementPalette.of(context).textSecondary,
                 ),
               ),
             ],
@@ -1611,19 +1621,6 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
   }
 }
 
-class _VisualInk {
-  static const Color moonless = Color(0xFF050A12);
-  static const Color inkBlue = Color(0xFF071523);
-  static const Color surface = Color(0xFF0B1D2C);
-  static const Color panel = Color(0xFF10283A);
-  static const Color blueWash = Color(0xFF14384A);
-  static const Color cyan = Color(0xFF8FB8C8);
-  static const Color gold = Color(0xFFD9B66F);
-  static const Color textPrimary = Color(0xFFEAF3F5);
-  static const Color textSecondary = Color(0xFF9CB4BD);
-  static const Color hairline = Color(0x334F7D8F);
-}
-
 /// 粘性 TabBar 代理
 class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
   _StickyTabBarDelegate(this.tabBar);
@@ -1643,7 +1640,7 @@ class _StickyTabBarDelegate extends SliverPersistentHeaderDelegate {
     bool overlapsContent,
   ) =>
       Container(
-        color: _VisualInk.surface,
+        color: VisualElementPalette.of(context).surface,
         child: tabBar,
       );
 
@@ -2006,9 +2003,11 @@ class _RecommendationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = _getRarityColors(element.rarity);
-    final actionLabel =
-        element.isBundle ? AppLocalizations.of(context)!.visualOneClickEquip : context.l10n.visualElementEquip;
+    final palette = VisualElementPalette.of(context);
+    final colors = _getRarityColors(context, element.rarity);
+    final actionLabel = element.isBundle
+        ? AppLocalizations.of(context)!.visualOneClickEquip
+        : context.l10n.visualElementEquip;
 
     return GestureDetector(
       onTap: onTap,
@@ -2019,8 +2018,8 @@ class _RecommendationCard extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               colors.border.withValues(alpha: 0.18),
-              _VisualInk.panel,
-              _VisualInk.surface,
+              palette.panel,
+              palette.surface,
             ],
           ),
           borderRadius: DS.borderRadius16,
@@ -2090,7 +2089,7 @@ class _RecommendationCard extends StatelessWidget {
                             style: TextStyle(
                               fontSize: DS.fontSizeSm,
                               fontWeight: DS.fontWeightSemibold,
-                              color: _VisualInk.textPrimary,
+                              color: palette.textPrimary,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
@@ -2102,16 +2101,21 @@ class _RecommendationCard extends StatelessWidget {
                             children: [
                               if (element.prestigeLabel != null)
                                 _miniInfoChip(
+                                  context,
                                   element.prestigeLabel!,
                                   colors.border,
                                 ),
                               _miniInfoChip(
+                                context,
                                 element.displaySlotLabel,
                                 colors.text,
                               ),
                               if (element.isBundle && bundleTotalCount > 0)
                                 _miniInfoChip(
-                                  AppLocalizations.of(context)!.visualCollectedCount(bundleOwnedCount, bundleTotalCount),
+                                  context,
+                                  AppLocalizations.of(context)!
+                                      .visualCollectedCount(
+                                          bundleOwnedCount, bundleTotalCount),
                                   bundleOwnedCount == bundleTotalCount
                                       ? DS.success
                                       : DS.info,
@@ -2157,7 +2161,7 @@ class _RecommendationCard extends StatelessWidget {
                               vertical: DS.spacing4,
                             ),
                             decoration: BoxDecoration(
-                              color: _VisualInk.gold,
+                              color: palette.gold,
                               borderRadius: DS.borderRadius8,
                             ),
                             child: Text(
@@ -2167,7 +2171,7 @@ class _RecommendationCard extends StatelessWidget {
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 fontSize: DS.fontSizeXs,
-                                color: _VisualInk.moonless,
+                                color: palette.moonless,
                                 fontWeight: DS.fontWeightMedium,
                               ),
                             ),
@@ -2183,14 +2187,14 @@ class _RecommendationCard extends StatelessWidget {
                 child: IgnorePointer(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: _VisualInk.moonless.withValues(alpha: 0.76),
+                      color: palette.moonless.withValues(alpha: 0.76),
                       borderRadius: DS.borderRadius16,
                     ),
                     child: Center(
                       child: Icon(
                         Icons.lock,
                         size: DS.iconSizeMd,
-                        color: _VisualInk.textSecondary,
+                        color: palette.textSecondary,
                       ),
                     ),
                   ),
@@ -2202,34 +2206,11 @@ class _RecommendationCard extends StatelessWidget {
     );
   }
 
-  _RarityColors _getRarityColors(VisualElementRarity rarity) {
-    switch (rarity) {
-      case VisualElementRarity.common:
-        return _RarityColors(
-          background: const Color(0xFF102436),
-          border: const Color(0xFF668696),
-          text: const Color(0xFFC6D6DB),
-        );
-      case VisualElementRarity.rare:
-        return _RarityColors(
-          background: const Color(0xFF0C2A37),
-          border: const Color(0xFF58C0D7),
-          text: const Color(0xFFC6F2F7),
-        );
-      case VisualElementRarity.epic:
-        return _RarityColors(
-          background: const Color(0xFF17253A),
-          border: const Color(0xFF91A9FF),
-          text: const Color(0xFFDCE5FF),
-        );
-      case VisualElementRarity.legendary:
-        return _RarityColors(
-          background: const Color(0xFF312813),
-          border: const Color(0xFFD9B66F),
-          text: const Color(0xFFFFE7A8),
-        );
-    }
-  }
+  VisualElementRarityColors _getRarityColors(
+    BuildContext context,
+    VisualElementRarity rarity,
+  ) =>
+      VisualElementPalette.of(context).rarityColors(rarity);
 
   IconData _getRarityIcon(VisualElementRarity rarity) {
     switch (rarity) {
@@ -2259,7 +2240,8 @@ class _RecommendationCard extends StatelessWidget {
     }
   }
 
-  Widget _miniInfoChip(String label, Color color) => Container(
+  Widget _miniInfoChip(BuildContext context, String label, Color color) =>
+      Container(
         constraints: const BoxConstraints(maxWidth: 112),
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing6,
@@ -2276,21 +2258,13 @@ class _RecommendationCard extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
-            color: Color.lerp(color, _VisualInk.textPrimary, 0.12),
+            color: Color.lerp(
+              color,
+              VisualElementPalette.of(context).textPrimary,
+              0.12,
+            ),
             fontWeight: DS.fontWeightMedium,
           ),
         ),
       );
-}
-
-class _RarityColors {
-  _RarityColors({
-    required this.background,
-    required this.border,
-    required this.text,
-  });
-
-  final Color background;
-  final Color border;
-  final Color text;
 }

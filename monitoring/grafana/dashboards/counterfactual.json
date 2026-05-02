@@ -1,0 +1,54 @@
+{
+  "title": "Sparkle Counterfactual Evaluation",
+  "uid": "sparkle-counterfactual",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "timezone": "browser",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Reports Generated",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "sum by (status) (rate(sparkle_counterfactual_reports_generated_total[5m]))",
+          "legendFormat": "{{status}}"
+        }
+      ]
+    },
+    {
+      "type": "bargauge",
+      "title": "Evidence Grade Histogram",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+      "targets": [
+        {
+          "expr": "sum by (le) (sparkle_counterfactual_evidence_grade_histogram_bucket)",
+          "legendFormat": "grade <= {{le}}"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Pending Promotions",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+      "targets": [
+        {
+          "expr": "sparkle_counterfactual_promotion_pending",
+          "legendFormat": "pending"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Evaluation Failures",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+      "targets": [
+        {
+          "expr": "sum by (source) (rate(sparkle_counterfactual_evaluation_failures_total[5m]))",
+          "legendFormat": "{{source}}"
+        }
+      ]
+    }
+  ]
+}

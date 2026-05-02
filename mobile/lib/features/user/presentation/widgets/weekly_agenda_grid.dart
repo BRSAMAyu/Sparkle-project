@@ -167,7 +167,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                   style: TextStyle(
                     color: _getLegendTextColor(type, isSelected),
                     fontSize: 12,
-                    fontWeight: isSelected ? FontWeight.bold : DS.fontWeightMedium,
+                    fontWeight: isSelected ? DS.fontWeightBold : DS.fontWeightMedium,
                   ),
                 ),
               ),
@@ -196,7 +196,7 @@ class _WeeklyAgendaGridState extends State<WeeklyAgendaGrid> {
                           child: Text(
                             day,
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                               fontSize: 12,
                               color: isDark
                                   ? DS.brandPrimary70

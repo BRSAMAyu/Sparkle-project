@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 class GraphiteScaffold extends StatelessWidget {
@@ -152,6 +153,7 @@ class GraphiteCardSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final emotionConfig = EmotionResponsiveTheme.maybeOf(context);
     final duration = DS.motionDuration(
       motionToken,
       reduceMotion: context.reduceMotion,
@@ -170,7 +172,7 @@ class GraphiteCardSurface extends StatelessWidget {
         border: Border.all(
           color: borderColor ?? DS.borderSubtle,
         ),
-        boxShadow: DS.shadowMd,
+        boxShadow: emotionConfig.simplifyCardHierarchy ? const [] : DS.shadowMd,
       ),
       child: child,
     );

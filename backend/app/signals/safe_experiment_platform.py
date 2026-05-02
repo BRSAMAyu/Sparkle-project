@@ -432,6 +432,28 @@ class SafeBanditController:
     def __init__(self):
         self.action_stats: dict[str, BanditActionStats] = {}
 
+    @staticmethod
+    def _primary_action(candidate_actions: list[str]) -> str:
+        return candidate_actions[0] if candidate_actions else ""
+
+    @staticmethod
+    def _high_risk_context_reason(context: ContextSignature, risk_level: str, user_opted_out: bool) -> str | None:
+        if user_opted_out:
+            return "user_opted_out_experiments"
+        if risk_level == "critical":
+            return "critical_risk_conservative"
+        if context.deadline_phase in {"D-0", "D0", "D0_exam_day"}:
+            return "D0_exam_day"
+        if context.deadline_pressure == "critical":
+            return "deadline_pressure_critical"
+        if context.affective_pressure in {"fatigue_critical", "crisis_mode"}:
+            return context.affective_pressure
+        if context.cognitive_load == "fatigue_critical":
+            return "fatigue_critical"
+        if context.goal_mode in {"crisis_mode", "exam_rescue_crisis"}:
+            return "crisis_mode"
+        return None
+
     def select_action(
         self,
         candidate_actions: list[str],
@@ -439,6 +461,7 @@ class SafeBanditController:
         context: ContextSignature,
         risk_level: str = "low",
         user_preference: str | None = None,
+        user_opted_out: bool = False,
     ) -> dict[str, Any]:
         """Select best action given context risk and current knowledge.
 
@@ -447,10 +470,21 @@ class SafeBanditController:
             context: Current context signature
             risk_level: "low" | "medium" | "high" | "critical"
             user_preference: Explicit user preference (overrides bandit)
+            user_opted_out: Whether the user disabled safe experiments
 
         Returns:
             Decision with selected action, reason, exploration_allowed flag
         """
+        block_reason = self._high_risk_context_reason(context, risk_level, user_opted_out)
+        if block_reason:
+            return {
+                "selected_action": self._primary_action(candidate_actions),
+                "reason": block_reason,
+                "exploration_allowed": False,
+                "confidence": 1.0 if user_opted_out else 0.3,
+                "blocked": True,
+            }
+
         # User preference always wins
         if user_preference and user_preference in candidate_actions:
             return {
@@ -578,6 +612,24 @@ class SafeBanditController:
     def reset(self) -> None:
         """Reset all action stats."""
         self.action_stats.clear()
+
+    def select_arm(
+        self,
+        candidate_actions: list[str],
+        *,
+        context: ContextSignature,
+        risk_level: str = "low",
+        user_preference: str | None = None,
+        user_opted_out: bool = False,
+    ) -> dict[str, Any]:
+        """Compatibility alias for callers that use bandit arm terminology."""
+        return self.select_action(
+            candidate_actions,
+            context=context,
+            risk_level=risk_level,
+            user_preference=user_preference,
+            user_opted_out=user_opted_out,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {

@@ -220,11 +220,14 @@ def build_contract_payload(
             "pacing_profile": _strip(strategy.get("pacing_profile")),
             "session_minutes": strategy.get("max_session_minutes"),
             "daily_capacity_minutes": strategy.get("daily_capacity_minutes"),
+            "workload_fit": _strip(strategy.get("workload_fit")),
+            "feasibility_flags": list(_as_list(strategy.get("feasibility_flags"))),
             "overload_signal": bool(strategy.get("overload_signal")),
         },
         SECTION_SEQUENCE: {
             "plan_type": _strip(strategy.get("plan_type")),
             "checkpoint_cadence": _strip(strategy.get("checkpoint_cadence")),
+            "first_review_after_days": strategy.get("first_review_after_days"),
             "required_sections": list(_as_list(strategy.get("required_plan_sections"))),
         },
         SECTION_GROUNDING_BASIS: {

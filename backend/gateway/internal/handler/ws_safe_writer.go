@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -12,6 +14,7 @@ type wsSafeWriter struct {
 	conn      *websocket.Conn
 	writeMu   chan struct{}
 	writeWait time.Duration
+	closeOnce sync.Once
 }
 
 func newWSSafeWriter(conn *websocket.Conn, writeWait time.Duration) *wsSafeWriter {
@@ -25,10 +28,19 @@ func newWSSafeWriter(conn *websocket.Conn, writeWait time.Duration) *wsSafeWrite
 }
 
 func (w *wsSafeWriter) withLock(fn func() error) error {
+	ctx, cancel := context.WithTimeout(context.Background(), w.writeWait)
+	defer cancel()
+	return w.withLockContext(ctx, fn)
+}
+
+func (w *wsSafeWriter) withLockContext(ctx context.Context, fn func() error) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	select {
 	case <-w.writeMu:
-	case <-time.After(w.writeWait):
-		return fmt.Errorf("ws writer lock timeout after %s", w.writeWait)
+	case <-ctx.Done():
+		return fmt.Errorf("ws writer lock timeout after %s: %w", w.writeWait, ctx.Err())
 	}
 	defer func() {
 		w.writeMu <- struct{}{}
@@ -55,13 +67,38 @@ func (w *wsSafeWriter) WriteMessage(messageType int, data []byte) error {
 }
 
 func (w *wsSafeWriter) WriteControl(messageType int, data []byte) error {
-	return w.withLock(func() error {
-		return w.conn.WriteControl(messageType, data, time.Now().Add(w.writeWait))
+	ctx, cancel := context.WithTimeout(context.Background(), w.writeWait)
+	defer cancel()
+	return w.WriteControlContext(ctx, messageType, data)
+}
+
+func (w *wsSafeWriter) WriteControlContext(ctx context.Context, messageType int, data []byte) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, w.writeWait)
+		defer cancel()
+	}
+	return w.withLockContext(ctx, func() error {
+		deadline := time.Now().Add(w.writeWait)
+		if ctxDeadline, ok := ctx.Deadline(); ok && ctxDeadline.Before(deadline) {
+			deadline = ctxDeadline
+		}
+		return w.conn.WriteControl(messageType, data, deadline)
 	})
 }
 
 func (w *wsSafeWriter) Close() error {
-	return w.withLock(func() error {
-		return w.conn.Close()
+	var closeErr error
+	closedNow := false
+	w.closeOnce.Do(func() {
+		closedNow = true
+		closeErr = w.conn.Close()
 	})
+	if !closedNow {
+		return nil
+	}
+	return closeErr
 }

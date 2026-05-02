@@ -77,13 +77,15 @@ class WorkingMemoryCard extends StatelessWidget {
   }
 
   String _buildMeta(Stage35WorkingMemoryItem item) {
+    final zh = I18nService.instance.isChinese;
     final parts = <String>[
       item.subjectType,
-      '提及 ${item.mentionCount} 次',
+      zh ? '提及 ${item.mentionCount} 次' : 'Mentioned ${item.mentionCount} times',
       if (item.consolidated) S.userConsolidated else S.userStillInForeground,
     ];
     if (item.lastSeenAt != null) {
-      parts.add(DateFormat('M月d日 HH:mm').format(item.lastSeenAt!));
+      parts.add(DateFormat(zh ? 'M月d日 HH:mm' : 'MMM d, HH:mm')
+          .format(item.lastSeenAt!));
     }
     return parts.join(' · ');
   }

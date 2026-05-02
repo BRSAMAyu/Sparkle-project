@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 import json
 import re
 import uuid
@@ -40,10 +41,12 @@ from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.aurora.runtime_v1.wake_policy import AuroraWakePolicyService
 from app.aurora.runtime_v1.write_pipeline import InferenceClaim
 from app.models.calendar_event import CalendarEvent
+from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus
 from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
+from app.services.calendar_service import CalendarService
 from app.services.memory_service import MemoryService
 from app.sprint_packs.last_24h_mode import (
     apply_last_24h_policy_overrides,
@@ -308,11 +311,13 @@ class AuroraRuntimeV1Service:
         active_db: AsyncSession,
         user_id: str | UUID,
         inactive_threshold_days: int = 3,
+        include_short_gaps: bool = False,
     ) -> dict[str, Any] | None:
-        """Build a comeback message for users who have been away with an active plan.
+        """Build cross-session comeback context.
 
-        Returns ``None`` when the user does not qualify (recently active or no
-        active sprint plan).
+        ``include_short_gaps`` is used by the foreground app-open endpoint. The
+        default stays conservative for push jobs, which should still only wake
+        users after the long-absence threshold.
         """
         from sqlalchemy import and_, select
 
@@ -330,9 +335,61 @@ class AuroraRuntimeV1Service:
         last_activity_at = await UserActivityService(active_db).get_last_real_activity_at(user_uuid)
         if last_activity_at is None:
             return None
-        days_away = max(0, (now - last_activity_at).days)
-        if days_away < inactive_threshold_days:
+        silence_gap = max(now - last_activity_at, timedelta())
+        inactive_minutes = max(0, int(silence_gap.total_seconds() // 60))
+        days_away = max(0, silence_gap.days)
+        if not include_short_gaps and days_away < inactive_threshold_days:
             return None
+        if include_short_gaps and inactive_minutes < 30:
+            latest_chat = await self._latest_chat_continuity(active_db=active_db, user_id=user_uuid)
+            if not latest_chat:
+                return None
+            active_core_session = await self._active_core_session_payload(user_uuid)
+            return self._base_comeback_payload(
+                kind="silent_resume",
+                title="",
+                message="",
+                user_id=user_uuid,
+                last_activity_at=last_activity_at,
+                inactive_minutes=inactive_minutes,
+                days_away=days_away,
+                days_remaining=0,
+                subject="",
+                plan=None,
+                next_task=None,
+                recent_task_summary="",
+                light_restart_suggestion="",
+                latest_chat=latest_chat,
+                active_core_session=active_core_session,
+                calendar_note="",
+            )
+        if include_short_gaps and inactive_minutes < 8 * 60:
+            latest_chat = await self._latest_chat_continuity(active_db=active_db, user_id=user_uuid)
+            if not latest_chat:
+                return None
+            active_core_session = await self._active_core_session_payload(user_uuid)
+            topic = _strip(latest_chat.get("topic_summary")) or "刚才那条线"
+            pending_question = _strip(latest_chat.get("pending_question"))
+            tail = f"上次 Aurora 问的是：「{pending_question}」" if pending_question else "我已经把位置接住了。"
+            message = f"继续上次的「{topic}」。{tail}"
+            return self._base_comeback_payload(
+                kind="light_resume",
+                title="接着刚才的线",
+                message=message,
+                user_id=user_uuid,
+                last_activity_at=last_activity_at,
+                inactive_minutes=inactive_minutes,
+                days_away=days_away,
+                days_remaining=0,
+                subject=topic,
+                plan=None,
+                next_task=None,
+                recent_task_summary=topic,
+                light_restart_suggestion="",
+                latest_chat=latest_chat,
+                active_core_session=active_core_session,
+                calendar_note="",
+            )
 
         # Most recent active plan with a target date
         stmt = (
@@ -350,27 +407,36 @@ class AuroraRuntimeV1Service:
         )
         result = await active_db.execute(stmt)
         plan = result.scalar_one_or_none()
-        if plan is None:
+        latest_chat = await self._latest_chat_continuity(active_db=active_db, user_id=user_uuid)
+        active_core_session = await self._active_core_session_payload(user_uuid)
+        if plan is None and not include_short_gaps:
             return None
 
-        days_remaining = max(0, (plan.target_date - now.date()).days) if plan.target_date else 0
-        subject = _strip(plan.subject) or _strip(plan.name) or "你的计划"
+        days_remaining = max(0, (plan.target_date - now.date()).days) if plan and plan.target_date else 0
+        subject = (
+            _strip(getattr(plan, "subject", None))
+            or _strip(getattr(plan, "name", None))
+            or _strip((latest_chat or {}).get("topic_summary"))
+            or "你的计划"
+        )
 
         # Next incomplete task
-        task_stmt = (
-            select(Task)
-            .where(
-                and_(
-                    Task.plan_id == plan.id,
-                    Task.deleted_at.is_(None),
-                    Task.status != TaskStatus.COMPLETED,
+        next_task = None
+        if plan is not None:
+            task_stmt = (
+                select(Task)
+                .where(
+                    and_(
+                        Task.plan_id == plan.id,
+                        Task.deleted_at.is_(None),
+                        Task.status != TaskStatus.COMPLETED,
+                    )
                 )
+                .order_by(Task.due_date.asc().nullslast())
+                .limit(1)
             )
-            .order_by(Task.due_date.asc().nullslast())
-            .limit(1)
-        )
-        task_result = await active_db.execute(task_stmt)
-        next_task = task_result.scalar_one_or_none()
+            task_result = await active_db.execute(task_stmt)
+            next_task = task_result.scalar_one_or_none()
         next_task_title = next_task.title if next_task else None
         recent_task_summary = self._comeback_recent_task_summary(next_task)
         light_restart_suggestion = self._comeback_light_restart_suggestion(
@@ -378,26 +444,60 @@ class AuroraRuntimeV1Service:
             recent_task_summary=recent_task_summary,
             next_task_title=next_task_title,
         )
-        message = self._comeback_message(
-            subject=subject,
+        calendar_note = ""
+        if include_short_gaps:
+            with contextlib.suppress(Exception):
+                calendar_note = await self._daily_startup_calendar_note(
+                    active_db=active_db,
+                    user_id=user_uuid,
+                    session_day=now.date(),
+                    today_focus=recent_task_summary or next_task_title or subject,
+                    estimated_minutes=int(getattr(next_task, "estimated_minutes", None) or 30),
+                )
+
+        if days_away >= inactive_threshold_days:
+            kind = "checkpoint_debrief"
+            title = "我们先把这几天接回来"
+            message = self._comeback_message(
+                subject=subject,
+                days_away=days_away,
+                days_remaining=days_remaining,
+                recent_task_summary=recent_task_summary,
+                next_task_title=next_task_title,
+                light_restart_suggestion=light_restart_suggestion,
+            )
+        elif include_short_gaps:
+            kind = "personalized_return"
+            title = "回来得正好"
+            message = self._personalized_return_message(
+                subject=subject,
+                days_remaining=days_remaining,
+                recent_task_summary=recent_task_summary,
+                next_task_title=next_task_title,
+                light_restart_suggestion=light_restart_suggestion,
+                calendar_note=calendar_note,
+            )
+        else:
+            return None
+
+        return self._base_comeback_payload(
+            kind=kind,
+            title=title,
+            message=message,
+            user_id=user_uuid,
+            last_activity_at=last_activity_at,
+            inactive_minutes=inactive_minutes,
             days_away=days_away,
             days_remaining=days_remaining,
+            subject=subject,
+            plan=plan,
+            next_task=next_task,
             recent_task_summary=recent_task_summary,
-            next_task_title=next_task_title,
             light_restart_suggestion=light_restart_suggestion,
+            latest_chat=latest_chat,
+            active_core_session=active_core_session,
+            calendar_note=calendar_note,
         )
-
-        return {
-            "title": "好久不见，我一直在等你",
-            "message": message,
-            "days_away": days_away,
-            "days_remaining": days_remaining,
-            "subject": subject,
-            "next_task_title": next_task_title or "",
-            "recent_task_summary": recent_task_summary,
-            "light_restart_suggestion": light_restart_suggestion,
-            "plan_id": str(plan.id),
-        }
 
     async def plan_turn(
         self,
@@ -826,7 +926,9 @@ class AuroraRuntimeV1Service:
                 runtime_enabled=True,
             )
         try:
-            return await ControlSurfaceService(active_db, self.redis, preference_service=None, enabled=True).read_control_surface(user_id)
+            return await ControlSurfaceService(
+                active_db, self.redis, preference_service=None, enabled=True
+            ).read_control_surface(user_id)
         except Exception as exc:
             logger.warning("Aurora runtime v1 failed to read control surface: {}", exc)
             hard_boundaries = await self._read_hard_boundaries(active_db=active_db, user_id=user_id)
@@ -1892,7 +1994,7 @@ class AuroraRuntimeV1Service:
         percent = int(round(completion_rate * 100))
         if completion_rate >= 0.8:
             return (
-                f"{opening}昨天完成率 {percent}%，做得很好，推进很顺利，"
+                f"{opening}昨天完成率 {percent}%，昨天推进很顺利，"
                 f"今天我们保持这个手感。{recommendation_tail}{calendar_tail}准备好了吗？"
             )
         if completion_rate < 0.5:
@@ -1911,38 +2013,57 @@ class AuroraRuntimeV1Service:
         today_focus: str,
         estimated_minutes: int,
     ) -> str:
-        day_start = datetime.combine(session_day, datetime.min.time())
-        day_end = day_start + timedelta(days=1)
-        result = await active_db.execute(
-            select(CalendarEvent)
-            .where(
-                CalendarEvent.user_id == user_id,
-                CalendarEvent.deleted_at.is_(None),
-                CalendarEvent.start_time < day_end,
-                CalendarEvent.end_time > day_start,
-            )
-            .order_by(CalendarEvent.start_time)
-            .limit(6)
+        context = await CalendarService(active_db).get_busy_free_context(
+            user_id=user_id,
+            start_date=session_day,
+            days=7,
+            include_conflicts=False,
         )
-        events = list(result.scalars().all())
+        notes: list[str] = []
+        day_type = _strip(context.get("day_type"))
+        today_profile = _as_dict(context.get("today_profile"))
+        density = _strip(today_profile.get("density") or context.get("workload_density"))
+        if density == "high":
+            notes.append("今天日程比较满，我会把开场压短一点")
+        elif day_type == "weekend":
+            notes.append("今天是周末，可以给复盘和缓冲多留一点空间")
+        elif day_type == "weekday":
+            notes.append("今天是工作日，先用短句对齐重点")
+
+        exam_urgency = _as_dict(context.get("exam_urgency"))
+        days_left = exam_urgency.get("days_left")
+        if days_left is not None:
+            try:
+                days_left_int = int(days_left)
+            except (TypeError, ValueError):
+                days_left_int = None
+            if days_left_int is not None and days_left_int <= 14:
+                title = _strip(exam_urgency.get("title")) or "考试"
+                if days_left_int == 0:
+                    notes.append(f"今天就是「{title}」")
+                else:
+                    notes.append(f"距「{title}」还有 {days_left_int} 天")
+
+        events = list(context.get("busy_events") or [])
         if not events:
-            return ""
+            return "。".join(notes)
 
         event = events[0]
-        start_label = self._format_event_time(event.start_time)
-        end_label = self._format_event_time(event.end_time)
-        slot = self._first_free_calendar_slot(
-            events=events,
-            session_day=session_day,
+        start_label = _strip(event.get("start"))
+        end_label = _strip(event.get("end"))
+        slot = self._first_free_calendar_block_from_context(
+            blocks=list(context.get("time_blocks_today") or []),
             estimated_minutes=estimated_minutes,
         )
-        title = _strip(event.title) or "日程"
+        title = _strip(event.get("title")) or "日程"
         if slot:
-            return (
+            notes.append(
                 f"今天 {start_label}-{end_label} 你有「{title}」，"
-                f"建议把「{today_focus}」放在 {slot[0]}-{slot[1]} 的空档里。"
+                f"建议把「{today_focus}」放在 {slot[0]}-{slot[1]} 的空档里"
             )
-        return f"今天 {start_label}-{end_label} 你有「{title}」，这段时间先不要安排冲刺任务。"
+        else:
+            notes.append(f"今天 {start_label}-{end_label} 你有「{title}」，这段时间先不要安排冲刺任务")
+        return "。".join(notes)
 
     @staticmethod
     def _format_event_time(value: datetime) -> str:
@@ -1975,6 +2096,36 @@ class AuroraRuntimeV1Service:
             return cursor.strftime("%H:%M"), slot_end.strftime("%H:%M")
         return None
 
+    @staticmethod
+    def _first_free_calendar_block_from_context(
+        *,
+        blocks: list[Any],
+        estimated_minutes: int,
+    ) -> tuple[str, str] | None:
+        required_minutes = max(30, min(60, int(estimated_minutes or 60)))
+        for raw in blocks:
+            block = _as_dict(raw)
+            start = _strip(block.get("start"))
+            end = _strip(block.get("end"))
+            try:
+                start_hour, start_minute = [int(part) for part in start.split(":", 1)]
+                end_hour, end_minute = [int(part) for part in end.split(":", 1)]
+            except (TypeError, ValueError):
+                continue
+            if start_hour < 9:
+                start_hour = 9
+                start_minute = 0
+            duration = (end_hour * 60 + end_minute) - (start_hour * 60 + start_minute)
+            if duration >= required_minutes:
+                slot_start_minutes = start_hour * 60 + start_minute
+                slot_end_minutes = start_hour * 60 + start_minute + max(60, required_minutes)
+                slot_end_minutes = min(slot_end_minutes, end_hour * 60 + end_minute)
+                return (
+                    f"{slot_start_minutes // 60:02d}:{slot_start_minutes % 60:02d}",
+                    f"{slot_end_minutes // 60:02d}:{slot_end_minutes % 60:02d}",
+                )
+        return None
+
     def _daily_recommendation_tail(self, recommendation: str, *, today_focus: str) -> str:
         text = self._compact_focus_text(recommendation)
         if not text:
@@ -1993,6 +2144,223 @@ class AuroraRuntimeV1Service:
         if not text.endswith(("。", "！", "？")):
             text = f"{text}。"
         return text
+
+    async def _latest_chat_continuity(
+        self,
+        *,
+        active_db: AsyncSession,
+        user_id: UUID,
+    ) -> dict[str, Any]:
+        session_result = await active_db.execute(
+            select(ChatSession)
+            .where(
+                ChatSession.user_id == user_id,
+                ChatSession.deleted_at.is_(None),
+            )
+            .order_by(ChatSession.last_message_at.desc().nullslast(), ChatSession.updated_at.desc())
+            .limit(1)
+        )
+        session = session_result.scalar_one_or_none()
+
+        message_stmt = (
+            select(ChatMessage)
+            .where(
+                ChatMessage.user_id == user_id,
+                ChatMessage.deleted_at.is_(None),
+            )
+            .order_by(ChatMessage.created_at.desc())
+            .limit(8)
+        )
+        if session is not None:
+            message_stmt = (
+                select(ChatMessage)
+                .where(
+                    ChatMessage.user_id == user_id,
+                    ChatMessage.session_id == session.id,
+                    ChatMessage.deleted_at.is_(None),
+                )
+                .order_by(ChatMessage.created_at.desc())
+                .limit(8)
+            )
+        messages_desc = list((await active_db.execute(message_stmt)).scalars().all())
+        if session is None and messages_desc:
+            session_id = messages_desc[0].session_id
+        elif session is not None:
+            session_id = session.id
+        else:
+            return {}
+
+        topic_summary = self._chat_topic_summary(messages_desc)
+        pending_question = self._latest_unanswered_assistant_question(messages_desc)
+        latest_message = messages_desc[0] if messages_desc else None
+        return {
+            "conversation_id": str(session_id),
+            "last_message_id": str(getattr(latest_message, "id", "") or ""),
+            "last_message_at": (
+                getattr(latest_message, "created_at", None).isoformat()
+                if getattr(latest_message, "created_at", None)
+                else None
+            ),
+            "topic_summary": topic_summary,
+            "pending_question": pending_question,
+            "message_count_sample": len(messages_desc),
+        }
+
+    @staticmethod
+    def _chat_topic_summary(messages_desc: list[ChatMessage]) -> str:
+        for role in (MessageRole.USER, MessageRole.ASSISTANT):
+            for message in messages_desc:
+                if message.role != role:
+                    continue
+                summary = AuroraRuntimeV1Service._compact_comeback_text(message.content, limit=34)
+                if summary:
+                    return summary
+        return ""
+
+    @staticmethod
+    def _latest_unanswered_assistant_question(messages_desc: list[ChatMessage]) -> str:
+        if not messages_desc:
+            return ""
+        latest = messages_desc[0]
+        if latest.role != MessageRole.ASSISTANT:
+            return ""
+        content = AuroraRuntimeV1Service._compact_comeback_text(latest.content, limit=58)
+        if not content:
+            return ""
+        question_markers = ("?", "？", "吗", "要不要", "能不能", "是不是", "还是", "想先", "现在有答案")
+        return content if any(marker in content for marker in question_markers) else ""
+
+    @staticmethod
+    def _compact_comeback_text(value: Any, *, limit: int) -> str:
+        text = re.sub(r"\s+", " ", _strip(value)).strip(" \n\t-—:：。.!！?？")
+        text = re.sub(r"[#*_`>\[\]()]+", "", text).strip()
+        if len(text) <= limit:
+            return text
+        return f"{text[: max(1, limit - 1)].rstrip()}…"
+
+    async def _active_core_session_payload(self, user_id: UUID) -> dict[str, Any] | None:
+        if self.redis is None:
+            return None
+        try:
+            from app.aurora.core_session import AuroraCoreSessionService
+
+            session = await AuroraCoreSessionService(self.redis).get_active_session(str(user_id))
+        except Exception as exc:
+            logger.warning("Aurora comeback active core session lookup failed: {}", exc)
+            return None
+        if session is None or session.status not in {"active", "paused"}:
+            return None
+        return {
+            "session_id": session.session_id,
+            "status": session.status,
+            "stage": session.stage,
+            "resume_token": session.resume_token or session.session_id,
+            "conversation_id": session.conversation_id or "",
+            "last_activity_at": session.last_activity_at.isoformat(),
+            "expires_at": session.expires_at.isoformat(),
+        }
+
+    def _base_comeback_payload(
+        self,
+        *,
+        kind: str,
+        title: str,
+        message: str,
+        user_id: UUID,
+        last_activity_at: datetime,
+        inactive_minutes: int,
+        days_away: int,
+        days_remaining: int,
+        subject: str,
+        plan: Plan | None,
+        next_task: Task | None,
+        recent_task_summary: str,
+        light_restart_suggestion: str,
+        latest_chat: dict[str, Any] | None,
+        active_core_session: dict[str, Any] | None,
+        calendar_note: str,
+    ) -> dict[str, Any]:
+        del user_id
+        chat = latest_chat or {}
+        unfinished_items = self._comeback_unfinished_items(
+            latest_chat=chat,
+            active_core_session=active_core_session,
+            next_task=next_task,
+        )
+        return {
+            "comeback_kind": kind,
+            "title": title,
+            "message": message,
+            "should_show_message": bool(_strip(message)),
+            "last_active_at": last_activity_at.isoformat(),
+            "inactive_minutes": inactive_minutes,
+            "days_away": days_away,
+            "days_remaining": days_remaining,
+            "subject": subject,
+            "next_task_title": getattr(next_task, "title", None) or "",
+            "recent_task_summary": recent_task_summary,
+            "light_restart_suggestion": light_restart_suggestion,
+            "plan_id": str(plan.id) if plan is not None else "",
+            "conversation_id": _strip(chat.get("conversation_id")),
+            "last_message_id": _strip(chat.get("last_message_id")),
+            "topic_summary": _strip(chat.get("topic_summary")),
+            "pending_question": _strip(chat.get("pending_question")),
+            "active_core_session": active_core_session or {},
+            "resume_token": _strip((active_core_session or {}).get("resume_token")),
+            "unfinished_items": unfinished_items,
+            "calendar_note": calendar_note,
+        }
+
+    def _comeback_unfinished_items(
+        self,
+        *,
+        latest_chat: dict[str, Any],
+        active_core_session: dict[str, Any] | None,
+        next_task: Task | None,
+    ) -> list[dict[str, str]]:
+        items: list[dict[str, str]] = []
+        if active_core_session:
+            items.append(
+                {
+                    "type": "core_session",
+                    "title": "继续上次的深度对话",
+                    "subtitle": "Aurora 会从中断的阶段接着问",
+                    "action_label": "继续",
+                    "resume_token": _strip(active_core_session.get("resume_token")),
+                }
+            )
+        pending_question = _strip(latest_chat.get("pending_question"))
+        if pending_question:
+            items.append(
+                {
+                    "type": "pending_question",
+                    "title": "上次的问题还挂着",
+                    "subtitle": pending_question,
+                    "action_label": "回答",
+                }
+            )
+        if next_task is not None:
+            focus = self._comeback_recent_task_summary(next_task) or _strip(next_task.title)
+            items.append(
+                {
+                    "type": "task",
+                    "title": _strip(next_task.title) or "继续任务",
+                    "subtitle": focus,
+                    "action_label": "去看看",
+                    "route": f"/tasks/{next_task.id}/execute",
+                }
+            )
+        topic = _strip(latest_chat.get("topic_summary"))
+        if topic and len(items) < 3:
+            items.append(
+                {
+                    "type": "conversation",
+                    "title": "上次聊到这里",
+                    "subtitle": topic,
+                    "action_label": "继续聊",
+                }
+            )
+        return items[:3]
 
     def _comeback_recent_task_summary(self, task: Task | None) -> str:
         if task is None:
@@ -2035,9 +2403,30 @@ class AuroraRuntimeV1Service:
         days_str = f"{days_remaining} 天" if days_remaining > 0 else "最后一点收尾窗口"
         still_time = "现在回来还来得及" if days_remaining > 0 else "现在回来也还能先追回一点节奏"
         return (
-            f"你已经 {days_away} 天没来了，我一直在等你。"
+            f"你已经 {days_away} 天没来了，我保留着上次的进度。"
             f"你的{plan_label}还剩 {days_str}，最近最适合重新捡起来的是「{focus}」。"
             f"{still_time}——如果累了，{light_restart_suggestion}"
+        )
+
+    def _personalized_return_message(
+        self,
+        *,
+        subject: str,
+        days_remaining: int,
+        recent_task_summary: str,
+        next_task_title: str | None,
+        light_restart_suggestion: str,
+        calendar_note: str,
+    ) -> str:
+        focus = recent_task_summary or _strip(next_task_title) or subject or "今天最小的一步"
+        countdown = f"还剩 {days_remaining} 天，" if days_remaining > 0 else ""
+        calendar_tail = self._daily_calendar_tail(calendar_note)
+        if calendar_tail:
+            calendar_tail = f"{calendar_tail}"
+        return (
+            f"{self._daily_greeting()}，{countdown}我把「{subject}」和今天的时间都接上了。"
+            f"先从「{focus}」开始会最稳。{calendar_tail}"
+            f"如果状态还没回来，{light_restart_suggestion}"
         )
 
     def _daily_greeting(self) -> str:

@@ -10,12 +10,12 @@ import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.d
 
 typedef KnowledgeNodeTap = void Function(String nodeId, double? masteryDelta);
 
-/// 错题卡片组件
+/// Error record card.
 ///
-/// 设计原则：
-/// 1. 信息层次清晰：题目摘要 > 状态标签 > 元信息
-/// 2. 交互明确：整卡可点击查看详情，左滑删除
-/// 3. 视觉反馈：掌握度用进度条和颜色体现
+/// Design notes:
+/// 1. Clear hierarchy: question summary, status tags, then metadata.
+/// 2. Clear interaction: tap for details, swipe to delete.
+/// 3. Visual feedback: mastery is shown through progress and color.
 class ErrorCard extends StatelessWidget {
   const ErrorCard({
     required this.error,
@@ -37,7 +37,7 @@ class ErrorCard extends StatelessWidget {
     final now = DateTime.now();
     final needReview =
         error.nextReviewAt != null && error.nextReviewAt!.isBefore(now);
-    final affectedNode = _affectedKnowledgeLink(error);
+    final affectedNode = _affectedKnowledgeLink(context, error);
 
     return Dismissible(
       key: Key(error.id),
@@ -89,7 +89,7 @@ class ErrorCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 头部：科目标签 + 状态标签
+                // Header: subject tag and status tag.
                 Row(
                   children: [
                     SubjectChip(subjectCode: error.subject, compact: true),
@@ -149,7 +149,7 @@ class ErrorCard extends StatelessWidget {
                 ),
                 const SizedBox(height: DS.spacing12),
 
-                // 题目摘要（限制3行）
+                // Question summary, limited to three lines.
                 Text(
                   error.questionText,
                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -180,7 +180,7 @@ class ErrorCard extends StatelessWidget {
                 ],
                 const SizedBox(height: DS.spacing12),
 
-                // 掌握度进度条
+                // Mastery progress.
                 if (showReviewStatus) ...[
                   Row(
                     children: [
@@ -211,7 +211,7 @@ class ErrorCard extends StatelessWidget {
                   const SizedBox(height: DS.spacing12),
                 ],
 
-                // 底部元信息
+                // Footer metadata.
                 Wrap(
                   spacing: DS.spacing16,
                   runSpacing: DS.spacing6,
@@ -250,7 +250,10 @@ class ErrorCard extends StatelessWidget {
     );
   }
 
-  KnowledgeLink? _affectedKnowledgeLink(ErrorRecord error) {
+  KnowledgeLink? _affectedKnowledgeLink(
+    BuildContext context,
+    ErrorRecord error,
+  ) {
     final affectedNodeId = error.affectedNodeId;
     if (affectedNodeId != null && affectedNodeId.isNotEmpty) {
       for (final link in error.knowledgeLinks) {
@@ -258,7 +261,10 @@ class ErrorCard extends StatelessWidget {
           return link;
         }
       }
-      return KnowledgeLink(nodeId: affectedNodeId, nodeName: '知识节点');
+      return KnowledgeLink(
+        nodeId: affectedNodeId,
+        nodeName: context.l10n.errorBookKnowledgeNodeFallback,
+      );
     }
 
     for (final link in error.knowledgeLinks) {
@@ -406,7 +412,7 @@ class _AffectedKnowledgeTag extends StatelessWidget {
   }
 }
 
-/// 错题简化卡片（用于复习页面）
+/// Simplified error card for review pages.
 class ErrorCardCompact extends StatelessWidget {
   const ErrorCardCompact({
     required this.error,

@@ -264,7 +264,7 @@ class _LearningForecastScreenState
                     style: TextStyle(
                       color: DS.textPrimary,
                       fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   const SizedBox(height: DS.xs),
@@ -287,7 +287,7 @@ class _LearningForecastScreenState
         style: TextStyle(
           color: DS.textPrimary,
           fontSize: 18,
-          fontWeight: FontWeight.bold,
+          fontWeight: DS.fontWeightBold,
         ),
       );
 
@@ -328,7 +328,7 @@ class _LearningForecastScreenState
                 const SizedBox(width: DS.md),
                 Text(
                   I18nService.instance.isChinese ? '最佳学习时间' : 'Best Learning Time',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(fontSize: 16, fontWeight: DS.fontWeightBold),
                 ),
               ],
             ),
@@ -441,7 +441,7 @@ class _LearningForecastScreenState
                   const SizedBox(width: DS.md),
                   Text(
                     I18nService.instance.isChinese ? '学习建议' : 'Learning Tips',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(fontSize: 16, fontWeight: DS.fontWeightBold),
                   ),
                 ],
               ),

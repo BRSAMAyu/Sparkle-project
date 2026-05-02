@@ -14,22 +14,24 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/microcosm-cc/bluemonday"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	pbws "github.com/sparkle/gateway/gen/ws"
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/config"
-	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/galaxy"
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/metrics"
 	"github.com/sparkle/gateway/internal/service"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"golang.org/x/time/rate"
+	"go.uber.org/zap"
 )
 
 // P1 Optimization: Object pools to reduce GC pressure in high-concurrency scenarios
@@ -130,10 +132,20 @@ const maxMessageLength = 4000
 // maxToolResultLength limits tool_result_json to prevent oversized payloads.
 const maxToolResultLength = 10 * 1024 // 10 KB
 
+// defaultMaxConcurrentStreams is the fallback when StreamMaxConcurrent is not set.
+const defaultMaxConcurrentStreams = 200
+
+func streamSemaphoreSize(cfg *config.Config) int {
+	if cfg != nil && cfg.StreamMaxConcurrent > 0 {
+		return cfg.StreamMaxConcurrent
+	}
+	return defaultMaxConcurrentStreams
+}
+
 type ChatOrchestrator struct {
 	agentClient  *agent.Client
 	galaxyClient *galaxy.Client
-	queries      *db.Queries
+	userIdentity service.UserIdentityService
 	chatHistory  *service.ChatHistoryService
 	quota        *service.QuotaService
 	semantic     *service.SemanticCacheService
@@ -146,13 +158,29 @@ type ChatOrchestrator struct {
 	signalHub    *service.SignalHub
 	httpClient   *http.Client
 	wsRegistry   *ConnectionRegistry
+	// streamSem limits concurrent gRPC StreamChat calls.
+	streamSem chan struct{}
+	draining  atomic.Bool
 }
 
-func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string, signalHub *service.SignalHub) *ChatOrchestrator {
-	return &ChatOrchestrator{
+var streamSemaphoreObserved atomic.Pointer[ChatOrchestrator]
+
+var _ = promauto.NewGaugeFunc(prometheus.GaugeOpts{
+	Name: "sparkle_grpc_stream_semaphore_usage",
+	Help: "Current gRPC StreamChat semaphore usage ratio in the gateway",
+}, func() float64 {
+	h := streamSemaphoreObserved.Load()
+	if h == nil || cap(h.streamSem) == 0 {
+		return 0
+	}
+	return float64(len(h.streamSem)) / float64(cap(h.streamSem))
+})
+
+func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, ui service.UserIdentityService, ch *service.ChatHistoryService, qs *service.QuotaService, sc *service.SemanticCacheService, bc *service.CostCalculator, wsFactory *WebSocketFactory, cfg *config.Config, uc *service.UserContextService, tc *service.TaskCommandService, backendURL string, signalHub *service.SignalHub) *ChatOrchestrator {
+	h := &ChatOrchestrator{
 		agentClient:  ac,
 		galaxyClient: gc,
-		queries:      q,
+		userIdentity: ui,
 		chatHistory:  ch,
 		quota:        qs,
 		semantic:     sc,
@@ -167,10 +195,18 @@ func NewChatOrchestrator(ac *agent.Client, gc *galaxy.Client, q *db.Queries, ch 
 			Timeout: 5 * time.Second,
 		},
 		wsRegistry: NewConnectionRegistry(signalHub, ch, cfg.WSGlobalMaxConnections, cfg.WSMaxConnections),
+		streamSem:  make(chan struct{}, streamSemaphoreSize(cfg)),
 	}
+	streamSemaphoreObserved.Store(h)
+	return h
 }
 
 func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
+	if h.IsDraining() {
+		c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"error": "Server shutting down"})
+		return
+	}
+
 	// Use WebSocketFactory for secure origin checking
 	var upgrader websocket.Upgrader
 	if h.wsFactory != nil {
@@ -191,7 +227,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
-		log.Printf("Failed to upgrade WS: %v", err)
+		zap.L().Warn("Failed to upgrade WS", zap.Error(err))
 		return
 	}
 
@@ -218,10 +254,16 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		writeWait = 60 * time.Second
 	}
 	writer := newWSSafeWriter(conn, writeWait)
+	closeCode := websocket.CloseNormalClosure
+	closeReason := ""
 	defer func() {
-		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-		_ = conn.Close()
+		_ = writer.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(closeCode, closeReason))
+		_ = writer.Close()
 	}()
+	if h.IsDraining() {
+		writeServerDrainingClose(writer, conn)
+		return
+	}
 
 	_ = conn.SetReadDeadline(time.Now().Add(pongWait))
 	conn.SetPongHandler(func(string) error {
@@ -246,41 +288,27 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	}()
 	defer close(pingDone)
 
-	// Idle timer — close connection if no messages for idleTimeout.
-	// connDone prevents the goroutine from touching conn after the handler exits.
+	// Idle timer — signal the main handler loop to close if no messages arrive.
 	idleTimer := time.NewTimer(idleTimeout)
 	defer idleTimer.Stop()
 	connDone := make(chan struct{})
 	defer close(connDone)
-	go func() {
-		select {
-		case <-idleTimer.C:
-			log.Printf("WebSocket idle timeout for connection, closing")
-			_ = writer.WriteControl(
-				websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseGoingAway, "idle timeout"),
-			)
-			_ = conn.Close()
-		case <-connDone:
-			return
-		}
-	}()
 
 	// Require authenticated user_id from context (must be set by AuthMiddleware)
 	userID := c.GetString("user_id")
 	if userID == "" {
 		log.Printf("WebSocket rejected: missing authentication")
-		_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
-		_ = conn.Close() // Explicitly close rejected connection
+		writeWSMessageLogged(writer, "authentication close frame", websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseUnsupportedData, "Authentication required"))
+		_ = writer.Close() // Explicitly close rejected connection
 		return
 	}
 	authToken := c.GetString("auth_token")
 	_ = authToken
 
-	log.Printf("WebSocket connected for user: %s", userID)
+	log.Printf("WebSocket connected for user: %s", hashUserIDForLog(userID))
 	// P0-1: Log reconnect context if session_id provided via query param
 	if reconnectSID := c.Query("session_id"); reconnectSID != "" {
-		log.Printf("WebSocket reconnect for user: %s with session_id: %s", userID, reconnectSID)
+		log.Printf("WebSocket reconnect for user: %s with session_id: %s", hashUserIDForLog(userID), reconnectSID)
 	}
 	authMethod := c.GetString("ws_auth_method")
 	if authMethod == "" {
@@ -288,6 +316,11 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	}
 	metrics.WSConnectionSuccess.WithLabelValues("/ws/chat", authMethod).Inc()
 	if !h.registerConnection(userID, conn, writer) {
+		if h.IsDraining() {
+			metrics.WSConnectionError.WithLabelValues("/ws/chat", authMethod, "draining").Inc()
+			writeServerDrainingClose(writer, conn)
+			return
+		}
 		metrics.WSConnectionError.WithLabelValues("/ws/chat", authMethod, "connection_limit").Inc()
 		writeConnectionLimitClose(writer, conn)
 		return
@@ -295,33 +328,42 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 	defer h.unregisterConnection(userID, conn)
 
 	readLimit := int64(0)
-	msgRate := 0.0
-	msgBurst := 0
 	if h.cfg != nil {
 		readLimit = h.cfg.WSMaxMessageBytes
-		msgRate = h.cfg.WSMessageRateRPS
-		msgBurst = h.cfg.WSMessageRateBurst
 	}
-	if readLimit > 0 {
-		conn.SetReadLimit(readLimit)
+	if readLimit <= 0 {
+		readLimit = wsDefaultMaxMessageBytes
 	}
-	if msgRate <= 0 {
-		msgRate = 1
-	}
-	if msgBurst <= 0 {
-		msgBurst = 1
-	}
-	msgLimiter := rate.NewLimiter(rate.Limit(msgRate), msgBurst)
+	conn.SetReadLimit(readLimit)
+	msgLimiter := newWSMessageRateLimiter(h.cfg)
 
 	tracer := otel.Tracer("chat-orchestrator")
+	readResults := readWSMessages(conn, connDone)
 
 	// Message handling loop: each WebSocket message triggers a new StreamChat call
 	for {
 		// Read message from WebSocket client
-		msgType, msg, err := conn.ReadMessage()
+		var msgType int
+		var msg []byte
+		var err error
+		select {
+		case <-idleTimer.C:
+			log.Printf("WebSocket idle timeout for connection, closing")
+			closeCode = websocket.CloseGoingAway
+			closeReason = "idle timeout"
+			return
+		case readResult, ok := <-readResults:
+			if !ok {
+				return
+			}
+			msgType = readResult.messageType
+			msg = readResult.message
+			err = readResult.err
+		}
 		if err != nil {
 			if errors.Is(err, websocket.ErrReadLimit) {
-				_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message too large"))
+				closeCode = websocket.ClosePolicyViolation
+				closeReason = "Message too large"
 			}
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 				log.Printf("WebSocket error: %v", err)
@@ -339,7 +381,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		idleTimer.Reset(idleTimeout)
 
 		if !msgLimiter.Allow() {
-			_ = writer.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "Message rate limit exceeded"))
+			writeWSMessageLogged(writer, "rate limit close frame", websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, defaultWSRateLimitMessage))
 			break
 		}
 
@@ -362,7 +404,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				msgMap := make(map[string]interface{})
 				if err := json.Unmarshal(msg, &msgMap); err != nil {
 					log.Printf("Failed to parse message: %v", err)
-					_ = writer.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
+					if !writeWSJSONLogged(writer, "invalid legacy JSON error", gin.H{"type": "error", "message": "Invalid JSON format"}) {
+						return true
+					}
 					return false
 				}
 
@@ -374,7 +418,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				// Route based on message type
 				switch msgType {
 				case "ping":
-					_ = writer.WriteJSON(gin.H{"type": "pong"})
+					if !writeWSJSONLogged(writer, "pong", gin.H{"type": "pong"}) {
+						return true
+					}
 					return false
 				case "action_feedback":
 					h.handleActionFeedback(c.Request.Context(), writer, msgMap, userID, authToken)
@@ -403,9 +449,16 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					toolInput.ToolErrorMsg, _ = msgMap["error_message"].(string)
 					toolInput.SessionID, _ = msgMap["session_id"].(string)
 					toolInput.RequestID, _ = msgMap["request_id"].(string)
+					if toolInput.RequestID == "" {
+						toolInput.RequestID = generateRequestID()
+					}
 
 					if len(toolInput.ToolResultJSON) > maxToolResultLength {
-						_ = writer.WriteJSON(gin.H{"type": "error", "message": "Tool result too large"})
+						if !writeWSJSONLogged(writer, "tool result too large error", gin.H{"type": "error", "message": "Tool result too large"}) {
+							toolInput.Reset()
+							chatInputPool.Put(toolInput)
+							return true
+						}
 						toolInput.Reset()
 						chatInputPool.Put(toolInput)
 						return false
@@ -424,16 +477,21 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 							attribute.String("tool_name", toolInput.ToolName),
 						)
 						defer span2.End()
+						if !sendLegacyAcceptedAck(writer, toolInput.RequestID) {
+							return true
+						}
 						return h.handleChatMessage(ctx2, writer, userID, toolInput, toolInput.RequestID)
 					}()
 				case "update_node_mastery":
-					h.handleUpdateNodeMastery(writer, msgMap, userID)
+					h.handleUpdateNodeMastery(writer, msgMap, userID, c.Request.Context())
 					return false
 				case "message", "":
 					// Continue with normal chat message handling
 				default:
 					log.Printf("Unknown message type: %s", msgType)
-					_ = writer.WriteJSON(gin.H{"type": "error", "message": "Unknown message type"})
+					if !writeWSJSONLogged(writer, "unknown message type error", gin.H{"type": "error", "message": "Unknown message type"}) {
+						return true
+					}
 					return false
 				}
 
@@ -450,21 +508,30 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				// Parse JSON input
 				if err := json.Unmarshal(msg, input); err != nil {
 					log.Printf("Failed to parse message: %v", err)
-					_ = writer.WriteJSON(gin.H{"type": "error", "message": "Invalid JSON format"})
+					if !writeWSJSONLogged(writer, "invalid chat JSON error", gin.H{"type": "error", "message": "Invalid JSON format"}) {
+						return true
+					}
 					return false
 				}
 
 				if input.Message == "" {
-					_ = writer.WriteJSON(gin.H{"type": "error", "message": "Empty message"})
+					if !writeWSJSONLogged(writer, "empty message error", gin.H{"type": "error", "message": "Empty message"}) {
+						return true
+					}
 					return false
+				}
+				if input.RequestID == "" {
+					input.RequestID = generateRequestID()
 				}
 
 				// 🔧 P1-2: 消息长度检查
 				if len(input.Message) > maxMessageLength {
-					_ = writer.WriteJSON(gin.H{
+					if !writeWSJSONLogged(writer, "message length error", gin.H{
 						"type":    "error",
 						"message": i18n.T(c.Request.Context(), "chat.message_length_exceeded", map[string]string{"max_length": fmt.Sprintf("%d", maxMessageLength)}),
-					})
+					}) {
+						return true
+					}
 					return false
 				}
 
@@ -485,6 +552,9 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				}
 				defer span.End()
 
+				if !sendLegacyAcceptedAck(writer, input.RequestID) {
+					return true
+				}
 				return h.handleChatMessage(ctx, writer, userID, input, input.RequestID)
 			}
 
@@ -520,6 +590,8 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					responder.SendError("invalid_argument", "Invalid chat_request payload", false)
 					return false
 				}
+
+				input.Message = sanitizer.Sanitize(input.Message)
 
 				// 🔧 P1-2: 消息长度检查
 				if len(input.Message) > maxMessageLength {
@@ -584,7 +656,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					responder.SendError("invalid_argument", "Invalid update_node_mastery payload", false)
 					return false
 				}
-				h.handleUpdateNodeMasteryWithResponder(responder, msgMap, userID)
+				h.handleUpdateNodeMasteryWithResponder(msgCtx, responder, msgMap, userID)
 				return false
 			case "intervention_feedback":
 				msgMap, err := decodePayloadMap(envelope.Payload["intervention_feedback"])
@@ -620,7 +692,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		}
 	}
 
-	log.Printf("WebSocket disconnected for user: %s", userID)
+	log.Printf("WebSocket disconnected for user: %s", hashUserIDForLog(userID))
 }
 
 // PushIntervention sends an intervention push message to all active WebSocket connections for a user.

@@ -4,11 +4,15 @@ import uuid
 from unittest.mock import AsyncMock
 
 import pytest
+from fastapi import HTTPException
 from sqlalchemy import select
 
+from app.api.v1.documents import _require_citation_chunk_belongs_to_file, _require_citation_feedback_access
+from app.models.community import Group, GroupMember, GroupRole, GroupType
 from app.models.document_chunks import DocumentChunk
 from app.models.document_feedback import DocumentRetrievalFeedback
 from app.models.file_storage import StoredFile
+from app.models.group_files import GroupFile
 from app.models.user import User
 from app.orchestration.graph_rag import GraphRAGRetriever
 from app.services.document_service import document_service
@@ -157,6 +161,75 @@ async def test_implicit_positive_feedback_is_persisted_from_follow_up(db_session
     assert len(records) == 1
     assert records[0].feedback_score == 1
     assert records[0].context["reason"] == "user_asked_follow_up_about_cited_content"
+
+
+@pytest.mark.asyncio
+async def test_group_citation_feedback_requires_group_view_permission(db_session, test_user: User) -> None:
+    viewer = User(
+        username=f"viewer-{uuid.uuid4()}",
+        email=f"viewer-{uuid.uuid4()}@example.com",
+        hashed_password="hashed",
+    )
+    db_session.add(viewer)
+    await db_session.flush()
+
+    group = Group(
+        name="OS Study Squad",
+        type=GroupType.SQUAD,
+        focus_tags=["os"],
+    )
+    db_session.add(group)
+    await db_session.flush()
+    db_session.add_all(
+        [
+            GroupMember(group_id=group.id, user_id=test_user.id, role=GroupRole.OWNER),
+            GroupMember(group_id=group.id, user_id=viewer.id, role=GroupRole.MEMBER),
+        ]
+    )
+
+    stored_file, _ = await _create_file_with_chunk(db_session, owner_id=test_user.id, visibility="group")
+    group_file = GroupFile(
+        group_id=group.id,
+        file_id=stored_file.id,
+        shared_by_id=test_user.id,
+        view_role=GroupRole.ADMIN,
+        download_role=GroupRole.ADMIN,
+        manage_role=GroupRole.ADMIN,
+    )
+    db_session.add(group_file)
+    await db_session.flush()
+
+    with pytest.raises(HTTPException) as exc:
+        await _require_citation_feedback_access(db_session, record=stored_file, user_id=viewer.id)
+    assert exc.value.status_code == 403
+
+    group_file.view_role = GroupRole.MEMBER
+    db_session.add(group_file)
+    await db_session.flush()
+
+    await _require_citation_feedback_access(db_session, record=stored_file, user_id=viewer.id)
+
+
+@pytest.mark.asyncio
+async def test_citation_feedback_chunk_must_belong_to_file(db_session, test_user: User) -> None:
+    first_file, _ = await _create_file_with_chunk(db_session, owner_id=test_user.id)
+    _, other_chunk = await _create_file_with_chunk(db_session, owner_id=test_user.id)
+
+    with pytest.raises(HTTPException) as exc:
+        await _require_citation_chunk_belongs_to_file(
+            db_session,
+            file_id=first_file.id,
+            chunk_id=str(other_chunk.id),
+        )
+    assert exc.value.status_code == 404
+
+    with pytest.raises(HTTPException) as invalid_exc:
+        await _require_citation_chunk_belongs_to_file(
+            db_session,
+            file_id=first_file.id,
+            chunk_id="not-a-uuid",
+        )
+    assert invalid_exc.value.status_code == 400
 
 
 @pytest.mark.asyncio

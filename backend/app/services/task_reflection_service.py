@@ -95,6 +95,8 @@ class TaskReflectionService:
         "intervention_ineffective",
         "plan_stall",
         "overload",
+        "plan_completed",
+        "milestone_reached",
     }
     PROMPT_TEMPLATES = {
         TaskFeedbackCategory.TOO_DIFFICULT.value: {
@@ -121,6 +123,14 @@ class TaskReflectionService:
             "question": "同一天连续失败或取消，最像是哪种过载？",
             "options": ["任务堆得太满", "精力撑不住", "时间被切得太碎"],
         },
+        "plan_completed": {
+            "question": "计划完成了，回顾一下，这次最有价值的收获是什么？",
+            "options": ["找到了有效的学习方法", "执行力比预期好", "目标拆解得很合理"],
+        },
+        "milestone_reached": {
+            "question": "你刚达成一个里程碑，是什么让你这次能稳定推进？",
+            "options": ["节奏把控得好", "方法找对了", "坚持了计划"],
+        },
     }
     TRIGGER_PROMPT_VERSIONS = {
         TaskFeedbackCategory.TOO_DIFFICULT.value: "v1",
@@ -129,6 +139,8 @@ class TaskReflectionService:
         "intervention_ineffective": "v1",
         "plan_stall": "v1",
         "overload": "v1",
+        "plan_completed": "v1",
+        "milestone_reached": "v1",
     }
 
     def __init__(self, db: AsyncSession, redis=None):

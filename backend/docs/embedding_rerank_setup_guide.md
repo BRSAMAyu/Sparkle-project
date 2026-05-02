@@ -22,7 +22,7 @@
 ```bash
 export EMBEDDING_PROVIDER=dashscope
 export RERANK_PROVIDER=dashscope
-export DASHSCOPE_API_KEY=sk-your-dashscope-api-key
+export DASHSCOPE_API_KEY=replace_with_provider_api_key
 
 # 模型配置
 export EMBEDDING_MODEL=text-embedding-v4

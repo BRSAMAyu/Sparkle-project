@@ -3,6 +3,9 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
+from pydantic import ValidationError
+
 from app.core.profile_context import ProfileContext
 from app.core.user_insight_state import UserInsightState
 from app.profile.projection_contract import UserProjectionContract
@@ -172,8 +175,7 @@ class ProfileFrontDoorService:
             "contract_version": getattr(contract, "contract_version", None),
             "generated_at": state.generated_at,
             "binding_note": (
-                "当前前门展示的是 canonical 结论 + 可点击的 L0 依据引用；"
-                "若没有可暴露依据，会明确显示为缺失或脱敏。"
+                "当前前门展示的是 canonical 结论 + 可点击的 L0 依据引用；" "若没有可暴露依据，会明确显示为缺失或脱敏。"
             ),
             "follow_up_hint": "如果哪一条不对，你可以直接在聊天里指出，我会按用户纠正通道处理。",
             "confirmation": dict(confirmation or {}),
@@ -187,7 +189,8 @@ class ProfileFrontDoorService:
         if isinstance(value, dict) and value:
             try:
                 return ProfileContext(**value)
-            except Exception:
+            except (TypeError, ValueError, ValidationError) as exc:
+                logger.warning("Failed to coerce profile_context payload: {}", exc)
                 return None
         return None
 
@@ -316,10 +319,14 @@ class ProfileFrontDoorService:
         recent_practice_outcomes = [
             {"type": "practice_outcome", "id": str(item.get("id")), "schema_version": "practice_outcome.v1"}
             for item in list(profile_context.recent_errors or [])
-            if _strip(item.get("id")) and int(item.get("review_count") or 0) > 0 and _strip(item.get("last_reviewed_at"))
+            if _strip(item.get("id"))
+            and int(item.get("review_count") or 0) > 0
+            and _strip(item.get("last_reviewed_at"))
         ]
         return {
-            "status": "known" if any((weak_concepts, recent_concepts, recent_errors, recent_practice_outcomes)) else "sparse",
+            "status": (
+                "known" if any((weak_concepts, recent_concepts, recent_errors, recent_practice_outcomes)) else "sparse"
+            ),
             "weak_concepts": weak_concepts[:3],
             "recent_concepts": recent_concepts[:3],
             "recent_errors": recent_errors[:3],
@@ -369,7 +376,9 @@ class ProfileFrontDoorService:
         *,
         evidence_catalog: dict[str, Any],
     ) -> list[dict[str, Any]]:
-        evidence_signals = {str(item).strip() for item in list(prediction.get("evidence_signals") or []) if str(item).strip()}
+        evidence_signals = {
+            str(item).strip() for item in list(prediction.get("evidence_signals") or []) if str(item).strip()
+        }
         if "error_summary" in evidence_signals:
             return self._dedupe_evidence_refs(
                 evidence_catalog.get("recent_practice_outcomes") or [],

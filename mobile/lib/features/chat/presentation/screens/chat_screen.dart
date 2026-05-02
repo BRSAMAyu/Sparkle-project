@@ -7,10 +7,15 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/offline/models/offline_chat_message.dart';
+import 'package:sparkle/core/offline/offline_providers.dart';
+import 'package:sparkle/core/models/aurora_correction_payload.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
@@ -19,6 +24,7 @@ import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_comeback_context.dart';
+import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
 import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_repository.dart';
 import 'package:sparkle/features/chat/chat_routes.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -33,6 +39,8 @@ import 'package:sparkle/features/chat/presentation/widgets/agent_workflow_panel.
 import 'package:sparkle/features/chat/presentation/widgets/ai_reasoning_mode_pill.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_bubble.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_design_language_widgets.dart';
+import 'package:sparkle/features/chat/presentation/widgets/comeback_banner.dart';
 import 'package:sparkle/features/chat/presentation/widgets/contextual_correction_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_input.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_mode_selector_pill.dart';
@@ -40,6 +48,7 @@ import 'package:sparkle/features/chat/presentation/widgets/chat_mode_transition_
 import 'package:sparkle/features/chat/presentation/widgets/chat_prediction_dock.dart';
 import 'package:sparkle/features/chat/presentation/widgets/expert_roundtable_widget.dart';
 import 'package:sparkle/features/chat/presentation/widgets/guidance_mode_toggle.dart';
+import 'package:sparkle/features/chat/presentation/widgets/offline_queue_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/community_insight_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/goal_arbitration_card.dart';
@@ -48,9 +57,11 @@ import 'package:sparkle/features/chat/presentation/widgets/spine_receipt_card.da
 import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/strategy_intervention_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_selector_pill.dart';
+import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/status_awareness_bar.dart';
 import 'package:sparkle/features/chat/presentation/widgets/study_materials_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/transparency_floating_capsule.dart';
+import 'package:sparkle/features/chat/presentation/widgets/understanding_drawer.dart';
 import 'package:sparkle/features/chat/presentation/widgets/working_memory_drawer.dart';
 import 'package:sparkle/features/documents/data/models/document_library_models.dart';
 import 'package:sparkle/features/documents/presentation/providers/document_library_provider.dart';
@@ -75,6 +86,50 @@ const _defaultAiSystemPreferences = TransparencyPreferences(
   autoCollapseOnComplete: true,
   allowPerTurnDismiss: true,
 );
+
+IconData _chatFailureIcon(String? code) {
+  switch (FailureKindCode.fromCode(code)) {
+    case FailureKind.offline:
+    case FailureKind.network:
+      return Icons.wifi_off_rounded;
+    case FailureKind.auth:
+      return Icons.lock_outline_rounded;
+    case FailureKind.server:
+      return Icons.cloud_sync_outlined;
+    case FailureKind.validation:
+      return Icons.edit_note_rounded;
+    case FailureKind.unknown:
+      return Icons.error_outline_rounded;
+  }
+}
+
+String _chatFailureTitle(BuildContext context, String? code) {
+  final zh = AppLocalizations.of(context)?.localeName.startsWith('zh') ?? true;
+  switch (FailureKindCode.fromCode(code)) {
+    case FailureKind.offline:
+      return zh ? '离线了' : 'Offline';
+    case FailureKind.auth:
+      return zh ? '需要重新登录' : 'Sign-in needed';
+    case FailureKind.server:
+      return zh ? '服务暂时不稳' : 'Service issue';
+    case FailureKind.validation:
+      return zh ? '需要调整输入' : 'Check input';
+    case FailureKind.network:
+      return zh ? '网络不稳定' : 'Connection issue';
+    case FailureKind.unknown:
+      return zh ? '请求遇到问题' : 'Request issue';
+  }
+}
+
+String _chatFailureActionLabel(BuildContext context, String? code) {
+  final zh = AppLocalizations.of(context)?.localeName.startsWith('zh') ?? true;
+  return switch (FailureKindCode.fromCode(code)) {
+    FailureKind.auth => zh ? '去登录' : 'Sign in',
+    FailureKind.validation => zh ? '修改' : 'Edit',
+    FailureKind.offline => zh ? '连网后重试' : 'Retry online',
+    _ => context.l10n.retry,
+  };
+}
 
 enum _ChatShortcutAction {
   newSession,
@@ -131,6 +186,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   String? _hydratedChatOpeningConversationId;
   String? _hydratedComebackSignature;
   String? _hydratedDailyStartupKey;
+  AuroraComebackContext? _comebackContext;
+  bool _showComebackBanner = false;
+  String? _newMessageDividerBeforeId;
+  String? _latestReadConversationId;
+  String? _latestReadMessageId;
+  final Map<String, GlobalKey> _messageKeys = <String, GlobalKey>{};
   bool _dailyStartupRetryBannerVisible = false;
   bool _dailyStartupRetryInFlight = false;
   String? _reviewNodeLabel;
@@ -262,6 +323,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       unawaited(ref.read(chatProvider.notifier).warmUpConnection());
+      unawaited(
+        ref.read(auroraCoreSessionStateProvider.notifier).refreshFromBackend(),
+      );
       final activePlanId = ref.read(activePlanProvider);
       await ref.read(chatProvider.notifier).switchPlanSession(activePlanId);
       if (ref.read(dashboardProvider).nextIntentForecast == null) {
@@ -283,6 +347,43 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (mastery is num) {
       _reviewNodeMastery = _normalizeReviewNodeMastery(mastery);
     }
+  }
+
+  Map<String, dynamic>? _normalizeInitialExtraContext(
+    Map<String, dynamic>? context,
+  ) {
+    if (context == null || context.isEmpty) {
+      return context;
+    }
+    final normalized = Map<String, dynamic>.from(context);
+    final rawCorrection = normalized['aurora_correction'];
+    if (rawCorrection is Map) {
+      final chatState = ref.read(chatProvider);
+      final payload = AuroraCorrectionPayload.fromJson(
+        Map<String, dynamic>.from(rawCorrection),
+      );
+      final conversationId = payload.conversationId.trim().isNotEmpty
+          ? payload.conversationId
+          : chatState.conversationId ?? '';
+      normalized['aurora_correction'] = payload
+          .copyWith(
+            conversationId: conversationId,
+            messageId: payload.messageId.trim().isNotEmpty
+                ? payload.messageId
+                : _latestAssistantMessageId(),
+          )
+          .toJson();
+    }
+    return normalized;
+  }
+
+  String _latestAssistantMessageId() {
+    for (final message in ref.read(chatProvider).messages.reversed) {
+      if (message.role == MessageRole.assistant && message.id.isNotEmpty) {
+        return message.id;
+      }
+    }
+    return '';
   }
 
   double _normalizeReviewNodeMastery(num mastery) {
@@ -344,7 +445,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return;
       }
       _dispatchedInitialUserMessage = nextMsg;
-      final overrides = <String, dynamic>{...?widget.initialExtraContext};
+      final overrides = <String, dynamic>{
+        ...?_normalizeInitialExtraContext(widget.initialExtraContext),
+      };
       if (widget.fromModelingComplete) {
         overrides['from_modeling_complete'] = true;
       }
@@ -409,6 +512,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return false;
     }
     if (widget.initialUserMessage?.trim().isNotEmpty ?? false) {
+      return false;
+    }
+    if (widget.initialConversationId?.trim().isNotEmpty ?? false) {
+      final conversationId = widget.initialConversationId!.trim();
+      await _restoreReadPositionForConversation(conversationId);
       return false;
     }
     if (!_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
@@ -593,9 +701,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     if (widget.initialUserMessage?.trim().isNotEmpty ?? false) {
       return false;
     }
-    if (!_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
-      return false;
-    }
 
     AuroraComebackContext comeback;
     try {
@@ -610,35 +715,284 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       return false;
     }
 
-    final signature =
-        '${comeback.planId}:${comeback.daysAway}:${comeback.daysRemaining}';
+    final signature = '${comeback.comebackKind}:${comeback.conversationId}:'
+        '${comeback.lastActiveAt}:${comeback.planId}:${comeback.resumeToken}';
     if (_hydratedComebackSignature == signature) {
       return true;
     }
 
     final selectedPlanId = ref.read(activePlanProvider)?.trim();
     final comebackPlanId = comeback.planId.trim();
-    if ((selectedPlanId == null || selectedPlanId.isEmpty) &&
-        comebackPlanId.isNotEmpty) {
-      await ref.read(chatProvider.notifier).switchPlanSession(comebackPlanId);
-      if (!mounted ||
-          !_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
+    final comebackConversationId = comeback.conversationId.trim();
+
+    if (comebackConversationId.isNotEmpty &&
+        comebackConversationId !=
+            (ref.read(chatProvider).conversationId ?? '').trim()) {
+      await ref
+          .read(chatProvider.notifier)
+          .loadConversationHistory(comebackConversationId);
+      if (!mounted) {
         return false;
       }
+      await _restoreReadPositionForConversation(comebackConversationId);
+    } else if (comebackConversationId.isNotEmpty) {
+      await _restoreReadPositionForConversation(comebackConversationId);
+    } else if ((selectedPlanId == null || selectedPlanId.isEmpty) &&
+        comebackPlanId.isNotEmpty) {
+      await ref.read(chatProvider.notifier).switchPlanSession(comebackPlanId);
+      if (!mounted) {
+        return false;
+      }
+      final conversationId = ref.read(chatProvider).conversationId;
+      if (conversationId != null && conversationId.isNotEmpty) {
+        await _restoreReadPositionForConversation(conversationId);
+      }
+    }
+
+    if ((selectedPlanId == null || selectedPlanId.isEmpty) &&
+        comebackPlanId.isNotEmpty) {
       ref.read(activePlanProvider.notifier).selectPlan(comebackPlanId);
     }
 
-    if (!_canShowAuroraOpenerOver(ref.read(chatProvider).messages)) {
-      return false;
+    if (comeback.shouldShowBanner) {
+      setState(() {
+        _comebackContext = comeback;
+        _showComebackBanner = true;
+      });
+    } else if (_showComebackBanner) {
+      setState(() {
+        _showComebackBanner = false;
+      });
     }
 
-    ref.read(chatProvider.notifier).showComebackMessage(
-          comeback.message,
-          planId: comebackPlanId,
-          daysAway: comeback.daysAway,
-        );
     _hydratedComebackSignature = signature;
     return true;
+  }
+
+  Future<void> _restoreReadPositionForConversation(
+      String conversationId) async {
+    final normalizedConversationId = conversationId.trim();
+    if (normalizedConversationId.isEmpty) {
+      return;
+    }
+    final messages = ref.read(chatProvider).messages;
+    _pruneMessageKeys(messages);
+    final prefs = await SharedPreferences.getInstance();
+    final storedLastReadId =
+        prefs.getString(_lastReadMessagePrefsKey(normalizedConversationId));
+    String? firstUnreadId;
+    if (storedLastReadId != null &&
+        storedLastReadId.isNotEmpty &&
+        messages.isNotEmpty) {
+      final storedIndex =
+          messages.indexWhere((message) => message.id == storedLastReadId);
+      if (storedIndex >= 0 && storedIndex < messages.length - 1) {
+        firstUnreadId = messages[storedIndex + 1].id;
+      } else if (storedIndex < 0) {
+        firstUnreadId = messages.first.id;
+      }
+    }
+    if (mounted) {
+      setState(() {
+        _newMessageDividerBeforeId = firstUnreadId;
+      });
+    }
+    final targetId =
+        firstUnreadId ?? (messages.isNotEmpty ? messages.last.id : null);
+    if (targetId == null) {
+      return;
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      final targetContext = _messageKeys[targetId]?.currentContext;
+      if (targetContext == null) {
+        _scrollToBottom();
+        return;
+      }
+      Scrollable.ensureVisible(
+        targetContext,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOutCubic,
+        alignment: 0.22,
+      );
+    });
+  }
+
+  void _pruneMessageKeys(List<ChatMessageModel> messages) {
+    final ids = messages.map((message) => message.id).toSet();
+    _messageKeys.removeWhere((id, _) => !ids.contains(id));
+  }
+
+  GlobalKey _messageKeyFor(String id) =>
+      _messageKeys.putIfAbsent(id, () => GlobalKey());
+
+  String _lastReadMessagePrefsKey(String conversationId) =>
+      'chat:last_read_message_id:$conversationId';
+
+  Future<void> _writeLatestReadPosition(
+    String conversationId,
+    String latestId,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastReadMessagePrefsKey(conversationId), latestId);
+  }
+
+  void _rememberLatestReadPosition(ChatState chatState) {
+    final conversationId = chatState.conversationId?.trim();
+    final latestId =
+        chatState.messages.isNotEmpty ? chatState.messages.last.id.trim() : '';
+    if (conversationId == null || conversationId.isEmpty || latestId.isEmpty) {
+      return;
+    }
+    _latestReadConversationId = conversationId;
+    _latestReadMessageId = latestId;
+  }
+
+  void _dismissComebackBanner() {
+    if (!_showComebackBanner) {
+      return;
+    }
+    setState(() {
+      _showComebackBanner = false;
+    });
+  }
+
+  void _continueFromComebackBanner() {
+    _dismissComebackBanner();
+    _scrollToBottom();
+  }
+
+  Future<void> _resumeComebackCoreSession() async {
+    final comeback = _comebackContext;
+    final resumeToken = comeback?.resumeToken.trim() ?? '';
+    if (resumeToken.isEmpty || !mounted) {
+      return;
+    }
+    _dismissComebackBanner();
+    await showAuroraCoreSession(
+      context: context,
+      bandStatus: 'calibration_available',
+      wakeReasons: const ['cross_session_resume'],
+      conversationId: ref.read(chatProvider).conversationId,
+      resumeToken: resumeToken,
+      sessionType: 'resume',
+      initialSize: AuroraCoreSessionSheetSize.expanded,
+    );
+  }
+
+  void _handleComebackItemSelected(AuroraComebackItem item) {
+    if (item.type == 'core_session' || item.resumeToken.isNotEmpty) {
+      unawaited(_resumeComebackCoreSession());
+      return;
+    }
+    if (item.route.isNotEmpty) {
+      _dismissComebackBanner();
+      unawaited(_navigateFromAction(item.route));
+      return;
+    }
+    _continueFromComebackBanner();
+  }
+
+  Future<void> _submitFreeformAuroraCorrection(String text) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) {
+      return;
+    }
+    final snapshot = ref.read(auroraStatusProvider);
+    final chatState = ref.read(chatProvider);
+    final telemetry = AuroraTelemetryService(ref.read(apiClientProvider));
+    unawaited(
+      telemetry.recordStatusBandCorrection(
+        label: trimmed,
+        semanticValue: 'freeform_correction',
+        isDisconfirming: true,
+        bandStatus: snapshot?.overallStatus ?? 'needs_confirm',
+        isFreeform: true,
+        freeformText: trimmed,
+        conversationId: chatState.conversationId,
+      ),
+    );
+    ref.read(auroraStatusProvider.notifier).markCorrectionEffective(
+          semanticValue: 'freeform_correction',
+          action: 'freeform_correction',
+        );
+    final payload = AuroraCorrectionPayload.freeform(
+      surface: AuroraCorrectionSurface.chat,
+      semanticValue: 'freeform_correction',
+      label: trimmed,
+      freeformText: trimmed,
+      isDisconfirming: true,
+      bandStatus: snapshot?.overallStatus ?? 'needs_confirm',
+      conversationId: chatState.conversationId ?? '',
+      messageId: _latestAssistantMessageId(),
+    );
+    unawaited(
+      ref.read(chatProvider.notifier).sendMessage(
+        trimmed,
+        extraContextOverrides: {
+          'aurora_correction': payload.toJson(),
+        },
+      ),
+    );
+    unawaited(
+      ref.read(auroraStatusProvider.notifier).refresh(
+            conversationId: chatState.conversationId,
+          ),
+    );
+  }
+
+  Future<String?> _promptForAuroraCorrection(BuildContext context) {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+    return showDialog<String?>(
+      context: context,
+      builder: (dialogContext) {
+        String? submittedText() {
+          final text = controller.text.trim();
+          return text.isEmpty ? null : text;
+        }
+
+        return AlertDialog(
+          title: Text(context.l10n.auroraCorrectionInputTitle),
+          content: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: true,
+            maxLines: 3,
+            minLines: 2,
+            decoration: InputDecoration(
+              hintText: context.l10n.auroraCorrectionInputHint,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(DS.radius12),
+              ),
+              contentPadding: const EdgeInsets.all(DS.spacing12),
+            ),
+            textInputAction: TextInputAction.send,
+            onSubmitted: (_) {
+              final text = submittedText();
+              if (text != null) {
+                Navigator.of(dialogContext).pop(text);
+              }
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: Text(context.l10n.auroraCorrectionInputCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(submittedText()),
+              child: Text(context.l10n.auroraCorrectionInputSend),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(() {
+      focusNode.dispose();
+      controller.dispose();
+    });
   }
 
   bool _canShowAuroraOpenerOver(List<ChatMessageModel> messages) {
@@ -679,13 +1033,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       }
       await ref.read(chatProvider.notifier).sendMessage(
             nextPrompt,
-            extraContextOverrides: widget.initialExtraContext,
+            extraContextOverrides:
+                _normalizeInitialExtraContext(widget.initialExtraContext),
           );
     });
   }
 
   @override
   void dispose() {
+    final conversationId = _latestReadConversationId;
+    final latestId = _latestReadMessageId;
+    if (conversationId != null && latestId != null) {
+      unawaited(_writeLatestReadPosition(conversationId, latestId));
+    }
     _scrollController
       ..removeListener(_handleScroll)
       ..dispose();
@@ -710,10 +1070,69 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     }
   }
 
+  Map<String, ChatBubbleDeliveryStatus> _offlineDeliveryStatusesByMessageId(
+    List<ChatMessageModel> messages,
+    List<OfflineQueueEntry> queueEntries,
+  ) {
+    if (queueEntries.isEmpty) {
+      return const <String, ChatBubbleDeliveryStatus>{};
+    }
+
+    final statuses = <String, ChatBubbleDeliveryStatus>{};
+    final unmatchedEntries = List<OfflineQueueEntry>.from(queueEntries);
+    for (final message in messages) {
+      if (message.role != MessageRole.user) {
+        continue;
+      }
+      final requestId =
+          message.rawMetadata?['offline_request_id']?.toString() ?? message.id;
+      final exactIndex = unmatchedEntries.indexWhere(
+        (entry) => entry.requestId == requestId,
+      );
+      var matchIndex = exactIndex;
+      if (matchIndex < 0) {
+        matchIndex = unmatchedEntries.indexWhere(
+          (entry) =>
+              entry.message == message.content &&
+              (entry.sessionId == message.conversationId ||
+                  entry.sessionId.isEmpty ||
+                  message.conversationId == 'temp_conversation') &&
+              entry.createdAt
+                      .difference(message.createdAt)
+                      .inMilliseconds
+                      .abs() <
+                  const Duration(minutes: 10).inMilliseconds,
+        );
+      }
+      if (matchIndex < 0) {
+        continue;
+      }
+      final entry = unmatchedEntries.removeAt(matchIndex);
+      statuses[message.id] = _chatDeliveryStatusFor(entry.status);
+    }
+    return statuses;
+  }
+
+  ChatBubbleDeliveryStatus _chatDeliveryStatusFor(
+    OfflineMessageStatus status,
+  ) {
+    switch (status) {
+      case OfflineMessageStatus.pending:
+        return ChatBubbleDeliveryStatus.queued;
+      case OfflineMessageStatus.sent:
+        return ChatBubbleDeliveryStatus.sending;
+      case OfflineMessageStatus.failed:
+        return ChatBubbleDeliveryStatus.failed;
+      case OfflineMessageStatus.acked:
+        return ChatBubbleDeliveryStatus.normal;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const experience = ExperienceProfiles.assistantFlow;
     final chatState = ref.watch(chatProvider);
+    _rememberLatestReadPosition(chatState);
     final aiSystemPreferences =
         ref.watch(transparencyPreferencesNotifierProvider).valueOrNull ??
             _defaultAiSystemPreferences;
@@ -730,6 +1149,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         (openClawConnection.config.isConfigured &&
             !openClawConnection.isConnected);
     final showStreamingBubble = chatState.shouldShowStreamingBubble;
+    final offlineUserId =
+        ref.watch(offlineQueueCurrentUserIdProvider).valueOrNull;
+    final offlineSnapshot = offlineUserId == null
+        ? OfflineQueueSnapshot.empty
+        : ref.watch(offlineQueueSnapshotProvider(offlineUserId)).valueOrNull ??
+            OfflineQueueSnapshot.empty;
+    final offlineStatuses = _offlineDeliveryStatusesByMessageId(
+      messages,
+      offlineSnapshot.entries,
+    );
     final listItemCount = messages.length +
         (showStreamingBubble ? 1 : 0) +
         (showStatusIndicator ? 1 : 0) +
@@ -926,6 +1355,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       conversationId: chatState.conversationId,
                       hasActiveRun: chatState.hasActiveRun,
                     ),
+                    if (!chatPureMode) const ChatUnderstandingDrawerButton(),
+                    AuroraCoreSessionResumeBanner(
+                      conversationId: chatState.conversationId,
+                    ),
                     if (chatState.dualCoreMode != null)
                       _DualCoreModeChip(mode: chatState.dualCoreMode!),
                     if (_reviewNodeLabel != null)
@@ -934,9 +1367,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         mastery: _reviewNodeMastery,
                       ),
                     if (_dailyStartupRetryBannerVisible)
-                      _DailyStartupRetryBanner(
+                      DailyStartupRetryBanner(
                         isRetrying: _dailyStartupRetryInFlight,
                         onRetry: _retryDailyStartupHydration,
+                      ),
+                    if (_showComebackBanner && _comebackContext != null)
+                      ComebackBanner(
+                        contextData: _comebackContext!,
+                        onDismiss: _dismissComebackBanner,
+                        onContinue: _continueFromComebackBanner,
+                        onResumeCoreSession:
+                            _comebackContext!.hasActiveCoreSession
+                                ? () => unawaited(_resumeComebackCoreSession())
+                                : null,
+                        onItemSelected: _handleComebackItemSelected,
                       ),
                     Expanded(
                       child: messages.isEmpty &&
@@ -1085,13 +1529,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 final showCorrectionBar = isLatestAssistant &&
                                     message.role == MessageRole.assistant &&
                                     !chatState.hasActiveRun;
+                                final showNewMessagesDivider =
+                                    message.id == _newMessageDividerBeforeId;
                                 return Column(
+                                  key: _messageKeyFor(message.id),
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
+                                    if (showNewMessagesDivider)
+                                      const ChatNewMessagesDivider(),
                                     ChatBubble(
                                       message: message,
                                       isLatestAssistantMessage:
                                           isLatestAssistant,
+                                      deliveryStatus:
+                                          offlineStatuses[message.id] ??
+                                              ChatBubbleDeliveryStatus.normal,
+                                      onRetryDelivery:
+                                          message.role == MessageRole.user
+                                              ? () => ref
+                                                  .read(chatProvider.notifier)
+                                                  .sendMessage(message.content)
+                                              : null,
                                       onActionConfirm: (action) {
                                         ref
                                             .read(chatProvider.notifier)
@@ -1133,54 +1591,337 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       },
                                     ),
                                     if (showCorrectionBar)
-                                      ContextualCorrectionBar(
-                                        predictedReplyGroups: ref
-                                            .watch(auroraStatusProvider)
-                                            ?.predictedReplyOptions,
-                                        onSendCorrection: (text) => ref
-                                            .read(chatProvider.notifier)
-                                            .sendMessage(text),
-                                        onNotRightDirection: () => ref
-                                            .read(chatProvider.notifier)
-                                            .sendMessage(
-                                              context
-                                                  .l10n.auroraCorrectNotRight,
-                                            ),
-                                        onMakeShorter: () => ref
-                                            .read(chatProvider.notifier)
-                                            .sendMessage(
-                                              context.l10n.auroraCorrectShorter,
-                                            ),
-                                        onGivePractice: () => ref
-                                            .read(chatProvider.notifier)
-                                            .sendMessage(
-                                              context.l10n.auroraCorrectDirect,
-                                            ),
-                                        onRecalibrate: () {
-                                          final snapshot = ref.read(
+                                      Builder(
+                                        builder: (ctx) {
+                                          final auroraStatus = ref.watch(
                                             auroraStatusProvider,
                                           );
-                                          showAuroraCalibration(
-                                            context: context,
-                                            observation: snapshot?.summary ??
-                                                context.l10n
-                                                    .auroraCalibrationObserved,
-                                            judgment: snapshot?.summary ??
-                                                context.l10n
-                                                    .auroraCalibrationJudgment,
-                                            confirmQuestion: context
-                                                .l10n.auroraCalibrationConfirm,
-                                            confirmOptions: [
-                                              context.l10n.chatMinutes30,
-                                              context.l10n.chatMinutes45,
-                                              context.l10n.chatMinutes60,
-                                            ],
-                                            onConfirm: (option) {
+                                          final l10n = ctx.l10n;
+                                          return ContextualCorrectionBar(
+                                            predictedReplyGroups: auroraStatus
+                                                ?.predictedReplyOptions,
+                                            bandStatus:
+                                                auroraStatus?.overallStatus ??
+                                                    '',
+                                            conversationId:
+                                                chatState.conversationId,
+                                            messageId: message.id,
+                                            onSendCorrection:
+                                                (option, groupId) {
+                                              final presentation =
+                                                  auroraCorrectionPresentationFor(
+                                                ctx,
+                                                option,
+                                              );
+                                              final telemetry =
+                                                  AuroraTelemetryService(
+                                                ref.read(apiClientProvider),
+                                              );
+                                              unawaited(
+                                                telemetry.recordChipSelected(
+                                                  option: option,
+                                                  groupId: groupId,
+                                                  bandStatus: auroraStatus
+                                                          ?.overallStatus ??
+                                                      '',
+                                                  conversationId: ref
+                                                      .read(chatProvider)
+                                                      .conversationId,
+                                                ),
+                                              );
                                               ref
-                                                  .read(chatProvider.notifier)
-                                                  .sendMessage(
-                                                    '${context.l10n.auroraCorrectRecalibrate}: $option',
+                                                  .read(auroraStatusProvider
+                                                      .notifier)
+                                                  .markCorrectionEffective(
+                                                    semanticValue:
+                                                        option.semanticValue,
                                                   );
+                                              final text = presentation.label;
+                                              final chatState =
+                                                  ref.read(chatProvider);
+                                              final payload =
+                                                  AuroraCorrectionPayload.chip(
+                                                surface: AuroraCorrectionSurface
+                                                    .chat,
+                                                semanticValue:
+                                                    option.semanticValue,
+                                                label: text,
+                                                isDisconfirming:
+                                                    option.isDisconfirming,
+                                                bandStatus: auroraStatus
+                                                        ?.overallStatus ??
+                                                    '',
+                                                telemetryId: option.telemetryId,
+                                                groupId: groupId,
+                                                conversationId:
+                                                    chatState.conversationId ??
+                                                        '',
+                                                messageId:
+                                                    _latestAssistantMessageId(),
+                                              );
+                                              unawaited(
+                                                ref
+                                                    .read(chatProvider.notifier)
+                                                    .sendMessage(
+                                                  text,
+                                                  extraContextOverrides: {
+                                                    'aurora_correction':
+                                                        payload.toJson(),
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                            onFreeformCorrectionRequested: () {
+                                              unawaited(
+                                                _promptForAuroraCorrection(ctx)
+                                                    .then((value) {
+                                                  final text =
+                                                      value?.trim() ?? '';
+                                                  if (text.isNotEmpty) {
+                                                    unawaited(
+                                                      _submitFreeformAuroraCorrection(
+                                                        text,
+                                                      ),
+                                                    );
+                                                  }
+                                                }),
+                                              );
+                                            },
+                                            onNotRightDirection: () {
+                                              final telemetry =
+                                                  AuroraTelemetryService(
+                                                ref.read(apiClientProvider),
+                                              );
+                                              unawaited(
+                                                telemetry
+                                                    .recordStatusBandCorrection(
+                                                  label: l10n
+                                                      .auroraCorrectNotRight,
+                                                  semanticValue:
+                                                      'not_right_direction',
+                                                  isDisconfirming: true,
+                                                  bandStatus: auroraStatus
+                                                          ?.overallStatus ??
+                                                      '',
+                                                  conversationId: ref
+                                                      .read(chatProvider)
+                                                      .conversationId,
+                                                ),
+                                              );
+                                              unawaited(
+                                                ref
+                                                    .read(chatProvider.notifier)
+                                                    .sendMessage(
+                                                  l10n.auroraCorrectNotRight,
+                                                  extraContextOverrides: {
+                                                    'aurora_correction':
+                                                        AuroraCorrectionPayload
+                                                            .chip(
+                                                      surface:
+                                                          AuroraCorrectionSurface
+                                                              .chat,
+                                                      semanticValue:
+                                                          'not_right_direction',
+                                                      label: l10n
+                                                          .auroraCorrectNotRight,
+                                                      isDisconfirming: true,
+                                                      bandStatus: auroraStatus
+                                                              ?.overallStatus ??
+                                                          '',
+                                                      conversationId: ref
+                                                              .read(
+                                                                  chatProvider)
+                                                              .conversationId ??
+                                                          '',
+                                                      messageId:
+                                                          _latestAssistantMessageId(),
+                                                    ).toJson(),
+                                                  },
+                                                ),
+                                              );
+                                              ref
+                                                  .read(auroraStatusProvider
+                                                      .notifier)
+                                                  .markCorrectionEffective(
+                                                    semanticValue:
+                                                        'not_right_direction',
+                                                  );
+                                            },
+                                            onMakeShorter: () {
+                                              final telemetry =
+                                                  AuroraTelemetryService(
+                                                ref.read(apiClientProvider),
+                                              );
+                                              unawaited(
+                                                telemetry
+                                                    .recordStatusBandCorrection(
+                                                  label:
+                                                      l10n.auroraCorrectShorter,
+                                                  semanticValue: 'make_shorter',
+                                                  isDisconfirming: false,
+                                                  bandStatus: auroraStatus
+                                                          ?.overallStatus ??
+                                                      '',
+                                                  conversationId: ref
+                                                      .read(chatProvider)
+                                                      .conversationId,
+                                                ),
+                                              );
+                                              unawaited(
+                                                ref
+                                                    .read(chatProvider.notifier)
+                                                    .sendMessage(
+                                                  l10n.auroraCorrectShorter,
+                                                  extraContextOverrides: {
+                                                    'aurora_correction':
+                                                        AuroraCorrectionPayload
+                                                            .chip(
+                                                      surface:
+                                                          AuroraCorrectionSurface
+                                                              .chat,
+                                                      semanticValue:
+                                                          'make_shorter',
+                                                      label: l10n
+                                                          .auroraCorrectShorter,
+                                                      isDisconfirming: false,
+                                                      bandStatus: auroraStatus
+                                                              ?.overallStatus ??
+                                                          '',
+                                                      conversationId: ref
+                                                              .read(
+                                                                  chatProvider)
+                                                              .conversationId ??
+                                                          '',
+                                                      messageId:
+                                                          _latestAssistantMessageId(),
+                                                    ).toJson(),
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                            onGivePractice: () {
+                                              final telemetry =
+                                                  AuroraTelemetryService(
+                                                ref.read(apiClientProvider),
+                                              );
+                                              unawaited(
+                                                telemetry
+                                                    .recordStatusBandCorrection(
+                                                  label:
+                                                      l10n.auroraCorrectDirect,
+                                                  semanticValue:
+                                                      'give_practice',
+                                                  isDisconfirming: false,
+                                                  bandStatus: auroraStatus
+                                                          ?.overallStatus ??
+                                                      '',
+                                                  conversationId: ref
+                                                      .read(chatProvider)
+                                                      .conversationId,
+                                                ),
+                                              );
+                                              unawaited(
+                                                ref
+                                                    .read(chatProvider.notifier)
+                                                    .sendMessage(
+                                                  l10n.auroraCorrectDirect,
+                                                  extraContextOverrides: {
+                                                    'aurora_correction':
+                                                        AuroraCorrectionPayload
+                                                            .chip(
+                                                      surface:
+                                                          AuroraCorrectionSurface
+                                                              .chat,
+                                                      semanticValue:
+                                                          'give_practice',
+                                                      label: l10n
+                                                          .auroraCorrectDirect,
+                                                      isDisconfirming: false,
+                                                      bandStatus: auroraStatus
+                                                              ?.overallStatus ??
+                                                          '',
+                                                      conversationId: ref
+                                                              .read(
+                                                                  chatProvider)
+                                                              .conversationId ??
+                                                          '',
+                                                      messageId:
+                                                          _latestAssistantMessageId(),
+                                                    ).toJson(),
+                                                  },
+                                                ),
+                                              );
+                                            },
+                                            onRecalibrate: () {
+                                              final snapshot = ref.read(
+                                                auroraStatusProvider,
+                                              );
+                                              unawaited(
+                                                showAuroraCoreSession(
+                                                  context: context,
+                                                  bandStatus:
+                                                      snapshot?.overallStatus ??
+                                                          'needs_confirm',
+                                                  wakeReasons: snapshot
+                                                          ?.wakeEligibility
+                                                          .wakeReasons ??
+                                                      const [
+                                                        'standard_layer_uncertainty'
+                                                      ],
+                                                  entryReason: snapshot == null
+                                                      ? AuroraCoreSessionEntryReason(
+                                                          triggerSource:
+                                                              'chat_correction_chip',
+                                                          observedSignals: [
+                                                            context.l10n
+                                                                .auroraCalibrationObserved,
+                                                          ],
+                                                          suggestedAgendaPreview: [
+                                                            I18nService.instance
+                                                                    .isChinese
+                                                                ? '确认聊天纠错反馈'
+                                                                : 'Confirm chat correction feedback',
+                                                            I18nService.instance
+                                                                    .isChinese
+                                                                ? '调整后续回复策略'
+                                                                : 'Adjust subsequent reply strategy',
+                                                          ],
+                                                          whyNow: context.l10n
+                                                              .auroraCalibrationJudgment,
+                                                          estimatedMinutes: 4,
+                                                        )
+                                                      : AuroraCoreSessionEntryReason
+                                                          .fromSnapshot(
+                                                          snapshot: snapshot,
+                                                          triggerSource:
+                                                              'chat_correction_chip',
+                                                          agendaPreview: [
+                                                            I18nService.instance
+                                                                    .isChinese
+                                                                ? '确认聊天纠错反馈'
+                                                                : 'Confirm chat correction feedback',
+                                                            I18nService.instance
+                                                                    .isChinese
+                                                                ? '调整后续回复策略'
+                                                                : 'Adjust subsequent reply strategy',
+                                                          ],
+                                                        ),
+                                                  conversationId: ref
+                                                      .read(chatProvider)
+                                                      .conversationId,
+                                                  scope: snapshot
+                                                              ?.wakeEligibility
+                                                              .suggestedScope
+                                                              .isNotEmpty ??
+                                                          false
+                                                      ? snapshot!
+                                                          .wakeEligibility
+                                                          .suggestedScope
+                                                      : null,
+                                                  sessionType:
+                                                      'belief_revision',
+                                                ),
+                                              );
                                             },
                                           );
                                         },
@@ -1218,59 +1959,108 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         ),
                         child: chatState.error == null
                             ? const SizedBox.shrink()
-                            : Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      chatState.error!,
-                                      style: TextStyle(
+                            : Builder(
+                                builder: (context) {
+                                  final failureKind = FailureKindCode.fromCode(
+                                    chatState.errorCode,
+                                  );
+                                  return Row(
+                                    children: [
+                                      Icon(
+                                        _chatFailureIcon(chatState.errorCode),
+                                        size: 20,
                                         color: DS.error,
-                                        fontSize: DS.fontSizeSm,
                                       ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  if (chatState.isErrorRetryable)
-                                    Padding(
-                                      padding: const EdgeInsets.only(
-                                        left: DS.spacing8,
-                                      ),
-                                      child: SparkleButton(
-                                        label: context.l10n.retry,
-                                        icon: const Icon(Icons.refresh_rounded),
-                                        onPressed: () => unawaited(
-                                          ref
-                                              .read(chatProvider.notifier)
-                                              .retryLastMessage(),
-                                        ),
-                                        variant: ButtonVariant.secondary,
-                                      ),
-                                    ),
-                                  Material(
-                                    color:
-                                        DS.surfacePrimary.withValues(alpha: 0),
-                                    borderRadius: DS.borderRadiusFull,
-                                    child: InkWell(
-                                      borderRadius: DS.borderRadiusFull,
-                                      onTap: () {
-                                        final notifier =
-                                            ref.read(chatProvider.notifier);
-                                        notifier.state = notifier.state
-                                            .copyWith(clearError: true);
-                                      },
-                                      child: Padding(
-                                        padding:
-                                            const EdgeInsets.all(DS.spacing4),
-                                        child: Icon(
-                                          Icons.close,
-                                          size: DS.iconSizeXs,
-                                          color: DS.error,
+                                      const SizedBox(width: DS.spacing8),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              _chatFailureTitle(
+                                                context,
+                                                chatState.errorCode,
+                                              ),
+                                              style: TextStyle(
+                                                color: DS.error,
+                                                fontSize: DS.fontSizeSm,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              chatState.error!,
+                                              style: TextStyle(
+                                                color: DS.error,
+                                                fontSize: DS.fontSizeSm,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                ],
+                                      if (chatState.isErrorRetryable ||
+                                          failureKind == FailureKind.auth)
+                                        Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: DS.spacing8,
+                                          ),
+                                          child: SparkleButton(
+                                            label: _chatFailureActionLabel(
+                                              context,
+                                              chatState.errorCode,
+                                            ),
+                                            icon: Icon(
+                                              failureKind == FailureKind.auth
+                                                  ? Icons.login_rounded
+                                                  : Icons.refresh_rounded,
+                                            ),
+                                            onPressed: () {
+                                              if (failureKind ==
+                                                  FailureKind.auth) {
+                                                context.go('/login');
+                                                return;
+                                              }
+                                              unawaited(
+                                                ref
+                                                    .read(
+                                                      chatProvider.notifier,
+                                                    )
+                                                    .retryLastMessage(),
+                                              );
+                                            },
+                                            variant: ButtonVariant.secondary,
+                                          ),
+                                        ),
+                                      Material(
+                                        color: DS.surfacePrimary
+                                            .withValues(alpha: 0),
+                                        borderRadius: DS.borderRadiusFull,
+                                        child: InkWell(
+                                          borderRadius: DS.borderRadiusFull,
+                                          onTap: () {
+                                            final notifier =
+                                                ref.read(chatProvider.notifier);
+                                            notifier.state = notifier.state
+                                                .copyWith(clearError: true);
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(
+                                                DS.spacing4),
+                                            child: Icon(
+                                              Icons.close,
+                                              size: DS.iconSizeXs,
+                                              color: DS.error,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                       ),
                     ),
@@ -1686,7 +2476,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 Text(
                   context.l10n.chatWelcomeTitle,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                         color: DS.textPrimary,
                       ),
                 ),
@@ -1708,7 +2498,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       runSpacing: DS.spacing12,
                       alignment: WrapAlignment.center,
                       children: [
-                        _QuickActionChip(
+                        ChatQuickActionChip(
                           icon: Icons.add_task_rounded,
                           label: context.l10n.chatQuickActionNewTask,
                           color: DS.brandPrimaryConst,
@@ -1719,7 +2509,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 ),
                           ),
                         ),
-                        _QuickActionChip(
+                        ChatQuickActionChip(
                           icon: Icons.calendar_month_rounded,
                           label: context.l10n.chatQuickActionLongPlan,
                           color: DS.capsuleAccent,
@@ -1730,7 +2520,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 ),
                           ),
                         ),
-                        _QuickActionChip(
+                        ChatQuickActionChip(
                           icon: Icons.cloud_sync_rounded,
                           label: context.l10n.chatDelegateToOpenclaw,
                           subtitle: context.l10n.chatOpenclawSuitable,
@@ -1740,7 +2530,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             '${HomeRoutes.openClawHub}?section=delegate',
                           ),
                         ),
-                        _QuickActionChip(
+                        ChatQuickActionChip(
                           icon: Icons.bug_report_rounded,
                           label: context.l10n.chatQuickActionErrorAttribution,
                           color: DS.brandPrimaryConst,
@@ -1878,6 +2668,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ref.watch(planListProvider.select((s) => s.activePlans));
     final activePlan =
         activePlans.where((plan) => plan.id == activePlanId).firstOrNull;
+    final offlineUserId =
+        ref.watch(offlineQueueCurrentUserIdProvider).valueOrNull;
+    final offlineSnapshot = offlineUserId == null
+        ? OfflineQueueSnapshot.empty
+        : ref.watch(offlineQueueSnapshotProvider(offlineUserId)).valueOrNull ??
+            OfflineQueueSnapshot.empty;
 
     return SingleChildScrollView(
       physics: const NeverScrollableScrollPhysics(),
@@ -1892,7 +2688,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 _chatBottomSurfaceHorizontalInset,
                 0,
               ),
-              child: _ChatContextToggle(
+              child: ChatContextToggle(
                 isExpanded: _showContextControls,
                 reasoningLabel: _reasoningModeLabel(reasoningMode),
                 modeLabel: currentMode.apiValue == 'standard'
@@ -2021,6 +2817,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     context: context,
                     bandStatus: aurora.overallStatus,
                     wakeReasons: wake.wakeReasons,
+                    entryReason: AuroraCoreSessionEntryReason.fromSnapshot(
+                      snapshot: aurora,
+                      triggerSource: 'status_bar',
+                      agendaPreview: [
+                        I18nService.instance.isChinese
+                            ? '确认顶部提醒里的判断'
+                            : 'Confirm status bar judgment',
+                        I18nService.instance.isChinese
+                            ? '决定下一步是否调整'
+                            : 'Decide whether to adjust next steps',
+                      ],
+                    ),
                     conversationId: chatState.conversationId,
                   ));
                 } else {
@@ -2044,6 +2852,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               },
             );
           }),
+          _OfflineQueueIndicatorHost(
+            snapshot: offlineSnapshot,
+            connectionState: chatState.wsConnectionState,
+          ),
           ChatInput(
             enabled: !chatState.hasActiveRun,
             studyMaterialsEnabled: chatState.documentRetrievalEnabled,
@@ -2081,6 +2893,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             onSend: (text, {replyToId}) => unawaited(
               ref.read(chatProvider.notifier).sendMessage(text),
             ),
+            onFreeformCorrection: (text) =>
+                _submitFreeformAuroraCorrection(text),
           ),
           if (chatState.graphragTrace != null)
             Padding(
@@ -2275,7 +3089,9 @@ class _OpenClawAppBarIcon extends StatelessWidget {
                   child: Text(
                     queueCount > 0 ? '$queueCount' : '!',
                     style: DS.bodySmall.copyWith(
-                      color: Colors.white,
+                      color: DS.onColor(
+                        queueCount > 0 ? DS.warning : DS.semanticError,
+                      ),
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
@@ -2421,7 +3237,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
             ),
             if (_inlineError != null) ...[
               const SizedBox(height: DS.md),
-              _InlineChatHistoryError(
+              ChatHistoryInlineError(
                 message: _inlineError!,
                 onRetry: _openingSessionId == null ? _refresh : null,
               ),
@@ -2436,7 +3252,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
                   }
 
                   if (snapshot.hasError) {
-                    return _InlineChatHistoryError(
+                    return ChatHistoryInlineError(
                       message: l10n.chatHistoryLoadFailed('${snapshot.error}'),
                       onRetry: _refresh,
                     );
@@ -2557,314 +3373,73 @@ class _DailyStartupPlanResolution {
   final bool shouldSelectPlan;
 }
 
-class _InlineChatHistoryError extends StatelessWidget {
-  const _InlineChatHistoryError({
-    required this.message,
-    this.onRetry,
+class _OfflineQueueIndicatorHost extends StatefulWidget {
+  const _OfflineQueueIndicatorHost({
+    required this.snapshot,
+    required this.connectionState,
   });
 
-  final String message;
-  final VoidCallback? onRetry;
+  final OfflineQueueSnapshot snapshot;
+  final WsConnectionState connectionState;
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: GraphiteCardSurface(
-          borderColor: DS.error.withValues(alpha: 0.14),
-          surfaceRole: SparkleSurfaceRole.card,
-          child: Padding(
-            padding: const EdgeInsets.all(DS.md),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.error_outline_rounded, color: DS.error),
-                const SizedBox(height: DS.sm),
-                Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: DS.bodyMedium.copyWith(color: DS.textSecondary),
-                ),
-                if (onRetry != null) ...[
-                  const SizedBox(height: DS.md),
-                  SparkleButton(
-                    label: context.l10n.chatRetryGeneric,
-                    icon: const Icon(Icons.refresh_rounded),
-                    onPressed: onRetry,
-                    variant: ButtonVariant.secondary,
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ),
-      );
+  State<_OfflineQueueIndicatorHost> createState() =>
+      _OfflineQueueIndicatorHostState();
 }
 
-class _QuickActionChip extends StatefulWidget {
-  const _QuickActionChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.isNarrow,
-    required this.onTap,
-    this.subtitle,
-  });
-  final IconData icon;
-  final String label;
-  final String? subtitle;
-  final Color color;
-  final bool isNarrow;
-  final VoidCallback onTap;
+class _OfflineQueueIndicatorHostState
+    extends State<_OfflineQueueIndicatorHost> {
+  Timer? _completeTimer;
+  var _showComplete = false;
+  var _hadActiveQueue = false;
 
   @override
-  State<_QuickActionChip> createState() => _QuickActionChipState();
-}
-
-class _ChatContextToggle extends StatelessWidget {
-  const _ChatContextToggle({
-    required this.isExpanded,
-    required this.reasoningLabel,
-    required this.modeLabel,
-    required this.planLabel,
-    required this.onTap,
-  });
-
-  final bool isExpanded;
-  final String reasoningLabel;
-  final String modeLabel;
-  final String planLabel;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final labelColor =
-        isDark ? DS.textPrimary.withValues(alpha: 0.92) : DS.textSecondary;
-    final iconColor =
-        isDark ? DS.secondaryLight.withValues(alpha: 0.92) : DS.textSecondary;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: DS.borderRadius16,
-        onTap: onTap,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: isDark
-                ? DS.surfaceTertiary.withValues(alpha: 0.92)
-                : DS.surfaceOverlay,
-            borderRadius: DS.borderRadius16,
-            border: Border.all(
-              color: isDark
-                  ? DS.borderStrong.withValues(alpha: 0.68)
-                  : DS.borderSubtle,
-            ),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12,
-              vertical: DS.spacing8,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.tune_rounded,
-                  size: DS.iconSizeSm,
-                  color: iconColor,
-                ),
-                const SizedBox(width: DS.spacing8),
-                Expanded(
-                  child: Text(
-                    '$reasoningLabel · $modeLabel · ${planLabel.isEmpty ? context.l10n.chatPlanUnbound : planLabel}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: DS.bodySmall.copyWith(
-                      color: labelColor,
-                      fontWeight: DS.fontWeightSemibold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: DS.spacing8),
-                Icon(
-                  isExpanded
-                      ? Icons.keyboard_arrow_down_rounded
-                      : Icons.keyboard_arrow_up_rounded,
-                  size: DS.iconSizeSm,
-                  color: iconColor,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  void didUpdateWidget(_OfflineQueueIndicatorHost oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final hasActiveQueue = widget.snapshot.hasActiveQueue;
+    if (_hadActiveQueue && !hasActiveQueue) {
+      _showComplete = true;
+      _completeTimer?.cancel();
+      _completeTimer = Timer(const Duration(seconds: 2), () {
+        if (mounted) {
+          setState(() => _showComplete = false);
+        }
+      });
+    }
+    _hadActiveQueue = hasActiveQueue;
   }
-}
-
-class _DailyStartupRetryBanner extends StatelessWidget {
-  const _DailyStartupRetryBanner({
-    required this.isRetrying,
-    required this.onRetry,
-  });
-
-  final bool isRetrying;
-  final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) => Container(
-        margin: const EdgeInsets.fromLTRB(
-          DS.spacing16,
-          DS.spacing4,
-          DS.spacing16,
-          DS.spacing8,
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing12,
-          vertical: DS.spacing8,
-        ),
-        decoration: BoxDecoration(
-          color: DS.warning.withValues(alpha: 0.08),
-          borderRadius: DS.borderRadius12,
-          border: Border.all(color: DS.warning.withValues(alpha: 0.22)),
-        ),
-        child: Row(
-          children: [
-            SizedBox.square(
-              dimension: DS.iconSizeSm,
-              child: isRetrying
-                  ? CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(DS.warning),
-                    )
-                  : Icon(
-                      Icons.hourglass_top_rounded,
-                      size: DS.iconSizeSm,
-                      color: DS.warning,
-                    ),
-            ),
-            const SizedBox(width: DS.spacing8),
-            Expanded(
-              child: Text(
-                context.l10n.chatLoadingDailyOverview,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: DS.warning,
-                  fontSize: DS.fontSizeXs,
-                  fontWeight: DS.fontWeightMedium,
-                ),
-              ),
-            ),
-            const SizedBox(width: DS.spacing4),
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              tooltip: context.l10n.chatRetryDailyOverview,
-              onPressed: isRetrying ? null : onRetry,
-              icon: Icon(
-                Icons.refresh_rounded,
-                size: DS.iconSizeSm,
-                color: isRetrying
-                    ? DS.textSecondary.withValues(alpha: 0.45)
-                    : DS.warning,
-              ),
-            ),
-          ],
-        ),
-      );
-}
-
-class _QuickActionChipState extends State<_QuickActionChip> {
-  bool _isPressed = false;
+  void dispose() {
+    _completeTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final backgroundColor = DS.surfaceTertiary;
-    final labelColor = DS.textPrimary;
-    final horizontalPadding = widget.isNarrow ? DS.spacing12 : DS.spacing16;
-    final hasSubtitle =
-        widget.subtitle != null && widget.subtitle!.trim().isNotEmpty;
+    final snapshot = widget.snapshot;
+    if (_showComplete && !snapshot.hasActiveQueue) {
+      return const OfflineQueueIndicator(
+        status: OfflineQueueIndicatorStatus.complete,
+        pendingCount: 0,
+      );
+    }
+    if (!snapshot.hasActiveQueue) {
+      return const OfflineQueueIndicator(
+        status: OfflineQueueIndicatorStatus.hidden,
+        pendingCount: 0,
+      );
+    }
 
-    return Semantics(
-      button: true,
-      label: widget.label,
-      hint: widget.subtitle,
-      child: GestureDetector(
-        onTapDown: (_) => setState(() => _isPressed = true),
-        onTapUp: (_) => setState(() => _isPressed = false),
-        onTapCancel: () => setState(() => _isPressed = false),
-        onTap: widget.onTap,
-        child: AnimatedScale(
-          scale: _isPressed ? 0.95 : 1.0,
-          duration: DS.durationFast,
-          curve: DS.curveEaseOut,
-          child: Container(
-            constraints: BoxConstraints(
-              minHeight: DS.touchTargetMinSize,
-              minWidth: widget.isNarrow ? 0 : 168,
-            ),
-            padding: EdgeInsets.symmetric(
-              horizontal: horizontalPadding,
-              vertical: hasSubtitle ? DS.spacing10 : DS.spacing8,
-            ),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: DS.borderRadius20,
-              border: Border.all(
-                color: widget.color.withValues(alpha: _isPressed ? 0.6 : 0.3),
-                width: _isPressed ? 1.5 : 1.0,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: widget.color.withValues(alpha: _isPressed ? 0.2 : 0.1),
-                  blurRadius: _isPressed ? 4 : 8,
-                  offset: _isPressed ? const Offset(0, 2) : const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: hasSubtitle
-                  ? CrossAxisAlignment.start
-                  : CrossAxisAlignment.center,
-              children: [
-                Icon(
-                  widget.icon,
-                  size: DS.iconSizeSm,
-                  color: widget.color,
-                ),
-                const SizedBox(width: DS.spacing8),
-                Flexible(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.label,
-                        style: TextStyle(
-                          color: labelColor,
-                          fontWeight: DS.fontWeightMedium,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (hasSubtitle) ...[
-                        const SizedBox(height: DS.spacing2),
-                        Text(
-                          widget.subtitle!,
-                          style: DS.bodySmall.copyWith(
-                            color: DS.textSecondary,
-                            height: 1.35,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+    final isSending = widget.connectionState == WsConnectionState.connected ||
+        widget.connectionState == WsConnectionState.connecting ||
+        widget.connectionState == WsConnectionState.reconnecting ||
+        snapshot.sendingCount > 0;
+    return OfflineQueueIndicator(
+      status: isSending
+          ? OfflineQueueIndicatorStatus.sending
+          : OfflineQueueIndicatorStatus.queued,
+      pendingCount: max(1, max(snapshot.pendingCount, snapshot.activeCount)),
     );
   }
 }
@@ -3237,12 +3812,12 @@ class _DualCoreModeChip extends StatelessWidget {
     return switch (mode) {
       'execution' => (
           context.l10n.chatExecutionMode,
-          const Color(0xFFD97706),
+          DS.warning,
           Icons.bolt_rounded
         ),
       'cognitive' => (
           context.l10n.chatCognitiveMode,
-          const Color(0xFF6366F1),
+          DS.brandSecondary,
           Icons.psychology_rounded
         ),
       _ => (
@@ -3334,38 +3909,45 @@ class _AuroraQuickTrigger extends StatelessWidget {
         (snapshot.overallStatus == 'risk_found' ||
             snapshot.overallStatus == 'calibration_available' ||
             snapshot.overallStatus == 'needs_confirm');
+    final statusText = canWake
+        ? '${_statusLabel(l10n)} · ${l10n.auroraWakeAvailable(wake.userQuotaRemaining)}'
+        : _statusLabel(l10n);
 
     return Padding(
       padding:
           const EdgeInsets.fromLTRB(DS.spacing12, 0, DS.spacing12, DS.spacing4),
-      child: GestureDetector(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing10, vertical: DS.spacing10),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(999),
-              border: Border.all(color: color.withValues(alpha: 0.2)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.auto_awesome_rounded, size: 14, color: color),
-                const SizedBox(width: DS.spacing6),
-                Text(
-                  canWake
-                      ? '${_statusLabel(l10n)} · ${l10n.auroraWakeAvailable(wake.userQuotaRemaining)}'
-                      : _statusLabel(l10n),
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 11,
-                    fontWeight: DS.fontWeightMedium,
+      child: Semantics(
+        button: true,
+        label: statusText,
+        child: GestureDetector(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing10,
+                vertical: DS.spacing10,
+              ),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: color.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.auto_awesome_rounded, size: 14, color: color),
+                  const SizedBox(width: DS.spacing6),
+                  Text(
+                    statusText,
+                    style: TextStyle(
+                      color: color,
+                      fontSize: 11,
+                      fontWeight: DS.fontWeightMedium,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

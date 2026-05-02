@@ -1,20 +1,26 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/sparkle/gateway/internal/db"
+	"github.com/sparkle/gateway/internal/service"
 )
 
 type GroupChatHandler struct {
-	queries *db.Queries
+	groupChat groupChatService
 }
 
-func NewGroupChatHandler(queries *db.Queries) *GroupChatHandler {
-	return &GroupChatHandler{queries: queries}
+type groupChatService interface {
+	CheckGroupMembership(ctx context.Context, userID, groupID pgtype.UUID) (bool, error)
+	GetGroupMessages(ctx context.Context, groupID pgtype.UUID, limit, offset int32) ([]service.GroupChatMessage, error)
+}
+
+func NewGroupChatHandler(groupChat groupChatService) *GroupChatHandler {
+	return &GroupChatHandler{groupChat: groupChat}
 }
 
 func (h *GroupChatHandler) GetMessages(c *gin.Context) {
@@ -39,10 +45,7 @@ func (h *GroupChatHandler) GetMessages(c *gin.Context) {
 	}
 
 	// Check if user is a member of the group
-	isMember, err := h.queries.IsGroupMember(c.Request.Context(), db.IsGroupMemberParams{
-		GroupID: groupID,
-		UserID:  userID,
-	})
+	isMember, err := h.groupChat.CheckGroupMembership(c.Request.Context(), userID, groupID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify group membership"})
 		return
@@ -58,11 +61,7 @@ func (h *GroupChatHandler) GetMessages(c *gin.Context) {
 	offsetStr := c.DefaultQuery("offset", "0")
 	offset, _ := strconv.Atoi(offsetStr)
 
-	messages, err := h.queries.GetGroupMessages(c.Request.Context(), db.GetGroupMessagesParams{
-		GroupID: groupID,
-		Limit:   int32(limit),
-		Offset:  int32(offset),
-	})
+	messages, err := h.groupChat.GetGroupMessages(c.Request.Context(), groupID, int32(limit), int32(offset))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch messages"})
 		return
@@ -77,7 +76,7 @@ func (h *GroupChatHandler) GetMessages(c *gin.Context) {
 				"id":         msg.SenderID,
 				"username":   msg.SenderUsername.String,
 				"nickname":   msg.SenderNickname.String,
-				"avatar_url": msg.SenderAvatarUrl.String,
+				"avatar_url": msg.SenderAvatarURL.String,
 			}
 		}
 
@@ -92,7 +91,7 @@ func (h *GroupChatHandler) GetMessages(c *gin.Context) {
 			quotedMessage = map[string]interface{}{
 				"id":           msg.ReplyID,
 				"content":      msg.ReplyContent.String,
-				"message_type": msg.ReplyType.Messagetype,
+				"message_type": msg.ReplyType,
 				"sender":       replySender,
 			}
 		}

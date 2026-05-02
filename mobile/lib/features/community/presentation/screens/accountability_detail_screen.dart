@@ -90,7 +90,7 @@ class _AccountabilityDetailScreenState
                 Text(
                   context.l10n.accountabilityDashboardLoadFailed,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: DS.spacing8),
@@ -248,11 +248,13 @@ class _AccountabilityDetailScreenState
         ref.invalidate(accountabilityDashboardProvider(widget.partnershipId));
         if (mounted) {
           context.pop();
-          AppFeedback.success(context, context.l10n.accountabilityPartnershipEnded);
+          AppFeedback.success(
+              context, context.l10n.accountabilityPartnershipEnded);
         }
       } catch (e) {
         if (mounted) {
-          AppFeedback.error(context, '${context.l10n.accountabilityOperationFailed}: $e');
+          AppFeedback.error(
+              context, '${context.l10n.accountabilityOperationFailed}: $e');
         }
       }
     }
@@ -282,7 +284,8 @@ class _DashboardView extends StatelessWidget {
     final stats = dashboard.stats;
     final isInitiator = partnership.initiatorId == currentUserId;
     final partner = isInitiator ? partnership.partner : partnership.initiator;
-    final partnerName = partner?.displayName ?? context.l10n.accountabilityPartnerDefault;
+    final partnerName =
+        partner?.displayName ?? context.l10n.accountabilityPartnerDefault;
     final partnerAchievements =
         ((dashboard.achievements['achievements'] as List<dynamic>?) ?? const [])
             .where(
@@ -342,7 +345,8 @@ class _DashboardView extends StatelessWidget {
                   title: context.l10n.accountabilityMyGoal,
                   goal: isInitiator
                       ? partnership.initiatorGoal
-                      : partnership.partnerGoal ?? context.l10n.accountabilityGoalNotSet,
+                      : partnership.partnerGoal ??
+                          context.l10n.accountabilityGoalNotSet,
                 ),
               ),
               const SizedBox(height: DS.spacing12),
@@ -353,7 +357,8 @@ class _DashboardView extends StatelessWidget {
                 child: _GoalPanel(
                   title: context.l10n.accountabilityPartnerGoal(partnerName),
                   goal: isInitiator
-                      ? partnership.partnerGoal ?? context.l10n.accountabilityPartnerGoalNotSet
+                      ? partnership.partnerGoal ??
+                          context.l10n.accountabilityPartnerGoalNotSet
                       : partnership.initiatorGoal,
                 ),
               ),
@@ -401,7 +406,9 @@ class _DashboardView extends StatelessWidget {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          share['title']?.toString() ?? context.l10n.accountabilitySharedItem,
+                                          share['title']?.toString() ??
+                                              context.l10n
+                                                  .accountabilitySharedItem,
                                           style: DS.bodyMedium.copyWith(
                                             fontWeight: DS.fontWeightSemibold,
                                           ),
@@ -464,7 +471,7 @@ class _DashboardView extends StatelessWidget {
               const SizedBox(height: DS.spacing16),
               Text(
                 context.l10n.accountabilityRecentCheckins,
-                style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.spacing8),
               if (dashboard.timeline.isEmpty)
@@ -491,7 +498,9 @@ class _DashboardView extends StatelessWidget {
           child: SizedBox(
             width: double.infinity,
             child: SparkleButton(
-              label: stats.myCheckedInToday ? context.l10n.accountabilityCheckedInToday : context.l10n.accountabilityCheckInToday,
+              label: stats.myCheckedInToday
+                  ? context.l10n.accountabilityCheckedInToday
+                  : context.l10n.accountabilityCheckInToday,
               onPressed: stats.myCheckedInToday ? null : onCheckin,
               disabled: stats.myCheckedInToday || onCheckin == null,
               expand: true,
@@ -558,12 +567,15 @@ class _DashboardHero extends StatelessWidget {
                           Text(
                             partnerName,
                             style: DS.titleLarge.copyWith(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            context.l10n.accountabilityDaysTogether((relationshipSummary['days_together'] as Object?) ?? 0),
+                            context.l10n.accountabilityDaysTogether(
+                                (relationshipSummary['days_together']
+                                        as Object?) ??
+                                    0),
                             style:
                                 DS.bodySmall.copyWith(color: DS.textSecondary),
                             textAlign: TextAlign.center,
@@ -583,7 +595,7 @@ class _DashboardHero extends StatelessWidget {
                                 Text(
                                   '${relationshipSummary['total_checkins'] ?? stats.totalCheckins}',
                                   style: DS.titleLarge.copyWith(
-                                    fontWeight: FontWeight.bold,
+                                    fontWeight: DS.fontWeightBold,
                                   ),
                                 ),
                                 Text(
@@ -613,7 +625,9 @@ class _DashboardHero extends StatelessWidget {
                   children: [
                     _HeroAction(
                       icon: Icons.check_circle_outline,
-                      label: stats.myCheckedInToday ? context.l10n.accountabilityCheckedIn : context.l10n.accountabilityCheckin,
+                      label: stats.myCheckedInToday
+                          ? context.l10n.accountabilityCheckedIn
+                          : context.l10n.accountabilityCheckin,
                       onTap: onCheckin,
                     ),
                     _HeroAction(
@@ -702,10 +716,13 @@ class _InactiveDashboardView extends StatelessWidget {
     final partnership = dashboard.partnership;
     final isInitiator = partnership.initiatorId == currentUserId;
     final partner = isInitiator ? partnership.partner : partnership.initiator;
-    final partnerName = partner?.displayName ?? context.l10n.accountabilityPartnerDefault;
+    final partnerName =
+        partner?.displayName ?? context.l10n.accountabilityPartnerDefault;
     final isPending = partnership.status == AccountabilityStatus.pending;
     final message = isPending
-        ? (isInitiator ? context.l10n.accountabilityInviteSentWait : context.l10n.accountabilityInvitePendingConfirm)
+        ? (isInitiator
+            ? context.l10n.accountabilityInviteSentWait
+            : context.l10n.accountabilityInvitePendingConfirm)
         : context.l10n.accountabilityDashboardNotAvailable;
 
     return Center(
@@ -722,8 +739,10 @@ class _InactiveDashboardView extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing12),
               Text(
-                isPending ? context.l10n.accountabilityInvitePending : context.l10n.accountabilityDashboardUnavailable,
-                style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                isPending
+                    ? context.l10n.accountabilityInvitePending
+                    : context.l10n.accountabilityDashboardUnavailable,
+                style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.spacing8),
               Text(
@@ -739,7 +758,9 @@ class _InactiveDashboardView extends StatelessWidget {
                 children: [
                   if (isPending)
                     SparkleButton.primary(
-                      label: isInitiator ? context.l10n.accountabilityViewStatus : context.l10n.accountabilityHandleInvite,
+                      label: isInitiator
+                          ? context.l10n.accountabilityViewStatus
+                          : context.l10n.accountabilityHandleInvite,
                       onPressed: () =>
                           unawaited(context.pushNamed('friendRequests')),
                     ),
@@ -788,19 +809,27 @@ class _GrowthSummary extends StatelessWidget {
           runSpacing: 8,
           children: [
             _TinyMetric(
-              label: context.l10n.accountabilityMyStreakDays((relationshipSummary['my_streak_days'] as Object?) ?? 0),
+              label: context.l10n.accountabilityMyStreakDays(
+                  (relationshipSummary['my_streak_days'] as Object?) ?? 0),
             ),
             _TinyMetric(
-              label: context.l10n.accountabilityPartnerStreakDays((relationshipSummary['partner_streak_days'] as Object?) ?? 0),
+              label: context.l10n.accountabilityPartnerStreakDays(
+                  (relationshipSummary['partner_streak_days'] as Object?) ?? 0),
             ),
-            _TinyMetric(label: context.l10n.accountabilityMyAchievementsUnlocked(myAchievements as Object)),
-            _TinyMetric(label: context.l10n.accountabilityPartnerAchievementsUnlocked(partnerAchievements as Object)),
+            _TinyMetric(
+                label: context.l10n.accountabilityMyAchievementsUnlocked(
+                    myAchievements as Object)),
+            _TinyMetric(
+                label: context.l10n.accountabilityPartnerAchievementsUnlocked(
+                    partnerAchievements as Object)),
           ],
         ),
         if (streakBoard.isNotEmpty) ...[
           const SizedBox(height: DS.spacing12),
           Text(
-            context.l10n.accountabilityStreakRank((streakBoard['my_rank'] ?? '-') as Object, (streakBoard['partner_rank'] ?? '-') as Object),
+            context.l10n.accountabilityStreakRank(
+                (streakBoard['my_rank'] ?? '-') as Object,
+                (streakBoard['partner_rank'] ?? '-') as Object),
             style: DS.bodySmall.copyWith(color: DS.textSecondary),
           ),
         ],
@@ -832,7 +861,7 @@ class _PersonStat extends StatelessWidget {
                   name,
                   style: TextStyle(
                     color: DS.brandPrimary,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ),
@@ -846,19 +875,19 @@ class _PersonStat extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: DS.success,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: DS.neutral0, width: 2),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.check,
                       size: 10,
-                      color: Colors.white,
+                      color: DS.neutral0,
                     ),
                   ),
                 ),
             ],
           ),
           const SizedBox(height: DS.xs),
-          Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(name, style: const TextStyle(fontWeight: DS.fontWeightBold)),
           Text(
             context.l10n.accountabilityStreakDays(streakDays),
             style: TextStyle(fontSize: DS.fontSizeXs, color: DS.brandPrimary),
@@ -882,7 +911,7 @@ class _GoalPanel extends StatelessWidget {
             Text(
               title,
               style: TextStyle(
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 fontSize: DS.fontSizeSm,
                 color: DS.textSecondary,
               ),
@@ -907,7 +936,8 @@ class _PendingPoliciesCard extends StatelessWidget {
         ? context.l10n.accountabilityNoPendingPolicies
         : nextTriggerAt == null
             ? context.l10n.accountabilityPoliciesReady(count)
-            : context.l10n.accountabilityPoliciesPending(count, DateFormat('M月d日 HH:mm').format(nextTriggerAt));
+            : context.l10n.accountabilityPoliciesPending(
+                count, DateFormat('M月d日 HH:mm').format(nextTriggerAt));
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
@@ -920,7 +950,7 @@ class _PendingPoliciesCard extends StatelessWidget {
               Text(
                 context.l10n.accountabilityPendingPolicies,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
             ],
@@ -957,7 +987,9 @@ class _RecentReflectionsCard extends StatelessWidget {
         ? context.l10n.accountabilityNoRecentReflections
         : lastAt == null
             ? context.l10n.accountabilityReflectionsGenerated(count)
-            : context.l10n.accountabilityReflectionsLatest(_labelForCategory(context, lastCategory), DateFormat('M月d日 HH:mm').format(lastAt));
+            : context.l10n.accountabilityReflectionsLatest(
+                _labelForCategory(context, lastCategory),
+                DateFormat('M月d日 HH:mm').format(lastAt));
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
       child: Column(
@@ -970,7 +1002,7 @@ class _RecentReflectionsCard extends StatelessWidget {
               Text(
                 context.l10n.accountabilityRecentReflections,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
             ],
@@ -1028,8 +1060,11 @@ class _ForesightHintCard extends StatelessWidget {
     final deviationCount = summary?.deviationCount ?? 0;
     final confidenceItems = summary?.attractorConfidences ?? [];
     final subtitle = [
-      if (deviationCount > 0) context.l10n.accountabilityDeviationsDetected(deviationCount),
-      if (generatedAt != null) context.l10n.accountabilityUpdatedAt(DateFormat('M月d日 HH:mm').format(generatedAt)),
+      if (deviationCount > 0)
+        context.l10n.accountabilityDeviationsDetected(deviationCount),
+      if (generatedAt != null)
+        context.l10n.accountabilityUpdatedAt(
+            DateFormat('M月d日 HH:mm').format(generatedAt)),
     ].join(' · ');
     return GraphiteCardSurface(
       surfaceRole: SparkleSurfaceRole.panel,
@@ -1043,7 +1078,7 @@ class _ForesightHintCard extends StatelessWidget {
               Text(
                 context.l10n.accountabilityForesightHint,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
               ),
             ],
@@ -1114,7 +1149,7 @@ class _SectionCard extends StatelessWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
             ),
             const SizedBox(height: DS.spacing12),
@@ -1156,32 +1191,32 @@ class _CheckinMoodVisual {
 }
 
 List<_CheckinMoodVisual> _checkinMoodVisuals(BuildContext context) => [
-  _CheckinMoodVisual(
-    icon: Icons.sentiment_very_dissatisfied_rounded,
-    label: context.l10n.accountabilityMoodLow,
-    color: Color(0xFFE57373),
-  ),
-  _CheckinMoodVisual(
-    icon: Icons.sentiment_dissatisfied_rounded,
-    label: context.l10n.accountabilityMoodOkay,
-    color: Color(0xFFFFB74D),
-  ),
-  _CheckinMoodVisual(
-    icon: Icons.sentiment_neutral_rounded,
-    label: context.l10n.accountabilityMoodSteady,
-    color: Color(0xFF90A4AE),
-  ),
-  _CheckinMoodVisual(
-    icon: Icons.sentiment_satisfied_alt_rounded,
-    label: context.l10n.accountabilityMoodGood,
-    color: Color(0xFF66BB6A),
-  ),
-  _CheckinMoodVisual(
-    icon: Icons.mood_rounded,
-    label: context.l10n.accountabilityMoodGreat,
-    color: Color(0xFF26A69A),
-  ),
-];
+      _CheckinMoodVisual(
+        icon: Icons.sentiment_very_dissatisfied_rounded,
+        label: context.l10n.accountabilityMoodLow,
+        color: Color(0xFFE57373),
+      ),
+      _CheckinMoodVisual(
+        icon: Icons.sentiment_dissatisfied_rounded,
+        label: context.l10n.accountabilityMoodOkay,
+        color: Color(0xFFFFB74D),
+      ),
+      _CheckinMoodVisual(
+        icon: Icons.sentiment_neutral_rounded,
+        label: context.l10n.accountabilityMoodSteady,
+        color: Color(0xFF90A4AE),
+      ),
+      _CheckinMoodVisual(
+        icon: Icons.sentiment_satisfied_alt_rounded,
+        label: context.l10n.accountabilityMoodGood,
+        color: Color(0xFF66BB6A),
+      ),
+      _CheckinMoodVisual(
+        icon: Icons.mood_rounded,
+        label: context.l10n.accountabilityMoodGreat,
+        color: Color(0xFF26A69A),
+      ),
+    ];
 
 _CheckinMoodVisual _resolveCheckinMoodVisual(BuildContext context, int mood) {
   final visuals = _checkinMoodVisuals(context);
@@ -1198,7 +1233,10 @@ class _CheckinTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dateStr = DateFormat('MM-dd HH:mm').format(checkin.createdAt);
     final moodVisual = _resolveCheckinMoodVisual(context, checkin.mood);
-    final authorName = checkin.author?.displayName ?? (isMe ? context.l10n.accountabilityMe : context.l10n.accountabilityPartner);
+    final authorName = checkin.author?.displayName ??
+        (isMe
+            ? context.l10n.accountabilityMe
+            : context.l10n.accountabilityPartner);
 
     return Container(
       margin: const EdgeInsets.only(bottom: DS.sm),
@@ -1217,7 +1255,7 @@ class _CheckinTile extends ConsumerWidget {
               Text(
                 authorName,
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: isMe ? DS.brandPrimary : DS.textPrimary,
                   fontSize: DS.fontSizeSm,
                 ),
@@ -1330,7 +1368,8 @@ class _CheckinTile extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, '${context.l10n.accountabilityLikeFailed}: $e');
+        AppFeedback.error(
+            context, '${context.l10n.accountabilityLikeFailed}: $e');
       }
     }
   }
@@ -1368,11 +1407,13 @@ class _CheckinTile extends ConsumerWidget {
           .encourageCheckin(ref, checkin.id, message);
       ref.invalidate(accountabilityDashboardProvider(checkin.partnershipId));
       if (context.mounted) {
-        AppFeedback.success(context, context.l10n.accountabilityEncourageDelivered);
+        AppFeedback.success(
+            context, context.l10n.accountabilityEncourageDelivered);
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, '${context.l10n.accountabilitySendFailed}: $e');
+        AppFeedback.error(
+            context, '${context.l10n.accountabilitySendFailed}: $e');
       }
     }
   }
@@ -1430,7 +1471,7 @@ class _AccountabilityCheckinSheetState
               Text(
                 context.l10n.accountabilityCheckInToday,
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   fontSize: DS.fontSizeLg,
                 ),
               ),
@@ -1447,7 +1488,7 @@ class _AccountabilityCheckinSheetState
               const SizedBox(height: DS.spacing16),
               Text(
                 context.l10n.accountabilityTodayMood,
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.sm),
               Row(
@@ -1501,7 +1542,7 @@ class _AccountabilityCheckinSheetState
               const SizedBox(height: DS.spacing16),
               Text(
                 context.l10n.accountabilityInvestedTime(_minutes),
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(fontWeight: DS.fontWeightBold),
               ),
               Slider(
                 value: _minutes.toDouble(),
@@ -1550,7 +1591,8 @@ class _AccountabilityCheckinSheetState
       }
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '${context.l10n.accountabilityCheckinFailed}: $e');
+        AppFeedback.error(
+            context, '${context.l10n.accountabilityCheckinFailed}: $e');
       }
     } finally {
       if (mounted) {

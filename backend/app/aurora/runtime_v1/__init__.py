@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import logging
+
 __all__: list[str] = []
+
+logger = logging.getLogger(__name__)
 
 
 def _export(*names: str) -> None:
@@ -23,8 +27,8 @@ try:
         "DndWindow",
         "HarnessUpdateRejectedError",
     )
-except ModuleNotFoundError:
-    pass
+except ModuleNotFoundError as exc:
+    logger.debug("Optional Aurora module not loaded: %s", exc)
 
 try:
     from app.aurora.runtime_v1.self_model import (
@@ -40,8 +44,8 @@ try:
         "SPARKLE_SELF_MODEL_TTL_SECONDS",
         "SparkleSelfModelService",
     )
-except ModuleNotFoundError:
-    pass
+except ModuleNotFoundError as exc:
+    logger.debug("Optional Aurora module not loaded: %s", exc)
 
 try:
     from app.aurora.runtime_v1.write_pipeline import (
@@ -75,8 +79,8 @@ try:
         "get_claim",
         "submit_claim",
     )
-except ModuleNotFoundError:
-    pass
+except ModuleNotFoundError as exc:
+    logger.debug("Optional Aurora module not loaded: %s", exc)
 
 try:
     from app.aurora.runtime_v1.state import (
@@ -114,15 +118,15 @@ try:
         "ScheduledWake",
         "build_aurora_runtime_metadata",
     )
-except ModuleNotFoundError:
-    pass
+except ModuleNotFoundError as exc:
+    logger.debug("Optional Aurora module not loaded: %s", exc)
 
 try:
     from app.aurora.runtime_v1.skills import AuroraSkillRegistry, SkillAffordance
 
     _export("AuroraSkillRegistry", "SkillAffordance")
-except ModuleNotFoundError:
-    pass
+except ModuleNotFoundError as exc:
+    logger.debug("Optional Aurora module not loaded: %s", exc)
 
 try:
     from app.aurora.runtime_v1.persistence import (
@@ -140,22 +144,22 @@ try:
         "AuroraStateSnapshotRecord",
         "PersistedScheduledWake",
     )
-except ModuleNotFoundError:
-    pass
+except ModuleNotFoundError as exc:
+    logger.debug("Optional Aurora module not loaded: %s", exc)
 
 try:
     from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 
     _export("AuroraDecisionTelemetryService")
-except ModuleNotFoundError:
-    pass
+except ModuleNotFoundError as exc:
+    logger.debug("Optional Aurora module not loaded: %s", exc)
 
 try:
     from app.aurora.runtime_v1.wake_scheduler import AuroraWakeScheduler
 
     _export("AuroraWakeScheduler")
-except ModuleNotFoundError:
-    pass
+except ModuleNotFoundError as exc:
+    logger.debug("Optional Aurora module not loaded: %s", exc)
 
 try:
     from app.aurora.runtime_v1.wake_policy import (
@@ -175,8 +179,8 @@ try:
         "WakeDecision",
         "WakeScoreComponents",
     )
-except ModuleNotFoundError:
-    pass
+except ModuleNotFoundError as exc:
+    logger.debug("Optional Aurora module not loaded: %s", exc)
 
 try:
     from app.aurora.runtime_v1.checkpoint_runtime import (
@@ -190,8 +194,8 @@ try:
         "AuroraCheckpointRuntimeService",
         "build_aurora_surface_metadata",
     )
-except ModuleNotFoundError:
-    pass
+except ModuleNotFoundError as exc:
+    logger.debug("Optional Aurora module not loaded: %s", exc)
 
 try:
     from app.aurora.runtime_v1.planning import (
@@ -211,8 +215,8 @@ try:
         "AuroraRuntimePlanningState",
         "AuroraTension",
     )
-except ModuleNotFoundError:
-    pass
+except ModuleNotFoundError as exc:
+    logger.debug("Optional Aurora module not loaded: %s", exc)
 
 from app.aurora.runtime_v1.chat_adapter import ChatLayerAdapter
 from app.aurora.runtime_v1.dashboard import (

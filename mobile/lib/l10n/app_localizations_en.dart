@@ -158,6 +158,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Turn off haptics for achievements, galaxy interactions, and more';
 
   @override
+  String get sensoryAuroraLinkTitle => 'Aurora Sensory Link';
+
+  @override
+  String get sensoryAuroraLinkSubtitle =>
+      'Let Aurora gently adjust music, haptics, and moments of celebration';
+
+  @override
   String get sensoryAmbientSceneTitle => 'Focus Ambience';
 
   @override
@@ -5377,6 +5384,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatRead => 'Read';
 
   @override
+  String chatOfflineQueuePending(int count) {
+    return '$count messages waiting to send';
+  }
+
+  @override
+  String chatOfflineQueueSending(int count) {
+    return 'Sending $count queued messages...';
+  }
+
+  @override
+  String get chatOfflineQueueComplete => 'All sent';
+
+  @override
+  String chatOfflineQueuePendingSemantic(int count) {
+    return 'Offline queue has $count messages waiting to send';
+  }
+
+  @override
+  String chatOfflineQueueSendingSemantic(int count) {
+    return 'Connection restored, sending $count queued messages';
+  }
+
+  @override
+  String get chatOfflineQueueCompleteSemantic =>
+      'All queued messages have been sent';
+
+  @override
+  String get chatMessageQueued => 'Queued';
+
+  @override
+  String get chatMessageSending => 'Sending';
+
+  @override
+  String get chatMessageSendFailed => 'Send failed';
+
+  @override
+  String get chatMessageRetrySend => 'Retry';
+
+  @override
   String get chatAgentNavigator => 'Galaxy Navigator';
 
   @override
@@ -5636,6 +5682,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get errorBookNoReviewHint => 'Great job! Keep it up';
 
   @override
+  String get errorBookNoReviewDescription =>
+      'Great job! Keep it up. Record a recent missed question first, then Sparkle can schedule future reviews.';
+
+  @override
+  String get errorBookRecordFirstError => 'Record first error';
+
+  @override
   String get errorBookDeleteSuccess => 'Deleted';
 
   @override
@@ -5747,6 +5800,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String errorBookCognitiveFilter(Object dimension) {
     return 'Reviewing specifically for \"$dimension\" dimension';
   }
+
+  @override
+  String errorBookKnowledgePointFilter(String node) {
+    return 'Knowledge point: $node';
+  }
+
+  @override
+  String get errorBookCognitiveDimension => 'Cognitive Dimension';
+
+  @override
+  String get errorBookKnowledgeNodeFallback => 'Knowledge node';
 
   @override
   String errorBookReviewCount(Object count) {
@@ -7151,6 +7215,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get photonTransactionAdminAdjustment => 'Admin adjustment';
+
+  @override
+  String get photonTransactionsEmpty => 'No transaction records';
+
+  @override
+  String get photonTransactionsEnd => 'No more records';
+
+  @override
+  String photonTransactionDaysAgo(int days) {
+    return '${days}d ago';
+  }
+
+  @override
+  String get photonTransactionNoNote => 'No note';
 
   @override
   String get shopItemTypeSkin => 'Skin';
@@ -10109,10 +10187,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskGuideTitle => 'Task Guide Title';
 
   @override
-  String get taskListLoading => 'Task List Loading';
+  String get taskListLoading => 'Loading tasks...';
 
   @override
-  String get taskListTitle => 'Task List Title';
+  String get taskListTitle => 'Tasks';
 
   @override
   String taskMinutesOption(Object arg0) {
@@ -10166,7 +10244,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskReminderTimesTitle => 'Task Reminder Times Title';
 
   @override
-  String get taskSearchHint => 'Task Search Hint';
+  String get taskSearchHint => 'Search tasks...';
 
   @override
   String get taskStart => 'Task Start';
@@ -11152,6 +11230,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatContinueInChat => 'Continue in chat';
+
+  @override
+  String get chatNewMessagesDivider => 'New messages';
 
   @override
   String get chatViewLatestReport => 'View latest learning report';
@@ -15352,6 +15433,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openclawHubButtonViewTasks => 'View Tasks';
 
   @override
+  String get openclawHubButtonOpenSetupGuide => 'Open Setup Guide';
+
+  @override
+  String get openclawHubSetupGuideUnavailable =>
+      'Setup guide could not be opened';
+
+  @override
   String get openclawHubSectionConnectionTitle => 'Connection & Control';
 
   @override
@@ -19099,8 +19187,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auroraCalibrationConfirm => 'Need your confirmation';
 
   @override
-  String get auroraCalibrationComplete =>
-      'Calibration complete. Returning to standard layer.';
+  String get auroraCalibrationComplete => 'Calibration complete';
 
   @override
   String get auroraCalibrationExit => 'Aurora returning to background';
@@ -19109,13 +19196,130 @@ class AppLocalizationsEn extends AppLocalizations {
   String get auroraCorrectNotRight => 'Not the right direction';
 
   @override
+  String get auroraCorrectNotRightSubtitle => 'This read is off';
+
+  @override
   String get auroraCorrectShorter => 'Make it shorter';
+
+  @override
+  String get auroraCorrectShorterSubtitle => 'Tighter reply';
 
   @override
   String get auroraCorrectDirect => 'Give me practice';
 
   @override
+  String get auroraCorrectDirectSubtitle => 'Switch to drills';
+
+  @override
   String get auroraCorrectRecalibrate => 'Recalibrate';
+
+  @override
+  String get auroraCorrectRecalibrateSubtitle => 'Deep check';
+
+  @override
+  String get auroraCorrectionRiskFalsePositive => 'I’m not anxious, just busy';
+
+  @override
+  String get auroraCorrectionRiskOverstated => 'It is not that serious';
+
+  @override
+  String get auroraCorrectionRiskSubtitle => 'Risk read is high';
+
+  @override
+  String get auroraCorrectionJudgmentOff => 'That read is off';
+
+  @override
+  String get auroraCorrectionJudgmentSubtitle => 'Update the judgment';
+
+  @override
+  String get auroraCorrectionTemporaryBusy => 'It is just temporary';
+
+  @override
+  String get auroraCorrectionTemporarySubtitle => 'Busy context';
+
+  @override
+  String get auroraCorrectionStrategyAdjust => 'Adjust the direction';
+
+  @override
+  String get auroraCorrectionStrategyFaster => 'We can move faster';
+
+  @override
+  String get auroraCorrectionStrategySubtitle => 'Strategy will shift';
+
+  @override
+  String get auroraCorrectionKnowledgeBlocker => 'I am stuck on the content';
+
+  @override
+  String get auroraCorrectionKnowledgeSubtitle => 'Change the cause';
+
+  @override
+  String get auroraCorrectionCareless => 'It was carelessness';
+
+  @override
+  String get auroraCorrectionCarelessSubtitle => 'Not concept gap';
+
+  @override
+  String get auroraCorrectionGenericDisconfirm => 'That is not quite right';
+
+  @override
+  String get auroraCorrectionGenericConfirm => 'That sounds right';
+
+  @override
+  String get auroraCorrectionFactSubtitle => 'Confirm the fact';
+
+  @override
+  String get auroraCorrectionToneSubtitle => 'Adjust the tone';
+
+  @override
+  String get auroraCorrectionFreeformLabel => 'Aurora got it wrong?';
+
+  @override
+  String get auroraCorrectionFreeformSubtitle => 'I’ll explain';
+
+  @override
+  String get auroraCorrectionReceivedTitle => 'Got it';
+
+  @override
+  String get auroraCorrectionReceivedSubtitle =>
+      'Aurora is updating its understanding';
+
+  @override
+  String get auroraCorrectionApplied => 'Last correction is active';
+
+  @override
+  String get calibrationReceiptExpand => 'Show calibration details';
+
+  @override
+  String get calibrationReceiptCollapse => 'Hide calibration details';
+
+  @override
+  String get calibrationReceiptDismiss => 'Hide this calibration receipt';
+
+  @override
+  String get calibrationReceiptWhatChanged => 'What changed';
+
+  @override
+  String get calibrationReceiptWhyChanged => 'Why it changed';
+
+  @override
+  String get calibrationReceiptNextTime => 'Next time';
+
+  @override
+  String get auroraCorrectionInputTitle => 'What should Aurora know?';
+
+  @override
+  String get auroraCorrectionInputHint =>
+      'What did Aurora get wrong? Share the correction…';
+
+  @override
+  String get auroraCorrectionInputCancel => 'Cancel';
+
+  @override
+  String get auroraCorrectionInputSend => 'Send';
+
+  @override
+  String get auroraCorrectionSubmitted =>
+      'Got it. Aurora is updating its understanding.';
 
   @override
   String auroraSourceBadge(Object source) {
@@ -19157,6 +19361,87 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get auroraBandCoolingDown => 'Aurora cooling down';
+
+  @override
+  String get auroraBandShortSensing => 'Sensing now';
+
+  @override
+  String get auroraBandShortCalibrated => 'Good rhythm';
+
+  @override
+  String get auroraBandShortRiskFound => 'Maybe stuck';
+
+  @override
+  String get auroraBandShortNeedsConfirm => 'Check this';
+
+  @override
+  String get auroraBandShortCalibrationAvailable => 'Can go deeper';
+
+  @override
+  String get auroraBandShortCoolingDown => 'Cooling down';
+
+  @override
+  String get auroraLayerJudgmentPrefix => 'I think this is: ';
+
+  @override
+  String get auroraLayerCorrectionQuestion => 'It may be because';
+
+  @override
+  String get auroraCorrectionTimeNotEnough => 'Not enough time';
+
+  @override
+  String get auroraCorrectionTooHard => 'Too hard';
+
+  @override
+  String get auroraCorrectionLowEnergy => 'Low energy lately';
+
+  @override
+  String get auroraCorrectionNoneOfThese => 'None of these';
+
+  @override
+  String get auroraCorrectionRecorded =>
+      'Got it. I will recalibrate from this next turn.';
+
+  @override
+  String get auroraActionDeepConversation => 'Enter deep conversation';
+
+  @override
+  String get auroraActionWakeDeepConversation =>
+      'Wake Aurora deep conversation';
+
+  @override
+  String get auroraLayerCurrentStatus => 'Current state';
+
+  @override
+  String get auroraLayerMemoryReferences => 'Memory references';
+
+  @override
+  String get auroraLayerNextSuggestion => 'Next suggestion';
+
+  @override
+  String get auroraLayerSelfEvaluation => 'Aurora self-check';
+
+  @override
+  String get auroraLayerMemoryFallback =>
+      'No recent related memory is strong enough yet.';
+
+  @override
+  String get auroraLayerNextSuggestionFallback =>
+      'Start with one 10-minute smallest next action.';
+
+  @override
+  String get auroraLayerNextSuggestionTimeConflict =>
+      'Quickly adjust the plan around this time conflict first.';
+
+  @override
+  String get auroraLayerSelfEvalFallback =>
+      'I will keep this as a light judgment until more signals arrive.';
+
+  @override
+  String get auroraLayerExpand => 'Expand';
+
+  @override
+  String get auroraLayerCollapse => 'Collapse';
 
   @override
   String auroraWakeAvailable(Object count) {
@@ -20562,6 +20847,34 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationRetractableTo => 'Retractable to';
 
   @override
+  String get notificationRecallWhyTitle => 'Why this reminder';
+
+  @override
+  String get notificationRecallGoalValue => 'Goal value';
+
+  @override
+  String get notificationRecallReason => 'Why now';
+
+  @override
+  String get notificationRecallEffort => 'Effort';
+
+  @override
+  String get notificationRecallDeadlinePressure => 'Time pressure';
+
+  @override
+  String get notificationRecallScore => 'Recall score';
+
+  @override
+  String get notificationRecallInaccurate => 'This reminder is inaccurate';
+
+  @override
+  String get notificationRecallFeedbackSaved =>
+      'Thanks. This reminder will be tuned.';
+
+  @override
+  String get notificationRecallFeedbackRecorded => 'Feedback recorded';
+
+  @override
   String get notificationSendEncouragement => 'Send encouragement';
 
   @override
@@ -21050,6 +21363,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatContextDetail => 'Context detail';
 
   @override
+  String get chatSocialContextDetail => 'Social context detail';
+
+  @override
+  String get chatSocialContextUsed => 'Used study partner activity';
+
+  @override
+  String get chatSocialContextDisableAction => 'Do not use their progress';
+
+  @override
+  String get chatSocialContextDisablePrompt =>
+      'Please stop using my study partner\'s progress to adjust replies.';
+
+  @override
   String chatContextUnused(Object count) {
     return 'Unused ($count)';
   }
@@ -21358,6 +21684,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatMemoryOriginalTurn => 'Original turn';
+
+  @override
+  String get chatMemoryReferenceCorrectFailed => 'Memory correction failed';
+
+  @override
+  String get chatMemoryReferenceDetailTitle => 'Related memories';
+
+  @override
+  String get chatMemoryReferenceNeedsConfirmation => 'needs confirmation';
+
+  @override
+  String get chatMemoryReferenceNotRight => 'Not right';
+
+  @override
+  String chatMemoryReferenceReceiptLabel(Object count) {
+    return 'Aurora used $count related memories';
+  }
+
+  @override
+  String chatMemoryReferenceUsed(Object count) {
+    return 'Used $count related memories';
+  }
 
   @override
   String chatMemorySessionCount(Object count) {
@@ -23682,6 +24030,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get simGenFailed => 'Simulation generation failed';
 
   @override
+  String get simRealtimeConnectionRecovered =>
+      'The live connection was interrupted. Restored to your most recently saved simulation progress.';
+
+  @override
+  String get simInteractionStreamRecovered =>
+      'The interaction stream was interrupted, but I restored the latest round state for you.';
+
+  @override
+  String simRoundProgressSummary(int round) {
+    return 'Discussion has reached round $round. Summarizing key disagreements and consensus now.';
+  }
+
+  @override
+  String get simDraftInsightSummary =>
+      'Simulation in progress. Summarizing the current discussion insights...';
+
+  @override
   String get simStudyGroup => 'Study Group';
 
   @override
@@ -24494,6 +24859,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ebRememberedHint => 'Extend review interval';
 
   @override
+  String get ebReviewMasteryPrompt => 'How well do you know this question?';
+
+  @override
+  String get ebReviewMasterySheetTitle => 'Rate your mastery';
+
+  @override
+  String get ebReviewMasterySheetDesc =>
+      'Sparkle will adjust the next review time from your rating';
+
+  @override
   String get ebPerfectRecall => 'Perfect Recall ✓';
 
   @override
@@ -24697,6 +25072,55 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memSkip => 'Skip';
 
   @override
+  String get memSettingsUpdated => 'Memory settings updated';
+
+  @override
+  String get memControl => 'Memory Control';
+
+  @override
+  String get memControlDesc =>
+      'Control how long-term memory learns your preferences, goals, and experiences. Default is conservative — only information valuable for future decisions is retained.';
+
+  @override
+  String get memSocialToggles => 'Social Semantic Toggles';
+
+  @override
+  String get memSocialTogglesDesc =>
+      'Stage 17 only declares memory and reads from the front door. Disabling a category hides its social semantics.';
+
+  @override
+  String get memProactiveReminders => 'Proactive Reminders';
+
+  @override
+  String get memQuietHours => 'Quiet Hours';
+
+  @override
+  String memCurrentTimezone(String timezone) {
+    return 'Timezone: $timezone';
+  }
+
+  @override
+  String get memTypes => 'Memory Types';
+
+  @override
+  String get memCaptureIntensity => 'Capture Intensity';
+
+  @override
+  String get memCaptureLow => 'Low';
+
+  @override
+  String get memCaptureMedium => 'Medium';
+
+  @override
+  String get memCaptureHigh => 'High';
+
+  @override
+  String get memBlockingPrefs => 'Blocking Preferences';
+
+  @override
+  String get memBlockedSources => 'Blocked Sources';
+
+  @override
   String get seedDetailFailed =>
       'Failed to load seed library details. Please try again.';
 
@@ -24853,6 +25277,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transWordCard => 'Word Card';
 
   @override
+  String get transAddedToFlashcardsReviewLater =>
+      'Added to flashcards, review in 24h';
+
+  @override
+  String get transTranslationFailed => 'Translation failed';
+
+  @override
   String get auroraObserving => 'Aurora · Observing';
 
   @override
@@ -24887,6 +25318,90 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get auroraSend => 'Send';
+
+  @override
+  String get auroraCoreSessionTitle => 'Aurora Deep Calibration';
+
+  @override
+  String auroraTurnsRemaining(int count) {
+    return '$count turns left';
+  }
+
+  @override
+  String get auroraPauseCalibration => 'Pause calibration';
+
+  @override
+  String get auroraResumeTitle => 'Continue the last deep calibration';
+
+  @override
+  String get auroraResumeSubtitle =>
+      'Aurora still has the stage and messages from where you paused.';
+
+  @override
+  String get auroraResumeBannerSubtitle =>
+      'Pick up from the last stage without starting over';
+
+  @override
+  String get auroraResumeAction => 'Continue';
+
+  @override
+  String get auroraCoreSessionResumed =>
+      'Continuing where we left off. Aurora kept the previous stage and messages.';
+
+  @override
+  String get auroraSessionExpiredTitle => 'The last deep calibration has ended';
+
+  @override
+  String get auroraSessionExpiredSubtitle =>
+      'It sat idle past the resume window, so Aurora will not continue from a stale state.';
+
+  @override
+  String get auroraLastSessionSummary => 'Last session summary';
+
+  @override
+  String get auroraJustChat => 'Just chat';
+
+  @override
+  String get auroraStartNewSession => 'Start a new calibration';
+
+  @override
+  String get auroraExpandSheet => 'Expand calibration sheet';
+
+  @override
+  String get auroraShrinkSheet => 'Shrink calibration sheet';
+
+  @override
+  String get auroraStatePatchesTitle => 'Updated states';
+
+  @override
+  String get auroraNextChangesTitle => 'What changes next';
+
+  @override
+  String get auroraReturnedToBackground =>
+      'Aurora has returned to the background';
+
+  @override
+  String get auroraViewAdjustedPlan => 'View adjusted plan';
+
+  @override
+  String get auroraExplainPrompt => 'Explain';
+
+  @override
+  String get auroraFreeformLabel => 'Freeform';
+
+  @override
+  String get auroraCoreCheckpointCta => 'Deep calibrate';
+
+  @override
+  String get auroraCheckpointWhyNow =>
+      'this checkpoint is the right moment to check whether the plan still matches your real progress';
+
+  @override
+  String get auroraCoreTaskStuckCta => 'Deep calibrate with Aurora';
+
+  @override
+  String get auroraTaskStuckWhyNow =>
+      'a task has become stuck, so calibrating now can prevent the next step from being built on the wrong assumption';
 
   @override
   String get settingsQueueCleared => 'Queue cleared';
@@ -26513,6 +27028,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String communityWeeksAgo(Object count) {
+    return '${count}w ago';
+  }
+
+  @override
+  String communityMonthsAgo(Object count) {
+    return '${count}mo ago';
+  }
+
+  @override
+  String communityBadgeUnlockedOn(Object date) {
+    return 'Unlocked on $date';
+  }
+
+  @override
   String get communityQuickShare => 'Quick Share';
 
   @override
@@ -26538,6 +27068,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get communityNoKnowledgeYet => 'No knowledge nodes studied yet';
+
+  @override
+  String get communityTaskPaused => 'Paused';
 
   @override
   String get communityTaskCompleted => 'Completed';
@@ -27613,6 +28146,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get userNoRevertibleActions => 'No revertible actions.';
+
+  @override
+  String get userCorrectionHistoryTitle => 'What I corrected Aurora on';
+
+  @override
+  String get userCorrectionHistoryHint =>
+      'Recent profile and chat corrections that can change future judgments.';
+
+  @override
+  String get userCorrectionHistoryEmpty => 'No Aurora corrections yet.';
+
+  @override
+  String get userCorrectionHistoryUndo => 'Restore previous read';
 
   @override
   String get userTransparentNotEnabled => 'Transparent profile not yet enabled';
@@ -28869,4 +29415,734 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get ebLoadError => 'Failed to load errors, please try again';
+
+  @override
+  String chatContextReceiptSummary(int used, int skipped) {
+    return 'Aurora · used $used context item(s) / skipped $skipped';
+  }
+
+  @override
+  String chatContextUsedTools(int count) {
+    return 'Tool context used ($count)';
+  }
+
+  @override
+  String toolsContextEffectMessage(String tool) {
+    return 'Aurora now knows about this $tool';
+  }
+
+  @override
+  String get toolsContextEffectUndo => 'Do not tell Aurora';
+
+  @override
+  String get toolsContextEffectUndone => 'This tool context was removed';
+
+  @override
+  String get toolsContextEffectUndoFailed =>
+      'Could not remove it. Try again later.';
+
+  @override
+  String get toolsNotesSyncedToPrism => 'Synced to Cognitive Prism';
+
+  @override
+  String get taskStatusRestore => 'Restored';
+
+  @override
+  String get streakQualityTitle => 'Quality Streak';
+
+  @override
+  String get streakQualitySubtitle =>
+      'Streaks count effective minutes, core tasks, hard breakthroughs, and plan consistency.';
+
+  @override
+  String get streakQualityDaysShort => 'quality';
+
+  @override
+  String get streakQualityTodayBreakdown => 'Today\'s quality breakdown';
+
+  @override
+  String get streakQualityEffectiveMinutes => 'Effective time';
+
+  @override
+  String get streakQualityCoreTasks => 'Core tasks';
+
+  @override
+  String get streakQualityBreakthroughs => 'Breakthroughs';
+
+  @override
+  String get streakQualityPlanConsistency => 'Plan match';
+
+  @override
+  String get streakQualityWeeklyTrend => 'Weekly quality trend';
+
+  @override
+  String get streakQualityEvidence => 'Why this is worth celebrating';
+
+  @override
+  String get streakQualityEmpty =>
+      'Start a learning session and the quality trend will appear here.';
+
+  @override
+  String get streakQualityUnavailable => 'Quality data unavailable';
+
+  @override
+  String get streakQualityViewDetails => 'View streak details';
+
+  @override
+  String streakQualityScoreLabel(Object score) {
+    return 'Quality $score%';
+  }
+
+  @override
+  String streakQualityMinutesValue(Object minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String streakQualitySemantics(Object currentDays, Object qualityDays) {
+    return 'Quality streak $qualityDays days, current streak $currentDays days. Tap for breakdown.';
+  }
+
+  @override
+  String get gdChronicleTitle => 'Growth Chronicle';
+
+  @override
+  String get gdChronicleSubtitle =>
+      'Review the milestones, turning points, and patterns Sparkle thinks matter.';
+
+  @override
+  String get gdLearningDashboardTitle => 'Learning Dashboard';
+
+  @override
+  String get gdLearningDashboardSubtitle =>
+      'See time, efficiency, weak spots, knowledge movement, and plan stability.';
+
+  @override
+  String get gdGrowthStory => 'Growth Story';
+
+  @override
+  String get gdStorySummary => 'Weekly story';
+
+  @override
+  String get gdKeyInsights => 'Key insights';
+
+  @override
+  String get gdNextWeekSuggestion => 'Next week suggestion';
+
+  @override
+  String get gdEvidenceChain => 'Evidence chain';
+
+  @override
+  String get gdConfirm => 'Confirm';
+
+  @override
+  String get gdEdit => 'Edit';
+
+  @override
+  String get gdReject => 'Reject';
+
+  @override
+  String get gdUndo => 'Undo';
+
+  @override
+  String get gdEntryConfirmed => 'Chronicle entry confirmed.';
+
+  @override
+  String get gdEntryEdited => 'Chronicle entry marked for editing.';
+
+  @override
+  String get gdEntryRejected => 'Chronicle entry rejected.';
+
+  @override
+  String get gdPending => 'Pending';
+
+  @override
+  String get gdConfirmed => 'Confirmed';
+
+  @override
+  String get gdEdited => 'Edited';
+
+  @override
+  String get gdRejected => 'Rejected';
+
+  @override
+  String get gdMilestone => 'Milestone';
+
+  @override
+  String get gdTurningPoint => 'Turning point';
+
+  @override
+  String get gdPattern => 'Pattern';
+
+  @override
+  String get gdReflection => 'Reflection';
+
+  @override
+  String get gdCategoryLearning => 'Learning';
+
+  @override
+  String get gdCategoryTraining => 'Training';
+
+  @override
+  String get gdCategoryErrorFix => 'Error fixing';
+
+  @override
+  String get gdCategoryReflection => 'Reflection';
+
+  @override
+  String get gdCategorySocial => 'Social';
+
+  @override
+  String get gdCategoryPlanning => 'Planning';
+
+  @override
+  String get gdCategoryOcr => 'Material capture';
+
+  @override
+  String get gdCategoryUnassigned => 'Unassigned';
+
+  @override
+  String get gdEmptyChronicleTitle => 'No chronicle entries yet';
+
+  @override
+  String get gdEmptyChronicleDesc =>
+      'Complete, fail, correct, or reflect on something important and Sparkle will turn the evidence into an editable story.';
+
+  @override
+  String get gdOpenChronicle => 'Open Chronicle';
+
+  @override
+  String get gdOpenDashboard => 'Open Dashboard';
+
+  @override
+  String get gdTimeDistribution => 'Time distribution';
+
+  @override
+  String get gdEfficiency => 'Efficiency';
+
+  @override
+  String get gdWeaknessRadar => 'Weakness radar';
+
+  @override
+  String get gdKnowledgeChanges => 'Knowledge changes';
+
+  @override
+  String get gdPlanStability => 'Plan stability';
+
+  @override
+  String gdTasksCompletedCount(int count) {
+    return '$count tasks';
+  }
+
+  @override
+  String gdAvgMinutes(String minutes) {
+    return '$minutes min avg';
+  }
+
+  @override
+  String gdOnTimeRate(String percent) {
+    return '$percent% on time';
+  }
+
+  @override
+  String gdInterruptionsCount(int count) {
+    return '$count interruptions';
+  }
+
+  @override
+  String gdAdjustmentsCount(int count) {
+    return '$count adjustments';
+  }
+
+  @override
+  String gdAbandonmentRate(String percent) {
+    return '$percent% abandoned';
+  }
+
+  @override
+  String get gdNoDataTitle => 'Learning dashboard is warming up';
+
+  @override
+  String get gdNoDataDesc =>
+      'After a few focus sessions and completed tasks, this page will show reliable patterns instead of guesses.';
+
+  @override
+  String get gdModelReceiptTitle => 'What Sparkle learned';
+
+  @override
+  String get gdTriggerEvent => 'Trigger';
+
+  @override
+  String get gdSparkleLearned => 'Learned';
+
+  @override
+  String get gdWhatChanged => 'Changed';
+
+  @override
+  String get gdNotWritten => 'Not written';
+
+  @override
+  String get gdRemembered => 'Remembered';
+
+  @override
+  String get gdCorrect => 'Correct';
+
+  @override
+  String get gdReceiptRemembered => 'Marked as remembered.';
+
+  @override
+  String get gdReceiptCorrectPrompt =>
+      'Thanks. Sparkle will treat this receipt as needing correction.';
+
+  @override
+  String get gdChronicleSemantics => 'Growth Chronicle timeline';
+
+  @override
+  String get gdDashboardSemantics => 'Learning Dashboard metrics';
+
+  @override
+  String gdTimeHours(String hours) {
+    return '$hours h';
+  }
+
+  @override
+  String gdMasteryMove(String before, String after) {
+    return '$before% to $after%';
+  }
+
+  @override
+  String gdGap(String percent) {
+    return 'Gap $percent%';
+  }
+
+  @override
+  String gdCurrentTarget(String current, String target) {
+    return 'Current $current% · Target $target%';
+  }
+
+  @override
+  String get gdRetry => 'Retry';
+
+  @override
+  String get gdLoadFailed => 'Could not load the growth dashboard';
+
+  @override
+  String get sourceExplanationSemantics => 'Source explanation for this answer';
+
+  @override
+  String sourceExplanationUsedSummary(int count) {
+    return 'This answer used $count source(s)';
+  }
+
+  @override
+  String get sourceExplanationUsedSources => 'Used sources';
+
+  @override
+  String sourceExplanationUnusedSources(int count) {
+    return '$count unused source(s)';
+  }
+
+  @override
+  String get sourceExplanationUnusedSourcesTitle => 'Unused sources';
+
+  @override
+  String get sourceExplanationNoSources => 'No source detail available yet';
+
+  @override
+  String sourceExplanationRelevance(int percent) {
+    return 'Relevance $percent%';
+  }
+
+  @override
+  String sourceExplanationConfidence(int percent) {
+    return '$percent% confidence';
+  }
+
+  @override
+  String get sourceExplanationCorrectSource => 'Correct this source';
+
+  @override
+  String get sourceExplanationCorrectionSent => 'Source correction recorded';
+
+  @override
+  String get sourceExplanationCorrectionFailed =>
+      'Could not record the correction';
+
+  @override
+  String get sourceExplanationUndo => 'Undo';
+
+  @override
+  String get goalGraphPanelSemantics => 'Open goal knowledge graph panel';
+
+  @override
+  String get goalGraphPanelTitle => 'Goal graph';
+
+  @override
+  String get goalGraphNoGoal =>
+      'Choose an active goal to see why each knowledge point matters.';
+
+  @override
+  String get goalGraphLoading => 'Loading goal graph';
+
+  @override
+  String get goalGraphRetry => 'Retry';
+
+  @override
+  String get goalGraphEmpty => 'No goal graph nodes are available yet.';
+
+  @override
+  String get goalGraphBottlenecks => 'Bottlenecks';
+
+  @override
+  String get goalGraphLearning => 'To learn';
+
+  @override
+  String get goalGraphMastered => 'Mastered';
+
+  @override
+  String goalGraphLegendBottleneck(int count) {
+    return '$count bottleneck';
+  }
+
+  @override
+  String goalGraphLegendLearning(int count) {
+    return '$count to learn';
+  }
+
+  @override
+  String goalGraphLegendMastered(int count) {
+    return '$count mastered';
+  }
+
+  @override
+  String goalGraphNodeSemantics(String node) {
+    return 'Open details for $node';
+  }
+
+  @override
+  String goalGraphMasteryPercent(int percent) {
+    return 'Mastery $percent%';
+  }
+
+  @override
+  String get goalGraphNodeType => 'Type';
+
+  @override
+  String get goalGraphMastery => 'Mastery';
+
+  @override
+  String get goalGraphRelationship => 'Why it matters';
+
+  @override
+  String get goalGraphExamWeight => 'Exam weight';
+
+  @override
+  String get goalGraphDifficulty => 'Difficulty';
+
+  @override
+  String get goalGraphTrainability => 'Trainability';
+
+  @override
+  String get goalGraphMistakes => 'Mistakes';
+
+  @override
+  String goalGraphPercentValue(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get taskPausedPanelTitle => 'Paused with context';
+
+  @override
+  String taskPausedPanelSemantics(String title) {
+    return 'Paused task details for $title';
+  }
+
+  @override
+  String get taskPauseReasonLabel => 'Reason:';
+
+  @override
+  String get taskPauseReasonFallback =>
+      'Sparkle paused this task to protect the current plan.';
+
+  @override
+  String get taskRestoreConditionLabel => 'Resume when:';
+
+  @override
+  String get taskRestoreConditionFallback =>
+      'You are ready to continue or the blocking condition clears.';
+
+  @override
+  String taskRestoreConditionDueDate(String date) {
+    return 'Before $date, unless you choose to resume sooner.';
+  }
+
+  @override
+  String get taskResumeQueued => 'Task resume requested.';
+
+  @override
+  String get taskPausedDurationUnknown => 'Paused';
+
+  @override
+  String get taskPausedDurationNow => 'Paused just now';
+
+  @override
+  String taskPausedDurationMinutes(int count) {
+    return 'Paused $count min';
+  }
+
+  @override
+  String taskPausedDurationHours(int count) {
+    return 'Paused $count h';
+  }
+
+  @override
+  String taskPausedDurationDays(int count) {
+    return 'Paused $count d';
+  }
+
+  @override
+  String get taskRestoreDialogTitle => 'Task restored';
+
+  @override
+  String taskRestoreDialogBody(String title) {
+    return '\"$title\" has been restored from abandoned or archived work.';
+  }
+
+  @override
+  String get taskRestoreDialogNextStepLabel => 'Suggested next step';
+
+  @override
+  String get taskRestoreDialogNextStepFallback =>
+      'Review the task context, then restart with the smallest useful step.';
+
+  @override
+  String get lowYieldCardSemantics => 'Gentle priority suggestion';
+
+  @override
+  String get lowYieldCardTitle => 'A more valuable next step';
+
+  @override
+  String get lowYieldActivityFallback => 'this activity';
+
+  @override
+  String get lowYieldReasonFallback =>
+      'your current deadline and goal priority';
+
+  @override
+  String get lowYieldSuggestionFallback => 'the suggested task';
+
+  @override
+  String lowYieldCardMessage(
+      String activity, String reason, String suggestion) {
+    return 'I noticed you are doing $activity. Considering $reason, what may be more valuable now is $suggestion.';
+  }
+
+  @override
+  String get lowYieldActionSwitch => 'Okay, switch';
+
+  @override
+  String get lowYieldActionContinue => 'I know, continue';
+
+  @override
+  String get lowYieldActionCorrect => 'Not right';
+
+  @override
+  String get understandingPanelTitle => 'Sparkle understands me';
+
+  @override
+  String get understandingPanelSemanticLabel =>
+      'Sparkle understanding snapshot';
+
+  @override
+  String understandingPanelSubtitle(int count, int ratio) {
+    return '$count claims · $ratio% high confidence';
+  }
+
+  @override
+  String get understandingPanelEmptySubtitle => 'No stable read yet';
+
+  @override
+  String get understandingPanelEmptyBody =>
+      'As you plan, chat, and finish tasks, Sparkle will show specific assumptions here so you can correct them.';
+
+  @override
+  String get understandingPanelLoading => 'Reading current self-model';
+
+  @override
+  String get understandingPanelError =>
+      'Could not load the understanding snapshot';
+
+  @override
+  String get understandingPanelExpand => 'Expand understanding snapshot';
+
+  @override
+  String get understandingPanelCollapse => 'Collapse understanding snapshot';
+
+  @override
+  String get understandingPanelMemoryTitle => 'What is being used right now';
+
+  @override
+  String get understandingCorrect => 'Correct';
+
+  @override
+  String get understandingConfidenceHigh => 'High confidence';
+
+  @override
+  String get understandingConfidenceMedium => 'Medium confidence';
+
+  @override
+  String get understandingConfidenceLow => 'Low confidence';
+
+  @override
+  String understandingClaimSemantic(String claim, int confidence) {
+    return '$claim. Confidence $confidence percent.';
+  }
+
+  @override
+  String understandingStyleSummary(
+      String tone, String verbosity, String reason) {
+    return '$tone · $verbosity. $reason';
+  }
+
+  @override
+  String understandingRecentlyCorrected(String correction) {
+    return 'Updated from your correction: $correction';
+  }
+
+  @override
+  String get understandingCorrectionTitle => 'Correct this read';
+
+  @override
+  String get understandingCorrectionHint =>
+      'What should Sparkle understand instead?';
+
+  @override
+  String get understandingCorrectionScopeTitle =>
+      'What should this change affect?';
+
+  @override
+  String understandingCorrectionUpdated(String effect) {
+    return 'Updated: $effect';
+  }
+
+  @override
+  String get understandingCorrectionFailed =>
+      'Could not update this correction';
+
+  @override
+  String get understandingCorrectionGenericEffect => 'self-model';
+
+  @override
+  String get understandingScopeMemoryClaim => 'Memory claim';
+
+  @override
+  String get understandingScopeRoutingPolicy => 'Routing policy';
+
+  @override
+  String get understandingScopeTaskGranularity => 'Task size';
+
+  @override
+  String get understandingScopePlanRisk => 'Plan risk';
+
+  @override
+  String get understandingScopeKnowledgeBottleneck => 'Knowledge bottleneck';
+
+  @override
+  String get understandingScopeWakePolicy => 'Wake policy';
+
+  @override
+  String get understandingChatDrawerTitle => 'Current self-model';
+
+  @override
+  String understandingChatDrawerSubtitle(int count) {
+    return '$count correctable claims';
+  }
+
+  @override
+  String get understandingChatDrawerSubtitleEmpty =>
+      'Open what Sparkle currently thinks';
+
+  @override
+  String get understandingChatDrawerOpen => 'Open current self-model';
+
+  @override
+  String get cahTitle => 'Accountability Hub';
+
+  @override
+  String get cahSubtitle =>
+      'Commitments, partner progress, and shared goals in one place';
+
+  @override
+  String get cahMyCommitments => 'My commitments';
+
+  @override
+  String get cahPartnerProgress => 'Partner progress';
+
+  @override
+  String get cahSharedGoals => 'Shared goals';
+
+  @override
+  String get cahNeedsAttention => 'Needs attention';
+
+  @override
+  String get cahHelpable => 'People I can help';
+
+  @override
+  String get cahFeedEntry => 'Open social feed';
+
+  @override
+  String get cahFeedEntryHint =>
+      'The feed stays one tap away for sharing and browsing posts';
+
+  @override
+  String get cahAllowReminder => 'Allow reminders';
+
+  @override
+  String get cahDoNotDisturb => 'Do not disturb';
+
+  @override
+  String get cahAcceptReminder => 'Accept';
+
+  @override
+  String get cahDeclineReminder => 'Decline';
+
+  @override
+  String get cahLaterReminder => 'Later';
+
+  @override
+  String get cahTooFrequentReminder => 'Too frequent';
+
+  @override
+  String get goalDetailTitle => 'Goal detail';
+
+  @override
+  String get goalDetailProgress => 'Overall progress';
+
+  @override
+  String get goalDetailMastery => 'Mastery';
+
+  @override
+  String get goalDetailTargetDate => 'Target date';
+
+  @override
+  String get goalDetailPriority => 'Priority';
+
+  @override
+  String get goalDetailMinimumLine => 'Minimum bar';
+
+  @override
+  String get goalDetailBottlenecks => 'Knowledge bottlenecks';
+
+  @override
+  String get goalDetailTodayStep => 'Today’s smallest next step';
+
+  @override
+  String get goalDetailPlanHealth => 'Plan health';
+
+  @override
+  String get goalDetailAccountability => 'Accountability';
+
+  @override
+  String get goalDetailRelatedSources => 'Related sources';
 }

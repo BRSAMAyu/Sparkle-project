@@ -50,6 +50,7 @@ from app.models import (
     # Recommendation models
     UserSimilarity, ItemSimilarity, UserItemInteraction, UserLearningProfile, RecommendationCache, LeaderboardSnapshot,
     CandidateActionFeedback,
+    ResearchConsentRecord,
     NightlyReview,
     # Seed Content Library
     SeedLibrary, SeedItem, UserLibrarySubscription,

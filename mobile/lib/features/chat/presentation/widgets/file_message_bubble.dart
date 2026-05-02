@@ -3,10 +3,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/file/file.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 
 class FileMessageBubbleWithThumbnail extends ConsumerStatefulWidget {
   const FileMessageBubbleWithThumbnail({
@@ -102,7 +102,7 @@ class _FileMessageBubbleWithThumbnailState
         ? DS.chatBubbleUserText.withValues(alpha: 0.74)
         : (isDark ? DS.neutral300 : DS.neutral600);
     final borderColor = widget.isMe
-        ? Colors.white.withValues(alpha: 0.12)
+        ? DS.chatBubbleUserText.withValues(alpha: 0.12)
         : DS.borderSubtle;
 
     return Container(
@@ -182,7 +182,8 @@ class _FileMessageBubbleWithThumbnailState
                     Row(
                       children: [
                         Icon(
-                          _iconForMime(widget.data.mimeType, widget.data.fileName),
+                          _iconForMime(
+                              widget.data.mimeType, widget.data.fileName),
                           size: 18,
                           color: accentColor,
                         ),
@@ -224,7 +225,7 @@ class _FileMessageBubbleWithThumbnailState
             children: [
               Expanded(
                 child: _ActionPill(
-                  label: '查看',
+                  label: I18nService.instance.isChinese ? '查看' : 'View',
                   icon: Icons.open_in_new_rounded,
                   onTap: _openFile,
                   accentColor: accentColor,
@@ -234,7 +235,9 @@ class _FileMessageBubbleWithThumbnailState
                 const SizedBox(width: DS.spacing8),
                 Expanded(
                   child: _ActionPill(
-                    label: _isSavingToLibrary ? context.l10n.chatFileSaving : context.l10n.chatFileSaveToLibrary,
+                    label: _isSavingToLibrary
+                        ? context.l10n.chatFileSaving
+                        : context.l10n.chatFileSaveToLibrary,
                     icon: Icons.bookmark_add_outlined,
                     onTap: _isSavingToLibrary ? null : _saveToLibrary,
                     accentColor: accentColor,
@@ -307,9 +310,8 @@ class _FileMessageBubbleWithThumbnailState
 
   String _typeLabel(String? mimeType, String fileName) {
     final normalizedMime = mimeType?.toLowerCase() ?? '';
-    final extension = fileName.contains('.')
-        ? fileName.split('.').last.toUpperCase()
-        : '';
+    final extension =
+        fileName.contains('.') ? fileName.split('.').last.toUpperCase() : '';
 
     if (normalizedMime.contains('pdf')) return 'PDF';
     if (normalizedMime.contains('presentation') || extension == 'PPTX') {
@@ -340,37 +342,41 @@ class _ActionPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
         color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
-          child: Ink(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing10,
-              vertical: DS.spacing10,
-            ),
-            decoration: BoxDecoration(
-              color: accentColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: accentColor.withValues(alpha: 0.16)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(icon, size: 16, color: accentColor),
-                const SizedBox(width: DS.spacing6),
-                Flexible(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: DS.fontWeightSemiBold,
-                      color: accentColor,
+        child: Semantics(
+          button: true,
+          label: 'Chat file message bubble control 1',
+          child: InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(12),
+            child: Ink(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing10,
+                vertical: DS.spacing10,
+              ),
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: accentColor.withValues(alpha: 0.16)),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(icon, size: 16, color: accentColor),
+                  const SizedBox(width: DS.spacing6),
+                  Flexible(
+                    child: Text(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: DS.fontWeightSemiBold,
+                        color: accentColor,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

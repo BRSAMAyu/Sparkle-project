@@ -91,6 +91,15 @@ class GalaxyEventBridge:
             logger.debug(
                 f"Forwarded galaxy.error.created to SSE: user={user_id} error={payload.get('error_id')}"
             )
+        elif event_type == "task.started":
+            await sse_manager.send_to_user(
+                user_id=user_id,
+                event_type="task.started_ack",
+                data={
+                    "task_id": payload.get("task_id"),
+                    "plan_id": payload.get("plan_id"),
+                }
+            )
 
 
 # 全局实例

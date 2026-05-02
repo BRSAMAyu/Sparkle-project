@@ -2,35 +2,28 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/redis/go-redis/v9"
-	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/service"
 )
 
 // DataConsistencyHandler provides endpoints for data consistency verification
 type DataConsistencyHandler struct {
-	chatHistory *service.ChatHistoryService
-	queries     *db.Queries
-	redis       *redis.Client
+	consistency dataConsistencyService
+}
+
+type dataConsistencyService interface {
+	CheckCache(ctx context.Context, messageID, conversationID string) (service.CacheMessageResult, error)
+	CheckDatabase(ctx context.Context, messageID, conversationID uuid.UUID) (service.DatabaseMessageResult, error)
 }
 
 // NewDataConsistencyHandler creates a new data consistency handler
-func NewDataConsistencyHandler(
-	chatHistory *service.ChatHistoryService,
-	queries *db.Queries,
-	redis *redis.Client,
-) *DataConsistencyHandler {
+func NewDataConsistencyHandler(consistency dataConsistencyService) *DataConsistencyHandler {
 	return &DataConsistencyHandler{
-		chatHistory: chatHistory,
-		queries:     queries,
-		redis:       redis,
+		consistency: consistency,
 	}
 }
 
@@ -57,31 +50,13 @@ func (h *DataConsistencyHandler) checkCache(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	// Check Redis cache
-	cacheKey := "chat:history:" + conversationID
-	result, err := h.redis.LRange(ctx, cacheKey, 0, -1).Result()
+	result, err := h.consistency.CheckCache(ctx, messageID, conversationID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": err.Error(),
-		})
+		sanitizeErrorResponse(c, http.StatusInternalServerError, err, "data_consistency.check_cache")
 		return
 	}
 
-	// Search for the message
-	var foundMessage map[string]interface{}
-	for _, msg := range result {
-		var msgData map[string]interface{}
-		if err := json.Unmarshal([]byte(msg), &msgData); err != nil {
-			continue
-		}
-
-		if msgID, ok := msgData["id"].(string); ok && msgID == messageID {
-			foundMessage = msgData
-			break
-		}
-	}
-
-	if foundMessage == nil {
+	if !result.Exists {
 		c.JSON(http.StatusOK, gin.H{
 			"exists": false,
 		})
@@ -90,7 +65,7 @@ func (h *DataConsistencyHandler) checkCache(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"exists":  true,
-		"message": foundMessage,
+		"message": result.Message,
 	})
 }
 
@@ -126,39 +101,21 @@ func (h *DataConsistencyHandler) checkDatabase(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	// Convert uuid.UUID to pgtype.UUID
-	var pgMessageID pgtype.UUID
-	copy(pgMessageID.Bytes[:], messageID[:])
-	pgMessageID.Valid = true
-
-	var pgSessionID pgtype.UUID
-	copy(pgSessionID.Bytes[:], conversationID[:])
-	pgSessionID.Valid = true
-
-	// Query database
-	message, err := h.queries.GetMessageByID(ctx, db.GetMessageByIDParams{
-		ID:        pgMessageID,
-		SessionID: pgSessionID,
-	})
+	result, err := h.consistency.CheckDatabase(ctx, messageID, conversationID)
 	if err != nil {
-		// Message not found
+		sanitizeErrorResponse(c, http.StatusInternalServerError, err, "data_consistency.check_database")
+		return
+	}
+
+	if !result.Exists {
 		c.JSON(http.StatusOK, gin.H{
 			"exists": false,
 		})
 		return
 	}
 
-	// Convert to map for response
-	messageData := map[string]interface{}{
-		"id":              message.ID.String(),
-		"conversation_id": message.SessionID.String(),
-		"role":            message.Role,
-		"content":         message.Content,
-		"timestamp":       message.CreatedAt.Time.Format(time.RFC3339),
-	}
-
 	c.JSON(http.StatusOK, gin.H{
 		"exists":  true,
-		"message": messageData,
+		"message": result.Message,
 	})
 }

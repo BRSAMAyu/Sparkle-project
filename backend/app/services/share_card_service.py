@@ -13,12 +13,14 @@ from textwrap import shorten
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.cache import cache_service
+from app.core.event_bus import event_bus
 from app.models.achievement import Achievement, UserAchievement
 from app.models.user import User
 from app.schemas.achievement import ShareCardPrivacySettings
@@ -127,6 +129,26 @@ class ShareCardService:
         user_achievement.share_count = (user_achievement.share_count or 0) + 1
         await self.db.commit()
         await self.db.refresh(user_achievement)
+        try:
+            await event_bus.publish(
+                "achievement.shared",
+                {
+                    "event_type": "achievement.shared",
+                    "user_id": str(user.id),
+                    "achievement_id": achievement.id,
+                    "achievement_name": achievement.name,
+                    "achievement_type": "achievement_share_card",
+                    "share_id": (
+                        f"achievement_card:{user.id}:{achievement.id}:{result.template_id}:"
+                        f"{user_achievement.share_count}"
+                    ),
+                    "share_count": user_achievement.share_count,
+                    "template_id": result.template_id,
+                    "timestamp": _utcnow().isoformat(),
+                },
+            )
+        except Exception as exc:
+            logger.warning("Failed to publish achievement share event: {}", exc)
 
         return result, achievement, user_achievement
 

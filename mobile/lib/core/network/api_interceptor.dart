@@ -10,6 +10,7 @@ import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/device_identity_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 
 final authInterceptorProvider = Provider(AuthInterceptor.new);
 final loggingInterceptorProvider = Provider((ref) => LoggingInterceptor());
@@ -57,7 +58,8 @@ class RetryInterceptor extends Interceptor {
 }
 
 class AuthInterceptor extends Interceptor {
-  AuthInterceptor(this._ref);
+  AuthInterceptor(this._ref, {Dio? retryDioForTesting})
+      : _retryDio = retryDioForTesting;
   final Ref _ref;
 
   // Lock for preventing concurrent token refresh
@@ -103,6 +105,12 @@ class AuthInterceptor extends Interceptor {
       options.headers.addAll(deviceHeaders);
       if (token != null) {
         options.headers['Authorization'] = 'Bearer $token';
+      }
+      final currentGoalId = _ref.read(activeGoalHeaderProvider);
+      if (currentGoalId != null) {
+        options.headers['X-Current-Goal-ID'] = currentGoalId;
+      } else {
+        options.headers.remove('X-Current-Goal-ID');
       }
     } on StateError {
       // Allow late teardown-time requests to complete without crashing tests.

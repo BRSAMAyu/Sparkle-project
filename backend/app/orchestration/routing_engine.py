@@ -99,12 +99,18 @@ class RoutingEngineMixin:
             raw = facts.get("session_length_preference")
             if isinstance(raw, (int, float)):
                 return int(raw)
-        preferences = (user_context_payload or {}).get("preferences") if isinstance(user_context_payload, dict) else None
+        preferences = (
+            (user_context_payload or {}).get("preferences") if isinstance(user_context_payload, dict) else None
+        )
         if isinstance(preferences, dict):
             raw = preferences.get("focus_duration_preference") or preferences.get("session_length_preference")
             if isinstance(raw, (int, float)):
                 return int(raw)
-        profile = ((plan_context or {}).get("user_profile") or {}).get("preferences_snapshot") if isinstance(plan_context, dict) else None
+        profile = (
+            ((plan_context or {}).get("user_profile") or {}).get("preferences_snapshot")
+            if isinstance(plan_context, dict)
+            else None
+        )
         if isinstance(profile, dict):
             raw = profile.get("focus_duration_preference") or profile.get("inferred_session_length")
             if isinstance(raw, (int, float)):
@@ -121,12 +127,18 @@ class RoutingEngineMixin:
             raw = facts.get("difficulty_preference")
             if isinstance(raw, (int, float)):
                 return float(raw)
-        profile = ((plan_context or {}).get("user_profile") or {}).get("preferences_snapshot") if isinstance(plan_context, dict) else None
+        profile = (
+            ((plan_context or {}).get("user_profile") or {}).get("preferences_snapshot")
+            if isinstance(plan_context, dict)
+            else None
+        )
         if isinstance(profile, dict):
             raw = profile.get("inferred_difficulty")
             if isinstance(raw, (int, float)):
                 return float(raw)
-        preferences = (user_context_payload or {}).get("preferences") if isinstance(user_context_payload, dict) else None
+        preferences = (
+            (user_context_payload or {}).get("preferences") if isinstance(user_context_payload, dict) else None
+        )
         if isinstance(preferences, dict):
             raw = preferences.get("difficulty_preference")
             if isinstance(raw, (int, float)):
@@ -145,7 +157,9 @@ class RoutingEngineMixin:
             if isinstance(raw, (int, float)):
                 return max(0.0, min(1.0, float(raw)))
 
-        profile_context = (user_context_payload or {}).get("profile_context") if isinstance(user_context_payload, dict) else None
+        profile_context = (
+            (user_context_payload or {}).get("profile_context") if isinstance(user_context_payload, dict) else None
+        )
         user_state_v1 = profile_context.get("user_state_v1") if isinstance(profile_context, dict) else None
         if isinstance(user_state_v1, dict):
             raw = user_state_v1.get("cognitive_load")
@@ -187,6 +201,20 @@ class RoutingEngineMixin:
             if any(candidate.get(key) for key in ("method_preferences", "method_preference_summary", "favorite_count")):
                 return candidate
         return candidates[0] if candidates else {}
+
+    @staticmethod
+    def _extract_recent_corrections(user_context_payload: dict[str, Any] | None) -> list[dict[str, Any]]:
+        if not isinstance(user_context_payload, dict):
+            return []
+        raw = user_context_payload.get("recent_corrections")
+        if isinstance(raw, list):
+            return [item for item in raw if isinstance(item, dict)]
+        cognitive_context = user_context_payload.get("cognitive_context")
+        if isinstance(cognitive_context, dict):
+            raw = cognitive_context.get("recent_corrections")
+            if isinstance(raw, list):
+                return [item for item in raw if isinstance(item, dict)]
+        return []
 
     @staticmethod
     def _extract_behavior_pattern_names(
@@ -329,8 +357,7 @@ class RoutingEngineMixin:
         added_strategy_adjustments = [
             dict(item)
             for item in candidate_decision.strategy_adjustments
-            if isinstance(item, dict)
-            and str(item.get("field") or "").strip() not in baseline_strategy_fields
+            if isinstance(item, dict) and str(item.get("field") or "").strip() not in baseline_strategy_fields
         ]
         return {
             "baseline_mode": baseline_decision.mode,
@@ -444,10 +471,7 @@ class RoutingEngineMixin:
         limit: int = 5,
     ) -> list[dict[str, Any]]:
         merged = [dict(item) for item in existing if isinstance(item, dict)]
-        seen_keys = {
-            str(item.get("field") or json.dumps(item, ensure_ascii=False, sort_keys=True))
-            for item in merged
-        }
+        seen_keys = {str(item.get("field") or json.dumps(item, ensure_ascii=False, sort_keys=True)) for item in merged}
         for item in additions:
             if not isinstance(item, dict):
                 continue
@@ -476,8 +500,7 @@ class RoutingEngineMixin:
         added_strategy_adjustments = [
             dict(item)
             for item in candidate_decision.strategy_adjustments
-            if isinstance(item, dict)
-            and str(item.get("field") or "").strip() not in baseline_strategy_fields
+            if isinstance(item, dict) and str(item.get("field") or "").strip() not in baseline_strategy_fields
         ]
         return {
             "baseline_mode": baseline_decision.mode,
@@ -513,8 +536,7 @@ class RoutingEngineMixin:
         added_strategy_adjustments = [
             dict(item)
             for item in candidate_decision.strategy_adjustments
-            if isinstance(item, dict)
-            and str(item.get("field") or "").strip() not in baseline_strategy_fields
+            if isinstance(item, dict) and str(item.get("field") or "").strip() not in baseline_strategy_fields
         ]
         return {
             "baseline_mode": baseline_decision.mode,
@@ -550,8 +572,7 @@ class RoutingEngineMixin:
         added_strategy_adjustments = [
             dict(item)
             for item in candidate_decision.strategy_adjustments
-            if isinstance(item, dict)
-            and str(item.get("field") or "").strip() not in baseline_strategy_fields
+            if isinstance(item, dict) and str(item.get("field") or "").strip() not in baseline_strategy_fields
         ]
         return {
             "baseline_mode": baseline_decision.mode,
@@ -660,6 +681,8 @@ class RoutingEngineMixin:
         *,
         active_db: AsyncSession | None,
         user_id: str,
+        session_id: str | None = None,
+        request_id: str | None = None,
         plan_id: uuid.UUID | None,
         user_context_payload: dict[str, Any] | None,
         plan_context: dict[str, Any] | None,
@@ -700,12 +723,8 @@ class RoutingEngineMixin:
             user_id=user_id,
             plan_context=plan_context,
         )
-        social_signals = SocialSignalsV1.from_payload(
-            self._extract_stage33_social_payload(user_context_payload)
-        )
-        srl_phase_hint = SRLPhaseHint.from_payload(
-            self._extract_stage33_srl_payload(user_context_payload)
-        )
+        social_signals = SocialSignalsV1.from_payload(self._extract_stage33_social_payload(user_context_payload))
+        srl_phase_hint = SRLPhaseHint.from_payload(self._extract_stage33_srl_payload(user_context_payload))
         metacognition_hint = await self._build_metacognition_hint(
             active_db=active_db,
             user_id=user_id,
@@ -751,7 +770,18 @@ class RoutingEngineMixin:
             cognitive_load=self._extract_cognitive_load(user_context_payload, plan_context),
             capsule_preferences=self._extract_capsule_preferences(user_context_payload),
             spine_active_states=await self._get_spine_active_states(user_id),
+            scaffolding_snapshot=(
+                dict(user_context_payload.get("scaffolding_fsm_snapshot") or {})
+                if isinstance(user_context_payload, dict)
+                and isinstance(user_context_payload.get("scaffolding_fsm_snapshot"), dict)
+                else {}
+            ),
             aurora_preferences=aurora_preferences,
+            recent_corrections=self._extract_recent_corrections(user_context_payload),
+            recent_route_outcomes=await self._get_recent_route_outcomes(
+                active_db=active_db,
+                user_id=user_id,
+            ),
         )
 
     async def _build_metacognition_hint(
@@ -768,9 +798,7 @@ class RoutingEngineMixin:
                 required_fields=("metacognition_profile",),
                 now=_utcnow(),
             )
-            return self._derive_metacognition_hint_from_envelope(
-                metacog_state.metacognition_profile
-            )
+            return self._derive_metacognition_hint_from_envelope(metacog_state.metacognition_profile)
 
         return self._derive_metacognition_hint_from_payload(
             self._extract_stage35_metacognition_payload(user_context_payload)
@@ -828,11 +856,13 @@ class RoutingEngineMixin:
             cal_data = json.loads(raw)
             deadlines = []
             for item in cal_data.get("upcoming_deadlines", []):
-                deadlines.append({
-                    "title": item.get("title", ""),
-                    "deadline_at": item.get("start_time") or item.get("end_time", ""),
-                    "type": "exam",
-                })
+                deadlines.append(
+                    {
+                        "title": item.get("title", ""),
+                        "deadline_at": item.get("start_time") or item.get("end_time", ""),
+                        "type": "exam",
+                    }
+                )
             return deadlines[:6]
         except Exception:
             return []
@@ -939,11 +969,7 @@ class RoutingEngineMixin:
     ) -> tuple[str | None, str]:
         service = FollowUpQuestionService()
         follow_up_question = None
-        if (
-            settings.SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED
-            and task_summary is not None
-            and task_summary.score < 0.6
-        ):
+        if settings.SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED and task_summary is not None and task_summary.score < 0.6:
             follow_up_question = service.select_question(task_summary)
 
         context_caveat = ""
@@ -1012,6 +1038,8 @@ class RoutingEngineMixin:
         unified_routing_result: Any | None,
         information_sufficient: bool,
         stream_callback,
+        session_id: str | None = None,
+        request_id: str | None = None,
     ) -> RouteDecision:
         routing_input = await self._build_dual_core_input(
             active_db=active_db,
@@ -1124,14 +1152,12 @@ class RoutingEngineMixin:
                 cognitive_load=routing_input.cognitive_load,
             )
 
-        task_summary_value, ctx_summary_value, sufficiency_judgment_id = (
-            await self._collect_stage20_sufficiency(
-                active_db=active_db,
-                user_id=user_id,
-                routing_input=effective_routing_input,
-                plan_context=plan_context,
-                user_context_payload=user_context_payload,
-            )
+        task_summary_value, ctx_summary_value, sufficiency_judgment_id = await self._collect_stage20_sufficiency(
+            active_db=active_db,
+            user_id=user_id,
+            routing_input=effective_routing_input,
+            plan_context=plan_context,
+            user_context_payload=user_context_payload,
         )
         follow_up_question, context_caveat = self._build_stage20_prompt_additions(
             task_summary=task_summary_value,
@@ -1341,7 +1367,9 @@ class RoutingEngineMixin:
                 part for part in [prompt_instruction, *stage20_prompt_parts] if part
             ).strip()
         if skill_prompt_context:
-            prompt_instruction = "\n\n".join(part for part in [prompt_instruction, skill_prompt_context] if part).strip()
+            prompt_instruction = "\n\n".join(
+                part for part in [prompt_instruction, skill_prompt_context] if part
+            ).strip()
 
         state.context_data["dual_core_prompt_instruction"] = prompt_instruction
         if task_summary_value is not None:
@@ -1439,19 +1467,14 @@ class RoutingEngineMixin:
         }
         idiographic_associations_injected: list[dict[str, object]] = []
         profile_context_payload = (
-            user_context_payload.get("profile_context")
-            if isinstance(user_context_payload, dict)
-            else None
+            user_context_payload.get("profile_context") if isinstance(user_context_payload, dict) else None
         )
         idiographic_summary_payload = (
-            profile_context_payload.get("idiographic_summary")
-            if isinstance(profile_context_payload, dict)
-            else None
+            profile_context_payload.get("idiographic_summary") if isinstance(profile_context_payload, dict) else None
         )
         if (
             isinstance(idiographic_summary_payload, dict)
-            and str(idiographic_summary_payload.get("mode") or "off").strip().lower()
-            == "live"
+            and str(idiographic_summary_payload.get("mode") or "off").strip().lower() == "live"
             and float(idiographic_summary_payload.get("confidence") or 0.0) >= 0.5
             and str(idiographic_summary_payload.get("disclaimer_text") or "").strip()
         ):
@@ -1471,16 +1494,13 @@ class RoutingEngineMixin:
                 if len(idiographic_associations_injected) >= 3:
                     break
         if isinstance(user_context_payload, dict):
-            user_context_payload["idiographic_associations_injected"] = (
-                idiographic_associations_injected
-            )
+            user_context_payload["idiographic_associations_injected"] = idiographic_associations_injected
+        route_history_decision_id: uuid.UUID | None = None
         if active_db is not None:
             try:
-                decision_id = await RouteHistoryService(active_db).record_decision(
+                route_history_decision_id = await RouteHistoryService(active_db).record_decision(
                     user_id=uuid.UUID(user_id),
-                    input_aggregator_snapshot_id=(
-                        f"aggregator:{user_id}:{_utcnow().isoformat(timespec='seconds')}"
-                    ),
+                    input_aggregator_snapshot_id=(f"aggregator:{user_id}:{_utcnow().isoformat(timespec='seconds')}"),
                     sufficiency_judgment_id=uuid.UUID(sufficiency_judgment_id) if sufficiency_judgment_id else None,
                     decision_type=decision.mode,
                     decision_payload={
@@ -1507,14 +1527,27 @@ class RoutingEngineMixin:
                     source_state_v2=source_state_v2,
                     source_state_v2_key=source_state_v2_key,
                     idiographic_associations_injected=[
-                        item
-                        for item in idiographic_associations_injected
-                        if isinstance(item, dict)
+                        item for item in idiographic_associations_injected if isinstance(item, dict)
                     ],
                 )
-                state.context_data["route_history_decision_id"] = str(decision_id)
+                state.context_data["route_history_decision_id"] = str(route_history_decision_id)
             except Exception as exc:
                 logger.warning("Stage20 route history write failed: {}", exc)
+            try:
+                from app.services.routing_outcome_service import RoutingOutcomeRecorder
+
+                signal = await RoutingOutcomeRecorder(active_db).record(
+                    user_id=uuid.UUID(user_id),
+                    decision=decision.to_dict(),
+                    route_execution_mode=route_decision.execution_mode,
+                    source_state_key=source_state_v2_key,
+                    request_id=request_id,
+                    session_id=session_id,
+                    route_history_decision_id=(str(route_history_decision_id) if route_history_decision_id else None),
+                )
+                state.context_data["routing_outcome_signal_id"] = str(signal.id)
+            except Exception as exc:
+                logger.warning("DualCore routing outcome signal write failed: {}", exc)
         if active_db is not None and selected_skill_ids:
             try:
                 await SkillStoreService(active_db).increment_usage(
@@ -1562,25 +1595,63 @@ class RoutingEngineMixin:
         user_context_payload: dict[str, Any] | None,
         plan_context: dict[str, Any] | None,
     ) -> dict[str, float]:
+        base: dict[str, float] = {}
         if active_db is not None:
             with contextlib.suppress(Exception):
-                return await RoutingProfileService(active_db, self.redis).get_profile(uuid.UUID(user_id))
+                base = await RoutingProfileService(active_db, self.redis).get_profile(uuid.UUID(user_id))
 
-        candidates = []
-        if isinstance(user_context_payload, dict):
-            preferences = user_context_payload.get("preferences")
-            if isinstance(preferences, dict):
-                candidates.append(preferences.get("routing_profile"))
-        if isinstance(plan_context, dict):
-            user_profile = plan_context.get("user_profile")
-            if isinstance(user_profile, dict):
-                snapshot = user_profile.get("preferences_snapshot")
-                if isinstance(snapshot, dict):
-                    candidates.append(snapshot.get("routing_profile"))
-        return RoutingProfileService.DEFAULT_PROFILE | next(
-            (candidate for candidate in candidates if isinstance(candidate, dict)),
-            {},
-        )
+        if not base:
+            candidates = []
+            if isinstance(user_context_payload, dict):
+                preferences = user_context_payload.get("preferences")
+                if isinstance(preferences, dict):
+                    candidates.append(preferences.get("routing_profile"))
+            if isinstance(plan_context, dict):
+                user_profile = plan_context.get("user_profile")
+                if isinstance(user_profile, dict):
+                    snapshot = user_profile.get("preferences_snapshot")
+                    if isinstance(snapshot, dict):
+                        candidates.append(snapshot.get("routing_profile"))
+            base = RoutingProfileService.DEFAULT_PROFILE | next(
+                (c for c in candidates if isinstance(c, dict)),
+                {},
+            )
+
+        # Blend recent adaptation records into the profile so that past
+        # preference changes influence routing thresholds.
+        with contextlib.suppress(Exception):
+            base = await self._blend_recent_adaptations(user_id, base)
+        return base
+
+    async def _blend_recent_adaptations(self, user_id: str, base: dict[str, float]) -> dict[str, float]:
+        from app.services.system_update_service import SystemUpdateService
+
+        svc = SystemUpdateService()
+        updates = await svc.list_updates(uuid.UUID(user_id), limit=20)
+        adjusted = dict(base)
+        for update in updates:
+            if update.get("category") != "evolution":
+                continue
+            meta = update.get("metadata") or {}
+            if meta.get("evolution_kind") != "preference_learning":
+                continue
+            adaptation = meta.get("preference_learning")
+            if not isinstance(adaptation, dict):
+                continue
+            what = str(adaptation.get("what_changed") or "")
+            if "深入" in what or "详尽" in what:
+                adjusted["directness_preference"] = max(0.2, adjusted.get("directness_preference", 0.5) - 0.08)
+            elif "简洁" in what or "概览" in what:
+                adjusted["directness_preference"] = min(0.85, adjusted.get("directness_preference", 0.5) + 0.08)
+            if "更轻量" in what or "降低难度" in what:
+                adjusted["procrastination_threshold"] = max(0.2, adjusted.get("procrastination_threshold", 0.6) - 0.12)
+            elif "更有挑战" in what or "提高难度" in what:
+                adjusted["procrastination_threshold"] = min(0.85, adjusted.get("procrastination_threshold", 0.6) + 0.12)
+            if "感性" in what or "温和" in what:
+                adjusted["emotional_sensitivity"] = min(0.85, adjusted.get("emotional_sensitivity", 0.5) + 0.10)
+            elif "理性" in what or "直接" in what:
+                adjusted["emotional_sensitivity"] = max(0.2, adjusted.get("emotional_sensitivity", 0.5) - 0.10)
+        return adjusted
 
     async def _get_cognitive_routing_signals(
         self,
@@ -1622,7 +1693,8 @@ class RoutingEngineMixin:
             and (
                 "cognitive" in str(item.get("pattern_type") or "").lower()
                 or any(
-                    token in " ".join(
+                    token
+                    in " ".join(
                         [
                             str(item.get("canonical_key") or "").lower(),
                             str(item.get("raw_pattern_name") or "").lower(),
@@ -1646,7 +1718,8 @@ class RoutingEngineMixin:
         procrastination_pattern = any(
             float(item.get("confidence") or 0.0) >= 0.7
             and any(
-                token in " ".join(
+                token
+                in " ".join(
                     [
                         str(item.get("canonical_key") or "").lower(),
                         str(item.get("raw_pattern_name") or "").lower(),
@@ -1657,11 +1730,15 @@ class RoutingEngineMixin:
             )
             for item in top_two
         )
-        suggested_verbosity = "supportive" if any(
-            "perfection" in str(item.get("canonical_key") or "").lower()
-            or "完美主义" in str(item.get("pattern_name") or "")
-            for item in top_two
-        ) else None
+        suggested_verbosity = (
+            "supportive"
+            if any(
+                "perfection" in str(item.get("canonical_key") or "").lower()
+                or "完美主义" in str(item.get("pattern_name") or "")
+                for item in top_two
+            )
+            else None
+        )
         current_guidance = ""
         if procrastination_pattern:
             current_guidance = "优先识别这是不是启动阻力或回避，再把建议压缩成几分钟可开始的动作。"
@@ -1680,6 +1757,47 @@ class RoutingEngineMixin:
             "suggested_verbosity": suggested_verbosity,
             "current_guidance": current_guidance,
         }
+
+    async def _get_recent_route_outcomes(
+        self,
+        *,
+        active_db: AsyncSession | None,
+        user_id: str,
+    ) -> list[dict[str, Any]]:
+        if active_db is None:
+            return []
+        try:
+            decisions = await RouteHistoryService(active_db).read_recent_decisions(
+                user_id=uuid.UUID(user_id),
+                limit=8,
+            )
+        except Exception as exc:
+            logger.debug("Failed to read recent route outcomes for dual-core input: {}", exc)
+            return []
+
+        outcomes: list[dict[str, Any]] = []
+        for item in decisions:
+            payload = dict(item.decision_payload or {})
+            debug = payload.get("routing_debug") if isinstance(payload.get("routing_debug"), dict) else {}
+            scores = payload.get("signal_scores") if isinstance(payload.get("signal_scores"), dict) else {}
+            outcomes.append(
+                {
+                    "decision_id": item.decision_id,
+                    "decided_at": item.decided_at.isoformat(),
+                    "mode": str(payload.get("mode") or item.decision_type or ""),
+                    "route_execution_mode": str(payload.get("route_execution_mode") or ""),
+                    "outcome": item.outcome or "pending",
+                    "outcome_signal_id": item.outcome_signal_id,
+                    "dominant_signal": str(debug.get("dominant_signal") or ""),
+                    "scaffolding_zone": str(payload.get("scaffolding_zone") or ""),
+                    "signal_scores": {
+                        str(key): round(float(value), 3)
+                        for key, value in list(scores.items())[:8]
+                        if isinstance(value, (int, float))
+                    },
+                }
+            )
+        return outcomes
 
     async def _get_last_dual_core_mode(self, user_id: str) -> str | None:
         """Return the dual-core mode from the previous session, or None."""
@@ -1849,7 +1967,9 @@ class RoutingEngineMixin:
         if not isinstance(conversation_context, dict):
             return []
         messages = conversation_context.get("messages")
-        history: list[dict[str, Any]] = [m for m in messages if isinstance(m, dict)] if isinstance(messages, list) else []
+        history: list[dict[str, Any]] = (
+            [m for m in messages if isinstance(m, dict)] if isinstance(messages, list) else []
+        )
         summary = conversation_context.get("summary")
         if isinstance(summary, str) and summary.strip():
             summary_content = summary.strip()
@@ -1879,10 +1999,7 @@ class RoutingEngineMixin:
             if tool_call_id:
                 history_item["tool_call_id"] = tool_call_id
 
-            metadata = {
-                str(k): str(v)
-                for k, v in dict(getattr(msg, "metadata", {}) or {}).items()
-            }
+            metadata = {str(k): str(v) for k, v in dict(getattr(msg, "metadata", {}) or {}).items()}
             if metadata:
                 history_item["metadata"] = metadata
                 raw_tool_calls = metadata.get("tool_calls")
@@ -1907,7 +2024,9 @@ class RoutingEngineMixin:
 
         merged_context = dict(conversation_context or {"messages": [], "summary": None})
         existing_messages = merged_context.get("messages")
-        existing_history = [m for m in existing_messages if isinstance(m, dict)] if isinstance(existing_messages, list) else []
+        existing_history = (
+            [m for m in existing_messages if isinstance(m, dict)] if isinstance(existing_messages, list) else []
+        )
 
         overlap = 0
         max_overlap = min(len(existing_history), len(proto_history))
@@ -1936,8 +2055,23 @@ class RoutingEngineMixin:
             return False
         msg_lower = message.lower()
         complex_keywords = {
-            "方案", "策略", "权衡", "分阶段", "multi-step", "tradeoff", "design", "architecture",
-            "学习计划", "复习计划", "错误诊断", "knowledge graph", "then", "after that", "首先", "然后", "接着",
+            "方案",
+            "策略",
+            "权衡",
+            "分阶段",
+            "multi-step",
+            "tradeoff",
+            "design",
+            "architecture",
+            "学习计划",
+            "复习计划",
+            "错误诊断",
+            "knowledge graph",
+            "then",
+            "after that",
+            "首先",
+            "然后",
+            "接着",
         }
         if any(keyword in msg_lower for keyword in complex_keywords):
             return True
@@ -1957,8 +2091,19 @@ class RoutingEngineMixin:
             return False
         msg_lower = message.lower()
         context_markers = {
-            "继续", "接着", "刚才", "上面", "这个", "那个", "如前所述", "继续上次",
-            "continue", "as above", "that one", "the previous", "what we discussed",
+            "继续",
+            "接着",
+            "刚才",
+            "上面",
+            "这个",
+            "那个",
+            "如前所述",
+            "继续上次",
+            "continue",
+            "as above",
+            "that one",
+            "the previous",
+            "what we discussed",
         }
         return any(marker in msg_lower for marker in context_markers)
 
@@ -1981,11 +2126,27 @@ class RoutingEngineMixin:
     # WS-B.2 escalation helpers
     # ------------------------------------------------------------------
 
-    _STRUCTURAL_TOPIC_MARKERS: frozenset[str] = frozenset({
-        "拆开", "拆分", "顺序", "怎么定", "分类", "组织", "分层",
-        "架构", "结构", "步骤", "优先级", "先做什么", "怎么排",
-        "break down", "order", "structure", "organize",
-    })
+    _STRUCTURAL_TOPIC_MARKERS: frozenset[str] = frozenset(
+        {
+            "拆开",
+            "拆分",
+            "顺序",
+            "怎么定",
+            "分类",
+            "组织",
+            "分层",
+            "架构",
+            "结构",
+            "步骤",
+            "优先级",
+            "先做什么",
+            "怎么排",
+            "break down",
+            "order",
+            "structure",
+            "organize",
+        }
+    )
 
     @staticmethod
     def _count_structural_topic_turns(conversation_context: dict[str, Any] | None) -> int:
@@ -2170,7 +2331,9 @@ class RoutingEngineMixin:
         confidence = route_decision.confidence if route_decision.confidence is not None else 0.5
         is_complex = self._is_complex_user_query(user_message)
         is_context_dependent = self._is_context_dependent_query(user_message)
-        has_summary = bool(isinstance(conversation_context, dict) and str(conversation_context.get("summary") or "").strip())
+        has_summary = bool(
+            isinstance(conversation_context, dict) and str(conversation_context.get("summary") or "").strip()
+        )
 
         inferred_intent = (
             unified_routing_result.primary_intent.value
@@ -2204,7 +2367,12 @@ class RoutingEngineMixin:
                     to_mode=route_decision.execution_mode,
                 ).inc()
 
-        if route_decision.execution_mode == "hybrid" and confidence >= 0.92 and not is_complex and not is_context_dependent:
+        if (
+            route_decision.execution_mode == "hybrid"
+            and confidence >= 0.92
+            and not is_complex
+            and not is_context_dependent
+        ):
             from_mode = route_decision.execution_mode
             route_decision.execution_mode = "direct"
             route_decision.reason = f"adaptive:high_confidence_simple:{inferred_intent}"

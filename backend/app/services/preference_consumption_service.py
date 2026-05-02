@@ -241,8 +241,8 @@ class PreferenceConsumptionService:
                     "quiet_hours_start": np.quiet_hours_start or "22:00",
                     "quiet_hours_end": np.quiet_hours_end or "08:00",
                 }
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to load notification preferences model for user {}: {}", user_id, exc)
 
         merged = {**notification_prefs, **notif_prefs_model}
 
@@ -251,7 +251,8 @@ class PreferenceConsumptionService:
                 select(UserPushOptIn).where(UserPushOptIn.user_id == user_id)
             )
             push_opt_in = result.scalar_one_or_none()
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to load push opt-in for user {}: {}", user_id, exc)
             push_opt_in = None
 
         return {
@@ -297,8 +298,8 @@ class PreferenceConsumptionService:
             mode = result.scalar_one_or_none()
             if mode:
                 ai_reasoning_mode = str(mode)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to load AI reasoning mode for user {}: {}", user_id, exc)
 
         if ai_reasoning_mode not in ("fast", "balanced", "deep"):
             ai_reasoning_mode = "balanced"
@@ -342,7 +343,8 @@ class PreferenceConsumptionService:
                 )
             )
             settings = result.scalar_one_or_none()
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to load user settings snapshot for user {}: {}", user_id, exc)
             settings = None
 
         if settings:
@@ -374,8 +376,8 @@ class PreferenceConsumptionService:
             push_timezone = result.scalar_one_or_none()
             if isinstance(push_timezone, str) and push_timezone.strip():
                 return push_timezone.strip()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to load push preference timezone for user {}: {}", user_id, exc)
 
         try:
             result = await self.db.execute(
@@ -384,8 +386,8 @@ class PreferenceConsumptionService:
             opt_in_timezone = result.scalar_one_or_none()
             if isinstance(opt_in_timezone, str) and opt_in_timezone.strip():
                 return opt_in_timezone.strip()
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("Failed to load push opt-in timezone for user {}: {}", user_id, exc)
 
         return "Asia/Shanghai"
 
@@ -395,7 +397,8 @@ class PreferenceConsumptionService:
             from zoneinfo import ZoneInfo
 
             return datetime.now(ZoneInfo(timezone_name))
-        except Exception:
+        except Exception as exc:
+            logger.warning("Invalid timezone {}, falling back to Asia/Shanghai: {}", timezone_name, exc)
             from zoneinfo import ZoneInfo
 
             return datetime.now(ZoneInfo("Asia/Shanghai"))
@@ -406,7 +409,8 @@ class PreferenceConsumptionService:
             from zoneinfo import ZoneInfo
 
             tz = ZoneInfo(timezone_name)
-        except Exception:
+        except Exception as exc:
+            logger.warning("Invalid timezone {}, falling back to Asia/Shanghai: {}", timezone_name, exc)
             from zoneinfo import ZoneInfo
 
             tz = ZoneInfo("Asia/Shanghai")

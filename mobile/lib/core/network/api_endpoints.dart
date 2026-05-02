@@ -34,6 +34,10 @@ class ApiEndpoints {
   static String fileThumbnail(String id) => '/files/$id/thumbnail';
   static const String myFiles = '/me/files';
   static const String myFilesSearch = '/me/files/search';
+  static String sourceArchive(String id) => '/sources/$id/archive';
+  static String sourceRestore(String id) => '/sources/$id/restore';
+  static String sourceRevoke(String id) => '/sources/$id/revoke';
+  static String sourceDelete(String id) => '/sources/$id';
   static String galaxyDocumentNodes(String id) => '/galaxy/documents/$id/nodes';
   static const String documentsUpload = '/documents/upload';
   static String documentConfirmUpload(String fileId) =>
@@ -57,7 +61,13 @@ class ApiEndpoints {
   static const String todayTasks = '/tasks/today';
   static const String recommendedTasks = '/tasks/recommended';
   static String startTask(String id) => '/tasks/$id/start';
+  static String pauseTask(String id) => '/tasks/$id/pause';
+  static String resumeTask(String id) => '/tasks/$id/resume';
   static String completeTask(String id) => '/tasks/$id/complete';
+  // TASK-001: TaskCardProtocol endpoint (why_this_task / materials / fallback)
+  static String taskCardProtocol(String id) => '/tasks/$id/card-protocol';
+  static String taskPriorityReasoning(String id) =>
+      '/tasks/$id/priority-reasoning';
   static String abandonTask(String id) => '/tasks/$id/abandon';
   static String snoozeTask(String id) => '/tasks/$id/snooze';
   static String taskStuck(String id) => '/tasks/$id/stuck';
@@ -184,6 +194,17 @@ class ApiEndpoints {
   static const String growthWeeklyNarrative = '/growth/weekly-narrative';
   static const String growthWeeklyNarrativeGenerate =
       '/growth/weekly-narrative/generate';
+  static const String insightsRecentDirectives = '/insights/recent-directives';
+  // GOAL-011: ReturnCaseFile endpoint (returning-user pickup)
+  static const String growthReturnCaseFile = '/growth/return-case-file';
+  static const String experienceUnderstandingSnapshot =
+      '/experience/understanding-snapshot';
+  static const String experienceGrowthDashboard =
+      '/experience/growth-dashboard';
+  static const String experienceCommunityAccountability =
+      '/experience/community-accountability';
+  static String experienceGoalDetail(String goalId) =>
+      '/experience/goal-detail/$goalId';
   static const String examSprintIntake = '/exam-sprint/intake';
   static const String examSprintDashboard = '/exam-sprint/dashboard';
   static const String examSprintPostExamReview =
@@ -197,11 +218,18 @@ class ApiEndpoints {
   static String auroraCalibrationCardRespond(String id) =>
       '/aurora/calibration-cards/$id/respond';
   static const String auroraControlSurface = '/aurora/control-surface';
+  static const String understandingSnapshot =
+      '/experience/understanding-snapshot';
+  static const String understandingSnapshotCorrections =
+      '/experience/understanding-snapshot/corrections';
   static const String auroraModelingStatus = '/aurora/modeling-status';
   static const String auroraPredictedOptions = '/aurora/predicted-options';
   static const String auroraCoreSessionStart = '/aurora/core-session/start';
+  static const String auroraCoreSessionResume = '/aurora/core-session/resume';
   static const String auroraCoreSessionRespond = '/aurora/core-session/respond';
   static const String auroraCoreSessionCurrent = '/aurora/core-session/current';
+  static String auroraCoreSessionPause(String id) =>
+      '/aurora/core-session/$id/pause';
   static String auroraCoreSessionClose(String id) =>
       '/aurora/core-session/$id/close';
   static const String auroraChipTelemetry = '/aurora/telemetry/chip-selected';
@@ -324,6 +352,9 @@ class ApiEndpoints {
   static const String communityShare = '/community/share';
   static String adoptSharedResource(String id) =>
       '/community/shared-resources/$id/adopt';
+  static String similarGoalPursuers(String goalId) =>
+      '/community/goals/$goalId/similar-pursuers';
+  static const String communityResources = '/community/resources';
   static const String searchUsers = '/community/users/search';
   static const String userStatus = '/community/status';
 
@@ -563,6 +594,16 @@ class ApiEndpoints {
   static String seedLibraryFewShot = '/seed-libraries/examples/few-shot';
   static String seedLibraryReplyTemplate =
       '/seed-libraries/query/reply-template';
+  static const String marketplaceSkills = '/marketplace/skills';
+  static const String marketplacePacks = '/marketplace/packs';
+  static String marketplaceSkillPreview(String id) =>
+      '/marketplace/skills/$id/preview';
+  static String marketplacePackPreview(String id) =>
+      '/marketplace/packs/$id/preview';
+  static String marketplaceSkillAdopt(String id) =>
+      '/marketplace/skills/$id/adopt';
+  static String marketplacePackAdopt(String id) =>
+      '/marketplace/packs/$id/adopt';
 
   // Shop System
   static const String shopItems = '/shop/items';

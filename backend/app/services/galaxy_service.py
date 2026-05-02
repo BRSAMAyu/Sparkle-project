@@ -26,13 +26,14 @@ from sqlalchemy.orm import aliased, undefer
 
 from app.config import settings
 from app.core.cache import cache_service, cached
-from app.core.event_bus import KnowledgeNodeUpdated, MasteryUpdatedFromError, event_bus
+from app.core.event_bus import event_bus
 from app.gen.sparkle.rag.v1 import evidence_pb2
 from app.models.document_chunks import DocumentChunk
 from app.models.error_book import ErrorRecord
-from app.models.file_storage import StoredFile
+from app.models.file_storage import SourceLifecycleStatus, StoredFile
 from app.models.galaxy import KnowledgeNode, KnowledgeNodeDocument, NodeRelation, StudyRecord, UserNodeStatus
 from app.models.task import Task, TaskStatus
+from app.models.task_resources import TaskKnowledgeLink
 from app.schemas.galaxy import (
     DraftGalaxyNode,
     GalaxyContributionNode,
@@ -59,6 +60,7 @@ from app.services.galaxy.ontology_generator import (
     OntologyGenerator,
     relation_type_to_wire_name,
 )
+from app.services.galaxy.provenance import append_graph_event_source
 from app.services.galaxy.retrieval_service import KnowledgeRetrievalService
 from app.services.galaxy.review_urgency_service import ReviewUrgencyService
 from app.services.galaxy.stats_service import GalaxyStatsService
@@ -161,44 +163,11 @@ class GalaxyService:
         [DEPRECATED] Do NOT call — mastery is owned by ErrorBookMasterySyncService.
         Calling this will cause double mastery deductions.
         """
-        try:
-            user_id = UUID(event_data["user_id"])
-            linked_node_ids = [UUID(nid) for nid in event_data.get("linked_node_ids", [])]
-
-            if not linked_node_ids:
-                return
-
-            logger.info(f"Processing error event for user {user_id}, linked nodes: {linked_node_ids}")
-
-            for node_id in linked_node_ids:
-                # 1. Get current status
-                query = text("SELECT mastery_score FROM user_node_status WHERE user_id = :uid AND node_id = :nid")
-                res = await self.db.execute(query, {"uid": user_id, "nid": node_id})
-                current = res.scalar_one_or_none()
-
-                current_score = current if current is not None else 0
-
-                # 2. Penalty Logic (Simple: -10%)
-                # Ensure it doesn't go below 0
-                new_score = max(0, int(current_score * 0.9))
-
-                if new_score != current_score:
-                    # 3. Update Mastery using existing method (handles Outbox + Audit)
-                    await self.update_node_mastery(
-                        user_id=user_id, node_id=node_id, new_mastery=new_score, reason="error_penalty"
-                    )
-
-                    # 4. Publish galaxy.node.updated (Specific for frontend realtime update)
-                    # update_node_mastery already publishes galaxy.node.mastery_updated via Outbox
-                    # We can also publish a realtime event via Redis directly if needed for immediate websocket
-                    realtime_event = KnowledgeNodeUpdated(
-                        user_id=str(user_id), node_id=str(node_id), new_mastery=new_score
-                    )
-                    await event_bus.publish("galaxy.node.updated", realtime_event.to_dict())
-                    logger.info(f"Reduced mastery for node {node_id} to {new_score}")
-
-        except Exception as e:
-            logger.error(f"Failed to handle error_created event: {e}")
+        logger.warning(
+            "Blocked deprecated GalaxyService.handle_error_created call; "
+            "mastery updates are owned by ErrorBookMasterySyncService"
+        )
+        return None
 
     async def update_mastery_from_error(
         self,
@@ -214,70 +183,11 @@ class GalaxyService:
         [DEPRECATED] Do NOT call — mastery is owned by ErrorBookMasterySyncService.
         Calling this will cause double mastery deductions.
         """
-        active_db = db or self.db
-        coerced_user_id = self._coerce_uuid(user_id)
-        coerced_node_id = self._coerce_uuid(knowledge_node_id)
-        node_name = str(knowledge_node_name or "").strip()
-
-        row = None
-        if coerced_node_id is not None:
-            result = await active_db.execute(
-                select(KnowledgeNode, UserNodeStatus)
-                .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
-                .where(UserNodeStatus.user_id == coerced_user_id)
-                .where(KnowledgeNode.id == coerced_node_id)
-                .limit(1)
-            )
-            row = result.first()
-
-        if row is None and node_name:
-            result = await active_db.execute(
-                select(KnowledgeNode, UserNodeStatus)
-                .join(UserNodeStatus, UserNodeStatus.node_id == KnowledgeNode.id)
-                .where(UserNodeStatus.user_id == coerced_user_id)
-                .where(func.lower(KnowledgeNode.name).like(f"%{node_name.lower()}%"))
-                .order_by(KnowledgeNode.name)
-                .limit(1)
-            )
-            row = result.first()
-
-        if row is None:
-            return None
-
-        node, status = row
-        old_mastery = float(status.mastery_score or 0.0)
-        requested_delta = self._error_mastery_delta(error_type=error_type, error_count=error_count)
-        new_mastery = max(10.0, old_mastery + requested_delta)
-        actual_delta = new_mastery - old_mastery
-        update_time = _utcnow()
-
-        status.mastery_score = new_mastery
-        status.bkt_mastery_prob = max(0.0, min(new_mastery / 100.0, 1.0))
-        status.bkt_last_updated_at = update_time
-        status.updated_at = update_time
-        status.last_interacted_at = update_time
-        status.is_unlocked = True
-        await active_db.flush()
-
-        event = MasteryUpdatedFromError(
-            user_id=str(user_id),
-            node_id=str(node.id),
-            node_name=str(node.name or ""),
-            old_mastery=old_mastery,
-            new_mastery=new_mastery,
-            delta=actual_delta,
-            error_type=str(error_type or "").strip().lower(),
-            triggered_at=update_time.isoformat(),
+        logger.warning(
+            "Blocked deprecated GalaxyService.update_mastery_from_error call; "
+            "mastery updates are owned by ErrorBookMasterySyncService"
         )
-        await event_bus.publish(event.event_type, event.to_dict())
-
-        return {
-            "node_id": str(node.id),
-            "node_name": str(node.name or ""),
-            "old_mastery": old_mastery,
-            "new_mastery": new_mastery,
-            "delta": actual_delta,
-        }
+        return None
 
     @staticmethod
     def _coerce_uuid(value: object) -> object:
@@ -658,6 +568,23 @@ class GalaxyService:
             self.db.add(edge)
             created_relations.append(edge)
 
+        for node in [root_node, *created_nodes]:
+            status = await self.db.get(UserNodeStatus, (user_id, node.id))
+            if status is not None:
+                append_graph_event_source(
+                    status,
+                    event_type="document.ontology_created",
+                    source_type="document",
+                    reference_id=file_id,
+                    label=file_name,
+                    payload={
+                        "node_name": node.name,
+                        "subject": subject,
+                        "draft": True,
+                    },
+                )
+                self.db.add(status)
+
         self.db.add(
             KnowledgeNodeDocument(
                 user_id=user_id,
@@ -829,6 +756,7 @@ class GalaxyService:
                 .where(KnowledgeNodeDocument.node_id == node_id)
                 .where(KnowledgeNodeDocument.deleted_at.is_(None))
                 .where(StoredFile.deleted_at.is_(None))
+                .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
                 .order_by(KnowledgeNodeDocument.is_primary.desc(), StoredFile.file_name.asc())
             )
         ).all()
@@ -937,6 +865,7 @@ class GalaxyService:
                 .where(KnowledgeNodeDocument.deleted_at.is_(None))
                 .where(KnowledgeNode.deleted_at.is_(None))
                 .where(StoredFile.deleted_at.is_(None))
+                .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
             )
         ).all()
 
@@ -970,6 +899,7 @@ class GalaxyService:
                 .where(KnowledgeNode.source_file_id.is_not(None))
                 .where(KnowledgeNode.deleted_at.is_(None))
                 .where(StoredFile.deleted_at.is_(None))
+                .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
             )
         ).all()
         for node, file_record, status in legacy_rows:
@@ -1876,6 +1806,7 @@ class GalaxyService:
             .where(DocumentChunk.file_id.in_(file_ids))
             .where(DocumentChunk.deleted_at.is_(None))
             .where(StoredFile.deleted_at.is_(None))
+            .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
         )
         if conditions:
             count_stmt = count_stmt.where(or_(*conditions))
@@ -1889,6 +1820,7 @@ class GalaxyService:
             .where(DocumentChunk.file_id.in_(file_ids))
             .where(DocumentChunk.deleted_at.is_(None))
             .where(StoredFile.deleted_at.is_(None))
+            .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
             .order_by(DocumentChunk.chunk_index.asc())
             .offset((page - 1) * page_size)
             .limit(page_size)
@@ -1943,6 +1875,7 @@ class GalaxyService:
             .where(DocumentChunk.file_id.in_(file_ids))
             .where(DocumentChunk.deleted_at.is_(None))
             .where(StoredFile.deleted_at.is_(None))
+            .where(StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value)
             .order_by(DocumentChunk.chunk_index.asc())
         )
         if conditions:
@@ -2351,6 +2284,8 @@ class GalaxyService:
             nodes_with_status,
             recent_error_counts=error_counts,
         )
+        goal_node_ids = await self._get_goal_connected_node_ids(user_id)
+        blocked_prerequisites = self._get_blocked_prerequisites_by_node(nodes_with_status, relations)
 
         # 6. Assemble with Flutter-compatible fields
         return GalaxyGraphResponse(
@@ -2360,6 +2295,8 @@ class GalaxyService:
                     status,
                     recent_error_count=error_counts.get(node.id, 0),
                     review_signal=review_signals.get(node.id),
+                    goal_node_ids=goal_node_ids,
+                    blocked_by_prerequisite_node_ids=blocked_prerequisites.get(node.id, []),
                 )
                 for node, status in nodes_with_status
             ],
@@ -2395,6 +2332,55 @@ class GalaxyService:
         except Exception as exc:
             logger.debug("GalaxyService: could not load error counts: {}", exc)
             return {}
+
+    async def _get_goal_connected_node_ids(self, user_id: UUID) -> set[UUID]:
+        """Return nodes attached to active work so Galaxy can explain goal relevance."""
+        try:
+            direct_rows = (
+                await self.db.execute(
+                    select(Task.knowledge_node_id)
+                    .where(Task.user_id == user_id)
+                    .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS]))
+                    .where(Task.knowledge_node_id.is_not(None))
+                    .limit(80)
+                )
+            ).all()
+            linked_rows = (
+                await self.db.execute(
+                    select(TaskKnowledgeLink.knowledge_node_id)
+                    .join(Task, Task.id == TaskKnowledgeLink.task_id)
+                    .where(Task.user_id == user_id)
+                    .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS]))
+                    .limit(120)
+                )
+            ).all()
+
+            node_ids: set[UUID] = set()
+            for node_id, in [*direct_rows, *linked_rows]:
+                if isinstance(node_id, UUID):
+                    node_ids.add(node_id)
+            return node_ids
+        except Exception as exc:
+            logger.debug("GalaxyService: could not load goal-connected node ids: {}", exc)
+            return set()
+
+    @staticmethod
+    def _get_blocked_prerequisites_by_node(
+        nodes_with_status: list[tuple[KnowledgeNode, UserNodeStatus | None]],
+        relations: list[NodeRelation],
+    ) -> dict[UUID, list[UUID]]:
+        status_by_node_id = {node.id: status for node, status in nodes_with_status}
+        blocked: dict[UUID, list[UUID]] = {}
+        for relation in relations:
+            if str(relation.relation_type or "").lower() != "prerequisite":
+                continue
+            prereq_status = status_by_node_id.get(relation.source_node_id)
+            prereq_mastery = float(getattr(prereq_status, "mastery_score", 0.0) or 0.0) if prereq_status else 0.0
+            prereq_ready = bool(getattr(prereq_status, "is_unlocked", False)) and prereq_mastery >= 40.0
+            if prereq_ready:
+                continue
+            blocked.setdefault(relation.target_node_id, []).append(relation.source_node_id)
+        return blocked
 
     async def get_galaxy_graph_viewport(
         self,

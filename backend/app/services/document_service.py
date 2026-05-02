@@ -613,6 +613,24 @@ class DocumentService:
         if rating not in {-1, 1}:
             raise ValueError("rating must be 1 or -1")
 
+        persisted_record = None
+        event_context = dict(context or {})
+        if db is not None:
+            persisted_record = await self.persist_feedback_event(
+                db,
+                {
+                    "user_id": user_id,
+                    "file_id": file_id,
+                    "chunk_id": chunk_id,
+                    "rating": rating,
+                    "query_type": query_type,
+                    "feedback_source": feedback_source,
+                    "conversation_id": conversation_id,
+                    "context": event_context,
+                },
+            )
+            event_context["persisted_feedback_id"] = str(persisted_record.id)
+
         try:
             from app.core.event_bus import DocumentCitationFeedbackEvent, event_bus
 
@@ -624,7 +642,7 @@ class DocumentService:
                 query_type=query_type,
                 feedback_source=feedback_source,
                 conversation_id=conversation_id,
-                context=context,
+                context=event_context,
             )
             published = await event_bus.publish(event.event_type, event.to_dict())
             if published:
@@ -632,7 +650,7 @@ class DocumentService:
         except Exception as exc:
             logger.warning(f"Failed to publish DocumentCitationFeedbackEvent: {exc}")
 
-        if db is None:
+        if db is None or persisted_record is not None:
             return
         await self.persist_feedback_event(
             db,
@@ -644,7 +662,7 @@ class DocumentService:
                 "query_type": query_type,
                 "feedback_source": feedback_source,
                 "conversation_id": conversation_id,
-                "context": context or {},
+                "context": event_context,
             },
         )
 

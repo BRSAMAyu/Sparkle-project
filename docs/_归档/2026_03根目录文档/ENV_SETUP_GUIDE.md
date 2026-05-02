@@ -91,8 +91,8 @@ DASHSCOPE_API_KEY=your_dashscope_api_key_here
 DEEPSEEK_API_KEY=your_deepseek_api_key_here
 
 # 讯飞 STT（如需语音功能）
-XUNFEI_API_KEY=your_xunfei_api_key_here
-XUNFEI_API_SECRET=your_xunfei_api_secret_here
+XUNFEI_API_KEY=your_xunfei_key
+XUNFEI_API_SECRET=your_xunfei_secret
 
 # SiliconFlow（推荐，用于嵌入）
 SILICONFLOW_API_KEY=your_siliconflow_api_key_here

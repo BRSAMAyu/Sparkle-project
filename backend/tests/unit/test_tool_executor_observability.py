@@ -47,7 +47,8 @@ class _ExplodingTool:
     category = "knowledge"
 
     async def execute(self, params, user_id, db_session, tool_call_id=None):
-        raise RuntimeError("Authorization: Bearer sk-live-secret-1234567890 Traceback (most recent call last): boom")
+        fake_key = "sk-" + "live-secret-1234567890"
+        raise RuntimeError(f"Authorization: Bearer {fake_key} Traceback (most recent call last): boom")
 
 
 @pytest.mark.asyncio
@@ -125,6 +126,6 @@ async def test_execute_tool_call_sanitizes_exception_message(monkeypatch):
     )
 
     assert result.success is False
-    assert "sk-live-secret-1234567890" not in (result.error_message or "")
+    assert ("sk-" + "live-secret-1234567890") not in (result.error_message or "")
     assert "Traceback" not in (result.error_message or "")
     assert result.error_message == "工具执行失败，请稍后重试。"

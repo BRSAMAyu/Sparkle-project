@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
 
@@ -40,10 +41,10 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     // Requires: flutter pub add geolocator
     // 暂时使用模拟位置
     setState(() {
-      _selectedLocation = '模拟位置';
+      _selectedLocation = I18nService.instance.isChinese ? '模拟位置' : 'Mock Location';
     });
 
-    AppFeedback.info(context, '位置选择功能开发中，使用模拟位置');
+    AppFeedback.info(context, I18nService.instance.isChinese ? '位置选择功能开发中，使用模拟位置' : 'Location picker is under development, using mock location');
   }
 
   Future<void> _submit() async {
@@ -62,14 +63,14 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       // Feature: Save location data separately if provided
       if (_selectedLocation != null) {
         if (kDebugMode) {
-          debugPrint('位置信息: $_selectedLocation');
+          debugPrint('Location info: $_selectedLocation');
         }
       }
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, '发布失败：$e');
+        AppFeedback.error(context, I18nService.instance.isChinese ? '发布失败：$e' : 'Post failed: $e');
       }
     } finally {
       if (mounted) setState(() => _isPosting = false);
@@ -85,12 +86,12 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
-          title: const Text('New Post'),
+          title: Text(I18nService.instance.isChinese ? '发布动态' : 'New Post'),
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: DS.md),
               child: SparkleButton(
-                label: 'Post',
+                label: I18nService.instance.isChinese ? '发布' : 'Post',
                 onPressed: _isPosting ? null : _submit,
                 variant: ButtonVariant.ghost,
                 size: ButtonSize.small,
@@ -112,7 +113,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     maxLines: 8,
                     style: TextStyle(color: DS.textPrimary, fontSize: 16),
                     decoration: InputDecoration(
-                      hintText: "What's on your mind?",
+                      hintText: I18nService.instance.isChinese ? '分享你此刻的想法...' : "What's on your mind?",
                       hintStyle: TextStyle(
                           color: DS.textSecondary.withValues(alpha: 0.7),),
                       border: InputBorder.none,
@@ -126,7 +127,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       style: TextStyle(color: DS.textPrimary),
                       decoration: InputDecoration(
                         prefixText: '# ',
-                        hintText: 'Topic (optional)',
+                        hintText: I18nService.instance.isChinese ? '话题（可选）' : 'Topic (optional)',
                         hintStyle: TextStyle(
                             color: DS.textSecondary.withValues(alpha: 0.7),),
                         border: InputBorder.none,

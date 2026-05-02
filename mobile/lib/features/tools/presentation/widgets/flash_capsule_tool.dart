@@ -11,7 +11,9 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/cognitive/data/models/cognitive_fragment_model.dart';
 import 'package:sparkle/features/cognitive/presentation/providers/cognitive_provider.dart';
 import 'package:sparkle/features/error_book/error_book.dart';
+import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
+import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_shell.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
 
@@ -25,13 +27,13 @@ const List<String> _errorTypes = [
 ];
 
 String _errorTypeLabel(AppLocalizations l, String key) => switch (key) {
-  'concept_confusion' => l.fcConceptConfusion,
-  'calculation_error' => l.fcCalculationError,
-  'misreading' => l.fcMisreading,
-  'knowledge_fading' => l.fcKnowledgeFading,
-  'wrong_method' => l.fcWrongMethod,
-  _ => l.fcOther,
-};
+      'concept_confusion' => l.fcConceptConfusion,
+      'calculation_error' => l.fcCalculationError,
+      'misreading' => l.fcMisreading,
+      'knowledge_fading' => l.fcKnowledgeFading,
+      'wrong_method' => l.fcWrongMethod,
+      _ => l.fcOther,
+    };
 
 class _SubjectOption {
   const _SubjectOption(this.code);
@@ -51,15 +53,15 @@ const List<_SubjectOption> _subjectOptions = [
 ];
 
 String _subjectLabel(AppLocalizations l, String code) => switch (code) {
-  'math' => l.fcSubjectMath,
-  'physics' => l.fcSubjectPhysics,
-  'chemistry' => l.fcSubjectChemistry,
-  'biology' => l.fcSubjectBiology,
-  'english' => l.fcSubjectEnglish,
-  'chinese' => l.fcSubjectChinese,
-  'computer' => l.fcSubjectComputer,
-  _ => l.fcOther,
-};
+      'math' => l.fcSubjectMath,
+      'physics' => l.fcSubjectPhysics,
+      'chemistry' => l.fcSubjectChemistry,
+      'biology' => l.fcSubjectBiology,
+      'english' => l.fcSubjectEnglish,
+      'chinese' => l.fcSubjectChinese,
+      'computer' => l.fcSubjectComputer,
+      _ => l.fcOther,
+    };
 
 class FlashCapsuleTool extends ConsumerStatefulWidget {
   const FlashCapsuleTool({
@@ -133,7 +135,8 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
       await ref.read(cognitiveProvider.notifier).loadFragments(limit: 50);
     } catch (e) {
       if (!silent && mounted) {
-        AppFeedback.error(context, context.l10n.toolsFlashLoadFailed(e.toString()));
+        AppFeedback.error(
+            context, context.l10n.toolsFlashLoadFailed(e.toString()));
       }
     }
   }
@@ -206,7 +209,9 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                   ),
                   const SizedBox(height: DS.spacing8),
                   Text(
-                    history.isEmpty ? context.l10n.flashCapsuleHistoryEmpty : context.l10n.flashCapsuleHistoryDesc,
+                    history.isEmpty
+                        ? context.l10n.flashCapsuleHistoryEmpty
+                        : context.l10n.flashCapsuleHistoryDesc,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
                       height: 1.5,
@@ -232,8 +237,9 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                                   .map((line) => line.trim())
                                   .where((line) => line.isNotEmpty)
                                   .toList(growable: false);
-                              final title =
-                                  lines.isEmpty ? context.l10n.flashCapsuleUnnamed : lines.first;
+                              final title = lines.isEmpty
+                                  ? context.l10n.flashCapsuleUnnamed
+                                  : lines.first;
                               final detail = lines.length > 1
                                   ? lines.skip(1).join('\n')
                                   : context.l10n.flashCapsuleNoDesc;
@@ -266,12 +272,16 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
                                           _HistoryChip(
                                             label: item.sourceType ==
                                                     'flash_capsule'
-                                                ? context.l10n.flashCapsuleTagFlash
-                                                : context.l10n.flashCapsuleTagThink,
+                                                ? context
+                                                    .l10n.flashCapsuleTagFlash
+                                                : context
+                                                    .l10n.flashCapsuleTagThink,
                                           ),
                                           if (pending) ...[
                                             const SizedBox(width: DS.spacing8),
-                                            _HistoryChip(label: context.l10n.flashCapsuleSyncPending),
+                                            _HistoryChip(
+                                                label: context.l10n
+                                                    .flashCapsuleSyncPending),
                                           ],
                                         ],
                                       ),
@@ -351,17 +361,38 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
 
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.success));
       if (mounted) {
-        Navigator.pop(context);
-        if (syncedToErrorBook) {
+        final contextEventId = await ref
+            .read(toolHistoryRepositoryProvider)
+            .recordFlashCapsuleSaved(
+              subject: selectedSubject.code,
+              errorType: _selectedErrorType,
+              surface: widget.surface.name,
+              taskId: widget.taskId,
+            );
+        if (!mounted) {
+          return;
+        }
+        if (contextEventId != null) {
+          ToolContextEffectFeedback.show(
+            context: context,
+            ref: ref,
+            toolLabel: context.l10n.flashCapsuleTitle,
+            eventId: contextEventId,
+          );
+          Navigator.pop(context);
+        } else if (syncedToErrorBook) {
+          Navigator.pop(context);
           AppFeedback.success(context, context.l10n.fcSavedWithSync);
         } else {
+          Navigator.pop(context);
           AppFeedback.info(context, context.l10n.fcSavedSyncLater);
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isSubmitting = false);
-        AppFeedback.error(context, context.l10n.toolsFlashSaveFailed(e.toString()));
+        AppFeedback.error(
+            context, context.l10n.toolsFlashSaveFailed(e.toString()));
       }
     }
   }
@@ -390,7 +421,9 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
           icon: Icons.label_rounded,
         ),
         ToolHeroChip(
-          label: historyCount == 0 ? context.l10n.flashCapsuleNoHistory : context.l10n.fcHistoryCount(historyCount),
+          label: historyCount == 0
+              ? context.l10n.flashCapsuleNoHistory
+              : context.l10n.fcHistoryCount(historyCount),
           accentColor: accent,
           icon: Icons.history_rounded,
         ),
@@ -493,7 +526,9 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
             expand: true,
           );
           final saveButton = SparkleButton(
-            label: _isSubmitting ? context.l10n.fcRecording : context.l10n.toolsFlashSaveCapsule,
+            label: _isSubmitting
+                ? context.l10n.fcRecording
+                : context.l10n.toolsFlashSaveCapsule,
             onPressed: _isSubmitting ? null : _submit,
             icon: const Icon(Icons.check_rounded),
             loading: _isSubmitting,
@@ -561,7 +596,8 @@ class _SubjectDropdown extends StatelessWidget {
                   .map(
                     (subject) => DropdownMenuItem<String>(
                       value: subject.code,
-                      child: Text(_subjectLabel(AppLocalizations.of(context)!, subject.code)),
+                      child: Text(_subjectLabel(
+                          AppLocalizations.of(context)!, subject.code)),
                     ),
                   )
                   .toList(),

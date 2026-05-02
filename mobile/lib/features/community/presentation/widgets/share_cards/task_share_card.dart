@@ -89,7 +89,9 @@ class TaskShareCard extends StatelessWidget {
                     ),
                     if (duration != null)
                       Text(
-                        '完成 · ${duration}分钟',
+                        I18nService.instance.isChinese
+                            ? '完成 · ${duration}分钟'
+                            : 'Completed · ${duration} min',
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: DS.textTertiary,
@@ -215,12 +217,29 @@ class TaskShareCard extends StatelessWidget {
                           runSpacing: DS.sm,
                           children: [
                             if (duration != null)
-                              _buildStat('时长', '${duration}m'),
+                              _buildStat(
+                                I18nService.instance.isChinese
+                                    ? '时长'
+                                    : 'Duration',
+                                '${duration}m',
+                              ),
                             if (points != null) ...[
-                              _buildStat('积分', '+$points'),
+                              _buildStat(
+                                I18nService.instance.isChinese
+                                    ? '积分'
+                                    : 'Points',
+                                '+$points',
+                              ),
                             ],
                             if (streak != null && streak! > 0) ...[
-                              _buildStat('连胜', '$streak 天'),
+                              _buildStat(
+                                I18nService.instance.isChinese
+                                    ? '连胜'
+                                    : 'Streak',
+                                I18nService.instance.isChinese
+                                    ? '$streak 天'
+                                    : '$streak days',
+                              ),
                             ],
                           ],
                         ),
@@ -291,9 +310,13 @@ class TaskShareCard extends StatelessWidget {
     if (diff.inMinutes < 1) {
       return S.communityShareJustNow;
     } else if (diff.inHours < 1) {
-      return '${diff.inMinutes}分钟前';
+      return I18nService.instance.isChinese
+          ? '${diff.inMinutes}分钟前'
+          : '${diff.inMinutes}m ago';
     } else if (diff.inDays < 1) {
-      return '${diff.inHours}小时前';
+      return I18nService.instance.isChinese
+          ? '${diff.inHours}小时前'
+          : '${diff.inHours}h ago';
     } else {
       return '${time.month}/${time.day}';
     }

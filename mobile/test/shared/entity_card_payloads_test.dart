@@ -172,5 +172,122 @@ void main() {
       expect(task.estimatedMinutes, 35);
       expect(task.status, TaskStatus.pending);
     });
+
+    test('fallback review card carries a routable primary action', () {
+      final payload = EntityCardPayload.fromRaw(
+        {
+          'review_id': 'review-1',
+          'title': '今天复盘条件概率',
+          'plan_id': 'plan-1',
+          'subject': 'math',
+          'score': 0.72,
+        },
+        fallbackType: 'review',
+      );
+
+      expect(payload.entityType, 'review');
+      expect(payload.entityId, 'review-1');
+      expect(payload.detailRoute, contains('/review?'));
+      expect(payload.detailRoute, contains('mode=today'));
+      expect(payload.share?.resourceType, 'review');
+    });
+
+    test('fallback vocabulary card opens lookup and wordbook actions', () {
+      final payload = EntityCardPayload.fromRaw(
+        {
+          'word_id': 'word-1',
+          'word': 'derive',
+          'definition': 'to obtain from a source',
+          'in_wordbook': true,
+        },
+        fallbackType: 'vocabulary',
+      );
+
+      expect(payload.entityType, 'vocabulary');
+      expect(payload.entityId, 'word-1');
+      expect(payload.detailRoute, '/tools/vocabulary_lookup?word=derive');
+      expect(payload.secondaryActions.single.route, '/tools/wordbook');
+      expect(payload.share?.resourceType, 'vocabulary');
+    });
+
+    test('fallback seed card remains adoptable', () {
+      final seed = EntityCardPayload.fromRaw(
+        {
+          'library_id': 'seed-1',
+          'name': '概率论高频错题种子',
+          'description': '可生成复盘任务的题型包',
+        },
+        fallbackType: 'seed',
+      );
+
+      expect(seed.detailRoute, '/seed-libraries/seed-1');
+      expect(seed.secondaryActions.first.type, 'adopt_resource');
+      expect(seed.share?.resourceType, 'seed');
+    });
+
+    test('parses first-class shared resource protocol fields', () {
+      final payload = EntityCardPayload.fromRaw(
+        {
+          'entity_card': {
+            'entity_type': 'shared_resource',
+            'entity_id': 'share-1',
+            'title': '概率论复习计划',
+            'execution_state': 'available',
+            'share': {
+              'resource_type': 'plan',
+              'resource_id': 'plan-1',
+              'title': '概率论复习计划',
+              'owner': {'user_id': 'user-1', 'display_name': 'Ada'},
+              'visibility': 'group',
+              'preview': {'title': '概率论复习计划'},
+              'source_receipt': {
+                'shared_resource_id': 'share-1',
+                'channel': 'community_share',
+              },
+              'adoption_action': {
+                'id': 'adopt_shared_resource',
+                'type': 'adopt_resource',
+                'route': '/community/shared-resources/share-1/adopt',
+                'label': '采纳到我的空间',
+                'payload': {'shared_resource_id': 'share-1'},
+              },
+              'expires_at': '2026-05-03T12:00:00Z',
+              'availability': 'available',
+            },
+          },
+        },
+        fallbackType: 'shared_resource',
+      );
+
+      expect(payload.share?.resourceType, 'plan');
+      expect(payload.share?.owner['display_name'], 'Ada');
+      expect(payload.share?.visibility, 'group');
+      expect(payload.share?.sourceReceipt['shared_resource_id'], 'share-1');
+      expect(
+        payload.share?.adoptionAction?.route,
+        '/community/shared-resources/share-1/adopt',
+      );
+      expect(payload.share?.availability, 'available');
+      expect(payload.share?.expiresAt, isNotNull);
+    });
+
+    test('legacy revoked shared resource hides adoption action', () {
+      final payload = EntityCardPayload.fromRaw(
+        {
+          'id': 'share-2',
+          'resource_type': 'task',
+          'resource_id': 'task-2',
+          'resource_title': '过期任务',
+          'availability': 'revoked',
+          'revoked_at': '2026-05-02T09:00:00Z',
+        },
+        fallbackType: 'shared_resource',
+      );
+
+      expect(payload.executionState, 'revoked');
+      expect(payload.secondaryActions, isEmpty);
+      expect(payload.share?.availability, 'revoked');
+      expect(payload.share?.revokedAt, isNotNull);
+    });
   });
 }

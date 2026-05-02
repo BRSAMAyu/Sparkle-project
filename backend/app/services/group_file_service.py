@@ -17,7 +17,7 @@ from app.core.celery_tasks import process_stored_file
 from app.core.event_bus import GroupFileSharedEvent, event_bus
 from app.models.background_task import BackgroundTask, BackgroundTaskStatus, BackgroundTaskType
 from app.models.community import GroupMember, GroupRole
-from app.models.file_storage import StoredFile
+from app.models.file_storage import SourceLifecycleStatus, StoredFile
 from app.models.group_files import GroupFile, GroupFileTrustLevel
 from app.services.document_upload_storage import document_upload_storage
 
@@ -233,7 +233,10 @@ class GroupFileService:
         group_ids: list[UUID | str] | None = None,
         limit: int | None = None,
     ) -> list[StoredFile]:
-        stmt = select(StoredFile).where(StoredFile.not_deleted_filter())
+        stmt = select(StoredFile).where(
+            StoredFile.not_deleted_filter(),
+            StoredFile.lifecycle_status == SourceLifecycleStatus.ACTIVE.value,
+        )
         if requested_file_ids:
             stmt = stmt.where(StoredFile.id.in_(requested_file_ids))
 

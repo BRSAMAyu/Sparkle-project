@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/data/repositories/seed_library_repository.dart';
@@ -62,10 +63,12 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
       );
 
       if (mounted) {
+        final zh = I18nService.instance.isChinese;
         unawaited(
           SensoryFeedbackService.emit(SensoryFeedbackEvent.success),
         );
-        AppFeedback.success(context, '种子库创建成功');
+        AppFeedback.success(
+            context, zh ? '种子库创建成功' : 'Library created successfully');
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -82,7 +85,8 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
     final tag = _tagsController.text.trim();
     if (tag.isEmpty) return;
     if (_tags.contains(tag)) {
-      AppFeedback.info(context, '标签已存在');
+      final zh = I18nService.instance.isChinese;
+      AppFeedback.info(context, zh ? '标签已存在' : 'Tag already exists');
       return;
     }
 
@@ -135,7 +139,8 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                     ),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return '请输入名称';
+                        final zh = I18nService.instance.isChinese;
+                        return zh ? '请输入名称' : 'Please enter a name';
                       }
                       return null;
                     },
@@ -163,10 +168,11 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '分类',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        I18nService.instance.isChinese ? '分类' : 'Category',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: DS.fontWeightBold,
+                                ),
                       ),
                       const SizedBox(height: DS.spacing8),
                       Wrap(
@@ -202,10 +208,11 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '可见性',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        I18nService.instance.isChinese ? '可见性' : 'Visibility',
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  fontWeight: DS.fontWeightBold,
+                                ),
                       ),
                       const SizedBox(height: DS.spacing8),
                       Wrap(
@@ -237,9 +244,9 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
 
                 // Tags
                 Text(
-                  '标签',
+                  I18nService.instance.isChinese ? '标签' : 'Tags',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                 ),
                 const SizedBox(height: DS.spacing8),

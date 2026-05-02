@@ -1063,6 +1063,21 @@ def test_learning_base_update_belief_insufficient():
     assert updated.beta == 2.0
 
 
+def test_learning_base_counter_evidence_discounts_belief_score():
+    """FV-18: user rejection/correction/harmful outcomes become counter-evidence."""
+    lb = LearningBase()
+    belief = StrategyBelief(strategy_key="recover_execution_rhythm", alpha=8, beta=2, evidence_count=10)
+
+    lb.update_belief(belief, "user_rejected", reason="用户拒绝了本策略")
+    lb.update_belief(belief, "harmful", reason="outcome=harmful")
+    lb.update_belief(belief, "user_corrected", reason="用户纠正了判断")
+
+    assert len(belief.counter_evidence) == 3
+    assert belief.raw_expected_effectiveness == pytest.approx(8 / 11)
+    assert belief.belief_score == pytest.approx((8 / 11) - 0.15)
+    assert belief.to_dict()["counter_evidence"][0]["source"] == "user_rejection"
+
+
 def test_learning_base_batch_update():
     """Batch update processes multiple outcomes."""
     lb = LearningBase()
@@ -1117,6 +1132,19 @@ async def test_learning_base_persist_and_load():
     assert loaded[0].strategy_key == "s1"
     assert loaded[0].alpha == 5
     assert loaded[1].beta == 7
+
+
+def test_strategy_belief_counter_evidence_round_trip():
+    """FV-18: persisted old/new belief JSON remains loadable with counter-evidence."""
+    belief = StrategyBelief(strategy_key="s1")
+    lb = LearningBase()
+    lb.add_counter_evidence(belief, source="user_correction", reason="用户纠正")
+
+    restored = StrategyBelief.from_dict(belief.to_dict())
+    legacy = StrategyBelief.from_dict({"strategy_key": "legacy", "alpha": 2, "beta": 1})
+
+    assert restored.counter_evidence[0].source == "user_correction"
+    assert legacy.counter_evidence == []
 
 
 async def test_learning_base_load_empty():
@@ -1271,5 +1299,3 @@ async def test_counter_evidence_lowers_confidence_perception():
 
     updated = await register.get_state("u1", "task_granularity_fit")
     assert "用户完成了长任务" in updated.counter_evidence
-
-

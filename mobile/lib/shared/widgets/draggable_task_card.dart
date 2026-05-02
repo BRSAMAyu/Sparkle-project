@@ -112,7 +112,7 @@ class DraggableTaskCard extends ConsumerWidget {
                         task.title,
                         style: TextStyle(
                           color: DS.brandPrimaryConst,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                           fontSize: 14,
                         ),
                         maxLines: 1,

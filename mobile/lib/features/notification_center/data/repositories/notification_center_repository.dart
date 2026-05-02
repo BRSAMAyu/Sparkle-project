@@ -193,6 +193,48 @@ class NotificationCenterRepository {
     }
   }
 
+  Future<void> sendRecallFeedback(
+    String notificationId, {
+    required bool isAccurate,
+    String? feedbackReason,
+    Map<String, dynamic>? actionPayload,
+  }) async {
+    if (DemoDataService.isDemoMode) {
+      final items = DemoDataService().demoNotifications;
+      final index = items.indexWhere((item) => item['id'] == notificationId);
+      if (index != -1) {
+        items[index] = {
+          ...items[index],
+          'is_read': true,
+          'read_at': DateTime.now().toIso8601String(),
+          'metadata': {
+            ...(items[index]['metadata'] as Map<String, dynamic>? ?? {}),
+            'recall_feedback_status': isAccurate ? 'accurate' : 'inaccurate',
+            'recall_feedback': {
+              'is_accurate': isAccurate,
+              if (feedbackReason != null) 'feedback_reason': feedbackReason,
+            },
+          },
+        };
+      }
+      return;
+    }
+
+    try {
+      await _client.post<Map<String, dynamic>>(
+        '/notification-center/notifications/$notificationId/recall-feedback',
+        data: {
+          'is_accurate': isAccurate,
+          if (feedbackReason != null && feedbackReason.trim().isNotEmpty)
+            'feedback_reason': feedbackReason.trim(),
+          'action_payload': actionPayload ?? <String, dynamic>{},
+        },
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
   Future<Map<String, dynamic>> sendAccountabilityEncouragement(
     String notificationId, {
     String? presetId,
@@ -214,7 +256,9 @@ class NotificationCenterRepository {
       }
       return {
         'success': true,
-        'message': I18nService.instance.isChinese ? '他收到了你的鼓励' : 'They received your encouragement',
+        'message': I18nService.instance.isChinese
+            ? '他收到了你的鼓励'
+            : 'They received your encouragement',
       };
     }
 
@@ -599,7 +643,8 @@ class NotificationCenterRepository {
       final statusCode = e.response?.statusCode;
       final responseData = e.response?.data;
       final message = responseData is Map<String, dynamic>
-          ? responseData['message'] ?? (I18nService.instance.isChinese ? '未知错误' : 'Unknown error')
+          ? responseData['message'] ??
+              (I18nService.instance.isChinese ? '未知错误' : 'Unknown error')
           : (I18nService.instance.isChinese ? '未知错误' : 'Unknown error');
 
       switch (statusCode) {

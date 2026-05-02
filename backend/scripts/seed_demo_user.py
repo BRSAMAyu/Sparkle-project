@@ -49,8 +49,8 @@ from app.models import (
 )
 from app.models.shop import PhotonTransactionHistory, PhotonTransactionType
 
-DEMO_USERNAME = "chat_test"
-DEMO_PASSWORD = "Chat123456"
+DEMO_USERNAME = os.getenv("LOCAL_SMOKE_USERNAME", "chat_test")
+DEMO_PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", "Chat123456")
 DEMO_EMAIL = "chat_test@sparkle.demo"
 
 

@@ -30,7 +30,7 @@ class GroupTasksScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text('Group Tasks'),
+        title: Text(I18nService.instance.isChinese ? '社群任务' : 'Group Tasks'),
       ),
       floatingActionButton: SparkleIconButton(
         icon: const Icon(Icons.add),
@@ -42,9 +42,9 @@ class GroupTasksScreen extends ConsumerWidget {
       child: tasksState.when(
         data: (tasks) {
           if (tasks.isEmpty) {
-            return const Center(
+            return Center(
               child: CompactEmptyState(
-                message: 'No tasks yet',
+                message: I18nService.instance.isChinese ? '还没有任务' : 'No tasks yet',
                 icon: Icons.assignment_outlined,
               ),
             );
@@ -89,7 +89,7 @@ class GroupTasksScreen extends ConsumerWidget {
                                   .completeTask(entry.$2.id);
                               ref.invalidate(groupTasksProvider(groupId));
                               if (context.mounted) {
-                                AppFeedback.success(context, 'Task completed!');
+                                AppFeedback.success(context, I18nService.instance.isChinese ? '任务已完成！' : 'Task completed!');
                               }
                             } catch (e) {
                               if (context.mounted) {
@@ -179,7 +179,7 @@ class GroupTasksScreen extends ConsumerWidget {
             Text(
               title,
               style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: color,
                   fontSize: DS.fontSizeBase,),
             ),
@@ -222,7 +222,7 @@ class _TaskCard extends StatelessWidget {
                 child: Text(
                   task.title,
                   style: TextStyle(
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     decoration: isDone ? TextDecoration.lineThrough : null,
                   ),
                 ),
@@ -324,7 +324,7 @@ extension on GroupTasksScreen {
                 const SizedBox(height: DS.md),
                 Text(
                   '${I18nService.instance.isChinese ? '预计时间' : 'Est. time'}: $estimatedMinutes ${I18nService.instance.isChinese ? '分钟' : 'min'}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: DS.fontWeightBold),
                 ),
                 Slider(
                   value: estimatedMinutes.toDouble(),
@@ -341,7 +341,7 @@ extension on GroupTasksScreen {
                 const SizedBox(height: DS.md),
                 Text(
                   '${I18nService.instance.isChinese ? '难度' : 'Difficulty'}: $difficulty/5',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: DS.fontWeightBold),
                 ),
                 Slider(
                   value: difficulty.toDouble(),

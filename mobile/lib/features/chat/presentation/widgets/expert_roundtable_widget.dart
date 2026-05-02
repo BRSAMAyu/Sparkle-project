@@ -2,8 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 
 class AssistantAgentBadge extends StatelessWidget {
   const AssistantAgentBadge({
@@ -193,7 +194,11 @@ class _CollapsedExpertRoundtable extends StatelessWidget {
       children: [
         ChatAccessoryPill(
           icon: Icons.forum_rounded,
-          label: experts.isEmpty ? context.l10n.chatRoundtableExpertCollab : '专家协作 ${experts.length}位',
+          label: experts.isEmpty
+              ? context.l10n.chatRoundtableExpertCollab
+              : (I18nService.instance.isChinese
+                  ? '专家协作 ${experts.length}位'
+                  : 'Expert collab ${experts.length}'),
           emphasize: true,
           onTap: onExpand,
           trailing: Icon(
@@ -289,17 +294,21 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              IconButton(
-                onPressed: onCollapse,
-                icon: const Icon(Icons.unfold_less_rounded, size: 18),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints.tightFor(
-                  width: 28,
-                  height: 28,
+              Semantics(
+                button: true,
+                label: 'Chat expert roundtable widget control 1',
+                child: IconButton(
+                  onPressed: onCollapse,
+                  icon: const Icon(Icons.unfold_less_rounded, size: 18),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints.tightFor(
+                    width: 28,
+                    height: 28,
+                  ),
+                  splashRadius: 18,
+                  color: DS.textSecondary,
+                  tooltip: I18nService.instance.isChinese ? '收起' : 'Collapse',
                 ),
-                splashRadius: 18,
-                color: DS.textSecondary,
-                tooltip: '收起',
               ),
             ],
           ),
@@ -377,7 +386,7 @@ class _TurnCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: DS.surfacePrimary,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: color.withValues(alpha: 0.14)),
       ),
@@ -412,7 +421,8 @@ class _TurnCard extends StatelessWidget {
 String _etaLabel(BuildContext context, int? etaMin, int? etaMax) {
   final low = etaMin ?? etaMax;
   final high = etaMax ?? etaMin;
-  if (low == null || high == null) return context.l10n.chatRoundtableEstimatedProcessing;
+  if (low == null || high == null)
+    return context.l10n.chatRoundtableEstimatedProcessing;
   if (low == high) return context.l10n.chatRoundtableAboutSeconds(low);
   return '$low-$high s';
 }
@@ -441,7 +451,7 @@ String _labelForAgent(BuildContext context, String raw) {
     case 'error_analyst':
       return context.l10n.chatRoundtableErrorSpecialist;
     case 'study_buddy':
-      return '学伴';
+      return I18nService.instance.isChinese ? '学伴' : 'Study Buddy';
     case 'math_agent':
       return context.l10n.chatExpertMath;
     case 'code_agent':

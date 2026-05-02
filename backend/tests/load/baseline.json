@@ -1,0 +1,83 @@
+{
+  "_description": "P2-32: Sparkle API load test SLO baseline — target thresholds for production readiness",
+  "_version": "1.0",
+  "_created": "2026-05-02",
+  "targets": {
+    "http": {
+      "chat_stream_post": {
+        "p50_ms": 200,
+        "p95_ms": 800,
+        "p99_ms": 1500,
+        "error_rate": 0.01,
+        "target_rps": 50
+      },
+      "chat_history_get": {
+        "p50_ms": 100,
+        "p95_ms": 400,
+        "p99_ms": 800,
+        "error_rate": 0.005,
+        "target_rps": 100
+      },
+      "feedback_post": {
+        "p50_ms": 150,
+        "p95_ms": 500,
+        "p99_ms": 1000,
+        "error_rate": 0.01,
+        "target_rps": 30
+      },
+      "user_profile_get": {
+        "p50_ms": 50,
+        "p95_ms": 200,
+        "p99_ms": 500,
+        "error_rate": 0.005,
+        "target_rps": 80
+      },
+      "health_get": {
+        "p50_ms": 20,
+        "p95_ms": 100,
+        "p99_ms": 200,
+        "error_rate": 0.001,
+        "target_rps": 200
+      },
+      "galaxy_nodes_get": {
+        "p50_ms": 150,
+        "p95_ms": 500,
+        "p99_ms": 1000,
+        "error_rate": 0.01,
+        "target_rps": 40
+      },
+      "galaxy_search_post": {
+        "p50_ms": 300,
+        "p95_ms": 1000,
+        "p99_ms": 2000,
+        "error_rate": 0.02,
+        "target_rps": 20
+      },
+      "plan_submit_post": {
+        "p50_ms": 200,
+        "p95_ms": 800,
+        "p99_ms": 1500,
+        "error_rate": 0.02,
+        "target_rps": 15
+      }
+    },
+    "websocket": {
+      "connection_rate_per_sec": 20,
+      "message_throughput_per_sec": 200,
+      "connection_error_rate": 0.02,
+      "message_latency_p95_ms": 500
+    },
+    "grpc": {
+      "stream_chat_p95_ms": 1200,
+      "stream_chat_p99_ms": 3000,
+      "error_rate": 0.01,
+      "concurrent_streams": 100
+    }
+  },
+  "degradation_thresholds": {
+    "p95_latency_degraded_factor": 2.0,
+    "error_rate_degraded_factor": 3.0,
+    "p95_latency_critical_factor": 5.0,
+    "error_rate_critical_factor": 10.0
+  }
+}

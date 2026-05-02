@@ -1243,7 +1243,7 @@ class _StatItem extends StatelessWidget {
             curve: Curves.easeOutCubic,
             builder: (context, animatedValue, child) => Text(
               '${animatedValue.toStringAsFixed(animatedValue >= 10 ? 0 : 1)}$suffix',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: const TextStyle(fontWeight: DS.fontWeightBold, fontSize: 16),
             ),
           ),
           Text(

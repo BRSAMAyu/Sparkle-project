@@ -11,11 +11,15 @@ from __future__ import annotations
 import asyncio
 import json
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from loguru import logger
+from prometheus_client import Counter
+from sqlalchemy import select
+
+from app.core.metrics import get_or_create_metric
 
 if TYPE_CHECKING:
     from app.services.plan_matching_service import PlanMatchingService
@@ -27,6 +31,13 @@ STATE_GENERATING = "GENERATING"
 STATE_TOOL_CALLING = "TOOL_CALLING"
 STATE_DONE = "DONE"
 STATE_FAILED = "FAILED"
+
+
+SESSION_LOCK_ACQUIRE_FAILURES_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_session_lock_acquire_failures_total",
+    "Total session lock acquire failures caused by lock contention",
+)
 
 
 @dataclass
@@ -67,7 +78,9 @@ class SessionStateManager:
     负责 FSM 状态的持久化、恢复和分布式锁管理
     """
 
-    def __init__(self, redis_client, ttl: int = 3600):
+    _DURABLE_RECOVERABLE_STATES = {STATE_INIT, STATE_THINKING, STATE_GENERATING, STATE_TOOL_CALLING, STATE_FAILED}
+
+    def __init__(self, redis_client, ttl: int = 3600, db_session=None):
         """
         Args:
             redis_client: Redis 客户端实例
@@ -76,6 +89,7 @@ class SessionStateManager:
         self.redis = redis_client
         self.ttl = ttl
         self.lock_ttl = 30  # 锁的过期时间（秒）
+        self.db_session = db_session
         logger.info("SessionStateManager initialized")
 
     def _get_state_key(self, session_id: str) -> str:
@@ -102,6 +116,8 @@ class SessionStateManager:
             bool: 是否成功
         """
         try:
+            if self.redis is None:
+                return False
             key = self._get_state_key(session_id)
             await self.redis.setex(key, self.ttl, state.to_json())
             logger.debug(f"Saved state for session {session_id}: {state.state}")
@@ -121,12 +137,17 @@ class SessionStateManager:
             Optional[FSMState]: 恢复的状态，如果不存在则返回 None
         """
         try:
+            if self.redis is None:
+                return await self._load_durable_state(session_id)
             key = self._get_state_key(session_id)
             data = await self.redis.get(key)
 
             if not data:
                 logger.debug(f"No saved state found for session {session_id}")
-                return None
+                durable = await self._load_durable_state(session_id)
+                if durable is not None:
+                    await self.save_state(session_id, durable)
+                return durable
 
             state = FSMState.from_json(data)
             logger.info(f"Restored state for session {session_id}: {state.state}")
@@ -191,11 +212,74 @@ class SessionStateManager:
                 )
 
             # 保存到 Redis
-            return await self.save_state(session_id, new_state)
+            saved = await self.save_state(session_id, new_state)
+            await self._persist_durable_state(new_state)
+            return saved
 
         except Exception as e:
             logger.error(f"Failed to update state for session {session_id}: {e}")
             return False
+
+    async def _persist_durable_state(self, state: FSMState) -> None:
+        if self.db_session is None:
+            return
+        try:
+            from app.aurora.runtime_v1.models import DurableSessionStateSnapshot
+
+            now = _utcnow()
+            recoverable = state.state in self._DURABLE_RECOVERABLE_STATES
+            expires_at = now + timedelta(hours=6 if recoverable else 1)
+            payload = asdict(state)
+            result = await self.db_session.execute(
+                select(DurableSessionStateSnapshot).where(
+                    DurableSessionStateSnapshot.session_id == state.session_id,
+                )
+            )
+            record = result.scalar_one_or_none()
+            if record is None:
+                record = DurableSessionStateSnapshot(session_id=state.session_id)
+                self.db_session.add(record)
+            record.user_id = state.user_id
+            record.request_id = state.request_id
+            record.fsm_state = state.state
+            record.details = state.details or ""
+            record.payload = payload
+            record.recoverable = recoverable
+            record.last_seen_at = now
+            record.expires_at = expires_at
+            record.runtime_metadata = {"source": "SessionStateManager.update_state"}
+            await self.db_session.flush()
+        except Exception as exc:
+            logger.debug(f"Failed to persist durable FSM state for {state.session_id}: {exc}")
+
+    async def _load_durable_state(self, session_id: str) -> FSMState | None:
+        if self.db_session is None:
+            return None
+        try:
+            from app.aurora.runtime_v1.models import DurableSessionStateSnapshot
+
+            now = _utcnow()
+            result = await self.db_session.execute(
+                select(DurableSessionStateSnapshot)
+                .where(
+                    DurableSessionStateSnapshot.session_id == session_id,
+                    DurableSessionStateSnapshot.recoverable.is_(True),
+                    DurableSessionStateSnapshot.expires_at > now,
+                )
+                .order_by(DurableSessionStateSnapshot.last_seen_at.desc())
+                .limit(1)
+            )
+            record = result.scalar_one_or_none()
+            if record is None:
+                return None
+            payload = dict(record.payload or {})
+            if payload.get("state") == STATE_DONE:
+                return None
+            logger.info(f"Recovered durable FSM state for session {session_id}: {payload.get('state')}")
+            return FSMState.from_json(json.dumps(payload, ensure_ascii=False))
+        except Exception as exc:
+            logger.debug(f"Failed to load durable FSM state for {session_id}: {exc}")
+            return None
 
     async def acquire_lock(self, session_id: str, request_id: str) -> bool:
         """
@@ -227,6 +311,7 @@ class SessionStateManager:
                 if existing == request_id:
                     logger.debug(f"Lock already held by same request {request_id}")
                     return True
+                SESSION_LOCK_ACQUIRE_FAILURES_TOTAL.inc()
                 logger.warning(f"Failed to acquire lock for session {session_id}, already locked")
                 return False
 

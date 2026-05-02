@@ -3,9 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
-import 'package:sparkle/core/models/memory_models.dart';
-import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/models/memory_models.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/memory/presentation/widgets/evidence_drawer.dart';
 
 class ProfileFrontDoorCard extends StatelessWidget {
   const ProfileFrontDoorCard({
@@ -48,7 +49,8 @@ class ProfileFrontDoorCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  confirmation['title']?.toString() ?? context.l10n.chatProfileUpdated,
+                  confirmation['title']?.toString() ??
+                      context.l10n.chatProfileUpdated,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: DS.fontWeightSemibold,
                         color: DS.neutral900,
@@ -254,9 +256,10 @@ class _ClaimTile extends StatelessWidget {
               ),
               const SizedBox(width: DS.spacing8),
               _Badge(
-                label: claim['evidence_label']?.toString() ?? context.l10n.chatProfileCompileConclusion,
-                color: const Color(0xFF0F766E),
-                background: const Color(0xFFE7F6F4),
+                label: claim['evidence_label']?.toString() ??
+                    context.l10n.chatProfileCompileConclusion,
+                color: DS.success,
+                background: DS.successLight,
               ),
             ],
           ),
@@ -287,20 +290,25 @@ class _ClaimTile extends StatelessWidget {
             children: [
               if ((claim['confidence_label']?.toString() ?? '').isNotEmpty)
                 _Badge(
-                  label: context.l10n.chatProfileConfidence(claim['confidence_label'].toString()),
+                  label: context.l10n.chatProfileConfidence(
+                      claim['confidence_label'].toString()),
                   color: DS.primaryBase,
                   background: DS.primaryBase.withValues(alpha: 0.08),
                 ),
               if ((claim['source']?.toString() ?? '').isNotEmpty)
                 _Badge(
-                  label: context.l10n.chatProfileSource(claim['source'].toString()),
+                  label: context.l10n
+                      .chatProfileSource(claim['source'].toString()),
                   color: DS.neutral700,
-                  background: DS.neutral100,),
+                  background: DS.neutral100,
+                ),
               if ((claim['freshness']?.toString() ?? '').isNotEmpty)
                 _Badge(
-                  label: context.l10n.chatProfileFreshness(claim['freshness'].toString()),
+                  label: context.l10n
+                      .chatProfileFreshness(claim['freshness'].toString()),
                   color: DS.neutral700,
-                  background: DS.neutral100,),
+                  background: DS.neutral100,
+                ),
             ],
           ),
           if ((claim['correction_hint']?.toString() ?? '').isNotEmpty) ...[
@@ -314,41 +322,47 @@ class _ClaimTile extends StatelessWidget {
           ],
           if (evidenceRefs.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
-            InkWell(
-              onTap: () => unawaited(
-                EvidenceDrawer.show(
-                  context,
-                  refs: evidenceRefs,
-                  evidenceMissing: false,
+            Semantics(
+              button: true,
+              label: 'Chat profile front door card control 1',
+              child: InkWell(
+                onTap: () => unawaited(
+                  EvidenceDrawer.show(
+                    context,
+                    refs: evidenceRefs,
+                    evidenceMissing: false,
+                  ),
                 ),
-              ),
-              borderRadius: DS.borderRadius12,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing2,
-                  vertical: DS.spacing2,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.dataset_linked_outlined,
-                      size: DS.iconSizeSm,
-                      color: DS.info,
-                    ),
-                    const SizedBox(width: DS.spacing6),
-                    Flexible(
-                      child: Text(
-                        claim['evidence_cta']?.toString().isNotEmpty == true
-                            ? '${claim['evidence_cta']} · ${claim['evidence_summary']}'
-                            : claim['evidence_summary']?.toString() ?? context.l10n.chatProfileViewEvidence,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DS.info,
-                              fontWeight: DS.fontWeightMedium,
-                            ),
+                borderRadius: DS.borderRadius12,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing2,
+                    vertical: DS.spacing2,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.dataset_linked_outlined,
+                        size: DS.iconSizeSm,
+                        color: DS.info,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: DS.spacing6),
+                      Flexible(
+                        child: Text(
+                          claim['evidence_cta']?.toString().isNotEmpty == true
+                              ? '${claim['evidence_cta']} · ${claim['evidence_summary']}'
+                              : claim['evidence_summary']?.toString() ??
+                                  context.l10n.chatProfileViewEvidence,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DS.info,
+                                    fontWeight: DS.fontWeightMedium,
+                                  ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -362,7 +376,8 @@ class _ClaimTile extends StatelessWidget {
                 final actionType = action['type']?.toString() ?? 'prompt';
                 final payload = Map<String, dynamic>.from(action);
                 return CustomButton.secondary(
-                  text: action['label']?.toString() ?? '继续',
+                  text: action['label']?.toString() ??
+                      (I18nService.instance.isChinese ? '继续' : 'Continue'),
                   onPressed: () => unawaited(onAction!(actionType, payload)),
                   size: CustomButtonSize.small,
                 );
@@ -399,7 +414,8 @@ class _PredictionTile extends StatelessWidget {
                 ),
               ),
               _Badge(
-                label: item['evidence_label']?.toString() ?? context.l10n.chatProfileInferencePrediction,
+                label: item['evidence_label']?.toString() ??
+                    context.l10n.chatProfileInferencePrediction,
                 color: const Color(0xFF7C3AED),
                 background: const Color(0xFFF2EAFE),
               ),
@@ -418,7 +434,8 @@ class _PredictionTile extends StatelessWidget {
           if ((item['recommended_action']?.toString() ?? '').isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              context.l10n.chatProfileSuggestedAction(item['recommended_action'].toString()),
+              context.l10n.chatProfileSuggestedAction(
+                  item['recommended_action'].toString()),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral900,
                     fontWeight: DS.fontWeightSemibold,
@@ -427,41 +444,47 @@ class _PredictionTile extends StatelessWidget {
           ],
           if (evidenceRefs.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
-            InkWell(
-              onTap: () => unawaited(
-                EvidenceDrawer.show(
-                  context,
-                  refs: evidenceRefs,
-                  evidenceMissing: false,
+            Semantics(
+              button: true,
+              label: 'Chat profile front door card control 2',
+              child: InkWell(
+                onTap: () => unawaited(
+                  EvidenceDrawer.show(
+                    context,
+                    refs: evidenceRefs,
+                    evidenceMissing: false,
+                  ),
                 ),
-              ),
-              borderRadius: DS.borderRadius12,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing2,
-                  vertical: DS.spacing2,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.dataset_linked_outlined,
-                      size: DS.iconSizeSm,
-                      color: DS.info,
-                    ),
-                    const SizedBox(width: DS.spacing6),
-                    Flexible(
-                      child: Text(
-                        item['evidence_cta']?.toString().isNotEmpty == true
-                            ? '${item['evidence_cta']} · ${item['evidence_summary']}'
-                            : item['evidence_summary']?.toString() ?? context.l10n.chatProfileViewEvidence,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: DS.info,
-                              fontWeight: DS.fontWeightMedium,
-                            ),
+                borderRadius: DS.borderRadius12,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing2,
+                    vertical: DS.spacing2,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.dataset_linked_outlined,
+                        size: DS.iconSizeSm,
+                        color: DS.info,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: DS.spacing6),
+                      Flexible(
+                        child: Text(
+                          item['evidence_cta']?.toString().isNotEmpty == true
+                              ? '${item['evidence_cta']} · ${item['evidence_summary']}'
+                              : item['evidence_summary']?.toString() ??
+                                  context.l10n.chatProfileViewEvidence,
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: DS.info,
+                                    fontWeight: DS.fontWeightMedium,
+                                  ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -528,8 +551,9 @@ Map<String, dynamic> _asMap(dynamic raw) {
 List<EvidenceRefModel> _parseEvidenceRefs(dynamic raw) {
   if (raw is List) {
     return raw
-        .whereType<Map>()
-        .map((item) => EvidenceRefModel.fromJson(Map<String, dynamic>.from(item)))
+        .whereType<Map<dynamic, dynamic>>()
+        .map((item) =>
+            EvidenceRefModel.fromJson(Map<String, dynamic>.from(item)))
         .where((item) => item.type.isNotEmpty && item.id.isNotEmpty)
         .toList();
   }

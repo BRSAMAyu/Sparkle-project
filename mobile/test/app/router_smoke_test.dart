@@ -1,3 +1,4 @@
+import 'dart:ffi' as ffi;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ import 'package:sparkle/core/analytics/models/user_analytics_event.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/core/offline/models/focus_session_record.dart';
+import 'package:sparkle/core/offline/models/offline_chat_message.dart';
 import 'package:sparkle/core/offline/models/translation_record.dart';
 import 'package:sparkle/core/offline/models/vocab_word.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
@@ -48,9 +50,11 @@ import 'package:sparkle/features/home/presentation/screens/notification_list_scr
 import 'package:sparkle/features/insights/presentation/screens/learning_forecast_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_panel_screen.dart';
 import 'package:sparkle/features/memory/presentation/screens/memory_settings_screen.dart';
+import 'package:sparkle/features/openclaw/presentation/screens/openclaw_screen.dart';
 import 'package:sparkle/features/photon/presentation/widgets/photon_balance_card.dart';
 import 'package:sparkle/features/plan/presentation/screens/growth_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_screen.dart';
+import 'package:sparkle/features/reviews/presentation/screens/review_plan_hub_screen.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/create_library_screen.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/seed_library_detail_screen.dart';
 import 'package:sparkle/features/seed_library/presentation/screens/seed_library_list_screen.dart';
@@ -74,7 +78,6 @@ import 'package:sparkle/shared/entities/user_model.dart';
 import '../shared/i18n_test_helper.dart';
 
 void main() {
-
   setUp(setUpI18nForTesting);
   TestWidgetsFlutterBinding.ensureInitialized();
   late Directory hiveDir;
@@ -83,7 +86,19 @@ void main() {
 
   setUpAll(() async {
     SharedPreferences.setMockInitialValues({});
-    await Isar.initializeIsarCore(download: true);
+    final bundledIsarCore = Platform.isMacOS
+        ? '${Directory.current.path}/third_party_plugins/isar_flutter_libs/macos/libisar.dylib'
+        : Platform.isLinux
+            ? '${Directory.current.path}/third_party_plugins/isar_flutter_libs/linux/libisar.so'
+            : null;
+    await Isar.initializeIsarCore(
+      libraries: bundledIsarCore == null
+          ? const {}
+          : {
+              ffi.Abi.current(): bundledIsarCore,
+            },
+      download: bundledIsarCore == null,
+    );
     hiveDir = Directory.systemTemp.createTempSync('sparkle_router_hive_');
     isarDir = await Directory.systemTemp.createTemp('sparkle_router_isar_');
     Hive.init(hiveDir.path);
@@ -100,6 +115,7 @@ void main() {
         VocabReviewSchema,
         FocusSessionRecordSchema,
         CachedStatisticsModelSchema,
+        OfflineChatMessageSchema,
       ],
       directory: isarDir.path,
     );
@@ -259,6 +275,7 @@ void main() {
 
       await expectRoute('/focus', FocusMainScreen);
       await expectRoute('/tasks', TaskListScreen);
+      await expectRoute('/openclaw', OpenClawScreen);
       await expectRoute('/notifications', NotificationListScreen);
       await expectRoute(
         '/calendar?date=2026-03-06T00:00:00.000',
@@ -305,6 +322,7 @@ void main() {
       await expectRoute('/errors', ErrorListScreen);
       await expectRoute('/errors/new', AddErrorScreen);
       await expectRoute('/errors/error-router-smoke', ErrorDetailScreen);
+      await expectRoute('/review-plan', ReviewPlanHubScreen);
       await expectRoute('/review?mode=today', ReviewScreen);
       await expectRoute('/learning/forecast', LearningForecastScreen);
       await expectRoute('/curiosity-capsule', CuriosityCapsuleScreen);
@@ -340,9 +358,9 @@ void main() {
 
       expect(
         harness.router.routeInformationProvider.value.uri.toString(),
-        '/review?mode=today',
+        '/review-plan',
       );
-      expect(find.byType(ReviewScreen), findsOneWidget);
+      expect(find.byType(ReviewPlanHubScreen), findsOneWidget);
 
       harness.router.go('/tools/learning_forecast?context=home');
       await _pumpFrames(tester);

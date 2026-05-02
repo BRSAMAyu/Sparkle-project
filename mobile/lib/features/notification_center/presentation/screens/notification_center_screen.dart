@@ -227,6 +227,9 @@ class _NotificationCenterScreenState
                   notification.isPush && notification.canDisablePushCategory
                       ? () => _disablePushCategory(notification)
                       : null,
+              onRecallInaccurate: notification.canMarkRecallInaccurate
+                  ? () => _markRecallInaccurate(notification)
+                  : null,
               onAccountabilityEncourage:
                   notification.canSendAccountabilityEncouragement
                       ? () => _sendAccountabilityEncouragement(notification)
@@ -446,6 +449,19 @@ class _NotificationCenterScreenState
     AppFeedback.success(context, context.l10n.notificationPushCategoryDisabled);
   }
 
+  Future<void> _markRecallInaccurate(UnifiedNotification notification) async {
+    await ref
+        .read(notificationCenterProvider.notifier)
+        .markRecallInaccurate(notification);
+    if (!mounted) {
+      return;
+    }
+    AppFeedback.success(context, context.l10n.notificationRecallFeedbackSaved);
+    unawaited(
+      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+    );
+  }
+
   Future<void> _sendAccountabilityEncouragement(
     UnifiedNotification notification,
   ) async {
@@ -455,7 +471,8 @@ class _NotificationCenterScreenState
     if (!mounted) {
       return;
     }
-    final message = result['message'] as String? ?? context.l10n.notificationEncouragementSentFallback;
+    final message = result['message'] as String? ??
+        context.l10n.notificationEncouragementSentFallback;
     AppFeedback.success(context, message);
     unawaited(
       SensoryFeedbackService.emit(SensoryFeedbackEvent.success),

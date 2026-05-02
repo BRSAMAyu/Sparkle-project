@@ -211,7 +211,7 @@ class _FlipDigitState extends State<_FlipDigit>
                   '$digit',
                   style: TextStyle(
                     fontSize: 56,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                     color: DS.brandPrimaryConst,
                     fontFamily: 'monospace',
                     fontFamilyFallback: sparkleFontFallback,
@@ -334,7 +334,7 @@ class SimpleFlipClock extends StatelessWidget {
         timeString,
         style: TextStyle(
           fontSize: fontSize,
-          fontWeight: FontWeight.bold,
+          fontWeight: DS.fontWeightBold,
           color: DS.brandPrimaryConst,
           fontFamily: 'monospace',
           fontFamilyFallback: sparkleFontFallback,

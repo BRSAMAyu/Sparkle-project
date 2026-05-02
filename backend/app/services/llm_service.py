@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.agent_profiles import AgentRole, ModelTier, TaskType
+from app.core.cost_controller import is_llm_within_budget, record_llm_cost
 from app.core.llm_monitoring import LLMMonitor
 from app.core.llm_router import LLMSelection, ModelProvider, llm_router
 from app.core.llm_secure_io import (
@@ -544,6 +545,14 @@ class LLMService:
                 await asyncio.sleep(1.0)
                 return mock_response
 
+            # Budget preflight: fail fast if LLM daily budget is exhausted
+            if not await is_llm_within_budget():
+                logger.warning("LLM daily budget exhausted, returning fallback response")
+                raise HTTPException(
+                    status_code=429,
+                    detail="Daily AI usage limit reached. Your budget will reset tomorrow.",
+                )
+
             if not self.provider:
                 raise HTTPException(
                     status_code=501,
@@ -598,7 +607,8 @@ class LLMService:
                     response = await _call_with_selection(
                         type('obj', (object,), {'config': type('obj', (object,), {
                             'model_name': model,
-                            'provider': type('obj', (object,), {'value': self._get_provider_name_from_url(), 'temperature': temperature})
+                            'temperature': temperature,
+                            'provider': type('obj', (object,), {'value': self._get_provider_name_from_url()})
                         })})
                     )
                     await circuit_breaker_service.record_success("primary_llm")
@@ -919,6 +929,15 @@ class LLMService:
                     await asyncio.sleep(0.03)
                 return
 
+            # Budget preflight: fail fast if LLM daily budget is exhausted
+            if not await is_llm_within_budget():
+                logger.warning("LLM daily budget exhausted, returning fallback stream")
+                fallback = "今天的 AI 使用额度已用完，额度将在明天重置。请先回顾今天的学习成果吧。"
+                for i in range(0, len(fallback), 8):
+                    yield fallback[i:i + 8]
+                    await asyncio.sleep(0.02)
+                return
+
             if not self.provider:
                 raise HTTPException(
                     status_code=501,
@@ -1069,6 +1088,10 @@ class LLMService:
                         selection.model_key, response.usage.prompt_tokens,
                         response.usage.completion_tokens, source="chat_with_tools",
                     )
+                    await record_llm_cost(
+                        selection.model_key, response.usage.prompt_tokens,
+                        response.usage.completion_tokens, source="chat_with_tools",
+                    )
                     await _track_daily_user_tokens(user_id, response.usage.total_tokens or 0)
 
                 tool_calls_dicts = []
@@ -1173,6 +1196,10 @@ class LLMService:
                     span.set_attribute("llm.usage.completion_tokens", response.usage.completion_tokens)
                     span.set_attribute("llm.usage.total_tokens", response.usage.total_tokens)
                     _record_token_usage(
+                        selection.model_key, response.usage.prompt_tokens,
+                        response.usage.completion_tokens, source="tool_results",
+                    )
+                    await record_llm_cost(
                         selection.model_key, response.usage.prompt_tokens,
                         response.usage.completion_tokens, source="tool_results",
                     )
@@ -1308,6 +1335,10 @@ class LLMService:
                     span.set_attribute("llm.usage.total_tokens", usage_data.total_tokens)
                     model_name = selection.model_key if selection else "unknown"
                     _record_token_usage(
+                        model_name, usage_data.prompt_tokens or 0,
+                        usage_data.completion_tokens or 0, source="stream_chat",
+                    )
+                    await record_llm_cost(
                         model_name, usage_data.prompt_tokens or 0,
                         usage_data.completion_tokens or 0, source="stream_chat",
                     )

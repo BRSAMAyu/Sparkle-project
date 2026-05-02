@@ -1,0 +1,17 @@
+FV-24: SLO 自动响应 + 服务端弱网
+Status: DONE
+Branch: codex/FV-17-source-lifecycle
+Modified files:
+- monitoring/alertmanager.yml (SLO auto-response webhook routing)
+- backend/app/api/internal/auto_degrade.py (webhook handler + 5 alert types + ClientDisconnectGuard)
+- backend/gateway/internal/middleware/network_resilience.go (keepalive + retry + disconnect detection)
+- backend/gateway/internal/middleware/network_resilience_test.go (14 tests)
+- backend/gateway/cmd/server/setup.go (middleware registration)
+- backend/app/main.py (auto_degrade router registration)
+- monitoring/sparkle_slo_alerts.yml (alertgroup labels for auto-response)
+Verification:
+- cd backend && pytest tests/api/test_slo_auto_degrade_api.py -v: PASS
+- cd backend/gateway && go test -v -run "TestNetwork|TestDisconnect|TestRetryable|TestDefault" ./internal/middleware/: PASS (14/14)
+- cd backend/gateway && go build ./internal/middleware/: PASS
+User-visible change: SLO alerts now auto-trigger graceful degradation (model fallback, rate limit tightening, etc.) with audit trail; server survives weak network conditions with keepalive + state save on disconnect
+Architect handoff: N/A — FV-24 code complete with tests. Toxiproxy integration test deferred (Python toxiproxy client not in requirements).

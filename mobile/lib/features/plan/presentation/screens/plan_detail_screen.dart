@@ -554,7 +554,8 @@ class _PlanOverviewTab extends ConsumerWidget {
         tasks.addAll(response.items);
       } catch (e) {
         if (!context.mounted) return;
-        AppFeedback.error(context, context.l10n.planDetailTaskLoadFailed(e.toString()));
+        AppFeedback.error(
+            context, context.l10n.planDetailTaskLoadFailed(e.toString()));
         return;
       }
     }
@@ -607,7 +608,8 @@ class _PlanOverviewTab extends ConsumerWidget {
       AppFeedback.success(context, context.l10n.planDetailTaskAdded);
     } catch (e) {
       if (!context.mounted) return;
-      AppFeedback.error(context, context.l10n.planDetailAddTaskFailed(e.toString()));
+      AppFeedback.error(
+          context, context.l10n.planDetailAddTaskFailed(e.toString()));
     }
   }
 }
@@ -1860,6 +1862,10 @@ String _taskStatusLabel(AppLocalizations l10n, TaskStatus status) {
       return l10n.planDetailStatusPending;
     case TaskStatus.inProgress:
       return l10n.planDetailStatusInProgress;
+    case TaskStatus.paused:
+      return l10n.taskStatusPaused;
+    case TaskStatus.restore:
+      return l10n.taskStatusRestore;
     case TaskStatus.stuck:
       return l10n.planDetailStatusStuck;
     case TaskStatus.completed:
@@ -1875,6 +1881,9 @@ IconData _taskStatusIcon(TaskStatus status) {
       return Icons.radio_button_unchecked_rounded;
     case TaskStatus.inProgress:
       return Icons.play_circle_outline_rounded;
+    case TaskStatus.paused:
+    case TaskStatus.restore:
+      return Icons.pause_circle_outline_rounded;
     case TaskStatus.stuck:
       return Icons.help_outline_rounded;
     case TaskStatus.completed:
@@ -1890,6 +1899,9 @@ Color _taskStatusColor(TaskStatus status) {
       return DS.brandPrimary;
     case TaskStatus.inProgress:
       return DS.info;
+    case TaskStatus.paused:
+    case TaskStatus.restore:
+      return DS.neutral500;
     case TaskStatus.stuck:
       return DS.warning;
     case TaskStatus.completed:
@@ -2168,7 +2180,7 @@ class _PlanProgressTab extends StatelessWidget {
                         radius: 55,
                         titleStyle: TextStyle(
                           color: DS.textOnPrimary,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                           fontSize: 14,
                         ),
                       ),
@@ -2476,7 +2488,8 @@ class _PlanPhaseSection extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: DS.spacing12),
                 child: Text(
-                  context.l10n.planDetailWeightedProgress((bundle.weightedProgress! * 100).round()),
+                  context.l10n.planDetailWeightedProgress(
+                      (bundle.weightedProgress! * 100).round()),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -2556,7 +2569,8 @@ class _PlanPhaseSection extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, l10n.planDetailCreatePhaseFailed(e.toString()));
+        AppFeedback.error(
+            context, l10n.planDetailCreatePhaseFailed(e.toString()));
       }
     }
   }
@@ -2576,7 +2590,8 @@ class _PlanPhaseSection extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, context.l10n.planDetailActivatePhaseFailed(e.toString()));
+        AppFeedback.error(
+            context, context.l10n.planDetailActivatePhaseFailed(e.toString()));
       }
     }
   }
@@ -2600,7 +2615,8 @@ class _PlanPhaseSection extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, context.l10n.planDetailCompletePhaseFailed(e.toString()));
+        AppFeedback.error(
+            context, context.l10n.planDetailCompletePhaseFailed(e.toString()));
       }
     }
   }
@@ -2709,7 +2725,8 @@ class _PlanPhaseSection extends ConsumerWidget {
       );
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, l10n.planDetailSubmitFeedbackFailed(e.toString()));
+        AppFeedback.error(
+            context, l10n.planDetailSubmitFeedbackFailed(e.toString()));
       }
     }
   }

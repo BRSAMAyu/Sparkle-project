@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
 /// PrismCard - Cognitive Prism Card (2x1 wide)
@@ -43,6 +44,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
     final dashboardState = ref.watch(dashboardProvider);
     final cognitive = dashboardState.cognitive;
     final weeklyPattern = cognitive.weeklyPattern;
+    final zh = I18nService.instance.isChinese;
 
     return GestureDetector(
       onTap: () => context.push('/cognitive/patterns'),
@@ -103,7 +105,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                       ),
                       const SizedBox(width: DS.sm),
                       Text(
-                        '认知棱镜',
+                        zh ? '认知棱镜' : 'Cognitive Prism',
                         style: context.sparkleTypography.labelSmall.copyWith(
                           fontWeight: DS.fontWeightSemibold,
                           color: DS.textPrimary,
@@ -129,12 +131,12 @@ class _PrismCardState extends ConsumerState<PrismCard>
                       children: [
                         _buildTag(context, '#$weeklyPattern'),
                         if (dashboardState.weather.type == 'rainy')
-                          _buildTag(context, '#焦虑波峰'),
+                          _buildTag(context, zh ? '#焦虑波峰' : '#AnxietyPeak'),
                       ],
                     ),
                     const SizedBox(height: DS.xs),
                     Text(
-                      '行为定式分析已更新',
+                      zh ? '行为定式分析已更新' : 'Behavioral pattern analysis updated',
                       style: context.sparkleTypography.labelSmall.copyWith(
                         color: DS.textSecondary,
                       ),
@@ -160,10 +162,10 @@ class _PrismCardState extends ConsumerState<PrismCard>
                                 size: 12, color: DS.prismPurple,),
                             const SizedBox(width: DS.spacing4),
                             Text(
-                              '复习弱项: 分析',
+                              zh ? '复习弱项: 分析' : 'Review weak area: Analysis',
                               style:
                                   context.sparkleTypography.labelSmall.copyWith(
-                                fontWeight: FontWeight.bold,
+                                fontWeight: DS.fontWeightBold,
                                 fontSize: 10,
                                 color: DS.textPrimary,
                               ),
@@ -174,7 +176,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                     ),
                   ] else ...[
                     Text(
-                      '点击同步闪念，发现你的行为定式',
+                      zh ? '点击同步闪念，发现你的行为定式' : 'Sync your thoughts to discover behavioral patterns',
                       style: context.sparkleTypography.bodyMedium.copyWith(
                         fontSize: 12,
                         color: DS.textSecondary,
@@ -203,7 +205,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
         child: Text(
           text,
           style: context.sparkleTypography.labelSmall.copyWith(
-            fontWeight: FontWeight.bold,
+            fontWeight: DS.fontWeightBold,
             fontSize: 11,
             color: DS.textPrimary,
           ),

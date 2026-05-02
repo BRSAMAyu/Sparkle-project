@@ -1,0 +1,29 @@
+FV-02: SafeExperimentRegistry 接入生产管道
+Status: DONE_WITH_VALIDATION_BLOCKER
+Branch: codex/FV-02-safe-experiments
+Modified files:
+- backend/alembic/versions/c14_20260502_safe_experiments.py
+- backend/app/api/v1/safe_experiments.py
+- backend/app/api/v1/router.py
+- backend/app/api/v1/user_settings.py
+- backend/app/celery_schedule.py
+- backend/app/core/celery_tasks.py
+- backend/app/core/metrics.py
+- backend/app/models/__init__.py
+- backend/app/models/safe_experiment.py
+- backend/app/models/user_settings.py
+- backend/app/schemas/user_settings.py
+- backend/app/services/user_settings_service.py
+- backend/app/signals/safe_experiment_platform.py
+- backend/app/signals/safe_experiment_promotion_gate.py
+- backend/app/signals/spine_orchestrator.py
+- backend/tests/api/test_safe_experiments_api.py
+- backend/tests/unit/test_safe_experiment_platform.py
+- monitoring/grafana/dashboards/safe_experiments.json
+- monitoring/prometheus.yml
+- docs/product/parallel_closeout/FV-02_safe_experiments_REPORT_2026-05-02.md
+Verification:
+- python3 -m py_compile FV2 changed Python files: PASS
+- pytest tests/unit/test_safe_experiment_platform.py tests/api/test_safe_experiments_api.py: BLOCKED by unrelated backend/app/models/community_privacy.py reserved SQLAlchemy metadata attribute
+User-visible change: Admins can manage safe experiments, users can opt out, and high-risk contexts now receive conservative primary strategies instead of bandit exploration.
+Architect handoff: Resolve community_privacy.py model import blocker, then rerun targeted pytest and full backend integration.

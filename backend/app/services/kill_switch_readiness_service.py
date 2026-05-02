@@ -24,6 +24,124 @@ class KillSwitchReadinessService:
     """
 
     FEATURE_CATALOG: ClassVar[dict[str, dict[str, Any]]] = {
+        "stage18_aggregator": {
+            "settings_key": "AURORA_STAGE18_AGGREGATOR_MODE",
+            "current": "live",
+            "target": "live",
+            "criteria": [
+                "State aggregator writes are isolated per Rule K",
+                "Push policy and delivery are gated independently",
+            ],
+        },
+        "stage19_working_memory": {
+            "settings_key": "AURORA_STAGE19_WM_MODE",
+            "current": "live",
+            "target": "live",
+            "criteria": [
+                "Working memory consolidation respects user opt-out",
+                "LLM extractor does not leak PII into memory payloads",
+            ],
+        },
+        "stage21_skill_system": {
+            "settings_key": "AURORA_STAGE21_SKILL_MODE",
+            "current": "live",
+            "target": "live",
+            "criteria": [
+                "Skill store CRUD passes authorization checks",
+                "Skill share respects visibility boundaries",
+            ],
+        },
+        "bayesian_learning": {
+            "settings_key": "AURORA_BAYESIAN_MODE",
+            "current": "shadow",
+            "target": "live_canary",
+            "criteria": [
+                "Shadow mode collects at least 500 real outcome records",
+                "Shadow vs baseline divergence < 15%",
+                "Live canary rate limit <= 5%",
+            ],
+        },
+        "stage24_policy": {
+            "settings_key": "AURORA_STAGE24_POLICY_MODE",
+            "current": "live",
+            "target": "live",
+            "criteria": [
+                "Policy compiler output is validated before application",
+                "Accountability policy respects user preferences",
+            ],
+        },
+        "stage25_reflection": {
+            "settings_key": "AURORA_STAGE25_REFLECTION_MODE",
+            "current": "live",
+            "target": "live",
+            "criteria": [
+                "Reflection wire produces user-visible receipts",
+                "Trigger toggles are independently controllable",
+            ],
+        },
+        "stage26_scene": {
+            "settings_key": "AURORA_STAGE26_SCENE_MODE",
+            "current": "live",
+            "target": "live",
+            "criteria": [
+                "Scene detection does not overclaim context",
+                "Detour handling preserves main conversation thread",
+            ],
+        },
+        "stage27_foresight": {
+            "settings_key": "AURORA_STAGE27_FORESIGHT_MODE",
+            "current": "live",
+            "target": "live",
+            "criteria": [
+                "Foresight predictions are association-only (no causal claims)",
+                "Feature-level kill switches are independently operable",
+            ],
+        },
+        "stage28_traits": {
+            "settings_key": "AURORA_STAGE28_TRAITS_MODE",
+            "current": "live",
+            "target": "live",
+            "criteria": [
+                "NLP observer respects user cold-start corrections",
+                "Trait merge produces explainable results",
+            ],
+        },
+        "stage29_srl": {
+            "settings_key": "AURORA_STAGE29_SRL_MODE",
+            "current": "live",
+            "target": "live",
+            "criteria": [
+                "SRL phase transitions have observable evidence",
+                "Scaffolding consumption respects kill switch boundaries",
+            ],
+        },
+        "stage30_metacognition": {
+            "settings_key": "AURORA_STAGE30_METACOGNITION_MODE",
+            "current": "live",
+            "target": "live",
+            "criteria": [
+                "Bias unification produces confidence proxies, not absolute scores",
+                "Process scaffolding gates are individually controllable",
+            ],
+        },
+        "stage31_idiographic": {
+            "settings_key": "AURORA_STAGE31_IDIOGRAPHIC_MODE",
+            "current": "live",
+            "target": "live",
+            "criteria": [
+                "Idiographic correlations are association-only (Rule AP)",
+                "Within-person analysis does not generalize across users",
+            ],
+        },
+        "stage33_journey": {
+            "settings_key": "AURORA_STAGE33_JOURNEY_MODE",
+            "current": "live",
+            "target": "live",
+            "criteria": [
+                "Journey events are idempotent and deduplicated",
+                "Feature-level kill switches are independently operable",
+            ],
+        },
         "memory_inferred_write": {
             "settings_key": "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED",
             "current": "live",
@@ -34,20 +152,9 @@ class KillSwitchReadinessService:
                 "Privacy redaction and evidence-token paths remain active",
             ],
         },
-        "bayesian_learning": {
-            "settings_key": "AURORA_BAYESIAN_MODE",
-            "current": "shadow",  # 已经升为shadow（本流C9做的）
-            "target": "live_canary",
-            "criteria": [
-                "shadow 模式收集至少 500 个真实 outcome 记录",
-                "shadow vs baseline divergence < 15%",
-                "live_canary 限流 <= 5%",
-            ],
-        },
     }
 
     KNOWN_BLOCKERS: ClassVar[dict[str, list[str]]] = {
-        "memory_inferred_write": [],
         "bayesian_learning": [
             "Bayesian learner has just entered shadow mode and needs real outcome data",
             "Shadow vs baseline divergence has not been measured on production traffic",
@@ -56,11 +163,47 @@ class KillSwitchReadinessService:
     }
 
     SUPPORTING_EVIDENCE: ClassVar[dict[str, list[str]]] = {
-        "memory_inferred_write": [
-            "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED is enabled after Rule Y guard validation",
+        "stage18_aggregator": [
+            "Stage 18 SQAM complete; aggregator is live with push policy/delivery gated independently",
+        ],
+        "stage19_working_memory": [
+            "Stage 19 SQAM complete; WM consolidation is live with LLM extractor gated",
+        ],
+        "stage21_skill_system": [
+            "Stage 21 SQAM complete; skill store/share/select are live",
         ],
         "bayesian_learning": [
             "Stage 23 SQAM is complete; shadow mode is the next data-collection step",
+        ],
+        "stage24_policy": [
+            "Stage 24 SQAM complete; policy compiler is live",
+        ],
+        "stage25_reflection": [
+            "Stage 25 SQAM complete; reflection wire is live with trigger toggles",
+        ],
+        "stage26_scene": [
+            "Stage 26 SQAM complete; scene detection is live",
+        ],
+        "stage27_foresight": [
+            "Stage 27 SQAM complete; foresight predictions are live",
+        ],
+        "stage28_traits": [
+            "Stage 28 SQAM complete; traits NLP/coldstart are live",
+        ],
+        "stage29_srl": [
+            "Stage 29 SQAM complete; SRL tracker/bridge/scaffolding are live",
+        ],
+        "stage30_metacognition": [
+            "Stage 30 SQAM complete; metacognition with bias unification is live",
+        ],
+        "stage31_idiographic": [
+            "Stage 31 SQAM complete; idiographic associations are live",
+        ],
+        "stage33_journey": [
+            "Stage 33 SQAM complete; journey events are live with feature-level kill switches",
+        ],
+        "memory_inferred_write": [
+            "SPARKLE_MEMORY_INFERRED_WRITE_ENABLED is enabled after Rule Y guard validation",
         ],
     }
 

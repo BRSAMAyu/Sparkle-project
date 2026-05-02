@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/motion.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     show CustomButton, CustomButtonSize;
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -12,13 +12,16 @@ import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
+import 'package:sparkle/features/chat/presentation/providers/low_yield_block_provider.dart';
 import 'package:sparkle/features/chat/presentation/widgets/aurora_nudge_entry.dart';
 import 'package:sparkle/features/chat/presentation/widgets/bottleneck_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/focus_action_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/graph_diagnostic_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/low_yield_gentle_block_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_progress_strip.dart';
 import 'package:sparkle/features/chat/presentation/widgets/plan_strategy_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/profile_front_door_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/task_stuck_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_card.dart';
@@ -28,7 +31,7 @@ import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/shared/utils/entity_card_payloads.dart';
 
-class ActionCard extends StatefulWidget {
+class ActionCard extends ConsumerStatefulWidget {
   const ActionCard({
     required this.action,
     super.key,
@@ -49,10 +52,11 @@ class ActionCard extends StatefulWidget {
       onWidgetAction;
 
   @override
-  State<ActionCard> createState() => _ActionCardState();
+  ConsumerState<ActionCard> createState() => _ActionCardState();
 }
 
-class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
+class _ActionCardState extends ConsumerState<ActionCard>
+    with TickerProviderStateMixin {
   static const Set<String> _narrativeKeys = {
     'summary',
     'description',
@@ -302,7 +306,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   right: DS.spacing8,
                 ),
                 child: SparkleButton(
-                  label: _confirmingTasks ? context.l10n.chatActionConfirming : context.l10n.chatActionConfirmTask,
+                  label: _confirmingTasks
+                      ? context.l10n.chatActionConfirming
+                      : context.l10n.chatActionConfirmTask,
                   onPressed: _confirmingTasks
                       ? null
                       : () => unawaited(_handleConfirmTasks(toolResultId)),
@@ -330,191 +336,196 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       });
     }
 
-    return GestureDetector(
-      onTapDown: isPressable ? (_) => _pressController.forward() : null,
-      onTapUp: isPressable ? (_) => _pressController.reverse() : null,
-      onTapCancel: isPressable ? () => _pressController.reverse() : null,
-      onTap: supportsTapToggle
-          ? () {
-              unawaited(
-                SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-              );
-              toggleDetails();
-            }
-          : hasAction
-              ? () => unawaited(
-                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-                  )
-              : null,
-      child: SparkleMotion.pressScale(
-        animation: _pressController,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: context.colors.surfaceCard,
-            borderRadius: DS.borderRadius16,
-            boxShadow: DS.shadowMd,
-          ),
-          child: ClipRRect(
-            borderRadius: DS.borderRadius16,
-            child: Stack(
-              children: [
-                // Gradient Stripe
-                Positioned(
-                  left: 0,
-                  top: 0,
-                  bottom: 0,
-                  width: 4,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: _getActionGradientFor(widget.action),
+    return Semantics(
+      button: true,
+      label: 'Chat action card control 1',
+      child: GestureDetector(
+        onTapDown: isPressable ? (_) => _pressController.forward() : null,
+        onTapUp: isPressable ? (_) => _pressController.reverse() : null,
+        onTapCancel: isPressable ? () => _pressController.reverse() : null,
+        onTap: supportsTapToggle
+            ? () {
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                );
+                toggleDetails();
+              }
+            : hasAction
+                ? () => unawaited(
+                      SensoryFeedbackService.emit(
+                          SensoryFeedbackEvent.selection),
+                    )
+                : null,
+        child: SparkleMotion.pressScale(
+          animation: _pressController,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: context.colors.surfaceCard,
+              borderRadius: DS.borderRadius16,
+              boxShadow: DS.shadowMd,
+            ),
+            child: ClipRRect(
+              borderRadius: DS.borderRadius16,
+              child: Stack(
+                children: [
+                  // Gradient Stripe
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    bottom: 0,
+                    width: 4,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: _getActionGradientFor(widget.action),
+                      ),
                     ),
                   ),
-                ),
 
-                // Shimmer overlay for unconfirmed actions
-                if (hasAction)
-                  Positioned.fill(
-                    child: TweenAnimationBuilder<double>(
-                      tween: Tween(begin: -2.0, end: 2.0),
-                      duration: const Duration(seconds: 3),
-                      builder: (context, value, child) => Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              DS.surfacePrimary.withValues(alpha: 0),
-                              DS.brandPrimary.withValues(alpha: 0.1),
-                              DS.surfacePrimary.withValues(alpha: 0),
-                            ],
-                            stops: [
-                              (value - 0.3).clamp(0.0, 1.0),
-                              value.clamp(0.0, 1.0),
-                              (value + 0.3).clamp(0.0, 1.0),
-                            ],
+                  // Shimmer overlay for unconfirmed actions
+                  if (hasAction)
+                    Positioned.fill(
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: -2.0, end: 2.0),
+                        duration: const Duration(seconds: 3),
+                        builder: (context, value, child) => Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                DS.surfacePrimary.withValues(alpha: 0),
+                                DS.brandPrimary.withValues(alpha: 0.1),
+                                DS.surfacePrimary.withValues(alpha: 0),
+                              ],
+                              stops: [
+                                (value - 0.3).clamp(0.0, 1.0),
+                                value.clamp(0.0, 1.0),
+                                (value + 0.3).clamp(0.0, 1.0),
+                              ],
+                            ),
                           ),
                         ),
+                        onEnd: () {
+                          // Restart animation
+                          if (mounted) setState(() {});
+                        },
                       ),
-                      onEnd: () {
-                        // Restart animation
-                        if (mounted) setState(() {});
-                      },
                     ),
-                  ),
 
-                Padding(
-                  padding: const EdgeInsets.all(DS.spacing16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          AnimatedBuilder(
-                            animation: _iconScaleAnimation,
-                            builder: (context, child) => Transform.scale(
-                              scale:
-                                  hasAction ? _iconScaleAnimation.value : 1.0,
-                              child: Container(
-                                padding: const EdgeInsets.all(DS.spacing8),
-                                decoration: BoxDecoration(
-                                  gradient:
-                                      _getActionGradientFor(widget.action),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _getActionColorFor(widget.action)
-                                          .withValues(alpha: 0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  _getActionIconFor(widget.action),
-                                  color: DS.brandPrimaryConst,
-                                  size: DS.iconSizeSm,
+                  Padding(
+                    padding: const EdgeInsets.all(DS.spacing16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            AnimatedBuilder(
+                              animation: _iconScaleAnimation,
+                              builder: (context, child) => Transform.scale(
+                                scale:
+                                    hasAction ? _iconScaleAnimation.value : 1.0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(DS.spacing8),
+                                  decoration: BoxDecoration(
+                                    gradient:
+                                        _getActionGradientFor(widget.action),
+                                    shape: BoxShape.circle,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: _getActionColorFor(widget.action)
+                                            .withValues(alpha: 0.3),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Icon(
+                                    _getActionIconFor(widget.action),
+                                    color: DS.brandPrimaryConst,
+                                    size: DS.iconSizeSm,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: DS.spacing12),
-                          Expanded(
-                            child: Text(
-                              _getTitleForAction(widget.action.type),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: DS.fontWeightBold,
-                                    color: DS.neutral900,
-                                  ),
+                            const SizedBox(width: DS.spacing12),
+                            Expanded(
+                              child: Text(
+                                _getTitleForAction(widget.action.type),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                      fontWeight: DS.fontWeightBold,
+                                      color: DS.neutral900,
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: DS.spacing16),
+                        if (isCollapsible && !_detailsExpanded)
+                          _buildCollapsedPreview(context, widget.action)
+                        else
+                          _buildContentForAction(context, widget.action),
+                        if (isCollapsible) ...[
+                          const SizedBox(height: DS.spacing12),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton.icon(
+                              onPressed: () {
+                                setState(() {
+                                  _detailsExpanded = !_detailsExpanded;
+                                });
+                              },
+                              icon: Icon(
+                                _detailsExpanded
+                                    ? Icons.unfold_less_rounded
+                                    : Icons.unfold_more_rounded,
+                                size: DS.iconSizeSm,
+                              ),
+                              label: Text(
+                                _detailsExpanded
+                                    ? context.l10n.commonCollapse
+                                    : context.l10n.commonExpand,
+                              ),
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: DS.spacing16),
-                      if (isCollapsible && !_detailsExpanded)
-                        _buildCollapsedPreview(context, widget.action)
-                      else
-                        _buildContentForAction(context, widget.action),
-                      if (isCollapsible) ...[
-                        const SizedBox(height: DS.spacing12),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton.icon(
-                            onPressed: () {
-                              setState(() {
-                                _detailsExpanded = !_detailsExpanded;
-                              });
-                            },
-                            icon: Icon(
-                              _detailsExpanded
-                                  ? Icons.unfold_less_rounded
-                                  : Icons.unfold_more_rounded,
-                              size: DS.iconSizeSm,
-                            ),
-                            label: Text(
-                              _detailsExpanded
-                                  ? context.l10n.commonCollapse
-                                  : context.l10n.commonExpand,
-                            ),
+                        if (hasAction) ...[
+                          const SizedBox(height: DS.spacing16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              if (widget.onDismiss != null)
+                                CustomButton.text(
+                                  text: dismissLabel,
+                                  onPressed: () => unawaited(
+                                    _handleGenericDismiss(widget.action),
+                                  ),
+                                  size: CustomButtonSize.small,
+                                ),
+                              const SizedBox(width: DS.spacing8),
+                              if (widget.onConfirm != null)
+                                CustomButton.primary(
+                                  text: confirmLabel,
+                                  icon: Icons.check_rounded,
+                                  onPressed: () => unawaited(
+                                    _handleGenericConfirm(widget.action),
+                                  ),
+                                  size: CustomButtonSize.small,
+                                  customGradient:
+                                      _getActionGradientFor(widget.action),
+                                ),
+                            ],
                           ),
-                        ),
+                        ],
                       ],
-                      if (hasAction) ...[
-                        const SizedBox(height: DS.spacing16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            if (widget.onDismiss != null)
-                              CustomButton.text(
-                                text: dismissLabel,
-                                onPressed: () => unawaited(
-                                  _handleGenericDismiss(widget.action),
-                                ),
-                                size: CustomButtonSize.small,
-                              ),
-                            const SizedBox(width: DS.spacing8),
-                            if (widget.onConfirm != null)
-                              CustomButton.primary(
-                                text: confirmLabel,
-                                icon: Icons.check_rounded,
-                                onPressed: () => unawaited(
-                                  _handleGenericConfirm(widget.action),
-                                ),
-                                size: CustomButtonSize.small,
-                                customGradient:
-                                    _getActionGradientFor(widget.action),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -620,11 +631,16 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'planning_progress_strip':
         return DS.infoGradient;
       case 'aurora_nudge_entry':
+      case 'aurora_runtime_follow_up':
         return const LinearGradient(
           colors: [Color(0xFF0EA5A4), Color(0xFF4F46E5)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         );
+      case 'task_stuck_card':
+        return DS.warningGradient;
+      case 'low_yield_gentle_block':
+        return DS.infoGradient;
       default:
         return DS.primaryGradient;
     }
@@ -685,7 +701,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'planning_progress_strip':
         return DS.info;
       case 'aurora_nudge_entry':
+      case 'aurora_runtime_follow_up':
         return const Color(0xFF0EA5A4);
+      case 'task_stuck_card':
+        return DS.warning;
+      case 'low_yield_gentle_block':
+        return DS.info;
       default:
         return DS.primaryBase;
     }
@@ -752,7 +773,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'planning_progress_strip':
         return Icons.linear_scale_rounded;
       case 'aurora_nudge_entry':
+      case 'aurora_runtime_follow_up':
         return Icons.psychology_rounded;
+      case 'task_stuck_card':
+        return Icons.assignment_late_rounded;
+      case 'low_yield_gentle_block':
+        return Icons.tips_and_updates_outlined;
       default:
         return Icons.touch_app_rounded;
     }
@@ -808,7 +834,12 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'planning_progress_strip':
         return context.l10n.chatActionPlanningProcess;
       case 'aurora_nudge_entry':
+      case 'aurora_runtime_follow_up':
         return context.l10n.chatActionAuroraReminder;
+      case 'task_stuck_card':
+        return context.l10n.stuckHelpTitle;
+      case 'low_yield_gentle_block':
+        return context.l10n.lowYieldCardTitle;
       default:
         return l10n.chatActionTitleDefault;
     }
@@ -899,6 +930,37 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       return AuroraNudgeEntry(
         data: action.data,
         onWidgetAction: widget.onWidgetAction,
+      );
+    }
+    if (action.type == 'aurora_runtime_follow_up') {
+      return _buildAuroraRuntimeFollowUp(context, action);
+    }
+    if (action.type == 'task_stuck_card') {
+      return TaskStuckCard(
+        data: action.data,
+        onWidgetAction: widget.onWidgetAction,
+      );
+    }
+    if (action.type == 'low_yield_gentle_block') {
+      final block = LowYieldBlock.fromPayload(action.data);
+      return LowYieldGentleBlockCard(
+        block: block,
+        onAccept: (block) async {
+          await ref.read(lowYieldBlockProvider.notifier).accept(block);
+          final route = block.route;
+          if (route != null && route.isNotEmpty && context.mounted) {
+            unawaited(context.push(route));
+          }
+        },
+        onDismiss: (block) =>
+            ref.read(lowYieldBlockProvider.notifier).dismiss(block),
+        onCorrect: (block) async {
+          await ref.read(lowYieldBlockProvider.notifier).correct(block);
+          await widget.onWidgetAction?.call(
+            'low_yield_correction',
+            block.rawPayload,
+          );
+        },
       );
     }
     if (action.type == 'system_update') {
@@ -1215,7 +1277,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                 ? context.l10n.chatActionAiExecutionSuggestion
                 : l10n.chatActionTitleExecutionSummary);
       case 'create_task':
-        return '任务';
+        return I18nService.instance.isChinese ? '任务' : 'Task';
       case 'create_plan':
       case 'plan_card':
         return context.l10n.chatActionStudyPlan;
@@ -1309,6 +1371,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       case 'reflection_card':
       case 'plan_card':
       case 'task_list':
+      case 'aurora_runtime_follow_up':
+      case 'task_stuck_card':
+      case 'low_yield_gentle_block':
         return true;
       default:
         return false;
@@ -1372,6 +1437,97 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
       return scalarItems.join(' · ');
     }
     return null;
+  }
+
+  Widget _buildAuroraRuntimeFollowUp(
+    BuildContext context,
+    WidgetPayload action,
+  ) {
+    final rawRenderAction = action.data['render_action'];
+    final renderAction = rawRenderAction is Map
+        ? Map<String, dynamic>.from(rawRenderAction)
+        : const <String, dynamic>{};
+    final title = _asString(renderAction['title']) ??
+        _asString(action.data['title']) ??
+        context.l10n.chatActionAuroraReminder;
+    final summary = _asString(renderAction['summary']) ??
+        _asString(action.data['message']) ??
+        _asString(action.data['blocker_summary']) ??
+        '';
+    final checkpoint = _asString(renderAction['checkpoint_description']) ??
+        _asString(action.data['checkpoint_description']);
+    final nextTask = _asString(renderAction['next_task_title']) ??
+        _asString(action.data['next_task_title']);
+    final ctaLabel = _asString(renderAction['cta_label']) ??
+        (I18nService.instance.isChinese ? '接着聊' : 'Continue');
+    final wakeId =
+        _asString(renderAction['wake_id']) ?? _asString(action.data['wake_id']);
+    final conversationId = _asString(renderAction['conversation_id']) ??
+        _asString(action.data['conversation_id']);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: DS.neutral900,
+                fontWeight: DS.fontWeightSemibold,
+              ),
+        ),
+        if (summary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing8),
+          Text(
+            summary,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: DS.neutral700,
+                  height: 1.42,
+                ),
+          ),
+        ],
+        if (checkpoint != null || nextTask != null) ...[
+          const SizedBox(height: DS.spacing12),
+          Wrap(
+            spacing: DS.spacing8,
+            runSpacing: DS.spacing8,
+            children: [
+              if (checkpoint != null)
+                _buildMetaChip(
+                  icon: Icons.flag_outlined,
+                  label: checkpoint,
+                ),
+              if (nextTask != null)
+                _buildMetaChip(
+                  icon: Icons.task_alt_rounded,
+                  label: nextTask,
+                ),
+            ],
+          ),
+        ],
+        if (widget.onWidgetAction != null && summary.isNotEmpty) ...[
+          const SizedBox(height: DS.spacing12),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: () => unawaited(
+                widget.onWidgetAction!(
+                  'checkpoint_follow_up_continue',
+                  {
+                    'prompt': summary,
+                    if (wakeId != null) 'wake_id': wakeId,
+                    if (conversationId != null)
+                      'conversation_id': conversationId,
+                    if (renderAction.isNotEmpty) 'render_action': renderAction,
+                  },
+                ),
+              ),
+              icon: const Icon(Icons.reply_rounded, size: 16),
+              label: Text(ctaLabel),
+            ),
+          ),
+        ],
+      ],
+    );
   }
 
   Widget _buildTaskListContent(BuildContext context, WidgetPayload action) {
@@ -1446,7 +1602,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                   children: [
                     Expanded(
                       child: SparkleButton(
-                        label: '打开',
+                        label: I18nService.instance.isChinese ? '打开' : 'Open',
                         variant: ButtonVariant.ghost,
                         icon: const Icon(Icons.open_in_new_rounded),
                         onPressed: canOpenTask
@@ -1458,7 +1614,7 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     const SizedBox(width: DS.spacing8),
                     Expanded(
                       child: SparkleButton(
-                        label: '分享',
+                        label: I18nService.instance.isChinese ? '分享' : 'Share',
                         variant: ButtonVariant.ghost,
                         icon: const Icon(Icons.share_outlined),
                         onPressed: canShareTask
@@ -1558,9 +1714,10 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                                     entity.share?.resourceType ?? 'plan',
                                 resourceId: entity.share?.resourceId ?? planId,
                                 title: entity.share?.title ??
-                                    (planTitle ?? context.l10n.chatActionStudyPlan),
-                                subtitle:
-                                    entity.share?.subtitle ?? context.l10n.chatActionAiGeneratedPlan,
+                                    (planTitle ??
+                                        context.l10n.chatActionStudyPlan),
+                                subtitle: entity.share?.subtitle ??
+                                    context.l10n.chatActionAiGeneratedPlan,
                               ),
                             )
                         : () {},
@@ -1574,7 +1731,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           Padding(
             padding: const EdgeInsets.only(top: DS.spacing12),
             child: SparkleButton(
-              label: _confirmingTasks ? context.l10n.chatActionConfirming : context.l10n.chatActionConfirmAllTasks,
+              label: _confirmingTasks
+                  ? context.l10n.chatActionConfirming
+                  : context.l10n.chatActionConfirmAllTasks,
               icon: const Icon(Icons.check_circle_outline),
               onPressed: _confirmingTasks
                   ? null
@@ -1816,7 +1975,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
     final retryAction =
         _executionSummaryPreviewData(action.data['retry_action']);
     final comparisonHeadline = comparisonSummary is Map<String, dynamic>
-        ? comparisonSummary['headline']?.toString() ?? context.l10n.chatActionResultComparison
+        ? comparisonSummary['headline']?.toString() ??
+            context.l10n.chatActionResultComparison
         : comparisonSummary != null
             ? context.l10n.chatActionResultComparison
             : null;
@@ -2000,19 +2160,23 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               if (validationTotal > 0)
                 _buildMetaChip(
                   icon: Icons.rule_rounded,
-                  label: context.l10n.chatActionValidationSteps(validationPassed, validationTotal),
+                  label: context.l10n.chatActionValidationSteps(
+                      validationPassed, validationTotal),
                 ),
               if (qualityScore > 0)
                 _buildMetaChip(
                   icon: Icons.fact_check_rounded,
-                  label: context.l10n.chatActionQualityScore((qualityScore * 100).round().toString()),
+                  label: context.l10n.chatActionQualityScore(
+                      (qualityScore * 100).round().toString()),
                 ),
               if (selfVerification != null &&
                   (selfVerification['score'] as num?) != null)
                 _buildMetaChip(
                   icon: Icons.verified_user_rounded,
-                  label:
-                      context.l10n.chatActionSelfCheck((((selfVerification['score'] as num?) ?? 0) * 100).round().toString()),
+                  label: context.l10n.chatActionSelfCheck(
+                      (((selfVerification['score'] as num?) ?? 0) * 100)
+                          .round()
+                          .toString()),
                 ),
             ],
           ),
@@ -2164,7 +2328,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        step['title']?.toString() ?? context.l10n.chatActionManualSteps,
+                        step['title']?.toString() ??
+                            context.l10n.chatActionManualSteps,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontWeight: DS.fontWeightSemibold,
                               color: DS.neutral900,
@@ -2188,30 +2353,34 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               (retryAction['label']?.toString() ?? '').isNotEmpty &&
               widget.onWidgetAction != null) ...[
             const SizedBox(height: DS.spacing4),
-            InkWell(
-              onTap: () => unawaited(
-                widget.onWidgetAction!.call(
-                  retryAction['type']?.toString() ?? 'prompt',
-                  retryAction,
+            Semantics(
+              button: true,
+              label: 'Chat action card control 2',
+              child: InkWell(
+                onTap: () => unawaited(
+                  widget.onWidgetAction!.call(
+                    retryAction['type']?.toString() ?? 'prompt',
+                    retryAction,
+                  ),
                 ),
-              ),
-              borderRadius: DS.borderRadius20,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing12,
-                  vertical: DS.spacing8,
-                ),
-                decoration: BoxDecoration(
-                  color: DS.primaryBase.withValues(alpha: 0.1),
-                  borderRadius: DS.borderRadius20,
-                  border:
-                      Border.all(color: DS.primaryBase.withValues(alpha: 0.18)),
-                ),
-                child: Text(
-                  retryAction['label'].toString(),
-                  style: TextStyle(
-                    color: DS.primaryBase,
-                    fontWeight: DS.fontWeightSemibold,
+                borderRadius: DS.borderRadius20,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing12,
+                    vertical: DS.spacing8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: DS.primaryBase.withValues(alpha: 0.1),
+                    borderRadius: DS.borderRadius20,
+                    border: Border.all(
+                        color: DS.primaryBase.withValues(alpha: 0.18)),
+                  ),
+                  child: Text(
+                    retryAction['label'].toString(),
+                    style: TextStyle(
+                      color: DS.primaryBase,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
                   ),
                 ),
               ),
@@ -2272,7 +2441,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  step['label']?.toString() ?? context.l10n.chatActionExecutionSteps,
+                  step['label']?.toString() ??
+                      context.l10n.chatActionExecutionSteps,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: DS.fontWeightSemibold,
                         color: DS.neutral900,
@@ -2332,7 +2502,9 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
             borderRadius: DS.borderRadius8,
           ),
           child: Text(
-            executionMode == 'hybrid' ? context.l10n.chatActionNeedsReview : context.l10n.chatActionCanDelegate,
+            executionMode == 'hybrid'
+                ? context.l10n.chatActionNeedsReview
+                : context.l10n.chatActionCanDelegate,
             style: TextStyle(
               color: DS.primaryBase,
               fontWeight: DS.fontWeightSemibold,
@@ -2356,17 +2528,21 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           children: [
             _buildMetaChip(
               icon: Icons.memory_rounded,
-              label: executionMode == 'hybrid' ? context.l10n.chatActionHybridExecution : context.l10n.chatActionAutoExecution,
+              label: executionMode == 'hybrid'
+                  ? context.l10n.chatActionHybridExecution
+                  : context.l10n.chatActionAutoExecution,
             ),
             _buildMetaChip(
               icon: Icons.hub_outlined,
-              label: context.l10n.chatActionEnvironment(targetEnv.toUpperCase()),
+              label:
+                  context.l10n.chatActionEnvironment(targetEnv.toUpperCase()),
             ),
             if (delegatePreference != null)
               _buildMetaChip(
                 icon: Icons.favorite_border_rounded,
-                label:
-                    context.l10n.chatActionTrust((double.tryParse('$delegatePreference') ?? 0).toStringAsFixed(2)),
+                label: context.l10n.chatActionTrust(
+                    (double.tryParse('$delegatePreference') ?? 0)
+                        .toStringAsFixed(2)),
               ),
           ],
         ),
@@ -2565,31 +2741,35 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
           ? DS.primaryBase.withValues(alpha: 0.2)
           : (isGhost ? DS.neutral300 : DS.neutral200);
       final textColor = isPrimary ? DS.primaryBase : DS.neutral700;
-      return InkWell(
-        onTap: label.isEmpty
-            ? null
-            : () => unawaited(
-                  widget.onWidgetAction?.call(
-                    item['type']?.toString() ?? 'prompt',
-                    item,
+      return Semantics(
+        button: true,
+        label: 'Chat action card control 3',
+        child: InkWell(
+          onTap: label.isEmpty
+              ? null
+              : () => unawaited(
+                    widget.onWidgetAction?.call(
+                      item['type']?.toString() ?? 'prompt',
+                      item,
+                    ),
                   ),
-                ),
-        borderRadius: DS.borderRadius20,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing8,
-          ),
-          decoration: BoxDecoration(
-            color: backgroundColor,
-            borderRadius: DS.borderRadius20,
-            border: Border.all(color: borderColor),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: textColor,
-              fontWeight: DS.fontWeightSemibold,
+          borderRadius: DS.borderRadius20,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
+              vertical: DS.spacing8,
+            ),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: DS.borderRadius20,
+              border: Border.all(color: borderColor),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                color: textColor,
+                fontWeight: DS.fontWeightSemibold,
+              ),
             ),
           ),
         ),
@@ -3310,7 +3490,8 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
   }
 
   Widget _buildAdaptationSummary(BuildContext context, WidgetPayload action) {
-    final title = action.data['title']?.toString() ?? context.l10n.chatActionMadeAdjustment;
+    final title = action.data['title']?.toString() ??
+        context.l10n.chatActionMadeAdjustment;
     final summary = action.data['summary']?.toString() ?? '';
     final reversibility = action.data['reversibility_note']?.toString() ?? '';
     final evidence = action.data['evidence_summary']?.toString() ?? '';
@@ -3508,29 +3689,33 @@ class _ActionCardState extends State<ActionCard> with TickerProviderStateMixin {
                       }
                     : item;
 
-                return InkWell(
-                  onTap: () => unawaited(
-                    widget.onWidgetAction?.call(
-                      item['type']?.toString() ?? 'prompt',
-                      actionPayload,
+                return Semantics(
+                  button: true,
+                  label: 'Chat action card control 4',
+                  child: InkWell(
+                    onTap: () => unawaited(
+                      widget.onWidgetAction?.call(
+                        item['type']?.toString() ?? 'prompt',
+                        actionPayload,
+                      ),
                     ),
-                  ),
-                  borderRadius: DS.borderRadius20,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing12,
-                      vertical: DS.spacing8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: DS.surfaceTertiary,
-                      borderRadius: DS.borderRadius20,
-                      border: Border.all(color: DS.neutral200),
-                    ),
-                    child: Text(
-                      item['label']?.toString() ?? '',
-                      style: TextStyle(
-                        color: DS.neutral700,
-                        fontWeight: DS.fontWeightSemibold,
+                    borderRadius: DS.borderRadius20,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing12,
+                        vertical: DS.spacing8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.surfaceTertiary,
+                        borderRadius: DS.borderRadius20,
+                        border: Border.all(color: DS.neutral200),
+                      ),
+                      child: Text(
+                        item['label']?.toString() ?? '',
+                        style: TextStyle(
+                          color: DS.neutral700,
+                          fontWeight: DS.fontWeightSemibold,
+                        ),
                       ),
                     ),
                   ),

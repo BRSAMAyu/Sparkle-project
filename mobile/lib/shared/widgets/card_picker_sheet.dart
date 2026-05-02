@@ -217,7 +217,7 @@ class _PickerTile extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
             trailing: isSelected
-                ? const Icon(Icons.check_circle_rounded, color: Colors.green)
+                ? Icon(Icons.check_circle_rounded, color: DS.success)
                 : const Icon(Icons.chevron_right_rounded),
           ),
         ),

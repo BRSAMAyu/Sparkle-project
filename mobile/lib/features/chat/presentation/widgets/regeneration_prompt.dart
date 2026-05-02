@@ -229,51 +229,55 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
     );
   }
 
-  Widget _buildHeader(ThemeData theme) => InkWell(
-        onTap: widget.status == RegenerationStatus.idle
-            ? () {
-                setState(() {
-                  _isExpanded = !_isExpanded;
-                });
-              }
-            : null,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(DS.spacing16),
-          child: Row(
-            children: [
-              Icon(
-                _getStatusIcon(),
-                color: _getStatusColor(theme),
-                size: 20,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _getStatusTitle(),
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: DS.fontWeightSemibold,
-                      ),
-                    ),
-                    if (widget.status != RegenerationStatus.idle)
+  Widget _buildHeader(ThemeData theme) => Semantics(
+        button: true,
+        label: 'Chat regeneration prompt control 1',
+        child: InkWell(
+          onTap: widget.status == RegenerationStatus.idle
+              ? () {
+                  setState(() {
+                    _isExpanded = !_isExpanded;
+                  });
+                }
+              : null,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(DS.spacing16),
+            child: Row(
+              children: [
+                Icon(
+                  _getStatusIcon(),
+                  color: _getStatusColor(theme),
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        _getStatusDescription(),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
+                        _getStatusTitle(),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: DS.fontWeightSemibold,
                         ),
                       ),
-                  ],
+                      if (widget.status != RegenerationStatus.idle)
+                        Text(
+                          _getStatusDescription(),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-              if (widget.status == RegenerationStatus.idle)
-                Icon(
-                  _isExpanded ? Icons.expand_less : Icons.expand_more,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-            ],
+                if (widget.status == RegenerationStatus.idle)
+                  Icon(
+                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+              ],
+            ),
           ),
         ),
       );

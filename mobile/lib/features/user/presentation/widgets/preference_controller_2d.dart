@@ -267,7 +267,7 @@ class _PreferenceController2DState extends State<PreferenceController2D> {
     const labelPadding = 8.0;
     final textStyle = TextStyle(
       fontSize: 10,
-      fontWeight: FontWeight.bold,
+      fontWeight: DS.fontWeightBold,
       color: DS.textSecondary,
     );
 

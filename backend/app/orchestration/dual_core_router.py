@@ -1,16 +1,17 @@
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from app.core.time_utils import utcnow
+from typing import TYPE_CHECKING, Any
 
 from app.services.social_signal_types import SocialSignalsV1
 from app.services.srl_phase_types import SRLPhaseHint
 from app.state_aggregator.schema import MetacognitionHintV1
 
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
+if TYPE_CHECKING:
+    from app.orchestration.routing_parameter_registry import RoutingParameterSnapshot
 
 
 @dataclass(frozen=True)
@@ -20,7 +21,7 @@ class AdaptationRecord:
     expected_effect: str
     user_facing_message: str
     source: str
-    created_at: str = field(default_factory=lambda: _utcnow().isoformat())
+    created_at: str = field(default_factory=lambda: utcnow().isoformat())
     record_id: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -65,12 +66,16 @@ class DualCoreRoutingInput:
     cognitive_load: float | None = None
     capsule_preferences: dict[str, Any] = field(default_factory=dict)
     spine_active_states: list[dict[str, Any]] = field(default_factory=list)
+    scaffolding_snapshot: dict[str, Any] = field(default_factory=dict)
     aurora_preferences: dict[str, str] = field(default_factory=dict)
+    recent_corrections: list[dict[str, Any]] = field(default_factory=list)
+    recent_route_outcomes: list[dict[str, Any]] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
 class CognitiveAdjustment:
     """Structured cognitive adjustment from Dual-Core Router."""
+
     dimension: str  # tone, verbosity, challenge_level, explanation_depth, etc.
     value: str | int | float
     reason: str
@@ -103,6 +108,9 @@ class DualCoreDecision:
     routing_debug: dict[str, Any] = field(default_factory=dict)
     strategy_adjustments: list[dict[str, Any]] = field(default_factory=list)
     structured_adjustments: list[CognitiveAdjustment] = field(default_factory=list)
+    signal_scores: dict[str, float] = field(default_factory=dict)
+    routing_trace_id: str = field(default_factory=lambda: f"dcr_{uuid.uuid4().hex}")
+    scaffolding_zone: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -113,6 +121,9 @@ class DualCoreDecision:
             "execution_constraints": list(self.execution_constraints),
             "routing_debug": dict(self.routing_debug or {}),
             "strategy_adjustments": [dict(item) for item in self.strategy_adjustments if isinstance(item, dict)],
+            "signal_scores": {str(k): float(v) for k, v in (self.signal_scores or {}).items()},
+            "routing_trace_id": self.routing_trace_id,
+            "scaffolding_zone": self.scaffolding_zone,
         }
 
     @property
@@ -127,19 +138,13 @@ class DualCoreDecision:
     def prompt_instruction(self) -> str:
         sections: list[str] = []
         if self.cognitive_adjustments:
-            sections.append(
-                "## 双核心认知调制\n"
-                + "\n".join(f"- {item}" for item in self.cognitive_adjustments)
-            )
+            sections.append("## 双核心认知调制\n" + "\n".join(f"- {item}" for item in self.cognitive_adjustments))
         if self.structured_adjustments:
             lines = [f"- {adj.to_text()}" for adj in self.structured_adjustments]
             if lines:
                 sections.append("## 结构化认知调整\n" + "\n".join(lines))
         if self.execution_constraints:
-            sections.append(
-                "## 双核心执行约束\n"
-                + "\n".join(f"- {item}" for item in self.execution_constraints)
-            )
+            sections.append("## 双核心执行约束\n" + "\n".join(f"- {item}" for item in self.execution_constraints))
         return "\n\n".join(section for section in sections if section).strip()
 
 
@@ -149,6 +154,15 @@ class DualCoreRouter:
         "emotional_sensitivity": 0.5,
         "directness_preference": 0.5,
     }
+
+    def __init__(self, parameter_snapshot: RoutingParameterSnapshot | None = None):
+        self._parameter_snapshot = parameter_snapshot
+
+    def _param(self, key: str, default: float | int) -> float | int:
+        if self._parameter_snapshot is not None:
+            return self._parameter_snapshot.get(key, default)
+        return default
+
     NEGATIVE_SENTIMENTS = {
         "anxious",
         "burnout",
@@ -191,8 +205,12 @@ class DualCoreRouter:
     def route(self, routing_input: DualCoreRoutingInput) -> DualCoreDecision:
         profile = self._resolved_profile(routing_input)
         goal_clarity_score = self._goal_clarity_score(routing_input)
-        goal_clear_threshold = self._goal_clear_threshold(profile)
-        low_conf_threshold = self._low_confidence_threshold(profile)
+        if self._parameter_snapshot is not None:
+            goal_clear_threshold = self._goal_clear_threshold_from_params(profile)
+            low_conf_threshold = self._low_confidence_threshold_from_params(profile)
+        else:
+            goal_clear_threshold = self._goal_clear_threshold(profile)
+            low_conf_threshold = self._low_confidence_threshold(profile)
         emotional_block_score = self._emotional_block_score(routing_input)
         procrastination_score = self._procrastination_score(routing_input)
 
@@ -203,11 +221,53 @@ class DualCoreRouter:
             procrastination_score,
             profile,
         )
+
+        # Compute explicit precedence scores (higher = more override authority)
+        pw = {
+            k: float(self._param(k, v))
+            for k, v in {
+                "emotional_block": 9.0,
+                "procrastination": 8.0,
+                "cognitive_mode": 7.0,
+                "low_metacognition": 6.0,
+                "high_cognitive_load": 5.0,
+                "spine_fatigue": 4.0,
+                "reflection_phase": 3.0,
+                "goal_clarity": 1.0,
+                "scaffolding_frustration": 6.5,
+                "scaffolding_boredom": 2.5,
+                "route_outcome_failure": 7.5,
+                "route_outcome_over_scaffolded": 4.5,
+            }.items()
+        }
+        precedence = {
+            "emotional_block": pw["emotional_block"] if emotional_block else 0.0,
+            "procrastination": pw["procrastination"] if procrastination_pattern else 0.0,
+            "cognitive_mode": pw["cognitive_mode"] if routing_input.cognitive_mode_suggested else 0.0,
+            "low_metacognition": pw["low_metacognition"] if False else 0.0,  # placeholder, set later
+            "high_cognitive_load": (
+                pw["high_cognitive_load"]
+                if (
+                    routing_input.cognitive_load is not None
+                    and float(routing_input.cognitive_load) >= float(self._param("high_cognitive_load", 0.55))
+                )
+                else 0.0
+            ),
+            "spine_fatigue": pw["spine_fatigue"],  # set later
+            "reflection_phase": pw["reflection_phase"],  # set later
+            "goal_clarity": pw["goal_clarity"] * goal_clarity_score,
+            "route_outcome_failure": 0.0,
+            "route_outcome_over_scaffolded": 0.0,
+        }
         cognitive_mode_suggested = bool(routing_input.cognitive_mode_suggested)
         pattern_guidance = self._pattern_guidance(routing_input)
         cognitive_load_value = float(routing_input.cognitive_load or 0.0)
-        high_cognitive_load = routing_input.cognitive_load is not None and cognitive_load_value >= 0.55
-        very_high_cognitive_load = routing_input.cognitive_load is not None and cognitive_load_value >= 0.78
+        high_cognitive_load = routing_input.cognitive_load is not None and cognitive_load_value >= float(
+            self._param("high_cognitive_load_threshold", 0.55)
+        )
+        very_high_cognitive_load = routing_input.cognitive_load is not None and cognitive_load_value >= float(
+            self._param("very_high_cognitive_load", 0.78)
+        )
         capsule_preferences = self._normalized_capsule_preferences(routing_input)
         capsule_method_preferences = capsule_preferences.get("method_preferences", [])
 
@@ -300,7 +360,9 @@ class DualCoreRouter:
                 and social_signals.social_learning_preference >= 0.65
                 and social_signals.mention_count > 0
             ):
-                execution_constraints.append("若任务天然适合协作，可允许用户借助同伴或群组来启动，但不要把社交化当成硬要求。")
+                execution_constraints.append(
+                    "若任务天然适合协作，可允许用户借助同伴或群组来启动，但不要把社交化当成硬要求。"
+                )
             if social_signals.relationship_count > 0:
                 cognitive_adjustments.append("涉及他人或协作情境时，保持边界感，不要替用户许诺或推断他人立场。")
 
@@ -323,7 +385,9 @@ class DualCoreRouter:
                 )
             elif srl_phase_hint.current_phase == "reflection":
                 reflection_phase_detected = srl_phase_hint.confidence >= 0.55
-                cognitive_adjustments.append("用户当前处在复盘反思阶段，先帮助总结哪里有效、哪里失灵，再决定下一轮怎么改。")
+                cognitive_adjustments.append(
+                    "用户当前处在复盘反思阶段，先帮助总结哪里有效、哪里失灵，再决定下一轮怎么改。"
+                )
                 recommend_strategy(
                     "session_mode",
                     "reflection",
@@ -371,12 +435,12 @@ class DualCoreRouter:
             key = str(ss.get("state_key", ""))
             value = str(ss.get("value", ""))
             conf = float(ss.get("confidence", 0))
-            if conf < 0.45:
+            if conf < float(self._param("spine_state_confidence_min", 0.45)):
                 continue
             if (
                 key in ("fatigue_accumulated", "affective_pressure", "cognitive_load", "notification_fatigue")
                 or value in {"high_load", "high_load_detected", "overloaded", "anxious", "tense"}
-            ) and conf >= 0.6:
+            ) and conf >= float(self._param("spine_fatigue_confidence_min", 0.6)):
                 spine_fatigue_detected = True
                 cognitive_adjustments.append("Spine 检测到累积疲劳或情绪压力，优先降负荷、给恢复建议。")
                 recommend_strategy(
@@ -426,6 +490,88 @@ class DualCoreRouter:
         aurora_explanation = str(aurora_prefs.get("aurora_explanation_level", "detailed"))
         aurora_analysis = str(aurora_prefs.get("aurora_analysis_depth", "deep"))
 
+        # ── Recent corrections bridge (BP1) ──
+        recent_corrections = routing_input.recent_corrections or []
+        corrections_count = len(recent_corrections)
+        corrections_addressed_topics: set[str] = set()
+        for correction in recent_corrections:
+            topic = str(correction.get("correction_type") or correction.get("topic") or "").strip().lower()
+            if topic:
+                corrections_addressed_topics.add(topic)
+        if corrections_count >= int(self._param("corrections_threshold", 3)):
+            cognitive_adjustments.append("用户近期被多次校准，优先确认校准是否已经生效，避免重复纠正。")
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="Multiple recent corrections suggest the system should pause and verify calibration before pushing more changes.",
+            )
+        if "difficulty_mismatch" in corrections_addressed_topics:
+            execution_constraints.append("用户曾校准过难度判断，本轮任务难度应基于校准后的标准。")
+            recommend_strategy(
+                "difficulty_level",
+                2,
+                reason="Prior difficulty correction should cap task difficulty at a user-validated level.",
+            )
+
+        recent_route_outcomes = [
+            item for item in (routing_input.recent_route_outcomes or []) if isinstance(item, dict)
+        ][:8]
+        failed_execution_count = 0
+        failed_cognitive_count = 0
+        successful_execution_count = 0
+        successful_cognitive_count = 0
+        pending_route_count = 0
+        for item in recent_route_outcomes:
+            outcome = str(item.get("outcome") or "").strip()
+            mode = str(item.get("mode") or item.get("decision_type") or "").strip()
+            if not outcome or outcome == "pending":
+                pending_route_count += 1
+                continue
+            if outcome in {"user_correction", "timeout"}:
+                if mode == "execution_first":
+                    failed_execution_count += 1
+                elif mode == "cognitive_first":
+                    failed_cognitive_count += 1
+            elif outcome in {"task_completion", "plan_success"}:
+                if mode == "execution_first":
+                    successful_execution_count += 1
+                elif mode == "cognitive_first":
+                    successful_cognitive_count += 1
+
+        route_outcome_support_needed = failed_execution_count >= 2
+        route_outcome_over_scaffolded = failed_cognitive_count >= 2 and successful_execution_count >= 1
+        if route_outcome_support_needed:
+            cognitive_adjustments.append("近期直接推进后的结果多次被纠正或超时，本轮先确认理解并把下一步做小。")
+            recommend_strategy(
+                "planning_granularity",
+                "startup_ready",
+                reason="Recent route outcomes show execution-first decisions were corrected or timed out.",
+            )
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="Failed direct-routing outcomes should increase support without adding pressure.",
+            )
+        elif route_outcome_over_scaffolded:
+            execution_constraints.append("近期过多校准曾被纠正，本轮少解释、直接给一个可执行动作。")
+            recommend_strategy(
+                "check_in_frequency",
+                "minimal",
+                reason="Recent route outcomes show cognitive-first support may have been too much.",
+            )
+            recommend_strategy(
+                "explanation_style",
+                "concise",
+                reason="Over-scaffolded route outcomes should shorten the next explanation.",
+            )
+        elif successful_execution_count >= 3 and failed_execution_count == 0:
+            execution_constraints.append("近期执行优先的结果稳定，本轮可以减少不必要的支架和重复确认。")
+            recommend_strategy(
+                "check_in_frequency",
+                "minimal",
+                reason="Repeated successful execution-first outcomes support a lower-friction route.",
+            )
+
         if aurora_directness == "direct":
             recommend_strategy(
                 "directness_mode",
@@ -460,10 +606,7 @@ class DualCoreRouter:
             execution_constraints.append(
                 f"用户偏好短冲刺，单次任务默认控制在 {routing_input.session_length_preference} 分钟以内。"
             )
-        if (
-            routing_input.difficulty_preference is not None
-            and routing_input.difficulty_preference < 0.4
-        ):
+        if routing_input.difficulty_preference is not None and routing_input.difficulty_preference < 0.4:
             execution_constraints.append("降低任务初始难度，避免一开始就给高压挑战。")
         if routing_input.recent_task_feedback_distribution.get("too_difficult", 0) >= 2:
             execution_constraints.append("近期连续反馈“太难”，当前回复避免再加码任务强度。")
@@ -483,6 +626,38 @@ class DualCoreRouter:
                     reason="Favorite capsule history indicates this execution method is personally salient for the user.",
                 )
         execution_constraints.extend(pattern_guidance["execution"])
+
+        scaffolding_snapshot = routing_input.scaffolding_snapshot or {}
+        scaffolding_zone = (
+            str(
+                scaffolding_snapshot.get("current_scaffolding_stage") or scaffolding_snapshot.get("current_zone") or ""
+            ).strip()
+            or None
+        )
+        scaffolding_support = float(
+            scaffolding_snapshot.get("template_support_level") or scaffolding_snapshot.get("support_level") or 0.0
+        )
+        scaffolding_failures = int(scaffolding_snapshot.get("consecutive_failures") or 0)
+        scaffolding_successes = int(scaffolding_snapshot.get("consecutive_successes") or 0)
+        if scaffolding_zone == "frustration" or scaffolding_support >= 4 or scaffolding_failures >= 2:
+            cognitive_adjustments.append("SGW 支架层显示用户可能处在挫败区，先提高支持密度、降低任务阻力。")
+            recommend_strategy(
+                "planning_granularity",
+                "startup_ready",
+                reason="Scaffolding FSM indicates frustration/high support need; the next action should be easier to start.",
+            )
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="High scaffolding support means Aurora should feel helpful rather than pushy.",
+            )
+        elif scaffolding_zone == "boredom" or scaffolding_successes >= 3:
+            execution_constraints.append("SGW 支架层显示用户最近推进较顺，可以减少解释、给更有挑战但仍可控的下一步。")
+            recommend_strategy(
+                "difficulty_level",
+                4,
+                reason="Scaffolding FSM indicates recent success; the next action can be slightly more challenging.",
+            )
 
         # Translate numeric adaptive adjustments from ParameterCompiler
         if routing_input.adaptive_adjustments:
@@ -507,7 +682,37 @@ class DualCoreRouter:
             if max_tasks is not None and max_tasks < 3:
                 execution_constraints.append(f"控制并发任务数量，单次推进不要超过 {max_tasks} 个任务。")
 
+        # Finalize precedence scores with late-computed signals
+        precedence["reflection_phase"] = pw["reflection_phase"] if reflection_phase_detected else 0.0
+        precedence["low_metacognition"] = pw["low_metacognition"] if low_metacognition_accuracy else 0.0
+        precedence["spine_fatigue"] = pw["spine_fatigue"] if spine_fatigue_detected else 0.0
+        precedence["scaffolding_frustration"] = (
+            pw["scaffolding_frustration"] if scaffolding_zone == "frustration" or scaffolding_failures >= 2 else 0.0
+        )
+        precedence["scaffolding_boredom"] = pw["scaffolding_boredom"] if scaffolding_zone == "boredom" else 0.0
+        precedence["route_outcome_failure"] = pw["route_outcome_failure"] if route_outcome_support_needed else 0.0
+        precedence["route_outcome_over_scaffolded"] = (
+            pw["route_outcome_over_scaffolded"] if route_outcome_over_scaffolded else 0.0
+        )
+        dominant_signal = max(precedence, key=lambda k: precedence[k])
+        signal_scores = {
+            "goal_clarity": round(goal_clarity_score, 3),
+            "emotional_block": round(emotional_block_score, 3),
+            "procrastination": round(procrastination_score, 3),
+            "cognitive_load": round(cognitive_load_value, 3) if routing_input.cognitive_load is not None else 0.0,
+            "low_metacognition": 1.0 if low_metacognition_accuracy else 0.0,
+            "spine_fatigue": 1.0 if spine_fatigue_detected else 0.0,
+            "spine_execution_low": 1.0 if spine_execution_low else 0.0,
+            "spine_knowledge_bottleneck": 1.0 if spine_knowledge_bottleneck else 0.0,
+            "recent_corrections": min(1.0, corrections_count / 5.0),
+            "scaffolding_frustration": 1.0 if precedence["scaffolding_frustration"] > 0 else 0.0,
+            "scaffolding_boredom": 1.0 if precedence["scaffolding_boredom"] > 0 else 0.0,
+            "route_outcome_failure": min(1.0, failed_execution_count / 3.0),
+            "route_outcome_over_scaffolded": min(1.0, failed_cognitive_count / 3.0),
+        }
         routing_debug = {
+            "dominant_signal": dominant_signal,
+            "precedence_scores": {k: round(v, 2) for k, v in precedence.items() if v > 0},
             "goal_clarity_score": round(goal_clarity_score, 3),
             "goal_clear_threshold": round(goal_clear_threshold, 3),
             "procrastination_score": round(procrastination_score, 3),
@@ -552,6 +757,23 @@ class DualCoreRouter:
                 "explanation": aurora_explanation,
                 "analysis": aurora_analysis,
             },
+            "corrections_count": corrections_count,
+            "corrections_topics": sorted(corrections_addressed_topics),
+            "recent_route_outcome_summary": {
+                "count": len(recent_route_outcomes),
+                "failed_execution_count": failed_execution_count,
+                "failed_cognitive_count": failed_cognitive_count,
+                "successful_execution_count": successful_execution_count,
+                "successful_cognitive_count": successful_cognitive_count,
+                "pending_count": pending_route_count,
+                "support_needed": route_outcome_support_needed,
+                "over_scaffolded": route_outcome_over_scaffolded,
+            },
+            "recent_route_outcomes": recent_route_outcomes[:5],
+            "scaffolding_snapshot": scaffolding_snapshot or None,
+            "scaffolding_zone": scaffolding_zone,
+            "parameter_version": self._parameter_snapshot.version if self._parameter_snapshot else "defaults",
+            "parameter_source": self._parameter_snapshot.source if self._parameter_snapshot else "defaults",
         }
         if social_signals is not None:
             routing_debug["social_relationship_count"] = social_signals.relationship_count
@@ -575,6 +797,7 @@ class DualCoreRouter:
             and not high_cognitive_load
             and not spine_fatigue_detected
             and not spine_knowledge_bottleneck
+            and not route_outcome_support_needed
         ):
             return DualCoreDecision(
                 mode="execution_first",
@@ -583,10 +806,12 @@ class DualCoreRouter:
                     if strong_metacognition_execution_bias
                     else "目标清晰、信息充分，且当前没有明显情绪或执行阻塞，适合直接推进执行路径。"
                 ),
-                cognitive_adjustments=cognitive_adjustments[:5],
+                cognitive_adjustments=cognitive_adjustments[-5:],
                 execution_constraints=execution_constraints[:5],
                 routing_debug=routing_debug,
                 strategy_adjustments=strategy_adjustments[:5],
+                signal_scores=signal_scores,
+                scaffolding_zone=scaffolding_zone,
             )
 
         if (
@@ -598,6 +823,7 @@ class DualCoreRouter:
             or very_high_cognitive_load
             or spine_fatigue_detected
             or spine_knowledge_bottleneck
+            or route_outcome_support_needed
             or (cognitive_mode_suggested and not goal_clear)
             or (not goal_clear and routing_input.intent_confidence < low_conf_threshold)
         ):
@@ -610,10 +836,12 @@ class DualCoreRouter:
                     procrastination_pattern=procrastination_pattern,
                     cognitive_mode_suggested=cognitive_mode_suggested,
                 ),
-                cognitive_adjustments=cognitive_adjustments[:5],
+                cognitive_adjustments=cognitive_adjustments[-5:],
                 execution_constraints=execution_constraints[:5],
                 routing_debug=routing_debug,
                 strategy_adjustments=strategy_adjustments[:5],
+                signal_scores=signal_scores,
+                scaffolding_zone=scaffolding_zone,
             )
 
         balanced_reason = "当前同时存在推进任务和理解用户状态的需求，先保持双核心并行。"
@@ -626,10 +854,12 @@ class DualCoreRouter:
         return DualCoreDecision(
             mode="balanced",
             reason=balanced_reason,
-            cognitive_adjustments=cognitive_adjustments[:5],
+            cognitive_adjustments=cognitive_adjustments[-5:],
             execution_constraints=execution_constraints[:5],
             routing_debug=routing_debug,
             strategy_adjustments=strategy_adjustments[:5],
+            signal_scores=signal_scores,
+            scaffolding_zone=scaffolding_zone,
         )
 
     def _goal_clarity_score(self, routing_input: DualCoreRoutingInput) -> float:
@@ -655,17 +885,14 @@ class DualCoreRouter:
 
     def _emotional_block_score(self, routing_input: DualCoreRoutingInput) -> float:
         sentiments = routing_input.recent_sentiment_distribution or {}
-        negative = sum(
-            count for sentiment, count in sentiments.items()
-            if sentiment in self.NEGATIVE_SENTIMENTS
-        )
+        negative = sum(count for sentiment, count in sentiments.items() if sentiment in self.NEGATIVE_SENTIMENTS)
         total = sum(sentiments.values())
         ratio = (negative / total) if total else 0.0
         score = ratio
         if routing_input.primary_challenge_area == "emotional":
             score = max(score, 0.75)
         if negative >= 2:
-            score = max(score, 0.6)
+            score = max(score, float(self._param("emotional_block_negative_ratio", 0.6)))
         if self._pattern_details_include(routing_input, {"overload", "burnout", "anxiety"}):
             score = max(score, 0.7)
         return max(0.0, min(score, 1.0))
@@ -682,13 +909,9 @@ class DualCoreRouter:
 
     def _procrastination_score(self, routing_input: DualCoreRoutingInput) -> float:
         feedback = routing_input.recent_task_feedback_distribution or {}
-        friction_signals = (
-            feedback.get("too_long", 0)
-            + feedback.get("unclear", 0)
-            + feedback.get("irrelevant", 0)
-        )
+        friction_signals = feedback.get("too_long", 0) + feedback.get("unclear", 0) + feedback.get("irrelevant", 0)
         pattern_names = self._normalized_pattern_names(routing_input)
-        score = min(0.95, friction_signals * 0.18)
+        score = min(0.95, friction_signals * float(self._param("procrastination_friction_weight", 0.18)))
         if feedback.get("too_difficult", 0) >= 3:
             score = max(score, 0.72)
         if routing_input.plan_health_status == "critical":
@@ -750,9 +973,7 @@ class DualCoreRouter:
             )
 
         summaries = [
-            str(item).strip()
-            for item in list(raw.get("method_preference_summary") or [])
-            if str(item).strip()
+            str(item).strip() for item in list(raw.get("method_preference_summary") or []) if str(item).strip()
         ]
         if not methods:
             for summary in summaries:
@@ -769,16 +990,13 @@ class DualCoreRouter:
                 if str(subject).strip()
             ][:3],
             "method_preferences": methods[:3],
-            "method_preference_summary": summaries[:3]
-            or [f"用户偏好{method['label']}" for method in methods[:3]],
+            "method_preference_summary": summaries[:3] or [f"用户偏好{method['label']}" for method in methods[:3]],
         }
         return normalized if any(normalized.values()) else {}
 
     def _normalized_pattern_names(self, routing_input: DualCoreRoutingInput) -> list[str]:
         names = [
-            str(name).strip().lower()
-            for name in (routing_input.behavior_pattern_names or [])
-            if str(name).strip()
+            str(name).strip().lower() for name in (routing_input.behavior_pattern_names or []) if str(name).strip()
         ]
         for item in routing_input.behavior_pattern_details or []:
             if not isinstance(item, dict):
@@ -792,11 +1010,7 @@ class DualCoreRouter:
     def _contains_any(self, pattern_names: list[str], keywords: set[str]) -> bool:
         if not pattern_names:
             return False
-        return any(
-            keyword in name
-            for name in pattern_names
-            for keyword in keywords
-        )
+        return any(keyword in name for name in pattern_names for keyword in keywords)
 
     def _pattern_details_include(
         self,
@@ -830,10 +1044,22 @@ class DualCoreRouter:
         directness = profile.get("directness_preference", 0.5)
         return max(0.55, min(0.8, 0.72 - (directness - 0.5) * 0.2))
 
+    def _goal_clear_threshold_from_params(self, profile: dict[str, float]) -> float:
+        directness = profile.get("directness_preference", 0.5)
+        base = float(self._param("goal_clear_threshold_base", 0.72))
+        sensitivity = float(self._param("goal_clear_threshold_sensitivity", 0.2))
+        return max(0.55, min(0.8, base - (directness - 0.5) * sensitivity))
+
     @staticmethod
     def _low_confidence_threshold(profile: dict[str, float]) -> float:
         directness = profile.get("directness_preference", 0.5)
         return max(0.35, min(0.7, 0.6 - (directness - 0.5) * 0.2))
+
+    def _low_confidence_threshold_from_params(self, profile: dict[str, float]) -> float:
+        directness = profile.get("directness_preference", 0.5)
+        base = float(self._param("low_confidence_threshold_base", 0.6))
+        sensitivity = float(self._param("low_confidence_threshold_sensitivity", 0.2))
+        return max(0.35, min(0.7, base - (directness - 0.5) * sensitivity))
 
     def _cognitive_reason(
         self,

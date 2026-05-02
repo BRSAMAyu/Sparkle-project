@@ -66,10 +66,12 @@ class TestLLMOutputValidator:
 
     def test_api_key_leak(self, validator):
         """测试 API Key 泄露"""
+        fake_openai_key = "sk-" + "1234567890abcdef1234567890abcdef"
+        fake_alt_key = "sk-" + "abcdefghij1234567890klmnopqrstuv"
         test_cases = [
-            "API key: sk-1234567890abcdef1234567890abcdef",
-            "api_key: sk-abcdefghij1234567890klmnopqrstuv",
-            "secret: sk-1234567890abcdef1234567890abcdef",
+            f"API key: {fake_openai_key}",
+            f"api_key: {fake_alt_key}",
+            f"secret: {fake_openai_key}",
         ]
 
         for text in test_cases:

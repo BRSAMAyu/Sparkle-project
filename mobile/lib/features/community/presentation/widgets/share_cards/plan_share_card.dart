@@ -89,7 +89,9 @@ class PlanShareCard extends StatelessWidget {
                     ),
                     if (progress != null)
                       Text(
-                        '进度 ${(_progressPercent!)}%',
+                        I18nService.instance.isChinese
+                            ? '进度 ${(_progressPercent!)}%'
+                            : 'Progress ${(_progressPercent!)}%',
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: DS.textTertiary,
@@ -111,170 +113,171 @@ class PlanShareCard extends StatelessWidget {
           builder: (context) {
             final isDarkMode = Theme.of(context).brightness == Brightness.dark;
             return Container(
-          width: 280,
-          decoration: BoxDecoration(
-            gradient: isDarkMode
-                ? LinearGradient(
-                    colors: [
-                      DS.info.withValues(alpha: 0.1),
-                      DS.brandPrimary.withValues(alpha: 0.05),
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  )
-                : null,
-            color: isDarkMode ? null : DS.surfacePanel,
-            borderRadius: DS.borderRadius12,
-            border: Border.all(
-              color: isDarkMode
-                  ? DS.info.withValues(alpha: 0.3)
-                  : DS.borderSubtle,
-            ),
-            boxShadow: DS.shadowSm,
-          ),
-          child: Stack(
-            children: [
-              // Background decoration
-              Positioned(
-                right: -10,
-                bottom: -10,
-                child: Icon(
-                  Icons.flag_outlined,
-                  size: 80,
-                  color: DS.info.withValues(alpha: 0.1),
+              width: 280,
+              decoration: BoxDecoration(
+                gradient: isDarkMode
+                    ? LinearGradient(
+                        colors: [
+                          DS.info.withValues(alpha: 0.1),
+                          DS.brandPrimary.withValues(alpha: 0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                color: isDarkMode ? null : DS.surfacePanel,
+                borderRadius: DS.borderRadius12,
+                border: Border.all(
+                  color: isDarkMode
+                      ? DS.info.withValues(alpha: 0.3)
+                      : DS.borderSubtle,
                 ),
+                boxShadow: DS.shadowSm,
               ),
-              Padding(
-                padding: const EdgeInsets.all(DS.md),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Header
-                    Row(
+              child: Stack(
+                children: [
+                  // Background decoration
+                  Positioned(
+                    right: -10,
+                    bottom: -10,
+                    child: Icon(
+                      Icons.flag_outlined,
+                      size: 80,
+                      color: DS.info.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(DS.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(DS.sm),
-                          decoration: BoxDecoration(
-                            color: DS.info.withValues(alpha: 0.15),
-                            borderRadius: DS.borderRadius8,
-                          ),
-                          child: Icon(
-                            Icons.flag,
-                            color: DS.info,
-                            size: 20,
-                          ),
+                        // Header
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(DS.sm),
+                              decoration: BoxDecoration(
+                                color: DS.info.withValues(alpha: 0.15),
+                                borderRadius: DS.borderRadius8,
+                              ),
+                              child: Icon(
+                                Icons.flag,
+                                color: DS.info,
+                                size: 20,
+                              ),
+                            ),
+                            const SizedBox(width: DS.sm),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    context.l10n.communityShareLearningPlan,
+                                    style: TextStyle(
+                                      fontSize: DS.fontSizeXs,
+                                      color: DS.textTertiary,
+                                    ),
+                                  ),
+                                  Text(
+                                    planTitle,
+                                    style: TextStyle(
+                                      fontWeight: DS.fontWeightBold,
+                                      fontSize: DS.fontSizeBase,
+                                      color: DS.textPrimary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: DS.sm),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+
+                        // Progress indicator
+                        if (progress != null) ...[
+                          const SizedBox(height: DS.md),
+                          Row(
                             children: [
-                              Text(
-                                context.l10n.communityShareLearningPlan,
-                                style: TextStyle(
-                                  fontSize: DS.fontSizeXs,
-                                  color: DS.textTertiary,
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: DS.borderRadius4,
+                                  child: LinearProgressIndicator(
+                                    value: progress!,
+                                    backgroundColor: DS.neutral200,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      _getProgressColor(),
+                                    ),
+                                    minHeight: 8,
+                                  ),
                                 ),
                               ),
+                              const SizedBox(width: DS.sm),
                               Text(
-                                planTitle,
+                                '${_progressPercent!}%',
                                 style: TextStyle(
                                   fontWeight: DS.fontWeightBold,
-                                  fontSize: DS.fontSizeBase,
-                                  color: DS.textPrimary,
+                                  fontSize: DS.fontSizeSm,
+                                  color: _getProgressColor(),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
 
-                    // Progress indicator
-                    if (progress != null) ...[
-                      const SizedBox(height: DS.md),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: DS.borderRadius4,
-                              child: LinearProgressIndicator(
-                                value: progress!,
-                                backgroundColor: DS.neutral200,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  _getProgressColor(),
+                        const SizedBox(height: DS.md),
+
+                        // Stats row
+                        Wrap(
+                          spacing: DS.md,
+                          runSpacing: DS.sm,
+                          children: [
+                            if (completedTasks != null && totalTasks != null)
+                              _buildStat(
+                                context.l10n.communityShareTask,
+                                '$completedTasks/$totalTasks',
+                                Icons.task_alt,
+                              ),
+                            if (milestones != null && milestones! > 0) ...[
+                              _buildStat(
+                                context.l10n.communityShareMilestone,
+                                '$milestones',
+                                Icons.emoji_events,
+                              ),
+                            ],
+                            if (deadline != null) ...[
+                              _buildStat(
+                                context.l10n.communityShareDeadline,
+                                _formatDeadline(deadline!),
+                                Icons.calendar_today,
+                              ),
+                            ],
+                          ],
+                        ),
+                        if (onAdopt != null) ...[
+                          const SizedBox(height: DS.sm),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 160),
+                              child: TextButton.icon(
+                                icon: const Icon(Icons.add_task,
+                                    size: DS.iconSizeSm),
+                                label: Text(
+                                  context.l10n.communityShareAdoptPlan,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                minHeight: 8,
+                                onPressed: onAdopt,
                               ),
                             ),
                           ),
-                          const SizedBox(width: DS.sm),
-                          Text(
-                            '${_progressPercent!}%',
-                            style: TextStyle(
-                              fontWeight: DS.fontWeightBold,
-                              fontSize: DS.fontSizeSm,
-                              color: _getProgressColor(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-
-                    const SizedBox(height: DS.md),
-
-                    // Stats row
-                    Wrap(
-                      spacing: DS.md,
-                      runSpacing: DS.sm,
-                      children: [
-                        if (completedTasks != null && totalTasks != null)
-                          _buildStat(
-                            context.l10n.communityShareTask,
-                            '$completedTasks/$totalTasks',
-                            Icons.task_alt,
-                          ),
-                        if (milestones != null && milestones! > 0) ...[
-                          _buildStat(
-                            context.l10n.communityShareMilestone,
-                            '$milestones',
-                            Icons.emoji_events,
-                          ),
-                        ],
-                        if (deadline != null) ...[
-                          _buildStat(
-                            context.l10n.communityShareDeadline,
-                            _formatDeadline(deadline!),
-                            Icons.calendar_today,
-                          ),
                         ],
                       ],
                     ),
-                    if (onAdopt != null) ...[
-                      const SizedBox(height: DS.sm),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 160),
-                          child: TextButton.icon(
-                            icon: const Icon(Icons.add_task, size: DS.iconSizeSm),
-                            label: Text(
-                              context.l10n.communityShareAdoptPlan,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            onPressed: onAdopt,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
             );
           },
         ),
@@ -332,7 +335,9 @@ class PlanShareCard extends StatelessWidget {
     } else if (diff.inDays == 0) {
       return S.communityShareToday;
     } else if (diff.inDays < 7) {
-      return '${diff.inDays}天后';
+      return I18nService.instance.isChinese
+          ? '${diff.inDays}天后'
+          : 'in ${diff.inDays} days';
     } else {
       return '${date.month}/${date.day}';
     }

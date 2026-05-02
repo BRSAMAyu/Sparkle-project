@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"sort"
 	"strconv"
 	"strings"
@@ -17,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/sparkle/gateway/internal/i18n"
+	"go.uber.org/zap"
 )
 
 const (
@@ -158,7 +158,9 @@ func (s *ChatHistoryService) flushRetryBuf() {
 	for _, e := range entries {
 		// 超时丢弃
 		if time.Since(e.enqueuedAt) > breakerRetryMaxAge {
-			log.Printf("[ChatHistoryService] Retry entry expired after %v, dropping", breakerRetryMaxAge)
+			zap.L().Warn("Chat history retry entry expired",
+				zap.Duration("max_age", breakerRetryMaxAge),
+			)
 			continue
 		}
 		qLen, err := s.rdb.LLen(ctx, queueKey).Result()
@@ -184,7 +186,10 @@ func (s *ChatHistoryService) flushRetryBuf() {
 		if len(s.retryBuf) > breakerRetryBufMax {
 			dropped := len(s.retryBuf) - breakerRetryBufMax
 			s.retryBuf = s.retryBuf[dropped:]
-			log.Printf("[ChatHistoryService] Retry buffer overflow, dropped %d oldest entries", dropped)
+			zap.L().Warn("Chat history retry buffer overflow",
+				zap.Int("dropped_count", dropped),
+				zap.Int("buffer_limit", breakerRetryBufMax),
+			)
 		}
 		s.retryMu.Unlock()
 	}
@@ -217,6 +222,20 @@ func (s *ChatHistoryService) PublishConnectionEvent(ctx context.Context, userID 
 	return s.rdb.Publish(ctx, eventKey, eventValue).Err()
 }
 
+// TryAcceptRealtimeRequest records a client request_id for a bounded window.
+// It returns false when the same user/request_id has already been accepted,
+// preventing reconnect/offline replay from creating duplicate side effects.
+func (s *ChatHistoryService) TryAcceptRealtimeRequest(ctx context.Context, userID, requestID string, ttl time.Duration) (bool, error) {
+	if s.rdb == nil || strings.TrimSpace(userID) == "" || strings.TrimSpace(requestID) == "" {
+		return true, nil
+	}
+	if ttl <= 0 {
+		ttl = time.Hour
+	}
+	key := fmt.Sprintf("ws:chat:request:%s:%s", userID, requestID)
+	return s.rdb.SetNX(ctx, key, time.Now().UTC().Format(time.RFC3339Nano), ttl).Result()
+}
+
 func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []byte) error {
 	pipe := s.rdb.Pipeline()
 	bufferOverflow := false
@@ -237,7 +256,10 @@ func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []
 	if err != nil {
 		// If Redis is reachable but LLEN fails, it's risky.
 		// If Redis is unreachable, pipeline exec will fail anyway.
-		log.Printf("Failed to check queue length: %v", err)
+		zap.L().Error("Failed to check chat history persist queue length",
+			zap.String("queue_key", queueKey),
+			zap.Error(err),
+		)
 		return err
 	}
 
@@ -246,13 +268,20 @@ func (s *ChatHistoryService) SaveMessage(ctx context.Context, sid string, msg []
 		pipe.RPush(ctx, queueKey, msg)
 	} else {
 		// P1修复: 队列过载时进入本地重试缓冲，由 retryWorker 定期重试入队，不再直接丢弃
-		log.Printf("[ChatHistoryService] Persist queue overloaded (%d/%d), buffering for retry", qLen, threshold)
+		zap.L().Warn("Chat history persist queue overloaded",
+			zap.Int64("queue_length", qLen),
+			zap.Int64("threshold", threshold),
+		)
 		s.retryMu.Lock()
 		if len(s.retryBuf) < breakerRetryBufMax {
 			s.retryBuf = append(s.retryBuf, retryEntry{msg: msg, enqueuedAt: time.Now()})
 		} else {
 			bufferOverflow = true
-			log.Printf("[ChatHistoryService] Retry buffer full, dropping message (queue: %d/%d)", qLen, threshold)
+			zap.L().Error("Chat history retry buffer full; dropping message",
+				zap.Int64("queue_length", qLen),
+				zap.Int64("threshold", threshold),
+				zap.Int("buffer_limit", breakerRetryBufMax),
+			)
 		}
 		s.retryMu.Unlock()
 		// 仍继续执行 pipeline（缓存写入不受影响）
@@ -420,7 +449,10 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID 
 		if errors.Is(err, errChatHistoryForbidden) {
 			return nil, err
 		}
-		log.Printf("[ChatHistoryService] Redis query failed: %v, trying DB fallback", err)
+		zap.L().Warn("Chat history Redis query failed; trying DB fallback",
+			zap.String("session_id", sessionID),
+			zap.Error(err),
+		)
 	} else if len(messages) > 0 {
 		// Cache hit - return immediately
 		return messages, nil
@@ -430,7 +462,10 @@ func (s *ChatHistoryService) GetMessages(ctx context.Context, userID, sessionID 
 	if s.pool != nil {
 		messages, err = s.getMessagesFromDB(ctx, userID, sessionID, limit, offset)
 		if err != nil {
-			log.Printf("[ChatHistoryService] DB fallback failed: %v", err)
+			zap.L().Error("Chat history DB fallback failed",
+				zap.String("session_id", sessionID),
+				zap.Error(err),
+			)
 			return nil, err
 		}
 
@@ -611,25 +646,45 @@ func (s *ChatHistoryService) backfillRedisMessages(sessionID string, messages []
 	for _, msg := range messages {
 		msgBytes, err := json.Marshal(msg)
 		if err != nil {
-			log.Printf("[ChatHistoryService] backfillRedisMessages: marshal error for session %s: %v", sessionID, err)
+			zap.L().Error("Failed to marshal chat history message for Redis backfill",
+				zap.String("session_id", sessionID),
+				zap.Error(err),
+			)
 			continue
 		}
 		// P1修复: 捕获 RPush 错误，不再静默失败
 		if err := s.rdb.RPush(ctx, cacheKey, msgBytes).Err(); err != nil {
-			log.Printf("[ChatHistoryService] backfillRedisMessages: RPush error for session %s: %v", sessionID, err)
+			zap.L().Error("Failed to push chat history Redis backfill message",
+				zap.String("session_id", sessionID),
+				zap.String("cache_key", cacheKey),
+				zap.Error(err),
+			)
 			return // Redis 不可用时提前终止，避免无效循环
 		}
 		successCount++
 	}
 
 	if err := s.rdb.LTrim(ctx, cacheKey, -20, -1).Err(); err != nil {
-		log.Printf("[ChatHistoryService] backfillRedisMessages: LTrim error for session %s: %v", sessionID, err)
+		zap.L().Error("Failed to trim chat history Redis backfill cache",
+			zap.String("session_id", sessionID),
+			zap.String("cache_key", cacheKey),
+			zap.Error(err),
+		)
 	}
 	if err := s.rdb.Expire(ctx, cacheKey, s.chatHistoryTTL).Err(); err != nil {
-		log.Printf("[ChatHistoryService] backfillRedisMessages: Expire error for session %s: %v", sessionID, err)
+		zap.L().Error("Failed to set chat history Redis backfill expiration",
+			zap.String("session_id", sessionID),
+			zap.String("cache_key", cacheKey),
+			zap.Duration("ttl", s.chatHistoryTTL),
+			zap.Error(err),
+		)
 	}
 
-	log.Printf("[ChatHistoryService] Backfilled Redis cache for session %s: %d/%d messages", sessionID, successCount, len(messages))
+	zap.L().Info("Backfilled chat history Redis cache",
+		zap.String("session_id", sessionID),
+		zap.Int("success_count", successCount),
+		zap.Int("message_count", len(messages)),
+	)
 }
 
 func (s *ChatHistoryService) GetRecentSessions(ctx context.Context, userID string, limit int) ([]ChatSessionSummary, error) {
@@ -640,7 +695,10 @@ func (s *ChatHistoryService) GetRecentSessions(ctx context.Context, userID strin
 	// 1. Try Redis first
 	sessions, err := s.getRecentSessionsFromRedis(ctx, userID, limit)
 	if err != nil {
-		log.Printf("[ChatHistoryService] Redis query failed: %v, trying DB fallback", err)
+		zap.L().Warn("Chat session Redis query failed; trying DB fallback",
+			zap.String("user_id", userID),
+			zap.Error(err),
+		)
 	} else if len(sessions) > 0 {
 		// Cache hit - return immediately
 		return sessions, nil
@@ -650,7 +708,10 @@ func (s *ChatHistoryService) GetRecentSessions(ctx context.Context, userID strin
 	if s.pool != nil {
 		sessions, err = s.getRecentSessionsFromDB(ctx, userID, limit)
 		if err != nil {
-			log.Printf("[ChatHistoryService] DB fallback failed: %v", err)
+			zap.L().Error("Chat session DB fallback failed",
+				zap.String("user_id", userID),
+				zap.Error(err),
+			)
 			return nil, err
 		}
 
@@ -805,7 +866,10 @@ func (s *ChatHistoryService) backfillRedisCache(userID string, sessions []ChatSe
 	// Set expiry on sessions list
 	s.rdb.Expire(ctx, sessionsKey, s.chatHistoryTTL)
 
-	log.Printf("[ChatHistoryService] Backfilled Redis cache for user %s with %d sessions", userID, len(sessions))
+	zap.L().Info("Backfilled chat session Redis cache",
+		zap.String("user_id", userID),
+		zap.Int("session_count", len(sessions)),
+	)
 }
 
 func parseUnixString(raw string) time.Time {

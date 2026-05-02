@@ -21,6 +21,7 @@ import (
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/chaos"
 	"github.com/sparkle/gateway/internal/config"
+	"github.com/sparkle/gateway/internal/cqrs"
 	cqrsEvent "github.com/sparkle/gateway/internal/cqrs/event"
 	"github.com/sparkle/gateway/internal/cqrs/metrics"
 	"github.com/sparkle/gateway/internal/cqrs/outbox"
@@ -64,6 +65,9 @@ type serviceBundle struct {
 	fileStorage    *service.FileStorageService
 	fileEventHub   *service.FileEventHub
 	signalHub      *service.SignalHub
+	appleAccount   *service.AppleAccountService
+	groupChat      *service.GroupChatService
+	consistency    *service.DataConsistencyService
 }
 
 type handlerBundle struct {
@@ -93,6 +97,7 @@ type cqrsBundle struct {
 	snapshotManager    *projection.SnapshotManager
 	projectionBuilder  *projection.Builder
 	dlqHandler         *cqrsWorker.DLQHandler
+	sagaCoordinator    *cqrs.SagaCoordinator
 	commSyncWorker     *worker.CommunitySyncWorker
 	taskSyncWorker     *worker.TaskSyncWorker
 	galaxySyncWorker   *worker.GalaxySyncWorker
@@ -106,12 +111,24 @@ type proxyBundle struct {
 	abTestMiddleware *middleware.ABTestMiddleware
 }
 
+const (
+	defaultDBMaxConns        int32 = 30
+	defaultDBMinConns        int32 = 5
+	defaultDBMaxConnIdleTime       = 15 * time.Minute
+)
+
 func initTracer() func(context.Context) error {
 	return otelinfra.InitTracer("sparkle-gateway")
 }
 
 func initDatabase(ctx context.Context, cfg *config.Config) (*databaseHandles, error) {
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	poolConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
+	if err != nil {
+		return nil, err
+	}
+	applyDefaultPoolConfig(poolConfig)
+
+	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -139,6 +156,12 @@ func initDatabase(ctx context.Context, cfg *config.Config) (*databaseHandles, er
 		queries:      queries,
 		chaosManager: chaosManager,
 	}, nil
+}
+
+func applyDefaultPoolConfig(poolConfig *pgxpool.Config) {
+	poolConfig.MaxConns = defaultDBMaxConns
+	poolConfig.MinConns = defaultDBMinConns
+	poolConfig.MaxConnIdleTime = defaultDBMaxConnIdleTime
 }
 
 func initRedis(cfg *config.Config) (*redisv9.Client, error) {
@@ -175,6 +198,9 @@ func initServices(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 		fileStorage:    fileStorageService,
 		fileEventHub:   service.NewFileEventHub(),
 		signalHub:      service.NewSignalHub(),
+		appleAccount:   service.NewAppleAccountService(dbh.queries),
+		groupChat:      service.NewGroupChatService(dbh.queries),
+		consistency:    service.NewDataConsistencyService(chatHistoryService, dbh.queries, rdb),
 	}, nil
 }
 
@@ -217,7 +243,7 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	chatOrchestrator := handler.NewChatOrchestrator(
 		agentClient,
 		galaxyClient,
-		dbh.queries,
+		service.NewDBUserIdentityService(dbh.queries),
 		services.chatHistory,
 		services.quota,
 		services.semantic,
@@ -230,24 +256,24 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 		services.signalHub,
 	)
 	signalPushHandler := handler.NewSignalPushHandler(cfg, services.signalHub)
-	groupChatHandler := handler.NewGroupChatHandler(dbh.queries)
+	groupChatHandler := handler.NewGroupChatHandler(services.groupChat)
 	errorBookHandler := handler.NewErrorBookHandler(errorBookClient)
 	chaosHandler := handler.NewChaosHandler(services.chatHistory, cfg.ToxiproxyURL)
 	fileHandler := handler.NewFileHandler(services.fileStorage, services.fileMetadata, services.fileProcessing)
 	interventionPushHandler := handler.NewInterventionPushHandler(chatOrchestrator)
-	dataConsistencyHandler := handler.NewDataConsistencyHandler(services.chatHistory, dbh.queries, rdb)
+	dataConsistencyHandler := handler.NewDataConsistencyHandler(services.consistency)
 
 	sttURL := strings.Replace(cfg.BackendURL, "http://", "ws://", 1)
 	sttURL = strings.Replace(sttURL, "https://", "wss://", 1)
 	sttHandler := handler.NewSTTHandler(sttURL+"/api/v1/stt/stream", logger, cfg)
 
-	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, logger, cfg)
+	wsProxy := handler.NewWebSocketProxy(cfg.BackendURL, logger, cfg, service.NewMessageDedupService(rdb))
 
 	appleAuthService, err := service.NewAppleAuthService(cfg)
 	if err != nil {
 		log.Printf("Warning: Apple Auth Service init failed: %v", err)
 	}
-	authHandler := handler.NewAuthHandler(cfg, dbh.queries, appleAuthService)
+	authHandler := handler.NewAuthHandler(cfg, appleAuthService, services.appleAccount)
 
 	// Galaxy handler for knowledge graph endpoints
 	galaxyHandler := handler.NewGalaxyHandler(galaxyClient, rdb, cfg.BackendURL)
@@ -275,6 +301,34 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, services *serviceBundle, logger *zap.Logger) *cqrsBundle {
 	cqrsMetrics := metrics.NewCQRSMetrics("sparkle")
 	eventBus := cqrsEvent.NewRedisEventBus(rdb)
+
+	// FV-20: Initialize Saga coordinator for distributed transactions
+	sagaCoordinator := cqrs.NewSagaCoordinator(dbh.pool, eventBus, logger)
+	if err := sagaCoordinator.EnsureSchema(ctx); err != nil {
+		logger.Error("Failed to ensure saga schema", zap.Error(err))
+	}
+	// Register the 4 cross-service saga definitions
+	sagaCoordinator.Register(cqrs.NewTaskCreateSaga(
+		cqrs.StepFunc{StepName: "create_task"},
+		cqrs.StepFunc{StepName: "send_notification"},
+		cqrs.StepFunc{StepName: "crdt_sync"},
+	))
+	sagaCoordinator.Register(cqrs.NewSourceUploadSaga(
+		cqrs.StepFunc{StepName: "upload_source"},
+		cqrs.StepFunc{StepName: "parse_content"},
+		cqrs.StepFunc{StepName: "mount_nodes"},
+	))
+	sagaCoordinator.Register(cqrs.NewExperimentPromotionSaga(
+		cqrs.StepFunc{StepName: "promote_experiment"},
+		cqrs.StepFunc{StepName: "notify_stakeholders"},
+		cqrs.StepFunc{StepName: "write_audit"},
+	))
+	sagaCoordinator.Register(cqrs.NewSkillPublishSaga(
+		cqrs.StepFunc{StepName: "publish_skill"},
+		cqrs.StepFunc{StepName: "register_marketplace"},
+		cqrs.StepFunc{StepName: "send_notification"},
+	))
+
 	outboxRepo := outbox.NewPostgresRepository(dbh.pool)
 	outboxPublisher := outbox.NewPublisher(outboxRepo, eventBus, cqrsMetrics, logger)
 	outboxCleaner := outbox.NewCleaner(outboxRepo, cqrsMetrics, logger)
@@ -339,6 +393,7 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 		snapshotManager:   snapshotManager,
 		projectionBuilder: projectionBuilder,
 		dlqHandler:        dlqHandler,
+		sagaCoordinator:   sagaCoordinator,
 		commSyncWorker:    commSyncWorker,
 		taskSyncWorker:    taskSyncWorker,
 		galaxySyncWorker:  galaxySyncWorker,
@@ -437,46 +492,50 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		logger,
 	)
 
+	// Health endpoints outside rate-limited group for reliable monitoring access
+		// route-tier: public
+	r.GET("/api/v1/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "ok",
+			"ready":  "/ready",
+			"live":   "/live",
+		})
+	})
+	r.GET("/api/v1/health/cqrs", func(c *gin.Context) {
+		// route-tier: public
+		outboxPendingCount, err := cqrs.outboxRepo.GetPendingCount(context.Background())
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"status": "error",
+				"error":  err.Error(),
+			})
+			return
+		}
+
+		commRunning := cqrs.commSyncWorker.IsRunning()
+		taskRunning := cqrs.taskSyncWorker.IsRunning()
+		galaxyRunning := cqrs.galaxySyncWorker.IsRunning()
+
+		c.JSON(http.StatusOK, gin.H{
+			"status": "healthy",
+			"components": gin.H{
+				"outbox_publisher": gin.H{
+					"pending_events": outboxPendingCount,
+				},
+				"workers": gin.H{
+					"community": commRunning,
+					"task":      taskRunning,
+					"galaxy":    galaxyRunning,
+				},
+			},
+		})
+	})
+
+	// route-tier: internal
 	api := r.Group("/api/v1")
 	api.Use(apiRateLimit)
 	api.Use(middleware.TimeoutMiddleware(time.Duration(requestTimeout) * time.Second))
 	{
-		api.GET("/health", func(c *gin.Context) {
-			c.JSON(http.StatusOK, gin.H{
-				"status": "ok",
-				"ready":  "/ready",
-				"live":   "/live",
-			})
-		})
-		api.GET("/health/cqrs", func(c *gin.Context) {
-			outboxPendingCount, err := cqrs.outboxRepo.GetPendingCount(context.Background())
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"status": "error",
-					"error":  err.Error(),
-				})
-				return
-			}
-
-			commRunning := cqrs.commSyncWorker.IsRunning()
-			taskRunning := cqrs.taskSyncWorker.IsRunning()
-			galaxyRunning := cqrs.galaxySyncWorker.IsRunning()
-
-			c.JSON(http.StatusOK, gin.H{
-				"status": "healthy",
-				"components": gin.H{
-					"outbox_publisher": gin.H{
-						"pending_events": outboxPendingCount,
-					},
-					"workers": gin.H{
-						"community": commRunning,
-						"task":      taskRunning,
-						"galaxy":    galaxyRunning,
-					},
-				},
-			})
-		})
-
 		api.POST("/auth/apple", authRateLimit, handlers.authHandler.AppleLogin)
 		api.POST(
 			"/ws/ticket",
@@ -512,8 +571,13 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		// route-tier: internal
 		internal.GET("/files/:file_id/download", handlers.fileHandler.GetInternalDownloadURL)
 		internal.POST("/interventions/push", handlers.interventionPushHandler.HandlePush)
+			// route-tier: internal
 		internal.POST("/signals/push", handlers.signalPushHandler.HandlePush)
 	}
+
+	// FV-24: Network resilience middleware for upstream proxy routes
+	resilienceCfg := middleware.DefaultNetworkResilienceConfig()
+	r.Use(middleware.NetworkResilienceMiddleware(resilienceCfg))
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

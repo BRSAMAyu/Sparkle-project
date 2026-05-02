@@ -97,15 +97,19 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                 context.l10n.intentPreviewTitle,
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: DS.textPrimary,
                 ),
               ),
             ),
-            SparkleIconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => Navigator.of(context).pop(false),
-              variant: ButtonVariant.ghost,
+            Semantics(
+              button: true,
+              label: 'Chat intent preview dialog control 1',
+              child: SparkleIconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.of(context).pop(false),
+                variant: ButtonVariant.ghost,
+              ),
             ),
           ],
         ),
@@ -256,7 +260,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                     '#$index',
                     style: TextStyle(
                       color: DS.onBrandPrimary,
-                      fontWeight: FontWeight.bold,
+                      fontWeight: DS.fontWeightBold,
                     ),
                   ),
                 ),

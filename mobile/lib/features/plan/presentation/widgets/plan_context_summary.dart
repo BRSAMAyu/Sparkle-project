@@ -719,6 +719,9 @@ class _PlanContextCard extends StatelessWidget {
       case TaskStatus.inProgress:
       case TaskStatus.stuck:
         return DS.info;
+      case TaskStatus.paused:
+      case TaskStatus.restore:
+        return DS.neutral500;
       case TaskStatus.pending:
         return DS.neutral400;
       case TaskStatus.abandoned:

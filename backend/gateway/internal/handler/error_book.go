@@ -39,7 +39,7 @@ func writeProtoJSON(c *gin.Context, statusCode int, message proto.Message) {
 	}
 	payload, err := marshaler.Marshal(message)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusInternalServerError, err, "error_book.write_proto_json.marshal")
 		return
 	}
 	c.Data(statusCode, "application/json; charset=utf-8", payload)
@@ -48,7 +48,7 @@ func writeProtoJSON(c *gin.Context, statusCode int, message proto.Message) {
 func writeGRPCError(c *gin.Context, err error) {
 	status, ok := grpcstatus.FromError(err)
 	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusInternalServerError, err, "error_book.grpc.non_grpc_error")
 		return
 	}
 
@@ -64,7 +64,11 @@ func writeGRPCError(c *gin.Context, err error) {
 		httpStatus = http.StatusForbidden
 	}
 
-	c.JSON(httpStatus, gin.H{"error": status.Message()})
+	if isDevelopmentModeForErrors() {
+		c.JSON(httpStatus, gin.H{"error": status.Message()})
+		return
+	}
+	sanitizeErrorResponse(c, httpStatus, err, "error_book.grpc.status_error")
 }
 
 func (h *ErrorBookHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
@@ -87,7 +91,7 @@ func (h *ErrorBookHandler) CreateError(c *gin.Context) {
 	injectAuthContext(c)
 	var raw map[string]interface{}
 	if err := c.ShouldBindJSON(&raw); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusBadRequest, err, "error_book.create.bind")
 		return
 	}
 	if _, ok := raw["subject_code"]; !ok {
@@ -99,13 +103,13 @@ func (h *ErrorBookHandler) CreateError(c *gin.Context) {
 
 	payload, err := json.Marshal(raw)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusBadRequest, err, "error_book.create.marshal")
 		return
 	}
 
 	var req errorbookv1.CreateErrorRequest
 	if err := json.Unmarshal(payload, &req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusBadRequest, err, "error_book.create.unmarshal")
 		return
 	}
 
@@ -212,7 +216,7 @@ func (h *ErrorBookHandler) UpdateError(c *gin.Context) {
 
 	var req errorbookv1.UpdateErrorRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusBadRequest, err, "error_book.update.bind")
 		return
 	}
 
@@ -273,7 +277,7 @@ func (h *ErrorBookHandler) SubmitReview(c *gin.Context) {
 
 	var req errorbookv1.SubmitReviewRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusBadRequest, err, "error_book.submit_review.bind")
 		return
 	}
 

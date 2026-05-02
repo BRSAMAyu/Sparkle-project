@@ -138,6 +138,12 @@ class Settings(BaseSettings):
     # Community Settings
     MESSAGE_REVOKE_TIME_LIMIT_SECONDS: int = 120  # 消息撤回时间限制（秒），默认2分钟
     MESSAGE_SEND_MAX_RETRIES: int = 3  # 消息发送最大重试次数
+    COMMUNITY_INTELLIGENCE_ENABLED: bool = True
+    COMMUNITY_INTELLIGENCE_MIN_COHORT_SIZE: int = 5
+    COMMUNITY_INTELLIGENCE_DP_ENABLED: bool = True
+    COMMUNITY_INTELLIGENCE_EPSILON: float = 1.0
+    COMMUNITY_INTELLIGENCE_QUERY_EPSILON: float = 0.5
+    COMMUNITY_INTELLIGENCE_DAILY_EPSILON: float = 3.0
 
     # Database (canonical envs: POSTGRES_*)
     DATABASE_URL: str = ""
@@ -146,6 +152,11 @@ class Settings(BaseSettings):
     POSTGRES_USER: str = Field("postgres", validation_alias=AliasChoices("POSTGRES_USER", "DB_USER"))
     POSTGRES_PASSWORD: str = Field("", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
     POSTGRES_DB: str = Field("sparkle", validation_alias=AliasChoices("POSTGRES_DB", "DB_NAME"))
+    SPARKLE_RBAC_ENABLED: bool = False
+    SPARKLE_JWT_KEY_VERSION: str = "v1"           # P1-8: active JWT key version for rotation
+    SPARKLE_JWT_PREVIOUS_KEY: str = ""            # P1-8: previous key for grace-period validation
+    SPARKLE_ENGINE_DATABASE_URL: str = ""
+    SPARKLE_CELERY_DATABASE_URL: str = ""
 
     # Redis (canonical envs: REDIS_*)
     REDIS_URL: str = ""
@@ -367,6 +378,11 @@ class Settings(BaseSettings):
     EMAIL_FROM: str = ""
     EMAIL_FROM_NAME: str = "Sparkle"
 
+    # Release approval governance
+    # JSON env example:
+    # {"policy_publish":["ops@example.com"],"experiment_promote":["admin@example.com"],"*":["cto@example.com"]}
+    RELEASE_APPROVERS_BY_CATEGORY: dict[str, list[str]] = Field(default_factory=dict)
+
     # WeChat Configuration
     WECHAT_APP_ID: str = ""
     WECHAT_APP_SECRET: str = ""
@@ -378,6 +394,9 @@ class Settings(BaseSettings):
     LLM_REASON_MODEL_NAME: str = "deepseek-reasoner"
     LLM_PROVIDER: str = "xiaomi"  # 'xiaomi' | 'deepseek' | 'zhipu' | 'qwen' | 'openai' | 'hunyuan'
     LLM_QUOTA_ENABLED: bool = False  # Disable token quota checks by default for demo recording
+    LLM_DAILY_BUDGET_USD: float = 10.0  # Daily USD budget for LLM calls (cost_controller circuit breaker)
+    RAG_DAILY_BUDGET_USD: float = 2.0  # Daily USD budget for RAG operations
+    AURORA_DAILY_BUDGET_USD: float = 5.0  # Daily USD budget for Aurora operations
     AI_MODE_FAST_DAILY_REQUEST_LIMIT: int = 120
     AI_MODE_BALANCED_DAILY_REQUEST_LIMIT: int = 60
     AI_MODE_DEEP_DAILY_REQUEST_LIMIT: int = 24
@@ -593,9 +612,9 @@ class Settings(BaseSettings):
     CONTEXT_PACK_FEEDBACK_WINDOW_MINUTES: int = 10
     ENABLE_CONTEXT_RANKING: bool = True
     ENABLE_CONTEXT_FOCUSING: bool = True
-    ENABLE_CONTEXT_SEMANTIC_GATING: bool = False
+    ENABLE_CONTEXT_SEMANTIC_GATING: bool = True
     ENABLE_CONTEXT_BRIEFING: bool = True
-    ENABLE_CONTEXT_FOCUS_METADATA: bool = False
+    ENABLE_CONTEXT_FOCUS_METADATA: bool = True
     ENABLE_FOCUS_DOCUMENT_CONTEXT: bool = True
     CONTEXT_TOTAL_TOKEN_BUDGET: int = 8000
     CONVERSATION_HISTORY_CONTEXT_RATIO: float = 0.40
@@ -606,7 +625,7 @@ class Settings(BaseSettings):
     GALAXY_KNOWLEDGE_CONTEXT_RATIO: float = 0.15
     TASK_ERROR_CONTEXT_RATIO: float = 0.10
     COGNITIVE_PROFILE_CONTEXT_RATIO: float = 0.10
-    AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE: str = "shadow"  # off | shadow | live
+    AURORA_DOC_CONTEXT_DOCUMENT_CONTEXT_INJECTION_MODE: str = "live"  # off | shadow | live
     # Aurora document-context gate. auto/live/on run the classifier; off/skip disable
     # document retrieval for every turn; selective/aggressive cap positive decisions.
     AURORA_DOC_CONTEXT_MODE: str = "auto"
@@ -627,24 +646,24 @@ class Settings(BaseSettings):
     ENABLE_USER_MEMORY_CONTROLS: bool = True
     SPARKLE_MEMORY_INFERRED_WRITE_ENABLED: bool = True
     SPARKLE_MEMORY_INFERRED_DRY_RUN_ENABLED: bool = False
-    SPARKLE_AGGREGATOR_ENABLED: bool = False
+    SPARKLE_AGGREGATOR_ENABLED: bool = True
     # This data is prompt context only, not a routing decision signal.
     # Any if/switch logic based on it requires Stage 19B Sufficiency Judge acceptance.
-    SPARKLE_ROUTER_SOCIAL_CONTEXT_READ_ENABLED: bool = False
-    SPARKLE_ROUTER_USE_AGGREGATOR_PROVIDER: bool = False
-    SPARKLE_PUSH_POLICY_ENABLED: bool = False
-    SPARKLE_PUSH_DELIVERY_ENABLED: bool = False
-    SPARKLE_WORKING_MEMORY_ENABLED: bool = False
-    SPARKLE_LLM_EXTRACTOR_ENABLED: bool = False
-    SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED: bool = True
-    SPARKLE_CONSOLIDATION_ENABLED: bool = False
-    SPARKLE_CONFLICT_RESOLVER_SHADOW_MODE: bool = True
-    SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED: bool = False
+    SPARKLE_ROUTER_SOCIAL_CONTEXT_READ_ENABLED: bool = True
+    SPARKLE_ROUTER_USE_AGGREGATOR_PROVIDER: bool = True
+    SPARKLE_PUSH_POLICY_ENABLED: bool = True
+    SPARKLE_PUSH_DELIVERY_ENABLED: bool = True
+    SPARKLE_WORKING_MEMORY_ENABLED: bool = True
+    SPARKLE_LLM_EXTRACTOR_ENABLED: bool = True
+    SPARKLE_LLM_EXTRACTOR_DRY_RUN_ENABLED: bool = False
+    SPARKLE_CONSOLIDATION_ENABLED: bool = True
+    SPARKLE_CONFLICT_RESOLVER_SHADOW_MODE: bool = False
+    SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED: bool = True
     SPARKLE_SKILL_STORE_ENABLED: bool = True
-    SPARKLE_SKILL_EXTRACT_ENABLED: bool = False
-    SPARKLE_SKILL_SELECTION_ENABLED: bool = False
-    SPARKLE_SKILL_SHARE_ENABLED: bool = False
-    SPARKLE_SKILL_SHARE_MOCK_REVIEW_ENABLED: bool = True
+    SPARKLE_SKILL_EXTRACT_ENABLED: bool = True
+    SPARKLE_SKILL_SELECTION_ENABLED: bool = True
+    SPARKLE_SKILL_SHARE_ENABLED: bool = True
+    SPARKLE_SKILL_SHARE_MOCK_REVIEW_ENABLED: bool = False
     SPARKLE_SKILL_EXTRACT_MODEL: str = "claude-haiku-4-5"
     SPARKLE_SKILL_EXTRACT_MAX_TOKENS: int = 300
     SPARKLE_SKILL_SHARE_REVIEW_MODEL: str = "claude-haiku-4-5"
@@ -653,7 +672,7 @@ class Settings(BaseSettings):
     SPARKLE_LLM_EXTRACTOR_MAX_TOKENS_PER_CALL: int = 200
     SPARKLE_LLM_EXTRACTOR_MAX_TOKENS_PER_SESSION: int = 2000
     # Legacy alias kept for Stage 17 compatibility with the prompt renderer.
-    SPARKLE_PROMPT_SOCIAL_CONTEXT_RENDER_ENABLED: bool = False
+    SPARKLE_PROMPT_SOCIAL_CONTEXT_RENDER_ENABLED: bool = True
     MEMORY_INFERRED_MIN_CONFIDENCE: float = 0.9
     ENABLE_MEMORY_JOBS: bool = True
     ENABLE_EVIDENCE_SNAPSHOT_ON_WRITE: bool = True
@@ -751,6 +770,13 @@ class Settings(BaseSettings):
     INTERNAL_API_KEY: str = ""
     GATEWAY_INTERNAL_URL: str = ""
 
+    # FV-24: SLO auto-degrade kill switch modes (off=normal, live=degraded)
+    SLO_AUTO_LLM_DEGRADE_MODE: str = "off"
+    SLO_AUTO_REDIS_FALLBACK_MODE: str = "off"
+    SLO_AUTO_DB_THROTTLE_MODE: str = "off"
+    SLO_AUTO_EVENT_BUS_THROTTLE_MODE: str = "off"
+    SLO_AUTO_RATE_LIMIT_TIGHTEN_MODE: str = "off"
+
     # Production URL (used for Flutter deeplinks, CORS, and email links)
     PRODUCTION_URL: str = ""  # e.g. https://sparkle.example.com
 
@@ -768,20 +794,20 @@ class Settings(BaseSettings):
     # Optional Agent Graph V2
     ENABLE_AGENT_GRAPH_V2: bool = False
     ENABLE_MODE_WORKFLOW_V2: bool = True
-    ENABLE_AURORA_RUNTIME_V1: bool = False
+    ENABLE_AURORA_RUNTIME_V1: bool = True
     ENABLE_EXPERT_ENTRY: bool = True
     ENABLE_UNIFIED_GRAPH_ROUTING: bool = True
     ENABLE_EXPERT_STRATEGY_V1: bool = True
-    ENABLE_SESSION_FEEDBACK_ADAPTATION: bool = False
-    ENABLE_ADAPTIVE_PRESENTATION: bool = False
-    ENABLE_STRUCTURED_NEXT_ACTIONS: bool = False
-    ENABLE_BLOCKED_TEMPERATURE: bool = False
-    ENABLE_UX_PRESENTATION_METADATA: bool = False
-    ENABLE_PERCEPTIBLE_INTELLIGENCE: bool = False
-    ENABLE_PROACTIVE_INSIGHTS: bool = False
-    ENABLE_PLAN_REASONING_SUMMARY: bool = False
-    ENABLE_WEEKLY_LEARNING_REPORT: bool = False
-    ENABLE_PROGRESS_COMPARISONS: bool = False
+    ENABLE_SESSION_FEEDBACK_ADAPTATION: bool = True
+    ENABLE_ADAPTIVE_PRESENTATION: bool = True
+    ENABLE_STRUCTURED_NEXT_ACTIONS: bool = True
+    ENABLE_BLOCKED_TEMPERATURE: bool = True
+    ENABLE_UX_PRESENTATION_METADATA: bool = True
+    ENABLE_PERCEPTIBLE_INTELLIGENCE: bool = True
+    ENABLE_PROACTIVE_INSIGHTS: bool = True
+    ENABLE_PLAN_REASONING_SUMMARY: bool = True
+    ENABLE_WEEKLY_LEARNING_REPORT: bool = True
+    ENABLE_PROGRESS_COMPARISONS: bool = True
     ENABLE_SUMMARIZATION_WORKER: bool = True
     ENABLE_AGENT_QUALITY_FEEDBACK: bool = True
     ENABLE_AGENT_LLM_COLLAB_ROUTING: bool = True
@@ -817,6 +843,7 @@ class Settings(BaseSettings):
     GRPC_REQUIRE_TLS: bool | None = None
     GRPC_TLS_CERT_PATH: str = ""
     GRPC_TLS_KEY_PATH: str = ""
+    GRPC_TLS_CA_CERT_PATH: str = ""  # P2-28: For mTLS client verification
 
     @field_validator("SECRET_KEY", mode="before")
     @classmethod
@@ -880,7 +907,10 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def finalize_urls(self):
-        if not self.DATABASE_URL:
+        rbac_database_url = self._service_database_url()
+        if rbac_database_url:
+            self.DATABASE_URL = normalize_database_url(rbac_database_url)
+        elif not self.DATABASE_URL:
             host = _normalize_local_docker_host(self.POSTGRES_HOST)
             self.DATABASE_URL = normalize_database_url(
                 f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{host}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
@@ -896,6 +926,14 @@ class Settings(BaseSettings):
                 f"redis://:{self.REDIS_PASSWORD}@{host}:{self.REDIS_PORT}/{self.REDIS_DB}"
             )
         return self
+
+    def _service_database_url(self) -> str:
+        if not self.SPARKLE_RBAC_ENABLED:
+            return ""
+        role = (self.SERVICE_ROLE or "").strip().lower()
+        if role in {"celery", "celery-glm-batch", "worker", "beat"}:
+            return self.SPARKLE_CELERY_DATABASE_URL or self.SPARKLE_ENGINE_DATABASE_URL
+        return self.SPARKLE_ENGINE_DATABASE_URL
 
     @field_validator("LLM_API_KEY", mode="before")
     @classmethod
@@ -957,6 +995,10 @@ class Settings(BaseSettings):
 
         if env in ("prod", "production") and self.DEBUG:
             raise ValueError("DEBUG must be disabled in production")
+
+        # P1-8: RBAC must be enabled in production
+        if env in ("prod", "production") and not self.SPARKLE_RBAC_ENABLED:
+            raise ValueError("SPARKLE_RBAC_ENABLED must be True in production")
 
         if env in ("prod", "production") and self.SERVICE_ROLE == "grpc" and not self.GRPC_REQUIRE_TLS:
             raise ValueError("GRPC_REQUIRE_TLS must be enabled in production")

@@ -26,6 +26,7 @@ UserStateFieldName = Literal[
     "srl_phase",
     "metacognition_profile",
     "idiographic_summary",
+    "emotion_hint",
 ]
 
 
@@ -115,6 +116,13 @@ class EngagementStateValue:
     last_active_at: datetime | None
     session_count_7d: int
     streak: int
+
+
+@dataclass(frozen=True)
+class EmotionHintValue:
+    dominant_sentiment: str | None
+    sentiment_distribution: dict[str, int]
+    emotional_block_detected: bool
 
 
 @dataclass(frozen=True)
@@ -302,4 +310,4 @@ class UserStateV1:
         StateFieldEnvelope[MetacognitionProfileSummaryValue] | None
     ) = None
     idiographic_summary: StateFieldEnvelope[IdiographicSummaryValue] | None = None
-    emotion_hint: StateFieldEnvelope[None] | None = None
+    emotion_hint: StateFieldEnvelope[EmotionHintValue] | None = None

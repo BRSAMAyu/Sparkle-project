@@ -39,6 +39,7 @@ class SmartScheduleService:
             target_date,
             existing_events,
             request.exclude_event_ids,
+            estimated_minutes=request.estimated_minutes,
         )
 
         scored_slots: list[tuple[tuple[int, int], float, list[str]]] = []
@@ -122,8 +123,8 @@ class SmartScheduleService:
         query = select(CalendarEvent).where(
             CalendarEvent.user_id == user_id,
             CalendarEvent.deleted_at.is_(None),
-            CalendarEvent.start_time >= day_start,
-            CalendarEvent.end_time <= day_end,
+            CalendarEvent.start_time < day_end,
+            CalendarEvent.end_time > day_start,
         ).order_by(CalendarEvent.start_time)
 
         result = await self.db.execute(query)
@@ -237,15 +238,33 @@ class SmartScheduleService:
         target_date: date,
         existing_events: list[CalendarEvent],
         exclude_ids: list[str] | None,
+        *,
+        estimated_minutes: int,
     ) -> list[tuple[int, int]]:
         """生成可用时间槽。"""
-        slots = [(hour, hour + 1) for hour in range(6, 23)]
+        day_start = 6 * 60
+        day_end = 23 * 60
+        duration = max(5, min(480, int(estimated_minutes or 60)))
+        step = 15 if duration <= 45 else 30
+
+        slots: list[tuple[int, int]] = []
+        cursor = day_start
+        while cursor + duration <= day_end:
+            slots.append((cursor, cursor + duration))
+            cursor += step
+
+        target_start = datetime.combine(target_date, datetime.min.time())
+        target_end = datetime.combine(target_date, datetime.max.time())
         for event in existing_events:
             if exclude_ids and str(event.id) in exclude_ids:
                 continue
-            start_hour = event.start_time.hour
-            end_hour = min(23, event.end_time.hour + (1 if event.end_time.minute > 0 else 0))
-            slots = [(start, end) for start, end in slots if not (start >= start_hour and end <= end_hour)]
+            event_start = max(event.start_time, target_start)
+            event_end = min(event.end_time, target_end)
+            start_minutes = event_start.hour * 60 + event_start.minute
+            end_minutes = min(day_end, event_end.hour * 60 + event_end.minute)
+            if event_end.second or event_end.microsecond:
+                end_minutes += 1
+            slots = [(start, end) for start, end in slots if end <= start_minutes or start >= end_minutes]
         return slots
 
     def _score_time_slot(
@@ -256,7 +275,7 @@ class SmartScheduleService:
         difficulty: int,
         schedule_profile: dict[str, object],
     ) -> tuple[float, list[str]]:
-        start_hour, _ = slot
+        start_hour = slot[0] // 60
         score = 0.35
         reasons: list[str] = []
 
@@ -329,7 +348,8 @@ class SmartScheduleService:
         target_date: date,
         reasons: list[str],
     ) -> TimeSlotSuggestion:
-        start_hour, end_hour = slot
+        start_minute, end_minute = slot
+        start_hour = start_minute // 60
         if score >= 0.74:
             quality = TimeSlotQuality.PEAK
         elif score >= 0.48:
@@ -348,14 +368,19 @@ class SmartScheduleService:
 
         confidence = min(0.95, 0.62 + score * 0.28)
         return TimeSlotSuggestion(
-            start_time=f"{start_hour:02d}:00",
-            end_time=f"{end_hour:02d}:00",
+            start_time=self._format_minutes(start_minute),
+            end_time=self._format_minutes(end_minute),
             date=target_date,
             quality=quality,
             score=round(score, 2),
             confidence=round(confidence, 2),
             reason=reason,
         )
+
+    @staticmethod
+    def _format_minutes(value: int) -> str:
+        value = max(0, min(24 * 60, int(value)))
+        return f"{value // 60:02d}:{value % 60:02d}"
 
     def _build_cognitive_insights(self, schedule_profile: dict[str, object]) -> dict[str, object]:
         exam_urgency = schedule_profile.get("exam_urgency")

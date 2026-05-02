@@ -3,6 +3,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/app_event_stream_service.dart';
+import 'package:sparkle/features/community/data/models/community_model.dart';
 
 final communityShareRepositoryProvider = Provider((ref) {
   final apiClient = ref.watch(apiClientProvider);
@@ -15,6 +16,38 @@ class CommunityShareRepository {
 
   final ApiClient _apiClient;
   final AppEventStreamService _eventStream;
+
+  /// Fetch shared resources with quality scoring info.
+  Future<List<SharedResourceInfo>> fetchSharedResources({
+    String sort = 'quality',
+    String? resourceType,
+    int limit = 20,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'sort': sort,
+      'limit': limit,
+    };
+    if (resourceType != null) {
+      queryParams['resource_type'] = resourceType;
+    }
+
+    final response = await _apiClient.get<dynamic>(
+      ApiEndpoints.communityResources,
+      queryParameters: queryParams,
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch shared resources');
+    }
+
+    final data = response.data;
+    if (data is! List) return [];
+
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map((json) => SharedResourceInfo.fromJson(json))
+        .toList();
+  }
 
   Future<Map<String, dynamic>> shareResource({
     required String resourceType,
@@ -75,5 +108,24 @@ class CommunityShareRepository {
       adoptedEntityId: data['new_resource_id']?.toString(),
     );
     return data;
+  }
+
+  /// SRC-015: Reject a recommended community resource so it does not appear
+  /// in future suggestions for this user. Records the rejection event so the
+  /// recommender can downweight similar resources.
+  Future<void> rejectResource({
+    required String sharedResourceId,
+  }) async {
+    final trimmedId = sharedResourceId.trim();
+    if (trimmedId.isEmpty) return;
+
+    // Server-side endpoint may not exist yet; record rejection through the
+    // event stream so it still influences personalization. When the backend
+    // ships /community/shared-resources/{id}/reject, swap to that.
+    await _eventStream.recordSharedResourceAction(
+      action: 'rejected',
+      sharedResourceId: sharedResourceId,
+      resourceType: 'community_share',
+    );
   }
 }

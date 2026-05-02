@@ -220,7 +220,13 @@ class ContextPruner:
         if message.get("tool_calls") or message.get("tool_results"):
             return True
         content = str(message.get("content") or "")
-        high_priority_keywords = ["计划", "任务", "阶段", "里程碑", "目标", "记住", "注意", "修改", "变更"]
+        high_priority_keywords = [
+            "计划", "任务", "阶段", "里程碑", "目标", "记住", "注意", "修改", "变更",
+            "焦虑", "压力", "紧张", "担心", "害怕", "崩溃", "烦躁", "失落",
+            "开心", "高兴", "激动", "兴奋", "成就感",
+            "卡住", "不理解", "不懂", "迷茫", "困惑",
+            "想放弃", "放弃", "坚持", "动力",
+        ]
         return any(keyword in content for keyword in high_priority_keywords)
 
     def _is_anchor_message(self, message: dict[str, Any]) -> bool:
@@ -320,7 +326,7 @@ context_pruner_instance = None
 
 def get_context_pruner(
     redis_client: redis.Redis | None = None,
-    **kwargs
+    **kwargs,
 ) -> ContextPruner:
     global context_pruner_instance
 
@@ -328,5 +334,8 @@ def get_context_pruner(
         if redis_client is None:
             raise ValueError("Redis client is required for first initialization")
         context_pruner_instance = ContextPruner(redis_client, **kwargs)
+    elif redis_client is not None and context_pruner_instance.redis is not redis_client:
+        # Re-initialize with new Redis client on reconnection
+        context_pruner_instance.redis = redis_client
 
     return context_pruner_instance

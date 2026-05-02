@@ -81,7 +81,7 @@ class GalaxyDocumentUploadOverlay extends StatelessWidget {
                                   .textTheme
                                   .labelLarge
                                   ?.copyWith(
-                                    color: Colors.white,
+                                    color: DS.neutral0,
                                     fontWeight: FontWeight.w700,
                                   ),
                             ),
@@ -229,7 +229,7 @@ class _GalaxyUploadStatusCard extends StatelessWidget {
                     Text(
                       _title(context),
                       style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
+                        color: DS.neutral0,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -237,7 +237,7 @@ class _GalaxyUploadStatusCard extends StatelessWidget {
                     Text(
                       details,
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.7),
+                        color: DS.neutral0.withValues(alpha: 0.7),
                         height: 1.4,
                       ),
                     ),
@@ -248,7 +248,7 @@ class _GalaxyUploadStatusCard extends StatelessWidget {
                 IconButton(
                   onPressed: onDismiss,
                   icon: const Icon(Icons.close_rounded),
-                  color: Colors.white.withValues(alpha: 0.72),
+                  color: DS.neutral0.withValues(alpha: 0.72),
                 ),
             ],
           ),
@@ -260,7 +260,7 @@ class _GalaxyUploadStatusCard extends StatelessWidget {
             child: LinearProgressIndicator(
               minHeight: 8,
               value: session.overallProgress.clamp(0, 1),
-              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              backgroundColor: DS.neutral0.withValues(alpha: 0.08),
               valueColor: AlwaysStoppedAnimation<Color>(accentColor),
             ),
           ),
@@ -273,7 +273,7 @@ class _GalaxyUploadStatusCard extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: Colors.white,
+                    color: DS.neutral0,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -293,7 +293,7 @@ class _GalaxyUploadStatusCard extends StatelessWidget {
             Text(
               session.errorMessage ?? l10n.galaxyUploadFailedBody,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.74),
+                color: DS.neutral0.withValues(alpha: 0.74),
                 height: 1.5,
               ),
             ),
@@ -435,7 +435,7 @@ class _StageStepper extends StatelessWidget {
                             ? (item.complete
                                 ? DS.success
                                 : const Color(0xFF7BE7FF))
-                            : Colors.white.withValues(alpha: 0.08),
+                            : DS.neutral0.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(999),
                       ),
                     ),
@@ -446,8 +446,8 @@ class _StageStepper extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: item.complete || item.active
-                                ? Colors.white
-                                : Colors.white.withValues(alpha: 0.52),
+                                ? DS.neutral0
+                                : DS.neutral0.withValues(alpha: 0.52),
                             fontWeight:
                                 item.active ? FontWeight.w700 : FontWeight.w500,
                           ),
@@ -619,7 +619,7 @@ class _GlowingDocumentOrb extends StatelessWidget {
           shape: BoxShape.circle,
           gradient: RadialGradient(
             colors: [
-              Colors.white,
+              DS.neutral0,
               color.withValues(alpha: 0.9),
               color.withValues(alpha: 0.22),
             ],

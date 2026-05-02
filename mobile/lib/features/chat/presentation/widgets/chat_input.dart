@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/presentation/widgets/attachment_picker_sheet.dart';
@@ -35,6 +36,7 @@ class ChatInput extends ConsumerStatefulWidget {
     this.onToggleStudyMaterials,
     this.onOpenStudyMaterials,
     this.onSetDocumentContextMode,
+    this.onFreeformCorrection,
   });
   final bool enabled;
   final String? hintText;
@@ -50,6 +52,7 @@ class ChatInput extends ConsumerStatefulWidget {
   final VoidCallback? onToggleStudyMaterials;
   final VoidCallback? onOpenStudyMaterials;
   final ValueChanged<DocumentContextMode>? onSetDocumentContextMode;
+  final FutureOr<void> Function(String text)? onFreeformCorrection;
 
   @override
   ConsumerState<ChatInput> createState() => _ChatInputState();
@@ -214,6 +217,72 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     });
   }
 
+  Future<void> _handleFreeformCorrection() async {
+    final callback = widget.onFreeformCorrection;
+    if (callback == null) return;
+
+    final text = await _showFreeformCorrectionDialog();
+    if (text == null || text.isEmpty) return;
+    await Future<void>.sync(() => callback(text));
+    if (mounted) {
+      AppFeedback.info(context, context.l10n.auroraCorrectionSubmitted);
+      _restoreFocus();
+    }
+  }
+
+  Future<String?> _showFreeformCorrectionDialog() {
+    final controller = TextEditingController();
+    final focusNode = FocusNode();
+
+    return showDialog<String?>(
+      context: context,
+      builder: (ctx) {
+        String? submittedText() {
+          final text = controller.text.trim();
+          return text.isEmpty ? null : text;
+        }
+
+        return AlertDialog(
+          title: Text(context.l10n.auroraCorrectionInputTitle),
+          content: TextField(
+            controller: controller,
+            focusNode: focusNode,
+            autofocus: true,
+            maxLines: 3,
+            minLines: 2,
+            decoration: InputDecoration(
+              hintText: context.l10n.auroraCorrectionInputHint,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(DS.radius12),
+              ),
+              contentPadding: const EdgeInsets.all(DS.spacing12),
+            ),
+            textInputAction: TextInputAction.send,
+            onSubmitted: (_) {
+              final text = submittedText();
+              if (text != null) {
+                Navigator.of(ctx).pop(text);
+              }
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(null),
+              child: Text(context.l10n.auroraCorrectionInputCancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(submittedText()),
+              child: Text(context.l10n.auroraCorrectionInputSend),
+            ),
+          ],
+        );
+      },
+    ).whenComplete(() {
+      focusNode.dispose();
+      controller.dispose();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final enterToSend = ref.watch(enterToSendProvider);
@@ -231,7 +300,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
         mainAxisSize: MainAxisSize.min,
         children: [
           if (widget.quotedMessage != null) _buildQuotePreview(isDark),
-          if (widget.onToggleStudyMaterials != null)
+          if (widget.onToggleStudyMaterials != null ||
+              widget.onFreeformCorrection != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 DS.spacing8,
@@ -245,12 +315,14 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                   spacing: DS.spacing8,
                   runSpacing: DS.spacing8,
                   children: [
-                    _SourceTrayPill(
-                      mode: widget.documentContextMode,
-                      enabled: widget.enabled,
-                      onModeChanged: widget.onSetDocumentContextMode,
-                    ),
-                    if (widget.documentContextMode != DocumentContextMode.off &&
+                    if (widget.onToggleStudyMaterials != null)
+                      _SourceTrayPill(
+                        mode: widget.documentContextMode,
+                        enabled: widget.enabled,
+                        onModeChanged: widget.onSetDocumentContextMode,
+                      ),
+                    if (widget.onToggleStudyMaterials != null &&
+                        widget.documentContextMode != DocumentContextMode.off &&
                         widget.availableStudyMaterialsCount > 0)
                       ChatAccessoryPill(
                         icon: Icons.description_outlined,
@@ -266,13 +338,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             widget.enabled ? widget.onOpenStudyMaterials : null,
                         emphasize: true,
                       ),
-                    if (widget.documentContextMode == DocumentContextMode.off)
+                    if (widget.onToggleStudyMaterials != null &&
+                        widget.documentContextMode == DocumentContextMode.off)
                       ChatAccessoryPill(
                         icon: Icons.pause_circle_outline_rounded,
                         label: context.l10n.chatStudyMaterialsPausedDescription,
                         onTap: widget.enabled
                             ? widget.onToggleStudyMaterials
                             : null,
+                      ),
+                    if (widget.onFreeformCorrection != null)
+                      ChatAccessoryPill(
+                        icon: Icons.edit_note_rounded,
+                        label: context.l10n.auroraCorrectionFreeformLabel,
+                        onTap:
+                            widget.enabled ? _handleFreeformCorrection : null,
+                        emphasize: true,
                       ),
                   ],
                 ),
@@ -295,18 +376,22 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         duration: DS.durationFast,
                         curve: Curves.easeOutBack,
                         scale: _isAttachmentBursting ? 1.08 : 1,
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.add_circle_outline_rounded,
-                            color: DS.textSecondary,
-                          ),
-                          iconSize: attachmentIconSize,
-                          onPressed:
-                              widget.enabled ? _showAttachmentSheet : null,
-                          padding: EdgeInsets.all(attachmentPadding),
-                          constraints: BoxConstraints.tightFor(
-                            width: attachmentVisualSize,
-                            height: attachmentVisualSize,
+                        child: Semantics(
+                          button: true,
+                          label: 'Open attachment options',
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.add_circle_outline_rounded,
+                              color: DS.textSecondary,
+                            ),
+                            iconSize: attachmentIconSize,
+                            onPressed:
+                                widget.enabled ? _showAttachmentSheet : null,
+                            padding: EdgeInsets.all(attachmentPadding),
+                            constraints: BoxConstraints.tightFor(
+                              width: attachmentVisualSize,
+                              height: attachmentVisualSize,
+                            ),
                           ),
                         ),
                       ),
@@ -366,7 +451,7 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               : TextInputAction.newline,
                           keyboardType: TextInputType.multiline,
                           decoration: InputDecoration(
-                            hintText: widget.hintText ?? 'Type a message...',
+                            hintText: widget.hintText ?? (I18nService.instance.isChinese ? '输入消息...' : 'Type a message...'),
                             hintStyle: TextStyle(color: DS.textSecondary),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: DS.spacing16,
@@ -426,29 +511,34 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 child: Material(
                   color: Colors.transparent,
                   shape: const CircleBorder(),
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: canSend ? _handleSend : null,
-                    onHighlightChanged: (pressed) {
-                      if (!mounted) return;
-                      setState(() => _isButtonPressed = pressed);
-                    },
-                    child: Center(
-                      child: _isSending
-                          ? SizedBox(
-                              width: 22,
-                              height: 22,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: DS.textOnPrimary,
+                  child: Semantics(
+                    button: true,
+                    label: 'Send message',
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: canSend ? _handleSend : null,
+                      onHighlightChanged: (pressed) {
+                        if (!mounted) return;
+                        setState(() => _isButtonPressed = pressed);
+                      },
+                      child: Center(
+                        child: _isSending
+                            ? SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: DS.textOnPrimary,
+                                ),
+                              )
+                            : Icon(
+                                Icons.arrow_upward_rounded,
+                                color: canSend
+                                    ? DS.textOnPrimary
+                                    : DS.textSecondary,
+                                size: DS.iconSizeBase,
                               ),
-                            )
-                          : Icon(
-                              Icons.arrow_upward_rounded,
-                              color:
-                                  canSend ? DS.textOnPrimary : DS.textSecondary,
-                              size: DS.iconSizeBase,
-                            ),
+                      ),
                     ),
                   ),
                 ),
@@ -478,7 +568,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    context.l10n.chatInputQuoting(widget.quotedMessage!.sender.displayName),
+                    context.l10n.chatInputQuoting(
+                        widget.quotedMessage!.sender.displayName),
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       fontWeight: DS.fontWeightBold,
@@ -501,14 +592,18 @@ class _ChatInputState extends ConsumerState<ChatInput> {
             SizedBox(
               width: DS.touchTargetMinSize,
               height: DS.touchTargetMinSize,
-              child: IconButton(
-                icon: Icon(
-                  Icons.close_rounded,
-                  size: DS.iconSizeSm,
-                  color: DS.textSecondary,
+              child: Semantics(
+                button: true,
+                label: 'Cancel quoted message',
+                child: IconButton(
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: DS.iconSizeSm,
+                    color: DS.textSecondary,
+                  ),
+                  onPressed: widget.onCancelQuote,
+                  padding: const EdgeInsets.all(12),
                 ),
-                onPressed: widget.onCancelQuote,
-                padding: const EdgeInsets.all(12),
               ),
             ),
           ],
@@ -536,15 +631,15 @@ class _SourceTrayPill extends StatelessWidget {
         ),
       DocumentContextMode.userSelected => (
           Icons.playlist_add_check_rounded,
-          'My Sources',
+          I18nService.instance.isChinese ? '我的资料' : 'My Sources',
         ),
       DocumentContextMode.taskScope => (
           Icons.task_alt_rounded,
-          'Task Scope',
+          I18nService.instance.isChinese ? '任务范围' : 'Task Scope',
         ),
       DocumentContextMode.goalScope => (
           Icons.flag_rounded,
-          'Goal Scope',
+          I18nService.instance.isChinese ? '目标范围' : 'Goal Scope',
         ),
       DocumentContextMode.off => (
           Icons.menu_book_outlined,
@@ -559,7 +654,8 @@ class _SourceTrayPill extends StatelessWidget {
           ? () {
               final next = switch (mode) {
                 DocumentContextMode.auto => DocumentContextMode.userSelected,
-                DocumentContextMode.userSelected => DocumentContextMode.taskScope,
+                DocumentContextMode.userSelected =>
+                  DocumentContextMode.taskScope,
                 DocumentContextMode.taskScope => DocumentContextMode.goalScope,
                 DocumentContextMode.goalScope => DocumentContextMode.off,
                 DocumentContextMode.off => DocumentContextMode.auto,

@@ -11,14 +11,14 @@ Statechart Engine Core Test Suite
 from __future__ import annotations
 
 import asyncio
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock
 
 from app.orchestration.statechart_engine import (
+    GraphEvent,
+    GraphEventType,
     StateGraph,
     WorkflowState,
-    GraphEventType,
-    GraphEvent,
 )
 
 
@@ -208,6 +208,104 @@ class TestStateGraphBasicExecution:
 
         assert result.context_data["sync_result"] == "done"
         assert result.messages[1]["content"] == "Sync executed"
+
+    @pytest.mark.asyncio
+    async def test_interrupted_checkpoint_resume_preserves_fresh_message_and_volatile_context(self):
+        async def node_a(state: WorkflowState) -> WorkflowState:
+            state.context_data["node_a_seen"] = True
+            state.append_message("system", "fresh node")
+            return state
+
+        checkpoint_state = WorkflowState(
+            messages=[{"role": "user", "content": "old message"}],
+            context_data={
+                "session_id": "s1",
+                "request_id": "r1",
+                "durable_hint": "keep",
+                "db_session": "old-db",
+                "stream_callback": "old-callback",
+            },
+            errors=["previous retryable error"],
+            trace_id="trace-old",
+        )
+
+        class FakeCheckpointer:
+            def __init__(self):
+                self.completed = False
+
+            async def load_interrupted(self, **kwargs):
+                assert kwargs["session_id"] == "s1"
+                assert kwargs["request_id"] == "r1"
+                return checkpoint_state, "node_a", {"incomplete": True}
+
+            async def save(self, state, node_id):
+                assert state.context_data["db_session"] == "fresh-db"
+                assert state.context_data["stream_callback"] == "fresh-callback"
+                assert state.messages[0]["content"] == "fresh message"
+
+            async def mark_completed(self, session_id, request_id=None):
+                self.completed = True
+
+        graph = StateGraph("ResumeGraph")
+        graph.add_node("node_a", node_a)
+        graph.set_entry_point("node_a")
+        graph.checkpointer = FakeCheckpointer()
+        graph.compile()
+
+        fresh = WorkflowState(
+            messages=[{"role": "user", "content": "fresh message"}],
+            context_data={
+                "session_id": "s1",
+                "request_id": "r1",
+                "db_session": "fresh-db",
+                "stream_callback": "fresh-callback",
+            },
+        )
+        result = await graph.invoke(fresh, resume_policy="interrupted_only")
+
+        assert result.messages[0]["content"] == "fresh message"
+        assert result.context_data["durable_hint"] == "keep"
+        assert result.context_data["db_session"] == "fresh-db"
+        assert result.context_data["stream_callback"] == "fresh-callback"
+        assert result.context_data["checkpoint_resume"]["node_id"] == "node_a"
+        assert result.trace_id == "trace-old"
+        assert graph.checkpointer.completed is True
+
+    @pytest.mark.asyncio
+    async def test_checkpoint_resume_does_not_run_for_new_turn_request(self):
+        called = False
+
+        async def node_a(state: WorkflowState) -> WorkflowState:
+            nonlocal called
+            called = True
+            return state
+
+        class FakeCheckpointer:
+            async def load_interrupted(self, **kwargs):
+                return None
+
+            async def save(self, state, node_id):
+                pass
+
+            async def mark_completed(self, session_id, request_id=None):
+                pass
+
+        graph = StateGraph("NoResumeGraph")
+        graph.add_node("node_a", node_a)
+        graph.set_entry_point("node_a")
+        graph.checkpointer = FakeCheckpointer()
+        graph.compile()
+
+        result = await graph.invoke(
+            WorkflowState(
+                messages=[{"role": "user", "content": "new turn"}],
+                context_data={"session_id": "s1", "request_id": "new-request"},
+            ),
+            resume_policy="interrupted_only",
+        )
+
+        assert called is True
+        assert "checkpoint_resume" not in result.context_data
 
     @pytest.mark.asyncio
     async def test_max_steps_limit(self, sample_state):

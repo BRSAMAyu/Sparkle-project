@@ -1,0 +1,16 @@
+{
+  "id": "checkpoint_return_2_days",
+  "family": "checkpoint_return",
+  "kind": "checkpoint_return",
+  "title": "Checkpoint 回归：短间隔",
+  "input": {
+    "plan_name": "7天计算机网络冲刺",
+    "checkpoint_day": 3,
+    "checkpoint_description": "第一次小复盘",
+    "previous_summary": "上次你把滑动窗口和拥塞控制分开理解，效果不错",
+    "open_threads": [],
+    "unclosed_questions": [],
+    "progress_facts": ["已完成 6/8 张任务", "TCP 题正确率从 50% 到 75%"],
+    "previous_openings": []
+  }
+}

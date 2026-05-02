@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
@@ -24,6 +25,7 @@ class DashboardState {
     this.nextMoveCard,
     this.isLoading = false,
     this.error,
+    this.failure,
   });
 
   DashboardState.loading()
@@ -41,9 +43,10 @@ class DashboardState {
         whatChangedCard = null,
         nextMoveCard = null,
         isLoading = true,
-        error = null;
+        error = null,
+        failure = null;
 
-  DashboardState.error(String errorMessage)
+  DashboardState.error(String errorMessage, {AppFailure? failure})
       : weather = WeatherData(type: 'sunny', condition: ''),
         flame = FlameData(level: 1, brightness: 0.0, todayFocusMinutes: 0),
         sprint = null,
@@ -58,7 +61,8 @@ class DashboardState {
         whatChangedCard = null,
         nextMoveCard = null,
         isLoading = false,
-        error = errorMessage;
+        error = errorMessage,
+        failure = failure;
   final WeatherData weather;
   final FlameData flame;
   final SprintData? sprint;
@@ -74,6 +78,7 @@ class DashboardState {
   final NextMoveCardData? nextMoveCard;
   final bool isLoading;
   final String? error;
+  final AppFailure? failure;
 
   DashboardState copyWith({
     WeatherData? weather,
@@ -91,6 +96,7 @@ class DashboardState {
     NextMoveCardData? nextMoveCard,
     bool? isLoading,
     String? error,
+    AppFailure? failure,
   }) =>
       DashboardState(
         weather: weather ?? this.weather,
@@ -108,6 +114,7 @@ class DashboardState {
         nextMoveCard: nextMoveCard ?? this.nextMoveCard,
         isLoading: isLoading ?? this.isLoading,
         error: error ?? this.error,
+        failure: failure ?? this.failure,
       );
 }
 
@@ -124,7 +131,10 @@ class FlameData {
     required this.todayFocusMinutes,
     this.tasksCompleted = 0,
     String? nudgeMessage,
-  }) : nudgeMessage = nudgeMessage ?? (I18nService.instance.isChinese ? '保持专注，继续前行' : 'Stay focused, keep going');
+  }) : nudgeMessage = nudgeMessage ??
+            (I18nService.instance.isChinese
+                ? '保持专注，继续前行'
+                : 'Stay focused, keep going');
   final int level;
   final double brightness;
   final int todayFocusMinutes;
@@ -453,7 +463,9 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         tasksCompleted: _asInt(flameMap['tasks_completed']),
         nudgeMessage: _asString(
           flameMap['nudge_message'],
-          fallback: I18nService.instance.isChinese ? '保持专注，继续前行' : 'Stay focused, keep going',
+          fallback: I18nService.instance.isChinese
+              ? '保持专注，继续前行'
+              : 'Stay focused, keep going',
         ),
       );
 
@@ -609,8 +621,8 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
                   .map((item) => '$item')
                   .where((item) => item.trim().isNotEmpty)
                   .toList(),
-              timeframeLabel:
-                  _asString(whatChangedMap['timeframe_label'], fallback: I18nService.instance.isChinese ? '最近' : 'Recent'),
+              timeframeLabel: _asString(whatChangedMap['timeframe_label'],
+                  fallback: I18nService.instance.isChinese ? '最近' : 'Recent'),
             );
 
       final nextMoveMap =
@@ -646,9 +658,13 @@ class DashboardNotifier extends StateNotifier<DashboardState> {
         nextMoveCard: nextMoveCard,
       );
     } catch (e) {
-      debugPrint('Error loading dashboard: $e');
+      final failure = AppFailureMapper.from(
+        e,
+        fallbackMessage: 'Could not load dashboard.',
+      );
+      debugPrint('Error loading dashboard: $failure');
       if (!mounted) return;
-      state = DashboardState.error(e.toString());
+      state = DashboardState.error(failure.userMessage, failure: failure);
       // F-09: Auto-retry once after 5 seconds on error
       Future.delayed(const Duration(seconds: 5), () {
         if (mounted && state.error != null) {

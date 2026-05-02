@@ -34,12 +34,7 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? queryParameters,
   }) async {
-    try {
-      return await _dio.get(path, queryParameters: queryParameters);
-    } on DioException {
-      // Handle error
-      rethrow;
-    }
+    return await _dio.get(path, queryParameters: queryParameters);
   }
 
   Future<Response<T>> post<T>(
@@ -47,12 +42,7 @@ class ApiClient {
     Object? data,
     Map<String, dynamic>? queryParameters,
   }) async {
-    try {
-      return await _dio.post(path, data: data, queryParameters: queryParameters);
-    } on DioException {
-      // Handle error
-      rethrow;
-    }
+    return await _dio.post(path, data: data, queryParameters: queryParameters);
   }
 
   Future<Response<T>> put<T>(
@@ -60,32 +50,18 @@ class ApiClient {
     Object? data,
     Map<String, dynamic>? queryParameters,
   }) async {
-    try {
-      return await _dio.put(path, data: data, queryParameters: queryParameters);
-    } on DioException {
-      // Handle error
-      rethrow;
-    }
+    return await _dio.put(path, data: data, queryParameters: queryParameters);
   }
 
   Future<Response<T>> patch<T>(String path, {Object? data}) async {
-    try {
-      return await _dio.patch(path, data: data);
-    } on DioException {
-      rethrow;
-    }
+    return await _dio.patch(path, data: data);
   }
 
   Future<Response<T>> delete<T>(
     String path, {
     Map<String, dynamic>? queryParameters,
   }) async {
-    try {
-      return await _dio.delete(path, queryParameters: queryParameters);
-    } on DioException {
-      // Handle error
-      rethrow;
-    }
+    return await _dio.delete(path, queryParameters: queryParameters);
   }
 
   /// SSE 流式 GET 请求
@@ -116,35 +92,48 @@ class ApiClient {
 
       var buffer = StringBuffer();
 
-      await for (final chunk in stream) {
-        buffer.write(utf8.decode(chunk));
-        var bufferStr = buffer.toString();
-
-        while (bufferStr.contains('\n\n')) {
-          final eventEnd = bufferStr.indexOf('\n\n');
-          final eventStr = bufferStr.substring(0, eventEnd);
-          bufferStr = bufferStr.substring(eventEnd + 2);
-
-          final event = _parseSSEEvent(eventStr);
-          if (event != null) {
-            yield event;
-            if (event.event == 'done' || event.event == 'error') {
-              return;
-            }
-          }
-        }
-        buffer = StringBuffer()..write(bufferStr);
+      await for (final chunk in stream.cast<List<int>>().transform(utf8.decoder)) {
+        buffer.write(chunk);
+        yield* _parseSSEBuffer(buffer);
       }
     } on DioException catch (e) {
       yield SSEEvent(
         event: 'error',
-        data: '{"message": "${e.message ?? "网络连接中断"}"}',
+        data: '{"message": "${e.message ?? "Connection lost"}", "error_code": "CONNECTION_ERROR"}',
       );
     } catch (e) {
       yield SSEEvent(
         event: 'error',
-        data: '{"message": "发生错误: $e"}',
+        data: '{"message": "An error occurred", "error_code": "STREAM_ERROR"}',
       );
+    }
+  }
+
+  /// Yield SSE events from buffer, handling both \n\n and \r\n\r\n delimiters.
+  Stream<SSEEvent> _parseSSEBuffer(StringBuffer buffer) async* {
+    var bufferStr = buffer.toString();
+    while (true) {
+      final doubleNewline = bufferStr.indexOf('\n\n');
+      final doubleCRLF = bufferStr.indexOf('\r\n\r\n');
+      final eventEnd = (doubleNewline >= 0 && (doubleCRLF < 0 || doubleNewline < doubleCRLF))
+          ? doubleNewline
+          : doubleCRLF;
+      if (eventEnd < 0) {
+        buffer
+          ..clear()
+          ..write(bufferStr);
+        break;
+      }
+      final delimLen = eventEnd == doubleCRLF ? 4 : 2;
+      final eventStr = bufferStr.substring(0, eventEnd);
+      bufferStr = bufferStr.substring(eventEnd + delimLen);
+      final event = _parseSSEEvent(eventStr);
+      if (event != null) {
+        yield event;
+        if (event.event == 'done' || event.event == 'error') {
+          return;
+        }
+      }
     }
   }
 
@@ -174,30 +163,11 @@ class ApiClient {
 
       var buffer = StringBuffer();
 
-      await for (final chunk in stream) {
-        buffer.write(utf8.decode(chunk));
-        var bufferStr = buffer.toString();
-
-        // 解析 SSE 事件 (以双换行分隔)
-        while (bufferStr.contains('\n\n')) {
-          final eventEnd = bufferStr.indexOf('\n\n');
-          final eventStr = bufferStr.substring(0, eventEnd);
-          bufferStr = bufferStr.substring(eventEnd + 2);
-
-          final event = _parseSSEEvent(eventStr);
-          if (event != null) {
-            yield event;
-
-            // 如果是 done 或 error 事件，结束流
-            if (event.event == 'done' || event.event == 'error') {
-              return;
-            }
-          }
-        }
-        buffer = StringBuffer()..write(bufferStr);
+      await for (final chunk in stream.cast<List<int>>().transform(utf8.decoder)) {
+        buffer.write(chunk);
+        yield* _parseSSEBuffer(buffer);
       }
 
-      // 处理剩余的 buffer
       final remaining = buffer.toString();
       if (remaining.isNotEmpty) {
         final event = _parseSSEEvent(remaining);
@@ -209,12 +179,12 @@ class ApiClient {
       // 🚨 网络错误时不抛出异常，返回错误事件
       yield SSEEvent(
         event: 'error',
-        data: '{"message": "${e.message ?? "网络连接中断"}"}',
+        data: '{"message": "${e.message ?? "Connection lost"}", "error_code": "CONNECTION_ERROR"}',
       );
     } catch (e) {
       yield SSEEvent(
         event: 'error',
-        data: '{"message": "发生错误: $e"}',
+        data: '{"message": "An error occurred", "error_code": "STREAM_ERROR"}',
       );
     }
   }
@@ -225,7 +195,7 @@ class ApiClient {
     String? event;
     String? data;
 
-    for (final line in eventStr.split('\n')) {
+    for (final line in eventStr.split(RegExp(r'\r?\n'))) {
       if (line.startsWith('id:')) {
         id = line.substring(3).trim();
       } else if (line.startsWith('event:')) {

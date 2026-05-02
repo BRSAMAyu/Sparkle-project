@@ -1,0 +1,6 @@
+{
+  "understandingPanelTitle": "Sparkle 懂我",
+  "understandingPanelSemanticLabel": "Sparkle 对我的理解快照",
+  "understandingCorrectionTitle": "纠正这条判断",
+  "understandingChatDrawerTitle": "当前自我模型"
+}

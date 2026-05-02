@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from dataclasses import replace
 from datetime import UTC, date, datetime, timedelta
+from app.core.time_utils import utcnow
 from typing import Any
 from uuid import UUID
 
@@ -19,6 +20,7 @@ from app.models.achievement import (
 )
 from app.models.calendar_event import CalendarEvent
 from app.models.chat import ChatSession
+from app.models.cognitive import CognitiveFragment
 from app.models.focus import FocusSession, FocusStatus
 from app.models.memory import EpisodicMemory
 from app.models.srl_phase_state import SRLPhaseStateRecord
@@ -46,6 +48,7 @@ from app.state_aggregator.schema import (
     CalendarDeadlineItemValue,
     CalendarTimeBlockItemValue,
     CommitmentSummaryValue,
+    EmotionHintValue,
     EngagementStateValue,
     ForesightConfidenceItemValue,
     ForesightHintSummaryValue,
@@ -71,11 +74,6 @@ from app.state_aggregator.schema import (
 )
 from app.working_memory.service import WorkingMemoryService
 
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
 class StateAggregatorService:
     """Read-only Stage 18 user-state aggregator."""
 
@@ -99,6 +97,7 @@ class StateAggregatorService:
         "srl_phase": settings.AURORA_SRL_AGGREGATOR_TTL_SECONDS,
         "metacognition_profile": settings.AURORA_METACOG_CACHE_TTL_SECONDS,
         "idiographic_summary": settings.AURORA_IDIOGRAPHIC_TTL_SECONDS,
+        "emotion_hint": 60,
     }
 
     def __init__(self, db: AsyncSession) -> None:
@@ -123,7 +122,7 @@ class StateAggregatorService:
         skill_selection_context: SkillSelectionContext | None = None,
         expose_shadow: bool = False,
     ) -> UserStateV1:
-        reference_time = now or _utcnow()
+        reference_time = now or utcnow()
         state = UserStateV1(user_id=user_id)
         for field_name in tuple(dict.fromkeys(required_fields)):
             envelope = await self._get_field(
@@ -202,6 +201,7 @@ class StateAggregatorService:
             "srl_phase": self._build_srl_phase_summary,
             "metacognition_profile": self._build_metacognition_profile_summary,
             "idiographic_summary": self._build_idiographic_summary,
+            "emotion_hint": self._build_emotion_hint_summary,
         }
         envelope = await fetcher[field_name](
             user_id,
@@ -224,6 +224,11 @@ class StateAggregatorService:
         if envelope is not None:
             expires_at = envelope.computed_at + timedelta(seconds=ttl_seconds)
         self._cache[cache_key] = (envelope, expires_at)
+        # Evict expired entries periodically to bound memory
+        if len(self._cache) > 500:
+            expired_keys = [k for k, (_, exp) in self._cache.items() if exp <= now]
+            for k in expired_keys:
+                del self._cache[k]
         return envelope
 
     async def _build_commitment_summary(
@@ -498,6 +503,41 @@ class StateAggregatorService:
             ),
             computed_at=now,
             source_snapshot_ids=tuple(source_ids),
+            freshness_seconds=0,
+        )
+
+    async def _build_emotion_hint_summary(
+        self,
+        user_id: UUID,
+        now: datetime,
+        current_turn_parse: CurrentTurnParseResult | None = None,
+    ) -> StateFieldEnvelope[EmotionHintValue]:
+        last_24h = now - timedelta(days=1)
+        stmt = (
+            select(CognitiveFragment.sentiment)
+            .where(
+                CognitiveFragment.user_id == user_id,
+                CognitiveFragment.sentiment.isnot(None),
+                CognitiveFragment.sentiment != "",
+                CognitiveFragment.created_at >= last_24h,
+            )
+            .order_by(CognitiveFragment.created_at.desc())
+            .limit(20)
+        )
+        rows = (await self.db.execute(stmt)).scalars().all()
+        distribution: dict[str, int] = {}
+        for s in rows:
+            distribution[s] = distribution.get(s, 0) + 1
+        dominant = max(distribution, key=distribution.get) if distribution else None
+        emotional_block = dominant in {"anxious", "frustrated", "overwhelmed"} if dominant else False
+        return StateFieldEnvelope(
+            value=EmotionHintValue(
+                dominant_sentiment=dominant,
+                sentiment_distribution=distribution,
+                emotional_block_detected=emotional_block,
+            ),
+            computed_at=now,
+            source_snapshot_ids=(f"fragments:{user_id}",),
             freshness_seconds=0,
         )
 

@@ -11,10 +11,12 @@ This is a *mixin* -- it relies on attributes that live on the concrete
 
 from __future__ import annotations
 
+import asyncio
 import contextlib
 import json
 import uuid
 from datetime import UTC, datetime, timedelta
+from app.core.time_utils import utcnow
 from typing import Any
 
 from google.protobuf.json_format import MessageToDict
@@ -24,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.i18n import I18n
+from app.core.metrics import AURORA_RETURNING_CONTEXT_TIER_TOTAL
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import CognitiveFragment
@@ -42,17 +45,13 @@ from app.services.memory_service import MemoryService
 from app.services.plan_service import PlanService
 from app.services.self_evolution_service import UnderstandingDepthService
 from app.services.simulation.seed_extractor import SeedExtractor
+from app.services.tool_history_service import ToolHistoryService
 from app.services.user_service import UserService
 from app.state_aggregator.service import StateAggregatorService
 
 # ---------------------------------------------------------------------------
 # Helpers (duplicated from orchestrator to avoid circular imports)
 # ---------------------------------------------------------------------------
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
 
 # ---------------------------------------------------------------------------
 # Mixin
@@ -95,11 +94,17 @@ class ContextBuilderMixin:
             "summary": str(memory.summary or "").strip(),
             "subject_type": str(memory.subject_type or "").strip(),
             "source_type": str(memory.source_type or "").strip(),
+            "source_lane": str(getattr(memory, "source_lane", "") or "").strip(),
             "occurred_at": memory.occurred_at.isoformat() if memory.occurred_at else None,
             "importance_score": (
                 float(memory.importance_score) if getattr(memory, "importance_score", None) is not None else None
             ),
             "confidence": (float(memory.confidence) if getattr(memory, "confidence", None) is not None else None),
+            "evidence_score": (
+                float(memory.evidence_score) if getattr(memory, "evidence_score", None) is not None else None
+            ),
+            "correction_count": int(getattr(memory, "correction_count", 0) or 0),
+            "user_confirmed": str(getattr(memory, "source_lane", "") or "").strip() != "inferred_extraction",
             "tags": list(memory.tags or []),
         }
 
@@ -226,6 +231,22 @@ class ContextBuilderMixin:
             cognitive_context["galaxy_snapshot"] = dict(galaxy_snapshot)
         return payload
 
+    async def _get_recent_tool_usage_context(
+        self,
+        *,
+        user_id: str,
+        db_session: AsyncSession,
+    ) -> list[dict[str, Any]]:
+        try:
+            return await ToolHistoryService(db_session).get_recent_context_effects(
+                uuid.UUID(user_id),
+                limit=4,
+                hours=24,
+            )
+        except Exception as exc:
+            logger.warning(f"Failed to build recent tool usage context for {user_id}: {exc}")
+            return []
+
     # ------------------------------------------------------------------
     # _build_profile_payload
     # ------------------------------------------------------------------
@@ -336,7 +357,7 @@ class ContextBuilderMixin:
                 select(func.count(Task.id)).where(
                     Task.user_id == uuid.UUID(user_id),
                     Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
-                    Task.due_date < _utcnow(),
+                    Task.due_date < utcnow(),
                 )
             )
             overdue = result.scalar() or 0
@@ -350,7 +371,9 @@ class ContextBuilderMixin:
     # _get_cognitive_insights
     # ------------------------------------------------------------------
 
-    async def _get_cognitive_insights(self, user_id: str, db_session: AsyncSession, locale: str = "en") -> dict[str, Any]:
+    async def _get_cognitive_insights(
+        self, user_id: str, db_session: AsyncSession, locale: str = "en"
+    ) -> dict[str, Any]:
         """获取认知模式摘要，注入 LLM 上下文
 
         当用户有已识别的行为模式时，LLM 可以在合适时机主动展示认知棱镜。
@@ -400,7 +423,7 @@ class ContextBuilderMixin:
                     key=lambda item: item.last_observed_at or item.created_at or datetime.min,
                 )
                 observed_at = most_recent.last_observed_at or most_recent.created_at
-                if observed_at and observed_at >= _utcnow() - timedelta(days=7):
+                if observed_at and observed_at >= utcnow() - timedelta(days=7):
                     recent_observation = {
                         "pattern_name": present_pattern_name(most_recent.pattern_name),
                         "observed_at": observed_at.isoformat(),
@@ -490,7 +513,7 @@ class ContextBuilderMixin:
             state = await StateAggregatorService(db_session).get_user_state(
                 uuid.UUID(user_id),
                 required_fields=("working_memory_snapshot",),
-                now=_utcnow(),
+                now=utcnow(),
             )
         except Exception as exc:
             logger.warning(f"Failed to build stage33 working memory snapshot for {user_id}: {exc}")
@@ -529,17 +552,26 @@ class ContextBuilderMixin:
         db_session: AsyncSession,
     ) -> dict[str, Any]:
         user_uuid = uuid.UUID(user_id)
-        memory_service = MemoryService(db_session)
+        memory_service = MemoryService(db_session, self.redis)
 
         active_goal_rows = await PlanService.list_active(db_session, user_uuid, limit=3)
         active_goals = [
             self._serialize_stage34_active_goal(plan) for plan in active_goal_rows if str(plan.name or "").strip()
         ]
 
-        episodic_rows = await memory_service.list_recent_episodic(user_uuid, limit=5)
+        episodic_rows = await memory_service.list_recent_episodic(user_uuid, limit=12)
+        ranked_episodic_rows = sorted(
+            episodic_rows,
+            key=lambda memory: (
+                int(getattr(memory, "correction_count", 0) or 0),
+                float(getattr(memory, "importance_score", 0.0) or 0.0),
+                float(getattr(memory, "confidence", 0.0) or 0.0),
+            ),
+            reverse=True,
+        )
         episodic_memories = [
             self._serialize_stage34_episodic_memory(memory)
-            for memory in episodic_rows
+            for memory in ranked_episodic_rows[:5]
             if str(getattr(memory, "summary", "") or "").strip()
         ]
 
@@ -551,11 +583,102 @@ class ContextBuilderMixin:
         if isinstance(last_mood, dict) and last_mood:
             payload["last_session_mood"] = last_mood
 
+        recent_corrections = await memory_service.list_recent_calibration_receipts(user_uuid, limit=3)
+        if recent_corrections:
+            payload["recent_corrections"] = recent_corrections
+
         cognitive_context = payload.get("cognitive_context")
         if isinstance(cognitive_context, dict):
             cognitive_context["active_goals"] = active_goals
             cognitive_context["episodic_memories"] = episodic_memories
+            if recent_corrections:
+                cognitive_context["recent_corrections"] = recent_corrections
         return payload
+
+    async def _build_aurora_everyday_presence_context(
+        self,
+        *,
+        user_id: str,
+        db_session: AsyncSession,
+        conversation_id: str | None,
+        returning_context: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        """Summarize Aurora's current judgment for ordinary chat surfaces.
+
+        This is a thin product-facing readout of the existing control surface,
+        not a separate Aurora state model.
+        """
+        try:
+            from app.services.aurora_control_surface_service import AuroraControlSurfaceService
+
+            snapshot = await AuroraControlSurfaceService(db_session, self.redis).build_snapshot(
+                user_id=uuid.UUID(user_id),
+                conversation_id=conversation_id,
+            )
+        except Exception as exc:
+            logger.debug(f"Aurora everyday presence context unavailable: {exc}")
+            return None
+
+        if not isinstance(snapshot, dict) or not snapshot:
+            return None
+
+        status = str(snapshot.get("overall_status") or "sensing").strip()
+        summary = str(snapshot.get("summary") or "").strip()
+        scene_alignment = str(snapshot.get("scene_alignment") or "matched").strip()
+        evidence = [
+            str(item).strip() for item in list(snapshot.get("status_evidence_chain") or [])[:3] if str(item).strip()
+        ]
+        memory_references = [
+            str(item).strip() for item in list(snapshot.get("memory_references") or [])[:2] if str(item).strip()
+        ]
+        last_correction = (
+            snapshot.get("last_correction_effect") if isinstance(snapshot.get("last_correction_effect"), dict) else {}
+        )
+        return_tier = str((returning_context or {}).get("resume_tier") or "").strip()
+
+        uncertainty_level = "low"
+        if status in {"risk_found", "needs_confirm"} or scene_alignment == "fallback":
+            uncertainty_level = "high"
+        elif status in {"sensing", "calibration_available"}:
+            uncertainty_level = "medium"
+        if bool(last_correction.get("visible")):
+            uncertainty_level = "medium"
+
+        if scene_alignment == "fallback":
+            chat_hint = "我可能接的是最近一次上下文，而不是这一轮的完整状态；如果方向不对，你可以直接纠正我。"
+        elif bool(last_correction.get("visible")):
+            chat_hint = "我已经按你刚才的纠正调整判断；这轮会先保守确认，不直接把旧假设当事实。"
+        elif return_tier in {"personalized_return", "checkpoint_debrief"}:
+            chat_hint = "你离开了一段时间，我会先接住上次进度和当前未完成项；如果我读错重点，直接告诉我。"
+        elif status in {"risk_found", "needs_confirm"}:
+            chat_hint = f"我可能在误读当前状态：{summary or '这个判断还需要你确认'}"
+        elif status == "calibrated":
+            chat_hint = "我会按当前目标、情景和记忆继续帮你推进；重要判断仍然可以随时改。"
+        else:
+            chat_hint = "我还在轻量感知当前上下文，会先少下结论、多留纠正空间。"
+
+        should_surface = bool(
+            status in {"risk_found", "needs_confirm"}
+            or scene_alignment == "fallback"
+            or bool(last_correction.get("visible"))
+            or return_tier in {"personalized_return", "checkpoint_debrief"}
+        )
+
+        return {
+            "source": "aurora_control_surface",
+            "overall_status": status,
+            "energy_level": str(snapshot.get("energy_level") or "L0"),
+            "summary": summary,
+            "chat_hint": chat_hint,
+            "uncertainty_level": uncertainty_level,
+            "scene_alignment": scene_alignment,
+            "evidence_chain": evidence,
+            "memory_references": memory_references,
+            "next_step_suggestion": str(snapshot.get("next_step_suggestion") or "").strip(),
+            "last_correction_effect": last_correction,
+            "return_tier": return_tier,
+            "should_surface": should_surface,
+        }
 
     # ------------------------------------------------------------------
     # _get_recent_sentiment_distribution
@@ -722,15 +845,19 @@ class ContextBuilderMixin:
                     for plan in plans
                 ]
 
-                # P0: 认知棱镜上下文注入
-                cognitive_insights = await self._get_cognitive_insights(user_id, db_session, locale=locale)
-
-                # P1: 种子库 few-shot 示例注入
-                seed_library_context = await self._get_seed_library_context(user_id, db_session)
-                learning_gaps_summary = await self._build_learning_gaps_summary(user_id, db_session)
-                working_memory_snapshot = await self._build_stage33_working_memory_snapshot(
-                    user_id,
-                    db_session,
+                # P0: 认知棱镜上下文注入 — parallel queries
+                (
+                    cognitive_insights,
+                    seed_library_context,
+                    learning_gaps_summary,
+                    working_memory_snapshot,
+                    recent_tool_usage,
+                ) = await asyncio.gather(
+                    self._get_cognitive_insights(user_id, db_session, locale=locale),
+                    self._get_seed_library_context(user_id, db_session),
+                    self._build_learning_gaps_summary(user_id, db_session),
+                    self._build_stage33_working_memory_snapshot(user_id, db_session),
+                    self._get_recent_tool_usage_context(user_id=user_id, db_session=db_session),
                 )
 
                 profile_payload = self._build_profile_payload(
@@ -769,6 +896,7 @@ class ContextBuilderMixin:
                     "profile_context": profile_context_payload,
                     "calendar_context": cognitive_context.calendar_context,
                     "working_memory_snapshot": working_memory_snapshot,
+                    "recent_tool_usage": recent_tool_usage,
                     "past_session_memory": cognitive_context.past_session_memory,
                     # New field for full context injection
                     "cognitive_context": cognitive_context_payload,
@@ -778,6 +906,15 @@ class ContextBuilderMixin:
                     "seed_library": seed_library_context,
                     "learning_gaps_summary": learning_gaps_summary,
                 }
+                aurora_presence = await self._build_aurora_everyday_presence_context(
+                    user_id=user_id,
+                    db_session=db_session,
+                    conversation_id=session_id,
+                    returning_context=returning_context,
+                )
+                if aurora_presence is not None:
+                    payload["aurora_everyday_presence"] = aurora_presence
+                    cognitive_context_payload["aurora_everyday_presence"] = aurora_presence
                 payload = await self._attach_stage34_memory_context(
                     payload,
                     user_id=user_id,
@@ -880,6 +1017,10 @@ class ContextBuilderMixin:
                         "next_actions": next_actions,
                         "active_plans": active_plans,
                         "focus_stats": focus_stats,
+                        "recent_tool_usage": await self._get_recent_tool_usage_context(
+                            user_id=user_id,
+                            db_session=db_session,
+                        ),
                         "preference_version": preference_version,
                         "llm_profile": llm_profile_data,
                         "experiment_cohort": experiment_cohort,
@@ -913,6 +1054,10 @@ class ContextBuilderMixin:
                         "next_actions": next_actions,
                         "active_plans": active_plans,
                         "focus_stats": focus_stats,
+                        "recent_tool_usage": await self._get_recent_tool_usage_context(
+                            user_id=user_id,
+                            db_session=db_session,
+                        ),
                         "preference_version": preference_version,
                         "llm_profile": llm_profile_data,
                         "experiment_cohort": experiment_cohort,
@@ -987,9 +1132,15 @@ class ContextBuilderMixin:
             if last_message_at is None:
                 return None
 
-            silence_gap = _utcnow() - last_message_at
-            if silence_gap < timedelta(days=3):
-                return None
+            silence_gap = utcnow() - last_message_at
+            if silence_gap < timedelta(minutes=30):
+                AURORA_RETURNING_CONTEXT_TIER_TOTAL.labels(tier="silent_resume").inc()
+                return {
+                    "resume_tier": "silent_resume",
+                    "last_active_at": last_message_at.isoformat(),
+                    "briefing_text": "",
+                    "welcome_back_message": "",
+                }
 
             task_result = await db_session.execute(
                 select(Task.title, Task.completed_at)
@@ -1010,7 +1161,7 @@ class ContextBuilderMixin:
                     Task.status.in_([ModelTaskStatus.PENDING, ModelTaskStatus.IN_PROGRESS]),
                     Task.due_date.is_not(None),
                     Task.due_date >= last_message_at.date(),
-                    Task.due_date <= _utcnow().date(),
+                    Task.due_date <= utcnow().date(),
                 )
             )
             overdue_count = int(overdue_result.scalar() or 0)
@@ -1033,19 +1184,39 @@ class ContextBuilderMixin:
 
             due_text = I18n.t("context.overdue_tasks", locale=locale, count=overdue_count)
             if next_due:
-                due_text = I18n.t("context.overdue_tasks_with_next", locale=locale, count=overdue_count, title=str(next_due[0]))
+                due_text = I18n.t(
+                    "context.overdue_tasks_with_next", locale=locale, count=overdue_count, title=str(next_due[0])
+                )
 
-            welcome_back = I18n.t("context.welcome_back", locale=locale, progress=progress_text, due=due_text)
+            if silence_gap < timedelta(hours=8):
+                resume_tier = "light_resume"
+                welcome_back = (
+                    "我接着刚才的上下文继续。"
+                    if locale.startswith("zh")
+                    else "I will continue from the recent context."
+                )
+                briefing_text = welcome_back
+            elif silence_gap < timedelta(days=3):
+                resume_tier = "personalized_return"
+                welcome_back = I18n.t("context.welcome_back", locale=locale, progress=progress_text, due=due_text)
+                briefing_text = f"{progress_text}{due_text}"
+            else:
+                resume_tier = "checkpoint_debrief"
+                welcome_back = I18n.t("context.welcome_back", locale=locale, progress=progress_text, due=due_text)
+                briefing_text = f"{progress_text}{due_text}"
 
             payload = {
-                "days_away": max(int(silence_gap.days), 3),
+                "resume_tier": resume_tier,
+                "days_away": max(int(silence_gap.days), 0),
+                "hours_away": round(silence_gap.total_seconds() / 3600, 1),
                 "last_active_at": last_message_at.isoformat(),
                 "last_progress": progress_text,
                 "overdue_task_count": overdue_count,
                 "next_due_task_title": str(next_due[0]) if next_due else "",
                 "welcome_back_message": welcome_back,
-                "briefing_text": f"{progress_text}{due_text}",
+                "briefing_text": briefing_text,
             }
+            AURORA_RETURNING_CONTEXT_TIER_TOTAL.labels(tier=resume_tier).inc()
             await self.redis.setex(redis_key, 24 * 60 * 60, "1")
             return payload
         except Exception as exc:
@@ -1230,7 +1401,11 @@ class ContextBuilderMixin:
                                         bump_version=False,
                                     )
 
-                                    locale = user_context_payload.get("profile", {}).get("identity", {}).get("language", "en")
+                                    locale = (
+                                        user_context_payload.get("profile", {})
+                                        .get("identity", {})
+                                        .get("language", "en")
+                                    )
                                     plan_context["mode"] = "phase_rollback"
                                     plan_context["rollback_reason"] = I18n.t("context.rollback_reason", locale=locale)
                                     if plan_state.feedback_log:

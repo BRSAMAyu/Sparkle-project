@@ -302,7 +302,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
               trailing: Text(
                 value(m),
                 style: TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: DS.brandPrimary,
                 ),
               ),
@@ -318,7 +318,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
           title,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.bold,
+            fontWeight: DS.fontWeightBold,
             color: DS.neutral600,
           ),
         ),
@@ -378,7 +378,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                 member.user.displayName,
                 style: TextStyle(
                   fontWeight:
-                      isOwner || isAdmin ? FontWeight.bold : FontWeight.normal,
+                      isOwner || isAdmin ? DS.fontWeightBold : FontWeight.normal,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -396,7 +396,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                   style: TextStyle(
                     fontSize: 10,
                     color: DS.neutral900,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ),
@@ -413,7 +413,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                   style: TextStyle(
                     fontSize: 10,
                     color: DS.brandPrimaryConst,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ),
@@ -536,7 +536,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                         value: 'kick',
                         child: Row(
                           children: [
-                            Icon(Icons.person_remove, size: 18, color: DS.error),
+                            Icon(Icons.person_remove,
+                                size: 18, color: DS.error),
                             const SizedBox(width: DS.sm),
                             Text(
                               context.l10n.gmKick,
@@ -570,7 +571,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
           user.displayName.substring(0, 1).toUpperCase(),
           style: TextStyle(
             color: DS.brandPrimaryConst,
-            fontWeight: FontWeight.bold,
+            fontWeight: DS.fontWeightBold,
             fontSize: 20,
           ),
         ),
@@ -684,7 +685,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
             }
           } catch (e) {
             if (mounted) {
-              AppFeedback.error(context, context.l10n.gmActionFailed(e.toString()));
+              AppFeedback.error(
+                  context, context.l10n.gmActionFailed(e.toString()));
             }
           }
         }
@@ -736,7 +738,9 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                 children: [
                   for (final m in [15, 30, 60, 1440])
                     ChoiceChip(
-                      label: Text(m >= 1440 ? context.l10n.gm24Hours : context.l10n.gmMinutes(m)),
+                      label: Text(m >= 1440
+                          ? context.l10n.gm24Hours
+                          : context.l10n.gmMinutes(m)),
                       selected: durationMinutes == m,
                       onSelected: (_) => setState(() => durationMinutes = m),
                     ),
@@ -777,7 +781,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                   );
                 } catch (e) {
                   if (!mounted) return;
-                  AppFeedback.error(context, context.l10n.gmActionFailed(e.toString()));
+                  AppFeedback.error(
+                      context, context.l10n.gmActionFailed(e.toString()));
                 }
               },
             ),
@@ -829,7 +834,8 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                 );
               } catch (e) {
                 if (!mounted) return;
-                AppFeedback.error(context, context.l10n.gmActionFailed(e.toString()));
+                AppFeedback.error(
+                    context, context.l10n.gmActionFailed(e.toString()));
               }
             },
           ),

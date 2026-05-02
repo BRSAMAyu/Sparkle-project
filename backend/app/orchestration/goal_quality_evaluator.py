@@ -51,7 +51,7 @@ class GoalQualityEvaluator:
     Runs only after field-level sufficiency passes.
     """
 
-    TRIGGER_INTENTS = {"create_plan", "set_goal"}
+    TRIGGER_INTENTS = {"create_plan", "set_goal", "time_planning"}
     PASS_THRESHOLD = 0.5
 
     async def evaluate(

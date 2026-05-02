@@ -156,7 +156,7 @@ class _MyFriendsTab extends ConsumerWidget {
                             Text(
                               friend.displayName,
                               style: DS.titleLarge
-                                  .copyWith(fontWeight: FontWeight.bold),
+                                  .copyWith(fontWeight: DS.fontWeightBold),
                             ),
                             Text(
                               'Lv.${friend.flameLevel}',
@@ -375,7 +375,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                   padding: const EdgeInsets.only(bottom: DS.md),
                   child: Text(
                     context.l10n.friendsFriendRequests,
-                    style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                    style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
                   ),
                 );
               }
@@ -431,7 +431,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                   padding: const EdgeInsets.only(top: DS.lg, bottom: DS.md),
                   child: Text(
                   context.l10n.friendPartnerInviteTitle,
-                    style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                    style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
                   ),
                 );
               }
@@ -579,7 +579,7 @@ class _RecommendationsTab extends ConsumerWidget {
           children: [
             Text(
               context.l10n.friendMatchingTitle,
-              style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+              style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
             ),
             const SizedBox(height: DS.xs),
             Text(
@@ -636,7 +636,7 @@ class _RecommendationsTab extends ConsumerWidget {
               const SizedBox(height: DS.md),
               Text(
                 context.l10n.friendCalibrationTitle,
-                style: DS.titleLarge.copyWith(fontWeight: FontWeight.bold),
+                style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.xs),
               Text(
@@ -899,7 +899,7 @@ class _RecommendationsTab extends ConsumerWidget {
               const SizedBox(height: DS.spacing16),
               Text(
                 context.l10n.friendCheckInFrequency,
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: DS.fontWeightBold),
               ),
               const SizedBox(height: DS.xs),
               Wrap(
@@ -1050,7 +1050,7 @@ class _RecommendationCard extends StatelessWidget {
                           child: Text(
                             recommendation.user.displayName,
                             style: DS.titleLarge
-                                .copyWith(fontWeight: FontWeight.bold),
+                                .copyWith(fontWeight: DS.fontWeightBold),
                           ),
                         ),
                         Container(
@@ -1246,7 +1246,7 @@ class _AccountabilityPartnersCard extends StatelessWidget {
                       Text(
                         context.l10n.friendMyPartnersTitle,
                         style: DS.titleLarge.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                         ),
                       ),
                       const SizedBox(height: DS.xs),

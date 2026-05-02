@@ -22,16 +22,14 @@ class ModeTransitionRecord {
   final String? reason;
 
   /// Whether this transition is from direct→workflow or vice versa.
-  bool get isDirectToWorkflow =>
-      !fromMode.isMultiAgent && toMode.isMultiAgent;
+  bool get isDirectToWorkflow => !fromMode.isMultiAgent && toMode.isMultiAgent;
 
-  bool get isWorkflowToDirect =>
-      fromMode.isMultiAgent && !toMode.isMultiAgent;
+  bool get isWorkflowToDirect => fromMode.isMultiAgent && !toMode.isMultiAgent;
 }
 
 /// Provider that tracks mode transitions within the current chat session.
-final modeTransitionHistoryProvider =
-    StateNotifierProvider<ModeTransitionHistoryNotifier, List<ModeTransitionRecord>>(
+final modeTransitionHistoryProvider = StateNotifierProvider<
+    ModeTransitionHistoryNotifier, List<ModeTransitionRecord>>(
   ModeTransitionHistoryNotifier.new,
 );
 
@@ -144,7 +142,9 @@ class _ChatModeTransitionBannerState
           child: Row(
             children: [
               Icon(
-                isUpgrade ? Icons.trending_up_rounded : Icons.chat_bubble_outline,
+                isUpgrade
+                    ? Icons.trending_up_rounded
+                    : Icons.chat_bubble_outline,
                 size: DS.iconSizeSm,
                 color: accentColor,
               ),

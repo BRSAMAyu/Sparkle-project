@@ -33,9 +33,13 @@ type Config struct {
 	PostgresUser                string   `mapstructure:"POSTGRES_USER"`
 	PostgresPassword            string   `mapstructure:"POSTGRES_PASSWORD"`
 	PostgresDB                  string   `mapstructure:"POSTGRES_DB"`
+	SparkleRBACEnabled          bool     `mapstructure:"SPARKLE_RBAC_ENABLED"`
+	SparkleGatewayDatabaseURL   string   `mapstructure:"SPARKLE_GATEWAY_DATABASE_URL"`
 	AgentAddress                string   `mapstructure:"AGENT_ADDRESS"`
 	AgentTLSEnabled             bool     `mapstructure:"AGENT_TLS_ENABLED"`
 	AgentTLSCACertPath          string   `mapstructure:"AGENT_TLS_CA_CERT"`
+	AgentTLSClientCertPath      string   `mapstructure:"AGENT_TLS_CLIENT_CERT"`
+	AgentTLSClientKeyPath       string   `mapstructure:"AGENT_TLS_CLIENT_KEY"`
 	AgentTLSServerName          string   `mapstructure:"AGENT_TLS_SERVER_NAME"`
 	AgentTLSInsecure            bool     `mapstructure:"AGENT_TLS_INSECURE"`
 	GRPCTimeoutSeconds          int      `mapstructure:"GRPC_TIMEOUT_SECONDS"`
@@ -53,6 +57,7 @@ type Config struct {
 	WSMessageRateBurst          int      `mapstructure:"WS_MESSAGE_RATE_BURST"`
 	WSMaxConnections            int      `mapstructure:"WS_MAX_CONNECTIONS_PER_USER"`
 	WSGlobalMaxConnections      int      `mapstructure:"WS_GLOBAL_MAX_CONNECTIONS"`
+	StreamMaxConcurrent         int      `mapstructure:"STREAM_MAX_CONCURRENT"`
 	RedisURL                    string   `mapstructure:"REDIS_URL"`
 	RedisHost                   string   `mapstructure:"REDIS_HOST"`
 	RedisPort                   int      `mapstructure:"REDIS_PORT"`
@@ -165,10 +170,8 @@ func (c *Config) IsOriginAllowed(origin string) bool {
 
 		allowedURL, err := neturl.Parse(allowed)
 		if err != nil || allowedURL.Scheme == "" || allowedURL.Host == "" {
-			allowedHost := strings.ToLower(allowed)
-			if originHost == allowedHost {
-				return true
-			}
+			// Skip malformed allowlist entries rather than falling back to
+			// insecure plain-hostname comparison which could be exploited.
 			continue
 		}
 
@@ -379,6 +382,8 @@ func Load() *Config {
 		"POSTGRES_USER",
 		"POSTGRES_PASSWORD",
 		"POSTGRES_DB",
+		"SPARKLE_RBAC_ENABLED",
+		"SPARKLE_GATEWAY_DATABASE_URL",
 		"AGENT_ADDRESS",
 		"AGENT_TLS_ENABLED",
 		"AGENT_TLS_CA_CERT",
@@ -450,6 +455,8 @@ func Load() *Config {
 	viper.SetDefault("POSTGRES_USER", "postgres")
 	viper.SetDefault("POSTGRES_PASSWORD", "")
 	viper.SetDefault("POSTGRES_DB", "sparkle")
+	viper.SetDefault("SPARKLE_RBAC_ENABLED", false)
+	viper.SetDefault("SPARKLE_GATEWAY_DATABASE_URL", "")
 	viper.SetDefault("AGENT_ADDRESS", "localhost:50051")
 	viper.SetDefault("AGENT_TLS_ENABLED", false)
 	viper.SetDefault("AGENT_TLS_CA_CERT", "")
@@ -591,6 +598,14 @@ func Load() *Config {
 		}
 	}
 
+	// P1-8: RBAC must be enabled in production
+	if cfg.IsProduction() && !cfg.SparkleRBACEnabled {
+		log.Fatal("SPARKLE_RBAC_ENABLED must be true in production")
+	}
+
+	if cfg.SparkleRBACEnabled && strings.TrimSpace(cfg.SparkleGatewayDatabaseURL) != "" {
+		cfg.DatabaseURL = strings.TrimSpace(cfg.SparkleGatewayDatabaseURL)
+	}
 	if cfg.DatabaseURL == "" {
 		host := normalizeLocalDockerHost(cfg.PostgresHost)
 		cfg.DatabaseURL = "postgresql://" + cfg.PostgresUser + ":" + cfg.PostgresPassword + "@" + host + ":" + strconv.Itoa(cfg.PostgresPort) + "/" + cfg.PostgresDB

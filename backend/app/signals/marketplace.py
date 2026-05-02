@@ -19,6 +19,18 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from sqlalchemy import Integer, func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.aurora.privacy import redact_pii_with_report
+from app.models.marketplace import (
+    MarketplacePack,
+    MarketplaceSkill,
+    PackAdoptionHistory,
+    UserSkillAdoption,
+)
+from app.signals.types import SkillEntry
+
 
 def _uid(prefix: str = "") -> str:
     return f"{prefix}{uuid.uuid4().hex[:12]}"
@@ -103,6 +115,63 @@ class SkillCard:
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> SkillCard:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 1b. DomainPack v2
+# ═══════════════════════════════════════════════════════════════════════
+
+
+@dataclass
+class DomainPack:
+    """Versioned domain pack that can be previewed, adopted, and rolled back."""
+
+    pack_id: str = ""
+    name: str = ""
+    description: str = ""
+    domain: str = ""
+    version: int = 1
+    source: str = "system"
+    status: str = "draft"
+    node_schema: dict[str, Any] = field(default_factory=dict)
+    task_templates: list[dict[str, Any]] = field(default_factory=list)
+    risk_rules: list[dict[str, Any]] = field(default_factory=list)
+    skill_ids: list[str] = field(default_factory=list)
+    quality_evidence: dict[str, Any] = field(default_factory=dict)
+    privacy_report: dict[str, Any] = field(default_factory=dict)
+    governance: dict[str, Any] = field(default_factory=dict)
+    quality_score: float = 0.0
+    adoption_count: int = 0
+    created_at: str = field(default_factory=_utcnow)
+
+    def __post_init__(self):
+        if not self.pack_id:
+            self.pack_id = _uid("pack")
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "pack_id": self.pack_id,
+            "name": self.name,
+            "description": self.description,
+            "domain": self.domain,
+            "version": self.version,
+            "source": self.source,
+            "status": self.status,
+            "node_schema": self.node_schema,
+            "task_templates": self.task_templates,
+            "risk_rules": self.risk_rules,
+            "skill_ids": self.skill_ids,
+            "quality_evidence": self.quality_evidence,
+            "privacy_report": self.privacy_report,
+            "governance": self.governance,
+            "quality_score": self.quality_score,
+            "adoption_count": self.adoption_count,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> DomainPack:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
@@ -539,3 +608,705 @@ class MarketplaceRegistry:
             "total_adoptions": sum(len(a) for a in self._adoptions.values()),
             "cards": [c.to_dict() for c in self._cards.values()],
         }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# 5. Production persistence and governance helpers
+# ═══════════════════════════════════════════════════════════════════════
+
+
+NEGATIVE_FEEDBACK_DEPRECATION_THRESHOLD = 0.30
+REVOKE_RATE_DEPRECATION_THRESHOLD = 0.50
+MIN_SYSTEM_SKILL_EVIDENCE_GRADE = 2
+
+
+def _clamp(value: float) -> float:
+    return max(0.0, min(1.0, value))
+
+
+def _json_safe(value: Any) -> Any:
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {k: _json_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_json_safe(item) for item in value]
+    return value
+
+
+def _asset_text_payload(asset: SkillCard | DomainPack) -> str:
+    if isinstance(asset, SkillCard):
+        pieces: list[Any] = [
+            asset.name,
+            asset.description,
+            asset.trigger_condition,
+            asset.action_template,
+            asset.expected_outcome,
+            asset.evidence_summary,
+            asset.context_signatures,
+        ]
+    else:
+        pieces = [
+            asset.name,
+            asset.description,
+            asset.node_schema,
+            asset.task_templates,
+            asset.risk_rules,
+            asset.quality_evidence,
+        ]
+    return "\n".join(str(piece) for piece in pieces if piece)
+
+
+def scan_marketplace_asset_privacy(asset: SkillCard | DomainPack) -> dict[str, Any]:
+    """Return a privacy report; assets with detected PII must not be listed."""
+
+    report = redact_pii_with_report(_asset_text_payload(asset))
+    return {
+        "passed": not report.redacted,
+        "redacted": report.redacted,
+        "categories": list(report.categories),
+        "mode": report.mode,
+        "source_sha256": report.source_sha256,
+    }
+
+
+def compute_marketplace_quality_score(
+    *,
+    success_rate: float,
+    evidence_grade: int,
+    negative_feedback_rate: float,
+    applicability_score: float,
+    revoke_rate: float = 0.0,
+) -> float:
+    """Outcome-weighted quality score. Adoption/download volume is intentionally excluded."""
+
+    evidence_component = _clamp(float(evidence_grade) / 5.0)
+    score = (
+        _clamp(success_rate) * 0.50
+        + evidence_component * 0.22
+        + _clamp(applicability_score) * 0.18
+        + (1.0 - _clamp(negative_feedback_rate)) * 0.07
+        + (1.0 - _clamp(revoke_rate)) * 0.03
+    )
+    return round(score, 3)
+
+
+def deprecation_reason(
+    *,
+    negative_feedback_rate: float,
+    revoke_rate: float,
+    privacy_report: dict[str, Any],
+) -> str | None:
+    if privacy_report and privacy_report.get("passed") is False:
+        return "privacy_alert"
+    if negative_feedback_rate > NEGATIVE_FEEDBACK_DEPRECATION_THRESHOLD:
+        return "negative_feedback_rate"
+    if revoke_rate > REVOKE_RATE_DEPRECATION_THRESHOLD:
+        return "user_revoke_rate"
+    return None
+
+
+def skill_card_from_entry(skill: SkillEntry, *, author_id: str | None = None) -> SkillCard:
+    """Convert a promoted system SkillEntry into a marketplace SkillCard."""
+
+    evidence = skill.evidence or {}
+    strategy = skill.strategy or {}
+    applicable_when = skill.applicable_when or {}
+    sample_size = max(int(skill.sample_size or 0), int(skill.effective_count or 0), 1)
+    success_rate = _clamp(float(skill.effective_count or 0) / sample_size)
+    evidence_grade = int(evidence.get("evidence_grade", MIN_SYSTEM_SKILL_EVIDENCE_GRADE))
+    context_signatures = evidence.get("context_signatures") or [applicable_when]
+    if not isinstance(context_signatures, list):
+        context_signatures = [context_signatures]
+
+    return SkillCard(
+        card_id=skill.skill_id if skill.skill_id.startswith("sk") else _uid("sk"),
+        name=str(strategy.get("name") or strategy.get("title") or skill.source_policy_key or "System skill"),
+        description=str(strategy.get("description") or strategy.get("intervention_summary") or ""),
+        goal_type=str(applicable_when.get("goal_type") or applicable_when.get("mode") or ""),
+        domain=str(applicable_when.get("domain") or applicable_when.get("subject") or ""),
+        author_id=str(author_id or ""),
+        version=int(evidence.get("version", 1) or 1),
+        trigger_condition=str(applicable_when.get("state_key") or applicable_when.get("trigger") or ""),
+        action_template=str(strategy.get("action_template") or strategy.get("intervention_summary") or ""),
+        expected_outcome=str(strategy.get("expected_outcome") or evidence.get("expected_outcome") or "effective"),
+        prerequisites=list(strategy.get("prerequisites") or []),
+        evidence_grade=evidence_grade,
+        evidence_summary=str(evidence.get("summary") or evidence.get("evidence_summary") or ""),
+        episode_count=sample_size,
+        success_rate=success_rate,
+        context_signatures=context_signatures,
+        status="active" if evidence_grade >= MIN_SYSTEM_SKILL_EVIDENCE_GRADE else "under_review",
+        effectiveness_decay=1.0,
+        last_validated_at=str(evidence.get("last_validated_at") or _utcnow()),
+    )
+
+
+class MarketplacePersistenceService:
+    """DB-backed marketplace operations used by API and lifecycle promotion."""
+
+    def __init__(self, db: AsyncSession):
+        self.db = db
+
+    async def list_skills(
+        self,
+        *,
+        domain: str | None = None,
+        goal_type: str | None = None,
+        include_deprecated: bool = False,
+    ) -> list[MarketplaceSkill]:
+        stmt = select(MarketplaceSkill).where(MarketplaceSkill.deleted_at.is_(None))
+        if not include_deprecated:
+            stmt = stmt.where(MarketplaceSkill.status == "active")
+        if domain:
+            stmt = stmt.where(MarketplaceSkill.domain == domain)
+        if goal_type:
+            stmt = stmt.where(MarketplaceSkill.goal_type == goal_type)
+        stmt = stmt.order_by(MarketplaceSkill.quality_score.desc(), MarketplaceSkill.updated_at.desc())
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def list_packs(
+        self,
+        *,
+        domain: str | None = None,
+        include_deprecated: bool = False,
+    ) -> list[MarketplacePack]:
+        stmt = select(MarketplacePack).where(MarketplacePack.deleted_at.is_(None))
+        if not include_deprecated:
+            stmt = stmt.where(MarketplacePack.status == "active")
+        if domain:
+            stmt = stmt.where(MarketplacePack.domain == domain)
+        stmt = stmt.order_by(MarketplacePack.quality_score.desc(), MarketplacePack.updated_at.desc())
+        result = await self.db.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get_skill(self, skill_id: str) -> MarketplaceSkill | None:
+        result = await self.db.execute(
+            select(MarketplaceSkill).where(
+                MarketplaceSkill.skill_id == skill_id,
+                MarketplaceSkill.deleted_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def get_pack(self, pack_id: str) -> MarketplacePack | None:
+        result = await self.db.execute(
+            select(MarketplacePack).where(
+                MarketplacePack.pack_id == pack_id,
+                MarketplacePack.deleted_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def register_skill_card(
+        self,
+        card: SkillCard,
+        *,
+        source_skill_id: str | None = None,
+        contraindications: list[str] | None = None,
+        governance: dict[str, Any] | None = None,
+    ) -> MarketplaceSkill:
+        privacy_report = scan_marketplace_asset_privacy(card)
+        if not privacy_report["passed"]:
+            raise ValueError(f"pii_detected:{','.join(privacy_report['categories'])}")
+
+        listing_check = MarketplaceIronLaws.is_listable(card)
+        if not listing_check["listable"]:
+            raise ValueError("iron_law_violations")
+
+        quality_score = compute_marketplace_quality_score(
+            success_rate=card.success_rate,
+            evidence_grade=card.evidence_grade,
+            negative_feedback_rate=0.0,
+            applicability_score=self._applicability_score(card.context_signatures),
+        )
+        existing = await self.get_skill(card.card_id)
+        if existing:
+            existing.previous_versions = [
+                *(existing.previous_versions or []),
+                self.serialize_skill(existing),
+            ]
+            existing.version = card.version
+            existing.name = card.name
+            existing.description = card.description
+            existing.goal_type = card.goal_type
+            existing.domain = card.domain
+            existing.status = card.status
+            existing.trigger_condition = card.trigger_condition
+            existing.action_template = card.action_template
+            existing.expected_outcome = card.expected_outcome
+            existing.prerequisites = card.prerequisites
+            existing.contraindications = contraindications or []
+            existing.evidence_grade = card.evidence_grade
+            existing.evidence_summary = card.evidence_summary
+            existing.episode_count = card.episode_count
+            existing.success_rate = card.success_rate
+            existing.context_signatures = card.context_signatures
+            existing.quality_score = quality_score
+            existing.privacy_report = privacy_report
+            existing.governance = governance or {"registered_by": "skill_lifecycle", "iron_law_check": listing_check}
+            existing.listed_at = existing.listed_at or datetime.now(UTC).replace(tzinfo=None)
+            await self.db.flush()
+            return existing
+
+        record = MarketplaceSkill(
+            skill_id=card.card_id,
+            source_skill_id=source_skill_id,
+            name=card.name,
+            description=card.description,
+            goal_type=card.goal_type,
+            domain=card.domain,
+            author_id=card.author_id or None,
+            version=card.version,
+            status=card.status,
+            trigger_condition=card.trigger_condition,
+            action_template=card.action_template,
+            expected_outcome=card.expected_outcome,
+            prerequisites=card.prerequisites,
+            contraindications=contraindications or [],
+            context_signatures=card.context_signatures,
+            evidence_grade=card.evidence_grade,
+            evidence_summary=card.evidence_summary,
+            episode_count=card.episode_count,
+            success_rate=card.success_rate,
+            quality_score=quality_score,
+            privacy_report=privacy_report,
+            governance=governance or {"registered_by": "skill_lifecycle", "iron_law_check": listing_check},
+            listed_at=datetime.now(UTC).replace(tzinfo=None),
+        )
+        self.db.add(record)
+        await self.db.flush()
+        return record
+
+    async def register_system_skill(
+        self,
+        skill: SkillEntry,
+        *,
+        user_id: str | None = None,
+    ) -> MarketplaceSkill:
+        if skill.scope != "system":
+            raise ValueError("only_system_skill_can_be_listed")
+        if skill.privacy and skill.privacy.get("contains_personal_data"):
+            raise ValueError("personal_data_skill_cannot_be_listed")
+        card = skill_card_from_entry(skill, author_id=user_id)
+        return await self.register_skill_card(
+            card,
+            source_skill_id=skill.skill_id,
+            contraindications=skill.contraindications,
+            governance={
+                "registered_by": "skill_lifecycle",
+                "promotion_history": (skill.evidence or {}).get("promotion_history", []),
+                "requires_approval": card.domain in MarketplaceIronLaws.LAW_HIGH_RISK_DOMAINS,
+            },
+        )
+
+    async def adopt_asset(
+        self,
+        *,
+        user_id: Any,
+        asset_id: str,
+        asset_type: str,
+        confirm: bool,
+        context_signature: dict[str, Any] | None = None,
+        trace_id: str | None = None,
+    ) -> UserSkillAdoption:
+        if not confirm:
+            raise ValueError("explicit_confirmation_required")
+        asset = await self._get_asset(asset_type, asset_id)
+        if asset is None or asset.status != "active":
+            raise ValueError("asset_not_available")
+
+        existing = await self._get_adoption(user_id=user_id, asset_type=asset_type, asset_id=asset_id)
+        if existing:
+            existing.status = "active"
+            existing.revoked_at = None
+            existing.revoked_reason = None
+            existing.explicit_confirm = True
+            existing.context_signature = context_signature or {}
+            existing.preview_snapshot = self.preview_asset(asset)
+            existing.trace_id = trace_id
+            await self.db.flush()
+            await self._refresh_asset_adoption_stats(asset_type, asset_id)
+            return existing
+
+        adoption = UserSkillAdoption(
+            user_id=user_id,
+            asset_id=asset_id,
+            asset_type=asset_type,
+            asset_version=int(asset.version),
+            status="active",
+            explicit_confirm=True,
+            context_signature=context_signature or {},
+            preview_snapshot=self.preview_asset(asset),
+            trace_id=trace_id,
+        )
+        self.db.add(adoption)
+        await self.db.flush()
+        await self._refresh_asset_adoption_stats(asset_type, asset_id)
+        return adoption
+
+    async def revoke_adoption(self, *, user_id: Any, adoption_id: Any, reason: str = "") -> UserSkillAdoption:
+        result = await self.db.execute(
+            select(UserSkillAdoption).where(
+                UserSkillAdoption.id == adoption_id,
+                UserSkillAdoption.user_id == user_id,
+                UserSkillAdoption.deleted_at.is_(None),
+            )
+        )
+        adoption = result.scalar_one_or_none()
+        if adoption is None:
+            raise ValueError("adoption_not_found")
+        adoption.status = "revoked"
+        adoption.revoked_at = datetime.now(UTC).replace(tzinfo=None)
+        adoption.revoked_reason = reason[:256] if reason else None
+        await self.db.flush()
+        await self._refresh_asset_adoption_stats(adoption.asset_type, adoption.asset_id)
+        return adoption
+
+    async def record_impact(
+        self,
+        *,
+        user_id: Any,
+        adoption_id: Any,
+        trace_id: str,
+        impact_type: str,
+        impact_summary: str,
+        target_id: str | None = None,
+        before_snapshot: dict[str, Any] | None = None,
+        after_snapshot: dict[str, Any] | None = None,
+        outcome: str = "pending",
+        metadata: dict[str, Any] | None = None,
+    ) -> PackAdoptionHistory:
+        result = await self.db.execute(
+            select(UserSkillAdoption).where(
+                UserSkillAdoption.id == adoption_id,
+                UserSkillAdoption.user_id == user_id,
+                UserSkillAdoption.deleted_at.is_(None),
+            )
+        )
+        adoption = result.scalar_one_or_none()
+        if adoption is None:
+            raise ValueError("adoption_not_found")
+
+        history = PackAdoptionHistory(
+            adoption_id=adoption.id,
+            user_id=user_id,
+            asset_id=adoption.asset_id,
+            asset_type=adoption.asset_type,
+            trace_id=trace_id,
+            impact_type=impact_type,
+            impact_summary=impact_summary,
+            target_id=target_id,
+            before_snapshot=before_snapshot or {},
+            after_snapshot=after_snapshot or {},
+            outcome=outcome,
+            metadata_json=metadata or {},
+        )
+        self.db.add(history)
+        await self.db.flush()
+        await self._refresh_asset_adoption_stats(adoption.asset_type, adoption.asset_id)
+        return history
+
+    async def rollback_skill(self, skill_id: str) -> MarketplaceSkill:
+        skill = await self.get_skill(skill_id)
+        if skill is None:
+            raise ValueError("skill_not_found")
+        versions = list(skill.previous_versions or [])
+        if not versions:
+            raise ValueError("no_previous_version")
+        previous = versions.pop()
+        skill.previous_versions = versions
+        for key in (
+            "name",
+            "description",
+            "goal_type",
+            "domain",
+            "version",
+            "status",
+            "trigger_condition",
+            "action_template",
+            "expected_outcome",
+            "prerequisites",
+            "contraindications",
+            "context_signatures",
+            "evidence_grade",
+            "evidence_summary",
+            "episode_count",
+            "success_rate",
+            "quality_score",
+            "privacy_report",
+            "governance",
+        ):
+            if key in previous:
+                setattr(skill, key, previous[key])
+        await self.db.flush()
+        return skill
+
+    async def rollback_pack(self, pack_id: str) -> MarketplacePack:
+        pack = await self.get_pack(pack_id)
+        if pack is None:
+            raise ValueError("pack_not_found")
+        versions = list(pack.previous_versions or [])
+        if not versions:
+            raise ValueError("no_previous_version")
+        previous = versions.pop()
+        pack.previous_versions = versions
+        for key in (
+            "name",
+            "description",
+            "domain",
+            "version",
+            "source",
+            "status",
+            "node_schema",
+            "task_templates",
+            "risk_rules",
+            "skill_ids",
+            "quality_evidence",
+            "quality_score",
+            "privacy_report",
+            "governance",
+        ):
+            if key in previous:
+                setattr(pack, key, previous[key])
+        await self.db.flush()
+        return pack
+
+    def preview_asset(self, asset: MarketplaceSkill | MarketplacePack) -> dict[str, Any]:
+        if isinstance(asset, MarketplaceSkill):
+            return {
+                "asset_id": asset.skill_id,
+                "asset_type": "skill",
+                "version": asset.version,
+                "will_affect": ["task", "plan", "source", "recall"],
+                "trigger_condition": asset.trigger_condition,
+                "expected_outcome": asset.expected_outcome,
+                "contraindications": asset.contraindications or [],
+                "evidence": {
+                    "grade": asset.evidence_grade,
+                    "summary": asset.evidence_summary,
+                    "episode_count": asset.episode_count,
+                    "success_rate": asset.success_rate,
+                },
+                "quality_score": asset.quality_score,
+                "privacy": asset.privacy_report,
+                "requires_explicit_confirm": True,
+                "trace_policy": "every task/plan/source impact must write pack_adoption_history.trace_id",
+            }
+        return {
+            "asset_id": asset.pack_id,
+            "asset_type": "pack",
+            "version": asset.version,
+            "will_affect": ["goal_graph", "task_templates", "risk_rules", "skills"],
+            "node_schema": asset.node_schema,
+            "task_template_count": len(asset.task_templates or []),
+            "risk_rule_count": len(asset.risk_rules or []),
+            "skill_ids": asset.skill_ids or [],
+            "quality_evidence": asset.quality_evidence,
+            "quality_score": asset.quality_score,
+            "privacy": asset.privacy_report,
+            "requires_explicit_confirm": True,
+            "trace_policy": "every task/plan/source impact must write pack_adoption_history.trace_id",
+        }
+
+    @staticmethod
+    def serialize_skill(skill: MarketplaceSkill) -> dict[str, Any]:
+        return {
+            "skill_id": skill.skill_id,
+            "source_skill_id": skill.source_skill_id,
+            "name": skill.name,
+            "description": skill.description,
+            "goal_type": skill.goal_type,
+            "domain": skill.domain,
+            "version": skill.version,
+            "status": skill.status,
+            "trigger_condition": skill.trigger_condition,
+            "action_template": skill.action_template,
+            "expected_outcome": skill.expected_outcome,
+            "prerequisites": skill.prerequisites or [],
+            "contraindications": skill.contraindications or [],
+            "context_signatures": skill.context_signatures or [],
+            "evidence_grade": skill.evidence_grade,
+            "evidence_summary": skill.evidence_summary,
+            "episode_count": skill.episode_count,
+            "success_rate": skill.success_rate,
+            "quality_score": skill.quality_score,
+            "negative_feedback_rate": skill.negative_feedback_rate,
+            "revoke_rate": skill.revoke_rate,
+            "adoption_count": skill.adoption_count,
+            "privacy_report": skill.privacy_report or {},
+            "governance": skill.governance or {},
+            "created_at": _json_safe(skill.created_at),
+            "updated_at": _json_safe(skill.updated_at),
+        }
+
+    @staticmethod
+    def serialize_pack(pack: MarketplacePack) -> dict[str, Any]:
+        return {
+            "pack_id": pack.pack_id,
+            "name": pack.name,
+            "description": pack.description,
+            "domain": pack.domain,
+            "version": pack.version,
+            "source": pack.source,
+            "status": pack.status,
+            "node_schema": pack.node_schema or {},
+            "task_templates": pack.task_templates or [],
+            "risk_rules": pack.risk_rules or [],
+            "skill_ids": pack.skill_ids or [],
+            "quality_evidence": pack.quality_evidence or {},
+            "quality_score": pack.quality_score,
+            "negative_feedback_rate": pack.negative_feedback_rate,
+            "revoke_rate": pack.revoke_rate,
+            "adoption_count": pack.adoption_count,
+            "privacy_report": pack.privacy_report or {},
+            "governance": pack.governance or {},
+            "created_at": _json_safe(pack.created_at),
+            "updated_at": _json_safe(pack.updated_at),
+        }
+
+    @staticmethod
+    def serialize_adoption(adoption: UserSkillAdoption) -> dict[str, Any]:
+        return {
+            "id": str(adoption.id),
+            "user_id": str(adoption.user_id),
+            "asset_id": adoption.asset_id,
+            "asset_type": adoption.asset_type,
+            "asset_version": adoption.asset_version,
+            "status": adoption.status,
+            "explicit_confirm": adoption.explicit_confirm,
+            "context_signature": adoption.context_signature or {},
+            "preview_snapshot": adoption.preview_snapshot or {},
+            "trace_id": adoption.trace_id,
+            "revoked_at": _json_safe(adoption.revoked_at),
+            "created_at": _json_safe(adoption.created_at),
+            "updated_at": _json_safe(adoption.updated_at),
+        }
+
+    @staticmethod
+    def serialize_history(history: PackAdoptionHistory) -> dict[str, Any]:
+        return {
+            "id": str(history.id),
+            "adoption_id": str(history.adoption_id),
+            "asset_id": history.asset_id,
+            "asset_type": history.asset_type,
+            "trace_id": history.trace_id,
+            "impact_type": history.impact_type,
+            "impact_summary": history.impact_summary,
+            "target_id": history.target_id,
+            "before_snapshot": history.before_snapshot or {},
+            "after_snapshot": history.after_snapshot or {},
+            "outcome": history.outcome,
+            "metadata": history.metadata_json or {},
+            "created_at": _json_safe(history.created_at),
+        }
+
+    async def _get_asset(self, asset_type: str, asset_id: str) -> MarketplaceSkill | MarketplacePack | None:
+        if asset_type == "skill":
+            return await self.get_skill(asset_id)
+        if asset_type == "pack":
+            return await self.get_pack(asset_id)
+        raise ValueError("invalid_asset_type")
+
+    async def _get_adoption(self, *, user_id: Any, asset_type: str, asset_id: str) -> UserSkillAdoption | None:
+        result = await self.db.execute(
+            select(UserSkillAdoption).where(
+                UserSkillAdoption.user_id == user_id,
+                UserSkillAdoption.asset_type == asset_type,
+                UserSkillAdoption.asset_id == asset_id,
+                UserSkillAdoption.deleted_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
+
+    async def _refresh_asset_adoption_stats(self, asset_type: str, asset_id: str) -> None:
+        asset = await self._get_asset(asset_type, asset_id)
+        if asset is None:
+            return
+
+        adoption_counts = await self.db.execute(
+            select(
+                func.count(UserSkillAdoption.id),
+                func.sum((UserSkillAdoption.status == "revoked").cast(Integer)),
+            ).where(
+                UserSkillAdoption.asset_type == asset_type,
+                UserSkillAdoption.asset_id == asset_id,
+                UserSkillAdoption.deleted_at.is_(None),
+            )
+        )
+        total, revoked = adoption_counts.one()
+        total_count = int(total or 0)
+        revoked_count = int(revoked or 0)
+        asset.adoption_count = total_count
+        asset.revoke_rate = round(revoked_count / max(total_count, 1), 3)
+
+        impact_counts = await self.db.execute(
+            select(
+                func.count(PackAdoptionHistory.id),
+                func.sum((PackAdoptionHistory.outcome.in_(["negative", "failure", "harmful"])).cast(Integer)),
+                func.sum((PackAdoptionHistory.outcome.in_(["success", "effective"])).cast(Integer)),
+            ).where(
+                PackAdoptionHistory.asset_type == asset_type,
+                PackAdoptionHistory.asset_id == asset_id,
+                PackAdoptionHistory.deleted_at.is_(None),
+            )
+        )
+        impact_total, negative, positive = impact_counts.one()
+        impact_total_count = int(impact_total or 0)
+        negative_count = int(negative or 0)
+        positive_count = int(positive or 0)
+        asset.negative_feedback_rate = round(negative_count / max(impact_total_count, 1), 3)
+        if impact_total_count:
+            success_rate = positive_count / max(impact_total_count, 1)
+        else:
+            success_rate = float(getattr(asset, "success_rate", 0.0) or 0.0)
+        if isinstance(asset, MarketplaceSkill):
+            asset.success_rate = round(success_rate, 3)
+            evidence_grade = int(asset.evidence_grade or 0)
+            applicability_score = self._applicability_score(asset.context_signatures or [])
+        else:
+            evidence_grade = int((asset.quality_evidence or {}).get("evidence_grade", 0))
+            applicability_score = self._applicability_score(asset.task_templates or [])
+
+        asset.quality_score = compute_marketplace_quality_score(
+            success_rate=success_rate,
+            evidence_grade=evidence_grade,
+            negative_feedback_rate=asset.negative_feedback_rate,
+            applicability_score=applicability_score,
+            revoke_rate=asset.revoke_rate,
+        )
+        reason = deprecation_reason(
+            negative_feedback_rate=asset.negative_feedback_rate,
+            revoke_rate=asset.revoke_rate,
+            privacy_report=asset.privacy_report or {},
+        )
+        if reason and asset.status == "active":
+            asset.status = "deprecated"
+            asset.auto_deprecation_reason = reason
+            asset.deprecated_at = datetime.now(UTC).replace(tzinfo=None)
+            try:
+                from app.core.metrics import MARKETPLACE_AUTO_DEPRECATIONS_TOTAL
+
+                MARKETPLACE_AUTO_DEPRECATIONS_TOTAL.labels(asset_type=asset_type, reason=reason).inc()
+            except Exception:
+                pass
+        try:
+            from app.core.metrics import MARKETPLACE_QUALITY_SCORE
+
+            MARKETPLACE_QUALITY_SCORE.labels(
+                asset_type=asset_type,
+                domain=str(getattr(asset, "domain", "") or "unknown"),
+                status=str(getattr(asset, "status", "") or "unknown"),
+            ).set(asset.quality_score)
+        except Exception:
+            pass
+        await self.db.flush()
+
+    @staticmethod
+    def _applicability_score(scopes: Any) -> float:
+        if isinstance(scopes, dict):
+            return 0.75 if scopes else 0.35
+        if isinstance(scopes, list):
+            return _clamp(0.35 + min(len(scopes), 5) * 0.1)
+        return 0.35

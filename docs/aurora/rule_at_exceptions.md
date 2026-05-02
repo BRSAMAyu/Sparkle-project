@@ -32,3 +32,6 @@
 - `backend/app/services/feedback_service.py`
 - `backend/app/services/personalization/runtime_context_service.py`
 - `backend/app/services/session_service.py`
+- `backend/app/services/stt_grpc_service.py` — imported by `backend/grpc_server.py` (outside scanner scope)
+- `backend/app/services/inference_grpc_service.py` — imported by `backend/grpc_server.py` (outside scanner scope)
+- `backend/app/services/routing_parameter_proposal_service.py` — dead module, only referenced in tests

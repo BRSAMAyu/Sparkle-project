@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
@@ -52,14 +53,14 @@ class KnowledgeCard extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.lightbulb_outline,
-                    color: context.colors.brandPrimary,
+                    color: context.sparkle.colors.brandPrimary,
                   ),
                   SizedBox(width: context.space.sm),
                   Expanded(
                     child: Text(
                       title,
                       style: context.typo.titleLarge.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: DS.fontWeightBold,
                       ),
                     ),
                   ),
@@ -116,16 +117,16 @@ class KnowledgeCard extends StatelessWidget {
     String label;
 
     if (masteryLevel >= 80) {
-      color = context.colors.semanticSuccess;
+      color = context.sparkle.colors.semanticSuccess;
       label = context.l10n.knowledgeMasteryLevelMastered;
     } else if (masteryLevel >= 50) {
-      color = context.colors.brandPrimary;
+      color = context.sparkle.colors.brandPrimary;
       label = context.l10n.knowledgeMasteryLevelPracticing;
     } else if (masteryLevel > 0) {
-      color = context.colors.brandPrimary;
+      color = context.sparkle.colors.brandPrimary;
       label = context.l10n.knowledgeMasteryLevelBeginner;
     } else {
-      color = context.colors.brandPrimary;
+      color = context.sparkle.colors.brandPrimary;
       label = context.l10n.knowledgeMasteryLevelUntouched;
     }
 

@@ -66,18 +66,27 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 			zap.String("client_ip", c.ClientIP()))
 		return
 	}
-	defer clientConn.Close()
-	readLimit := h.config.WSMaxMessageBytes
+	writeWait := 10 * time.Second
+	if h.config != nil && h.config.WSWriteWaitSeconds > 0 {
+		writeWait = time.Duration(h.config.WSWriteWaitSeconds) * time.Second
+	}
+	clientWriter := newWSSafeWriter(clientConn, writeWait)
+	defer clientWriter.Close()
+	readLimit := int64(0)
+	if h.config != nil {
+		readLimit = h.config.WSMaxMessageBytes
+	}
 	if readLimit <= 0 {
-		readLimit = 1 << 20
+		readLimit = wsDefaultMaxMessageBytes
 	}
 	clientConn.SetReadLimit(readLimit)
+	msgLimiter := newWSMessageRateLimiter(h.config)
 
 	// Extract user_id from context (set by auth middleware)
 	userID := c.GetString("user_id")
 	if userID == "" {
 		h.logger.Warn("No user_id in context for STT WebSocket")
-		_ = clientConn.WriteJSON(map[string]string{
+		_ = clientWriter.WriteJSON(map[string]string{
 			"type":    "error",
 			"content": "Unauthorized: No user context",
 		})
@@ -96,9 +105,9 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 	pythonConn, _, err := websocket.DefaultDialer.Dial(h.pythonSTTUrl, pythonHeaders)
 	if err != nil {
 		h.logger.Error("Failed to connect to Python STT service", zap.Error(err))
-		_ = clientConn.WriteJSON(map[string]string{
+		_ = clientWriter.WriteJSON(map[string]string{
 			"type":    "error",
-			"content": "STT service unavailable: " + err.Error(),
+			"content": "STT service unavailable",
 		})
 		return
 	}
@@ -116,6 +125,13 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 		closeOnce.Do(func() {
 			close(done)
 		})
+	}
+	var pythonWriteMu sync.Mutex
+	writePython := func(messageType int, data []byte) error {
+		pythonWriteMu.Lock()
+		defer pythonWriteMu.Unlock()
+		_ = pythonConn.SetWriteDeadline(time.Now().Add(writeWait))
+		return pythonConn.WriteMessage(messageType, data)
 	}
 
 	// Client -> Python (forward audio data)
@@ -136,8 +152,16 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 					return
 				}
 
+				if !msgLimiter.Allow() {
+					_ = clientWriter.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, defaultWSRateLimitMessage))
+					errChan <- nil
+					return
+				}
+				if messageType != websocket.TextMessage && messageType != websocket.BinaryMessage {
+					continue
+				}
 				// Forward binary audio data or control messages to Python
-				if err := pythonConn.WriteMessage(messageType, data); err != nil {
+				if err := writePython(messageType, data); err != nil {
 					errChan <- err
 					return
 				}
@@ -164,7 +188,7 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 				}
 
 				// Forward transcription results to client
-				if err := clientConn.WriteMessage(messageType, data); err != nil {
+				if err := clientWriter.WriteMessage(messageType, data); err != nil {
 					errChan <- err
 					return
 				}
@@ -181,7 +205,7 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 	}
 
 	// Send STOP signal to Python before closing
-	_ = pythonConn.WriteMessage(websocket.TextMessage, []byte("STOP"))
+	_ = writePython(websocket.TextMessage, []byte("STOP"))
 
 	h.logger.Info("STT WebSocket disconnected", zap.String("user_id", userID))
 }

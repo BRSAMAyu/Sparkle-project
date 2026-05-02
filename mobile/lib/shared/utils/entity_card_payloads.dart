@@ -96,6 +96,14 @@ class EntityCardSharePayload {
     required this.title,
     this.subtitle,
     this.meta = const <String, dynamic>{},
+    this.owner = const <String, dynamic>{},
+    this.visibility,
+    this.preview = const <String, dynamic>{},
+    this.sourceReceipt = const <String, dynamic>{},
+    this.adoptionAction,
+    this.expiresAt,
+    this.revokedAt,
+    this.availability,
   });
 
   factory EntityCardSharePayload.fromMap(Map<String, dynamic> raw) =>
@@ -111,6 +119,24 @@ class EntityCardSharePayload {
                     raw['meta'] as Map<Object?, Object?>,
                   )
                 : const <String, dynamic>{},
+        owner: raw['owner'] is Map
+            ? Map<String, dynamic>.from(raw['owner'] as Map)
+            : const <String, dynamic>{},
+        visibility: _asString(raw['visibility']),
+        preview: raw['preview'] is Map
+            ? Map<String, dynamic>.from(raw['preview'] as Map)
+            : const <String, dynamic>{},
+        sourceReceipt: raw['source_receipt'] is Map
+            ? Map<String, dynamic>.from(raw['source_receipt'] as Map)
+            : const <String, dynamic>{},
+        adoptionAction: raw['adoption_action'] is Map
+            ? EntityCardActionPayload.fromMap(
+                Map<String, dynamic>.from(raw['adoption_action'] as Map),
+              )
+            : null,
+        expiresAt: _parseDate(raw['expires_at']),
+        revokedAt: _parseDate(raw['revoked_at']),
+        availability: _asString(raw['availability']),
       );
 
   final String resourceType;
@@ -118,6 +144,14 @@ class EntityCardSharePayload {
   final String title;
   final String? subtitle;
   final Map<String, dynamic> meta;
+  final Map<String, dynamic> owner;
+  final String? visibility;
+  final Map<String, dynamic> preview;
+  final Map<String, dynamic> sourceReceipt;
+  final EntityCardActionPayload? adoptionAction;
+  final DateTime? expiresAt;
+  final DateTime? revokedAt;
+  final String? availability;
 }
 
 class EntityCardFeedbackPayload {
@@ -439,7 +473,9 @@ Map<String, dynamic> _buildLegacyEntityMap(
             cardRef?.lifecycleStatus,
       ),
       'execution_state':
-          (_asString(source['status'])?.toUpperCase() == 'COMPLETED') ? 'confirmed' : 'draft',
+          (_asString(source['status'])?.toUpperCase() == 'COMPLETED')
+              ? 'confirmed'
+              : 'draft',
       'linked_entities': {
         if (_asString(source['legacy_plan_id'] ?? source['plan_id']) != null)
           'plan_id': _asString(source['legacy_plan_id'] ?? source['plan_id']),
@@ -558,7 +594,7 @@ Map<String, dynamic> _buildLegacyEntityMap(
     };
   }
   if (type == 'knowledge_node' || type == 'knowledge_card') {
-    final nodeId = _asString(raw['id']);
+    final nodeId = _asString(raw['id'] ?? raw['node_id']);
     return <String, dynamic>{
       'entity_type': 'knowledge_node',
       'entity_id': nodeId,
@@ -581,6 +617,239 @@ Map<String, dynamic> _buildLegacyEntityMap(
               'title': _asString(raw['title']) ?? 'Knowledge Node',
               'subtitle':
                   _asString(raw['summary']) ?? _asString(raw['description']),
+            },
+      'raw': raw,
+    };
+  }
+  if (type == 'review' || type == 'review_card') {
+    final reviewId = _asString(raw['review_id'] ?? raw['id']);
+    final mode = _asString(raw['mode']) ?? 'today';
+    final query = _compactQuery({
+      'mode': mode,
+      'subject': _asString(raw['subject'] ?? raw['subject_code']),
+      'plan_id': _asString(raw['plan_id']),
+      'review_id': reviewId,
+    });
+    return <String, dynamic>{
+      'entity_type': 'review',
+      'entity_id': reviewId,
+      'title': _asString(raw['title'] ?? raw['name']) ?? 'Review',
+      'summary': _asString(
+        raw['summary'] ?? raw['description'] ?? raw['diagnosis'],
+      ),
+      'status': _asString(raw['status'] ?? raw['decision']),
+      'execution_state': _asString(raw['execution_state']) ?? 'suggested',
+      'primary_action': {
+        'id': 'open_review',
+        'type': 'open_detail',
+        'label': 'Open review',
+        'route': query.isEmpty ? '/review?mode=today' : '/review?$query',
+      },
+      'linked_entities': {
+        if (_asString(raw['plan_id']) != null)
+          'plan_id': _asString(raw['plan_id']),
+        if (_asString(raw['subject'] ?? raw['subject_code']) != null)
+          'subject': _asString(raw['subject'] ?? raw['subject_code']),
+      },
+      'metrics': {
+        if (_asDouble(raw['score'] ?? raw['overall_score']) != null)
+          'score': _asDouble(raw['score'] ?? raw['overall_score']),
+        if (_asInt(raw['due_count']) != null)
+          'due_count': _asInt(raw['due_count']),
+      },
+      'share': reviewId == null
+          ? null
+          : {
+              'resource_type': 'review',
+              'resource_id': reviewId,
+              'title': _asString(raw['title'] ?? raw['name']) ?? 'Review',
+              'subtitle': _asString(raw['summary'] ?? raw['description']),
+            },
+      'raw': raw,
+    };
+  }
+  if (type == 'vocabulary' || type == 'vocabulary_card') {
+    final word = _asString(raw['word'] ?? raw['term']);
+    final wordId = _asString(raw['word_id'] ?? raw['id']) ?? word;
+    final query = _compactQuery({'word': word});
+    return <String, dynamic>{
+      'entity_type': 'vocabulary',
+      'entity_id': wordId,
+      'title': _asString(raw['title']) ?? word ?? 'Vocabulary',
+      'summary': _asString(
+        raw['definition'] ?? raw['translation'] ?? raw['summary'],
+      ),
+      'status': _asString(raw['status']) ??
+          ((_asBool(raw['in_wordbook']) ?? false) ? 'saved' : 'lookup'),
+      'execution_state': _asString(raw['execution_state']) ?? 'suggested',
+      'primary_action': {
+        'id': 'open_vocabulary',
+        'type': 'open_detail',
+        'label': 'Open vocabulary',
+        'route': query.isEmpty
+            ? '/tools/vocabulary_lookup'
+            : '/tools/vocabulary_lookup?$query',
+        'payload': {
+          if (word != null) 'word': word,
+          if (wordId != null) 'word_id': wordId,
+        },
+      },
+      'secondary_actions': [
+        {
+          'id': 'review_wordbook',
+          'type': 'open_detail',
+          'label': 'Review wordbook',
+          'route': '/tools/wordbook',
+        },
+      ],
+      'linked_entities': {
+        if (_asString(raw['knowledge_node_id']) != null)
+          'knowledge_node_id': _asString(raw['knowledge_node_id']),
+        if (_asString(raw['source_translation_id']) != null)
+          'source_translation_id': _asString(raw['source_translation_id']),
+      },
+      'metrics': {
+        if (_asInt(raw['importance']) != null)
+          'importance': _asInt(raw['importance']),
+        if (_asInt(raw['review_count']) != null)
+          'review_count': _asInt(raw['review_count']),
+      },
+      'share': wordId == null
+          ? null
+          : {
+              'resource_type': 'vocabulary',
+              'resource_id': wordId,
+              'title': _asString(raw['title']) ?? word ?? 'Vocabulary',
+              'subtitle': _asString(raw['definition'] ?? raw['translation']),
+            },
+      'raw': raw,
+    };
+  }
+  if (type == 'seed' || type == 'seed_card' || type == 'seed_library') {
+    final seedId = _asString(raw['seed_id'] ?? raw['library_id'] ?? raw['id']);
+    return <String, dynamic>{
+      'entity_type': 'seed',
+      'entity_id': seedId,
+      'title': _asString(raw['title'] ?? raw['name']) ?? 'Seed',
+      'summary': _asString(
+        raw['summary'] ?? raw['description'] ?? raw['content'],
+      ),
+      'status': _asString(raw['status'] ?? raw['category']),
+      'execution_state': _asString(raw['execution_state']) ?? 'adoptable',
+      'primary_action': {
+        'id': 'open_seed',
+        'type': 'open_detail',
+        'label': 'Open seed',
+        'route': seedId == null ? '/seed-libraries' : '/seed-libraries/$seedId',
+      },
+      'secondary_actions': seedId == null
+          ? <Map<String, dynamic>>[]
+          : [
+              {
+                'id': 'adopt_seed',
+                'type': 'adopt_resource',
+                'label': 'Adopt seed',
+                'payload': {'resource_type': 'seed', 'resource_id': seedId},
+              },
+              {
+                'id': 'share_seed',
+                'type': 'share_resource',
+                'label': 'Share seed',
+                'payload': {'resource_type': 'seed', 'resource_id': seedId},
+              },
+            ],
+      'linked_entities': {
+        if (_asString(raw['plan_id']) != null)
+          'plan_id': _asString(raw['plan_id']),
+        if (_asString(raw['task_id']) != null)
+          'task_id': _asString(raw['task_id']),
+        if (_asString(raw['knowledge_node_id']) != null)
+          'knowledge_node_id': _asString(raw['knowledge_node_id']),
+      },
+      'metrics': {
+        if (_asInt(raw['adoption_count']) != null)
+          'adoption_count': _asInt(raw['adoption_count']),
+        if (_asDouble(raw['rating']) != null)
+          'rating': _asDouble(raw['rating']),
+      },
+      'share': seedId == null
+          ? null
+          : {
+              'resource_type': 'seed',
+              'resource_id': seedId,
+              'title': _asString(raw['title'] ?? raw['name']) ?? 'Seed',
+              'subtitle': _asString(raw['summary'] ?? raw['description']),
+            },
+      'raw': raw,
+    };
+  }
+  if (type == 'shared_resource' || type == 'share_card') {
+    final shareId =
+        _asString(raw['shared_resource_id'] ?? raw['share_id'] ?? raw['id']);
+    final resourceType = _asString(raw['resource_type']) ?? 'unknown';
+    final resourceId = _asString(raw['resource_id']);
+    final availability = _asString(raw['availability']) ?? 'available';
+    final adoptionAction = raw['adoption_action'] is Map
+        ? Map<String, dynamic>.from(raw['adoption_action'] as Map)
+        : <String, dynamic>{
+            'id': 'adopt_shared_resource',
+            'type': 'adopt_resource',
+            'label': 'Adopt resource',
+            if (shareId != null)
+              'route': '/community/shared-resources/$shareId/adopt',
+            'payload': {
+              if (shareId != null) 'shared_resource_id': shareId,
+              'resource_type': resourceType,
+              if (resourceId != null) 'resource_id': resourceId,
+            },
+          };
+    final route =
+        _resourceDetailRoute(resourceType, resourceId) ?? '/community';
+    return <String, dynamic>{
+      'entity_type': 'shared_resource',
+      'entity_id': shareId,
+      'title':
+          _asString(raw['title'] ?? raw['resource_title']) ?? 'Shared Resource',
+      'summary': _asString(
+        raw['comment'] ?? raw['summary'] ?? raw['resource_summary'],
+      ),
+      'status': _asString(raw['permission'] ?? raw['visibility']),
+      'execution_state': availability,
+      'primary_action': {
+        'id': 'open_shared_resource',
+        'type': 'open_detail',
+        'label': 'Open resource',
+        'route': route,
+      },
+      'secondary_actions':
+          const {'revoked', 'expired', 'private'}.contains(availability)
+              ? <Map<String, dynamic>>[]
+              : [adoptionAction],
+      'linked_entities': {
+        'resource_type': resourceType,
+        if (resourceId != null) 'resource_id': resourceId,
+        if (shareId != null) 'shared_resource_id': shareId,
+      },
+      'share': resourceId == null
+          ? null
+          : {
+              'resource_type': resourceType,
+              'resource_id': resourceId,
+              'title': _asString(raw['title'] ?? raw['resource_title']) ??
+                  'Shared Resource',
+              'subtitle': _asString(raw['summary'] ?? raw['resource_summary']),
+              if (raw['owner'] is Map) 'owner': raw['owner'],
+              if (_asString(raw['visibility']) != null)
+                'visibility': _asString(raw['visibility']),
+              if (raw['preview'] is Map) 'preview': raw['preview'],
+              if (raw['source_receipt'] is Map)
+                'source_receipt': raw['source_receipt'],
+              'adoption_action': adoptionAction,
+              if (_asString(raw['expires_at']) != null)
+                'expires_at': _asString(raw['expires_at']),
+              if (_asString(raw['revoked_at']) != null)
+                'revoked_at': _asString(raw['revoked_at']),
+              'availability': availability,
             },
       'raw': raw,
     };
@@ -629,6 +898,8 @@ String _normalizeTaskStatus(dynamic raw) {
     case 'in_progress':
     case 'inprogress':
       return 'IN_PROGRESS';
+    case 'paused':
+      return 'PAUSED';
     case 'completed':
       return 'COMPLETED';
     case 'abandoned':
@@ -684,4 +955,38 @@ DateTime? _parseDate(dynamic value) {
   final text = _asString(value);
   if (text == null) return null;
   return DateTime.tryParse(text);
+}
+
+String _compactQuery(Map<String, String?> raw) {
+  final query = <String, String>{};
+  for (final entry in raw.entries) {
+    final value = entry.value?.trim();
+    if (value != null && value.isNotEmpty) {
+      query[entry.key] = value;
+    }
+  }
+  return Uri(queryParameters: query).query;
+}
+
+String? _resourceDetailRoute(String resourceType, String? resourceId) {
+  if (resourceId == null || resourceId.isEmpty) return null;
+  switch (resourceType) {
+    case 'plan':
+      return '/plans/$resourceId';
+    case 'task':
+      return '/tasks/$resourceId';
+    case 'knowledge_node':
+      return '/galaxy?nodeId=$resourceId';
+    case 'seed':
+    case 'seed_library':
+      return '/seed-libraries/$resourceId';
+    case 'vocabulary':
+    case 'vocabulary_set':
+      return '/tools/wordbook';
+    case 'review':
+    case 'review_result':
+      return '/review?review_id=$resourceId';
+    default:
+      return null;
+  }
 }

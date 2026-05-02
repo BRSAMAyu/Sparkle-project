@@ -53,6 +53,9 @@ class DocumentFeedbackEventConsumer:
     async def handle_event(self, event: dict):
         if event.get("event_type") != "document.citation.feedback":
             return
+        context = event.get("context") or {}
+        if isinstance(context, dict) and context.get("persisted_feedback_id"):
+            return
 
         async with AsyncSessionLocal() as db:
             await document_service.persist_feedback_event(db, event)

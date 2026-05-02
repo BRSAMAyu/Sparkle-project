@@ -13,6 +13,7 @@ from app.api.v1.achievements import router as achievements_router
 from app.db.session import get_db
 from app.models.achievement import AchievementRarity, AchievementType, VisualEffectType
 from app.schemas.achievement import AchievementDetail, AchievementShareResponse
+from tests._credentials import TEST_INTERNAL_API_KEY
 
 
 @pytest.fixture
@@ -175,7 +176,7 @@ def test_detail_endpoint_returns_unlock_context_snapshot(achievement_client):
 
 
 def test_process_achievement_event_requires_internal_token(achievement_client):
-    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", "secret-key"):
+    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", TEST_INTERNAL_API_KEY):
         response = achievement_client.post(
             "/achievements/events/process",
             params={"user_id": str(uuid4()), "event_type": "task_completed"},
@@ -200,7 +201,7 @@ def test_process_achievement_event_accepts_internal_token_and_user_id(achievemen
         }
     ]
 
-    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", "secret-key"):
+    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", TEST_INTERNAL_API_KEY):
         with patch(
             "app.api.v1.achievements.AchievementEngine.process_event",
             new=AsyncMock(return_value=unlocked),
@@ -209,7 +210,7 @@ def test_process_achievement_event_accepts_internal_token_and_user_id(achievemen
                 "/achievements/events/process",
                 params={"user_id": str(uuid4()), "event_type": "task_completed"},
                 json={"task_id": "task-1"},
-                headers={"X-Internal-Token": "secret-key", "Idempotency-Key": "achv-evt-1"},
+                headers={"X-Internal-Token": TEST_INTERNAL_API_KEY, "Idempotency-Key": "achv-evt-1"},
             )
 
     assert response.status_code == 200
@@ -221,12 +222,12 @@ def test_process_achievement_event_accepts_internal_token_and_user_id(achievemen
 
 
 def test_process_achievement_event_requires_idempotency_key(achievement_client):
-    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", "secret-key"):
+    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", TEST_INTERNAL_API_KEY):
         response = achievement_client.post(
             "/achievements/events/process",
             params={"user_id": str(uuid4()), "event_type": "task_completed"},
             json={"task_id": "task-1"},
-            headers={"X-Internal-Token": "secret-key"},
+            headers={"X-Internal-Token": TEST_INTERNAL_API_KEY},
         )
 
     assert response.status_code == 400

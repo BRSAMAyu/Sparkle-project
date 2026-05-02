@@ -1,0 +1,19 @@
+FV-09: 发布审批工作流
+Status: DONE_WITH_EXTERNAL_BLOCKER
+Branch: codex/FV-09-release-approval
+Modified files:
+- backend/app/services/release_approval.py
+- backend/app/api/v1/release_approvals.py
+- backend/alembic/versions/c20_20260502_release_approvals.py
+- backend/tests/unit/test_release_approval_service.py
+- backend/app/api/v1/router.py
+- backend/app/config/settings.py
+- docs/product/parallel_closeout/FV-09_release_approval_REPORT_2026-05-02.md
+- .claude/fix-progress/FV-09.done
+Verification:
+- python3 -m py_compile backend/app/services/release_approval.py backend/app/api/v1/release_approvals.py backend/tests/unit/test_release_approval_service.py backend/alembic/versions/c20_20260502_release_approvals.py: PASS
+- cd backend && ruff check app/services/release_approval.py app/api/v1/release_approvals.py tests/unit/test_release_approval_service.py alembic/versions/c20_20260502_release_approvals.py: PASS
+- cd backend && pytest tests/unit/test_release_approval_service.py -q: BLOCKED by unrelated app.models.community_privacy metadata reserved-name error
+- cd backend && alembic heads: BLOCKED by unrelated app.models.community_privacy metadata reserved-name error
+User-visible change: Admins can create, review, reject, approve, and apply durable release approval requests with notification/red-dot support.
+Architect handoff: Wire FV-01/FV-02/FV-04 promotion endpoints to ReleaseApprovalService; merge router/settings hunks carefully with concurrent FV changes.

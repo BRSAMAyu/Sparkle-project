@@ -189,9 +189,8 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
                   const SizedBox(height: DS.spacing16),
                   SparkleButton.primary(
                     label: l10n.retry,
-                    onPressed: () => ref
-                        .read(documentLibraryProvider.notifier)
-                        .refresh(),
+                    onPressed: () =>
+                        ref.read(documentLibraryProvider.notifier).refresh(),
                   ),
                 ],
               ),
@@ -253,6 +252,9 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
                         .read(documentLibraryProvider.notifier)
                         .toggleExpanded(document.fileId),
                     onDelete: () => _confirmDelete(document),
+                    onArchive: () => _archiveDocument(document),
+                    onRestore: () => _restoreDocument(document),
+                    onRevoke: () => _confirmRevoke(document),
                     onShareToGroup: () => _showShareSheet(document),
                     onRefresh: () =>
                         ref.read(documentLibraryProvider.notifier).refresh(),
@@ -284,7 +286,8 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           if (!mounted) return;
           Navigator.of(sheetContext).pop();
           ScaffoldMessenger.of(this.context).showSnackBar(
-            SnackBar(content: Text(this.context.l10n.studyMaterialsUploadSuccess)),
+            SnackBar(
+                content: Text(this.context.l10n.studyMaterialsUploadSuccess)),
           );
           unawaited(ref.read(documentLibraryProvider.notifier).refresh());
         },
@@ -347,10 +350,79 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
     }
   }
 
+  Future<void> _archiveDocument(DocumentLibraryItem document) async {
+    try {
+      await ref
+          .read(documentLibraryProvider.notifier)
+          .archiveDocument(document.fileId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('资料已归档，不会再进入 RAG 上下文')),
+      );
+    } on Exception catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('归档失败：$error'), backgroundColor: DS.error),
+      );
+    }
+  }
+
+  Future<void> _restoreDocument(DocumentLibraryItem document) async {
+    try {
+      await ref
+          .read(documentLibraryProvider.notifier)
+          .restoreDocument(document.fileId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('资料已恢复')),
+      );
+    } on Exception catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('恢复失败：$error'), backgroundColor: DS.error),
+      );
+    }
+  }
+
+  Future<void> _confirmRevoke(DocumentLibraryItem document) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('撤回资料权限'),
+        content: Text('撤回后，${document.filename} 会从共享与检索缓存中移除。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(context.l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('撤回'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await ref
+          .read(documentLibraryProvider.notifier)
+          .revokeDocument(document.fileId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('资料权限已撤回')),
+      );
+    } on Exception catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('撤回失败：$error'), backgroundColor: DS.error),
+      );
+    }
+  }
+
   Future<void> _showShareSheet(DocumentLibraryItem document) async {
     final l10n = context.l10n;
-    final groupsFuture =
-        ref.read(communityRepositoryProvider).getMyGroups();
+    final groupsFuture = ref.read(communityRepositoryProvider).getMyGroups();
 
     if (!mounted) return;
     await showModalBottomSheet<void>(
@@ -522,11 +594,12 @@ class _LibraryHeroCard extends StatelessWidget {
                     const SizedBox(height: DS.spacing8),
                     Text(
                       context.l10n.studyMaterialsHeroTitle,
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            height: 1.1,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                height: 1.1,
+                              ),
                     ),
                     const SizedBox(height: DS.spacing8),
                     Text(
@@ -810,8 +883,7 @@ class _FilterSection extends ConsumerWidget {
             _FilterChip(
               label: l10n.studyMaterialsStatusProcessing,
               selected: state.statusFilter == DocumentStatus.processing,
-              onTap: () =>
-                  notifier.setStatusFilter(DocumentStatus.processing),
+              onTap: () => notifier.setStatusFilter(DocumentStatus.processing),
             ),
             _FilterChip(
               label: l10n.studyMaterialsStatusReady,
@@ -838,8 +910,7 @@ class _FilterSection extends ConsumerWidget {
             _FilterChip(
               label: l10n.studyMaterialsDate7d,
               selected: state.dateFilter == DocumentDateFilter.last7Days,
-              onTap: () =>
-                  notifier.setDateFilter(DocumentDateFilter.last7Days),
+              onTap: () => notifier.setDateFilter(DocumentDateFilter.last7Days),
             ),
             _FilterChip(
               label: l10n.studyMaterialsDate30d,
@@ -967,9 +1038,8 @@ class _FilterChip extends StatelessWidget {
             fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
           ),
       side: BorderSide(
-        color: selected
-            ? DS.brandPrimary.withValues(alpha: 0.3)
-            : DS.borderSubtle,
+        color:
+            selected ? DS.brandPrimary.withValues(alpha: 0.3) : DS.borderSubtle,
       ),
     );
   }
@@ -981,6 +1051,9 @@ class _DocumentCard extends StatelessWidget {
     required this.expanded,
     required this.onToggleExpanded,
     required this.onDelete,
+    required this.onArchive,
+    required this.onRestore,
+    required this.onRevoke,
     required this.onShareToGroup,
     required this.onRefresh,
     required this.onFilterByNode,
@@ -990,6 +1063,9 @@ class _DocumentCard extends StatelessWidget {
   final bool expanded;
   final VoidCallback onToggleExpanded;
   final VoidCallback onDelete;
+  final VoidCallback onArchive;
+  final VoidCallback onRestore;
+  final VoidCallback onRevoke;
   final VoidCallback onShareToGroup;
   final VoidCallback onRefresh;
   final ValueChanged<DocumentGalaxyNode> onFilterByNode;
@@ -998,7 +1074,8 @@ class _DocumentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final status = document.effectiveStatus;
-    final nodePreview = document.attachedNodes.take(3).map((node) => node.name).join(' · ');
+    final nodePreview =
+        document.attachedNodes.take(3).map((node) => node.name).join(' · ');
 
     return GraphiteCardSurface(
       padding: const EdgeInsets.all(DS.spacing18),
@@ -1019,9 +1096,9 @@ class _DocumentCard extends StatelessWidget {
                     Text(
                       document.filename,
                       style: theme.textTheme.titleMedium?.copyWith(
-                            color: DS.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        color: DS.textPrimary,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: DS.spacing6),
                     Wrap(
@@ -1033,6 +1110,7 @@ class _DocumentCard extends StatelessWidget {
                           icon: Icons.auto_awesome_motion_rounded,
                         ),
                         _StatusBadge(document: document),
+                        _LifecycleBadge(status: document.lifecycleStatus),
                         if (document.processingStatus?.hasDraftsPending == true)
                           _DraftsPendingPill(
                             count: document.processingStatus!.draftsPending!,
@@ -1052,8 +1130,8 @@ class _DocumentCard extends StatelessWidget {
                     Text(
                       _usageLine(context, document),
                       style: theme.textTheme.bodyMedium?.copyWith(
-                            color: DS.textSecondary,
-                          ),
+                        color: DS.textSecondary,
+                      ),
                     ),
                     if (nodePreview.isNotEmpty) ...[
                       const SizedBox(height: DS.spacing6),
@@ -1062,8 +1140,8 @@ class _DocumentCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodySmall?.copyWith(
-                              color: DS.textTertiary,
-                            ),
+                          color: DS.textTertiary,
+                        ),
                       ),
                     ],
                   ],
@@ -1083,8 +1161,8 @@ class _DocumentCard extends StatelessWidget {
                   Text(
                     _uploadedLabel(context, document.uploadedAt),
                     style: theme.textTheme.labelSmall?.copyWith(
-                          color: DS.textTertiary,
-                        ),
+                      color: DS.textTertiary,
+                    ),
                   ),
                 ],
               ),
@@ -1141,8 +1219,7 @@ class _DocumentCard extends StatelessWidget {
                   Column(
                     children: document.citationInsight.topChunks.map((chunk) {
                       return Padding(
-                        padding:
-                            const EdgeInsets.only(bottom: DS.spacing10),
+                        padding: const EdgeInsets.only(bottom: DS.spacing10),
                         child: _ChunkInsightCard(chunk: chunk),
                       );
                     }).toList(),
@@ -1152,10 +1229,9 @@ class _DocumentCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _StatPanel(
-                        label: context
-                            .l10n.studyMaterialsConversationCountLabel,
-                        value:
-                            '${document.citationInsight.conversationCount}',
+                        label:
+                            context.l10n.studyMaterialsConversationCountLabel,
+                        value: '${document.citationInsight.conversationCount}',
                       ),
                     ),
                     const SizedBox(width: DS.spacing10),
@@ -1189,6 +1265,27 @@ class _DocumentCard extends StatelessWidget {
                       label: Text(
                         context.l10n.studyMaterialsShareAction,
                       ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: document.lifecycleStatus ==
+                              SourceLifecycleStatus.active
+                          ? onArchive
+                          : onRestore,
+                      icon: Icon(
+                        document.lifecycleStatus == SourceLifecycleStatus.active
+                            ? Icons.archive_outlined
+                            : Icons.unarchive_outlined,
+                      ),
+                      label: Text(
+                        document.lifecycleStatus == SourceLifecycleStatus.active
+                            ? '归档'
+                            : '恢复',
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: onRevoke,
+                      icon: const Icon(Icons.link_off_rounded),
+                      label: const Text('撤权'),
                     ),
                     OutlinedButton.icon(
                       onPressed: onDelete,
@@ -1461,6 +1558,53 @@ class _StatusBadge extends StatelessWidget {
           const SizedBox(width: DS.spacing6),
           Text(
             label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LifecycleBadge extends StatelessWidget {
+  const _LifecycleBadge({required this.status});
+
+  final SourceLifecycleStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = switch (status) {
+      SourceLifecycleStatus.active => DS.info,
+      SourceLifecycleStatus.archived => DS.textSecondary,
+      SourceLifecycleStatus.revoked => DS.error,
+      SourceLifecycleStatus.orphaned => DS.warning,
+    };
+    final icon = switch (status) {
+      SourceLifecycleStatus.active => Icons.fact_check_outlined,
+      SourceLifecycleStatus.archived => Icons.archive_outlined,
+      SourceLifecycleStatus.revoked => Icons.link_off_rounded,
+      SourceLifecycleStatus.orphaned => Icons.flag_circle_outlined,
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: DS.spacing10,
+        vertical: DS.spacing6,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: DS.spacing6),
+          Text(
+            status.label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: color,
                   fontWeight: FontWeight.w700,
@@ -1761,9 +1905,8 @@ class _DocumentsEmptyState extends StatelessWidget {
             label: hasAnyDocuments && searchActive
                 ? l10n.studyMaterialsResetFilters
                 : l10n.studyMaterialsUploadCta,
-            onPressed: hasAnyDocuments && searchActive
-                ? onResetFilters
-                : onUpload,
+            onPressed:
+                hasAnyDocuments && searchActive ? onResetFilters : onUpload,
           ),
         ],
       ),
@@ -1902,7 +2045,8 @@ class _QualityIndicator extends StatelessWidget {
             : 'Low quality';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: DS.spacing10, vertical: DS.spacing6),
+      padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10, vertical: DS.spacing6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
@@ -1914,7 +2058,10 @@ class _QualityIndicator extends StatelessWidget {
           const SizedBox(width: DS.spacing6),
           Text(
             label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: color, fontWeight: FontWeight.w600),
+            style: Theme.of(context)
+                .textTheme
+                .labelSmall
+                ?.copyWith(color: color, fontWeight: FontWeight.w600),
           ),
         ],
       ),

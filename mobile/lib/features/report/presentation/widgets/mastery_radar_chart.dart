@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class MasteryRadarChart extends StatelessWidget {
   const MasteryRadarChart({
@@ -34,10 +35,8 @@ class MasteryRadarChart extends StatelessWidget {
       );
     }
 
-    final normalizedValues = values
-        .take(axisCount)
-        .map((value) => value.clamp(0.0, 1.0))
-        .toList();
+    final normalizedValues =
+        values.take(axisCount).map((value) => value.clamp(0.0, 1.0)).toList();
     final comparisonValues = secondaryValues
         ?.take(axisCount)
         .map((value) => value.clamp(0.0, 1.0))
@@ -53,9 +52,9 @@ class MasteryRadarChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '知识掌握度雷达图',
-            style: TextStyle(fontWeight: DS.fontWeightBold),
+          Text(
+            I18nService.instance.isChinese ? '知识掌握度雷达图' : 'Mastery Radar',
+            style: const TextStyle(fontWeight: DS.fontWeightBold),
           ),
           const SizedBox(height: 16),
           SizedBox(

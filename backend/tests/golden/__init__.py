@@ -1,0 +1,1 @@
+"""Aurora experience golden tests."""

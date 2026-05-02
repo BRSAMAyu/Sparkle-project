@@ -1,6 +1,6 @@
 {
   "python": {
-    "global": 35,
+    "global": 50,
     "paths": [
       {
         "path": "app/core",
@@ -21,11 +21,11 @@
     ]
   },
   "go": {
-    "global": 10,
+    "global": 30,
     "paths": [
       {
         "path": "internal/handler",
-        "threshold": 35
+        "threshold": 50
       },
       {
         "path": "internal/service",
@@ -33,7 +33,7 @@
       },
       {
         "path": "internal/db",
-        "threshold": 0
+        "threshold": 10
       },
       {
         "path": "internal/agent",
@@ -41,12 +41,12 @@
       },
       {
         "path": "internal/middleware",
-        "threshold": 12
+        "threshold": 40
       }
     ]
   },
   "flutter": {
-    "global": 15,
+    "global": 25,
     "paths": [
       {
         "path": "mobile/lib/features/chat",

@@ -6,6 +6,29 @@ part of 'seed_library_model.dart';
 // JsonSerializableGenerator
 // **************************************************************************
 
+SeedAdoptionAction _$SeedAdoptionActionFromJson(Map<String, dynamic> json) =>
+    SeedAdoptionAction(
+      actionType: json['action_type'] as String,
+      label: json['label'] as String,
+      resourceType: json['resource_type'] as String,
+      description: json['description'] as String?,
+      resourceId: json['resource_id'] as String?,
+      route: json['route'] as String?,
+      payload:
+          json['payload'] as Map<String, dynamic>? ?? const <String, dynamic>{},
+    );
+
+Map<String, dynamic> _$SeedAdoptionActionToJson(SeedAdoptionAction instance) =>
+    <String, dynamic>{
+      'action_type': instance.actionType,
+      'label': instance.label,
+      'description': instance.description,
+      'resource_type': instance.resourceType,
+      'resource_id': instance.resourceId,
+      'route': instance.route,
+      'payload': instance.payload,
+    };
+
 SeedLibrary _$SeedLibraryFromJson(Map<String, dynamic> json) => SeedLibrary(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -28,6 +51,11 @@ SeedLibrary _$SeedLibraryFromJson(Map<String, dynamic> json) => SeedLibrary(
       userRatingAvg: (json['user_rating_avg'] as num?)?.toDouble(),
       userRatingCount: (json['user_rating_count'] as num?)?.toInt(),
       currentUserRating: (json['current_user_rating'] as num?)?.toDouble(),
+      adoptionNextActions: (json['adoption_next_actions'] as List<dynamic>?)
+              ?.map(
+                  (e) => SeedAdoptionAction.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <SeedAdoptionAction>[],
     );
 
 Map<String, dynamic> _$SeedLibraryToJson(SeedLibrary instance) =>
@@ -49,6 +77,7 @@ Map<String, dynamic> _$SeedLibraryToJson(SeedLibrary instance) =>
       'user_rating_avg': instance.userRatingAvg,
       'user_rating_count': instance.userRatingCount,
       'current_user_rating': instance.currentUserRating,
+      'adoption_next_actions': instance.adoptionNextActions,
       'item_count': instance.itemCount,
       'subscriber_count': instance.subscriberCount,
       'created_at': instance.createdAt.toIso8601String(),
@@ -83,6 +112,11 @@ SeedItem _$SeedItemFromJson(Map<String, dynamic> json) => SeedItem(
           _$DifficultyLevelEnumMap, json['difficulty_level']),
       tags: (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList(),
       orderIndex: (json['order_index'] as num?)?.toInt(),
+      adoptionNextActions: (json['adoption_next_actions'] as List<dynamic>?)
+              ?.map(
+                  (e) => SeedAdoptionAction.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <SeedAdoptionAction>[],
     );
 
 Map<String, dynamic> _$SeedItemToJson(SeedItem instance) => <String, dynamic>{
@@ -96,6 +130,7 @@ Map<String, dynamic> _$SeedItemToJson(SeedItem instance) => <String, dynamic>{
       'difficulty_level': _$DifficultyLevelEnumMap[instance.difficultyLevel],
       'tags': instance.tags,
       'order_index': instance.orderIndex,
+      'adoption_next_actions': instance.adoptionNextActions,
       'is_active': instance.isActive,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
@@ -131,6 +166,12 @@ UserLibrarySubscription _$UserLibrarySubscriptionFromJson(
       lastUsedAt: json['last_used_at'] == null
           ? null
           : DateTime.parse(json['last_used_at'] as String),
+      adoptionNextActions: (json['adoption_next_actions'] as List<dynamic>?)
+              ?.map(
+                  (e) => SeedAdoptionAction.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <SeedAdoptionAction>[],
+      communityShare: json['community_share'] as Map<String, dynamic>?,
     );
 
 Map<String, dynamic> _$UserLibrarySubscriptionToJson(
@@ -144,6 +185,8 @@ Map<String, dynamic> _$UserLibrarySubscriptionToJson(
       'notes': instance.notes,
       'subscribed_at': instance.subscribedAt.toIso8601String(),
       'last_used_at': instance.lastUsedAt?.toIso8601String(),
+      'adoption_next_actions': instance.adoptionNextActions,
+      'community_share': instance.communityShare,
       'created_at': instance.createdAt.toIso8601String(),
       'updated_at': instance.updatedAt.toIso8601String(),
     };

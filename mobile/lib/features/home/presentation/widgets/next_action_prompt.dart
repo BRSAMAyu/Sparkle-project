@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 
 class NextActionPrompt extends StatelessWidget {
@@ -56,8 +57,12 @@ class NextActionPrompt extends StatelessWidget {
                       Expanded(
                         child: Text(
                           activeTask == null
-                              ? '现在最值得做的：给今天做一个轻量复盘'
-                              : '现在最值得做的：${activeTask.title}',
+                              ? (I18nService.instance.isChinese
+                                  ? '现在最值得做的：给今天做一个轻量复盘'
+                                  : 'Best move right now: do a quick review of today')
+                              : (I18nService.instance.isChinese
+                                  ? '现在最值得做的：${activeTask.title}'
+                                  : 'Best move right now: ${activeTask.title}'),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: context.sparkleTypography.bodyMedium.copyWith(
@@ -70,7 +75,9 @@ class NextActionPrompt extends StatelessWidget {
                       const SizedBox(width: DS.spacing12),
                       SparkleButton(
                         key: const ValueKey('next-action-start-button'),
-                        label: activeTask == null ? '查看' : '开始',
+                        label: activeTask == null
+                            ? (I18nService.instance.isChinese ? '查看' : 'View')
+                            : (I18nService.instance.isChinese ? '开始' : 'Start'),
                         size: ButtonSize.small,
                         icon: Icon(
                           activeTask == null

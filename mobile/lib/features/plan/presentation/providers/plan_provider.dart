@@ -152,11 +152,14 @@ class PlanNotifier extends StateNotifier<PlanListState> {
 
 // 3. Providers
 
+/// Core keepAlive provider: the plan list/current plan overview is shared by
+/// the shell, chat context, and plan tab, so it survives tab switches.
 final planListProvider = StateNotifierProvider<PlanNotifier, PlanListState>(
-    (ref) => PlanNotifier(ref.watch(planRepositoryProvider), ref),);
+  (ref) => PlanNotifier(ref.watch(planRepositoryProvider), ref),
+);
 
 final planDetailProvider =
-    FutureProvider.family<PlanModel, String>((ref, id) async {
+    FutureProvider.autoDispose.family<PlanModel, String>((ref, id) async {
   final planRepo = ref.watch(planRepositoryProvider);
   return planRepo.getPlan(id);
 });

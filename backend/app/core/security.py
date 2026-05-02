@@ -2,6 +2,7 @@
 Security and Authentication Utilities
 JWT token generation, password hashing, etc.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -28,8 +29,9 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码"""
     try:
         return pwd_context.verify(plain_password, hashed_password)
-    except Exception:
-        # Remove dangerous fallback - always return False for invalid passwords
+    except Exception as exc:
+        # Intentional fail-closed behavior: verifier errors must never authenticate a password.
+        logger.warning("Password verification failed closed: {}", exc)
         return False
 
 
@@ -55,13 +57,11 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
             "iat": now,
             "jti": str(uuid4()),
             "type": "access",
-            "iss": getattr(settings, 'JWT_ISSUER', 'sparkle-gateway'),
-            "aud": getattr(settings, 'JWT_AUDIENCE', 'sparkle-app')
+            "iss": getattr(settings, "JWT_ISSUER", "sparkle-gateway"),
+            "aud": getattr(settings, "JWT_AUDIENCE", "sparkle-app"),
         }
     )
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
@@ -78,13 +78,11 @@ def create_refresh_token(data: dict) -> str:
             "iat": now,
             "jti": str(uuid4()),
             "type": "refresh",
-            "iss": getattr(settings, 'JWT_ISSUER', 'sparkle-gateway'),
-            "aud": getattr(settings, 'JWT_AUDIENCE', 'sparkle-app')
+            "iss": getattr(settings, "JWT_ISSUER", "sparkle-gateway"),
+            "aud": getattr(settings, "JWT_AUDIENCE", "sparkle-app"),
         }
     )
-    encoded_jwt = jwt.encode(
-        to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM
-    )
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
@@ -159,8 +157,17 @@ async def is_token_revoked(jti: str) -> bool:
     try:
         value = await cache_service.get(key)
         return value is not None
-    except Exception:
-        # Fail open if Redis is unavailable to avoid blocking logins.
+    except Exception as exc:
+        env = (settings.ENVIRONMENT or "").strip().lower()
+        jti_prefix = jti[:8] if len(jti) > 8 else jti
+        logger.error(
+            "Token blacklist lookup failed for jti_prefix={} in env={}: {}",
+            jti_prefix,
+            env or "unknown",
+            exc,
+        )
+        if env in {"prod", "production"}:
+            return True
         return False
 
 
@@ -175,8 +182,8 @@ async def get_user_revoked_before(user_id: str) -> int | None:
         value = await cache_service.get(key)
         if value is not None:
             return int(value)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("Revocation timestamp cache lookup failed for user {}: {}", user_id, exc)
 
     try:
         from app.db.session import AsyncSessionLocal
@@ -189,7 +196,8 @@ async def get_user_revoked_before(user_id: str) -> int | None:
             revoked_before_ts = int(user.token_revoked_before.timestamp())
             await set_user_revoked_before(user_id, user.token_revoked_before)
             return revoked_before_ts
-    except Exception:
+    except Exception as exc:
+        logger.warning("Revocation timestamp DB fallback failed for user {}: {}", user_id, exc)
         return None
 
     return None
@@ -204,8 +212,11 @@ async def is_session_revoked(session_id: str) -> bool:
     try:
         if await auth_session_service.is_session_revoked(session_id):
             return True
-    except Exception:
-        pass
+    except Exception as exc:
+        # Intentional fail-open behavior: session service outages fall back to the DB session record.
+        logger.warning(
+            "Session revocation service lookup failed open to DB fallback for session {}: {}", session_id, exc
+        )
 
     try:
         from app.db.session import AsyncSessionLocal
@@ -218,7 +229,9 @@ async def is_session_revoked(session_id: str) -> bool:
             if db_session is None:
                 return False
             return (not db_session.is_active) or (db_session.revoked_at is not None)
-    except Exception:
+    except Exception as exc:
+        # Intentional fail-open behavior: revocation DB outages should not block existing valid sessions.
+        logger.warning("Session revocation DB lookup failed open for session {}: {}", session_id, exc)
         return False
 
 
@@ -230,13 +243,15 @@ async def set_user_revoked_before(user_id: str, revoked_before: datetime) -> Non
         return
     try:
         ts = int(revoked_before.timestamp())
-    except Exception:
+    except Exception as exc:
+        logger.warning("Invalid revoked_before timestamp for user {}: {}", user_id, exc)
         return
     ttl = int(settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
     key = f"{USER_REVOKED_BEFORE_PREFIX}{user_id}"
     try:
         await cache_service.set(key, ts, ttl=ttl)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to cache revoked_before timestamp for user {}: {}", user_id, exc)
         return
 
 
@@ -251,7 +266,8 @@ async def blacklist_token(jti: str, exp: int | float | datetime | None) -> None:
             exp_ts = int(exp.timestamp())
         else:
             exp_ts = int(exp)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Invalid blacklist expiration for jti {}: {}", jti, exc)
         return
 
     now_ts = int(datetime.now(UTC).timestamp())
@@ -275,11 +291,12 @@ async def blacklist_token(jti: str, exp: int | float | datetime | None) -> None:
                     jti_prefix=jti[:8] if len(jti) > 8 else jti,
                     error=str(e),
                     error_type=type(e).__name__,
-                    attempts=max_retries
+                    attempts=max_retries,
                 )
                 return False
             # Exponential backoff: 100ms, 200ms, 300ms
             import asyncio
+
             await asyncio.sleep(0.1 * (attempt + 1))
 
     return True

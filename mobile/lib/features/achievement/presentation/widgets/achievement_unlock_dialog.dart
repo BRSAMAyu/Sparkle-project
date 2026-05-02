@@ -5,15 +5,15 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_confetti.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/bgm_scope.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart'
     as chat;
 import 'package:sparkle/l10n/app_localizations.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 enum _AchievementUnlockActionState {
@@ -74,6 +74,8 @@ class AchievementUnlockDialog extends StatefulWidget {
         rewardPreview: event.rewardPreview,
         surfacePreview: event.surfacePreview,
         gloryLines: event.gloryLines,
+        contextSnapshot: event.contextSnapshot,
+        contextStory: event.contextStory,
       ),
       onShare: onShare,
       onViewRewards: onViewRewards,
@@ -487,6 +489,12 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                   if (widget.milestoneInfo != null)
                     _buildMilestoneSection(widget.milestoneInfo!),
 
+                  if (widget.event.contextStory?.trim().isNotEmpty ??
+                      false) ...[
+                    const SizedBox(height: DS.spacing12),
+                    _buildEvidenceSection(widget.event.contextStory!.trim()),
+                  ],
+
                   if (widget.event.rewardPreview.isNotEmpty) ...[
                     const SizedBox(height: DS.spacing12),
                     _buildRewardPreviewSection(),
@@ -545,15 +553,15 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
                       children: [
                         if (widget.onViewRewards != null) ...[
                           Expanded(
-                          child: _buildActionButton(
-                            icon: Icons.workspace_premium_outlined,
-                            label: context.l10n.achievementUnlockViewRewards,
-                            isPrimary: true,
-                            onPressed: _handleViewRewards,
+                            child: _buildActionButton(
+                              icon: Icons.workspace_premium_outlined,
+                              label: context.l10n.achievementUnlockViewRewards,
+                              isPrimary: true,
+                              onPressed: _handleViewRewards,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: DS.spacing12),
-                      ],
+                          const SizedBox(width: DS.spacing12),
+                        ],
                         Expanded(
                           child: _buildActionButton(
                             icon: Icons.close,
@@ -838,6 +846,40 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
     );
   }
 
+  Widget _buildEvidenceSection(String evidence) {
+    final colors = _getRarityColors();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: colors.background.withValues(alpha: 0.72),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: colors.border.withValues(alpha: 0.42)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.auto_awesome_rounded,
+            size: 16,
+            color: colors.border,
+          ),
+          const SizedBox(width: DS.spacing8),
+          Expanded(
+            child: Text(
+              evidence,
+              style: TextStyle(
+                fontSize: DS.fontSizeXs,
+                color: colors.text.withValues(alpha: 0.88),
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildGloryLinesSection() {
     final colors = _getRarityColors();
     return Container(
@@ -1005,7 +1047,8 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
       return context.l10n.achievementUnlockTimeHoursAgo(diff.inHours);
     } else {
       return context.l10n.achievementUnlockTimeDate(
-        time.month, time.day,
+        time.month,
+        time.day,
         time.hour.toString().padLeft(2, '0'),
         time.minute.toString().padLeft(2, '0'),
       );

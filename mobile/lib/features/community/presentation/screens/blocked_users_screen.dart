@@ -18,7 +18,7 @@ class BlockedUsersScreen extends ConsumerWidget {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: Text('Blocked Users'),
+        title: Text(I18nService.instance.isChinese ? '黑名单用户' : 'Blocked Users'),
         backgroundColor: DS.surfacePrimary,
       ),
       child: blockedState.when(
@@ -61,7 +61,7 @@ class BlockedUsersScreen extends ConsumerWidget {
               ElevatedButton(
                 onPressed: () =>
                     ref.read(blockedUsersProvider.notifier).refresh(),
-                child: Text('Retry'),
+                child: Text(I18nService.instance.isChinese ? '重试' : 'Retry'),
               ),
             ],
           ),
@@ -108,7 +108,7 @@ class _BlockedUserTile extends ConsumerWidget {
           style: TextButton.styleFrom(
             foregroundColor: DS.primaryBase,
           ),
-          child: Text('Unblock'),
+          child: Text(I18nService.instance.isChinese ? '解除拉黑' : 'Unblock'),
         ),
       ),
     );
@@ -120,7 +120,7 @@ class _BlockedUserTile extends ConsumerWidget {
     final confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Unblock'),
+        title: Text(I18nService.instance.isChinese ? '解除拉黑' : 'Unblock'),
         content: Text(I18nService.instance.isChinese
             ? '确定要解除对 $displayName 的拉黑吗？\n\n解除后对方可以重新发送好友请求和消息给您。'
             : 'Unblock $displayName?\n\nThey will be able to send friend requests and messages again.'),

@@ -515,7 +515,8 @@ CREATE TABLE ab_experiment_assignments (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    accessibility_settings json DEFAULT '{}'::json NOT NULL
 );
 
 

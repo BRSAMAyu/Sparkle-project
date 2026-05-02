@@ -113,9 +113,9 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
 
   /// 显示权限申请对话框
   Future<void> _showPermissionDialog() => showAppPermissionDialog(
-      context,
-      permission: AppPermissionKind.microphone,
-    );
+        context,
+        permission: AppPermissionKind.microphone,
+      );
 
   /// 开始录音
   Future<void> _startRecording() async {
@@ -276,9 +276,7 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
   void _updateReleaseAction(LongPressMoveUpdateDetails details) {
     final offset = details.offsetFromOrigin;
     final nextAction = offset.dy < -36
-        ? (offset.dx >= 0
-              ? VoiceReleaseAction.send
-              : VoiceReleaseAction.cancel)
+        ? (offset.dx >= 0 ? VoiceReleaseAction.send : VoiceReleaseAction.cancel)
         : VoiceReleaseAction.commit;
     if (!mounted) {
       return;
@@ -301,90 +299,96 @@ class _VoiceInputButtonState extends ConsumerState<VoiceInputButton>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: widget.interactionMode == VoiceInputInteractionMode.tapToggle
-          ? () {
-              if (_isRecording) {
-                unawaited(_stopRecording());
-              } else {
-                unawaited(_startRecording());
+    return Semantics(
+      button: true,
+      label: _isRecording ? 'Stop voice input recording' : 'Start voice input',
+      child: GestureDetector(
+        onTap: widget.interactionMode == VoiceInputInteractionMode.tapToggle
+            ? () {
+                if (_isRecording) {
+                  unawaited(_stopRecording());
+                } else {
+                  unawaited(_startRecording());
+                }
               }
-            }
-          : null,
-      onLongPressStart:
-          widget.interactionMode == VoiceInputInteractionMode.holdToTalk
-          ? (_) => _startRecording()
-          : null,
-      onLongPressMoveUpdate:
-          widget.interactionMode == VoiceInputInteractionMode.holdToTalk
-          ? _updateReleaseAction
-          : null,
-      onLongPressEnd:
-          widget.interactionMode == VoiceInputInteractionMode.holdToTalk
-          ? (_) => _stopRecording()
-          : null,
-      onLongPressCancel:
-          widget.interactionMode == VoiceInputInteractionMode.holdToTalk
-          ? _cancelRecording
-          : null,
-      child: AnimatedBuilder(
-        animation: _animationController!,
-        builder: (context, child) {
-          final scale = 1.0 + (_animationController?.value ?? 0) * 0.1;
-          return Transform.scale(
-            scale: scale,
-            child: child,
-          );
-        },
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            if (_isRecording &&
-                widget.showGestureHints &&
-                widget.interactionMode == VoiceInputInteractionMode.holdToTalk)
-              Positioned(
-                top: -68,
-                child: _VoiceGestureHints(activeAction: _releaseAction),
-              ),
-            Container(
-              width: widget.size,
-              height: widget.size,
-              decoration: BoxDecoration(
-                color: _isRecording
-                    ? DS.brandPrimary
-                    : (isDark ? DS.neutral800 : DS.neutral200),
-                shape: BoxShape.circle,
-                boxShadow: _isRecording
-                    ? [
-                        BoxShadow(
-                          color: DS.brandPrimary.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: Center(
-                child: _buildButtonContent(isDark: isDark),
-              ),
-            ),
-            if (_isRecording &&
-                widget.interactionMode == VoiceInputInteractionMode.holdToTalk &&
-                _longPressOffset.dy < -8)
-              Positioned(
-                top: -18 + _longPressOffset.dy.clamp(-20.0, 0.0),
-                child: Icon(
-                  _releaseAction == VoiceReleaseAction.cancel
-                      ? Icons.undo_rounded
-                      : _releaseAction == VoiceReleaseAction.send
-                      ? Icons.send_rounded
-                      : Icons.keyboard_arrow_up_rounded,
-                  color: DS.textOnPrimary,
-                  size: 20,
+            : null,
+        onLongPressStart:
+            widget.interactionMode == VoiceInputInteractionMode.holdToTalk
+                ? (_) => _startRecording()
+                : null,
+        onLongPressMoveUpdate:
+            widget.interactionMode == VoiceInputInteractionMode.holdToTalk
+                ? _updateReleaseAction
+                : null,
+        onLongPressEnd:
+            widget.interactionMode == VoiceInputInteractionMode.holdToTalk
+                ? (_) => _stopRecording()
+                : null,
+        onLongPressCancel:
+            widget.interactionMode == VoiceInputInteractionMode.holdToTalk
+                ? _cancelRecording
+                : null,
+        child: AnimatedBuilder(
+          animation: _animationController!,
+          builder: (context, child) {
+            final scale = 1.0 + (_animationController?.value ?? 0) * 0.1;
+            return Transform.scale(
+              scale: scale,
+              child: child,
+            );
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              if (_isRecording &&
+                  widget.showGestureHints &&
+                  widget.interactionMode ==
+                      VoiceInputInteractionMode.holdToTalk)
+                Positioned(
+                  top: -68,
+                  child: _VoiceGestureHints(activeAction: _releaseAction),
+                ),
+              Container(
+                width: widget.size,
+                height: widget.size,
+                decoration: BoxDecoration(
+                  color: _isRecording
+                      ? DS.brandPrimary
+                      : (isDark ? DS.neutral800 : DS.neutral200),
+                  shape: BoxShape.circle,
+                  boxShadow: _isRecording
+                      ? [
+                          BoxShadow(
+                            color: DS.brandPrimary.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Center(
+                  child: _buildButtonContent(isDark: isDark),
                 ),
               ),
-          ],
+              if (_isRecording &&
+                  widget.interactionMode ==
+                      VoiceInputInteractionMode.holdToTalk &&
+                  _longPressOffset.dy < -8)
+                Positioned(
+                  top: -18 + _longPressOffset.dy.clamp(-20.0, 0.0),
+                  child: Icon(
+                    _releaseAction == VoiceReleaseAction.cancel
+                        ? Icons.undo_rounded
+                        : _releaseAction == VoiceReleaseAction.send
+                            ? Icons.send_rounded
+                            : Icons.keyboard_arrow_up_rounded,
+                    color: DS.textOnPrimary,
+                    size: 20,
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -475,7 +479,8 @@ class _VoiceGestureHints extends StatelessWidget {
     required IconData icon,
     required bool active,
     required Color color,
-  }) => AnimatedContainer(
+  }) =>
+      AnimatedContainer(
         duration: const Duration(milliseconds: 120),
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing10,

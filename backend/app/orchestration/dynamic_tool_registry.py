@@ -325,6 +325,28 @@ class DynamicToolRegistry:
         except TypeError:
             return False
 
+    def validate_all_tools(self) -> list[dict[str, str]]:
+        """Validate every registered tool has a working execute method and valid schema.
+
+        Returns a list of issue dicts with ``tool`` and ``issue`` keys.  An empty
+        list means all tools passed validation.
+        """
+        issues: list[dict[str, str]] = []
+        with self._registration_lock:
+            tools = list(self._tools.values())
+        for tool in tools:
+            if not hasattr(tool, "execute") or not callable(tool.execute):
+                issues.append({"tool": tool.name, "issue": "missing or non-callable execute()"})
+            if not getattr(tool, "name", None):
+                issues.append({"tool": getattr(tool, "__class__", type(None)).__name__, "issue": "missing name attribute"})
+            if not getattr(tool, "parameters_schema", None):
+                issues.append({"tool": tool.name, "issue": "missing parameters_schema"})
+            try:
+                tool.to_openai_schema()
+            except Exception as exc:
+                issues.append({"tool": tool.name, "issue": f"to_openai_schema() failed: {exc}"})
+        return issues
+
     def get_stats(self) -> dict[str, Any]:
         """
         获取注册表统计信息

@@ -645,41 +645,44 @@ def test_causal_change_indicator_explains_why():
 # ── P4-RES-005: Consent Tracking ────────────────────────────────────────
 
 
-def test_consent_grant_and_check():
+@pytest.mark.asyncio
+async def test_consent_grant_and_check(db_session):
     """P4-RES-005: granting consent enables research inclusion."""
     from app.signals.research_mode import ConsentTracker
 
     tracker = ConsentTracker()
-    assert tracker.can_include_in_research("u1") is False
+    assert await tracker.can_include_in_research_async("u1", db=db_session) is False
 
-    tracker.grant_consent(user_id="u1", consent_type="research_analytics")
-    tracker.grant_consent(user_id="u1", consent_type="cohort_comparison")
-    tracker.grant_consent(user_id="u1", consent_type="anonymized_export")
+    await tracker.grant_consent_async(user_id="u1", consent_type="research_analytics", db=db_session)
+    await tracker.grant_consent_async(user_id="u1", consent_type="cohort_comparison", db=db_session)
+    await tracker.grant_consent_async(user_id="u1", consent_type="anonymized_export", db=db_session)
 
-    assert tracker.can_include_in_research("u1") is True
+    assert await tracker.can_include_in_research_async("u1", db=db_session) is True
 
 
-def test_consent_revoke_blocks_research():
+@pytest.mark.asyncio
+async def test_consent_revoke_blocks_research(db_session):
     """P4-RES-005: revoking any consent blocks research inclusion."""
     from app.signals.research_mode import ConsentTracker
 
     tracker = ConsentTracker()
     for ct in ConsentTracker.REQUIRED_CONSENTS:
-        tracker.grant_consent(user_id="u1", consent_type=ct)
+        await tracker.grant_consent_async(user_id="u1", consent_type=ct, db=db_session)
 
-    tracker.revoke_consent(user_id="u1", consent_type="anonymized_export")
-    assert tracker.can_include_in_research("u1") is False
-    assert tracker.has_consent("u1", "anonymized_export") is False
+    await tracker.revoke_consent_async(user_id="u1", consent_type="anonymized_export", db=db_session)
+    assert await tracker.can_include_in_research_async("u1", db=db_session) is False
+    assert await tracker.has_consent_async("u1", "anonymized_export", db=db_session) is False
 
 
-def test_consent_check_all_types():
+@pytest.mark.asyncio
+async def test_consent_check_all_types(db_session):
     """P4-RES-005: check_all_consents returns status for all required types."""
     from app.signals.research_mode import ConsentTracker
 
     tracker = ConsentTracker()
-    tracker.grant_consent(user_id="u1", consent_type="research_analytics")
+    await tracker.grant_consent_async(user_id="u1", consent_type="research_analytics", db=db_session)
 
-    status = tracker.check_all_consents("u1")
+    status = await tracker.check_all_consents_async("u1", db=db_session)
     assert len(status) == 3
     assert status["research_analytics"] is True
     assert status["cohort_comparison"] is False
@@ -1353,4 +1356,3 @@ async def test_goal_drift_extended_inactivity():
     )
     assert result is not None
     assert "goal_abandoned_while_active_elsewhere" in result.evidence_summary
-

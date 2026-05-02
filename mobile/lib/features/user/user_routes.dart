@@ -76,7 +76,7 @@ class UserRoutes {
         GoRoute(
           path: modelingChat,
           name: 'modelingChat',
-          pageBuilder: (context, state) => buildSparkleTransitionPage(
+          pageBuilder: (context, state) => buildColdStartTransitionPage(
             state: state,
             child: ModelingChatScreen(
               postOnboardingMessage:
@@ -316,7 +316,7 @@ class UserRoutes {
         GoRoute(
           path: personaOnboarding,
           name: 'personaOnboarding',
-          pageBuilder: (context, state) => buildSparkleTransitionPage(
+          pageBuilder: (context, state) => buildColdStartTransitionPage(
             state: state,
             child: const PersonaOnboardingScreen(),
           ),

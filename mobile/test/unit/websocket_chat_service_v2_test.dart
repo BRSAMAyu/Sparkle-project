@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/features/aurora/presentation/providers/emotion_state_provider.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:stream_channel/stream_channel.dart';
@@ -102,6 +104,7 @@ void main() {
         mockChannel;
 
     setUp(() {
+      SharedPreferences.setMockInitialValues({});
       originalDebugPrint = debugPrint;
       debugPrint = (String? message, {int? wrapWidth}) {};
       mockChannel = MockWebSocketChannel();
@@ -211,6 +214,31 @@ void main() {
       expect(ack.actionId, 'resp-1');
       expect(ack.status, 'ok');
       expect(ack.widgetType, 'response_feedback');
+
+      await sub.cancel();
+    });
+
+    test('aurora_state_band updates EmotionStateProvider', () async {
+      final stream = service.sendMessage(message: 'init', userId: 'user1');
+      final events = <ChatStreamEvent>[];
+      final sub = stream.listen(events.add);
+
+      mockChannel.simulateIncomingMessage(json.encode({
+        'type': 'aurora_state_band',
+        'payload': {
+          'emotion': 'tired',
+          'fatigue_level': 0.82,
+          'cognitive_load': 0.44,
+          'stress_signal': 0.31,
+        },
+      }));
+      await _waitForEvents(events);
+
+      expect(events.first, isA<AuroraStateBandEvent>());
+      final emotionState = container.read(emotionStateProvider);
+      expect(emotionState.emotion, 'tired');
+      expect(emotionState.fatigueLevel, 0.82);
+      expect(emotionState.responsiveConfig.isLowStimulus, true);
 
       await sub.cancel();
     });

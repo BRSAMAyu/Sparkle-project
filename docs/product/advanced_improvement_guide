@@ -178,7 +178,7 @@ Go 网关作为 **Flutter 移动端与后端 AI 引擎之间的中间层**，承
 | 入口 | 协议 | 端口 | 功能 |
 |---|---|---|---|
 | `app/main.py` | FastAPI HTTP | 8000 | REST API、中间件（CORS、安全头、幂等性、限流）、OpenTelemetry、Prometheus |
-| `grpc_server.py` | gRPC | 50051 | AgentService、ErrorBookService、GalaxyService 三个 gRPC 服务 |
+| `grpc_server.py` | gRPC | 50051 | AgentService、ErrorBookService、GalaxyService、STTService、InferenceService；CommunityService 已废弃为 REST-only |
 
 ### 核心模块层级
 
@@ -430,7 +430,7 @@ Go 网关作为 **Flutter 移动端与后端 AI 引擎之间的中间层**，承
 |---|---|---|---|
 | **AgentService** | agent_service.proto | 17 | 流式聊天、记忆检索、用户画像、周报、反馈、计划审查、内容审查、仲裁 |
 | **GalaxyService** | galaxy_service.proto | 2 | 节点掌握度更新（CRDT）、协作图谱同步（Yjs） |
-| **CommunityService** | community_service.proto | 24 | 好友管理、群组管理、消息（群聊/私聊）、搜索、签到 |
+| **CommunityService** | community_service.proto | 24 | **Deprecated / REST-only**：好友、群组、消息、搜索、签到由 REST/gateway CQRS 承载 |
 | **ErrorBookService** | error_book.proto | 10 | 错题 CRUD、AI 分析、SM-2 间隔复习、统计 |
 | **STTService** | stt_service.proto | 3 | 实时语音转文字、文件转录、转录增强 |
 | **InferenceService** | inference.proto | 1 | 统一 LLM 推理调用（9 种任务类型） |

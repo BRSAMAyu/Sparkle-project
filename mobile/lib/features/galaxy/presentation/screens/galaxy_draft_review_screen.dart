@@ -75,7 +75,7 @@ class _GalaxyDraftReviewScreenState
             title: Text(
               l10n.galaxyDraftReviewScreenTitle,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.white,
+                    color: DS.neutral0,
                     fontWeight: FontWeight.w700,
                   ),
             ),
@@ -118,7 +118,7 @@ class _GalaxyDraftReviewScreenState
                         ),
                         style:
                             Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                  color: Colors.white,
+                                  color: DS.neutral0,
                                   fontWeight: FontWeight.w800,
                                   height: 1.15,
                                 ),
@@ -127,7 +127,7 @@ class _GalaxyDraftReviewScreenState
                       Text(
                         l10n.galaxyDraftReviewPromptBody,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.72),
+                              color: DS.neutral0.withValues(alpha: 0.72),
                               height: 1.5,
                             ),
                       ),
@@ -175,7 +175,7 @@ class _GalaxyDraftReviewScreenState
                                 .textTheme
                                 .bodySmall
                                 ?.copyWith(
-                                  color: Colors.white.withValues(alpha: 0.58),
+                                  color: DS.neutral0.withValues(alpha: 0.58),
                                 ),
                           ),
                         ),
@@ -278,8 +278,8 @@ class _GalaxyDraftReviewScreenState
 
     return SparkleCard(
       key: const ValueKey<String>('draft-review-complete'),
-      backgroundColor: Colors.white.withValues(alpha: 0.08),
-      borderColor: Colors.white.withValues(alpha: 0.1),
+      backgroundColor: DS.neutral0.withValues(alpha: 0.08),
+      borderColor: DS.neutral0.withValues(alpha: 0.1),
       borderRadius: BorderRadius.circular(28),
       padding: const EdgeInsets.all(DS.spacing24),
       child: Column(
@@ -304,9 +304,9 @@ class _GalaxyDraftReviewScreenState
                 ),
               ],
             ),
-            child: const Icon(
+            child: Icon(
               Icons.auto_awesome_rounded,
-              color: Colors.white,
+              color: DS.neutral0,
               size: 28,
             ),
           ),
@@ -317,7 +317,7 @@ class _GalaxyDraftReviewScreenState
               result.totalDraftCount,
             ),
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
+                  color: DS.neutral0,
                   fontWeight: FontWeight.w800,
                 ),
           ),
@@ -325,7 +325,7 @@ class _GalaxyDraftReviewScreenState
           Text(
             context.l10n.galaxyDraftCompletionBody(batch.documentName),
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.72),
+                  color: DS.neutral0.withValues(alpha: 0.72),
                   height: 1.5,
                 ),
           ),
@@ -342,16 +342,16 @@ class _GalaxyDraftReviewScreenState
                         vertical: DS.spacing8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: DS.neutral0.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(999),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.08),
+                          color: DS.neutral0.withValues(alpha: 0.08),
                         ),
                       ),
                       child: Text(
                         node.finalName,
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: Colors.white,
+                              color: DS.neutral0,
                               fontWeight: FontWeight.w600,
                             ),
                       ),
@@ -363,7 +363,7 @@ class _GalaxyDraftReviewScreenState
             Text(
               context.l10n.galaxyDraftCompletionNothingAdded,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.68),
+                    color: DS.neutral0.withValues(alpha: 0.68),
                   ),
             ),
           const Spacer(),
@@ -493,8 +493,8 @@ class _ReviewStatePanel extends StatelessWidget {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: SparkleCard(
-            backgroundColor: Colors.white.withValues(alpha: 0.08),
-            borderColor: Colors.white.withValues(alpha: 0.1),
+            backgroundColor: DS.neutral0.withValues(alpha: 0.08),
+            borderColor: DS.neutral0.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(28),
             padding: const EdgeInsets.all(DS.spacing24),
             child: Column(
@@ -504,7 +504,7 @@ class _ReviewStatePanel extends StatelessWidget {
                   title,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
+                        color: DS.neutral0,
                         fontWeight: FontWeight.w800,
                       ),
                 ),
@@ -513,7 +513,7 @@ class _ReviewStatePanel extends StatelessWidget {
                   body,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.68),
+                        color: DS.neutral0.withValues(alpha: 0.68),
                       ),
                 ),
                 const SizedBox(height: DS.spacing20),
@@ -549,7 +549,7 @@ class _ReviewProgressHeader extends StatelessWidget {
               Text(
                 currentLabel,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Colors.white,
+                      color: DS.neutral0,
                       fontWeight: FontWeight.w600,
                     ),
               ),
@@ -557,7 +557,7 @@ class _ReviewProgressHeader extends StatelessWidget {
               Text(
                 '$current/$total',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.56),
+                      color: DS.neutral0.withValues(alpha: 0.56),
                     ),
               ),
             ],
@@ -568,7 +568,7 @@ class _ReviewProgressHeader extends StatelessWidget {
             child: LinearProgressIndicator(
               value: total == 0 ? 0 : current / total,
               minHeight: 8,
-              backgroundColor: Colors.white.withValues(alpha: 0.08),
+              backgroundColor: DS.neutral0.withValues(alpha: 0.08),
               valueColor: AlwaysStoppedAnimation<Color>(DS.brandPrimary),
             ),
           ),
@@ -661,18 +661,18 @@ class _DraftReviewCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(32),
             gradient: LinearGradient(
               colors: [
-                Colors.white.withValues(alpha: 0.12),
-                Colors.white.withValues(alpha: 0.07),
+                DS.neutral0.withValues(alpha: 0.12),
+                DS.neutral0.withValues(alpha: 0.07),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.12),
+              color: DS.neutral0.withValues(alpha: 0.12),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.26),
+                color: DS.galaxyShadow.withValues(alpha: 0.26),
                 blurRadius: 30,
                 offset: const Offset(0, 22),
               ),
@@ -701,7 +701,7 @@ class _DraftReviewCard extends StatelessWidget {
                 Text(
                   draft.currentName,
                   style: theme.textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
+                    color: DS.neutral0,
                     fontWeight: FontWeight.w800,
                     height: 1.15,
                   ),
@@ -710,7 +710,7 @@ class _DraftReviewCard extends StatelessWidget {
                 Text(
                   draft.currentDescription,
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.72),
+                    color: DS.neutral0.withValues(alpha: 0.72),
                     height: 1.5,
                   ),
                 ),
@@ -722,7 +722,7 @@ class _DraftReviewCard extends StatelessWidget {
                 Text(
                   context.l10n.galaxyDraftExcerpts,
                   style: theme.textTheme.titleSmall?.copyWith(
-                    color: Colors.white,
+                    color: DS.neutral0,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -778,7 +778,7 @@ class _SimilarityBanner extends StatelessWidget {
                   similarity.similarityPercent,
                 ),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white,
+                      color: DS.neutral0,
                       height: 1.45,
                     ),
               ),
@@ -798,16 +798,16 @@ class _ExcerptCard extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(DS.spacing14),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.06),
+          color: DS.neutral0.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08),
+            color: DS.neutral0.withValues(alpha: 0.08),
           ),
         ),
         child: Text(
           excerpt,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.74),
+                color: DS.neutral0.withValues(alpha: 0.74),
                 height: 1.5,
               ),
         ),
@@ -844,20 +844,20 @@ class _SwipeDecisionBackground extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
+                      color: DS.neutral0,
                       fontWeight: FontWeight.w700,
                     ),
               ),
             if (alignment == Alignment.centerRight)
               const SizedBox(width: DS.spacing10),
-            Icon(icon, color: Colors.white),
+            Icon(icon, color: DS.neutral0),
             if (alignment == Alignment.centerLeft)
               const SizedBox(width: DS.spacing10),
             if (alignment == Alignment.centerLeft)
               Text(
                 label,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
+                      color: DS.neutral0,
                       fontWeight: FontWeight.w700,
                     ),
               ),
@@ -882,21 +882,21 @@ class _MetaPill extends StatelessWidget {
           vertical: DS.spacing8,
         ),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.08),
+          color: DS.neutral0.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(999),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.08),
+            color: DS.neutral0.withValues(alpha: 0.08),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.white.withValues(alpha: 0.74), size: 16),
+            Icon(icon, color: DS.neutral0.withValues(alpha: 0.74), size: 16),
             const SizedBox(width: DS.spacing8),
             Text(
               label,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.78),
+                    color: DS.neutral0.withValues(alpha: 0.78),
                   ),
             ),
           ],

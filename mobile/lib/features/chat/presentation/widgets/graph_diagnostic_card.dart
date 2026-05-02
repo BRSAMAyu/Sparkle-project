@@ -47,7 +47,7 @@ class GraphDiagnosticCard extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: DS.spacing8),
               child: _NodeTile(
                 item: item,
-                tone: const Color(0xFFF97316),
+                tone: DS.warning,
                 onAction: onAction,
               ),
             ),
@@ -65,7 +65,7 @@ class GraphDiagnosticCard extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: DS.spacing8),
               child: _NodeTile(
                 item: item,
-                tone: const Color(0xFFD97706),
+                tone: DS.warning,
                 onAction: onAction,
               ),
             ),
@@ -223,7 +223,8 @@ class _NodeTile extends StatelessWidget {
           if (_listString(item['prerequisite_names']).isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              context.l10n.chatGraphPrerequisites(_listString(item['prerequisite_names']).join('、')),
+              context.l10n.chatGraphPrerequisites(
+                  _listString(item['prerequisite_names']).join('、')),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral600,
                   ),
@@ -232,7 +233,8 @@ class _NodeTile extends StatelessWidget {
           if (_listString(item['downstream_names']).isNotEmpty) ...[
             const SizedBox(height: DS.spacing4),
             Text(
-              context.l10n.chatGraphAffectedLater(_listString(item['downstream_names']).join('、')),
+              context.l10n.chatGraphAffectedLater(
+                  _listString(item['downstream_names']).join('、')),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.neutral600,
                   ),
@@ -297,7 +299,10 @@ List<Map<String, dynamic>> _mapList(dynamic raw) {
 
 List<String> _listString(dynamic raw) {
   if (raw is List) {
-    return raw.map((item) => item.toString()).where((item) => item.isNotEmpty).toList();
+    return raw
+        .map((item) => item.toString())
+        .where((item) => item.isNotEmpty)
+        .toList();
   }
   return const <String>[];
 }

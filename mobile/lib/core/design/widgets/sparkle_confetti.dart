@@ -19,6 +19,8 @@ class SparkleConfetti extends StatefulWidget {
     this.enableSensory = true,
     this.particleCount,
     this.colors,
+    this.evidenceText,
+    this.messageText,
   });
 
   final bool play;
@@ -29,6 +31,8 @@ class SparkleConfetti extends StatefulWidget {
   final bool enableSensory;
   final int? particleCount;
   final List<Color>? colors;
+  final String? evidenceText;
+  final String? messageText;
 
   @override
   State<SparkleConfetti> createState() => _SparkleConfettiState();
@@ -40,14 +44,14 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
   int _registeredParticleCount = 0;
 
   Duration get _duration => switch (widget.intensity) {
-        SparkleCelebrationIntensity.small =>
-          const Duration(milliseconds: 900),
+        SparkleCelebrationIntensity.small => const Duration(milliseconds: 900),
         SparkleCelebrationIntensity.medium => DS.durationSlow,
-        SparkleCelebrationIntensity.large =>
-          const Duration(milliseconds: 1800),
+        SparkleCelebrationIntensity.large => const Duration(milliseconds: 1800),
       };
 
-  int get _particleCount => widget.particleCount ?? switch (widget.intensity) {
+  int get _particleCount =>
+      widget.particleCount ??
+      switch (widget.intensity) {
         SparkleCelebrationIntensity.small => 12,
         SparkleCelebrationIntensity.medium => 20,
         SparkleCelebrationIntensity.large => 34,
@@ -122,42 +126,108 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
   }
 
   @override
-  Widget build(BuildContext context) => Stack(
-        children: [
-          if (widget.child != null) widget.child!,
+  Widget build(BuildContext context) {
+    final evidence = widget.evidenceText?.trim();
+    final message = widget.messageText?.trim();
+    final hasFeedback = (evidence != null && evidence.isNotEmpty) ||
+        (message != null && message.isNotEmpty);
+    final scheme = Theme.of(context).colorScheme;
+
+    return Stack(
+      children: [
+        if (widget.child != null) widget.child!,
+        Align(
+          alignment: widget.alignment,
+          child: RepaintBoundary(
+            child: ConfettiWidget(
+              confettiController: _controller,
+              blastDirectionality: BlastDirectionality.explosive,
+              colors: widget.colors ??
+                  [
+                    DS.primaryBase,
+                    DS.accent,
+                    DS.success,
+                    DS.info,
+                    DS.warning,
+                  ],
+              gravity: widget.intensity == SparkleCelebrationIntensity.small
+                  ? 0.34
+                  : 0.28,
+              emissionFrequency:
+                  widget.intensity == SparkleCelebrationIntensity.large
+                      ? 0.07
+                      : 0.05,
+              numberOfParticles: _particleCount,
+              maxBlastForce:
+                  widget.intensity == SparkleCelebrationIntensity.large
+                      ? 120
+                      : 100,
+              minBlastForce:
+                  widget.intensity == SparkleCelebrationIntensity.small
+                      ? 60
+                      : 80,
+            ),
+          ),
+        ),
+        if (hasFeedback)
           Align(
-            alignment: widget.alignment,
-            child: RepaintBoundary(
-              child: ConfettiWidget(
-                confettiController: _controller,
-                blastDirectionality: BlastDirectionality.explosive,
-                colors: widget.colors ??
-                    [
-                      DS.primaryBase,
-                      DS.accent,
-                      DS.success,
-                      DS.info,
-                      DS.warning,
+            alignment: Alignment.bottomCenter,
+            child: SafeArea(
+              minimum: const EdgeInsets.all(DS.spacing16),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: scheme.surfaceContainerHighest,
+                    borderRadius: DS.borderRadius16,
+                    border: Border.all(color: scheme.outlineVariant),
+                    boxShadow: [
+                      BoxShadow(
+                        color: scheme.shadow.withValues(alpha: 0.16),
+                        blurRadius: 18,
+                        offset: const Offset(0, 8),
+                      ),
                     ],
-                gravity: widget.intensity == SparkleCelebrationIntensity.small
-                    ? 0.34
-                    : 0.28,
-                emissionFrequency:
-                    widget.intensity == SparkleCelebrationIntensity.large
-                        ? 0.07
-                        : 0.05,
-                numberOfParticles: _particleCount,
-                maxBlastForce:
-                    widget.intensity == SparkleCelebrationIntensity.large
-                        ? 120
-                        : 100,
-                minBlastForce:
-                    widget.intensity == SparkleCelebrationIntensity.small
-                        ? 60
-                        : 80,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(DS.spacing14),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (message != null && message.isNotEmpty)
+                          Text(
+                            message,
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
+                                ?.copyWith(
+                                  color: scheme.onSurface,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                        if (message != null &&
+                            message.isNotEmpty &&
+                            evidence != null &&
+                            evidence.isNotEmpty)
+                          const SizedBox(height: DS.spacing6),
+                        if (evidence != null && evidence.isNotEmpty)
+                          Text(
+                            evidence,
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: scheme.onSurfaceVariant,
+                                      height: 1.35,
+                                    ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
-        ],
-      );
+      ],
+    );
+  }
 }

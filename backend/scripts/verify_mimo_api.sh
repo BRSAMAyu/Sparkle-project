@@ -10,16 +10,21 @@ if [ -f "$ENV_FILE" ]; then
     export $(grep -v '^#' "$ENV_FILE" | grep -E '^(XIAOMI|LLM_TIER)' | xargs)
 fi
 
-API_KEY="${XIAOMI_MIMO_API_KEY:-sk-cpvw0yaaow852p35x6pez0x76mk6o3leg8py0by8jpv30zr5}"
+API_KEY="${XIAOMI_MIMO_API_KEY:-}"
 BASE_URL="${XIAOMI_MIMO_BASE_URL:-https://api.xiaomimimo.com/v1}"
 MODEL="${XIAOMI_CHAT_MODEL:-mimo-v2-flash}"
+
+if [ -z "$API_KEY" ]; then
+    echo "XIAOMI_MIMO_API_KEY is not set; refusing to run a live provider check."
+    exit 1
+fi
 
 echo "============================================================"
 echo "  MIMO API 验证"
 echo "============================================================"
 echo ""
 echo "配置信息:"
-echo "  API Key: ${API_KEY:0:10}..."
+echo "  API Key: configured"
 echo "  Base URL: $BASE_URL"
 echo "  Model: $MODEL"
 echo ""

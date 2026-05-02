@@ -317,7 +317,12 @@ message UserPrivacySettings {
 
 // ============ 服务定义 ============
 
+// Deprecated: Sparkle community features are served by REST/gateway CQRS.
+// This proto is retained only as compatibility documentation and must not be
+// used as a live Python gRPC contract.
 service CommunityService {
+  option deprecated = true;
+
   // 好友系统
   rpc SendFriendRequest(FriendRequest) returns (FriendshipInfo);
   rpc RespondToFriendRequest(FriendResponse) returns (FriendshipInfo);

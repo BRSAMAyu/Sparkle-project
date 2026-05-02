@@ -27,15 +27,15 @@ var (
 		Help: "Total Redis errors in rate limiter by error type",
 	}, []string{"error_type"})
 
-	rateLimiterTokensCurrent = promauto.NewGaugeVec(prometheus.GaugeOpts{
+	rateLimiterTokensCurrent = promauto.NewGauge(prometheus.GaugeOpts{
 		Name: "rate_limiter_tokens_current",
-		Help: "Current token count left in the distributed token bucket",
-	}, []string{"key"})
+		Help: "Current token count left in the distributed token bucket (sampled)",
+	})
 
 	rateLimiterRejectionsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Name: "rate_limiter_rejections_total",
-		Help: "Total distributed token bucket rejections by key and reason",
-	}, []string{"key", "reason"})
+		Help: "Total distributed token bucket rejections by reason",
+	}, []string{"reason"})
 )
 
 var distributedTokenBucketScript = redis.NewScript(`
@@ -73,6 +73,32 @@ var distributedTokenBucketScript = redis.NewScript(`
 	redis.call('PEXPIRE', key, 300000)
 
 	return {allowed, tostring(remaining)}
+`)
+
+var distributedSlidingWindowScript = redis.NewScript(`
+	local key = KEYS[1]
+	local now = tonumber(ARGV[1])
+	local window_start = tonumber(ARGV[2])
+	local limit = tonumber(ARGV[3])
+	local window_ms = tonumber(ARGV[4])
+
+	-- Remove expired entries
+	redis.call('ZREMRANGEBYSCORE', key, '-inf', window_start)
+
+	-- Count current entries
+	local count = redis.call('ZCARD', key)
+
+	if count < limit then
+		-- Add a unique member even when multiple requests arrive in the same millisecond.
+		local seq_key = key .. ':seq'
+		local seq = redis.call('INCR', seq_key)
+		redis.call('PEXPIRE', seq_key, window_ms)
+		redis.call('ZADD', key, now, now .. '-' .. seq)
+		redis.call('PEXPIRE', key, window_ms)
+		return {1, limit - count - 1}
+	end
+
+	return {0, 0}
 `)
 
 // DistributedRateLimiter implements Token Bucket algorithm using Redis
@@ -180,7 +206,7 @@ func (d *DistributedRateLimiter) allowAtMillis(ctx context.Context, key string, 
 		log.Printf("[ALERT] Rate limiter Redis error: %v, falling back to local", err)
 		redisFallbackCounter.Inc()
 		redisErrorCounter.WithLabelValues("script_error").Inc()
-		rateLimiterRejectionsTotal.WithLabelValues(fullKey, "redis_error").Inc()
+		rateLimiterRejectionsTotal.WithLabelValues("redis_error").Inc()
 		return false, 0, fmt.Errorf("redis script execution failed: %w", err)
 	}
 
@@ -197,10 +223,10 @@ func (d *DistributedRateLimiter) allowAtMillis(ctx context.Context, key string, 
 		return false, 0, fmt.Errorf("parse remaining tokens: %w", err)
 	}
 
-	rateLimiterTokensCurrent.WithLabelValues(fullKey).Set(remaining)
+	rateLimiterTokensCurrent.Set(remaining)
 	allowed := allowedValue == 1
 	if !allowed {
-		rateLimiterRejectionsTotal.WithLabelValues(fullKey, "insufficient_tokens").Inc()
+		rateLimiterRejectionsTotal.WithLabelValues("insufficient_tokens").Inc()
 	}
 	return allowed, remaining, nil
 }
@@ -231,32 +257,8 @@ func (s *SlidingWindowRateLimiter) Allow(ctx context.Context, key string) (bool,
 	now := float64(time.Now().UnixMilli())
 	windowStart := now - float64(s.window.Milliseconds())
 
-	// Sliding Window Lua script using sorted sets
 	// Returns: [allowed (0/1), remaining]
-	script := redis.NewScript(`
-		local key = KEYS[1]
-		local now = tonumber(ARGV[1])
-		local window_start = tonumber(ARGV[2])
-		local limit = tonumber(ARGV[3])
-		local window_ms = tonumber(ARGV[4])
-
-		-- Remove expired entries
-		redis.call('ZREMRANGEBYSCORE', key, '-inf', window_start)
-
-		-- Count current entries
-		local count = redis.call('ZCARD', key)
-
-		if count < limit then
-			-- Add new entry with unique score
-			redis.call('ZADD', key, now, now .. '-' .. math.random())
-			redis.call('PEXPIRE', key, window_ms)
-			return {1, limit - count - 1}
-		end
-
-		return {0, 0}
-	`)
-
-	result, err := script.Run(ctx, s.rdb, []string{fullKey},
+	result, err := distributedSlidingWindowScript.Run(ctx, s.rdb, []string{fullKey},
 		now, windowStart, s.limit, int64(s.window.Milliseconds())).Slice()
 	if err != nil {
 		return false, 0, fmt.Errorf("redis script execution failed: %w", err)
@@ -347,12 +349,10 @@ func (rl *RateLimiter) cleanupVisitorsWithInterval(interval time.Duration) {
 	for {
 		select {
 		case <-rl.stopCh:
-			// Graceful shutdown
 			return
 		case <-ticker.C:
 			rl.mu.Lock()
 			for ip, v := range rl.visitors {
-				// Expire after 3 times the cleanup interval (reduced from 5 minutes)
 				if time.Since(v.lastSeen) > 3*interval {
 					delete(rl.visitors, ip)
 				}

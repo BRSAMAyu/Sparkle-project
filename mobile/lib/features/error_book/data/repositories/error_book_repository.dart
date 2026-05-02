@@ -2,7 +2,9 @@ import 'package:dio/dio.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
+import 'package:sparkle/features/error_book/data/models/remediable_pattern.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
+
 /// 错题档案 Repository
 ///
 /// 职责：封装所有错题相关的 API 调用
@@ -202,7 +204,8 @@ class ErrorBookRepository {
 
       return ErrorRecord.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, zh: '提交复习记录失败', en: 'Failed to submit review record');
+      throw _handleError(e,
+          zh: '提交复习记录失败', en: 'Failed to submit review record');
     }
   }
 
@@ -225,7 +228,8 @@ class ErrorBookRepository {
 
       return ErrorListResponse.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
-      throw _handleError(e, zh: '获取今日待复习列表失败', en: 'Failed to get today\'s review list');
+      throw _handleError(e,
+          zh: '获取今日待复习列表失败', en: 'Failed to get today\'s review list');
     }
   }
 
@@ -258,14 +262,86 @@ class ErrorBookRepository {
         response.data ?? <String, dynamic>{},
       );
     } on DioException catch (e) {
-      throw _handleError(e, zh: '获取语义摘要失败', en: 'Failed to get semantic summary');
+      throw _handleError(e,
+          zh: '获取语义摘要失败', en: 'Failed to get semantic summary');
+    }
+  }
+
+  /// 获取可补救错因模式
+  ///
+  /// GET /error-book/remediable-patterns
+  Future<List<RemediablePattern>> getRemediablePatterns({
+    int limit = 3,
+    int lookbackDays = 14,
+  }) async {
+    try {
+      final response = await _dio.get<List<dynamic>>(
+        '/error-book/remediable-patterns',
+        queryParameters: {
+          'limit': limit,
+          'lookback_days': lookbackDays,
+        },
+      );
+      return (response.data ?? const [])
+          .whereType<Map<dynamic, dynamic>>()
+          .map(
+            (item) => RemediablePattern.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
+          .toList();
+    } on DioException catch (e) {
+      throw _handleError(
+        e,
+        zh: '获取可补救错因失败',
+        en: 'Failed to get remediable patterns',
+      );
+    }
+  }
+
+  /// 生成补救任务模板预览
+  ///
+  /// POST /error-book/patterns/{id}/generate-template
+  Future<RemedialTaskTemplate> generateTaskTemplate(String patternId) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/error-book/patterns/$patternId/generate-template',
+      );
+      return RemedialTaskTemplate.fromJson(
+        response.data ?? const <String, dynamic>{},
+      );
+    } on DioException catch (e) {
+      throw _handleError(
+        e,
+        zh: '生成补救任务失败',
+        en: 'Failed to generate remediation task',
+      );
+    }
+  }
+
+  /// 接受补救任务模板并加入任务列表
+  ///
+  /// POST /error-book/patterns/{id}/accept-template
+  Future<Map<String, dynamic>> acceptTaskTemplate(String patternId) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/error-book/patterns/$patternId/accept-template',
+      );
+      return response.data ?? const <String, dynamic>{};
+    } on DioException catch (e) {
+      throw _handleError(
+        e,
+        zh: '加入今日计划失败',
+        en: 'Failed to add remediation task',
+      );
     }
   }
 
   /// 统一错误处理
   ///
   /// 将 HTTP 异常转换为用户友好的错误消息
-  Exception _handleError(DioException e, {required String zh, required String en}) {
+  Exception _handleError(DioException e,
+      {required String zh, required String en}) {
     final isZh = I18nService.instance.isChinese;
     final defaultMessage = isZh ? zh : en;
     if (e.response?.statusCode == 404) {
@@ -276,12 +352,17 @@ class ErrorBookRepository {
       final data = e.response?.data;
       final errorDetail =
           data is Map<String, dynamic> ? data['detail'] as String? : null;
-      return Exception(errorDetail ?? (isZh ? '请求参数错误' : 'Invalid request parameters'));
+      return Exception(
+          errorDetail ?? (isZh ? '请求参数错误' : 'Invalid request parameters'));
     } else if (e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
-      return Exception(isZh ? '网络超时，请检查网络连接' : 'Network timeout, please check your connection');
+      return Exception(isZh
+          ? '网络超时，请检查网络连接'
+          : 'Network timeout, please check your connection');
     } else if (e.type == DioExceptionType.unknown) {
-      return Exception(isZh ? '网络错误，请检查网络连接' : 'Network error, please check your connection');
+      return Exception(isZh
+          ? '网络错误，请检查网络连接'
+          : 'Network error, please check your connection');
     }
 
     return Exception(defaultMessage);

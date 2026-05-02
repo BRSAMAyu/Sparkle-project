@@ -39,12 +39,14 @@ class GalaxyNodePreviewCard extends StatelessWidget {
           )
         : Color.alphaBlend(
             sectorColor.withValues(alpha: 0.05),
-            Colors.white.withValues(alpha: 0.94),
+            DS.neutral0.withValues(alpha: 0.94),
           );
     final borderColor = isDarkMode
-        ? Colors.white.withValues(alpha: 0.12)
-        : Colors.black.withValues(alpha: 0.08);
-    final secondaryColor = isDarkMode ? Colors.white70 : Colors.black54;
+        ? DS.neutral0.withValues(alpha: 0.12)
+        : DS.galaxyShadow.withValues(alpha: 0.08);
+    final secondaryColor = isDarkMode
+        ? DS.neutral0.withValues(alpha: 0.7)
+        : DS.neutral900.withValues(alpha: 0.54);
     final masteryProgress = (node.masteryScore / 100).clamp(0.0, 1.0);
 
     return Material(
@@ -68,7 +70,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
             border: Border.all(color: borderColor),
             boxShadow: [
               BoxShadow(
-                color: (isDarkMode ? Colors.black : glowColor)
+                color: (isDarkMode ? DS.neutral900 : glowColor)
                     .withValues(alpha: isDarkMode ? 0.22 : 0.08),
                 blurRadius: 24,
                 offset: const Offset(0, 12),
@@ -100,7 +102,9 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                           Text(
                             node.name,
                             style: TextStyle(
-                              color: isDarkMode ? Colors.white : Colors.black87,
+                              color: isDarkMode
+                                  ? DS.neutral0
+                                  : DS.neutral900.withValues(alpha: 0.87),
                               fontSize: 16,
                               fontWeight: DS.fontWeightBold,
                             ),
@@ -137,7 +141,9 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                           child: Text(
                             '${node.masteryScore}',
                             style: TextStyle(
-                              color: isDarkMode ? Colors.white : Colors.black87,
+                              color: isDarkMode
+                                  ? DS.neutral0
+                                  : DS.neutral900.withValues(alpha: 0.87),
                               fontSize: 11,
                               fontWeight: DS.fontWeightBold,
                             ),
@@ -175,7 +181,7 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: masteryProgress,
                     minHeight: 6,
-                    backgroundColor: (isDarkMode ? Colors.white : Colors.black)
+                    backgroundColor: (isDarkMode ? DS.neutral0 : DS.neutral900)
                         .withValues(alpha: 0.08),
                     valueColor: AlwaysStoppedAnimation<Color>(sectorColor),
                   ),
@@ -184,8 +190,8 @@ class GalaxyNodePreviewCard extends StatelessWidget {
                 Divider(
                   height: 1,
                   color: isDarkMode
-                      ? Colors.white.withValues(alpha: 0.1)
-                      : Colors.black.withValues(alpha: 0.08),
+                      ? DS.neutral0.withValues(alpha: 0.1)
+                      : DS.galaxyShadow.withValues(alpha: 0.08),
                 ),
                 if (node.shouldPulseForReview) ...[
                   const SizedBox(height: 12),
@@ -334,7 +340,9 @@ class _ReviewUrgencyCallout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final secondaryColor = isDarkMode ? Colors.white70 : Colors.black54;
+    final secondaryColor = isDarkMode
+        ? DS.neutral0.withValues(alpha: 0.7)
+        : DS.neutral900.withValues(alpha: 0.54);
     final scorePercent = (node.reviewUrgencyScore * 100).round();
     final daysSince = node.daysSinceMasteryUpdate.round();
 
@@ -343,8 +351,8 @@ class _ReviewUrgencyCallout extends StatelessWidget {
         color: Color.alphaBlend(
           glowColor.withValues(alpha: isDarkMode ? 0.12 : 0.08),
           isDarkMode
-              ? Colors.white.withValues(alpha: 0.03)
-              : Colors.black.withValues(alpha: 0.02),
+              ? DS.neutral0.withValues(alpha: 0.03)
+              : DS.galaxyShadow.withValues(alpha: 0.02),
         ),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
@@ -387,7 +395,9 @@ class _ReviewUrgencyCallout extends StatelessWidget {
             Text(
               _buildReviewMessage(),
               style: TextStyle(
-                color: isDarkMode ? Colors.white : Colors.black87,
+                color: isDarkMode
+                    ? DS.neutral0
+                    : DS.neutral900.withValues(alpha: 0.87),
                 fontSize: 12,
                 height: 1.4,
                 fontWeight: DS.fontWeightSemibold,
@@ -475,7 +485,7 @@ class _MasteryRingPainter extends CustomPainter {
         center,
         radius,
         Paint()
-          ..color = (isDarkMode ? Colors.white : Colors.black)
+          ..color = (isDarkMode ? DS.neutral0 : DS.neutral900)
               .withValues(alpha: isDarkMode ? 0.08 : 0.05)
           ..style = PaintingStyle.stroke
           ..strokeWidth = 4,

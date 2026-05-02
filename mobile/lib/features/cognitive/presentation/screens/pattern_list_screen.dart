@@ -96,7 +96,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
                 context.l10n.patternListTitle,
                 style: TextStyle(
                   fontSize: 20,
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   color: DS.textPrimary,
                 ),
               ),
@@ -141,7 +141,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
               context.l10n.patternListEmptyTitle,
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
               ),
             ),
@@ -217,7 +217,7 @@ class _PatternCard extends StatelessWidget {
                             pattern.patternName,
                             style: TextStyle(
                               fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: DS.fontWeightBold,
                               color: DS.brandPrimaryConst,
                             ),
                           ),
@@ -260,7 +260,7 @@ class _PatternCard extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 10,
                             color: DS.success,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                           ),
                         ),
                       ),
@@ -383,7 +383,10 @@ class _PatternCard extends StatelessWidget {
     if (pattern.lastObservedAt == null) {
       return discovered;
     }
-    return '$discovered · 最近观察 ${Formatters.formatRelativeTime(pattern.lastObservedAt!)}';
+    final lastObserved = Formatters.formatRelativeTime(pattern.lastObservedAt!);
+    return I18nService.instance.isChinese
+        ? '$discovered · 最近观察 $lastObserved'
+        : '$discovered · Last observed $lastObserved';
   }
 
   Color _getTypeColor(PatternType type) {

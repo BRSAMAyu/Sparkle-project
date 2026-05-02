@@ -75,6 +75,7 @@ RetrievalDecision = ContextPlan
 @dataclass(frozen=True)
 class RetrievalIntentBudgets:
     aggressive: int = 2200
+    deep: int = 3200
     selective: int = 900
     ambiguous: int = 500
 
@@ -107,6 +108,19 @@ _PLANNING_PATTERNS = (
 _AMBIGUOUS_PATTERNS = (
     r"\b(help me|can you help|stuck|confused|this topic|chapter|lecture|notes|material)\b",
     r"(帮我|卡住|这个知识点|这章|课件|笔记|材料|教材)",
+)
+
+# P1-9: Patterns for deep_source_synthesis and aurora_core_case_file modes
+_DEEP_RESEARCH_PATTERNS = (
+    r"\b(compare|contrast|synthesize|cross.reference|triangulate|reconcile|integrate)\b",
+    r"\b(multiple sources|across sources|different perspectives|literature review|meta.analysis)\b",
+    r"\b(what are the different|how do different|compare and contrast|side by side)\b",
+    r"(对比|比较|综合分析|多方|不同来源|交叉验证|梳理|整合)",
+)
+_CASE_FILE_PATTERNS = (
+    r"\b(what have we discussed|previous analysis|earlier you said|last time|recall our|based on our previous)\b",
+    r"\b(what did you conclude|what did we decide|our earlier conclusion|prior assessment)\b",
+    r"(上次|之前|之前分析|之前讨论|之前结论|回顾一下|还记得|你之前说)",
 )
 
 _LINKED_DOC_KEYS = (
@@ -373,6 +387,36 @@ class RetrievalIntentClassifier:
                 citation_required=False,
                 user_visible_receipt=True,
                 reason_for_user="Aurora · 已参考知识星图摘要",
+            )
+
+        # P1-9: deep_source_synthesis — multi-source cross-reference synthesis
+        deep_research_signal = _matches_any(text, _DEEP_RESEARCH_PATTERNS)
+        case_file_signal = _matches_any(text, _CASE_FILE_PATTERNS)
+
+        if deep_research_signal:
+            return ContextPlan(
+                retrieval_mode="deep_source_synthesis",
+                should_retrieve=True,
+                budget_tokens=budgets.deep or budgets.aggressive,
+                reason="deep_source_synthesis_requested",
+                source_scope="goal_bound",
+                pollution_guard="moderate",
+                citation_required=True,
+                user_visible_receipt=True,
+                reason_for_user="Aurora · 已综合多方资料分析",
+            )
+
+        if case_file_signal:
+            return ContextPlan(
+                retrieval_mode="aurora_core_case_file",
+                should_retrieve=True,
+                budget_tokens=budgets.selective,
+                reason="aurora_case_file_context_requested",
+                source_scope=source_scope,
+                pollution_guard="moderate",
+                citation_required=False,
+                user_visible_receipt=True,
+                reason_for_user="Aurora · 已参考历史分析记录",
             )
 
         if knowledge_signal:

@@ -3,16 +3,30 @@ package agent
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/status"
+)
+
+var (
+	circuitBreakerStateGauge = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "sparkle_grpc_circuit_breaker_state",
+		Help: "Circuit breaker state: 1 = current state (closed/open/half-open)",
+	}, []string{"state"})
+
+	circuitBreakerTransitionsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "sparkle_grpc_circuit_breaker_transitions_total",
+		Help: "Total circuit breaker state transitions",
+	}, []string{"from", "to"})
 )
 
 // CircuitState represents the state of a circuit breaker
@@ -181,7 +195,10 @@ func (h *AgentHealthChecker) check() {
 		// Health check failed
 		h.isHealthy = false
 		h.recordFailure()
-		log.Printf("[AgentHealthChecker] Health check failed: %v (latency: %v)", err, latency)
+		zap.L().Warn("Agent health check failed",
+			zap.Duration("latency", latency),
+			zap.Error(err),
+		)
 	} else {
 		// Health check succeeded
 		h.isHealthy = true
@@ -276,7 +293,15 @@ func (h *AgentHealthChecker) transitionTo(newState CircuitState) {
 		h.successes = 0
 	}
 
-	log.Printf("[AgentHealthChecker] Circuit breaker transitioned: %s -> %s", oldState, newState)
+	zap.L().Warn("Agent circuit breaker transitioned",
+		zap.String("from_state", oldState.String()),
+		zap.String("to_state", newState.String()),
+	)
+
+	// Update Prometheus metrics
+	circuitBreakerStateGauge.Reset()
+	circuitBreakerStateGauge.WithLabelValues(newState.String()).Set(1)
+	circuitBreakerTransitionsTotal.WithLabelValues(oldState.String(), newState.String()).Inc()
 
 	if h.onStateChange != nil {
 		go h.onStateChange(oldState, newState)

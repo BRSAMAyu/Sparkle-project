@@ -113,7 +113,7 @@ func (h *ChaosHandler) SetGrpcLatency(c *gin.Context) {
 	}
 
 	if err := h.postToxiproxy(c, proxy, payload); err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusBadGateway, err, "chaos.set_grpc_latency.toxiproxy")
 		return
 	}
 
@@ -131,7 +131,7 @@ func (h *ChaosHandler) ResetGrpcLatency(c *gin.Context) {
 	}
 
 	if err := h.deleteToxic(c, proxy, toxicName); err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		sanitizeErrorResponse(c, http.StatusBadGateway, err, "chaos.reset_grpc_latency.toxiproxy")
 		return
 	}
 

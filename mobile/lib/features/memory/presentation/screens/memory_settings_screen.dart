@@ -3,12 +3,152 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+
+enum _MemorySettingsErrorKind { load, save, unavailable }
+
+class _MemorySettingsDataState {
+  const _MemorySettingsDataState({
+    this.isLoading = true,
+    this.isSaving = false,
+    this.error,
+    this.errorKind,
+    this.settings,
+    this.pushSettings,
+  });
+
+  final bool isLoading;
+  final bool isSaving;
+  final String? error;
+  final _MemorySettingsErrorKind? errorKind;
+  final MemorySettingsModel? settings;
+  final PushOptInSettingsModel? pushSettings;
+
+  _MemorySettingsDataState copyWith({
+    bool? isLoading,
+    bool? isSaving,
+    String? error,
+    _MemorySettingsErrorKind? errorKind,
+    MemorySettingsModel? settings,
+    PushOptInSettingsModel? pushSettings,
+    bool clearError = false,
+  }) =>
+      _MemorySettingsDataState(
+        isLoading: isLoading ?? this.isLoading,
+        isSaving: isSaving ?? this.isSaving,
+        error: clearError ? null : error ?? this.error,
+        errorKind: clearError ? null : errorKind ?? this.errorKind,
+        settings: settings ?? this.settings,
+        pushSettings: pushSettings ?? this.pushSettings,
+      );
+}
+
+class _MemorySettingsDataNotifier
+    extends StateNotifier<_MemorySettingsDataState> {
+  _MemorySettingsDataNotifier(this._service)
+      : super(const _MemorySettingsDataState());
+
+  final MemoryApiService _service;
+
+  Future<_MemorySettingsDataState> loadSettings() async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      MemorySettingsModel settings;
+      PushOptInSettingsModel pushSettings;
+      try {
+        settings = await _service.getMemorySettings();
+      } catch (_) {
+        settings = MemorySettingsModel(
+          enabled: true,
+          allowPreferences: true,
+          allowGoals: true,
+          allowEpisodic: true,
+          allowInferredEpisodic: true,
+          captureLevel: 'medium',
+          blockedPrefKeys: [],
+          blockedSources: [],
+        );
+      }
+      try {
+        pushSettings = await _service.getPushSettings();
+      } catch (_) {
+        pushSettings = PushOptInSettingsModel(
+          enabled: false,
+          allowCommitmentFollowUp: false,
+          allowEngagementRecovery: false,
+          quietHoursStart: '22:00',
+          quietHoursEnd: '08:00',
+          timezone: 'Asia/Shanghai',
+        );
+      }
+      if (!mounted) {
+        return state;
+      }
+      state = state.copyWith(
+        isLoading: false,
+        settings: settings,
+        pushSettings: pushSettings,
+      );
+      return state;
+    } catch (e) {
+      if (!mounted) {
+        return state;
+      }
+      state = state.copyWith(
+        isLoading: false,
+        error: '$e',
+        errorKind: _MemorySettingsErrorKind.load,
+      );
+      return state;
+    }
+  }
+
+  void setUnavailable(String message) {
+    state = state.copyWith(
+      isLoading: false,
+      error: message,
+      errorKind: _MemorySettingsErrorKind.unavailable,
+    );
+  }
+
+  Future<_MemorySettingsDataState> saveSettings({
+    required MemorySettingsModel settings,
+    required PushOptInSettingsModel pushSettings,
+  }) async {
+    state = state.copyWith(isSaving: true, clearError: true);
+    try {
+      final updated = await _service.updateMemorySettings(settings);
+      final updatedPush = await _service.updatePushSettings(pushSettings);
+      if (!mounted) {
+        return state;
+      }
+      state = state.copyWith(
+        isSaving: false,
+        settings: updated,
+        pushSettings: updatedPush,
+      );
+      return state;
+    } catch (e) {
+      if (mounted) {
+        state = state.copyWith(
+          isSaving: false,
+          error: '$e',
+          errorKind: _MemorySettingsErrorKind.save,
+        );
+      }
+      rethrow;
+    }
+  }
+}
+
+final _memorySettingsDataProvider = StateNotifierProvider.autoDispose<
+    _MemorySettingsDataNotifier, _MemorySettingsDataState>((ref) {
+  return _MemorySettingsDataNotifier(ref.watch(memoryApiServiceProvider));
+});
 
 class MemorySettingsScreen extends ConsumerStatefulWidget {
   const MemorySettingsScreen({super.key});
@@ -26,10 +166,6 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
     'relationship',
     'commitment',
   ];
-
-  bool _loading = true;
-  bool _saving = false;
-  String? _error;
 
   bool _enabled = true;
   bool _allowPreferences = true;
@@ -95,91 +231,52 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
     }
   }
 
+  void _updateForm(VoidCallback update) => setState(update);
+
+  void _applySettings(
+    MemorySettingsModel settings,
+    PushOptInSettingsModel pushSettings,
+  ) {
+    _updateForm(() {
+      _enabled = settings.enabled;
+      _allowPreferences = settings.allowPreferences;
+      _allowGoals = settings.allowGoals;
+      _allowEpisodic = settings.allowEpisodic;
+      _allowInferredEpisodic = settings.allowInferredEpisodic;
+      _captureLevel = settings.captureLevel;
+      _blockedPrefKeys
+        ..clear()
+        ..addAll(settings.blockedPrefKeys);
+      _blockedSources
+        ..clear()
+        ..addAll(settings.blockedSources);
+      _pushEnabled = pushSettings.enabled;
+      _allowCommitmentFollowUp = pushSettings.allowCommitmentFollowUp;
+      _allowEngagementRecovery = pushSettings.allowEngagementRecovery;
+      _pushQuietStart = pushSettings.quietHoursStart;
+      _pushQuietEnd = pushSettings.quietHoursEnd;
+      _pushTimezone = pushSettings.timezone;
+      _hydrateSocialTypeFlags(settings.blockedSources);
+    });
+  }
+
   Future<void> _loadSettings() async {
     if (!AppFeatureFlags.enableUserMemoryControls) {
-      setState(() {
-        _loading = false;
-        _error = context.l10n.memNotEnabled;
-      });
+      ref
+          .read(_memorySettingsDataProvider.notifier)
+          .setUnavailable(context.l10n.memNotEnabled);
       return;
     }
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-    try {
-      final service = ref.read(memoryApiServiceProvider);
-      MemorySettingsModel settings;
-      PushOptInSettingsModel pushSettings;
-      try {
-        settings = await service.getMemorySettings();
-      } catch (_) {
-        settings = MemorySettingsModel(
-          enabled: true,
-          allowPreferences: true,
-          allowGoals: true,
-          allowEpisodic: true,
-          allowInferredEpisodic: true,
-          captureLevel: 'medium',
-          blockedPrefKeys: [],
-          blockedSources: [],
-        );
-      }
-      try {
-        pushSettings = await service.getPushSettings();
-      } catch (_) {
-        pushSettings = PushOptInSettingsModel(
-          enabled: false,
-          allowCommitmentFollowUp: false,
-          allowEngagementRecovery: false,
-          quietHoursStart: '22:00',
-          quietHoursEnd: '08:00',
-          timezone: 'Asia/Shanghai',
-        );
-      }
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _enabled = settings.enabled;
-        _allowPreferences = settings.allowPreferences;
-        _allowGoals = settings.allowGoals;
-        _allowEpisodic = settings.allowEpisodic;
-        _allowInferredEpisodic = settings.allowInferredEpisodic;
-        _captureLevel = settings.captureLevel;
-        _blockedPrefKeys
-          ..clear()
-          ..addAll(settings.blockedPrefKeys);
-        _blockedSources
-          ..clear()
-          ..addAll(settings.blockedSources);
-        _pushEnabled = pushSettings.enabled;
-        _allowCommitmentFollowUp = pushSettings.allowCommitmentFollowUp;
-        _allowEngagementRecovery = pushSettings.allowEngagementRecovery;
-        _pushQuietStart = pushSettings.quietHoursStart;
-        _pushQuietEnd = pushSettings.quietHoursEnd;
-        _pushTimezone = pushSettings.timezone;
-        _hydrateSocialTypeFlags(settings.blockedSources);
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
-      setState(() {
-        _error = context.l10n.memLoadSettingsFailed(e.toString());
-        _loading = false;
-      });
+    final state =
+        await ref.read(_memorySettingsDataProvider.notifier).loadSettings();
+    if (!mounted || state.settings == null || state.pushSettings == null) {
+      return;
     }
+    _applySettings(state.settings!, state.pushSettings!);
   }
 
   Future<void> _saveSettings() async {
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
     try {
-      final service = ref.read(memoryApiServiceProvider);
       final settings = MemorySettingsModel(
         enabled: _enabled,
         allowPreferences: _allowPreferences,
@@ -198,75 +295,60 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         quietHoursEnd: _pushQuietEnd,
         timezone: _pushTimezone,
       );
-      final updated = await service.updateMemorySettings(settings);
-      final updatedPush = await service.updatePushSettings(pushSettings);
+      final state =
+          await ref.read(_memorySettingsDataProvider.notifier).saveSettings(
+                settings: settings,
+                pushSettings: pushSettings,
+              );
       if (!mounted) {
         return;
       }
-      setState(() {
-        _enabled = updated.enabled;
-        _allowPreferences = updated.allowPreferences;
-        _allowGoals = updated.allowGoals;
-        _allowEpisodic = updated.allowEpisodic;
-        _allowInferredEpisodic = updated.allowInferredEpisodic;
-        _captureLevel = updated.captureLevel;
-        _blockedPrefKeys
-          ..clear()
-          ..addAll(updated.blockedPrefKeys);
-        _blockedSources
-          ..clear()
-          ..addAll(updated.blockedSources);
-        _pushEnabled = updatedPush.enabled;
-        _allowCommitmentFollowUp = updatedPush.allowCommitmentFollowUp;
-        _allowEngagementRecovery = updatedPush.allowEngagementRecovery;
-        _pushQuietStart = updatedPush.quietHoursStart;
-        _pushQuietEnd = updatedPush.quietHoursEnd;
-        _pushTimezone = updatedPush.timezone;
-        _hydrateSocialTypeFlags(updated.blockedSources);
-        _saving = false;
-      });
-      AppFeedback.success(context, I18nService.instance.isChinese ? '记忆设置已更新' : 'Memory settings updated');
+      _applySettings(state.settings!, state.pushSettings!);
+      AppFeedback.success(context, context.l10n.memSettingsUpdated);
     } catch (e) {
       if (!mounted) {
         return;
       }
-      setState(() {
-        _saving = false;
-        _error = context.l10n.memSaveFailed(e.toString());
-      });
     }
   }
 
   @override
-  Widget build(BuildContext context) => GraphiteScaffold(
-        role: SparklePageRole.settings,
-        safeArea: false,
-        appBar: AppBar(
-          leading: SparkleIconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: _goBack,
-            variant: ButtonVariant.ghost,
-            semanticLabel: context.l10n.memBack,
-          ),
-          title: Text(
-            I18nService.instance.isChinese ? '记忆控制' : 'Memory Control',
-            style: DS.titleLarge.copyWith(
-              color: DS.textPrimary,
-              fontWeight: DS.fontWeightBold,
-            ),
-          ),
-          iconTheme: IconThemeData(color: DS.textPrimary),
-          backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-          elevation: 0,
+  Widget build(BuildContext context) {
+    final dataState = ref.watch(_memorySettingsDataProvider);
+    return GraphiteScaffold(
+      role: SparklePageRole.settings,
+      safeArea: false,
+      appBar: AppBar(
+        leading: SparkleIconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _goBack,
+          variant: ButtonVariant.ghost,
+          semanticLabel: context.l10n.memBack,
         ),
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : _error != null
-                ? _buildError(context)
-                : _buildContent(context),
-      );
+        title: Text(
+          context.l10n.memControl,
+          style: DS.titleLarge.copyWith(
+            color: DS.textPrimary,
+            fontWeight: DS.fontWeightBold,
+          ),
+        ),
+        iconTheme: IconThemeData(color: DS.textPrimary),
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        elevation: 0,
+      ),
+      child: dataState.isLoading
+          ? const ContentConstraint(child: _MemorySettingsLoadingSkeleton())
+          : dataState.error != null
+              ? _buildError(context, dataState)
+              : _buildContent(context),
+    );
+  }
 
-  Widget _buildError(BuildContext context) => Center(
+  Widget _buildError(
+    BuildContext context,
+    _MemorySettingsDataState dataState,
+  ) =>
+      Center(
         child: Padding(
           padding: const EdgeInsets.all(DS.lg),
           child: GraphiteCardSurface(
@@ -280,7 +362,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
                 ),
                 const SizedBox(height: DS.spacing12),
                 Text(
-                  _error ?? context.l10n.memUnavailable,
+                  _formatSettingsError(context, dataState),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: DS.textSecondary,
                         height: 1.45,
@@ -298,353 +380,376 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
         ),
       );
 
-  Widget _buildContent(BuildContext context) => ContentConstraint(
-        child: ListView(
-          padding: const EdgeInsets.all(DS.lg),
-          children: [
-            SparkleStaggerItem(
-              index: 0,
-              child: GraphiteCardSurface(
-                surfaceRole: SparkleSurfaceRole.panel,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(
-                      spacing: DS.spacing8,
-                      runSpacing: DS.spacing8,
-                      children: [
-                        _buildStatusChip(
-                          icon: Icons.auto_awesome_outlined,
-                          label: _enabled ? context.l10n.memEnabled : context.l10n.memPaused,
-                          color: _enabled ? DS.primaryBase : DS.textSecondary,
-                        ),
-                        _buildStatusChip(
-                          icon: Icons.privacy_tip_outlined,
-                          label: context.l10n.memPrefControlled,
-                          color: const Color(0xFF71917D),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: DS.spacing12),
-                    Text(
-                      I18nService.instance.isChinese ? '控制系统长期记忆如何学习你的偏好、目标与经历。默认更克制，只有对后续决策真正有价值的信息才应保留。' : 'Control how long-term memory learns your preferences, goals, and experiences. Default is conservative — only information valuable for future decisions is retained.',
-                      style: DS.bodyMedium.copyWith(
-                        color: DS.textSecondary,
-                        height: 1.45,
+  String _formatSettingsError(
+    BuildContext context,
+    _MemorySettingsDataState dataState,
+  ) {
+    final error = dataState.error ?? context.l10n.memUnavailable;
+    return switch (dataState.errorKind) {
+      _MemorySettingsErrorKind.save => context.l10n.memSaveFailed(error),
+      _MemorySettingsErrorKind.unavailable => error,
+      _ => context.l10n.memLoadSettingsFailed(error),
+    };
+  }
+
+  Widget _buildContent(BuildContext context) {
+    final dataState = ref.watch(_memorySettingsDataProvider);
+    return ContentConstraint(
+      child: ListView(
+        padding: const EdgeInsets.all(DS.lg),
+        children: [
+          SparkleStaggerItem(
+            index: 0,
+            child: GraphiteCardSurface(
+              surfaceRole: SparkleSurfaceRole.panel,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing8,
+                    children: [
+                      _buildStatusChip(
+                        icon: Icons.auto_awesome_outlined,
+                        label: _enabled
+                            ? context.l10n.memEnabled
+                            : context.l10n.memPaused,
+                        color: _enabled ? DS.primaryBase : DS.textSecondary,
                       ),
+                      _buildStatusChip(
+                        icon: Icons.privacy_tip_outlined,
+                        label: context.l10n.memPrefControlled,
+                        color: const Color(0xFF71917D),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  Text(
+                    context.l10n.memControlDesc,
+                    style: DS.bodyMedium.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: DS.lg),
-            SparkleStaggerItem(
-              index: 1,
-              child: GraphiteCardSurface(
-                child: Column(
-                  children: [
-                    _buildToggleRow(
-                      title: context.l10n.memEnableLongTerm,
-                      description: context.l10n.memDisableDesc,
-                      value: _enabled,
-                      onChanged: (value) => setState(() => _enabled = value),
-                    ),
-                  ],
-                ),
+          ),
+          const SizedBox(height: DS.lg),
+          SparkleStaggerItem(
+            index: 1,
+            child: GraphiteCardSurface(
+              child: Column(
+                children: [
+                  _buildToggleRow(
+                    title: context.l10n.memEnableLongTerm,
+                    description: context.l10n.memDisableDesc,
+                    value: _enabled,
+                    onChanged: (value) => _updateForm(() => _enabled = value),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: DS.lg),
-            SparkleStaggerItem(
-              index: 2,
-              child: GraphiteCardSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      I18nService.instance.isChinese ? '社交语义子开关' : 'Social Semantic Toggles',
-                      style: DS.titleMedium.copyWith(
-                        color: DS.textPrimary,
-                        fontWeight: DS.fontWeightBold,
-                      ),
+          ),
+          const SizedBox(height: DS.lg),
+          SparkleStaggerItem(
+            index: 2,
+            child: GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    context.l10n.memSocialToggles,
+                    style: DS.titleMedium.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: DS.fontWeightBold,
                     ),
-                    const SizedBox(height: DS.sm),
-                    Text(
-                      I18nService.instance.isChinese ? 'Stage 17 只做记忆声明与前门读取。关闭某一类后，该类社交语义会在前门中被隐藏。' : 'Stage 17 only declares memory and reads from the front door. Disabling a category hides its social semantics.',
-                      style: DS.bodySmall.copyWith(
-                        color: DS.textSecondary,
-                        height: 1.45,
-                      ),
+                  ),
+                  const SizedBox(height: DS.sm),
+                  Text(
+                    context.l10n.memSocialTogglesDesc,
+                    style: DS.bodySmall.copyWith(
+                      color: DS.textSecondary,
+                      height: 1.45,
                     ),
-                    const SizedBox(height: DS.md),
-                    _buildToggleRow(
-                      title: context.l10n.memSelfMemory,
-                      description: 'self',
-                      value: _socialTypeEnabled['self'] ?? true,
-                      onChanged: (value) =>
-                          setState(() => _socialTypeEnabled['self'] = value),
+                  ),
+                  const SizedBox(height: DS.md),
+                  _buildToggleRow(
+                    title: context.l10n.memSelfMemory,
+                    description: 'self',
+                    value: _socialTypeEnabled['self'] ?? true,
+                    onChanged: (value) =>
+                        _updateForm(() => _socialTypeEnabled['self'] = value),
+                  ),
+                  _buildToggleRow(
+                    title: context.l10n.memPeopleMention,
+                    description: 'person_mention',
+                    value: _socialTypeEnabled['person_mention'] ?? true,
+                    onChanged: (value) => _updateForm(
+                      () => _socialTypeEnabled['person_mention'] = value,
                     ),
-                    _buildToggleRow(
-                      title: context.l10n.memPeopleMention,
-                      description: 'person_mention',
-                      value: _socialTypeEnabled['person_mention'] ?? true,
-                      onChanged: (value) => setState(
-                        () => _socialTypeEnabled['person_mention'] = value,
-                      ),
+                  ),
+                  _buildToggleRow(
+                    title: context.l10n.memRelationshipDynamics,
+                    description: 'relationship',
+                    value: _socialTypeEnabled['relationship'] ?? true,
+                    onChanged: (value) => _updateForm(
+                      () => _socialTypeEnabled['relationship'] = value,
                     ),
-                    _buildToggleRow(
-                      title: context.l10n.memRelationshipDynamics,
-                      description: 'relationship',
-                      value: _socialTypeEnabled['relationship'] ?? true,
-                      onChanged: (value) => setState(
-                        () => _socialTypeEnabled['relationship'] = value,
-                      ),
+                  ),
+                  _buildToggleRow(
+                    title: context.l10n.memCommitments,
+                    description: 'commitment',
+                    value: _socialTypeEnabled['commitment'] ?? true,
+                    onChanged: (value) => _updateForm(
+                      () => _socialTypeEnabled['commitment'] = value,
                     ),
-                    _buildToggleRow(
-                      title: context.l10n.memCommitments,
-                      description: 'commitment',
-                      value: _socialTypeEnabled['commitment'] ?? true,
-                      onChanged: (value) => setState(
-                        () => _socialTypeEnabled['commitment'] = value,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: DS.lg),
-            SparkleStaggerItem(
-              index: 3,
-              child: GraphiteCardSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle(
-                      I18nService.instance.isChinese ? '主动提醒' : 'Proactive Reminders',
-                      subtitle: context.l10n.memCommitmentStageNote,
-                    ),
-                    _buildToggleRow(
-                      title: context.l10n.memEnableProactive,
-                      description: context.l10n.memProactiveMaster,
-                      value: _pushEnabled,
-                      onChanged: (value) =>
-                          setState(() => _pushEnabled = value),
-                    ),
-                    _buildToggleRow(
-                      title: context.l10n.memCommitmentFollowup,
-                      description: context.l10n.memCommitmentFollowupDesc,
-                      value: _allowCommitmentFollowUp,
-                      enabled: _pushEnabled,
-                      onChanged: (value) =>
-                          setState(() => _allowCommitmentFollowUp = value),
-                    ),
-                    _buildToggleRow(
-                      title: context.l10n.memActivityRecovery,
-                      description: context.l10n.memActivityRecoveryDesc,
-                      value: _allowEngagementRecovery,
-                      enabled: _pushEnabled,
-                      isLast: true,
-                      onChanged: (value) =>
-                          setState(() => _allowEngagementRecovery = value),
-                    ),
-                    const SizedBox(height: DS.md),
-                    _buildSectionTitle(
-                      I18nService.instance.isChinese ? '静默时段' : 'Quiet Hours',
-                      subtitle: context.l10n.memQuietHoursNote,
-                    ),
-                    _buildChoiceGroup(
-                      title: context.l10n.memStartTime,
-                      values: const ['22:00', '22:30', '23:00'],
-                      selected: _pushQuietStart,
-                      enabled: _pushEnabled,
-                      onSelected: (value) =>
-                          setState(() => _pushQuietStart = value),
-                    ),
-                    const SizedBox(height: DS.spacing12),
-                    _buildChoiceGroup(
-                      title: context.l10n.memEndTime,
-                      values: const ['07:00', '07:30', '08:00'],
-                      selected: _pushQuietEnd,
-                      enabled: _pushEnabled,
-                      onSelected: (value) =>
-                          setState(() => _pushQuietEnd = value),
-                    ),
-                    const SizedBox(height: DS.md),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            I18nService.instance.isChinese ? '当前时区：$_pushTimezone' : 'Timezone: $_pushTimezone',
-                            style: DS.bodySmall.copyWith(
-                              color: DS.textSecondary,
-                            ),
+          ),
+          const SizedBox(height: DS.lg),
+          SparkleStaggerItem(
+            index: 3,
+            child: GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle(
+                    context.l10n.memProactiveReminders,
+                    subtitle: context.l10n.memCommitmentStageNote,
+                  ),
+                  _buildToggleRow(
+                    title: context.l10n.memEnableProactive,
+                    description: context.l10n.memProactiveMaster,
+                    value: _pushEnabled,
+                    onChanged: (value) =>
+                        _updateForm(() => _pushEnabled = value),
+                  ),
+                  _buildToggleRow(
+                    title: context.l10n.memCommitmentFollowup,
+                    description: context.l10n.memCommitmentFollowupDesc,
+                    value: _allowCommitmentFollowUp,
+                    enabled: _pushEnabled,
+                    onChanged: (value) =>
+                        _updateForm(() => _allowCommitmentFollowUp = value),
+                  ),
+                  _buildToggleRow(
+                    title: context.l10n.memActivityRecovery,
+                    description: context.l10n.memActivityRecoveryDesc,
+                    value: _allowEngagementRecovery,
+                    enabled: _pushEnabled,
+                    isLast: true,
+                    onChanged: (value) =>
+                        _updateForm(() => _allowEngagementRecovery = value),
+                  ),
+                  const SizedBox(height: DS.md),
+                  _buildSectionTitle(
+                    context.l10n.memQuietHours,
+                    subtitle: context.l10n.memQuietHoursNote,
+                  ),
+                  _buildChoiceGroup(
+                    title: context.l10n.memStartTime,
+                    values: const ['22:00', '22:30', '23:00'],
+                    selected: _pushQuietStart,
+                    enabled: _pushEnabled,
+                    onSelected: (value) =>
+                        _updateForm(() => _pushQuietStart = value),
+                  ),
+                  const SizedBox(height: DS.spacing12),
+                  _buildChoiceGroup(
+                    title: context.l10n.memEndTime,
+                    values: const ['07:00', '07:30', '08:00'],
+                    selected: _pushQuietEnd,
+                    enabled: _pushEnabled,
+                    onSelected: (value) =>
+                        _updateForm(() => _pushQuietEnd = value),
+                  ),
+                  const SizedBox(height: DS.md),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          context.l10n.memCurrentTimezone(_pushTimezone),
+                          style: DS.bodySmall.copyWith(
+                            color: DS.textSecondary,
                           ),
                         ),
-                        SparkleButton.ghost(
-                          label: context.l10n.memViewInbox,
-                          onPressed: () => context.push('/notification-center'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                      ),
+                      SparkleButton.ghost(
+                        label: context.l10n.memViewInbox,
+                        onPressed: () => context.push('/notification-center'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: DS.lg),
-            SparkleStaggerItem(
-              index: 4,
-              child: GraphiteCardSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle(
-                      I18nService.instance.isChinese ? '记忆类型' : 'Memory Types',
-                      subtitle: context.l10n.memDecideWhat,
-                    ),
-                    _buildToggleRow(
-                      title: context.l10n.memPreference,
-                      description: context.l10n.memPreferenceDesc,
-                      value: _allowPreferences,
-                      enabled: _enabled,
-                      onChanged: (value) =>
-                          setState(() => _allowPreferences = value),
-                    ),
-                    _buildToggleRow(
-                      title: context.l10n.memGoals,
-                      description: context.l10n.memGoalsDesc,
-                      value: _allowGoals,
-                      enabled: _enabled,
-                      onChanged: (value) => setState(() => _allowGoals = value),
-                    ),
-                    _buildToggleRow(
-                      title: context.l10n.memExperience,
-                      description: context.l10n.memExperienceDesc,
-                      value: _allowEpisodic,
-                      enabled: _enabled,
-                      onChanged: (value) =>
-                          setState(() => _allowEpisodic = value),
-                    ),
-                    _buildToggleRow(
-                      title: context.l10n.memAiAutoMemory,
-                      description: context.l10n.memAiAutoMemoryDesc,
-                      value: _allowInferredEpisodic,
-                      enabled: _enabled && _allowEpisodic,
-                      isLast: true,
-                      onChanged: (value) =>
-                          setState(() => _allowInferredEpisodic = value),
-                    ),
-                  ],
-                ),
+          ),
+          const SizedBox(height: DS.lg),
+          SparkleStaggerItem(
+            index: 4,
+            child: GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle(
+                    context.l10n.memTypes,
+                    subtitle: context.l10n.memDecideWhat,
+                  ),
+                  _buildToggleRow(
+                    title: context.l10n.memPreference,
+                    description: context.l10n.memPreferenceDesc,
+                    value: _allowPreferences,
+                    enabled: _enabled,
+                    onChanged: (value) =>
+                        _updateForm(() => _allowPreferences = value),
+                  ),
+                  _buildToggleRow(
+                    title: context.l10n.memGoals,
+                    description: context.l10n.memGoalsDesc,
+                    value: _allowGoals,
+                    enabled: _enabled,
+                    onChanged: (value) =>
+                        _updateForm(() => _allowGoals = value),
+                  ),
+                  _buildToggleRow(
+                    title: context.l10n.memExperience,
+                    description: context.l10n.memExperienceDesc,
+                    value: _allowEpisodic,
+                    enabled: _enabled,
+                    onChanged: (value) =>
+                        _updateForm(() => _allowEpisodic = value),
+                  ),
+                  _buildToggleRow(
+                    title: context.l10n.memAiAutoMemory,
+                    description: context.l10n.memAiAutoMemoryDesc,
+                    value: _allowInferredEpisodic,
+                    enabled: _enabled && _allowEpisodic,
+                    isLast: true,
+                    onChanged: (value) =>
+                        _updateForm(() => _allowInferredEpisodic = value),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: DS.lg),
-            SparkleStaggerItem(
-              index: 5,
-              child: GraphiteCardSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle(
-                      I18nService.instance.isChinese ? '捕获强度' : 'Capture Intensity',
-                      subtitle: context.l10n.memSensitivityNote,
-                    ),
-                    Wrap(
-                      spacing: DS.spacing8,
-                      runSpacing: DS.spacing8,
-                      children: [
-                        ('low', I18nService.instance.isChinese ? '低' : 'Low'),
-                        ('medium', I18nService.instance.isChinese ? '中' : 'Medium'),
-                        ('high', I18nService.instance.isChinese ? '高' : 'High'),
-                      ].map((entry) {
-                        final value = entry.$1;
-                        final label = entry.$2;
-                        return _MemoryChoiceChip(
-                          value: value,
-                          label: label,
-                          selected: _captureLevel == value,
-                          enabled: _enabled,
-                          onSelected: () {
-                            setState(() {
-                              _captureLevel = value;
-                            });
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
+          ),
+          const SizedBox(height: DS.lg),
+          SparkleStaggerItem(
+            index: 5,
+            child: GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle(
+                    context.l10n.memCaptureIntensity,
+                    subtitle: context.l10n.memSensitivityNote,
+                  ),
+                  Wrap(
+                    spacing: DS.spacing8,
+                    runSpacing: DS.spacing8,
+                    children: [
+                      ('low', context.l10n.memCaptureLow),
+                      (
+                        'medium',
+                        context.l10n.memCaptureMedium
+                      ),
+                      ('high', context.l10n.memCaptureHigh),
+                    ].map((entry) {
+                      final value = entry.$1;
+                      final label = entry.$2;
+                      return _MemoryChoiceChip(
+                        value: value,
+                        label: label,
+                        selected: _captureLevel == value,
+                        enabled: _enabled,
+                        onSelected: () {
+                          _updateForm(() {
+                            _captureLevel = value;
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: DS.lg),
-            SparkleStaggerItem(
-              index: 6,
-              child: GraphiteCardSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle(
-                      I18nService.instance.isChinese ? '屏蔽偏好' : 'Blocking Preferences',
-                      subtitle: context.l10n.memExcludeNote,
-                    ),
-                    Wrap(
-                      spacing: DS.sm,
-                      runSpacing: DS.sm,
-                      children: _prefKeyOptions
-                          .map(
-                            (key) => _MemoryFilterChip(
-                              label: key,
-                              selected: _blockedPrefKeys.contains(key),
-                              enabled: _enabled && _allowPreferences,
-                              onSelected: (selected) =>
-                                  _togglePrefKey(key, selected),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ],
-                ),
+          ),
+          const SizedBox(height: DS.lg),
+          SparkleStaggerItem(
+            index: 6,
+            child: GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle(
+                    context.l10n.memBlockingPrefs,
+                    subtitle: context.l10n.memExcludeNote,
+                  ),
+                  Wrap(
+                    spacing: DS.sm,
+                    runSpacing: DS.sm,
+                    children: _prefKeyOptions
+                        .map(
+                          (key) => _MemoryFilterChip(
+                            label: key,
+                            selected: _blockedPrefKeys.contains(key),
+                            enabled: _enabled && _allowPreferences,
+                            onSelected: (selected) =>
+                                _togglePrefKey(key, selected),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: DS.lg),
-            SparkleStaggerItem(
-              index: 7,
-              child: GraphiteCardSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildSectionTitle(
-                      I18nService.instance.isChinese ? '屏蔽来源' : 'Blocked Sources',
-                      subtitle: context.l10n.memSourceLimit,
-                    ),
-                    Wrap(
-                      spacing: DS.sm,
-                      runSpacing: DS.sm,
-                      children: _sourceOptions
-                          .map(
-                            (source) => _MemoryFilterChip(
-                              label: source,
-                              selected: _blockedSources.contains(source),
-                              enabled: _enabled,
-                              onSelected: (selected) =>
-                                  _toggleSource(source, selected),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ],
-                ),
+          ),
+          const SizedBox(height: DS.lg),
+          SparkleStaggerItem(
+            index: 7,
+            child: GraphiteCardSurface(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionTitle(
+                    context.l10n.memBlockedSources,
+                    subtitle: context.l10n.memSourceLimit,
+                  ),
+                  Wrap(
+                    spacing: DS.sm,
+                    runSpacing: DS.sm,
+                    children: _sourceOptions
+                        .map(
+                          (source) => _MemoryFilterChip(
+                            label: source,
+                            selected: _blockedSources.contains(source),
+                            enabled: _enabled,
+                            onSelected: (selected) =>
+                                _toggleSource(source, selected),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: DS.xl),
-            SparkleStaggerItem(
-              index: 8,
-              child: SparkleButton.primary(
-                label: _saving ? context.l10n.memSaving : context.l10n.memSaveSettings,
-                onPressed: _saving ? () {} : _saveSettings,
-              ),
+          ),
+          const SizedBox(height: DS.xl),
+          SparkleStaggerItem(
+            index: 8,
+            child: SparkleButton.primary(
+              label: dataState.isSaving
+                  ? context.l10n.memSaving
+                  : context.l10n.memSaveSettings,
+              onPressed: dataState.isSaving ? () {} : _saveSettings,
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildStatusChip({
     required IconData icon,
@@ -790,7 +895,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
       );
 
   void _togglePrefKey(String key, bool selected) {
-    setState(() {
+    _updateForm(() {
       if (selected) {
         _blockedPrefKeys.add(key);
       } else {
@@ -800,7 +905,7 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
   }
 
   void _toggleSource(String source, bool selected) {
-    setState(() {
+    _updateForm(() {
       if (selected) {
         _blockedSources.add(source);
       } else {
@@ -827,6 +932,52 @@ class _MemorySettingsScreenState extends ConsumerState<MemorySettingsScreen> {
     }
     return blocked.toList()..sort();
   }
+}
+
+class _MemorySettingsLoadingSkeleton extends StatelessWidget {
+  const _MemorySettingsLoadingSkeleton();
+
+  @override
+  Widget build(BuildContext context) => ListView.separated(
+        padding: const EdgeInsets.all(DS.lg),
+        itemBuilder: (context, index) => GraphiteCardSurface(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _SettingsSkeletonBar(widthFactor: index == 0 ? 0.38 : 0.52),
+              const SizedBox(height: DS.spacing12),
+              const _SettingsSkeletonBar(widthFactor: 0.9, height: 12),
+              const SizedBox(height: DS.spacing8),
+              const _SettingsSkeletonBar(widthFactor: 0.68, height: 12),
+            ],
+          ),
+        ),
+        separatorBuilder: (context, index) => const SizedBox(height: DS.lg),
+        itemCount: 4,
+      );
+}
+
+class _SettingsSkeletonBar extends StatelessWidget {
+  const _SettingsSkeletonBar({
+    required this.widthFactor,
+    this.height = 16,
+  });
+
+  final double widthFactor;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) => FractionallySizedBox(
+        widthFactor: widthFactor,
+        alignment: Alignment.centerLeft,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: DS.surfaceTertiary,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: SizedBox(height: height),
+        ),
+      );
 }
 
 class _MemoryChoiceChip extends StatelessWidget {

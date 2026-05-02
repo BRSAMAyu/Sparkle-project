@@ -378,6 +378,31 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     });
   }
 
+  Future<void> pauseTask(String id, {String? reason}) async {
+    await _runWithErrorHandling(() async {
+      final updatedTask = await _taskRepository.pauseTask(id, reason: reason);
+      _updateTaskInState(updatedTask);
+      final activeTask = _ref.read(activeTaskProvider);
+      if (activeTask?.id == id) {
+        _ref.read(activeTaskProvider.notifier).state = updatedTask;
+      }
+      await _notificationScheduler.showTaskResumeReminder(updatedTask);
+      state = state.copyWith(isLoading: false);
+    });
+  }
+
+  Future<void> resumeTask(String id) async {
+    await _runWithErrorHandling(() async {
+      final updatedTask = await _taskRepository.resumeTask(id);
+      _updateTaskInState(updatedTask);
+      final activeTask = _ref.read(activeTaskProvider);
+      if (activeTask?.id == id) {
+        _ref.read(activeTaskProvider.notifier).state = updatedTask;
+      }
+      state = state.copyWith(isLoading: false);
+    });
+  }
+
   Future<TaskStuckResult> markTaskStuck(
     String id, {
     String? stuckPoint,
@@ -824,8 +849,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
             priority: 1,
           );
           if (mounted) {
-            state =
-                state.copyWith(error: ExecutionCopy.engineOfflineQueuedMessage());
+            state = state.copyWith(
+                error: ExecutionCopy.engineOfflineQueuedMessage());
           }
           return null;
         }
@@ -974,7 +999,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     connection.markExecutionUnavailable(message);
     if (mounted) {
       final zh = I18nService.instance.isChinese;
-      state = state.copyWith(error: zh ? '$message，已加入等待队列。' : '$message, added to wait queue.');
+      state = state.copyWith(
+          error: zh ? '$message，已加入等待队列。' : '$message, added to wait queue.');
     }
     return true;
   }

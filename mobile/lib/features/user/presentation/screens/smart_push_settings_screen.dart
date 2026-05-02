@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
@@ -171,7 +172,7 @@ class _SmartPushSettingsScreenState
                   _buildSectionTitle(l10n.smartPushPersonaSection),
                   const SizedBox(height: DS.spacing4),
                   Text(
-                    '调整提醒语气与频率，让推送更像陪伴而不是打扰。',
+                    I18nService.instance.isChinese ? '调整提醒语气与频率，让推送更像陪伴而不是打扰。' : 'Adjust reminder tone and frequency so notifications feel like companionship, not interruption.',
                     style: DS.bodySmall.copyWith(color: DS.textSecondary),
                   ),
                   const SizedBox(height: DS.sm),
@@ -238,7 +239,7 @@ class _SmartPushSettingsScreenState
         style: Theme.of(context)
             .textTheme
             .titleMedium
-            ?.copyWith(fontWeight: FontWeight.bold),
+            ?.copyWith(fontWeight: DS.fontWeightBold),
       );
 
   Widget _buildPersonaSelector(AppLocalizations l10n) => Row(
@@ -315,7 +316,7 @@ class _SmartPushSettingsScreenState
                   : colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: DS.sm),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(label, style: const TextStyle(fontWeight: DS.fontWeightBold)),
             const SizedBox(height: DS.xs),
             Text(
               description,
@@ -338,7 +339,7 @@ class _SmartPushSettingsScreenState
               Text(
                 l10n.smartPushFrequencyLabel(_dailyCap),
                 style: const TextStyle(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: DS.fontWeightBold,
                   fontSize: 18,
                 ),
               ),

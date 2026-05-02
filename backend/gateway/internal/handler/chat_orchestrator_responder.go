@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -26,6 +27,23 @@ func newEnvelopeResponder(writer *wsSafeWriter, env *wsEnvelopeIn, ctx context.C
 		envelope: env,
 		ctx:      ctx,
 	}
+}
+
+func legacyAcceptedAckPayload(requestID string) map[string]interface{} {
+	return map[string]interface{}{
+		"type":       "ack",
+		"message_id": requestID,
+		"request_id": requestID,
+		"server_ts":  time.Now().UnixMilli(),
+		"status":     "received",
+	}
+}
+
+func sendLegacyAcceptedAck(writer *wsSafeWriter, requestID string) bool {
+	if strings.TrimSpace(requestID) == "" {
+		return true
+	}
+	return writeWSJSONLogged(writer, "legacy accepted ack", legacyAcceptedAckPayload(requestID))
 }
 
 func (r *envelopeResponder) SendAck() {
@@ -213,7 +231,11 @@ func (r *envelopeResponder) SendPlanReviewStatus(reviewID, status string, data m
 	for k, v := range data {
 		statusMsg[k] = v
 	}
-	raw, _ := json.Marshal(statusMsg)
+	raw, err := json.Marshal(statusMsg)
+	if err != nil {
+		log.Printf("Failed to marshal plan review status: %v", err)
+		return
+	}
 	payload := map[string]json.RawMessage{
 		"plan_review_status": raw,
 	}
@@ -254,23 +276,27 @@ func newProtobufResponder(writer *wsSafeWriter, msg *pbws.WebSocketMessage, ctx 
 }
 
 func (r *protobufResponder) SendAck() {
-	// For P2, we can define a dedicated Ack message or just use status
-	// Using generic WebSocketMessage for Ack
-	// Payload could be empty or a simple status proto
 	r.sendProto("ack", nil)
 }
 
+// marshalJSON logs marshal errors instead of silently ignoring them.
+func marshalJSON(v interface{}) json.RawMessage {
+	raw, err := json.Marshal(v)
+	if err != nil {
+		log.Printf("protobufResponder: json.Marshal failed: %v", err)
+		return json.RawMessage(`{}`)
+	}
+	return raw
+}
+
 func (r *protobufResponder) SendError(code, message string, retryable bool) {
-	// TRACKED(TD-009): Define Error proto in websocket.proto
-	// For now, sending JSON error inside protobuf wrapper to be compatible with clients expecting structured error
 	enumCode := parseErrorCode(code)
 	errBody := map[string]interface{}{
 		"error_code": normalizeErrorCodeString(enumCode),
 		"message":    message,
 		"retryable":  retryable,
 	}
-	raw, _ := json.Marshal(errBody)
-	r.sendProto("error", raw)
+	r.sendProto("error", marshalJSON(errBody))
 }
 
 func (r *protobufResponder) SendActionStatus(actionID, status string, data map[string]interface{}) {
@@ -282,13 +308,11 @@ func (r *protobufResponder) SendActionStatus(actionID, status string, data map[s
 	for k, v := range data {
 		statusMsg[k] = v
 	}
-	raw, _ := json.Marshal(statusMsg)
-	r.sendProto("action_status", raw)
+	r.sendProto("action_status", marshalJSON(statusMsg))
 }
 
 func (r *protobufResponder) SendToolResult(payload map[string]interface{}) {
-	raw, _ := json.Marshal(payload)
-	r.sendProto("tool_result", raw)
+	r.sendProto("tool_result", marshalJSON(payload))
 }
 
 func (r *protobufResponder) SendInterventionAck(requestID, status, message string) {
@@ -300,8 +324,7 @@ func (r *protobufResponder) SendInterventionAck(requestID, status, message strin
 	if message != "" {
 		ack["message"] = message
 	}
-	raw, _ := json.Marshal(ack)
-	r.sendProto("intervention_feedback_ack", raw)
+	r.sendProto("intervention_feedback_ack", marshalJSON(ack))
 }
 
 func (r *protobufResponder) SendResponseFeedbackAck(responseID, status, message string) {
@@ -313,8 +336,7 @@ func (r *protobufResponder) SendResponseFeedbackAck(responseID, status, message 
 	if message != "" {
 		ack["message"] = message
 	}
-	raw, _ := json.Marshal(ack)
-	r.sendProto("response_feedback_ack", raw)
+	r.sendProto("response_feedback_ack", marshalJSON(ack))
 }
 
 func (r *protobufResponder) SendUpdateNodeMasteryAck(nodeID, version string, success bool) {
@@ -324,8 +346,7 @@ func (r *protobufResponder) SendUpdateNodeMasteryAck(nodeID, version string, suc
 		"success":   success,
 		"timestamp": time.Now().Unix(),
 	}
-	raw, _ := json.Marshal(body)
-	r.sendProto("ack_update_node_mastery", raw)
+	r.sendProto("ack_update_node_mastery", marshalJSON(body))
 }
 
 func (r *protobufResponder) SendUpdateNodeError(nodeID, version, message string) {
@@ -334,8 +355,7 @@ func (r *protobufResponder) SendUpdateNodeError(nodeID, version, message string)
 		"version": version,
 		"error":   message,
 	}
-	raw, _ := json.Marshal(body)
-	r.sendProto("error_update_node_mastery", raw)
+	r.sendProto("error_update_node_mastery", marshalJSON(body))
 }
 
 func (r *protobufResponder) SendChatResponse(resp *agentv1.ChatResponse) error {

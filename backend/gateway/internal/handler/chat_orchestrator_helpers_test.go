@@ -113,6 +113,58 @@ func TestDecodeChatRequestEnvelopeProtoJSON(t *testing.T) {
 	}
 }
 
+func TestDecodeChatRequestEnvelopePreservesAuroraCorrectionPayload(t *testing.T) {
+	var input chatInput
+	raw := json.RawMessage(`{
+		"sessionId":"session-aurora",
+		"message":"That is not quite right",
+		"extraContext":{
+			"aurora_correction":{
+				"surface":"chat",
+				"source":"freeform_input",
+				"semantic_value":"freeform_correction",
+				"label":"Let me explain",
+				"freeform_text":"The blocker was illness, not avoidance.",
+				"is_freeform":true,
+				"is_disconfirming":true,
+				"band_status":"needs_confirm",
+				"telemetry_id":"tel-1",
+				"group_id":"group-1",
+				"conversation_id":"conversation-1",
+				"message_id":"message-1"
+			}
+		}
+	}`)
+	if err := decodeChatRequestEnvelope(raw, &input); err != nil {
+		t.Fatalf("decodeChatRequestEnvelope returned error: %v", err)
+	}
+	correction, ok := input.ExtraContext["aurora_correction"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("expected aurora_correction map, got %#v", input.ExtraContext["aurora_correction"])
+	}
+	for _, key := range []string{
+		"surface",
+		"source",
+		"semantic_value",
+		"label",
+		"freeform_text",
+		"is_freeform",
+		"is_disconfirming",
+		"band_status",
+		"telemetry_id",
+		"group_id",
+		"conversation_id",
+		"message_id",
+	} {
+		if _, ok := correction[key]; !ok {
+			t.Fatalf("expected aurora_correction to preserve %q, got %#v", key, correction)
+		}
+	}
+	if correction["conversation_id"] != "conversation-1" || correction["message_id"] != "message-1" {
+		t.Fatalf("unexpected correlation fields: %#v", correction)
+	}
+}
+
 func TestDecodeChatRequestEnvelopeRejectsInvalidShape(t *testing.T) {
 	var input chatInput
 	raw := json.RawMessage(`{"message":{"text":"bad-shape"}}`)

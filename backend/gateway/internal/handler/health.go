@@ -17,7 +17,10 @@ import (
 // P3: Comprehensive health check handler for production readiness
 // Provides Kubernetes-compatible liveness/readiness probes and detailed health info
 
-// HealthHandler provides health check endpoints
+// HealthHandler provides health check endpoints.
+// Intentional: holds raw *pgxpool.Pool and *redis.Client for direct Ping checks.
+// Health probes must bypass service layers so they can detect infrastructure
+// failures even when service-level abstractions mask them.
 type HealthHandler struct {
 	db          *pgxpool.Pool
 	redis       *redis.Client
@@ -34,12 +37,12 @@ type HealthHandler struct {
 
 // HealthResponse represents the full health check response
 type HealthResponse struct {
-	Status     string                    `json:"status"`
-	Version    string                    `json:"version"`
-	Uptime     string                    `json:"uptime"`
-	Timestamp  time.Time                 `json:"timestamp"`
+	Status     string                     `json:"status"`
+	Version    string                     `json:"version"`
+	Uptime     string                     `json:"uptime"`
+	Timestamp  time.Time                  `json:"timestamp"`
 	Components map[string]ComponentStatus `json:"components"`
-	System     *SystemInfo               `json:"system,omitempty"`
+	System     *SystemInfo                `json:"system,omitempty"`
 }
 
 // ComponentStatus represents the health of a single component
@@ -221,7 +224,7 @@ func (h *HealthHandler) checkDatabase(ctx context.Context) ComponentStatus {
 		return ComponentStatus{
 			Status:  "unhealthy",
 			Latency: latency,
-			Message: err.Error(),
+			Message: sanitizePlainError(ctx, http.StatusServiceUnavailable, err, "health.database.ping"),
 		}
 	}
 
@@ -249,7 +252,7 @@ func (h *HealthHandler) checkRedis(ctx context.Context) ComponentStatus {
 		return ComponentStatus{
 			Status:  "unhealthy",
 			Latency: latency,
-			Message: err.Error(),
+			Message: sanitizePlainError(ctx, http.StatusServiceUnavailable, err, "health.redis.ping"),
 		}
 	}
 
@@ -299,7 +302,7 @@ func (h *HealthHandler) checkGRPCAgent(ctx context.Context) ComponentStatus {
 	case !status.IsHealthy:
 		compStatus.Status = "unhealthy"
 		if status.LastError != nil {
-			compStatus.Message = status.LastError.Error()
+			compStatus.Message = sanitizePlainError(ctx, http.StatusServiceUnavailable, status.LastError, "health.grpc_agent.last_error")
 		} else {
 			compStatus.Message = "health check failed"
 		}

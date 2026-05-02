@@ -1,0 +1,13 @@
+{
+  "id": "core_session_checkpoint_deeper",
+  "family": "core_session_opening",
+  "kind": "core_session_opening",
+  "title": "Core Session：Checkpoint 深入",
+  "input": {
+    "trigger_source": "checkpoint_card",
+    "observed_signals": ["checkpoint 进度比预期慢 18%", "错题集中在同一类知识点"],
+    "suggested_agenda_preview": ["看真实偏差", "决定要不要重排下一阶段"],
+    "why_now": "现在调整比等到最后一天补救更轻",
+    "estimated_minutes": 5
+  }
+}

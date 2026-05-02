@@ -41,6 +41,18 @@ class DifficultyLevelEnum(StrEnum):
     EXPERT = "expert"
 
 
+class SeedAdoptionAction(BaseModel):
+    """可执行的种子采纳后续动作"""
+
+    action_type: str = Field(..., description="动作类型，如 create_plan/create_task/share_to_community")
+    label: str = Field(..., description="动作显示文案")
+    description: str | None = Field(None, description="动作说明")
+    resource_type: str = Field(default="seed_library", description="关联资源类型")
+    resource_id: UUID | None = Field(None, description="关联资源ID")
+    route: str | None = Field(None, description="移动端可跳转路由")
+    payload: dict[str, Any] = Field(default_factory=dict, description="动作上下文")
+
+
 # ============ 库相关 Schema ============
 
 class LibraryBase(BaseModel):
@@ -94,6 +106,7 @@ class LibraryInfo(BaseModel):
     current_user_rating: float | None = Field(None, description="当前用户评分")
     item_count: int = Field(default=0, description="内容项数量")
     subscriber_count: int = Field(default=0, description="订阅者数量")
+    adoption_next_actions: list[SeedAdoptionAction] = Field(default_factory=list, description="采纳后可执行的下一步动作")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 
@@ -165,6 +178,7 @@ class ItemInfo(BaseModel):
     tags: list[str] | None = Field(default_factory=list, description="标签列表")
     order_index: int = Field(default=0, description="排序索引")
     is_active: bool = Field(default=True, description="是否启用")
+    adoption_next_actions: list[SeedAdoptionAction] = Field(default_factory=list, description="该内容项可转化的后续动作")
     created_at: datetime = Field(..., description="创建时间")
     updated_at: datetime = Field(..., description="更新时间")
 
@@ -229,9 +243,12 @@ class SubscriptionInfo(BaseModel):
     is_enabled: bool = Field(default=True, description="是否启用")
     priority: int = Field(default=0, description="优先级")
     notes: str | None = Field(None, description="备注")
+    adoption_next_actions: list[SeedAdoptionAction] = Field(default_factory=list, description="采纳后可执行的下一步动作")
+    community_share: dict[str, Any] | None = Field(default=None, description="安全分享上下文")
     subscribed_at: datetime = Field(..., description="订阅时间")
     last_used_at: datetime | None = Field(None, description="最后使用时间")
     created_at: datetime = Field(..., description="创建时间")
+    updated_at: datetime = Field(..., description="更新时间")
 
     model_config = ConfigDict(from_attributes=True)
 

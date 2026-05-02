@@ -1,0 +1,11 @@
+{
+  "id": "push_gentle_comeback",
+  "family": "push_copy",
+  "kind": "push_copy",
+  "title": "推送文案：温和回归",
+  "input": {
+    "lead": "你不用一次把节奏追回来。",
+    "body": "先回来做一个 15 分钟的小闭环，我会把剩下的计划重新接上。",
+    "action": "从上次停住的地方继续就好。"
+  }
+}

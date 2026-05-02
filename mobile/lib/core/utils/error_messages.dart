@@ -37,6 +37,10 @@ class ErrorMessages {
     // 2. 基于错误代码进行匹配映射
     switch (errorCode.toUpperCase()) {
       // 连接相关错误
+      case 'OFFLINE':
+      case 'NO_INTERNET':
+        return l10n.errorConnectionFailed;
+
       case 'CONNECTION_ERROR':
       case 'WEBSOCKET_ERROR':
         return l10n.errorConnectionFailed;
@@ -67,6 +71,7 @@ class ErrorMessages {
       // 请求相关错误
       case 'INVALID_REQUEST':
       case 'BAD_REQUEST':
+      case 'VALIDATION_ERROR':
         return l10n.errorServerIssue;
 
       case 'RATE_LIMIT_EXCEEDED':
@@ -115,6 +120,9 @@ class ErrorMessages {
       case 'CONNECTION_ERROR':
       case 'WEBSOCKET_ERROR':
         return '连接中断了，我没法继续拿到后续结果。';
+      case 'OFFLINE':
+      case 'NO_INTERNET':
+        return '看起来已经离线了。已保留本地内容，连网后可以重试。';
       case 'CONNECTION_TIMEOUT':
       case 'STREAM_TIMEOUT':
         return '这轮等待超时了，我只拿到部分结果。';
@@ -149,6 +157,8 @@ class ErrorMessages {
       case 'WEBSOCKET_ERROR':
       case 'CONNECTION_TIMEOUT':
       case 'STREAM_TIMEOUT':
+      case 'OFFLINE':
+      case 'NO_INTERNET':
       case 'MAX_RETRIES_EXCEEDED':
       case 'SERVER_ERROR':
       case 'INTERNAL_ERROR':
@@ -163,14 +173,18 @@ class ErrorMessages {
   }
 
   /// 获取错误对应的建议操作
-  static String getActionSuggestion(String errorCode,
-      {AppLocalizations? l10n,}) {
+  static String getActionSuggestion(
+    String errorCode, {
+    AppLocalizations? l10n,
+  }) {
     // 建议操作也可以根据 l10n 进一步细化，目前保持简单
     switch (errorCode.toUpperCase()) {
       case 'CONNECTION_ERROR':
       case 'WEBSOCKET_ERROR':
       case 'CONNECTION_TIMEOUT':
       case 'STREAM_TIMEOUT':
+      case 'OFFLINE':
+      case 'NO_INTERNET':
         return '检查网络后重试，或先看当前已返回的部分结果';
       case 'UNAUTHORIZED':
       case 'AUTH_REQUIRED':

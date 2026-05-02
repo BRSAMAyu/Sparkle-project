@@ -493,15 +493,15 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
   Color _laneColor(String lane) {
     switch (lane) {
       case 'streak_lane':
-        return const Color(0xFFFF8A3D);
+        return DS.warning;
       case 'sprint_lane':
-        return const Color(0xFF2FB6FF);
+        return DS.info;
       case 'knowledge_lane':
-        return const Color(0xFF78E08F);
+        return DS.success;
       case 'social_lane':
-        return const Color(0xFFE8A1FF);
+        return DS.brandSecondary;
       default:
-        return const Color(0xFFFFD166);
+        return DS.warning;
     }
   }
 

@@ -74,7 +74,8 @@ class _GrowthCardState extends State<GrowthCard>
             color: DS.surfaceHigh,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: DS.success.withValues(alpha: widget.isMilestone ? 0.5 : 0.3),
+              color:
+                  DS.success.withValues(alpha: widget.isMilestone ? 0.5 : 0.3),
             ),
             boxShadow: [
               BoxShadow(
@@ -167,7 +168,8 @@ class _GrowthCardState extends State<GrowthCard>
                 padding: const EdgeInsets.fromLTRB(12, 4, 12, 12),
                 child: Row(
                   children: widget.actions.map((action) {
-                    final isDismiss = action.contains('累') || action.contains(context.l10n.chatNotNeeded);
+                    final isDismiss = action.contains('累') ||
+                        action.contains(context.l10n.chatNotNeeded);
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ActionChip(

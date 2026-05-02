@@ -3,10 +3,15 @@ package middleware
 import (
 	"context"
 	"math"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/time/rate"
 )
 
 func newDistributedRateLimiterForTest(t *testing.T, rate float64, burst, initialTokens int) (*DistributedRateLimiter, *miniredis.Miniredis) {
@@ -104,5 +109,134 @@ func TestRateLimiter_BurstExhaustion(t *testing.T) {
 
 	if refillPasses < 3 || refillPasses > 4 {
 		t.Fatalf("post-burst refill allowed %d requests, want about 2/s over 2s (3-4)", refillPasses)
+	}
+}
+
+func TestSlidingWindowRateLimiter_AllowRejectAndRecover(t *testing.T) {
+	t.Parallel()
+
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() {
+		_ = rdb.Close()
+	})
+
+	limiter := NewSlidingWindowRateLimiter(rdb, 500*time.Millisecond, 2, "ratelimit-test")
+	ctx := context.Background()
+
+	allowed, remaining, err := limiter.Allow(ctx, "sliding")
+	if err != nil {
+		t.Fatalf("first Allow(): %v", err)
+	}
+	if !allowed || remaining != 1 {
+		t.Fatalf("first request allowed=%v remaining=%d, want allowed true remaining 1", allowed, remaining)
+	}
+
+	time.Sleep(10 * time.Millisecond)
+	allowed, remaining, err = limiter.Allow(ctx, "sliding")
+	if err != nil {
+		t.Fatalf("second Allow(): %v", err)
+	}
+	if !allowed || remaining != 0 {
+		t.Fatalf("second request allowed=%v remaining=%d, want allowed true remaining 0", allowed, remaining)
+	}
+
+	time.Sleep(10 * time.Millisecond)
+	allowed, remaining, err = limiter.Allow(ctx, "sliding")
+	if err != nil {
+		t.Fatalf("third Allow(): %v", err)
+	}
+	if allowed || remaining != 0 {
+		t.Fatalf("third request allowed=%v remaining=%d, want allowed false remaining 0", allowed, remaining)
+	}
+
+	time.Sleep(550 * time.Millisecond)
+	allowed, remaining, err = limiter.Allow(ctx, "sliding")
+	if err != nil {
+		t.Fatalf("post-window Allow(): %v", err)
+	}
+	if !allowed || remaining != 1 {
+		t.Fatalf("post-window request allowed=%v remaining=%d, want allowed true remaining 1", allowed, remaining)
+	}
+}
+
+func TestHybridRateLimitMiddleware_RedisAllowAndReject(t *testing.T) {
+	limiter, _ := newDistributedRateLimiterForTest(t, 1, 1, 1)
+	localRL := NewRateLimiterWithCleanup(rate.Limit(100), 100, time.Minute)
+	t.Cleanup(localRL.Stop)
+
+	router := gin.New()
+	router.Use(HybridRateLimitMiddleware(limiter.rdb, localRL, HybridRateLimiterConfig{
+		Backend:         "redis",
+		Rate:            1,
+		Burst:           1,
+		CleanupInterval: time.Minute,
+	}))
+	router.GET("/limited", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
+	first := httptest.NewRecorder()
+	firstReq := httptest.NewRequest(http.MethodGet, "/limited", nil)
+	firstReq.RemoteAddr = "127.0.0.1:34567"
+	router.ServeHTTP(first, firstReq)
+	if first.Code != http.StatusOK {
+		t.Fatalf("first redis-backed request got %d, want %d", first.Code, http.StatusOK)
+	}
+	if first.Header().Get("X-RateLimit-Remaining") != "0" {
+		t.Fatalf("first request remaining header = %q, want 0", first.Header().Get("X-RateLimit-Remaining"))
+	}
+
+	second := httptest.NewRecorder()
+	secondReq := httptest.NewRequest(http.MethodGet, "/limited", nil)
+	secondReq.RemoteAddr = "127.0.0.1:34567"
+	router.ServeHTTP(second, secondReq)
+	if second.Code != http.StatusTooManyRequests {
+		t.Fatalf("second redis-backed request got %d, want %d", second.Code, http.StatusTooManyRequests)
+	}
+}
+
+func TestHybridRateLimitMiddleware_RedisFailureFallsBackToLocalLimiter(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{
+		Addr:         mr.Addr(),
+		MaxRetries:   0,
+		DialTimeout:  5 * time.Millisecond,
+		ReadTimeout:  5 * time.Millisecond,
+		WriteTimeout: 5 * time.Millisecond,
+	})
+	t.Cleanup(func() {
+		_ = rdb.Close()
+	})
+	mr.Close()
+
+	localRL := NewRateLimiterWithCleanup(rate.Limit(0), 1, time.Minute)
+	t.Cleanup(localRL.Stop)
+
+	router := gin.New()
+	router.Use(HybridRateLimitMiddleware(rdb, localRL, HybridRateLimiterConfig{
+		Backend:         "redis",
+		Rate:            1,
+		Burst:           1,
+		CleanupInterval: time.Minute,
+	}))
+	router.GET("/fallback", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
+	first := httptest.NewRecorder()
+	firstReq := httptest.NewRequest(http.MethodGet, "/fallback", nil)
+	firstReq.RemoteAddr = "127.0.0.1:34567"
+	router.ServeHTTP(first, firstReq)
+	if first.Code != http.StatusOK {
+		t.Fatalf("first local fallback request got %d, want %d", first.Code, http.StatusOK)
+	}
+
+	second := httptest.NewRecorder()
+	secondReq := httptest.NewRequest(http.MethodGet, "/fallback", nil)
+	secondReq.RemoteAddr = "127.0.0.1:34567"
+	router.ServeHTTP(second, secondReq)
+	if second.Code != http.StatusTooManyRequests {
+		t.Fatalf("second local fallback request got %d, want %d", second.Code, http.StatusTooManyRequests)
 	}
 }

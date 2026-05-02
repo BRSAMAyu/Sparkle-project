@@ -37,6 +37,7 @@ groups:
           severity: warning
           tier: P2
           service: backend
+          alertgroup: slo_auto_response
         annotations:
           summary: "Backend 5xx rate high"
           description: "5xx ratio > 2% for 10m"
@@ -53,6 +54,7 @@ groups:
           severity: warning
           tier: P2
           service: backend
+          alertgroup: slo_auto_response
         annotations:
           summary: "Backend P95 latency high"
           description: "P95 latency exceeds 1.5s for 10m"
@@ -65,6 +67,7 @@ groups:
           severity: warning
           tier: P2
           service: backend
+          alertgroup: slo_auto_response
         annotations:
           summary: "Event stream lag high"
           description: "Event stream lag above 120s for 5m"
@@ -117,3 +120,188 @@ groups:
           summary: "Event Bus consumer lag exceeds 5 minutes"
           description: "Redis Streams consumer group lag is above 300s. Consumers may be stalled or overwhelmed."
           runbook: "monitoring/runbooks/incident_response.md#p2-eventbus-lag"
+
+      - alert: SparkleAuroraCorrectionLoopStuck
+        expr: increase(sparkle_aurora_correction_failure_total[10m]) > 5
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Aurora correction loop stuck"
+          description: "More than 5 consecutive Aurora correction failures in the last 10 minutes. The calibration loop may be stuck and unable to converge for affected users."
+          runbook: "monitoring/runbooks/incident_response.md#p2-aurora-correction-stuck"
+
+      - alert: SparkleCircuitBreakerOpen
+        expr: sparkle_grpc_circuit_breaker_state{state="open"} == 1
+        for: 2m
+        labels:
+          severity: warning
+          tier: P2
+          service: gateway
+        annotations:
+          summary: "gRPC circuit breaker is open"
+          description: "The gRPC agent client circuit breaker has been open for more than 2 minutes. All agent requests are being rejected without attempt."
+          runbook: "monitoring/runbooks/incident_response.md#p2-circuit-breaker-open"
+
+      - alert: SparkleWebSocketConnectionsGrowing
+        expr: deriv(sparkle_ws_active_connections[30m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: gateway
+        annotations:
+          summary: "WebSocket connections growing steadily"
+          description: "Active WebSocket connections have been growing at more than 0.5 connections per second over a 30 minute window."
+          runbook: "monitoring/runbooks/incident_response.md#p2-websocket-connections-growing"
+
+      - alert: SparkleSessionLockContentionHigh
+        expr: increase(sparkle_session_lock_acquire_failures_total[5m]) > 5
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Session lock contention is high"
+          description: "More than 5 session lock acquire attempts failed due to contention in the last 5 minutes."
+          runbook: "monitoring/runbooks/incident_response.md#p2-session-lock-contention"
+
+      - alert: SparkleGrpcStreamSemaphoreUsageHigh
+        expr: sparkle_grpc_stream_semaphore_usage > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: gateway
+        annotations:
+          summary: "gRPC stream semaphore usage high"
+          description: "Gateway gRPC StreamChat semaphore usage has exceeded 80% for 5 minutes."
+          runbook: "monitoring/runbooks/incident_response.md#p2-grpc-stream-semaphore-usage"
+
+      - alert: SparkleAuroraCorrectionsNotTakingEffect
+        expr: |
+          (
+            sum(increase(sparkle_aurora_correction_to_state_change_total{changed="false"}[30m]))
+            /
+            clamp_min(sum(increase(sparkle_aurora_correction_to_state_change_total[30m])), 1)
+          ) > 0.6
+          and
+          sum(increase(sparkle_aurora_correction_to_state_change_total[30m])) > 10
+        for: 15m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Aurora corrections are not changing behavior"
+          description: "More than 60% of Aurora corrections produced no state/profile change across at least 10 corrections in 30 minutes."
+          runbook: "monitoring/runbooks/incident_response.md#p2-aurora-corrections-not-taking-effect"
+
+      - alert: SparkleCardActionFailuresHigh
+        expr: sum(increase(sparkle_product_loop_event_total{loop="card_action",outcome=~"failed|invalid"}[10m])) > 5
+        for: 10m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Card action failures are high"
+          description: "More than 5 timeline/card action failures or invalid actions were recorded in 10 minutes."
+          runbook: "monitoring/runbooks/incident_response.md#p2-card-action-failures-high"
+
+      - alert: SparklePushFatigueHigh
+        expr: |
+          (
+            sum(increase(sparkle_product_loop_event_total{loop="push_judgment",outcome=~"dismissed|ignored"}[30m]))
+            /
+            clamp_min(sum(increase(sparkle_product_loop_event_total{loop="push_judgment"}[30m])), 1)
+          ) > 0.7
+          and
+          sum(increase(sparkle_product_loop_event_total{loop="push_judgment"}[30m])) > 20
+        for: 15m
+        labels:
+          severity: warning
+          tier: P2
+          service: backend
+        annotations:
+          summary: "Push fatigue signal is high"
+          description: "More than 70% of recent push interactions were dismiss or ignore across at least 20 interactions."
+          runbook: "monitoring/runbooks/incident_response.md#p2-push-fatigue-high"
+
+      - alert: SparkleCommunityFeedEmptyHigh
+        expr: |
+          (
+            sum(increase(sparkle_product_loop_event_total{loop="community_feed",reason="empty"}[30m])) by (surface)
+            /
+            clamp_min(sum(increase(sparkle_product_loop_event_total{loop="community_feed"}[30m])) by (surface), 1)
+          ) > 0.8
+          and
+          sum(increase(sparkle_product_loop_event_total{loop="community_feed"}[30m])) by (surface) > 20
+        for: 15m
+        labels:
+          severity: warning
+          tier: P3
+          service: backend
+        annotations:
+          summary: "Community feed is often empty"
+          description: "A community feed scope is returning empty responses for more than 80% of recent loads."
+          runbook: "monitoring/runbooks/incident_response.md#p3-community-feed-empty-high"
+
+      - alert: SparkleProductLoopLatencyHigh
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum(rate(sparkle_product_loop_latency_seconds_bucket[10m])) by (le, loop, surface)
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+          tier: P3
+          service: backend
+        annotations:
+          summary: "Product loop P95 latency is high"
+          description: "A user-impact product loop has P95 latency above 2 seconds for 10 minutes."
+          runbook: "monitoring/runbooks/incident_response.md#p3-product-loop-latency-high"
+
+      # --- Resource Alerts (P2-Inf-2) ---
+
+      - alert: SparkleDatabasePoolExhaustion
+        expr: pg_stat_activity_count{datname="sparkle"} > 25
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: database
+          alertgroup: slo_auto_response
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "PostgreSQL connection count for sparkle database has exceeded 25 for 5 minutes. Pool exhaustion will cause request failures."
+          runbook: "monitoring/runbooks/incident_response.md#p2-database-pool"
+
+      - alert: SparkleDiskSpaceHigh
+        expr: (node_filesystem_size_bytes{mountpoint="/var/lib/postgresql"} - node_filesystem_avail_bytes{mountpoint="/var/lib/postgresql"}) / node_filesystem_size_bytes{mountpoint="/var/lib/postgresql"} > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: infrastructure
+        annotations:
+          summary: "Database disk space above 90%"
+          description: "PostgreSQL data volume disk usage has exceeded 90%. Risk of database corruption and write failures."
+          runbook: "monitoring/runbooks/incident_response.md#p2-disk-space"
+
+      - alert: SparkleContainerMemoryHigh
+        expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          tier: P2
+          service: infrastructure
+          alertgroup: slo_auto_response
+        annotations:
+          summary: "Container memory usage above 90%"
+          description: "A container is using over 90% of its memory limit. Risk of OOM kills."
+          runbook: "monitoring/runbooks/incident_response.md#p2-memory"

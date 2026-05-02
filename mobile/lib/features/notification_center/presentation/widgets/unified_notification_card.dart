@@ -16,6 +16,7 @@ class UnifiedNotificationCard extends StatelessWidget {
     this.onSnooze,
     this.onPushDismiss,
     this.onPushDisableCategory,
+    this.onRecallInaccurate,
     this.onAccountabilityEncourage,
     super.key,
   });
@@ -28,6 +29,7 @@ class UnifiedNotificationCard extends StatelessWidget {
   final VoidCallback? onSnooze;
   final VoidCallback? onPushDismiss;
   final VoidCallback? onPushDisableCategory;
+  final VoidCallback? onRecallInaccurate;
   final VoidCallback? onAccountabilityEncourage;
 
   @override
@@ -37,6 +39,7 @@ class UnifiedNotificationCard extends StatelessWidget {
     final snoozeAction = onSnooze;
     final pushDismissAction = onPushDismiss;
     final pushDisableCategoryAction = onPushDisableCategory;
+    final recallInaccurateAction = onRecallInaccurate;
     final accountabilityEncourageAction = onAccountabilityEncourage;
 
     return Dismissible(
@@ -117,7 +120,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: notification.isRead
                                 ? FontWeight.normal
-                                : FontWeight.bold,
+                                : DS.fontWeightBold,
                           ),
                     ),
 
@@ -164,6 +167,13 @@ class UnifiedNotificationCard extends StatelessWidget {
                         _buildSourceBadge(context),
                       ],
                     ),
+                    if (notification.hasRecallValueDetails) ...[
+                      const SizedBox(height: DS.sm),
+                      _buildRecallValueDisclosure(
+                        context,
+                        onInaccurate: recallInaccurateAction,
+                      ),
+                    ],
                     if (notification.isIntervention) ...[
                       const SizedBox(height: DS.sm),
                       Wrap(
@@ -206,7 +216,8 @@ class UnifiedNotificationCard extends StatelessWidget {
                               pushDisableCategoryAction != null)
                             SparkleButton.outline(
                               onPressed: pushDisableCategoryAction,
-                              label: context.l10n.notificationDisablePushCategory,
+                              label:
+                                  context.l10n.notificationDisablePushCategory,
                             ),
                         ],
                       ),
@@ -278,6 +289,93 @@ class UnifiedNotificationCard extends StatelessWidget {
           fontSize: 10,
           color: badgeColor,
           fontWeight: DS.fontWeightMedium,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecallValueDisclosure(
+    BuildContext context, {
+    VoidCallback? onInaccurate,
+  }) {
+    final score = notification.recallScore;
+    final boundedScore = score == null ? null : score.clamp(0.0, 1.0);
+    return Container(
+      decoration: BoxDecoration(
+        color: DS.surfaceSecondary,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: DS.border),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: DS.spacing12),
+          childrenPadding: const EdgeInsets.fromLTRB(
+            DS.spacing12,
+            0,
+            DS.spacing12,
+            DS.spacing12,
+          ),
+          title: Text(
+            context.l10n.notificationRecallWhyTitle,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  fontWeight: DS.fontWeightSemibold,
+                ),
+          ),
+          children: [
+            if (_hasText(notification.valueReason))
+              _buildDetailRow(
+                context,
+                context.l10n.notificationRecallGoalValue,
+                notification.valueReason!,
+              ),
+            if (_hasText(notification.recallReason)) ...[
+              const SizedBox(height: DS.spacing8),
+              _buildDetailRow(
+                context,
+                context.l10n.notificationRecallReason,
+                notification.recallReason!,
+              ),
+            ],
+            if (_hasText(notification.effortEstimate)) ...[
+              const SizedBox(height: DS.spacing8),
+              _buildDetailRow(
+                context,
+                context.l10n.notificationRecallEffort,
+                notification.effortEstimate!,
+              ),
+            ],
+            if (_hasText(notification.deadlinePressureLabel)) ...[
+              const SizedBox(height: DS.spacing8),
+              _buildDetailRow(
+                context,
+                context.l10n.notificationRecallDeadlinePressure,
+                notification.deadlinePressureLabel!,
+              ),
+            ],
+            if (boundedScore != null) ...[
+              const SizedBox(height: DS.spacing8),
+              _buildDetailRow(
+                context,
+                context.l10n.notificationRecallScore,
+                '${(boundedScore * 100).round()}%',
+              ),
+            ],
+            const SizedBox(height: DS.spacing12),
+            if (onInaccurate != null)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: SparkleButton.ghost(
+                  onPressed: onInaccurate,
+                  label: context.l10n.notificationRecallInaccurate,
+                ),
+              )
+            else
+              Text(
+                context.l10n.notificationRecallFeedbackRecorded,
+                style: DS.bodySmall.copyWith(color: DS.success),
+              ),
+          ],
         ),
       ),
     );
@@ -384,7 +482,8 @@ class UnifiedNotificationCard extends StatelessWidget {
                   notification.suggestedStep!.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Text(
-                  context.l10n.notificationSuggestedAction(notification.suggestedStep!),
+                  context.l10n
+                      .notificationSuggestedAction(notification.suggestedStep!),
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         fontWeight: DS.fontWeightSemibold,
                       ),
@@ -396,7 +495,10 @@ class UnifiedNotificationCard extends StatelessWidget {
                 _buildDetailRow(
                   context,
                   context.l10n.notificationParameterAdjustment,
-                  _buildParameterCompilationSummary(context, parameterCompilation),
+                  _buildParameterCompilationSummary(
+                    context,
+                    parameterCompilation,
+                  ),
                 ),
               ],
               if (notification.isIntervention && evidence.isNotEmpty) ...[
@@ -412,7 +514,9 @@ class UnifiedNotificationCard extends StatelessWidget {
                 _buildDetailRow(
                   context,
                   context.l10n.notificationTriggerEvidence,
-                  notification.evidenceToken ?? context.l10n.notificationNotProvided,
+                  notification.proactiveReason ??
+                      notification.evidenceToken ??
+                      context.l10n.notificationNotProvided,
                 ),
                 const SizedBox(height: 8),
                 _buildDetailRow(
@@ -465,6 +569,8 @@ class UnifiedNotificationCard extends StatelessWidget {
         ],
       );
 
+  bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
+
   String _labelForInteractionState(BuildContext context, String state) {
     switch (state) {
       case 'seen':
@@ -503,15 +609,22 @@ class UnifiedNotificationCard extends StatelessWidget {
     }
   }
 
-  String _buildParameterCompilationSummary(BuildContext context, Map<String, dynamic> compilation) {
+  String _buildParameterCompilationSummary(
+    BuildContext context,
+    Map<String, dynamic> compilation,
+  ) {
     final result = compilation['result'] as String? ?? 'unknown';
     final affected = compilation['affected_task_count'] as int? ?? 0;
     final inserted = compilation['inserted_task_count'] as int? ?? 0;
     final hidden = compilation['hidden_task_count'] as int? ?? 0;
-    return context.l10n.notificationCompilationSummary(result, affected, inserted, hidden);
+    return context.l10n
+        .notificationCompilationSummary(result, affected, inserted, hidden);
   }
 
-  String _buildEvidenceSummary(BuildContext context, Map<String, dynamic> evidence) {
+  String _buildEvidenceSummary(
+    BuildContext context,
+    Map<String, dynamic> evidence,
+  ) {
     final improvement = evidence['improvement'];
     if (improvement is Map) {
       final map = Map<String, dynamic>.from(improvement);
@@ -524,8 +637,10 @@ class UnifiedNotificationCard extends StatelessWidget {
       return [
         if (recovered) context.l10n.notificationEvidencePlanHealthRecovered,
         if (masteryImproved) context.l10n.notificationEvidenceMasteryImproved,
-        if (feedbackCount > 0) context.l10n.notificationEvidenceFeedbackCount(feedbackCount),
-        if (negativeFeedback > 0) context.l10n.notificationEvidenceNegativeFeedback(negativeFeedback),
+        if (feedbackCount > 0)
+          context.l10n.notificationEvidenceFeedbackCount(feedbackCount),
+        if (negativeFeedback > 0)
+          context.l10n.notificationEvidenceNegativeFeedback(negativeFeedback),
       ].where((item) => item.isNotEmpty).join('，');
     }
     return context.l10n.notificationEvidenceRecorded;

@@ -6,11 +6,14 @@ Security Audit Log Models
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Column, DateTime, ForeignKey, String, Text
+import uuid
+
+from sqlalchemy import JSON, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import relationship
 
 from app.db.session import Base
+from app.models.base import GUID
 
 
 class SecurityAuditLog(Base):
@@ -44,6 +47,70 @@ class SecurityAuditLog(Base):
 
     def __repr__(self):
         return f"<SecurityAuditLog {self.event_type} {self.timestamp}>"
+
+
+class AdminAuditLog(Base):
+    """Append-only audit trail for privileged API operations."""
+
+    __tablename__ = "admin_audit_log"
+
+    id = Column(GUID(), primary_key=True, default=uuid.uuid4, nullable=False, index=True)
+    admin_user_id = Column(GUID(), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    action = Column(String(160), nullable=False, index=True)
+    category = Column(String(80), nullable=False, index=True)
+    risk = Column(String(20), nullable=False, index=True)
+
+    method = Column(String(10), nullable=False)
+    path = Column(String(500), nullable=False, index=True)
+    query_hash = Column(String(64), nullable=True)
+    status_code = Column(Integer, nullable=False, index=True)
+    outcome = Column(String(20), nullable=False, index=True)
+    duration_ms = Column(Float, nullable=False)
+
+    ip_address = Column(String(45), nullable=True, index=True)
+    user_agent = Column(Text, nullable=True)
+    request_id = Column(String(100), nullable=True, index=True)
+    trace_id = Column(String(100), nullable=True, index=True)
+    actor_claims = Column(JSON, nullable=True)
+    error_message = Column(Text, nullable=True)
+    details = Column(JSON, nullable=True)
+
+    occurred_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    retention_until = Column(DateTime, nullable=False, index=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+
+    admin_user = relationship("User", backref="admin_audit_logs", foreign_keys=[admin_user_id])
+
+    def to_archive_dict(self) -> dict:
+        """Serialize immutable fields for object-storage archival."""
+
+        return {
+            "id": str(self.id),
+            "admin_user_id": str(self.admin_user_id) if self.admin_user_id else None,
+            "action": self.action,
+            "category": self.category,
+            "risk": self.risk,
+            "method": self.method,
+            "path": self.path,
+            "query_hash": self.query_hash,
+            "status_code": self.status_code,
+            "outcome": self.outcome,
+            "duration_ms": self.duration_ms,
+            "ip_address": self.ip_address,
+            "user_agent": self.user_agent,
+            "request_id": self.request_id,
+            "trace_id": self.trace_id,
+            "actor_claims": self.actor_claims,
+            "error_message": self.error_message,
+            "details": self.details,
+            "occurred_at": self.occurred_at.isoformat() if self.occurred_at else None,
+            "retention_until": self.retention_until.isoformat() if self.retention_until else None,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+    def __repr__(self):
+        return f"<AdminAuditLog {self.category} {self.action} {self.outcome}>"
 
 
 class DataAccessLog(Base):
@@ -146,5 +213,9 @@ class ComplianceCheckLog(Base):
 # 在User类中添加以下关系：
 # security_audit_logs = relationship("SecurityAuditLog", back_populates="user")
 # data_access_logs = relationship("DataAccessLog", back_populates="user")
-# system_config_change_logs = relationship("SystemConfigChangeLog", back_populates="changer", foreign_keys=[SystemConfigChangeLog.changed_by])
-# compliance_check_logs = relationship("ComplianceCheckLog", back_populates="executor", foreign_keys=[ComplianceCheckLog.executed_by])
+# system_config_change_logs = relationship(
+#     "SystemConfigChangeLog", back_populates="changer", foreign_keys=[SystemConfigChangeLog.changed_by]
+# )
+# compliance_check_logs = relationship(
+#     "ComplianceCheckLog", back_populates="executor", foreign_keys=[ComplianceCheckLog.executed_by]
+# )

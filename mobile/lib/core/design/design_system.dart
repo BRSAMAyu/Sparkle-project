@@ -607,6 +607,8 @@ class DS {
         brandPrimary,
         darkText: neutral900,
       );
+  static Color onColor(Color background) =>
+      ThemeUtils.getContrastSafeText(background);
   static Color get onBrandPrimary => textOnPrimary;
   static Color get border => _isDark ? neutral600 : neutral300;
   static Color get borderStrong =>
@@ -963,6 +965,7 @@ class DS {
   static const double fontSizeXs = 12.0;
   static const double fontSizeSm = 14.0;
   static const double fontSizeBase = 16.0;
+  static const double fontSizeMd = fontSizeBase;
   static const double fontSizeLg = fontSizeBase * _fontRatio;
   static const double fontSizeXl = fontSizeLg * _fontRatio;
   static const double fontSize2xl = fontSizeXl * _fontRatio;

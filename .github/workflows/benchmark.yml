@@ -11,9 +11,9 @@ on:
   workflow_dispatch:
 
 env:
-  GO_VERSION: '1.21'
+  GO_VERSION: '1.24.0'
   PYTHON_VERSION: '3.11'
-  FLUTTER_VERSION: '3.16.0'
+  FLUTTER_VERSION: '3.24.0'
 
 jobs:
   # Go Gateway Benchmarks
@@ -73,7 +73,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: sparkle
           POSTGRES_PASSWORD: sparkle
@@ -105,12 +105,13 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           cache: 'pip'
+          cache-dependency-path: backend/requirements.lock
 
       - name: Install dependencies
         run: |
           cd backend
-          pip install -e .
-          pip install pytest pytest-benchmark pytest-asyncio
+          python -m pip install --upgrade pip
+          pip install -r requirements.lock
 
       - name: Run benchmarks
         env:
@@ -173,7 +174,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Flutter
-        uses: subosito/flutter-action@v2
+        uses: subosito/flutter-action@v3
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: 'stable'
@@ -216,7 +217,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: sparkle
           POSTGRES_PASSWORD: sparkle
@@ -250,8 +251,8 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install -r backend/requirements.txt
-          pip install pytest pytest-asyncio pytest-timeout psutil
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.lock
 
       - name: Run Celery stress tests
         env:
@@ -280,7 +281,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:15
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: sparkle
           POSTGRES_PASSWORD: sparkle
@@ -311,9 +312,13 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.lock
 
-      - name: Install Locust
-        run: pip install locust
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.lock
 
       - name: Start services
         run: |
@@ -371,8 +376,8 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip install -e .
-          pip install pytest pytest-asyncio
+          python -m pip install --upgrade pip
+          pip install -r requirements.lock
 
       - name: Run SparkleGoalBench scenarios
         env:

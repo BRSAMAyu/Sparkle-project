@@ -91,6 +91,14 @@ enum SensoryFeedbackEvent {
   dragDrop,
 }
 
+enum AuroraSensoryEvent {
+  coreSessionOpen,
+  correctionCompleted,
+  statusChanged,
+  achievementUnlocked,
+  streakContinued,
+}
+
 // ---------------------------------------------------------------------------
 // Ambient audio scenes
 // ---------------------------------------------------------------------------
@@ -166,6 +174,8 @@ class SensoryFeedbackService {
   static const _hapticEnabledKey = 'sensory_feedback.haptic_enabled';
   static const _ambientVolumeKey = 'sensory_feedback.ambient_volume';
   static const _ambientSceneKey = 'sensory_feedback.ambient_scene';
+  static const _auroraLinkageEnabledKey =
+      'sensory_feedback.aurora_linkage_enabled';
 
   // ── Player pool ───────────────────────────────────────────────────────────
   static const int _poolSize = 3;
@@ -190,6 +200,7 @@ class SensoryFeedbackService {
 
   // ── Prefs cache ───────────────────────────────────────────────────────────
   static SharedPreferences? _prefs;
+  static bool _auroraLinkageEnabledCache = true;
 
   // ---------------------------------------------------------------------------
   // Init
@@ -227,6 +238,24 @@ class SensoryFeedbackService {
 
   static Future<void> setHapticEnabled(bool enabled) async =>
       (await _getPrefs()).setBool(_hapticEnabledKey, enabled);
+
+  static Future<bool> isAuroraLinkageEnabled() async {
+    try {
+      final saved = (await _getPrefs()).getBool(_auroraLinkageEnabledKey);
+      if (saved != null) {
+        _auroraLinkageEnabledCache = saved;
+      }
+    } catch (_) {
+      // Widget tests and early startup can ask before SharedPreferences is
+      // wired. Use the last known value rather than dropping the UI event.
+    }
+    return _auroraLinkageEnabledCache;
+  }
+
+  static Future<void> setAuroraLinkageEnabled(bool enabled) async {
+    _auroraLinkageEnabledCache = enabled;
+    await (await _getPrefs()).setBool(_auroraLinkageEnabledKey, enabled);
+  }
 
   static Future<void> _setSoundEnabled(bool enabled) async {
     await (await _getPrefs()).setBool(_soundEnabledKey, enabled);
@@ -294,10 +323,20 @@ class SensoryFeedbackService {
     final soundAllowed = enableSound && await isSoundEnabled();
     final hapticAllowed = enableHaptic && await isHapticEnabled();
 
-    if (soundAllowed && _consumeBudget(_recentSoundEvents, _soundBudgetWindow, _soundBudgetLimit)) {
+    if (soundAllowed &&
+        _consumeBudget(
+          _recentSoundEvents,
+          _soundBudgetWindow,
+          _soundBudgetLimit,
+        )) {
       unawaited(_playSound(event));
     }
-    if (hapticAllowed && _consumeBudget(_recentHapticEvents, _hapticBudgetWindow, _hapticBudgetLimit)) {
+    if (hapticAllowed &&
+        _consumeBudget(
+          _recentHapticEvents,
+          _hapticBudgetWindow,
+          _hapticBudgetLimit,
+        )) {
       unawaited(_playHaptic(event));
     }
   }
@@ -317,6 +356,50 @@ class SensoryFeedbackService {
       if (i < events.length - 1) {
         await Future<void>.delayed(gap);
       }
+    }
+  }
+
+  static Future<void> emitAuroraEvent(
+    AuroraSensoryEvent event, {
+    bool enableSound = true,
+    bool enableHaptic = true,
+  }) async {
+    if (!await isAuroraLinkageEnabled()) {
+      return;
+    }
+    await emit(
+      _feedbackEventForAurora(event),
+      enableSound: enableSound,
+      enableHaptic: enableHaptic,
+    );
+  }
+
+  @visibleForTesting
+  static SensoryFeedbackEvent debugFeedbackEventForAurora(
+    AuroraSensoryEvent event,
+  ) =>
+      _feedbackEventForAurora(event);
+
+  @visibleForTesting
+  // ignore: use_setters_to_change_properties
+  static void debugSetAuroraLinkageEnabledCache(bool enabled) {
+    _auroraLinkageEnabledCache = enabled;
+  }
+
+  static SensoryFeedbackEvent _feedbackEventForAurora(
+    AuroraSensoryEvent event,
+  ) {
+    switch (event) {
+      case AuroraSensoryEvent.coreSessionOpen:
+        return SensoryFeedbackEvent.sheetOpen;
+      case AuroraSensoryEvent.correctionCompleted:
+        return SensoryFeedbackEvent.confirm;
+      case AuroraSensoryEvent.statusChanged:
+        return SensoryFeedbackEvent.selection;
+      case AuroraSensoryEvent.achievementUnlocked:
+        return SensoryFeedbackEvent.achievementRare;
+      case AuroraSensoryEvent.streakContinued:
+        return SensoryFeedbackEvent.checkin;
     }
   }
 
@@ -401,6 +484,9 @@ class SensoryFeedbackService {
     _lastEmission.clear();
     _recentSoundEvents.clear();
     _recentHapticEvents.clear();
+    _missingSoundAssets.clear();
+    _prefs = null;
+    _auroraLinkageEnabledCache = true;
   }
 
   // ---------------------------------------------------------------------------

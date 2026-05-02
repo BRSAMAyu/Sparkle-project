@@ -87,118 +87,124 @@ class TransparencyFloatingCapsule extends StatelessWidget {
           boxShadow: DS.shadowSm,
           border: Border.all(color: tone.withValues(alpha: 0.14)),
         ),
-        child: InkWell(
-          borderRadius: DS.borderRadius20,
-          onTap: () async {
-            onExpandedChanged?.call(true);
-            await showSensoryModalBottomSheet<void>(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (context) => SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.all(DS.spacing12),
-                  child: Material(
-                    color: DS.surfacePrimary,
-                    borderRadius: DS.borderRadius20,
-                    clipBehavior: Clip.antiAlias,
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: DS.spacing12),
-                        child: TransparencyPanel(
-                          status: status,
-                          details: details,
-                          promptTokens: promptTokens,
-                          completionTokens: completionTokens,
-                          totalTokens: totalTokens,
-                          currentAgentName: currentAgentName,
-                          activeAgentType: activeAgentType,
-                          activeTools: activeTools,
-                          dailyTokens: dailyTokens,
-                          dailyTokenLimit: dailyTokenLimit,
-                          dailyCostMicroUsd: dailyCostMicroUsd,
-                          transparencyData: transparencyData,
-                          runLedgerSummary: runLedgerSummary,
-                          currentStepIndex: currentStepIndex,
-                          showTokenUsageDetails: preferences.showTokenUsage,
-                          showAgentCollaboration:
-                              preferences.showAgentSwitching,
-                          showReasoningTimeline: preferences.showReasoningSteps,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            );
-            onExpandedChanged?.call(false);
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12,
-              vertical: DS.spacing10,
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: tone,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: DS.spacing10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        summaryLabel ?? 'Sparkle AI',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: DS.textPrimary,
-                          fontWeight: DS.fontWeightSemibold,
-                        ),
-                      ),
-                      if ((details ?? '').trim().isNotEmpty ||
-                          (currentAgentName ?? '').trim().isNotEmpty ||
-                          stepLabel != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 2),
-                          child: Text(
-                            [
-                              if ((details ?? '').trim().isNotEmpty) details!,
-                              if ((currentAgentName ?? '').trim().isNotEmpty)
-                                currentAgentName!,
-                              if (stepLabel != null) context.l10n.chatTransparencyStep(stepLabel),
-                              if (activeTools.isNotEmpty)
-                                '${activeTools.length} tools',
-                            ].join(' · '),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: secondaryText,
-                              fontSize: DS.fontSizeXs,
-                            ),
+        child: Semantics(
+          button: true,
+          label: 'Chat transparency floating capsule control 1',
+          child: InkWell(
+            borderRadius: DS.borderRadius20,
+            onTap: () async {
+              onExpandedChanged?.call(true);
+              await showSensoryModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(DS.spacing12),
+                    child: Material(
+                      color: DS.surfacePrimary,
+                      borderRadius: DS.borderRadius20,
+                      clipBehavior: Clip.antiAlias,
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: DS.spacing12),
+                          child: TransparencyPanel(
+                            status: status,
+                            details: details,
+                            promptTokens: promptTokens,
+                            completionTokens: completionTokens,
+                            totalTokens: totalTokens,
+                            currentAgentName: currentAgentName,
+                            activeAgentType: activeAgentType,
+                            activeTools: activeTools,
+                            dailyTokens: dailyTokens,
+                            dailyTokenLimit: dailyTokenLimit,
+                            dailyCostMicroUsd: dailyCostMicroUsd,
+                            transparencyData: transparencyData,
+                            runLedgerSummary: runLedgerSummary,
+                            currentStepIndex: currentStepIndex,
+                            showTokenUsageDetails: preferences.showTokenUsage,
+                            showAgentCollaboration:
+                                preferences.showAgentSwitching,
+                            showReasoningTimeline:
+                                preferences.showReasoningSteps,
                           ),
                         ),
-                    ],
+                      ),
+                    ),
                   ),
                 ),
-                if (preferences.allowPerTurnDismiss && onDismiss != null)
-                  IconButton(
-                    onPressed: onDismiss,
-                    icon: Icon(
-                      Icons.close_rounded,
-                      size: DS.iconSizeSm,
-                      color: secondaryText,
+              );
+              onExpandedChanged?.call(false);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing12,
+                vertical: DS.spacing10,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: tone,
+                      shape: BoxShape.circle,
                     ),
-                    splashRadius: DS.touchTargetMinSize / 2,
                   ),
-              ],
+                  const SizedBox(width: DS.spacing10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          summaryLabel ?? 'Sparkle AI',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: DS.textPrimary,
+                            fontWeight: DS.fontWeightSemibold,
+                          ),
+                        ),
+                        if ((details ?? '').trim().isNotEmpty ||
+                            (currentAgentName ?? '').trim().isNotEmpty ||
+                            stepLabel != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              [
+                                if ((details ?? '').trim().isNotEmpty) details!,
+                                if ((currentAgentName ?? '').trim().isNotEmpty)
+                                  currentAgentName!,
+                                if (stepLabel != null)
+                                  context.l10n.chatTransparencyStep(stepLabel),
+                                if (activeTools.isNotEmpty)
+                                  '${activeTools.length} tools',
+                              ].join(' · '),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: secondaryText,
+                                fontSize: DS.fontSizeXs,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  if (preferences.allowPerTurnDismiss && onDismiss != null)
+                    IconButton(
+                      onPressed: onDismiss,
+                      icon: Icon(
+                        Icons.close_rounded,
+                        size: DS.iconSizeSm,
+                        color: secondaryText,
+                      ),
+                      splashRadius: DS.touchTargetMinSize / 2,
+                    ),
+                ],
+              ),
             ),
           ),
         ),

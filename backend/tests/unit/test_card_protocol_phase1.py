@@ -1,18 +1,32 @@
 from __future__ import annotations
 
+from datetime import timedelta
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import select
 
-from app.models.card_protocol import BindingMode, Card, CardEdge, CardLifecycleStatus, CardType, EdgeType
+from app.core.time_utils import utcnow
+from app.models.card_protocol import (
+    BindingMode,
+    Card,
+    CardEdge,
+    CardLifecycleStatus,
+    CardShareRecord,
+    CardType,
+    EdgeType,
+    SharePermission,
+    ShareScope,
+)
 from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
 from app.models.task import Task, TaskStatus, TaskType
 from app.schemas.plan import PlanCreate
 from app.schemas.task import TaskCreate
 from app.services.card_protocol.legacy_adapter import PlanAdapter, TaskAdapter
 from app.services.card_protocol.mastery_bridge import ErrorMasteryBridge
+from app.services.card_protocol.share_service import ShareService
 from app.services.card_service import CardService
 from app.services.plan_service import PlanService
 from app.services.task_occurrence_service import OccurrenceStatus, TaskOccurrenceService
@@ -26,6 +40,42 @@ class FakeEventBus:
     async def publish(self, event_type: str, payload: dict, stream: str = "sparkle_events") -> str | None:
         self.events.append((event_type, payload))
         return "test-id"
+
+
+@pytest.mark.asyncio
+async def test_share_service_rejects_revoked_expired_and_private_shares(db_session):
+    service = ShareService(db_session)
+    viewer_id = uuid4()
+    owner_id = uuid4()
+
+    revoked = CardShareRecord(
+        snapshot_id=uuid4(),
+        shared_by_user_id=owner_id,
+        scope=ShareScope.PUBLIC,
+        permission=SharePermission.ADOPT,
+        revoked_at=utcnow(),
+    )
+    with pytest.raises(ValueError, match="revoked"):
+        await service._assert_share_access(revoked, viewer_id)
+
+    expired = CardShareRecord(
+        snapshot_id=uuid4(),
+        shared_by_user_id=owner_id,
+        scope=ShareScope.PUBLIC,
+        permission=SharePermission.ADOPT,
+        metadata_={"expires_at": (utcnow() - timedelta(minutes=1)).isoformat()},
+    )
+    with pytest.raises(ValueError, match="expired"):
+        await service._assert_share_access(expired, viewer_id)
+
+    private = CardShareRecord(
+        snapshot_id=uuid4(),
+        shared_by_user_id=owner_id,
+        scope=ShareScope.USER,
+        permission=SharePermission.ADOPT,
+    )
+    with pytest.raises(ValueError, match="private"):
+        await service._assert_share_access(private, viewer_id)
 
 
 @pytest.mark.asyncio

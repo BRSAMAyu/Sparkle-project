@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,8 +15,18 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/redis/go-redis/v9"
 	"github.com/sparkle/gateway/internal/config"
+	"github.com/sparkle/gateway/internal/i18n"
+	"github.com/sparkle/gateway/internal/logsafe"
+	"go.uber.org/zap"
+)
+
+const (
+	localBlacklistCleanupThreshold = 100
+	localBlacklistMaxEntries       = 10000
 )
 
 // Local token blacklist cache for Fail-Closed fallback
@@ -24,6 +35,7 @@ import (
 type localBlacklistCache struct {
 	mu             sync.RWMutex
 	jtiSet         map[string]time.Time // JTI -> expiry time
+	jtiAddedAt     map[string]time.Time
 	userRevoked    map[string]localRevocation
 	cleanupRunning bool // Prevent goroutine leak
 }
@@ -31,18 +43,29 @@ type localBlacklistCache struct {
 type localRevocation struct {
 	timestamp int64
 	expiresAt time.Time
+	addedAt   time.Time
 }
 
 var globalLocalBlacklist = &localBlacklistCache{
 	jtiSet:      make(map[string]time.Time),
+	jtiAddedAt:  make(map[string]time.Time),
 	userRevoked: make(map[string]localRevocation),
 }
 
 // AddJTI adds a JTI to the local blacklist cache
 func (c *localBlacklistCache) AddJTI(jti string, ttl time.Duration) {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.jtiSet[jti] = time.Now().Add(ttl)
+	now := time.Now()
+	c.ensureMapsLocked()
+	c.jtiSet[jti] = now.Add(ttl)
+	c.jtiAddedAt[jti] = now
+	c.enforceHardLimitLocked()
+	shouldCleanup := c.shouldStartCleanupLocked()
+	c.mu.Unlock()
+
+	if shouldCleanup {
+		go c.cleanupExpired()
+	}
 }
 
 // IsJTIBlacklisted checks if JTI is in local cache
@@ -60,23 +83,93 @@ func (c *localBlacklistCache) IsJTIBlacklisted(jti string) bool {
 // SetUserRevoked sets user-level revocation timestamp
 func (c *localBlacklistCache) SetUserRevoked(userID string, timestamp int64, ttl time.Duration) {
 	c.mu.Lock()
-	expiresAt := time.Now().Add(ttl)
+	now := time.Now()
+	c.ensureMapsLocked()
+	expiresAt := now.Add(ttl)
 	if ttl <= 0 {
-		expiresAt = time.Now().Add(24 * time.Hour)
+		expiresAt = now.Add(24 * time.Hour)
 	}
 	c.userRevoked[userID] = localRevocation{
 		timestamp: timestamp,
 		expiresAt: expiresAt,
+		addedAt:   now,
 	}
-	shouldCleanup := !c.cleanupRunning && (len(c.jtiSet) > 100 || len(c.userRevoked) > 100)
-	if shouldCleanup {
-		c.cleanupRunning = true
-	}
+	c.enforceHardLimitLocked()
+	shouldCleanup := c.shouldStartCleanupLocked()
 	c.mu.Unlock()
 
 	// Only spawn cleanup goroutine if needed and not already running
 	if shouldCleanup {
 		go c.cleanupExpired()
+	}
+}
+
+func (c *localBlacklistCache) shouldStartCleanupLocked() bool {
+	if c.cleanupRunning {
+		return false
+	}
+	if len(c.jtiSet) <= localBlacklistCleanupThreshold && len(c.userRevoked) <= localBlacklistCleanupThreshold {
+		return false
+	}
+	c.cleanupRunning = true
+	return true
+}
+
+func (c *localBlacklistCache) ensureMapsLocked() {
+	if c.jtiSet == nil {
+		c.jtiSet = make(map[string]time.Time)
+	}
+	if c.jtiAddedAt == nil {
+		c.jtiAddedAt = make(map[string]time.Time)
+	}
+	if c.userRevoked == nil {
+		c.userRevoked = make(map[string]localRevocation)
+	}
+}
+
+func (c *localBlacklistCache) enforceHardLimitLocked() {
+	for len(c.jtiSet) > localBlacklistMaxEntries {
+		c.evictOldestJTILocked()
+	}
+	for len(c.userRevoked) > localBlacklistMaxEntries {
+		c.evictOldestUserRevocationLocked()
+	}
+}
+
+func (c *localBlacklistCache) evictOldestJTILocked() {
+	oldestKey := ""
+	var oldestTime time.Time
+	for jti, expiresAt := range c.jtiSet {
+		addedAt := c.jtiAddedAt[jti]
+		if addedAt.IsZero() {
+			addedAt = expiresAt
+		}
+		if oldestKey == "" || addedAt.Before(oldestTime) {
+			oldestKey = jti
+			oldestTime = addedAt
+		}
+	}
+	if oldestKey != "" {
+		delete(c.jtiSet, oldestKey)
+		delete(c.jtiAddedAt, oldestKey)
+	}
+}
+
+func (c *localBlacklistCache) evictOldestUserRevocationLocked() {
+	oldestKey := ""
+	var oldestTime time.Time
+	for userID, entry := range c.userRevoked {
+		addedAt := entry.addedAt
+		if addedAt.IsZero() {
+			addedAt = entry.expiresAt
+		}
+		if oldestKey == "" || addedAt.Before(oldestTime) {
+			oldestKey = userID
+			oldestTime = addedAt
+		}
+	}
+	if oldestKey != "" {
+		delete(c.userRevoked, oldestKey)
 	}
 }
 
@@ -107,6 +200,7 @@ func (c *localBlacklistCache) cleanupExpired() {
 		for jti, exp := range c.jtiSet {
 			if now.After(exp) {
 				delete(c.jtiSet, jti)
+				delete(c.jtiAddedAt, jti)
 				removed++
 				if removed >= 50 { // Limit per-batch removals
 					break
@@ -131,6 +225,124 @@ func (c *localBlacklistCache) cleanupExpired() {
 	}
 }
 
+type apiErrorResponse struct {
+	Error     string `json:"error"`
+	ErrorCode string `json:"error_code,omitempty"`
+	RequestID string `json:"request_id,omitempty"`
+}
+
+var middlewareSanitizedErrorsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+	Name: "sparkle_gateway_middleware_errors_total",
+	Help: "Total middleware error responses (auth, admin, etc.) sanitized before returning to clients.",
+}, []string{"status_code", "code", "category"})
+
+func abortWithAPIError(c *gin.Context, status int, code string, message string) {
+	if code == "" {
+		code = middlewareErrorCode(status)
+	}
+	category := middlewareErrorCategory(status)
+	middlewareSanitizedErrorsTotal.WithLabelValues(strconv.Itoa(status), code, category).Inc()
+
+	if message != "" {
+		fields := []zap.Field{
+			zap.Int("status", status),
+			zap.String("code", code),
+			zap.String("category", category),
+			zap.String("internal_message", logsafe.RedactText(message)),
+			zap.String("request_id", requestIDFromContext(c)),
+		}
+		zap.L().Warn("middleware error response", fields...)
+	}
+
+	c.AbortWithStatusJSON(status, apiErrorResponse{
+		Error:     middlewareErrorMessage(c, status, message),
+		ErrorCode: code,
+		RequestID: requestIDFromContext(c),
+	})
+}
+
+func middlewareErrorCategory(statusCode int) string {
+	switch {
+	case statusCode >= 500:
+		return "server_error"
+	case statusCode == http.StatusUnauthorized || statusCode == http.StatusForbidden:
+		return "auth_error"
+	case statusCode == http.StatusNotFound:
+		return "not_found"
+	case statusCode >= 400:
+		return "client_error"
+	default:
+		return "unknown"
+	}
+}
+
+func middlewareErrorMessage(c *gin.Context, status int, message string) string {
+	message = strings.TrimSpace(message)
+	if isDevelopmentModeForMiddlewareErrors() && message != "" {
+		return message
+	}
+
+	ctx := context.Background()
+	if c != nil && c.Request != nil {
+		ctx = c.Request.Context()
+	}
+	switch status {
+	case http.StatusBadRequest:
+		return i18n.T(ctx, "errors.bad_request")
+	case http.StatusUnauthorized:
+		return i18n.T(ctx, "errors.unauthorized")
+	case http.StatusForbidden:
+		return i18n.T(ctx, "errors.forbidden")
+	case http.StatusNotFound:
+		return i18n.T(ctx, "errors.not_found")
+	case http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
+		return i18n.T(ctx, "errors.upstream")
+	default:
+		return i18n.T(ctx, "errors.generic")
+	}
+}
+
+func isDevelopmentModeForMiddlewareErrors() bool {
+	env := strings.ToLower(os.Getenv("ENVIRONMENT"))
+	return env == "" || env == "dev" || env == "development"
+}
+
+func middlewareErrorCode(status int) string {
+	switch status {
+	case http.StatusBadRequest:
+		return "bad_request"
+	case http.StatusUnauthorized:
+		return "unauthorized"
+	case http.StatusForbidden:
+		return "forbidden"
+	case http.StatusNotFound:
+		return "not_found"
+	case http.StatusServiceUnavailable:
+		return "service_unavailable"
+	default:
+		if status >= 500 {
+			return "internal_error"
+		}
+		if status >= 400 {
+			return "request_failed"
+		}
+	}
+	return "operation_failed"
+}
+
+func requestIDFromContext(c *gin.Context) string {
+	if c == nil {
+		return ""
+	}
+	if requestID := c.GetString("request_id"); requestID != "" {
+		return requestID
+	}
+	if c.Request != nil {
+		return c.GetHeader("X-Request-ID")
+	}
+	return ""
+}
+
 func AuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get token from Authorization header only.
@@ -144,24 +356,21 @@ func AuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 
 		if tokenString == "" {
 			log.Printf("Auth failed: missing token")
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization token required"})
+			abortWithAPIError(c, http.StatusUnauthorized, "authorization_token_required", "Authorization token required")
 			return
 		}
 
 		userID, isAdmin, err := validateJWT(cfg, rdb, tokenString)
 		if err != nil {
 			log.Printf("Auth failed: invalid token (err=%v)", err)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_expired_token", "Invalid or expired token")
 			return
 		}
 
 		// Optional query user_id is for backward compatibility but must match token identity
 		queryUserID := c.Query("user_id")
 		if queryUserID != "" && queryUserID != userID {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
-				"error": "user_id mismatch",
-				"code":  "USER_ID_MISMATCH",
-			})
+			abortWithAPIError(c, http.StatusForbidden, "user_id_mismatch", "user_id mismatch")
 			return
 		}
 
@@ -201,13 +410,13 @@ func AdminAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Always require X-Admin-Secret header (including development).
 		if cfg.AdminSecret == "" {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Admin secret not configured"})
+			abortWithAPIError(c, http.StatusUnauthorized, "admin_secret_not_configured", "Admin secret not configured")
 			return
 		}
 
 		secretFromHeader := c.GetHeader("X-Admin-Secret")
 		if secretFromHeader == "" || subtle.ConstantTimeCompare([]byte(secretFromHeader), []byte(cfg.AdminSecret)) != 1 {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid or missing admin secret"})
+			abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_missing_admin_secret", "Invalid or missing admin secret")
 			return
 		}
 
@@ -219,7 +428,7 @@ func AdminAuthMiddleware(cfg *config.Config) gin.HandlerFunc {
 func RequireAdmin(c *gin.Context) {
 	isAdmin := c.GetBool("is_admin")
 	if !isAdmin {
-		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "Admin access required"})
+		abortWithAPIError(c, http.StatusForbidden, "admin_access_required", "Admin access required")
 		return
 	}
 	c.Next()
@@ -304,7 +513,7 @@ func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (str
 				redisAvailable = false
 				if cfg.RedisFailClosed {
 					// Fail-Closed: reject token when Redis is unavailable
-					log.Printf("[SECURITY] Redis unavailable with Fail-Closed mode, rejecting token for user %s: %v", userID, err)
+					log.Printf("[SECURITY] Redis unavailable with Fail-Closed mode, rejecting token for user %s: %v", logsafe.UserIDHash(userID), err)
 					return "", false, fmt.Errorf("token validation unavailable")
 				}
 				// Fail-Open (development): log warning but continue
@@ -333,7 +542,7 @@ func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (str
 				}
 				if err != redis.Nil {
 					if cfg.RedisFailClosed {
-						log.Printf("[SECURITY] Redis user revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", userID, err)
+						log.Printf("[SECURITY] Redis user revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", logsafe.UserIDHash(userID), err)
 						return "", false, fmt.Errorf("token validation unavailable")
 					}
 					log.Printf("[SECURITY WARNING] Redis user revocation check failed, allowing token (Fail-Open mode): %v", err)
@@ -354,12 +563,12 @@ func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (str
 			sessionRevoked, err := rdb.Exists(ctx, "session_revoked:"+sid).Result()
 			if err != nil {
 				if !redisAvailable && cfg.RedisFailClosed {
-					log.Printf("[SECURITY] Redis session revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", userID, err)
+					log.Printf("[SECURITY] Redis session revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", logsafe.UserIDHash(userID), err)
 					return "", false, fmt.Errorf("token validation unavailable")
 				}
 				if err != redis.Nil {
 					if cfg.RedisFailClosed {
-						log.Printf("[SECURITY] Redis session revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", userID, err)
+						log.Printf("[SECURITY] Redis session revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", logsafe.UserIDHash(userID), err)
 						return "", false, fmt.Errorf("token validation unavailable")
 					}
 					log.Printf("[SECURITY WARNING] Redis session revocation check failed, allowing token (Fail-Open mode): %v", err)

@@ -41,6 +41,7 @@ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/sector_confi
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_map_painter.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/star_success_animation.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy_contribution_banner.dart';
+import 'package:sparkle/features/galaxy/presentation/widgets/goal_world_graph_mini_panel.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/task/task_routes.dart';
@@ -554,13 +555,25 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
     final deltaText = masteryDelta == null
         ? ''
         : masteryDelta < 0
-            ? context.l10n.galaxyMasteryDeltaDown(masteryDelta.abs().toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1))
-            : context.l10n.galaxyMasteryDeltaUp(masteryDelta.toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1));
+            ? context.l10n.galaxyMasteryDeltaDown(
+                masteryDelta
+                    .abs()
+                    .toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1),
+              )
+            : context.l10n.galaxyMasteryDeltaUp(
+                masteryDelta.toStringAsFixed(masteryDelta.abs() >= 1 ? 0 : 1),
+              );
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(context.l10n.galaxyNodeMasteryToast(node.name, node.masteryScore, deltaText)),
+          content: Text(
+            context.l10n.galaxyNodeMasteryToast(
+              node.name,
+              node.masteryScore,
+              deltaText,
+            ),
+          ),
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 3),
         ),
@@ -900,7 +913,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
 
   void _startReviewForNode(GalaxyNodeModel node) {
     final focusPrompt = node.reviewUrgencyReason == 'recent_errors'
-        ? context.l10n.galaxyReviewPromptWithErrors(node.name, node.masteryScore)
+        ? context.l10n
+            .galaxyReviewPromptWithErrors(node.name, node.masteryScore)
         : context.l10n.galaxyReviewPromptNoErrors(node.name, node.masteryScore);
     final chatMode = node.reviewUrgencyReason == 'recent_errors'
         ? 'error_diagnosis'
@@ -2767,7 +2781,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       colorScheme: baseTheme.colorScheme.copyWith(
         brightness: Brightness.dark,
         surface: const Color(0xFF101929),
-        onSurface: Colors.white,
+        onSurface: DS.neutral0,
       ),
     );
 
@@ -2809,7 +2823,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                     if (_isLoading) {
                       return _StatusPanel(
                         backgroundColor: backgroundColor,
-                        foregroundColor: Colors.white,
+                        foregroundColor: DS.neutral0,
                         title: context.l10n.galaxyLoadingTitle,
                         message: context.l10n.galaxyLoadingMessage,
                         highlights: <String>[
@@ -2825,7 +2839,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       return _StatusPanel(
                         backgroundColor: backgroundColor,
                         foregroundColor:
-                            isDarkMode ? Colors.white : Colors.black,
+                            isDarkMode ? DS.neutral0 : DS.neutral900,
                         title: context.l10n.galaxyLoadFailedTitle,
                         message: '$_loadError',
                         actionLabel: context.l10n.retry,
@@ -2837,10 +2851,14 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                       return _StatusPanel(
                         backgroundColor: backgroundColor,
                         foregroundColor:
-                            isDarkMode ? Colors.white : Colors.black,
+                            isDarkMode ? DS.neutral0 : DS.neutral900,
                         title: context.l10n.galaxyEmptyTitle,
                         message: context.l10n.galaxyEmptyFirst,
-                        highlights: <String>[context.l10n.galaxyEmptyHighlights1, context.l10n.galaxyEmptyHighlights2, context.l10n.galaxyEmptyHighlights3],
+                        highlights: <String>[
+                          context.l10n.galaxyEmptyHighlights1,
+                          context.l10n.galaxyEmptyHighlights2,
+                          context.l10n.galaxyEmptyHighlights3,
+                        ],
                         actionLabel: context.l10n.galaxyEmptyActionLabel,
                         onAction: () async {
                           await context.push(TaskRoutes.taskCreate);
@@ -3023,6 +3041,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                       isDarkMode: isDarkMode,
                                     ),
                                   ),
+                                Positioned(
+                                  top: 112,
+                                  right: 16,
+                                  left: constraints.maxWidth < 560 ? 16 : null,
+                                  child: const GoalWorldGraphMiniPanel(),
+                                ),
                                 Positioned(
                                   top: 56,
                                   left: 16,
@@ -3231,11 +3255,11 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
               end: Alignment.bottomRight,
             ),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: DS.neutral0.withValues(alpha: 0.1),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.16),
+                color: DS.galaxyShadow.withValues(alpha: 0.16),
                 blurRadius: 24,
                 offset: const Offset(0, 14),
               ),
@@ -3253,12 +3277,12 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
+                        color: DS.neutral0.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.auto_awesome_rounded,
-                        color: Colors.white,
+                        color: DS.neutral0,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -3272,7 +3296,7 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
                               batch.documentName,
                             ),
                             style: theme.textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
+                              color: DS.neutral0,
                               fontWeight: FontWeight.w800,
                               height: 1.2,
                             ),
@@ -3281,7 +3305,7 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
                           Text(
                             context.l10n.galaxyDraftReviewPromptBody,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.72),
+                              color: DS.neutral0.withValues(alpha: 0.72),
                               height: 1.4,
                             ),
                           ),
@@ -3292,7 +3316,7 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
                       onPressed: onDismiss,
                       icon: Icon(
                         Icons.close_rounded,
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: DS.neutral0.withValues(alpha: 0.8),
                       ),
                     ),
                   ],
@@ -3303,9 +3327,9 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
                     Expanded(
                       child: OutlinedButton(
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.white,
+                          foregroundColor: DS.neutral0,
                           side: BorderSide(
-                            color: Colors.white.withValues(alpha: 0.18),
+                            color: DS.neutral0.withValues(alpha: 0.18),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
@@ -3317,7 +3341,7 @@ class _GalaxyDraftPromptCard extends StatelessWidget {
                     Expanded(
                       child: FilledButton.icon(
                         style: FilledButton.styleFrom(
-                          backgroundColor: Colors.white,
+                          backgroundColor: DS.neutral0,
                           foregroundColor: const Color(0xFF182238),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
@@ -3359,7 +3383,7 @@ class _GalaxyDraftPendingIndicator extends StatelessWidget {
               color: const Color(0xD9101A2C),
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
+                color: DS.neutral0.withValues(alpha: 0.1),
               ),
             ),
             child: Padding(
@@ -3389,7 +3413,7 @@ class _GalaxyDraftPendingIndicator extends StatelessWidget {
                       draftCount,
                     ),
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: Colors.white,
+                          color: DS.neutral0,
                           fontWeight: FontWeight.w700,
                         ),
                   ),
@@ -3434,11 +3458,11 @@ class _StatusPanel extends StatelessWidget {
             constraints: const BoxConstraints(maxWidth: 380),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: (isDarkMode ? Colors.white : Colors.black)
+                color: (isDarkMode ? DS.neutral0 : DS.neutral900)
                     .withValues(alpha: isDarkMode ? 0.04 : 0.03),
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(
-                  color: (isDarkMode ? Colors.white : Colors.black)
+                  color: (isDarkMode ? DS.neutral0 : DS.neutral900)
                       .withValues(alpha: 0.08),
                 ),
               ),
@@ -3559,16 +3583,17 @@ class _GalaxyOverviewStats extends StatelessWidget {
   @override
   Widget build(BuildContext context) => DecoratedBox(
         decoration: BoxDecoration(
-          color: (isDarkMode ? const Color(0xCC101929) : Colors.white)
+          color: (isDarkMode ? const Color(0xCC101929) : DS.neutral0)
               .withValues(alpha: 0.88),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: (isDarkMode ? Colors.white : Colors.black)
+            color: (isDarkMode ? DS.neutral0 : DS.neutral900)
                 .withValues(alpha: 0.08),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDarkMode ? 0.18 : 0.08),
+              color:
+                  DS.galaxyShadow.withValues(alpha: isDarkMode ? 0.18 : 0.08),
               blurRadius: 20,
               offset: const Offset(0, 12),
             ),
@@ -3630,10 +3655,10 @@ class _OverviewMetric extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground = isDarkMode ? Colors.white : const Color(0xFF101828);
+    final foreground = isDarkMode ? DS.neutral0 : const Color(0xFF101828);
     final secondary = isDarkMode
-        ? Colors.white.withValues(alpha: 0.62)
-        : Colors.black.withValues(alpha: 0.54);
+        ? DS.neutral0.withValues(alpha: 0.62)
+        : DS.galaxyShadow.withValues(alpha: 0.54);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -3684,7 +3709,7 @@ class _GalaxyMasteryEmptyBanner extends StatelessWidget {
         decoration: BoxDecoration(
           color: const Color(0xE6101929),
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          border: Border.all(color: DS.neutral0.withValues(alpha: 0.08)),
         ),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -3694,12 +3719,12 @@ class _GalaxyMasteryEmptyBanner extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.08),
+                  color: DS.neutral0.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.auto_awesome_outlined,
-                  color: Colors.white,
+                  color: DS.neutral0,
                   size: 20,
                 ),
               ),
@@ -3711,7 +3736,7 @@ class _GalaxyMasteryEmptyBanner extends StatelessWidget {
                     Text(
                       context.l10n.galaxyNoMasteryTitle,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: DS.neutral0,
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
                       ),
@@ -3720,7 +3745,7 @@ class _GalaxyMasteryEmptyBanner extends StatelessWidget {
                     Text(
                       context.l10n.galaxyNoMasterySubtitle,
                       style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.72),
+                        color: DS.neutral0.withValues(alpha: 0.72),
                         fontSize: 12,
                         height: 1.4,
                       ),
@@ -3799,7 +3824,7 @@ class _StatusOrbPainter extends CustomPainter {
         Paint()
           ..shader = RadialGradient(
             colors: [
-              Colors.white.withValues(alpha: 0.92),
+              DS.neutral0.withValues(alpha: 0.92),
               baseColor,
               baseColor.withValues(alpha: 0.18),
             ],

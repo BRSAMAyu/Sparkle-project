@@ -119,11 +119,10 @@ class _StudyMaterialsSheetState extends ConsumerState<StudyMaterialsSheet> {
                       ),
                       child: Text(
                         context.l10n.chatStudyMaterialsEmptySubtitle,
-                        style:
-                            Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: DS.textSecondary,
-                                  height: 1.5,
-                                ),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.5,
+                            ),
                       ),
                     );
                   }
@@ -142,9 +141,8 @@ class _StudyMaterialsSheetState extends ConsumerState<StudyMaterialsSheet> {
                         isEnabled: !isToggledOff &&
                             widget.documentContextMode !=
                                 DocumentContextMode.off,
-                        canToggle:
-                            widget.documentContextMode ==
-                                DocumentContextMode.userSelected,
+                        canToggle: widget.documentContextMode ==
+                            DocumentContextMode.userSelected,
                         onToggle: () {
                           SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
                           setState(() {
@@ -171,7 +169,8 @@ class _StudyMaterialsSheetState extends ConsumerState<StudyMaterialsSheet> {
     if (doc.citationInsight.totalReferences > 3) {
       return _SourceRelevance.high;
     }
-    if (doc.knowledgeStarCount > 0 || doc.qualityScore != null && doc.qualityScore! > 0.5) {
+    if (doc.knowledgeStarCount > 0 ||
+        doc.qualityScore != null && doc.qualityScore! > 0.5) {
       return _SourceRelevance.medium;
     }
     return _SourceRelevance.low;
@@ -263,7 +262,7 @@ class _ModeSelector extends StatelessWidget {
       child: Row(
         children: [
           _ModeChip(
-            label: '自动',
+            label: I18nService.instance.isChinese ? '自动' : 'Auto',
             selected: currentMode == DocumentContextMode.auto,
             onTap: () => onModeChanged(DocumentContextMode.auto),
           ),
@@ -273,7 +272,7 @@ class _ModeSelector extends StatelessWidget {
             onTap: () => onModeChanged(DocumentContextMode.userSelected),
           ),
           _ModeChip(
-            label: '任务',
+            label: I18nService.instance.isChinese ? '任务' : 'Task',
             selected: currentMode == DocumentContextMode.taskScope,
             onTap: () => onModeChanged(DocumentContextMode.taskScope),
           ),
@@ -302,30 +301,34 @@ class _ModeChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 6),
-          decoration: BoxDecoration(
-            color: selected ? DS.surfacePrimary : Colors.transparent,
-            borderRadius: DS.borderRadius8,
-            boxShadow: selected
-                ? [
-                    BoxShadow(
-                      color: DS.borderSubtle.withValues(alpha: 0.3),
-                      blurRadius: 4,
-                      offset: const Offset(0, 1),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: DS.labelSmall.copyWith(
-                color: selected ? DS.textPrimary : DS.textTertiary,
-                fontWeight: selected ? FontWeight.w500 : FontWeight.normal,
+      child: Semantics(
+        button: true,
+        label: 'Chat study materials sheet control 1',
+        child: GestureDetector(
+          onTap: onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            decoration: BoxDecoration(
+              color: selected ? DS.surfacePrimary : Colors.transparent,
+              borderRadius: DS.borderRadius8,
+              boxShadow: selected
+                  ? [
+                      BoxShadow(
+                        color: DS.borderSubtle.withValues(alpha: 0.3),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Center(
+              child: Text(
+                label,
+                style: DS.labelSmall.copyWith(
+                  color: selected ? DS.textPrimary : DS.textTertiary,
+                  fontWeight: selected ? FontWeight.w500 : FontWeight.normal,
+                ),
               ),
             ),
           ),
@@ -339,11 +342,14 @@ class _RelevanceLegend extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
         children: [
-          _LegendDot(color: DS.success, label: context.l10n.chatStudyHighRelevance),
+          _LegendDot(
+              color: DS.success, label: context.l10n.chatStudyHighRelevance),
           const SizedBox(width: 12),
-          _LegendDot(color: DS.warning, label: context.l10n.chatStudyMediumRelevance),
+          _LegendDot(
+              color: DS.warning, label: context.l10n.chatStudyMediumRelevance),
           const SizedBox(width: 12),
-          _LegendDot(color: DS.textTertiary, label: context.l10n.chatStudyNotAnalyzed),
+          _LegendDot(
+              color: DS.textTertiary, label: context.l10n.chatStudyNotAnalyzed),
         ],
       );
 }
@@ -414,104 +420,111 @@ class _SourceRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nodeCount = document.knowledgeStarCount;
-    return GestureDetector(
-      onTap: canToggle ? onToggle : null,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
-        opacity: isEnabled ? 1.0 : 0.45,
-        child: Container(
-          padding: const EdgeInsets.all(DS.spacing12),
-          decoration: BoxDecoration(
-            color: DS.surfaceSecondary,
-            borderRadius: DS.borderRadius16,
-            border: Border.all(
-              color: isEnabled
-                  ? _relevanceColor.withValues(alpha: 0.25)
-                  : DS.borderSubtle,
+    return Semantics(
+      button: true,
+      label: 'Chat study materials sheet control 2',
+      child: GestureDetector(
+        onTap: canToggle ? onToggle : null,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: isEnabled ? 1.0 : 0.45,
+          child: Container(
+            padding: const EdgeInsets.all(DS.spacing12),
+            decoration: BoxDecoration(
+              color: DS.surfaceSecondary,
+              borderRadius: DS.borderRadius16,
+              border: Border.all(
+                color: isEnabled
+                    ? _relevanceColor.withValues(alpha: 0.25)
+                    : DS.borderSubtle,
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              // Relevance indicator dot
-              Container(
-                width: 8,
-                height: 8,
-                margin: const EdgeInsets.only(right: 10),
-                decoration: BoxDecoration(
-                  color: _relevanceColor,
-                  shape: BoxShape.circle,
+            child: Row(
+              children: [
+                // Relevance indicator dot
+                Container(
+                  width: 8,
+                  height: 8,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(
+                    color: _relevanceColor,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ),
-              // File icon
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: DS.primaryBase.withValues(alpha: 0.08),
-                  borderRadius: DS.borderRadius8,
+                // File icon
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: DS.primaryBase.withValues(alpha: 0.08),
+                    borderRadius: DS.borderRadius8,
+                  ),
+                  child: Icon(
+                    _iconForType(document.fileType),
+                    color: DS.primaryBase,
+                    size: 16,
+                  ),
                 ),
-                child: Icon(
-                  _iconForType(document.fileType),
-                  color: DS.primaryBase,
-                  size: 16,
-                ),
-              ),
-              const SizedBox(width: DS.spacing10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      document.filename,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: DS.textPrimary,
-                            fontWeight: DS.fontWeightSemibold,
-                          ),
-                    ),
-                    const SizedBox(height: 3),
-                    Row(
-                      children: [
-                        Text(
-                          _relevanceLabel,
-                          style: DS.labelSmall.copyWith(
-                            color: _relevanceColor,
-                            fontSize: 11,
-                          ),
-                        ),
-                        if (nodeCount > 0) ...[
-                          const SizedBox(width: 8),
+                const SizedBox(width: DS.spacing10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        document.filename,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: DS.fontWeightSemibold,
+                            ),
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
                           Text(
-                            context.l10n.chatStudyNodeCount(nodeCount),
+                            _relevanceLabel,
                             style: DS.labelSmall.copyWith(
-                              color: DS.textTertiary,
+                              color: _relevanceColor,
                               fontSize: 11,
                             ),
                           ),
-                        ],
-                        if (document.citationInsight.totalReferences > 0) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            context.l10n.chatStudyCitationCount(document.citationInsight.totalReferences),
-                            style: DS.labelSmall.copyWith(
-                              color: DS.textTertiary,
-                              fontSize: 11,
+                          if (nodeCount > 0) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              context.l10n.chatStudyNodeCount(nodeCount),
+                              style: DS.labelSmall.copyWith(
+                                color: DS.textTertiary,
+                                fontSize: 11,
+                              ),
                             ),
-                          ),
+                          ],
+                          if (document.citationInsight.totalReferences > 0) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              context.l10n.chatStudyCitationCount(
+                                  document.citationInsight.totalReferences),
+                              style: DS.labelSmall.copyWith(
+                                color: DS.textTertiary,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ],
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              if (canToggle)
-                Icon(
-                  isEnabled ? Icons.check_circle : Icons.remove_circle_outline,
-                  size: 18,
-                  color: isEnabled ? DS.success : DS.textTertiary,
-                ),
-            ],
+                if (canToggle)
+                  Icon(
+                    isEnabled
+                        ? Icons.check_circle
+                        : Icons.remove_circle_outline,
+                    size: 18,
+                    color: isEnabled ? DS.success : DS.textTertiary,
+                  ),
+              ],
+            ),
           ),
         ),
       ),

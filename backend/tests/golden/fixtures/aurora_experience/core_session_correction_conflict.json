@@ -1,0 +1,13 @@
+{
+  "id": "core_session_correction_conflict",
+  "family": "core_session_opening",
+  "kind": "core_session_opening",
+  "title": "Core Session：纠错冲突",
+  "input": {
+    "trigger_source": "chat_correction_chip",
+    "observed_signals": ["你刚纠正了我的判断", "我对卡点原因的把握下降"],
+    "suggested_agenda_preview": ["先撤回旧判断", "确认真正卡住的原因"],
+    "why_now": "这会影响接下来任务怎么拆",
+    "estimated_minutes": 3
+  }
+}

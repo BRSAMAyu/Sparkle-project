@@ -103,36 +103,40 @@ class _UnselectedPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-        child: GestureDetector(
-          onTap: onTap,
-          child: MaterialStyler(
-            material: AppMaterials.ceramic(context).copyWith(
-              // Use surfaceTertiary to match Dashboard ceramic cards
-              backgroundColor: isDark ? DS.surfaceTertiary : DS.neutral200,
-            ),
-            borderRadius: DS.borderRadius20,
-            padding: const EdgeInsets.symmetric(
-              horizontal: DS.spacing12,
-              vertical: DS.spacing8,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.add_circle_outline,
-                  size: DS.iconSizeSm,
-                  color: DS.neutral500,
-                ),
-                const SizedBox(width: DS.spacing6),
-                Text(
-                  context.l10n.chatPlanSelect,
-                  style: TextStyle(
-                    color: DS.neutral600,
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightMedium,
+        child: Semantics(
+          button: true,
+          label: 'Chat plan selector pill control 1',
+          child: GestureDetector(
+            onTap: onTap,
+            child: MaterialStyler(
+              material: AppMaterials.ceramic(context).copyWith(
+                // Use surfaceTertiary to match Dashboard ceramic cards
+                backgroundColor: isDark ? DS.surfaceTertiary : DS.neutral200,
+              ),
+              borderRadius: DS.borderRadius20,
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.spacing12,
+                vertical: DS.spacing8,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.add_circle_outline,
+                    size: DS.iconSizeSm,
+                    color: DS.neutral500,
                   ),
-                ),
-              ],
+                  const SizedBox(width: DS.spacing6),
+                  Text(
+                    context.l10n.chatPlanSelect,
+                    style: TextStyle(
+                      color: DS.neutral600,
+                      fontSize: DS.fontSizeSm,
+                      fontWeight: DS.fontWeightMedium,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -158,71 +162,75 @@ class _SelectedPill extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
-      child: GestureDetector(
-        onTap: onTap,
-        child: MaterialStyler(
-          material: AppMaterials.neoGlass(context).copyWith(
-            backgroundGradient: LinearGradient(
-              colors: [
-                planColor.withValues(alpha: 0.18),
-                planColor.withValues(alpha: 0.08),
+      child: Semantics(
+        button: true,
+        label: 'Chat plan selector pill control 2',
+        child: GestureDetector(
+          onTap: onTap,
+          child: MaterialStyler(
+            material: AppMaterials.neoGlass(context).copyWith(
+              backgroundGradient: LinearGradient(
+                colors: [
+                  planColor.withValues(alpha: 0.18),
+                  planColor.withValues(alpha: 0.08),
+                ],
+              ),
+              borderColor: planColor.withValues(alpha: 0.35),
+            ),
+            borderRadius: DS.borderRadius20,
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing12,
+              vertical: DS.spacing8,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _getPlanIcon(),
+                  size: DS.iconSizeSm,
+                  color: planColor,
+                ),
+                const SizedBox(width: DS.spacing6),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 140),
+                  child: Text(
+                    plan.name,
+                    style: TextStyle(
+                      color: isDark ? DS.textPrimary : DS.neutral900,
+                      fontSize: DS.fontSizeSm,
+                      fontWeight: DS.fontWeightMedium,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: DS.spacing6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing6,
+                    vertical: DS.spacing4 / 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: planColor.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(DS.spacing8),
+                  ),
+                  child: Text(
+                    progressLabel,
+                    style: TextStyle(
+                      color: planColor,
+                      fontSize: DS.fontSizeXs,
+                      fontWeight: DS.fontWeightSemibold,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: DS.spacing4),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: DS.iconSizeSm,
+                  color: DS.neutral500,
+                ),
               ],
             ),
-            borderColor: planColor.withValues(alpha: 0.35),
-          ),
-          borderRadius: DS.borderRadius20,
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing12,
-            vertical: DS.spacing8,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _getPlanIcon(),
-                size: DS.iconSizeSm,
-                color: planColor,
-              ),
-              const SizedBox(width: DS.spacing6),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 140),
-                child: Text(
-                  plan.name,
-                  style: TextStyle(
-                    color: isDark ? DS.textPrimary : DS.neutral900,
-                    fontSize: DS.fontSizeSm,
-                    fontWeight: DS.fontWeightMedium,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              const SizedBox(width: DS.spacing6),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: DS.spacing6,
-                  vertical: DS.spacing4 / 2,
-                ),
-                decoration: BoxDecoration(
-                  color: planColor.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(DS.spacing8),
-                ),
-                child: Text(
-                  progressLabel,
-                  style: TextStyle(
-                    color: planColor,
-                    fontSize: DS.fontSizeXs,
-                    fontWeight: DS.fontWeightSemibold,
-                  ),
-                ),
-              ),
-              const SizedBox(width: DS.spacing4),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: DS.iconSizeSm,
-                color: DS.neutral500,
-              ),
-            ],
           ),
         ),
       ),
@@ -310,10 +318,14 @@ class _PlanSelectorSheet extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  SparkleIconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                    variant: ButtonVariant.ghost,
+                  Semantics(
+                    button: true,
+                    label: 'Chat plan selector pill control 3',
+                    child: SparkleIconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      variant: ButtonVariant.ghost,
+                    ),
                   ),
                 ],
               ),
@@ -349,46 +361,51 @@ class _ClearOptionTile extends ConsumerWidget {
     final selectedPlanId = ref.watch(activePlanProvider);
     final isSelected = selectedPlanId == null;
 
-    return InkWell(
-      onTap: () {
-        ref.read(activePlanProvider.notifier).clearSelection();
-        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
-        Navigator.pop(context);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing20,
-          vertical: DS.spacing16,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? DS.primaryBase.withValues(alpha: 0.1)
-              : DS.surfacePrimary.withValues(alpha: 0),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              Icons.not_interested_rounded,
-              color: DS.neutral500,
-            ),
-            const SizedBox(width: DS.spacing16),
-            Text(
-              context.l10n.chatPlanContextClear,
-              style: TextStyle(
-                fontSize: DS.fontSizeBase,
-                fontWeight:
-                    isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
-                color: isDark ? DS.textPrimary : DS.neutral900,
-              ),
-            ),
-            const Spacer(),
-            if (isSelected)
+    return Semantics(
+      button: true,
+      label: 'Chat plan selector pill control 4',
+      child: InkWell(
+        onTap: () {
+          ref.read(activePlanProvider.notifier).clearSelection();
+          unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+          Navigator.pop(context);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing20,
+            vertical: DS.spacing16,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? DS.primaryBase.withValues(alpha: 0.1)
+                : DS.surfacePrimary.withValues(alpha: 0),
+          ),
+          child: Row(
+            children: [
               Icon(
-                Icons.check_circle,
-                color: DS.primaryBase,
-                size: DS.iconSizeBase,
+                Icons.not_interested_rounded,
+                color: DS.neutral500,
               ),
-          ],
+              const SizedBox(width: DS.spacing16),
+              Text(
+                context.l10n.chatPlanContextClear,
+                style: TextStyle(
+                  fontSize: DS.fontSizeBase,
+                  fontWeight:
+                      isSelected ? DS.fontWeightSemibold : DS.fontWeightRegular,
+                  color: isDark ? DS.textPrimary : DS.neutral900,
+                ),
+              ),
+              const Spacer(),
+              if (isSelected)
+                Icon(
+                  Icons.check_circle,
+                  color: DS.primaryBase,
+                  size: DS.iconSizeBase,
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -410,99 +427,104 @@ class _PlanListTile extends ConsumerWidget {
     final isSelected = selectedPlanId == plan.id;
     final planColor = _getPlanColor();
 
-    return InkWell(
-      onTap: () {
-        ref.read(activePlanProvider.notifier).selectPlan(plan.id);
-        unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
-        Navigator.pop(context);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing20,
-          vertical: DS.spacing16,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? planColor.withValues(alpha: 0.1)
-              : DS.surfacePrimary.withValues(alpha: 0),
-          border: Border(
-            left: BorderSide(
-              color: isSelected
-                  ? planColor
-                  : DS.surfacePrimary.withValues(alpha: 0),
-              width: 4,
+    return Semantics(
+      button: true,
+      label: 'Chat plan selector pill control 5',
+      child: InkWell(
+        onTap: () {
+          ref.read(activePlanProvider.notifier).selectPlan(plan.id);
+          unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
+          Navigator.pop(context);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing20,
+            vertical: DS.spacing16,
+          ),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? planColor.withValues(alpha: 0.1)
+                : DS.surfacePrimary.withValues(alpha: 0),
+            border: Border(
+              left: BorderSide(
+                color: isSelected
+                    ? planColor
+                    : DS.surfacePrimary.withValues(alpha: 0),
+                width: 4,
+              ),
             ),
           ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(DS.spacing8),
-              decoration: BoxDecoration(
-                color: planColor.withValues(alpha: 0.15),
-                borderRadius: DS.borderRadius8,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(DS.spacing8),
+                decoration: BoxDecoration(
+                  color: planColor.withValues(alpha: 0.15),
+                  borderRadius: DS.borderRadius8,
+                ),
+                child: Icon(
+                  _getPlanIcon(),
+                  color: planColor,
+                  size: DS.iconSizeBase,
+                ),
               ),
-              child: Icon(
-                _getPlanIcon(),
-                color: planColor,
-                size: DS.iconSizeBase,
-              ),
-            ),
-            const SizedBox(width: DS.spacing16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    plan.name,
-                    style: TextStyle(
-                      fontSize: DS.fontSizeBase,
-                      fontWeight: isSelected
-                          ? DS.fontWeightSemibold
-                          : DS.fontWeightMedium,
-                      color: isDark ? DS.textPrimary : DS.neutral900,
+              const SizedBox(width: DS.spacing16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      plan.name,
+                      style: TextStyle(
+                        fontSize: DS.fontSizeBase,
+                        fontWeight: isSelected
+                            ? DS.fontWeightSemibold
+                            : DS.fontWeightMedium,
+                        color: isDark ? DS.textPrimary : DS.neutral900,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: DS.spacing4 / 2),
-                  Row(
-                    children: [
-                      Text(
-                        _getPlanTypeLabel(context),
-                        style: TextStyle(
-                          fontSize: DS.fontSizeXs,
-                          color: planColor,
+                    const SizedBox(height: DS.spacing4 / 2),
+                    Row(
+                      children: [
+                        Text(
+                          _getPlanTypeLabel(context),
+                          style: TextStyle(
+                            fontSize: DS.fontSizeXs,
+                            color: planColor,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: DS.spacing8),
-                      Icon(
-                        Icons.circle,
-                        size: DS.spacing4,
-                        color: DS.neutral500,
-                      ),
-                      const SizedBox(width: DS.spacing8),
-                      Text(
-                        context.l10n.numberProgress(
-                          (plan.progress * 100).toInt(),
-                        ),
-                        style: TextStyle(
-                          fontSize: DS.fontSizeXs,
+                        const SizedBox(width: DS.spacing8),
+                        Icon(
+                          Icons.circle,
+                          size: DS.spacing4,
                           color: DS.neutral500,
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                        const SizedBox(width: DS.spacing8),
+                        Text(
+                          context.l10n.numberProgress(
+                            (plan.progress * 100).toInt(),
+                          ),
+                          style: TextStyle(
+                            fontSize: DS.fontSizeXs,
+                            color: DS.neutral500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if (isSelected)
-              Icon(
-                Icons.check_circle,
-                color: planColor,
-                size: DS.iconSizeBase,
-              ),
-          ],
+              if (isSelected)
+                Icon(
+                  Icons.check_circle,
+                  color: planColor,
+                  size: DS.iconSizeBase,
+                ),
+            ],
+          ),
         ),
       ),
     );

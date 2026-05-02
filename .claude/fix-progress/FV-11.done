@@ -1,0 +1,18 @@
+FV-11: Mobile CRDT 真实合并 + ACK
+Status: DONE
+Branch: codex/FV-11-mobile-crdt-ack
+Modified files:
+- mobile/lib/core/offline/offline_crdt_document.dart
+- mobile/lib/core/offline/crdt_sync_manager.dart
+- mobile/lib/core/offline/sync_engine.dart
+- mobile/lib/core/offline/sync_queue.dart
+- mobile/lib/core/offline/offline_providers.dart
+- mobile/test/core/offline/offline_crdt_document_test.dart
+- mobile/test/core/offline/sync_engine_crdt_ack_test.dart
+- docs/product/parallel_closeout/FV-11_mobile_crdt_ack_REPORT_2026-05-02.md
+Verification:
+- cd mobile && flutter test test/core/offline/offline_crdt_document_test.dart: PASS
+- cd mobile && dart analyze lib/core/offline/offline_crdt_document.dart lib/core/offline/crdt_sync_manager.dart lib/core/offline/sync_engine.dart lib/core/offline/sync_queue.dart lib/core/offline/offline_providers.dart test/core/offline/offline_crdt_document_test.dart test/core/offline/sync_engine_crdt_ack_test.dart: PASS with pre-existing sync_engine info-level style lints
+- cd mobile && flutter test test/core/offline/sync_engine_crdt_ack_test.dart: BLOCKED by unrelated Flutter compile errors in non-FV11 files
+User-visible change: Offline mastery/task/chat edits now use deterministic CRDT deltas and CRDT outbox rows are deleted only after server ACK.
+Architect handoff: Confirm backend Yjs bridge accepts sparkle-crdt-v1 operations and returns ack_crdt_update/crdt_ack/ack_crdt with requestId.

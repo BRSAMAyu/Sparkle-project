@@ -15,6 +15,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/background_layer.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/effect_layer.dart';
 import 'package:sparkle/features/home/presentation/widgets/layers/particle_layer.dart';
+import 'package:sparkle/features/visual_elements/presentation/shared/visual_element_palette.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
@@ -134,13 +135,14 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final palette = VisualElementPalette.of(context);
     final colors = _getRarityColors(widget.element.rarity);
 
     return Stack(
       children: [
         Container(
           decoration: BoxDecoration(
-            color: _InkStagePalette.moonless,
+            color: palette.moonless,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border: Border(
               top: BorderSide(
@@ -156,7 +158,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: _InkStagePalette.textSecondary.withValues(alpha: 0.38),
+                  color: palette.textSecondary.withValues(alpha: 0.38),
                   borderRadius: DS.borderRadiusFull,
                 ),
               ),
@@ -202,7 +204,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                                         style: TextStyle(
                                           fontSize: DS.fontSizeLg,
                                           fontWeight: DS.fontWeightBold,
-                                          color: _InkStagePalette.textPrimary,
+                                          color: palette.textPrimary,
                                           height: 1.15,
                                         ),
                                         maxLines: 4,
@@ -226,7 +228,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                                         style: TextStyle(
                                           fontSize: DS.fontSizeLg,
                                           fontWeight: DS.fontWeightBold,
-                                          color: _InkStagePalette.textPrimary,
+                                          color: palette.textPrimary,
                                           height: 1.15,
                                         ),
                                         maxLines: 3,
@@ -251,7 +253,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                                   widget.element.description!,
                                   style: TextStyle(
                                     fontSize: DS.fontSizeSm,
-                                    color: _InkStagePalette.textSecondary,
+                                    color: palette.textSecondary,
                                     height: 1.5,
                                   ),
                                 ),
@@ -281,7 +283,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
 
                             const SizedBox(height: DS.spacing16),
                             Divider(
-                              color: _InkStagePalette.hairline,
+                              color: palette.hairline,
                             ),
                             const SizedBox(height: DS.spacing16),
 
@@ -379,9 +381,9 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
           MediaQuery.of(context).padding.bottom + DS.spacing12,
         ),
         decoration: BoxDecoration(
-          color: _InkStagePalette.moonless,
+          color: VisualElementPalette.of(context).moonless,
           border: Border(
-            top: BorderSide(color: _InkStagePalette.hairline),
+            top: BorderSide(color: VisualElementPalette.of(context).hairline),
           ),
         ),
         child: SafeArea(
@@ -436,8 +438,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
             overflow: TextOverflow.ellipsis,
           ),
           style: OutlinedButton.styleFrom(
-            foregroundColor: _InkStagePalette.textSecondary,
-            side: BorderSide(color: _InkStagePalette.hairline),
+            foregroundColor: VisualElementPalette.of(context).textSecondary,
+            side: BorderSide(color: VisualElementPalette.of(context).hairline),
             shape: const RoundedRectangleBorder(
               borderRadius: DS.borderRadius12,
             ),
@@ -448,57 +450,57 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
   Widget _buildEquipButton(AppLocalizations l10n) {
     final zh = I18nService.instance.isChinese;
     return SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: ElevatedButton.icon(
-          onPressed: _handleEquip,
-          icon: Icon(
-            widget.element.isBundle
-                ? Icons.auto_awesome_rounded
-                : Icons.check_circle_outline,
-          ),
-          label: Text(
-            widget.element.isBundle
-                ? (zh ? '一键装备套装' : 'Equip Bundle')
-                : l10n.visualElementEquip,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _InkStagePalette.gold,
-            foregroundColor: _InkStagePalette.moonless,
-            shape: const RoundedRectangleBorder(
-              borderRadius: DS.borderRadius12,
-            ),
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton.icon(
+        onPressed: _handleEquip,
+        icon: Icon(
+          widget.element.isBundle
+              ? Icons.auto_awesome_rounded
+              : Icons.check_circle_outline,
+        ),
+        label: Text(
+          widget.element.isBundle
+              ? (zh ? '一键装备套装' : 'Equip Bundle')
+              : l10n.visualElementEquip,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: VisualElementPalette.of(context).gold,
+          foregroundColor: VisualElementPalette.of(context).moonless,
+          shape: const RoundedRectangleBorder(
+            borderRadius: DS.borderRadius12,
           ),
         ),
-      );
+      ),
+    );
   }
 
   Widget _buildUnequipButton(AppLocalizations l10n) {
     final zh = I18nService.instance.isChinese;
     return SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: OutlinedButton.icon(
-          onPressed: widget.onUnequip,
-          icon: const Icon(Icons.remove_circle_outline),
-          label: Text(
-            widget.element.isBundle
-                ? (zh ? '卸下整套' : 'Unequip Bundle')
-                : l10n.visualElementUnequip,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: _InkStagePalette.textSecondary,
-            side: BorderSide(color: _InkStagePalette.hairline),
-            shape: const RoundedRectangleBorder(
-              borderRadius: DS.borderRadius12,
-            ),
+      width: double.infinity,
+      height: 48,
+      child: OutlinedButton.icon(
+        onPressed: widget.onUnequip,
+        icon: const Icon(Icons.remove_circle_outline),
+        label: Text(
+          widget.element.isBundle
+              ? (zh ? '卸下整套' : 'Unequip Bundle')
+              : l10n.visualElementUnequip,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: VisualElementPalette.of(context).textSecondary,
+          side: BorderSide(color: VisualElementPalette.of(context).hairline),
+          shape: const RoundedRectangleBorder(
+            borderRadius: DS.borderRadius12,
           ),
         ),
-      );
+      ),
+    );
   }
 
   Widget _buildLockedButton(AppLocalizations l10n) => SizedBox(
@@ -513,8 +515,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
             overflow: TextOverflow.ellipsis,
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: _InkStagePalette.panel,
-            foregroundColor: _InkStagePalette.textSecondary,
+            backgroundColor: VisualElementPalette.of(context).panel,
+            foregroundColor: VisualElementPalette.of(context).textSecondary,
             shape: const RoundedRectangleBorder(
               borderRadius: DS.borderRadius12,
             ),
@@ -597,34 +599,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
     return names[category] ?? category;
   }
 
-  _RarityColors _getRarityColors(VisualElementRarity rarity) {
-    switch (rarity) {
-      case VisualElementRarity.common:
-        return _RarityColors(
-          background: const Color(0xFF102436),
-          border: const Color(0xFF668696),
-          text: const Color(0xFFC6D6DB),
-        );
-      case VisualElementRarity.rare:
-        return _RarityColors(
-          background: const Color(0xFF0C2A37),
-          border: const Color(0xFF58C0D7),
-          text: const Color(0xFFC6F2F7),
-        );
-      case VisualElementRarity.epic:
-        return _RarityColors(
-          background: const Color(0xFF17253A),
-          border: const Color(0xFF91A9FF),
-          text: const Color(0xFFDCE5FF),
-        );
-      case VisualElementRarity.legendary:
-        return _RarityColors(
-          background: const Color(0xFF312813),
-          border: const Color(0xFFD9B66F),
-          text: const Color(0xFFFFE7A8),
-        );
-    }
-  }
+  VisualElementRarityColors _getRarityColors(VisualElementRarity rarity) =>
+      VisualElementPalette.of(context).rarityColors(rarity);
 
   String _getUnlockSourceText(
     VisualElementUnlockSource source,
@@ -697,7 +673,7 @@ class _MetaChip extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             fontSize: DS.fontSizeXs,
-            color: Color.lerp(color, _InkStagePalette.textPrimary, 0.12),
+            color: Color.lerp(color, VisualElementPalette.textPrimary, 0.12),
             fontWeight: DS.fontWeightMedium,
           ),
         ),
@@ -726,7 +702,7 @@ class _StageChip extends StatelessWidget {
               vertical: DS.spacing6,
             ),
             decoration: BoxDecoration(
-              color: _InkStagePalette.moonless.withValues(alpha: 0.58),
+              color: VisualElementPalette.moonless.withValues(alpha: 0.58),
               borderRadius: DS.borderRadiusFull,
               border: Border.all(color: color.withValues(alpha: 0.28)),
             ),
@@ -739,8 +715,8 @@ class _StageChip extends StatelessWidget {
                   label,
                   style: TextStyle(
                     fontSize: DS.fontSizeXs,
-                    color:
-                        Color.lerp(color, _InkStagePalette.textPrimary, 0.18),
+                    color: Color.lerp(
+                        color, VisualElementPalette.textPrimary, 0.18),
                     fontWeight: DS.fontWeightMedium,
                   ),
                 ),
@@ -759,7 +735,7 @@ class _PreviewSurfaceMock extends StatelessWidget {
   });
 
   final VisualElementModel element;
-  final _RarityColors colors;
+  final VisualElementRarityColors colors;
   final bool isPreviewing;
 
   @override
@@ -789,7 +765,8 @@ class _PreviewSurfaceMock extends StatelessWidget {
                       compactStage ? DS.spacing10 : DS.spacing14,
                     ),
                     decoration: BoxDecoration(
-                      color: _InkStagePalette.moonless.withValues(alpha: 0.52),
+                      color:
+                          VisualElementPalette.moonless.withValues(alpha: 0.52),
                       borderRadius: DS.borderRadius16,
                       border: Border.all(
                         color: colors.border.withValues(alpha: 0.22),
@@ -822,7 +799,7 @@ class _PreviewSurfaceMock extends StatelessWidget {
                                   ),
                                   child: Icon(
                                     Icons.person_outline_rounded,
-                                    color: _InkStagePalette.textPrimary,
+                                    color: VisualElementPalette.textPrimary,
                                     size: DS.iconSizeSm,
                                   ),
                                 ),
@@ -842,7 +819,8 @@ class _PreviewSurfaceMock extends StatelessWidget {
                                         style: const TextStyle(
                                           fontSize: DS.fontSizeSm,
                                           fontWeight: DS.fontWeightBold,
-                                          color: _InkStagePalette.textPrimary,
+                                          color:
+                                              VisualElementPalette.textPrimary,
                                         ),
                                       ),
                                       const SizedBox(height: DS.spacing4),
@@ -854,7 +832,8 @@ class _PreviewSurfaceMock extends StatelessWidget {
                                         overflow: TextOverflow.ellipsis,
                                         style: const TextStyle(
                                           fontSize: DS.fontSizeXs,
-                                          color: _InkStagePalette.textSecondary,
+                                          color: VisualElementPalette
+                                              .textSecondary,
                                         ),
                                       ),
                                     ],
@@ -869,7 +848,8 @@ class _PreviewSurfaceMock extends StatelessWidget {
                               spacing: DS.spacing8,
                               runSpacing: DS.spacing8,
                               children: [
-                                _surfacePill(Icons.home_rounded, zh ? '主页' : 'Home', colors),
+                                _surfacePill(Icons.home_rounded,
+                                    zh ? '主页' : 'Home', colors),
                                 _surfacePill(
                                   Icons.account_tree_rounded,
                                   zh ? '星图' : 'Galaxy',
@@ -906,7 +886,8 @@ class _PreviewSurfaceMock extends StatelessWidget {
     );
   }
 
-  Widget _surfacePill(IconData icon, String label, _RarityColors colors) =>
+  Widget _surfacePill(
+          IconData icon, String label, VisualElementRarityColors colors) =>
       Container(
         padding: const EdgeInsets.symmetric(
           horizontal: DS.spacing8,
@@ -949,7 +930,7 @@ class _PreviewArea extends StatefulWidget {
   final VisualElementModel element;
   final List<VisualElementModel> availableElements;
   final UserVisualConfig? baseConfig;
-  final _RarityColors colors;
+  final VisualElementRarityColors colors;
   final bool isPreviewing;
   final VoidCallback onTogglePreview;
 
@@ -996,8 +977,8 @@ class _PreviewAreaState extends State<_PreviewArea>
           end: Alignment.bottomRight,
           colors: [
             widget.colors.border.withValues(alpha: 0.24),
-            _InkStagePalette.panel,
-            _InkStagePalette.surface,
+            VisualElementPalette.panel,
+            VisualElementPalette.surface,
           ],
         ),
         border: Border.all(
@@ -1046,7 +1027,8 @@ class _PreviewAreaState extends State<_PreviewArea>
                 child: Container(
                   padding: const EdgeInsets.all(DS.spacing8),
                   decoration: BoxDecoration(
-                    color: _InkStagePalette.moonless.withValues(alpha: 0.72),
+                    color:
+                        VisualElementPalette.moonless.withValues(alpha: 0.72),
                     borderRadius: DS.borderRadius8,
                   ),
                   child: Icon(
@@ -1054,7 +1036,7 @@ class _PreviewAreaState extends State<_PreviewArea>
                         ? Icons.visibility_off
                         : Icons.visibility,
                     size: DS.iconSizeSm,
-                    color: _InkStagePalette.textSecondary,
+                    color: VisualElementPalette.textSecondary,
                   ),
                 ),
               ),
@@ -1125,7 +1107,7 @@ class _CrossfadePreviewArea extends StatefulWidget {
   final VisualElementModel element;
   final List<VisualElementModel> availableElements;
   final UserVisualConfig? baseConfig;
-  final _RarityColors colors;
+  final VisualElementRarityColors colors;
   final bool isPreviewing;
   final Animation<double> crossfadeAnimation;
   final VoidCallback onTogglePreview;
@@ -1200,8 +1182,8 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          _InkStagePalette.moonless.withValues(alpha: 0.10),
-                          _InkStagePalette.moonless.withValues(alpha: 0.42),
+                          VisualElementPalette.moonless.withValues(alpha: 0.10),
+                          VisualElementPalette.moonless.withValues(alpha: 0.42),
                         ],
                         stops: const [0.0, 0.58, 1.0],
                       ),
@@ -1226,16 +1208,18 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
                   icon: widget.isPreviewing
                       ? Icons.auto_awesome_rounded
                       : Icons.dashboard_customize_outlined,
-                  label: widget.isPreviewing ? context.l10n.visualPreviewing : context.l10n.visualCurrentLook,
+                  label: widget.isPreviewing
+                      ? context.l10n.visualPreviewing
+                      : context.l10n.visualCurrentLook,
                   color: widget.isPreviewing
                       ? widget.colors.border
-                      : _InkStagePalette.textSecondary,
+                      : VisualElementPalette.textSecondary,
                 ),
                 const Spacer(),
                 _StageChip(
                   icon: Icons.touch_app_rounded,
                   label: context.l10n.visualTapToggle,
-                  color: _InkStagePalette.gold,
+                  color: VisualElementPalette.gold,
                 ),
               ],
             ),
@@ -1254,7 +1238,8 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
                     vertical: DS.spacing8,
                   ),
                   decoration: BoxDecoration(
-                    color: _InkStagePalette.moonless.withValues(alpha: 0.72),
+                    color:
+                        VisualElementPalette.moonless.withValues(alpha: 0.72),
                     borderRadius: DS.borderRadiusFull,
                     border: Border.all(
                       color: widget.colors.border.withValues(alpha: 0.32),
@@ -1268,16 +1253,18 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
                             ? Icons.visibility_off
                             : Icons.visibility,
                         size: DS.iconSizeSm,
-                        color: _InkStagePalette.textPrimary,
+                        color: VisualElementPalette.textPrimary,
                       ),
                       const SizedBox(width: DS.spacing6),
                       Text(
                         I18nService.instance.isChinese
                             ? (widget.isPreviewing ? '查看当前' : '体验此装扮')
-                            : (widget.isPreviewing ? 'View Current' : 'Try This Look'),
+                            : (widget.isPreviewing
+                                ? 'View Current'
+                                : 'Try This Look'),
                         style: const TextStyle(
                           fontSize: DS.fontSizeXs,
-                          color: _InkStagePalette.textPrimary,
+                          color: VisualElementPalette.textPrimary,
                           fontWeight: DS.fontWeightMedium,
                         ),
                       ),
@@ -1298,7 +1285,7 @@ class _CrossfadePreviewAreaState extends State<_CrossfadePreviewArea>
           BackgroundLayer(
             element: config.equippedBackground,
             mainAnimation: _mainController,
-            tint: _InkStagePalette.moonless,
+            tint: VisualElementPalette.moonless,
             tintOpacity: 0.06,
           ),
           ParticleLayer(
@@ -1369,7 +1356,7 @@ class _RarityBadge extends StatelessWidget {
   });
 
   final VisualElementRarity rarity;
-  final _RarityColors colors;
+  final VisualElementRarityColors colors;
   final AppLocalizations l10n;
 
   @override
@@ -1453,7 +1440,7 @@ class _InfoRow extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
-                  color: _InkStagePalette.textSecondary,
+                  color: VisualElementPalette.textSecondary,
                 ),
               ),
             ),
@@ -1467,7 +1454,7 @@ class _InfoRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
                   fontWeight: DS.fontWeightMedium,
-                  color: _InkStagePalette.textPrimary,
+                  color: VisualElementPalette.textPrimary,
                 ),
               ),
             ),
@@ -1490,16 +1477,16 @@ class _UnlockRequirement extends StatelessWidget {
   Widget build(BuildContext context) => Container(
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
-          color: _InkStagePalette.panel,
+          color: VisualElementPalette.panel,
           borderRadius: DS.borderRadius12,
-          border: Border.all(color: _InkStagePalette.hairline),
+          border: Border.all(color: VisualElementPalette.hairline),
         ),
         child: Row(
           children: [
             Icon(
               Icons.lock_outline,
               size: DS.iconSizeSm,
-              color: _InkStagePalette.textSecondary,
+              color: VisualElementPalette.textSecondary,
             ),
             const SizedBox(width: DS.spacing12),
             Expanded(
@@ -1507,7 +1494,7 @@ class _UnlockRequirement extends StatelessWidget {
                 _getRequirementText(),
                 style: TextStyle(
                   fontSize: DS.fontSizeSm,
-                  color: _InkStagePalette.textSecondary,
+                  color: VisualElementPalette.textSecondary,
                 ),
               ),
             ),
@@ -1538,26 +1525,4 @@ class _UnlockRequirement extends StatelessWidget {
         return l10n.visualElementUnlockHintSeason;
     }
   }
-}
-
-class _InkStagePalette {
-  static const Color moonless = Color(0xFF050A12);
-  static const Color surface = Color(0xFF0B1D2C);
-  static const Color panel = Color(0xFF10283A);
-  static const Color gold = Color(0xFFD9B66F);
-  static const Color textPrimary = Color(0xFFEAF3F5);
-  static const Color textSecondary = Color(0xFF9CB4BD);
-  static const Color hairline = Color(0x334F7D8F);
-}
-
-class _RarityColors {
-  _RarityColors({
-    required this.background,
-    required this.border,
-    required this.text,
-  });
-
-  final Color background;
-  final Color border;
-  final Color text;
 }

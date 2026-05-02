@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
@@ -46,7 +47,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => context.pop(),
                 ),
-                title: Text('Group Details'),
+                title: Text(I18nService.instance.isChinese ? '社群详情' : 'Group Details'),
               ),
               Expanded(
                 child: Center(
@@ -70,40 +71,41 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
 
   Widget _buildContent(BuildContext context, WidgetRef ref, GroupInfo group) =>
       ContentConstraint(
-      child: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          _buildAppBar(context, ref, group),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                DS.spacing16,
-                DS.spacing16,
-                DS.spacing16,
-                DS.spacing12,
-              ),
-              child: _GroupDetailTabs(
-                selectedTab: _selectedTab,
-                onChanged: (tab) => setState(() => _selectedTab = tab),
-              ),
-            ),
-          ),
-          if (_selectedTab == _GroupDetailTab.overview)
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            _buildAppBar(context, ref, group),
             SliverToBoxAdapter(
-              child: _buildOverviewTab(context, ref, group),
-            )
-          else
-            SliverFillRemaining(
-              child: GroupKnowledgeBaseView(
-                groupId: widget.groupId,
-                currentUserRole: group.myRole,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  DS.spacing16,
+                  DS.spacing16,
+                  DS.spacing16,
+                  DS.spacing12,
+                ),
+                child: _GroupDetailTabs(
+                  selectedTab: _selectedTab,
+                  onChanged: (tab) => setState(() => _selectedTab = tab),
+                ),
               ),
             ),
-        ],
-      ),
+            if (_selectedTab == _GroupDetailTab.overview)
+              SliverToBoxAdapter(
+                child: _buildOverviewTab(context, ref, group),
+              )
+            else
+              SliverFillRemaining(
+                child: GroupKnowledgeBaseView(
+                  groupId: widget.groupId,
+                  currentUserRole: group.myRole,
+                ),
+              ),
+          ],
+        ),
       );
 
-  SliverAppBar _buildAppBar(BuildContext context, WidgetRef ref, GroupInfo group) {
+  SliverAppBar _buildAppBar(
+      BuildContext context, WidgetRef ref, GroupInfo group) {
     final isMember = group.myRole != null;
     final isSprint = group.isSprint;
 
@@ -123,7 +125,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
             color: DS.textPrimary,
             shadows: [
               Shadow(
-                color: Colors.black.withValues(alpha: 0.08),
+                color: DS.galaxyShadow.withValues(alpha: 0.08),
                 blurRadius: 8,
               ),
             ],
@@ -199,7 +201,8 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
     );
   }
 
-  Widget _buildOverviewTab(BuildContext context, WidgetRef ref, GroupInfo group) {
+  Widget _buildOverviewTab(
+      BuildContext context, WidgetRef ref, GroupInfo group) {
     final isMember = group.myRole != null;
     final theme = Theme.of(context);
 
@@ -233,7 +236,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   context.l10n.gdSprintCountdown(group.daysRemaining ?? 0),
                   style: TextStyle(
                     color: DS.error,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
               ),
@@ -293,7 +296,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           Text(
             context.l10n.gdAbout,
             style: theme.textTheme.titleLarge
-                ?.copyWith(fontWeight: FontWeight.bold),
+                ?.copyWith(fontWeight: DS.fontWeightBold),
           ),
           const SizedBox(height: DS.sm),
           Text(
@@ -330,7 +333,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                 child: Text(
                   context.l10n.gdAnnouncement,
                   style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.bold),
+                      ?.copyWith(fontWeight: DS.fontWeightBold),
                 ),
               ),
               if (group.isAdmin)
@@ -346,7 +349,9 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
           ),
           const SizedBox(height: DS.sm),
           Text(
-            group.announcement?.isNotEmpty ?? false ? group.announcement! : context.l10n.gdNoAnnouncement,
+            group.announcement?.isNotEmpty ?? false
+                ? group.announcement!
+                : context.l10n.gdNoAnnouncement,
             style: theme.textTheme.bodyMedium
                 ?.copyWith(color: DS.textSecondary, height: 1.6),
           ),
@@ -366,8 +371,8 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   child: CustomButton.secondary(
                     text: context.l10n.gdTasks,
                     icon: Icons.task_alt,
-                    onPressed: () =>
-                        unawaited(context.push('/community/groups/${widget.groupId}/tasks')),
+                    onPressed: () => unawaited(context
+                        .push('/community/groups/${widget.groupId}/tasks')),
                   ),
                 ),
                 const SizedBox(width: DS.lg),
@@ -403,11 +408,12 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                       .read(groupDetailProvider(widget.groupId).notifier)
                       .joinGroup();
                   if (context.mounted) {
-                    AppFeedback.success(context, 'Welcome to the group!');
+                    AppFeedback.success(context, I18nService.instance.isChinese ? '欢迎加入社群！' : 'Welcome to the group!');
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    AppFeedback.error(context, context.l10n.gdJoinFailed(e.toString()));
+                    AppFeedback.error(
+                        context, context.l10n.gdJoinFailed(e.toString()));
                   }
                 }
               },
@@ -443,7 +449,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
               value,
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontWeight: DS.fontWeightBold,
                 color: DS.textPrimary,
               ),
             ),
@@ -489,7 +495,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   context.l10n.gdLeaveGroup,
                   style: TextStyle(
                     color: DS.error,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: DS.fontWeightBold,
                   ),
                 ),
                 onTap: () async {
@@ -518,7 +524,13 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                           .read(groupDetailProvider(widget.groupId).notifier)
                           .leaveGroup();
                       if (context.mounted) context.pop();
-                    } catch (_) {}
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(I18nService.instance.isChinese ? '退出群组失败，请重试' : 'Failed to leave group, please retry')),
+                        );
+                      }
+                    }
                   }
                 },
               ),
@@ -571,9 +583,11 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
       await ref
           .read(groupDetailProvider(widget.groupId).notifier)
           .updateAnnouncement(result.isEmpty ? null : result);
-      if (context.mounted) AppFeedback.success(context, context.l10n.gdAnnouncementUpdated);
+      if (context.mounted)
+        AppFeedback.success(context, context.l10n.gdAnnouncementUpdated);
     } catch (e) {
-      if (context.mounted) AppFeedback.error(context, context.l10n.gdUpdateFailed(e.toString()));
+      if (context.mounted)
+        AppFeedback.error(context, context.l10n.gdUpdateFailed(e.toString()));
     }
   }
 }
@@ -648,7 +662,7 @@ class _TabButton extends StatelessWidget {
                 label,
                 style: TextStyle(
                   fontWeight: DS.fontWeightSemiBold,
-                  color: selected ? Colors.white : DS.textSecondary,
+                  color: selected ? DS.neutral0 : DS.textSecondary,
                 ),
               ),
             ),

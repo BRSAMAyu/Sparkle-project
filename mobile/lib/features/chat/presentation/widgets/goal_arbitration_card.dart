@@ -131,8 +131,7 @@ class _GoalArbitrationCardState extends State<GoalArbitrationCard>
                             (e) => _GoalRow(
                               index: e.key,
                               data: e.value,
-                              isPrimary: e.value['goal_id'] ==
-                                  _primaryGoalId(),
+                              isPrimary: e.value['goal_id'] == _primaryGoalId(),
                             ),
                           ),
                     ],
@@ -180,8 +179,7 @@ class _GoalArbitrationCardState extends State<GoalArbitrationCard>
     try {
       return widget.goals
           .reduce(
-            (a, b) =>
-                (a['score'] as num) >= (b['score'] as num) ? a : b,
+            (a, b) => (a['score'] as num) >= (b['score'] as num) ? a : b,
           )['goal_id']
           ?.toString();
     } catch (_) {
@@ -234,11 +232,15 @@ class _Header extends StatelessWidget {
                 ),
               ),
             ),
-            IconButton(
-              icon: Icon(Icons.close, size: 15, color: DS.textTertiary),
-              onPressed: onDismiss,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+            Semantics(
+              button: true,
+              label: 'Chat goal arbitration card control 1',
+              child: IconButton(
+                icon: Icon(Icons.close, size: 15, color: DS.textTertiary),
+                onPressed: onDismiss,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
             ),
           ],
         ),
@@ -281,11 +283,9 @@ class _GoalRow extends StatelessWidget {
                       child: Text(
                         title,
                         style: DS.labelSmall.copyWith(
-                          color:
-                              isPrimary ? DS.textPrimary : DS.textSecondary,
-                          fontWeight: isPrimary
-                              ? FontWeight.w600
-                              : FontWeight.w400,
+                          color: isPrimary ? DS.textPrimary : DS.textSecondary,
+                          fontWeight:
+                              isPrimary ? FontWeight.w600 : FontWeight.w400,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -360,25 +360,28 @@ class _ActionButton extends StatelessWidget {
   final bool outlined;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          decoration: BoxDecoration(
-            color: outlined ? DS.surfaceHigh : color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: outlined
-                  ? DS.borderSubtle
-                  : color.withValues(alpha: 0.25),
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: 'Chat goal arbitration card control 2',
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: outlined ? DS.surfaceHigh : color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color:
+                    outlined ? DS.borderSubtle : color.withValues(alpha: 0.25),
+              ),
             ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: DS.labelSmall.copyWith(
-                color: outlined ? DS.textTertiary : color,
-                fontWeight: FontWeight.w500,
+            child: Center(
+              child: Text(
+                label,
+                style: DS.labelSmall.copyWith(
+                  color: outlined ? DS.textTertiary : color,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ),

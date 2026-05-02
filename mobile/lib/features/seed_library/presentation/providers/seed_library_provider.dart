@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/data/repositories/seed_library_repository.dart';
 
@@ -185,10 +186,11 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
   final SeedLibraryRepository _repository;
   final String libraryId;
 
-  String _friendlyError(Object error, String fallback) {
+  String _friendlyError(Object error, String fallbackZh, [String? fallbackEn]) {
     final raw = error.toString().replaceFirst('Exception: ', '').trim();
     if (raw.isEmpty || raw.toLowerCase() == 'null') {
-      return fallback;
+      final zh = I18nService.instance.isChinese;
+      return zh ? fallbackZh : (fallbackEn ?? fallbackZh);
     }
     return raw;
   }
@@ -209,7 +211,8 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
     } catch (e) {
       state = state.copyWith(
         isLoadingLibrary: false,
-        error: _friendlyError(e, '种子库详情加载失败，请稍后再试'),
+        error: _friendlyError(e, '种子库详情加载失败，请稍后再试',
+            'Failed to load library details. Please try again later.'),
       );
       return;
     }
@@ -236,8 +239,10 @@ class SeedLibraryDetailNotifier extends StateNotifier<SeedLibraryDetailState> {
         isSubscribed: false,
         subscription: null,
         activeSubscriptions: const [],
-        error:
-            state.library == null ? _friendlyError(e, '种子库状态加载失败，请稍后再试') : null,
+        error: state.library == null
+            ? _friendlyError(e, '种子库状态加载失败，请稍后再试',
+                'Failed to load library status. Please try again later.')
+            : null,
       );
     }
   }

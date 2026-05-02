@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
 import 'package:sparkle/core/offline/local_database.dart';
@@ -53,7 +54,8 @@ class LocalVocabularyState {
 
 /// Local vocabulary notifier
 class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
-  LocalVocabularyNotifier(this._repository) : super(const LocalVocabularyState()) {
+  LocalVocabularyNotifier(this._repository)
+      : super(const LocalVocabularyState()) {
     loadWords();
     loadDueWords();
     loadStatistics();
@@ -76,6 +78,7 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
 
       state = state.copyWith(words: words, isLoading: false);
     } catch (e) {
+      debugPrint('LocalVocabularyNotifier.loadWords failed: $e');
       state = state.copyWith(isLoading: false);
     }
   }
@@ -85,7 +88,9 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
     try {
       final dueWords = await _repository.getDueForReview();
       state = state.copyWith(dueWords: dueWords);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('LocalVocabularyNotifier.loadDueWords failed: $e');
+    }
   }
 
   /// Load statistics
@@ -93,7 +98,9 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
     try {
       final stats = await _repository.getStatistics();
       state = state.copyWith(statistics: stats);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('LocalVocabularyNotifier.loadStatistics failed: $e');
+    }
   }
 
   /// Load all tags
@@ -101,7 +108,9 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
     try {
       final tags = await _repository.getAllTags();
       state = state.copyWith(allTags: tags);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('LocalVocabularyNotifier.loadTags failed: $e');
+    }
   }
 
   /// Set filter
@@ -187,8 +196,16 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
   }
 
   /// Record a review
-  Future<bool> recordReview(Id id, bool remembered, {int responseTimeMs = 0}) async {
-    final success = await _repository.recordReview(id, remembered, responseTimeMs: responseTimeMs);
+  Future<bool> recordReview(
+    Id id,
+    bool remembered, {
+    int responseTimeMs = 0,
+  }) async {
+    final success = await _repository.recordReview(
+      id,
+      remembered,
+      responseTimeMs: responseTimeMs,
+    );
     if (success) {
       await loadWords();
       await loadDueWords();
@@ -210,7 +227,8 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
   }
 
   /// Check if a word exists
-  Future<VocabWordItem?> getByWord(String word) async => _repository.getByWord(word);
+  Future<VocabWordItem?> getByWord(String word) async =>
+      _repository.getByWord(word);
 
   /// Get a word by ID
   Future<VocabWordItem?> getById(Id id) async {
@@ -221,7 +239,8 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
     try {
       final allWords = await _repository.getAll();
       return allWords.where((w) => w.id == id).firstOrNull;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('LocalVocabularyNotifier.getById failed: $e');
       return null;
     }
   }
@@ -239,7 +258,9 @@ final localVocabularyRepositoryProvider =
 
   try {
     repository.init(db);
-  } catch (_) {}
+  } catch (e) {
+    debugPrint('localVocabularyRepositoryProvider.init failed: $e');
+  }
 
   return repository;
 });
@@ -247,7 +268,9 @@ final localVocabularyRepositoryProvider =
 /// State provider
 final localVocabularyProvider =
     StateNotifierProvider<LocalVocabularyNotifier, LocalVocabularyState>(
-        (ref) => LocalVocabularyNotifier(ref.watch(localVocabularyRepositoryProvider)),);
+  (ref) =>
+      LocalVocabularyNotifier(ref.watch(localVocabularyRepositoryProvider)),
+);
 
 /// Due count provider (for badges)
 final localVocabularyDueCountProvider =

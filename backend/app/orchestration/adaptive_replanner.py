@@ -36,6 +36,7 @@ from app.services.plan_progress_service import PlanHealthReport, PlanProgressSer
 from app.services.plan_state_service import PlanStateService
 from app.services.system_update_service import SystemUpdateService, build_system_update
 from app.services.task_service import _sync_task_card_projection
+from app.services.task_stuck_signal_service import TaskStuckPatternAnalyzer
 
 if TYPE_CHECKING:
     from app.orchestration.step_feedback_collector import PlanExecutionFeedback
@@ -137,15 +138,17 @@ class CognitivePatternTrigger:
         )
         patterns = list(result.scalars().all())
         if pattern_name:
-            filtered = [pattern for pattern in patterns if pattern_name.lower() in str(pattern.pattern_name or "").lower()]
+            filtered = [
+                pattern for pattern in patterns if pattern_name.lower() in str(pattern.pattern_name or "").lower()
+            ]
             if filtered:
                 patterns = filtered
 
         prefs = await self.preference_service.get_preferences(user_id)
         explicit = getattr(prefs, "explicit", {}) or {}
         constraints = dict(existing_constraints or {})
-        locked = ((constraints.get("_meta") or {}).get("locked_parameters") or [])
-        sources = ((constraints.get("_meta") or {}).get("constraint_sources") or {})
+        locked = (constraints.get("_meta") or {}).get("locked_parameters") or []
+        sources = (constraints.get("_meta") or {}).get("constraint_sources") or {}
 
         adjustments: list[PlanParameterAdjustment] = []
         seen_parameters: set[str] = set()
@@ -187,7 +190,10 @@ class CognitivePatternTrigger:
                 )
             )
 
-        if any(token in name for token in ["planning optimism", "乐观偏差", "低估", "underestimate"]) or "planning.underestimate" in description:
+        if (
+            any(token in name for token in ["planning optimism", "乐观偏差", "低估", "underestimate"])
+            or "planning.underestimate" in description
+        ):
             add("task_duration_multiplier", 1.3, "检测到计划乐观偏差")
             add("phase_count_delta", 1, "检测到计划乐观偏差")
 
@@ -257,9 +263,13 @@ class CognitivePatternTrigger:
     ) -> bool:
         if adjustment.parameter in locked_parameters:
             return True
-        if adjustment.parameter in existing_constraints and str(sources.get(adjustment.parameter) or "").startswith("user"):
+        if adjustment.parameter in existing_constraints and str(sources.get(adjustment.parameter) or "").startswith(
+            "user"
+        ):
             return True
-        if adjustment.parameter == "max_session_minutes" and explicit_preferences.get("focus_duration_preference") not in (None, ""):
+        if adjustment.parameter == "max_session_minutes" and explicit_preferences.get(
+            "focus_duration_preference"
+        ) not in (None, ""):
             return True
         return False
 
@@ -385,11 +395,7 @@ class AdaptiveReplanner:
         )
         source_spec = _as_dict(source_daily_spec)
         subject_strategy = _as_dict(source_spec.get("subject_strategy"))
-        node_labels = [
-            _strip(item)
-            for item in list(subject_strategy.get("node_labels") or [])
-            if _strip(item)
-        ]
+        node_labels = [_strip(item) for item in list(subject_strategy.get("node_labels") or []) if _strip(item)]
         primary_target = (
             _strip(subject_strategy.get("primary_node_label"))
             or (node_labels[0] if node_labels else "")
@@ -447,9 +453,7 @@ class AdaptiveReplanner:
             },
         }
         if calendar_slot:
-            avoidance_note = (
-                f"避开日历冲突，建议安排在 {calendar_slot['start']}-{calendar_slot['end']}。"
-            )
+            avoidance_note = f"避开日历冲突，建议安排在 {calendar_slot['start']}-{calendar_slot['end']}。"
             spec.update(
                 {
                     "scheduled_start_time": calendar_slot["start"],
@@ -613,13 +617,106 @@ class AdaptiveReplanner:
                     continue
                 event_start = _parse_hhmm(event.get("start"))
                 event_end = _parse_hhmm(event.get("end"))
-                if event_start is not None and event_end is not None and source_start < event_end and event_start < source_end:
+                if (
+                    event_start is not None
+                    and event_end is not None
+                    and source_start < event_end
+                    and event_start < source_end
+                ):
                     return True
 
         if available_blocks:
             longest_block = max((end - start for start, end in available_blocks), default=0)
-            return longest_block < required_minutes and any(cls._is_high_pressure_calendar_event(event) for event in conflicts)
+            return longest_block < required_minutes and any(
+                cls._is_high_pressure_calendar_event(event) for event in conflicts
+            )
         return any(cls._is_high_pressure_calendar_event(event) for event in conflicts)
+
+    async def _load_calendar_context(self, *, user_id: UUID, plan_id: UUID) -> dict[str, Any]:
+        if self.db is None:
+            return {}
+        try:
+            from app.services.calendar_service import CalendarService
+
+            context = await CalendarService(self.db).get_busy_free_context(user_id=user_id, days=7)
+            plan_result = await self.db.execute(
+                select(Plan).where(Plan.id == plan_id, Plan.user_id == user_id, Plan.deleted_at.is_(None))
+            )
+            plan = plan_result.scalar_one_or_none()
+            if plan is not None:
+                required_daily = int(plan.daily_available_minutes or 60)
+                context["required_daily_minutes"] = required_daily
+                capacity = _as_dict(context.get("capacity_summary")).copy()
+                capacity["next_3_days_required_minutes"] = required_daily * 3
+                context["capacity_summary"] = capacity
+            return context
+        except Exception as exc:
+            logger.debug("Calendar capacity context unavailable for plan {}: {}", plan_id, exc)
+            return {}
+
+    @classmethod
+    def _apply_calendar_capacity_to_report(
+        cls,
+        report: PlanHealthReport,
+        calendar_context: dict[str, Any] | None,
+    ) -> PlanHealthReport:
+        context = _as_dict(calendar_context)
+        if not context:
+            return report
+
+        capacity = _as_dict(context.get("capacity_summary"))
+        conflicts = [item for item in list(context.get("time_conflicts") or []) if isinstance(item, dict)]
+        required_next_3 = _safe_int(capacity.get("next_3_days_required_minutes"))
+        available_next_3 = _safe_int(capacity.get("next_3_days_available_minutes"))
+        required_daily = _safe_int(context.get("required_daily_minutes"))
+        available_by_date = _as_dict(context.get("available_minutes_by_date"))
+
+        daily_shortfall = False
+        if required_daily:
+            daily_shortfall = any((_safe_int(minutes) or 0) < required_daily for minutes in available_by_date.values())
+        three_day_shortfall = bool(
+            required_next_3 and available_next_3 is not None and available_next_3 < int(required_next_3 * 0.75)
+        )
+        calendar_pressure = bool(conflicts or daily_shortfall or three_day_shortfall)
+        if not calendar_pressure:
+            return report
+
+        reasons = list(report.reasons or [])
+        if conflicts and "calendar_time_conflict" not in reasons:
+            reasons.append("calendar_time_conflict")
+        if (daily_shortfall or three_day_shortfall) and "calendar_capacity_shortfall" not in reasons:
+            reasons.append("calendar_capacity_shortfall")
+
+        metrics = dict(report.metrics or {})
+        metrics["calendar_capacity"] = {
+            "required_daily_minutes": required_daily,
+            "next_3_days_required_minutes": required_next_3,
+            "next_3_days_available_minutes": available_next_3,
+            "planning_intensity_hint": capacity.get("planning_intensity_hint"),
+        }
+        if conflicts:
+            metrics["calendar_time_conflicts"] = conflicts[:3]
+
+        severity = report.severity
+        recommended_action = report.recommended_action
+        if recommended_action == "none":
+            severity = "warning"
+            recommended_action = "adjust"
+        if "progress_lag" in report.reasons and calendar_pressure:
+            severity = "warning"
+            recommended_action = "adjust"
+
+        return PlanHealthReport(
+            plan_id=report.plan_id,
+            user_id=report.user_id,
+            status=report.status,
+            severity=severity,
+            health_score=report.health_score,
+            reasons=reasons,
+            metrics=metrics,
+            requires_adjustment=True,
+            recommended_action=recommended_action,
+        )
 
     @staticmethod
     def _is_high_pressure_calendar_event(event: dict[str, Any]) -> bool:
@@ -686,6 +783,18 @@ class AdaptiveReplanner:
                 compressed_spec=compressed_spec,
             )
         return [compressed_spec]
+
+    @staticmethod
+    def build_task_stuck_micro_session_payload(
+        pattern: dict[str, Any],
+        *,
+        next_task_title: str | None = None,
+    ) -> dict[str, Any]:
+        """Return the 3-turn lightweight Core Session contract for task-stuck help."""
+        return TaskStuckPatternAnalyzer.build_micro_session_payload(
+            pattern,
+            next_task_title=next_task_title,
+        )
 
     async def _write_compressed_sprint_day(
         self,
@@ -793,9 +902,9 @@ class AdaptiveReplanner:
             task_id=task_id,
             completion_status="completed",
         )
-        report = await self.progress_service.evaluate_progress(user_id, plan_id)
-        return await self._handle_report(
-            report,
+        return await self.evaluate_plan_health_now(
+            user_id=user_id,
+            plan_id=plan_id,
             trigger="task_completed",
             task_id=task_id,
             completion_rate=completion_rate,
@@ -836,6 +945,7 @@ class AdaptiveReplanner:
             trigger=trigger,
             task_id=task_id,
             feedback_category=category,
+            feedback_text=feedback_text,
             difficulty_delta=difficulty_delta,
         )
 
@@ -945,9 +1055,7 @@ class AdaptiveReplanner:
         neighboring tasks. The surrounding plan can still learn from the signal
         through PlanState feedback and normal health evaluation later.
         """
-        result = await self.db.execute(
-            select(Task).where(Task.id == task_id, Task.user_id == user_id)
-        )
+        result = await self.db.execute(select(Task).where(Task.id == task_id, Task.user_id == user_id))
         task = result.scalar_one_or_none()
         if task is None:
             return []
@@ -960,10 +1068,7 @@ class AdaptiveReplanner:
             breakdown_items = self._fallback_too_hard_breakdown(task)
 
         order_result = await self.db.execute(
-            select(SubTask)
-            .where(SubTask.parent_task_id == task.id)
-            .order_by(desc(SubTask.order))
-            .limit(1)
+            select(SubTask).where(SubTask.parent_task_id == task.id).order_by(desc(SubTask.order)).limit(1)
         )
         last_subtask = order_result.scalar_one_or_none()
         next_order = int(last_subtask.order + 1) if last_subtask else 0
@@ -1024,9 +1129,7 @@ class AdaptiveReplanner:
             record = AdaptationRecord(
                 what_changed=f"把「{task.title}」拆成了 {len(created)} 个更小的步骤",
                 why="用户在任务卡上标记了太难，说明当前任务颗粒度超过了可启动范围。",
-                expected_effect=(
-                    "先把启动门槛降下来，避免因为一张任务卡过重而放弃整段计划。"
-                ),
+                expected_effect=("先把启动门槛降下来，避免因为一张任务卡过重而放弃整段计划。"),
                 user_facing_message=f"我把「{task.title}」拆小了，先做第一步就够。",
                 source="adaptive_replanner.task_quick_action",
             )
@@ -1123,20 +1226,12 @@ class AdaptiveReplanner:
             item = dict(raw_item)
 
         title = str(
-            item.get("title")
-            or item.get("name")
-            or item.get("step")
-            or f"小步 {index + 1}: {parent_title}"
+            item.get("title") or item.get("name") or item.get("step") or f"小步 {index + 1}: {parent_title}"
         ).strip()
         if not title:
             return None
 
-        raw_minutes = (
-            item.get("estimated_minutes")
-            or item.get("minutes")
-            or item.get("duration")
-            or 15
-        )
+        raw_minutes = item.get("estimated_minutes") or item.get("minutes") or item.get("duration") or 15
         try:
             estimated_minutes = int(float(raw_minutes))
         except (TypeError, ValueError):
@@ -1146,10 +1241,7 @@ class AdaptiveReplanner:
         description = str(item.get("description") or item.get("detail") or "").strip() or None
         guide_content = str(item.get("guide_content") or item.get("guide") or "").strip()
         if not guide_content:
-            guide_content = (
-                "这是从“太难”快速操作里拆出来的小步。"
-                "只需要完成这一小步，不要顺手加码。"
-            )
+            guide_content = "这是从“太难”快速操作里拆出来的小步。" "只需要完成这一小步，不要顺手加码。"
 
         return {
             "title": title[:255],
@@ -1270,10 +1362,26 @@ class AdaptiveReplanner:
         task_id: UUID | None = None,
         completion_rate: float | None = None,
         feedback_category: str | None = None,
+        feedback_text: str | None = None,
         difficulty_delta: float | None = None,
+        calendar_context: dict[str, Any] | None = None,
     ) -> list[AdaptationRecord]:
         """Run an immediate plan-health evaluation outside the periodic loop."""
         report = await self.progress_service.evaluate_progress(user_id, plan_id)
+        calendar_context = (
+            calendar_context
+            if calendar_context is not None
+            else await self._load_calendar_context(
+                user_id=user_id,
+                plan_id=plan_id,
+            )
+        )
+        report = self._apply_calendar_capacity_to_report(report, calendar_context)
+        report = self._apply_feedback_signal_to_report(
+            report,
+            feedback_category=feedback_category,
+            feedback_text=feedback_text,
+        )
         return await self._handle_report(
             report,
             trigger=trigger,
@@ -1281,6 +1389,46 @@ class AdaptiveReplanner:
             completion_rate=completion_rate,
             feedback_category=feedback_category,
             difficulty_delta=difficulty_delta,
+        )
+
+    @classmethod
+    def _apply_feedback_signal_to_report(
+        cls,
+        report: PlanHealthReport,
+        *,
+        feedback_category: str | None,
+        feedback_text: str | None = None,
+    ) -> PlanHealthReport:
+        """Convert explicit duration corrections into an immediate plan-health signal."""
+        category = _strip(feedback_category).lower()
+        text = _strip(feedback_text).lower()
+        time_markers = ("太长", "时间不够", "来不及", "做不完", "排不开", "too long", "not enough time")
+        is_duration_correction = category == "too_long" or any(marker in text for marker in time_markers)
+        if not is_duration_correction or "time_overrun" in (report.reasons or []):
+            return report
+
+        reasons = list(report.reasons or [])
+        reasons.append("time_overrun")
+        metrics = dict(report.metrics or {})
+        feedback_stats = dict(metrics.get("feedback_stats") or {})
+        feedback_stats["too_long"] = max(_safe_int(feedback_stats.get("too_long")) or 0, 1)
+        metrics["feedback_stats"] = feedback_stats
+        metrics["duration_correction_source"] = "task_feedback"
+
+        severity = report.severity
+        if severity in {"healthy", "unknown", "none", ""}:
+            severity = "warning"
+
+        return PlanHealthReport(
+            plan_id=report.plan_id,
+            user_id=report.user_id,
+            status=report.status,
+            severity=severity,
+            health_score=min(report.health_score or 0.79, 0.79),
+            reasons=reasons,
+            metrics=metrics,
+            requires_adjustment=True,
+            recommended_action="adjust" if report.recommended_action == "none" else report.recommended_action,
         )
 
     @classmethod
@@ -1310,9 +1458,7 @@ class AdaptiveReplanner:
         if not self.db:
             return
         try:
-            result = await self.db.execute(
-                select(Task).where(Task.id == task_id).where(Task.user_id == user_id)
-            )
+            result = await self.db.execute(select(Task).where(Task.id == task_id).where(Task.user_id == user_id))
             task = result.scalar_one_or_none()
             if task is None:
                 return
@@ -1458,11 +1604,12 @@ class AdaptiveReplanner:
         if feedback.needs_replanning:
             state = await self.plan_state_service.get_plan_state(user_id, plan_id)
             if state and not self._recently_triggered(
-                state.facts or {}, "last_replan_at", self.AUTO_REPLAN_COOLDOWN,
+                state.facts or {},
+                "last_replan_at",
+                self.AUTO_REPLAN_COOLDOWN,
             ):
                 replan_reason = (
-                    f"Execution feedback: {feedback.validation_status}, "
-                    f"failed_tools={feedback.failed_tools}"
+                    f"Execution feedback: {feedback.validation_status}, " f"failed_tools={feedback.failed_tools}"
                 )
                 await plan_review_service.trigger_replanning(
                     plan_id=str(plan_id),
@@ -1471,10 +1618,7 @@ class AdaptiveReplanner:
                 )
                 record = AdaptationRecord(
                     what_changed="触发了当前计划的自动重规划",
-                    why=(
-                        f"执行反馈显示质量状态为 {feedback.validation_status}，"
-                        f"失败工具={feedback.failed_tools}"
-                    ),
+                    why=(f"执行反馈显示质量状态为 {feedback.validation_status}，" f"失败工具={feedback.failed_tools}"),
                     expected_effect="下一轮计划会重新评估失败步骤和依赖，降低重复卡住的概率。",
                     user_facing_message="我发现这轮执行里有关键步骤卡住了，下一轮会重新帮你收紧计划。",
                     source="adaptive_replanner",
@@ -1503,7 +1647,8 @@ class AdaptiveReplanner:
                 )
                 logger.info(
                     "Triggered replan from execution feedback: plan={}, severity={}",
-                    plan_id, feedback.severity,
+                    plan_id,
+                    feedback.severity,
                 )
                 return [record]
         cognitive_records = await self._apply_cognitive_pattern_adjustments(user_id=user_id, plan_id=plan_id)
@@ -1763,11 +1908,7 @@ class AdaptiveReplanner:
             )
             task_level_change = bool(
                 patch_result.applied
-                and (
-                    patch_result.affected_task_ids
-                    or patch_result.inserted_task_ids
-                    or patch_result.hidden_task_ids
-                )
+                and (patch_result.affected_task_ids or patch_result.inserted_task_ids or patch_result.hidden_task_ids)
             )
             if task_level_change:
                 logger.info(
@@ -1811,9 +1952,7 @@ class AdaptiveReplanner:
             logger.warning("Card protocol writeback failed (non-fatal): {}", exc)
 
         if not patch_result or not (
-            patch_result.affected_task_ids
-            or patch_result.inserted_task_ids
-            or patch_result.hidden_task_ids
+            patch_result.affected_task_ids or patch_result.inserted_task_ids or patch_result.hidden_task_ids
         ):
             await self._enqueue_adaptation_update(
                 report.user_id,
@@ -1822,8 +1961,7 @@ class AdaptiveReplanner:
                     why="系统检测到了波动信号，但暂时只更新了内部参数和回顾记录。",
                     expected_effect="保留当前执行面不被频繁扰动，同时把这次评估结果纳入后续重规划依据。",
                     user_facing_message=(
-                        "我已经重新检查了你的计划，这一轮先保留当前任务安排，"
-                        "并把评估结果记入后续校准。"
+                        "我已经重新检查了你的计划，这一轮先保留当前任务安排，" "并把评估结果记入后续校准。"
                     ),
                     source="adaptive_replanner",
                 ),
@@ -1949,6 +2087,16 @@ class AdaptiveReplanner:
             adaptive["task_density_mode"] = "reduced"
             adaptive["scaffolding_mode"] = "time_boxed_or_single_step"
 
+        if any(reason in {"calendar_capacity_shortfall", "calendar_time_conflict"} for reason in report.reasons):
+            adaptive["max_concurrent_tasks"] = 1
+            adaptive["task_density_mode"] = "calendar_aware_reduced"
+            adaptive["scaffolding_mode"] = "calendar_safe_single_step"
+            adaptive["calendar_aware"] = True
+            calendar_capacity = dict((report.metrics or {}).get("calendar_capacity") or {})
+            available_next_3 = _safe_int(calendar_capacity.get("next_3_days_available_minutes"))
+            if available_next_3 is not None:
+                adaptive["daily_minutes_cap"] = max(30, min(90, int(round(available_next_3 / 3))))
+
         if "difficulty_too_hard" in report.reasons or too_difficult >= 2:
             adaptive["max_concurrent_tasks"] = 1
             adaptive["task_density_mode"] = "reduced"
@@ -2009,7 +2157,9 @@ class AdaptiveReplanner:
             feedback_type="cognitive_pattern_adjustment",
             content="Applied plan constraints from high-confidence cognitive patterns",
             task_id=None,
-            applied_adjustment={"constraints": current_constraints.get("cognitive_pattern_adjustments", [])[-len(applied_records):]},
+            applied_adjustment={
+                "constraints": current_constraints.get("cognitive_pattern_adjustments", [])[-len(applied_records) :]
+            },
         )
 
         await self.plan_state_service.upsert_plan_state(
@@ -2128,11 +2278,20 @@ class AdaptiveReplanner:
         evidence_parts: list[str] = []
         if metrics.get("overrun_count"):
             evidence_parts.append(f"最近 {metrics['overrun_count']} 次任务出现超时")
-        too_difficult = ((metrics.get("feedback_stats") or {}).get("too_difficult", 0))
+        too_difficult = (metrics.get("feedback_stats") or {}).get("too_difficult", 0)
         if too_difficult:
             evidence_parts.append(f"最近有 {too_difficult} 次反馈“太难”")
         if feedback_category:
             evidence_parts.append(f"最近一次反馈分类是 {feedback_category}")
+        calendar_capacity = dict(metrics.get("calendar_capacity") or {})
+        if calendar_capacity:
+            available = calendar_capacity.get("next_3_days_available_minutes")
+            required = calendar_capacity.get("next_3_days_required_minutes")
+            if available is not None and required is not None:
+                evidence_parts.append(f"未来 3 天可用约 {available} 分钟，计划需要约 {required} 分钟")
+        calendar_conflicts = list(metrics.get("calendar_time_conflicts") or [])
+        if calendar_conflicts:
+            evidence_parts.append("日历事件和任务/计划截止发生冲突")
         why = "，且".join(evidence_parts) if evidence_parts else f"计划健康度触发了 {', '.join(report.reasons)}"
 
         expected_parts: list[str] = []
@@ -2146,9 +2305,13 @@ class AdaptiveReplanner:
             expected_parts.append("适度提高挑战强度")
         if adaptive.get("scaffolding_mode"):
             expected_parts.append("先给更具体的补强脚手架")
+        if adaptive.get("calendar_aware"):
+            expected_parts.append("避开忙时并降低未来几天的计划密度")
         expected_effect = "，".join(expected_parts) if expected_parts else "让后续任务更贴近你当前的执行状态。"
 
-        if "difficulty_too_hard" in report.reasons or too_difficult >= 2:
+        if any(reason in {"calendar_capacity_shortfall", "calendar_time_conflict"} for reason in report.reasons):
+            message = "我看到主要问题是日程时间不够，不把它算成执行力差；先帮你收成更轻的一步。"
+        elif "difficulty_too_hard" in report.reasons or too_difficult >= 2:
             message = "我发现你最近的任务偏难了，帮你调轻了一些。"
         elif "time_overrun" in report.reasons:
             message = "我发现你最近的任务经常超时，帮你把节奏放宽了一点。"
@@ -2182,7 +2345,9 @@ class AdaptiveReplanner:
         )
 
     @staticmethod
-    def _append_revision_summary(adaptive_meta: dict[str, Any], revision_summary: PlanRevisionSummary) -> dict[str, Any]:
+    def _append_revision_summary(
+        adaptive_meta: dict[str, Any], revision_summary: PlanRevisionSummary
+    ) -> dict[str, Any]:
         updated = dict(adaptive_meta)
         recent = list(updated.get("recent_revision_summaries", []) or [])
         recent.append(revision_summary.to_dict())
@@ -2199,26 +2364,19 @@ class AdaptiveReplanner:
         outcome_learning: dict[str, Any] | None = None,
     ) -> PlanRevisionSummary:
         reasons = ", ".join(report.reasons) if report.reasons else "plan health drift"
-        assumption_failed = (
-            feedback_category
-            or (report.reasons[0] if report.reasons else "current plan assumptions no longer fit execution reality")
+        assumption_failed = feedback_category or (
+            report.reasons[0] if report.reasons else "current plan assumptions no longer fit execution reality"
         )
         learning = outcome_learning if isinstance(outcome_learning, dict) else {}
         failure_rules = [
-            str(item).strip()
-            for item in list(learning.get("known_failure_avoidance_rules") or [])
-            if str(item).strip()
+            str(item).strip() for item in list(learning.get("known_failure_avoidance_rules") or []) if str(item).strip()
         ]
         success_patterns = [
-            str(item).strip()
-            for item in list(learning.get("known_success_patterns") or [])
-            if str(item).strip()
+            str(item).strip() for item in list(learning.get("known_success_patterns") or []) if str(item).strip()
         ]
         why_text = f"Recent execution signals showed that the current plan drifted because: {reasons}."
         if failure_rules:
-            why_text = (
-                f"{why_text} This also matches validated learning: {failure_rules[0]}"
-            )
+            why_text = f"{why_text} This also matches validated learning: {failure_rules[0]}"
         what_stays = "The main goal stays the same, and any progress already made should be preserved."
         if success_patterns:
             what_stays = f"{what_stays} Keep the validated success pattern: {success_patterns[0]}"
@@ -2285,14 +2443,10 @@ class AdaptiveReplanner:
     ) -> PlanRevisionSummary:
         learning = outcome_learning if isinstance(outcome_learning, dict) else {}
         failure_rules = [
-            str(item).strip()
-            for item in list(learning.get("known_failure_avoidance_rules") or [])
-            if str(item).strip()
+            str(item).strip() for item in list(learning.get("known_failure_avoidance_rules") or []) if str(item).strip()
         ]
         success_patterns = [
-            str(item).strip()
-            for item in list(learning.get("known_success_patterns") or [])
-            if str(item).strip()
+            str(item).strip() for item in list(learning.get("known_success_patterns") or []) if str(item).strip()
         ]
 
         signal_bits = [
@@ -2322,7 +2476,9 @@ class AdaptiveReplanner:
         if success_patterns:
             what_stays = f"{what_stays} Keep the validated success pattern: {success_patterns[0]}"
 
-        why_plan_changed = f"Recent execution signals show the current path should be revised slightly: {', '.join(signal_bits)}."
+        why_plan_changed = (
+            f"Recent execution signals show the current path should be revised slightly: {', '.join(signal_bits)}."
+        )
         if failure_rules:
             why_plan_changed = f"{why_plan_changed} This matches validated learning: {failure_rules[0]}"
 
@@ -2614,9 +2770,7 @@ class AdaptiveReplanner:
             return None
 
         # 检查最近是否已经主动联系过（冷却期8h）
-        last_proactive = self._coerce_meta_datetime(
-            await self._get_meta_value(user_id, plan_id, "last_proactive_at")
-        )
+        last_proactive = self._coerce_meta_datetime(await self._get_meta_value(user_id, plan_id, "last_proactive_at"))
         if last_proactive and _utcnow() - last_proactive < timedelta(hours=8):
             return None
 
@@ -2635,10 +2789,7 @@ class AdaptiveReplanner:
             )
         else:
             # 通用挣扎
-            message_hint = (
-                "你最近学习节奏似乎遇到了一些阻力，这很正常——"
-                "我们来看看是卡点的问题还是任务节奏需要调整？"
-            )
+            message_hint = "你最近学习节奏似乎遇到了一些阻力，这很正常——" "我们来看看是卡点的问题还是任务节奏需要调整？"
 
         await self._set_meta_value(user_id, plan_id, "last_proactive_at", _utcnow())
 
@@ -2703,17 +2854,23 @@ class AdaptiveReplanner:
         *,
         update_type: str,
     ) -> None:
+        reason = _strip(record.why)
+        description = _strip(record.user_facing_message)
+        if reason and reason not in description:
+            description = f"{description} 原因：{reason}"
+
         await SystemUpdateService(self.redis).enqueue(
             user_id,
             build_system_update(
                 update_type=update_type,
                 category="evolution",
-                title="系统已根据你的状态调整",
-                description=record.user_facing_message,
+                title="计划已根据真实进展调整",
+                description=description,
                 priority="low",
                 metadata={
                     "evolution_kind": "adaptation_record",
                     "adaptation_record": record.to_dict(),
+                    "adaptation_reason": reason,
                 },
             ),
         )

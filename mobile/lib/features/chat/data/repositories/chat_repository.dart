@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/network/response_parser.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
@@ -102,23 +103,37 @@ class ChatRepository {
         dormantInjection: null,
       );
     }
-    final response = await _dio.post<Map<String, dynamic>>(
-      '/chat/task/$taskId',
-      data: {
-        'message': message,
-        'conversation_id': conversationId,
-        if (extraContext != null) 'context': extraContext,
-      },
-    );
-    final payload =
-        ApiResponseParser.unwrapMap(response.data, action: 'sendMessageToTask');
-    // Extract dormant metadata before fromJson strips unknown keys
-    final dormantInjection =
-        payload['dormant_injection'] as Map<String, dynamic>?;
-    return (
-      response: ChatResponseModel.fromJson(payload),
-      dormantInjection: dormantInjection,
-    );
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/chat/task/$taskId',
+        data: {
+          'message': message,
+          'conversation_id': conversationId,
+          if (extraContext != null) 'context': extraContext,
+        },
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'sendMessageToTask',
+      );
+      // Extract dormant metadata before fromJson strips unknown keys
+      final dormantInjection =
+          payload['dormant_injection'] as Map<String, dynamic>?;
+      return (
+        response: ChatResponseModel.fromJson(payload),
+        dormantInjection: dormantInjection,
+      );
+    } on DioException catch (error) {
+      throw AppFailureMapper.fromDio(
+        error,
+        fallbackMessage: 'Could not send this message.',
+      );
+    } catch (error) {
+      throw AppFailureMapper.from(
+        error,
+        fallbackMessage: 'Could not send this message.',
+      );
+    }
   }
 
   Future<ChatResponseModel> sendMessage(
@@ -133,19 +148,31 @@ class ChatRepository {
       );
     }
 
-    final response = await _dio.post<Map<String, dynamic>>(
-      '/chat',
-      data: {
-        'message': message,
-        'conversation_id': conversationId,
-        if (extraContext != null) 'context': extraContext,
-      },
-    );
-    final payload = ApiResponseParser.unwrapMap(
-      response.data,
-      action: 'sendMessage',
-    );
-    return ChatResponseModel.fromJson(payload);
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/chat',
+        data: {
+          'message': message,
+          'conversation_id': conversationId,
+          if (extraContext != null) 'context': extraContext,
+        },
+      );
+      final payload = ApiResponseParser.unwrapMap(
+        response.data,
+        action: 'sendMessage',
+      );
+      return ChatResponseModel.fromJson(payload);
+    } on DioException catch (error) {
+      throw AppFailureMapper.fromDio(
+        error,
+        fallbackMessage: 'Could not send this message.',
+      );
+    } catch (error) {
+      throw AppFailureMapper.from(
+        error,
+        fallbackMessage: 'Could not send this message.',
+      );
+    }
   }
 
   /// 获取对话历史
@@ -162,10 +189,23 @@ class ChatRepository {
     if (limit != null) queryParams['limit'] = limit;
     if (offset != null) queryParams['offset'] = offset;
 
-    final response = await _dio.get<dynamic>(
-      '/chat/history/$conversationId',
-      queryParameters: queryParams.isEmpty ? null : queryParams,
-    );
+    late final Response<dynamic> response;
+    try {
+      response = await _dio.get<dynamic>(
+        '/chat/history/$conversationId',
+        queryParameters: queryParams.isEmpty ? null : queryParams,
+      );
+    } on DioException catch (error) {
+      throw AppFailureMapper.fromDio(
+        error,
+        fallbackMessage: 'Could not load chat history.',
+      );
+    } catch (error) {
+      throw AppFailureMapper.from(
+        error,
+        fallbackMessage: 'Could not load chat history.',
+      );
+    }
 
     // Handle both list response and wrapped response
     dynamic data = response.data;
@@ -250,33 +290,45 @@ class ChatRepository {
       ];
       return conversations;
     }
-    final response = await _dio.get<dynamic>('/chat/sessions');
-    final data = ApiResponseParser.unwrapList(
-      response.data,
-      action: 'getRecentConversations',
-    );
-    return List<Map<String, dynamic>>.from(
-      data.map((item) {
-        final raw = Map<String, dynamic>.from(item as Map<String, dynamic>);
-        final sessionId =
-            raw['id']?.toString() ?? raw['session_id']?.toString() ?? '';
-        final updatedAt = raw['updated_at']?.toString() ??
-            raw['last_message_at']?.toString() ??
-            raw['created_at']?.toString();
-        final title = (raw['title']?.toString().trim().isNotEmpty ?? false)
-            ? raw['title']!.toString().trim()
-            : ((raw['task_id']?.toString().isNotEmpty ?? false)
-                ? S.chatDemoTaskHelper
-                : S.chatDemoHistory);
+    try {
+      final response = await _dio.get<dynamic>('/chat/sessions');
+      final data = ApiResponseParser.unwrapList(
+        response.data,
+        action: 'getRecentConversations',
+      );
+      return List<Map<String, dynamic>>.from(
+        data.map((item) {
+          final raw = Map<String, dynamic>.from(item as Map<String, dynamic>);
+          final sessionId =
+              raw['id']?.toString() ?? raw['session_id']?.toString() ?? '';
+          final updatedAt = raw['updated_at']?.toString() ??
+              raw['last_message_at']?.toString() ??
+              raw['created_at']?.toString();
+          final title = (raw['title']?.toString().trim().isNotEmpty ?? false)
+              ? raw['title']!.toString().trim()
+              : ((raw['task_id']?.toString().isNotEmpty ?? false)
+                  ? S.chatDemoTaskHelper
+                  : S.chatDemoHistory);
 
-        return {
-          ...raw,
-          'id': sessionId,
-          'title': title,
-          'updated_at': updatedAt,
-        };
-      }),
-    );
+          return {
+            ...raw,
+            'id': sessionId,
+            'title': title,
+            'updated_at': updatedAt,
+          };
+        }),
+      );
+    } on DioException catch (error) {
+      throw AppFailureMapper.fromDio(
+        error,
+        fallbackMessage: 'Could not load recent conversations.',
+      );
+    } catch (error) {
+      throw AppFailureMapper.from(
+        error,
+        fallbackMessage: 'Could not load recent conversations.',
+      );
+    }
   }
 
   Future<MultiAgentCatalog> getMultiAgentCatalog() async {

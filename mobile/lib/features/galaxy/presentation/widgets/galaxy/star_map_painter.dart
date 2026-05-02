@@ -496,7 +496,7 @@ class StarMapPainter extends CustomPainter {
           text: '${predictedMastery.round()}%',
           fontSize: 10,
           fontWeight: DS.fontWeightBold,
-          color: Colors.white,
+          color: DS.neutral0,
           maxWidth: 44,
         );
         painter.paint(
@@ -618,7 +618,7 @@ class StarMapPainter extends CustomPainter {
         [
           Colors.transparent,
           Colors.transparent,
-          (isDarkMode ? Colors.black : const Color(0xFFCBD2DD)).withValues(
+          (isDarkMode ? DS.neutral900 : const Color(0xFFCBD2DD)).withValues(
             alpha: isDarkMode ? 0.12 : 0.06,
           ),
         ],
@@ -1398,7 +1398,7 @@ class StarMapPainter extends CustomPainter {
       ..drawCircle(
         tangent.position,
         2.2 + trailStrength * 1.6,
-        Paint()..color = Colors.white.withValues(alpha: 0.92),
+        Paint()..color = DS.neutral0.withValues(alpha: 0.92),
       );
   }
 
@@ -1567,7 +1567,7 @@ class StarMapPainter extends CustomPainter {
               nodeCenter,
               radius,
               [
-                Colors.white.withValues(alpha: nodeAlpha * 0.2),
+                DS.neutral0.withValues(alpha: nodeAlpha * 0.2),
                 innerColor.withValues(
                   alpha: style.fillAlpha * nodeAlpha * 0.92,
                 ),
@@ -1590,7 +1590,7 @@ class StarMapPainter extends CustomPainter {
           math.max(1.1, radius * 0.28),
           Paint()
             ..color =
-                Colors.white.withValues(alpha: style.coreAlpha * nodeAlpha),
+                DS.neutral0.withValues(alpha: style.coreAlpha * nodeAlpha),
         );
       }
 
@@ -1718,7 +1718,7 @@ class StarMapPainter extends CustomPainter {
       if (selectedNodeId == node.id) {
         final selectedColor = Color.lerp(
           style.baseColor,
-          isDarkMode ? Colors.white : Colors.black,
+          isDarkMode ? DS.neutral0 : DS.neutral900,
           isDarkMode ? 0.42 : 0.28,
         )!;
         canvas
@@ -1838,8 +1838,9 @@ class StarMapPainter extends CustomPainter {
               ? 12.0
               : 10.0;
       final fontWeight = isSelected ? DS.fontWeightBold : DS.fontWeightSemibold;
-      final labelColor = (isDarkMode ? Colors.white : Colors.black87)
-          .withValues(alpha: labelAlpha);
+      final labelColor =
+          (isDarkMode ? DS.neutral0 : DS.neutral900.withValues(alpha: 0.87))
+              .withValues(alpha: labelAlpha);
       final cacheKey =
           '${node.id}:$fontSize:${fontWeight.value}:${labelColor.toARGB32()}';
       final labelPainter = labelCache.obtain(
@@ -1875,7 +1876,7 @@ class StarMapPainter extends CustomPainter {
           backgroundRect,
           Paint()
             ..color = Color.lerp(
-              isDarkMode ? _darkBackground : Colors.white,
+              isDarkMode ? _darkBackground : DS.neutral0,
               baseColor,
               0.18,
             )!
@@ -1887,7 +1888,9 @@ class StarMapPainter extends CustomPainter {
 
       if (lod == GalaxyLod.l4) {
         final barColor = _nodeCanvasColor(node).withValues(alpha: 0.92);
-        final barTrackColor = (isDarkMode ? Colors.white24 : Colors.black12);
+        final barTrackColor = (isDarkMode
+            ? DS.neutral0.withValues(alpha: 0.24)
+            : DS.neutral900.withValues(alpha: 0.12));
         final barOffset = Offset(
           labelOffset.dx,
           labelOffset.dy + labelPainter.height + 5,
@@ -2495,12 +2498,33 @@ class StarMapPainter extends CustomPainter {
   }
 
   Color _nodeCanvasColor(GalaxyNodeModel node) {
-    final blended = galaxyMasteryNodeColor(
-      masteryScore: node.masteryScore,
+    final sectorColor = SectorConfig.resolveNodeBaseColor(
+      node: node,
       isDarkMode: isDarkMode,
     );
+    final masteryRatio = galaxyMasteryRatio(node.masteryScore);
+    if (masteryRatio < 0.05) {
+      final grayed = Color.lerp(
+        isDarkMode ? const Color(0xFF3A404A) : const Color(0xFFB8BFC8),
+        sectorColor,
+        0.35,
+      )!;
+      return SectorConfig.applyImportanceRamp(
+        grayed,
+        importance: node.importance,
+        isDarkMode: isDarkMode,
+      );
+    }
+    final desaturated = Color.lerp(
+      sectorColor,
+      galaxyMasteryNodeColor(
+        masteryScore: node.masteryScore,
+        isDarkMode: isDarkMode,
+      ),
+      0.45,
+    )!;
     return SectorConfig.applyImportanceRamp(
-      blended,
+      desaturated,
       importance: node.importance,
       isDarkMode: isDarkMode,
     );
@@ -2520,7 +2544,7 @@ class StarMapPainter extends CustomPainter {
         dotCenter,
         dotRadius + 1.4,
         Paint()
-          ..color = (isDarkMode ? const Color(0xFF060A12) : Colors.white)
+          ..color = (isDarkMode ? const Color(0xFF060A12) : DS.neutral0)
               .withValues(alpha: 0.92 * nodeAlpha),
       )
       ..drawCircle(
@@ -2536,7 +2560,7 @@ class StarMapPainter extends CustomPainter {
         dotCenter,
         dotRadius + 1.4,
         Paint()
-          ..color = Colors.white.withValues(alpha: 0.24 * nodeAlpha)
+          ..color = DS.neutral0.withValues(alpha: 0.24 * nodeAlpha)
           ..strokeWidth = 0.8
           ..style = PaintingStyle.stroke,
       );

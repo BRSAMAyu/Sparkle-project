@@ -12,7 +12,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, ClassVar
 
 
 def _utcnow() -> str:
@@ -40,6 +40,8 @@ class ActionableSignal:
     evidence_summary: str
     possible_effects: list[str]
     priority: str               # "high" | "medium" | "low"
+    counter_evidence: list[str] = field(default_factory=list)
+    alternative_explanations: list[str] = field(default_factory=list)
     created_at: str = field(default_factory=_utcnow)
 
     def to_dict(self) -> dict[str, Any]:
@@ -54,6 +56,8 @@ class ActionableSignal:
             "ttl_hours": self.ttl_hours,
             "evidence_summary": self.evidence_summary,
             "possible_effects": self.possible_effects,
+            "counter_evidence": self.counter_evidence,
+            "alternative_explanations": self.alternative_explanations,
             "priority": self.priority,
             "created_at": self.created_at,
         }
@@ -100,6 +104,109 @@ class StateEntry:
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> StateEntry:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class CounterEvidence:
+    """Evidence that a strategy belief should be discounted."""
+
+    reason: str
+    source: str = "outcome"  # user_rejection / harmful_outcome / user_correction / outcome
+    weight: float = 1.0
+    evidence_id: str = field(default_factory=lambda: _uid("ce"))
+    created_at: str = field(default_factory=_utcnow)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "evidence_id": self.evidence_id,
+            "source": self.source,
+            "reason": self.reason,
+            "weight": self.weight,
+            "created_at": self.created_at,
+            "metadata": self.metadata,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> CounterEvidence:
+        if isinstance(d, str):
+            return cls(reason=d)
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+
+@dataclass
+class StrategyBelief:
+    """Bayesian belief about a strategy's effectiveness."""
+
+    strategy_key: str
+    scope: str = "global"              # current_sprint | global | cohort
+    alpha: float = 1.0    # prior "successes" (Beta distribution)
+    beta: float = 1.0     # prior "failures"
+    evidence_count: int = 0
+    last_updated: str = ""
+    retract_if: list[str] = field(default_factory=list)  # conditions triggering auto-retraction
+    counter_evidence: list[CounterEvidence] = field(default_factory=list)
+
+    COUNTER_EVIDENCE_PENALTY_PER_ITEM: ClassVar[float] = 0.05
+    MAX_COUNTER_EVIDENCE_PENALTY: ClassVar[float] = 0.3
+
+    @property
+    def raw_expected_effectiveness(self) -> float:
+        """Posterior mean before counter-evidence discount."""
+        total = self.alpha + self.beta
+        if total == 0:
+            return 0.5
+        return self.alpha / total
+
+    @property
+    def counter_evidence_penalty(self) -> float:
+        """FV-18: each counter-evidence item discounts belief score by 0.05, capped at 0.3."""
+        return min(
+            len(self.counter_evidence) * self.COUNTER_EVIDENCE_PENALTY_PER_ITEM,
+            self.MAX_COUNTER_EVIDENCE_PENALTY,
+        )
+
+    @property
+    def belief_score(self) -> float:
+        """Counter-evidence-adjusted strategy effectiveness score."""
+        return max(0.0, self.raw_expected_effectiveness - self.counter_evidence_penalty)
+
+    @property
+    def expected_effectiveness(self) -> float:
+        """Backward-compatible alias for policy consumers."""
+        return self.belief_score
+
+    @property
+    def confidence(self) -> float:
+        """How confident we are in the estimate (0-1)."""
+        total = self.alpha + self.beta
+        if total < 2:
+            return 0.0
+        return min(total / (total + 10), 1.0)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "strategy_key": self.strategy_key,
+            "scope": self.scope,
+            "alpha": self.alpha,
+            "beta": self.beta,
+            "evidence_count": self.evidence_count,
+            "last_updated": self.last_updated,
+            "retract_if": self.retract_if,
+            "counter_evidence": [e.to_dict() for e in self.counter_evidence],
+            "belief_score": self.belief_score,
+            "raw_expected_effectiveness": self.raw_expected_effectiveness,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> StrategyBelief:
+        fields = {k: v for k, v in d.items() if k in cls.__dataclass_fields__}
+        raw_counter_evidence = fields.get("counter_evidence") or []
+        fields["counter_evidence"] = [
+            item if isinstance(item, CounterEvidence) else CounterEvidence.from_dict(item)
+            for item in raw_counter_evidence
+        ]
+        return cls(**fields)
 
 
 @dataclass
@@ -459,7 +566,7 @@ class RetrievalDirective:
     do_not_load: list[str] = field(default_factory=list)
     token_budget: int = 3600
     citation_required: bool = True
-    pollution_guard: str = "strict"                # strict / permissive / off
+    pollution_guard: str = "strict"                # strict / moderate / off
     scope: str = "turn"
     reason_for_user: str = ""
     created_at: str = field(default_factory=_utcnow)
@@ -688,6 +795,93 @@ class OutcomeRecord:
         return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
 
 
+# ── 8b. OutcomeVector — unified multi-dimensional outcome schema ──────
+# P1-15: Merges attribution, confidence, user feedback, skill extraction
+# candidates, and short/long-term impact into a single standardized structure.
+
+@dataclass
+class OutcomeVector:
+    outcome_id: str
+    causal_trace_id: str
+
+    # Attribution layer (from OutcomeRecord)
+    attribution: str = "inconclusive"       # effective / insufficient / harmful / inconclusive
+    attribution_confidence: float = 0.0
+
+    # User feedback layer
+    user_corrected: bool = False
+    user_feedback_text: str = ""
+    user_satisfaction: float | None = None  # 0-1
+
+    # Skill extraction layer
+    extracted_skill_id: str | None = None
+    skill_candidate_confidence: float = 0.0
+
+    # Temporal impact layer
+    impact_duration: str = "unknown"        # immediate / short_term / long_term / unknown
+    short_term_effect: dict[str, Any] = field(default_factory=dict)
+    long_term_effect: dict[str, Any] = field(default_factory=dict)
+
+    # Composite score (0-1), derived from all layers
+    composite_score: float = 0.0
+
+    created_at: str = field(default_factory=_utcnow)
+
+    def compute_composite(self) -> float:
+        """Derive composite score from attribution confidence + user satisfaction."""
+        base = self.attribution_confidence
+        if self.user_satisfaction is not None:
+            base = (base + self.user_satisfaction) / 2.0
+        if self.user_corrected:
+            base *= 0.6
+        self.composite_score = max(0.0, min(1.0, base))
+        return self.composite_score
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "outcome_id": self.outcome_id,
+            "causal_trace_id": self.causal_trace_id,
+            "attribution": self.attribution,
+            "attribution_confidence": self.attribution_confidence,
+            "user_corrected": self.user_corrected,
+            "user_feedback_text": self.user_feedback_text,
+            "user_satisfaction": self.user_satisfaction,
+            "extracted_skill_id": self.extracted_skill_id,
+            "skill_candidate_confidence": self.skill_candidate_confidence,
+            "impact_duration": self.impact_duration,
+            "short_term_effect": self.short_term_effect,
+            "long_term_effect": self.long_term_effect,
+            "composite_score": self.composite_score,
+            "created_at": self.created_at,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict[str, Any]) -> OutcomeVector:
+        return cls(**{k: v for k, v in d.items() if k in cls.__dataclass_fields__})
+
+    @classmethod
+    def from_outcome_record(
+        cls,
+        record: OutcomeRecord,
+        *,
+        user_feedback_text: str = "",
+        user_satisfaction: float | None = None,
+        extracted_skill_id: str | None = None,
+    ) -> OutcomeVector:
+        """Create an OutcomeVector from an existing OutcomeRecord."""
+        vec = cls(
+            outcome_id=record.outcome_id,
+            causal_trace_id=record.causal_trace_id,
+            attribution=record.attribution,
+            attribution_confidence=record.attribution_confidence,
+            user_feedback_text=user_feedback_text,
+            user_satisfaction=user_satisfaction,
+            extracted_skill_id=extracted_skill_id,
+        )
+        vec.compute_composite()
+        return vec
+
+
 # ── 9. PolicyEffectLedger ────────────────────────────────────────────────
 # 记录策略执行效果，用于 PolicyEngine 影子模式规则偏置。
 # 不是直接改规则，而是记录+查询+影响下一次决策。
@@ -765,6 +959,7 @@ class SourceAsset:
     goal_id: str = ""
     owner: str = "user"               # user / community / system
     visibility: str = "private"       # private / cohort / public
+    lifecycle_status: str = "active"  # active / archived / revoked / orphaned
     parsed_status: str = "parsed"     # pending / parsed / failed
     quality_score: float = 1.0        # 0.0 - 1.0
     mapped_nodes: list[str] | None = None
@@ -781,6 +976,7 @@ class SourceAsset:
             "goal_id": self.goal_id,
             "owner": self.owner,
             "visibility": self.visibility,
+            "lifecycle_status": self.lifecycle_status,
             "parsed_status": self.parsed_status,
             "quality_score": self.quality_score,
         }
@@ -883,17 +1079,23 @@ class SkillEntry:
     applicable_when: dict[str, Any]      # Conditions under which this skill applies
     evidence: dict[str, Any]             # Effectiveness metrics
     privacy: dict[str, bool] | None = None  # contains_personal_data / shareable
+    contraindications: list[str] = field(default_factory=list)  # when this skill should not be applied
+    version: int = 1
+    previous_versions: list[dict[str, Any]] = field(default_factory=list)
     effective_count: int = 0
     sample_size: int = 0
 
     def to_dict(self) -> dict[str, Any]:
         d: dict[str, Any] = {
             "skill_id": self.skill_id,
+            "version": self.version,
             "scope": self.scope,
             "source_policy_key": self.source_policy_key,
             "strategy": self.strategy,
             "applicable_when": self.applicable_when,
             "evidence": self.evidence,
+            "contraindications": self.contraindications,
+            "previous_versions": self.previous_versions,
             "effective_count": self.effective_count,
             "sample_size": self.sample_size,
         }

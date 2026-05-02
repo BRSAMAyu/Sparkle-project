@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,6 +8,7 @@ from app.core.cache import cache_service
 from app.models.user import User
 from app.services.growth_dashboard_service import GrowthDashboardService
 from app.services.progress_narrative_service import ProgressNarrativeService
+from app.signals.growth_chronicle import GrowthChronicleService
 
 router = APIRouter()
 
@@ -59,3 +62,44 @@ async def generate_weekly_growth_narrative(
     service = ProgressNarrativeService(db, redis=cache_service.redis, cache=cache_service)
     narrative = await service.get_weekly_narrative(current_user.id, force=True)
     return narrative.to_dict() if hasattr(narrative, "to_dict") else narrative
+
+
+# route-tier: authed
+@router.get("/return-case-file")
+async def get_return_case_file(
+    rebuild: bool = Query(False, description="Bypass cache and rebuild from chronicle"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    GOAL-011: Return case file for users who have been away.
+
+    Returns the user's confirmed long-term insights, pending review items, and
+    chronicle summary so the system can pick up where it left off without
+    treating returning users as new users. Falls back to chronicle rebuild if
+    Redis cache is missing.
+    """
+    redis = cache_service.redis
+    user_key = f"spine:return_case_file:{current_user.id}:latest"
+
+    if not rebuild and redis is not None:
+        try:
+            cached = await redis.get(user_key)
+            if cached:
+                payload = json.loads(cached if isinstance(cached, str) else cached.decode())
+                payload["source"] = "cache"
+                return payload
+        except Exception:  # noqa: BLE001
+            pass
+
+    chronicle = GrowthChronicleService(redis, db_session=db)
+    case = await chronicle.build_return_case_file(str(current_user.id))
+    case["source"] = "rebuild"
+
+    if redis is not None:
+        try:
+            await redis.set(user_key, json.dumps(case, default=str), ex=7 * 24 * 3600)
+        except Exception:  # noqa: BLE001
+            pass
+
+    return case

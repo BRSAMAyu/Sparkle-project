@@ -79,20 +79,6 @@ from app.orchestration.agent_activity import emit_agent_activity, emit_routing_p
 from app.orchestration.agent_memory import AgentMemoryService  # noqa: F401
 from app.orchestration.agent_scoring import AgentScoringService  # noqa: F401
 from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
-from app.orchestration.memory_helpers import (
-    build_aurora_modeling_memory_summary,
-    build_aurora_runtime_metadata as _build_aurora_runtime_metadata,
-    build_error_memory_summary,
-    extract_completion_state_from_response_data,
-    extract_struggle_score as _extract_struggle_score,
-    first_memory_value as _first_memory_value,
-    memory_dict as _memory_dict,
-    memory_json_dict as _memory_json_dict,
-    memory_text as _memory_text,
-    safe_float as _safe_float,
-    should_record_stressed_session_mood as _should_record_stressed,
-    wake_policy_energy as _wake_policy_energy,
-)
 
 # Multi-Agent Mode Support
 from app.orchestration.chat_modes import (
@@ -124,6 +110,7 @@ from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.execution_engine import ExecutionEngineMixin
 from app.orchestration.executor import ToolExecutor
 from app.orchestration.experience_actuator import ExperienceActuator
+from app.orchestration.experience_packets import attach_goal_realization_context
 from app.orchestration.expert_strategy import ExpertStrategyV1
 from app.orchestration.goal_quality_evaluator import goal_quality_evaluator  # noqa: F401
 from app.orchestration.graph_rag import (
@@ -133,6 +120,38 @@ from app.orchestration.graph_rag import (
 )
 from app.orchestration.grounding_validator import GroundingValidator
 from app.orchestration.lang_graph_planner import LangGraphPlanner
+from app.orchestration.memory_helpers import (
+    build_aurora_modeling_memory_summary,
+    build_error_memory_summary,
+    extract_completion_state_from_response_data,
+)
+from app.orchestration.memory_helpers import (
+    build_aurora_runtime_metadata as _build_aurora_runtime_metadata,
+)
+from app.orchestration.memory_helpers import (
+    extract_struggle_score as _extract_struggle_score,
+)
+from app.orchestration.memory_helpers import (
+    first_memory_value as _first_memory_value,
+)
+from app.orchestration.memory_helpers import (
+    memory_dict as _memory_dict,
+)
+from app.orchestration.memory_helpers import (
+    memory_json_dict as _memory_json_dict,
+)
+from app.orchestration.memory_helpers import (
+    memory_text as _memory_text,
+)
+from app.orchestration.memory_helpers import (
+    safe_float as _safe_float,
+)
+from app.orchestration.memory_helpers import (
+    should_record_stressed_session_mood as _should_record_stressed,
+)
+from app.orchestration.memory_helpers import (
+    wake_policy_energy as _wake_policy_energy,
+)
 from app.orchestration.mode_workflow_config import get_mode_strategy, get_workflow_config  # noqa: F401
 from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter, execute_multi_agent_workflow  # noqa: F401
 from app.orchestration.observability_logger import observability_logger
@@ -329,7 +348,7 @@ class ChatOrchestrator(
         self._bg_tasks: set[asyncio.Task] = set()
 
         # Initialize components
-        self.state_manager = SessionStateManager(redis_client)
+        self.state_manager = SessionStateManager(redis_client, db_session=db_session)
         self.validator = RequestValidator(
             redis_client,
             daily_quota=getattr(settings, "DAILY_QUOTA", 100000),
@@ -928,6 +947,56 @@ class ChatOrchestrator(
         mode = str(request_extra_context.get("mode") or "").strip()
         return AURORA_RUNTIME_MODE_SURFACES.get(mode)
 
+    async def _process_aurora_correction_from_context(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        request_id: str,
+        active_db: AsyncSession | None,
+        request_extra_context: dict[str, Any],
+    ) -> None:
+        raw_payload = request_extra_context.get("aurora_correction")
+        if not isinstance(raw_payload, dict):
+            return
+        try:
+            from app.aurora.correction_types import AuroraCorrectionPayload
+            from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
+
+            payload = AuroraCorrectionPayload.normalize(
+                raw_payload,
+                conversation_id=raw_payload.get("conversation_id") or session_id,
+                message_id=raw_payload.get("message_id") or request_id,
+            )
+            request_extra_context["aurora_correction"] = payload.to_dict()
+
+            db_session_factory = None
+            if active_db is not None:
+
+                @contextlib.asynccontextmanager
+                async def _db_session():
+                    yield active_db
+
+                db_session_factory = _db_session
+
+            processor = CorrectionFeedbackProcessor(self.redis, db_session_factory)
+            result = await processor.process(
+                user_id=user_id,
+                semantic_value=payload.semantic_value,
+                is_disconfirming=payload.is_disconfirming,
+                is_freeform=payload.is_freeform,
+                freeform_text=payload.freeform_text,
+                telemetry_id=payload.telemetry_id,
+                context_source=payload.source,
+                correction_payload=payload,
+            )
+            if result.user_visible_effect:
+                effect_key = f"aurora:last_correction_effect:{user_id}"
+                await self.redis.set(effect_key, json.dumps(result.user_visible_effect, ensure_ascii=False))
+                await self.redis.expire(effect_key, 24 * 3600)
+        except Exception:
+            logger.warning("Failed to process Aurora correction payload from chat context", exc_info=True)
+
     @staticmethod
     def _build_aurora_runtime_metadata(
         *,
@@ -1374,6 +1443,23 @@ class ChatOrchestrator(
         except Exception:
             logger.debug("Non-standard session_id format, using uuid5 fallback: %s", raw[:50])
             return uuid.uuid5(uuid.NAMESPACE_URL, f"sparkle-session:{raw}")
+
+    @staticmethod
+    def _bind_response_session_id(
+        response: agent_service_pb2.ChatResponse,
+        session_id: str,
+        *,
+        request_id: str | None = None,
+    ) -> agent_service_pb2.ChatResponse:
+        if response.session_id:
+            return response
+        response.session_id = session_id
+        if request_id:
+            logger.warning(
+                "Orchestrator response missing session_id; bound active session_id "
+                f"request_id={request_id} session_id={session_id}"
+            )
+        return response
 
     def _response_priority(self, resp: agent_service_pb2.ChatResponse) -> str:
         content_kind = resp.WhichOneof("content")
@@ -1858,11 +1944,22 @@ class ChatOrchestrator(
         try:
             knowledge_service = KnowledgeService(active_db)
             retriever = GraphRAGRetriever(knowledge_service)
+
+            # P1-9: depth mapping for deep_source_synthesis + aurora_core_case_file
+            if mode == "deep_source_synthesis":
+                retrieval_depth = 3
+            elif mode == "aurora_core_case_file":
+                retrieval_depth = 2
+            elif mode == "aggressive":
+                retrieval_depth = 2
+            else:
+                retrieval_depth = 1
+
             rag_result = await asyncio.wait_for(
                 retriever.retrieve(
                     str(user_message or ""),
                     str(user_uuid),
-                    depth=2 if mode == "aggressive" else 1,
+                    depth=retrieval_depth,
                     route_intent=route_intent,
                     include_group_documents=include_group_documents,
                     group_ids=group_ids,
@@ -1961,7 +2058,16 @@ class ChatOrchestrator(
             turn_started_at = _utcnow().replace(tzinfo=None)
             ACTIVE_SESSIONS.inc()
             request_id = request.request_id
-            session_id = request.session_id
+            session_id = str(request.session_id or "").strip()
+            if not session_id:
+                session_id = str(uuid.uuid4())
+                request.session_id = session_id
+                logger.warning(
+                    "Generated new orchestrator session_id for first request without a session_id "
+                    f"request_id={request_id} session_id={session_id}"
+                )
+                span.set_attribute("session_id_generated", True)
+            span.set_attribute("session_id", session_id)
             user_id = request.user_id
             response_id = str(uuid.uuid4())
             workflow_id = (context_data or {}).get("workflow_id", "standard_chat")
@@ -1972,12 +2078,12 @@ class ChatOrchestrator(
             if validation_error := await self._validate_request(
                 request, response_id=response_id, request_id=request_id
             ):
-                yield validation_error
+                yield self._bind_response_session_id(validation_error, session_id, request_id=request_id)
                 return
             if cached_resp := await self._check_idempotency_response(
                 session_id=session_id, request_id=request_id, response_id=response_id
             ):
-                yield cached_resp
+                yield self._bind_response_session_id(cached_resp, session_id, request_id=request_id)
                 return
 
             lock_acquired = False
@@ -1993,16 +2099,20 @@ class ChatOrchestrator(
                 # Step 2: Distributed lock
                 lock_acquired = await self._acquire_session_lock(session_id, request_id)
                 if not lock_acquired:
-                    yield agent_service_pb2.ChatResponse(
-                        response_id=response_id,
-                        created_at=int(datetime.now().timestamp()),
-                        request_id=request_id,
-                        error=agent_service_pb2.Error(
-                            message="会话正在处理另一个请求，请稍候",
-                            retryable=True,
-                            error_code=agent_service_pb2.ERROR_CODE_CONFLICT,
+                    yield self._bind_response_session_id(
+                        agent_service_pb2.ChatResponse(
+                            response_id=response_id,
+                            created_at=int(datetime.now().timestamp()),
+                            request_id=request_id,
+                            error=agent_service_pb2.Error(
+                                message="会话正在处理另一个请求，请稍候",
+                                retryable=True,
+                                error_code=agent_service_pb2.ERROR_CODE_CONFLICT,
+                            ),
+                            finish_reason=agent_service_pb2.ERROR,
                         ),
-                        finish_reason=agent_service_pb2.ERROR,
+                        session_id,
+                        request_id=request_id,
                     )
                     return
                 lock_renewal_task, lock_renewal_stop = await self.state_manager.start_lock_renewal(
@@ -2010,7 +2120,13 @@ class ChatOrchestrator(
                 )
 
                 # Step 3: Initialize state & extract message
-                await self._update_state(session_id, STATE_INIT, f"Request {request_id}")
+                await self._update_state(
+                    session_id,
+                    STATE_INIT,
+                    f"Request {request_id}",
+                    request_id=request_id,
+                    user_id=user_id,
+                )
                 chat_mode = normalize_chat_mode(request.chat_mode or CHAT_MODE_STANDARD)
                 user_message = request.message or ""
                 request_extra_context = {}
@@ -2030,6 +2146,13 @@ class ChatOrchestrator(
                 if request_document_filter:
                     request_extra_context["document_filter"] = request_document_filter
                     request_extra_context["selected_document_ids"] = request_document_filter
+                await self._process_aurora_correction_from_context(
+                    user_id=user_id,
+                    session_id=session_id,
+                    request_id=request_id,
+                    active_db=active_db,
+                    request_extra_context=request_extra_context,
+                )
                 raw_conversation_settings = request_extra_context.get("conversation_settings")
                 conversation_settings = dict(raw_conversation_settings) if isinstance(raw_conversation_settings, dict) else {}
                 raw_group_ids = (
@@ -2116,7 +2239,7 @@ class ChatOrchestrator(
                     )
                     if bridge_responses:
                         for bridge_response in bridge_responses:
-                            yield bridge_response
+                            yield self._bind_response_session_id(bridge_response, session_id, request_id=request_id)
                         await self._update_state(session_id, STATE_DONE, "Bridge tool short-circuit completed")
                         REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
                         COLLABORATION_SUCCESS.labels(
@@ -2139,7 +2262,7 @@ class ChatOrchestrator(
                         active_db=active_db,
                     ):
                         saw_openclaw_short_circuit = True
-                        yield openclaw_response
+                        yield self._bind_response_session_id(openclaw_response, session_id, request_id=request_id)
                     if saw_openclaw_short_circuit:
                         await self._update_state(
                             session_id, STATE_DONE, "OpenClaw chat control short-circuit completed"
@@ -2372,6 +2495,10 @@ class ChatOrchestrator(
 
                 state = WorkflowState()
                 state.context_data.update(initial_document_context_state)
+                state.context_data["session_id"] = session_id
+                state.context_data["conversation_id"] = session_id
+                state.context_data["request_id"] = request_id
+                state.context_data["user_id"] = user_id
                 # v2.9/v2.10: Inject spine directives into workflow state
                 for _spine_key in ("spine_response_directive", "spine_chronicle_summary",
                                    "spine_fatigue_context", "spine_retrieval_directive",
@@ -2417,6 +2544,7 @@ class ChatOrchestrator(
                     resp.response_id = response_id
                     resp.created_at = int(datetime.now().timestamp())
                     resp.request_id = request_id
+                    resp.session_id = resp.session_id or session_id
                     resp.workflow_id = resp.workflow_id or workflow_id
                     resp.prompt_version = resp.prompt_version or prompt_version
                     resp.trace_id = resp.trace_id or trace_id
@@ -2513,7 +2641,7 @@ class ChatOrchestrator(
                     )
                     if fast_track_handled:
                         async for queued in self._drain_queue(queue):
-                            yield queued
+                            yield self._bind_response_session_id(queued, session_id, request_id=request_id)
                         await self._update_state(session_id, STATE_DONE, "Exam sprint fast-track completed")
                         REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
                         COLLABORATION_SUCCESS.labels(
@@ -2576,7 +2704,7 @@ class ChatOrchestrator(
                         if evolution_highlights:
                             user_context_payload["evolution_highlights"] = evolution_highlights
                 for update_resp in update_responses:
-                    yield update_resp
+                    yield self._bind_response_session_id(update_resp, session_id, request_id=request_id)
 
                 user_context_payload = await self._attach_active_intervention_state(
                     active_db=active_db,
@@ -2647,7 +2775,7 @@ class ChatOrchestrator(
                 )
                 if sufficiency_handled:
                     async for queued in self._drain_queue(queue):
-                        yield queued
+                        yield self._bind_response_session_id(queued, session_id, request_id=request_id)
                     return
                 if await self._check_goal_quality(
                     intent_type=intent_type,
@@ -2660,7 +2788,7 @@ class ChatOrchestrator(
                     state=state,
                 ):
                     async for queued in self._drain_queue(queue):
-                        yield queued
+                        yield self._bind_response_session_id(queued, session_id, request_id=request_id)
                     return
 
                 if chat_mode != CHAT_MODE_STANDARD and not settings.ENABLE_UNIFIED_GRAPH_ROUTING:
@@ -2733,6 +2861,10 @@ class ChatOrchestrator(
                         user_context_payload=user_context_payload,
                         state=state,
                     )
+                    user_context_payload = attach_goal_realization_context(
+                        user_context_payload=user_context_payload,
+                        state_context=state.context_data,
+                    )
 
                 # Step 6: Prepare runtime context (transparency, tools)
                 transparency_generator, emit_transparency_event = await self._prepare_runtime_context(
@@ -2746,7 +2878,7 @@ class ChatOrchestrator(
 
                 if request.HasField("tool_result"):
                     async for queued in self._drain_queue(queue):
-                        yield queued
+                        yield self._bind_response_session_id(queued, session_id, request_id=request_id)
                     async for continued_response in self._continue_after_tool_result(
                         request=request,
                         active_db=active_db,
@@ -2772,7 +2904,7 @@ class ChatOrchestrator(
                 if aurora_surface is not None:
                     await self._update_state(session_id, STATE_GENERATING, f"Aurora runtime v1 ({aurora_surface})")
                     async for queued in self._drain_queue(queue):
-                        yield queued
+                        yield self._bind_response_session_id(queued, session_id, request_id=request_id)
                     async for aurora_response in self._stream_aurora_runtime_v1(
                         request=request,
                         active_db=active_db,
@@ -2947,13 +3079,13 @@ class ChatOrchestrator(
                         ),
                         result_holder=mode_result,
                     ):
-                        yield resp
+                        yield self._bind_response_session_id(resp, session_id, request_id=request_id)
                     final_response_data = mode_result.get("final_response_data")
                     if isinstance(final_response_data, dict):
                         await self._cache_response(session_id, request_id, final_response_data)
                         followup_updates, _, _, _, _, _, _ = await self._drain_system_updates(user_id)
                         for update_resp in followup_updates:
-                            yield update_resp
+                            yield self._bind_response_session_id(update_resp, session_id, request_id=request_id)
                     return
 
                 # Step 10: Route with unified orchestration brain for all modes
@@ -3077,6 +3209,8 @@ class ChatOrchestrator(
                     state=state,
                     active_db=active_db,
                     user_id=user_id,
+                    session_id=session_id,
+                    request_id=request_id,
                     plan_id=plan_id,
                     user_context_payload=user_context_payload,
                     plan_context=plan_context,
@@ -3095,6 +3229,9 @@ class ChatOrchestrator(
                         "cognitive_adjustments": dual_core_decision.get("cognitive_adjustments", []),
                         "structured_adjustments": dual_core_decision.get("structured_adjustments", []),
                         "execution_constraints": dual_core_decision.get("execution_constraints", []),
+                        "signal_scores": dual_core_decision.get("signal_scores", {}),
+                        "routing_trace_id": dual_core_decision.get("routing_trace_id"),
+                        "scaffolding_zone": dual_core_decision.get("scaffolding_zone"),
                         "session_id": session_id,
                     },
                     duration_ms=self._roundtrip_ms(dual_core_started_at),
@@ -3181,6 +3318,10 @@ class ChatOrchestrator(
                     user_context_payload=user_context_payload,
                     state=state,
                 )
+                user_context_payload = attach_goal_realization_context(
+                    user_context_payload=user_context_payload,
+                    state_context=state.context_data,
+                )
 
                 # Step 11: Plan & validate (langgraph/hybrid mode)
                 route_decision, executable_plan, snapshot, should_return = await self._plan_and_validate(
@@ -3204,7 +3345,7 @@ class ChatOrchestrator(
                 )
                 if should_return:
                     async for queued in self._drain_queue(queue):
-                        yield queued
+                        yield self._bind_response_session_id(queued, session_id, request_id=request_id)
                     return
 
                 # Step 12: Log route decision
@@ -3315,8 +3456,14 @@ class ChatOrchestrator(
                         await emit_transparency_event(transparency_generator.get_complete_event())
                     followup_updates, _, _, _, _, _, _ = await self._drain_system_updates(user_id)
                     for update_resp in followup_updates:
-                        yield update_resp
-                    await self._update_state(session_id, STATE_DONE, "Response completed")
+                        yield self._bind_response_session_id(update_resp, session_id, request_id=request_id)
+                    await self._update_state(
+                        session_id,
+                        STATE_DONE,
+                        "Response completed",
+                        request_id=request_id,
+                        user_id=user_id,
+                    )
                     await self._maybe_upsert_session_mood(
                         active_db=active_db,
                         user_id=user_id,
@@ -3324,7 +3471,7 @@ class ChatOrchestrator(
                         request_extra_context=request_extra_context,
                         conversation_context=conversation_context,
                     )
-                    yield final_response
+                    yield self._bind_response_session_id(final_response, session_id, request_id=request_id)
 
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
                 COLLABORATION_SUCCESS.labels(
@@ -3337,7 +3484,13 @@ class ChatOrchestrator(
                     workflow_type="standard_chat", agents_used="orchestrator", outcome="error"
                 ).inc()
                 logger.opt(exception=e).error("Orchestration Error")
-                await self._update_state(session_id, STATE_FAILED, str(e))
+                await self._update_state(
+                    session_id,
+                    STATE_FAILED,
+                    str(e),
+                    request_id=request_id,
+                    user_id=user_id,
+                )
                 await self._write_turn_end_episodic_memory(
                     active_db=active_db,
                     user_id=user_id,
@@ -3357,7 +3510,7 @@ class ChatOrchestrator(
                     await emit_transparency_event(transparency_generator.get_complete_event())
                 # ✅ Fix C4: Drain queue before yielding error to ensure all queued messages are sent
                 async for queued in self._drain_queue(queue):
-                    yield queued
+                    yield self._bind_response_session_id(queued, session_id, request_id=request_id)
                 safe_message, error_code, retryable = build_safe_chat_error(e)
                 yield agent_service_pb2.ChatResponse(
                     response_id=response_id,

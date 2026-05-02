@@ -16,7 +16,6 @@ import (
 
 	"github.com/sparkle/gateway/internal/agent"
 	"github.com/sparkle/gateway/internal/config"
-	"github.com/sparkle/gateway/internal/db"
 	"github.com/sparkle/gateway/internal/service"
 )
 
@@ -33,7 +32,7 @@ func newTestOrchestrator(t *testing.T) *ChatOrchestrator {
 	return NewChatOrchestrator(
 		ac,                            // agent client
 		nil,                           // galaxy client
-		(*db.Queries)(nil),            // queries (nil for integration)
+		(service.UserIdentityService)(nil), // userIdentity (nil for integration)
 		(*service.ChatHistoryService)(nil),
 		(*service.QuotaService)(nil),
 		(*service.SemanticCacheService)(nil),

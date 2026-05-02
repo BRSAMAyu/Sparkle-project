@@ -4,6 +4,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/models/skill_models.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/skill_api_service.dart';
 
 class SkillManagementScreen extends ConsumerStatefulWidget {
@@ -105,34 +106,39 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
                               vertical: DS.spacing16,
                             ),
                             children: [
-                            _buildIntroCard(),
-                            const SizedBox(height: DS.spacing12),
-                            ..._skills.map(_buildSkillCard),
-                            if (_skills.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: DS.spacing24),
-                                child: Center(child: Text(context.l10n.skillEmptyMy)),
-                              ),
-                          ],
-                        ),
-                      ),
-                      RefreshIndicator(
-                        onRefresh: _load,
-                        child: ListView(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: DS.spacing16,
+                              _buildIntroCard(),
+                              const SizedBox(height: DS.spacing12),
+                              ..._skills.map(_buildSkillCard),
+                              if (_skills.isEmpty)
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.only(top: DS.spacing24),
+                                  child: Center(
+                                      child: Text(context.l10n.skillEmptyMy)),
+                                ),
+                            ],
                           ),
-                          children: [
-                            ..._sharedSkills.map(_buildSharedSkillCard),
-                            if (_sharedSkills.isEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(top: DS.spacing24),
-                                child: Center(child: Text(context.l10n.skillEmptyShared)),
-                              ),
-                          ],
                         ),
-                      ),
-                    ],
+                        RefreshIndicator(
+                          onRefresh: _load,
+                          child: ListView(
+                            padding: const EdgeInsets.symmetric(
+                              vertical: DS.spacing16,
+                            ),
+                            children: [
+                              ..._sharedSkills.map(_buildSharedSkillCard),
+                              if (_sharedSkills.isEmpty)
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.only(top: DS.spacing24),
+                                  child: Center(
+                                      child:
+                                          Text(context.l10n.skillEmptyShared)),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
       );
@@ -380,7 +386,8 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
       await action();
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, context.l10n.skillActionFailed(e.toString()));
+        AppFeedback.error(
+            context, context.l10n.skillActionFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -458,18 +465,22 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: Text(widget.existing == null ? context.l10n.skillEditorNew : context.l10n.skillEditorEdit),
+        title: Text(widget.existing == null
+            ? context.l10n.skillEditorNew
+            : context.l10n.skillEditorEdit),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: _nameController,
-                decoration: InputDecoration(labelText: context.l10n.skillEditorName),
+                decoration:
+                    InputDecoration(labelText: context.l10n.skillEditorName),
               ),
               TextField(
                 controller: _patternController,
-                decoration: InputDecoration(labelText: context.l10n.skillEditorTemplate),
+                decoration: InputDecoration(
+                    labelText: context.l10n.skillEditorTemplate),
                 minLines: 3,
                 maxLines: 5,
               ),
@@ -491,7 +502,8 @@ class _SkillEditorDialogState extends State<_SkillEditorDialog> {
               ),
               TextField(
                 controller: _examplesController,
-                decoration: InputDecoration(labelText: context.l10n.skillEditorExamples),
+                decoration: InputDecoration(
+                    labelText: context.l10n.skillEditorExamples),
                 minLines: 2,
                 maxLines: 4,
               ),
@@ -561,7 +573,9 @@ class _SkillDraftRequestDialog extends ConsumerStatefulWidget {
 class _SkillDraftRequestDialogState
     extends ConsumerState<_SkillDraftRequestDialog> {
   final TextEditingController _consentController = TextEditingController(
-    text: '以后这样做，记住这种方式',
+    text: I18nService.instance.isChinese
+        ? '以后这样做，记住这种方式'
+        : 'Do it this way from now on, remember this pattern',
   );
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _assistantController = TextEditingController();
@@ -576,17 +590,22 @@ class _SkillDraftRequestDialogState
             children: [
               TextField(
                 controller: _consentController,
-                decoration: InputDecoration(labelText: AppLocalizations.of(context)!.skillDraftConsentLabel),
+                decoration: InputDecoration(
+                    labelText:
+                        AppLocalizations.of(context)!.skillDraftConsentLabel),
               ),
               TextField(
                 controller: _userController,
-                decoration: InputDecoration(labelText: AppLocalizations.of(context)!.skillDraftUserMessage),
+                decoration: InputDecoration(
+                    labelText:
+                        AppLocalizations.of(context)!.skillDraftUserMessage),
                 minLines: 2,
                 maxLines: 4,
               ),
               TextField(
                 controller: _assistantController,
-                decoration: InputDecoration(labelText: AppLocalizations.of(context)!.skillDraftAiReply),
+                decoration: InputDecoration(
+                    labelText: AppLocalizations.of(context)!.skillDraftAiReply),
                 minLines: 2,
                 maxLines: 4,
               ),
@@ -600,7 +619,9 @@ class _SkillDraftRequestDialogState
           ),
           ElevatedButton(
             onPressed: _submitting ? null : _submit,
-            child: Text(_submitting ? AppLocalizations.of(context)!.skillDraftGenerating : AppLocalizations.of(context)!.skillDraftGenerate),
+            child: Text(_submitting
+                ? AppLocalizations.of(context)!.skillDraftGenerating
+                : AppLocalizations.of(context)!.skillDraftGenerate),
           ),
         ],
       );
@@ -619,7 +640,8 @@ class _SkillDraftRequestDialogState
       Navigator.of(context).pop(draft);
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, AppLocalizations.of(context)!.skillDraftFailed(e.toString()));
+      AppFeedback.error(context,
+          AppLocalizations.of(context)!.skillDraftFailed(e.toString()));
       setState(() => _submitting = false);
     }
   }

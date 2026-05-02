@@ -10,16 +10,20 @@ class UserSettingsUpdate(BaseModel):
     transparency_level: int | None = Field(default=None, ge=0, le=3)
     system_update_level: int | None = Field(default=None, ge=0, le=2)
     ai_reasoning_mode: str | None = Field(default=None, pattern="^(fast|balanced|deep)$")
+    current_goal_id: str | None = Field(default=None, max_length=64)
     task_reminders_enabled: bool | None = None
     task_reminder_times: list[int] | None = None
+    community_intelligence_enabled: bool | None = None
 
 
 class UserSettingsResponse(BaseModel):
     transparency_level: int
     system_update_level: int
     ai_reasoning_mode: str
+    current_goal_id: str | None = None
     task_reminders_enabled: bool
     task_reminder_times: list[int] | None = None
+    community_intelligence_enabled: bool = True
     notification_preferences: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime | None
     updated_at: datetime | None

@@ -54,7 +54,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
                       Text(
                         item.name,
                         style: context.sparkleTypography.headingLarge.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: DS.fontWeightBold,
                         ),
                       ),
                       const SizedBox(height: DS.spacing4),
@@ -135,7 +135,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
                         Text(
                           '${(item.finalProgress * 100).toInt()}%',
                           style: context.sparkleTypography.headingLarge.copyWith(
-                            fontWeight: FontWeight.bold,
+                            fontWeight: DS.fontWeightBold,
                             fontSize: 24,
                           ),
                         ),
@@ -316,7 +316,7 @@ class SprintHistoryDetailSheet extends StatelessWidget {
           Text(
             value,
             style: context.sparkleTypography.labelLarge.copyWith(
-              fontWeight: FontWeight.bold,
+              fontWeight: DS.fontWeightBold,
               color: color,
             ),
           ),

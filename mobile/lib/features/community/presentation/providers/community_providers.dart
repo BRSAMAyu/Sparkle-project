@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
@@ -7,20 +9,22 @@ import 'package:sparkle/features/community/data/repositories/community_repositor
 class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   FeedNotifier(this._repository, this._currentUserId)
       : super(const AsyncValue.loading()) {
-    refresh();
+    unawaited(refresh());
   }
   final CommunityRepository _repository;
   final String? _currentUserId;
 
   String? _scope;
 
-  Future<void> refresh({String? scope}) async {
-    if (scope != null) {
+  Future<void> refresh({String? scope, bool clearScope = false}) async {
+    if (clearScope) {
+      _scope = null;
+    } else if (scope != null) {
       _scope = scope;
     }
     try {
       state = const AsyncValue.loading();
-      final posts = await _repository.getFeed(scope: scope ?? _scope);
+      final posts = await _repository.getFeed(scope: _scope);
       state = AsyncValue.data(posts);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -29,7 +33,10 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
 
   // Optimistic Update: Add post locally before sync
   Future<void> addPostOptimistically(
-      String content, List<String> imageUrls, String topic,) async {
+    String content,
+    List<String> imageUrls,
+    String topic,
+  ) async {
     final currentUserId = _currentUserId;
     if (currentUserId == null) return;
 

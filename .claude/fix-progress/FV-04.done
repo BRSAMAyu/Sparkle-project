@@ -1,0 +1,31 @@
+FV-04: Skill/DomainPack Marketplace 上线
+Status: DONE
+Branch: codex/FV-04-marketplace
+Modified files:
+- backend/alembic/versions/c15_20260502_marketplace.py
+- backend/app/api/v1/marketplace.py
+- backend/app/api/v1/router.py
+- backend/app/core/metrics.py
+- backend/app/models/marketplace.py
+- backend/app/models/__init__.py
+- backend/app/signals/marketplace.py
+- backend/app/signals/skill_lifecycle.py
+- backend/tests/unit/test_marketplace_service.py
+- backend/tests/api/test_marketplace_api.py
+- mobile/lib/core/network/api_endpoints.dart
+- mobile/lib/features/seed_library/presentation/marketplace/marketplace_models.dart
+- mobile/lib/features/seed_library/presentation/marketplace/marketplace_repository.dart
+- mobile/lib/features/seed_library/presentation/marketplace/marketplace_provider.dart
+- mobile/lib/features/seed_library/presentation/marketplace/marketplace_screen.dart
+- mobile/lib/features/seed_library/seed_library_routes.dart
+- mobile/lib/features/seed_library/presentation/screens/seed_library_list_screen.dart
+- monitoring/grafana/dashboards/marketplace.json
+- docs/product/parallel_closeout/FV-04_marketplace_REPORT_2026-05-02.md
+Verification:
+- cd backend && .venv/bin/python -m py_compile app/signals/marketplace.py app/api/v1/marketplace.py app/models/marketplace.py app/signals/skill_lifecycle.py tests/unit/test_marketplace_service.py tests/api/test_marketplace_api.py: PASS
+- cd backend && .venv/bin/ruff check app/signals/marketplace.py app/api/v1/marketplace.py app/models/marketplace.py app/signals/skill_lifecycle.py tests/unit/test_marketplace_service.py tests/api/test_marketplace_api.py: PASS
+- cd backend && .venv/bin/pytest tests/unit/test_marketplace_service.py tests/api/test_marketplace_api.py -q: PASS (6 passed, 2 warnings)
+- cd mobile && flutter analyze lib/features/seed_library/presentation/marketplace lib/features/seed_library/seed_library_routes.dart lib/features/seed_library/presentation/screens/seed_library_list_screen.dart lib/core/network/api_endpoints.dart: PASS
+- cd backend && .venv/bin/alembic heads: PASS
+User-visible change: Seed Library now has a Skill Marketplace page where users can preview evidence and impact before explicitly adopting Skill/DomainPack assets.
+Architect handoff: Merge c15_20260502 with other parallel migration heads; review the small skill_lifecycle.py automatic marketplace handoff because it is required by FV-04 but outside the original exclusive file list.

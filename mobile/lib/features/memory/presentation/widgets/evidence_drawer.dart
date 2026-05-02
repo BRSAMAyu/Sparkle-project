@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class EvidenceDrawer extends StatelessWidget {
   const EvidenceDrawer({
@@ -64,6 +65,7 @@ class EvidenceDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final allItems = [
       ...items,
       ...refs.map((r) => {'summary': '${r.type}: ${r.id}'}),
@@ -73,7 +75,7 @@ class EvidenceDrawer extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.all(DS.md),
         child: Text(
-          '暂无证据记录',
+          zh ? '暂无证据记录' : 'No evidence records yet',
           style: DS.bodySmall.copyWith(color: DS.textSecondary),
         ),
       );
@@ -83,7 +85,7 @@ class EvidenceDrawer extends StatelessWidget {
       return Padding(
         padding: const EdgeInsets.all(DS.md),
         child: Text(
-          '证据不足',
+          zh ? '证据不足' : 'Insufficient evidence',
           style: DS.bodySmall.copyWith(color: DS.semanticWarning),
         ),
       );
@@ -97,7 +99,7 @@ class EvidenceDrawer extends StatelessWidget {
             (item) => ListTile(
               dense: true,
               title: Text(
-                item['summary']?.toString() ?? '证据条目',
+                item['summary']?.toString() ?? (zh ? '证据条目' : 'Evidence entry'),
                 style: DS.bodySmall,
               ),
               subtitle: item['source'] != null
