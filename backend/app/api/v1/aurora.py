@@ -16,6 +16,7 @@ from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
 from app.aurora.runtime_v1.state import AuroraEnergyStore
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
 from app.core.cache import cache_service
+from app.core.metrics import AURORA_CORRECTION_FAILURE_TOTAL, record_product_loop_event
 from app.models.user import User
 from app.services.aurora_calibration_card_service import AuroraCalibrationCardService
 from app.services.aurora_control_surface_service import (
@@ -111,6 +112,9 @@ class ChipSelectedTelemetryRequest(BaseModel):
     session_id: str | None = None
     group_id: str = ""
     freeform_text: str = ""
+    route_history_decision_id: str = ""
+    routing_outcome_signal_id: str = ""
+    routing_trace_id: str = ""
 
 
 class AuroraCorrectionRequest(BaseModel):
@@ -126,6 +130,9 @@ class AuroraCorrectionRequest(BaseModel):
     group_id: str = ""
     conversation_id: str = ""
     message_id: str = ""
+    route_history_decision_id: str = ""
+    routing_outcome_signal_id: str = ""
+    routing_trace_id: str = ""
     type: str | None = None
     context_source: str = ""
 
@@ -536,6 +543,10 @@ async def record_chip_selected(
                     except Exception as exc:
                         logger.debug("Failed to persist Aurora correction effect: %s", exc, exc_info=True)
             except Exception as exc:
+                AURORA_CORRECTION_FAILURE_TOTAL.labels(
+                    surface=correction_payload.surface or "chip_telemetry",
+                    reason="processor_error",
+                ).inc()
                 logger.exception("Correction feedback processing failed: %s", exc)
 
     response = {"recorded": True, "semantic_value": correction_payload.semantic_value}
@@ -597,6 +608,10 @@ async def record_aurora_correction(
                 )
                 await redis.expire(f"aurora:last_correction_effect:{current_user.id}", 24 * 3600)
         except Exception:
+            AURORA_CORRECTION_FAILURE_TOTAL.labels(
+                surface=correction_payload.surface or "unified_correction",
+                reason="processor_error",
+            ).inc()
             logger.exception("Unified Aurora correction processing failed")
 
     response = {
@@ -748,7 +763,9 @@ async def get_causal_timeline(
             if outcome:
                 outcome_data = outcome.to_dict()
         except Exception as exc:
-            logger.warning("Failed to load outcome for causal timeline trace %s: %s", trace.trace_id, exc, exc_info=True)
+            logger.warning(
+                "Failed to load outcome for causal timeline trace %s: %s", trace.trace_id, exc, exc_info=True
+            )
 
         # Human-readable event summary
         event_parts = []
@@ -881,6 +898,7 @@ async def correct_timeline_card(
 
     redis = cache_service.redis
     if redis is None:
+        record_product_loop_event("card_action", "timeline_card", "failed", "redis_unavailable")
         return {"status": "error", "message": "service unavailable"}
 
     spine = SpineOrchestrator(redis)
@@ -915,6 +933,8 @@ async def correct_timeline_card(
         await spine.metrics.record_outcome_recorded(effective=False)
     elif request.action == "dismiss":
         pass
+    else:
+        record_product_loop_event("card_action", "timeline_card", "invalid", "bad_action")
 
     # Store the correction action
     await redis.set(
@@ -930,6 +950,18 @@ async def correct_timeline_card(
         ex=72 * 3600,
     )
 
+    reason_by_action = {
+        "confirm": "positive",
+        "correct": "correction",
+        "partial": "partial",
+        "dismiss": "dismissed",
+    }
+    record_product_loop_event(
+        "card_action",
+        "timeline_card",
+        request.action,
+        reason_by_action.get(request.action, "unknown_action"),
+    )
     return {"status": "ok", "action": request.action}
 
 
@@ -1024,7 +1056,9 @@ async def get_goal_graph(
             ),
         }
     except Exception as exc:
-        logger.warning("Failed to load Spine goal graph %s for user %s: %s", goal_id, current_user.id, exc, exc_info=True)
+        logger.warning(
+            "Failed to load Spine goal graph %s for user %s: %s", goal_id, current_user.id, exc, exc_info=True
+        )
         return {"active": False, "nodes": [], "edges": []}
 
 

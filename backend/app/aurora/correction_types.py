@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-
 _DEFAULT_SURFACE = "chat"
 _DEFAULT_SOURCE = "predicted_chip"
 
@@ -84,6 +83,9 @@ class AuroraCorrectionPayload:
     group_id: str = ""
     conversation_id: str = ""
     message_id: str = ""
+    route_history_decision_id: str = ""
+    routing_outcome_signal_id: str = ""
+    routing_trace_id: str = ""
 
     @classmethod
     def normalize(
@@ -115,6 +117,9 @@ class AuroraCorrectionPayload:
             group_id=_as_str(data.get("group_id")),
             conversation_id=_as_str(data.get("conversation_id") or data.get("session_id")),
             message_id=_as_str(data.get("message_id")),
+            route_history_decision_id=_as_str(data.get("route_history_decision_id")),
+            routing_outcome_signal_id=_as_str(data.get("routing_outcome_signal_id")),
+            routing_trace_id=_as_str(data.get("routing_trace_id")),
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -131,4 +136,7 @@ class AuroraCorrectionPayload:
             "group_id": self.group_id,
             "conversation_id": self.conversation_id,
             "message_id": self.message_id,
+            "route_history_decision_id": self.route_history_decision_id,
+            "routing_outcome_signal_id": self.routing_outcome_signal_id,
+            "routing_trace_id": self.routing_trace_id,
         }

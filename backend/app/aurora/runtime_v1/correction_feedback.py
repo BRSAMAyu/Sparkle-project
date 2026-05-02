@@ -20,6 +20,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
+from uuid import UUID
 
 from loguru import logger
 
@@ -43,6 +44,7 @@ class CorrectionResult:
     new_confidence: dict[str, float] = field(default_factory=dict)
     self_model_updated: bool = False
     correction_recorded: bool = False
+    routing_feedback_recorded: bool = False
     user_visible_effect: dict[str, Any] = field(default_factory=dict)
     calibration_receipt: dict[str, Any] = field(default_factory=dict)
 
@@ -55,6 +57,7 @@ class CorrectionResult:
             "new_confidence": self.new_confidence,
             "self_model_updated": self.self_model_updated,
             "correction_recorded": self.correction_recorded,
+            "routing_feedback_recorded": self.routing_feedback_recorded,
             "user_visible_effect": self.user_visible_effect,
             "calibration_receipt": self.calibration_receipt,
         }
@@ -162,7 +165,7 @@ def _receipt_reason(*, freeform_text: str, chip_label: str, locale: str) -> str:
     reason = freeform_text.strip() or chip_label.strip()
     if reason:
         if locale == "en":
-            return f"Because you corrected me with: \"{reason}\"."
+            return f'Because you corrected me with: "{reason}".'
         return f"因为你纠正了我：「{reason}」。"
     if locale == "en":
         return "Because you marked that Aurora's earlier read was not quite right."
@@ -176,7 +179,9 @@ def _receipt_next_time(*, action: str, locale: str) -> str:
         return "下次遇到类似情境，我会先确认这个理解，再决定是否提醒或推进。"
     if action == "disconfirmed":
         if locale == "en":
-            return "Next time a similar signal appears, I will treat this judgment as less certain and ask before nudging."
+            return (
+                "Next time a similar signal appears, I will treat this judgment as less certain and ask before nudging."
+            )
         return "下次出现类似信号时，我会把这个判断当作不那么确定，并先确认再提醒。"
     if locale == "en":
         return "Next time I see a similar signal, I can use this confirmation with slightly more confidence."
@@ -357,7 +362,11 @@ class CorrectionFeedbackProcessor:
         AURORA_CORRECTION_TO_STATE_CHANGE_TOTAL.labels(
             surface=payload.surface or "unknown",
             action=result.action,
-            changed="true" if result.affected_state_keys or result.self_model_updated or result.correction_recorded else "false",
+            changed=(
+                "true"
+                if result.affected_state_keys or result.self_model_updated or result.correction_recorded
+                else "false"
+            ),
         ).inc()
         return result
 
@@ -427,6 +436,7 @@ class CorrectionFeedbackProcessor:
             "conversation_id": payload.conversation_id,
             "message_id": payload.message_id,
             "affected_state_keys": result.affected_state_keys,
+            "routing_feedback_recorded": result.routing_feedback_recorded,
             "updated_at": _utcnow().isoformat(),
         }
 
@@ -535,6 +545,11 @@ class CorrectionFeedbackProcessor:
 
         # 4. Update routing profile so corrections change future routing behavior
         await self._update_routing_profile(user_id, semantic_value)
+        await self._record_routing_correction_outcome(
+            user_id=user_id,
+            correction_payload=correction_payload,
+            result=result,
+        )
 
         logger.info(
             "CorrectionFeedback: disconfirmation user={} semantic={} affected_states={}",
@@ -542,6 +557,71 @@ class CorrectionFeedbackProcessor:
             semantic_value,
             result.affected_state_keys,
         )
+
+    async def _record_routing_correction_outcome(
+        self,
+        *,
+        user_id: str,
+        correction_payload: AuroraCorrectionPayload,
+        result: CorrectionResult,
+    ) -> None:
+        """Mark the related DualCore route as failed when a correction carries trace ids."""
+        if self.db_session_factory is None:
+            return
+        decision_id = str(correction_payload.route_history_decision_id or "").strip()
+        signal_id = str(correction_payload.routing_outcome_signal_id or "").strip()
+        if not decision_id and not signal_id:
+            return
+        outcome_signal_id = (
+            correction_payload.telemetry_id or result.telemetry_id or result.correction_id or "aurora_correction"
+        )
+        try:
+            from sqlalchemy import select
+            from sqlalchemy.orm.attributes import flag_modified
+
+            from app.models.intervention_adaptive import PassiveSignal
+            from app.scaffolding.scaffolding_fsm import ScaffoldingFSM
+            from app.services.route_history_service import RouteHistoryService
+
+            async with self.db_session_factory() as session:
+                parsed_user_id = UUID(user_id)
+                recorded = False
+                if decision_id:
+                    updated = await RouteHistoryService(session).record_user_correction(
+                        decision_id=UUID(decision_id),
+                        outcome_signal_id=outcome_signal_id,
+                    )
+                    recorded = updated is not None
+                if signal_id:
+                    signal = (
+                        await session.execute(
+                            select(PassiveSignal).where(
+                                PassiveSignal.id == UUID(signal_id),
+                                PassiveSignal.user_id == parsed_user_id,
+                                PassiveSignal.signal_type == "routing_decision",
+                            )
+                        )
+                    ).scalar_one_or_none()
+                    if signal is not None:
+                        context = dict(signal.context or {})
+                        context["outcome_recorded"] = True
+                        context["outcome_success"] = False
+                        context["outcome_reason"] = "explicit_user_correction_after_routing"
+                        context["outcome_signal_id"] = outcome_signal_id
+                        context["corrected_at"] = _utcnow().isoformat()
+                        signal.context = context
+                        flag_modified(signal, "context")
+                        await ScaffoldingFSM(session).apply_feedback(
+                            parsed_user_id,
+                            success=False,
+                            feedback="explicit_user_correction_after_routing",
+                            weight=1.25,
+                        )
+                        await session.commit()
+                        recorded = True
+                result.routing_feedback_recorded = recorded
+        except Exception:
+            logger.debug("CorrectionFeedback: route outcome backfill failed", exc_info=True)
 
     async def _update_routing_profile(self, user_id: str, semantic_value: str) -> None:
         """Bridge correction → routing profile so disconfirmations change future routing."""

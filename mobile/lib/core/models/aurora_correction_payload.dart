@@ -36,6 +36,9 @@ class AuroraCorrectionPayload {
     String? groupId,
     this.conversationId = '',
     this.messageId = '',
+    this.routeHistoryDecisionId = '',
+    this.routingOutcomeSignalId = '',
+    this.routingTraceId = '',
   })  : telemetryId = _nonEmptyOr(telemetryId, _uuid.v4()),
         groupId = _nonEmptyOr(groupId, _sessionGroupId);
 
@@ -50,6 +53,9 @@ class AuroraCorrectionPayload {
     String? groupId,
     String conversationId = '',
     String messageId = '',
+    String routeHistoryDecisionId = '',
+    String routingOutcomeSignalId = '',
+    String routingTraceId = '',
   }) =>
       AuroraCorrectionPayload(
         surface: surface,
@@ -64,6 +70,9 @@ class AuroraCorrectionPayload {
         groupId: groupId,
         conversationId: conversationId,
         messageId: messageId,
+        routeHistoryDecisionId: routeHistoryDecisionId,
+        routingOutcomeSignalId: routingOutcomeSignalId,
+        routingTraceId: routingTraceId,
       );
 
   factory AuroraCorrectionPayload.chip({
@@ -76,6 +85,9 @@ class AuroraCorrectionPayload {
     String? groupId,
     String conversationId = '',
     String messageId = '',
+    String routeHistoryDecisionId = '',
+    String routingOutcomeSignalId = '',
+    String routingTraceId = '',
   }) =>
       AuroraCorrectionPayload(
         surface: surface,
@@ -90,6 +102,9 @@ class AuroraCorrectionPayload {
         groupId: groupId,
         conversationId: conversationId,
         messageId: messageId,
+        routeHistoryDecisionId: routeHistoryDecisionId,
+        routingOutcomeSignalId: routingOutcomeSignalId,
+        routingTraceId: routingTraceId,
       );
 
   factory AuroraCorrectionPayload.calibrationOverride({
@@ -101,6 +116,9 @@ class AuroraCorrectionPayload {
     String? groupId,
     String conversationId = '',
     String messageId = '',
+    String routeHistoryDecisionId = '',
+    String routingOutcomeSignalId = '',
+    String routingTraceId = '',
   }) =>
       AuroraCorrectionPayload(
         surface: surface,
@@ -115,6 +133,9 @@ class AuroraCorrectionPayload {
         groupId: groupId,
         conversationId: conversationId,
         messageId: messageId,
+        routeHistoryDecisionId: routeHistoryDecisionId,
+        routingOutcomeSignalId: routingOutcomeSignalId,
+        routingTraceId: routingTraceId,
       );
 
   factory AuroraCorrectionPayload.fromJson(Map<String, dynamic> json) {
@@ -136,6 +157,11 @@ class AuroraCorrectionPayload {
       groupId: json['group_id'] as String?,
       conversationId: json['conversation_id'] as String? ?? '',
       messageId: json['message_id'] as String? ?? '',
+      routeHistoryDecisionId:
+          json['route_history_decision_id'] as String? ?? '',
+      routingOutcomeSignalId:
+          json['routing_outcome_signal_id'] as String? ?? '',
+      routingTraceId: json['routing_trace_id'] as String? ?? '',
     );
   }
 
@@ -155,6 +181,9 @@ class AuroraCorrectionPayload {
   final String groupId;
   final String conversationId;
   final String messageId;
+  final String routeHistoryDecisionId;
+  final String routingOutcomeSignalId;
+  final String routingTraceId;
 
   AuroraCorrectionPayload copyWith({
     AuroraCorrectionSurface? surface,
@@ -169,6 +198,9 @@ class AuroraCorrectionPayload {
     String? groupId,
     String? conversationId,
     String? messageId,
+    String? routeHistoryDecisionId,
+    String? routingOutcomeSignalId,
+    String? routingTraceId,
   }) =>
       AuroraCorrectionPayload(
         surface: surface ?? this.surface,
@@ -183,6 +215,11 @@ class AuroraCorrectionPayload {
         groupId: groupId ?? this.groupId,
         conversationId: conversationId ?? this.conversationId,
         messageId: messageId ?? this.messageId,
+        routeHistoryDecisionId:
+            routeHistoryDecisionId ?? this.routeHistoryDecisionId,
+        routingOutcomeSignalId:
+            routingOutcomeSignalId ?? this.routingOutcomeSignalId,
+        routingTraceId: routingTraceId ?? this.routingTraceId,
       );
 
   Map<String, dynamic> toJson() => {
@@ -198,6 +235,9 @@ class AuroraCorrectionPayload {
         'group_id': groupId,
         'conversation_id': conversationId,
         'message_id': messageId,
+        'route_history_decision_id': routeHistoryDecisionId,
+        'routing_outcome_signal_id': routingOutcomeSignalId,
+        'routing_trace_id': routingTraceId,
       };
 
   static String _nonEmptyOr(String? value, String fallback) {

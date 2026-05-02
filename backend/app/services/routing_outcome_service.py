@@ -38,6 +38,7 @@ class RoutingOutcomeRecorder:
         source_state_key: str | None = None,
         request_id: str | None = None,
         session_id: str | None = None,
+        route_history_decision_id: str | None = None,
     ) -> PassiveSignal:
         intervention = InterventionRequest(
             user_id=user_id,
@@ -56,6 +57,7 @@ class RoutingOutcomeRecorder:
                 "route_execution_mode": route_execution_mode,
                 "request_id": request_id,
                 "session_id": session_id,
+                "route_history_decision_id": route_history_decision_id,
             },
             schema_version="routing_outcome.v1",
             policy_version="aurora_sgw_closed_loop.v1",
@@ -78,6 +80,7 @@ class RoutingOutcomeRecorder:
             "source_state_key": source_state_key,
             "request_id": request_id,
             "session_id": session_id,
+            "route_history_decision_id": route_history_decision_id,
             "evaluation_due_at": (_utcnow() + timedelta(hours=48)).isoformat(),
             "outcome_recorded": False,
         }
