@@ -66,6 +66,8 @@ from app.signals.self_model import SparkleSelfModelService
 from app.signals.signal_ranker import SignalRanker
 from app.signals.skill_extraction import SkillExtractionService
 from app.signals.skill_lifecycle import SkillLifecycleManager
+from app.signals.citation_validator import CitationValidator
+from app.signals.low_yield_guard import LowYieldGuard
 from app.signals.source_tray_integration import SourceEffectivenessTracker
 from app.signals.spine_metrics import SpineMetricsCollector
 from app.signals.stale_state_guard import StaleStateGuard
@@ -167,6 +169,10 @@ class SpineOrchestrator:
         # P1-10/11: Previously orphaned — now wired into pipeline
         self.learning_guard = LearningGuard(redis_client)
         self.l0_engine = L0RuleEngine(redis_client)
+
+        # P1-16/17: Citation validation + low-yield guarding
+        self.citation_validator = CitationValidator(redis_client)
+        self.low_yield_guard = LowYieldGuard(redis_client)
 
         # EA-1~EA-4: Governance modules — wired into production pipeline
         from app.core.research_isolation import ResearchIsolationGuard
@@ -1407,6 +1413,29 @@ class SpineOrchestrator:
 
         # Overlay ExamSprintPolicy constraints if user is in exam_rescue mode
         directive = await self._apply_exam_sprint_overlay(user_id, directive)
+
+        # P1-17: Low-yield gentle block — redirect low-yield activities under deadline pressure
+        try:
+            task_type = getattr(directive, "task_type", None) or getattr(directive, "suggested_activity", None)
+            if task_type:
+                dl_hours = await self._estimate_deadline_hours(user_id)
+                yield_result = self.low_yield_guard.check_activity(
+                    str(task_type),
+                    deadline_hours=dl_hours,
+                    is_exam_context=getattr(signal, "goal_type", "") in ("exam_sprint", "exam_rescue", "exam_build"),
+                )
+                if not yield_result.passed:
+                    alt = self.low_yield_guard.get_best_alternative(str(task_type))
+                    logger.info(
+                        "LowYieldGuard: redirecting {} → {} for user={}",
+                        task_type, alt, user_id,
+                    )
+                    trace.raw_event_ids.append(f"low_yield_block:{task_type}")
+                    if hasattr(directive, "task_type"):
+                        directive.task_type = alt
+            except Exception:
+                logger.debug("LowYieldGuard check failed for user={}", user_id, exc_info=True)
+
         await self.trace_store.set_active_directive(user_id, directive)
         await self._link_directive_to_active_session(user_id, directive.directive_id)
 
@@ -1434,6 +1463,21 @@ class SpineOrchestrator:
                     trace.raw_event_ids.append(f"fabrication:{len(flagged)}")
             except Exception:
                 logger.debug("Fabrication scan failed for user={}", user_id, exc_info=True)
+
+            # P1-16: Citation validation — verify citations against retrieved sources
+            try:
+                response_text = response_dir.message if hasattr(response_dir, "message") else ""
+                if response_text:
+                    citation_result = self.citation_validator.validate_response(
+                        response_text,
+                        is_exam_context=signal.goal_type in ("exam_sprint", "exam_rescue", "exam_build") if hasattr(signal, "goal_type") else False,
+                    )
+                    if not citation_result.passed:
+                        note = self.citation_validator.get_verification_note(citation_result)
+                        logger.warning("CitationValidator: {} for user={}", note, user_id)
+                        trace.raw_event_ids.append(f"citation_warning:{len(citation_result.unverifiable)}")
+            except Exception:
+                logger.debug("Citation validation failed for user={}", user_id, exc_info=True)
 
         # Build and store NotificationDirective
         notif_dir = self.policy_engine.build_notification_directive(decision, signal)
@@ -2268,6 +2312,20 @@ class SpineOrchestrator:
         except (ValueError, AttributeError):
             return goal_mode, None
         return goal_mode, days
+
+    async def _estimate_deadline_hours(self, user_id: str) -> float | None:
+        """Estimate hours until nearest deadline from exam sprint context or goals."""
+        try:
+            _, days = await self._get_exam_sprint_context(user_id)
+            if days is not None:
+                return float(days * 24)
+            # Fall back to state register
+            deadline_state = await self.state_register.get_state(user_id, "deadline_pressure")
+            if deadline_state and deadline_state.value:
+                return float(deadline_state.value) * 24
+        except Exception:
+            pass
+        return None
 
     async def _apply_exam_sprint_overlay(
         self,
