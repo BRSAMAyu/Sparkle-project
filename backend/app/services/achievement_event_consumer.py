@@ -84,6 +84,10 @@ class AchievementEventConsumer:
             await self._handle_node_updated(event)
         elif event_type == "focus.session.completed":
             await self._handle_focus_session_completed(event)
+        elif event_type in {"community.resource_shared", "achievement.shared"}:
+            await self._handle_community_share(event)
+        elif event_type == "aurora.calibration.completed":
+            await self._handle_aurora_calibration_completed(event)
         elif event_type == EXECUTION_RESULT_INGESTED:
             await self._handle_execution_result(event)
         elif event_type == "achievement.unlocked":
@@ -147,6 +151,41 @@ class AchievementEventConsumer:
                 task_id=str(event.get("personal_task_id") or ""),
                 source="group",
                 group_task_id=str(event.get("group_task_id") or ""),
+            )
+
+    async def _handle_community_share(self, event: dict):
+        user_id = event.get("user_id") or event.get("shared_by")
+        if not user_id:
+            return
+
+        async with AsyncSessionLocal() as db:
+            engine = AchievementEngine(db)
+            await engine.process_event(
+                user_id=str(user_id),
+                event_type=AchievementEvent.COMMUNITY_SHARE,
+                share_id=str(event.get("share_id") or event.get("shared_resource_id") or ""),
+                shared_resource_id=str(event.get("shared_resource_id") or event.get("share_id") or ""),
+                card_share_record_id=str(event.get("card_share_record_id") or ""),
+                resource_type=str(event.get("resource_type") or event.get("achievement_type") or ""),
+                target_group_id=str(event.get("target_group_id") or event.get("group_id") or ""),
+                share_count=int(event.get("share_count") or 0),
+            )
+
+    async def _handle_aurora_calibration_completed(self, event: dict):
+        user_id = event.get("user_id")
+        session_id = event.get("session_id") or event.get("aurora_session_id")
+        if not user_id or not session_id:
+            return
+
+        async with AsyncSessionLocal() as db:
+            engine = AchievementEngine(db)
+            await engine.process_event(
+                user_id=str(user_id),
+                event_type=AchievementEvent.AURORA_CALIBRATION,
+                session_id=str(session_id),
+                surface=str(event.get("surface") or "aurora_modeling"),
+                entry_reason=str(event.get("entry_reason") or ""),
+                calibration_count=int(event.get("calibration_count") or 0),
             )
 
     async def _handle_execution_result(self, event: dict):

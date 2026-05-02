@@ -26,6 +26,7 @@ from typing import Any, Literal
 from loguru import logger
 from sqlalchemy import select
 
+from app.core.event_bus import event_bus
 from app.core.metrics import AURORA_CORE_SESSION_EVENT_TOTAL
 from app.signals.aurora_core_session import AuroraCoreSessionEntryReason
 
@@ -672,6 +673,20 @@ class AuroraCoreSessionService:
         await self.store.save(session, previous_resume_token=previous_resume_token)
         if session.status == "completed":
             AURORA_CORE_SESSION_EVENT_TOTAL.labels(event="completed", status=session.status).inc()
+            try:
+                await event_bus.publish(
+                    "aurora.calibration.completed",
+                    {
+                        "event_type": "aurora.calibration.completed",
+                        "user_id": str(user_id),
+                        "session_id": session.id,
+                        "surface": session.scope,
+                        "entry_reason": session.entry_reason,
+                        "timestamp": datetime.utcnow().isoformat(),
+                    },
+                )
+            except Exception as exc:
+                logger.warning("Failed to publish Aurora calibration achievement event: {}", exc)
         return session
 
     async def close_session(self, *, user_id: str, session_id: str) -> AuroraCoreSession:
