@@ -105,6 +105,14 @@ def setup_periodic_tasks(sender, **kwargs):
         name='run-l4-async-engine-sweep-every-4h'
     )
 
+    # P4-PCI community privacy maintenance — every 4 hours
+    from app.core.celery_tasks import run_community_privacy_maintenance
+    sender.add_periodic_task(
+        14400.0,
+        run_community_privacy_maintenance.s(),
+        name='run-community-privacy-maintenance-every-4h'
+    )
+
     # P4 counterfactual policy evaluation — daily report generation
     from app.core.celery_tasks import run_counterfactual_evaluations
     sender.add_periodic_task(

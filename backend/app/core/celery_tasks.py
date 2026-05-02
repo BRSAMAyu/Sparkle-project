@@ -3238,3 +3238,64 @@ def monitor_safe_experiment_guardrails(self):
     except Exception as exc:
         logger.error("monitor_safe_experiment_guardrails failed: %s", exc)
         raise self.retry(exc=exc, countdown=300) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_community_privacy_maintenance")
+def run_community_privacy_maintenance(self, limit: int = 200):
+    """P4-PCI maintenance: reset daily privacy budgets and clean up stale cohorts.
+
+    Runs every 4 hours to ensure privacy budget windows roll over and
+    expired cohort data is pruned while preserving the append-only ledger.
+    """
+
+    async def _run():
+        from app.core.redis_client import get_redis
+        from app.db.session import AsyncSessionLocal
+        from app.models.community_privacy import PrivacyBudgetLedger
+
+        redis = get_redis()
+        results = {"budgets_reset": 0, "cohorts_pruned": 0, "errors": 0}
+
+        async with AsyncSessionLocal() as session:
+            # Reset daily privacy budgets for windows older than 24h
+            try:
+                from datetime import UTC, datetime, timedelta
+
+                cutoff = datetime.now(UTC) - timedelta(hours=24)
+                ledger_keys = await redis.scan(match="sparkle:privacy_budget:*", count=limit)
+                for key in ledger_keys[1][:limit]:
+                    key_str = key if isinstance(key, str) else key.decode()
+                    try:
+                        raw = await redis.get(key_str)
+                        if not raw:
+                            continue
+                        import json
+                        budget = json.loads(raw if isinstance(raw, str) else raw.decode())
+                        last_reset = budget.get("last_reset", "")
+                        if last_reset and last_reset < cutoff.isoformat():
+                            await redis.delete(key_str)
+                            results["budgets_reset"] += 1
+                    except Exception:
+                        results["errors"] += 1
+
+                # Prune expired cohort keys (14-day TTL for cohort data)
+                cohort_keys = await redis.scan(match="sparkle:privacy_cohort:*", count=limit)
+                for key in cohort_keys[1][:limit]:
+                    key_str = key if isinstance(key, str) else key.decode()
+                    ttl = await redis.ttl(key_str)
+                    if ttl <= 0:  # No TTL or expired
+                        await redis.delete(key_str)
+                        results["cohorts_pruned"] += 1
+            except Exception as exc:
+                results["errors"] += 1
+                logger.warning("Community privacy maintenance error: {}", exc)
+
+        return results
+
+    try:
+        result = _run_async(_run())
+        logger.info("Community privacy maintenance finished: {}", result)
+        return result
+    except Exception as exc:
+        logger.error("Community privacy maintenance failed: {}", exc)
+        raise self.retry(exc=exc, countdown=600) from exc
