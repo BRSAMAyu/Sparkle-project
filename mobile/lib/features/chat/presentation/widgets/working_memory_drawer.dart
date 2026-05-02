@@ -35,6 +35,7 @@ class _ChatWorkingMemoryPanelState
     extends ConsumerState<ChatWorkingMemoryPanel> {
   bool _loading = false;
   bool _expanded = false;
+  bool _dismissed = false;
   String? _error;
   WorkingMemorySessionModel _session =
       WorkingMemorySessionModel(sessionId: null, items: const []);
@@ -123,7 +124,8 @@ class _ChatWorkingMemoryPanelState
 
   @override
   Widget build(BuildContext context) {
-    if (!AppFeatureFlags.enableWorkingMemoryDrawer ||
+    if (_dismissed ||
+        !AppFeatureFlags.enableWorkingMemoryDrawer ||
         ((widget.sessionId ?? '').isEmpty && _session.items.isEmpty)) {
       return const SizedBox.shrink();
     }
@@ -178,6 +180,15 @@ class _ChatWorkingMemoryPanelState
                         ],
                       ),
                     ),
+                    GestureDetector(
+                      onTap: () => setState(() => _dismissed = true),
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: DS.spacing4),
+                        child: Icon(Icons.close_rounded,
+                            color: DS.textTertiary, size: 16),
+                      ),
+                    ),
+                    const SizedBox(width: DS.spacing4),
                     Icon(
                       _expanded ? Icons.expand_less : Icons.expand_more,
                       color: DS.textSecondary,

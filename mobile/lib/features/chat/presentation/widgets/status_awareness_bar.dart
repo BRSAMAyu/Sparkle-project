@@ -44,6 +44,7 @@ class StatusAwarenessBar extends ConsumerStatefulWidget {
 class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
     with SingleTickerProviderStateMixin {
   _AuroraExpansion _expansion = _AuroraExpansion.collapsed;
+  bool _dismissed = false;
   String? _selectedCorrectionSemantic;
   late final AnimationController _controller;
   late final Animation<double> _expandAnimation;
@@ -112,6 +113,8 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
 
   @override
   Widget build(BuildContext context) {
+    if (_dismissed) return const SizedBox.shrink();
+
     final snapshot = ref.watch(auroraStatusProvider);
 
     if (snapshot == null) {
@@ -239,6 +242,12 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
                         style: TextStyle(color: DS.textSecondary, fontSize: 11),
                       ),
                       const SizedBox(width: DS.spacing4),
+                      GestureDetector(
+                        onTap: () => setState(() => _dismissed = true),
+                        child: Icon(Icons.close_rounded,
+                            size: 14, color: DS.textTertiary),
+                      ),
+                      const SizedBox(width: DS.spacing4),
                       Icon(
                         _expansion != _AuroraExpansion.collapsed
                             ? Icons.keyboard_arrow_up_rounded
@@ -318,11 +327,12 @@ class _StatusAwarenessBarState extends ConsumerState<StatusAwarenessBar>
   Widget _buildExpansionContent(
       AuroraControlSurfaceSnapshot snapshot, Color tone) {
     if (_expansion == _AuroraExpansion.deep) {
-      final maxHeight =
-          (MediaQuery.sizeOf(context).height * 0.62).clamp(280.0, 420.0);
+      final availableHeight = MediaQuery.sizeOf(context).height * 0.45;
+      final maxHeight = availableHeight.clamp(220.0, 360.0);
       return ConstrainedBox(
         constraints: BoxConstraints(maxHeight: maxHeight),
         child: SingleChildScrollView(
+          padding: const EdgeInsets.only(bottom: DS.spacing16),
           child: _buildDeepExpansion(snapshot),
         ),
       );
