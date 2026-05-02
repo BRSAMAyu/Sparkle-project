@@ -10,13 +10,14 @@ import httpx
 import pytest
 
 from app.services.stt.providers.zhipu_provider import ZhipuProvider
+from tests._credentials import TEST_ZHIPU_API_KEY
 
 
 @pytest.mark.asyncio
 async def test_zhipu_provider_init():
     """测试 ZhipuProvider 初始化"""
     with patch("app.services.stt.providers.zhipu_provider.settings") as mock_settings:
-        mock_settings.ZHIPU_API_KEY = "test-zhipu-api-key"
+        mock_settings.ZHIPU_API_KEY = TEST_ZHIPU_API_KEY
         mock_settings.ZHIPU_ASR_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
         mock_settings.ZHIPU_ASR_MODEL = "glm-asr-2512"
         mock_settings.ZHIPU_ASR_SAMPLE_RATE = 16000
@@ -26,7 +27,7 @@ async def test_zhipu_provider_init():
         mock_settings.ZHIPU_ASR_REQUEST_TIMEOUT_SECONDS = 90
 
         provider = ZhipuProvider()
-        assert provider.api_key == "test-zhipu-api-key"
+        assert provider.api_key == TEST_ZHIPU_API_KEY
         assert provider.endpoint == "https://open.bigmodel.cn/api/paas/v4/audio/transcriptions"
         assert provider.model == "glm-asr-2512"
 
@@ -34,7 +35,7 @@ async def test_zhipu_provider_init():
 def test_zhipu_provider_build_wav_bytes():
     """测试 PCM 封装为 WAV"""
     with patch("app.services.stt.providers.zhipu_provider.settings") as mock_settings:
-        mock_settings.ZHIPU_API_KEY = "test-zhipu-api-key"
+        mock_settings.ZHIPU_API_KEY = TEST_ZHIPU_API_KEY
         mock_settings.ZHIPU_ASR_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
         mock_settings.ZHIPU_ASR_MODEL = "glm-asr-2512"
         mock_settings.ZHIPU_ASR_SAMPLE_RATE = 16000
@@ -56,7 +57,7 @@ def test_zhipu_provider_build_wav_bytes():
 async def test_zhipu_provider_transcribe_audio_bytes_success():
     """测试智谱音频转写调用"""
     with patch("app.services.stt.providers.zhipu_provider.settings") as mock_settings:
-        mock_settings.ZHIPU_API_KEY = "test-zhipu-api-key"
+        mock_settings.ZHIPU_API_KEY = TEST_ZHIPU_API_KEY
         mock_settings.ZHIPU_ASR_BASE_URL = "https://open.bigmodel.cn/api/paas/v4"
         mock_settings.ZHIPU_ASR_MODEL = "glm-asr-2512"
         mock_settings.ZHIPU_ASR_SAMPLE_RATE = 16000

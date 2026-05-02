@@ -65,7 +65,7 @@ class GraphDiagnosticCard extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: DS.spacing8),
               child: _NodeTile(
                 item: item,
-                tone: DS.warningAccent,
+                tone: DS.warning,
                 onAction: onAction,
               ),
             ),
