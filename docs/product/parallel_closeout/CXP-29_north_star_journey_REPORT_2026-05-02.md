@@ -1,5 +1,7 @@
 # CXP-29 Report — End-To-End North Star Journey
 
+> Final integration note (2026-05-02): this report was written before the final merge pass. Its "missing report" and "GAP" statuses reflected the pre-merge state. The final integrated acceptance state is recorded in `SPARKLE_FINAL_INTEGRATION_ACCEPTANCE_REPORT_2026-05-02.md`.
+
 ## Goal
 Validate and polish the complete product story: a zero-base user can onboard, state a goal, receive a plan, execute tasks, use tools, receive Aurora calibration, correct the system, share progress, return after absence, and see changed future behavior. This report is the canonical final E2E acceptance narrative.
 

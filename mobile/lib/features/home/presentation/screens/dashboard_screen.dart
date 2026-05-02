@@ -599,22 +599,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 state: band != null
                     ? AuroraStatusBand.mapBandStatus(band.bandStatus)
                     : _resolveAuroraState(dashboardState),
-                label: band?.bandSummary.isNotEmpty == true
+                label: band?.bandSummary.isNotEmpty ?? false
                     ? band!.bandSummary
                     : _auroraBandLabel(dashboardState),
                 correctionOptions: band?.correctionOptions ?? [],
                 cooldownRemainingSeconds: band?.cooldownRemainingSeconds,
                 cooldownCanOverride: band?.cooldownCanOverride ?? false,
-                onTap: () => context.push(ChatRoutes.chat),
+                onTap: () => unawaited(context.push(ChatRoutes.chat)),
                 onCorrectionTap: (opt) {
                   if (opt.isFreeform) {
-                    _showFreeformCorrectionDialog(
-                      context,
-                      bandStatus: band?.bandStatus.protocolValue ?? '',
-                      semanticValue: opt.semanticValue,
-                      isDisconfirming: opt.isDisconfirming,
-                      telemetry:
-                          AuroraTelemetryService(ref.read(apiClientProvider)),
+                    unawaited(
+                      _showFreeformCorrectionDialog(
+                        context,
+                        bandStatus: band?.bandStatus.protocolValue ?? '',
+                        semanticValue: opt.semanticValue,
+                        isDisconfirming: opt.isDisconfirming,
+                        telemetry: AuroraTelemetryService(
+                          ref.read(apiClientProvider),
+                        ),
+                      ),
                     );
                   } else {
                     final telemetry =
@@ -632,10 +635,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       isDisconfirming: opt.isDisconfirming,
                       bandStatus: band?.bandStatus.protocolValue ?? '',
                     );
-                    context.push(ChatRoutes.chat, extra: {
-                      'initial_user_message': opt.label,
-                      'aurora_correction': payload.toJson(),
-                    });
+                    unawaited(
+                      context.push(ChatRoutes.chat, extra: {
+                        'initial_user_message': opt.label,
+                        'aurora_correction': payload.toJson(),
+                      }),
+                    );
                   }
                 },
                 onCooldownOverride: () {
@@ -653,11 +658,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     label: context.l10n.dashboardQuickCalibration,
                     bandStatus: band?.bandStatus.protocolValue ?? '',
                   );
-                  context.push(ChatRoutes.chat, extra: {
-                    'initial_user_message':
-                        context.l10n.dashboardQuickCalibration,
-                    'aurora_correction': payload.toJson(),
-                  });
+                  unawaited(
+                    context.push(ChatRoutes.chat, extra: {
+                      'initial_user_message':
+                          context.l10n.dashboardQuickCalibration,
+                      'aurora_correction': payload.toJson(),
+                    }),
+                  );
                 },
               ),
               loading: () => AuroraStatusBand(

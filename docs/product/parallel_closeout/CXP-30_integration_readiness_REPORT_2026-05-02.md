@@ -1,5 +1,7 @@
 # CXP-30 Report — Final Integration Readiness And Conflict Map
 
+> Final integration note (2026-05-02): this report was intentionally a pre-merge conflict map. The final merge pass resolved the listed lineage/report gaps, added the missing CXP-14 report, merged pushed branches, and recorded the final verdict in `SPARKLE_FINAL_INTEGRATION_ACCEPTANCE_REPORT_2026-05-02.md`.
+
 ## Goal
 Prepare all parallel work for final merge by identifying write-set overlaps, duplicate implementations, incompatible assumptions, migration conflicts, API contract conflicts, missing cross-links, and the required merge order.
 

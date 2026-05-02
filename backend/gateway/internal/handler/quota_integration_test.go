@@ -83,12 +83,19 @@ func TestChatOrchestrator_QuotaIntegration(t *testing.T) {
 		})
 		assert.NoError(t, err)
 
-		// Expect Error Message (Service Unavailable) because agentClient is nil
-		// This proves it PASSED the quota check and tried to call StreamChat
+		// First expect the accepted ACK introduced by realtime request admission.
+		// The chat flow may also emit a legacy message_ack before the service
+		// error. Seeing the error proves it passed quota admission and attempted
+		// the agent call.
 		var resp map[string]interface{}
 		err = conn.ReadJSON(&resp)
 		assert.NoError(t, err)
+		assert.Equal(t, "ack", resp["type"])
 
+		for i := 0; i < 3 && resp["type"] != "error"; i++ {
+			err = conn.ReadJSON(&resp)
+			assert.NoError(t, err)
+		}
 		assert.Equal(t, "error", resp["type"])
 		assert.Equal(t, "AI Service Unavailable", resp["message"])
 

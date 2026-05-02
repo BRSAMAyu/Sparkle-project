@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-05-01 (R8 全部修复: 社区 feed scope 后端闭环, GoalFocus i18n, 类边界, mock 签名, scope 持久化; 全栈愿景审计 22 section PASS; 7001 tests passed)
+> **最后更新**: 2026-05-02 (30 CXP 并行打磨完成最终集成: 30/30 报告齐备, CXP 分支/共享工作区补丁已合入 final-closeout integration, Python/Go/Flutter 聚焦验证通过)
 
 ### P0 Critical — 当前会话修复
 
@@ -20,6 +20,14 @@
 |------|------|--------|------|
 | C16: Flutter Typed Failure Model | ✅ 完成 | Codex | `AppFailure` typed mapper added; auth/chat/dashboard paths adopted; chat/dashboard UI differentiates offline/auth/server/validation recovery; `flutter test test/core/errors/failures_test.dart` 4/4 passed |
 | R18: Aurora 完全体体验收口 | ✅ 完成 | Codex | Legacy `SPARKLE_*` 配套开关默认全开并纳入配置一致性守卫；聊天 freeform 纠错进入可见对话+结构化链；状态带第三层小屏可滚动、纠正/详情 chip 更稳；后端 Aurora 51 tests + 移动端聚焦 61 tests + secret/diff checks passed |
+
+### 2026-05-02 Parallel CXP Final Integration
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| CXP-01~CXP-30 并行体验/系统打磨 | ✅ 集成完成 | Codex final integrator | 共享工作区补丁提交 `ccf83242e`; 已合并 CXP-01/02/05/07/13/16/17/18/21/23/25 等独立分支; CXP-14 缺失报告已补; 最终验收见 `docs/product/parallel_closeout/SPARKLE_FINAL_INTEGRATION_ACCEPTANCE_REPORT_2026-05-02.md` |
+| Final conflict resolution | ✅ 完成 | Codex | 解决 `time_utils.py` add/add、community API 格式/权限调用、task card 格式、gateway ACK/quota 旧测试语义冲突 |
+| Final verification | ✅ 聚焦通过 | Codex | backend compile + ruff scoped + 74 backend tests; gateway logsafe/handler/middleware tests; Flutter entity-card 11 tests; Flutter focused analyze `--no-fatal-infos` 通过 |
 
 ---
 
