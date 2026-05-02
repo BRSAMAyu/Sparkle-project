@@ -1000,6 +1000,10 @@ class EventBus:
         Returns:
             Message ID if successful, None otherwise
         """
+        # P1-12: Inject schema_version for all events
+        if "schema_version" not in payload:
+            payload["schema_version"] = "1.0"
+
         last_error: Exception | None = None
         for attempt in range(self.max_retries + 1):
             try:

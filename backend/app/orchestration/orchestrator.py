@@ -1944,11 +1944,22 @@ class ChatOrchestrator(
         try:
             knowledge_service = KnowledgeService(active_db)
             retriever = GraphRAGRetriever(knowledge_service)
+
+            # P1-9: depth mapping for deep_source_synthesis + aurora_core_case_file
+            if mode == "deep_source_synthesis":
+                retrieval_depth = 3
+            elif mode == "aurora_core_case_file":
+                retrieval_depth = 2
+            elif mode == "aggressive":
+                retrieval_depth = 2
+            else:
+                retrieval_depth = 1
+
             rag_result = await asyncio.wait_for(
                 retriever.retrieve(
                     str(user_message or ""),
                     str(user_uuid),
-                    depth=2 if mode == "aggressive" else 1,
+                    depth=retrieval_depth,
                     route_intent=route_intent,
                     include_group_documents=include_group_documents,
                     group_ids=group_ids,
