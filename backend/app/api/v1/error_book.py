@@ -42,6 +42,7 @@ async def get_error_service(
     return ErrorBookService(db)
 
 
+# route-tier: authed
 @router.post("", response_model=ErrorRecordResponse, status_code=201)
 async def create_error(
     data: ErrorRecordCreate,
@@ -59,6 +60,7 @@ async def create_error(
     return error
 
 
+# route-tier: authed
 @router.get("", response_model=ErrorRecordListResponse)
 async def list_errors(
     subject: SubjectEnum | None = Query(None, description="按科目筛选"),
@@ -99,6 +101,7 @@ async def list_errors(
     )
 
 
+# route-tier: authed
 @router.get("/stats", response_model=ReviewStatsResponse)
 async def get_stats(
     user_id: str = Depends(get_current_user_id), service: ErrorBookService = Depends(get_error_service)
@@ -108,6 +111,7 @@ async def get_stats(
     return ReviewStatsResponse(**stats)
 
 
+# route-tier: authed
 @router.get("/today-review", response_model=ErrorRecordListResponse)
 async def get_today_review_list(
     page: int = Query(1, ge=1),
@@ -125,6 +129,7 @@ async def get_today_review_list(
     )
 
 
+# route-tier: authed
 @router.get("/review-cards", response_model=ErrorReviewCardsResponse)
 async def get_review_cards(
     limit: int = Query(8, ge=1, le=20),
@@ -136,6 +141,7 @@ async def get_review_cards(
     return await service.get_review_cards(UUID(user_id), limit=limit, lookback_days=lookback_days)
 
 
+# route-tier: authed
 @router.get("/{error_id}", response_model=ErrorRecordResponse)
 async def get_error(
     error_id: UUID, user_id: str = Depends(get_current_user_id), service: ErrorBookService = Depends(get_error_service)
@@ -149,6 +155,7 @@ async def get_error(
     return error
 
 
+# route-tier: authed
 @router.patch("/{error_id}", response_model=ErrorRecordResponse)
 async def update_error(
     error_id: UUID,
@@ -163,6 +170,7 @@ async def update_error(
     return error
 
 
+# route-tier: authed
 @router.delete("/{error_id}", status_code=204)
 async def delete_error(
     error_id: UUID, user_id: str = Depends(get_current_user_id), service: ErrorBookService = Depends(get_error_service)
@@ -173,6 +181,7 @@ async def delete_error(
         raise HTTPException(status_code=404, detail="没有找到这个错题，可能已经删除了")
 
 
+# route-tier: authed
 @router.post("/{error_id}/analyze", response_model=dict)
 async def re_analyze_error(
     error_id: UUID,
@@ -192,6 +201,7 @@ async def re_analyze_error(
     return {"message": "分析任务已提交，请稍后刷新查看结果~"}
 
 
+# route-tier: authed
 @router.post("/{error_id}/review", response_model=ErrorRecordResponse)
 async def submit_review(
     error_id: UUID,
@@ -209,6 +219,7 @@ async def submit_review(
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/{error_id}/semantic", response_model=ErrorSemanticSummary)
 async def get_error_semantic_summary(
     error_id: UUID,

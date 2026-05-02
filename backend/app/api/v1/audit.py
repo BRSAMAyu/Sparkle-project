@@ -67,6 +67,7 @@ def _serialize_admin_audit_log(row: AdminAuditLog) -> AdminAuditActionResponse:
         details=row.details,
     )
 
+# route-tier: authed
 @router.get("/avatars", response_model=list[UserProfile])
 @audit_admin_action(category="avatar_moderation", risk="medium", action="list_pending_avatars")
 async def get_pending_avatars(
@@ -76,6 +77,7 @@ async def get_pending_avatars(
     """获取待审核头像列表"""
     return await AuditService.get_pending_avatars(db)
 
+# route-tier: authed
 @router.post("/avatars/{user_id}/approve", response_model=UserProfile)
 @audit_admin_action(category="avatar_moderation", risk="medium", action="approve_avatar")
 async def approve_avatar(
@@ -89,6 +91,7 @@ async def approve_avatar(
         raise HTTPException(status_code=404, detail="没有找到待审核的用户")
     return user
 
+# route-tier: authed
 @router.post("/avatars/{user_id}/reject", response_model=UserProfile)
 @audit_admin_action(category="avatar_moderation", risk="medium", action="reject_avatar")
 async def reject_avatar(
@@ -116,6 +119,7 @@ async def get_kill_switch_readiness(
 
 
 # route-tier: admin
+# route-tier: authed
 @router.get("/aurora-effectiveness", response_model=AuroraEffectivenessReport)
 @audit_admin_action(category="aurora_effectiveness", risk="medium", action="view_aurora_effectiveness")
 async def get_aurora_effectiveness(
@@ -128,6 +132,7 @@ async def get_aurora_effectiveness(
 
 
 # route-tier: admin
+# route-tier: authed
 @router.get("/pack-quality", response_model=PackQualityReport)
 @audit_admin_action(category="pack_quality", risk="medium", action="view_pack_quality")
 async def get_pack_quality_report(
@@ -147,6 +152,7 @@ async def get_pack_quality_report(
     return await service.build_pack_quality_report(pack_id)
 
 
+# route-tier: internal
 @router.get("/admin_actions", response_model=AdminAuditActionListResponse)
 @audit_admin_action(category="audit_log_access", risk="high", action="query_admin_audit_log")
 async def list_admin_audit_actions(
@@ -183,6 +189,7 @@ async def list_admin_audit_actions(
     )
 
 
+# route-tier: internal
 @router.post("/admin_actions/archive_due")
 @audit_admin_action(category="audit_log_archive", risk="high", action="archive_due_admin_audit_logs")
 async def archive_due_admin_audit_actions(

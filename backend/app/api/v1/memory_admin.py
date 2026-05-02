@@ -80,6 +80,7 @@ def _ensure_ltm_eval_enabled() -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="LTM eval disabled")
 
 
+# route-tier: internal
 @router.get("/stats")
 async def memory_stats(db: AsyncSession = Depends(get_db)):
     _ensure_governance_enabled()
@@ -149,6 +150,7 @@ def _experiment_cohort_for_user(user_id: str | None) -> str | None:
     return ("A", "B", "C")[bucket]
 
 
+# route-tier: internal
 @router.get("/health")
 async def memory_health(
     limit: int = Query(default=20, ge=1, le=200),
@@ -180,6 +182,7 @@ async def memory_health(
     return {"items": samples[:limit]}
 
 
+# route-tier: internal
 @router.get("/health-snapshot")
 async def memory_health_snapshot(db: AsyncSession = Depends(get_db)):
     _ensure_governance_enabled()
@@ -189,6 +192,7 @@ async def memory_health_snapshot(db: AsyncSession = Depends(get_db)):
     return await service.compute_snapshot()
 
 
+# route-tier: internal
 @router.post("/health/run")
 @audit_admin_action(category="memory_governance", risk="high", action="run_memory_health")
 async def run_memory_health(
@@ -204,6 +208,7 @@ async def run_memory_health(
     return {"status": "ok", "summary": summary}
 
 
+# route-tier: internal
 @router.post("/adjustments/run")
 @audit_admin_action(category="memory_governance", risk="high", action="run_memory_adjustments")
 async def run_adjustments(db: AsyncSession = Depends(get_db)):
@@ -225,6 +230,7 @@ async def run_adjustments(db: AsyncSession = Depends(get_db)):
     return {"status": "ok", "summary": summary}
 
 
+# route-tier: internal
 @router.get("/jobs/status")
 async def memory_jobs_status(db: AsyncSession = Depends(get_db)):
     _ensure_governance_enabled()
@@ -247,6 +253,7 @@ async def memory_jobs_status(db: AsyncSession = Depends(get_db)):
     return {"jobs": job_status, "evidence_missing": missing}
 
 
+# route-tier: internal
 @router.post("/jobs/run")
 @audit_admin_action(category="memory_governance", risk="high", action="run_memory_job")
 async def run_memory_job(
@@ -562,6 +569,7 @@ async def update_stage33_kill_switches(payload: dict = Body(default={})):
     return {"status": "ok", "flags": await service.summary()}
 
 
+# route-tier: internal
 @router.get("/context-pack/stats")
 async def context_pack_stats():
     _ensure_governance_enabled()
@@ -572,6 +580,7 @@ async def context_pack_stats():
     return {"intent_distribution": intents}
 
 
+# route-tier: internal
 @router.get("/budgets")
 async def get_budget_profiles(db: AsyncSession = Depends(get_db)):
     _ensure_governance_enabled()
@@ -588,6 +597,7 @@ async def get_budget_profiles(db: AsyncSession = Depends(get_db)):
     return payload
 
 
+# route-tier: internal
 @router.get("/release-gate")
 async def get_release_gate(db: AsyncSession = Depends(get_db)):
     _ensure_governance_enabled()
@@ -596,6 +606,7 @@ async def get_release_gate(db: AsyncSession = Depends(get_db)):
     return {"ok": result.ok, "reasons": result.reasons, "metrics": result.metrics}
 
 
+# route-tier: internal
 @router.post("/release-gate/run")
 @audit_admin_action(category="release_gate", risk="high", action="run_ltm_release_gate")
 async def run_release_gate(db: AsyncSession = Depends(get_db)):
@@ -605,6 +616,7 @@ async def run_release_gate(db: AsyncSession = Depends(get_db)):
     return {"ok": result.ok, "reasons": result.reasons, "metrics": result.metrics}
 
 
+# route-tier: internal
 @router.get("/rollout/status")
 async def rollout_status(
     sample_size: int = Query(default=50, ge=1, le=500),
@@ -629,6 +641,7 @@ async def rollout_status(
     }
 
 
+# route-tier: internal
 @router.get("/ai-phases/status")
 async def ai_phases_status(user_id: str | None = Query(default=None)):
     _ensure_governance_enabled()
@@ -722,6 +735,7 @@ async def ai_phases_status(user_id: str | None = Query(default=None)):
     }
 
 
+# route-tier: internal
 @router.post("/budgets/reset")
 @audit_admin_action(category="memory_governance", risk="high", action="reset_budget_profiles")
 async def reset_budget_profiles(db: AsyncSession = Depends(get_db)):
@@ -734,6 +748,7 @@ async def reset_budget_profiles(db: AsyncSession = Depends(get_db)):
     return payload
 
 
+# route-tier: internal
 @router.post("/eval/run")
 @audit_admin_action(category="memory_governance", risk="high", action="run_ltm_eval")
 async def run_ltm_eval(
@@ -760,6 +775,7 @@ async def run_ltm_eval(
     return summary
 
 
+# route-tier: internal
 @router.get("/rank-policies")
 async def list_rank_policies(db: AsyncSession = Depends(get_db)):
     _ensure_governance_enabled()
@@ -779,6 +795,7 @@ async def list_rank_policies(db: AsyncSession = Depends(get_db)):
     }
 
 
+# route-tier: internal
 @router.post("/rank-policies")
 @audit_admin_action(category="memory_governance", risk="high", action="upsert_rank_policy")
 async def upsert_rank_policy(
@@ -804,6 +821,7 @@ async def upsert_rank_policy(
     }
 
 
+# route-tier: internal
 @router.delete("/rank-policies/{policy_id}")
 @audit_admin_action(category="memory_governance", risk="high", action="delete_rank_policy")
 async def delete_rank_policy(

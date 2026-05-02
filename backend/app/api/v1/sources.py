@@ -32,6 +32,7 @@ async def _load_source_or_404(db: AsyncSession, source_id: UUID, user_id: UUID):
     return source
 
 
+# route-tier: authed
 @router.post("/{source_id}/archive", summary="Archive a source document")
 async def archive_source(
     source_id: UUID,
@@ -51,6 +52,7 @@ async def archive_source(
     return source_lifecycle_payload(result.source, invalidated_keys=result.invalidated_keys)
 
 
+# route-tier: authed
 @router.post("/{source_id}/restore", summary="Restore an archived or orphaned source document")
 async def restore_source(
     source_id: UUID,
@@ -71,6 +73,7 @@ async def restore_source(
     return source_lifecycle_payload(result.source, invalidated_keys=result.invalidated_keys)
 
 
+# route-tier: authed
 @router.post("/{source_id}/revoke", summary="Revoke sharing/retrieval permissions for a source document")
 async def revoke_source_permissions(
     source_id: UUID,
@@ -90,6 +93,7 @@ async def revoke_source_permissions(
     return body
 
 
+# route-tier: authed
 @router.delete("/{source_id}", summary="Delete and cryptographically erase a source document")
 async def delete_source(
     source_id: UUID,
@@ -102,6 +106,7 @@ async def delete_source(
     return source_lifecycle_payload(result.source, invalidated_keys=result.invalidated_keys)
 
 
+# route-tier: authed
 @router.post("/goal-close-cleanup", summary="Mark closed-goal source material as orphaned")
 async def goal_close_cleanup(
     payload: GoalCloseCleanupRequest,

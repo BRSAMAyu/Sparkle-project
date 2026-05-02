@@ -351,6 +351,7 @@ async def _goal_graph_summary(user_id: UUID, goal_id: str | None) -> dict[str, A
         return {"active": False, "nodes": [], "edges": [], "focus_suggestions": []}
 
 
+# route-tier: authed
 @router.get("/understanding-snapshot")
 async def get_understanding_snapshot(
     conversation_id: str | None = Query(default=None),
@@ -416,6 +417,7 @@ async def get_understanding_snapshot(
     }
 
 
+# route-tier: authed
 @router.post("/understanding-snapshot/corrections")
 async def correct_understanding_snapshot(
     request: UnderstandingCorrectionRequest,
@@ -454,6 +456,7 @@ async def correct_understanding_snapshot(
     }
 
 
+# route-tier: authed
 @router.get("/goal-detail/{goal_id}")
 async def get_goal_detail(
     goal_id: str,
@@ -510,6 +513,7 @@ async def get_goal_detail(
     }
 
 
+# route-tier: authed
 @router.get("/growth-dashboard")
 async def get_experience_growth_dashboard(
     current_user: User = Depends(get_current_user),
@@ -582,6 +586,7 @@ async def get_experience_growth_dashboard(
     }
 
 
+# route-tier: authed
 @router.get("/community-accountability")
 async def get_community_accountability(
     current_user: User = Depends(get_current_user),

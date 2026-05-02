@@ -87,7 +87,7 @@ class FavoritesScreen extends ConsumerWidget {
         ),
         data: (favorites) {
           if (favorites.isEmpty) {
-            return const Center(
+            return Center(
               child: CompactEmptyState(
                 message: I18nService.instance.isChinese ? '还没有收藏' : 'No favorites yet',
                 icon: Icons.bookmark_border,

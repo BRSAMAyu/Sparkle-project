@@ -31,6 +31,7 @@ def _serialize_report(report: Any) -> dict[str, Any]:
     }
 
 
+# route-tier: internal
 @router.get("/reports")
 async def list_counterfactual_reports(
     limit: int = Query(50, ge=1, le=200),
@@ -49,6 +50,7 @@ async def list_counterfactual_reports(
     return {"items": [_serialize_report(report) for report in reports], "limit": limit, "offset": offset}
 
 
+# route-tier: internal
 @router.get("/reports/{report_id}")
 async def get_counterfactual_report(
     report_id: str,
@@ -65,6 +67,7 @@ async def get_counterfactual_report(
     return _serialize_report(report)
 
 
+# route-tier: internal
 @router.post("/promote/{report_id}")
 async def promote_counterfactual_report(
     report_id: str,

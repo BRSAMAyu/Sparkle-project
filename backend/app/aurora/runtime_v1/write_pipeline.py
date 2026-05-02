@@ -511,7 +511,7 @@ class InferenceWritePipeline:
 
     async def _save_inferred_data(self, user_uuid: UUID, inferred: dict[str, Any]) -> Any:
         if self.pref_service is not None:
-            return await self.pref_service.update_inferred(user_uuid, inferred)
+            return await self.pref_service.update_inferred(user_uuid, inferred)  # rule-k: ignore — pref_service injected by caller outside aurora/ path
         return None
 
     async def _read_user_preferences(self, user_uuid: UUID) -> Any:

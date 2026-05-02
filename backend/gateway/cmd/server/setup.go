@@ -493,6 +493,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	)
 
 	// Health endpoints outside rate-limited group for reliable monitoring access
+		// route-tier: public
 	r.GET("/api/v1/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status": "ok",
@@ -501,6 +502,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		})
 	})
 	r.GET("/api/v1/health/cqrs", func(c *gin.Context) {
+		// route-tier: public
 		outboxPendingCount, err := cqrs.outboxRepo.GetPendingCount(context.Background())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -529,6 +531,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		})
 	})
 
+	// route-tier: internal
 	api := r.Group("/api/v1")
 	api.Use(apiRateLimit)
 	api.Use(middleware.TimeoutMiddleware(time.Duration(requestTimeout) * time.Second))
@@ -568,6 +571,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		// route-tier: internal
 		internal.GET("/files/:file_id/download", handlers.fileHandler.GetInternalDownloadURL)
 		internal.POST("/interventions/push", handlers.interventionPushHandler.HandlePush)
+			// route-tier: internal
 		internal.POST("/signals/push", handlers.signalPushHandler.HandlePush)
 	}
 

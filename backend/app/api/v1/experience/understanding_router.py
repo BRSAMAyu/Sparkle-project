@@ -192,6 +192,7 @@ async def _store_correction_effect(
     return effect
 
 
+# route-tier: authed
 @router.get("/understanding-snapshot")
 async def get_understanding_snapshot(
     current_user: User = Depends(get_current_user),
@@ -219,6 +220,7 @@ async def get_understanding_snapshot(
     }
 
 
+# route-tier: authed
 @router.post("/understanding-snapshot/corrections")
 async def correct_understanding_snapshot(
     request: UnderstandingCorrectionRequest,

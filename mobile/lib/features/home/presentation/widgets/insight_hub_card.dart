@@ -318,7 +318,7 @@ class _CompactInsightHubCard extends ConsumerWidget {
                               ),
                             ],
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.insights_rounded,
                             color: DS.textOnPrimary,
                             size: 18,

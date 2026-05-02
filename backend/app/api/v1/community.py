@@ -255,6 +255,7 @@ def _shared_resource_payload_is_active(resource: SharedResource) -> bool:
     return resource.card_share_record_id is not None
 
 
+# route-tier: authed
 @router.get("/feed", summary="获取社区动态流")
 async def get_feed(
     page: int = Query(default=1, ge=1),
@@ -378,6 +379,7 @@ async def get_feed(
     return [_post_to_response(p) for p in posts]
 
 
+# route-tier: authed
 @router.post("/posts", summary="发布社区动态", status_code=201)
 async def create_post(
     request: Request,
@@ -401,6 +403,7 @@ async def create_post(
     return _post_to_response(post)
 
 
+# route-tier: authed
 @router.post("/posts/{post_id}/like", summary="点赞/取消点赞")
 async def toggle_like_post(
     post_id: UUID,
@@ -973,6 +976,7 @@ async def _get_share_resource(db: AsyncSession, resource_type: SharedResourceTyp
 # ============ 好友系统 ============
 
 
+# route-tier: authed
 @router.post("/friends/request", summary="发送好友请求")
 @limiter.limit("5/minute")
 async def send_friend_request(
@@ -1025,6 +1029,7 @@ async def send_friend_request(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/friends/respond", summary="响应好友请求")
 async def respond_to_friend_request(
     data: FriendResponse, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -1038,6 +1043,7 @@ async def respond_to_friend_request(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.delete("/friends/{friendship_id}", summary="删除好友")
 async def delete_friend(
     friendship_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -1056,6 +1062,7 @@ async def delete_friend(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/friends", response_model=list[FriendshipInfo], summary="获取好友列表")
 async def get_friends(
     limit: int = Query(default=50, ge=1, le=100),
@@ -1116,6 +1123,7 @@ async def get_friends(
     return payload
 
 
+# route-tier: authed
 @router.get("/friends/pending", response_model=list[FriendshipInfo], summary="获取待处理的好友请求")
 async def get_pending_requests(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """获取收到的待处理好友请求"""
@@ -1127,6 +1135,7 @@ async def get_pending_requests(current_user: User = Depends(get_current_user), d
     ]
 
 
+# route-tier: authed
 @router.get("/friends/{friend_id}/profile", summary="获取好友详情资料")
 async def get_friend_profile(
     friend_id: UUID,
@@ -1233,6 +1242,7 @@ async def get_friend_profile(
     }
 
 
+# route-tier: authed
 @router.get("/users/search", response_model=list[UserBrief], summary="搜索用户")
 @limiter.limit("20/minute")
 async def search_users(
@@ -1271,6 +1281,7 @@ async def search_users(
 # ============ 用户拉黑 API ============
 
 
+# route-tier: authed
 @router.post("/users/block", summary="拉黑用户")
 @limiter.limit("10/hour")
 async def block_user(
@@ -1293,6 +1304,7 @@ async def block_user(
     return {"success": True, "message": "已拉黑该用户"}
 
 
+# route-tier: authed
 @router.delete("/users/block/{user_id}", summary="解除拉黑")
 @limiter.limit("20/hour")
 async def unblock_user(
@@ -1305,6 +1317,7 @@ async def unblock_user(
     return {"success": True, "message": "已解除拉黑"}
 
 
+# route-tier: authed
 @router.get("/users/blocked", response_model=list[BlockUserInfo], summary="获取拉黑列表")
 async def get_blocked_users(
     request: Request,
@@ -1336,6 +1349,7 @@ async def get_blocked_users(
     ]
 
 
+# route-tier: authed
 @router.put("/users/privacy", summary="更新用户隐私设置")
 async def update_privacy_settings(
     request: Request,
@@ -1356,6 +1370,7 @@ async def update_privacy_settings(
     return {"success": True, "searchable_by": data.searchable_by.value}
 
 
+# route-tier: authed
 @router.get("/users/privacy", response_model=UserPrivacySettings, summary="获取用户隐私设置")
 async def get_privacy_settings(
     request: Request, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -1366,6 +1381,7 @@ async def get_privacy_settings(
     return UserPrivacySettings(searchable_by=SearchVisibilityEnum(searchable_by))
 
 
+# route-tier: authed
 @router.get("/friends/recommendations", response_model=list[FriendRecommendation], summary="获取好友推荐")
 @limiter.limit("10/minute")
 async def get_friend_recommendations(
@@ -1388,6 +1404,7 @@ async def get_friend_recommendations(
     return recommendations
 
 
+# route-tier: authed
 @router.post("/friends/recommendations/feedback", summary="提交好友推荐反馈")
 async def submit_friend_recommendation_feedback(
     data: FriendRecommendationFeedbackRequest,
@@ -1399,6 +1416,7 @@ async def submit_friend_recommendation_feedback(
     return {"success": True}
 
 
+# route-tier: authed
 @router.get(
     "/recommendations/feedback/prompts",
     response_model=list[RecommendationFeedbackPrompt],
@@ -1420,6 +1438,7 @@ async def get_recommendation_feedback_prompts(
     return prompts
 
 
+# route-tier: authed
 @router.get(
     "/recommendations/feedback/insights",
     response_model=list[RecommendationFeedbackInsight],
@@ -1529,6 +1548,7 @@ def _extract_ws_token(websocket: WebSocket) -> str | None:
 # ============ 群组管理 ============
 
 
+# route-tier: authed
 @router.post("/groups", response_model=GroupInfo, summary="创建群组")
 async def create_group(
     data: GroupCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -1545,6 +1565,7 @@ async def create_group(
     return group_info
 
 
+# route-tier: authed
 @router.get("/groups/search", response_model=list[GroupListItem], summary="搜索公开群组")
 async def search_groups(
     keyword: str | None = None,
@@ -1598,6 +1619,7 @@ async def search_groups(
     return result
 
 
+# route-tier: authed
 @router.get("/groups/directory", response_model=GroupDirectoryResponse, summary="公开群组目录")
 async def get_group_directory(
     keyword: str | None = None,
@@ -1675,6 +1697,7 @@ async def get_group_directory(
     )
 
 
+# route-tier: authed
 @router.get("/groups/recommendations", response_model=list[GroupRecommendationItem], summary="群组推荐")
 async def get_group_recommendations(
     limit: int = Query(default=20, ge=1, le=50),
@@ -1693,6 +1716,7 @@ async def get_group_recommendations(
     return recommendations
 
 
+# route-tier: authed
 @router.post("/groups/recommendations/feedback", summary="群组推荐反馈")
 async def group_recommendations_feedback(
     data: GroupRecommendationFeedbackRequest,
@@ -1705,6 +1729,7 @@ async def group_recommendations_feedback(
     return {"success": True}
 
 
+# route-tier: authed
 @router.get("/groups/{group_id}", response_model=GroupInfo, summary="获取群组详情")
 async def get_group(group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """获取群组详细信息"""
@@ -1714,6 +1739,7 @@ async def get_group(group_id: UUID, current_user: User = Depends(get_current_use
     return group
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/join", summary="加入群组")
 async def join_group(
     group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -1739,6 +1765,7 @@ async def join_group(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/leave", summary="退出群组")
 async def leave_group(
     group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -1764,6 +1791,7 @@ async def leave_group(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.delete("/groups/{group_id}", summary="解散群组")
 async def dissolve_group(
     group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -1777,6 +1805,7 @@ async def dissolve_group(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/transfer", summary="转让群主")
 async def transfer_group_owner(
     group_id: UUID,
@@ -1806,6 +1835,7 @@ async def transfer_group_owner(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/groups/{group_id}/members", response_model=list[GroupMemberInfo], summary="获取群成员列表")
 async def get_group_members(
     group_id: UUID,
@@ -1820,6 +1850,7 @@ async def get_group_members(
     return [_build_group_member_info(member) for member in members]
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/members/{user_id}/kick", summary="移出群成员")
 async def kick_group_member(
     group_id: UUID,
@@ -1846,6 +1877,7 @@ async def kick_group_member(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/members/{user_id}/promote", summary="提升成员为管理员")
 async def promote_group_member(
     group_id: UUID,
@@ -1873,6 +1905,7 @@ async def promote_group_member(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/members/{user_id}/demote", summary="降级管理员为普通成员")
 async def demote_group_member(
     group_id: UUID,
@@ -1900,6 +1933,7 @@ async def demote_group_member(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/members/{user_id}/transfer-ownership", summary="转让群主")
 async def transfer_group_owner_by_path(
     group_id: UUID,
@@ -1911,6 +1945,7 @@ async def transfer_group_owner_by_path(
     return await transfer_group_owner(group_id, user_id, current_user, db)
 
 
+# route-tier: authed
 @router.get("/groups", response_model=list[GroupListItem], summary="获取我的群组")
 async def get_my_groups(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """获取当前用户加入的所有群组"""
@@ -1920,6 +1955,7 @@ async def get_my_groups(current_user: User = Depends(get_current_user), db: Asyn
 # ============ 群消息 ============
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/messages", response_model=MessageInfo, summary="发送群消息")
 @limiter.limit("30/minute")
 async def send_message(
@@ -1970,6 +2006,7 @@ async def send_message(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/groups/{group_id}/messages", response_model=list[MessageInfo], summary="获取群消息")
 async def get_messages(
     group_id: UUID,
@@ -1990,6 +2027,7 @@ async def get_messages(
     return result
 
 
+# route-tier: authed
 @router.post(
     "/groups/{group_id}/messages/read",
     response_model=GroupMessageReadResponse,
@@ -2034,6 +2072,7 @@ async def mark_group_messages_read(
 # ============ 群文件 ============
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/files", response_model=GroupFileInfo, summary="分享文件到群组")
 async def create_group_file_share(
     group_id: UUID,
@@ -2090,6 +2129,7 @@ async def create_group_file_share(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/files/{file_id}/share", response_model=GroupFileInfo, summary="分享文件到群组")
 async def share_group_file(
     group_id: UUID,
@@ -2146,6 +2186,7 @@ async def share_group_file(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/groups/{group_id}/files", response_model=list[GroupFileInfo], summary="获取群文件列表")
 async def list_group_files(
     group_id: UUID,
@@ -2176,6 +2217,7 @@ async def list_group_files(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post(
     "/groups/{group_id}/files/{file_id}/copy-to-library",
     response_model=FileCopyResponse,
@@ -2232,6 +2274,7 @@ async def copy_group_file_to_library(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post(
     "/users/{user_id}/share-file",
     response_model=FileCopyResponse,
@@ -2300,6 +2343,7 @@ async def share_file_to_user(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post(
     "/groups/{group_id}/knowledge-base/documents",
     response_model=GroupFileInfo,
@@ -2330,6 +2374,7 @@ async def add_group_knowledge_base_document(
         raise HTTPException(status_code=status_code, detail=detail) from e
 
 
+# route-tier: authed
 @router.get(
     "/groups/{group_id}/knowledge-base",
     response_model=GroupKnowledgeBaseResponse,
@@ -2353,6 +2398,7 @@ async def get_group_knowledge_base(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get(
     "/groups/{group_id}/galaxy",
     response_model=GroupCollaborativeGalaxyResponse,
@@ -2369,6 +2415,7 @@ async def get_group_collaborative_galaxy(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.put("/groups/{group_id}/files/{file_id}/permissions", response_model=GroupFileInfo, summary="更新群文件权限")
 async def update_group_file_permissions(
     group_id: UUID,
@@ -2407,6 +2454,7 @@ async def update_group_file_permissions(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get(
     "/groups/{group_id}/files/categories", response_model=list[GroupFileCategoryStat], summary="获取群文件分类统计"
 )
@@ -2422,6 +2470,7 @@ async def get_group_file_categories(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.patch("/groups/{group_id}/messages/{message_id}", response_model=MessageInfo, summary="编辑群消息")
 async def edit_group_message(
     group_id: UUID,
@@ -2444,6 +2493,7 @@ async def edit_group_message(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/messages/{message_id}/revoke", response_model=MessageInfo, summary="撤回群消息")
 async def revoke_group_message(
     group_id: UUID, message_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -2464,6 +2514,7 @@ async def revoke_group_message(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/messages/{message_id}/reactions", response_model=MessageInfo, summary="更新群消息表情")
 async def update_group_message_reaction(
     group_id: UUID,
@@ -2488,6 +2539,7 @@ async def update_group_message_reaction(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/groups/{group_id}/threads/{thread_root_id}", response_model=list[MessageInfo], summary="获取群消息线程")
 async def get_group_thread_messages(
     group_id: UUID,
@@ -2504,6 +2556,7 @@ async def get_group_thread_messages(
     return [_build_message_info(msg) for msg in messages]
 
 
+# route-tier: authed
 @router.get("/groups/{group_id}/messages/search", response_model=list[MessageInfo], summary="搜索群消息")
 async def search_group_messages(
     group_id: UUID,
@@ -2523,6 +2576,7 @@ async def search_group_messages(
 # ============ 私聊消息 ============
 
 
+# route-tier: authed
 @router.post("/messages", response_model=PrivateMessageInfo, summary="发送私信")
 @limiter.limit("30/minute")
 async def send_private_message(
@@ -2571,6 +2625,7 @@ async def send_private_message(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/friends/{friend_id}/messages", response_model=list[PrivateMessageInfo], summary="获取私信记录")
 async def get_private_messages(
     friend_id: UUID,
@@ -2592,6 +2647,7 @@ async def get_private_messages(
     return result
 
 
+# route-tier: authed
 @router.patch("/messages/{message_id}", response_model=PrivateMessageInfo, summary="编辑私信")
 async def edit_private_message(
     message_id: UUID,
@@ -2616,6 +2672,7 @@ async def edit_private_message(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/messages/{message_id}/revoke", response_model=PrivateMessageInfo, summary="撤回私信")
 async def revoke_private_message(
     message_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -2640,6 +2697,7 @@ async def revoke_private_message(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/messages/{message_id}/reactions", response_model=PrivateMessageInfo, summary="更新私信表情")
 async def update_private_message_reaction(
     message_id: UUID,
@@ -2667,6 +2725,7 @@ async def update_private_message_reaction(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/friends/{friend_id}/messages/search", response_model=list[PrivateMessageInfo], summary="搜索私信")
 async def search_private_messages(
     friend_id: UUID,
@@ -2701,6 +2760,7 @@ async def _update_user_status(user_id: str, status: UserStatus):
         await manager.notify_status_change(str(user.id), broadcast_status)
 
 
+# route-tier: authed
 @router.put("/status", summary="更新在线状态")
 async def update_status(
     data: UserStatusUpdate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -2776,6 +2836,7 @@ async def user_websocket_endpoint(websocket: WebSocket, token: str | None = Quer
 # ============ 打卡 ============
 
 
+# route-tier: authed
 @router.post("/checkin", response_model=CheckinResponse, summary="群组打卡")
 async def checkin(
     data: CheckinRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -2820,6 +2881,7 @@ async def _refresh_streak_signals(user_id: UUID) -> None:
 # ============ 群任务 ============
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/tasks", response_model=GroupTaskInfo, summary="创建群任务")
 async def create_group_task(
     group_id: UUID,
@@ -2876,6 +2938,7 @@ async def create_group_task(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/groups/{group_id}/tasks", response_model=list[GroupTaskInfo], summary="获取群任务列表")
 async def get_group_tasks(
     group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -2921,6 +2984,7 @@ async def get_group_tasks(
     return result
 
 
+# route-tier: authed
 @router.post("/tasks/{task_id}/claim", summary="认领群任务")
 async def claim_group_task(
     task_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -2937,6 +3001,7 @@ async def claim_group_task(
 # ============ 火堆状态 ============
 
 
+# route-tier: authed
 @router.get("/groups/{group_id}/flame", response_model=GroupFlameStatus, summary="获取群组火堆状态")
 async def get_group_flame_status(
     group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -3006,6 +3071,7 @@ async def get_group_flame_status(
 # ============ 资源共享 ============
 
 
+# route-tier: authed
 @router.post("/share", response_model=SharedResourceInfo, summary="分享资源")
 async def share_resource(
     data: SharedResourceCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -3193,6 +3259,7 @@ async def share_resource(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/groups/{group_id}/resources", response_model=list[SharedResourceInfo], summary="获取群组共享资源")
 async def get_group_resources(
     group_id: UUID,
@@ -3434,6 +3501,7 @@ async def _clone_seed_library_with_items(
     return cloned_library
 
 
+# route-tier: authed
 @router.post(
     "/shared-resources/{shared_resource_id}/adopt",
     summary="采纳共享资源为个人任务/计划",
@@ -3833,6 +3901,7 @@ async def adopt_shared_resource(
 # ============ 端到端加密 ============
 
 
+# route-tier: authed
 @router.post("/encryption/keys", response_model=EncryptionKeyInfo, summary="注册加密公钥")
 async def register_encryption_key(
     data: EncryptionKeyCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -3858,6 +3927,7 @@ async def register_encryption_key(
     )
 
 
+# route-tier: authed
 @router.get("/encryption/keys/{user_id}", response_model=list[EncryptionKeyInfo], summary="获取用户公钥")
 async def get_user_encryption_keys(
     user_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -3879,6 +3949,7 @@ async def get_user_encryption_keys(
     ]
 
 
+# route-tier: authed
 @router.delete("/encryption/keys/{key_id}", summary="撤销加密密钥")
 async def revoke_encryption_key(
     key_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -3894,6 +3965,7 @@ async def revoke_encryption_key(
 # ============ 群管理与风控 ============
 
 
+# route-tier: authed
 @router.put("/groups/{group_id}/announcement", summary="更新群公告")
 async def update_group_announcement(
     group_id: UUID,
@@ -3922,6 +3994,7 @@ async def update_group_announcement(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.put("/groups/{group_id}/moderation", summary="更新群管理设置")
 async def update_group_moderation_settings(
     group_id: UUID,
@@ -3955,6 +4028,7 @@ async def update_group_moderation_settings(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/members/{user_id}/mute", summary="禁言成员")
 async def mute_group_member(
     group_id: UUID,
@@ -3986,6 +4060,7 @@ async def mute_group_member(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.delete("/groups/{group_id}/members/{user_id}/mute", summary="解除禁言")
 async def unmute_group_member(
     group_id: UUID, user_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -4003,6 +4078,7 @@ async def unmute_group_member(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post("/groups/{group_id}/members/{user_id}/warn", summary="警告成员")
 async def warn_group_member(
     group_id: UUID,
@@ -4031,6 +4107,7 @@ async def warn_group_member(
 # ============ 消息举报 ============
 
 
+# route-tier: authed
 @router.post("/reports", response_model=MessageReportInfo, summary="举报消息")
 @limiter.limit("10/minute")
 async def report_message(
@@ -4060,6 +4137,7 @@ async def report_message(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/groups/{group_id}/reports", response_model=list[MessageReportInfo], summary="获取群组待处理举报")
 async def get_group_pending_reports(
     group_id: UUID,
@@ -4098,6 +4176,7 @@ async def get_group_pending_reports(
     ]
 
 
+# route-tier: authed
 @router.put("/reports/{report_id}", response_model=MessageReportInfo, summary="审核举报")
 async def review_message_report(
     report_id: UUID,
@@ -4129,6 +4208,7 @@ async def review_message_report(
 # ============ 消息收藏 ============
 
 
+# route-tier: authed
 @router.post("/favorites", response_model=MessageFavoriteInfo, summary="收藏消息")
 async def add_message_favorite(
     data: MessageFavoriteCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -4167,6 +4247,7 @@ async def add_message_favorite(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/favorites", response_model=list[MessageFavoriteInfo], summary="获取收藏列表")
 async def get_message_favorites(
     tags: list[str] | None = Query(default=None),
@@ -4209,6 +4290,7 @@ async def get_message_favorites(
     return result
 
 
+# route-tier: authed
 @router.delete("/favorites/{favorite_id}", summary="取消收藏")
 async def remove_message_favorite(
     favorite_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -4224,6 +4306,7 @@ async def remove_message_favorite(
 # ============ 消息转发 ============
 
 
+# route-tier: authed
 @router.post("/forward", summary="转发消息")
 async def forward_message(
     data: MessageForwardRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -4250,6 +4333,7 @@ async def forward_message(
 # ============ 跨群广播 ============
 
 
+# route-tier: authed
 @router.post("/broadcast", response_model=BroadcastMessageInfo, summary="跨群广播")
 async def create_broadcast_message(
     data: BroadcastMessageCreate, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -4289,6 +4373,7 @@ async def create_broadcast_message(
 # ============ 高级搜索 ============
 
 
+# route-tier: authed
 @router.post(
     "/groups/{group_id}/messages/search/advanced", response_model=MessageSearchResult, summary="高级搜索群消息"
 )
@@ -4327,6 +4412,7 @@ async def advanced_search_group_messages(
         raise HTTPException(status_code=403, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/groups/{group_id}/topics", summary="获取群组话题列表")
 async def get_group_topics(
     group_id: UUID, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -4348,6 +4434,7 @@ async def get_group_topics(
 # ============ 离线队列 ============
 
 
+# route-tier: authed
 @router.get("/offline/pending", response_model=list[OfflineMessageInfo], summary="获取待发送的离线消息")
 async def get_pending_offline_messages(
     limit: int = Query(default=50, ge=1, le=100),
@@ -4372,6 +4459,7 @@ async def get_pending_offline_messages(
     ]
 
 
+# route-tier: authed
 @router.get("/offline/failed", response_model=list[OfflineMessageInfo], summary="获取发送失败的离线消息")
 async def get_failed_offline_messages(
     limit: int = Query(default=50, ge=1, le=100),
@@ -4396,6 +4484,7 @@ async def get_failed_offline_messages(
     ]
 
 
+# route-tier: authed
 @router.post("/offline/retry", summary="批量重试失败消息")
 async def retry_offline_messages(
     data: OfflineMessageRetryRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -4406,6 +4495,7 @@ async def retry_offline_messages(
     return {"success": True, "retried_count": len(messages), "message_ids": [str(m.id) for m in messages]}
 
 
+# route-tier: authed
 @router.get("/recommended-resources", summary="Get recommended shared resources from user's groups")
 async def get_recommended_resources(
     limit: int = Query(default=5, ge=1, le=20),
@@ -4458,6 +4548,7 @@ async def get_recommended_resources(
 # ============ FV-22: Resource Quality Ranking ============
 
 
+# route-tier: authed
 @router.get("/resources", summary="Get community resources ranked by quality")
 async def get_community_resources_ranked(
     sort: str = Query(default="quality", description="排序方式: quality | recent"),
@@ -4541,6 +4632,7 @@ async def get_community_resources_ranked(
     return {"resources": items, "total": total, "offset": offset, "limit": limit}
 
 
+# route-tier: authed
 @router.post("/shared-resources/{resource_id}/flag-misleading", summary="标记资源为误导")
 async def flag_resource_misleading(
     resource_id: UUID,
@@ -4568,6 +4660,7 @@ async def flag_resource_misleading(
 # ============ 管理员社区审核 ============
 
 
+# route-tier: authed
 @router.get("/admin/reports", summary="获取所有待处理举报（管理员）")
 async def get_all_pending_reports_admin(
     limit: int = Query(default=50, ge=1, le=200),
@@ -4603,6 +4696,7 @@ async def get_all_pending_reports_admin(
     ]
 
 
+# route-tier: authed
 @router.put("/admin/reports/{report_id}/resolve", summary="管理员处理举报")
 async def admin_resolve_report(
     report_id: UUID,

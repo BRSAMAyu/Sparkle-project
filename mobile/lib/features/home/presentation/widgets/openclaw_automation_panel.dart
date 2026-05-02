@@ -155,7 +155,7 @@ class _OpenClawAutomationPanelState
                       ? null
                       : () => unawaited(_submitBatch(automation)),
                   icon: automation.isSubmittingBatch
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(
@@ -315,7 +315,7 @@ class _OpenClawAutomationPanelState
                       ? null
                       : () => unawaited(_createSchedule(automation)),
                   icon: automation.isSavingSchedule
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(

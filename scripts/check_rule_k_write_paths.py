@@ -153,6 +153,17 @@ def resolve_scan_paths(repo_root: Path, candidates: list[str] | None) -> list[Pa
     return sorted(paths)
 
 
+RULE_K_IGNORE_RE = re.compile(r"#\s*rule-k:\s*ignore")
+
+
+def _line_is_rule_k_ignored(lines: list[str], line_no: int) -> bool:
+    if RULE_K_IGNORE_RE.search(lines[line_no - 1]):
+        return True
+    if line_no >= 2 and RULE_K_IGNORE_RE.search(lines[line_no - 2]):
+        return True
+    return False
+
+
 def scan_paths(paths: list[Path], repo_root: Path) -> list[RuleKViolation]:
     violations: list[RuleKViolation] = []
     for path in paths:
@@ -162,6 +173,8 @@ def scan_paths(paths: list[Path], repo_root: Path) -> list[RuleKViolation]:
             continue
         rel = path.resolve().relative_to(repo_root.resolve()).as_posix()
         for line_no, line in enumerate(content, start=1):
+            if _line_is_rule_k_ignored(content, line_no):
+                continue
             for rule in VIOLATION_RULES:
                 if rule.pattern.search(line):
                     violations.append(

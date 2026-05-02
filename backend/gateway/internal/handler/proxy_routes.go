@@ -647,9 +647,11 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered documents proxy routes")
 
+	// route-tier: authed
 	sources := api.Group("/sources")
 	sources.Use(authMiddleware)
 	{
+		// route-tier: authed
 		sources.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered sources proxy routes")

@@ -7,7 +7,6 @@ Models Package
 导出所有数据库模型
 """
 
-from app.aurora.runtime_v1.models import GoalWorldGraphSnapshot, GrowthChronicleSnapshot
 from app.models.accountability import (
     AccountabilityCheckin,
     AccountabilityPartnership,

@@ -86,7 +86,9 @@ def _service(db: AsyncSession) -> ReleaseApprovalService:
     return ReleaseApprovalService(db)
 
 
+# route-tier: internal
 @router.post("", response_model=ReleaseApprovalResponse, status_code=status.HTTP_201_CREATED)
+# route-tier: internal
 @router.post("/", response_model=ReleaseApprovalResponse, status_code=status.HTTP_201_CREATED, include_in_schema=False)
 async def create_release_approval(
     payload: ReleaseApprovalCreate,
@@ -105,7 +107,9 @@ async def create_release_approval(
     )
 
 
+# route-tier: internal
 @router.get("", response_model=list[ReleaseApprovalResponse])
+# route-tier: internal
 @router.get("/", response_model=list[ReleaseApprovalResponse], include_in_schema=False)
 async def list_release_approvals(
     status_filter: ApprovalStatus | None = Query(default=None, alias="status"),
@@ -122,11 +126,13 @@ async def list_release_approvals(
     )
 
 
+# route-tier: internal
 @router.get("/dashboard-summary")
 async def release_approval_dashboard_summary(db: AsyncSession = Depends(get_db)) -> dict[str, Any]:
     return await _service(db).dashboard_summary()
 
 
+# route-tier: internal
 @router.get("/admin-tab", response_class=HTMLResponse)
 async def release_approval_admin_tab(db: AsyncSession = Depends(get_db)) -> HTMLResponse:
     service = _service(db)
@@ -160,6 +166,7 @@ async def release_approval_admin_tab(db: AsyncSession = Depends(get_db)) -> HTML
     return HTMLResponse(content=html)
 
 
+# route-tier: internal
 @router.get("/{request_id}", response_model=ReleaseApprovalResponse)
 async def get_release_approval(
     request_id: UUID,
@@ -168,6 +175,7 @@ async def get_release_approval(
     return await _service(db).get_request(request_id)
 
 
+# route-tier: internal
 @router.patch("/{request_id}", response_model=ReleaseApprovalResponse)
 async def update_release_approval(
     request_id: UUID,
@@ -184,6 +192,7 @@ async def update_release_approval(
     )
 
 
+# route-tier: internal
 @router.post("/{request_id}/submit", response_model=ReleaseApprovalResponse)
 async def submit_release_approval(
     request_id: UUID,
@@ -195,6 +204,7 @@ async def submit_release_approval(
     return await service.submit_request(request, actor=current_user)
 
 
+# route-tier: internal
 @router.post("/{request_id}/approve", response_model=ReleaseApprovalResponse)
 async def approve_release_approval(
     request_id: UUID,
@@ -207,6 +217,7 @@ async def approve_release_approval(
     return await service.approve(request, approver=current_user, comment=payload.comment if payload else None)
 
 
+# route-tier: internal
 @router.post("/{request_id}/reject", response_model=ReleaseApprovalResponse)
 async def reject_release_approval(
     request_id: UUID,
@@ -219,6 +230,7 @@ async def reject_release_approval(
     return await service.reject(request, reviewer=current_user, reason=payload.reason)
 
 
+# route-tier: internal
 @router.post("/{request_id}/apply", response_model=ReleaseApprovalResponse)
 async def apply_release_approval(
     request_id: UUID,
@@ -231,6 +243,7 @@ async def apply_release_approval(
     return await service.apply(request, actor=current_user, result=payload.result if payload else None)
 
 
+# route-tier: internal
 @router.delete("/{request_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_release_approval(
     request_id: UUID,

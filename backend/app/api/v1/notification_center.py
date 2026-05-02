@@ -30,6 +30,7 @@ from app.services.notification_center_service import NotificationCenterService
 router = APIRouter(prefix="/notification-center", tags=["notification-center"])
 
 
+# route-tier: authed
 @router.get("/notifications", response_model=list[UnifiedNotificationResponse])
 async def get_unified_notifications(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
@@ -68,6 +69,7 @@ async def get_unified_notifications(
     return notifications
 
 
+# route-tier: authed
 @router.put("/notifications/{notification_id}/read")
 async def mark_notification_read(
     notification_id: UUID,
@@ -104,6 +106,7 @@ async def mark_notification_read(
     return {"message": "Notification marked as read"}
 
 
+# route-tier: authed
 @router.put("/notifications/mark-all-read")
 async def mark_all_notifications_read(
     current_user: User = Depends(get_current_user),
@@ -124,6 +127,7 @@ async def mark_all_notifications_read(
     }
 
 
+# route-tier: authed
 @router.delete("/notifications/{notification_id}")
 async def delete_notification(
     notification_id: UUID,
@@ -273,6 +277,7 @@ async def transition_intervention_record(
     return {"message": f"Intervention record action applied: {request.action}"}
 
 
+# route-tier: authed
 @router.delete("/notifications/clear-read")
 async def clear_read_notifications(
     current_user: User = Depends(get_current_user),
@@ -293,6 +298,7 @@ async def clear_read_notifications(
     }
 
 
+# route-tier: authed
 @router.get("/history")
 async def get_notification_history(
     page: int = Query(1, ge=1, description="Page number"),
@@ -334,6 +340,7 @@ async def get_notification_history(
     return result
 
 
+# route-tier: authed
 @router.get("/analytics", response_model=NotificationAnalyticsResponse)
 async def get_notification_analytics(
     period: str = Query("7d", description="Time period: 1d, 7d, 30d, all"),
@@ -369,6 +376,7 @@ async def get_notification_analytics(
     return analytics
 
 
+# route-tier: authed
 @router.get("/preferences", response_model=NotificationPreferencesResponse)
 async def get_notification_preferences(
     current_user: User = Depends(get_current_user),
@@ -394,6 +402,7 @@ async def get_notification_preferences(
     )
 
 
+# route-tier: authed
 @router.put("/preferences", response_model=NotificationPreferencesResponse)
 async def update_notification_preferences(
     update: NotificationPreferencesUpdate,

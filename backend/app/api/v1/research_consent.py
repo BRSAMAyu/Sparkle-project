@@ -70,6 +70,7 @@ def _serialize_record(record: dict[str, Any]) -> ConsentRecordResponse:
     )
 
 
+# route-tier: authed
 @router.get("", response_model=ConsentOverviewResponse)
 async def get_research_consent(
     include_revoked: bool = Query(default=True),
@@ -87,6 +88,7 @@ async def get_research_consent(
     )
 
 
+# route-tier: authed
 @router.post("/revoke", response_model=ConsentRecordResponse)
 async def revoke_research_consent(
     payload: ConsentRevokeRequest,

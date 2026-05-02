@@ -42,7 +42,7 @@ class GroupTasksScreen extends ConsumerWidget {
       child: tasksState.when(
         data: (tasks) {
           if (tasks.isEmpty) {
-            return const Center(
+            return Center(
               child: CompactEmptyState(
                 message: I18nService.instance.isChinese ? '还没有任务' : 'No tasks yet',
                 icon: Icons.assignment_outlined,

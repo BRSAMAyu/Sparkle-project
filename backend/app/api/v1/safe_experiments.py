@@ -177,6 +177,7 @@ async def _get_experiment(db: AsyncSession, experiment_key: str, current_user: U
     return record
 
 
+# route-tier: internal
 @router.post("/", response_model=SafeExperimentResponse)
 async def create_safe_experiment(
     payload: SafeExperimentCreate,
@@ -233,6 +234,7 @@ async def create_safe_experiment(
     return record
 
 
+# route-tier: internal
 @router.get("/", response_model=list[SafeExperimentResponse])
 async def list_safe_experiments(
     status: str | None = Query(None),
@@ -254,6 +256,7 @@ async def list_safe_experiments(
     return list(result.scalars().all())
 
 
+# route-tier: internal
 @router.get("/{experiment_key}", response_model=SafeExperimentResponse)
 async def get_safe_experiment(
     experiment_key: str,
@@ -263,6 +266,7 @@ async def get_safe_experiment(
     return await _get_experiment(db, experiment_key, current_user)
 
 
+# route-tier: internal
 @router.patch("/{experiment_key}", response_model=SafeExperimentResponse)
 async def update_safe_experiment(
     experiment_key: str,
@@ -284,6 +288,7 @@ async def update_safe_experiment(
     return record
 
 
+# route-tier: internal
 @router.delete("/{experiment_key}")
 async def delete_safe_experiment(
     experiment_key: str,
@@ -296,6 +301,7 @@ async def delete_safe_experiment(
     return {"status": "deleted", "experiment_key": experiment_key}
 
 
+# route-tier: internal
 @router.post("/{experiment_key}/transition", response_model=SafeExperimentResponse)
 async def transition_safe_experiment(
     experiment_key: str,
@@ -329,6 +335,7 @@ async def transition_safe_experiment(
     return record
 
 
+# route-tier: internal
 @router.post("/{experiment_key}/episodes", response_model=SafeExperimentEpisodeResponse)
 async def record_safe_experiment_episode(
     experiment_key: str,
@@ -374,6 +381,7 @@ async def record_safe_experiment_episode(
     return episode
 
 
+# route-tier: internal
 @router.post("/{experiment_key}/promotion-candidate")
 async def evaluate_promotion_candidate(
     experiment_key: str,
@@ -389,6 +397,7 @@ async def evaluate_promotion_candidate(
     return result.to_dict()
 
 
+# route-tier: internal
 @router.get("/me/opt-out")
 async def get_safe_experiment_opt_out(
     db: AsyncSession = Depends(get_db),
@@ -399,6 +408,7 @@ async def get_safe_experiment_opt_out(
     return {"opted_out": bool(settings and settings.safe_experiments_opt_out)}
 
 
+# route-tier: internal
 @router.post("/me/opt-out")
 async def set_safe_experiment_opt_out(
     payload: SafeExperimentOptOutRequest,

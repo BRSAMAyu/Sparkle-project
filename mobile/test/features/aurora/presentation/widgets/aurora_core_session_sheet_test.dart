@@ -395,6 +395,7 @@ AuroraCoreSession _session({
     scope: '当前策略与你的实际情况',
     sessionType: 'user_initiated',
     entryReason: null,
+    agenda: null,
     resumeToken: resumeToken,
     messages: messages,
     calibrationResult: calibrationResult,

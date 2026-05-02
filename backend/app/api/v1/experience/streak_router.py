@@ -15,6 +15,7 @@ from app.services.streak_quality import StreakQualityService
 router = APIRouter(prefix="/experience", tags=["experience"])
 
 
+# route-tier: authed
 @router.get("/streak-quality", response_model=dict[str, Any])
 async def get_streak_quality(
     current_user: User = Depends(get_current_user),

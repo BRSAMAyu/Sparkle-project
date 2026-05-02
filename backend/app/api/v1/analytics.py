@@ -37,6 +37,7 @@ async def _build_weekly_report_payload(
         "download_url": f"/api/v1/analytics/reports/download/{filename}",
     }
 
+# route-tier: internal
 @router.post("/reports/generate", response_model=dict[str, Any])
 async def generate_weekly_report(
     background_tasks: BackgroundTasks,
@@ -57,6 +58,7 @@ async def generate_weekly_report(
         raise HTTPException(status_code=500, detail="Report generation failed") from e
 
 
+# route-tier: internal
 @router.get("/report", response_model=dict[str, Any])
 async def get_weekly_report_alias(
     background_tasks: BackgroundTasks,
@@ -74,6 +76,7 @@ async def get_weekly_report_alias(
         raise HTTPException(status_code=500, detail="Report generation failed") from e
 
 
+# route-tier: internal
 @router.get("/north-star/trends", response_model=NorthStarTrendResponse)
 async def get_north_star_trends(
     days: Annotated[int, Query(ge=1, le=365)] = 30,
@@ -90,6 +93,7 @@ async def get_north_star_trends(
         days=days,
     )
 
+# route-tier: internal
 @router.get("/reports/download/{filename}")
 async def download_report(
     filename: str,

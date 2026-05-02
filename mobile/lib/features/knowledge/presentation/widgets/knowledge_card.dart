@@ -53,7 +53,7 @@ class KnowledgeCard extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.lightbulb_outline,
-                    color: context.colors.brandPrimary,
+                    color: context.sparkle.colors.brandPrimary,
                   ),
                   SizedBox(width: context.space.sm),
                   Expanded(
@@ -117,16 +117,16 @@ class KnowledgeCard extends StatelessWidget {
     String label;
 
     if (masteryLevel >= 80) {
-      color = context.colors.semanticSuccess;
+      color = context.sparkle.colors.semanticSuccess;
       label = context.l10n.knowledgeMasteryLevelMastered;
     } else if (masteryLevel >= 50) {
-      color = context.colors.brandPrimary;
+      color = context.sparkle.colors.brandPrimary;
       label = context.l10n.knowledgeMasteryLevelPracticing;
     } else if (masteryLevel > 0) {
-      color = context.colors.brandPrimary;
+      color = context.sparkle.colors.brandPrimary;
       label = context.l10n.knowledgeMasteryLevelBeginner;
     } else {
-      color = context.colors.brandPrimary;
+      color = context.sparkle.colors.brandPrimary;
       label = context.l10n.knowledgeMasteryLevelUntouched;
     }
 

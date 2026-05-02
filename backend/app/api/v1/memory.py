@@ -104,6 +104,7 @@ async def _resolve_working_memory_session_id(
     return str(session.id) if session else None
 
 
+# route-tier: authed
 @router.get("/preferences")
 async def list_preferences(
     db: AsyncSession = Depends(get_db),
@@ -138,6 +139,7 @@ async def list_preferences(
     return {"items": list(latest_by_key.values())}
 
 
+# route-tier: authed
 @router.get("/preferences/{pref_key}/history")
 async def preference_history(
     pref_key: str,
@@ -176,6 +178,7 @@ async def preference_history(
     return {"items": history}
 
 
+# route-tier: authed
 @router.get("/goals")
 async def list_goals(
     status_filter: str | None = Query(default=None, alias="status"),
@@ -219,6 +222,7 @@ async def list_goals(
     return {"items": items}
 
 
+# route-tier: authed
 @router.get("/episodic")
 async def list_episodic(
     start: datetime | None = Query(default=None),
@@ -526,6 +530,7 @@ async def arbitrate_unresolved_conflict(
     return _serialize_unresolved_conflict(item)
 
 
+# route-tier: authed
 @router.post("/retract")
 async def retract_memory(
     payload: dict,
@@ -563,6 +568,7 @@ async def retract_memory(
     return {"status": "retracted"}
 
 
+# route-tier: authed
 @router.post("/correct")
 async def correct_memory(
     payload: dict,
@@ -611,6 +617,7 @@ async def correct_memory(
     }
 
 
+# route-tier: authed
 @router.post("/reference-outcome")
 async def record_memory_reference_outcome(
     payload: dict,
@@ -653,6 +660,7 @@ async def record_memory_reference_outcome(
     return {"status": "recorded", "outcome": result}
 
 
+# route-tier: authed
 @router.get("/export")
 async def export_memory(
     db: AsyncSession = Depends(get_db),

@@ -94,6 +94,7 @@ def _raise_marketplace_error(exc: ValueError) -> None:
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=message) from exc
 
 
+# route-tier: authed
 @router.get("/skills")
 async def list_skills(
     domain: str | None = Query(default=None),
@@ -108,6 +109,7 @@ async def list_skills(
     return {"items": [service.serialize_skill(skill) for skill in skills]}
 
 
+# route-tier: authed
 @router.get("/skills/{skill_id}")
 async def get_skill(
     skill_id: str,
@@ -122,6 +124,7 @@ async def get_skill(
     return service.serialize_skill(skill)
 
 
+# route-tier: authed
 @router.get("/skills/{skill_id}/preview")
 async def preview_skill(
     skill_id: str,
@@ -136,6 +139,7 @@ async def preview_skill(
     return service.preview_asset(skill)
 
 
+# route-tier: authed
 @router.post("/skills/{skill_id}/adopt", status_code=status.HTTP_201_CREATED)
 async def adopt_skill(
     skill_id: str,
@@ -159,6 +163,7 @@ async def adopt_skill(
     return service.serialize_adoption(adoption)
 
 
+# route-tier: authed
 @router.get("/packs")
 async def list_packs(
     domain: str | None = Query(default=None),
@@ -172,6 +177,7 @@ async def list_packs(
     return {"items": [service.serialize_pack(pack) for pack in packs]}
 
 
+# route-tier: authed
 @router.get("/packs/{pack_id}")
 async def get_pack(
     pack_id: str,
@@ -186,6 +192,7 @@ async def get_pack(
     return service.serialize_pack(pack)
 
 
+# route-tier: authed
 @router.get("/packs/{pack_id}/preview")
 async def preview_pack(
     pack_id: str,
@@ -200,6 +207,7 @@ async def preview_pack(
     return service.preview_asset(pack)
 
 
+# route-tier: authed
 @router.post("/packs/{pack_id}/adopt", status_code=status.HTTP_201_CREATED)
 async def adopt_pack(
     pack_id: str,
@@ -223,6 +231,7 @@ async def adopt_pack(
     return service.serialize_adoption(adoption)
 
 
+# route-tier: authed
 @router.post("/adoptions/{adoption_id}/revoke")
 async def revoke_adoption(
     adoption_id: UUID,
@@ -239,6 +248,7 @@ async def revoke_adoption(
     return service.serialize_adoption(adoption)
 
 
+# route-tier: authed
 @router.get("/adoptions/{adoption_id}/impact")
 async def list_adoption_impact(
     adoption_id: UUID,
@@ -256,6 +266,7 @@ async def list_adoption_impact(
     return {"items": [service.serialize_history(item) for item in result.scalars().all()]}
 
 
+# route-tier: authed
 @router.post("/adoptions/{adoption_id}/impact", status_code=status.HTTP_201_CREATED)
 async def record_adoption_impact(
     adoption_id: UUID,
@@ -284,6 +295,7 @@ async def record_adoption_impact(
     return service.serialize_history(history)
 
 
+# route-tier: authed
 @router.post("/admin/skills", status_code=status.HTTP_201_CREATED)
 async def admin_register_skill(
     payload: SkillCardRequest,
@@ -324,6 +336,7 @@ async def admin_register_skill(
     return service.serialize_skill(skill)
 
 
+# route-tier: authed
 @router.post("/admin/packs", status_code=status.HTTP_201_CREATED)
 async def admin_register_pack(
     payload: PackRequest,
@@ -401,6 +414,7 @@ async def admin_register_pack(
     return service.serialize_pack(pack)
 
 
+# route-tier: authed
 @router.post("/admin/skills/{skill_id}/rollback")
 async def admin_rollback_skill(
     skill_id: str,
@@ -416,6 +430,7 @@ async def admin_rollback_skill(
     return service.serialize_skill(skill)
 
 
+# route-tier: authed
 @router.post("/admin/packs/{pack_id}/rollback")
 async def admin_rollback_pack(
     pack_id: str,

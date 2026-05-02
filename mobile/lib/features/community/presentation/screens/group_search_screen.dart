@@ -78,7 +78,7 @@ class _GroupSearchScreenState extends ConsumerState<GroupSearchScreen> {
       child: searchState.when(
         data: (groups) {
           if (groups.isEmpty) {
-            return const Center(
+            return Center(
               child: CompactEmptyState(
                 message: I18nService.instance.isChinese ? '搜索学习小组或冲刺小组' : 'Search for squads or sprint groups',
                 icon: Icons.search,

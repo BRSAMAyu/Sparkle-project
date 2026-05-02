@@ -25,6 +25,7 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+# route-tier: authed
 @router.get("/growth-dashboard")
 async def get_growth_experience_dashboard(
     current_user: User = Depends(get_current_user),

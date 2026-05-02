@@ -18,6 +18,7 @@ from app.models.user import User
 router = APIRouter(prefix="/research", tags=["research"])
 
 
+# route-tier: authed
 @router.get("/dashboard")
 async def get_research_dashboard(
     request: Request,
@@ -68,6 +69,7 @@ async def get_research_dashboard(
     return json.loads(raw if isinstance(raw, str) else raw.decode())
 
 
+# route-tier: authed
 @router.get("/gaps")
 async def get_research_gaps(
     request: Request,
@@ -87,6 +89,7 @@ async def get_research_gaps(
     return {"user_id": str(current_user.id), "gaps": gaps if isinstance(gaps, list) else [gaps]}
 
 
+# route-tier: authed
 @router.get("/proposals")
 async def get_research_proposals(
     request: Request,

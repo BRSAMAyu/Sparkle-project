@@ -160,6 +160,7 @@ async def _weekly_progress(
     return min(1.0, checkins / expected)
 
 
+# route-tier: authed
 @router.get("/community-accountability", response_model=CommunityAccountabilityOut)
 async def get_community_accountability(
     db: AsyncSession = Depends(get_db),

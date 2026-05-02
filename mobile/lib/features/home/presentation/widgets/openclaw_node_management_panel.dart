@@ -211,7 +211,7 @@ class _OpenClawNodeManagementPanelState
                 child: FilledButton.icon(
                   onPressed: preferenceService.isSaving ? null : _saveAffinity,
                   icon: preferenceService.isSaving
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(

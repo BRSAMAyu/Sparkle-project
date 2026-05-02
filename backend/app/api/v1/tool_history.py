@@ -169,6 +169,7 @@ def _build_context_snapshot(
     return context_snapshot, input_args, output_summary
 
 
+# route-tier: authed
 @router.post("/client-events", response_model=ClientToolHistoryResponse)
 async def record_client_tool_history(
     payload: ClientToolHistoryCreate,
@@ -199,6 +200,7 @@ async def record_client_tool_history(
     )
 
 
+# route-tier: authed
 @router.delete("/client-events/{history_id}", response_model=ClientToolHistoryDeleteResponse)
 async def delete_client_tool_history(
     history_id: int,

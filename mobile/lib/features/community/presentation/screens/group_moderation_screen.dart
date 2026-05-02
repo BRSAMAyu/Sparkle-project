@@ -281,7 +281,7 @@ class _GroupModerationScreenState
                             Expanded(
                               child: TextField(
                                 controller: _keywordController,
-                                decoration: const InputDecoration(
+                                decoration: InputDecoration(
                                   hintText: I18nService.instance.isChinese ? '添加关键词' : 'Add keyword',
                                   border: OutlineInputBorder(),
                                 ),

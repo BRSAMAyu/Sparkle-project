@@ -98,6 +98,7 @@ class GoalDetailPayload(BaseModel):
     related_sources: list[RelatedSourcePayload] = Field(default_factory=list)
 
 
+# route-tier: authed
 @router.get("/goal-detail/{goal_id}", response_model=GoalDetailPayload)
 async def get_goal_detail(
     goal_id: UUID = Path(...),

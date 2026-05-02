@@ -41,6 +41,7 @@ class CommunityAggregateAnalyzeRequest(BaseModel):
     values: list[float | dict[str, Any]]
 
 
+# route-tier: authed
 @router.get("", response_model=list[CommunityAggregateResponse])
 async def list_community_aggregates(
     *,
@@ -68,6 +69,7 @@ async def list_community_aggregates(
     return [_aggregate_response(row) for row in rows]
 
 
+# route-tier: authed
 @router.get("/insights", response_model=list[CommunityAggregateResponse])
 async def list_my_anonymous_community_insights(
     *,
@@ -101,6 +103,7 @@ async def list_my_anonymous_community_insights(
     return [_aggregate_response(row) for row in rows]
 
 
+# route-tier: authed
 @router.post("/analyze")
 async def analyze_community_aggregate(
     payload: CommunityAggregateAnalyzeRequest,
@@ -126,6 +129,7 @@ async def analyze_community_aggregate(
     return result
 
 
+# route-tier: authed
 @router.get("/budget-ledger")
 async def list_privacy_budget_ledger(
     *,

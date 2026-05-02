@@ -314,6 +314,7 @@ def _constant_time_compare(a: str, b: str) -> bool:
     return hmac.compare_digest(a.encode(), b.encode())
 
 
+# route-tier: internal
 @router.post("/auto-degrade/webhook")
 async def handle_alertmanager_webhook(
     request: Request,
@@ -361,6 +362,7 @@ async def handle_alertmanager_webhook(
     }
 
 
+# route-tier: internal
 @router.get("/auto-degrade/status")
 async def get_auto_degrade_status(
     x_internal_api_key: str | None = Header(None),

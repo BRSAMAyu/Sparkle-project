@@ -173,6 +173,7 @@ async def _queue_health() -> dict[str, Any]:
         return {"available": False, "error": str(exc)}
 
 
+# route-tier: internal
 @router.get("/dashboard")
 @audit_admin_action(category="admin_dashboard", risk="medium", action="view_admin_dashboard")
 async def admin_dashboard(
@@ -210,6 +211,7 @@ async def admin_dashboard(
     }
 
 
+# route-tier: internal
 @router.get("/dashboard/kill-switches")
 @audit_admin_action(category="kill_switch", risk="medium", action="audit_kill_switches")
 async def admin_kill_switch_audit() -> dict[str, Any]:
@@ -249,6 +251,7 @@ async def admin_kill_switch_audit() -> dict[str, Any]:
     }
 
 
+# route-tier: internal
 @router.get("/dashboard/aurora/user/{user_id}")
 async def admin_inspect_aurora_user(
     user_id: str,
@@ -348,6 +351,7 @@ async def admin_inspect_aurora_user(
     }
 
 
+# route-tier: internal
 @router.get("/dashboard/routing/user/{user_id}")
 async def admin_inspect_routing_history(
     user_id: str,

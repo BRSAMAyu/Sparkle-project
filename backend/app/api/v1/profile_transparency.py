@@ -933,6 +933,7 @@ def _apply_legacy_transparency_level(payload: dict[str, Any], level: int) -> dic
     }
 
 
+# route-tier: authed
 @router.get("/transparent")
 async def get_profile_transparent(
     db: AsyncSession = Depends(get_db),
@@ -1056,6 +1057,7 @@ async def get_profile_transparent(
     )
 
 
+# route-tier: authed
 @router.get("/context")
 async def get_profile_context(
     db: AsyncSession = Depends(get_db),
@@ -1176,6 +1178,7 @@ async def get_profile_insights(
     )
 
 
+# route-tier: authed
 @router.get("/inferred-preferences")
 async def get_inferred_preferences(
     db: AsyncSession = Depends(get_db),
@@ -1192,6 +1195,7 @@ async def get_inferred_preferences(
     )
 
 
+# route-tier: authed
 @router.get("/active-policies")
 async def get_active_policies(
     db: AsyncSession = Depends(get_db),
@@ -1208,6 +1212,7 @@ async def get_active_policies(
     )
 
 
+# route-tier: authed
 @router.get("/system-updates")
 async def list_system_updates(
     limit: int = 50,
@@ -1294,6 +1299,7 @@ async def create_chat_opening(
     )
 
 
+# route-tier: authed
 @router.post("/onboarding")
 async def submit_onboarding(
     payload: OnboardingRequest,
@@ -1451,6 +1457,7 @@ async def submit_onboarding(
     return {"status": "ok", "updated": updated, "first_message": first_message}
 
 
+# route-tier: authed
 @router.post("/onboarding/preview", response_model=OnboardingPreviewResponse)
 async def preview_onboarding(
     payload: OnboardingRequest,
@@ -1497,6 +1504,7 @@ async def submit_traits_coldstart(
     }
 
 
+# route-tier: authed
 @router.put("/preferences")
 async def update_preference(
     payload: PreferenceUpdateRequest,
@@ -1524,6 +1532,7 @@ async def update_preference(
     }
 
 
+# route-tier: authed
 @router.post("/override-inferred")
 async def override_inferred_preference(
     payload: InferredOverrideRequest,
@@ -1561,6 +1570,7 @@ async def override_inferred_preference(
     }
 
 
+# route-tier: authed
 @router.post("/reset-override")
 async def reset_override_preference(
     payload: ResetOverrideRequest,
@@ -1613,6 +1623,7 @@ async def control_profile_insight(
     }
 
 
+# route-tier: authed
 @router.post("/preferences/rollback")
 async def rollback_preference(
     payload: PreferenceRollbackRequest,
@@ -1655,6 +1666,7 @@ async def rollback_preference(
     }
 
 
+# route-tier: authed
 @router.put("/goals")
 async def update_goal(
     payload: GoalUpdateRequest,
@@ -1694,6 +1706,7 @@ async def update_goal(
     return {"status": "ok"}
 
 
+# route-tier: authed
 @router.post("/corrections")
 async def submit_correction(
     payload: CorrectionRequest,

@@ -89,6 +89,17 @@ EXPECTATIONS: dict[str, dict[Path, tuple[str, ...]]] = {
             'user_context.get("galaxy_snapshot")',
         ),
     },
+    "recent_corrections": {
+        CONTEXT_BUILDER: (
+            'payload["recent_corrections"]',
+        ),
+        ROUTING_ENGINE: (
+            '_extract_recent_corrections',
+        ),
+        PROMPTS: (
+            '_format_recent_corrections_section',
+        ),
+    },
 }
 
 

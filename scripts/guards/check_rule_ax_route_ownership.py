@@ -11,7 +11,7 @@ ROUTE_TIER_RE = re.compile(r"route-tier:\s*(public|authed|internal|deprecated)")
 IGNORE_RE = re.compile(r"rule-ax:\s*ignore\s+.+", re.IGNORECASE)
 PY_ROUTE_RE = re.compile(r"^\s*@(?:app|router)\.(?:get|post|put|patch|delete)\(")
 GO_ROUTE_RE = re.compile(
-    r"(^\s*\w+\s*:=\s*\w+\.Group\()|(\.\s*(?:GET|POST|PUT|PATCH|DELETE|Any)\()|(\bNoRoute\()"
+    r"(^\s*\w+\s*:=\s*\w+\.Group\()|(?<!zap)\.\s*(?:GET|POST|PUT|PATCH|DELETE|Any)\s*\(|(\bNoRoute\s*\()"
 )
 
 
@@ -72,23 +72,30 @@ def _run_diff(repo_root: Path, args: list[str]) -> str:
 
 
 def _parse_changed_lines(diff_text: str) -> dict[str, set[int] | None]:
+    """Parse unified diff and return exact line numbers of added/modified lines (not hunk ranges)."""
     changed: dict[str, set[int] | None] = {}
     current_file: str | None = None
+    current_new_lineno: int = 0
     for line in diff_text.splitlines():
         if line.startswith("+++ b/"):
             current_file = line[6:]
             changed.setdefault(current_file, set())
             continue
-        if not line.startswith("@@") or current_file is None:
+        if line.startswith("@@ "):
+            match = re.search(r"\+(\d+)(?:,(\d+))?", line)
+            if match:
+                current_new_lineno = int(match.group(1))
             continue
-        match = re.search(r"\+(\d+)(?:,(\d+))?", line)
-        if not match:
+        if current_file is None:
             continue
-        start = int(match.group(1))
-        count = int(match.group(2) or "1")
-        bucket = changed.setdefault(current_file, set())
-        if bucket is not None:
-            bucket.update(range(start, start + max(count, 1)))
+        if line.startswith("-"):
+            continue
+        if line.startswith("+") and not line.startswith("+++"):
+            bucket = changed.setdefault(current_file, set())
+            if bucket is not None:
+                bucket.add(current_new_lineno)
+        if not line.startswith("-"):
+            current_new_lineno += 1
     return changed
 
 
@@ -168,6 +175,8 @@ def scan_rule_ax(*, repo_root: Path | None = None, diff_only: bool = True) -> li
     for path in candidate_paths:
         rel = path.relative_to(repo_root).as_posix()
         if changed is not None and rel not in changed:
+            continue
+        if path.name.endswith("_test.go"):
             continue
         lines = path.read_text(encoding="utf-8").splitlines()
         routes = _scan_go_routes(path) if path.suffix == ".go" else _scan_python_routes(path)
