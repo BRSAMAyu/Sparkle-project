@@ -21,7 +21,6 @@ import 'package:sparkle/features/home/presentation/providers/home_growth_provide
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
 import 'package:sparkle/features/chat/chat_routes.dart';
-import 'package:sparkle/features/home/presentation/widgets/active_bottleneck_alert.dart';
 import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/aurora_status_band.dart';
 import 'package:sparkle/features/home/presentation/widgets/compact_status_bar.dart';
@@ -32,11 +31,9 @@ import 'package:sparkle/features/home/presentation/widgets/exam_sprint_dashboard
 import 'package:sparkle/features/home/presentation/widgets/home_notification_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/learning_heatmap_widget.dart';
 import 'package:sparkle/features/home/presentation/widgets/metrics_row.dart';
-import 'package:sparkle/features/home/presentation/widgets/next_action_prompt.dart';
 import 'package:sparkle/features/home/presentation/widgets/predicted_intent_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/recent_insights_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/task_board/task_board_card.dart';
-import 'package:sparkle/features/home/presentation/widgets/today_growth_status_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
@@ -443,59 +440,62 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final activeBottleneck = growthState?.activeBottleneck;
     final examSprintDashboard = examSprintDashboardAsync.valueOrNull;
     var growthSectionIndex = 0;
-    final growthSections = <Widget>[
-      _staggeredSection(
-        index: growthSectionIndex++,
-        child: DailyContextLine(
-          text: dailyContextLine?.text,
-          isLoading: dailyContextLine == null && dailyContextAsync.isLoading,
-        ),
-      ),
-      if (examSprintDashboard != null)
-        _staggeredSection(
-          index: growthSectionIndex++,
-          child: ExamSprintDashboardCard(
-            data: examSprintDashboard,
-            onRecordResult: () {
-              unawaited(
-                context.push(
-                  '/exam-sprint/review?plan_id=${examSprintDashboard.planId}'
-                  '&subject=${Uri.encodeComponent(examSprintDashboard.subject)}',
+    final showGrowthHeader = dashboardState.error == null;
+    final growthSections = !showGrowthHeader
+        ? <Widget>[]
+        : <Widget>[
+            _staggeredSection(
+              index: growthSectionIndex++,
+              child: CompactStatusBar(
+                user: user,
+                dashboardState: dashboardState,
+              ),
+            ),
+            _staggeredSection(
+              index: growthSectionIndex++,
+              child: DailyContextLine(
+                text: dailyContextLine?.text,
+                isLoading:
+                    dailyContextLine == null && dailyContextAsync.isLoading,
+              ),
+            ),
+            _staggeredSection(
+              index: growthSectionIndex++,
+              child: _HomeCommandCenterCard(
+                dashboardState: dashboardState,
+                growthState: growthState,
+                isLoading: growthState == null && growthAsync.isLoading,
+                onStartTask: _startNextAction,
+                onOpenTasks: () {
+                  unawaited(context.push('/tasks'));
+                },
+                onCreatePlan: () {
+                  unawaited(context.push('/plans/new?type=growth'));
+                },
+                onOpenAurora: () {
+                  unawaited(context.push(ChatRoutes.chat));
+                },
+                onOpenBottleneckChat: activeBottleneck == null
+                    ? null
+                    : () => _openBottleneckChat(activeBottleneck),
+              ),
+            ),
+            if (examSprintDashboard != null)
+              _staggeredSection(
+                index: growthSectionIndex++,
+                child: ExamSprintDashboardCard(
+                  data: examSprintDashboard,
+                  onRecordResult: () {
+                    unawaited(
+                      context.push(
+                        '/exam-sprint/review?plan_id=${examSprintDashboard.planId}'
+                        '&subject=${Uri.encodeComponent(examSprintDashboard.subject)}',
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-        ),
-      _staggeredSection(
-        index: growthSectionIndex++,
-        child: TodayGrowthStatusCard(
-          state: growthState,
-          isLoading: growthState == null && growthAsync.isLoading,
-          onCreatePlan: () {
-            unawaited(context.push('/plans/new?type=growth'));
-          },
-        ),
-      ),
-      if (activeBottleneck != null)
-        _staggeredSection(
-          index: growthSectionIndex++,
-          child: ActiveBottleneckAlert(
-            bottleneck: activeBottleneck,
-            onOpenChat: _openBottleneckChat,
-          ),
-        ),
-      _staggeredSection(
-        index: growthSectionIndex++,
-        child: NextActionPrompt(
-          task: growthState?.nextAction,
-          isLoading: growthState == null && growthAsync.isLoading,
-          onStart: _startNextAction,
-          onOpenTasks: () {
-            unawaited(context.push('/tasks'));
-          },
-        ),
-      ),
-    ];
+              ),
+          ];
 
     var sectionIndex = growthSections.length;
     final dashboardSections = <Widget>[];
@@ -580,15 +580,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
       );
     } else if (dashboardState.isLoading) {
-      dashboardSections.add(
-        _staggeredSection(
-          index: sectionIndex++,
-          child: CompactStatusBar(
-            user: user,
-            dashboardState: dashboardState,
-          ),
-        ),
-      );
       for (final skeleton in _buildDashboardSkeletonSections()) {
         dashboardSections.add(
           _staggeredSection(
@@ -599,13 +590,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       }
     } else {
       dashboardSections.addAll([
-        _staggeredSection(
-          index: sectionIndex++,
-          child: CompactStatusBar(
-            user: user,
-            dashboardState: dashboardState,
-          ),
-        ),
         _staggeredSection(
           index: sectionIndex++,
           child: Builder(builder: (context) {
@@ -854,6 +838,475 @@ String _formatDeadlineLabel({
   }
 
   return context.l10n.dashboardDaysLeft(daysToDeadline);
+}
+
+class _HomeCommandCenterCard extends StatelessWidget {
+  const _HomeCommandCenterCard({
+    required this.dashboardState,
+    required this.growthState,
+    required this.isLoading,
+    required this.onStartTask,
+    required this.onOpenTasks,
+    required this.onCreatePlan,
+    required this.onOpenAurora,
+    this.onOpenBottleneckChat,
+  });
+
+  final DashboardState dashboardState;
+  final HomeGrowthState? growthState;
+  final bool isLoading;
+  final ValueChanged<HomeGrowthTask> onStartTask;
+  final VoidCallback onOpenTasks;
+  final VoidCallback onCreatePlan;
+  final VoidCallback onOpenAurora;
+  final VoidCallback? onOpenBottleneckChat;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = growthState;
+    final zh = I18nService.instance.isChinese;
+
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing10,
+        ),
+        child: DashboardSectionShell(
+          key: const ValueKey('dashboard-command-center'),
+          tone: DashboardSurfaceTone.hero,
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: AnimatedSwitcher(
+            duration: DS.quick,
+            child: isLoading && state == null
+                ? const _CommandCenterSkeleton()
+                : _CommandCenterContent(
+                    dashboardState: dashboardState,
+                    growthState: state ?? const HomeGrowthState.empty(),
+                    onStartTask: onStartTask,
+                    onOpenTasks: onOpenTasks,
+                    onCreatePlan: onCreatePlan,
+                    onOpenAurora: onOpenAurora,
+                    onOpenBottleneckChat: onOpenBottleneckChat,
+                    zh: zh,
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CommandCenterContent extends StatelessWidget {
+  const _CommandCenterContent({
+    required this.dashboardState,
+    required this.growthState,
+    required this.onStartTask,
+    required this.onOpenTasks,
+    required this.onCreatePlan,
+    required this.onOpenAurora,
+    required this.zh,
+    this.onOpenBottleneckChat,
+  });
+
+  final DashboardState dashboardState;
+  final HomeGrowthState growthState;
+  final ValueChanged<HomeGrowthTask> onStartTask;
+  final VoidCallback onOpenTasks;
+  final VoidCallback onCreatePlan;
+  final VoidCallback onOpenAurora;
+  final VoidCallback? onOpenBottleneckChat;
+  final bool zh;
+
+  @override
+  Widget build(BuildContext context) {
+    final nextTask = growthState.nextAction;
+    final priorityTask = dashboardState.mostImportantTask;
+    final hasActivePlan = growthState.hasActivePlan;
+    final bottleneck = growthState.activeBottleneck;
+    final progress = growthState.completionRate;
+    final health = growthState.planHealth;
+    final planName = growthState.activePlan?.name ??
+        dashboardState.activePlanProgress?.name ??
+        dashboardState.growth?.name;
+    final deadlineDays = priorityTask?.daysToDeadline ??
+        dashboardState.nextMoveCard?.daysToDeadline ??
+        dashboardState.activePlanProgress?.daysToDeadline;
+
+    final hasRisk = bottleneck != null ||
+        (deadlineDays != null && deadlineDays <= 2) ||
+        (hasActivePlan && health > 0 && health < 0.45);
+    final accentColor = hasRisk
+        ? DS.warning
+        : nextTask != null
+            ? DS.brandPrimary
+            : hasActivePlan
+                ? DS.success
+                : DS.info;
+    final title = _title(nextTask, priorityTask, hasActivePlan);
+    final summary = _summary(context, nextTask, priorityTask, hasActivePlan);
+    final riskText = _riskText(context, bottleneck, deadlineDays, health);
+
+    return Column(
+      key: const ValueKey('dashboard-command-center-content'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.12),
+                borderRadius: DS.borderRadius16,
+                border: Border.all(color: accentColor.withValues(alpha: 0.18)),
+              ),
+              child: Icon(
+                hasRisk
+                    ? Icons.priority_high_rounded
+                    : nextTask != null
+                        ? Icons.play_arrow_rounded
+                        : Icons.auto_awesome_rounded,
+                color: accentColor,
+                size: 22,
+              ),
+            ),
+            const SizedBox(width: DS.spacing12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    zh ? '现在的指挥台' : 'Command Center',
+                    style: context.sparkleTypography.labelSmall.copyWith(
+                      color: DS.textSecondary,
+                      fontWeight: DS.fontWeightBold,
+                    ),
+                  ),
+                  const SizedBox(height: DS.spacing4),
+                  Text(
+                    title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: context.sparkleTypography.titleLarge.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: DS.fontWeightBold,
+                      height: 1.18,
+                    ),
+                  ),
+                  if (summary.isNotEmpty) ...[
+                    const SizedBox(height: DS.spacing6),
+                    Text(
+                      summary,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: context.sparkleTypography.bodySmall.copyWith(
+                        color: DS.textSecondary,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: DS.spacing14),
+        Wrap(
+          spacing: DS.spacing8,
+          runSpacing: DS.spacing8,
+          children: [
+            _DashboardChip(
+              icon: Icons.task_alt_rounded,
+              label: growthState.hasTasks
+                  ? '${growthState.tasksCompleted}/${growthState.tasksTotal}'
+                  : (zh ? '今天未排任务' : 'No tasks today'),
+            ),
+            if (hasActivePlan)
+              _DashboardChip(
+                icon: Icons.timeline_rounded,
+                label: zh
+                    ? '健康度 ${(health * 100).round()}%'
+                    : '${(health * 100).round()}% health',
+              ),
+            if (planName != null && planName.trim().isNotEmpty)
+              _DashboardChip(
+                icon: Icons.flag_rounded,
+                label: planName,
+              ),
+            if (deadlineDays != null)
+              _DashboardChip(
+                icon: Icons.timelapse_rounded,
+                label: _formatDeadlineLabel(
+                  context: context,
+                  daysToDeadline: deadlineDays,
+                ),
+              ),
+          ],
+        ),
+        if (growthState.hasTasks || dashboardState.activePlanProgress != null)
+          Padding(
+            padding: const EdgeInsets.only(top: DS.spacing12),
+            child: ClipRRect(
+              borderRadius: DS.borderRadiusFull,
+              child: LinearProgressIndicator(
+                minHeight: 8,
+                value: progress > 0
+                    ? progress.clamp(0, 1)
+                    : (dashboardState.activePlanProgress?.progress ?? 0)
+                        .clamp(0, 1),
+                backgroundColor: DS.surfaceOverlay,
+                valueColor: AlwaysStoppedAnimation<Color>(accentColor),
+              ),
+            ),
+          ),
+        if (riskText != null) ...[
+          const SizedBox(height: DS.spacing12),
+          _CommandCenterRiskBanner(
+            text: riskText,
+            onTap: onOpenBottleneckChat ?? onOpenAurora,
+          ),
+        ],
+        const SizedBox(height: DS.spacing14),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final primary = SparkleButton.primary(
+              label: nextTask != null
+                  ? context.l10n.dashboardStartHere
+                  : hasActivePlan
+                      ? context.l10n.dashboardOpenTasks
+                      : context.l10n.dashboardStartWithAI,
+              icon: Icon(
+                nextTask != null
+                    ? Icons.play_arrow_rounded
+                    : hasActivePlan
+                        ? Icons.list_alt_rounded
+                        : Icons.auto_awesome_rounded,
+              ),
+              onPressed: nextTask != null
+                  ? () => onStartTask(nextTask)
+                  : hasActivePlan
+                      ? onOpenTasks
+                      : onCreatePlan,
+            );
+            final secondary = SparkleButton.ghost(
+              label: zh ? '问 Aurora' : 'Ask Aurora',
+              icon: const Icon(Icons.chat_bubble_outline_rounded),
+              onPressed: onOpenAurora,
+            );
+
+            if (constraints.maxWidth < 360) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  primary,
+                  const SizedBox(height: DS.spacing10),
+                  secondary,
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: primary),
+                const SizedBox(width: DS.spacing10),
+                Expanded(child: secondary),
+              ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  String _title(
+    HomeGrowthTask? nextTask,
+    PriorityTaskData? priorityTask,
+    bool hasActivePlan,
+  ) {
+    if (nextTask != null) {
+      return nextTask.title;
+    }
+    if (priorityTask != null && priorityTask.title.trim().isNotEmpty) {
+      return priorityTask.title;
+    }
+    if (hasActivePlan && growthState.hasTasks) {
+      return zh ? '今天的任务已经清楚了' : 'Today is mapped out';
+    }
+    if (hasActivePlan) {
+      return zh ? '先检查今天的计划节奏' : 'Check today plan rhythm';
+    }
+    return zh ? '先定一个今天能开始的目标' : 'Set a goal you can start today';
+  }
+
+  String _summary(
+    BuildContext context,
+    HomeGrowthTask? nextTask,
+    PriorityTaskData? priorityTask,
+    bool hasActivePlan,
+  ) {
+    if (nextTask != null) {
+      final due = nextTask.dueDate;
+      final dueText = due == null
+          ? null
+          : _formatDeadlineLabel(
+              context: context,
+              daysToDeadline: DateTime(
+                due.year,
+                due.month,
+                due.day,
+              )
+                  .difference(
+                    DateTime(
+                      DateTime.now().year,
+                      DateTime.now().month,
+                      DateTime.now().day,
+                    ),
+                  )
+                  .inDays,
+            );
+      return [
+        if (dueText != null) dueText,
+        if (nextTask.isHighPriority) zh ? '高优先级' : 'High priority',
+        zh ? '完成后会更新计划进度' : 'Completing it updates your plan progress',
+      ].join(' - ');
+    }
+    if (priorityTask != null && priorityTask.reason.trim().isNotEmpty) {
+      return priorityTask.reason;
+    }
+    if (hasActivePlan && growthState.tasksCompleted >= growthState.tasksTotal) {
+      return zh
+          ? '今天没有更急的动作。可以复盘、补资料，或让 Aurora 重新排一下。'
+          : 'No urgent action is queued. Review, add context, or let Aurora reprioritize.';
+    }
+    return dashboardState.nextMoveCard?.summary ??
+        (zh
+            ? 'Sparkle 会把目标拆成下一步、进度和风险提醒。'
+            : 'Sparkle will turn it into a next step, progress, and risk signal.');
+  }
+
+  String? _riskText(
+    BuildContext context,
+    HomeBottleneck? bottleneck,
+    int? deadlineDays,
+    double health,
+  ) {
+    if (bottleneck != null) {
+      return zh
+          ? '风险：${bottleneck.topic} 正在卡住进度'
+          : 'Risk: ${bottleneck.topic} is slowing progress';
+    }
+    if (deadlineDays != null && deadlineDays <= 2) {
+      return zh
+          ? '风险：${_formatDeadlineLabel(context: context, daysToDeadline: deadlineDays)}'
+          : 'Risk: ${_formatDeadlineLabel(context: context, daysToDeadline: deadlineDays)}';
+    }
+    if (health > 0 && health < 0.45) {
+      return zh
+          ? '风险：计划健康度偏低，需要重新校准'
+          : 'Risk: plan health is low; recalibration may help';
+    }
+    return null;
+  }
+}
+
+class _CommandCenterRiskBanner extends StatelessWidget {
+  const _CommandCenterRiskBanner({
+    required this.text,
+    required this.onTap,
+  });
+
+  final String text;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing12,
+            vertical: DS.spacing10,
+          ),
+          decoration: BoxDecoration(
+            color: DS.warning.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: DS.warning.withValues(alpha: 0.18)),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: DS.warning,
+                size: 18,
+              ),
+              const SizedBox(width: DS.spacing8),
+              Expanded(
+                child: Text(
+                  text,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: context.sparkleTypography.bodySmall.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightMedium,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+              const SizedBox(width: DS.spacing8),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: DS.textSecondary,
+                size: 18,
+              ),
+            ],
+          ),
+        ),
+      );
+}
+
+class _CommandCenterSkeleton extends StatelessWidget {
+  const _CommandCenterSkeleton();
+
+  @override
+  Widget build(BuildContext context) => const Column(
+        key: ValueKey('dashboard-command-center-skeleton'),
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              SparkleSkeleton(width: 44, height: 44, borderRadius: 16),
+              SizedBox(width: DS.spacing12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SparkleSkeleton(width: 112, height: 12, borderRadius: 6),
+                    SizedBox(height: DS.spacing8),
+                    SparkleSkeleton(height: 22, borderRadius: 11),
+                    SizedBox(height: DS.spacing8),
+                    SparkleSkeleton(width: 220, height: 14, borderRadius: 7),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: DS.spacing14),
+          SparkleSkeleton(height: 8, borderRadius: 4),
+          SizedBox(height: DS.spacing14),
+          Row(
+            children: [
+              Expanded(child: SparkleSkeleton(height: 38, borderRadius: 19)),
+              SizedBox(width: DS.spacing10),
+              Expanded(child: SparkleSkeleton(height: 38, borderRadius: 19)),
+            ],
+          ),
+        ],
+      );
 }
 
 class _DailyBriefingCard extends StatelessWidget {
