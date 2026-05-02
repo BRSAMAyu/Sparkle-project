@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 	"mime"
 	"net/http"
 	"path"
@@ -247,7 +248,7 @@ func (h *FileHandler) CompleteUpload(c *gin.Context) {
 			go func() {
 				procCtx := context.WithoutCancel(c.Request.Context())
 				if err := h.processor.TriggerProcessing(procCtx, payload); err != nil {
-					_ = err
+					log.Printf("async file processing trigger failed: %v", err)
 				}
 			}()
 		}
