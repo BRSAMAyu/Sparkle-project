@@ -1433,8 +1433,8 @@ class SpineOrchestrator:
                     trace.raw_event_ids.append(f"low_yield_block:{task_type}")
                     if hasattr(directive, "task_type"):
                         directive.task_type = alt
-            except Exception:
-                logger.debug("LowYieldGuard check failed for user={}", user_id, exc_info=True)
+        except Exception:
+            logger.debug("LowYieldGuard check failed for user={}", user_id, exc_info=True)
 
         await self.trace_store.set_active_directive(user_id, directive)
         await self._link_directive_to_active_session(user_id, directive.directive_id)
