@@ -1,7 +1,7 @@
 # Sparkle Roadmap v3 — 工作跟踪文档
 
 > **创建日期**: 2026-04-28
-> **最后更新**: 2026-05-02 (纵向体验闭环二次收口完成: Aurora + GoalRealization + Memory + Source Receipt + Graph Trace + Card Protocol 主链已统一接入)
+> **最后更新**: 2026-05-02 (FV-05 Privacy Community Intelligence 已从库能力接入生产链路: k 匿名 + DP 预算账本 + opt-out + 匿名洞察 API + 指标)
 
 ### P0 Critical — 当前会话修复
 
@@ -40,6 +40,13 @@
 | VEC-05 Source Document Card Protocol | ✅ 完成 | Codex | 新增 `source_document` entity card，可打开来源、纠正来源、转知识点、分享并让接收方保存私有副本 |
 | VEC-06 Verification | ✅ 通过 | Codex | `py_compile` + scoped `ruff` + `pytest tests/unit/test_goal_realization_experience_packets.py tests/unit/test_entity_cards.py tests/unit/orchestrator/mixins/test_response_builder_mixin.py -q` -> 30 passed |
 | VEC-07 Closeout report | ✅ 完成 | Codex | `docs/product/parallel_closeout/SPARKLE_VERTICAL_EXPERIENCE_CLOSEOUT_REPORT_2026-05-02.md` |
+
+### 2026-05-02 Full Vision Final Polish
+
+| 任务 | 状态 | 负责人 | 备注 |
+|------|------|--------|------|
+| FV-05 PrivacyPreservingCommunityEngine 接入 | ✅ 完成 | Codex | 在独立分支 `codex/FV-05-privacy-community-production` 完成: `community_aggregate_signals` + `privacy_budget_ledger` + `community_intelligence_enabled` 用户开关; CommunitySignalBridge 统一执行 k>=5、DP Laplace 噪声、预算扣减、opt-out 双向隔离; 新增 `/community/aggregates/*` API、Prometheus 指标、Grafana dashboard、4 个聚焦单测 |
+| FV-05 验收报告 | ✅ 完成 | Codex | `docs/product/parallel_closeout/FV-05_privacy_community_intelligence_REPORT_2026-05-02.md`; 验证: py_compile、ruff scoped、pytest 4 passed、Grafana JSON、diff check、Alembic head `c16_20260502` |
 
 ---
 

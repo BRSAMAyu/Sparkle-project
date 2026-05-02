@@ -13,9 +13,7 @@ class UserSettingsUpdate(BaseModel):
     current_goal_id: str | None = Field(default=None, max_length=64)
     task_reminders_enabled: bool | None = None
     task_reminder_times: list[int] | None = None
-    safe_experiments_opt_out: bool | None = None
     community_intelligence_enabled: bool | None = None
-    accessibility_settings: dict[str, Any] | None = None
 
 
 class UserSettingsResponse(BaseModel):
@@ -25,9 +23,7 @@ class UserSettingsResponse(BaseModel):
     current_goal_id: str | None = None
     task_reminders_enabled: bool
     task_reminder_times: list[int] | None = None
-    safe_experiments_opt_out: bool = False
     community_intelligence_enabled: bool = True
-    accessibility_settings: dict[str, Any] = Field(default_factory=dict)
     notification_preferences: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime | None
     updated_at: datetime | None

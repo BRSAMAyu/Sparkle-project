@@ -1048,52 +1048,26 @@ SPARKLE_SKILL_SHARE_PIPELINE_LATENCY_SECONDS = get_or_create_metric(
     buckets=[0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0],
 )
 
-# ============ FV-05: Privacy Community Intelligence Metrics ============
-
-COMMUNITY_PRIVACY_AGGREGATES_TOTAL = get_or_create_metric(
+COMMUNITY_PRIVACY_AGGREGATE_TOTAL = get_or_create_metric(
     Counter,
-    "sparkle_community_privacy_aggregates_total",
-    "Privacy-preserving community aggregates by stat and result",
-    ["stat_name", "privacy_tier", "result"],
+    "sparkle_community_privacy_aggregate_total",
+    "Privacy-preserving community aggregate attempts by result and query type",
+    ["result", "query_type"],
 )
 
-COMMUNITY_PRIVACY_BUDGET_SPENT_TOTAL = get_or_create_metric(
+COMMUNITY_PRIVACY_BUDGET_SPENT = get_or_create_metric(
     Counter,
-    "sparkle_community_privacy_budget_spent_total",
-    "Differential privacy epsilon spent for community aggregate queries",
-    ["query_type", "status"],
-)
-
-COMMUNITY_PRIVACY_BUDGET_REMAINING = get_or_create_metric(
-    Gauge,
-    "sparkle_community_privacy_budget_remaining",
-    "Remaining epsilon budget for community aggregate query subjects",
-    ["budget_subject", "query_type"],
+    "sparkle_community_privacy_budget_spent_epsilon_total",
+    "Differential privacy budget spent by query type",
+    ["query_type"],
 )
 
 COMMUNITY_PRIVACY_COHORT_SIZE = get_or_create_metric(
     Histogram,
     "sparkle_community_privacy_cohort_size",
-    "Cohort sizes seen by the privacy-preserving community engine",
-    ["stat_name", "privacy_tier"],
+    "Cohort sizes entering privacy-preserving community intelligence",
+    ["privacy_tier"],
     buckets=[0, 1, 3, 5, 10, 15, 25, 50, 100, 250],
-)
-
-# ============ FV-22: Community Resource Quality Metrics ============
-
-COMMUNITY_RESOURCE_QUALITY_SCORE = get_or_create_metric(
-    Histogram,
-    "sparkle_community_resource_quality_score",
-    "Quality score distribution of community shared resources",
-    ["resource_type"],
-    buckets=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
-)
-
-COMMUNITY_RESOURCE_MISLEADING_FLAGS_TOTAL = get_or_create_metric(
-    Counter,
-    "sparkle_community_resource_misleading_flags_total",
-    "Total misleading flags raised on community resources",
-    ["resource_id"],
 )
 
 # ============ Phase 6: Performance SLO Metrics ============

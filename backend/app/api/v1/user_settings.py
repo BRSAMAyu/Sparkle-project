@@ -37,9 +37,7 @@ async def get_user_settings(
         current_goal_id=record.current_goal_id,
         task_reminders_enabled=record.task_reminders_enabled,
         task_reminder_times=record.task_reminder_times,
-        safe_experiments_opt_out=record.safe_experiments_opt_out,
         community_intelligence_enabled=record.community_intelligence_enabled,
-        accessibility_settings=record.accessibility_settings or {},
         notification_preferences=await _load_notification_preferences(current_user.id, db),
         created_at=record.created_at,
         updated_at=record.updated_at,
@@ -61,9 +59,7 @@ async def _update_user_settings_impl(
         "current_goal_id": old_record.current_goal_id,
         "task_reminders_enabled": old_record.task_reminders_enabled,
         "task_reminder_times": old_record.task_reminder_times,
-        "safe_experiments_opt_out": old_record.safe_experiments_opt_out,
         "community_intelligence_enabled": old_record.community_intelligence_enabled,
-        "accessibility_settings": old_record.accessibility_settings or {},
     }
     submitted = payload.model_dump(exclude_unset=True)
 
@@ -99,9 +95,7 @@ async def _update_user_settings_impl(
         current_goal_id=record.current_goal_id,
         task_reminders_enabled=record.task_reminders_enabled,
         task_reminder_times=record.task_reminder_times,
-        safe_experiments_opt_out=record.safe_experiments_opt_out,
         community_intelligence_enabled=record.community_intelligence_enabled,
-        accessibility_settings=record.accessibility_settings or {},
         notification_preferences=await _load_notification_preferences(current_user.id, db),
         created_at=record.created_at,
         updated_at=record.updated_at,

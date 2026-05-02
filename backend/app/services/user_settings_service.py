@@ -19,9 +19,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "current_goal_id": None,
     "task_reminders_enabled": True,
     "task_reminder_times": [1440, 60, 15],  # 1 day, 1 hour, 15 minutes
-    "safe_experiments_opt_out": False,
     "community_intelligence_enabled": True,
-    "accessibility_settings": {},
 }
 
 

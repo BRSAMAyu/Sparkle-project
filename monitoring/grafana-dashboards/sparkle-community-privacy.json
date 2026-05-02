@@ -1,0 +1,42 @@
+{
+  "title": "Sparkle Community Privacy Intelligence",
+  "uid": "sparkle-community-privacy",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Aggregate Attempts",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (result, query_type) (rate(sparkle_community_privacy_aggregate_total[5m]))",
+          "legendFormat": "{{result}} / {{query_type}}"
+        }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Privacy Budget Spend",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (query_type) (rate(sparkle_community_privacy_budget_spent_epsilon_total[5m]))",
+          "legendFormat": "{{query_type}}"
+        }
+      ]
+    },
+    {
+      "type": "heatmap",
+      "title": "Cohort Size Distribution",
+      "gridPos": {"x": 0, "y": 8, "w": 24, "h": 8},
+      "targets": [
+        {
+          "expr": "sum by (le, privacy_tier) (rate(sparkle_community_privacy_cohort_size_bucket[5m]))",
+          "legendFormat": "{{privacy_tier}}"
+        }
+      ]
+    }
+  ]
+}
