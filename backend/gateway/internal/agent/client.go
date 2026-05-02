@@ -3,7 +3,10 @@ package agent
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
+	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -95,23 +98,43 @@ func NewClient(cfg *config.Config) (*Client, error) {
 func buildDialOptions(cfg *config.Config) ([]grpc.DialOption, error) {
 	creds := insecure.NewCredentials()
 	if cfg.AgentTLSEnabled {
+		tlsCfg := &tls.Config{
+			ServerName:         cfg.AgentTLSServerName,
+			InsecureSkipVerify: cfg.AgentTLSInsecure,
+		}
+		// Load CA cert for server verification
 		if cfg.AgentTLSCACertPath != "" {
-			tlsCreds, err := credentials.NewClientTLSFromFile(cfg.AgentTLSCACertPath, cfg.AgentTLSServerName)
+			caCert, err := os.ReadFile(cfg.AgentTLSCACertPath)
 			if err != nil {
-				zap.L().Error("Failed to load agent TLS CA cert",
+				zap.L().Error("Failed to read agent TLS CA cert",
 					zap.String("ca_cert_path", cfg.AgentTLSCACertPath),
-					zap.String("server_name", cfg.AgentTLSServerName),
 					zap.Error(err),
 				)
 				return nil, err
 			}
-			creds = tlsCreds
-		} else {
-			creds = credentials.NewTLS(&tls.Config{
-				ServerName:         cfg.AgentTLSServerName,
-				InsecureSkipVerify: cfg.AgentTLSInsecure,
-			})
+			tlsCfg.RootCAs = x509.NewCertPool()
+			if !tlsCfg.RootCAs.AppendCertsFromPEM(caCert) {
+				zap.L().Error("Failed to parse agent TLS CA cert",
+					zap.String("ca_cert_path", cfg.AgentTLSCACertPath),
+				)
+				return nil, fmt.Errorf("failed to parse CA cert: %s", cfg.AgentTLSCACertPath)
+			}
+			tlsCfg.InsecureSkipVerify = false
 		}
+		// P2-28: Load client cert for mTLS
+		if cfg.AgentTLSClientCertPath != "" && cfg.AgentTLSClientKeyPath != "" {
+			clientCert, err := tls.LoadX509KeyPair(cfg.AgentTLSClientCertPath, cfg.AgentTLSClientKeyPath)
+			if err != nil {
+				zap.L().Error("Failed to load agent mTLS client cert/key",
+					zap.String("cert_path", cfg.AgentTLSClientCertPath),
+					zap.String("key_path", cfg.AgentTLSClientKeyPath),
+					zap.Error(err),
+				)
+				return nil, err
+			}
+			tlsCfg.Certificates = []tls.Certificate{clientCert}
+		}
+		creds = credentials.NewTLS(tlsCfg)
 	}
 
 	// Retry policy configuration

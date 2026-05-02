@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -17,6 +18,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/metrics"
+	"github.com/sparkle/gateway/internal/service"
 	"go.uber.org/zap"
 )
 
@@ -52,6 +54,7 @@ type WebSocketProxy struct {
 	upgrader          *websocket.Upgrader
 	logger            *zap.Logger
 	config            *config.Config
+	dedupService      *service.MessageDedupService
 	mu                sync.Mutex
 	activeByUser      map[string]int
 	reconnectTrackers map[string]*reconnectTracker
@@ -66,7 +69,7 @@ type proxyConnectionPair struct {
 }
 
 // NewWebSocketProxy 创建新的 WebSocket 代理
-func NewWebSocketProxy(backendURL string, logger *zap.Logger, cfg *config.Config) *WebSocketProxy {
+func NewWebSocketProxy(backendURL string, logger *zap.Logger, cfg *config.Config, dedupService *service.MessageDedupService) *WebSocketProxy {
 	proxy := &WebSocketProxy{
 		pythonBackendURL: backendURL,
 		upgrader: &websocket.Upgrader{
@@ -90,6 +93,7 @@ func NewWebSocketProxy(backendURL string, logger *zap.Logger, cfg *config.Config
 		},
 		logger:            logger,
 		config:            cfg,
+		dedupService:      dedupService,
 		activeByUser:      make(map[string]int),
 		reconnectTrackers: make(map[string]*reconnectTracker),
 		liveConnections:   make(map[*websocket.Conn]*proxyConnectionPair),
@@ -385,6 +389,23 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 			}
 			if messageType == websocket.TextMessage {
 				data = sanitizeCommunityWSTextPayload(data)
+
+				// P2-29: Server-side message deduplication via content hash
+				if p.dedupService != nil && len(data) > 0 {
+					hash := sha256.Sum256(data)
+					dedupKey := hex.EncodeToString(hash[:])
+					isDup, err := p.dedupService.CheckAndMark(context.Background(), userID, dedupKey)
+					if err != nil {
+						p.logger.Debug("Dedup check failed, forwarding anyway",
+							zap.String("user_id_hash", hashUserIDForLog(userID)),
+							zap.Error(err))
+					} else if isDup {
+						p.logger.Debug("Dropping duplicate WebSocket message",
+							zap.String("user_id_hash", hashUserIDForLog(userID)),
+							zap.Int("size", len(data)))
+						continue
+					}
+				}
 			}
 			if err := writeMessage(&backendWriteMu, backendConn, messageType, data); err != nil {
 				p.logger.Warn("Backend write error",

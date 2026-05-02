@@ -38,6 +38,8 @@ type Config struct {
 	AgentAddress                string   `mapstructure:"AGENT_ADDRESS"`
 	AgentTLSEnabled             bool     `mapstructure:"AGENT_TLS_ENABLED"`
 	AgentTLSCACertPath          string   `mapstructure:"AGENT_TLS_CA_CERT"`
+	AgentTLSClientCertPath      string   `mapstructure:"AGENT_TLS_CLIENT_CERT"`
+	AgentTLSClientKeyPath       string   `mapstructure:"AGENT_TLS_CLIENT_KEY"`
 	AgentTLSServerName          string   `mapstructure:"AGENT_TLS_SERVER_NAME"`
 	AgentTLSInsecure            bool     `mapstructure:"AGENT_TLS_INSECURE"`
 	GRPCTimeoutSeconds          int      `mapstructure:"GRPC_TIMEOUT_SECONDS"`

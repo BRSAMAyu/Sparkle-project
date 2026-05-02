@@ -196,14 +196,26 @@ async def serve():
             cert_chain = cert_file.read()
         with open(settings.GRPC_TLS_KEY_PATH, "rb") as key_file:
             private_key = key_file.read()
-        credentials = grpc.ssl_server_credentials(((private_key, cert_chain),))
+        # P2-28: mTLS — require and verify client certificates
+        if _ca_cert_path:
+            with open(_ca_cert_path, "rb") as ca_file:
+                ca_cert = ca_file.read()
+            credentials = grpc.ssl_server_credentials(
+                ((private_key, cert_chain),),
+                root_certificates=ca_cert,
+                require_client_auth=True,
+            )
+        else:
+            credentials = grpc.ssl_server_credentials(((private_key, cert_chain),))
         server.add_secure_port(listen_addr, credentials)
     else:
         server.add_insecure_port(listen_addr)
 
+    _ca_cert_path = getattr(settings, "GRPC_TLS_CA_CERT_PATH", "")
+    tls_mode = "mTLS" if (use_tls and _ca_cert_path) else ("TLS" if use_tls else "PLAINTEXT")
     logger.info("=" * 60)
     logger.info("🚀 Sparkle AI Agent gRPC Server Starting...")
-    logger.info(f"📡 Listening on: {listen_addr} ({'TLS' if use_tls else 'PLAINTEXT'})")
+    logger.info(f"📡 Listening on: {listen_addr} ({tls_mode})")
     logger.info(f"🔧 Environment: {'DEMO' if getattr(settings, 'DEMO_MODE', False) else 'PRODUCTION'}")
     logger.info(f"🤖 LLM Model: {settings.LLM_MODEL_NAME}")
     logger.info(f"🔗 LLM Provider: {settings.LLM_API_BASE_URL}")

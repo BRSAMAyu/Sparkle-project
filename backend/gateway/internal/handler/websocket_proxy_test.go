@@ -38,7 +38,7 @@ func TestBuildBackendWebSocketHeaders_SkipsEmptyValues(t *testing.T) {
 }
 
 func TestWebSocketProxyBackendURLsDoNotCarryTokens(t *testing.T) {
-	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{})
+	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{}, nil)
 
 	require.Equal(t, "http://backend.local/api/v1/community/groups/group-1/ws", proxy.communityBackendURL("group-1"))
 	require.Equal(t, "http://backend.local/api/v1/community/ws/connect", proxy.personalBackendURL())
@@ -47,7 +47,7 @@ func TestWebSocketProxyBackendURLsDoNotCarryTokens(t *testing.T) {
 }
 
 func TestWebSocketProxyConnectionLimitPerUser(t *testing.T) {
-	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{WSMaxConnections: 1})
+	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{WSMaxConnections: 1}, nil)
 
 	require.True(t, proxy.registerConnection("user-1"))
 	require.False(t, proxy.registerConnection("user-1"))
@@ -58,7 +58,7 @@ func TestWebSocketProxyConnectionLimitPerUser(t *testing.T) {
 }
 
 func TestWebSocketProxyRejectsNewConnectionsWhileDraining(t *testing.T) {
-	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{WSMaxConnections: 1})
+	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{WSMaxConnections: 1}, nil)
 
 	proxy.StartDraining()
 
@@ -67,7 +67,7 @@ func TestWebSocketProxyRejectsNewConnectionsWhileDraining(t *testing.T) {
 }
 
 func TestWebSocketProxyDrainAllResetsTracking(t *testing.T) {
-	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{WSMaxConnections: 2})
+	proxy := NewWebSocketProxy("http://backend.local", zap.NewNop(), &config.Config{WSMaxConnections: 2}, nil)
 	clientConn := &websocket.Conn{}
 	backendConn := &websocket.Conn{}
 
@@ -110,7 +110,7 @@ func TestWebSocketProxyRejectsPerConnectionRateLimit(t *testing.T) {
 		WSMessageRateRPS:   0.001,
 		WSMessageRateBurst: 1,
 		WSWriteWaitSeconds: 1,
-	})
+	}, nil)
 	gateway := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		proxy.proxyWebSocket(w, r, backend.URL, "token-123", "user-1", "personal", "")
 	}))

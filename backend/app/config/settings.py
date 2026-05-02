@@ -843,6 +843,7 @@ class Settings(BaseSettings):
     GRPC_REQUIRE_TLS: bool | None = None
     GRPC_TLS_CERT_PATH: str = ""
     GRPC_TLS_KEY_PATH: str = ""
+    GRPC_TLS_CA_CERT_PATH: str = ""  # P2-28: For mTLS client verification
 
     @field_validator("SECRET_KEY", mode="before")
     @classmethod
