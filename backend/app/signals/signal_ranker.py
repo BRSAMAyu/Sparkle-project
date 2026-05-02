@@ -159,6 +159,9 @@ class SignalRanker:
     5. 抑制被冲突覆盖的信号
     """
 
+    def __init__(self, state_register: Any = None):
+        self.state_register = state_register
+
     def rank(
         self,
         signals: list[ActionableSignal],
@@ -241,7 +244,14 @@ class SignalRanker:
         )
 
     def _compute_dimensions(self, signal: ActionableSignal, tier: int) -> dict[str, float]:
-        """计算 Final Spec Section 3 的 10 维评分。每维归一化到 [0, 1]。"""
+        """计算 Final Spec Section 3 的 10 维评分。每维归一化到 [0, 1]。
+
+        contradiction_level derived from signal's own counter_evidence and
+        alternative_explanations, providing a data-driven estimate.
+        Falls back to 0.5 when neither field is populated.
+        """
+        contradiction = self._contradiction_level(signal)
+
         return {
             "goal_impact": self._goal_impact(tier),
             "decision_relevance": self._decision_relevance(signal),
@@ -252,8 +262,27 @@ class SignalRanker:
             "reversibility": self._reversibility(signal),
             "user_visibility_need": self._user_visibility_need(signal),
             "privacy_sensitivity": self._privacy_sensitivity(signal),
-            "contradiction_level": 0.5,  # default; requires state register for accurate value
+            "contradiction_level": contradiction,
         }
+
+    @staticmethod
+    def _contradiction_level(signal: ActionableSignal) -> float:
+        """Derive contradiction from signal's counter_evidence and alternative_explanations.
+
+        - counter_evidence present → higher contradiction (evidence against the claim)
+        - alternative_explanations present → lower contradiction (less certain)
+        - neither → neutral 0.5 default
+        """
+        has_counter = bool(getattr(signal, "counter_evidence", None))
+        has_alternatives = bool(getattr(signal, "alternative_explanations", None))
+
+        if has_counter and has_alternatives:
+            return 0.65  # mixed: both counter and alternative
+        if has_counter:
+            return 0.80  # high contradiction
+        if has_alternatives:
+            return 0.30  # signal hedged with alternatives → lower contradiction
+        return 0.5
 
     @staticmethod
     def _goal_impact(tier: int) -> float:

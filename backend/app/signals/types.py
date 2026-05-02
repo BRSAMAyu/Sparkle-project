@@ -39,9 +39,9 @@ class ActionableSignal:
     ttl_hours: int
     evidence_summary: str
     possible_effects: list[str]
+    priority: str               # "high" | "medium" | "low"
     counter_evidence: list[str] = field(default_factory=list)
     alternative_explanations: list[str] = field(default_factory=list)
-    priority: str               # "high" | "medium" | "low"
     created_at: str = field(default_factory=_utcnow)
 
     def to_dict(self) -> dict[str, Any]:
@@ -566,7 +566,7 @@ class RetrievalDirective:
     do_not_load: list[str] = field(default_factory=list)
     token_budget: int = 3600
     citation_required: bool = True
-    pollution_guard: str = "strict"                # strict / permissive / off
+    pollution_guard: str = "strict"                # strict / moderate / off
     scope: str = "turn"
     reason_for_user: str = ""
     created_at: str = field(default_factory=_utcnow)
@@ -986,7 +986,6 @@ class SourceTrayState:
 class SkillEntry:
     """A strategy that has been proven effective and extracted for reuse."""
     skill_id: str
-    version: int = 1
     scope: str                           # personal / cohort / system
     source_policy_key: str               # The policy that was proven effective
     strategy: dict[str, Any]             # The effective strategy parameters
@@ -994,6 +993,7 @@ class SkillEntry:
     evidence: dict[str, Any]             # Effectiveness metrics
     privacy: dict[str, bool] | None = None  # contains_personal_data / shareable
     contraindications: list[str] = field(default_factory=list)  # when this skill should not be applied
+    version: int = 1
     previous_versions: list[dict[str, Any]] = field(default_factory=list)
     effective_count: int = 0
     sample_size: int = 0

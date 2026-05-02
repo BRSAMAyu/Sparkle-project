@@ -892,7 +892,7 @@ class PolicyEngine:
         "pre_exam_silence": {
             "retrieval_mode": "task_bound_graph_rag",
             "source_scope": "task_bound",
-            "pollution_guard": "permissive",
+            "pollution_guard": "moderate",
             "reason": "考前快速复习，加载高收益资料。",
         },
     }

@@ -57,8 +57,10 @@ async def compute_retrieval_plan(
     for sel in selections:
         selected_actions[sel.source_id] = sel.action
 
-    # Guard: pollution_guard = strict means only user-pinned or high-relevance
-    strict_mode = retrieval_directive.pollution_guard == "strict"
+    # Guard: pollution_guard controls relevance filtering threshold
+    pg_mode = retrieval_directive.pollution_guard
+    strict_mode = pg_mode == "strict"
+    moderate_mode = pg_mode == "moderate"
     token_budget = retrieval_directive.token_budget
 
     for source in available:
@@ -123,6 +125,11 @@ async def compute_retrieval_plan(
             do_not_load.append({
                 "source_id": sid,
                 "reason": f"low_relevance({relevance:.2f})_strict_guard",
+            })
+        elif moderate_mode and relevance < 0.15:
+            do_not_load.append({
+                "source_id": sid,
+                "reason": f"low_relevance({relevance:.2f})_moderate_guard",
             })
         elif token_budget_used + estimate <= token_budget:
             may_load.append({
