@@ -8,6 +8,16 @@ from sqlalchemy.pool import StaticPool
 from app.config import settings
 from app.core.redis_utils import resolve_redis_password
 
+from tests._credentials import (  # noqa: F401 — re-exported for legacy imports
+    TEST_HASHED_PASSWORD,
+    TEST_HY_API_KEY,
+    TEST_INTERNAL_API_KEY,
+    TEST_SF_API_KEY,
+    TEST_XUNFEI_API_KEY,
+    TEST_XUNFEI_API_SECRET,
+    TEST_ZHIPU_API_KEY,
+)
+
 from app.models.base import Base
 from app.models.plan import Plan  # noqa: F401
 from app.models.task import Task  # noqa: F401
@@ -85,14 +95,6 @@ from app.models.shop import (  # noqa: F401
 from app.models.simulation_run import SimulationRun  # noqa: F401
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
-
-# Centralized mock credentials for tests — never use real keys in test code.
-TEST_INTERNAL_API_KEY = "test-internal-api-key"
-TEST_ZHIPU_API_KEY = "test-zhipu-api-key"
-TEST_SF_API_KEY = "test-sf-api-key"
-TEST_XUNFEI_API_KEY = "test-xunfei-api-key"
-TEST_XUNFEI_API_SECRET = "test-xunfei-api-secret"
-TEST_HASHED_PASSWORD = "hashed"
 
 
 def _normalize_test_redis_url(raw_url: str) -> str:

@@ -501,7 +501,7 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
       case 'social_lane':
         return DS.brandSecondary;
       default:
-        return DS.warningAccent;
+        return DS.warning;
     }
   }
 

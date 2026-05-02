@@ -13,6 +13,8 @@ Tests coverage:
 import pytest
 import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
+
+from tests._credentials import TEST_HY_API_KEY, TEST_SF_API_KEY
 from app.services.translation_service import (
     translation_service,
     TranslationService,
@@ -137,7 +139,7 @@ async def test_translate_with_siliconflow_provider_label(mock_cache_service, moc
          patch("app.services.translation_service.llm_service", mock_llm_service), \
          patch("app.services.translation_service.SecureLLMClient.get", return_value=mock_client), \
          patch("app.services.translation_service.settings.HUNYUAN_API_KEY", ""), \
-         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "test-sf-api-key"):
+         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", TEST_SF_API_KEY):
         result = await service.translate(
             segments=segments,
             source_lang="en",
@@ -163,8 +165,8 @@ async def test_translate_falls_back_to_backup_provider_when_hunyuan_fails(mock_c
     with patch("app.services.translation_service.cache_service", mock_cache_service), \
          patch("app.services.translation_service.llm_service", mock_llm_service), \
          patch("app.services.translation_service.SecureLLMClient.get", side_effect=[failing_client, success_client]), \
-         patch("app.services.translation_service.settings.HUNYUAN_API_KEY", "hy-key"), \
-         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "test-sf-api-key"):
+         patch("app.services.translation_service.settings.HUNYUAN_API_KEY", TEST_HY_API_KEY), \
+         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", TEST_SF_API_KEY):
         result = await service.translate(
             segments=[TranslationSegment(id="s0", text="backup")],
             source_lang="en",
@@ -262,8 +264,8 @@ async def test_translate_falls_back_to_generic_llm_after_all_specialists_fail(mo
     with patch("app.services.translation_service.cache_service", mock_cache_service), \
          patch("app.services.translation_service.llm_service", mock_llm_service), \
          patch("app.services.translation_service.SecureLLMClient.get", side_effect=[failing_client, failing_client]), \
-         patch("app.services.translation_service.settings.HUNYUAN_API_KEY", "hy-key"), \
-         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "test-sf-api-key"):
+         patch("app.services.translation_service.settings.HUNYUAN_API_KEY", TEST_HY_API_KEY), \
+         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", TEST_SF_API_KEY):
         result = await service.translate(
             segments=[TranslationSegment(id="s0", text="fallback me")],
             source_lang="en",
