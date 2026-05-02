@@ -140,6 +140,7 @@ from app.models.experiment import (
 )
 from app.models.file_storage import StoredFile
 from app.models.focus import FocusSession, FocusStatus, FocusType
+from app.models.goal import Goal
 from app.models.galaxy import (
     ExpansionFeedback,
     KnowledgeNode,
