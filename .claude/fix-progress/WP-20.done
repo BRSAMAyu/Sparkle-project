@@ -1,0 +1,10 @@
+WP-20: Proto文件修复
+Status: DONE
+Modified files:
+- proto/agent_service.proto
+- proto/websocket.proto
+- backend/gateway/internal/handler/proxy_routes.go
+Verification:
+- buf build --path proto/agent_service.proto --path proto/websocket.proto -o /tmp/sparkle-wp20.bin: PASS
+- cd backend/gateway && go build ./...: PASS
+- buf lint: FAIL (pre-existing repository-wide lint baseline issues: package directory layout, RPC naming, enum naming)

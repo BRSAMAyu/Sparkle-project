@@ -47,3 +47,29 @@ def setup_periodic_tasks(sender, **kwargs):
         evaluate_routing_outcomes.s(),
         name='evaluate-routing-outcomes-every-hour'
     )
+
+    # L4 daily learning loop — yesterday's bottleneck → today's focus
+    from app.core.celery_tasks import run_daily_goal_reflections
+    sender.add_periodic_task(
+        86400.0,
+        run_daily_goal_reflections.s(),
+        name='run-daily-goal-reflections-every-day'
+    )
+
+    # State decay/retraction maintenance — prevents stale short-term state from becoming identity
+    from app.core.celery_tasks import apply_memory_decay, spine_auto_deprecate_skills, spine_expire_stale_states
+    sender.add_periodic_task(
+        21600.0,
+        spine_expire_stale_states.s(),
+        name='spine-expire-stale-states-every-6h'
+    )
+    sender.add_periodic_task(
+        86400.0,
+        spine_auto_deprecate_skills.s(),
+        name='spine-auto-deprecate-skills-every-day'
+    )
+    sender.add_periodic_task(
+        86400.0,
+        apply_memory_decay.s(),
+        name='apply-memory-decay-every-day'
+    )

@@ -1,15 +1,15 @@
 /// CRDT synchronization for collaborative offline-first features.
 ///
-/// **STATUS: NOT YET IMPLEMENTED**
-///
-/// This is a placeholder for future offline-first collaboration features.
 /// The current sync architecture uses:
 /// - Outbox queue pattern for reliable local-to-server sync
 /// - Exponential backoff retry logic
 /// - Isar database for local persistence
+/// - Local CRDT snapshots for replay/recovery
+/// - Last-write/max-wins merge in the knowledge mastery sync queue
 ///
-/// Future implementation may use YDoc or Automerge for true CRDT capabilities
-/// when multi-device collaborative editing is required.
+/// This intentionally keeps the CRDT payload opaque so the backend can evolve
+/// from simple binary updates to YDoc/Automerge-compatible operations without
+/// changing the local persistence contract.
 ///
 /// @see sync_engine.dart for the current sync implementation
 library;
@@ -29,11 +29,8 @@ enum SyncType {
 
 class CRDTSyncManager {
   CRDTSyncManager(this._localDb, this._syncEngine);
-  // ignore: unused_field
   final LocalDatabase _localDb;
   final SyncEngine _syncEngine;
-  
-  // In-memory representation would go here (e.g. YDoc)
 
   Future<void> initialize() async {
     _syncEngine.start();
@@ -43,24 +40,25 @@ class CRDTSyncManager {
     _syncEngine.stop();
   }
 
-  /// Apply a binary update from a remote peer or local change
-  Future<void> applyUpdate(List<int> update, {String? origin}) async {
-    // 1. Apply to in-memory doc (Placeholder for YDoc.applyUpdate)
-    // _doc.applyUpdate(update);
-    
-    // 2. Persist snapshot
-    // await _persistSnapshot(update);
+  /// Apply a binary update from a remote peer or local change.
+  Future<void> applyUpdate(
+    List<int> update, {
+    String? origin,
+    String galaxyId = 'default',
+  }) async {
+    await _persistSnapshot(galaxyId: galaxyId, update: update, synced: origin != 'local');
 
-    // 3. If local change, queue for sync
     if (origin == 'local') {
       await _syncEngine.enqueue(
         topic: 'crdt',
         opType: 'update',
         payload: {
+          'galaxyId': galaxyId,
           'data': base64Encode(update),
           'timestamp': DateTime.now().millisecondsSinceEpoch,
         },
         entityType: 'crdt_snapshot',
+        entityId: galaxyId,
       );
     }
   }
@@ -71,7 +69,27 @@ class CRDTSyncManager {
   }
 
   /// Resolve conflict using CRDT logic (automatic merge)
-  Future<void> resolveConflict(List<int> remoteUpdate) async {
-    await applyUpdate(remoteUpdate, origin: 'remote');
+  Future<void> resolveConflict(List<int> remoteUpdate, {String galaxyId = 'default'}) async {
+    await applyUpdate(remoteUpdate, origin: 'remote', galaxyId: galaxyId);
+  }
+
+  Future<LocalCRDTSnapshot?> getSnapshot(String galaxyId) async =>
+      _localDb.isar.localCRDTSnapshots.getByGalaxyId(galaxyId);
+
+  Future<void> _persistSnapshot({
+    required String galaxyId,
+    required List<int> update,
+    required bool synced,
+  }) async {
+    await _localDb.isar.writeTxn(() async {
+      final existing =
+          await _localDb.isar.localCRDTSnapshots.getByGalaxyId(galaxyId);
+      final snapshot = (existing ?? LocalCRDTSnapshot())
+        ..galaxyId = galaxyId
+        ..updateData = update
+        ..timestamp = DateTime.now()
+        ..synced = synced;
+      await _localDb.isar.localCRDTSnapshots.putByGalaxyId(snapshot);
+    });
   }
 }

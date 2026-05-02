@@ -611,6 +611,64 @@ def evaluate_routing_outcomes(self, limit: int = 200):
         raise self.retry(exc=exc, countdown=300) from exc
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_daily_goal_reflections")
+def run_daily_goal_reflections(self, limit: int = 500):
+    """Run L4 DailyGoalReflection for users with accumulated Spine signals.
+
+    This closes LEARN-008: the L4 job is no longer merely a library function.
+    It scans active deep-learning accumulation buckets, produces the
+    user-visible candidate, and leaves the candidate in the existing L4 store
+    for the next planning/Aurora turn to consume.
+    """
+
+    async def _run():
+        import json
+
+        from app.core.redis_client import get_redis
+        from app.signals.async_deep_learner import AsyncDeepLearner
+
+        redis = get_redis()
+        learner = AsyncDeepLearner(redis)
+        cursor, keys = await redis.scan(match="spine:deep_learning_accumulation:*", count=limit)
+        processed = 0
+        generated = 0
+        errors = 0
+
+        for key in keys[:limit]:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-1]
+            try:
+                raw = await redis.get(key)
+                if not raw:
+                    continue
+                signals = json.loads(raw if isinstance(raw, str) else raw.decode())
+                if not isinstance(signals, list) or not signals:
+                    continue
+                await learner.run_daily_goal_reflection(user_id, signals)
+                generated += 1
+            except Exception as exc:  # continue scanning other users
+                errors += 1
+                logger.warning("DailyGoalReflection skipped for user={}: {}", user_id, exc)
+            finally:
+                processed += 1
+
+        return {
+            "cursor": cursor if isinstance(cursor, int) else str(cursor),
+            "users_scanned": len(keys),
+            "processed": processed,
+            "generated": generated,
+            "errors": errors,
+        }
+
+    try:
+        result = _run_async(_run())
+        logger.info(f"✅ Daily goal reflections finished: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Failed to run daily goal reflections: {exc}")
+        raise self.retry(exc=exc, countdown=300) from exc
+
+
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.generate_weekly_growth_digests")
 def generate_weekly_growth_digests(self, limit: int = 200, deliver: bool = False):
     """Generate weekly growth digests, optionally delivering them immediately."""

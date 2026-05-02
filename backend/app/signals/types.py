@@ -883,6 +883,7 @@ class SkillEntry:
     applicable_when: dict[str, Any]      # Conditions under which this skill applies
     evidence: dict[str, Any]             # Effectiveness metrics
     privacy: dict[str, bool] | None = None  # contains_personal_data / shareable
+    contraindications: list[str] = field(default_factory=list)  # when this skill should not be applied
     effective_count: int = 0
     sample_size: int = 0
 
@@ -894,6 +895,7 @@ class SkillEntry:
             "strategy": self.strategy,
             "applicable_when": self.applicable_when,
             "evidence": self.evidence,
+            "contraindications": self.contraindications,
             "effective_count": self.effective_count,
             "sample_size": self.sample_size,
         }

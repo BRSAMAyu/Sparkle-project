@@ -24,15 +24,15 @@ route:
 receivers:
   - name: default-webhook
     webhook_configs:
-      - url: ${ALERTMANAGER_DEFAULT_WEBHOOK_URL:-http://host.docker.internal:19093/alerts/default}
+      - url: ${ALERTMANAGER_DEFAULT_WEBHOOK_URL:?ALERTMANAGER_DEFAULT_WEBHOOK_URL must be set}
         send_resolved: true
   - name: critical-webhook
     webhook_configs:
-      - url: ${ALERTMANAGER_CRITICAL_WEBHOOK_URL:-http://host.docker.internal:19093/alerts/critical}
+      - url: ${ALERTMANAGER_CRITICAL_WEBHOOK_URL:?ALERTMANAGER_CRITICAL_WEBHOOK_URL must be set}
         send_resolved: true
   - name: warning-webhook
     webhook_configs:
-      - url: ${ALERTMANAGER_WARNING_WEBHOOK_URL:-http://host.docker.internal:19093/alerts/warning}
+      - url: ${ALERTMANAGER_WARNING_WEBHOOK_URL:?ALERTMANAGER_WARNING_WEBHOOK_URL must be set}
         send_resolved: true
   - name: email-fallback
     email_configs:

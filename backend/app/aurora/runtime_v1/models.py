@@ -142,3 +142,44 @@ class DurableSessionStateSnapshot(BaseModel):
         Index("idx_durable_session_state_recovery", "session_id", "recoverable", "expires_at"),
         Index("idx_durable_session_state_user_seen", "user_id", "last_seen_at"),
     )
+
+
+class GoalWorldGraphSnapshot(BaseModel):
+    """Durable fallback for per-goal GoalWorldGraph state.
+
+    Redis remains the hot path, but this snapshot prevents long goals from
+    disappearing when Redis expires or restarts.
+    """
+
+    __tablename__ = "goal_world_graph_snapshots"
+
+    graph_id = Column(String(128), nullable=False, index=True)
+    user_id = Column(String(128), nullable=False, index=True)
+    goal_id = Column(String(128), nullable=False, index=True)
+    goal_type = Column(String(64), nullable=False, default="general", index=True)
+    coverage = Column(Float, nullable=False, default=0.0)
+    payload = Column(JSONBCompat, nullable=False, default=dict)
+    last_saved_at = Column(DateTime, nullable=False, index=True)
+    runtime_metadata = Column("metadata", JSONBCompat, nullable=False, default=dict)
+
+    __table_args__ = (
+        Index("idx_goal_world_graph_user_goal", "user_id", "goal_id", unique=True),
+        Index("idx_goal_world_graph_user_type", "user_id", "goal_type", "last_saved_at"),
+    )
+
+
+class GrowthChronicleSnapshot(BaseModel):
+    """Durable fallback for user-governed GrowthChronicle entries."""
+
+    __tablename__ = "growth_chronicle_snapshots"
+
+    user_id = Column(String(128), nullable=False, unique=True, index=True)
+    entry_count = Column(Integer, nullable=False, default=0)
+    confirmed_count = Column(Integer, nullable=False, default=0)
+    payload = Column(JSONBCompat, nullable=False, default=list)
+    last_saved_at = Column(DateTime, nullable=False, index=True)
+    runtime_metadata = Column("metadata", JSONBCompat, nullable=False, default=dict)
+
+    __table_args__ = (
+        Index("idx_growth_chronicle_user_saved", "user_id", "last_saved_at"),
+    )

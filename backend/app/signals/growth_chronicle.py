@@ -18,6 +18,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from loguru import logger
+from sqlalchemy import select
 
 from app.signals.types import _uid
 
@@ -111,8 +112,9 @@ class ChronicleEntry:
 class GrowthChronicleService:
     """Build and store user-governed growth narrative entries."""
 
-    def __init__(self, redis_client: Any):
+    def __init__(self, redis_client: Any, db_session: Any | None = None):
         self.redis = redis_client
+        self.db = db_session
 
     async def add_entry(self, user_id: str, entry: ChronicleEntry) -> None:
         """Add an entry to a user's chronicle JSON list. Uses WATCH for atomicity."""
@@ -422,7 +424,13 @@ class GrowthChronicleService:
 
     async def _load_entries(self, user_id: str) -> list[ChronicleEntry]:
         raw = await self.redis.get(_CHRONICLE_KEY.format(user_id=user_id))
-        return self._parse_raw_entries(raw)
+        entries = self._parse_raw_entries(raw)
+        if entries:
+            return entries
+        durable = await self._load_durable_entries(user_id)
+        if durable:
+            await self._save_entries(user_id, durable)
+        return durable
 
     @staticmethod
     def _parse_raw_entries(raw: Any) -> list[ChronicleEntry]:
@@ -449,6 +457,59 @@ class GrowthChronicleService:
             json.dumps([entry.to_dict() for entry in entries], ensure_ascii=False),
             ex=_CHRONICLE_TTL_SECONDS,
         )
+        await self._save_durable_entries(user_id, entries)
+
+    async def _save_durable_entries(self, user_id: str, entries: list[ChronicleEntry]) -> None:
+        if self.db is None:
+            return
+        try:
+            from app.aurora.runtime_v1.models import GrowthChronicleSnapshot
+
+            result = await self.db.execute(
+                select(GrowthChronicleSnapshot).where(
+                    GrowthChronicleSnapshot.user_id == user_id,
+                    GrowthChronicleSnapshot.deleted_at.is_(None),
+                )
+            )
+            record = result.scalar_one_or_none()
+            if record is None:
+                record = GrowthChronicleSnapshot(user_id=user_id)
+            record.entry_count = len(entries)
+            record.confirmed_count = sum(1 for entry in entries if entry.is_confirmed and not entry.user_hidden)
+            record.payload = [entry.to_dict() for entry in entries[:_MAX_STORED_ENTRIES]]
+            record.last_saved_at = datetime.now(UTC).replace(tzinfo=None)
+            record.runtime_metadata = {
+                "source": "growth_chronicle_service",
+                "user_visible": True,
+                "editable": True,
+            }
+            self.db.add(record)
+            await self.db.commit()
+        except Exception as exc:
+            logger.warning("GrowthChronicle durable save skipped user={}: {}", user_id, exc)
+
+    async def _load_durable_entries(self, user_id: str) -> list[ChronicleEntry]:
+        if self.db is None:
+            return []
+        try:
+            from app.aurora.runtime_v1.models import GrowthChronicleSnapshot
+
+            result = await self.db.execute(
+                select(GrowthChronicleSnapshot)
+                .where(
+                    GrowthChronicleSnapshot.user_id == user_id,
+                    GrowthChronicleSnapshot.deleted_at.is_(None),
+                )
+                .order_by(GrowthChronicleSnapshot.last_saved_at.desc())
+                .limit(1)
+            )
+            record = result.scalar_one_or_none()
+            if record is None:
+                return []
+            return self._parse_raw_entries(json.dumps(record.payload or [], ensure_ascii=False))
+        except Exception as exc:
+            logger.warning("GrowthChronicle durable load skipped user={}: {}", user_id, exc)
+            return []
 
     @staticmethod
     def _collect_evidence_refs(data: dict[str, Any], keys: list[str]) -> list[str]:
