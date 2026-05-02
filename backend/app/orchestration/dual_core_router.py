@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
@@ -65,6 +66,7 @@ class DualCoreRoutingInput:
     cognitive_load: float | None = None
     capsule_preferences: dict[str, Any] = field(default_factory=dict)
     spine_active_states: list[dict[str, Any]] = field(default_factory=list)
+    scaffolding_snapshot: dict[str, Any] = field(default_factory=dict)
     aurora_preferences: dict[str, str] = field(default_factory=dict)
     recent_corrections: list[dict[str, Any]] = field(default_factory=list)
 
@@ -104,6 +106,9 @@ class DualCoreDecision:
     routing_debug: dict[str, Any] = field(default_factory=dict)
     strategy_adjustments: list[dict[str, Any]] = field(default_factory=list)
     structured_adjustments: list[CognitiveAdjustment] = field(default_factory=list)
+    signal_scores: dict[str, float] = field(default_factory=dict)
+    routing_trace_id: str = field(default_factory=lambda: f"dcr_{uuid.uuid4().hex}")
+    scaffolding_zone: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -114,6 +119,9 @@ class DualCoreDecision:
             "execution_constraints": list(self.execution_constraints),
             "routing_debug": dict(self.routing_debug or {}),
             "strategy_adjustments": [dict(item) for item in self.strategy_adjustments if isinstance(item, dict)],
+            "signal_scores": {str(k): float(v) for k, v in (self.signal_scores or {}).items()},
+            "routing_trace_id": self.routing_trace_id,
+            "scaffolding_zone": self.scaffolding_zone,
         }
 
     @property
@@ -522,6 +530,39 @@ class DualCoreRouter:
                 )
         execution_constraints.extend(pattern_guidance["execution"])
 
+        scaffolding_snapshot = routing_input.scaffolding_snapshot or {}
+        scaffolding_zone = str(
+            scaffolding_snapshot.get("current_scaffolding_stage")
+            or scaffolding_snapshot.get("current_zone")
+            or ""
+        ).strip() or None
+        scaffolding_support = float(
+            scaffolding_snapshot.get("template_support_level")
+            or scaffolding_snapshot.get("support_level")
+            or 0.0
+        )
+        scaffolding_failures = int(scaffolding_snapshot.get("consecutive_failures") or 0)
+        scaffolding_successes = int(scaffolding_snapshot.get("consecutive_successes") or 0)
+        if scaffolding_zone == "frustration" or scaffolding_support >= 4 or scaffolding_failures >= 2:
+            cognitive_adjustments.append("SGW 支架层显示用户可能处在挫败区，先提高支持密度、降低任务阻力。")
+            recommend_strategy(
+                "planning_granularity",
+                "startup_ready",
+                reason="Scaffolding FSM indicates frustration/high support need; the next action should be easier to start.",
+            )
+            recommend_strategy(
+                "intervention_intensity",
+                "low",
+                reason="High scaffolding support means Aurora should feel helpful rather than pushy.",
+            )
+        elif scaffolding_zone == "boredom" or scaffolding_successes >= 3:
+            execution_constraints.append("SGW 支架层显示用户最近推进较顺，可以减少解释、给更有挑战但仍可控的下一步。")
+            recommend_strategy(
+                "difficulty_level",
+                4,
+                reason="Scaffolding FSM indicates recent success; the next action can be slightly more challenging.",
+            )
+
         # Translate numeric adaptive adjustments from ParameterCompiler
         if routing_input.adaptive_adjustments:
             diff_shift = routing_input.adaptive_adjustments.get("difficulty_shift", 0.0)
@@ -549,7 +590,24 @@ class DualCoreRouter:
         precedence["reflection_phase"] = 3.0 if reflection_phase_detected else 0.0
         precedence["low_metacognition"] = 6.0 if low_metacognition_accuracy else 0.0
         precedence["spine_fatigue"] = 4.0 if spine_fatigue_detected else 0.0
+        precedence["scaffolding_frustration"] = (
+            6.5 if scaffolding_zone == "frustration" or scaffolding_failures >= 2 else 0.0
+        )
+        precedence["scaffolding_boredom"] = 2.5 if scaffolding_zone == "boredom" else 0.0
         dominant_signal = max(precedence, key=lambda k: precedence[k])
+        signal_scores = {
+            "goal_clarity": round(goal_clarity_score, 3),
+            "emotional_block": round(emotional_block_score, 3),
+            "procrastination": round(procrastination_score, 3),
+            "cognitive_load": round(cognitive_load_value, 3) if routing_input.cognitive_load is not None else 0.0,
+            "low_metacognition": 1.0 if low_metacognition_accuracy else 0.0,
+            "spine_fatigue": 1.0 if spine_fatigue_detected else 0.0,
+            "spine_execution_low": 1.0 if spine_execution_low else 0.0,
+            "spine_knowledge_bottleneck": 1.0 if spine_knowledge_bottleneck else 0.0,
+            "recent_corrections": min(1.0, corrections_count / 5.0),
+            "scaffolding_frustration": 1.0 if precedence["scaffolding_frustration"] > 0 else 0.0,
+            "scaffolding_boredom": 1.0 if precedence["scaffolding_boredom"] > 0 else 0.0,
+        }
         routing_debug = {
             "dominant_signal": dominant_signal,
             "precedence_scores": {k: round(v, 2) for k, v in precedence.items() if v > 0},
@@ -599,6 +657,8 @@ class DualCoreRouter:
             },
             "corrections_count": corrections_count,
             "corrections_topics": sorted(corrections_addressed_topics),
+            "scaffolding_snapshot": scaffolding_snapshot or None,
+            "scaffolding_zone": scaffolding_zone,
         }
         if social_signals is not None:
             routing_debug["social_relationship_count"] = social_signals.relationship_count
@@ -634,6 +694,8 @@ class DualCoreRouter:
                 execution_constraints=execution_constraints[:5],
                 routing_debug=routing_debug,
                 strategy_adjustments=strategy_adjustments[:5],
+                signal_scores=signal_scores,
+                scaffolding_zone=scaffolding_zone,
             )
 
         if (
@@ -661,6 +723,8 @@ class DualCoreRouter:
                 execution_constraints=execution_constraints[:5],
                 routing_debug=routing_debug,
                 strategy_adjustments=strategy_adjustments[:5],
+                signal_scores=signal_scores,
+                scaffolding_zone=scaffolding_zone,
             )
 
         balanced_reason = "当前同时存在推进任务和理解用户状态的需求，先保持双核心并行。"
@@ -677,6 +741,8 @@ class DualCoreRouter:
             execution_constraints=execution_constraints[:5],
             routing_debug=routing_debug,
             strategy_adjustments=strategy_adjustments[:5],
+            signal_scores=signal_scores,
+            scaffolding_zone=scaffolding_zone,
         )
 
     def _goal_clarity_score(self, routing_input: DualCoreRoutingInput) -> float:

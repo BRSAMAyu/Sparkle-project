@@ -1296,3 +1296,34 @@ Full `flutter analyze` 仍被项目级 info lint debt 干扰；本轮 scoped ana
 ### 25.3 剩余边界
 
 多设备强一致仍不是本轮目标；当前实现保证 latest Aurora state 和回归摘要可恢复，但不对不同设备同时输入做全局锁。未来若真实用户数据证明跨设备并发很高，再推进统一 Session State aggregate。
+
+---
+
+## 26. Aurora Complete Experience Closed Loop (2026-05-02)
+
+> **结论**: 本轮把 Aurora 的关键护城河从“路由/校准模块存在”推进为“主路径可记录、可评估、可反馈、可被用户看见”。DualCore 决策现在会进入 SGW outcome loop，L3 Core Session API 主路径接上 PostgreSQL durability，Core Session 输出 CaseFile 与 Agenda，纠正反馈具备可观测的 state-change 证据。
+
+### 26.1 修复状态
+
+| 项 | 状态 | 证据 |
+|----|------|------|
+| DualCore → SGW PassiveSignal | FIXED-IN-PASS | `RoutingOutcomeRecorder` 创建 routing intervention handle 并写入 `PassiveSignal(signal_type="routing_decision")` |
+| Delayed routing evaluation | FIXED-IN-PASS | `RoutingOutcomeEvaluator` 写入 `BehavioralOutcome(outcome_type="routing_effectiveness")`，并用结果调整 `ScaffoldingFSM` |
+| Router consumes SGW state | FIXED-IN-PASS | `DualCoreRoutingInput.scaffolding_snapshot` 进入 router；frustration/high-support 会降低推进压力并提升支持密度 |
+| Core Session PG主路径 | FIXED-IN-PASS | FastAPI Core Session endpoints 注入 `db`，服务层 PG snapshot fallback 真正接到产品 API |
+| CaseFile + Agenda | FIXED-IN-PASS | `AuroraCoreSession.case_file` 持久化来源证据；`agenda_snapshot()` 输出 enter/explain/confirm/apply/close 议程 |
+| Correction outcome metric | FIXED-IN-PASS | `sparkle_aurora_correction_to_state_change_total{surface,action,changed}` 追踪纠正是否改变状态链 |
+| Returning memory ranking | FIXED-IN-PASS | Stage34 episodic memory ranking 按 correction_count/importance/confidence 优先，不再只是时间最近 |
+| Celery evaluator | FIXED-IN-PASS | `app.core.celery_tasks.evaluate_routing_outcomes` + `evaluate-routing-outcomes-every-hour` |
+| Grafana panels | FIXED-IN-PASS | `sparkle-spine-outcome` dashboard 增加 Aurora routing outcome、correction changed-state、Core Session lifecycle、returning tier panels |
+
+### 26.2 验证
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/unit/test_dual_core_router_real_engine.py tests/unit/test_aurora_closed_loop.py tests/unit/test_session_recovery_persistence.py tests/orchestration/test_statechart_engine.py tests/unit/test_aurora_core_session_entry.py -q` | ✅ `69 passed` |
+| `cd backend && ruff check ...focused files...` | ✅ PASS |
+
+### 26.3 剩余边界
+
+这轮没有声称完成“全量体验极致化”的所有视觉与多端 QA。剩余高价值收口项是：真实设备上的 Aurora Core Session 视觉节奏、跨设备同时输入的冲突提示、全量语义向量召回，以及 Grafana 面板对新增 Aurora 指标的可视化扩展。

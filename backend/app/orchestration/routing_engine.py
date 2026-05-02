@@ -674,6 +674,8 @@ class RoutingEngineMixin:
         *,
         active_db: AsyncSession | None,
         user_id: str,
+        session_id: str | None = None,
+        request_id: str | None = None,
         plan_id: uuid.UUID | None,
         user_context_payload: dict[str, Any] | None,
         plan_context: dict[str, Any] | None,
@@ -765,6 +767,12 @@ class RoutingEngineMixin:
             cognitive_load=self._extract_cognitive_load(user_context_payload, plan_context),
             capsule_preferences=self._extract_capsule_preferences(user_context_payload),
             spine_active_states=await self._get_spine_active_states(user_id),
+            scaffolding_snapshot=(
+                dict(user_context_payload.get("scaffolding_fsm_snapshot") or {})
+                if isinstance(user_context_payload, dict)
+                and isinstance(user_context_payload.get("scaffolding_fsm_snapshot"), dict)
+                else {}
+            ),
             aurora_preferences=aurora_preferences,
             recent_corrections=self._extract_recent_corrections(user_context_payload),
         )
@@ -1027,6 +1035,8 @@ class RoutingEngineMixin:
         unified_routing_result: Any | None,
         information_sufficient: bool,
         stream_callback,
+        session_id: str | None = None,
+        request_id: str | None = None,
     ) -> RouteDecision:
         routing_input = await self._build_dual_core_input(
             active_db=active_db,
@@ -1530,6 +1540,20 @@ class RoutingEngineMixin:
                 state.context_data["route_history_decision_id"] = str(decision_id)
             except Exception as exc:
                 logger.warning("Stage20 route history write failed: {}", exc)
+            try:
+                from app.services.routing_outcome_service import RoutingOutcomeRecorder
+
+                signal = await RoutingOutcomeRecorder(active_db).record(
+                    user_id=uuid.UUID(user_id),
+                    decision=decision.to_dict(),
+                    route_execution_mode=route_decision.execution_mode,
+                    source_state_key=source_state_v2_key,
+                    request_id=request_id,
+                    session_id=session_id,
+                )
+                state.context_data["routing_outcome_signal_id"] = str(signal.id)
+            except Exception as exc:
+                logger.warning("DualCore routing outcome signal write failed: {}", exc)
         if active_db is not None and selected_skill_ids:
             try:
                 await SkillStoreService(active_db).increment_usage(

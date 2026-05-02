@@ -12,7 +12,7 @@ Celery 任务模块 - 任务包装器
 """
 
 
-from datetime import UTC
+from datetime import UTC, datetime
 
 from loguru import logger
 
@@ -590,6 +590,25 @@ def run_push_policy_scheduler(self):
     except Exception as exc:
         logger.error(f"❌ Failed to run push policy scheduler: {exc}")
         raise self.retry(exc=exc, countdown=60) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.evaluate_routing_outcomes")
+def evaluate_routing_outcomes(self, limit: int = 200):
+    """Evaluate delayed DualCore routing outcomes and feed SGW."""
+    from app.db.session import AsyncSessionLocal
+    from app.services.routing_outcome_service import RoutingOutcomeEvaluator
+
+    async def _run():
+        async with AsyncSessionLocal() as session:
+            return {"evaluated": await RoutingOutcomeEvaluator(session).evaluate_due(limit=limit)}
+
+    try:
+        result = _run_async(_run())
+        logger.info(f"✅ Routing outcome evaluation finished: {result}")
+        return result
+    except Exception as exc:
+        logger.error(f"❌ Failed to evaluate routing outcomes: {exc}")
+        raise self.retry(exc=exc, countdown=300) from exc
 
 
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.generate_weekly_growth_digests")
@@ -2610,16 +2629,11 @@ def apply_memory_decay(self, batch_size: int = 200):
     """
 
     async def _run():
-        import uuid
-        from datetime import timedelta
 
-        from sqlalchemy import select, update
+        from sqlalchemy import select
 
-        from app.core.redis_client import get_redis
-        from app.models.memory import EpisodicMemory
-
-        redis = get_redis()
         from app.core.db import async_session_factory
+        from app.models.memory import EpisodicMemory
 
         async with async_session_factory() as session:
             now = datetime.now(UTC)

@@ -1427,3 +1427,35 @@ Full mobile analyzer still reports broad existing lint debt outside C18 (`6327 i
 ### Boundary
 
 P4 多设备强一致继续 deferred；当前 pass 只保证 latest Aurora state、resume token fallback、returning context 可恢复和可解释，不引入跨设备全局锁。
+
+---
+
+## 2026-05-02 Aurora Complete Experience Closed Loop
+
+> **来源**: Aurora 完全体落地收口计划 + `AURORA_SGW_CLOSED_LOOP_SPECS_2026-05-02.md`
+> **目标**: 把 Aurora 从“路由时调 prompt”推进为“每轮判断可记录、可评估、可反馈到 SGW，并能在 L3 会话里被用户看见和校准”的体验闭环。
+
+### Closed Loop Tasks
+
+| ID | 严重度 | 模块 | 状态 | 证据 |
+|----|--------|------|------|------|
+| ACL-01 | P0 | DualCore signal scores | FIXED-IN-PASS | `DualCoreDecision` 暴露 `signal_scores`、`routing_trace_id`、`scaffolding_zone` |
+| ACL-02 | P0 | SGW routing passive signal | FIXED-IN-PASS | `RoutingOutcomeRecorder` 每次路由写入 `PassiveSignal(signal_type="routing_decision")` |
+| ACL-03 | P0 | Routing outcome feedback | FIXED-IN-PASS | `RoutingOutcomeEvaluator` 生成 `BehavioralOutcome(outcome_type="routing_effectiveness")` 并调用 `ScaffoldingFSM.apply_feedback()` |
+| ACL-04 | P1 | L3 API durability wiring | FIXED-IN-PASS | `/aurora/core-session/*` 主路径把 `db` 注入 `AuroraCoreSessionService`，PG fallback 不再只停留在服务层 |
+| ACL-05 | P1 | L3 CaseFile/Agenda | FIXED-IN-PASS | `AuroraCoreSession` 持久化 `case_file` 并输出 backend-authoritative `agenda` |
+| ACL-06 | P1 | Correction observability | FIXED-IN-PASS | `sparkle_aurora_correction_to_state_change_total` 记录纠正是否产生 state/self-model/correction 变化 |
+| ACL-07 | P2 | Returning memory ranking | FIXED-IN-PASS | Stage34 episodic memory 从最近 5 条升级为按 correction/importance/confidence 排序后取 Top 5 |
+| ACL-08 | P2 | Scheduled evaluation | FIXED-IN-PASS | Celery beat 每小时运行 `evaluate_routing_outcomes` |
+| ACL-09 | P2 | Grafana observability | FIXED-IN-PASS | Spine outcome dashboard 增加 Aurora routing/session/correction/returning panels |
+
+### Verification Evidence
+
+| 命令 | 结果 |
+|------|------|
+| `cd backend && pytest tests/unit/test_dual_core_router_real_engine.py tests/unit/test_aurora_closed_loop.py tests/unit/test_session_recovery_persistence.py tests/orchestration/test_statechart_engine.py tests/unit/test_aurora_core_session_entry.py -q` | PASS: `69 passed` |
+| `cd backend && ruff check app/orchestration/dual_core_router.py app/orchestration/routing_engine.py app/services/routing_outcome_service.py app/api/v1/aurora.py app/aurora/core_session.py app/orchestration/context_builder.py app/aurora/runtime_v1/correction_feedback.py app/core/celery_tasks.py app/celery_schedule.py tests/unit/test_dual_core_router_real_engine.py tests/unit/test_aurora_closed_loop.py` | PASS |
+
+### Boundary
+
+本轮完成的是 Aurora 判断闭环和 L3 主路径体验收口；多设备强一致、全量语义向量召回、全 Flutter 视觉 QA 继续作为后续打磨项，但核心链路现在已经从“可运行”推进到“可学习、可解释、可观测”。

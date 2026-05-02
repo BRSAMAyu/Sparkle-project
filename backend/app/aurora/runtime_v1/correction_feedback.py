@@ -24,6 +24,7 @@ from typing import Any
 from loguru import logger
 
 from app.aurora.correction_types import AuroraCorrectionPayload
+from app.core.metrics import AURORA_CORRECTION_TO_STATE_CHANGE_TOTAL
 from app.signals.types import _uid
 
 
@@ -353,6 +354,11 @@ class CorrectionFeedbackProcessor:
             receipt=result.calibration_receipt,
             session_id=payload.conversation_id,
         )
+        AURORA_CORRECTION_TO_STATE_CHANGE_TOTAL.labels(
+            surface=payload.surface or "unknown",
+            action=result.action,
+            changed="true" if result.affected_state_keys or result.self_model_updated or result.correction_recorded else "false",
+        ).inc()
         return result
 
     async def _persist_calibration_receipt(

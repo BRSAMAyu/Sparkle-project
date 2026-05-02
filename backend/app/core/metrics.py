@@ -289,6 +289,41 @@ ROUTING_OUTCOME_BACKFILL_LATENCY = get_or_create_metric(
     buckets=[1, 5, 15, 30, 60, 120, 300, 600, 1800],
 )
 
+AURORA_ROUTING_SIGNAL_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_aurora_routing_signal_total",
+    "DualCore routing decisions persisted as SGW passive signals",
+    ["mode", "dominant_signal"],
+)
+
+AURORA_ROUTING_OUTCOME_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_aurora_routing_outcome_total",
+    "Delayed DualCore routing outcome evaluations",
+    ["mode", "success", "reason"],
+)
+
+AURORA_CORE_SESSION_EVENT_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_aurora_core_session_event_total",
+    "Aurora Core Session lifecycle events",
+    ["event", "status"],
+)
+
+AURORA_RETURNING_CONTEXT_TIER_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_aurora_returning_context_tier_total",
+    "Returning context tiers attached to a user turn",
+    ["tier"],
+)
+
+AURORA_CORRECTION_TO_STATE_CHANGE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_aurora_correction_to_state_change_total",
+    "Aurora corrections that produced state/profile changes",
+    ["surface", "action", "changed"],
+)
+
 BAYESIAN_RECOMMENDATION_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_bayesian_recommendation_total",

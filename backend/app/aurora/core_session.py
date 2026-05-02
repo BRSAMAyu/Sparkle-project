@@ -15,8 +15,8 @@ Rules:
 
 from __future__ import annotations
 
-import inspect
 import hashlib
+import inspect
 import json
 import uuid
 from dataclasses import dataclass, field
@@ -26,6 +26,7 @@ from typing import Any, Literal
 from loguru import logger
 from sqlalchemy import select
 
+from app.core.metrics import AURORA_CORE_SESSION_EVENT_TOTAL
 from app.signals.aurora_core_session import AuroraCoreSessionEntryReason
 
 SessionStage = Literal[
@@ -139,6 +140,7 @@ class AuroraCoreSession:
     scope: str  # declared calibration scope (1 sentence)
     session_type: str  # strategy_recalibration | quick_calibration | user_initiated
     entry_reason: dict[str, Any] = field(default_factory=dict)
+    case_file: dict[str, Any] = field(default_factory=dict)
     resume_token: str = ""
     messages: list[AuroraCoreMessage] = field(default_factory=list)
     calibration_result: CalibrationResult | None = None
@@ -212,6 +214,8 @@ class AuroraCoreSession:
             "scope": self.scope,
             "session_type": self.session_type,
             "entry_reason": self.entry_reason,
+            "case_file": self.case_file,
+            "agenda": self.agenda_snapshot(),
             "resume_token": self.resume_token,
             "messages": [m.to_dict() for m in self.messages],
             "calibration_result": self.calibration_result.to_dict() if self.calibration_result else None,
@@ -238,6 +242,7 @@ class AuroraCoreSession:
             scope=data.get("scope", ""),
             session_type=data.get("session_type", "user_initiated"),
             entry_reason=data.get("entry_reason") if isinstance(data.get("entry_reason"), dict) else {},
+            case_file=data.get("case_file") if isinstance(data.get("case_file"), dict) else {},
             resume_token=data.get("resume_token") or "",
             messages=messages,
             calibration_result=result,
@@ -248,6 +253,49 @@ class AuroraCoreSession:
             last_activity_at=data.get("last_activity_at", _utcnow().isoformat()),
             expires_at=data.get("expires_at", (_utcnow() + timedelta(seconds=SESSION_TTL_SECONDS)).isoformat()),
         )
+
+    def agenda_snapshot(self) -> dict[str, Any]:
+        """Return the backend-authoritative agenda projection for the UI."""
+        items = [
+            {
+                "id": "enter_session",
+                "label": "进入 Aurora 校准",
+                "status": "done",
+                "message_stage": "declare",
+            },
+            {
+                "id": "explain_conflict",
+                "label": "说明我看见的冲突",
+                "status": "done" if self.aurora_message_count >= 2 else "in_progress",
+                "message_stage": "observe",
+            },
+            {
+                "id": "ask_confirmation",
+                "label": "向你确认关键判断",
+                "status": "in_progress" if self.status in ("active", "paused") else "done",
+                "message_stage": "ask",
+            },
+            {
+                "id": "apply_update",
+                "label": "应用校准结果",
+                "status": "done" if self.calibration_result is not None else "pending",
+                "message_stage": "update",
+            },
+            {
+                "id": "close_session",
+                "label": "Aurora 回到后台",
+                "status": "done" if self.stage == "exit" else "pending",
+                "message_stage": "exit",
+            },
+        ]
+        return {
+            "session_id": self.session_id,
+            "scope": self.scope,
+            "status": self.status,
+            "current_stage": self.stage,
+            "interruption_policy": "answer_then_resume",
+            "items": items,
+        }
 
 
 class AuroraCoreSessionStore:
@@ -508,6 +556,7 @@ class AuroraCoreSessionService:
         wake_reasons: list[str] | None = None,
         band_status: str = "calibration_available",
         entry_reason: dict[str, Any] | AuroraCoreSessionEntryReason | None = None,
+        case_file: dict[str, Any] | None = None,
         resume_token: str | None = None,
     ) -> AuroraCoreSession:
         """Create a new L3 session and inject opening Aurora messages."""
@@ -527,6 +576,7 @@ class AuroraCoreSessionService:
                     wake_reasons=wake_reasons,
                     band_status=band_status,
                     entry_reason=entry_reason,
+                    case_file=case_file,
                 )
             return existing
 
@@ -550,12 +600,20 @@ class AuroraCoreSessionService:
             scope=resolved_scope,
             session_type=session_type,
             entry_reason=normalized_entry_reason.to_dict(),
+            case_file=self._build_case_file(
+                user_id=user_id,
+                scope=resolved_scope,
+                wake_reasons=wake_reasons or [],
+                entry_reason=normalized_entry_reason,
+                supplied=case_file,
+            ),
             resume_token=_new_resume_token(),
         )
 
         # Inject opening message sequence
         self._inject_opening_sequence(session, wake_reasons=wake_reasons or [])
         await self.store.save(session)
+        AURORA_CORE_SESSION_EVENT_TOTAL.labels(event="started", status=session.status).inc()
         return session
 
     async def respond(
@@ -612,6 +670,8 @@ class AuroraCoreSessionService:
         )
 
         await self.store.save(session, previous_resume_token=previous_resume_token)
+        if session.status == "completed":
+            AURORA_CORE_SESSION_EVENT_TOTAL.labels(event="completed", status=session.status).inc()
         return session
 
     async def close_session(self, *, user_id: str, session_id: str) -> AuroraCoreSession:
@@ -627,6 +687,7 @@ class AuroraCoreSessionService:
         previous_resume_token = session.resume_token
         self._finalize_session(session, abandoned=True)
         await self.store.save(session, previous_resume_token=previous_resume_token)
+        AURORA_CORE_SESSION_EVENT_TOTAL.labels(event="closed", status=session.status).inc()
         return session
 
     async def pause_session(
@@ -657,6 +718,7 @@ class AuroraCoreSessionService:
                 "process_response",
             )
         await self.store.save(session, previous_resume_token=previous_resume_token)
+        AURORA_CORE_SESSION_EVENT_TOTAL.labels(event="paused", status=session.status).inc()
         return session
 
     async def get_active_session(self, user_id: str) -> AuroraCoreSession | None:
@@ -726,6 +788,7 @@ class AuroraCoreSessionService:
                 "process_response",
             )
         await self.store.save(session, previous_resume_token=previous_resume_token)
+        AURORA_CORE_SESSION_EVENT_TOTAL.labels(event="resumed", status=session.status).inc()
         return session
 
     def _refresh_resume_token(self, session: AuroraCoreSession) -> str | None:
@@ -751,6 +814,7 @@ class AuroraCoreSessionService:
     def _pause_for_idle(self, session: AuroraCoreSession) -> None:
         session.status = "paused"
         session.last_activity_at = _utcnow().isoformat()
+        AURORA_CORE_SESSION_EVENT_TOTAL.labels(event="idle_paused", status=session.status).inc()
         if not session.messages or "暂停在这里" not in session.messages[-1].content:
             session.add_aurora_message(
                 "我先把这次深度校准暂停在这里。回来时我们可以从这个问题继续，不用你重新解释前面的内容。",
@@ -779,6 +843,7 @@ class AuroraCoreSessionService:
         session.stage = "exit"
         session.pending_option_groups = []
         session.resume_token = ""
+        AURORA_CORE_SESSION_EVENT_TOTAL.labels(event="expired", status=session.status).inc()
 
     def _build_expired_summary(self, session: AuroraCoreSession) -> str:
         if session.user_turn_count:
@@ -789,6 +854,62 @@ class AuroraCoreSessionService:
         return f"上次深度对话停在「{session.scope}」，还没进入正式校准，已经自动结束。"
 
     # ── Session flow ───────────────────────────────────────────────
+
+    def _build_case_file(
+        self,
+        *,
+        user_id: str,
+        scope: str,
+        wake_reasons: list[str],
+        entry_reason: AuroraCoreSessionEntryReason,
+        supplied: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Build the evidence package the UI and closure can audit."""
+        source_summary = []
+        for signal in entry_reason.observed_signals:
+            source_summary.append(
+                {
+                    "source": "entry_reason",
+                    "summary": signal,
+                    "confidence": 0.72,
+                }
+            )
+        for reason in wake_reasons:
+            source_summary.append(
+                {
+                    "source": "wake_reason",
+                    "summary": reason,
+                    "confidence": 0.68,
+                }
+            )
+
+        base = {
+            "case_file_id": f"acf_{uuid.uuid4().hex}",
+            "user_id": user_id,
+            "goal_summary": str((supplied or {}).get("goal_summary") or scope),
+            "current_plan_summary": str((supplied or {}).get("current_plan_summary") or scope),
+            "recent_task_events": list((supplied or {}).get("recent_task_events") or [])[:8],
+            "recent_failures": list((supplied or {}).get("recent_failures") or [])[:8],
+            "recent_user_corrections": list((supplied or {}).get("recent_user_corrections") or [])[:8],
+            "active_hypotheses": list((supplied or {}).get("active_hypotheses") or [])[:6],
+            "conflicts_to_resolve": list((supplied or {}).get("conflicts_to_resolve") or [])[:6],
+            "source_summary": list((supplied or {}).get("source_summary") or source_summary)[:10],
+            "relationship_notes": list((supplied or {}).get("relationship_notes") or [])[:5],
+            "suggested_questions": list(
+                (supplied or {}).get("suggested_questions")
+                or entry_reason.suggested_agenda_preview
+                or ["我这次哪里理解错了？", "接下来需要先改哪个动作？"]
+            )[:5],
+            "wake_reason": wake_reasons[0] if wake_reasons else "",
+            "entry_reason": entry_reason.to_dict(),
+            "created_at": _utcnow().isoformat(),
+        }
+        if supplied:
+            for key in ("source_receipt", "recent_outcomes", "active_state_packet"):
+                value = supplied.get(key)
+                if value:
+                    base[key] = value
+        return base
 
     def _normalize_entry_reason(
         self,

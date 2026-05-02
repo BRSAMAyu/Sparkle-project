@@ -39,3 +39,11 @@ def setup_periodic_tasks(sender, **kwargs):
         scan_trace_compaction.s(),
         name='scan-trace-compaction-every-day'
     )
+
+    # Aurora DualCore → SGW outcome evaluator — every hour
+    from app.core.celery_tasks import evaluate_routing_outcomes
+    sender.add_periodic_task(
+        3600.0,
+        evaluate_routing_outcomes.s(),
+        name='evaluate-routing-outcomes-every-hour'
+    )

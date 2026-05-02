@@ -24,6 +24,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.i18n import I18n
+from app.core.metrics import AURORA_RETURNING_CONTEXT_TIER_TOTAL
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.chat import ChatMessage, ChatSession, MessageRole
 from app.models.cognitive import CognitiveFragment
@@ -561,10 +562,19 @@ class ContextBuilderMixin:
             self._serialize_stage34_active_goal(plan) for plan in active_goal_rows if str(plan.name or "").strip()
         ]
 
-        episodic_rows = await memory_service.list_recent_episodic(user_uuid, limit=5)
+        episodic_rows = await memory_service.list_recent_episodic(user_uuid, limit=12)
+        ranked_episodic_rows = sorted(
+            episodic_rows,
+            key=lambda memory: (
+                int(getattr(memory, "correction_count", 0) or 0),
+                float(getattr(memory, "importance_score", 0.0) or 0.0),
+                float(getattr(memory, "confidence", 0.0) or 0.0),
+            ),
+            reverse=True,
+        )
         episodic_memories = [
             self._serialize_stage34_episodic_memory(memory)
-            for memory in episodic_rows
+            for memory in ranked_episodic_rows[:5]
             if str(getattr(memory, "summary", "") or "").strip()
         ]
 
@@ -1033,6 +1043,7 @@ class ContextBuilderMixin:
 
             silence_gap = _utcnow() - last_message_at
             if silence_gap < timedelta(minutes=30):
+                AURORA_RETURNING_CONTEXT_TIER_TOTAL.labels(tier="silent_resume").inc()
                 return {
                     "resume_tier": "silent_resume",
                     "last_active_at": last_message_at.isoformat(),
@@ -1110,6 +1121,7 @@ class ContextBuilderMixin:
                 "welcome_back_message": welcome_back,
                 "briefing_text": briefing_text,
             }
+            AURORA_RETURNING_CONTEXT_TIER_TOTAL.labels(tier=resume_tier).inc()
             await self.redis.setex(redis_key, 24 * 60 * 60, "1")
             return payload
         except Exception as exc:

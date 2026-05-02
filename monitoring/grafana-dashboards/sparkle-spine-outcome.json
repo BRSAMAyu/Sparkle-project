@@ -132,6 +132,54 @@
           "legendFormat": "retractions"
         }
       ]
+    },
+    {
+      "title": "Aurora Routing Outcomes",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 6, "w": 8, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum by (mode, success) (increase(sparkle_aurora_routing_outcome_total[6h]))",
+          "legendFormat": "{{mode}} / {{success}}"
+        }
+      ]
+    },
+    {
+      "title": "Aurora Correction Changed State",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(increase(sparkle_aurora_correction_to_state_change_total{changed=\"true\"}[24h]))",
+          "legendFormat": "changed"
+        }
+      ]
+    },
+    {
+      "title": "Aurora Core Session Lifecycle",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum by (event, status) (increase(sparkle_aurora_core_session_event_total[6h]))",
+          "legendFormat": "{{event}} / {{status}}"
+        }
+      ]
+    },
+    {
+      "title": "Returning Context Tiers",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 6, "w": 8, "x": 8, "y": 12 },
+      "targets": [
+        {
+          "expr": "sum by (tier) (increase(sparkle_aurora_returning_context_tier_total[6h]))",
+          "legendFormat": "{{tier}}"
+        }
+      ]
     }
   ],
   "schemaVersion": 38,

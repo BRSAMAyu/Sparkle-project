@@ -10,8 +10,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_superuser, get_current_user, get_db
-from app.aurora.correction_types import AuroraCorrectionPayload
 from app.aurora.core_session import AuroraCoreSessionService
+from app.aurora.correction_types import AuroraCorrectionPayload
 from app.aurora.runtime_v1.service import AuroraRuntimeV1Service
 from app.aurora.runtime_v1.state import AuroraEnergyStore
 from app.aurora.runtime_v1.telemetry import AuroraDecisionTelemetryService
@@ -75,6 +75,7 @@ class CoreSessionStartRequest(BaseModel):
     wake_reasons: list[str] = Field(default_factory=list)
     band_status: str = "calibration_available"
     entry_reason: dict[str, Any] | None = None
+    case_file: dict[str, Any] | None = None
     resume_token: str | None = None
 
 
@@ -252,10 +253,11 @@ async def get_aurora_telemetry_summary(
 @router.post("/core-session/start")
 async def start_core_session(
     payload: CoreSessionStartRequest,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Start or retrieve an active L3 Aurora Core Session for this user."""
-    service = AuroraCoreSessionService(cache_service.redis)
+    service = AuroraCoreSessionService(cache_service.redis, db=db)
     try:
         session = await service.start_session(
             user_id=str(current_user.id),
@@ -266,6 +268,7 @@ async def start_core_session(
             wake_reasons=payload.wake_reasons,
             band_status=payload.band_status,
             entry_reason=payload.entry_reason,
+            case_file=payload.case_file,
             resume_token=payload.resume_token,
         )
     except LookupError as exc:
@@ -304,10 +307,11 @@ async def start_core_session(
 @router.post("/core-session/resume")
 async def resume_core_session(
     payload: CoreSessionResumeRequest,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Resume a paused/active Aurora Core Session by opaque resume token."""
-    service = AuroraCoreSessionService(cache_service.redis)
+    service = AuroraCoreSessionService(cache_service.redis, db=db)
     try:
         session = await service.resume_session(
             user_id=str(current_user.id),
@@ -336,10 +340,11 @@ async def resume_core_session(
 async def pause_core_session(
     payload: CoreSessionPauseRequest,
     session_id: str = Path(...),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Pause an active Aurora Core Session and return its resume token."""
-    service = AuroraCoreSessionService(cache_service.redis)
+    service = AuroraCoreSessionService(cache_service.redis, db=db)
     try:
         session = await service.pause_session(
             user_id=str(current_user.id),
@@ -363,10 +368,11 @@ async def pause_core_session(
 @router.post("/core-session/respond")
 async def respond_core_session(
     payload: CoreSessionRespondRequest,
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Process a user response in an active Aurora Core Session."""
-    service = AuroraCoreSessionService(cache_service.redis)
+    service = AuroraCoreSessionService(cache_service.redis, db=db)
     try:
         session = await service.respond(
             user_id=str(current_user.id),
@@ -393,10 +399,11 @@ async def respond_core_session(
 # route-tier: authed
 @router.get("/core-session/current")
 async def get_current_core_session(
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Get the user's current resumable Aurora Core Session, if any."""
-    service = AuroraCoreSessionService(cache_service.redis)
+    service = AuroraCoreSessionService(cache_service.redis, db=db)
     session = await service.get_current_session(str(current_user.id))
     if session is None:
         return {"active": False, "resumable": False, "expired": False, "session": None}
@@ -412,10 +419,11 @@ async def get_current_core_session(
 @router.post("/core-session/{session_id}/close")
 async def close_core_session(
     session_id: str = Path(...),
+    db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Close an active Aurora Core Session (user-initiated exit)."""
-    service = AuroraCoreSessionService(cache_service.redis)
+    service = AuroraCoreSessionService(cache_service.redis, db=db)
     try:
         session = await service.close_session(
             user_id=str(current_user.id),

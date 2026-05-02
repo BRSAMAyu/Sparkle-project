@@ -5,27 +5,27 @@ Tests DualCoreRouter with real routing logic (no mocks),
 and FSM state persistence with real Redis.
 """
 
-import pytest
-import pytest_asyncio
 import uuid
 
+import pytest
+import pytest_asyncio
+
 from app.orchestration.dual_core_router import (
+    AdaptationRecord,
+    CognitiveAdjustment,
+    DualCoreDecision,
     DualCoreRouter,
     DualCoreRoutingInput,
-    DualCoreDecision,
-    CognitiveAdjustment,
-    AdaptationRecord,
 )
-from app.orchestration.state_manager import SessionStateManager, FSMState
 from app.orchestration.orchestrator import (
-    STATE_INIT,
-    STATE_THINKING,
-    STATE_GENERATING,
     STATE_DONE,
     STATE_FAILED,
+    STATE_GENERATING,
+    STATE_INIT,
+    STATE_THINKING,
     STATE_TOOL_CALLING,
 )
-
+from app.orchestration.state_manager import FSMState, SessionStateManager
 
 # ── DualCoreRouter Real Engine Tests ──────────────────────────────────
 
@@ -66,6 +66,31 @@ class TestDualCoreRouter_RealDecisions:
         decision = self.router.route(inp)
         assert decision.mode == "cognitive_first"
         assert len(decision.cognitive_adjustments) > 0
+        assert decision.signal_scores["emotional_block"] > 0
+        assert decision.routing_trace_id.startswith("dcr_")
+
+    def test_scaffolding_snapshot_changes_router_surface(self):
+        inp = DualCoreRoutingInput(
+            intent="task",
+            intent_confidence=0.85,
+            information_sufficient=True,
+            primary_challenge_area=None,
+            recent_sentiment_distribution={"neutral": 3},
+            has_active_plan=True,
+            plan_health_status="on_track",
+            recent_task_feedback_distribution={"completed": 1},
+            scaffolding_snapshot={
+                "current_scaffolding_stage": "frustration",
+                "template_support_level": 4,
+                "consecutive_failures": 2,
+            },
+        )
+
+        decision = self.router.route(inp)
+
+        assert decision.scaffolding_zone == "frustration"
+        assert decision.signal_scores["scaffolding_frustration"] == 1.0
+        assert any("SGW" in item for item in decision.cognitive_adjustments)
 
     def test_balanced_for_mixed_signals(self):
         inp = DualCoreRoutingInput(

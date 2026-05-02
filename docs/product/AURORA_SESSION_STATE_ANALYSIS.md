@@ -792,3 +792,43 @@ User Message
 - Redis RDB/AOF configuration remains an infrastructure choice; application-level recovery now no longer depends on it for the covered session paths.
 
 *End of updated analysis.*
+
+---
+
+## 15. Implementation Addendum — Aurora Complete Experience Closed Loop (2026-05-02)
+
+**Status**: Implemented after the safe recovery pass. This addendum records the shift from state continuity to outcome continuity: Aurora decisions are no longer only prompt modifiers; they now enter SGW feedback and delayed effectiveness evaluation.
+
+### 15.1 What Changed
+
+| Area | New behavior | Files |
+|------|--------------|-------|
+| DualCore signal surface | `DualCoreDecision` now includes `signal_scores`, `routing_trace_id`, and `scaffolding_zone`. | `backend/app/orchestration/dual_core_router.py` |
+| SGW feedback bridge | Routing decisions are written as `PassiveSignal(signal_type="routing_decision")`; delayed evaluation writes `BehavioralOutcome(outcome_type="routing_effectiveness")` and updates `ScaffoldingFSM`. | `backend/app/services/routing_outcome_service.py`, `backend/app/orchestration/routing_engine.py` |
+| L3 API durability | Core Session REST endpoints pass `db` into `AuroraCoreSessionService`, so Redis miss fallback to PostgreSQL is active on the product API path. | `backend/app/api/v1/aurora.py` |
+| CaseFile / Agenda | Core Session state now persists a `case_file` evidence package and returns a backend-authoritative agenda projection. | `backend/app/aurora/core_session.py` |
+| Observability | Added metrics for routing passive signals, routing outcomes, core-session lifecycle events, returning tiers, and correction-to-state-change. | `backend/app/core/metrics.py` |
+| Returning context memory | Stage34 memory injection ranks recent episodic memories by correction count, importance, and confidence before recency. | `backend/app/orchestration/context_builder.py` |
+
+### 15.2 Product Semantics
+
+| User-facing promise | Implementation evidence |
+|---------------------|-------------------------|
+| “Aurora remembers what I corrected.” | Corrections persist receipts and working-memory entries; returning context and routing input consume recent corrections. |
+| “Aurora changes how it responds after being wrong.” | Correction metrics expose state/self-model/correction changes; routing profile updates still run through `CorrectionFeedbackProcessor`. |
+| “Aurora deep session has a visible structure.” | `agenda_snapshot()` exposes enter/explain/confirm/apply/close so the UI can show where the session is. |
+| “Aurora learns if its route worked.” | Routing evaluator feeds delayed success/failure into `ScaffoldingFSM.apply_feedback()`. |
+
+### 15.3 Verification Added
+
+| Test | Coverage |
+|------|----------|
+| `tests/unit/test_dual_core_router_real_engine.py::test_scaffolding_snapshot_changes_router_surface` | SGW scaffolding state affects DualCore routing surface. |
+| `tests/unit/test_aurora_closed_loop.py::test_routing_decision_records_passive_signal_and_sgw_outcome` | Routing decision -> PassiveSignal -> BehavioralOutcome -> ScaffoldingFSM feedback. |
+| `tests/unit/test_aurora_closed_loop.py::test_core_session_case_file_agenda_survive_redis_miss` | CaseFile and Agenda survive Redis loss through PG fallback. |
+
+### 15.4 Remaining Boundaries
+
+- Multi-device strong coordination remains intentionally deferred.
+- The current memory ranking is semantic-adjacent and correction-aware; full vector semantic retrieval for returning context remains a later enhancement.
+- UI polish still needs device-level QA for the pacing and visual feel of multi-message Core Session rendering.
