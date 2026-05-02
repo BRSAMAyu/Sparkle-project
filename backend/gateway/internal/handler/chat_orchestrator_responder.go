@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -26,6 +27,23 @@ func newEnvelopeResponder(writer *wsSafeWriter, env *wsEnvelopeIn, ctx context.C
 		envelope: env,
 		ctx:      ctx,
 	}
+}
+
+func legacyAcceptedAckPayload(requestID string) map[string]interface{} {
+	return map[string]interface{}{
+		"type":       "ack",
+		"message_id": requestID,
+		"request_id": requestID,
+		"server_ts":  time.Now().UnixMilli(),
+		"status":     "received",
+	}
+}
+
+func sendLegacyAcceptedAck(writer *wsSafeWriter, requestID string) bool {
+	if strings.TrimSpace(requestID) == "" {
+		return true
+	}
+	return writeWSJSONLogged(writer, "legacy accepted ack", legacyAcceptedAckPayload(requestID))
 }
 
 func (r *envelopeResponder) SendAck() {
