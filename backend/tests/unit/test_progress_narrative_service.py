@@ -6,6 +6,8 @@ import pytest
 from app.models.achievement import Achievement, AchievementRarity, AchievementType, UserAchievement, UserStreakStats
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, StudyRecord
+from app.models.memory import MemoryCorrection
+from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_feedback import TaskFeedback
 from app.models.user import User
@@ -189,7 +191,26 @@ async def test_weekly_growth_narrative_uses_tasks_errors_reflections_and_mastery
         },
         created_at=now - timedelta(days=1),
     )
-    db_session.add_all([user, node, task, study, error, feedback])
+    plan = Plan(
+        id=uuid4(),
+        user_id=user_id,
+        name="物理考前冲刺",
+        type=PlanType.SPRINT,
+        subject="physics",
+        progress=0.97,
+        target_date=(now + timedelta(days=2)).date(),
+        updated_at=now - timedelta(days=1),
+    )
+    correction = MemoryCorrection(
+        id=uuid4(),
+        user_id=user_id,
+        memory_type="aurora_calibration_card",
+        memory_id=uuid4(),
+        action="correct",
+        reason="不是没时间，是完全不会做",
+        created_at=now - timedelta(days=1),
+    )
+    db_session.add_all([user, node, task, study, error, feedback, plan, correction])
     await db_session.commit()
 
     service = ProgressNarrativeService(db_session, redis=None)
@@ -207,6 +228,10 @@ async def test_weekly_growth_narrative_uses_tasks_errors_reflections_and_mastery
     assert narrative.data_points["errors_fixed"] == 1
     assert narrative.data_points["reflection_records"] == 1
     assert narrative.data_points["mastery_delta"] == 18.5
+    assert narrative.data_points["plan_completed_count"] == 1
+    assert narrative.data_points["aurora_correction_count"] == 1
+    assert narrative.data_points["aurora_correction_reasons"] == ["不是没时间，是完全不会做"]
+    assert narrative.data_points["report_actions"][0]["deep_link"]
     assert narrative.highlights
     assert narrative.biggest_improvement is not None
     assert narrative.biggest_improvement["node_name"] == "热力学第一定律"
@@ -311,9 +336,59 @@ async def test_weekly_growth_narrative_returns_first_week_placeholder(db_session
         "error_review_records": 0,
         "reflection_records": 0,
         "mastery_changes": 0,
+        "plan_outcomes": 0,
+        "aurora_corrections": 0,
         "achievement_unlocks": 0,
         "study_days": 0,
     }
+
+
+@pytest.mark.asyncio
+async def test_weekly_growth_narrative_keeps_aurora_corrections_actionable_without_study_days(db_session):
+    user_id = uuid4()
+    now = _utcnow()
+    db_session.add_all(
+        [
+            User(
+                id=user_id,
+                username=f"user_{user_id.hex[:8]}",
+                email=f"{user_id.hex[:8]}@example.com",
+                hashed_password="test",
+            ),
+            Plan(
+                id=uuid4(),
+                user_id=user_id,
+                name="线代补弱计划",
+                type=PlanType.SPRINT,
+                subject="math",
+                progress=0.4,
+                target_date=(now - timedelta(days=1)).date(),
+                updated_at=now - timedelta(days=1),
+            ),
+            MemoryCorrection(
+                id=uuid4(),
+                user_id=user_id,
+                memory_type="aurora_calibration_card",
+                memory_id=uuid4(),
+                action="correct",
+                reason="我不是不想学，是前置概念断了",
+                created_at=now - timedelta(days=1),
+            ),
+        ]
+    )
+    await db_session.commit()
+
+    service = ProgressNarrativeService(db_session, redis=None)
+    narrative = await service.build_weekly_narrative(user_id, generated_at=now)
+
+    assert narrative.is_placeholder is False
+    assert narrative.data_points["plan_drift_count"] == 1
+    assert narrative.data_points["aurora_correction_count"] == 1
+    assert narrative.source_counts["plan_outcomes"] == 1
+    assert narrative.source_counts["aurora_corrections"] == 1
+    assert narrative.data_points["report_actions"][0]["id"] == "repair-plan-drift"
+    assert "线代补弱计划" in narrative.body
+    assert "前置概念断了" in narrative.body
 
 
 @pytest.mark.asyncio

@@ -18,10 +18,16 @@ class WeeklyGrowthNarrative {
 
   factory WeeklyGrowthNarrative.fromJson(Map<String, dynamic> json) =>
       WeeklyGrowthNarrative(
-        period: json['period']?.toString() ?? (I18nService.instance.isChinese ? '本周成长故事' : 'This Week\'s Growth Story'),
+        period: json['period']?.toString() ??
+            (I18nService.instance.isChinese
+                ? '本周成长故事'
+                : 'This Week\'s Growth Story'),
         weekStart: json['week_start']?.toString() ?? '',
         weekEnd: json['week_end']?.toString() ?? '',
-        body: json['body']?.toString() ?? (I18nService.instance.isChinese ? '这是你的第一周，先开始吧。' : 'Your first week — let\'s get started.'),
+        body: json['body']?.toString() ??
+            (I18nService.instance.isChinese
+                ? '这是你的第一周，先开始吧。'
+                : 'Your first week — let\'s get started.'),
         sentences: _stringList(json['sentences']),
         highlights: _stringList(json['highlights']),
         biggestImprovement: _stringMap(json['biggest_improvement']),
@@ -36,6 +42,13 @@ class WeeklyGrowthNarrative {
 
   factory WeeklyGrowthNarrative.placeholder() {
     final zh = I18nService.instance.isChinese;
+    final firstSentence =
+        zh ? '这是你的第一周，先开始吧。' : 'Your first week — let\'s get started.';
+    final secondSentence = zh
+        ? '完成一次学习任务、记录一道错题，或者写下一句复盘后，这里就会开始把你的成长线索连起来。'
+        : 'After a learning task, error log, or reflection, growth threads will connect here.';
+    final firstHighlight =
+        zh ? '开始留下第一条成长线索。' : 'Start leaving your first growth thread.';
     return WeeklyGrowthNarrative(
       period: zh ? '本周成长故事' : 'This Week\'s Growth Story',
       weekStart: '',
@@ -44,12 +57,10 @@ class WeeklyGrowthNarrative {
           ? '这是你的第一周，先开始吧。完成一次学习任务、记录一道错题，或者写下一句复盘后，这里就会开始把你的成长线索连起来。'
           : 'Your first week — let\'s get started. After you complete a learning task, log an error, or write a reflection, your growth threads will start connecting here.',
       sentences: <String>[
-        zh ? '这是你的第一周，先开始吧。' : 'Your first week — let\'s get started.',
-        zh
-            ? '完成一次学习任务、记录一道错题，或者写下一句复盘后，这里就会开始把你的成长线索连起来。'
-            : 'After a learning task, error log, or reflection, growth threads will connect here.',
+        firstSentence,
+        secondSentence,
       ],
-      highlights: <String>[zh ? '开始留下第一条成长线索。' : 'Start leaving your first growth thread.'],
+      highlights: <String>[firstHighlight],
       biggestImprovement: <String, dynamic>{},
       nextWeekSuggestion: zh
           ? '先完成一个最小的学习动作，比如学 15 分钟或记录一道错题。'
@@ -82,6 +93,10 @@ class WeeklyGrowthNarrative {
       _intValue(dataPoints['errors_fixed'] ?? dataPoints['error_records']);
   int get reflectionRecords => _intValue(dataPoints['reflection_records']);
   double get masteryDelta => _doubleValue(dataPoints['mastery_delta']);
+  int get planCompletedCount => _intValue(dataPoints['plan_completed_count']);
+  int get planDriftCount => _intValue(dataPoints['plan_drift_count']);
+  int get auroraCorrectionCount =>
+      _intValue(dataPoints['aurora_correction_count']);
   String get biggestImprovementNode =>
       biggestImprovement['node_name']?.toString() ?? '';
   double get biggestImprovementBefore =>
@@ -94,7 +109,9 @@ class WeeklyGrowthNarrative {
     if (weekStart.isEmpty || weekEnd.isEmpty) {
       return I18nService.instance.isChinese ? '这一周' : 'This Week';
     }
-    return I18nService.instance.isChinese ? '$weekStart 至 $weekEnd' : '$weekStart – $weekEnd';
+    return I18nService.instance.isChinese
+        ? '$weekStart 至 $weekEnd'
+        : '$weekStart – $weekEnd';
   }
 
   static List<String> _stringList(dynamic value) {

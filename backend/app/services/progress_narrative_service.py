@@ -5,6 +5,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import UTC, datetime, time, timedelta
 from typing import Any
+from urllib.parse import quote
 from uuid import UUID
 
 from loguru import logger
@@ -16,6 +17,7 @@ from app.models.cognitive import BehaviorPattern
 from app.models.community import GroupTaskClaim, SharedResource
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, StudyRecord
+from app.models.memory import MemoryCorrection
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
 from app.models.task_feedback import TaskFeedback
@@ -256,6 +258,8 @@ class ProgressNarrativeService:
         errors = await self._error_fix_summary(user_id, start, end)
         reflections = await self._reflection_summary(user_id, start, end)
         mastery = await self._mastery_progress_summary(user_id, start, end)
+        plan_outcomes = await self._plan_outcome_summary(user_id, start, end, now=now)
+        aurora_corrections = await self._aurora_correction_summary(user_id, start, end)
         biggest_improvement = await self._biggest_mastery_improvement(user_id, start, end)
         achievements = await self.recent_achievement_story_lines(str(user_id), start, end)
         study_days = await self._study_days_count(user_id, start, end)
@@ -265,12 +269,16 @@ class ProgressNarrativeService:
             errors=errors,
             reflections=reflections,
             mastery=mastery,
+            plan_outcomes=plan_outcomes,
+            aurora_corrections=aurora_corrections,
             study_days=study_days,
         )
         next_week_suggestion = self._build_next_week_suggestion(
             tasks=tasks,
             errors=errors,
             mastery=mastery,
+            plan_outcomes=plan_outcomes,
+            aurora_corrections=aurora_corrections,
             biggest_improvement=biggest_improvement,
             study_days=study_days,
         )
@@ -290,11 +298,27 @@ class ProgressNarrativeService:
             "reflection_snippets": reflections["snippets"],
             "mastery_delta": round(float(mastery["delta"]), 2),
             "mastery_nodes": mastery["nodes"],
+            "plan_completed_count": plan_outcomes["completed_count"],
+            "plan_drift_count": plan_outcomes["drift_count"],
+            "plan_outcome_titles": plan_outcomes["completed_titles"],
+            "plan_drift_titles": plan_outcomes["drift_titles"],
+            "aurora_correction_count": aurora_corrections["count"],
+            "aurora_correction_reasons": aurora_corrections["reasons"],
+            "aurora_correction_actions": aurora_corrections["actions"],
             "study_days": study_days,
             "study_days_count": study_days,
             "highlights": highlights,
             "biggest_improvement": biggest_improvement,
             "next_week_suggestion": next_week_suggestion,
+            "report_actions": self._build_report_actions(
+                tasks=tasks,
+                errors=errors,
+                mastery=mastery,
+                plan_outcomes=plan_outcomes,
+                aurora_corrections=aurora_corrections,
+                biggest_improvement=biggest_improvement,
+                next_week_suggestion=next_week_suggestion,
+            ),
             "recent_narrative_count": len(recent_narratives),
         }
         source_counts = {
@@ -303,6 +327,8 @@ class ProgressNarrativeService:
             "error_review_records": int(errors["reviewed_count"]),
             "reflection_records": int(reflections["count"]),
             "mastery_changes": int(mastery["record_count"]),
+            "plan_outcomes": int(plan_outcomes["completed_count"]) + int(plan_outcomes["drift_count"]),
+            "aurora_corrections": int(aurora_corrections["count"]),
             "achievement_unlocks": len(achievements),
             "study_days": study_days,
         }
@@ -316,7 +342,16 @@ class ProgressNarrativeService:
                 "完成一次学习任务、记录一道错题，或者写下一句复盘后，这里就会开始把你的成长线索连起来。",
             ]
             is_placeholder = True
-        elif study_days == 0:
+        elif (
+            study_days == 0
+            and int(errors["reviewed_count"]) == 0
+            and int(reflections["count"]) == 0
+            and float(mastery["delta"]) <= 0
+            and not achievements
+            and int(plan_outcomes["completed_count"]) == 0
+            and int(plan_outcomes["drift_count"]) == 0
+            and int(aurora_corrections["count"]) == 0
+        ):
             highlights = ["本周暂停学习，下周继续。"]
             next_week_suggestion = "下周先从一个 15 分钟的小任务重新启动就好。"
             sentences = [
@@ -330,6 +365,8 @@ class ProgressNarrativeService:
                 biggest_improvement=biggest_improvement,
                 next_week_suggestion=next_week_suggestion,
                 achievements=achievements,
+                plan_outcomes=plan_outcomes,
+                aurora_corrections=aurora_corrections,
                 week_start=start,
                 recent_narratives=recent_narratives,
             )
@@ -652,6 +689,102 @@ class ProgressNarrativeService:
             "categories": [category for category, _count in categories.most_common(3)],
         }
 
+    async def _plan_outcome_summary(
+        self,
+        user_id: str | UUID,
+        start: datetime,
+        end: datetime,
+        *,
+        now: datetime,
+    ) -> dict[str, Any]:
+        result = await self.db.execute(
+            select(Plan.name, Plan.progress, Plan.target_date, Plan.updated_at)
+            .where(
+                Plan.user_id == self._uuid_or_original(user_id),
+                (
+                    ((Plan.updated_at >= start) & (Plan.updated_at < end))
+                    | (
+                        Plan.target_date.is_not(None)
+                        & (Plan.target_date >= start.date())
+                        & (Plan.target_date < end.date())
+                    )
+                ),
+            )
+            .order_by(desc(Plan.updated_at))
+            .limit(20)
+        )
+        completed_titles: list[str] = []
+        drift_titles: list[str] = []
+        progress_samples: list[dict[str, Any]] = []
+        today = now.date()
+        for name, progress, target_date, updated_at in result.all():
+            title = self._clean_text(name) or "未命名计划"
+            progress_value = max(0.0, min(float(progress or 0.0), 1.0))
+            progress_samples.append(
+                {
+                    "title": title,
+                    "progress": round(progress_value, 2),
+                    "target_date": target_date.isoformat() if target_date else None,
+                    "updated_at": updated_at.isoformat() if isinstance(updated_at, datetime) else None,
+                }
+            )
+            if progress_value >= 0.95 and title not in completed_titles:
+                completed_titles.append(title)
+            if target_date and target_date < today and progress_value < 0.8 and title not in drift_titles:
+                drift_titles.append(title)
+        return {
+            "completed_count": len(completed_titles),
+            "completed_titles": completed_titles[:3],
+            "drift_count": len(drift_titles),
+            "drift_titles": drift_titles[:3],
+            "progress_samples": progress_samples[:5],
+        }
+
+    async def _aurora_correction_summary(
+        self,
+        user_id: str | UUID,
+        start: datetime,
+        end: datetime,
+    ) -> dict[str, Any]:
+        result = await self.db.execute(
+            select(MemoryCorrection.action, MemoryCorrection.reason, MemoryCorrection.memory_type)
+            .where(
+                MemoryCorrection.user_id == self._uuid_or_original(user_id),
+                MemoryCorrection.created_at >= start,
+                MemoryCorrection.created_at < end,
+                MemoryCorrection.memory_type.in_(
+                    (
+                        "aurora_calibration_card",
+                        "aurora_state",
+                        "aurora_profile",
+                        "aurora_directive",
+                    )
+                ),
+            )
+            .order_by(desc(MemoryCorrection.created_at))
+            .limit(10)
+        )
+        rows = result.all()
+        reasons: list[str] = []
+        actions: Counter[str] = Counter()
+        memory_types: Counter[str] = Counter()
+        for action, reason, memory_type in rows:
+            action_text = self._clean_text(action)
+            if action_text:
+                actions[action_text] += 1
+            type_text = self._clean_text(memory_type)
+            if type_text:
+                memory_types[type_text] += 1
+            reason_text = self._clean_text(reason)
+            if reason_text and reason_text not in reasons:
+                reasons.append(self._shorten(reason_text, 42))
+        return {
+            "count": len(rows),
+            "reasons": reasons[:3],
+            "actions": [action for action, _count in actions.most_common(3)],
+            "memory_types": [memory_type for memory_type, _count in memory_types.most_common(3)],
+        }
+
     async def recent_achievement_story_lines(self, user_id: str, start: datetime, end: datetime) -> list[str]:
         result = await self.db.execute(
             select(UserAchievement, Achievement)
@@ -879,12 +1012,23 @@ class ProgressNarrativeService:
         errors: dict[str, Any],
         reflections: dict[str, Any],
         mastery: dict[str, Any],
+        plan_outcomes: dict[str, Any],
+        aurora_corrections: dict[str, Any],
         study_days: int,
     ) -> list[str]:
         highlights: list[str] = []
 
         if study_days > 0:
             highlights.append(f"这周你学习了 {study_days} 天。")
+        if int(plan_outcomes["completed_count"]) > 0:
+            title = plan_outcomes["completed_titles"][0] if plan_outcomes["completed_titles"] else "一个计划"
+            highlights.append(f"「{title}」这周已经接近完成，进度证据进入报告。")
+        if int(plan_outcomes["drift_count"]) > 0:
+            title = plan_outcomes["drift_titles"][0] if plan_outcomes["drift_titles"] else "一个计划"
+            highlights.append(f"「{title}」出现计划漂移，需要下周先调整节奏。")
+        if int(aurora_corrections["count"]) > 0:
+            reason = aurora_corrections["reasons"][0] if aurora_corrections["reasons"] else "你的校准反馈"
+            highlights.append(f"Aurora 本周记录了 {int(aurora_corrections['count'])} 次校准：{reason}。")
         if mastery["nodes"]:
             highlights.append(f"掌握了 {self._format_list(mastery['nodes'])} 等知识点。")
         elif int(mastery["node_count"]) > 0:
@@ -907,9 +1051,16 @@ class ProgressNarrativeService:
         tasks: dict[str, Any],
         errors: dict[str, Any],
         mastery: dict[str, Any],
+        plan_outcomes: dict[str, Any],
+        aurora_corrections: dict[str, Any],
         biggest_improvement: dict[str, Any] | None,
         study_days: int,
     ) -> str:
+        if int(plan_outcomes["drift_count"]) > 0:
+            drift_title = plan_outcomes["drift_titles"][0] if plan_outcomes["drift_titles"] else "当前计划"
+            return f"先修正「{drift_title}」的计划节奏，再安排新的学习量。"
+        if int(aurora_corrections["count"]) > 0:
+            return "下周先按这次校准后的理解来选任务，如果仍不准，可以继续纠正 Aurora。"
         if study_days == 0:
             return "下周先从一个 15 分钟的小任务重新启动就好。"
         if errors["focus"]:
@@ -922,6 +1073,96 @@ class ProgressNarrativeService:
             return f"围绕 {self._format_list(tasks['tags'])} 再完成一轮核心任务。"
         return "用一次任务、一次复盘，把下周的学习节奏重新稳住。"
 
+    def _build_report_actions(
+        self,
+        *,
+        tasks: dict[str, Any],
+        errors: dict[str, Any],
+        mastery: dict[str, Any],
+        plan_outcomes: dict[str, Any],
+        aurora_corrections: dict[str, Any],
+        biggest_improvement: dict[str, Any] | None,
+        next_week_suggestion: str,
+    ) -> list[dict[str, Any]]:
+        actions: list[dict[str, Any]] = []
+        if int(plan_outcomes["drift_count"]) > 0:
+            title = plan_outcomes["drift_titles"][0] if plan_outcomes["drift_titles"] else "当前计划"
+            actions.append(
+                {
+                    "id": "repair-plan-drift",
+                    "title": f"调整「{title}」计划节奏",
+                    "summary": "报告发现计划进度和目标日期已经不匹配，先重排任务量。",
+                    "deep_link": "/plan",
+                    "kind": "plan_repair",
+                    "priority": "high",
+                    "evidence": plan_outcomes["progress_samples"],
+                }
+            )
+        if int(errors["reviewed_count"]) > 0 and errors["focus"]:
+            focus = self._format_list(errors["focus"])
+            actions.append(
+                {
+                    "id": "review-error-focus",
+                    "title": f"复盘 {focus}",
+                    "summary": "错题复盘是本周最明确的学习证据，下一步先把反复原因清掉。",
+                    "deep_link": "/error-book",
+                    "kind": "review",
+                    "priority": "high",
+                    "evidence": errors["causes"],
+                }
+            )
+        if biggest_improvement and biggest_improvement.get("node_name"):
+            node_name = str(biggest_improvement["node_name"])
+            actions.append(
+                {
+                    "id": "extend-mastery-node",
+                    "title": f"继续推进 {node_name}",
+                    "summary": "这是本周掌握度变化最清楚的节点，适合衔接相邻概念。",
+                    "deep_link": f"/theater?topic={quote(node_name)}",
+                    "kind": "prediction_theater",
+                    "priority": "medium",
+                    "evidence": [biggest_improvement],
+                }
+            )
+        elif mastery["nodes"]:
+            node_name = str(mastery["nodes"][0])
+            actions.append(
+                {
+                    "id": "open-mastery-thread",
+                    "title": f"推演 {node_name}",
+                    "summary": "本周知识掌握已有变化，可以用预测剧场看看下一条路径。",
+                    "deep_link": f"/theater?topic={quote(node_name)}",
+                    "kind": "prediction_theater",
+                    "priority": "medium",
+                    "evidence": mastery["nodes"],
+                }
+            )
+        if int(aurora_corrections["count"]) > 0:
+            actions.append(
+                {
+                    "id": "review-aurora-calibration",
+                    "title": "查看 Aurora 本周校准",
+                    "summary": "你修正过系统理解，后续建议会按这些反馈收敛。",
+                    "deep_link": "/aurora",
+                    "kind": "aurora_correction",
+                    "priority": "medium",
+                    "evidence": aurora_corrections["reasons"] or aurora_corrections["actions"],
+                }
+            )
+        if not actions:
+            actions.append(
+                {
+                    "id": "next-week-minimum-action",
+                    "title": "安排一个最小下一步",
+                    "summary": next_week_suggestion,
+                    "deep_link": "/plan/quick-task" if int(tasks["count"]) == 0 else "/plan",
+                    "kind": "next_action",
+                    "priority": "medium",
+                    "evidence": [],
+                }
+            )
+        return actions[:3]
+
     def _compose_weekly_narrative_sentences(
         self,
         *,
@@ -929,6 +1170,8 @@ class ProgressNarrativeService:
         biggest_improvement: dict[str, Any] | None,
         next_week_suggestion: str,
         achievements: list[str],
+        plan_outcomes: dict[str, Any],
+        aurora_corrections: dict[str, Any],
         week_start: datetime,
         recent_narratives: list[dict[str, Any]],
     ) -> list[str]:
@@ -963,6 +1206,17 @@ class ProgressNarrativeService:
                 sentences.append(f"最大的进步：{improvement_sentence}")
         elif achievements:
             sentences.append(achievements[0])
+        if int(plan_outcomes["drift_count"]) > 0 and plan_outcomes["drift_titles"]:
+            sentences.append(f"计划上需要诚实看见：{plan_outcomes['drift_titles'][0]} 已经偏离原节奏，报告会把下一步收回到可执行。")
+        elif int(plan_outcomes["completed_count"]) > 0 and plan_outcomes["completed_titles"]:
+            sentences.append(f"计划进展最清楚的是「{plan_outcomes['completed_titles'][0]}」，它已经接近收尾。")
+        if int(aurora_corrections["count"]) > 0:
+            correction = (
+                aurora_corrections["reasons"][0]
+                if aurora_corrections["reasons"]
+                else "你修正了系统对你的理解"
+            )
+            sentences.append(f"Aurora 也记录了你的校准反馈：{correction}，后续报告会把它作为解释依据。")
         if next_week_suggestion:
             if style_variant == 1:
                 sentences.append(f"下周可以这样接：{next_week_suggestion}")

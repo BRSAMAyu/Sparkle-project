@@ -10,7 +10,7 @@ import statistics
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 from uuid import UUID, uuid4
 
 from sqlalchemy import String, cast, desc, func, or_, select
@@ -499,6 +499,19 @@ class PredictionTheaterService:
                 prediction_id=prediction_id,
                 generated_at=generated_at,
                 calibration_profile=calibration_profile,
+            ),
+            "evidence_summary": self._build_prediction_evidence_summary(
+                target_context=target_context,
+                options=options,
+                mastery_evidence=mastery_evidence,
+                error_evidence=error_evidence,
+                calibration_profile=calibration_profile,
+                topic_calibration=topic_calibration,
+            ),
+            "recommended_next_action": self._build_prediction_next_action(
+                prediction_id=prediction_id,
+                topic=topic,
+                recommended_route=options[0].to_dict() if options else {},
             ),
             "routing_notes": {
                 "patterns": pattern_names,
@@ -3436,6 +3449,74 @@ class PredictionTheaterService:
                 }
             )
         return checkpoints
+
+    @staticmethod
+    def _build_prediction_evidence_summary(
+        *,
+        target_context: TheaterTargetContext,
+        options: list[TheaterPathOption],
+        mastery_evidence: list[dict[str, Any]],
+        error_evidence: list[dict[str, Any]],
+        calibration_profile: dict[str, Any],
+        topic_calibration: dict[str, Any],
+    ) -> dict[str, Any]:
+        best_route = options[0] if options else None
+        graph_source_count = sum(
+            1 for item in target_context.backbone if str(item.get("source_type") or "").startswith("graph")
+        )
+        sample_count = int(calibration_profile.get("sample_count") or 0)
+        data_quality = best_route.data_quality if best_route else "low"
+        confidence = best_route.data_sufficiency_score if best_route else 0.0
+        evidence_points: list[str] = []
+        if graph_source_count:
+            evidence_points.append(f"{graph_source_count} 个路径节点来自你的知识星图")
+        if mastery_evidence:
+            evidence_points.append(f"{len(mastery_evidence)} 条掌握度证据参与估计")
+        if error_evidence:
+            evidence_points.append(f"{len(error_evidence)} 条错题/卡点证据参与风险判断")
+        if sample_count:
+            evidence_points.append(f"参考了 {sample_count} 次历史推演回填")
+        if not evidence_points:
+            evidence_points.append("当前主要基于主题结构推演，数字只适合当作区间参考")
+        return {
+            "data_quality": data_quality,
+            "confidence_score": round(float(confidence or 0.0), 4),
+            "is_cold_start": sample_count == 0,
+            "target_resolution_mode": target_context.resolution_mode,
+            "semantic_match_count": len(target_context.semantic_matches),
+            "mastery_evidence_count": len(mastery_evidence),
+            "error_evidence_count": len(error_evidence),
+            "calibration_sample_count": sample_count,
+            "topic_pending_feedback_count": int(topic_calibration.get("pending_count") or 0),
+            "evidence_points": evidence_points[:4],
+            "user_copy": "；".join(evidence_points[:3]),
+        }
+
+    @staticmethod
+    def _build_prediction_next_action(
+        *,
+        prediction_id: str,
+        topic: str,
+        recommended_route: dict[str, Any],
+    ) -> dict[str, Any]:
+        route_id = str(recommended_route.get("id") or "").strip()
+        title = str(recommended_route.get("title") or topic or "推荐路径").strip()
+        week_one_tasks = [
+            item for item in list(recommended_route.get("week_one_tasks") or []) if isinstance(item, dict)
+        ]
+        first_task = week_one_tasks[0] if week_one_tasks else {}
+        return {
+            "id": "adopt-recommended-route",
+            "title": f"采纳「{title}」",
+            "summary": (
+                str(first_task.get("summary") or first_task.get("title") or "").strip()
+                or "把推荐路径转成计划和第一周任务，再用真实结果校准预测。"
+            ),
+            "deep_link": f"/theater?prediction_id={quote(prediction_id)}&route_id={quote(route_id)}",
+            "kind": "adopt_theater_route",
+            "route_id": route_id,
+            "prediction_id": prediction_id,
+        }
 
     @staticmethod
     def _build_accuracy_tracking(
