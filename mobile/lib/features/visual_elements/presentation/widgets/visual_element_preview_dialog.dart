@@ -135,13 +135,14 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final palette = VisualElementPalette.of(context);
     final colors = _getRarityColors(widget.element.rarity);
 
     return Stack(
       children: [
         Container(
           decoration: BoxDecoration(
-            color: VisualElementPalette.moonless,
+            color: palette.moonless,
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border: Border(
               top: BorderSide(
@@ -157,8 +158,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: VisualElementPalette.textSecondary
-                      .withValues(alpha: 0.38),
+                  color: palette.textSecondary.withValues(alpha: 0.38),
                   borderRadius: DS.borderRadiusFull,
                 ),
               ),
@@ -204,8 +204,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                                         style: TextStyle(
                                           fontSize: DS.fontSizeLg,
                                           fontWeight: DS.fontWeightBold,
-                                          color:
-                                              VisualElementPalette.textPrimary,
+                                          color: palette.textPrimary,
                                           height: 1.15,
                                         ),
                                         maxLines: 4,
@@ -229,8 +228,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                                         style: TextStyle(
                                           fontSize: DS.fontSizeLg,
                                           fontWeight: DS.fontWeightBold,
-                                          color:
-                                              VisualElementPalette.textPrimary,
+                                          color: palette.textPrimary,
                                           height: 1.15,
                                         ),
                                         maxLines: 3,
@@ -255,7 +253,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
                                   widget.element.description!,
                                   style: TextStyle(
                                     fontSize: DS.fontSizeSm,
-                                    color: VisualElementPalette.textSecondary,
+                                    color: palette.textSecondary,
                                     height: 1.5,
                                   ),
                                 ),
@@ -285,7 +283,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
 
                             const SizedBox(height: DS.spacing16),
                             Divider(
-                              color: VisualElementPalette.hairline,
+                              color: palette.hairline,
                             ),
                             const SizedBox(height: DS.spacing16),
 
@@ -383,9 +381,9 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
           MediaQuery.of(context).padding.bottom + DS.spacing12,
         ),
         decoration: BoxDecoration(
-          color: VisualElementPalette.moonless,
+          color: VisualElementPalette.of(context).moonless,
           border: Border(
-            top: BorderSide(color: VisualElementPalette.hairline),
+            top: BorderSide(color: VisualElementPalette.of(context).hairline),
           ),
         ),
         child: SafeArea(
@@ -440,8 +438,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
             overflow: TextOverflow.ellipsis,
           ),
           style: OutlinedButton.styleFrom(
-            foregroundColor: VisualElementPalette.textSecondary,
-            side: BorderSide(color: VisualElementPalette.hairline),
+            foregroundColor: VisualElementPalette.of(context).textSecondary,
+            side: BorderSide(color: VisualElementPalette.of(context).hairline),
             shape: const RoundedRectangleBorder(
               borderRadius: DS.borderRadius12,
             ),
@@ -469,8 +467,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
           overflow: TextOverflow.ellipsis,
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: VisualElementPalette.gold,
-          foregroundColor: VisualElementPalette.moonless,
+          backgroundColor: VisualElementPalette.of(context).gold,
+          foregroundColor: VisualElementPalette.of(context).moonless,
           shape: const RoundedRectangleBorder(
             borderRadius: DS.borderRadius12,
           ),
@@ -495,8 +493,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
           overflow: TextOverflow.ellipsis,
         ),
         style: OutlinedButton.styleFrom(
-          foregroundColor: VisualElementPalette.textSecondary,
-          side: BorderSide(color: VisualElementPalette.hairline),
+          foregroundColor: VisualElementPalette.of(context).textSecondary,
+          side: BorderSide(color: VisualElementPalette.of(context).hairline),
           shape: const RoundedRectangleBorder(
             borderRadius: DS.borderRadius12,
           ),
@@ -517,8 +515,8 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
             overflow: TextOverflow.ellipsis,
           ),
           style: ElevatedButton.styleFrom(
-            backgroundColor: VisualElementPalette.panel,
-            foregroundColor: VisualElementPalette.textSecondary,
+            backgroundColor: VisualElementPalette.of(context).panel,
+            foregroundColor: VisualElementPalette.of(context).textSecondary,
             shape: const RoundedRectangleBorder(
               borderRadius: DS.borderRadius12,
             ),
@@ -602,7 +600,7 @@ class _VisualElementPreviewDialogState extends State<VisualElementPreviewDialog>
   }
 
   VisualElementRarityColors _getRarityColors(VisualElementRarity rarity) =>
-      VisualElementPalette.rarityColors(rarity);
+      VisualElementPalette.of(context).rarityColors(rarity);
 
   String _getUnlockSourceText(
     VisualElementUnlockSource source,

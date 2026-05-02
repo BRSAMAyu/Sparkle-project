@@ -310,6 +310,9 @@ class _PosterStudioScreenState extends ConsumerState<PosterStudioScreen> {
                     .firstOrNull
                     ?.titleDisplay ??
                 l10n.posterIdentityGrowing,
+            'earned_from': topAchievement == null
+                ? l10n.posterIdentityGrowing
+                : topAchievement.achievement.name,
           },
           templateId: 'elegant',
         ),
