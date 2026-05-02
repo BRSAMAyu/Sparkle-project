@@ -598,6 +598,11 @@ func Load() *Config {
 		}
 	}
 
+	// P1-8: RBAC must be enabled in production
+	if cfg.IsProduction() && !cfg.SparkleRBACEnabled {
+		log.Fatal("SPARKLE_RBAC_ENABLED must be true in production")
+	}
+
 	if cfg.SparkleRBACEnabled && strings.TrimSpace(cfg.SparkleGatewayDatabaseURL) != "" {
 		cfg.DatabaseURL = strings.TrimSpace(cfg.SparkleGatewayDatabaseURL)
 	}
