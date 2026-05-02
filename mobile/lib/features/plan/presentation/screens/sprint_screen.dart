@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -17,6 +18,7 @@ class SprintScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final zh = I18nService.instance.isChinese;
     final planState = ref.watch(planListProvider);
     final activeSprint = planState.activePlans
         .where((p) => p.type == PlanType.sprint)
@@ -30,7 +32,7 @@ class SprintScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('My Sprint'),
+        title: Text(zh ? '我的冲刺' : 'My Sprint'),
         actions: [
           Tooltip(
             message: context.l10n.planHistoryPlans,
@@ -88,38 +90,43 @@ class _NoActiveSprintView extends StatelessWidget {
   const _NoActiveSprintView();
 
   @override
-  Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(DS.xl),
-          child: GraphiteCardSurface(
-            surfaceRole: SparkleSurfaceRole.card,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.flag_outlined, size: 80, color: DS.brandPrimary),
-                const SizedBox(height: DS.lg),
-                Text(
-                  'No Active Sprint',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: DS.sm),
-                const Text(
-                  'Create a new sprint plan to focus on a short-term goal.',
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: DS.xl),
-                SparkleButton(
-                  onPressed: () {
-                    unawaited(context.push('/exam-sprint/setup'));
-                  },
-                  icon: const Icon(Icons.add),
-                  label: context.l10n.planStartExamSprint,
-                ),
-              ],
-            ),
+  Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(DS.xl),
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.flag_outlined, size: 80, color: DS.brandPrimary),
+              const SizedBox(height: DS.lg),
+              Text(
+                zh ? '暂无活跃冲刺' : 'No Active Sprint',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: DS.sm),
+              Text(
+                zh
+                    ? '创建一个新的冲刺计划，聚焦短期目标。'
+                    : 'Create a new sprint plan to focus on a short-term goal.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: DS.xl),
+              SparkleButton(
+                onPressed: () {
+                  unawaited(context.push('/exam-sprint/setup'));
+                },
+                icon: const Icon(Icons.add),
+                label: context.l10n.planStartExamSprint,
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
+  }
 }
 
 class _ActiveSprintView extends ConsumerWidget {
@@ -128,6 +135,7 @@ class _ActiveSprintView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final zh = I18nService.instance.isChinese;
     // We need the full plan details (with tasks), so we watch the detail provider
     final planDetailAsync = ref.watch(planDetailProvider(plan.id));
 
@@ -141,14 +149,15 @@ class _ActiveSprintView extends ConsumerWidget {
             child: Padding(
               padding: const EdgeInsets.all(DS.lg),
               child: Text(
-                'Tasks',
+                zh ? '任务' : 'Tasks',
                 style: Theme.of(context).textTheme.titleLarge,
               ),
             ),
           ),
           if (fullPlan.tasks == null || fullPlan.tasks!.isEmpty)
-            const SliverToBoxAdapter(
-              child: Center(child: Text('No tasks in this sprint.')),
+            SliverToBoxAdapter(
+              child: Center(
+                  child: Text(zh ? '这个冲刺暂无任务。' : 'No tasks in this sprint.')),
             )
           else
             SliverList(
@@ -172,7 +181,8 @@ class _ActiveSprintView extends ConsumerWidget {
           children: [
             Icon(Icons.error_outline, size: 48, color: DS.textSecondary),
             const SizedBox(height: DS.spacing12),
-            Text(context.l10n.planLoadSprintFailed, style: TextStyle(color: DS.textSecondary)),
+            Text(context.l10n.planLoadSprintFailed,
+                style: TextStyle(color: DS.textSecondary)),
           ],
         ),
       ),
@@ -186,6 +196,7 @@ class _SprintHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final daysLeft = plan.targetDate?.difference(DateTime.now()).inDays ?? 0;
     final parsed = PlanDescriptionCodec.parse(plan.description);
 
@@ -222,7 +233,7 @@ class _SprintHeader extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Progress',
+                  zh ? '进度' : 'Progress',
                   style: Theme.of(context).textTheme.bodyLarge,
                 ),
                 Text(
@@ -239,8 +250,9 @@ class _SprintHeader extends StatelessWidget {
             ),
             const SizedBox(height: DS.lg),
             Chip(
-              label:
-                  Text(daysLeft > 0 ? '$daysLeft days left' : 'Sprint ended'),
+              label: Text(daysLeft > 0
+                  ? (zh ? '剩余 $daysLeft 天' : '$daysLeft days left')
+                  : (zh ? '冲刺已结束' : 'Sprint ended')),
               avatar: const Icon(Icons.timelapse),
             ),
           ],
@@ -290,6 +302,7 @@ class _SprintAchievementsProgressState
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final achievementState = ref.watch(achievementProvider);
 
     // Filter sprint achievements
@@ -340,7 +353,7 @@ class _SprintAchievementsProgressState
                           ),
                           const SizedBox(width: DS.sm),
                           Text(
-                            'Sprint Achievements',
+                            zh ? '冲刺成就' : 'Sprint Achievements',
                             style: Theme.of(context).textTheme.titleSmall,
                           ),
                         ],
@@ -349,7 +362,7 @@ class _SprintAchievementsProgressState
                         onPressed: () => unawaited(
                           context.push('/achievements?type=sprint'),
                         ),
-                        label: 'View All',
+                        label: zh ? '查看全部' : 'View All',
                       ),
                     ],
                   ),

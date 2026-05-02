@@ -13,7 +13,8 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Path, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Path, Query
+from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,12 +24,15 @@ from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError
 from app.core.metrics import observe_product_loop_latency, record_product_loop_event
 from app.db.session import get_db
+from app.models.file_storage import StoredFile
 from app.models.task import Task, TaskStatus, TaskType
+from app.models.task_document import TaskDocument
 from app.models.task_resources import TaskResourceLink, TaskResourceType
 from app.models.user import User
 from app.schemas.task import (
     SubTaskDetail,
     TaskAbandon,
+    TaskBoundSourceInfo,
     TaskCompleteRequest,
     TaskCreate,
     TaskDetail,
@@ -63,6 +67,7 @@ from app.services.intelligent_task_service import IntelligentTaskService
 from app.services.seed_library_service import SeedLibraryService
 from app.services.task_document_service import task_document_service
 from app.services.task_guide_service import task_guide_service
+from app.services.task_priority_service import TaskPriorityService
 from app.services.task_service import TaskService
 from app.task_guidance import TaskGuidance, TaskGuidanceAudience
 
@@ -92,6 +97,111 @@ def _serialize_task_document(link, file_record) -> TaskDocumentInfo:
         linked_by=link.linked_by,
         document_quality_score=float(file_record.document_quality_score or 0.0),
     )
+
+
+def _serialize_source_asset(
+    *,
+    file_record: StoredFile,
+    linked_by: str | None,
+    reason: str | None = None,
+) -> TaskBoundSourceInfo:
+    return TaskBoundSourceInfo(
+        id=file_record.id,
+        title=file_record.file_name,
+        lifecycle_status=file_record.lifecycle_status or "active",
+        source_type="file",
+        linked_by=linked_by,
+        reason=reason,
+        status=file_record.status,
+        lifecycle_reason=file_record.lifecycle_reason,
+        updated_at=file_record.updated_at,
+    )
+
+
+async def _load_bound_sources_for_tasks(
+    db: AsyncSession,
+    *,
+    task_ids: list[UUID],
+    user_id: UUID,
+) -> dict[UUID, list[TaskBoundSourceInfo]]:
+    """Return task-bound source assets, including archived/revoked/orphaned files."""
+    if not task_ids:
+        return {}
+
+    sources_by_task: dict[UUID, list[TaskBoundSourceInfo]] = {task_id: [] for task_id in task_ids}
+    seen_by_task: dict[UUID, set[UUID]] = {task_id: set() for task_id in task_ids}
+
+    document_rows = (
+        await db.execute(
+            select(TaskDocument, StoredFile)
+            .join(StoredFile, StoredFile.id == TaskDocument.file_id)
+            .join(Task, Task.id == TaskDocument.task_id)
+            .where(TaskDocument.task_id.in_(task_ids))
+            .where(Task.user_id == user_id)
+            .where(TaskDocument.deleted_at.is_(None))
+            .where(StoredFile.deleted_at.is_(None))
+            .order_by(TaskDocument.created_at.asc(), StoredFile.file_name.asc())
+        )
+    ).all()
+
+    for link, file_record in document_rows:
+        if file_record.id in seen_by_task[link.task_id]:
+            continue
+        seen_by_task[link.task_id].add(file_record.id)
+        sources_by_task[link.task_id].append(
+            _serialize_source_asset(
+                file_record=file_record,
+                linked_by=link.linked_by,
+                reason=link.source_reason,
+            )
+        )
+
+    resource_rows = (
+        await db.execute(
+            select(TaskResourceLink, StoredFile)
+            .join(StoredFile, StoredFile.id == TaskResourceLink.resource_id)
+            .join(Task, Task.id == TaskResourceLink.task_id)
+            .where(TaskResourceLink.task_id.in_(task_ids))
+            .where(TaskResourceLink.resource_type == TaskResourceType.FILE.value)
+            .where(Task.user_id == user_id)
+            .where(TaskResourceLink.deleted_at.is_(None))
+            .where(StoredFile.deleted_at.is_(None))
+            .order_by(TaskResourceLink.order_index.asc(), TaskResourceLink.created_at.asc())
+        )
+    ).all()
+
+    for link, file_record in resource_rows:
+        if file_record.id in seen_by_task[link.task_id]:
+            continue
+        seen_by_task[link.task_id].add(file_record.id)
+        sources_by_task[link.task_id].append(
+            _serialize_source_asset(
+                file_record=file_record,
+                linked_by="resource",
+                reason=link.summary,
+            )
+        )
+
+    return sources_by_task
+
+
+async def _load_bound_sources_for_task(
+    db: AsyncSession,
+    *,
+    task_id: UUID,
+    user_id: UUID,
+) -> list[TaskBoundSourceInfo]:
+    return (await _load_bound_sources_for_tasks(db, task_ids=[task_id], user_id=user_id)).get(task_id, [])
+
+
+def _serialize_task_detail(
+    task: Task,
+    *,
+    bound_sources: list[TaskBoundSourceInfo] | None = None,
+) -> dict[str, Any]:
+    payload = TaskDetail.model_validate(task).model_dump(mode="json")
+    payload["bound_sources"] = [source.model_dump(mode="json") for source in (bound_sources or [])]
+    return payload
 
 
 async def _get_user_task_or_404(db: AsyncSession, task_id: UUID, user_id: UUID) -> Task:
@@ -239,9 +349,14 @@ async def list_tasks(
     query = query.offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
     tasks = result.scalars().all()
+    bound_sources = await _load_bound_sources_for_tasks(
+        db,
+        task_ids=[task.id for task in tasks],
+        user_id=current_user.id,
+    )
 
     return {
-        "data": [TaskDetail.model_validate(t) for t in tasks],
+        "data": [_serialize_task_detail(t, bound_sources=bound_sources.get(t.id, [])) for t in tasks],
         "meta": {
             "total": total,
             "page": page,
@@ -300,7 +415,10 @@ async def create_task(
         logger.warning(f"Failed to get task nudges: {e}")
 
     return {
-        "data": TaskDetail.model_validate(task),
+        "data": _serialize_task_detail(
+            task,
+            bound_sources=await _load_bound_sources_for_task(db, task_id=task.id, user_id=current_user.id),
+        ),
         "nudges": nudges,
         "linked_documents": linked_documents,
         "document_suggestions": document_suggestions,
@@ -382,7 +500,13 @@ async def get_today_tasks(
         include_completed_today=True,
         only_today_relevant=True,
     )
-    return [TaskDetail.model_validate(selection.task) for selection in selections]
+    tasks = [selection.task for selection in selections]
+    bound_sources = await _load_bound_sources_for_tasks(
+        db,
+        task_ids=[task.id for task in tasks],
+        user_id=current_user.id,
+    )
+    return [_serialize_task_detail(task, bound_sources=bound_sources.get(task.id, [])) for task in tasks]
 
 
 # route-tier: authed
@@ -398,7 +522,13 @@ async def get_recommended_tasks(
         limit=limit,
         include_completed_today=False,
     )
-    return [TaskDetail.model_validate(selection.task) for selection in selections]
+    tasks = [selection.task for selection in selections]
+    bound_sources = await _load_bound_sources_for_tasks(
+        db,
+        task_ids=[task.id for task in tasks],
+        user_id=current_user.id,
+    )
+    return [_serialize_task_detail(task, bound_sources=bound_sources.get(task.id, [])) for task in tasks]
 
 
 # route-tier: authed
@@ -413,7 +543,12 @@ async def get_task(
     """
     task = await _get_user_task_or_404(db, task_id, current_user.id)
 
-    return {"data": TaskDetail.model_validate(task)}
+    return {
+        "data": _serialize_task_detail(
+            task,
+            bound_sources=await _load_bound_sources_for_task(db, task_id=task_id, user_id=current_user.id),
+        )
+    }
 
 
 # route-tier: authed
@@ -437,7 +572,7 @@ async def get_task_card_protocol(
     orchestrator. Falls back to sane defaults if no Spine context is cached.
     """
     from app.signals.task_card_protocol import TaskCardBuilder
-    from app.signals.types import MaterialsProtocol, StuckProtocol, WhyThisTask
+    from app.signals.types import StuckProtocol, WhyThisTask
 
     task = await _get_user_task_or_404(db, task_id, current_user.id)
 
@@ -445,11 +580,10 @@ async def get_task_card_protocol(
     cached_payload: dict[str, Any] | None = None
     if cache_service.redis is not None:
         try:
-            raw = await cache_service.redis.get(
-                f"spine:task_card_protocol:{task.id}"
-            )
+            raw = await cache_service.redis.get(f"spine:task_card_protocol:{task.id}")
             if raw:
                 import json as _json
+
                 cached_payload = _json.loads(raw if isinstance(raw, str) else raw.decode())
         except Exception:  # noqa: BLE001
             cached_payload = None
@@ -486,6 +620,55 @@ async def get_task_card_protocol(
     # Override task_id to match the live DB row
     protocol.task_id = str(task.id)
     return {"data": protocol.to_dict()}
+
+
+async def _compute_priority_reasoning_background(
+    service: TaskPriorityService,
+    *,
+    user_id: UUID,
+    task_id: UUID,
+) -> None:
+    try:
+        await service.generate_and_cache(user_id=user_id, task_id=task_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to compute priority reasoning for task {}: {}", task_id, exc)
+
+
+# route-tier: authed
+@router.get("/{task_id}/priority-reasoning", response_model=dict[str, Any])
+async def get_task_priority_reasoning(
+    background_tasks: BackgroundTasks,
+    task_id: UUID = Path(..., description="Task ID"),
+    refresh: bool = Query(False, description="Force synchronous recomputation"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Return structured transparent reasoning for why this task is recommended today."""
+    task = await _get_user_task_or_404(db, task_id, current_user.id)
+    service = TaskPriorityService(db, cache_service)
+
+    if not refresh:
+        cached = await service.get_cached_reasoning(user_id=current_user.id, task=task)
+        if cached is not None:
+            return {"data": cached}
+
+        background_tasks.add_task(
+            _compute_priority_reasoning_background,
+            service,
+            user_id=current_user.id,
+            task_id=task_id,
+        )
+        return JSONResponse(
+            status_code=202,
+            content={
+                "status": "calculating",
+                "task_id": str(task_id),
+                "retry_after_seconds": 1,
+            },
+        )
+
+    reasoning = await service.generate_and_cache(user_id=current_user.id, task_id=task_id)
+    return {"data": reasoning.model_dump(mode="json")}
 
 
 # route-tier: authed

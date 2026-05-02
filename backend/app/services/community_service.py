@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import math
+from difflib import SequenceMatcher
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -3038,3 +3039,164 @@ class CommunityResourceScorer:
             await db.flush()
             return resource.quality_score
         return None
+
+
+# ============ COM-011: Similar Goal Pursuers ============
+
+def _cosine_sim(a: list[float], b: list[float]) -> float:
+    """Compute cosine similarity between two vectors."""
+    dot = sum(x * y for x, y in zip(a, b))
+    na = sum(x * x for x in a) ** 0.5
+    nb = sum(x * x for x in b) ** 0.5
+    if na == 0 or nb == 0:
+        return 0.0
+    return dot / (na * nb)
+
+
+def _bounded_similarity(raw: float) -> float:
+    """Convert cosine output into a UI-safe 0..1 score."""
+    return max(0.0, min((raw + 1.0) / 2.0, 1.0))
+
+
+def _lexical_goal_similarity(a: str, b: str) -> float:
+    """Fallback title similarity when embedding calls are unavailable."""
+    left = " ".join(str(a or "").lower().split())
+    right = " ".join(str(b or "").lower().split())
+    if not left or not right:
+        return 0.0
+
+    sequence = SequenceMatcher(None, left, right).ratio()
+    left_tokens = set(left.split())
+    right_tokens = set(right.split())
+    token_overlap = len(left_tokens & right_tokens) / max(len(left_tokens | right_tokens), 1)
+    return max(sequence, token_overlap)
+
+
+async def _accepted_friend_ids(db: AsyncSession, user_id: UUID) -> set[UUID]:
+    """Return accepted friend ids for the canonical Friendship table."""
+    result = await db.execute(
+        select(Friendship.user_id, Friendship.friend_id).where(
+            Friendship.status == FriendshipStatus.ACCEPTED,
+            Friendship.not_deleted_filter(),
+            or_(Friendship.user_id == user_id, Friendship.friend_id == user_id),
+        )
+    )
+    friend_ids: set[UUID] = set()
+    for left_id, right_id in result.all():
+        friend_ids.add(right_id if left_id == user_id else left_id)
+    return friend_ids
+
+
+async def find_users_with_similar_goals(
+    user_id: UUID,
+    goal_id: UUID,
+    db: AsyncSession,
+    limit: int = 10,
+) -> list[dict]:
+    """
+    COM-011: Find other users pursuing goals similar to the given goal.
+
+    Scoring: title_vector_similarity * 0.5 + type_match * 0.3 + time_window_overlap * 0.2
+    Uses embedding_service for on-the-fly title vectorization.
+    """
+    from app.models.goal import Goal
+    from app.models.user import User
+    from app.services.embedding_service import embedding_service
+
+    # 1. Fetch the source goal
+    src_stmt = select(Goal).where(
+        Goal.id == goal_id,
+        Goal.user_id == user_id,
+        Goal.deleted_at.is_(None),
+    )
+    src_res = await db.execute(src_stmt)
+    src_goal = src_res.scalar_one_or_none()
+    if src_goal is None:
+        return []
+
+    # 2. Compute source embedding
+    src_text = f"{src_goal.title} {src_goal.description or ''}".strip()
+    try:
+        src_embedding = await embedding_service.get_embedding(src_text, text_type="query")
+    except Exception:
+        src_embedding = None
+
+    # 3. Query candidate goals: active, not the user's own
+    cand_stmt = (
+        select(Goal, User)
+        .join(User, Goal.user_id == User.id)
+        .where(
+            Goal.user_id != user_id,
+            Goal.status == "active",
+            Goal.deleted_at.is_(None),
+            User.is_active.is_(True),
+            User.deleted_at.is_(None),
+        )
+        .order_by(Goal.created_at.desc())
+        .limit(200)
+    )
+    cand_res = await db.execute(cand_stmt)
+    candidates = cand_res.all()
+
+    if not candidates:
+        return []
+
+    # 4. Score each candidate
+    scored: list[tuple[float, dict]] = []
+    try:
+        current_friend_ids = await _accepted_friend_ids(db, user_id)
+    except Exception:
+        current_friend_ids = set()
+
+    # Batch-compute embeddings for efficiency
+    cand_texts = [
+        f"{g.title} {g.description or ''}".strip() for g, _ in candidates
+    ]
+    try:
+        cand_embeddings = await embedding_service.batch_embeddings(cand_texts, text_type="document")
+    except Exception:
+        cand_embeddings = [None] * len(candidates)
+
+    for (cand_goal, cand_user), cand_emb in zip(candidates, cand_embeddings):
+        # Title vector similarity (0-1)
+        if src_embedding and cand_emb:
+            vec_sim = _bounded_similarity(_cosine_sim(src_embedding, cand_emb))
+        else:
+            vec_sim = _lexical_goal_similarity(src_goal.title, cand_goal.title)
+
+        # Type match (0 or 1)
+        type_match = 1.0 if cand_goal.goal_type == src_goal.goal_type else 0.0
+
+        # Time window overlap (0-1)
+        time_overlap = 0.5
+        if src_goal.target_date and cand_goal.target_date:
+            days_diff = abs((src_goal.target_date - cand_goal.target_date).days)
+            time_overlap = max(0.0, 1.0 - days_diff / 365.0)
+
+        score = vec_sim * 0.5 + type_match * 0.3 + time_overlap * 0.2
+
+        try:
+            candidate_friend_ids = await _accepted_friend_ids(db, cand_user.id)
+            mutual_count = len(current_friend_ids & candidate_friend_ids)
+        except Exception:
+            mutual_count = 0
+
+        display_name = cand_user.nickname or cand_user.username or "User"
+        scored.append((
+            score,
+            {
+                "user_id": cand_user.id,
+                "display_name": display_name,
+                "avatar_url": getattr(cand_user, "avatar_url", None),
+                "goal_title": cand_goal.title,
+                "goal_type": cand_goal.goal_type,
+                "goal_progress": cand_goal.progress or 0.0,
+                "similarity": round(score, 4),
+                "last_active": getattr(cand_user, "last_login_at", None) or cand_goal.updated_at,
+                "mutual_friends_count": mutual_count,
+            },
+        ))
+
+    # 5. Sort by score descending, return top N
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [item[1] for item in scored[:limit]]

@@ -5,6 +5,7 @@ Cognitive Prism API
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends
+from pydantic import BaseModel, Field
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,8 +18,22 @@ from app.models.user import User
 from app.schemas.cognitive import BehaviorPatternResponse, CognitiveFragmentCreate, CognitiveFragmentResponse
 from app.services.cognitive_service import CognitiveService
 from app.services.glm_batch_service import glm_batch_service
+from app.services.strategy_belief_service import strategy_belief_service
 
 router = APIRouter()
+
+
+class StrategyMigrationRequest(BaseModel):
+    goal_id: UUID
+    new_strategy_id: str = Field(min_length=1)
+
+
+class StrategyMigrationResponse(BaseModel):
+    goal_id: str
+    previous_strategy_id: str
+    new_strategy_id: str
+    new_strategy_title: str
+    migrated_at: str
 
 async def _analyze_fragment_task(user_id: UUID, fragment_id: UUID, db_session_factory):
     """Background task wrapper for analysis"""
@@ -123,3 +138,40 @@ async def get_patterns(
     )
     result = await db.execute(stmt)
     return list(result.scalars().all())
+
+
+# route-tier: authed
+@router.get("/alternative-strategies")
+async def get_alternative_strategies(
+    *,
+    goal_id: UUID,
+    limit: int = 3,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return replacement strategies when a goal's current strategy has counter-evidence."""
+    bundle = await strategy_belief_service.suggest_alternatives(
+        user_id=current_user.id,
+        goal_id=goal_id,
+        db=db,
+        limit=limit,
+    )
+    return bundle.to_dict()
+
+
+# route-tier: authed
+@router.post("/strategies/migrate", response_model=StrategyMigrationResponse)
+async def migrate_strategy(
+    payload: StrategyMigrationRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> StrategyMigrationResponse:
+    """Switch a goal to a selected alternative strategy."""
+    result = await strategy_belief_service.migrate_strategy(
+        user_id=current_user.id,
+        goal_id=payload.goal_id,
+        new_strategy_id=payload.new_strategy_id,
+        db=db,
+    )
+    await db.commit()
+    return StrategyMigrationResponse(**result.to_dict())

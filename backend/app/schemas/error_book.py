@@ -295,6 +295,53 @@ class ErrorReviewCardsResponse(BaseModel):
     source_error_count: int = Field(ge=0)
 
 
+class RemediablePattern(BaseModel):
+    """A repeated error pattern that is strong enough to become a repair task."""
+
+    id: str
+    knowledge_node_id: UUID | None = None
+    knowledge_node_name: str | None = None
+    error_type: str
+    error_type_label: str
+    subject_code: str | None = None
+    chapter: str | None = None
+    error_count: int = Field(ge=0)
+    confidence: float = Field(ge=0.0, le=1.0)
+    average_mastery: float = Field(ge=0.0, le=1.0)
+    suggested_duration_minutes: int = Field(ge=1)
+    root_cause_summary: str | None = None
+    representative_error_id: UUID
+    error_ids: list[UUID] = Field(default_factory=list)
+    last_seen_at: datetime
+
+
+class StructuredRemediationStep(BaseModel):
+    """ExecutablePlan-compatible remediation step."""
+
+    order: int = Field(ge=1)
+    title: str
+    instruction: str
+    duration_minutes: int = Field(ge=1)
+    checkpoint: str
+
+
+class TaskTemplate(BaseModel):
+    """Preview payload for turning an error pattern into a task."""
+
+    pattern_id: str
+    title: str
+    objective: str
+    estimated_minutes: int = Field(ge=1)
+    difficulty: int = Field(ge=1, le=5)
+    knowledge_node_id: UUID | None = None
+    error_type: str
+    success_criteria: list[str] = Field(default_factory=list)
+    minimum_output: str
+    structured_steps: list[StructuredRemediationStep] = Field(default_factory=list)
+    guide_json: dict[str, Any] = Field(default_factory=dict)
+    task_payload: dict[str, Any] = Field(default_factory=dict)
+
+
 # ============================================
 # 筛选查询 Schema
 # ============================================

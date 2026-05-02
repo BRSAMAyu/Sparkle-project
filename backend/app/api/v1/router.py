@@ -53,11 +53,13 @@ from app.api.v1 import (
     files,
     focus,
     galaxy,
+    goals,
     graph_monitor,
     graphrag_trace,
     growth,
     health_production,
     ingestion,
+    insights,
     interventions,
     inventory,
     leaderboards,
@@ -161,7 +163,9 @@ api_router.include_router(audit.router, tags=["Audit"])
 api_router.include_router(dlq_admin.router, tags=["DLQ"])
 api_router.include_router(event_bus_health.router, prefix="/admin", tags=["Event Bus Health"])
 api_router.include_router(galaxy.router, tags=["galaxy"])
+api_router.include_router(goals.router, prefix="/goals", tags=["goals"])
 api_router.include_router(error_book.router)  # Prefix is defined in router itself (/errors)
+api_router.include_router(error_book.error_book_router)  # Prefix is defined in router itself (/error-book)
 api_router.include_router(learning_paths.router)  # Already has prefix /learning-paths
 api_router.include_router(chat.router, prefix="/chat", tags=["chat"])
 api_router.include_router(aurora.router)
@@ -185,6 +189,7 @@ api_router.include_router(counterfactual.router)
 api_router.include_router(omnibar.router, prefix="/omnibar", tags=["omnibar"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(growth.router, prefix="/growth", tags=["growth"])
+api_router.include_router(insights.router, prefix="/insights", tags=["insights"])
 api_router.include_router(experience.router)
 _include_experience_routers()
 api_router.include_router(exam_sprint.router, prefix="/exam-sprint", tags=["exam-sprint"])

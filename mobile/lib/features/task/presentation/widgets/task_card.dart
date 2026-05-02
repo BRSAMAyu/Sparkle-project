@@ -11,9 +11,10 @@ import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/widgets/paused_task_status_panel.dart';
+import 'package:sparkle/features/task/presentation/widgets/source_lifecycle_badge.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_quick_action_menu.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
+import 'package:sparkle/features/task/presentation/widgets/why_this_today_panel.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskCard extends ConsumerStatefulWidget {
@@ -117,7 +118,10 @@ class _TaskCardState extends ConsumerState<TaskCard> {
     final card = _buildCardContent(context);
     if (!widget.enableSwipeComplete ||
         widget.onComplete == null ||
-        widget.task.status == TaskStatus.completed) {
+        widget.task.status == TaskStatus.completed ||
+        widget.task.status == TaskStatus.abandoned ||
+        widget.task.status == TaskStatus.paused ||
+        widget.task.status == TaskStatus.restore) {
       return card;
     }
     return Dismissible(
@@ -346,9 +350,16 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                       TaskPill(
                                                         type: widget.task.type,
                                                         label: _statusLabel(
-                                                          context.l10n,
-                                                          widget.task.status,
+                                                          context,
+                                                          widget.task,
                                                         ),
+                                                        icon: widget.task
+                                                                    .status ==
+                                                                TaskStatus
+                                                                    .paused
+                                                            ? Icons
+                                                                .pause_circle_outline_rounded
+                                                            : null,
                                                         tone: _statusTone(
                                                           widget.task.status,
                                                         ),
@@ -534,13 +545,35 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                         ),
                                       ],
                                       if (widget.task.status ==
-                                          TaskStatus.paused) ...[
+                                              TaskStatus.paused &&
+                                          !widget.compact) ...[
                                         const SizedBox(height: 10),
                                         PausedTaskStatusPanel(
                                           task: widget.task,
                                           onResume:
                                               widget.onResume ?? widget.onStart,
                                           onPause: widget.onPause,
+                                        ),
+                                      ],
+                                      if (!widget.compact &&
+                                          widget.task.boundSources
+                                              .isNotEmpty) ...[
+                                        const SizedBox(height: 10),
+                                        SourceLifecycleBadgeGroup(
+                                          sources: widget.task.boundSources,
+                                          compact: true,
+                                          maxVisible: 2,
+                                        ),
+                                      ],
+                                      if (!widget.compact &&
+                                          widget.task.status !=
+                                              TaskStatus.completed &&
+                                          widget.task.status !=
+                                              TaskStatus.abandoned) ...[
+                                        const SizedBox(height: 10),
+                                        WhyThisTodayPanel(
+                                          taskId: widget.task.id,
+                                          margin: EdgeInsets.zero,
                                         ),
                                       ],
                                       if (widget.task.knowledgeNodeId !=
@@ -773,6 +806,7 @@ TaskPillTone _statusTone(TaskStatus status) {
     case TaskStatus.stuck:
       return TaskPillTone.brand;
     case TaskStatus.paused:
+      return TaskPillTone.warning;
     case TaskStatus.restore:
       return TaskPillTone.neutral;
     case TaskStatus.completed:
@@ -801,14 +835,16 @@ String _typeLabel(TaskType type) {
   }
 }
 
-String _statusLabel(AppLocalizations l10n, TaskStatus status) {
+String _statusLabel(BuildContext context, TaskModel task) {
+  final l10n = context.l10n;
+  final status = task.status;
   switch (status) {
     case TaskStatus.pending:
       return l10n.taskStatusPending;
     case TaskStatus.inProgress:
       return l10n.taskStatusInProgress;
     case TaskStatus.paused:
-      return l10n.taskStatusPaused;
+      return PausedTaskDetails.fromTask(task).pausedDurationLabel(context);
     case TaskStatus.restore:
       return l10n.taskStatusRestore;
     case TaskStatus.stuck:

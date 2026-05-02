@@ -161,6 +161,7 @@ from app.schemas.community import (
     SharedResourceCreate,
     SharedResourceInfo,
     SharedResourceTypeEnum,
+    SimilarGoalPursuer,
     UserBrief,
     UserFileShareRequest,
     UserPrivacySettings,
@@ -192,6 +193,7 @@ from app.services.community_service import (
     UserBlockService,
     UserSearchService,
     _is_visible_to,
+    find_users_with_similar_goals,
 )
 from app.services.community_signal_bridge import CommunitySignalBridge
 from app.services.friend_match_service import FriendMatchService
@@ -253,6 +255,13 @@ def _shared_resource_payload_is_active(resource: SharedResource) -> bool:
         if payload is not None:
             return not getattr(payload, "is_deleted", False)
     return resource.card_share_record_id is not None
+
+
+def _shared_resource_avg_rating(resource: SharedResource) -> float | None:
+    """Use persisted quality as the current rating proxy until explicit ratings exist."""
+    if resource.quality_score is None:
+        return None
+    return round(max(0.0, min(float(resource.quality_score), 1.0)) * 5.0, 1)
 
 
 # route-tier: authed
@@ -3236,6 +3245,10 @@ async def share_resource(
             comment=shared.comment,
             view_count=shared.view_count,
             save_count=shared.save_count,
+            quality_score=shared.quality_score or 0.0,
+            quality_hidden=shared.quality_hidden or False,
+            adoption_count=shared.adoption_count or 0,
+            avg_rating=_shared_resource_avg_rating(shared),
             sharer=UserBrief.model_validate(current_user),
             resource_title=brief["title"],
             resource_summary=brief["summary"],
@@ -3362,6 +3375,8 @@ async def get_group_resources(
                 resource_summary=resource_summary,
                 quality_score=res.quality_score or 0.0,
                 quality_hidden=res.quality_hidden or False,
+                adoption_count=res.adoption_count or 0,
+                avg_rating=_shared_resource_avg_rating(res),
                 entity_card=build_shared_resource_entity_card(
                     shared_resource_id=str(res.id),
                     resource_type=r_type_str,
@@ -4622,6 +4637,7 @@ async def get_community_resources_ranked(
                 "quality_score": res.quality_score or 0.0,
                 "quality_hidden": res.quality_hidden or False,
                 "adoption_count": res.adoption_count or 0,
+                "avg_rating": _shared_resource_avg_rating(res),
                 "view_count": res.view_count or 0,
                 "save_count": res.save_count or 0,
                 "created_at": res.created_at.isoformat() if res.created_at else None,
@@ -4655,6 +4671,30 @@ async def flag_resource_misleading(
     COMMUNITY_RESOURCE_MISLEADING_FLAGS_TOTAL.labels(resource_id=str(resource_id)).inc()
 
     return {"success": True, "quality_score": new_score, "resource_id": str(resource_id)}
+
+
+# ============ COM-011: 同目标伙伴 ============
+
+# route-tier: authed
+@router.get(
+    "/goals/{goal_id}/similar-pursuers",
+    response_model=list[SimilarGoalPursuer],
+    summary="Find users pursuing similar goals",
+)
+async def get_similar_goal_pursuers(
+    goal_id: UUID,
+    limit: int = Query(default=10, ge=1, le=50),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """COM-011: Find other users who are pursuing goals similar to the specified goal."""
+    results = await find_users_with_similar_goals(
+        user_id=current_user.id,
+        goal_id=goal_id,
+        db=db,
+        limit=limit,
+    )
+    return [SimilarGoalPursuer(**r) for r in results]
 
 
 # ============ 管理员社区审核 ============

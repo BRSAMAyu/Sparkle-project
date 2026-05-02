@@ -1,10 +1,13 @@
-export 'data/models/weekly_growth_narrative.dart';
+export 'data/models/directive_audit_entry.dart';
 export 'data/models/growth_dashboard.dart';
+export 'data/models/weekly_growth_narrative.dart';
 export 'insights_routes.dart';
 export 'presentation/pages/growth_chronicle_page.dart';
 export 'presentation/pages/learning_dashboard_page.dart';
+export 'presentation/providers/directive_audit_provider.dart';
 export 'presentation/providers/growth_dashboard_provider.dart';
 export 'presentation/providers/learning_path_provider.dart';
 export 'presentation/providers/weekly_growth_narrative_provider.dart';
+export 'presentation/screens/directive_audit_screen.dart';
 export 'presentation/screens/learning_forecast_screen.dart';
 export 'presentation/screens/learning_insights_overview_screen.dart';

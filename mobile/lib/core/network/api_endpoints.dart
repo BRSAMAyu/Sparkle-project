@@ -66,6 +66,8 @@ class ApiEndpoints {
   static String completeTask(String id) => '/tasks/$id/complete';
   // TASK-001: TaskCardProtocol endpoint (why_this_task / materials / fallback)
   static String taskCardProtocol(String id) => '/tasks/$id/card-protocol';
+  static String taskPriorityReasoning(String id) =>
+      '/tasks/$id/priority-reasoning';
   static String abandonTask(String id) => '/tasks/$id/abandon';
   static String snoozeTask(String id) => '/tasks/$id/snooze';
   static String taskStuck(String id) => '/tasks/$id/stuck';
@@ -192,6 +194,7 @@ class ApiEndpoints {
   static const String growthWeeklyNarrative = '/growth/weekly-narrative';
   static const String growthWeeklyNarrativeGenerate =
       '/growth/weekly-narrative/generate';
+  static const String insightsRecentDirectives = '/insights/recent-directives';
   // GOAL-011: ReturnCaseFile endpoint (returning-user pickup)
   static const String growthReturnCaseFile = '/growth/return-case-file';
   static const String experienceUnderstandingSnapshot =
@@ -349,6 +352,9 @@ class ApiEndpoints {
   static const String communityShare = '/community/share';
   static String adoptSharedResource(String id) =>
       '/community/shared-resources/$id/adopt';
+  static String similarGoalPursuers(String goalId) =>
+      '/community/goals/$goalId/similar-pursuers';
+  static const String communityResources = '/community/resources';
   static const String searchUsers = '/community/users/search';
   static const String userStatus = '/community/status';
 

@@ -19,14 +19,19 @@ from app.schemas.error_book import (
     ErrorRecordUpdate,
     ErrorReviewCardsResponse,
     ErrorTypeEnum,
+    RemediablePattern,
     ReviewAction,
     ReviewStatsResponse,
     SubjectEnum,
+    TaskTemplate,
 )
 from app.schemas.semantic_memory import ErrorSemanticSummary
+from app.schemas.task import TaskDetail
 from app.services.error_book_service import ErrorBookService
+from app.services.error_pattern_template_service import ErrorPatternTemplateService
 
 router = APIRouter(prefix="/errors", tags=["Error Book"])
+error_book_router = APIRouter(prefix="/error-book", tags=["Error Book"])
 
 
 async def _analyze_error_task(error_id: UUID, user_id: UUID, db_session_factory) -> None:
@@ -40,6 +45,12 @@ async def get_error_service(
     db: AsyncSession = Depends(get_db),
 ) -> ErrorBookService:
     return ErrorBookService(db)
+
+
+async def get_error_pattern_template_service(
+    db: AsyncSession = Depends(get_db),
+) -> ErrorPatternTemplateService:
+    return ErrorPatternTemplateService(db)
 
 
 # route-tier: authed
@@ -139,6 +150,50 @@ async def get_review_cards(
 ):
     """Get clustered, actionable review cards built from recent real mistakes."""
     return await service.get_review_cards(UUID(user_id), limit=limit, lookback_days=lookback_days)
+
+
+# route-tier: authed
+@router.get("/remediable-patterns", response_model=list[RemediablePattern])
+@error_book_router.get("/remediable-patterns", response_model=list[RemediablePattern])
+async def list_remediable_patterns(
+    limit: int = Query(3, ge=1, le=20),
+    lookback_days: int = Query(14, ge=1, le=90),
+    user_id: str = Depends(get_current_user_id),
+    service: ErrorPatternTemplateService = Depends(get_error_pattern_template_service),
+):
+    """List repeated ErrorBook patterns that can become remediation tasks."""
+    return await service.identify_remediable_patterns(UUID(user_id), lookback_days=lookback_days, limit=limit)
+
+
+# route-tier: authed
+@router.post("/patterns/{pattern_id}/generate-template", response_model=TaskTemplate)
+@error_book_router.post("/patterns/{pattern_id}/generate-template", response_model=TaskTemplate)
+async def generate_remedial_task_template(
+    pattern_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: ErrorPatternTemplateService = Depends(get_error_pattern_template_service),
+):
+    """Preview the task template for a remediable error pattern."""
+    patterns = await service.identify_remediable_patterns(UUID(user_id), min_confidence=0.0, limit=50)
+    pattern = next((item for item in patterns if item.id == pattern_id), None)
+    if pattern is None:
+        raise HTTPException(status_code=404, detail="没有找到这个可补救错因模式")
+    return service.generate_task_template(pattern)
+
+
+# route-tier: authed
+@router.post("/patterns/{pattern_id}/accept-template", response_model=TaskDetail, status_code=201)
+@error_book_router.post("/patterns/{pattern_id}/accept-template", response_model=TaskDetail, status_code=201)
+async def accept_remedial_task_template(
+    pattern_id: str,
+    user_id: str = Depends(get_current_user_id),
+    service: ErrorPatternTemplateService = Depends(get_error_pattern_template_service),
+):
+    """Accept a remediable pattern template and create a real task."""
+    try:
+        return await service.accept_template(UUID(user_id), pattern_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 # route-tier: authed

@@ -3,9 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/remediable_patterns_card.dart';
+import 'package:sparkle/features/insights/insights_routes.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
-import 'package:sparkle/features/insights/insights_routes.dart';
 import 'package:sparkle/features/report/data/models/learning_report.dart';
 import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/simulation/data/models/simulation_models.dart';
@@ -14,8 +17,6 @@ import 'package:sparkle/features/simulation/simulation_routes.dart';
 import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/theater/theater_routes.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class LearningInsightsOverviewScreen extends ConsumerWidget {
   const LearningInsightsOverviewScreen({
@@ -110,6 +111,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                 WeeklyGrowthNarrativeCard(
                   initialExpanded: initialPanel == panelWeeklyNarrative,
                 ),
+              const RemediablePatternsCard(),
               const SizedBox(height: DS.spacing16),
               _InsightModuleCard(
                 title: context.l10n.gdChronicleTitle,
@@ -131,6 +133,24 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                 highlighted: false,
                 buttonLabel: context.l10n.gdOpenDashboard,
                 onPressed: () => context.push(InsightsRoutes.learningDashboard),
+              ),
+              const SizedBox(height: DS.spacing12),
+              _InsightModuleCard(
+                title: I18nService.instance.isChinese
+                    ? 'AI 决策日志'
+                    : 'AI Decision Log',
+                subtitle: I18nService.instance.isChinese
+                    ? '查看最近的提醒、跳过、降级和重规划依据'
+                    : 'Review recent notify, skip, downgrade, and replan decisions',
+                status: I18nService.instance.isChinese
+                    ? 'Causal Control OS 审计'
+                    : 'Causal Control OS Audit',
+                accent: DS.info,
+                icon: Icons.account_tree_outlined,
+                highlighted: false,
+                buttonLabel:
+                    I18nService.instance.isChinese ? '查看日志' : 'Open Log',
+                onPressed: () => context.push(InsightsRoutes.directiveAudit),
               ),
               const SizedBox(height: DS.spacing16),
               _OverviewHero(activePanel: initialPanel),

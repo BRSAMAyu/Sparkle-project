@@ -10,6 +10,7 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/providers/error_book_provider.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/error_card.dart';
+import 'package:sparkle/features/error_book/presentation/widgets/remediable_patterns_card.dart';
 import 'package:sparkle/features/error_book/presentation/widgets/subject_chips.dart';
 import 'package:sparkle/features/galaxy/galaxy_routes.dart';
 import 'package:sparkle/shared/entities/cognitive_analysis.dart';
@@ -268,6 +269,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
                 ],
               ),
             ),
+            const RemediablePatternsCard(),
 
             // List content.
             Expanded(

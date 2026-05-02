@@ -763,6 +763,8 @@ class SharedResourceInfo(BaseSchema):
     # FV-22: Quality scoring
     quality_score: float = 0.0
     quality_hidden: bool = False
+    adoption_count: int = 0
+    avg_rating: float | None = None
 
     sharer: UserBrief
 
@@ -771,6 +773,23 @@ class SharedResourceInfo(BaseSchema):
     resource_title: str | None = None
     resource_summary: str | None = None
     entity_card: dict[str, Any] | None = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============ COM-011: 同目标伙伴 ============
+
+class SimilarGoalPursuer(BaseModel):
+    """与当前用户追求相似目标的其他用户"""
+    user_id: UUID = Field(description="用户ID")
+    display_name: str = Field(description="显示名称")
+    avatar_url: str | None = Field(default=None, description="头像URL")
+    goal_title: str = Field(description="对方的目标标题")
+    goal_type: str = Field(default="general", description="目标类型")
+    goal_progress: float = Field(default=0.0, description="目标进度 0-1")
+    similarity: float = Field(default=0.0, description="目标相似度 0-1")
+    last_active: datetime | None = Field(default=None, description="最近活跃时间")
+    mutual_friends_count: int = Field(default=0, description="共同好友数")
 
     model_config = ConfigDict(from_attributes=True)
 

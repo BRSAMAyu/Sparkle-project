@@ -210,6 +210,20 @@ class TaskBase(BaseSchema):
     due_date: date | None = Field(description="Due date")
 
 
+class TaskBoundSourceInfo(BaseModel):
+    """Lifecycle-aware source bound to a task."""
+
+    id: UUID = Field(description="Source asset ID")
+    title: str = Field(description="Source title")
+    lifecycle_status: str = Field(default="active", description="Source lifecycle status")
+    source_type: str = Field(default="file", description="Source type")
+    linked_by: str | None = Field(default=None, description="Link origin")
+    reason: str | None = Field(default=None, description="Why this source is bound")
+    status: str | None = Field(default=None, description="Parsing or upload status")
+    lifecycle_reason: str | None = Field(default=None, description="Lifecycle transition reason")
+    updated_at: datetime | None = Field(default=None, description="Source updated time")
+
+
 class TaskDetail(TaskBase):
     """Task detailed information"""
 
@@ -232,6 +246,10 @@ class TaskDetail(TaskBase):
     source_planning_session_id: str | None = Field(default=None, description="Origin planning session ID")
     phase_index: int | None = Field(default=None, description="Phase index inside the planning strategy")
     success_criteria: str | None = Field(default=None, description="Task success criteria")
+    bound_sources: list[TaskBoundSourceInfo] = Field(
+        default_factory=list,
+        description="Lifecycle-aware source assets currently bound to the task",
+    )
 
 
 class TaskReorderRequest(BaseModel):

@@ -10,6 +10,7 @@ import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/intervention_action_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
@@ -33,7 +34,9 @@ import 'package:sparkle/features/task/presentation/widgets/blocking_interceptor_
 import 'package:sparkle/features/task/presentation/widgets/execution_approval_card.dart';
 import 'package:sparkle/features/task/presentation/widgets/execution_status_indicator.dart';
 import 'package:sparkle/features/task/presentation/widgets/execution_template_card.dart';
+import 'package:sparkle/features/task/presentation/widgets/paused_task_status_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/quick_tools_panel.dart';
+import 'package:sparkle/features/task/presentation/widgets/source_lifecycle_badge.dart';
 import 'package:sparkle/features/task/presentation/widgets/stuck_help_sheet.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart';
@@ -43,6 +46,7 @@ import 'package:sparkle/features/task/presentation/widgets/task_guide_panel.dart
 import 'package:sparkle/features/task/presentation/widgets/task_offline_indicator.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_protocol_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
+import 'package:sparkle/features/task/presentation/widgets/why_this_today_panel.dart';
 import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
 import 'package:sparkle/features/visual_elements/presentation/providers/visual_elements_provider.dart';
@@ -529,10 +533,16 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         entryReason: AuroraCoreSessionEntryReason(
           triggerSource: 'task_stuck_prompt',
           observedSignals: observed.isEmpty ? [task.title] : observed,
-          suggestedAgendaPreview: const [
-            '确认卡点发生在哪里',
-            '判断是任务太大还是知识点没接上',
-            '给出下一步可执行调整',
+          suggestedAgendaPreview: [
+            I18nService.instance.isChinese
+                ? '确认卡点发生在哪里'
+                : 'Confirm where the block happened',
+            I18nService.instance.isChinese
+                ? '判断是任务太大还是知识点没接上'
+                : 'Determine if the task is too big or a knowledge gap',
+            I18nService.instance.isChinese
+                ? '给出下一步可执行调整'
+                : 'Suggest an actionable next step',
           ],
           whyNow: context.l10n.auroraTaskStuckWhyNow,
           estimatedMinutes: 4,
@@ -874,12 +884,34 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                               const SizedBox(height: DS.spacing16),
                               // TASK-013: offline / pending sync banner
                               const TaskOfflineIndicator(),
+                              if (activeTask.status == TaskStatus.paused) ...[
+                                const SizedBox(height: DS.spacing12),
+                                PausedTaskBanner(
+                                  task: activeTask,
+                                  onResume: () {
+                                    unawaited(
+                                      ref
+                                          .read(taskListProvider.notifier)
+                                          .resumeTask(activeTask.id),
+                                    );
+                                  },
+                                ),
+                              ],
+                              if (activeTask.boundSources.isNotEmpty) ...[
+                                const SizedBox(height: DS.spacing12),
+                                SourceLifecycleBadgeGroup(
+                                  sources: activeTask.boundSources,
+                                  maxVisible: 2,
+                                ),
+                              ],
                               // 1. Focus Mode Entry Card (Prominent)
+                              const SizedBox(height: DS.spacing16),
                               _buildFocusEntryCard(context, activeTask),
                               const SizedBox(height: DS.spacing16),
                               // TASK-001: structured TaskCardProtocol panel
                               // (why_this_task / materials / fallback)
                               TaskProtocolPanel(taskId: activeTask.id),
+                              WhyThisTodayPanel(taskId: activeTask.id),
                               const SizedBox(height: DS.spacing16),
                               TaskGuidePanel(
                                 task: activeTask,

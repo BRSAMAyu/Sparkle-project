@@ -27,7 +27,9 @@ import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.d
 import 'package:sparkle/features/task/presentation/providers/subtask_provider.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/guidance/task_guidance_surface.dart';
+import 'package:sparkle/features/task/presentation/widgets/source_lifecycle_badge.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
+import 'package:sparkle/features/task/presentation/widgets/why_this_today_panel.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/widgets/card_picker_sheet.dart';
 
@@ -84,7 +86,16 @@ class _TaskDetailView extends ConsumerWidget {
                           if (task.status == TaskStatus.paused ||
                               task.status == TaskStatus.restore)
                             _buildPausedRecoveryCard(context, ref),
+                          if (task.boundSources.isNotEmpty)
+                            SourceLifecycleBadgeGroup(
+                              sources: task.boundSources,
+                              maxVisible: 3,
+                            ),
                           _buildInfoSection(context, ref),
+                          WhyThisTodayPanel(
+                            taskId: task.id,
+                            margin: EdgeInsets.zero,
+                          ),
                           if (task.guideJson != null ||
                               (task.aiPrompt ?? '').trim().isNotEmpty)
                             _StructuredGuideSection(task: task),

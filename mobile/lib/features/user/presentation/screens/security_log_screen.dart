@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/models/account_security_model.dart';
@@ -161,237 +162,242 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => SparklePageScaffold(
-        role: SparklePageRole.settings,
-        appBar: AppBar(
-          leading: SparkleIconButton(
-            variant: ButtonVariant.ghost,
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
-          ),
-          title: Text(context.l10n.securityLogTitle),
-          centerTitle: true,
+  Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
+    return SparklePageScaffold(
+      role: SparklePageRole.settings,
+      appBar: AppBar(
+        leading: SparkleIconButton(
+          variant: ButtonVariant.ghost,
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
         ),
-        child: ContentConstraint(
-          child: RefreshIndicator(
-            onRefresh: _loadLogs,
-            child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
-              children: [
-                SparkleStaggerItem(
-                  index: 0,
-                  child: GraphiteCardSurface(
-                    surfaceRole: SparkleSurfaceRole.panel,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: DS.spacing8,
-                          runSpacing: DS.spacing8,
-                          children: [
-                            _buildInfoChip(
-                              context,
-                              icon: Icons.history_rounded,
-                              label: '共 ${_logs.length} 条记录',
+        title: Text(context.l10n.securityLogTitle),
+        centerTitle: true,
+      ),
+      child: ContentConstraint(
+        child: RefreshIndicator(
+          onRefresh: _loadLogs,
+          child: ListView(
+            padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
+            children: [
+              SparkleStaggerItem(
+                index: 0,
+                child: GraphiteCardSurface(
+                  surfaceRole: SparkleSurfaceRole.panel,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Wrap(
+                        spacing: DS.spacing8,
+                        runSpacing: DS.spacing8,
+                        children: [
+                          _buildInfoChip(
+                            context,
+                            icon: Icons.history_rounded,
+                            label: zh
+                                ? '共 ${_logs.length} 条记录'
+                                : '${_logs.length} records',
+                          ),
+                          _buildInfoChip(
+                            context,
+                            icon: Icons.warning_amber_rounded,
+                            label: zh
+                                ? '异常 ${_logs.where((item) => item.action == 'login_failed' || item.action == 'account_delete').length} 条'
+                                : '${_logs.where((item) => item.action == 'login_failed' || item.action == 'account_delete').length} anomalies',
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: DS.spacing12),
+                      Text(
+                        context.l10n.securityLogIntro,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: DS.textSecondary,
+                              height: 1.45,
                             ),
-                            _buildInfoChip(
-                              context,
-                              icon: Icons.warning_amber_rounded,
-                              label:
-                                  '异常 ${_logs.where((item) => item.action == 'login_failed' || item.action == 'account_delete').length} 条',
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: DS.spacing12),
-                        Text(
-                          context.l10n.securityLogIntro,
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: DS.textSecondary,
-                                    height: 1.45,
-                                  ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: DS.spacing16),
-                if (_isLoading)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: DS.spacing40),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (_logs.isEmpty)
-                  GraphiteCardSurface(
-                    child: Text(context.l10n.securityLogEmpty),
-                  )
-                else
-                  ..._logs.asMap().entries.map(
-                    (entry) {
-                      final index = entry.key;
-                      final item = entry.value;
-                      final isExpanded = _expandedIndices.contains(index);
-                      final color = _actionColor(item.action);
+              ),
+              const SizedBox(height: DS.spacing16),
+              if (_isLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: DS.spacing40),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_logs.isEmpty)
+                GraphiteCardSurface(
+                  child: Text(context.l10n.securityLogEmpty),
+                )
+              else
+                ..._logs.asMap().entries.map(
+                  (entry) {
+                    final index = entry.key;
+                    final item = entry.value;
+                    final isExpanded = _expandedIndices.contains(index);
+                    final color = _actionColor(item.action);
 
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: DS.spacing12),
-                        child: SparkleStaggerItem(
-                          index: index + 1,
-                          child: GraphiteCardSurface(
-                            child: InkWell(
-                              borderRadius: DS.borderRadius16,
-                              onTap: () {
-                                setState(() {
-                                  if (isExpanded) {
-                                    _expandedIndices.remove(index);
-                                  } else {
-                                    _expandedIndices.add(index);
-                                  }
-                                });
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.all(DS.spacing16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(DS.sm),
-                                          decoration: BoxDecoration(
-                                            color:
-                                                color.withValues(alpha: 0.12),
-                                            borderRadius: DS.borderRadius8,
-                                          ),
-                                          child: Icon(
-                                            _actionIcon(item.action),
-                                            size: 18,
-                                            color: color,
-                                          ),
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: DS.spacing12),
+                      child: SparkleStaggerItem(
+                        index: index + 1,
+                        child: GraphiteCardSurface(
+                          child: InkWell(
+                            borderRadius: DS.borderRadius16,
+                            onTap: () {
+                              setState(() {
+                                if (isExpanded) {
+                                  _expandedIndices.remove(index);
+                                } else {
+                                  _expandedIndices.add(index);
+                                }
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(DS.spacing16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(DS.sm),
+                                        decoration: BoxDecoration(
+                                          color: color.withValues(alpha: 0.12),
+                                          borderRadius: DS.borderRadius8,
                                         ),
-                                        const SizedBox(width: DS.spacing12),
-                                        Expanded(
-                                          child: Wrap(
-                                            spacing: DS.spacing8,
-                                            runSpacing: DS.spacing8,
-                                            children: [
-                                              Text(
-                                                _actionLabel(item.action),
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .titleMedium
-                                                    ?.copyWith(
-                                                      fontWeight:
-                                                          DS.fontWeightBold,
-                                                    ),
-                                              ),
-                                              _SecurityStatePill(
-                                                label: item.action,
-                                                color: color,
-                                              ),
-                                            ],
-                                          ),
+                                        child: Icon(
+                                          _actionIcon(item.action),
+                                          size: 18,
+                                          color: color,
                                         ),
-                                        Icon(
-                                          isExpanded
-                                              ? Icons.keyboard_arrow_up_rounded
-                                              : Icons
-                                                  .keyboard_arrow_down_rounded,
-                                          color: DS.textSecondary,
-                                          size: 20,
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: DS.spacing10),
-                                    _buildMetaLine(
-                                      context.l10n.securityLogOccurredAt(
-                                        _formatTime(item.occurredAt),
                                       ),
+                                      const SizedBox(width: DS.spacing12),
+                                      Expanded(
+                                        child: Wrap(
+                                          spacing: DS.spacing8,
+                                          runSpacing: DS.spacing8,
+                                          children: [
+                                            Text(
+                                              _actionLabel(item.action),
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .titleMedium
+                                                  ?.copyWith(
+                                                    fontWeight:
+                                                        DS.fontWeightBold,
+                                                  ),
+                                            ),
+                                            _SecurityStatePill(
+                                              label: item.action,
+                                              color: color,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Icon(
+                                        isExpanded
+                                            ? Icons.keyboard_arrow_up_rounded
+                                            : Icons.keyboard_arrow_down_rounded,
+                                        color: DS.textSecondary,
+                                        size: 20,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: DS.spacing10),
+                                  _buildMetaLine(
+                                    context.l10n.securityLogOccurredAt(
+                                      _formatTime(item.occurredAt),
                                     ),
-                                    if ((item.ipAddress ?? '').isNotEmpty)
-                                      _buildMetaLine('IP: ${item.ipAddress}'),
-                                    if (isExpanded) ...[
-                                      const SizedBox(height: DS.spacing10),
-                                      if ((item.userAgent ?? '').isNotEmpty)
-                                        Container(
-                                          padding: const EdgeInsets.all(
-                                            DS.spacing12,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: DS.surfaceSecondary,
-                                            borderRadius: DS.borderRadius12,
-                                            border: Border.all(
-                                              color: DS.borderSubtle,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            context.l10n.securityLogDevice(
-                                              item.userAgent!,
-                                            ),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall
-                                                ?.copyWith(
-                                                  color: DS.textSecondary,
-                                                  height: 1.4,
-                                                ),
-                                            maxLines: 3,
-                                            overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if ((item.ipAddress ?? '').isNotEmpty)
+                                    _buildMetaLine('IP: ${item.ipAddress}'),
+                                  if (isExpanded) ...[
+                                    const SizedBox(height: DS.spacing10),
+                                    if ((item.userAgent ?? '').isNotEmpty)
+                                      Container(
+                                        padding: const EdgeInsets.all(
+                                          DS.spacing12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: DS.surfaceSecondary,
+                                          borderRadius: DS.borderRadius12,
+                                          border: Border.all(
+                                            color: DS.borderSubtle,
                                           ),
                                         ),
-                                      if ((item.metadata ?? const {})
-                                          .isNotEmpty) ...[
-                                        const SizedBox(height: DS.spacing8),
-                                        Container(
-                                          padding: const EdgeInsets.all(
-                                            DS.spacing12,
+                                        child: Text(
+                                          context.l10n.securityLogDevice(
+                                            item.userAgent!,
                                           ),
-                                          decoration: BoxDecoration(
-                                            color: DS.surfaceSecondary,
-                                            borderRadius: DS.borderRadius12,
-                                            border: Border.all(
-                                              color: DS.borderSubtle,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            context.l10n
-                                                .securityLogAdditionalInfo(
-                                              item.metadata.toString(),
-                                            ),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall
-                                                ?.copyWith(
-                                                  color: DS.textSecondary,
-                                                  height: 1.4,
-                                                ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: DS.textSecondary,
+                                                height: 1.4,
+                                              ),
+                                          maxLines: 3,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    if ((item.metadata ?? const {})
+                                        .isNotEmpty) ...[
+                                      const SizedBox(height: DS.spacing8),
+                                      Container(
+                                        padding: const EdgeInsets.all(
+                                          DS.spacing12,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: DS.surfaceSecondary,
+                                          borderRadius: DS.borderRadius12,
+                                          border: Border.all(
+                                            color: DS.borderSubtle,
                                           ),
                                         ),
-                                      ],
+                                        child: Text(
+                                          context.l10n
+                                              .securityLogAdditionalInfo(
+                                            item.metadata.toString(),
+                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: DS.textSecondary,
+                                                height: 1.4,
+                                              ),
+                                        ),
+                                      ),
                                     ],
                                   ],
-                                ),
+                                ],
                               ),
                             ),
                           ),
                         ),
-                      );
-                    },
+                      ),
+                    );
+                  },
+                ),
+              if (!_isLoading && _logs.isNotEmpty && _hasMore)
+                Padding(
+                  padding: const EdgeInsets.only(top: DS.spacing8),
+                  child: SparkleButton.ghost(
+                    label: _isLoadingMore
+                        ? context.l10n.userLoading
+                        : context.l10n.userLoadMoreRecords,
+                    onPressed: _isLoadingMore ? () {} : _loadMoreLogs,
+                    expand: true,
                   ),
-                if (!_isLoading && _logs.isNotEmpty && _hasMore)
-                  Padding(
-                    padding: const EdgeInsets.only(top: DS.spacing8),
-                    child: SparkleButton.ghost(
-                      label: _isLoadingMore ? context.l10n.userLoading : context.l10n.userLoadMoreRecords,
-                      onPressed: _isLoadingMore ? () {} : _loadMoreLogs,
-                      expand: true,
-                    ),
-                  ),
-              ],
-            ),
+                ),
+            ],
           ),
         ),
-      );
+      ),
+    );
+  }
 
   Widget _buildInfoChip(
     BuildContext context, {

@@ -7,15 +7,33 @@ import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/goal/presentation/pages/goal_detail_page.dart';
+import 'package:sparkle/features/goal/presentation/screens/goal_creation_wizard_screen.dart';
 
 class GoalRoutes {
   GoalRoutes._();
 
   static const String detail = '/goals/:goalId';
+  static const String create = '/goals/new';
 
   static String detailLocation(String goalId) => '/goals/$goalId';
 
   static List<RouteBase> get routes => [
+        GoRoute(
+          path: create,
+          name: 'goalCreate',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
+            state: state,
+            motionToken: SparkleMotionToken.scene,
+            type: SharedAxisTransitionType.scaled,
+            child: SceneAudioScope(
+              policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                trackOverride: BgmTrack.plan,
+              ),
+              child: const GoalCreationWizardScreen(),
+            ),
+          ),
+        ),
         GoRoute(
           path: detail,
           name: 'goalDetail',

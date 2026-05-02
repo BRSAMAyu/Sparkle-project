@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/features/cognitive/data/models/strategy_migration_models.dart';
 
 final goalDetailProvider = StateNotifierProvider.family<GoalDetailNotifier,
     AsyncValue<GoalDetailData>, String>(
@@ -95,6 +96,7 @@ class GoalDetailData {
     required this.knowledgeBottlenecks,
     required this.accountabilityStatus,
     required this.relatedSources,
+    this.strategyBelief,
   });
 
   factory GoalDetailData.fromJson(Map<String, dynamic> json) => GoalDetailData(
@@ -124,6 +126,9 @@ class GoalDetailData {
             .whereType<Map<String, dynamic>>()
             .map(RelatedSource.fromJson)
             .toList(growable: false),
+        strategyBelief: _asMap(json['strategy_belief']) == null
+            ? null
+            : StrategyBeliefView.fromJson(_asMap(json['strategy_belief'])!),
       );
 
   final GoalSummary goal;
@@ -134,6 +139,7 @@ class GoalDetailData {
   final List<KnowledgeBottleneck> knowledgeBottlenecks;
   final AccountabilityStatusSummary accountabilityStatus;
   final List<RelatedSource> relatedSources;
+  final StrategyBeliefView? strategyBelief;
 
   GoalDetailData copyWith({
     MinimumAcceptanceCriteria? minimumAcceptanceCriteria,
@@ -148,6 +154,7 @@ class GoalDetailData {
         knowledgeBottlenecks: knowledgeBottlenecks,
         accountabilityStatus: accountabilityStatus,
         relatedSources: relatedSources,
+        strategyBelief: strategyBelief,
       );
 }
 

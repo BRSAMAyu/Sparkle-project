@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/features/cognitive/presentation/widgets/strategy_migration_wizard.dart';
+import 'package:sparkle/features/community/presentation/widgets/similar_goal_pursuers_card.dart';
 import 'package:sparkle/features/goal/presentation/providers/goal_detail_provider.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_bottleneck_strip.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_detail_l10n.dart';
@@ -54,6 +56,15 @@ class GoalDetailPage extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
             children: [
               _GoalHeader(data: data),
+              if (data.strategyBelief != null) ...[
+                const SizedBox(height: 14),
+                StrategyMigrationWizard(
+                  goalId: goalId,
+                  belief: data.strategyBelief,
+                  onMigrated: (_) =>
+                      ref.read(goalDetailProvider(goalId).notifier).load(),
+                ),
+              ],
               const SizedBox(height: 14),
               MinimumCriteriaCard(
                 criteria: data.minimumAcceptanceCriteria,
@@ -89,6 +100,8 @@ class GoalDetailPage extends ConsumerWidget {
               _AccountabilityCard(summary: data.accountabilityStatus),
               const SizedBox(height: 14),
               _RelatedSourcesCard(sources: data.relatedSources),
+              const SizedBox(height: 14),
+              SimilarGoalPursuersCard(goalId: goalId),
             ],
           ),
         ),
