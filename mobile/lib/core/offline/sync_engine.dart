@@ -198,6 +198,9 @@ class SyncEngine {
           await _sendInterventionPassiveSignal(payload);
         case 'intervention_outcomes':
           await _sendInterventionOutcome(payload);
+        case 'task':
+          // TASK-013: offline task lifecycle (start/pause/resume/complete/abandon)
+          await _sendTaskOperation(descriptor.opType, payload, item);
         default:
           _logger.w(
             'Unknown outbox item: ${descriptor.topic}/${descriptor.opType}',
@@ -361,6 +364,59 @@ class SyncEngine {
       ApiEndpoints.interventionsOutcomes,
       data: payload,
     );
+  }
+
+  /// TASK-013: Replay a task lifecycle operation captured offline.
+  ///
+  /// Op types: 'start' / 'pause' / 'resume' / 'complete' / 'abandon'.
+  /// Server is idempotent on these (status transitions reject duplicates with
+  /// 409, which we treat as success since the desired state is already there).
+  Future<void> _sendTaskOperation(
+    String opType,
+    Map<String, dynamic> payload,
+    OutboxItem item,
+  ) async {
+    final taskId = (payload['task_id'] as String?) ?? '';
+    if (taskId.isEmpty) {
+      throw SyncFailure('MISSING_TASK_ID', 'Missing task_id for offline replay');
+    }
+
+    String? endpoint;
+    Map<String, dynamic>? body;
+    switch (opType) {
+      case 'start':
+        endpoint = ApiEndpoints.startTask(taskId);
+        body = null;
+      case 'pause':
+        endpoint = ApiEndpoints.pauseTask(taskId);
+        body = (payload['reason'] != null) ? {'reason': payload['reason']} : null;
+      case 'resume':
+        endpoint = ApiEndpoints.resumeTask(taskId);
+        body = null;
+      case 'complete':
+        endpoint = ApiEndpoints.completeTask(taskId);
+        body = (payload['completion'] as Map?)?.cast<String, dynamic>();
+      case 'abandon':
+        endpoint = '/tasks/$taskId/abandon';
+        body = (payload['reason'] != null) ? {'reason': payload['reason']} : null;
+      default:
+        throw SyncFailure(
+          'UNKNOWN_TASK_OP',
+          'Unknown task op type: $opType',
+        );
+    }
+
+    try {
+      await _apiClient.post<dynamic>(endpoint, data: body);
+    } on DioException catch (e) {
+      // 409 = already in target state from a previous (possibly retried) call.
+      // Treat as success so we don't retry forever after partial network glitch.
+      if (e.response?.statusCode == 409) {
+        _logger.i('Task op $opType already applied for $taskId, treating as success');
+        return;
+      }
+      rethrow;
+    }
   }
 
   _OutboxDescriptor _describeItem(OutboxItem item) {

@@ -40,6 +40,8 @@ import 'package:sparkle/features/task/presentation/widgets/task_chat_panel.dart'
 import 'package:sparkle/features/task/presentation/widgets/task_completion_celebration.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_feedback_dialog.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_guide_panel.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_offline_indicator.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_protocol_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/timer_widget.dart';
 import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/task/utils/task_identity.dart';
@@ -870,9 +872,15 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               const SizedBox(height: DS.spacing16),
+                              // TASK-013: offline / pending sync banner
+                              const TaskOfflineIndicator(),
                               // 1. Focus Mode Entry Card (Prominent)
                               _buildFocusEntryCard(context, activeTask),
-                              const SizedBox(height: DS.spacing24),
+                              const SizedBox(height: DS.spacing16),
+                              // TASK-001: structured TaskCardProtocol panel
+                              // (why_this_task / materials / fallback)
+                              TaskProtocolPanel(taskId: activeTask.id),
+                              const SizedBox(height: DS.spacing16),
                               TaskGuidePanel(
                                 task: activeTask,
                                 onAuroraTriggerPressed: (trigger) =>

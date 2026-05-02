@@ -64,6 +64,8 @@ class ApiEndpoints {
   static String pauseTask(String id) => '/tasks/$id/pause';
   static String resumeTask(String id) => '/tasks/$id/resume';
   static String completeTask(String id) => '/tasks/$id/complete';
+  // TASK-001: TaskCardProtocol endpoint (why_this_task / materials / fallback)
+  static String taskCardProtocol(String id) => '/tasks/$id/card-protocol';
   static String abandonTask(String id) => '/tasks/$id/abandon';
   static String snoozeTask(String id) => '/tasks/$id/snooze';
   static String taskStuck(String id) => '/tasks/$id/stuck';
@@ -190,6 +192,8 @@ class ApiEndpoints {
   static const String growthWeeklyNarrative = '/growth/weekly-narrative';
   static const String growthWeeklyNarrativeGenerate =
       '/growth/weekly-narrative/generate';
+  // GOAL-011: ReturnCaseFile endpoint (returning-user pickup)
+  static const String growthReturnCaseFile = '/growth/return-case-file';
   static const String experienceUnderstandingSnapshot =
       '/experience/understanding-snapshot';
   static const String experienceGrowthDashboard =

@@ -12,6 +12,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_offline_indicator.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 enum TaskFilterOptions { all, pending, inProgress, paused, completed }
@@ -250,6 +251,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         child: ContentConstraint(
           child: Column(
             children: [
+              const TaskOfflineIndicator(),
               if (!_isSearching) const _FilterChips(),
               if (taskListState.error != null && tasks.isNotEmpty)
                 Container(

@@ -45,6 +45,7 @@ import 'package:sparkle/features/home/presentation/widgets/task_board/task_board
 import 'package:sparkle/features/home/presentation/widgets/understanding_panel.dart';
 import 'package:sparkle/features/home/presentation/widgets/unified_omni_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/weather_header.dart';
+import 'package:sparkle/features/insights/presentation/widgets/return_case_file_card.dart';
 import 'package:sparkle/features/insights/presentation/widgets/weekly_growth_narrative_card.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 import 'package:sparkle/features/notification_center/presentation/providers/notification_center_provider.dart';
@@ -616,6 +617,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ? null
                     : () => _openBottleneckChat(activeBottleneck),
               ),
+            ),
+            _staggeredSection(
+              index: growthSectionIndex++,
+              child: const ReturnCaseFileCard(),
             ),
             _staggeredSection(
               index: growthSectionIndex++,

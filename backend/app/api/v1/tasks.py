@@ -188,6 +188,7 @@ async def _resolve_task_resource_defaults(
     return title, summary, metadata or None
 
 
+# route-tier: authed
 @router.get("", response_model=dict[str, Any])
 async def list_tasks(
     status: TaskStatus | None = Query(None, description="Filter by status"),
@@ -250,6 +251,7 @@ async def list_tasks(
     }
 
 
+# route-tier: authed
 @router.post("", response_model=dict[str, Any])
 async def create_task(
     task_in: TaskCreate,
@@ -305,6 +307,7 @@ async def create_task(
     }
 
 
+# route-tier: authed
 @router.post("/reorder", response_model=dict[str, Any])
 async def reorder_tasks(
     request: TaskReorderRequest,
@@ -327,6 +330,7 @@ async def reorder_tasks(
     }
 
 
+# route-tier: authed
 @router.post("/suggestions", response_model=TaskSuggestionResponse)
 async def get_task_suggestions(
     request: TaskSuggestionRequest, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)
@@ -338,6 +342,7 @@ async def get_task_suggestions(
     return await service.get_suggestions(current_user.id, request.input_text)
 
 
+# route-tier: authed
 @router.get("/recommendations/micro", response_model=list[TaskRecommendationResponse])
 async def get_micro_task_recommendations(
     context: str | None = Query(None, description="上下文: commute, lunch, evening"),
@@ -364,6 +369,7 @@ async def get_micro_task_recommendations(
     return [TaskRecommendationResponse(**r.__dict__) for r in micro_tasks[:limit]]
 
 
+# route-tier: authed
 @router.get("/today", response_model=list[TaskDetail])
 async def get_today_tasks(
     current_user: User = Depends(get_current_user),
@@ -379,6 +385,7 @@ async def get_today_tasks(
     return [TaskDetail.model_validate(selection.task) for selection in selections]
 
 
+# route-tier: authed
 @router.get("/recommended", response_model=list[TaskDetail])
 async def get_recommended_tasks(
     limit: int = Query(5, ge=1, le=20, description="Recommendation count"),
@@ -394,6 +401,7 @@ async def get_recommended_tasks(
     return [TaskDetail.model_validate(selection.task) for selection in selections]
 
 
+# route-tier: authed
 @router.get("/{task_id}", response_model=dict[str, Any])
 async def get_task(
     task_id: UUID = Path(..., description="Task ID"),
@@ -408,6 +416,79 @@ async def get_task(
     return {"data": TaskDetail.model_validate(task)}
 
 
+# route-tier: authed
+@router.get("/{task_id}/card-protocol", response_model=dict[str, Any])
+async def get_task_card_protocol(
+    task_id: UUID = Path(..., description="Task ID"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    TASK-001: Return the structured TaskCardProtocol for a task.
+
+    Surfaces the protocol fields (why_this_task, materials_protocol,
+    stuck_protocol, success_criteria, minimum_output, updates_after_completion,
+    fallback_if_failed) that the Flutter task guide panel needs to render the
+    "why am I doing this" / "what materials do I need" / "what if I fail"
+    sections.
+
+    The protocol is built on demand from the task's existing fields plus any
+    cached SkillDirective / RetrievalDirective hints from the Spine
+    orchestrator. Falls back to sane defaults if no Spine context is cached.
+    """
+    from app.signals.task_card_protocol import TaskCardBuilder
+    from app.signals.types import MaterialsProtocol, StuckProtocol, WhyThisTask
+
+    task = await _get_user_task_or_404(db, task_id, current_user.id)
+
+    # Try to read cached Spine task-card-protocol payload first
+    cached_payload: dict[str, Any] | None = None
+    if cache_service.redis is not None:
+        try:
+            raw = await cache_service.redis.get(
+                f"spine:task_card_protocol:{task.id}"
+            )
+            if raw:
+                import json as _json
+                cached_payload = _json.loads(raw if isinstance(raw, str) else raw.decode())
+        except Exception:  # noqa: BLE001
+            cached_payload = None
+
+    if cached_payload is not None:
+        return {"data": cached_payload}
+
+    # Build a default protocol from task fields. Map task type → builder.
+    bound_nodes: list[str] = []
+    if getattr(task, "knowledge_node_id", None):
+        bound_nodes.append(str(task.knowledge_node_id))
+
+    builder_map = {
+        TaskType.LEARNING: TaskCardBuilder.for_study,
+        TaskType.TRAINING: TaskCardBuilder.for_practice,
+        TaskType.ERROR_FIX: TaskCardBuilder.for_practice,
+        TaskType.REFLECTION: TaskCardBuilder.for_study,
+    }
+    builder = builder_map.get(task.task_type, TaskCardBuilder.for_study)
+
+    protocol = builder(
+        goal_id=str(task.plan_id) if task.plan_id else "",
+        bound_nodes=bound_nodes,
+        why=WhyThisTask(
+            primary_signal=(task.description or task.title)[:200],
+            user_visible_reason=task.title,
+        ),
+        steps=[],
+        stuck_protocol=StuckProtocol(
+            escalation_after_min=15,
+            hint_strategy="worked_example",
+        ),
+    )
+    # Override task_id to match the live DB row
+    protocol.task_id = str(task.id)
+    return {"data": protocol.to_dict()}
+
+
+# route-tier: authed
 @router.get("/{task_id}/documents", response_model=dict[str, Any])
 async def list_task_documents(
     task_id: UUID = Path(..., description="Task ID"),
@@ -424,6 +505,7 @@ async def list_task_documents(
     return {"data": [_serialize_task_document(link, file_record) for link, file_record in links]}
 
 
+# route-tier: authed
 @router.post("/{task_id}/documents", response_model=dict[str, Any])
 async def attach_task_document(
     payload: TaskDocumentLinkCreate,
@@ -456,6 +538,7 @@ async def attach_task_document(
     return {"data": _serialize_task_document(attached[0], attached[1])}
 
 
+# route-tier: authed
 @router.delete("/{task_id}/documents", response_model=dict[str, Any])
 async def detach_task_document(
     payload: TaskDocumentUnlinkRequest,
@@ -478,6 +561,7 @@ async def detach_task_document(
     return {"success": True, "task_id": str(task_id), "file_id": str(payload.file_id)}
 
 
+# route-tier: authed
 @router.get("/{task_id}/resources", response_model=dict[str, Any])
 async def list_task_resources(
     task_id: UUID = Path(..., description="Task ID"),
@@ -495,6 +579,7 @@ async def list_task_resources(
     return {"data": [TaskResourceLinkInfo.model_validate(link) for link in resources]}
 
 
+# route-tier: authed
 @router.post("/{task_id}/resources", response_model=dict[str, Any])
 async def attach_task_resource(
     payload: TaskResourceLinkCreate,
@@ -533,6 +618,7 @@ async def attach_task_resource(
     return {"data": TaskResourceLinkInfo.model_validate(link)}
 
 
+# route-tier: authed
 @router.delete("/{task_id}/resources/{link_id}", status_code=204)
 async def delete_task_resource(
     task_id: UUID = Path(..., description="Task ID"),
@@ -550,6 +636,7 @@ async def delete_task_resource(
     return None
 
 
+# route-tier: authed
 @router.put("/{task_id}", response_model=dict[str, Any])
 async def update_task(
     task_in: TaskUpdate,
@@ -574,6 +661,7 @@ async def update_task(
     return {"data": TaskDetail.model_validate(task)}
 
 
+# route-tier: authed
 @router.post("/{task_id}/generate-guide", response_model=dict[str, Any])
 async def generate_task_guide(
     task_id: UUID = Path(..., description="Task ID"),
@@ -813,6 +901,7 @@ async def skip_task(
     )
 
 
+# route-tier: authed
 @router.delete("/{task_id}")
 async def delete_task(
     task_id: UUID = Path(..., description="Task ID"),
@@ -831,6 +920,7 @@ async def delete_task(
     return {"success": True}
 
 
+# route-tier: authed
 @router.post("/{task_id}/start", response_model=dict[str, Any])
 async def start_task(
     task_id: UUID = Path(..., description="Task ID"),
@@ -847,6 +937,7 @@ async def start_task(
     return {"data": TaskDetail.model_validate(task)}
 
 
+# route-tier: authed
 @router.post("/{task_id}/pause", response_model=dict[str, Any])
 async def pause_task(
     task_id: UUID = Path(..., description="Task ID"),
@@ -863,6 +954,7 @@ async def pause_task(
     return {"data": TaskDetail.model_validate(task)}
 
 
+# route-tier: authed
 @router.post("/{task_id}/resume", response_model=dict[str, Any])
 async def resume_task(
     task_id: UUID = Path(..., description="Task ID"),
@@ -877,6 +969,7 @@ async def resume_task(
     return {"data": TaskDetail.model_validate(task)}
 
 
+# route-tier: authed
 @router.post("/{task_id}/abandon", response_model=dict[str, Any])
 async def abandon_task(
     task_id: UUID = Path(..., description="Task ID"),
@@ -914,6 +1007,7 @@ async def abandon_task(
     return {"data": TaskDetail.model_validate(task)}
 
 
+# route-tier: authed
 @router.post("/{task_id}/complete", response_model=dict[str, Any])
 async def complete_task(
     request: TaskCompleteRequest,
@@ -1074,6 +1168,7 @@ async def complete_task(
     }
 
 
+# route-tier: authed
 @router.post("/confirm-batch/{tool_result_id}", response_model=dict[str, Any])
 async def confirm_generated_tasks(
     tool_result_id: str = Path(..., description="Tool result ID"),
@@ -1092,6 +1187,7 @@ async def confirm_generated_tasks(
 # ========== Task Feedback Endpoints ==========
 
 
+# route-tier: authed
 @router.post("/{task_id}/feedback", response_model=TaskFeedbackSubmitResponse)
 async def submit_task_feedback(
     feedback_in: TaskFeedbackCreate,
@@ -1149,6 +1245,7 @@ async def submit_task_feedback(
         raise HTTPException(status_code=400, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.post(
     "/feedback/{feedback_id}/reflection",
     response_model=ReflectionAnswerResponse,
@@ -1186,6 +1283,7 @@ async def submit_task_reflection_answer(
         raise HTTPException(status_code=404, detail=str(e)) from e
 
 
+# route-tier: authed
 @router.get("/{task_id}/feedback", response_model=dict[str, Any])
 async def get_task_feedback(
     task_id: UUID = Path(..., description="Task ID"),
@@ -1214,6 +1312,7 @@ async def get_task_feedback(
     }
 
 
+# route-tier: authed
 @router.get("/feedback/stats", response_model=dict[str, Any])
 async def get_user_feedback_stats(current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     """
@@ -1241,6 +1340,7 @@ async def get_user_feedback_stats(current_user: User = Depends(get_current_user)
     }
 
 
+# route-tier: authed
 @router.post("/{task_id}/next-action-selection", response_model=dict[str, Any])
 async def record_next_action_selection(
     selection_in: NextActionSelectionCreate,

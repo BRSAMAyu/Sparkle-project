@@ -1,3 +1,4 @@
+import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -148,3 +149,87 @@ async def test_weekly_narrative_generate_endpoint_forces_refresh(growth_client, 
     assert response.status_code == 200
     assert response.json() == story
     mock_get.assert_awaited_once_with(user.id, force=True)
+
+
+@pytest.mark.asyncio
+async def test_return_case_file_rebuild_path(growth_client, db_session):
+    """GOAL-011: rebuild=true forces rebuild from chronicle."""
+    client, state = growth_client
+    user = User(
+        username="returning_user_rebuild",
+        email="returning_rebuild@example.com",
+        hashed_password="hashed",
+        nickname="Riku",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    state["current_user"] = user
+
+    case_payload = {
+        "user_id": str(user.id),
+        "chronicle_summary": {"total_entries": 5, "confirmed_count": 3, "pending_count": 1},
+        "confirmed_insights": [
+            {
+                "claim": "对你来说，先做 worked example 再 drill 比直接刷题有效",
+                "scope": "exam_sprint",
+                "confidence": 0.85,
+                "recommended_future_use": "在新计划中默认这个策略",
+            }
+        ],
+        "pending_review": ["chron-1"],
+        "generated_at": "2026-05-02T15:00:00",
+    }
+
+    with patch(
+        "app.api.v1.growth.GrowthChronicleService.build_return_case_file",
+        new=AsyncMock(return_value=case_payload),
+    ) as mock_build:
+        response = client.get("/growth/return-case-file?rebuild=true")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["chronicle_summary"]["confirmed_count"] == 3
+    assert body["confirmed_insights"][0]["claim"].startswith("对你来说")
+    assert body["source"] == "rebuild"
+    mock_build.assert_awaited_once_with(str(user.id))
+
+
+@pytest.mark.asyncio
+async def test_return_case_file_cache_hit(growth_client, db_session):
+    """GOAL-011: cached file returned without rebuilding."""
+    client, state = growth_client
+    user = User(
+        username="returning_user_cached",
+        email="returning_cached@example.com",
+        hashed_password="hashed",
+        nickname="Cha",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    state["current_user"] = user
+
+    cached = {
+        "user_id": str(user.id),
+        "chronicle_summary": {"total_entries": 2, "confirmed_count": 2, "pending_count": 0},
+        "confirmed_insights": [],
+        "pending_review": [],
+        "generated_at": "2026-05-02T15:00:00",
+    }
+
+    fake_redis = AsyncMock()
+    fake_redis.get = AsyncMock(return_value=json.dumps(cached))
+    fake_redis.set = AsyncMock(return_value=True)
+
+    with patch("app.api.v1.growth.cache_service") as mock_cache:
+        mock_cache.redis = fake_redis
+        with patch(
+            "app.api.v1.growth.GrowthChronicleService.build_return_case_file",
+            new=AsyncMock(),
+        ) as mock_build:
+            response = client.get("/growth/return-case-file")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["source"] == "cache"
+    assert body["chronicle_summary"]["confirmed_count"] == 2
+    mock_build.assert_not_called()

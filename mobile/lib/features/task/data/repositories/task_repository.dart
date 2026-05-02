@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
+import 'package:sparkle/core/offline/offline_providers.dart';
+import 'package:sparkle/core/offline/sync_engine.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/task/data/models/execution_intent_model.dart';
@@ -18,6 +20,16 @@ import 'package:sparkle/features/task/data/models/task_nudge.dart';
 import 'package:sparkle/shared/entities/subtask_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 import 'package:sparkle/shared/models/api_response_model.dart';
+
+/// TASK-013: Thrown when an offline-eligible task op was successfully queued
+/// for later sync rather than executed immediately. Callers should treat this
+/// as success but with an "Offline — will sync when reconnected" UX hint.
+class OfflineEnqueuedException implements Exception {
+  OfflineEnqueuedException(this.message);
+  final String message;
+  @override
+  String toString() => 'OfflineEnqueuedException: $message';
+}
 
 enum TaskGuidanceAudience { human, ai }
 
@@ -197,8 +209,42 @@ class TaskStuckResult {
 }
 
 class TaskRepository {
-  TaskRepository(this._apiClient);
+  TaskRepository(this._apiClient, {SyncEngine? offlineSync})
+      : _offlineSync = offlineSync;
+
   final ApiClient _apiClient;
+  final SyncEngine? _offlineSync;
+
+  /// TASK-013: Returns true if the DioException looks like an offline / network
+  /// failure and the request can safely be enqueued for later replay.
+  bool _isOfflineError(DioException e) {
+    return e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout;
+  }
+
+  /// TASK-013: Enqueue a task lifecycle op for later replay if SyncEngine is
+  /// available; rethrow otherwise so the caller falls back to legacy error UX.
+  Future<void> _enqueueTaskOp({
+    required String taskId,
+    required String opType,
+    Map<String, dynamic>? extras,
+  }) async {
+    final engine = _offlineSync;
+    if (engine == null) return;
+    final payload = <String, dynamic>{'task_id': taskId};
+    if (extras != null) payload.addAll(extras);
+    await engine.enqueue(
+      topic: 'task',
+      opType: opType,
+      payload: payload,
+      entityType: 'task',
+      entityId: taskId,
+      dedupeKey: 'task:$taskId:$opType',
+      priority: opType == 'complete' ? 2 : 1,
+    );
+  }
 
   // A generic error handler for Dio exceptions
   T _handleDioError<T>(DioException e, String functionName) {
@@ -1275,6 +1321,19 @@ Clarify the core output and completion criteria.
           ApiResponseParser.unwrapMap(response.data, action: 'pauseTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
+      // TASK-013: enqueue for later if we're offline.
+      if (_isOfflineError(e) && _offlineSync != null) {
+        await _enqueueTaskOp(
+          taskId: id,
+          opType: 'pause',
+          extras: (reason != null && reason.trim().isNotEmpty)
+              ? {'reason': reason.trim()}
+              : null,
+        );
+        // Return optimistic local task so UI can update immediately.
+        // The real server-side update will reconcile on next fetch after sync.
+        throw OfflineEnqueuedException('pauseTask queued for sync');
+      }
       return _handleDioError(e, 'pauseTask');
     }
   }
@@ -1302,6 +1361,11 @@ Clarify the core output and completion criteria.
           ApiResponseParser.unwrapMap(response.data, action: 'resumeTask');
       return TaskModel.fromJson(payload);
     } on DioException catch (e) {
+      // TASK-013: enqueue for later if we're offline.
+      if (_isOfflineError(e) && _offlineSync != null) {
+        await _enqueueTaskOp(taskId: id, opType: 'resume');
+        throw OfflineEnqueuedException('resumeTask queued for sync');
+      }
       return _handleDioError(e, 'resumeTask');
     }
   }
@@ -1645,5 +1709,19 @@ Clarify the core output and completion criteria.
 // Provider for TaskRepository
 final taskRepositoryProvider = Provider<TaskRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  return TaskRepository(apiClient);
+  // TASK-013: TaskRepository receives the SyncEngine so pause/resume/complete
+  // can fall back to the offline outbox when the network is unavailable.
+  // SyncEngine is constructed lazily via offline_providers.dart; it is safe to
+  // resolve at provider creation time because the engine wires its own
+  // listeners on first use.
+  SyncEngine? engine;
+  try {
+    // Avoid circular imports by reading the provider instead of importing it.
+    final syncProviderRef = ref.read;
+    final dynamicEngine = syncProviderRef(syncEngineProvider);
+    engine = dynamicEngine;
+  } catch (_) {
+    engine = null;
+  }
+  return TaskRepository(apiClient, offlineSync: engine);
 });

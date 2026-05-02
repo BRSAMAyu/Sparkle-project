@@ -76,4 +76,23 @@ class CommunityShareRepository {
     );
     return data;
   }
+
+  /// SRC-015: Reject a recommended community resource so it does not appear
+  /// in future suggestions for this user. Records the rejection event so the
+  /// recommender can downweight similar resources.
+  Future<void> rejectResource({
+    required String sharedResourceId,
+  }) async {
+    final trimmedId = sharedResourceId.trim();
+    if (trimmedId.isEmpty) return;
+
+    // Server-side endpoint may not exist yet; record rejection through the
+    // event stream so it still influences personalization. When the backend
+    // ships /community/shared-resources/{id}/reject, swap to that.
+    await _eventStream.recordSharedResourceAction(
+      action: 'rejected',
+      sharedResourceId: sharedResourceId,
+      resourceType: 'community_share',
+    );
+  }
 }
