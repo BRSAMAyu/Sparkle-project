@@ -105,6 +105,14 @@ def setup_periodic_tasks(sender, **kwargs):
         name='run-l4-async-engine-sweep-every-4h'
     )
 
+    # P4-RES research improvement loop — every 6 hours
+    from app.core.celery_tasks import run_research_improvement_loop
+    sender.add_periodic_task(
+        21600.0,
+        run_research_improvement_loop.s(),
+        name='run-research-improvement-loop-every-6h'
+    )
+
     # P4-PCI community privacy maintenance — every 4 hours
     from app.core.celery_tasks import run_community_privacy_maintenance
     sender.add_periodic_task(

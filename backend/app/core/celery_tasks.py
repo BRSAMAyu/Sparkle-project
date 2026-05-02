@@ -3299,3 +3299,73 @@ def run_community_privacy_maintenance(self, limit: int = 200):
     except Exception as exc:
         logger.error("Community privacy maintenance failed: {}", exc)
         raise self.retry(exc=exc, countdown=600) from exc
+
+
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_research_improvement_loop")
+def run_research_improvement_loop(self, limit: int = 500):
+    """P4-RES: Continuous improvement loop — scan research gaps, generate
+    proposals, prioritize, and produce research dashboard snapshots.
+
+    Scans Redis for research gaps stored by SpineOrchestrator, feeds them
+    into ContinuousImprovementLoop, and persists the dashboard snapshot.
+    """
+
+    async def _run():
+        import json
+
+        from app.core.redis_client import get_redis
+        from app.signals.research_mode import ContinuousImprovementLoop
+
+        redis = get_redis()
+        loop = ContinuousImprovementLoop()
+        cursor, keys = await redis.scan(match="spine:research_gaps:*", count=limit)
+        total_proposals = 0
+        dashboards = 0
+        errors = 0
+
+        for key in keys[:limit]:
+            key_str = key if isinstance(key, str) else key.decode()
+            user_id = key_str.split(":")[-2] if key_str.endswith(":latest") else key_str.split(":")[-1]
+            try:
+                raw = await redis.get(key_str)
+                if not raw:
+                    continue
+                gap_data = json.loads(raw if isinstance(raw, str) else raw.decode())
+                if not isinstance(gap_data, dict):
+                    continue
+
+                proposals = loop.ingest_gaps(
+                    quality_health=gap_data.get("quality_health", "healthy"),
+                    quality_score=float(gap_data.get("quality_score", 1.0)),
+                    systemic_issues=gap_data.get("systemic_issues", []),
+                )
+                if proposals:
+                    total_proposals += len(proposals)
+
+                # Build and store dashboard snapshot per user
+                dashboard = loop.build_dashboard(domain=gap_data.get("domain", "global"))
+                dashboard["user_id"] = user_id
+                await redis.set(
+                    f"spine:research_dashboard:{user_id}:latest",
+                    json.dumps(dashboard, default=str),
+                    ex=7 * 24 * 3600,
+                )
+                dashboards += 1
+            except Exception as exc:
+                errors += 1
+                logger.warning("Research improvement loop skipped for user={}: {}", user_id, exc)
+
+        return {
+            "users_scanned": len(keys),
+            "dashboards_generated": dashboards,
+            "proposals_generated": total_proposals,
+            "errors": errors,
+        }
+
+    try:
+        result = _run_async(_run())
+        logger.info("Research improvement loop finished: {}", result)
+        return result
+    except Exception as exc:
+        logger.error("Research improvement loop failed: {}", exc)
+        raise self.retry(exc=exc, countdown=600) from exc

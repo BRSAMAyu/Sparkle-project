@@ -78,6 +78,7 @@ from app.api.v1 import (
     profile_transparency,
     push_interaction,
     recommendations,
+    research,
     research_consent,
     release_approvals,
     safe_experiments,
@@ -165,6 +166,7 @@ api_router.include_router(memory_settings.router, tags=["memory"])
 api_router.include_router(memory_admin.router)
 api_router.include_router(skills.router)
 api_router.include_router(preferences.router)
+api_router.include_router(research.router)
 api_router.include_router(research_consent.router)
 api_router.include_router(push_interaction.router)
 api_router.include_router(seed_libraries.router, tags=["seed-libraries"])
