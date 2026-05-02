@@ -59,9 +59,10 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
   Widget build(BuildContext context) {
     final config = _stateConfig;
     final hasCorrections = widget.correctionOptions.isNotEmpty;
+    final hasExplanation = widget.label?.trim().isNotEmpty ?? false;
     final isCooling = widget.state == AuroraBandState.coolingDown &&
         widget.cooldownRemainingSeconds != null;
-    final canExpand = hasCorrections || isCooling;
+    final canExpand = hasCorrections || hasExplanation || isCooling;
 
     return Semantics(
       container: true,
@@ -154,10 +155,71 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
                   ],
                 ),
                 if (_expanded) ...[
-                  if (hasCorrections) ...[
+                  if (hasExplanation) ...[
                     const SizedBox(height: 8),
                     const Divider(height: 1, thickness: 0.5),
                     const SizedBox(height: 8),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.fact_check_outlined,
+                          size: 14,
+                          color: DS.textSecondary,
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _expandedExplanation,
+                            style: DS.labelSmall.copyWith(
+                              color: DS.textSecondary,
+                              fontSize: 11,
+                              height: 1.35,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (!hasCorrections && widget.onTap != null) ...[
+                      const SizedBox(height: 8),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: widget.onTap,
+                          icon: const Icon(Icons.chat_bubble_outline, size: 14),
+                          label: Text(
+                            I18nService.instance.isChinese
+                                ? '去聊天里纠正'
+                                : 'Correct in chat',
+                            style: DS.labelSmall.copyWith(fontSize: 11),
+                          ),
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(44, 36),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                  if (hasCorrections) ...[
+                    if (!hasExplanation) ...[
+                      const SizedBox(height: 8),
+                      const Divider(height: 1, thickness: 0.5),
+                    ],
+                    const SizedBox(height: 8),
+                    Text(
+                      I18nService.instance.isChinese
+                          ? '如果我判断错了，直接改一下：'
+                          : 'If this read is off, correct it here:',
+                      style: DS.labelSmall.copyWith(
+                        color: DS.textTertiary,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
                     Wrap(
                       spacing: 6,
                       runSpacing: 6,
@@ -289,6 +351,21 @@ class _AuroraStatusBandState extends State<AuroraStatusBand>
     return zh
         ? '$hours小时$remainMinutes分钟后恢复'
         : 'Resuming in $hours hr $remainMinutes min';
+  }
+
+  String get _expandedExplanation {
+    final zh = I18nService.instance.isChinese;
+    final label = widget.label?.trim() ?? '';
+    if (label.isEmpty) {
+      return zh
+          ? 'Aurora 会先轻量判断当前状态，重要判断都可以被你纠正。'
+          : 'Aurora is making a lightweight read; important judgments remain correctable.';
+    }
+    final prefix = zh ? '当前判断：' : 'Current read: ';
+    final suffix = zh
+        ? ' 我可能会误读，所以这里保留纠正入口。'
+        : ' I may be misreading it, so this stays correctable.';
+    return '$prefix$label$suffix';
   }
 
   _AuroraBandConfig get _stateConfig {

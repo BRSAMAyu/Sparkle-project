@@ -443,6 +443,64 @@ class ResponseBuilderMixin:
         }
 
     @staticmethod
+    def _aurora_everyday_presence_metadata(context_data: dict[str, Any]) -> dict[str, str]:
+        presence = context_data.get("aurora_everyday_presence")
+        if not isinstance(presence, dict):
+            cognitive_context = context_data.get("cognitive_context")
+            if isinstance(cognitive_context, dict):
+                presence = cognitive_context.get("aurora_everyday_presence")
+        if not isinstance(presence, dict) or not presence:
+            return {}
+        if presence.get("should_surface") is False:
+            return {}
+
+        chat_hint = str(presence.get("chat_hint") or presence.get("summary") or "").strip()
+        if not chat_hint:
+            return {}
+
+        evidence_chain = [str(item).strip() for item in presence.get("evidence_chain") or [] if str(item).strip()]
+        memory_references = [str(item).strip() for item in presence.get("memory_references") or [] if str(item).strip()]
+        next_step = str(presence.get("next_step_suggestion") or "").strip()
+        uncertainty = str(presence.get("uncertainty_level") or "medium").strip() or "medium"
+        last_correction = presence.get("last_correction_effect")
+        correction_visible = isinstance(last_correction, dict) and bool(last_correction.get("visible"))
+
+        what_changed: list[str] = []
+        if correction_visible:
+            affected = [
+                str(item).strip() for item in last_correction.get("affected_state_keys") or [] if str(item).strip()
+            ]
+            if affected:
+                what_changed.append(f"已按纠正更新：{', '.join(affected[:3])}")
+            else:
+                what_changed.append("已把刚才的纠正作为本轮判断的约束。")
+        if next_step:
+            what_changed.append(f"下一步建议：{next_step}")
+
+        payload = {
+            "title": "Aurora 当前判断",
+            "summary": chat_hint,
+            "visible_hint": chat_hint,
+            "what_changed": what_changed,
+            "evidence_chain": evidence_chain,
+            "memory_references": memory_references,
+            "uncertainty_level": uncertainty,
+            "overall_status": str(presence.get("overall_status") or "sensing"),
+            "scene_alignment": str(presence.get("scene_alignment") or "matched"),
+            "correction_actions": [
+                {
+                    "label": "这个判断不对",
+                    "prompt": "这个 Aurora 判断不对，请先按我的纠正重新理解，再继续回答。",
+                },
+                {
+                    "label": "只回答当前问题",
+                    "prompt": "先不要引用旧状态，只回答我这次的问题。",
+                },
+            ],
+        }
+        return {"aurora_everyday_presence": json.dumps(payload, ensure_ascii=False)}
+
+    @staticmethod
     def _normalize_next_action_receipt(payload: dict[str, Any]) -> dict[str, Any] | None:
         if not payload:
             return None
@@ -498,6 +556,21 @@ class ResponseBuilderMixin:
                     source_key="session_adaptation",
                 ),
             )
+        everyday_presence = ResponseBuilderMixin._decode_receipt_payload(
+            response_metadata.get("aurora_everyday_presence")
+        )
+        if isinstance(everyday_presence, dict):
+            normalized = ResponseBuilderMixin._normalize_aurora_experience_receipt(
+                everyday_presence,
+                source_key="aurora_everyday_presence",
+            )
+            if normalized is not None:
+                normalized["evidence_chain"] = everyday_presence.get("evidence_chain") or []
+                normalized["memory_references"] = everyday_presence.get("memory_references") or []
+                normalized["uncertainty_level"] = everyday_presence.get("uncertainty_level") or "medium"
+                if everyday_presence.get("correction_actions"):
+                    normalized["correction_actions"] = everyday_presence["correction_actions"]
+            ResponseBuilderMixin._append_unified_receipt(receipts, normalized)
 
         memory = ResponseBuilderMixin._decode_receipt_payload(response_metadata.get("memory_reference_receipt"))
         if isinstance(memory, dict):
@@ -1073,6 +1146,7 @@ class ResponseBuilderMixin:
             response_metadata["user_strategy_state"] = json.dumps(strategy_state, ensure_ascii=False)
         response_metadata.update(self._dual_core_response_metadata(final_state.context_data))
         response_metadata.update(self._task_stuck_intervention_metadata(final_state.context_data))
+        response_metadata.update(self._aurora_everyday_presence_metadata(final_state.context_data))
         understanding_depth = (
             (user_context_payload or {}).get("understanding_depth") if isinstance(user_context_payload, dict) else None
         )
