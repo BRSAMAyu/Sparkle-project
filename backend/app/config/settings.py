@@ -153,6 +153,8 @@ class Settings(BaseSettings):
     POSTGRES_PASSWORD: str = Field("", validation_alias=AliasChoices("POSTGRES_PASSWORD", "DB_PASSWORD"))
     POSTGRES_DB: str = Field("sparkle", validation_alias=AliasChoices("POSTGRES_DB", "DB_NAME"))
     SPARKLE_RBAC_ENABLED: bool = False
+    SPARKLE_JWT_KEY_VERSION: str = "v1"           # P1-8: active JWT key version for rotation
+    SPARKLE_JWT_PREVIOUS_KEY: str = ""            # P1-8: previous key for grace-period validation
     SPARKLE_ENGINE_DATABASE_URL: str = ""
     SPARKLE_CELERY_DATABASE_URL: str = ""
 
@@ -992,6 +994,10 @@ class Settings(BaseSettings):
 
         if env in ("prod", "production") and self.DEBUG:
             raise ValueError("DEBUG must be disabled in production")
+
+        # P1-8: RBAC must be enabled in production
+        if env in ("prod", "production") and not self.SPARKLE_RBAC_ENABLED:
+            raise ValueError("SPARKLE_RBAC_ENABLED must be True in production")
 
         if env in ("prod", "production") and self.SERVICE_ROLE == "grpc" and not self.GRPC_REQUIRE_TLS:
             raise ValueError("GRPC_REQUIRE_TLS must be enabled in production")
