@@ -3791,12 +3791,12 @@ class _DualCoreModeChip extends StatelessWidget {
     return switch (mode) {
       'execution' => (
           context.l10n.chatExecutionMode,
-          const Color(0xFFD97706),
+          DS.warning,
           Icons.bolt_rounded
         ),
       'cognitive' => (
           context.l10n.chatCognitiveMode,
-          const Color(0xFF6366F1),
+          DS.brandSecondary,
           Icons.psychology_rounded
         ),
       _ => (

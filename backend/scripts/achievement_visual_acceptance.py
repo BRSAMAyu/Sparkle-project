@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 from dataclasses import dataclass
 
 import requests
@@ -11,8 +12,8 @@ from sqlalchemy import select
 
 
 BASE_URL = "http://127.0.0.1:8000/api/v1"
-USERNAME = "chat_test"
-PASSWORD = "Chat123456"
+USERNAME = os.getenv("LOCAL_SMOKE_USERNAME", "chat_test")
+PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", "Chat123456")
 
 
 @dataclass

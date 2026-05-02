@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
@@ -243,7 +244,7 @@ class _Header extends StatelessWidget {
               child: IconButton(
                 icon: Icon(Icons.refresh, size: 18, color: DS.textTertiary),
                 onPressed: onRefresh,
-                tooltip: '刷新',
+                tooltip: I18nService.instance.isChinese ? '刷新' : 'Refresh',
                 padding: const EdgeInsets.all(8),
                 constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               ),
@@ -281,7 +282,7 @@ class _ErrorState extends StatelessWidget {
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: 12),
-            TextButton(onPressed: onRetry, child: const Text('重试')),
+            TextButton(onPressed: onRetry, child: Text(I18nService.instance.isChinese ? '重试' : 'Retry')),
           ],
         ),
       );
@@ -513,11 +514,11 @@ class _TimelineEntryCardState extends State<_TimelineEntryCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('取消'),
+            child: Text(I18nService.instance.isChinese ? '取消' : 'Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: const Text('提交'),
+            child: Text(I18nService.instance.isChinese ? '提交' : 'Submit'),
           ),
         ],
       ),

@@ -47,7 +47,7 @@ class GraphDiagnosticCard extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: DS.spacing8),
               child: _NodeTile(
                 item: item,
-                tone: const Color(0xFFF97316),
+                tone: DS.warning,
                 onAction: onAction,
               ),
             ),
@@ -65,7 +65,7 @@ class GraphDiagnosticCard extends StatelessWidget {
               padding: const EdgeInsets.only(bottom: DS.spacing8),
               child: _NodeTile(
                 item: item,
-                tone: const Color(0xFFD97706),
+                tone: DS.warningAccent,
                 onAction: onAction,
               ),
             ),

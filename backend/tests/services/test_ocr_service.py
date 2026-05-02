@@ -80,8 +80,8 @@ async def test_ocr_falls_back_to_backup_provider_on_primary_failure():
     service = OCRService()
     service.primary_provider = "zhipu"
     service.backup_provider = "siliconflow"
-    service.api_key = "zhipu-key"
-    service.siliconflow_api_key = "sf-key"
+    service.api_key = "test-zhipu-api-key"
+    service.siliconflow_api_key = "test-sf-api-key"
     service._zhipu_ocr_from_url = AsyncMock(side_effect=RuntimeError("primary down"))
     service._siliconflow_ocr_from_url = AsyncMock(return_value="backup text")
 

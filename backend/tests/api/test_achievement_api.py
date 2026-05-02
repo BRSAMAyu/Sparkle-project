@@ -175,7 +175,7 @@ def test_detail_endpoint_returns_unlock_context_snapshot(achievement_client):
 
 
 def test_process_achievement_event_requires_internal_token(achievement_client):
-    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", "secret-key"):
+    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", "test-internal-api-key"):
         response = achievement_client.post(
             "/achievements/events/process",
             params={"user_id": str(uuid4()), "event_type": "task_completed"},
@@ -200,7 +200,7 @@ def test_process_achievement_event_accepts_internal_token_and_user_id(achievemen
         }
     ]
 
-    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", "secret-key"):
+    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", "test-internal-api-key"):
         with patch(
             "app.api.v1.achievements.AchievementEngine.process_event",
             new=AsyncMock(return_value=unlocked),
@@ -209,7 +209,7 @@ def test_process_achievement_event_accepts_internal_token_and_user_id(achievemen
                 "/achievements/events/process",
                 params={"user_id": str(uuid4()), "event_type": "task_completed"},
                 json={"task_id": "task-1"},
-                headers={"X-Internal-Token": "secret-key", "Idempotency-Key": "achv-evt-1"},
+                headers={"X-Internal-Token": "test-internal-api-key", "Idempotency-Key": "achv-evt-1"},
             )
 
     assert response.status_code == 200
@@ -221,12 +221,12 @@ def test_process_achievement_event_accepts_internal_token_and_user_id(achievemen
 
 
 def test_process_achievement_event_requires_idempotency_key(achievement_client):
-    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", "secret-key"):
+    with patch("app.api.v1.achievements.settings.INTERNAL_API_KEY", "test-internal-api-key"):
         response = achievement_client.post(
             "/achievements/events/process",
             params={"user_id": str(uuid4()), "event_type": "task_completed"},
             json={"task_id": "task-1"},
-            headers={"X-Internal-Token": "secret-key"},
+            headers={"X-Internal-Token": "test-internal-api-key"},
         )
 
     assert response.status_code == 400

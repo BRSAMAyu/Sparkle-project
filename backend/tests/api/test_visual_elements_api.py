@@ -202,7 +202,7 @@ def test_unlock_internal_requires_internal_token(visual_client):
         hashed_password="hashed",
     )
 
-    with patch("app.api.v1.visual_elements.settings.INTERNAL_API_KEY", "secret-key"):
+    with patch("app.api.v1.visual_elements.settings.INTERNAL_API_KEY", "test-internal-api-key"):
         response = client.post(
             "/visual-elements/unlock",
             json={

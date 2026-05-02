@@ -266,8 +266,8 @@ async def test_stt_service_init_xunfei_provider():
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.ZHIPU_API_KEY = ""
         mock_settings.XUNFEI_APP_ID = "app-id"
-        mock_settings.XUNFEI_API_KEY = "api-key"
-        mock_settings.XUNFEI_API_SECRET = "api-secret"
+        mock_settings.XUNFEI_API_KEY = "test-xunfei-api-key"
+        mock_settings.XUNFEI_API_SECRET = "test-xunfei-api-secret"
 
         with patch("app.services.stt.providers.xunfei_provider.XunFeiProvider") as mock_xunfei:
             mock_provider = Mock()
@@ -285,10 +285,10 @@ async def test_stt_service_falls_back_to_xunfei_when_zhipu_quota_exhausted():
         mock_settings.STT_BACKUP_PROVIDER = "xunfei"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.DEMO_MODE = False
-        mock_settings.ZHIPU_API_KEY = "zhipu-key"
+        mock_settings.ZHIPU_API_KEY = "test-zhipu-api-key"
         mock_settings.XUNFEI_APP_ID = "app-id"
-        mock_settings.XUNFEI_API_KEY = "api-key"
-        mock_settings.XUNFEI_API_SECRET = "api-secret"
+        mock_settings.XUNFEI_API_KEY = "test-xunfei-api-key"
+        mock_settings.XUNFEI_API_SECRET = "test-xunfei-api-secret"
 
         with patch("app.services.stt.providers.zhipu_provider.ZhipuProvider") as mock_zhipu:
             with patch("app.services.stt.providers.xunfei_provider.XunFeiProvider") as mock_xunfei:
@@ -324,10 +324,10 @@ async def test_stt_service_falls_back_when_xunfei_times_out():
         mock_settings.STT_BACKUP_PROVIDER = "zhipu"
         mock_settings.UPLOAD_DIR = "./uploads"
         mock_settings.DEMO_MODE = False
-        mock_settings.ZHIPU_API_KEY = "zhipu-key"
+        mock_settings.ZHIPU_API_KEY = "test-zhipu-api-key"
         mock_settings.XUNFEI_APP_ID = "app-id"
-        mock_settings.XUNFEI_API_KEY = "api-key"
-        mock_settings.XUNFEI_API_SECRET = "api-secret"
+        mock_settings.XUNFEI_API_KEY = "test-xunfei-api-key"
+        mock_settings.XUNFEI_API_SECRET = "test-xunfei-api-secret"
 
         with patch("app.services.stt.providers.zhipu_provider.ZhipuProvider") as mock_zhipu:
             with patch("app.services.stt.providers.xunfei_provider.XunFeiProvider") as mock_xunfei:

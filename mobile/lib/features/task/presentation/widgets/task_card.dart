@@ -61,7 +61,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
   Color _textDisabled(BuildContext context) => DS.textDisabled;
 
   Color _success(BuildContext context) =>
-      _sparkleTheme(context)?.colors.semanticSuccess ?? Colors.green;
+      _sparkleTheme(context)?.colors.semanticSuccess ?? DS.success;
 
   LinearGradient _getTypeGradient(BuildContext context, TaskType type) =>
       context.sparkleColors.getTaskGradient(type.name);
@@ -270,8 +270,8 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                             .titleMedium
                                                             ?.copyWith(
                                                               fontWeight:
-                                                                  FontWeight
-                                                                      .w700,
+                                                                  DS
+                                                                      .fontWeightBold,
                                                               color:
                                                                   _textPrimary(
                                                                 context,
