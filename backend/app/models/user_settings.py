@@ -15,6 +15,7 @@ class UserSettings(BaseModel):
     # Task reminder settings
     task_reminders_enabled = Column(Boolean, nullable=False, default=True)
     task_reminder_times = Column(JSON, nullable=True)  # List of integers (minutes before due)
+    community_intelligence_enabled = Column(Boolean, nullable=False, default=True)
 
     user = relationship("User", backref="user_settings")
 

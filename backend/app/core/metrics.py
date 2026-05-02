@@ -959,6 +959,28 @@ SPARKLE_SKILL_SHARE_PIPELINE_LATENCY_SECONDS = get_or_create_metric(
     buckets=[0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0],
 )
 
+COMMUNITY_PRIVACY_AGGREGATE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_community_privacy_aggregate_total",
+    "Privacy-preserving community aggregate attempts by result and query type",
+    ["result", "query_type"],
+)
+
+COMMUNITY_PRIVACY_BUDGET_SPENT = get_or_create_metric(
+    Counter,
+    "sparkle_community_privacy_budget_spent_epsilon_total",
+    "Differential privacy budget spent by query type",
+    ["query_type"],
+)
+
+COMMUNITY_PRIVACY_COHORT_SIZE = get_or_create_metric(
+    Histogram,
+    "sparkle_community_privacy_cohort_size",
+    "Cohort sizes entering privacy-preserving community intelligence",
+    ["privacy_tier"],
+    buckets=[0, 1, 3, 5, 10, 15, 25, 50, 100, 250],
+)
+
 # ============ Phase 6: Performance SLO Metrics ============
 
 GALAXY_E2E_LATENCY = get_or_create_metric(

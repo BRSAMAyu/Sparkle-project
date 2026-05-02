@@ -138,6 +138,12 @@ class Settings(BaseSettings):
     # Community Settings
     MESSAGE_REVOKE_TIME_LIMIT_SECONDS: int = 120  # 消息撤回时间限制（秒），默认2分钟
     MESSAGE_SEND_MAX_RETRIES: int = 3  # 消息发送最大重试次数
+    COMMUNITY_INTELLIGENCE_ENABLED: bool = True
+    COMMUNITY_INTELLIGENCE_MIN_COHORT_SIZE: int = 5
+    COMMUNITY_INTELLIGENCE_DP_ENABLED: bool = True
+    COMMUNITY_INTELLIGENCE_EPSILON: float = 1.0
+    COMMUNITY_INTELLIGENCE_QUERY_EPSILON: float = 0.5
+    COMMUNITY_INTELLIGENCE_DAILY_EPSILON: float = 3.0
 
     # Database (canonical envs: POSTGRES_*)
     DATABASE_URL: str = ""

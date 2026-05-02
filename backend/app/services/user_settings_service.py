@@ -18,6 +18,7 @@ DEFAULT_SETTINGS: dict[str, Any] = {
     "ai_reasoning_mode": "balanced",
     "task_reminders_enabled": True,
     "task_reminder_times": [1440, 60, 15],  # 1 day, 1 hour, 15 minutes
+    "community_intelligence_enabled": True,
 }
 
 

@@ -101,6 +101,7 @@ from app.models.community import (
     PrivateMessage,
     SharedResource,
 )
+from app.models.community_privacy import CommunityAggregateSignal, PrivacyBudgetLedger
 from app.models.compliance import (
     CryptoShreddingCertificate,
     DlqReplayAuditLog,

@@ -12,6 +12,7 @@ class UserSettingsUpdate(BaseModel):
     ai_reasoning_mode: str | None = Field(default=None, pattern="^(fast|balanced|deep)$")
     task_reminders_enabled: bool | None = None
     task_reminder_times: list[int] | None = None
+    community_intelligence_enabled: bool | None = None
 
 
 class UserSettingsResponse(BaseModel):
@@ -20,6 +21,7 @@ class UserSettingsResponse(BaseModel):
     ai_reasoning_mode: str
     task_reminders_enabled: bool
     task_reminder_times: list[int] | None = None
+    community_intelligence_enabled: bool = True
     notification_preferences: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime | None
     updated_at: datetime | None

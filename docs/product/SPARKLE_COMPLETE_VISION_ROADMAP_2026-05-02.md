@@ -158,7 +158,7 @@
 
 ### P0-1.5：PrivacyPreservingCommunityEngine 未被生产管道消费
 
-**现状**：`backend/app/signals/privacy_community_intelligence.py`（668 行）完整实现了差分隐私引擎：`PrivacyBudget`（epsilon/delta）、`AnonymizedCohortStat`（拉普拉斯噪声）、三层隐私（<5 suppressed / 5-15 trend_only / 16+ anonymous_aggregate）、`TemporalPrivacyBudget`、`CohortDriftDetector`、`FederatedInsight`、`SecureAggregationEngine`。但无任何生产管道或 API 端点调用它。实际的社群错误聚合（`community_error_aggregation_service.py`）使用简单的 MIN_USERS=3 阈值，未使用此引擎。
+**现状**：✅ 2026-05-02 FV-05 已完成核心生产接入。`CommunitySignalBridge.build_privacy_preserving_cohort_signal()` 现在统一执行用户 opt-out、k>=5、DP Laplace 噪声、持久化预算账本、匿名聚合信号持久化、候选 soft-bias event 发布；新增 `/community/aggregates/*` 管理/用户洞察 API、Prometheus 指标与 Grafana dashboard。验收报告见 `docs/product/parallel_closeout/FV-05_privacy_community_intelligence_REPORT_2026-05-02.md`。
 
 **5 分标准**：
 1. `community_error_aggregation_service.py` 的聚合逻辑改用 `PrivacyPreservingCommunityEngine`
@@ -173,12 +173,13 @@
 10. 跨 cohort 信号不泄露（不同课程/目标隔离）
 
 **具体差距**：
-- 隐私引擎完全未被消费
-- k-anonymity 阈值偏低（3 vs 5）
-- 无隐私预算实际追踪
-- 无差分隐私实际应用
-- 无审计追踪
-- 无用户可配置的社群隐私模式
+- ✅ 隐私引擎已被 `CommunitySignalBridge` 生产消费
+- ✅ k-anonymity 阈值默认 5
+- ✅ `privacy_budget_ledger` 持久化追踪预算消耗/拒绝
+- ✅ 差分隐私 Laplace 噪声应用于实际聚合
+- ✅ `community_aggregate_signals` + budget ledger 可审计查询
+- ✅ `user_settings.community_intelligence_enabled` 提供用户关闭入口
+- 🟡 后续集成项：将所有历史 `community_error_aggregation_service.py` 聚合入口逐步改为直接调用该 bridge，避免双轨维护
 
 **涉及模块**：`backend/app/signals/privacy_community_intelligence.py`, `backend/app/services/community_error_aggregation_service.py`, `backend/app/services/community_service.py`
 

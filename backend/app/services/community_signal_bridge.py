@@ -3,21 +3,32 @@ CommunitySignalBridge - bridge high-value community signals back into personal s
 """
 from __future__ import annotations
 
+import hashlib
+import json
 from datetime import UTC, datetime
 from uuid import UUID
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.core.event_bus import event_bus
+from app.core.metrics import (
+    COMMUNITY_PRIVACY_AGGREGATE_TOTAL,
+    COMMUNITY_PRIVACY_BUDGET_SPENT,
+    COMMUNITY_PRIVACY_COHORT_SIZE,
+)
 from app.models.community import Group, GroupTask, GroupTaskClaim, GroupType
+from app.models.community_privacy import CommunityAggregateSignal, PrivacyBudgetLedger
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.task import Task
+from app.models.user_settings import UserSettings
 from app.orchestration.dual_core_router import AdaptationRecord
 from app.services.community_service import GroupTaskService
 from app.services.galaxy_service import GalaxyService
 from app.services.system_update_service import SystemUpdateService, build_system_update
+from app.signals.privacy_community_intelligence import PrivacyPreservingCommunityEngine
 
 
 def _utcnow() -> datetime:
@@ -29,6 +40,7 @@ class CommunitySignalBridge:
 
     GROUP_WEIGHT_FACTOR = 0.7
     KNOWLEDGE_SHARE_BONUS = 5.0  # user_node_status.mastery_score uses 0-100 scale
+    PRIVACY_WINDOW_PREFIX = "community-intelligence"
     AURORA_ALLOWED_SOCIAL_EVENT_KINDS = frozenset(
         {
             "partner_checkin",
@@ -53,6 +65,7 @@ class CommunitySignalBridge:
     def __init__(self, db: AsyncSession, redis=None) -> None:
         self.db = db
         self.redis = redis
+        self.privacy_engine = PrivacyPreservingCommunityEngine()
 
     @classmethod
     def sanitize_for_aurora_context(
@@ -231,6 +244,112 @@ class CommunitySignalBridge:
             ),
         )
 
+    async def build_privacy_preserving_cohort_signal(
+        self,
+        *,
+        requester_user_id: UUID | str,
+        cohort_criteria: dict[str, str],
+        stat_name: str,
+        contributor_values: list[float | int | dict],
+        query_type: str = "pattern_mining",
+        signal_type: str = "community_cohort_pattern",
+    ) -> dict:
+        """Build and persist an anonymized community signal.
+
+        This is the production bridge for cross-user intelligence. It enforces
+        opt-out on both sides, spends a persistent privacy budget, persists only
+        anonymized aggregates, and emits the result as a candidate soft-bias
+        signal rather than writing personal state directly.
+        """
+        requester = str(requester_user_id)
+        if not getattr(settings, "COMMUNITY_INTELLIGENCE_ENABLED", True):
+            COMMUNITY_PRIVACY_AGGREGATE_TOTAL.labels(result="disabled", query_type=query_type).inc()
+            return {"allowed": False, "reason": "community_intelligence_disabled"}
+        if not await self._community_intelligence_enabled(requester):
+            COMMUNITY_PRIVACY_AGGREGATE_TOTAL.labels(result="requester_opted_out", query_type=query_type).inc()
+            return {"allowed": False, "reason": "requester_opted_out"}
+
+        raw_values = await self._filter_opted_in_values(contributor_values)
+        min_k = int(getattr(settings, "COMMUNITY_INTELLIGENCE_MIN_COHORT_SIZE", 5))
+        if len(raw_values) < min_k:
+            await self._write_privacy_budget_ledger(
+                subject_id=requester,
+                query_type=query_type,
+                epsilon_spent=0.0,
+                allowed=False,
+                denial_reason="below_privacy_floor",
+            )
+            COMMUNITY_PRIVACY_AGGREGATE_TOTAL.labels(result="below_privacy_floor", query_type=query_type).inc()
+            return {
+                "allowed": False,
+                "reason": "below_privacy_floor",
+                "cohort_size": len(raw_values),
+                "min_cohort_size": min_k,
+            }
+
+        query_cost = float(getattr(settings, "COMMUNITY_INTELLIGENCE_QUERY_EPSILON", 0.5))
+        budget_check = await self._check_daily_budget(requester, query_type=query_type, query_cost=query_cost)
+        if not budget_check["allowed"]:
+            await self._write_privacy_budget_ledger(
+                subject_id=requester,
+                query_type=query_type,
+                epsilon_spent=0.0,
+                allowed=False,
+                denial_reason=budget_check["reason"],
+            )
+            COMMUNITY_PRIVACY_AGGREGATE_TOTAL.labels(result="budget_exhausted", query_type=query_type).inc()
+            return budget_check
+
+        result = self.privacy_engine.aggregate_cohort_signal(
+            requester_id=requester,
+            cohort_criteria=cohort_criteria,
+            raw_values=raw_values,
+            stat_name=stat_name,
+            query_type=query_type,
+            epsilon=float(getattr(settings, "COMMUNITY_INTELLIGENCE_EPSILON", 1.0)),
+            min_cohort_size=min_k,
+        )
+        await self._write_privacy_budget_ledger(
+            subject_id=requester,
+            query_type=query_type,
+            epsilon_spent=query_cost,
+            allowed=True,
+            denial_reason="",
+            metadata={"cohort_criteria": cohort_criteria, "stat_name": stat_name},
+        )
+        COMMUNITY_PRIVACY_BUDGET_SPENT.labels(query_type=query_type).inc(query_cost)
+
+        if not result.get("allowed"):
+            COMMUNITY_PRIVACY_AGGREGATE_TOTAL.labels(
+                result=str(result.get("reason") or "suppressed"),
+                query_type=query_type,
+            ).inc()
+            return result
+
+        record = await self._persist_aggregate_signal(
+            result=result,
+            cohort_criteria=cohort_criteria,
+            stat_name=stat_name,
+            signal_type=signal_type,
+            query_type=query_type,
+        )
+        payload = {
+            "event_type": "community.aggregate_signal.created",
+            "signal_id": record.signal_id,
+            "signal_type": signal_type,
+            "cohort_key": record.cohort_key,
+            "pattern": record.pattern,
+            "observation": record.observation,
+            "soft_bias_only": True,
+            "requires_user_confirmation": True,
+            "privacy_boundary": "differential_privacy_k_anonymous",
+            "timestamp": _utcnow().isoformat(),
+        }
+        await event_bus.publish("community.aggregate_signal.created", payload)
+        COMMUNITY_PRIVACY_AGGREGATE_TOTAL.labels(result="persisted", query_type=query_type).inc()
+        COMMUNITY_PRIVACY_COHORT_SIZE.labels(privacy_tier=record.privacy_tier).observe(record.cohort_size)
+        return {**result, "record_id": str(record.id), "signal_id": record.signal_id, "directive_payload": payload}
+
     async def _sync_sprint_progress_hint(self, *, claim: GroupTaskClaim) -> None:
         task = await self.db.get(Task, claim.personal_task_id) if claim.personal_task_id else None
         if not task or not task.plan_id:
@@ -264,6 +383,134 @@ class CommunitySignalBridge:
                 },
             ),
         )
+
+    async def _community_intelligence_enabled(self, user_id: UUID | str | None) -> bool:
+        if not user_id:
+            return False
+        try:
+            result = await self.db.execute(select(UserSettings).where(UserSettings.user_id == UUID(str(user_id))))
+            settings_row = result.scalar_one_or_none()
+            if settings_row is None:
+                return True
+            return bool(settings_row.community_intelligence_enabled)
+        except Exception:
+            logger.warning("community_intelligence_enabled check failed for {}", user_id, exc_info=True)
+            return False
+
+    async def _filter_opted_in_values(self, contributor_values: list[float | int | dict]) -> list[float]:
+        values: list[float] = []
+        for item in contributor_values:
+            if isinstance(item, dict):
+                contributor_id = item.get("user_id")
+                if contributor_id and not await self._community_intelligence_enabled(contributor_id):
+                    continue
+                raw_value = item.get("value")
+            else:
+                raw_value = item
+            try:
+                values.append(float(raw_value))
+            except (TypeError, ValueError):
+                continue
+        return values
+
+    @classmethod
+    def _cohort_key(cls, criteria: dict[str, str]) -> str:
+        canonical = json.dumps(criteria, ensure_ascii=False, sort_keys=True)
+        return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:32]
+
+    @classmethod
+    def _window_key(cls) -> str:
+        return f"{cls.PRIVACY_WINDOW_PREFIX}:{datetime.now(UTC).date().isoformat()}"
+
+    async def _check_daily_budget(self, subject_id: str, *, query_type: str, query_cost: float) -> dict:
+        max_epsilon = float(getattr(settings, "COMMUNITY_INTELLIGENCE_DAILY_EPSILON", 3.0))
+        window_key = self._window_key()
+        result = await self.db.execute(
+            select(func.coalesce(func.sum(PrivacyBudgetLedger.epsilon_spent), 0.0)).where(
+                PrivacyBudgetLedger.subject_id == subject_id,
+                PrivacyBudgetLedger.query_type == query_type,
+                PrivacyBudgetLedger.window_key == window_key,
+                PrivacyBudgetLedger.allowed.is_(True),
+                PrivacyBudgetLedger.deleted_at.is_(None),
+            )
+        )
+        spent = float(result.scalar_one() or 0.0)
+        if spent + query_cost > max_epsilon:
+            return {
+                "allowed": False,
+                "reason": "privacy_budget_exhausted",
+                "remaining_epsilon": max(0.0, max_epsilon - spent),
+                "max_epsilon": max_epsilon,
+            }
+        return {"allowed": True, "remaining_epsilon": max_epsilon - spent - query_cost, "max_epsilon": max_epsilon}
+
+    async def _write_privacy_budget_ledger(
+        self,
+        *,
+        subject_id: str,
+        query_type: str,
+        epsilon_spent: float,
+        allowed: bool,
+        denial_reason: str,
+        metadata: dict | None = None,
+    ) -> PrivacyBudgetLedger:
+        max_epsilon = float(getattr(settings, "COMMUNITY_INTELLIGENCE_DAILY_EPSILON", 3.0))
+        check = await self._check_daily_budget(subject_id, query_type=query_type, query_cost=0.0)
+        record = PrivacyBudgetLedger(
+            subject_id=subject_id,
+            subject_type="user",
+            query_type=query_type,
+            epsilon_spent=epsilon_spent,
+            max_epsilon=max_epsilon,
+            remaining_epsilon=max(0.0, float(check.get("remaining_epsilon", max_epsilon)) - epsilon_spent),
+            window_key=self._window_key(),
+            allowed=allowed,
+            denial_reason=denial_reason,
+            spent_at=_utcnow(),
+            runtime_metadata=metadata or {},
+        )
+        self.db.add(record)
+        await self.db.flush()
+        return record
+
+    async def _persist_aggregate_signal(
+        self,
+        *,
+        result: dict,
+        cohort_criteria: dict[str, str],
+        stat_name: str,
+        signal_type: str,
+        query_type: str,
+    ) -> CommunityAggregateSignal:
+        cohort = result.get("cohort") or {}
+        stat = result.get("stat") or {}
+        record = CommunityAggregateSignal(
+            signal_id=str(result.get("observation", {}).get("observation_id") or f"cas_{datetime.now(UTC).timestamp()}"),
+            cohort_id=str(cohort.get("cohort_id") or ""),
+            cohort_key=self._cohort_key(cohort_criteria),
+            cohort_criteria=cohort_criteria,
+            signal_type=signal_type,
+            stat_name=stat_name,
+            cohort_size=int(stat.get("cohort_size") or 0),
+            min_cohort_size=int(stat.get("min_cohort_size") or 5),
+            privacy_tier=str(cohort.get("privacy_tier") or "suppressed"),
+            value=float(stat.get("value")) if stat.get("value") is not None else None,
+            noise_std=float(stat.get("noise_std") or 0.0),
+            confidence_interval=stat.get("confidence_interval") or [],
+            pattern=result.get("pattern") or {},
+            observation=result.get("observation") or {},
+            privacy_cost=float(result.get("privacy_cost") or 0.0),
+            status="candidate",
+            generated_at=_utcnow(),
+            runtime_metadata={
+                "query_type": query_type,
+                "soft_bias_only": True,
+                "requires_user_confirmation": True,
+            },
+        )
+        self.db.add(record)
+        await self.db.flush()
+        return record
 
     async def broadcast_achievement_unlock(
         self,

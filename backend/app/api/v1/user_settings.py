@@ -36,6 +36,7 @@ async def get_user_settings(
         ai_reasoning_mode=record.ai_reasoning_mode,
         task_reminders_enabled=record.task_reminders_enabled,
         task_reminder_times=record.task_reminder_times,
+        community_intelligence_enabled=record.community_intelligence_enabled,
         notification_preferences=await _load_notification_preferences(current_user.id, db),
         created_at=record.created_at,
         updated_at=record.updated_at,
@@ -56,6 +57,7 @@ async def _update_user_settings_impl(
         "ai_reasoning_mode": old_record.ai_reasoning_mode,
         "task_reminders_enabled": old_record.task_reminders_enabled,
         "task_reminder_times": old_record.task_reminder_times,
+        "community_intelligence_enabled": old_record.community_intelligence_enabled,
     }
     submitted = payload.model_dump(exclude_none=True)
 
@@ -90,6 +92,7 @@ async def _update_user_settings_impl(
         ai_reasoning_mode=record.ai_reasoning_mode,
         task_reminders_enabled=record.task_reminders_enabled,
         task_reminder_times=record.task_reminder_times,
+        community_intelligence_enabled=record.community_intelligence_enabled,
         notification_preferences=await _load_notification_preferences(current_user.id, db),
         created_at=record.created_at,
         updated_at=record.updated_at,
