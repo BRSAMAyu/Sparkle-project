@@ -1,3 +1,4 @@
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/calendar/data/models/calendar_event_model.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -142,20 +143,23 @@ class CalendarDayAggregate {
   /// Summary string for display (e.g., "3任务, 1h专注")
   /// 概要字符串（如 "3任务, 1h专注"）
   String get summaryText {
+    final isChinese = I18nService.instance.isChinese;
     final parts = <String>[];
     if (totalTasks > 0) {
-      parts.add('$totalTasks任务');
+      parts.add(isChinese ? '$totalTasks任务' : '$totalTasks tasks');
     }
     if (totalEvents > 0) {
-      parts.add('$totalEvents事件');
+      parts.add(isChinese ? '$totalEvents事件' : '$totalEvents events');
     }
     if (focusMinutes >= 60) {
       final hours = focusMinutes ~/ 60;
-      parts.add('${hours}h专注');
+      parts.add(isChinese ? '${hours}h专注' : '${hours}h focus');
     } else if (focusMinutes > 0) {
-      parts.add('${focusMinutes}m专注');
+      parts.add(isChinese ? '${focusMinutes}m专注' : '${focusMinutes}m focus');
     }
-    return parts.isEmpty ? '无活动' : parts.join(', ');
+    return parts.isEmpty
+        ? (isChinese ? '无活动' : 'No activity')
+        : parts.join(', ');
   }
 
   CalendarDayAggregate copyWith({

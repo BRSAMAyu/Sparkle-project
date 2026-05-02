@@ -2,8 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// 责任伙伴打卡互动组件
@@ -333,7 +334,8 @@ class EncouragementMessage {
       EncouragementMessage(
         id: json['id'] as String,
         authorId: json['user_id'] as String,
-        authorName: json['author_name'] as String? ?? '伙伴',
+        authorName: json['author_name'] as String? ??
+            (I18nService.instance.isChinese ? '伙伴' : 'Partner'),
         message: json['message'] as String,
         createdAt: DateTime.parse(json['created_at'] as String),
       );
@@ -512,7 +514,8 @@ class CheckinWithInteraction {
       CheckinWithInteraction(
         id: json['id'] as String,
         userId: json['user_id'] as String,
-        authorName: json['author_name'] as String? ?? '用户',
+        authorName: json['author_name'] as String? ??
+            (I18nService.instance.isChinese ? '用户' : 'User'),
         content: json['content'] as String,
         likes: json['likes'] as int? ?? 0,
         encouragements: (json['encouragements'] as List? ?? [])

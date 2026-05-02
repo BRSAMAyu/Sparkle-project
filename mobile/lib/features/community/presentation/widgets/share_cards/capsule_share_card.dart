@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 
 /// Purple color constant for capsule cards
@@ -156,7 +157,8 @@ class CapsuleShareCard extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                capsuleType ?? context.l10n.communityShareTimeCapsule,
+                                capsuleType ??
+                                    context.l10n.communityShareTimeCapsule,
                                 style: TextStyle(
                                   fontSize: DS.fontSizeXs,
                                   color: DS.textTertiary,
@@ -179,7 +181,8 @@ class CapsuleShareCard extends StatelessWidget {
                     ),
 
                     // Summary
-                    if (capsuleSummary != null && capsuleSummary!.isNotEmpty) ...[
+                    if (capsuleSummary != null &&
+                        capsuleSummary!.isNotEmpty) ...[
                       const SizedBox(height: DS.sm),
                       Container(
                         padding: const EdgeInsets.all(DS.sm),
@@ -205,12 +208,13 @@ class CapsuleShareCard extends StatelessWidget {
                     // Stats row
                     Row(
                       children: [
-                        if (depth != null)
-                          _buildDepthIndicator(depth!),
+                        if (depth != null) _buildDepthIndicator(depth!),
                         if (wordCount != null) ...[
                           const SizedBox(width: DS.md),
                           _buildStat(
-                            '${wordCount}字',
+                            I18nService.instance.isChinese
+                                ? '${wordCount}字'
+                                : '$wordCount words',
                             Icons.edit_note,
                           ),
                         ],
@@ -230,23 +234,28 @@ class CapsuleShareCard extends StatelessWidget {
                       Wrap(
                         spacing: DS.xs,
                         runSpacing: DS.xs,
-                        children: tags!.take(3).map((tag) => Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: DS.sm,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: _capsulePurple.withValues(alpha: 0.1),
-                              borderRadius: DS.borderRadius4,
-                            ),
-                            child: Text(
-                              '#$tag',
-                              style: const TextStyle(
-                                fontSize: DS.fontSizeXs,
-                                color: _capsulePurple,
+                        children: tags!
+                            .take(3)
+                            .map(
+                              (tag) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: DS.sm,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: _capsulePurple.withValues(alpha: 0.1),
+                                  borderRadius: DS.borderRadius4,
+                                ),
+                                child: Text(
+                                  '#$tag',
+                                  style: const TextStyle(
+                                    fontSize: DS.fontSizeXs,
+                                    color: _capsulePurple,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),).toList(),
+                            )
+                            .toList(),
                       ),
                     ],
                   ],
@@ -258,12 +267,12 @@ class CapsuleShareCard extends StatelessWidget {
       );
 
   IconData _getTypeIcon() => switch (capsuleType?.toLowerCase()) {
-      'thinking' || '思考' => Icons.psychology,
-      'reflection' || '反思' => Icons.auto_stories,
-      'inspiration' || '灵感' => Icons.lightbulb,
-      'summary' || '总结' => Icons.summarize,
-      _ => Icons.hourglass_empty,
-    };
+        'thinking' || '思考' => Icons.psychology,
+        'reflection' || '反思' => Icons.auto_stories,
+        'inspiration' || '灵感' => Icons.lightbulb,
+        'summary' || '总结' => Icons.summarize,
+        _ => Icons.hourglass_empty,
+      };
 
   Widget _buildDepthIndicator(int depth) => Container(
         padding: const EdgeInsets.symmetric(
@@ -284,7 +293,9 @@ class CapsuleShareCard extends StatelessWidget {
             ),
             const SizedBox(width: DS.xs),
             Text(
-              '深度 Lv.$depth',
+              I18nService.instance.isChinese
+                  ? '深度 Lv.$depth'
+                  : 'Depth Lv.$depth',
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 fontWeight: DS.fontWeightBold,

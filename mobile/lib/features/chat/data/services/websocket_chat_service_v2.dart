@@ -1877,8 +1877,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         droppedPayload,
         ErrorEvent(
           code: 'PENDING_QUEUE_OVERFLOW',
-          message:
-              '有未发送消息因队列已满被丢弃 / A pending message was dropped because the queue is full.',
+          message: I18nService.instance.isChinese
+              ? '有未发送消息因队列已满被丢弃。'
+              : 'A pending message was dropped because the queue is full.',
           retryable: false,
         ),
       );
@@ -1948,7 +1949,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _log('❌ Incoming message queue error: $error');
       _broadcastErrorToActiveRequests(ErrorEvent(
         code: 'MESSAGE_PARSE_ERROR',
-        message: '消息解析失败 / Failed to parse incoming message',
+        message: I18nService.instance.isChinese
+            ? '消息解析失败'
+            : 'Failed to parse incoming message',
         retryable: false,
       ));
     });

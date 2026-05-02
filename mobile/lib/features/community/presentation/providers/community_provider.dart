@@ -1971,7 +1971,7 @@ class PrivateChatNotifier
     final user = _ref.read(currentUserProvider);
     if (user == null) {
       var userId = 'guest';
-      var nickname = '访客';
+      var nickname = I18nService.instance.isChinese ? '访客' : 'Guest';
       try {
         final guestService = _ref.read(guestServiceProvider);
         userId = await guestService.getGuestId();

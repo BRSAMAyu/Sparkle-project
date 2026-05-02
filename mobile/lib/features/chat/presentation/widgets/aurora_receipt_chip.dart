@@ -607,7 +607,9 @@ class _ReceiptActionChips extends StatelessWidget {
               (option) => _ReceiptAction(
                 icon: Icons.tune_rounded,
                 label: option,
-                prompt: '$option。请重新判断这次行动调整。',
+                prompt: s.isChinese
+                    ? '$option。请重新判断这次行动调整。'
+                    : '$option. Please reassess this action change.',
               ),
             )
             .toList(growable: false);

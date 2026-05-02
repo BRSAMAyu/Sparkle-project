@@ -1,8 +1,11 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/network/dio_provider.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/error_semantic_summary.dart';
+import 'package:sparkle/features/error_book/data/models/remediable_pattern.dart';
 import 'package:sparkle/features/error_book/data/repositories/error_book_repository.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
 import 'package:sparkle/features/insights/presentation/providers/weekly_growth_narrative_provider.dart';
@@ -25,6 +28,16 @@ ErrorBookRepository errorBookRepository(ErrorBookRepositoryRef ref) {
   final dio = ref.watch(dioProvider);
   return ErrorBookRepository(dio);
 }
+
+final remediablePatternsProvider =
+    FutureProvider.autoDispose<List<RemediablePattern>>((ref) async {
+  final repository = ref.watch(errorBookRepositoryProvider);
+  try {
+    return await repository.getRemediablePatterns();
+  } catch (_) {
+    return const <RemediablePattern>[];
+  }
+});
 
 // ============================================
 // 错题列表 Provider
@@ -176,10 +189,13 @@ Future<List<ErrorRecord>> todayReviewList(TodayReviewListRef ref) async {
     return response.items;
   } catch (_) {
     final now = DateTime.now();
+    final isChinese = I18nService.instance.isChinese;
     return [
       ErrorRecord(
         id: 'demo_review_1',
-        questionText: '已知二次函数 y=x²-4x+3，求顶点坐标。',
+        questionText: isChinese
+            ? '已知二次函数 y=x²-4x+3，求顶点坐标。'
+            : 'Given the quadratic y=x²-4x+3, find the vertex.',
         userAnswer: '(2,3)',
         correctAnswer: '(2,-1)',
         subject: 'math',
@@ -187,21 +203,28 @@ Future<List<ErrorRecord>> todayReviewList(TodayReviewListRef ref) async {
         reviewCount: 2,
         createdAt: now.subtract(const Duration(days: 3)),
         updatedAt: now.subtract(const Duration(hours: 4)),
-        chapter: '二次函数',
-        aiAnalysisSummary: '顶点公式代入时符号出错，建议先配方再验算。',
+        chapter: isChinese ? '二次函数' : 'Quadratic functions',
+        aiAnalysisSummary: isChinese
+            ? '顶点公式代入时符号出错，建议先配方再验算。'
+            : 'The sign was wrong when applying the vertex formula. Complete the square first, then verify.',
       ),
       ErrorRecord(
         id: 'demo_review_2',
         questionText: 'Translate: The data suggests a positive correlation.',
-        userAnswer: '数据说明一个积极的关系。',
-        correctAnswer: '数据表明存在正相关。',
+        userAnswer:
+            isChinese ? '数据说明一个积极的关系。' : 'The data says a positive relation.',
+        correctAnswer: isChinese
+            ? '数据表明存在正相关。'
+            : 'The data indicates a positive correlation.',
         subject: 'english',
         masteryLevel: 0.58,
         reviewCount: 1,
         createdAt: now.subtract(const Duration(days: 1)),
         updatedAt: now.subtract(const Duration(hours: 2)),
-        chapter: '学术英语',
-        aiAnalysisSummary: '术语“positive correlation”需要固定搭配记忆。',
+        chapter: isChinese ? '学术英语' : 'Academic English',
+        aiAnalysisSummary: isChinese
+            ? '术语“positive correlation”需要固定搭配记忆。'
+            : 'The term "positive correlation" should be memorized as a fixed expression.',
       ),
     ];
   }
