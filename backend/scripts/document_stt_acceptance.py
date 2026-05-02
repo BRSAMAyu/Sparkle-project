@@ -1,6 +1,7 @@
 import asyncio
 import json
 import mimetypes
+import os
 import subprocess
 import tempfile
 import time
@@ -17,8 +18,8 @@ from _acceptance_common import login_with_requests
 BASE_URL = "http://127.0.0.1:8080/api/v1"
 AUTH_BASE_URL = "http://127.0.0.1:8000/api/v1"
 WS_URL = "ws://127.0.0.1:8080/ws/stt"
-USERNAME = "chat_test"
-PASSWORD = "Chat123456"
+USERNAME = os.getenv("LOCAL_SMOKE_USERNAME", "chat_test")
+PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", "Chat123456")
 REQUEST_TIMEOUT_SECONDS = 180
 VOICE_TEXT = (
     "Sparkle speech acceptance test. "

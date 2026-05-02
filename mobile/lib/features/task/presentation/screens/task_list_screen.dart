@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
@@ -51,8 +50,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           ..showSnackBar(
             SparkleSnackBar.error(
               next,
-              onRetry: () =>
-                  ref.read(taskListProvider.notifier).refreshTasks(),
+              onRetry: () => ref.read(taskListProvider.notifier).refreshTasks(),
               retryLabel: context.l10n.retry,
             ),
           );
@@ -94,6 +92,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       appBar: AppBar(
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
+          semanticLabel: context.l10n.commonBack,
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             if (context.canPop()) {
@@ -200,6 +199,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           if (canReorder || _isReorderMode)
             SparkleIconButton(
               variant: ButtonVariant.ghost,
+              semanticLabel: _isReorderMode
+                  ? context.l10n.commonDone
+                  : context.l10n.commonSort,
               icon: Icon(
                 _isReorderMode ? Icons.check_rounded : Icons.reorder_rounded,
                 size: DS.iconSizeBase,
@@ -213,6 +215,9 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
             ),
           SparkleIconButton(
             variant: ButtonVariant.ghost,
+            semanticLabel: _isSearching
+                ? context.l10n.commonClose
+                : context.l10n.commonSearch,
             icon: Icon(
               _isSearching ? Icons.close_rounded : Icons.search_rounded,
               size: DS.iconSizeBase,
@@ -229,9 +234,10 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
       ),
       floatingActionButton: SparkleIconButton(
         size: 60,
+        semanticLabel: context.l10n.taskAddNew,
         onPressed: () {
           unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
-          context.push('/tasks/new');
+          unawaited(context.push('/tasks/new'));
         },
         icon: Icon(
           Icons.add_rounded,
@@ -338,7 +344,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           description: context.l10n.taskListEmptyDescription,
           actionText: context.l10n.taskListEmptyAction,
           onAction: () {
-            context.push('/tasks/new');
+            unawaited(context.push('/tasks/new'));
           },
         );
       }
@@ -373,30 +379,56 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                     child: TaskCard(
                       task: task,
                       compact: true,
-                      onTap: () => context.push('/tasks/${task.id}'),
+                      onTap: () => unawaited(context.push('/tasks/${task.id}')),
                       onStart: () {
-                        ref.read(taskListProvider.notifier).startTask(task.id);
+                        unawaited(
+                          ref
+                              .read(taskListProvider.notifier)
+                              .startTask(task.id),
+                        );
                       },
                       onComplete: () {
+                        unawaited(
+                          ref.read(taskListProvider.notifier).completeTask(
+                                task.id,
+                                task.estimatedMinutes,
+                                null,
+                              ),
+                        );
+                      },
+                      onRetrySync: () {
+                        unawaited(
+                          ref.read(taskListProvider.notifier).retryCompleteTask(
+                                task.id,
+                                task.actualMinutes ?? task.estimatedMinutes,
+                                task.userNote,
+                              ),
+                        );
+                      },
+                      onDiscardSync: () {
                         ref
                             .read(taskListProvider.notifier)
-                            .completeTask(task.id, task.estimatedMinutes, null);
+                            .discardChange(task.id);
                       },
                     ),
                   ),
                   const SizedBox(width: DS.spacing8),
-                  ReorderableDragStartListener(
-                    index: index,
-                    child: Container(
-                      margin: const EdgeInsets.only(top: DS.spacing12),
-                      padding: const EdgeInsets.all(DS.spacing8),
-                      decoration: BoxDecoration(
-                        color: DS.surfaceSecondary,
-                        borderRadius: DS.borderRadius12,
-                      ),
-                      child: Icon(
-                        Icons.drag_indicator_rounded,
-                        color: DS.textSecondary,
+                  Semantics(
+                    label: '${context.l10n.commonSort}: ${task.title}',
+                    button: true,
+                    child: ReorderableDragStartListener(
+                      index: index,
+                      child: Container(
+                        margin: const EdgeInsets.only(top: DS.spacing12),
+                        padding: const EdgeInsets.all(DS.spacing8),
+                        decoration: BoxDecoration(
+                          color: DS.surfaceSecondary,
+                          borderRadius: DS.borderRadius12,
+                        ),
+                        child: Icon(
+                          Icons.drag_indicator_rounded,
+                          color: DS.textSecondary,
+                        ),
                       ),
                     ),
                   ),
@@ -433,9 +465,11 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                   .where((task) => task.status == TaskStatus.pending)
                   .length,
               inProgressCount: tasks
-                  .where((task) =>
-                      task.status == TaskStatus.inProgress ||
-                      task.status == TaskStatus.stuck)
+                  .where(
+                    (task) =>
+                        task.status == TaskStatus.inProgress ||
+                        task.status == TaskStatus.stuck,
+                  )
                   .length,
               completedCount: tasks
                   .where((task) => task.status == TaskStatus.completed)
@@ -447,7 +481,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
             child: TaskCard(
               task: task,
               compact: true,
-              onTap: () => context.push('/tasks/${task.id}'),
+              onTap: () => unawaited(context.push('/tasks/${task.id}')),
               onStart: () {
                 unawaited(
                   ref.read(taskListProvider.notifier).startTask(task.id),
@@ -459,6 +493,18 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
                       .read(taskListProvider.notifier)
                       .completeTask(task.id, task.estimatedMinutes, null),
                 );
+              },
+              onRetrySync: () {
+                unawaited(
+                  ref.read(taskListProvider.notifier).retryCompleteTask(
+                        task.id,
+                        task.actualMinutes ?? task.estimatedMinutes,
+                        task.userNote,
+                      ),
+                );
+              },
+              onDiscardSync: () {
+                ref.read(taskListProvider.notifier).discardChange(task.id);
               },
             ),
           );
@@ -476,9 +522,11 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
         return tasks.where((t) => t.status == TaskStatus.pending).toList();
       case TaskFilterOptions.inProgress:
         return tasks
-            .where((t) =>
-                t.status == TaskStatus.inProgress ||
-                t.status == TaskStatus.stuck)
+            .where(
+              (t) =>
+                  t.status == TaskStatus.inProgress ||
+                  t.status == TaskStatus.stuck,
+            )
             .toList();
       case TaskFilterOptions.completed:
         return tasks.where((t) => t.status == TaskStatus.completed).toList();
@@ -563,39 +611,46 @@ class _FilterChips extends ConsumerWidget {
             final isSelected = currentFilter == filter;
             return Padding(
               padding: const EdgeInsets.only(right: DS.spacing8),
-              child: GestureDetector(
-                onTap: () {
-                  unawaited(
-                    SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-                  );
-                  ref.read(taskFilterProvider.notifier).state = filter;
-                },
-                child: AnimatedContainer(
-                  duration: DS.durationFast,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing12,
-                    vertical: DS.spacing6,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: isSelected ? DS.primaryGradient : null,
-                    color: isSelected ? null : DS.surfacePrimary,
-                    borderRadius: DS.borderRadius20,
-                    border: Border.all(
-                      color: isSelected ? Colors.transparent : DS.neutral300,
-                      width: 1.5,
+              child: Semantics(
+                selected: isSelected,
+                button: true,
+                label: _getFilterLabel(context, filter),
+                child: GestureDetector(
+                  onTap: () {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.selection,
+                      ),
+                    );
+                    ref.read(taskFilterProvider.notifier).state = filter;
+                  },
+                  child: AnimatedContainer(
+                    duration: DS.durationFast,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing12,
+                      vertical: DS.spacing6,
                     ),
-                    boxShadow: isSelected ? DS.shadowSm : null,
-                  ),
-                  child: Center(
-                    child: Text(
-                      _getFilterLabel(context, filter),
-                      style: TextStyle(
-                        color: isSelected ? DS.brandPrimary : DS.neutral700,
-                        fontWeight: isSelected
-                            ? DS.fontWeightBold
-                            : DS.fontWeightMedium,
-                        fontSize: DS.fontSizeSm,
-                        height: 1,
+                    decoration: BoxDecoration(
+                      gradient: isSelected ? DS.primaryGradient : null,
+                      color: isSelected ? null : DS.surfacePrimary,
+                      borderRadius: DS.borderRadius20,
+                      border: Border.all(
+                        color: isSelected ? Colors.transparent : DS.neutral300,
+                        width: 1.5,
+                      ),
+                      boxShadow: isSelected ? DS.shadowSm : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        _getFilterLabel(context, filter),
+                        style: TextStyle(
+                          color: isSelected ? DS.brandPrimary : DS.neutral700,
+                          fontWeight: isSelected
+                              ? DS.fontWeightBold
+                              : DS.fontWeightMedium,
+                          fontSize: DS.fontSizeSm,
+                          height: 1,
+                        ),
                       ),
                     ),
                   ),
@@ -639,7 +694,11 @@ class _TaskListSummary extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return Container(
+    return Semantics(
+      container: true,
+      label:
+          '${l10n.taskListTitle}: $totalCount, ${l10n.taskStatusPending}: $pendingCount, ${l10n.taskStatusInProgress}: $inProgressCount, ${l10n.taskStatusCompleted}: $completedCount',
+      child: Container(
         padding: const EdgeInsets.all(DS.spacing12),
         decoration: BoxDecoration(
           color: DS.surfaceSecondary,
@@ -650,7 +709,11 @@ class _TaskListSummary extends StatelessWidget {
           spacing: DS.spacing8,
           runSpacing: DS.spacing6,
           children: [
-            _TaskMetricChip(label: l10n.taskFilterAll, value: totalCount, tone: DS.info),
+            _TaskMetricChip(
+              label: l10n.taskFilterAll,
+              value: totalCount,
+              tone: DS.info,
+            ),
             _TaskMetricChip(
               label: l10n.taskStatusPending,
               value: pendingCount,
@@ -668,7 +731,8 @@ class _TaskListSummary extends StatelessWidget {
             ),
           ],
         ),
-      );
+      ),
+    );
   }
 }
 

@@ -56,8 +56,8 @@ async def test_xunfei_provider_drain_messages_collects_segments_and_terminal_sta
     """测试讯飞回包解析会提取文本并识别终态"""
     with _patch_settings() as mock_settings:
         mock_settings.XUNFEI_APP_ID = "app-id"
-        mock_settings.XUNFEI_API_KEY = "api-key"
-        mock_settings.XUNFEI_API_SECRET = "api-secret"
+        mock_settings.XUNFEI_API_KEY = "test-xunfei-api-key"
+        mock_settings.XUNFEI_API_SECRET = "test-xunfei-api-secret"
         mock_settings.XUNFEI_STT_DOMAIN = "iat"
         mock_settings.XUNFEI_STT_LANGUAGE = "zh-CN"
         mock_settings.XUNFEI_STT_SAMPLE_RATE = 16000
@@ -84,8 +84,8 @@ async def test_xunfei_provider_transcribe_file_timeout_returns_error_text():
     """测试文件转写超时会返回可识别的错误文本"""
     with _patch_settings() as mock_settings:
         mock_settings.XUNFEI_APP_ID = "app-id"
-        mock_settings.XUNFEI_API_KEY = "api-key"
-        mock_settings.XUNFEI_API_SECRET = "api-secret"
+        mock_settings.XUNFEI_API_KEY = "test-xunfei-api-key"
+        mock_settings.XUNFEI_API_SECRET = "test-xunfei-api-secret"
         mock_settings.XUNFEI_STT_DOMAIN = "iat"
         mock_settings.XUNFEI_STT_LANGUAGE = "zh-CN"
         mock_settings.XUNFEI_STT_SAMPLE_RATE = 16000

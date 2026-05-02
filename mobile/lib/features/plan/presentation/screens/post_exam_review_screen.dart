@@ -243,7 +243,7 @@ class _PostExamReviewScreenState extends ConsumerState<PostExamReviewScreen> {
                 onPressed: () => setState(() => _resultRating = rating),
                 icon: Icon(
                   selected ? Icons.star_rounded : Icons.star_border_rounded,
-                  color: selected ? Colors.amber.shade600 : DS.textTertiary,
+                  color: selected ? DS.warning : DS.textTertiary,
                   size: 34,
                 ),
               );

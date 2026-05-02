@@ -2,8 +2,9 @@
 Unit tests for app.core.metrics module.
 Tests prometheus metrics initialization and decorator functionality.
 """
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from prometheus_client import REGISTRY
 
 from app.core import metrics
@@ -43,11 +44,19 @@ class TestMetricsInitialization:
         assert metrics.RESPONSE_FEEDBACK_INGESTED is not None
         assert metrics.RESPONSE_FEEDBACK_DEDUPE_TOTAL is not None
 
+    def test_product_loop_metrics_exist(self):
+        """Test product-loop observability metrics are initialized."""
+        assert metrics.PRODUCT_LOOP_EVENT_TOTAL is not None
+        assert metrics.PRODUCT_LOOP_LATENCY is not None
+        assert metrics.PRODUCT_LOOP_ITEMS is not None
+        assert metrics.AURORA_CORRECTION_FAILURE_TOTAL is not None
+
     def test_metrics_in_registry(self):
         """Test that metrics are registered in prometheus registry"""
         assert 'sparkle_requests_total' in REGISTRY._names_to_collectors
         assert 'sparkle_tokens_total' in REGISTRY._names_to_collectors
         assert 'sparkle_cache_hits_total' in REGISTRY._names_to_collectors
+        assert 'sparkle_product_loop_event_total' in REGISTRY._names_to_collectors
 
 
 class TestGetOrCreateMetric:
@@ -190,6 +199,25 @@ class TestMetricLabelUpdates:
             model='gpt-4',
             type='prompt'
         ).inc()
+
+    def test_product_loop_helpers_sanitize_labels(self):
+        """Product-loop helpers should accept noisy labels without high-cardinality values."""
+        metrics.record_product_loop_event(
+            loop='Task Execution',
+            surface='Task Complete',
+            outcome='Completed!',
+            reason='User Action With Spaces',
+        )
+        metrics.observe_product_loop_latency('Task Execution', 'Task Complete', 'Completed!', 0.12)
+        metrics.observe_product_loop_items('Community Feed', 'Goal-Mates', 3)
+
+        event_metric = metrics.PRODUCT_LOOP_EVENT_TOTAL.labels(
+            loop='task_execution',
+            surface='task_complete',
+            outcome='completed',
+            reason='user_action_with_spaces',
+        )
+        assert event_metric is not None
 
 
 class TestCollaborationMetrics:

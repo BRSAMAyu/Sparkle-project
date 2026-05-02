@@ -20,6 +20,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/i18n"
+	"github.com/sparkle/gateway/internal/logsafe"
 	"go.uber.org/zap"
 )
 
@@ -247,7 +248,7 @@ func abortWithAPIError(c *gin.Context, status int, code string, message string) 
 			zap.Int("status", status),
 			zap.String("code", code),
 			zap.String("category", category),
-			zap.String("internal_message", message),
+			zap.String("internal_message", logsafe.RedactText(message)),
 			zap.String("request_id", requestIDFromContext(c)),
 		}
 		zap.L().Warn("middleware error response", fields...)
@@ -512,7 +513,7 @@ func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (str
 				redisAvailable = false
 				if cfg.RedisFailClosed {
 					// Fail-Closed: reject token when Redis is unavailable
-					log.Printf("[SECURITY] Redis unavailable with Fail-Closed mode, rejecting token for user %s: %v", userID, err)
+					log.Printf("[SECURITY] Redis unavailable with Fail-Closed mode, rejecting token for user %s: %v", logsafe.UserIDHash(userID), err)
 					return "", false, fmt.Errorf("token validation unavailable")
 				}
 				// Fail-Open (development): log warning but continue
@@ -541,7 +542,7 @@ func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (str
 				}
 				if err != redis.Nil {
 					if cfg.RedisFailClosed {
-						log.Printf("[SECURITY] Redis user revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", userID, err)
+						log.Printf("[SECURITY] Redis user revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", logsafe.UserIDHash(userID), err)
 						return "", false, fmt.Errorf("token validation unavailable")
 					}
 					log.Printf("[SECURITY WARNING] Redis user revocation check failed, allowing token (Fail-Open mode): %v", err)
@@ -562,12 +563,12 @@ func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (str
 			sessionRevoked, err := rdb.Exists(ctx, "session_revoked:"+sid).Result()
 			if err != nil {
 				if !redisAvailable && cfg.RedisFailClosed {
-					log.Printf("[SECURITY] Redis session revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", userID, err)
+					log.Printf("[SECURITY] Redis session revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", logsafe.UserIDHash(userID), err)
 					return "", false, fmt.Errorf("token validation unavailable")
 				}
 				if err != redis.Nil {
 					if cfg.RedisFailClosed {
-						log.Printf("[SECURITY] Redis session revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", userID, err)
+						log.Printf("[SECURITY] Redis session revocation check failed with Fail-Closed mode, rejecting token for user %s: %v", logsafe.UserIDHash(userID), err)
 						return "", false, fmt.Errorf("token validation unavailable")
 					}
 					log.Printf("[SECURITY WARNING] Redis session revocation check failed, allowing token (Fail-Open mode): %v", err)

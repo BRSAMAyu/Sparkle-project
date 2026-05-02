@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -105,7 +106,7 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
         },
         loading: () => LoadingIndicator.circular(
           showText: true,
-          loadingText: '正在整理今日胶囊...',
+          loadingText: I18nService.instance.isChinese ? '正在整理今日胶囊...' : 'Preparing today\'s capsule...',
         ),
         error: (err, stack) => CustomErrorWidget.page(
           context: context,
@@ -150,7 +151,7 @@ class _CapsuleList extends StatelessWidget {
             child: EmptyState(
               title: emptyMessage ?? context.l10n.capsuleEmptyTitle,
               description: archived
-                  ? '已归档的胶囊会在这里显示。'
+                  ? (I18nService.instance.isChinese ? '已归档的胶囊会在这里显示。' : 'Archived capsules will appear here.')
                   : context.l10n.capsuleEmptySubtitle,
               icon: archived
                   ? Icons.inventory_2_outlined

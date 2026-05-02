@@ -33,6 +33,10 @@ class NorthStarMetricType:
     EXAM_OUTCOME_RECORDED = "exam_outcome_recorded"
     SEVEN_DAY_GOAL_STARTED = "seven_day_goal_started"
     SEVEN_DAY_GOAL_COMPLETED = "seven_day_goal_completed"
+    FIRST_GOAL_PROFILE_CREATED = "first_goal_profile_created"
+    FIRST_AURORA_BASELINE_FORMED = "first_aurora_baseline_formed"
+    FIRST_PLAN_REQUESTED = "first_plan_requested"
+    FIRST_TASK_COMPLETED = "first_task_completed"
 
 
 NORTH_STAR_DEFINITIONS = [
@@ -53,6 +57,12 @@ NORTH_STAR_DEFINITIONS = [
         label="7-day goal completion",
         description="Completed 7-day survival sprint goals divided by 7-day survival sprint goals started.",
         unit="ratio",
+    ),
+    NorthStarMetricDefinition(
+        key="cold_start_first_value",
+        label="Cold-start first value",
+        description="Counts the first goal profile, Aurora baseline, first plan request, and first task completion milestones.",
+        unit="count",
     ),
 ]
 
@@ -154,6 +164,48 @@ class NorthStarMetricsService:
             payload=payload or {},
         )
 
+    async def record_cold_start_milestone(
+        self,
+        *,
+        user_id: UUID,
+        milestone: str,
+        source: str,
+        occurred_at: datetime | None = None,
+        plan_id: UUID | None = None,
+        task_id: UUID | None = None,
+        payload: dict[str, Any] | None = None,
+    ) -> NorthStarMetricEvent:
+        allowed = {
+            NorthStarMetricType.FIRST_GOAL_PROFILE_CREATED,
+            NorthStarMetricType.FIRST_AURORA_BASELINE_FORMED,
+            NorthStarMetricType.FIRST_PLAN_REQUESTED,
+            NorthStarMetricType.FIRST_TASK_COMPLETED,
+        }
+        if milestone not in allowed:
+            raise ValueError(f"Unsupported cold-start North Star milestone: {milestone}")
+
+        event_key = f"north_star:cold_start:{milestone}:{user_id}"
+        existing_result = await self.db.execute(
+            select(NorthStarMetricEvent).where(NorthStarMetricEvent.event_key == event_key)
+        )
+        existing = existing_result.scalar_one_or_none()
+        if existing is not None:
+            return existing
+
+        return await self._upsert_event(
+            user_id=user_id,
+            plan_id=plan_id,
+            task_id=task_id,
+            event_type=milestone,
+            event_key=event_key,
+            source=source,
+            occurred_at=occurred_at,
+            value_float=1.0,
+            numerator=1,
+            denominator=1,
+            payload=payload or {},
+        )
+
     async def get_trends(
         self,
         *,
@@ -202,6 +254,14 @@ class NorthStarMetricsService:
                     seven_day_goal_completion_rate=(round(completed / started, 4) if started else None),
                     seven_day_goals_started=started,
                     seven_day_goals_completed=completed,
+                    first_goal_profiles_created=len(
+                        daily.get(NorthStarMetricType.FIRST_GOAL_PROFILE_CREATED, [])
+                    ),
+                    aurora_baselines_formed=len(
+                        daily.get(NorthStarMetricType.FIRST_AURORA_BASELINE_FORMED, [])
+                    ),
+                    first_plan_requests=len(daily.get(NorthStarMetricType.FIRST_PLAN_REQUESTED, [])),
+                    first_tasks_completed=len(daily.get(NorthStarMetricType.FIRST_TASK_COMPLETED, [])),
                 )
             )
             cursor += timedelta(days=1)
@@ -291,6 +351,14 @@ class NorthStarMetricsService:
         )
         starts = sum(1 for event in events if event.event_type == NorthStarMetricType.SEVEN_DAY_GOAL_STARTED)
         completions = sum(1 for event in events if event.event_type == NorthStarMetricType.SEVEN_DAY_GOAL_COMPLETED)
+        first_goal_profiles = sum(
+            1 for event in events if event.event_type == NorthStarMetricType.FIRST_GOAL_PROFILE_CREATED
+        )
+        aurora_baselines = sum(
+            1 for event in events if event.event_type == NorthStarMetricType.FIRST_AURORA_BASELINE_FORMED
+        )
+        first_plan_requests = sum(1 for event in events if event.event_type == NorthStarMetricType.FIRST_PLAN_REQUESTED)
+        first_tasks_completed = sum(1 for event in events if event.event_type == NorthStarMetricType.FIRST_TASK_COMPLETED)
 
         return {
             "latest_exam_pass_probability": latest_probability,
@@ -301,5 +369,11 @@ class NorthStarMetricsService:
             "seven_day_goals_started": starts,
             "seven_day_goals_completed": completions,
             "seven_day_goal_completion_rate": round(completions / starts, 4) if starts else None,
+            "first_goal_profiles_created": first_goal_profiles,
+            "aurora_baselines_formed": aurora_baselines,
+            "first_plan_requests": first_plan_requests,
+            "first_tasks_completed": first_tasks_completed,
+            "cold_start_first_value_completion_rate": (
+                round(first_tasks_completed / first_goal_profiles, 4) if first_goal_profiles else None
+            ),
         }
-

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 import uuid
 
@@ -14,8 +15,8 @@ from _acceptance_common import login_with_requests
 
 AUTH_BASE_URL = "http://127.0.0.1:8000/api/v1"
 BASE_URL = "http://127.0.0.1:8080/api/v1"
-USERNAME = "chat_test"
-PASSWORD = "Chat123456"
+USERNAME = os.getenv("LOCAL_SMOKE_USERNAME", "chat_test")
+PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", "Chat123456")
 REQUEST_TIMEOUT_SECONDS = 180
 
 

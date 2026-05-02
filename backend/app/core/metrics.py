@@ -324,6 +324,13 @@ AURORA_CORRECTION_TO_STATE_CHANGE_TOTAL = get_or_create_metric(
     ["surface", "action", "changed"],
 )
 
+AURORA_CORRECTION_FAILURE_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_aurora_correction_failure_total",
+    "Aurora correction processing failures by surface and reason",
+    ["surface", "reason"],
+)
+
 BAYESIAN_RECOMMENDATION_TOTAL = get_or_create_metric(
     Counter,
     "sparkle_bayesian_recommendation_total",
@@ -516,6 +523,77 @@ RUN_LEDGER_FEEDBACK_EFFECT_TOTAL = get_or_create_metric(
     "Total feedback-to-strategy effects captured by the unified run ledger",
     ["effect_target", "status"],
 )
+
+PRODUCT_LOOP_EVENT_TOTAL = get_or_create_metric(
+    Counter,
+    "sparkle_product_loop_event_total",
+    "User-impact product loop events by loop, surface, outcome, and reason",
+    ["loop", "surface", "outcome", "reason"],
+)
+
+PRODUCT_LOOP_LATENCY = get_or_create_metric(
+    Histogram,
+    "sparkle_product_loop_latency_seconds",
+    "Latency for user-impact product loop operations",
+    ["loop", "surface", "outcome"],
+    buckets=[0.05, 0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0],
+)
+
+PRODUCT_LOOP_ITEMS = get_or_create_metric(
+    Histogram,
+    "sparkle_product_loop_items",
+    "Items returned or affected by user-impact product loop operations",
+    ["loop", "surface"],
+    buckets=[0, 1, 3, 5, 10, 20, 50],
+)
+
+
+def _product_loop_label(value: str | None, default: str = "unknown") -> str:
+    """Keep product-loop labels bounded and Prometheus-friendly."""
+    normalized = (value or default).strip().lower().replace(" ", "_").replace("-", "_")
+    normalized = "".join(char for char in normalized if char.isalnum() or char == "_")
+    return (normalized or default)[:64]
+
+
+def record_product_loop_event(
+    loop: str,
+    surface: str,
+    outcome: str,
+    reason: str = "none",
+) -> None:
+    """Record a best-effort user-impact event without affecting request handling."""
+    try:
+        PRODUCT_LOOP_EVENT_TOTAL.labels(
+            loop=_product_loop_label(loop),
+            surface=_product_loop_label(surface),
+            outcome=_product_loop_label(outcome),
+            reason=_product_loop_label(reason, "none"),
+        ).inc()
+    except Exception as exc:  # pragma: no cover - metrics must never break product flows
+        logger.debug(f"Failed to record product-loop event metric: {exc}")
+
+
+def observe_product_loop_latency(loop: str, surface: str, outcome: str, duration_seconds: float) -> None:
+    """Observe a best-effort latency sample for an operational product loop."""
+    try:
+        PRODUCT_LOOP_LATENCY.labels(
+            loop=_product_loop_label(loop),
+            surface=_product_loop_label(surface),
+            outcome=_product_loop_label(outcome),
+        ).observe(max(0.0, float(duration_seconds)))
+    except Exception as exc:  # pragma: no cover - metrics must never break product flows
+        logger.debug(f"Failed to record product-loop latency metric: {exc}")
+
+
+def observe_product_loop_items(loop: str, surface: str, count: int) -> None:
+    """Observe a best-effort item-count sample for an operational product loop."""
+    try:
+        PRODUCT_LOOP_ITEMS.labels(
+            loop=_product_loop_label(loop),
+            surface=_product_loop_label(surface),
+        ).observe(max(0, int(count)))
+    except Exception as exc:  # pragma: no cover - metrics must never break product flows
+        logger.debug(f"Failed to record product-loop item metric: {exc}")
 
 
 # 装饰器：用于测量函数执行时间并记录指标

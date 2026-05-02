@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 	agentv1 "github.com/sparkle/gateway/gen/agent/v1"
 	"github.com/sparkle/gateway/internal/i18n"
+	"github.com/sparkle/gateway/internal/logsafe"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -212,7 +213,7 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 	}
 
 	log.Printf("Action feedback from user %s: action=%s, widget_type=%s, tool_result_id=%s",
-		userID, action, widgetType, toolResultID)
+		hashUserIDForLog(userID), action, widgetType, toolResultID)
 
 	// Parse user ID
 	userUUID, err := uuid.Parse(userID)
@@ -226,7 +227,7 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 	case "task_list", "create_task":
 		if action == "confirm" {
 			// Handle task list confirmation (tasks were created)
-			log.Printf("Task list creation confirmed for user %s, tool_result_id=%s", userID, toolResultID)
+			log.Printf("Task list creation confirmed for user %s, tool_result_id=%s", hashUserIDForLog(userID), toolResultID)
 
 			// [P0.1 FIX]: Call TaskCommand to confirm tasks in database
 			taskCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -234,7 +235,7 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 
 			err := h.taskCommand.ConfirmGeneratedTasks(taskCtx, userUUID, toolResultID)
 			if err != nil {
-				log.Printf("❌ Failed to confirm tasks for user %s: %v", userID, err)
+				log.Printf("❌ Failed to confirm tasks for user %s: %v", hashUserIDForLog(userID), err)
 				sender.SendActionStatus(toolResultID, "failed", map[string]interface{}{
 					"message": i18n.T(ctx, "feedback.action_confirm_failed"),
 				})
@@ -248,7 +249,7 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 			})
 		} else if action == "dismiss" {
 			// Handle task list dismissal (user rejected generated tasks)
-			log.Printf("Task list creation dismissed by user %s", userID)
+			log.Printf("Task list creation dismissed by user %s", hashUserIDForLog(userID))
 
 			// TRACKED(TD-009): In future, could mark tasks as rejected in DB
 			// For now, just send status update
@@ -261,14 +262,14 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 	case "plan_card", "create_plan":
 		if action == "confirm" {
 			// Handle plan confirmation
-			log.Printf("Plan creation confirmed for user %s", userID)
+			log.Printf("Plan creation confirmed for user %s", hashUserIDForLog(userID))
 
 			sender.SendActionStatus(toolResultID, "confirmed", map[string]interface{}{
 				"message":     i18n.T(ctx, "feedback.plan_confirmed"),
 				"widget_type": widgetType,
 			})
 		} else if action == "dismiss" {
-			log.Printf("Plan creation dismissed by user %s", userID)
+			log.Printf("Plan creation dismissed by user %s", hashUserIDForLog(userID))
 
 			sender.SendActionStatus(toolResultID, "dismissed", map[string]interface{}{
 				"message":     i18n.T(ctx, "feedback.plan_dismissed"),
@@ -279,14 +280,14 @@ func (h *ChatOrchestrator) handleActionFeedbackWithResponder(ctx context.Context
 	case "focus_card":
 		if action == "confirm" {
 			// Handle focus session start confirmation
-			log.Printf("Focus session start confirmed for user %s", userID)
+			log.Printf("Focus session start confirmed for user %s", hashUserIDForLog(userID))
 
 			sender.SendActionStatus(toolResultID, "confirmed", map[string]interface{}{
 				"message":     i18n.T(ctx, "feedback.focus_started"),
 				"widget_type": widgetType,
 			})
 		} else if action == "dismiss" {
-			log.Printf("Focus session dismissed by user %s", userID)
+			log.Printf("Focus session dismissed by user %s", hashUserIDForLog(userID))
 
 			sender.SendActionStatus(toolResultID, "dismissed", map[string]interface{}{
 				"message":     i18n.T(ctx, "feedback.focus_cancelled"),
@@ -585,7 +586,7 @@ func (h *ChatOrchestrator) handleUpdateNodeMasteryWithResponder(ctx context.Cont
 		return
 	}
 
-	log.Printf("Received mastery update for user %s, node %s, mastery %d, version %s", userID, nodeID, mastery, versionStr)
+	log.Printf("Received mastery update for user %s, node %s, mastery %d, version %s", hashUserIDForLog(userID), nodeID, mastery, versionStr)
 
 	// Call Python Backend via gRPC
 	if h.galaxyClient == nil {
@@ -756,7 +757,7 @@ func (h *ChatOrchestrator) handleResponseFeedbackWithResponder(ctx context.Conte
 		return
 	}
 
-	log.Printf("Response feedback from user %s: response_id=%s trace_id=%s", userID, responseID, traceID)
+	log.Printf("Response feedback from user %s: response_id=%s trace_id=%s", hashUserIDForLog(userID), responseID, traceID)
 
 	req := &agentv1.ResponseFeedbackRequest{
 		UserId:        userID,
@@ -858,7 +859,7 @@ func (h *ChatOrchestrator) handlePlanReviewFeedbackWithResponder(ctx context.Con
 	userComment, _ := msgMap["user_comment"].(string)
 
 	log.Printf("Plan review feedback from user %s: review_id=%s, plan_id=%s, decision=%s, comment=%s",
-		userID, reviewID, planID, userDecision, userComment)
+		hashUserIDForLog(userID), reviewID, planID, userDecision, logsafe.RedactText(userComment))
 
 	// Map string decision to proto enum
 	var decision agentv1.PlanReviewDecision
@@ -959,7 +960,7 @@ func (h *ChatOrchestrator) handleFocusCompleted(msgMap map[string]interface{}, u
 	}
 
 	log.Printf("Focus session completed: user=%s, session_id=%s, duration=%d minutes, completed_tasks=%d",
-		userID, sessionID, int(actualDuration), len(completedTaskIDs))
+		hashUserIDForLog(userID), sessionID, int(actualDuration), len(completedTaskIDs))
 
 	if h.backendURL == "" || authToken == "" {
 		log.Printf("Focus completion not persisted: backendURL or auth token missing")

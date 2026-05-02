@@ -18,7 +18,7 @@ def _production_settings(**overrides):
         "DATABASE_URL": "postgresql+asyncpg://postgres:secret@sparkle_db:5432/sparkle",
         "POSTGRES_PASSWORD": "postgres_secret",
         "REDIS_PASSWORD": "redis_secret",
-        "INTERNAL_API_KEY": "internal_secret",
+        "INTERNAL_API_KEY": "test-internal-api-key",
         "MINIO_ACCESS_KEY": "minio_access",
         "MINIO_SECRET_KEY": "minio_secret",
         "LLM_API_KEY": "llm_secret",

@@ -687,12 +687,11 @@ class TaskRepository {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         dueDate: task.dueDate,
-        guideContent:
-            generateGuide
-                ? (I18nService.instance.isChinese
-                    ? '# AI 执行指南\n\n1. 准备阶段\n2. 执行阶段\n3. 复习阶段'
-                    : '# AI Execution Guide\n\n1. Preparation\n2. Execution\n3. Review')
-                : null,
+        guideContent: generateGuide
+            ? (I18nService.instance.isChinese
+                ? '# AI 执行指南\n\n1. 准备阶段\n2. 执行阶段\n3. 复习阶段'
+                : '# AI Execution Guide\n\n1. Preparation\n2. Execution\n3. Review')
+            : null,
       );
       DemoDataService().demoTasks.add(newTask);
       return newTask;
@@ -723,7 +722,9 @@ class TaskRepository {
           ? [
               TaskNudge(
                 type: 'time_adjustment',
-                title: I18nService.instance.isChinese ? '检测到规划乐观偏差' : 'Planning optimism bias detected',
+                title: I18nService.instance.isChinese
+                    ? '检测到规划乐观偏差'
+                    : 'Planning optimism bias detected',
                 message: I18nService.instance.isChinese
                     ? '根据您的历史行为模式，建议将预估时间调整为 ${task.estimatedMinutes * 130 ~/ 100} 分钟'
                     : 'Based on your history, consider adjusting the estimate to ${task.estimatedMinutes * 130 ~/ 100} min',
@@ -1037,18 +1038,23 @@ class TaskRepository {
           createdAt: now,
           updatedAt: now,
           estimatedMinutes: 5,
-          guideContent: zh ? '只定位卡点，不解决整张任务卡。' : 'Just locate the block — don\'t solve the whole task.',
+          guideContent: zh
+              ? '只定位卡点，不解决整张任务卡。'
+              : 'Just locate the block — don\'t solve the whole task.',
         ),
         SubTaskModel(
           id: 'demo_${id}_step_2',
           parentTaskId: id,
-          title: zh ? '把这个卡点讲成一句人话' : 'Describe the block in one plain sentence',
+          title:
+              zh ? '把这个卡点讲成一句人话' : 'Describe the block in one plain sentence',
           order: 1,
           status: SubTaskStatus.pending,
           createdAt: now,
           updatedAt: now,
           estimatedMinutes: 10,
-          guideContent: zh ? '先讲清楚，再决定下一步。' : 'Explain it clearly first, then decide next steps.',
+          guideContent: zh
+              ? '先讲清楚，再决定下一步。'
+              : 'Explain it clearly first, then decide next steps.',
         ),
         SubTaskModel(
           id: 'demo_${id}_step_3',
@@ -1059,7 +1065,9 @@ class TaskRepository {
           createdAt: now,
           updatedAt: now,
           estimatedMinutes: 10,
-          guideContent: zh ? '只验证刚拆出来的这一步。' : 'Only verify this one sub-step you just broke out.',
+          guideContent: zh
+              ? '只验证刚拆出来的这一步。'
+              : 'Only verify this one sub-step you just broke out.',
         ),
       ];
       final updated = existing.copyWith(
@@ -1255,12 +1263,21 @@ Clarify the core output and completion criteria.
       final existing = DemoDataService().demoTasks[existingIndex];
       final zh = I18nService.instance.isChinese;
       final diagnosis = <String, dynamic>{
-        'diagnosis_question': zh ? '你现在最像卡在哪一步？' : 'Which step feels most stuck right now?',
+        'diagnosis_question':
+            zh ? '你现在最像卡在哪一步？' : 'Which step feels most stuck right now?',
         'diagnosis_options': zh
             ? ['概念没想清', '步骤顺序乱了', '题目条件不会用']
-            : ['Concept not clear', 'Step order confused', 'Can\'t use given conditions'],
-        'targeted_fix': zh ? '先只做一个 5 分钟内能完成的小动作。' : 'Just do one small action you can finish in 5 minutes.',
-        'check_question': zh ? '下一步你能先写下哪一句？' : 'What can you write down first for the next step?',
+            : [
+                'Concept not clear',
+                'Step order confused',
+                'Can\'t use given conditions',
+              ],
+        'targeted_fix': zh
+            ? '先只做一个 5 分钟内能完成的小动作。'
+            : 'Just do one small action you can finish in 5 minutes.',
+        'check_question': zh
+            ? '下一步你能先写下哪一句？'
+            : 'What can you write down first for the next step?',
         'source': 'demo',
       };
       final updated = existing.copyWith(
@@ -1326,7 +1343,8 @@ Clarify the core output and completion criteria.
             NextAction(
               type: NextActionType.quickReview,
               title: zh ? '快速回顾' : 'Quick Review',
-              description: zh ? '回顾刚才的核心要点' : 'Review the key points just covered',
+              description:
+                  zh ? '回顾刚才的核心要点' : 'Review the key points just covered',
               estimatedMinutes: 5,
               energyCost: 1,
               difficulty: 1,

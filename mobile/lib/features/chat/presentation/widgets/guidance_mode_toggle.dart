@@ -44,7 +44,7 @@ class GuidanceModeToggle extends ConsumerWidget {
               icon: Icons.self_improvement_rounded,
               label: l10n.guidanceModeSelf,
               isSelected: mode == GuidanceMode.selfGuide,
-              color: const Color(0xFF00897B),
+              color: DS.success,
               onTap: () => ref.read(guidanceModeProvider.notifier).mode =
                   GuidanceMode.selfGuide,
             ),

@@ -11,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/sparkle/gateway/internal/i18n"
+	"github.com/sparkle/gateway/internal/logsafe"
 	"go.uber.org/zap"
 )
 
@@ -121,8 +122,8 @@ func recordSanitizedError(ctx context.Context, statusCode string, handlerName st
 		zap.String("status_code", statusCode),
 		zap.String("handler", handlerName),
 		zap.String("category", category),
-		zap.String("internal_message", internalMsg),
-		zap.Error(err),
+		zap.String("internal_message", logsafe.RedactText(internalMsg)),
+		zap.String("error", logsafe.RedactText(err.Error())),
 	}
 	if requestID != "" {
 		fields = append(fields, zap.String("request_id", requestID))

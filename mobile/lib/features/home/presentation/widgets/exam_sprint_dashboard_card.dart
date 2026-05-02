@@ -594,9 +594,9 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
   }
 
   static Color _probabilityColor(double value) {
-    if (value < 0.4) return Colors.red[400]!;
-    if (value <= 0.6) return Colors.amber[600]!;
-    return Colors.green[400]!;
+    if (value < 0.4) return DS.error;
+    if (value <= 0.6) return DS.warning;
+    return DS.success;
   }
 }
 

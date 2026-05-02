@@ -91,6 +91,45 @@
 2. Sample traces to identify oversized context sources.
 3. Create optimization backlog and monitor trend over 24h.
 
+## Product Loop Observability
+
+Primary dashboard: `Sparkle Product Loop Operations` (`monitoring/grafana-dashboards/sparkle-product-loops.json`).
+
+## P2: Aurora Corrections Not Taking Effect
+
+1. Open the product loop dashboard and compare `sparkle_aurora_correction_to_state_change_total{changed="false"}` by `surface` and `action`.
+2. Sample recent correction receipts from `/api/v1/admin/observability/responses/{response_id}` or Redis `aurora:last_correction_effect:*`.
+3. If a surface is sending vague or unmapped corrections, disable that correction chip/surface copy until the semantic payload maps to profile/state updates.
+4. If writes are failing, check `sparkle_aurora_correction_failure_total` and backend logs for `Correction feedback processing failed`.
+
+## P2: Card Action Failures High
+
+1. Inspect `sparkle_product_loop_event_total{loop="card_action"}` by `outcome` and `reason`.
+2. If `redis_unavailable`, verify Redis health before debugging card rendering.
+3. If `bad_action`, compare mobile card action payloads with the backend action contract: `confirm`, `correct`, `partial`, `dismiss`.
+4. Sample affected traces from the run ledger and keep card rendering live if failures are isolated to one action.
+
+## P2: Push Fatigue High
+
+1. Inspect `sparkle_product_loop_event_total{loop="push_judgment"}` split by `opened`, `dismissed`, and `ignored`.
+2. Check wake/push policy changes, quiet-hour config, cooldowns, and recent campaign or scheduler changes.
+3. Temporarily lower proactive push volume for the dominant reason/surface while preserving critical reminders.
+4. Confirm the negative interaction rate drops before restoring normal push policy.
+
+## P3: Community Feed Empty High
+
+1. Inspect empty ratio by `surface` (`global`, `squad`, `goal_mates`, `following`).
+2. Verify whether the scope has real eligible content after soft-delete, block, privacy, and friendship filters.
+3. If content exists but does not render, inspect community API logs and recent query/filter changes.
+4. If content genuinely does not exist, schedule seed/recommendation work instead of relaxing privacy filters.
+
+## P3: Product Loop Latency High
+
+1. Check the product loop latency panel by `loop` and `surface`.
+2. For `community_feed`, inspect database query plans and pagination/filter fan-out.
+3. For `task_execution`, inspect downstream plan, Galaxy, achievement, and next-action calls.
+4. For `card_action` or `push_judgment`, verify Redis latency and avoid blocking the user on non-critical telemetry.
+
 ## Post-incident checklist
 
 1. Document timeline, root cause, blast radius, and mitigation.

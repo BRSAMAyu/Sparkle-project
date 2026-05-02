@@ -303,6 +303,8 @@ class VocabularyService:
                 existing.part_of_speech = part_of_speech
             if source_translation_id:
                 existing.source_translation_id = source_translation_id
+            await db.commit()
+            await db.refresh(existing)
             return existing
 
         word_book = WordBook(
@@ -318,6 +320,95 @@ class VocabularyService:
             next_review_at=_utcnow()
         )
         db.add(word_book)
+        await db.commit()
+        await db.refresh(word_book)
+        return word_book
+
+    @staticmethod
+    def build_learning_loop_summary(
+        word_book: WordBook,
+        *,
+        graph_node_id: UUID | str | None = None,
+        learning_asset_id: UUID | str | None = None,
+        graph_status: str | None = None,
+        asset_status: str | None = None,
+        warnings: list[str] | None = None,
+    ) -> dict[str, Any]:
+        """Expose where a saved word goes next in the learning OS."""
+        tag_links = VocabularyService._extract_learning_links(word_book.tags)
+        graph_node_id = graph_node_id or tag_links.get("knowledge_node_id")
+        learning_asset_id = learning_asset_id or tag_links.get("learning_asset_id")
+
+        return {
+            "vocabulary_card": {
+                "word_id": str(word_book.id),
+                "word": word_book.word,
+                "source_translation_id": word_book.source_translation_id,
+            },
+            "review": {
+                "scheduled": True,
+                "next_review_at": word_book.next_review_at.isoformat() if word_book.next_review_at else None,
+                "importance": word_book.importance,
+                "review_count": word_book.review_count,
+            },
+            "knowledge_card": {
+                "created": bool(graph_node_id),
+                "node_id": str(graph_node_id) if graph_node_id else None,
+                "status": graph_status or tag_links.get("knowledge_status"),
+            },
+            "learning_asset": {
+                "created": bool(learning_asset_id),
+                "asset_id": str(learning_asset_id) if learning_asset_id else None,
+                "status": asset_status or tag_links.get("learning_asset_status"),
+            },
+            "task_recommendation_hint": {
+                "eligible": bool(graph_node_id),
+                "reason": (
+                    "translation_vocabulary_review_due"
+                    if graph_node_id
+                    else "wordbook_spaced_review_due"
+                ),
+            },
+            "warnings": warnings or [],
+        }
+
+    @staticmethod
+    def _extract_learning_links(tags: Any) -> dict[str, Any]:
+        if not isinstance(tags, list):
+            return {}
+        for tag in tags:
+            if isinstance(tag, dict) and tag.get("type") == "learning_loop":
+                return tag
+        return {}
+
+    @staticmethod
+    async def attach_learning_links(
+        db: AsyncSession,
+        word_book: WordBook,
+        *,
+        graph_node_id: UUID | str | None = None,
+        graph_status: str | None = None,
+        learning_asset_id: UUID | str | None = None,
+        learning_asset_status: str | None = None,
+    ) -> WordBook:
+        """Store graph/asset links on the wordbook row without a schema migration."""
+        tags = word_book.tags if isinstance(word_book.tags, list) else []
+        retained_tags = [
+            tag
+            for tag in tags
+            if not (isinstance(tag, dict) and tag.get("type") == "learning_loop")
+        ]
+        retained_tags.append(
+            {
+                "type": "learning_loop",
+                "knowledge_node_id": str(graph_node_id) if graph_node_id else None,
+                "knowledge_status": graph_status,
+                "learning_asset_id": str(learning_asset_id) if learning_asset_id else None,
+                "learning_asset_status": learning_asset_status,
+                "linked_at": _utcnow().isoformat(),
+            }
+        )
+        word_book.tags = retained_tags
         await db.commit()
         await db.refresh(word_book)
         return word_book
@@ -378,7 +469,8 @@ class VocabularyService:
     async def record_review(
         db: AsyncSession,
         word_id: UUID,
-        remembered: bool
+        remembered: bool,
+        user_id: UUID | None = None,
     ) -> WordBook | None:
         """
         Record review result and schedule next review (使用统一算法)
@@ -391,7 +483,15 @@ class VocabularyService:
         Returns:
             Updated word book entry or None if not found
         """
-        word_book = await db.get(WordBook, word_id)
+        if user_id is not None:
+            result = await db.execute(
+                select(WordBook).where(
+                    and_(WordBook.id == word_id, WordBook.user_id == user_id)
+                )
+            )
+            word_book = result.scalar_one_or_none()
+        else:
+            word_book = await db.get(WordBook, word_id)
         if not word_book:
             return None
 

@@ -348,3 +348,81 @@ async def test_wake_policy_triggers_risk_override_for_days_left_one_to_three() -
             self_model={"strategy_confidence": 0.2, "task_failure_streak": 3},
         )
         assert decision.risk_override_triggered is True, f"expected risk_override for days_left={days_left}"
+
+
+@pytest.mark.asyncio
+async def test_wake_policy_payload_explains_risk_plan_drift_recall_and_comeback() -> None:
+    service = AuroraWakePolicyService(redis_client=_FakeRedis())
+
+    decision = await service.evaluate(
+        active_db=None,
+        user_id="user-1",
+        user_message="我回来了，但复习掉队了。",
+        request_extra_context={
+            "days_left": 2,
+            "pass_probability": 0.38,
+            "plan_completion_rate": 0.32,
+            "expected_plan_completion_rate": 0.78,
+            "same_cause_error_streak": 4,
+            "quiz_accuracy_history": [0.84, 0.57],
+            "wake_reminder_topic": "条件概率",
+            "hours_since_last_active": 52,
+            "struggle_score": 0.6,
+            "standard_layer_uncertainty": 0.3,
+        },
+        user_context_payload={},
+        self_model={"strategy_confidence": 0.3, "task_failure_streak": 2},
+    )
+
+    payload = decision.to_payload()
+    reason_kinds = {reason["kind"] for reason in payload["wake_reasons"]}
+
+    assert {"risk", "plan_drift", "recall", "comeback"}.issubset(reason_kinds)
+    assert payload["wake_reasons"][0]["explanation"]
+    assert payload["wake_reasons"][0]["user_control"]
+    assert payload["raw_wake_score"] >= payload["wake_score"]
+
+
+@pytest.mark.asyncio
+async def test_repeated_wrong_wake_feedback_reduces_future_wake_confidence() -> None:
+    redis = _FakeRedis()
+    service = AuroraWakePolicyService(redis_client=redis)
+
+    before = await service.evaluate(
+        active_db=None,
+        user_id="user-1",
+        user_message="继续。",
+        request_extra_context={
+            "days_left": 7,
+            "plan_completion_rate": 0.45,
+            "expected_plan_completion_rate": 0.75,
+            "struggle_score": 0.5,
+            "standard_layer_uncertainty": 0.3,
+        },
+        user_context_payload={},
+        self_model={"strategy_confidence": 0.35, "task_failure_streak": 1},
+    )
+
+    await service.record_wake_feedback(user_id="user-1", wake_kind="plan_drift", outcome="wrong")
+    await service.record_wake_feedback(user_id="user-1", wake_kind="plan_drift", outcome="wrong")
+
+    after = await service.evaluate(
+        active_db=None,
+        user_id="user-1",
+        user_message="继续。",
+        request_extra_context={
+            "days_left": 7,
+            "plan_completion_rate": 0.45,
+            "expected_plan_completion_rate": 0.75,
+            "struggle_score": 0.5,
+            "standard_layer_uncertainty": 0.3,
+        },
+        user_context_payload={},
+        self_model={"strategy_confidence": 0.35, "task_failure_streak": 1},
+    )
+
+    assert after.wake_score < before.wake_score
+    assert after.feedback_profile.negative_count_14d == 2
+    assert after.feedback_profile.confidence_multiplier < 1.0
+    assert "plan_drift" in after.feedback_profile.suppressed_kinds
+    assert "plan_drift" not in {reason.kind for reason in after.wake_reasons}

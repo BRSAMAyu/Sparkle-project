@@ -256,7 +256,7 @@ func (h *GalaxyHandler) invalidateGalaxyGraphCache(ctx context.Context, userID s
 	}
 
 	if err := h.cache.Del(ctx, "galaxy:graph:"+userID).Err(); err != nil {
-		log.Printf("Failed to delete galaxy cache key for user %s: %v", userID, err)
+		log.Printf("Failed to delete galaxy cache key for user %s: %v", hashUserIDForLog(userID), err)
 	}
 
 	pattern := "*:view:get_galaxy_graph:" + userID + ":*"
@@ -266,14 +266,14 @@ func (h *GalaxyHandler) invalidateGalaxyGraphCache(ctx context.Context, userID s
 		keys = append(keys, iter.Val())
 	}
 	if err := iter.Err(); err != nil {
-		log.Printf("Failed to scan galaxy cache pattern for user %s: %v", userID, err)
+		log.Printf("Failed to scan galaxy cache pattern for user %s: %v", hashUserIDForLog(userID), err)
 		return
 	}
 	if len(keys) == 0 {
 		return
 	}
 	if err := h.cache.Del(ctx, keys...).Err(); err != nil {
-		log.Printf("Failed to delete galaxy cache pattern for user %s: %v", userID, err)
+		log.Printf("Failed to delete galaxy cache pattern for user %s: %v", hashUserIDForLog(userID), err)
 	}
 }
 

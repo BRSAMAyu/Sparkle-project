@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Release: production domain only, HTTPS enforced -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="true">sparkle.com</domain>
+    </domain-config>
+
+    <!-- Fallback: allows localhost for debug/development -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

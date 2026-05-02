@@ -8,6 +8,7 @@ Tasks API Endpoints
 
 from __future__ import annotations
 
+import time
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -20,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError
+from app.core.metrics import observe_product_loop_latency, record_product_loop_event
 from app.db.session import get_db
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_resources import TaskResourceLink, TaskResourceType
@@ -53,6 +55,7 @@ from app.schemas.task_feedback import (
     TaskFeedbackResponse,
     TaskFeedbackSubmitResponse,
 )
+from app.services.daily_task_selection_service import DailyTaskSelectionService
 from app.services.feedback_service import feedback_service
 from app.services.focus_context_service import focus_context_service
 from app.services.intelligent_task_service import IntelligentTaskService
@@ -366,21 +369,13 @@ async def get_today_tasks(
     db: AsyncSession = Depends(get_db),
 ):
     """Return tasks relevant for today."""
-    today = date.today()
-    query = (
-        select(Task)
-        .where(
-            Task.user_id == current_user.id,
-            Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.STUCK, TaskStatus.COMPLETED]),
-        )
-        .where(
-            (Task.due_date.is_(None)) | (Task.due_date <= today) | (Task.completed_at.is_not(None)),
-        )
-        .order_by(Task.order_index.asc(), desc(Task.priority), desc(Task.updated_at))
-        .limit(50)
+    selections = await DailyTaskSelectionService(db, cache_service.redis).select_tasks(
+        user_id=current_user.id,
+        limit=50,
+        include_completed_today=True,
+        only_today_relevant=True,
     )
-    result = await db.execute(query)
-    return [TaskDetail.model_validate(task) for task in result.scalars().all()]
+    return [TaskDetail.model_validate(selection.task) for selection in selections]
 
 
 @router.get("/recommended", response_model=list[TaskDetail])
@@ -390,39 +385,12 @@ async def get_recommended_tasks(
     db: AsyncSession = Depends(get_db),
 ):
     """Return a lightweight recommendation list for the dashboard."""
-    today = date.today()
-    query = (
-        select(Task)
-        .where(
-            Task.user_id == current_user.id,
-            Task.status.in_([TaskStatus.PENDING, TaskStatus.IN_PROGRESS, TaskStatus.STUCK]),
-        )
-        .order_by(
-            Task.due_date.is_(None),
-            Task.due_date.asc(),
-            desc(Task.priority),
-            desc(Task.updated_at),
-        )
-        .limit(limit)
+    selections = await DailyTaskSelectionService(db, cache_service.redis).select_tasks(
+        user_id=current_user.id,
+        limit=limit,
+        include_completed_today=False,
     )
-    result = await db.execute(query)
-    tasks = result.scalars().all()
-
-    if len(tasks) < limit:
-        fallback_query = (
-            select(Task)
-            .where(
-                Task.user_id == current_user.id,
-                Task.status == TaskStatus.COMPLETED,
-                Task.updated_at >= today,
-            )
-            .order_by(desc(Task.updated_at))
-            .limit(limit - len(tasks))
-        )
-        fallback_result = await db.execute(fallback_query)
-        tasks.extend(fallback_result.scalars().all())
-
-    return [TaskDetail.model_validate(task) for task in tasks[:limit]]
+    return [TaskDetail.model_validate(selection.task) for selection in selections]
 
 
 @router.get("/{task_id}", response_model=dict[str, Any])
@@ -933,6 +901,8 @@ async def complete_task(
     - 发布 task.completed 事件 (触发 AdaptiveReplanner)
     - Galaxy Spark 点亮
     """
+    start_time = time.perf_counter()
+
     # 幂等性检查: 查询任务当前状态
     existing_task = await db.execute(
         select(Task).where(
@@ -943,9 +913,17 @@ async def complete_task(
     task = existing_task.scalar_one_or_none()
 
     if not task:
+        record_product_loop_event("task_execution", "task_complete", "not_found", "missing_task")
+        observe_product_loop_latency(
+            "task_execution", "task_complete", "not_found", time.perf_counter() - start_time
+        )
         raise NotFoundError(message="Task not found")
 
     if task.status == TaskStatus.COMPLETED:
+        record_product_loop_event("task_execution", "task_complete", "already_completed", "idempotent")
+        observe_product_loop_latency(
+            "task_execution", "task_complete", "already_completed", time.perf_counter() - start_time
+        )
         return {
             "success": True,
             "data": {
@@ -1040,6 +1018,11 @@ async def complete_task(
     except Exception as e:
         logger.warning(f"Contract progress update failed: {e}")
     # ============================================
+
+    record_product_loop_event("task_execution", "task_complete", "completed", "user_action")
+    observe_product_loop_latency(
+        "task_execution", "task_complete", "completed", time.perf_counter() - start_time
+    )
 
     # 返回数据
     return {

@@ -18,7 +18,7 @@ async def test_files_internal_token_fails_closed_when_key_missing():
 
 @pytest.mark.asyncio
 async def test_files_internal_token_rejects_wrong_secret():
-    with patch("app.api.v1.files.settings.INTERNAL_API_KEY", "secret-key"):
+    with patch("app.api.v1.files.settings.INTERNAL_API_KEY", "test-internal-api-key"):
         with pytest.raises(HTTPException) as exc_info:
             await verify_files_internal_token("wrong-key")
 

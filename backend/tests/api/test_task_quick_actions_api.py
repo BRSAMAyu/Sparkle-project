@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import UUID
 
@@ -84,17 +85,21 @@ async def _create_task(
     user_id,
     title: str,
     due_date: date | None = None,
+    priority: int = 1,
+    estimated_minutes: int = 30,
+    difficulty: int = 3,
+    energy_cost: int = 2,
 ) -> Task:
     task = Task(
         user_id=user_id,
         title=title,
         type=TaskType.LEARNING,
         tags=["quick-action"],
-        estimated_minutes=30,
-        difficulty=3,
-        energy_cost=2,
+        estimated_minutes=estimated_minutes,
+        difficulty=difficulty,
+        energy_cost=energy_cost,
         status=TaskStatus.PENDING,
-        priority=1,
+        priority=priority,
         due_date=due_date,
     )
     db_session.add(task)
@@ -132,6 +137,60 @@ async def test_snooze_task_moves_due_date_without_replanning(tasks_client, db_se
     await db_session.refresh(primary_task)
     assert primary_task.due_date == date.today() + timedelta(days=1)
     assert "snoozed" in (primary_task.tags or [])
+
+
+@pytest.mark.asyncio
+async def test_recommended_tasks_balance_deadline_priority_and_aurora_energy(
+    tasks_client,
+    db_session,
+    monkeypatch,
+):
+    client, state = tasks_client
+    user = await _create_user(db_session)
+    await _create_task(
+        db_session,
+        user_id=user.id,
+        title="Hard but loud task",
+        due_date=date.today(),
+        priority=5,
+        estimated_minutes=45,
+        difficulty=5,
+        energy_cost=5,
+    )
+    gentle_task = await _create_task(
+        db_session,
+        user_id=user.id,
+        title="Doable recovery step",
+        due_date=date.today() + timedelta(days=1),
+        priority=1,
+        estimated_minutes=15,
+        difficulty=2,
+        energy_cost=2,
+    )
+    state["current_user"] = user
+
+    class _FakeAuroraStore:
+        def __init__(self, redis):
+            pass
+
+        async def load_energy(self, user_id):
+            return SimpleNamespace(
+                current_level="L2",
+                wake_score=0.82,
+                is_cooling_down=False,
+            )
+
+    monkeypatch.setattr(
+        "app.services.daily_task_selection_service.AuroraRuntimeStore",
+        _FakeAuroraStore,
+    )
+
+    response = client.get("/tasks/recommended?limit=2")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload[0]["id"] == str(gentle_task.id)
+    assert payload[0]["title"] == "Doable recovery step"
 
 
 @pytest.mark.asyncio

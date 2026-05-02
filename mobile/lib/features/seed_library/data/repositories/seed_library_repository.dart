@@ -59,10 +59,10 @@ class SeedLibraryRepository {
       };
 
       if (category != null) {
-        queryParams['category'] = category.name;
+        queryParams['category'] = category.apiValue;
       }
       if (visibility != null) {
-        queryParams['visibility'] = visibility.name;
+        queryParams['visibility'] = visibility.apiValue;
       }
       if (language != null) {
         queryParams['language'] = language;
@@ -194,13 +194,13 @@ class SeedLibraryRepository {
       };
 
       if (itemType != null) {
-        queryParams['item_type'] = itemType.name;
+        queryParams['item_type'] = itemType.apiValue;
       }
       if (subject != null && subject.isNotEmpty) {
         queryParams['subject'] = subject;
       }
       if (difficultyLevel != null) {
-        queryParams['difficulty_level'] = difficultyLevel.name;
+        queryParams['difficulty_level'] = difficultyLevel.apiValue;
       }
       if (search != null && search.isNotEmpty) {
         queryParams['search'] = search;
@@ -246,7 +246,7 @@ class SeedLibraryRepository {
   }) async {
     try {
       final data = <String, dynamic>{
-        'item_type': itemType.name,
+        'item_type': itemType.apiValue,
       };
 
       if (title != null) data['title'] = title;
@@ -254,7 +254,7 @@ class SeedLibraryRepository {
       if (contentData != null) data['content_data'] = contentData;
       if (subject != null) data['subject'] = subject;
       if (difficultyLevel != null) {
-        data['difficulty_level'] = difficultyLevel.name;
+        data['difficulty_level'] = difficultyLevel.apiValue;
       }
       if (tags != null) data['tags'] = tags;
 
@@ -293,7 +293,7 @@ class SeedLibraryRepository {
       if (contentData != null) data['content_data'] = contentData;
       if (subject != null) data['subject'] = subject;
       if (difficultyLevel != null) {
-        data['difficulty_level'] = difficultyLevel.name;
+        data['difficulty_level'] = difficultyLevel.apiValue;
       }
       if (tags != null) data['tags'] = tags;
       if (isActive != null) data['is_active'] = isActive;
@@ -511,7 +511,7 @@ class SeedLibraryRepository {
       }
       if (difficultyLevels != null && difficultyLevels.isNotEmpty) {
         data['difficulty_levels'] =
-            difficultyLevels.map((e) => e.name).toList();
+            difficultyLevels.map((e) => e.apiValue).toList();
       }
       if (tags != null && tags.isNotEmpty) {
         data['tags'] = tags;

@@ -12,6 +12,7 @@ import asyncio
 import json
 import random
 import re
+from collections import defaultdict
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -30,6 +31,9 @@ from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.schemas.error_book import (
     ErrorQueryParams,
+    ErrorClusterReviewCard,
+    ErrorReviewCardAction,
+    ErrorReviewCardsResponse,
     ErrorRecordCreate,
     ErrorRecordUpdate,
     KnowledgeLinkBrief,
@@ -842,6 +846,286 @@ class ErrorBookService:
         await self._attach_knowledge_links(items)
 
         return items, total
+
+    async def get_review_cards(
+        self,
+        user_id: UUID,
+        *,
+        limit: int = 8,
+        lookback_days: int = 90,
+    ) -> ErrorReviewCardsResponse:
+        """Build clustered review cards from real mistakes that need strategy repair."""
+        now = _utcnow()
+        cutoff = now - timedelta(days=max(7, lookback_days))
+        query = (
+            select(ErrorRecord)
+            .where(
+                ErrorRecord.user_id == user_id,
+                ErrorRecord.is_deleted.is_(False),
+                ErrorRecord.created_at >= cutoff,
+            )
+            .order_by(ErrorRecord.next_review_at.asc().nullslast(), ErrorRecord.created_at.desc())
+            .limit(120)
+        )
+        result = await self.db.execute(query)
+        records = list(result.scalars().all())
+        if records:
+            await self._attach_knowledge_links(records)
+
+        cards = self._build_cluster_review_cards(records, now=now)
+        cards.sort(key=lambda item: item.priority_score, reverse=True)
+        return ErrorReviewCardsResponse(
+            cards=cards[: max(1, limit)],
+            generated_at=now,
+            source_error_count=len(records),
+        )
+
+    def _build_cluster_review_cards(
+        self,
+        records: list[ErrorRecord],
+        *,
+        now: datetime | None = None,
+    ) -> list[ErrorClusterReviewCard]:
+        now = now or _utcnow()
+        grouped: dict[str, list[ErrorRecord]] = defaultdict(list)
+        for error in records:
+            grouped[self._review_cluster_key(error)].append(error)
+
+        cards: list[ErrorClusterReviewCard] = []
+        for cluster_key, items in grouped.items():
+            active_items = [item for item in items if item is not None]
+            if not active_items:
+                continue
+            active_items.sort(key=lambda item: (item.next_review_at or item.created_at or now, item.created_at or now))
+            representative = active_items[0]
+            due_items = [
+                item
+                for item in active_items
+                if item.next_review_at is None or self._normalize_dt(item.next_review_at) <= self._normalize_dt(now)
+            ]
+            avg_mastery = sum(float(item.mastery_level or 0.0) for item in active_items) / max(len(active_items), 1)
+            error_type = self._analysis_value(representative, "error_type")
+            root_cause = self._analysis_value(representative, "root_cause")
+            node_id = self._primary_affected_node_id(representative)
+            node_name = self._primary_knowledge_link_name(representative)
+            title_focus = node_name or representative.chapter or self._error_type_label(error_type)
+            priority = self._review_card_priority(
+                error_count=len(active_items),
+                due_count=len(due_items),
+                average_mastery=avg_mastery,
+                representative=representative,
+                now=now,
+            )
+            review_steps = self._review_steps_for_error(error_type=error_type, root_cause=root_cause, focus=title_focus)
+            task_card = self._build_review_task_card(
+                cluster_id=cluster_key,
+                title_focus=title_focus,
+                errors=active_items,
+                node_id=node_id,
+                error_type=error_type,
+                review_steps=review_steps,
+            )
+            cards.append(
+                ErrorClusterReviewCard(
+                    cluster_id=cluster_key,
+                    title=f"{title_focus} · 错题修复",
+                    reason=self._review_card_reason(
+                        error_count=len(active_items),
+                        due_count=len(due_items),
+                        average_mastery=avg_mastery,
+                        error_type=error_type,
+                        root_cause=root_cause,
+                    ),
+                    priority_score=priority,
+                    error_count=len(active_items),
+                    due_count=len(due_items),
+                    average_mastery=round(avg_mastery, 3),
+                    subject_code=representative.subject_code,
+                    chapter=representative.chapter,
+                    error_type=error_type,
+                    root_cause=root_cause,
+                    affected_node_id=node_id,
+                    affected_node_name=node_name,
+                    representative_error_id=representative.id,
+                    error_ids=[item.id for item in active_items],
+                    review_steps=review_steps,
+                    task_card=task_card,
+                    actions=self._review_card_actions(cluster_id=cluster_key, task_card=task_card, node_id=node_id),
+                )
+            )
+        return cards
+
+    def _review_cluster_key(self, error: ErrorRecord) -> str:
+        node_id = self._primary_affected_node_id(error)
+        if node_id:
+            return f"node:{node_id}"
+
+        error_type = self._analysis_value(error, "error_type") or "other"
+        root_cause = self._normalize_cluster_text(self._analysis_value(error, "root_cause") or "")
+        if root_cause:
+            return f"cause:{error_type}:{root_cause[:48]}"
+        chapter = self._normalize_cluster_text(error.chapter or "")
+        return f"fallback:{error.subject_code}:{chapter or error_type}"
+
+    @staticmethod
+    def _normalize_cluster_text(value: str) -> str:
+        return re.sub(r"[\W_]+", "", str(value or "").strip().lower())
+
+    @staticmethod
+    def _normalize_dt(value: datetime) -> datetime:
+        if value.tzinfo is not None:
+            return value.replace(tzinfo=None)
+        return value
+
+    @staticmethod
+    def _analysis_value(error: ErrorRecord, key: str) -> str | None:
+        analysis = getattr(error, "latest_analysis", None)
+        if not isinstance(analysis, dict):
+            return None
+        value = analysis.get(key)
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
+
+    @staticmethod
+    def _error_type_label(error_type: str | None) -> str:
+        labels = {
+            "concept_confusion": "概念边界",
+            "knowledge_gap": "知识缺口",
+            "method_wrong": "解法选择",
+            "logic_error": "推理链路",
+            "calculation_error": "计算过程",
+            "reading_careless": "审题细节",
+            "memory_lapse": "记忆提取",
+            "time_pressure": "限时策略",
+        }
+        return labels.get(str(error_type or ""), "错因模式")
+
+    @staticmethod
+    def _primary_knowledge_link_name(error: ErrorRecord) -> str | None:
+        links = getattr(error, "knowledge_links", None) or []
+        if not links:
+            return None
+        primary = next((item for item in links if getattr(item, "is_primary", False)), links[0])
+        return getattr(primary, "name", None)
+
+    def _review_card_priority(
+        self,
+        *,
+        error_count: int,
+        due_count: int,
+        average_mastery: float,
+        representative: ErrorRecord,
+        now: datetime,
+    ) -> float:
+        overdue_days = 0.0
+        if representative.next_review_at:
+            delta = self._normalize_dt(now) - self._normalize_dt(representative.next_review_at)
+            overdue_days = max(delta.total_seconds() / 86400.0, 0.0)
+        return round(
+            due_count * 4.0
+            + error_count * 2.0
+            + max(0.0, 1.0 - average_mastery) * 5.0
+            + min(overdue_days, 7.0) * 0.4,
+            3,
+        )
+
+    def _review_steps_for_error(self, *, error_type: str | None, root_cause: str | None, focus: str) -> list[str]:
+        base = [
+            f"先复述 {focus} 的判定条件，不急着做整题。",
+            "重做代表错题，只检查这一类错因有没有复现。",
+        ]
+        if error_type in {"concept_confusion", "knowledge_gap"}:
+            base.insert(1, "把容易混淆的概念写成一组正反例。")
+        elif error_type in {"calculation_error", "method_wrong"}:
+            base.insert(1, "按步骤拆出公式、代入、单位和最后验算。")
+        elif error_type in {"reading_careless", "time_pressure"}:
+            base.insert(1, "圈出题干限制词，再设一个 60 秒慢读检查点。")
+        else:
+            base.insert(1, "说出当时卡住的第一步，并补一个最小相似题。")
+        if root_cause:
+            base.append(f"最后对照根因：{root_cause[:80]}")
+        return base[:4]
+
+    def _review_card_reason(
+        self,
+        *,
+        error_count: int,
+        due_count: int,
+        average_mastery: float,
+        error_type: str | None,
+        root_cause: str | None,
+    ) -> str:
+        reason = (
+            f"这里聚合了 {error_count} 道相关错题，其中 {due_count} 道已经到复习时间；"
+            f"当前平均掌握度约 {average_mastery:.0%}。"
+        )
+        if error_type:
+            reason += f" 主要错因是 {self._error_type_label(error_type)}。"
+        if root_cause:
+            reason += f" 根因线索：{root_cause[:96]}"
+        return reason
+
+    def _build_review_task_card(
+        self,
+        *,
+        cluster_id: str,
+        title_focus: str,
+        errors: list[ErrorRecord],
+        node_id: UUID | None,
+        error_type: str | None,
+        review_steps: list[str],
+    ) -> dict:
+        representative = errors[0]
+        due_minutes = 15 + min(15, max(len(errors) - 1, 0) * 3)
+        return {
+            "type": "error_review",
+            "source": "error_book_cluster",
+            "cluster_id": cluster_id,
+            "title": f"修复错因：{title_focus}",
+            "estimated_minutes": due_minutes,
+            "difficulty": 2 if len(errors) <= 2 else 3,
+            "knowledge_node_id": str(node_id) if node_id else None,
+            "representative_error_id": str(representative.id),
+            "error_ids": [str(item.id) for item in errors],
+            "error_type": error_type or "other",
+            "success_criteria": "能用自己的话解释错因，并连续做对 1 道同类题。",
+            "guide_steps": review_steps,
+            "route": f"/errors/{representative.id}?focus=review_cluster",
+        }
+
+    @staticmethod
+    def _review_card_actions(
+        *,
+        cluster_id: str,
+        task_card: dict,
+        node_id: UUID | None,
+    ) -> list[ErrorReviewCardAction]:
+        actions = [
+            ErrorReviewCardAction(
+                type="start_review",
+                label="开始复习",
+                route=f"/errors/review?cluster_id={cluster_id}",
+                payload={"cluster_id": cluster_id, "error_ids": task_card.get("error_ids", [])},
+            ),
+            ErrorReviewCardAction(
+                type="create_task",
+                label="加入今日任务",
+                route="/tasks/new",
+                payload={"task_card": task_card},
+            ),
+        ]
+        if node_id:
+            actions.append(
+                ErrorReviewCardAction(
+                    type="open_knowledge_node",
+                    label="查看星图节点",
+                    route=f"/galaxy/nodes/{node_id}",
+                    payload={"knowledge_node_id": str(node_id)},
+                )
+            )
+        return actions
 
     async def update_error(self, error_id: UUID, user_id: UUID, data: ErrorRecordUpdate) -> ErrorRecord | None:
         error = await self.get_error(error_id, user_id)

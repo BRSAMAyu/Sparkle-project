@@ -98,6 +98,8 @@ def test_push_policy_compiler_builds_commitment_follow_up_decision() -> None:
     assert decision.metadata["proactive_reason"]
     assert decision.metadata["destination_route"].startswith("/chat?")
     assert decision.metadata["intrusiveness_level"] == "standard"
+    assert decision.metadata["wake_type"] == "accountability"
+    assert decision.metadata["feedback_controls"][0]["effect"] == "reduces_future_confidence_for_category"
 
 
 def test_push_policy_compiler_applies_daily_cap() -> None:
@@ -186,6 +188,7 @@ def test_push_policy_compiler_builds_engagement_recovery_when_no_commitment_trig
     assert decision.policy_id == "EngagementRecovery"
     assert decision.category == "engagement_recovery"
     assert decision.message_template_id == "engagement_recovery_soft"
+    assert decision.metadata["wake_type"] == "comeback"
 
 
 def test_push_policy_compiler_delays_into_quiet_hour_exit() -> None:

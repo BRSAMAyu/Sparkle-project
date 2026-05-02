@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -1077,10 +1077,19 @@ class ShareService:
         return result.scalar_one_or_none()
 
     async def _assert_share_access(self, share: CardShareRecord, user_id: UUID) -> None:
+        if share.revoked_at is not None:
+            raise ValueError("Share has been revoked")
+
+        expires_at = self._metadata_datetime(share.metadata_.get("expires_at") if share.metadata_ else None)
+        if expires_at is not None and expires_at <= _utcnow():
+            raise ValueError("Share has expired")
+
         if share.target_user_id and str(share.target_user_id) != str(user_id):
             raise ValueError("No access to this share")
         if share.shared_by_user_id == user_id:
             return
+        if share.scope == ShareScope.USER and share.target_user_id is None:
+            raise ValueError("No access to this private share")
         if share.scope == ShareScope.GROUP and share.group_id:
             from app.models.community import GroupMember
 
@@ -1093,3 +1102,18 @@ class ShareService:
             )
             if result.scalar_one_or_none() is None:
                 raise ValueError("No access to this group share")
+
+    @staticmethod
+    def _metadata_datetime(value: Any) -> datetime | None:
+        if value in (None, ""):
+            return None
+        if isinstance(value, datetime):
+            parsed = value
+        else:
+            try:
+                parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+            except ValueError:
+                return None
+        if parsed.tzinfo is not None:
+            return parsed.astimezone(UTC).replace(tzinfo=None)
+        return parsed

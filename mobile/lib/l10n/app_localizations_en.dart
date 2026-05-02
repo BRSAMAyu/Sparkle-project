@@ -10187,10 +10187,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskGuideTitle => 'Task Guide Title';
 
   @override
-  String get taskListLoading => 'Task List Loading';
+  String get taskListLoading => 'Loading tasks...';
 
   @override
-  String get taskListTitle => 'Task List Title';
+  String get taskListTitle => 'Tasks';
 
   @override
   String taskMinutesOption(Object arg0) {
@@ -10244,7 +10244,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskReminderTimesTitle => 'Task Reminder Times Title';
 
   @override
-  String get taskSearchHint => 'Task Search Hint';
+  String get taskSearchHint => 'Search tasks...';
 
   @override
   String get taskStart => 'Task Start';
@@ -25050,13 +25050,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get memControl => 'Memory Control';
 
   @override
-  String get memControlDesc => 'Control how long-term memory learns your preferences, goals, and experiences. Default is conservative — only information valuable for future decisions is retained.';
+  String get memControlDesc =>
+      'Control how long-term memory learns your preferences, goals, and experiences. Default is conservative — only information valuable for future decisions is retained.';
 
   @override
   String get memSocialToggles => 'Social Semantic Toggles';
 
   @override
-  String get memSocialTogglesDesc => 'Stage 17 only declares memory and reads from the front door. Disabling a category hides its social semantics.';
+  String get memSocialTogglesDesc =>
+      'Stage 17 only declares memory and reads from the front door. Disabling a category hides its social semantics.';
 
   @override
   String get memProactiveReminders => 'Proactive Reminders';

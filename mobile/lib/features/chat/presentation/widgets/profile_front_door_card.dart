@@ -257,8 +257,8 @@ class _ClaimTile extends StatelessWidget {
               _Badge(
                 label: claim['evidence_label']?.toString() ??
                     context.l10n.chatProfileCompileConclusion,
-                color: const Color(0xFF0F766E),
-                background: const Color(0xFFE7F6F4),
+                color: DS.success,
+                background: DS.success.withValues(alpha: 0.08),
               ),
             ],
           ),

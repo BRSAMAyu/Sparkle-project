@@ -1,0 +1,243 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [
+    {
+      "title": "Product Loop Runbook",
+      "type": "link",
+      "url": "monitoring/runbooks/incident_response.md#product-loop-observability"
+    }
+  ],
+  "panels": [
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "sum(rate(sparkle_product_loop_event_total[10m])) by (loop, outcome)",
+          "legendFormat": "{{loop}} / {{outcome}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Product Loop Event Rate",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 0
+      },
+      "id": 2,
+      "targets": [
+        {
+          "expr": "sum(rate(sparkle_aurora_correction_to_state_change_total{changed=\"true\"}[30m])) / clamp_min(sum(rate(sparkle_aurora_correction_to_state_change_total[30m])), 0.001)",
+          "legendFormat": "corrections changing state",
+          "refId": "A"
+        }
+      ],
+      "title": "Aurora Correction Effectiveness",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "id": 3,
+      "targets": [
+        {
+          "expr": "sum(rate(sparkle_product_loop_event_total{loop=\"push_judgment\",outcome=~\"dismissed|ignored\"}[30m])) / clamp_min(sum(rate(sparkle_product_loop_event_total{loop=\"push_judgment\"}[30m])), 0.001)",
+          "legendFormat": "push negative rate",
+          "refId": "A"
+        }
+      ],
+      "title": "Push Fatigue Signal",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 7
+      },
+      "id": 4,
+      "targets": [
+        {
+          "expr": "sum(rate(sparkle_product_loop_event_total{loop=\"card_action\"}[10m])) by (outcome, reason)",
+          "legendFormat": "{{outcome}} / {{reason}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Card Actions And Failures",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 7
+      },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "sum(rate(sparkle_product_loop_event_total{loop=\"task_execution\",outcome=\"completed\"}[30m])) / clamp_min(sum(rate(sparkle_product_loop_event_total{loop=\"task_execution\"}[30m])), 0.001)",
+          "legendFormat": "completion success",
+          "refId": "A"
+        }
+      ],
+      "title": "Task Completion Loop Health",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 7
+      },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "sum(rate(sparkle_product_loop_event_total{loop=\"community_feed\",reason=\"empty\"}[30m])) by (surface) / clamp_min(sum(rate(sparkle_product_loop_event_total{loop=\"community_feed\"}[30m])) by (surface), 0.001)",
+          "legendFormat": "{{surface}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Community Empty Feed Ratio",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 0,
+        "y": 14
+      },
+      "id": 7,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(sparkle_product_loop_latency_seconds_bucket[10m])) by (le, loop, surface))",
+          "legendFormat": "{{loop}} / {{surface}}",
+          "refId": "A"
+        }
+      ],
+      "title": "Product Loop P95 Latency",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "gridPos": {
+        "h": 7,
+        "w": 12,
+        "x": 12,
+        "y": 14
+      },
+      "id": 8,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(sparkle_product_loop_items_bucket{loop=\"community_feed\"}[30m])) by (le, surface))",
+          "legendFormat": "{{surface}} p50 returned items",
+          "refId": "A"
+        }
+      ],
+      "title": "Community Feed Depth",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": [
+    "sparkle",
+    "product",
+    "ops",
+    "cxp26"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timezone": "browser",
+  "title": "Sparkle Product Loop Operations",
+  "uid": "sparkle-product-loops",
+  "version": 1,
+  "weekStart": ""
+}

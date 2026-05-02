@@ -127,6 +127,7 @@ class PushPolicyCompiler:
                 proactive_reason=proactive_reason,
                 destination_route=route,
                 intrusiveness_level=intrusiveness,
+                wake_type="accountability",
                 device_context=device_context,
             ),
         )
@@ -178,6 +179,7 @@ class PushPolicyCompiler:
                 proactive_reason=proactive_reason,
                 destination_route=route,
                 intrusiveness_level=intrusiveness,
+                wake_type="comeback",
                 device_context=device_context,
             ),
         )
@@ -204,11 +206,13 @@ class PushPolicyCompiler:
         proactive_reason: str,
         destination_route: str,
         intrusiveness_level: str,
+        wake_type: str,
         device_context: dict[str, Any],
     ) -> dict[str, Any]:
         target_device_count = int(device_context.get("active_device_count") or 0)
         metadata = {
             **evidence,
+            "wake_type": wake_type,
             "proactive_reason": proactive_reason,
             "destination_route": destination_route,
             "deep_link": destination_route,
@@ -221,6 +225,18 @@ class PushPolicyCompiler:
             },
             "intrusiveness_level": intrusiveness_level,
             "respectfulness_reason": "recent_dismissal" if intrusiveness_level == "reduced" else "policy_match",
+            "feedback_controls": [
+                {
+                    "action": "dismissed",
+                    "label": "这次不用了",
+                    "effect": "reduces_future_confidence_for_category",
+                },
+                {
+                    "action": "disable_category",
+                    "label": "以后少提醒这类",
+                    "effect": "disables_or_reduces_this_category",
+                },
+            ],
             "target_device_count": target_device_count,
             "target_platforms": list(device_context.get("platforms") or []),
             "last_active_device_id": device_context.get("last_active_device_id"),

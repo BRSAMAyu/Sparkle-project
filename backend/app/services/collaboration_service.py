@@ -12,6 +12,7 @@ from app.models.community import (
     GroupMember,
     SharedResource,
     SharedResourceType,
+    UserBlock,
 )
 
 
@@ -25,7 +26,7 @@ class CollaborationService:
         target_group_id: UUID | None = None,
         target_user_id: UUID | None = None,
         permission: str = "view",
-        comment: str = None
+        comment: str = None,
     ) -> SharedResource:
         """
         Share a resource (Plan, Task, Fragment) with a Group or User.
@@ -42,7 +43,7 @@ class CollaborationService:
                 select(GroupMember).where(
                     GroupMember.group_id == target_group_id,
                     GroupMember.user_id == user_id,
-                    GroupMember.not_deleted_filter()
+                    GroupMember.not_deleted_filter(),
                 )
             )
             if not membership_result.scalar_one_or_none():
@@ -54,17 +55,13 @@ class CollaborationService:
             if await UserBlockService.has_block_relationship(db, user_id, target_user_id):
                 raise ValueError("Cannot share with a blocked user")
 
-            u1, u2 = (
-                (user_id, target_user_id)
-                if str(user_id) < str(target_user_id)
-                else (target_user_id, user_id)
-            )
+            u1, u2 = (user_id, target_user_id) if str(user_id) < str(target_user_id) else (target_user_id, user_id)
             rel_result = await db.execute(
                 select(Friendship).where(
                     Friendship.user_id == u1,
                     Friendship.friend_id == u2,
                     Friendship.status == FriendshipStatus.ACCEPTED,
-                    Friendship.not_deleted_filter()
+                    Friendship.not_deleted_filter(),
                 )
             )
             if not rel_result.scalar_one_or_none():
@@ -115,13 +112,25 @@ class CollaborationService:
         db: AsyncSession,
         group_id: UUID,
         resource_type: SharedResourceType | None = None,
-        limit: int = 50
+        limit: int = 50,
+        viewer_id: UUID | None = None,
     ) -> list[SharedResource]:
         """Get resources shared with a group"""
-        stmt = select(SharedResource).where(
-            SharedResource.group_id == group_id,
-            SharedResource.deleted_at.is_(None)
-        )
+        stmt = select(SharedResource).where(SharedResource.group_id == group_id, SharedResource.deleted_at.is_(None))
+
+        if viewer_id is not None:
+            blocked_uids = (
+                select(UserBlock.blocked_id.label("uid"))
+                .where(UserBlock.blocker_id == viewer_id, UserBlock.not_deleted_filter())
+                .union(
+                    select(UserBlock.blocker_id.label("uid")).where(
+                        UserBlock.blocked_id == viewer_id,
+                        UserBlock.not_deleted_filter(),
+                    )
+                )
+                .subquery()
+            )
+            stmt = stmt.where(~SharedResource.shared_by.in_(select(blocked_uids.c.uid)))
 
         if resource_type:
             if resource_type == SharedResourceType.PLAN:
@@ -158,5 +167,6 @@ class CollaborationService:
 
         result = await db.execute(stmt)
         return result.scalars().all()
+
 
 collaboration_service = CollaborationService()

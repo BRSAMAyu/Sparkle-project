@@ -416,6 +416,222 @@ class SeedLibraryService:
 
         return " ".join(parts) if parts else None
 
+    @staticmethod
+    def _seed_action(
+        *,
+        action_type: str,
+        label: str,
+        description: str,
+        resource_type: str,
+        resource_id: uuid.UUID | None,
+        route: str | None,
+        payload: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        return {
+            "action_type": action_type,
+            "label": label,
+            "description": description,
+            "resource_type": resource_type,
+            "resource_id": resource_id,
+            "route": route,
+            "payload": payload or {},
+        }
+
+    def build_item_adoption_actions(self, item: SeedItem) -> list[dict[str, Any]]:
+        """Build privacy-safe, routeable next actions for one seed item."""
+        item_type = str(item.item_type or "")
+        title = item.title or "种子内容"
+        base_payload = {
+            "source": "seed_library",
+            "seed_item_id": str(item.id),
+            "seed_library_id": str(item.library_id),
+            "title": title,
+            "item_type": item_type,
+            "subject": item.subject,
+            "difficulty_level": item.difficulty_level,
+            "tags": list(item.tags or [])[:8],
+        }
+
+        if item_type == ItemType.EXERCISE.value:
+            return [
+                self._seed_action(
+                    action_type="create_task",
+                    label="变成练习任务",
+                    description="把这条练习种子加入今日任务或计划任务草稿。",
+                    resource_type="seed_item",
+                    resource_id=item.id,
+                    route=f"/tasks/new?seed_item_id={item.id}",
+                    payload={**base_payload, "suggested_title": title},
+                )
+            ]
+        if item_type == ItemType.KNOWLEDGE.value:
+            return [
+                self._seed_action(
+                    action_type="create_knowledge_node",
+                    label="沉淀为知识节点",
+                    description="用这条知识种子生成可复习、可关联任务的知识节点。",
+                    resource_type="seed_item",
+                    resource_id=item.id,
+                    route=f"/galaxy/drafts?seed_item_id={item.id}",
+                    payload=base_payload,
+                )
+            ]
+        if item_type == ItemType.FLASHCARD.value:
+            return [
+                self._seed_action(
+                    action_type="start_review",
+                    label="加入复习",
+                    description="把这张卡片作为下一轮复习材料。",
+                    resource_type="seed_item",
+                    resource_id=item.id,
+                    route=f"/review?seed_item_id={item.id}",
+                    payload=base_payload,
+                )
+            ]
+        if item_type == ItemType.TEMPLATE.value:
+            return [
+                self._seed_action(
+                    action_type="query_seed",
+                    label="让 Aurora 套用模板",
+                    description="在对话中把这条模板作为回复或拆解的参考。",
+                    resource_type="seed_item",
+                    resource_id=item.id,
+                    route=f"/chat?seed_item_id={item.id}",
+                    payload=base_payload,
+                )
+            ]
+        return [
+            self._seed_action(
+                action_type="create_plan",
+                label="变成行动计划",
+                description="把这条种子扩展成一个可编辑计划草稿。",
+                resource_type="seed_item",
+                resource_id=item.id,
+                route=f"/plans/new?seed_item_id={item.id}",
+                payload=base_payload,
+            )
+        ]
+
+    def build_library_adoption_actions(
+        self,
+        library: SeedLibrary,
+        items: list[SeedItem] | None = None,
+        *,
+        max_actions: int = 5,
+    ) -> list[dict[str, Any]]:
+        """Build routeable actions unlocked by adopting a seed library."""
+        category = str(library.category or "")
+        base_payload = {
+            "source": "seed_library",
+            "seed_library_id": str(library.id),
+            "library_name": library.name,
+            "category": category,
+            "tags": list(library.tags or [])[:8],
+            "safe_share": True,
+        }
+        actions: list[dict[str, Any]] = []
+
+        if category == LibraryCategory.TEACHING_CONTENT.value:
+            actions.append(
+                self._seed_action(
+                    action_type="create_plan",
+                    label="生成学习计划",
+                    description="把这套内容变成带里程碑和任务的计划草稿。",
+                    resource_type="seed_library",
+                    resource_id=library.id,
+                    route=f"/plans/new?seed_library_id={library.id}",
+                    payload=base_payload,
+                )
+            )
+        elif category == LibraryCategory.FEW_SHOT.value:
+            actions.append(
+                self._seed_action(
+                    action_type="query_seed",
+                    label="让 Aurora 参考这套方法",
+                    description="在下一次对话或拆解中优先使用这套示例。",
+                    resource_type="seed_library",
+                    resource_id=library.id,
+                    route=f"/chat?seed_library_id={library.id}",
+                    payload=base_payload,
+                )
+            )
+        elif category == LibraryCategory.REPLY_TEMPLATE.value:
+            actions.append(
+                self._seed_action(
+                    action_type="query_seed",
+                    label="套用回复模板",
+                    description="把模板用于下一次反馈、复盘或社群回复。",
+                    resource_type="seed_library",
+                    resource_id=library.id,
+                    route=f"/chat?seed_library_id={library.id}",
+                    payload=base_payload,
+                )
+            )
+        else:
+            actions.append(
+                self._seed_action(
+                    action_type="create_task",
+                    label="挑一个开始做",
+                    description="从种子库里选一条内容变成今日任务。",
+                    resource_type="seed_library",
+                    resource_id=library.id,
+                    route=f"/tasks/new?seed_library_id={library.id}",
+                    payload=base_payload,
+                )
+            )
+
+        seen_action_types = {actions[0]["action_type"]}
+        for item in items or []:
+            for item_action in self.build_item_adoption_actions(item):
+                action_type = str(item_action.get("action_type") or "")
+                if action_type in seen_action_types:
+                    continue
+                actions.append(item_action)
+                seen_action_types.add(action_type)
+                break
+            if len(actions) >= max_actions - 1:
+                break
+
+        actions.append(
+            self._seed_action(
+                action_type="share_to_community",
+                label="分享到社群",
+                description="只分享预览和资源引用，接收者会获得自己的私有副本。",
+                resource_type="seed_library",
+                resource_id=library.id,
+                route=f"/community/share?resource_type=seed_library&resource_id={library.id}",
+                payload={**base_payload, "permission": "adopt"},
+            )
+        )
+        return actions[:max_actions]
+
+    async def get_library_adoption_actions(
+        self,
+        db: AsyncSession,
+        library: SeedLibrary,
+        *,
+        max_items: int = 8,
+        max_actions: int = 5,
+    ) -> list[dict[str, Any]]:
+        result = await db.execute(
+            select(SeedItem)
+            .options(defer(SeedItem.embedding))
+            .where(
+                and_(
+                    SeedItem.library_id == library.id,
+                    SeedItem.deleted_at.is_(None),
+                    SeedItem.is_active.is_(True),
+                )
+            )
+            .order_by(asc(SeedItem.order_index), desc(SeedItem.created_at))
+            .limit(max_items)
+        )
+        return self.build_library_adoption_actions(
+            library,
+            list(result.scalars().all()),
+            max_actions=max_actions,
+        )
+
     # ============ 库管理 ============
 
     async def _publish_seed_event(self, event_type: str, payload: dict[str, Any]) -> None:

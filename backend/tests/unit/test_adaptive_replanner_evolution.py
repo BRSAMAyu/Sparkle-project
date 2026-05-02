@@ -150,6 +150,44 @@ async def test_on_task_feedback_uses_struggle_trigger_for_unclear_feedback() -> 
 
 
 @pytest.mark.asyncio
+async def test_duration_feedback_forces_time_overrun_adjustment_signal() -> None:
+    user_id = uuid4()
+    plan_id = uuid4()
+    task_id = uuid4()
+    base_report = PlanHealthReport(
+        plan_id=plan_id,
+        user_id=user_id,
+        status="active",
+        severity="healthy",
+        health_score=1.0,
+        reasons=[],
+        metrics={"feedback_stats": {}},
+        requires_adjustment=False,
+        recommended_action="none",
+    )
+    replanner = object.__new__(AdaptiveReplanner)
+    replanner.progress_service = SimpleNamespace(evaluate_progress=AsyncMock(return_value=base_report))
+    replanner._handle_report = AsyncMock(return_value=[])
+
+    await replanner.evaluate_plan_health_now(
+        user_id=user_id,
+        plan_id=plan_id,
+        trigger="task_feedback",
+        task_id=task_id,
+        feedback_category="too_long",
+        feedback_text="这张任务卡比你估计得久太多了",
+        calendar_context={},
+    )
+
+    report = replanner._handle_report.await_args.args[0]
+    assert report.requires_adjustment is True
+    assert report.recommended_action == "adjust"
+    assert "time_overrun" in report.reasons
+    assert report.metrics["feedback_stats"]["too_long"] == 1
+    assert report.metrics["duration_correction_source"] == "task_feedback"
+
+
+@pytest.mark.asyncio
 async def test_on_plan_execution_completed_records_execution_delta_without_replan() -> None:
     user_id = uuid4()
     plan_id = uuid4()

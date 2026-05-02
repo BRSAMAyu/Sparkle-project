@@ -146,6 +146,7 @@ class PushDeliveryService:
         return list(result.scalars().all())
 
     async def apply_action(self, *, user_id: UUID, notification_id: UUID, action: str) -> PushDeliveryRecord | None:
+        action = self._normalize_action(action)
         result = await self.db.execute(
             select(PushDeliveryRecord).where(
                 PushDeliveryRecord.user_id == user_id,
@@ -188,6 +189,13 @@ class PushDeliveryService:
         await self.db.commit()
         await self.db.refresh(record)
         return record
+
+    @staticmethod
+    def _normalize_action(action: str) -> str:
+        normalized = str(action or "").strip().lower()
+        if normalized in {"wrong", "not_useful", "too_much", "bad_timing"}:
+            return "dismissed"
+        return normalized
 
     async def _passes_delivery_guards(self, *, user_id: UUID, decision: PushDecision) -> bool:
         opt_in = await self.opt_in_service.get_or_create(user_id)

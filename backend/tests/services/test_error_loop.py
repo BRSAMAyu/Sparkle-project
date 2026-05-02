@@ -1,14 +1,15 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from app.services.error_book_service import ErrorBookService
+from app.services.error_book_mastery_sync_service import ErrorBookMasterySyncService
 from app.services.galaxy_service import GalaxyService
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode
 from app.core.event_bus import event_bus, ErrorCreated
-from app.schemas.error_book import ErrorRecordCreate, SubjectEnum
+from app.schemas.error_book import ErrorRecordCreate, KnowledgeLinkBrief, SubjectEnum
 
 
 class _AsyncNullContext:
@@ -94,7 +95,7 @@ async def test_error_to_galaxy_loop_flow():
         print("\n[SUCCESS] Step 1: Error Created Event Published")
         
         
-    # --- Step 2: Galaxy Service consumes event ---
+    # --- Step 2: Deprecated Galaxy event consumer no longer owns mastery writes ---
     galaxy_service = GalaxyService(mock_db)
     
     # Mock update_node_mastery
@@ -115,23 +116,105 @@ async def test_error_to_galaxy_loop_flow():
     
     with patch('app.core.event_bus.event_bus.publish') as mock_publish_galaxy:
         await galaxy_service.handle_error_created(event_data)
-        
-        # Verify Mastery Update Called
-        galaxy_service.update_node_mastery.assert_called_once()
-        call_kwargs = galaxy_service.update_node_mastery.call_args.kwargs
-        
-        assert call_kwargs["user_id"] == user_id
-        assert call_kwargs["node_id"] == node_id_1
-        assert call_kwargs["new_mastery"] == 72 # 80 * 0.9 = 72
-        assert call_kwargs["reason"] == "error_penalty"
-        
-        # Verify Realtime Update Event Published
-        assert mock_publish_galaxy.called
-        galaxy_event_type = mock_publish_galaxy.call_args[0][0]
-        galaxy_event_payload = mock_publish_galaxy.call_args[0][1]
-        
-        assert galaxy_event_type == "galaxy.node.updated"
-        assert galaxy_event_payload["node_id"] == str(node_id_1)
-        assert galaxy_event_payload["new_mastery"] == 72
-        
-        print(f"[SUCCESS] Step 2: Galaxy Mastery Updated (80 -> 72) and Event Published")
+
+        # Mastery updates are now owned by ErrorBookMasterySyncService, so this
+        # deprecated consumer must not apply a second penalty.
+        galaxy_service.update_node_mastery.assert_not_called()
+        mock_publish_galaxy.assert_not_called()
+
+        print("[SUCCESS] Step 2: Deprecated Galaxy mastery consumer stayed blocked")
+
+
+def test_error_review_cards_cluster_real_mistakes_into_actionable_cards():
+    service = ErrorBookService(AsyncMock())
+    user_id = uuid4()
+    node_id = uuid4()
+    now = datetime.utcnow()
+    common_analysis = {
+        "error_type": "concept_confusion",
+        "root_cause": "混淆 TCP 拥塞窗口和接收窗口的触发条件",
+    }
+    errors = [
+        ErrorRecord(
+            id=uuid4(),
+            user_id=user_id,
+            subject_code="computer",
+            chapter="TCP",
+            affected_node_id=node_id,
+            linked_knowledge_node_ids=[node_id],
+            mastery_level=0.35,
+            review_count=1,
+            next_review_at=now - timedelta(hours=2),
+            created_at=now - timedelta(days=3),
+            latest_analysis=common_analysis,
+            question_text="窗口变量如何变化？",
+        ),
+        ErrorRecord(
+            id=uuid4(),
+            user_id=user_id,
+            subject_code="computer",
+            chapter="TCP",
+            affected_node_id=node_id,
+            linked_knowledge_node_ids=[node_id],
+            mastery_level=0.45,
+            review_count=2,
+            next_review_at=now - timedelta(hours=1),
+            created_at=now - timedelta(days=1),
+            latest_analysis=common_analysis,
+            question_text="rwnd 和 cwnd 的区别？",
+        ),
+    ]
+    for error in errors:
+        error.knowledge_links = [
+            KnowledgeLinkBrief(id=node_id, name="TCP 拥塞控制", is_primary=True),
+        ]
+
+    cards = service._build_cluster_review_cards(errors, now=now)
+
+    assert len(cards) == 1
+    card = cards[0]
+    assert card.cluster_id == f"node:{node_id}"
+    assert card.error_count == 2
+    assert card.due_count == 2
+    assert card.affected_node_name == "TCP 拥塞控制"
+    assert card.task_card["source"] == "error_book_cluster"
+    assert card.task_card["type"] == "error_review"
+    assert set(card.task_card["error_ids"]) == {str(error.id) for error in errors}
+    assert {"start_review", "create_task", "open_knowledge_node"} <= {action.type for action in card.actions}
+
+
+@pytest.mark.asyncio
+async def test_forgotten_review_feedback_updates_mastery_and_evaluates_plan_pressure():
+    service = ErrorBookMasterySyncService(AsyncMock())
+    user_id = uuid4()
+    node_id = uuid4()
+    plan_id = uuid4()
+    error = ErrorRecord(
+        id=uuid4(),
+        user_id=user_id,
+        subject_code="computer",
+        linked_knowledge_node_ids=[node_id],
+        latest_analysis={"error_type": "concept_confusion"},
+    )
+    service._update_node_mastery = AsyncMock(
+        return_value={
+            "node_id": str(node_id),
+            "error_id": str(error.id),
+            "old_mastery": 40,
+            "new_mastery": 38,
+            "delta": -2,
+        }
+    )
+    service._identify_error_pressure_impacted_plans = AsyncMock(return_value={plan_id})
+    service._evaluate_impacted_plans = AsyncMock()
+
+    results = await service.apply_review_feedback(user_id, error, "forgotten")
+
+    assert results[0]["delta"] == -2
+    assert service._update_node_mastery.call_args.kwargs["delta"] == -2
+    service._evaluate_impacted_plans.assert_awaited_once_with(
+        user_id=user_id,
+        plan_ids={plan_id},
+        trigger="error_review_pressure",
+        feedback_category="review_forgotten",
+    )

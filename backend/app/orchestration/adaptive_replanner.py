@@ -945,6 +945,7 @@ class AdaptiveReplanner:
             trigger=trigger,
             task_id=task_id,
             feedback_category=category,
+            feedback_text=feedback_text,
             difficulty_delta=difficulty_delta,
         )
 
@@ -1361,6 +1362,7 @@ class AdaptiveReplanner:
         task_id: UUID | None = None,
         completion_rate: float | None = None,
         feedback_category: str | None = None,
+        feedback_text: str | None = None,
         difficulty_delta: float | None = None,
         calendar_context: dict[str, Any] | None = None,
     ) -> list[AdaptationRecord]:
@@ -1375,6 +1377,11 @@ class AdaptiveReplanner:
             )
         )
         report = self._apply_calendar_capacity_to_report(report, calendar_context)
+        report = self._apply_feedback_signal_to_report(
+            report,
+            feedback_category=feedback_category,
+            feedback_text=feedback_text,
+        )
         return await self._handle_report(
             report,
             trigger=trigger,
@@ -1382,6 +1389,46 @@ class AdaptiveReplanner:
             completion_rate=completion_rate,
             feedback_category=feedback_category,
             difficulty_delta=difficulty_delta,
+        )
+
+    @classmethod
+    def _apply_feedback_signal_to_report(
+        cls,
+        report: PlanHealthReport,
+        *,
+        feedback_category: str | None,
+        feedback_text: str | None = None,
+    ) -> PlanHealthReport:
+        """Convert explicit duration corrections into an immediate plan-health signal."""
+        category = _strip(feedback_category).lower()
+        text = _strip(feedback_text).lower()
+        time_markers = ("太长", "时间不够", "来不及", "做不完", "排不开", "too long", "not enough time")
+        is_duration_correction = category == "too_long" or any(marker in text for marker in time_markers)
+        if not is_duration_correction or "time_overrun" in (report.reasons or []):
+            return report
+
+        reasons = list(report.reasons or [])
+        reasons.append("time_overrun")
+        metrics = dict(report.metrics or {})
+        feedback_stats = dict(metrics.get("feedback_stats") or {})
+        feedback_stats["too_long"] = max(_safe_int(feedback_stats.get("too_long")) or 0, 1)
+        metrics["feedback_stats"] = feedback_stats
+        metrics["duration_correction_source"] = "task_feedback"
+
+        severity = report.severity
+        if severity in {"healthy", "unknown", "none", ""}:
+            severity = "warning"
+
+        return PlanHealthReport(
+            plan_id=report.plan_id,
+            user_id=report.user_id,
+            status=report.status,
+            severity=severity,
+            health_score=min(report.health_score or 0.79, 0.79),
+            reasons=reasons,
+            metrics=metrics,
+            requires_adjustment=True,
+            recommended_action="adjust" if report.recommended_action == "none" else report.recommended_action,
         )
 
     @classmethod

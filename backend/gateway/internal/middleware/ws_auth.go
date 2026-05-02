@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"github.com/sparkle/gateway/internal/config"
+	"github.com/sparkle/gateway/internal/logsafe"
 	"github.com/sparkle/gateway/internal/metrics"
 )
 
@@ -47,7 +48,7 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 					abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_expired_token", "Invalid or expired token")
 					return
 				}
-				log.Printf("[WsAuth] JWT header validation success for user: %s", userID)
+				log.Printf("[WsAuth] JWT header validation success for user: %s", logsafe.UserIDHash(userID))
 				c.Set("user_id", userID)
 				c.Set("is_admin", isAdmin)
 				c.Set("auth_token", tokenString)
@@ -68,7 +69,7 @@ func WsAuthMiddleware(cfg *config.Config, rdb *redis.Client) gin.HandlerFunc {
 					abortWithAPIError(c, http.StatusUnauthorized, "invalid_or_expired_token", "Invalid or expired token")
 					return
 				}
-				log.Printf("[WsAuth] JWT query validation success for user: %s", userID)
+				log.Printf("[WsAuth] JWT query validation success for user: %s", logsafe.UserIDHash(userID))
 				c.Set("user_id", userID)
 				c.Set("is_admin", isAdmin)
 				c.Set("auth_token", queryToken)

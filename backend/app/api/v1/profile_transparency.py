@@ -1402,6 +1402,52 @@ async def submit_onboarding(
         study_time_minutes=payload.study_time_minutes,
     )
 
+    try:
+        from app.services.north_star_metrics_service import (
+            NorthStarMetricsService,
+            NorthStarMetricType,
+        )
+
+        metrics = NorthStarMetricsService(db)
+        metric_payload = {
+            "learning_goal_type": payload.learning_goal_type,
+            "has_learning_goal": bool(_strip(payload.learning_goal)),
+            "learning_style": payload.learning_style,
+            "knowledge_level": payload.knowledge_level,
+            "study_time_minutes": payload.study_time_minutes,
+            "updated_fields": sorted(updated.keys()),
+        }
+        await metrics.record_cold_start_milestone(
+            user_id=current_user.id,
+            milestone=NorthStarMetricType.FIRST_GOAL_PROFILE_CREATED,
+            source="profile_onboarding",
+            payload=metric_payload,
+        )
+        await metrics.record_cold_start_milestone(
+            user_id=current_user.id,
+            milestone=NorthStarMetricType.FIRST_AURORA_BASELINE_FORMED,
+            source="profile_onboarding",
+            payload={
+                **metric_payload,
+                "baseline_inputs": [
+                    key
+                    for key in (
+                        "learning_goal",
+                        "learning_style",
+                        "knowledge_level",
+                        "study_time_preference",
+                        "response_style",
+                    )
+                    if key in updated
+                ],
+                "assumptions_correctable": True,
+            },
+        )
+    except Exception as _exc:
+        import logging
+
+        logging.getLogger(__name__).warning("North Star onboarding metric failed: %s", _exc)
+
     return {"status": "ok", "updated": updated, "first_message": first_message}
 
 

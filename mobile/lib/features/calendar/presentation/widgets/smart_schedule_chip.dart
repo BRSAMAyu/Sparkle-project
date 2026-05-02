@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/calendar/data/services/smart_schedule_service.dart';
 
@@ -183,7 +184,7 @@ class _FullChip extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '建议时间',
+                    I18nService.instance.isChinese ? '建议时间' : 'Suggested',
                     style: TextStyle(
                       fontSize: 10,
                       color: DS.textSecondary,
@@ -241,7 +242,7 @@ class _LoadingChip extends StatelessWidget {
             if (!compact) ...[
               const SizedBox(width: DS.spacing8),
               Text(
-                '分析中...',
+                I18nService.instance.isChinese ? '分析中...' : 'Analyzing...',
                 style: TextStyle(
                   fontSize: 12,
                   color: DS.textSecondary,
@@ -279,7 +280,7 @@ class _TimeSuggestionSheet extends StatelessWidget {
                 ),
                 const SizedBox(width: DS.spacing10),
                 Text(
-                  '智能时间建议',
+                  I18nService.instance.isChinese ? '智能时间建议' : 'Smart Scheduling',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: DS.fontWeightBold,
@@ -290,7 +291,7 @@ class _TimeSuggestionSheet extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing4),
             Text(
-              '根据您的偏好和认知模式推荐',
+              I18nService.instance.isChinese ? '根据您的偏好和认知模式推荐' : 'Based on your preferences and cognitive patterns',
               style: TextStyle(
                 fontSize: 13,
                 color: DS.textSecondary,

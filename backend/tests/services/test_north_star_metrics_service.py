@@ -11,7 +11,10 @@ from app.models.plan import Plan, PlanStage, PlanType
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.user import User
 from app.services.exam_sprint_review_service import ExamSprintReviewService
-from app.services.north_star_metrics_service import NorthStarMetricsService
+from app.services.north_star_metrics_service import (
+    NorthStarMetricsService,
+    NorthStarMetricType,
+)
 
 
 async def _create_user(db_session: AsyncSession, username: str = "north_star_user") -> User:
@@ -92,6 +95,77 @@ async def test_north_star_metric_writes_are_idempotent_and_aggregated(db_session
     assert trend.series[0].exam_pass_probability == 0.64
     assert trend.series[0].exam_pass_outcome_rate == 1.0
     assert trend.series[0].seven_day_goal_completion_rate == 1.0
+
+
+@pytest.mark.asyncio
+async def test_cold_start_milestones_track_first_value_once(db_session: AsyncSession):
+    user = await _create_user(db_session, username="north_star_cold_start_user")
+    plan = await _create_sprint_plan(db_session, user)
+    task = Task(
+        user_id=user.id,
+        plan_id=plan.id,
+        title="First meaningful task",
+        type=TaskType.LEARNING,
+        estimated_minutes=15,
+        difficulty=1,
+        energy_cost=1,
+        order_index=1,
+        status=TaskStatus.COMPLETED,
+        completed_at=datetime(2026, 5, 1, 9, 30, 0),
+    )
+    db_session.add(task)
+    await db_session.commit()
+    await db_session.refresh(task)
+    service = NorthStarMetricsService(db_session)
+
+    await service.record_cold_start_milestone(
+        user_id=user.id,
+        milestone=NorthStarMetricType.FIRST_GOAL_PROFILE_CREATED,
+        source="test",
+        occurred_at=datetime(2026, 5, 1, 9, 0, 0),
+        payload={"goal": "计算机网络"},
+    )
+    await service.record_cold_start_milestone(
+        user_id=user.id,
+        milestone=NorthStarMetricType.FIRST_GOAL_PROFILE_CREATED,
+        source="test_second_write",
+        occurred_at=datetime(2026, 5, 2, 9, 0, 0),
+        payload={"goal": "should not replace first event"},
+    )
+    await service.record_cold_start_milestone(
+        user_id=user.id,
+        milestone=NorthStarMetricType.FIRST_AURORA_BASELINE_FORMED,
+        source="test",
+        occurred_at=datetime(2026, 5, 1, 9, 5, 0),
+    )
+    await service.record_cold_start_milestone(
+        user_id=user.id,
+        milestone=NorthStarMetricType.FIRST_PLAN_REQUESTED,
+        source="test",
+        occurred_at=datetime(2026, 5, 1, 9, 10, 0),
+        plan_id=plan.id,
+    )
+    await service.record_cold_start_milestone(
+        user_id=user.id,
+        milestone=NorthStarMetricType.FIRST_TASK_COMPLETED,
+        source="test",
+        occurred_at=datetime(2026, 5, 1, 9, 30, 0),
+        plan_id=plan.id,
+        task_id=task.id,
+    )
+
+    trend = await service.get_trends(user_id=user.id, start_date=date(2026, 5, 1), end_date=date(2026, 5, 2))
+
+    assert trend.summary["first_goal_profiles_created"] == 1
+    assert trend.summary["aurora_baselines_formed"] == 1
+    assert trend.summary["first_plan_requests"] == 1
+    assert trend.summary["first_tasks_completed"] == 1
+    assert trend.summary["cold_start_first_value_completion_rate"] == 1.0
+    assert trend.series[0].first_goal_profiles_created == 1
+    assert trend.series[0].aurora_baselines_formed == 1
+    assert trend.series[0].first_plan_requests == 1
+    assert trend.series[0].first_tasks_completed == 1
+    assert trend.series[1].first_goal_profiles_created == 0
 
 
 @pytest.mark.asyncio

@@ -10,9 +10,9 @@ import 'package:sparkle/core/design/theme/sparkle_theme_extension.dart';
 import 'package:sparkle/core/design/widgets/sparkle_tappable.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
-import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/features/task/presentation/widgets/subtask_list_widget.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_quick_action_menu.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskCard extends ConsumerStatefulWidget {
@@ -22,6 +22,8 @@ class TaskCard extends ConsumerStatefulWidget {
     this.onTap,
     this.onStart,
     this.onComplete,
+    this.onRetrySync,
+    this.onDiscardSync,
     this.compact = false,
     this.enableSwipeComplete = false,
   });
@@ -29,6 +31,8 @@ class TaskCard extends ConsumerStatefulWidget {
   final VoidCallback? onTap;
   final VoidCallback? onStart;
   final VoidCallback? onComplete;
+  final VoidCallback? onRetrySync;
+  final VoidCallback? onDiscardSync;
   final bool compact;
   final bool enableSwipeComplete;
 
@@ -61,7 +65,7 @@ class _TaskCardState extends ConsumerState<TaskCard> {
   Color _textDisabled(BuildContext context) => DS.textDisabled;
 
   Color _success(BuildContext context) =>
-      _sparkleTheme(context)?.colors.semanticSuccess ?? Colors.green;
+      _sparkleTheme(context)?.colors.semanticSuccess ?? DS.success;
 
   LinearGradient _getTypeGradient(BuildContext context, TaskType type) =>
       context.sparkleColors.getTaskGradient(type.name);
@@ -269,9 +273,8 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                                             .textTheme
                                                             .titleMedium
                                                             ?.copyWith(
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w700,
+                                                              fontWeight: DS
+                                                                  .fontWeightBold,
                                                               color:
                                                                   _textPrimary(
                                                                 context,
@@ -377,7 +380,10 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            context.l10n.taskEstimatedMinutesValue(widget.task.estimatedMinutes),
+                                            context.l10n
+                                                .taskEstimatedMinutesValue(
+                                              widget.task.estimatedMinutes,
+                                            ),
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodySmall
@@ -444,9 +450,19 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                               ),
                                         ),
                                       ],
-                                      if (widget.task.knowledgeNodeId != null) ...[
+                                      if (widget.task.knowledgeNodeId !=
+                                          null) ...[
                                         const SizedBox(height: 8),
                                         _SourceContextChip(task: widget.task),
+                                      ],
+                                      if (widget.task.syncStatus ==
+                                          TaskSyncStatus.failed) ...[
+                                        const SizedBox(height: 10),
+                                        _SyncFailureStrip(
+                                          message: widget.task.syncError,
+                                          onRetry: widget.onRetrySync,
+                                          onDiscard: widget.onDiscardSync,
+                                        ),
                                       ],
                                     ],
                                   ),
@@ -504,6 +520,97 @@ class _ActionButton extends StatelessWidget {
           child: Icon(icon, size: 20, color: color),
         ),
       );
+}
+
+class _SyncFailureStrip extends StatelessWidget {
+  const _SyncFailureStrip({
+    required this.message,
+    this.onRetry,
+    this.onDiscard,
+  });
+
+  final String? message;
+  final VoidCallback? onRetry;
+  final VoidCallback? onDiscard;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final detail = (message ?? '').trim();
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(DS.spacing10),
+      decoration: BoxDecoration(
+        color: DS.warning.withValues(alpha: 0.1),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: DS.warning.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.sync_problem_rounded,
+                size: 16,
+                color: DS.warning,
+              ),
+              const SizedBox(width: DS.spacing6),
+              Expanded(
+                child: Text(
+                  l10n.taskExecutionSyncFailed,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: DS.textPrimary,
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightBold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (detail.isNotEmpty) ...[
+            const SizedBox(height: DS.spacing4),
+            Text(
+              detail,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: DS.textSecondary,
+                fontSize: DS.fontSizeXs,
+                height: 1.25,
+              ),
+            ),
+          ],
+          if (onRetry != null || onDiscard != null) ...[
+            const SizedBox(height: DS.spacing8),
+            Wrap(
+              spacing: DS.spacing8,
+              runSpacing: DS.spacing6,
+              children: [
+                if (onRetry != null)
+                  SparkleButton(
+                    label: l10n.retry,
+                    size: ButtonSize.small,
+                    icon: const Icon(Icons.refresh_rounded),
+                    onPressed: onRetry,
+                  ),
+                if (onDiscard != null)
+                  SparkleButton(
+                    label: l10n.cancel,
+                    size: ButtonSize.small,
+                    variant: ButtonVariant.ghost,
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: onDiscard,
+                  ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }
 
 class _TaskTypePill extends StatelessWidget {

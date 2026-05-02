@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
@@ -526,7 +527,7 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                     } catch (e) {
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('退出群组失败，请重试')),
+                          SnackBar(content: Text(I18nService.instance.isChinese ? '退出群组失败，请重试' : 'Failed to leave group, please retry')),
                         );
                       }
                     }

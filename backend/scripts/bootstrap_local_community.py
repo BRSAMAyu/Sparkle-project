@@ -19,7 +19,7 @@ from app.models.user import User
 LOCAL_GROUP_NAME = "本地联调学习群"
 PRIMARY_GUEST_USERNAME = "guest_user"
 SECONDARY_USERNAME = "chat_test"
-SECONDARY_PASSWORD = "Chat123456"
+SECONDARY_PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", "Chat123456")
 SECONDARY_EMAIL = "chat_test@sparkle.demo"
 
 

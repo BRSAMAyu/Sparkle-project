@@ -260,6 +260,8 @@ class PushFeedbackService:
             return "opened"
         if action in {"dismissed", "ignored"}:
             return action
+        if action in {"wrong", "not_useful", "too_much", "bad_timing"}:
+            return "dismissed"
         return None
 
     @staticmethod

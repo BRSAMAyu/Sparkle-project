@@ -100,6 +100,10 @@ class NotificationCenterService:
             }
         )
         route = f"/chat?{route_query}"
+        proactive_reason = (
+            f"「{display_name}」距离上次复习已有 {interval_days} 天，"
+            f"掌握度约 {int(round(float(mastery) * 100))}%，现在复习能降低遗忘风险。"
+        )
 
         return await NotificationService.create(
             self.db,
@@ -116,6 +120,10 @@ class NotificationCenterService:
                     "mastery": round(float(mastery), 4),
                     "interval_days": interval_days,
                     "estimated_minutes": estimated_minutes,
+                    "proactive_reason": proactive_reason,
+                    "wake_type": "recall",
+                    "intrusiveness_level": "standard",
+                    "respectfulness_reason": "spaced_repetition_window",
                     "destination_route": route,
                     "deep_link": route,
                     "route": route,

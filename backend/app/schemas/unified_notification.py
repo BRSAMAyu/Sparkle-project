@@ -69,7 +69,7 @@ class PushNotificationActionRequest(BaseModel):
 
     action: str = Field(
         ...,
-        pattern="^(seen|dismissed|acted|disable_category|retract)$",
+        pattern="^(seen|dismissed|acted|disable_category|retract|wrong|not_useful|too_much|bad_timing)$",
         description="Desired push action",
     )
     action_payload: dict[str, Any] = Field(default_factory=dict)

@@ -506,6 +506,28 @@ class TaskService:
             evidence_id=str(db_obj.id),
             metadata={"plan_id": str(db_obj.plan_id) if db_obj.plan_id else None},
         )
+        try:
+            from app.services.north_star_metrics_service import (
+                NorthStarMetricsService,
+                NorthStarMetricType,
+            )
+
+            await NorthStarMetricsService(db).record_cold_start_milestone(
+                user_id=db_obj.user_id,
+                plan_id=db_obj.plan_id,
+                task_id=db_obj.id,
+                milestone=NorthStarMetricType.FIRST_TASK_COMPLETED,
+                source="task_service_complete",
+                occurred_at=db_obj.completed_at,
+                payload={
+                    "task_title": db_obj.title,
+                    "actual_minutes": actual_minutes,
+                    "estimated_minutes": estimated,
+                    "completion_rate": completion_rate,
+                },
+            )
+        except Exception as exc:
+            logger.warning("Failed to record first task North Star metric {}: {}", db_obj.id, exc)
 
         # Lane N: Auto-archive sprint when all tasks are completed
         if db_obj.plan_id:

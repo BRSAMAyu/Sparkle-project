@@ -17,6 +17,7 @@ from app.schemas.error_book import (
     ErrorRecordListResponse,
     ErrorRecordResponse,
     ErrorRecordUpdate,
+    ErrorReviewCardsResponse,
     ErrorTypeEnum,
     ReviewAction,
     ReviewStatsResponse,
@@ -122,6 +123,17 @@ async def get_today_review_list(
     return ErrorRecordListResponse(
         items=items, total=total, page=page, page_size=page_size, has_next=(page * page_size) < total
     )
+
+
+@router.get("/review-cards", response_model=ErrorReviewCardsResponse)
+async def get_review_cards(
+    limit: int = Query(8, ge=1, le=20),
+    lookback_days: int = Query(90, ge=7, le=365),
+    user_id: str = Depends(get_current_user_id),
+    service: ErrorBookService = Depends(get_error_service),
+):
+    """Get clustered, actionable review cards built from recent real mistakes."""
+    return await service.get_review_cards(UUID(user_id), limit=limit, lookback_days=lookback_days)
 
 
 @router.get("/{error_id}", response_model=ErrorRecordResponse)

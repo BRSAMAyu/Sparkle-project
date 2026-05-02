@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -252,6 +253,46 @@ class ReviewStatsResponse(BaseModel):
     need_review_count: int
     review_streak_days: int
     subject_distribution: dict[str, int]
+
+
+class ErrorReviewCardAction(BaseModel):
+    """Action exposed by a clustered error-review card."""
+
+    type: str = Field(description="Client action type, for example start_review or create_task")
+    label: str
+    route: str | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class ErrorClusterReviewCard(BaseModel):
+    """A strategy card built from a cluster of related mistakes."""
+
+    cluster_id: str
+    title: str
+    reason: str
+    priority_score: float = Field(ge=0.0)
+    error_count: int = Field(ge=0)
+    due_count: int = Field(ge=0)
+    average_mastery: float = Field(ge=0.0, le=1.0)
+    subject_code: str | None = None
+    chapter: str | None = None
+    error_type: str | None = None
+    root_cause: str | None = None
+    affected_node_id: UUID | None = None
+    affected_node_name: str | None = None
+    representative_error_id: UUID
+    error_ids: list[UUID] = Field(default_factory=list)
+    review_steps: list[str] = Field(default_factory=list)
+    task_card: dict[str, Any] = Field(default_factory=dict)
+    actions: list[ErrorReviewCardAction] = Field(default_factory=list)
+
+
+class ErrorReviewCardsResponse(BaseModel):
+    """Clustered error-review cards for the reviews module."""
+
+    cards: list[ErrorClusterReviewCard] = Field(default_factory=list)
+    generated_at: datetime
+    source_error_count: int = Field(ge=0)
 
 
 # ============================================

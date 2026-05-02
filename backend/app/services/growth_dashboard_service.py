@@ -18,6 +18,7 @@ from app.models.galaxy import KnowledgeNode, StudyRecord, UserNodeStatus
 from app.models.plan import Plan, PlanPriority
 from app.models.task import Task, TaskStatus
 from app.models.user import User
+from app.services.daily_task_selection_service import DailyTaskSelectionService
 from app.services.llm_fallback_utils import safe_llm_json_call
 from app.services.plan_progress_service import PlanHealthReport, PlanProgressService
 from app.services.progress_narrative_service import ProgressNarrativeService
@@ -749,54 +750,30 @@ class GrowthDashboardService:
         return name or None
 
     async def _get_most_important_task(self, user_id: UUID) -> dict[str, Any] | None:
-        stmt = (
-            select(Task, Plan, UserNodeStatus.mastery_score)
-            .outerjoin(Plan, Task.plan_id == Plan.id)
-            .outerjoin(
-                UserNodeStatus,
-                and_(
-                    UserNodeStatus.user_id == user_id,
-                    UserNodeStatus.node_id == Task.knowledge_node_id,
-                ),
-            )
-            .where(
-                Task.user_id == user_id,
-                Task.status == TaskStatus.PENDING,
-            )
-            .order_by(desc(Task.priority), Task.created_at)
-            .limit(25)
+        selections = await DailyTaskSelectionService(self.db, cache_service.redis).select_tasks(
+            user_id=user_id,
+            limit=1,
+            include_completed_today=False,
         )
-        result = await self.db.execute(stmt)
-        candidates = result.all()
-        if not candidates:
+        if not selections:
             return None
 
-        best_payload: dict[str, Any] | None = None
-        best_score = -1.0
-        for task, plan, mastery_score in candidates:
-            mastery_gap = self._mastery_gap(task, mastery_score)
-            deadline_factor = self._deadline_factor(task, plan)
-            plan_factor = self._plan_factor(plan)
-            priority_factor = 1.0 + min(max(int(task.priority or 0), 0), 5) * 0.12
-            score = plan_factor * priority_factor * max(mastery_gap, 0.25) * max(deadline_factor, 0.5)
-
-            if score <= best_score:
-                continue
-
-            due_reference = task.due_date or getattr(plan, "target_date", None)
-            best_score = score
-            best_payload = {
-                "id": str(task.id),
-                "title": task.title,
-                "estimated_minutes": int(task.estimated_minutes or 0),
-                "priority": int(task.priority or 0),
-                "type": getattr(task.type, "value", str(task.type or "")),
-                "risk_score": round(score, 3),
-                "reason": self._task_reason(task, plan, mastery_gap, deadline_factor),
-                "plan_name": plan.name if plan else None,
-                "days_to_deadline": self._days_until(due_reference) if due_reference else None,
-            }
-        return best_payload
+        selection = selections[0]
+        task = selection.task
+        plan = selection.plan
+        due_reference = task.due_date or getattr(plan, "target_date", None)
+        return {
+            "id": str(task.id),
+            "title": task.title,
+            "estimated_minutes": int(task.estimated_minutes or 0),
+            "priority": int(task.priority or 0),
+            "type": getattr(task.type, "value", str(task.type or "")),
+            "risk_score": selection.score,
+            "reason": selection.reason,
+            "plan_name": plan.name if plan else None,
+            "days_to_deadline": self._days_until(due_reference) if due_reference else None,
+            "selection_signals": selection.signals,
+        }
 
     def _mastery_gap(self, task: Task, mastery_score: float | None) -> float:
         if mastery_score is not None:

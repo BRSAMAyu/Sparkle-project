@@ -137,7 +137,7 @@ async def test_translate_with_siliconflow_provider_label(mock_cache_service, moc
          patch("app.services.translation_service.llm_service", mock_llm_service), \
          patch("app.services.translation_service.SecureLLMClient.get", return_value=mock_client), \
          patch("app.services.translation_service.settings.HUNYUAN_API_KEY", ""), \
-         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "sf-key"):
+         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "test-sf-api-key"):
         result = await service.translate(
             segments=segments,
             source_lang="en",
@@ -164,7 +164,7 @@ async def test_translate_falls_back_to_backup_provider_when_hunyuan_fails(mock_c
          patch("app.services.translation_service.llm_service", mock_llm_service), \
          patch("app.services.translation_service.SecureLLMClient.get", side_effect=[failing_client, success_client]), \
          patch("app.services.translation_service.settings.HUNYUAN_API_KEY", "hy-key"), \
-         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "sf-key"):
+         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "test-sf-api-key"):
         result = await service.translate(
             segments=[TranslationSegment(id="s0", text="backup")],
             source_lang="en",
@@ -263,7 +263,7 @@ async def test_translate_falls_back_to_generic_llm_after_all_specialists_fail(mo
          patch("app.services.translation_service.llm_service", mock_llm_service), \
          patch("app.services.translation_service.SecureLLMClient.get", side_effect=[failing_client, failing_client]), \
          patch("app.services.translation_service.settings.HUNYUAN_API_KEY", "hy-key"), \
-         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "sf-key"):
+         patch("app.services.translation_service.settings.SILICONFLOW_API_KEY", "test-sf-api-key"):
         result = await service.translate(
             segments=[TranslationSegment(id="s0", text="fallback me")],
             source_lang="en",

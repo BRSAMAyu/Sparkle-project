@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
@@ -16,8 +17,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user
 from app.config.settings import settings
 from app.db.session import get_db
+from app.models.learning_assets import AssetKind, AssetStatus
 from app.models.user import User
 from app.services.dictionary_package_service import dictionary_package_service
+from app.services.knowledge_integration_service import KnowledgeIntegrationService
+from app.services.learning_asset_service import learning_asset_service
 from app.services.mdx_dictionary_service import MDX_AVAILABLE, create_mdx_service
 from app.services.vocabulary_service import vocabulary_service
 from app.utils.helpers import read_upload_file
@@ -93,6 +97,19 @@ class WordBookAdd(BaseModel):
     importance: int = Field(3, ge=1, le=5, description="1-5 星，5 星为最需要复习的词汇")
     part_of_speech: str | None = Field(None, max_length=50)
     source_translation_id: str | None = Field(None, max_length=100)
+    save_to_knowledge: bool = Field(
+        False,
+        description="Also create/link a draft vocabulary node in the knowledge graph.",
+    )
+    create_learning_asset: bool = Field(
+        True,
+        description="Also keep an active learning asset so review signals can use the saved word.",
+    )
+    language: str = Field("en", max_length=20)
+    target_language: str | None = Field(None, max_length=20)
+    domain: str | None = Field(None, max_length=50)
+    source_url: str | None = Field(None, max_length=500)
+    source_document_id: str | None = Field(None, max_length=100)
 
 
 class ReviewRecord(BaseModel):
@@ -128,6 +145,7 @@ class WordBookResponse(BaseModel):
     part_of_speech: str | None = None
     source_translation_id: str | None = None
     context_sentence: str | None = None
+    learning_loop: dict[str, Any] | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -154,6 +172,40 @@ class DictionaryPackageInfo(BaseModel):
     generated_at: str | None = None
     download_available: bool
     download_url: str
+
+
+def _wordbook_response(word_entry, *, learning_loop: dict[str, Any] | None = None) -> WordBookResponse:
+    accuracy_rate = (
+        word_entry.correct_review_count / word_entry.review_count
+        if word_entry.review_count > 0
+        else 0.0
+    )
+    return WordBookResponse(
+        id=word_entry.id,
+        word=word_entry.word,
+        phonetic=word_entry.phonetic,
+        definition=word_entry.definition,
+        importance=word_entry.importance,
+        consecutive_correct=word_entry.consecutive_correct,
+        correct_review_count=word_entry.correct_review_count,
+        review_count=word_entry.review_count,
+        next_review_at=word_entry.next_review_at,
+        last_review_at=word_entry.last_review_at,
+        accuracy_rate=accuracy_rate,
+        part_of_speech=word_entry.part_of_speech,
+        source_translation_id=word_entry.source_translation_id,
+        context_sentence=word_entry.context_sentence,
+        learning_loop=learning_loop or vocabulary_service.build_learning_loop_summary(word_entry),
+    )
+
+
+def _parse_optional_uuid(value: str | None, field_name: str) -> UUID | None:
+    if not value:
+        return None
+    try:
+        return UUID(value)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid {field_name} format") from None
 
 
 # ============ Endpoints ============
@@ -243,6 +295,7 @@ async def add_to_wordbook(
     db: AsyncSession = Depends(get_db)
 ):
     """添加单词到用户的生词本"""
+    source_document_uuid = _parse_optional_uuid(data.source_document_id, "source_document_id")
     word_entry = await vocabulary_service.add_to_wordbook(
         db,
         current_user.id,
@@ -256,29 +309,73 @@ async def add_to_wordbook(
         source_translation_id=data.source_translation_id,
     )
 
-    # 计算准确率
-    accuracy_rate = (
-        word_entry.correct_review_count / word_entry.review_count
-        if word_entry.review_count > 0
-        else 0.0
-    )
+    graph_node_id = None
+    graph_status = None
+    learning_asset_id = None
+    learning_asset_status = None
+    loop_warnings: list[str] = []
 
-    return WordBookResponse(
-        id=word_entry.id,
-        word=word_entry.word,
-        phonetic=word_entry.phonetic,
-        definition=word_entry.definition,
-        importance=word_entry.importance,
-        consecutive_correct=word_entry.consecutive_correct,
-        correct_review_count=word_entry.correct_review_count,
-        review_count=word_entry.review_count,
-        next_review_at=word_entry.next_review_at,
-        last_review_at=word_entry.last_review_at,
-        accuracy_rate=accuracy_rate,
-        part_of_speech=word_entry.part_of_speech,
-        source_translation_id=word_entry.source_translation_id,
-        context_sentence=word_entry.context_sentence,
+    if data.create_learning_asset:
+        try:
+            asset = await learning_asset_service.create_asset_from_selection(
+                db=db,
+                user_id=current_user.id,
+                selected_text=data.word,
+                translation=data.definition,
+                definition=data.definition,
+                example=data.context_sentence,
+                source_file_id=source_document_uuid,
+                context_before=None,
+                context_after=data.context_sentence,
+                language_code=data.language,
+                asset_kind=AssetKind.WORD,
+                initial_status=AssetStatus.ACTIVE,
+            )
+            await db.commit()
+            learning_asset_id = asset.id
+            learning_asset_status = asset.status
+        except Exception as exc:
+            await db.rollback()
+            loop_warnings.append(f"learning_asset_unavailable:{type(exc).__name__}")
+
+    if data.save_to_knowledge:
+        try:
+            knowledge_service = KnowledgeIntegrationService(db)
+            node = await knowledge_service.create_vocabulary_node(
+                user_id=current_user.id,
+                source_text=data.word,
+                translation=data.definition,
+                context=data.context_sentence or data.definition,
+                source_url=data.source_url,
+                source_document_id=source_document_uuid,
+                language=data.language,
+                domain=data.domain,
+            )
+            graph_node_id = node.id
+            graph_status = node.status
+        except Exception as exc:
+            await db.rollback()
+            loop_warnings.append(f"knowledge_graph_unavailable:{type(exc).__name__}")
+
+    if graph_node_id or learning_asset_id:
+        word_entry = await vocabulary_service.attach_learning_links(
+            db,
+            word_entry,
+            graph_node_id=graph_node_id,
+            graph_status=graph_status,
+            learning_asset_id=learning_asset_id,
+            learning_asset_status=learning_asset_status,
+        )
+
+    learning_loop = vocabulary_service.build_learning_loop_summary(
+        word_entry,
+        graph_node_id=graph_node_id,
+        learning_asset_id=learning_asset_id,
+        graph_status=graph_status,
+        asset_status=learning_asset_status,
+        warnings=loop_warnings,
     )
+    return _wordbook_response(word_entry, learning_loop=learning_loop)
 
 
 @router.get("/wordbook", summary="获取生词本列表", response_model=list[WordBookResponse])
@@ -292,27 +389,7 @@ async def get_wordbook(
 
     result = []
     for word_entry in words:
-        accuracy_rate = (
-            word_entry.correct_review_count / word_entry.review_count
-            if word_entry.review_count > 0
-            else 0.0
-        )
-        result.append(WordBookResponse(
-            id=word_entry.id,
-            word=word_entry.word,
-            phonetic=word_entry.phonetic,
-            definition=word_entry.definition,
-            importance=word_entry.importance,
-            consecutive_correct=word_entry.consecutive_correct,
-            correct_review_count=word_entry.correct_review_count,
-            review_count=word_entry.review_count,
-            next_review_at=word_entry.next_review_at,
-            last_review_at=word_entry.last_review_at,
-            accuracy_rate=accuracy_rate,
-            part_of_speech=word_entry.part_of_speech,
-            source_translation_id=word_entry.source_translation_id,
-            context_sentence=word_entry.context_sentence,
-        ))
+        result.append(_wordbook_response(word_entry))
 
     return result
 
@@ -333,27 +410,7 @@ async def get_review_list(
 
     result = []
     for word_entry in words:
-        accuracy_rate = (
-            word_entry.correct_review_count / word_entry.review_count
-            if word_entry.review_count > 0
-            else 0.0
-        )
-        result.append(WordBookResponse(
-            id=word_entry.id,
-            word=word_entry.word,
-            phonetic=word_entry.phonetic,
-            definition=word_entry.definition,
-            importance=word_entry.importance,
-            consecutive_correct=word_entry.consecutive_correct,
-            correct_review_count=word_entry.correct_review_count,
-            review_count=word_entry.review_count,
-            next_review_at=word_entry.next_review_at,
-            last_review_at=word_entry.last_review_at,
-            accuracy_rate=accuracy_rate,
-            part_of_speech=word_entry.part_of_speech,
-            source_translation_id=word_entry.source_translation_id,
-            context_sentence=word_entry.context_sentence,
-        ))
+        result.append(_wordbook_response(word_entry))
 
     return result
 
@@ -366,34 +423,13 @@ async def record_review(
 ):
     """记录单词复习结果"""
     word_entry = await vocabulary_service.record_review(
-        db, data.word_id, data.remembered
+        db, data.word_id, data.remembered, user_id=current_user.id
     )
 
     if not word_entry:
         raise HTTPException(status_code=404, detail="Word not found")
 
-    accuracy_rate = (
-        word_entry.correct_review_count / word_entry.review_count
-        if word_entry.review_count > 0
-        else 0.0
-    )
-
-    return WordBookResponse(
-        id=word_entry.id,
-        word=word_entry.word,
-        phonetic=word_entry.phonetic,
-        definition=word_entry.definition,
-        importance=word_entry.importance,
-        consecutive_correct=word_entry.consecutive_correct,
-        correct_review_count=word_entry.correct_review_count,
-        review_count=word_entry.review_count,
-        next_review_at=word_entry.next_review_at,
-        last_review_at=word_entry.last_review_at,
-        accuracy_rate=accuracy_rate,
-        part_of_speech=word_entry.part_of_speech,
-        source_translation_id=word_entry.source_translation_id,
-        context_sentence=word_entry.context_sentence,
-    )
+    return _wordbook_response(word_entry)
 
 
 @router.delete("/wordbook/{word_id}", summary="删除生词本条目")
@@ -428,28 +464,7 @@ async def update_importance(
     if not word_entry:
         raise HTTPException(status_code=404, detail="Word not found")
 
-    accuracy_rate = (
-        word_entry.correct_review_count / word_entry.review_count
-        if word_entry.review_count > 0
-        else 0.0
-    )
-
-    return WordBookResponse(
-        id=word_entry.id,
-        word=word_entry.word,
-        phonetic=word_entry.phonetic,
-        definition=word_entry.definition,
-        importance=word_entry.importance,
-        consecutive_correct=word_entry.consecutive_correct,
-        correct_review_count=word_entry.correct_review_count,
-        review_count=word_entry.review_count,
-        next_review_at=word_entry.next_review_at,
-        last_review_at=word_entry.last_review_at,
-        accuracy_rate=accuracy_rate,
-        part_of_speech=word_entry.part_of_speech,
-        source_translation_id=word_entry.source_translation_id,
-        context_sentence=word_entry.context_sentence,
-    )
+    return _wordbook_response(word_entry)
 
 
 @router.get("/wordbook/stats", summary="获取词汇统计", response_model=VocabularyStats)

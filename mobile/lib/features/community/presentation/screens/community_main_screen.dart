@@ -5,11 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/presentation/providers/focus_mode_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/friends_hub_view.dart';
@@ -135,9 +133,8 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
                     ? Icons.do_not_disturb_on
                     : Icons.do_not_disturb_off_outlined,
                 size: 18,
-                color: ref.read(focusModeProvider)
-                    ? DS.warning
-                    : DS.textSecondary,
+                color:
+                    ref.read(focusModeProvider) ? DS.warning : DS.textSecondary,
               ),
               const SizedBox(width: DS.spacing10),
               Expanded(
@@ -154,9 +151,9 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
           value: 'favorites',
           child: Row(
             children: [
-              Icon(Icons.bookmark_outline, size: 18),
-              SizedBox(width: DS.spacing10),
-              Expanded(child: Text(I18nService.instance.isChinese ? '收藏' : 'Favorites')),
+              const Icon(Icons.bookmark_outline, size: 18),
+              const SizedBox(width: DS.spacing10),
+              Expanded(child: Text(context.l10n.communityFavorite)),
             ],
           ),
         ),
@@ -246,6 +243,7 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
         scrolledUnderElevation: 0,
         leading: SparkleIconButton(
           variant: ButtonVariant.ghost,
+          semanticLabel: context.l10n.commonBack,
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).maybePop(),
         ),
@@ -262,14 +260,16 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             message: context.l10n.communitySearch,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
+              semanticLabel: context.l10n.communitySearch,
               icon: const Icon(Icons.search),
               onPressed: _showSearchOptions,
             ),
           ),
           Tooltip(
-            message: I18nService.instance.isChinese ? '更多' : 'More',
+            message: context.l10n.commonShowMore,
             child: SparkleIconButton(
               variant: ButtonVariant.ghost,
+              semanticLabel: context.l10n.commonShowMore,
               icon: Icon(
                 Icons.more_horiz_rounded,
                 color: focusMode ? DS.warning : DS.textSecondary,
@@ -300,6 +300,9 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             : context.l10n.communityCreateGroup,
         child: SparkleIconButton(
           size: 56,
+          semanticLabel: _tabController.index == 0
+              ? context.l10n.communityAddFriend
+              : context.l10n.communityCreateGroup,
           icon: const Icon(Icons.add),
           onPressed: _handleFabPressed,
         ),
@@ -328,13 +331,13 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
 class _FriendsListTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => const FriendsHubView(
-      padding: EdgeInsets.fromLTRB(16, 10, 16, 24),
-    );
+        padding: EdgeInsets.fromLTRB(16, 10, 16, 24),
+      );
 }
 
 class _GroupsListTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => const GroupsHubView(
-      padding: EdgeInsets.fromLTRB(16, 10, 16, 24),
-    );
+        padding: EdgeInsets.fromLTRB(16, 10, 16, 24),
+      );
 }
