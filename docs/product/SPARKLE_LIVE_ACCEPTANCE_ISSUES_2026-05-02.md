@@ -1515,6 +1515,36 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T11:15
 - **fix_commit**: 留空
+- **opus_review**: REJECTED by opus-reviewer at 2026-05-04T10:50:00Z
+- **rework_note**: |
+  **REJECTED — 3 defects found (2026-05-04T10:50:00Z)**
+
+  **(1) query.sql.go NOT regenerated (critical)**
+  The fixer manually patched schema.sql (+paused_at, +paused_reason) and models.go (+PausedAt, +PausedReason) but did NOT run `sqlc generate` to update query.sql.go. The generated `GetTaskByID` query at query.sql.go:938 still has the old 33-column explicit SELECT list (expanded from `SELECT *` before paused columns existed). Since `query.sql:282` uses `SELECT * FROM tasks`, re-running sqlc would auto-expand to include both new columns. Without regeneration, the query only returns 33 columns, so `PausedAt`/`PausedReason` in the Task struct are always nil/zero. Two Go callers exist (`cqrs/projection/handlers.go:348`, `worker/task_sync.go:435`) — neither reads paused fields today, so no current runtime bug, but the source-of-truth contract is broken.
+
+  **(2) Wrong fix approach — manual patching instead of make sync-db**
+  The suggested_fix_direction explicitly says `make sync-db` (which runs `db-migrate → db-dump → db-sqlc`). Manual schema.sql edits bypass `pg_dump` (canonical DB source) and risk column ordering/typo mismatch. Running `make sync-db` would correctly regenerate all 3 files (schema.sql via dump, models.go via sqlc gen, query.sql.go via sqlc gen).
+
+  **(3) I6 (Reportreason HATE_SPEECH) not addressed despite same root cause**
+  `models.go:1256-1261` still shows only 6 `Reportreason` constants (missing `ReportreasonHATESPEECH`). The `schema.sql:482-490` reportreason enum has 7 values including HATE_SPEECH. Since I5 and I6 share the same root cause (`make sync-db` not run), a proper fix would resolve both.
+
+  **Cross-layer contract check:**
+  - DB (PostgreSQL): ✅ paused_at + paused_reason exist (migration de30c736266b applied)
+  - Python model (task.py:97-98): ✅ paused_at + paused_reason
+  - schema.sql: ✅ manually patched (lines 5656-5657)
+  - models.go: ✅ manually patched (lines 5154-5155)
+  - query.sql.go: ❌ NOT regenerated (line 938 — old 33-column SELECT)
+
+  **Tests:** `go test ./internal/db/...` passes (0.073s). No test covers column completeness of GetTaskByID — expected since schema drift is a generation-time invariant. The correct regression guard is `make sync-db && git diff --exit-code` in CI.
+
+  **Rule guards:** Only pre-existing AX failures (missing route-tier comments in proxy_routes.go) — no new non-AX failures introduced.
+
+  **Rework required:**
+  ```
+  cd backend/gateway && sqlc generate
+  ```
+  (or equivalently `make sync-db` from repo root)
+  This will regenerate query.sql.go with the correct 35-column SELECT list and also fix I6 by regenerating the Reportreason constants. Verify with `grep 'paused_at' query.sql.go` returning the new columns and `grep 'HATESPEECH' models.go` returning the new constant.
 
 ### ISSUE-20260504-1050-I6
 - **status**: verified
@@ -2414,7 +2444,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1930-E8
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: E
 - **title**: Privacy kill switch drill 的 _PRIVACY_BINDING 内联 type() 缺少 allowed_modes 字段导致 write_mode() 抛出 AttributeError——E7 的 fix_commit 指向错误的 B5 提交，该 bug 实际未修复
@@ -2431,11 +2461,12 @@
 - **blast_radius**: 影响 drill_all 完整性——privacy 是 DEFAULT_SPECS 成员，默认 drill_all 执行到 privacy 时崩溃，后续 doc_context/dual_core_router/stage40-calendar 条目无法执行。E7 的 fix_commit 错误可能导致维护者误以为已修复而跳过。对北极星无直接影响（PII redaction 本身不依赖 drill）。
 - **suggested_fix_direction**: 将 `_PRIVACY_BINDING` 替换为 `KillSwitchBinding(stage="privacy", feature="pii_redaction", redis_key="aurora:privacy:pii_redaction", settings_attr="AURORA_PRIVACY_PII_REDACTION_MODE", fallback_mode="live")`。同时修正 E7 条目的 fix_commit 字段。
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-reviewer+2026-05-04T20:30Z
+- **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) run_kill_switch_drills.py:238-243: _PRIVACY_BINDING 仍为 inline type() 仅有 5 属性，缺 allowed_modes。(2) kill_switch.py:125: write_mode() 访问 binding.allowed_modes 对缺失属性触发 AttributeError。(3) kill_switch.py:34: KillSwitchBinding.allowed_modes dataclass 默认 TRI_STATE_MODES，inline type() 不继承。(4) run_kill_switch_drills.py:248-249: _privacy_apply() → _ks_write_mode(binding=_PRIVACY_BINDING) 是 crash 触发点。(5) git show 65ea8325 --name-only 确认仅修改 3 个 Flutter 文件（capsule_provider + capsule_detail_screen + test），从未触及 run_kill_switch_drills.py。E7 正确诊断了 bug 但 fix_commit 错误归因到 B5 的修复——该 bug 在最新 commit 19f64433b 中仍未修复。调用链完整：_privacy_apply → _ks_write_mode → kill_switch.write_mode → normalize_mode(allowed_modes=binding.allowed_modes) → AttributeError。与 E7 不重复——E8 的核心发现是 E7 的 fix_commit 误指向 B5 提交、bug 实际未被修复（是对 tracker 完整性的 meta 发现），非单纯重复 bug 报告。非"设计如此"——其他 drill 条目（stage18-39、doc_context、stage40-calendar）均使用正式 KillSwitchBinding 或专用 kill switch service。
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1931-E9
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: E
 - **title**: Privacy drill 写入 Redis 但 pii_redaction_mode() 仅从 settings 读取——drill 对实际行为零影响
@@ -2452,7 +2483,8 @@
 - **blast_radius**: 不影响用户 PII 保护——PII redaction 始终按 settings 配置工作。影响运维认知——drill 输出给人虚假的控制感。对北极星无直接影响。
 - **suggested_fix_direction**: 方案 A：修改 `pii_redaction_mode()` 使用 `read_mode()`（需评估 Redis 覆盖 PII 的安全风险）。方案 B：修改 `_privacy_apply()` 直接操作 `settings.AURORA_PRIVACY_PII_REDACTION_MODE` 而非写 Redis（当 redis_client 不可用时 write_mode 已有 settings 回退逻辑，可传 redis_client=None）。方案 C：从 DEFAULT_SPECS 移除 privacy 并在 DrillSpec.description 中说明原因。
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-reviewer+2026-05-04T20:30Z
+- **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) privacy.py:53-58: pii_redaction_mode() 仅从 settings 读取 getattr(settings, "AURORA_PRIVACY_PII_REDACTION_MODE", "live")，不调用 read_mode()，不查询 Redis。(2) run_kill_switch_drills.py:248-249: _privacy_apply() 通过 _ks_write_mode(redis_client=redis_client, ...) 写入 Redis，读/写数据源不同。(3) kill_switch.py:133-134: write_mode() else 分支 await redis_client.set(...) 写入 Redis key sparkle:aurora:privacy:pii_redaction。(4) kill_switch.py:94-112: read_mode() 的标准流程为 settings → Redis 覆盖 → gauge，privacy 绕过此流程。(5) aurora_stage35_kill_switch_service.py:29-34: get_mode() 使用了 read_mode() 同时读取 settings+Redis 作为正确参照。调用链完整：drill write path: _privacy_apply → _ks_write_mode → kill_switch.write_mode → redis_client.set(sparkle:aurora:privacy:pii_redaction)；production read path: pii_redaction_mode → normalize_mode(getattr(settings, ...)) → 不查 Redis。两路径使用不同数据源，drill 的模式切换对 PII redaction 零影响。与 E2 不重复——E2 是 Prometheus gauge 缺记录（可观测性，已 closed via 540ba1b97），E9 是读/写数据源不对称（功能性 gap）。非"设计如此"的确定结论——条目本身承认可能是安全设计（Redis 不应覆盖 PII），但 drill 的 DEFAULT_SPECS 包含 privacy 条目且写入 Redis 却从未被读取，属于工具与实际行为脱节，drill 应反映真实控制路径（方案 A/B/C 任一均可）。对用户 PII 保护无影响（始终按 settings 工作），但运维人员通过 drill 获得的"成功"反馈是虚假的。
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
