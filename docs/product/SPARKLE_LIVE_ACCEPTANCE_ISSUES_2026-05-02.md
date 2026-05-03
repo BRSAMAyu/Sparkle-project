@@ -2464,6 +2464,32 @@
 - **verified_by**: opus-reviewer+2026-05-03T21:50:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence：(1) task_event_consumer.py:90-171 — _handle_task_completed 外层 try/except Exception 仅 logger.error 无 re-raise，内部 BehaviorSignalCollector+MetacognitionService+CommunitySignalBridge 共享同一 AsyncSessionLocal 事务，中途失败全部回滚但事件已 ACK；(2) profile_event_consumer.py — 11 个子处理器（_handle_preference_updated/deleted/knowledge_updated/behavior_pattern_updated/focus_session_completed/error_created/insight_signal_family_updated/capsule_favorite_updated/seed_library_event/tool_history_recorded 及其 helper）全部使用 try/except Exception + logger.error 无 re-raise；(3) intervention_event_consumer.py:96-121 — _handle_record_created 同样模式，干预记录停留在 CREATED 状态不重试；(4) event_bus.py:1145-1151 — _process_stream_message 在 callback 正常返回后执行 xack，仅 callback 抛异常时路由到 _handle_failed_message；(5) galaxy_event_consumer.py:64 — 对比参照使用 @reliable_consumer 装饰器，handle_event 无 try/except 包裹，主流程异常可传播到 EventBus DLQ/retry。调用链验证：子处理器吞异常 → callback 正常返回 → EventBus xack → 消息永不重试/不进 DLQ。非设计意图——EventBus 的 DLQ/retry 基础设施存在目的就是处理消费者失败，吞异常完全旁路此机制。与其他任何条目无重复。
 - **fix_commit**: 留空
+- **opus_review**: |
+    APPROVED by independent-fix-reviewer at 2026-05-04T00:15Z
+
+    **Review scope**: All 4 modified files (3 consumers + 1 test file) + EventBus callback mechanism + calling chain verification.
+
+    **a) Root-cause resolution — PASS**:
+    Root cause: outer `except Exception` blocks in 19 sub-handlers (8 in TaskEventConsumer, 10 in ProfileEventConsumer, 1 in InterventionEventConsumer) swallowed exceptions via `logger.error()` without re-raise. Fix adds bare `raise` after each `logger.error()` call. This ensures exceptions propagate through `handle_event` callback → `EventBus._process_stream_message` (line 1146-1151) → `_handle_failed_message` → retry/DLQ path. Internal non-critical operations (outcome_exc, spine_exc, auto_fragment in TaskEventConsumer; _load_seed_library, _invalidate_*_cache in ProfileEventConsumer) correctly retain their try/except without re-raise, per suggested_fix_direction point (3).
+
+    **b) Regression risk — LOW**:
+    - Internal helpers (_load_seed_library, _invalidate_context_cache, _invalidate_profile_context_cache) are unaffected — they still swallow their own errors.
+    - Sub-handlers for outcome recording, spine pipeline, auto-fragment collection retain internal try/except without re-raise (correct: these are non-critical side-effects).
+    - Minor design note: `_trigger_adaptive_plan_health_event` (called from `_handle_task_abandoned` and `_handle_task_stuck`) uses its own `AsyncSessionLocal()` session at line 323 WITHOUT outer try/except. If DB fails inside this method, the exception now propagates to the outer handler which re-raises, causing the entire event to retry even if primary operations (BehaviorSignalCollector) already succeeded. This is acceptable because EventBus retry naturally creates this scenario and BehaviorSignalCollector should be idempotent.
+    - `_handle_reflection_completed` also received raise — correct, as reflection→adapt failure should trigger retry.
+
+    **c) Cross-layer contract sync — N/A**:
+    Pure Python-side change. No proto, DB schema, i18n, Go gateway, or Flutter changes. Consumers are internal services not exposed via API.
+
+    **d) Test regression protection — PASS with caveat**:
+    3 tests cover one representative handler per consumer (task_completed, preference_updated, record_created). Verified by running tests WITHOUT the fix applied: all 3 correctly FAIL with "DID NOT RAISE <class 'Exception'>". With the fix (in stash@{0}): all 3 PASS. Tests are effective regression guards.
+    Caveat: 16 additional sub-handlers (7 task + 9 profile + 0 intervention — intervention only has 1 handler which is tested) share the identical fix pattern but lack individual test coverage. Acceptable given pattern uniformity, but noted for future hardening.
+
+    **e) CLAUDE.md / rule guards compliance — PASS**:
+    No anti-pattern violations. No hardcoded secrets, no cross-layer violations, no Go-side logic changes. Pure Python internal service fix.
+
+    **PROCEDURAL NOTE**:
+    Fix code (19 `raise` additions + test file) is currently in git stash@{0}, NOT in the working tree. The working tree HEAD lacks the raises. Before marking this issue closed, the fix must be applied from stash and committed. Test file (backend/tests/services/test_consumer_exception_propagation.py) is untracked — also needs git add + commit.
 
 ### ISSUE-20260504-2130-F6
 - **status**: verified
@@ -2488,7 +2514,8 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1800-B1
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-03T17:20:00Z
 - **severity**: P2
 - **domain**: B
 - **title**: CurrentUserStatusNotifier.updateStatus 乐观更新后 API 失败不回滚本地状态
