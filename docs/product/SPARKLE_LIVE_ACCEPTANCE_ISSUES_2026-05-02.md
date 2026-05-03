@@ -2443,7 +2443,8 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1700-F5
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-05T13:05:00Z
 - **severity**: P2
 - **domain**: F
 - **title**: Task/Profile/Intervention 消费者子处理器内部吞噬全部异常 → EventBus DLQ/重试完全旁路
