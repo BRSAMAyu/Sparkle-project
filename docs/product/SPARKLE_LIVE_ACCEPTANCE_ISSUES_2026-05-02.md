@@ -392,7 +392,8 @@
 | R11 | 2026-05-03T20:45 | F | 0 | N/A | F-domain 续探——PreferenceEventConsumer + GraphSyncWorker，无新增 |
 | R12 | 2026-05-03T21:00 | I | 3 | 3/3 | DB schema vs code field: I1 TaskStatus enum三层不一致, I2 paused_at缺失, I3 ReportReason不匹配 |
 | R13 | 2026-05-03T22:00 | L | 4 | 4/4 (L1/L2/L3/L4 verified) | Governance rules vs real implementation: L1 BH orphan, L2 AV stale lists, L3 no secret guard, L4 shallow checks |
-| R19 | 2026-05-04T02:15 | C | 1 | pending (C1) | C-domain 重探纠正 R18 误判——proxy_routes.go tasks 组无 Any("/*path") 通配，3 条路由缺失 |
+| R19 | 2026-05-04T02:15 | C | 1 | 1/1 (C1 verified) | C-domain 纠偏 R18 误判——proxy_routes.go tasks 组无通配路由，pause/resume/stuck 缺失 |
+| R20 | 2026-05-04T03:00 | A | 1 | pending (C2) | A-domain UI E2E 追踪：guidance 代理路由缺失（跨域发现） |
 
 ---
 
@@ -1047,6 +1048,7 @@
 | R16 | 2026-05-04T00:35 | ISSUE-20260503-1602-E3 + E4 | ✅ Fixed | 288b0407b | ~5 min |
 | R17 | 2026-05-04T01:45 | ISSUE-20260503-1600-D1 | ✅ Fixed | dd0885789+bf56ba944 | ~75 min |
 | R19 | 2026-05-04T02:30 | ISSUE-20260504-0015-I4 | ✅ Fixed | e57c82be8 | ~15 min |
+| R20 | 2026-05-04T02:40 | ISSUE-20260504-0215-C1 | ✅ Fixed | 0fd0c3b6d | ~15 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1482,10 +1484,11 @@
 
 
 ### ISSUE-20260504-0215-C1
-- **status**: in_progress
+- **status**: closed
 - **severity**: P1
 - **domain**: C
 - **fixer_started_at**: 2026-05-04T02:40:00Z
+- **closed_at**: 2026-05-04T02:55:00Z
 - **title**: Go gateway 缺少 3 个 task 生命周期代理路由（pause/resume/stuck），Flutter 调用全部返回 404
 - **symptom**: 用户在任务执行中点击暂停 → 404 错误；恢复已暂停任务 → 404 错误；任务卡住请求 AI 诊断 → 404 错误。三个操作全部静默失败，用户看到 DioException 转换的通用 Exception
 - **root_cause_hypothesis**: proxy_routes.go 中 tasks 路由组使用显式路由注册（非 Any("/*path") 通配），29 条路由覆盖 start/complete/abandon/snooze/too-hard/skip 等操作，但遗漏了 pause/resume/stuck 三条路由。NoRoute handler（setup.go:810-842）仅代理 auth 路径，不代理 task 路径，导致请求返回 404 JSON
@@ -1504,6 +1507,29 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T03:00:00Z
 - **reviewer_note**: APPROVED — independent review confirms all 6 evidence references match code exactly. (1) proxy_routes.go:69-129 tasks group: 29 explicit routes (start/complete/abandon/snooze/too-hard/too_hard/skip/feedback/generate-guide/next-action-selection), NO `Any("/*path")` catch-all, NO pause/resume/stuck. Comment at line 171 confirms intentional explicit-registration pattern. Other route groups (users, interventions, dashboard, etc.) DO use `Any("/*path")` — the tasks group is the exception, making the R18 "50+ catch-all" claim strictly false for this group. (2) tasks.py:984/1124/1141 — all 3 Python endpoints present (stuck/pause/resume). (3) api_endpoints.dart:64-65,73 — all 3 Flutter endpoint helpers defined. (4) task_repository.dart:1295-1338 — pauseTask() POSTs via ApiEndpoints.pauseTask(id), catches DioException → _handleDioError. (5) setup.go:847-868 — shouldProxyNoRoutePath() only prefix-matches /api/v1/auth/*; task paths never reach Python via NoRoute. Call chain: Flutter pauseTask(id) → POST /api/v1/tasks/{id}/pause → Gin NoRoute → shouldProxyNoRoutePath returns false → 404 JSON → DioException → generic Exception. Not design intent — all other task lifecycle ops (start/complete/abandon/snooze/skip) are registered; pause/resume/stuck share the same pattern and were simply omitted. Not duplicate — unique gap across all open/closed issues. Severity P1 confirmed: 3 core task lifecycle actions completely broken, impacting the "7-day zero-to-pass" North Star.
+- **fix_commit**: 0fd0c3b6d
+- **independent_fix_review**: APPROVED — (a) Root cause fix: YES — 3 POST routes added at proxy_routes.go:116-118 matching existing start/complete/abandon pattern; not a hack. (b) Regression risk: NONE — no route conflicts, no duplicate registrations, Go build clean, all 15 handler tests pass. (c) Cross-layer contract sync: VERIFIED — Python tasks.py uses @router.post for all 3 (lines 984/1124/1141), Go registers POST for all 3, Flutter api_endpoints.dart defines pauseTask/resumeTask/taskStuck (lines 64-65/73), task_repository.dart calls them via POST. HTTP method matches across all 3 layers. (d) Test coverage: PARTIAL — existing TestProxyRoutesHandler_RegisterProxyRoutes passes but expectedTasksRoutes list (test lines 114-140) does NOT assert pause/resume/stuck; routes are registered but untested by the assertion list. This is a pre-existing gap, not introduced by this fix. The fix itself is correct. (e) CLAUDE.md/rule guards: No violations — Go gateway proxy routing only, no business logic, no proto changes, no DB schema changes. NOTE: tasks action routes are split across two code blocks (lines 68-102 tasks group + lines 112-131 inside errors group) — pre-existing structural oddity not introduced by this fix.
+
+
+### ISSUE-20260504-0300-C2
+- **status**: discovered
+- **severity**: P2
+- **domain**: C
+- **title**: Go gateway 缺少 2 个 task guidance 代理路由（GET/POST），用户点击生成指南后报错
+- **symptom**: 用户在任务详情页打开 Guidance 面板 → 首次加载时 API 返回 404 → UI 认为无 guidance → 自动触发 POST generation → 再次 404 → 用户看到错误 snackbar "Guidance generation failed"。GET 路径静默降级（404→null→空状态），但 POST 路径硬失败
+- **root_cause_hypothesis**: proxy_routes.go 的 tasks 路由组未注册 GET/POST /:id/guidance。与 C1 相同模式——tasks 组使用显式路由注册（无 Any("/*path") 通配），两条 guidance 路由被遗漏
+- **evidence**:
+  - `backend/gateway/internal/handler/proxy_routes.go:69-129` — tasks 路由组无 `GET /:id/guidance` 和 `POST /:id/guidance`（grep 返回空）；C1 修复已添加 pause/resume/stuck 但未覆盖 guidance
+  - `backend/app/api/v1/tasks.py:898-917` — `@router.get("/{task_id}/guidance")` 和 `@router.post("/{task_id}/guidance")` Python 两个端点均存在
+  - `mobile/lib/features/task/data/repositories/task_repository.dart:969-982` — `getTaskGuidance()` 调用 `_apiClient.get(_taskGuidancePath(taskId))` → GET /tasks/{id}/guidance；404 时返回 null（静默降级）
+  - `mobile/lib/features/task/data/repositories/task_repository.dart:999-1013` — `createOrRefreshTaskGuidance()` 调用 `_apiClient.post(_taskGuidancePath(taskId))` → POST /tasks/{id}/guidance；404 时进入 `_handleDioError` 抛 Exception（硬失败）
+  - `mobile/lib/features/task/presentation/widgets/guidance/task_guidance_surface.dart:76,107` — UI 调用 `notifier.createOrRefreshTaskGuidance(taskId)`，用户触发"Generate Guidance"按钮
+- **repro_or_trigger**: Flutter → 打开任务详情 → 切换到 Guidance 标签 → 首次加载：`loadTaskGuidance()` GET /tasks/{id}/guidance → 404 → 返回 null → UI 显示空状态 → 自动触发 `_primeHumanGuidance()` → `createOrRefreshTaskGuidance()` POST /tasks/{id}/guidance → 404 → `_handleDioError` → Exception → UI 显示错误 snackbar
+- **expected_vs_actual**: 期望：Go gateway 透明代理 GET/POST guidance 请求到 Python 后端，用户看到 AI 生成的学习指南；实际：GET 静默失败返回空状态，POST 抛出 Exception 显示错误提示
+- **blast_radius**: 影响任务学习指南（Task Guidance）功能的完整流程——用户无法获取或生成 AI 定制的任务学习指南。Guidance 是 Phase 2 新增的差异化功能（task_guidance_surface.dart 是 P2-05 产物），对北极星有中等影响——任务指南帮助学生理解如何完成复杂任务
+- **suggested_fix_direction**: 在 proxy_routes.go 的 tasks 路由组中添加：`tasks.GET("/:id/guidance", h.proxyWithHeaders)` 和 `tasks.POST("/:id/guidance", h.proxyWithHeaders)`。与 C1 修复的 pause/resume/stuck 保持一致的注册模式
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
 - **fix_commit**: 留空
 
 
@@ -1560,3 +1586,26 @@
 - **Findings**: R18 声称 "50+ catch-all Any('/*path') 确保所有 Python API 端点可达" 是错误的。tasks 路由组（proxy_routes.go:69-129）使用显式路由注册而非 Any("/*path") 通配，因此未注册的端点不会被代理。对比其他组：users (line 216 Any("/*path"))、interventions (line 542 Any("/*path"))、dashboard (line 550 Any("/*path")) 等使用通配可自动覆盖所有子路径，但 tasks 组每条路由显式注册。29 条已注册的 task 路由覆盖了 start/complete/abandon/snooze/too-hard/skip/feedback/generate-guide/next-action-selection 等操作，但 pause/resume/stuck 三条未被注册。NoRoute handler 仅代理 auth 前缀路径（shouldProxyNoRoutePath 行 847-868），不代理 /api/v1/tasks/*。因此 Flutter 调用这三个端点时 Go gateway 返回 404。这是 R18 探索不彻底的误判——未区分 route group 的注册策略差异。
 - **Opus pass rate**: pending
 - **Next suggested domain**: 继续跨域回归——C1 修复后验证 pause/resume/stuck 端到端可达。考虑回探 I（DB schema）域，I4 ReportReason 仍缺少 HATE_SPEECH
+
+| R19 | 2026-05-04T02:15 | C | 1 | 1/1 (C1 verified) | C-domain 纠偏 R18 误判——proxy_routes.go tasks 组无通配路由，pause/resume/stuck 缺失 |
+| R20 | 2026-05-04T03:00 | A | 1 | pending (C2) | A-domain UI E2E 追踪发现 guidance 代理路由缺失——跨域发现 |
+
+
+### Round R20 — 2026-05-04T03:00
+- **Domain**: A (Flutter UI E2E 链路 — 任务执行流跨层追踪)
+- **Paths covered**:
+  - mobile/lib/features/task/presentation/widgets/task_quick_action_menu.dart (pause/resume/stuck/help 操作菜单)
+  - mobile/lib/features/task/presentation/screens/task_execution_screen.dart:479-518 (stuck help FAB + markTaskStuck 调用)
+  - mobile/lib/features/task/presentation/widgets/guidance/task_guidance_surface.dart (TaskGuidanceSurface: auto-prime + user-triggered generation)
+  - mobile/lib/features/task/presentation/providers/task_provider.dart:305-335 (loadTaskGuidance + createOrRefreshTaskGuidance)
+  - mobile/lib/features/task/data/repositories/task_repository.dart:936-1013 (getTaskGuidance GET + createOrRefreshTaskGuidance POST)
+  - mobile/lib/features/task/presentation/widgets/paused_task_status_panel.dart (pause banner UI — well-implemented)
+  - mobile/lib/features/task/presentation/widgets/stuck_help_sheet.dart (stuck help sheet — well-implemented)
+  - mobile/lib/features/chat/presentation/widgets/plan_review_card.dart (plan review card — well-implemented)
+  - mobile/lib/features/community/presentation/screens/create_post_screen.dart (post creation — well-implemented)
+  - backend/gateway/internal/handler/proxy_routes.go:69-129 (tasks 路由组 — C1 已修复 pause/resume/stuck，仍缺 guidance)
+  - backend/app/api/v1/tasks.py:898-917 (Python guidance GET/POST 端点)
+- **New issues**: C2(P2)
+- **Findings**: A-domain UI 代码质量总体优秀——error handling 使用 CompactErrorCard，i18n 覆盖完整，paused/stuck 面板 UI 实现细致。发现一个跨域问题：TaskGuidanceSurface 调用 createOrRefreshTaskGuidance() → POST /tasks/{id}/guidance → proxy_routes.go 缺少此路由 → 404 → _handleDioError 抛 Exception → 用户看到错误 snackbar。GET guidance 优雅降级（404→null→空状态），但 POST 硬失败。C1 修复（pause/resume/stuck）已于本轮期间由 fixer 提交（0fd0c3b6d），验证确认。Plan review card、community post creation、quick action menu 均正确实现，无明显 UI dead-end。
+- **Opus pass rate**: pending (C2)
+- **Next suggested domain**: 回探 H（i18n 残留）域——H5 修复验证；或继续跨域验证 C1 修复后的 pause/resume/stuck E2E 可达性
