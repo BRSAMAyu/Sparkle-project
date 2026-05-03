@@ -368,8 +368,8 @@
 
 | Round | Timestamp | Domain | Issues Found | Opus Pass Rate | Notes |
 |-------|-----------|--------|-------------|---------------|-------|
-| R1 | 2026-05-03T12:00 | G | 3 | 2/3 (G3 pending) | Mock vs Real differences |
-| R2 | 2026-05-03T13:00 | B | 1 | pending | Route masking contract mismatch |
+| R1 | 2026-05-03T12:00 | G | 3 | 3/3 (G3 verified by opus-reviewer-2) | Mock vs Real differences |
+| R2 | 2026-05-03T13:00 | B | 1 | claimed by fixer (in_progress) | Route masking contract mismatch — opus-reviewer-2 verified root cause |
 
 ---
 
