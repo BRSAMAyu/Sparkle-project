@@ -483,6 +483,7 @@ CREATE TYPE reportreason AS ENUM (
     'SPAM',
     'HARASSMENT',
     'VIOLENCE',
+    'HATE_SPEECH',
     'MISINFORMATION',
     'INAPPROPRIATE',
     'OTHER'

@@ -92,6 +92,7 @@ class ReportReason(enum.StrEnum):
     SPAM = "spam"                    # 垃圾信息
     HARASSMENT = "harassment"        # 骚扰
     VIOLENCE = "violence"            # 暴力内容
+    HATE_SPEECH = "hate_speech"      # 仇恨言论
     MISINFORMATION = "misinformation"  # 虚假信息
     INAPPROPRIATE = "inappropriate"  # 不当内容
     OTHER = "other"                  # 其他
