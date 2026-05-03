@@ -11397,6 +11397,12 @@ class AppLocalizationsZh extends AppLocalizations {
   String get taskExecutionStuckLabel => '卡住了?';
 
   @override
+  String get taskExecutionCoachTooltip => '和 AI 教练对话';
+
+  @override
+  String get taskExecutionCoachLabel => 'AI 教练';
+
+  @override
   String taskExecutionAuroraDiagnosticUnavailable(Object error) {
     return 'Aurora 诊断暂时不可用：$error';
   }

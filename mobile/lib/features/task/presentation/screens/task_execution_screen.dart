@@ -19,6 +19,7 @@ import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_core_session_sheet.dart';
 import 'package:sparkle/features/focus/presentation/providers/focus_statistics_provider.dart'
     as focus_stats;
+import 'package:sparkle/features/focus/presentation/widgets/focus_agent_sheet.dart';
 import 'package:sparkle/features/home/home_routes.dart';
 import 'package:sparkle/features/openclaw/presentation/widgets/openclaw_primitives.dart';
 import 'package:sparkle/features/plan/presentation/widgets/plan_context_summary.dart';
@@ -732,6 +733,66 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     return lines;
   }
 
+  Future<void> _openFocusCoach(TaskModel task) {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
+    return showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        initialChildSize: 0.85,
+        minChildSize: 0.55,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => FocusAgentSheet(task: task),
+      ),
+    );
+  }
+
+  Widget _buildCoachFab(TaskModel task) => Positioned(
+        right: DS.spacing16,
+        bottom: DS.spacing64 + DS.spacing24,
+        child: SafeArea(
+          top: false,
+          child: Tooltip(
+            message: context.l10n.taskExecutionCoachTooltip,
+            child: Material(
+              color: DS.surfaceOverlay.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(999),
+              child: InkWell(
+                key: const Key('focus-coach-fab'),
+                borderRadius: BorderRadius.circular(999),
+                onTap: () => unawaited(_openFocusCoach(task)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing10,
+                    vertical: DS.spacing8,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.auto_awesome_rounded,
+                        color: DS.brandPrimary,
+                        size: 17,
+                      ),
+                      const SizedBox(width: DS.spacing4),
+                      Text(
+                        context.l10n.taskExecutionCoachLabel,
+                        style: DS.bodySmall.copyWith(
+                          color: DS.textSecondary,
+                          fontWeight: DS.fontWeightBold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
   Widget _buildStuckHelpFab(TaskModel task) => Positioned(
         left: DS.spacing16,
         bottom: DS.spacing64 + DS.spacing24,
@@ -1080,6 +1141,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           ),
 
           _buildStuckHelpFab(activeTask),
+          _buildCoachFab(activeTask),
 
           // Celebration Overlay
           if (_showCelebration)

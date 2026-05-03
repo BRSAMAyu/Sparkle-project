@@ -11892,6 +11892,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taskExecutionStuckLabel => 'Stuck?';
 
   @override
+  String get taskExecutionCoachTooltip => 'Talk to AI coach';
+
+  @override
+  String get taskExecutionCoachLabel => 'AI Coach';
+
+  @override
   String taskExecutionAuroraDiagnosticUnavailable(Object error) {
     return 'Aurora diagnostic is temporarily unavailable: $error';
   }

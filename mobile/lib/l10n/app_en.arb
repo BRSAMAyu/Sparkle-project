@@ -4754,6 +4754,8 @@
   "taskExecutionStuckClarifyPrompt": "Please ask me one key clarifying question, then narrow the next step to something I can start within 5 minutes.",
   "taskExecutionStuckTooltip": "Stuck?",
   "taskExecutionStuckLabel": "Stuck?",
+  "taskExecutionCoachTooltip": "Talk to AI coach",
+  "taskExecutionCoachLabel": "AI Coach",
   "taskExecutionAuroraDiagnosticUnavailable": "Aurora diagnostic is temporarily unavailable: {error}",
   "@taskExecutionAuroraDiagnosticUnavailable": {
     "placeholders": {

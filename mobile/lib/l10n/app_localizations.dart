@@ -11939,7 +11939,7 @@ abstract class AppLocalizations {
   /// No description provided for @memoryDiff.
   ///
   /// In zh, this message translates to:
-  /// **'Diff'**
+  /// **'差异'**
   String get memoryDiff;
 
   /// No description provided for @memoryRevertToVersion.
@@ -21003,6 +21003,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'卡住了?'**
   String get taskExecutionStuckLabel;
+
+  /// No description provided for @taskExecutionCoachTooltip.
+  ///
+  /// In zh, this message translates to:
+  /// **'和 AI 教练对话'**
+  String get taskExecutionCoachTooltip;
+
+  /// No description provided for @taskExecutionCoachLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 教练'**
+  String get taskExecutionCoachLabel;
 
   /// No description provided for @taskExecutionAuroraDiagnosticUnavailable.
   ///

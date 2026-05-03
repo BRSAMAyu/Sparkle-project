@@ -4747,6 +4747,8 @@
   "taskExecutionStuckClarifyPrompt": "请先问我一个最关键的澄清问题，然后把下一步缩小到5分钟内能开始。",
   "taskExecutionStuckTooltip": "卡住了？",
   "taskExecutionStuckLabel": "卡住了?",
+  "taskExecutionCoachTooltip": "和 AI 教练对话",
+  "taskExecutionCoachLabel": "AI 教练",
   "taskExecutionAuroraDiagnosticUnavailable": "Aurora 诊断暂时不可用：{error}",
   "@taskExecutionAuroraDiagnosticUnavailable": {
     "placeholders": {
