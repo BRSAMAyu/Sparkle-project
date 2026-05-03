@@ -2260,9 +2260,10 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1801-B2
-- **status**: verified
+- **status**: in_progress
 - **severity**: P1
 - **domain**: B
+- **fixer_started_at**: 2026-05-03T08:00:00Z
 - **title**: GoalDetailNotifier.confirmMinimumCriteria 纯本地状态变更无 API 持久化，刷新即丢失
 - **symptom**: 用户在目标详情页确认"最低验收标准"（Minimum Acceptance Criteria），看到 SnackBar 提示"已确认"并可撤销。下拉刷新或离开页面返回后，确认状态复原为未确认。用户的确认决定永久丢失。
 - **root_cause_hypothesis**: `confirmMinimumCriteria()` 方法仅执行 `state = AsyncValue.data(value.copyWith(...))` 纯本地状态更新，无任何 API 调用或持久化。`undoConfirmMinimumCriteria()` 同理。后端无 `/goal/{id}/confirm-criteria` 或等效端点（grep 确认）。对比同文件 `startNextStep()`/`completeNextStep()` 均执行 `POST /tasks/$taskId/...` 后 `load()` 重载。
