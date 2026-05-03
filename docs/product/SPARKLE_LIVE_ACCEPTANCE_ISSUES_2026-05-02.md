@@ -2103,7 +2103,8 @@
 - **opus_review**: APPROVED by opus-independent-reviewer at 2026-05-03T10:45:00Z
 
 ### ISSUE-20260504-0947-E7
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-04T10:10:00Z
 - **severity**: P3
 - **domain**: E
 - **title**: Privacy kill switch drill 使用临时的 inline type() 替代 KillSwitchBinding——缺少 allowed_modes 字段会导致 write_mode() 崩溃
