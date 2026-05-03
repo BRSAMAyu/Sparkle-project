@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-03 22:30 (L-domain all 4 discovered verified by opus-reviewer)
+> Updated: 2026-05-04 01:00 (R16 I4/H5 verified by opus-independent-reviewer)
 
 ---
 
@@ -370,7 +370,7 @@
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
 - **Discovered (not verified)**: 0
-- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 3 (I1/I2/I3) + 4 (L1/L2/L3/L4) + 3 (B1/B2/B3)
+- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 3 (I1/I2/I3) + 4 (L1/L2/L3/L4) + 3 (B1/B2/B3) + 2 (I4/H5)
 
 ---
 
@@ -850,6 +850,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-03T16:45:00Z
 - **fix_commit**:
+- **independent_review**: REJECTED by independent-auditor at 2026-05-04. **Root cause NOT fixed.** Commit `77ea55fb5` only changed issue metadata (status: verified->in_progress, added fixer_started_at). No source code was modified. Both target files remain unprotected: `plan_review_service.py:2199` and `multi_agent_adapter.py:87` still call `await planner.plan()` without `asyncio.wait_for` timeout wrapper. Test file `backend/tests/test_langgraph_planner_timeout.py` does not exist in git history (only a stale `.pyc` in `__pycache__`). Evidence: `git diff 77ea55fb5~1..77ea55fb5` shows only docs change; `grep -rn "asyncio.wait_for|TimeoutError" plan_review_service.py multi_agent_adapter.py` returns empty; `find backend/tests -name "*planner_timeout*.py"` returns nothing. The fix needs to be fully implemented before this issue can be re-reviewed.
 
 
 ### ISSUE-20260503-1700-F1
@@ -1399,7 +1400,7 @@
 - **fix_commit**:
 
 ### ISSUE-20260504-0016-H5
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: H
 - **title**: group_members_screen 残留 6 处硬编码英文（搜索框、空状态、角色分区标题），H1 修复未完全覆盖
@@ -1416,7 +1417,7 @@
 - **blast_radius**: 影响中文用户的群组成员管理体验。搜索框和角色分区标题是每次进入成员列表都会看到的 UI 元素。对北极星有中等影响——群组管理是社区问责系统的核心交互
 - **suggested_fix_direction**: 将 6 处硬编码英文替换为 `I18nService.instance.isChinese ? '中文' : 'English'` 模式，与 H1 修复中 promote/demote/transfer 的 i18n 方式保持一致
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-independent-reviewer+2026-05-04T01:00:00Z
 - **fix_commit**:
 
 ### Round R16 — 2026-05-04T00:30
@@ -1430,7 +1431,7 @@
   - chat_orchestrator_chatflow.go:696-703 (K2 fix verified — truncated partial response saved correctly)
 - **New issues**: I4(P1), H5(P2)
 - **Findings**: Cross-domain regression pass on 16 recently fixed/explored files. G-domain fixes (G1/G2/G3) verified intact. Discovered 2 new issues: (1) I4 — ReportReason I3 fix was incomplete: Python model enum (community.py:90-97) missing HATE_SPEECH while schema (community.py:882-889) has it, causing DB write failures when Flutter sends hate_speech. This is a regression-in-fix — the I3 fix was applied to schema/Flutter but missed the model layer. (2) H5 — group_members_screen.dart has 6 remaining hardcoded English strings (search hint, empty states, role section headers) that were outside H1 fix scope. Verified K1 percentile fix is correct (returns None for global sentinel, not a bug). Verified K2 truncated response save works correctly.
-- **Opus pass rate**: pending
+- **Opus pass rate**: 2/2 (I4/H5 both APPROVED by opus-independent-reviewer at 2026-05-04T01:00)
 - **Next suggested domain**: Cross-domain integration checks continue — verify I4 fix propagates correctly to DB enum migration
 
 ---
