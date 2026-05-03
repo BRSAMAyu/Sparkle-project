@@ -1649,7 +1649,7 @@ class MockCommunityRepository implements CommunityRepository {
     final members = <GroupMemberInfo>[];
     for (int i = 0; i < _mockUsers.length && members.length < group.memberCount; i++) {
       final user = _mockUsers[i];
-      final role = user.id == currentUserId ? group.myRole : roles[i % roles.length];
+      final role = user.id == currentUserId ? (group.myRole ?? GroupRole.member) : roles[i % roles.length];
       members.add(GroupMemberInfo(
         user: user,
         role: role,
@@ -1663,28 +1663,76 @@ class MockCommunityRepository implements CommunityRepository {
     return members;
   }
 
+  GroupInfo _rebuildGroup(GroupInfo group, {
+    int? memberCount,
+    GroupRole? myRole,
+  }) {
+    return GroupInfo(
+      id: group.id,
+      name: group.name,
+      description: group.description,
+      avatarUrl: group.avatarUrl,
+      type: group.type,
+      focusTags: group.focusTags,
+      memberCount: memberCount ?? group.memberCount,
+      totalFlamePower: group.totalFlamePower,
+      todayCheckinCount: group.todayCheckinCount,
+      totalTasksCompleted: group.totalTasksCompleted,
+      maxMembers: group.maxMembers,
+      isPublic: group.isPublic,
+      joinRequiresApproval: group.joinRequiresApproval,
+      createdAt: group.createdAt,
+      updatedAt: DateTime.now(),
+      deadline: group.deadline,
+      sprintGoal: group.sprintGoal,
+      announcement: group.announcement,
+      myRole: myRole,
+    );
+  }
+
   @override
   Future<void> kickMember(String groupId, String userId) async {
-    // Mock implementation - do nothing
-    return;
+    final index = _mockGroups.indexWhere((g) => g.id == groupId);
+    if (index == -1) return;
+    final group = _mockGroups[index];
+    _mockGroups[index] = _rebuildGroup(
+      group,
+      memberCount: group.memberCount > 0 ? group.memberCount - 1 : 0,
+      myRole: userId == currentUserId ? null : group.myRole,
+    );
   }
 
   @override
   Future<void> promoteMember(String groupId, String userId) async {
-    // Mock implementation - do nothing
-    return;
+    final index = _mockGroups.indexWhere((g) => g.id == groupId);
+    if (index == -1) return;
+    final group = _mockGroups[index];
+    _mockGroups[index] = _rebuildGroup(
+      group,
+      myRole: userId == currentUserId ? GroupRole.admin : group.myRole,
+    );
   }
 
   @override
   Future<void> demoteMember(String groupId, String userId) async {
-    // Mock implementation - do nothing
-    return;
+    final index = _mockGroups.indexWhere((g) => g.id == groupId);
+    if (index == -1) return;
+    final group = _mockGroups[index];
+    _mockGroups[index] = _rebuildGroup(
+      group,
+      myRole: userId == currentUserId ? GroupRole.member : group.myRole,
+    );
   }
 
   @override
   Future<void> transferOwnership(String groupId, String userId) async {
-    // Mock implementation - do nothing
-    return;
+    final index = _mockGroups.indexWhere((g) => g.id == groupId);
+    if (index == -1) return;
+    final group = _mockGroups[index];
+    _mockGroups[index] = _rebuildGroup(
+      group,
+      myRole: userId == currentUserId ? GroupRole.owner : GroupRole.member,
+    );
   }
 
   @override
