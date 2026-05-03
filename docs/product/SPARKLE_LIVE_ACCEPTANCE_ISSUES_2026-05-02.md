@@ -1482,9 +1482,10 @@
 
 
 ### ISSUE-20260504-0215-C1
-- **status**: verified
+- **status**: in_progress
 - **severity**: P1
 - **domain**: C
+- **fixer_started_at**: 2026-05-04T02:40:00Z
 - **title**: Go gateway 缺少 3 个 task 生命周期代理路由（pause/resume/stuck），Flutter 调用全部返回 404
 - **symptom**: 用户在任务执行中点击暂停 → 404 错误；恢复已暂停任务 → 404 错误；任务卡住请求 AI 诊断 → 404 错误。三个操作全部静默失败，用户看到 DioException 转换的通用 Exception
 - **root_cause_hypothesis**: proxy_routes.go 中 tasks 路由组使用显式路由注册（非 Any("/*path") 通配），29 条路由覆盖 start/complete/abandon/snooze/too-hard/skip 等操作，但遗漏了 pause/resume/stuck 三条路由。NoRoute handler（setup.go:810-842）仅代理 auth 路径，不代理 task 路径，导致请求返回 404 JSON
