@@ -1309,7 +1309,7 @@
 - **fix_commit**: 留空
 
 ### Round R14 — 2026-05-03T23:00
-- **Domain**: L (治理规则与文档承诺 vs 真实实现)
+- **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
   - scripts/rule_guard_manifest.tsv (64 registered rules, full audit)
   - scripts/run_all_rule_guards.sh (CI entry point)
@@ -1330,5 +1330,19 @@
 - **Opus pass rate**: 4/4 (L1/L2/L3/L4 all APPROVED by opus-reviewer at 2026-05-03T22:30)
 - **Next suggested domain**: I (DB 迁移 vs 代码字段) — already done (R12). All 12 domains now explored at least once.
 | R14 | 2026-05-03T23:00 | B | 3 | pending | Riverpod Provider 健康度续探——B1 无声数据丢失, B2 乐观更新无声回退, B3 catch-all 吞错
+
+### Round R15 — 2026-05-04T00:00
+- **Domain**: B (Riverpod Provider 健康度 — 独立验证)
+- **Paths covered**:
+  - notification_provider.dart (markAsRead empty catch at line 40-42)
+  - capsule_provider.dart (constructor init + error handling — verified NOT a permanent loading issue)
+  - accountability_provider.dart (endPartnership — verified UI caller has try/catch at accountability_detail_screen.dart:243-257)
+  - smart_schedule_service.dart:578-608 (TaskScheduleParams missing ==/hashCode for FutureProvider.family)
+  - galaxy_provider.dart:344-419 (SSE subscription — verified dispose() properly cancels)
+  - ai_ops_analysis_screen.dart:33-34 (verified hasValue guard before .value!)
+- **New issues**: 0
+- **Findings**: Independent verification of Domain B. Two parallel agents investigated 5+ feature directories. Most agent-reported findings were false positives upon verification: (1) CapsuleNotifier DOES set error state in catch (line 20), not permanent loading; (2) Galaxy SSE subscription IS properly disposed in dispose() method; (3) ai_ops_analysis_screen .value! has hasValue guard; (4) Accountability endPartnership has UI-layer try/catch. Confirmed but not filed (below threshold): TaskScheduleParams missing ==/hashCode for family provider key (causes cache miss on every rebuild — P3 at best), notification_provider markAsRead empty catch (similar to B1 pattern already filed). Domain B already well-covered by R14's B1/B2/B3 which are pending Opus review.
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: All 12 domains (A-L) have been explored at least once. Consider revisiting K (error handling) or E (Aurora kill switch) for regression checks on recent fixes, or exploring cross-domain integration issues
 
 ---
