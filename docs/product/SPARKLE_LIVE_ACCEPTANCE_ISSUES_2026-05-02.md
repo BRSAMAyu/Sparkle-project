@@ -1610,3 +1610,24 @@
 - **Findings**: A-domain UI 代码质量总体优秀——error handling 使用 CompactErrorCard，i18n 覆盖完整，paused/stuck 面板 UI 实现细致。发现一个跨域问题：TaskGuidanceSurface 调用 createOrRefreshTaskGuidance() → POST /tasks/{id}/guidance → proxy_routes.go 缺少此路由 → 404 → _handleDioError 抛 Exception → 用户看到错误 snackbar。GET guidance 优雅降级（404→null→空状态），但 POST 硬失败。C1 修复（pause/resume/stuck）已于本轮期间由 fixer 提交（0fd0c3b6d），验证确认。Plan review card、community post creation、quick action menu 均正确实现，无明显 UI dead-end。
 - **Opus pass rate**: pending (C2)
 - **Next suggested domain**: 回探 H（i18n 残留）域——H5 修复验证；或继续跨域验证 C1 修复后的 pause/resume/stuck E2E 可达性
+### Round R19 — 2026-05-04T02:25
+- **Domain**: A (Flutter UI 端到端链路 — 重探 focus/task execution 流程)
+- **Paths covered**:
+  - focus_main_screen.dart (full file — task selection + quick focus + dummy task creation)
+  - task_execution_screen.dart:111-172 (activeTaskProvider init, isServerTaskId guard, execution state polling)
+  - task_execution_screen.dart:229-263 (_onWillPop exit confirmation with mis-click protection)
+  - task_execution_screen.dart:820-870 (hasPersistentTask rendering guards)
+  - task_execution_screen.dart:978-990 (subtask section hidden for local-only tasks)
+  - task_chat_provider.dart:75-174 (TaskChatNotifier sendMessage chain)
+  - chat_repository.dart:88-127 (sendMessageToTask → POST /chat/task/$taskId)
+  - task_identity.dart (isServerTaskId UUID regex check)
+  - focus_agent_sheet.dart (FocusAgentSheet — still not integrated into any screen)
+  - poster_studio_screen.dart:30-80 (poster generation with proper state management)
+  - task_repository.dart:936-1014 (getTaskGuidance + createOrRefreshTaskGuidance)
+- **New issues**: 0
+- **Findings**: A 域重探聚焦 focus/task execution 全流程。(1) Quick focus 创建 `quick_focus_${uuid}` 格式的本地任务 ID，isServerTaskId 正确识别为非服务端 ID，task execution 屏幕使用 hasPersistentTask 布尔值在所有 API 调用点做守卫——设计合理。(2) FocusAgentSheet（P1-20 注明的未集成组件）仍然没有被任何屏幕导入使用——这是已知 Phase 2 项目。(3) POST /chat/task/:task_id 路由在 Go proxy 已注册（chat.POST("/task/:task_id")）。(4) Task guidance 路由（GET/POST /:id/guidance）缺失但已被 C 域发现为 discovered 条目。(5) Exit confirmation 有 15 秒误触保护 + 自动暂停逻辑。(6) Poster studio 使用 DefaultTextStyle.merge 修复了 P2-02 黄线问题，状态管理正确
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: 回探 K（错误处理）验证 K3 CompactErrorCard 修复，或继续跨域集成验证
+
+| R19 | 2026-05-04T02:25 | A | 0 | N/A | A 域重探——focus/task execution 流程设计合理，FocusAgentSheet 未集成（已知 Phase 2） |
+
