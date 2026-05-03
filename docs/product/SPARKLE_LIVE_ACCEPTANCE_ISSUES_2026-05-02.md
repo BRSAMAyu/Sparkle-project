@@ -369,8 +369,8 @@
 - **Routes Verified (working with data)**: 5
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
-- **Discovered (not verified)**: 4 (F1/F2/F3/F4 pending review)
-- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 1 (A1 — fix commit pending) + 1 (D1)
+- **Discovered (not verified)**: 0
+- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1)
 
 ---
 
@@ -388,7 +388,7 @@
 | R7 | 2026-05-03T15:30 | A | 1 | 1/1 (A1 verified) | Task execution navigation missing activeTaskProvider |
 | R8 | 2026-05-03T16:00 | E | 4 | 4/4 | Aurora kill switch: E1 Dual-Core Router zero KS, E2 Privacy Prometheus gauge bypass, E3 drill_all.sh missing 37-39, E4 permissions 644 |
 | R9 | 2026-05-03T16:30 | D | 1 | 1/1 (D1 verified) | LangGraph planner timeout missing in 2/3 callers |
-| R10 | 2026-05-03T17:00 | F | 4 | pending opus review | Event bus consumers: F1 subscribe silent fail, F2 Preference bypass, F3 health blind spot, F4 missing stop() |
+| R10 | 2026-05-03T17:00 | F | 4 | 4/4 | Event bus consumers: F1 subscribe silent fail, F2 Preference bypass, F3 health blind spot, F4 missing stop() |
 
 ---
 
@@ -1023,7 +1023,7 @@
   - main.py:170-330 (20+ consumer startup sequence)
 - **New issues**: F1(P2), F2(P2), F3(P2), F4(P3)
 - **Findings**: EventBus infrastructure is well-architected with comprehensive DLQ, retry, idempotency, and stale message claiming. Discovered 4 gaps: (1) subscribe() silently returns on non-BUSYGROUP ResponseError, causing consumers to appear started when they're dead; (2) PreferenceEventConsumer bypasses the entire EventBus framework with manual Redis stream operations, lacking all safety mechanisms; (3) background consume_loop task death is undetected by all ~20 consumer start() methods because the task runs independently via asyncio.create_task() with no health monitoring; (4) 5 consumers lack stop() method, preventing graceful shutdown. DLQ redrive mechanism confirmed functional via admin API (dlq_admin.py). No un-consumed event types found (tracking_events consumed by CognitiveStreamWorker, all sparkle_events types have matching consumers).
-- **Opus pass rate**: pending
+- **Opus pass rate**: 4/4 (F1/F2/F3/F4 all APPROVED by opus-reviewer at 2026-05-03T17:08)
 - **Next suggested domain**: I (DB 迁移 vs 代码字段) or L (治理规则与文档承诺 vs 真实实现) — remaining unexplored domains
 
 ### Round R9 — 2026-05-03T16:30
