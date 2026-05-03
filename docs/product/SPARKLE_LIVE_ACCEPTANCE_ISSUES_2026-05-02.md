@@ -2531,7 +2531,8 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1900-D1
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-05T14:30:00Z
 - **severity**: P1
 - **domain**: D
 - **title**: Statechart engine silently swallows node exceptions and returns partial state; orchestrator never checks state.errors
