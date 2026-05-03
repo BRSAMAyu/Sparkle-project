@@ -421,6 +421,7 @@
 | R45 | 2026-05-04T21:30 | F | 1 | 1/1 (F6 verified) | F 域续探——EventBus DLQ PostgreSQL 表 + Redis 流无任何管理/重放 API |
 | R46 | 2026-05-05T08:00 | H | 1 | 1/1 (H9 verified) | H 域续探——document_library_screen 归档/恢复/撤回 10 处纯中文硬编码 |
 | R48 | 2026-05-05T09:00 | I | 1 | pending | I 域续探——Pydantic GroupInfo schema 缺少 announcement 字段，群公告响应静默丢弃 |
+| R50 | 2026-05-05T09:30 | C | 2 | pending | C 域续探——legacyStreamErrorPayload 3 路径缺 request_id + message_nack 缺 request_id + Flutter NackEvent 死代码 |
 
 ---
 
@@ -2713,6 +2714,50 @@
 - **reviewer_note**: APPROVED — independent review confirms all 3 evidence references match code exactly. (1) community_service.py:697-718 — `get_group()` returns a dict with `'announcement': group.announcement` at line 717. The `group.announcement` comes from DB column `announcement = Column(Text, nullable=True)` at community.py:207. (2) community.py:284-310 — `GroupInfo(BaseSchema)` schema lists 16 fields (name, description, avatar_url, type, focus_tags, deadline, sprint_goal, days_remaining, member_count, total_flame_power, today_checkin_count, total_tasks_completed, max_members, is_public, join_requires_approval, my_role) — `announcement` is NOT among them. Pydantic v2 default behavior drops undeclared extra fields during serialization. (3) community_model.dart:418,452 — Flutter `GroupInfo` model declares `final String? announcement` at line 452, and passes it in constructor at line 418. `_$GroupInfoFromJson` will set it to null when the key is absent from JSON. Full call chain traced: `GET /community/groups/{group_id}` → Go proxy → Python `get_group()` → returns dict with announcement (line 717) → FastAPI response_model=GroupInfo → Pydantic strips announcement → Flutter receives JSON without announcement key → `fromJson` sets null. Not "by design" — the service layer explicitly returns the field (line 717), the DB column exists (community.py:207-208 even has `announcement_updated_at`), and the Flutter model expects it. The schema simply forgot to declare it. Not a duplicate of any closed/verified entry — this is a unique schema-field omission in the community module.
 - **fix_commit**: 留空
 
+### ISSUE-20260505-0930-C8
+- **status**: discovered
+- **severity**: P1
+- **domain**: C
+- **title**: legacyStreamErrorPayload 3 个调用路径缺失 request_id——多请求并发时错误事件被静默丢弃
+- **symptom**: 当 WebSocket 连接上有 2+ 个活跃聊天请求时，Go 通过 `legacyStreamErrorPayload()` 发送的错误（resource_exhausted / duplicate_request / stream_recv_error）无法被 Flutter 路由到正确请求，错误事件被静默丢弃，用户看不到任何错误反馈。
+- **root_cause_hypothesis**: Go 的 `legacyStreamErrorPayload()` 返回 `{"type": "error", "message": ..., "error_code": ..., "retryable": ...}` 不含 `request_id`。Flutter 的 `_extractRequestIdFromRawMessage()` 仅从 JSON 顶层提取 `request_id` 字段，不检查 `message_id`。`_routeEventToRequest(null, errorEvent)` 仅在活跃请求数 == 1 时路由成功（fallback 到唯一控制器），0 或 ≥2 时直接 return 丢弃事件。`resource_exhausted` 路径可能确实无 request_id（请求尚未被接受），但 `duplicate_request` 和 `stream_recv_error` 路径有可用的 requestID 却未包含。
+- **evidence**:
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:991-998` — `legacyStreamErrorPayload()` 返回 gin.H 不含 `request_id` 或 `message_id`
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:342` — duplicate_request 路径：`sendChatAccepted` 已发送含 `request_id` 的 message_ack（行 333），随后 `legacyStreamErrorPayload` 发送的 error 却不含 `request_id`——requestID 可用但未传递
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:307` — resource_exhausted 路径：在 streamSem 满时拒绝，requestID 尚未分配——但可用临时 ID
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:947` — stream_recv_error 路径：gRPC 流接收失败时 `respondStreamRecvError` 调用 legacyStreamErrorPayload，requestID 在当前函数作用域可用但未传递
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:1807-1815` — `_extractRequestIdFromRawMessage` 仅检查 `jsonData['request_id']`，不检查 `message_id`
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:1818-1826` — `_routeEventToRequest` 当 requestId 为 null 且活跃请求数 != 1 时直接 return，事件静默丢弃
+- **repro_or_trigger**: (1) 从 Flutter 同时发送 2 条聊天消息（快速双击发送）→ (2) 在第二条消息的 gRPC 流接收期间模拟网络中断触发 stream_recv_error → (3) 观察第一条消息收到流式响应，第二条消息的错误事件被丢弃——用户看到第二条消息永久处于"发送中"状态，无任何错误提示
+- **expected_vs_actual**: 期望：Go 发送 error 时包含 `request_id`（或 Flutter 通过 `message_id`/`response_id` 路由），错误被正确关联到对应请求，用户看到具体错误信息。实际：3 个 `legacyStreamErrorPayload` 路径全部缺失 `request_id`，≥2 并发请求时错误被丢弃。
+- **blast_radius**: 影响 chat 模块的错误反馈可靠性。当用户有多个并发聊天请求时，stream_recv_error（gRPC 流中断）和 duplicate_request（重复请求拒绝）均无法展示给用户。不影响北极星（单请求场景 route 可 fallback 到唯一控制器），但降低多任务并发使用场景的健壮性。
+- **suggested_fix_direction**: (1) 为 `legacyStreamErrorPayload` 添加 `requestID string` 参数，在 3 个调用点传入可用的 requestID；(2) 或让 `_extractRequestIdFromRawMessage` 同时检查 `request_id` 和 `message_id`（两者在现有协议中值相同）；(3) 资源耗尽路径无 requestID 时可生成临时 ID 或使用 `_broadcastErrorToActiveRequests` 语义。
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空（Opus 填）
+- **fix_commit**: 留空（fixer 填）
+
+### ISSUE-20260505-0930-C9
+- **status**: discovered
+- **severity**: P1
+- **domain**: C
+- **title**: Go message_nack 缺 request_id（仅含 message_id）+ Flutter chat_provider 未处理 NackEvent——服务端消息拒绝完全不可见
+- **symptom**: 当 Go 发送 `message_nack` 拒绝客户端消息时（8 个路径：invalid_json ×2 / tool_result_too_large / unknown_message_type / empty_message / agent_unavailable ×2 / quota_exceeded），Flutter 端：(1) `_extractRequestIdFromRawMessage` 无法提取 requestId（因 JSON 仅有 `message_id` 无 `request_id`），导致 NackEvent 在 ≥2 并发请求时无法路由；(2) 即使侥幸路由到唯一活跃请求，`chat_provider` 的 event loop 不处理 `NackEvent`——事件静默穿过 if/else 链无任何动作。用户看不到任何错误反馈。
+- **root_cause_hypothesis**: 两个独立断点：(A) Go ↔ Flutter 路由键不一致——Go 的 `message_nack` JSON 使用 `message_id` 作为关联键，但 Flutter 的 `_extractRequestIdFromRawMessage` 仅查找 `request_id`；(B) Flutter 解析层与 UI 层脱节——`websocket_chat_service_v2.dart:853-871` 正确解析 `NackEvent`（含 messageId/errorCode/errorMessage/retryAfterMs），但 `chat_provider.dart` 的 event loop（行 1297-1919）不检查 `is NackEvent`，事件落入未处理分支后无任何用户反馈。
+- **evidence**:
+  - `backend/gateway/internal/handler/chat_orchestrator.go:407,457,496,515,522` — 5 处 `message_nack` 均含 `message_id` 但无 `request_id`（格式：`gin.H{"type": "message_nack", "message_id": ..., "error_code": ..., ...}`）
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:640,658,748` — 3 处 `message_nack`（agent_unavailable ×2 / quota_exceeded）同样含 `message_id` 但无 `request_id`
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:1807-1815` — `_extractRequestIdFromRawMessage` 仅提取 `request_id`，不提取 `message_id`——message_nack 的 requestId 始终为 null
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:853-871` — `NackEvent` 被正确解析（含 messageId/errorCode/errorMessage/retryAfterMs），但仅被 `_routeEventToRequest` 添加到 stream controller，无后续处理
+  - `mobile/lib/features/chat/presentation/providers/chat_provider.dart:1297-1919` — event loop 处理 11 种事件类型（TextEvent/FullTextEvent/ErrorEvent/WidgetEvent/ToolStartEvent/ToolResultEvent/UsageEvent/MetaEvent/DagExecutionEvent/CollaborationTimelineEvent/DoneEvent），**不含 NackEvent**。NackEvent 在 loop 中静默穿过。
+  - `mobile/lib/features/chat/presentation/providers/chat_provider.dart:1629-1656` — ErrorEvent 处理逻辑（getUserFriendlyMessage → finalizeRun(phase: failed)）已存在——NackEvent 可复用相同模式
+- **repro_or_trigger**: (1) Flutter 发送空消息（`{"type":"message","message":"","request_id":"req-123"}`）→ Go 返回 `message_nack` with `message_id: "req-123"` → (2) Flutter 解析为 NackEvent → (3) `_extractRequestIdFromRawMessage` 返回 null（无 `request_id` 字段）→ (4) 若恰好 1 个活跃请求，NackEvent 被添加到 stream → (5) chat_provider event loop 不处理 NackEvent → 用户看到消息永久处于"发送中"旋转状态，无任何错误提示。若 ≥2 个活跃请求，NackEvent 在第 4 步即被丢弃。
+- **expected_vs_actual**: 期望：服务端通过 `message_nack` 拒绝消息时，客户端应展示具体错误（如"消息为空""配额已用完""AI 服务不可用"），并区分可重试/永久性错误。实际：所有 `message_nack` 事件在客户端完全不可见，用户无任何反馈。
+- **blast_radius**: 影响所有服务端消息拒绝场景的 UX——空消息检测、JSON 格式验证、未知消息类型、工具结果过大、agent 不可用、配额超限——共 8 个 Go 路径全部静默失败。用户可能重复发送无效消息而不自知。不影响北极星（正常聊天流不受影响），但严重降低错误 UX 完整性。
+- **suggested_fix_direction**: (A) Go 端：在所有 `message_nack` JSON 中添加 `"request_id": messageID`（值同 `message_id`），使 Flutter 可通过现有 `_extractRequestIdFromRawMessage` 路由；(B) Flutter 端：在 `chat_provider` event loop 中添加 `else if (event is NackEvent)` 分支，复用 ErrorEvent 的 `finalizeRun` 模式（phase: failed, errorMessage: event.errorMessage, errorCode: event.errorCode），并利用 `retryAfterMs` 区分瞬时/永久错误。
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空（Opus 填）
+- **fix_commit**: 留空（fixer 填）
+
 ### Round R25 — 2026-05-04T05:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
@@ -3263,3 +3308,43 @@
 - **Findings**: L 域全面审查。治理框架健壮：66 注册规则，65 PASS，1 FAIL (AX pre-existing tech debt)。CI 强制执行。CLAUDE.md 所有声称验证通过。Phase 2 承诺 8/8 兑现。三层架构约束严格。Rule BG 16 warnings 为 cosmetic（proto 仅加 deprecation 注释）。域已穷尽。
 - **Opus pass rate**: N/A (0 new issues)
 - **Next suggested domain**: G (Mock vs Real) — 10 轮未回探；或 B (Riverpod Provider 健康度) — 14 轮未回探
+
+### Round R50 — 2026-05-05T09:30
+- **Domain**: C (WebSocket / gRPC 契约一致性 — 续探)
+- **Paths covered**:
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:296-309` — resource_exhausted → legacyStreamErrorPayload 无 request_id
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:327-345` — duplicate_request → sendChatAccepted 含 request_id 但后续 error 不含
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:939-949` — respondStreamRecvError → legacyStreamErrorPayload 无 request_id
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:991-998` — legacyStreamErrorPayload() 定义，payload 不含 request_id/message_id
+  - `backend/gateway/internal/handler/chat_orchestrator.go:407,457,496,515,522` — 5 处 message_nack 含 message_id 但无 request_id
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:640,658,748` — 3 处 message_nack（agent_unavailable ×2 / quota_exceeded）含 message_id 但无 request_id
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:738-774` — ErrorEvent 解析：检查嵌套 error 或顶层 error_code/message，不提取 message_id
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:853-871` — NackEvent 解析：正确提取 messageId/errorCode/errorMessage/retryAfterMs
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:1807-1815` — _extractRequestIdFromRawMessage：仅提取 request_id，不提取 message_id
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:1818-1826` — _routeEventToRequest：requestId 为 null 且活跃请求数 != 1 时静默丢弃
+  - `mobile/lib/features/chat/presentation/providers/chat_provider.dart:1297-1919` — event loop 处理 11 种事件，不含 NackEvent
+  - `mobile/lib/features/chat/presentation/providers/chat_provider.dart:1629-1656` — ErrorEvent 处理逻辑（finalizeRun phase:failed）已存在，NackEvent 可复用
+- **New issues**: 2 — C8 (P1: legacyStreamErrorPayload 3 路径缺 request_id，多请求并发错误静默丢弃), C9 (P1: Go message_nack 缺 request_id + Flutter chat_provider 未处理 NackEvent，服务端消息拒绝完全不可见)
+- **Findings**: C 域续探聚焦 Go ↔ Flutter WebSocket 消息路由契约。C6 fix（message_nack 替代 ad-hoc error）已在 chat_orchestrator.go 的 5 个验证路径落地，但存在两个严重遗漏：
+  1. **C8 — legacyStreamErrorPayload 3 路径残留**: chat_orchestrator_chatflow.go 的 resource_exhausted（行 307）/ duplicate_request（行 342）/ stream_recv_error（行 947）仍使用旧格式，不含 request_id。duplicate_request 路径尤其严重——sendChatAccepted 刚发送了含 request_id 的 message_ack（行 333），紧随的 error 却丢失了同一个 requestID。
+  2. **C9 — message_nack 双层断裂**: (A) 所有 8 处 message_nack 均含 message_id 但无 request_id，Flutter 的 _extractRequestIdFromRawMessage 仅检查 request_id → 路由失败（≥2 并发时丢弃）；(B) 即使路由成功，chat_provider 的 event loop 不处理 NackEvent → 事件静默穿过。两个断点叠加使 message_nack 机制在客户端完全不可见。
+  - 调用链完整追踪：Go gin.H → WriteJSON → WebSocket → Flutter json.decode → _extractRequestIdFromRawMessage（断点 1：无 request_id）→ _routeEventToRequest（断点 2：null requestId 丢弃）→ event loop（断点 3：NackEvent 未处理）。三层断裂，无一幸免。
+  - C6 修复为部分修复——只改了 chat_orchestrator.go 的验证路径（协议层），未改 chat_orchestrator_chatflow.go 的流错误路径（流层），也未补 request_id 或 Flutter NackEvent 处理。
+- **Opus pass rate**: pending (C8/C9)
+- **Next suggested domain**: G (Mock vs Real) — 11 轮未回探；或 K (错误处理/降级/边界) — 13 轮未回探
+
+### Round R51 — 2026-05-05T10:00
+- **Domain**: B (Riverpod Provider 健康度)
+- **Paths covered**:
+  - `mobile/lib/features/documents/presentation/providers/document_library_provider.dart:115-298` — _load() with on Exception catch, optimistic update + rollback
+  - `mobile/lib/features/seed_library/presentation/marketplace/marketplace_provider.dart:1-80` — error in state, screen renders CustomErrorWidget with retry ✅
+  - `mobile/lib/features/experience/presentation/providers/experience_provider.dart:1-28` — 4 FutureProviders, all consumed with .when() ✅
+  - `mobile/lib/features/insights/presentation/providers/directive_audit_provider.dart` + screen .when() ✅
+  - `mobile/lib/features/insights/presentation/providers/return_case_file_provider.dart` + card .when() ✅
+  - `mobile/lib/features/insights/presentation/providers/learning_path_provider.dart` + dialog .when() with empty handling ✅
+  - `mobile/lib/features/community/presentation/providers/community_provider.dart:547-738` — defensive degradation (by design), GroupDetailNotifier rethrow ✅
+  - `mobile/lib/features/focus/presentation/providers/focus_statistics_provider.dart:160-199` — ref.onDispose cancels subscription ✅
+- **New issues**: 0
+- **Findings**: B 域续探审查 12 个未覆盖 provider。全部遵循项目正确模式：FutureProvider .when() 三态、StateNotifier 乐观更新+rollback+rethrow、defensive degradation、proper dispose。12 项 agent 报告全部误报。
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: G (Mock vs Real) — 11 轮未回探；或 D (Python FSM) — 11 轮未回探
