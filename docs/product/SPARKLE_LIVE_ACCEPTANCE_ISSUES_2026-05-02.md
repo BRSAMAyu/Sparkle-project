@@ -2811,12 +2811,12 @@
 - **blast_radius**: 影响 D1 修复质量。若此 fix 合入 main：(1) ExecutionTracer 和 realtime_visualizer 在异常后永远收不到 GRAPH_END → 前端实时可视化卡住；(2) RedisCheckpointer 的 session 永远留在 in_progress → 下次同 session 请求会尝试 resume 中断的检查点 → 数据不一致。影响范围：所有使用 StateGraph 的 workflow（StandardChat、TaskDecomposition、MultiAgent）。
 - **suggested_fix_direction**: 将 RuntimeError raise 移到 GRAPH_END + checkpointer 清理之后（swap lines 309-313 和 314-321），或用 try/finally 确保 cleanup 始终执行：`try: ... if node_exception_occurred: raise RuntimeError(...) finally: await self._emit_event(GRAPH_END, ...); if self.checkpointer: await mark_completed(...)`
 - **discovered_by**: explorer-loop
-- **verified_by**: opus-independent-reviewer+2026-05-03T12:00:00Z
+- **verified_by**: opus-independent-reviewer+2026-05-05T10:30:00Z
 - **reviewer_note**: APPROVED — independent review confirms all 4 evidence references match code exactly. (1) statechart_engine.py:309-313 — `if node_exception_occurred: raise RuntimeError(...)` confirmed in uncommitted working tree diff. The flag is set at line 282 inside the `except Exception` handler after `break`. (2) statechart_engine.py:315 — `await self._emit_event(GraphEventType.GRAPH_END, self.name, state)` confirmed at line 315, positioned AFTER the raise at line 310. No try/finally wraps lines 309-322. (3) statechart_engine.py:316-321 — `if self.checkpointer:` block with `mark_completed` confirmed at lines 316-321, also after the raise. Full call chain traced: raise → execution_engine.py:1842-1844 re-raises via `graph_task.exception()` → orchestrator top-level handler. GRAPH_END never fires, checkpointer never marks completed. (4) test_statechart_engine.py:894-902 — normal flow test checks GRAPH_END; test at lines 748-770 uses `pytest.raises(RuntimeError)` and never asserts GRAPH_END was emitted. Root cause hypothesis confirmed: raise position before cleanup is the bug. Not "by design" — D1's intent is to propagate exceptions, not to skip lifecycle events and checkpoint cleanup. The checkpointer's `load_interrupted` (redis_checkpointer.py:133) relies on `incomplete` flag being cleared by `mark_completed` — skipping it leaves stale checkpoints that cause data inconsistency on next session resume. Not a duplicate of D1/D2/D3 — D1 is the original silent-swallos bug, D2 is edge target validation, D3 is max_steps truncation. This is a regression introduced by D1's fix.
 - **fix_commit**: 留空（fixer 填）
 
 ### ISSUE-20260505-1030-K10
-- **status**: discovered
+- **status**: rejected
 - **severity**: P2
 - **domain**: K
 - **title**: intelligent_task_service._recognize_intent() 静默吞所有异常返回硬编码默认值——任务建议 API 永不报错但可能返回无意义结果
@@ -2833,8 +2833,9 @@
 - **blast_radius**: 影响任务创建时的 AI 建议功能。用户收到无意义的建议（英文用户看到中文意图）但不影响核心任务创建流程（建议是辅助功能）。P2——降低 AI 功能可靠性但不阻塞北极星（7 天 0 基础学生仍需 AI 建议来高效创建学习任务，但可手动创建）。
 - **suggested_fix_direction**: (1) 添加 `import logging` + `logger = logging.getLogger(__name__)`；(2) `_recognize_intent()` 的 `except Exception` 块中先 `logger.error("LLM intent recognition failed", exc_info=True)`，然后抛出异常或返回可区分的 error marker；(3) `get_suggestions()` 捕获 `_recognize_intent()` 的异常并转换为 HTTP 503 + user-friendly error message；(4) 移除中文硬编码 fallback，改用英文通用默认值或直接报错。
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空（Opus 填）
-- **fix_commit**: 留空（fixer 填）
+- **verified_by**: 留空（驳回不填）
+- **fix_commit**: 留空（驳回不修复）
+- **reviewer_note**: REJECTED — 与 ISSUE-20260504-1002-K7 (status: verified, line 2105) 重复。K7 已覆盖完全相同的问题：(A) 同一代码位置 `intelligent_task_service.py:186-194` 的裸 `except Exception:` 吞异常；(B) 同一根因——降级策略无日志导致零可观测性；(C) 同一硬编码中文默认值 `{"intent": "日常学习", ...}`。K7 已由 opus-reviewer+2026-05-04T10:15 验证通过。K10 的独特贡献：(1) 文件未导入 logging 模块的证据 (lines 1-5)——深化了 K7 的"无日志"发现；(2) Flutter 端 `task_repository.dart:1546-1556` 的 `_handleDioError` 永远不可达分析——深化了用户无感知的证据；(3) P3→P2 严重度升级建议——基于英文用户看到中文默认值的 UX 影响。这三点应合并到 K7 的 evidence/symptom 中以提升其完整性，但不足以构成独立 bug。驳回，不删除。建议将 K10 的 3 点独特发现追加到 K7 的 evidence 和 severity 评估中。
 
 ### Round R25 — 2026-05-04T05:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
