@@ -1492,9 +1492,10 @@
   **(f) CLAUDE.md / Rule guards: NO VIOLATIONS.** No secrets, no hardcoded tokens, no cross-layer boundary violations. Go gateway schema.sql update follows established pattern. Rule guards all pass (AX pre-existing unrelated).
 
 ### ISSUE-20260504-1045-I5
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: I
+- **fixer_started_at**: 2026-05-04T00:10:00Z
 - **title**: Go schema.sql tasks 表 + sqlc Task struct 缺失 paused_at/paused_reason 列——I2 修复后未运行 make sync-db
 - **symptom**: Go gateway 查询 tasks 时，sqlc 生成的 GetTaskByID 查询不包含 paused_at/paused_reason 列，Task struct 也无对应字段。当前 Go handler 未主动使用这些字段，但若未来通过 Go proxy 透传 task 数据给 Flutter，paused 元数据会静默丢失。
 - **root_cause_hypothesis**: I2 修复通过 alembic migration de30c736266b 向 DB tasks 表添加了 paused_at 和 paused_reason 列，Python model 同步添加。但 `make sync-db`（pg_dump → schema.sql → sqlc gen）未运行，导致 Go schema.sql 的 tasks 表定义和 sqlc 生成的 Task struct 均停留在 I2 之前的状态。
