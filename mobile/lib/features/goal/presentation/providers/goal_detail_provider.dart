@@ -44,22 +44,34 @@ class GoalDetailNotifier extends StateNotifier<AsyncValue<GoalDetailData>> {
   Future<void> startNextStep() async {
     final taskId = state.valueOrNull?.todaysMinimalNextStep.taskId;
     if (taskId == null || taskId.isEmpty) return;
-    await _ref.read(apiClientProvider).post<dynamic>('/tasks/$taskId/start');
-    unawaited(load());
+    try {
+      await _ref.read(apiClientProvider).post<dynamic>('/tasks/$taskId/start');
+      unawaited(load());
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<void> undoStartNextStep() async {
     final taskId = state.valueOrNull?.todaysMinimalNextStep.taskId;
     if (taskId == null || taskId.isEmpty) return;
-    await _ref.read(apiClientProvider).post<dynamic>('/tasks/$taskId/pause');
-    unawaited(load());
+    try {
+      await _ref.read(apiClientProvider).post<dynamic>('/tasks/$taskId/pause');
+      unawaited(load());
+    } catch (e) {
+      rethrow;
+    }
   }
 
   Future<void> completeNextStep() async {
     final taskId = state.valueOrNull?.todaysMinimalNextStep.taskId;
     if (taskId == null || taskId.isEmpty) return;
-    await _ref.read(apiClientProvider).post<dynamic>('/tasks/$taskId/complete');
-    unawaited(load());
+    try {
+      await _ref.read(apiClientProvider).post<dynamic>('/tasks/$taskId/complete');
+      unawaited(load());
+    } catch (e) {
+      rethrow;
+    }
   }
 
   void confirmMinimumCriteria() {

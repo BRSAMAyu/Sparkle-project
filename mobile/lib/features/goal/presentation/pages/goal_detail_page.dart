@@ -303,23 +303,34 @@ class _TodayStepCard extends ConsumerWidget {
                 children: [
                   FilledButton.icon(
                     onPressed: () async {
-                      await ref
-                          .read(goalDetailProvider(goalId).notifier)
-                          .startNextStep();
-                      if (!context.mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.goalDetailStartedSnack),
-                          action: SnackBarAction(
-                            label: l10n.goalDetailUndo,
-                            onPressed: () => unawaited(
-                              ref
-                                  .read(goalDetailProvider(goalId).notifier)
-                                  .undoStartNextStep(),
+                      try {
+                        await ref
+                            .read(goalDetailProvider(goalId).notifier)
+                            .startNextStep();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.goalDetailStartedSnack),
+                            action: SnackBarAction(
+                              label: l10n.goalDetailUndo,
+                              onPressed: () => unawaited(
+                                ref
+                                    .read(goalDetailProvider(goalId).notifier)
+                                    .undoStartNextStep(),
+                              ),
                             ),
                           ),
-                        ),
-                      );
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${l10n.goalDetailStart}: $e',
+                            ),
+                          ),
+                        );
+                      }
                     },
                     icon: const Icon(Icons.play_arrow_rounded),
                     label: Text(l10n.goalDetailStart),
@@ -344,9 +355,20 @@ class _TodayStepCard extends ConsumerWidget {
                         ),
                       );
                       if (confirmed ?? false) {
-                        await ref
-                            .read(goalDetailProvider(goalId).notifier)
-                            .completeNextStep();
+                        try {
+                          await ref
+                              .read(goalDetailProvider(goalId).notifier)
+                              .completeNextStep();
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${l10n.goalDetailComplete}: $e',
+                              ),
+                            ),
+                          );
+                        }
                       }
                     },
                     icon: const Icon(Icons.check_rounded),

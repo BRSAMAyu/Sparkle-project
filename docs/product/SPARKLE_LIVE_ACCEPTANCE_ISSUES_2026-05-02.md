@@ -636,7 +636,7 @@
 - **verified_by**: -
 
 ### ISSUE-20260503-1500-K1
-- **status**: in_progress
+- **status**: ✅ FIXED
 - **severity**: P2
 - **domain**: K
 - **fixer_started_at**: 2026-05-03T16:25:00Z
@@ -655,6 +655,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-03T15:30
 - **fix_commit**:
+- **opus_review**: APPROVED by independent-review-agent at 2026-05-03T18:30Z
 
 ---
 
@@ -669,7 +670,9 @@
 | R1 | 2026-05-03T14:20 | P2-01 | ✅ Fixed | c7918a705 | ~5 min |
 | R2 | 2026-05-03T14:55 | ISSUE-20260503-1300-B1 | closed_already_resolved | c7918a705 (顺带) + 回归测试 | ~25 min |
 | R3 | 2026-05-03T15:10 | ISSUE-20260503-1401-H2 | ✅ Fixed | cbca7878d | ~5 min |
-| R4 | 2026-05-03T15:30 | ISSUE-20260503-1400-H1 | ✅ Fixed | (this commit) | ~15 min |
+| R4 | 2026-05-03T15:30 | ISSUE-20260503-1400-H1 | ✅ Fixed | 4a8b9f7cc | ~15 min |
+| R5 | 2026-05-03T16:00 | ISSUE-20260503-1403-H4 | ✅ Fixed | 31462e3af | ~5 min |
+| R6 | 2026-05-03T16:30 | ISSUE-20260503-1500-K1 | ✅ Fixed | (this commit) | ~10 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
