@@ -11,6 +11,7 @@ full planning/execution workflows while keeping backward-compatible entrypoints.
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from collections.abc import AsyncGenerator
 from typing import TYPE_CHECKING, Any
@@ -84,20 +85,34 @@ class MultiAgentWorkflowAdapter:
             session_id=session_id,
             context_versions={"tasks": "v0"},
         )
-        plan = await self.orchestrator.lang_graph_planner.plan(
-            message=message,
-            snapshot=snapshot,
-            user_id=user_id,
-            session_id=session_id,
-            conversation_history=context_data.get("conversation_context", {}).get("messages", []),
-            execution_feedback=None,
-            mode_config=config,
-            state_overrides={
-                "planning_mode": "langgraph",
-                "_planning_mode": True,
-            },
-            locale=locale,
-        )
+        try:
+            plan = await asyncio.wait_for(
+                self.orchestrator.lang_graph_planner.plan(
+                    message=message,
+                    snapshot=snapshot,
+                    user_id=user_id,
+                    session_id=session_id,
+                    conversation_history=context_data.get("conversation_context", {}).get("messages", []),
+                    execution_feedback=None,
+                    mode_config=config,
+                    state_overrides={
+                        "planning_mode": "langgraph",
+                        "_planning_mode": True,
+                    },
+                    locale=locale,
+                ),
+                timeout=10.0,
+            )
+        except TimeoutError:
+            logger.warning(
+                "LangGraph planner timed out in multi-agent adapter for session {}; using fallback",
+                session_id,
+            )
+            plan = self.orchestrator.lang_graph_planner.build_fallback_plan(
+                message=message,
+                user_id=user_id,
+                session_id=session_id,
+            )
 
         plan = self._apply_tool_policy(plan, config, context_data)
         result_holder["collaboration_mode"] = plan.collaboration_mode

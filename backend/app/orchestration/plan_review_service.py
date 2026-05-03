@@ -2196,12 +2196,26 @@ Please review this plan and provide your assessment."""
                     self.redis,
                     circuit_breaker=await self._get_langgraph_breaker(),
                 )
-                executable_plan = await planner.plan(
-                    message=replan_message,
-                    snapshot=snapshot,
-                    user_id=user_id,
-                    session_id=session_id,
-                )
+                try:
+                    executable_plan = await asyncio.wait_for(
+                        planner.plan(
+                            message=replan_message,
+                            snapshot=snapshot,
+                            user_id=user_id,
+                            session_id=session_id,
+                        ),
+                        timeout=10.0,
+                    )
+                except TimeoutError:
+                    logger.warning(
+                        "LangGraph planner timed out during replan for session {}; using fallback",
+                        session_id,
+                    )
+                    executable_plan = planner.build_fallback_plan(
+                        message=replan_message,
+                        user_id=user_id,
+                        session_id=session_id,
+                    )
 
                 user_context = {}
                 try:
