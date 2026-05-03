@@ -1484,3 +1484,22 @@
 | R17 | 2026-05-04T01:45 | D | 1 | pending (D2) | D1 修复回归——build_fallback_plan 缺少必需参数 |
 | R18 | 2026-05-04T01:00 | ISSUE-20260503-1601-E2 | closed | 540ba1b97 | ~25 min |
 
+
+### Round R18 — 2026-05-04T02:05
+- **Domain**: C (WebSocket / gRPC 契约一致性 — 重探)
+- **Paths covered**:
+  - proto/agent_service.proto (完整 proto 定义：18 RPC、所有 enum 类型)
+  - backend/app/services/agent_grpc_service.py (Python gRPC 实现，无 UnimplementedError)
+  - backend/gateway/internal/agent/client.go (Go gRPC 客户端，18 RPC 全部包装)
+  - backend/gateway/internal/handler/chat_orchestrator_responder.go (action_status 消息发送)
+  - mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart (40+ 消息类型处理)
+  - mobile/lib/features/chat/presentation/providers/chat_provider.dart:420-450 (UX envelope 提取)
+  - backend/app/orchestration/ux_envelope.py (UX envelope 生成，9 字段)
+  - backend/gateway/internal/handler/proxy_routes.go (72 route groups，50+ catch-all)
+- **New issues**: 0
+- **Findings**: C 域重探确认与 R3 一致——零问题。Proto 合约完整：所有 18 RPC 方法在 Python/Go/Flutter 三层实现。Action_status 消息类型一致（Go 发送 "action_status"，Flutter 在 line 912 处理 "action_status"——agent 2 的 "action_feedback_ack" 不匹配报告是误判）。UX envelope 正确传播：Python 生成 9 字段（ux_turn/result/followthrough/sources/evolution/continuity_banner/mode_explanation/collaboration_summary/adaptation_summary），Flutter chat_provider.dart:424-434 正确提取全部 9 字段。Go proxy 路由覆盖完整：72 个路由组，其中 50+ 使用 catch-all Any("/*path") 模式代理所有子路径，确保所有 Python API 端点可达。反馈枚举（FeedbackType/FeedbackReason/PlanReviewDecision/ContentReviewFeedbackType）在 proto/Python/Go/Flutter 四层一致。
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: 所有 12 域已完成至少一轮。建议回探 H（i18n）或 K（错误处理）验证最近修复，或继续跨域集成验证
+
+| R18 | 2026-05-04T02:05 | C | 0 | N/A | C 域重探确认——合约一致性优秀，零回归 |
+
