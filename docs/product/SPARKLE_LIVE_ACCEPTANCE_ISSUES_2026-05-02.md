@@ -370,7 +370,7 @@
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
 - **Discovered (not verified)**: 0
-- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 3 (I1/I2/I3) + 4 (L1/L2/L3/L4)
+- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 3 (I1/I2/I3) + 4 (L1/L2/L3/L4) + 3 (B1/B2/B3)
 
 ---
 
@@ -391,7 +391,7 @@
 | R10 | 2026-05-03T17:00 | F | 4 | 4/4 | Event bus consumers: F1 subscribe silent fail, F2 Preference bypass, F3 health blind spot, F4 missing stop() |
 | R11 | 2026-05-03T20:45 | F | 0 | N/A | F-domain 续探——PreferenceEventConsumer + GraphSyncWorker，无新增 |
 | R12 | 2026-05-03T21:00 | I | 3 | 3/3 | DB schema vs code field: I1 TaskStatus enum三层不一致, I2 paused_at缺失, I3 ReportReason不匹配 |
-| R13 | 2026-05-03T22:00 | L | 4 | pending | Governance rules vs real implementation: L1 BH orphan, L2 AV stale lists, L3 no secret guard, L4 shallow checks |
+| R13 | 2026-05-03T22:00 | L | 4 | 4/4 (L1/L2/L3/L4 verified) | Governance rules vs real implementation: L1 BH orphan, L2 AV stale lists, L3 no secret guard, L4 shallow checks |
 | R12 | 2026-05-03T21:00 | I | 3 | 3/3 | DB migration vs code field comparison — I1 TaskStatus enum, I2 paused_at/reason columns, I3 ReportReason enum |
 
 ---
@@ -1335,10 +1335,10 @@
   - api_client.dart (Dio get/post/put 方法——无类型安全保证, 依赖调用方正确指定泛型)
 - **New issues**: B1(P2), B2(P2), B3(P3)
 - **Findings**: Riverpod provider 生态整体健康——多数 StateNotifierProvider 正确使用 AsyncValue loading/data/error 模式并检查 mounted。发现 3 个值得修复的缺口: (1) experience_repository._payload() 对非 Map 响应返回 {}，结合 experience_models 的防御性 fromJson 工厂，形成完整的无声数据丢失链——4 个 experience FutureProvider 永远不进入 error 状态，API 契约变化完全不可探测; (2) AuroraPreferencesNotifier 的 build() 和 updatePreference() 使用 catch (_) 吞错——build 在 API 失败时返回全默认值（用户永远不知道看到的是默认值），updatePreference 乐观更新后 API 失败无声回退（用户看到选项自己弹回去）; (3) spineStatusBandProvider 用 catch (_) 吞没所有异常使 error 状态不可达。同时也发现 10+ 个 community_provider.dart 方法使用 try/catch+rethrow 模式——这虽然是正确的（让 UI 层处理错误），但 catch 块完全为空使其成为无操作包装。K1（goal_detail_provider startNextStep/completeNextStep 无错误处理）的 catch+rethrow 模式仍未修复——已在 R6 发现但 fix_commit 为空。provider 依赖链（home_growth_provider 的 4 层 .future 依赖）在错误传播方面行为正确——非 DioException 错误正确传播至 UI error 状态。
-- **Opus pass rate**: pending
+- **Opus pass rate**: 3/3 (B1/B2/B3 all APPROVED by opus-reviewer at 2026-05-04T00:15)
 - **Next suggested domain**: A (Flutter UI 端到端链路) 或 C (WebSocket / gRPC 契约)——所有域至少一轮后，建议回探早期域查回归
 
-| R14 | 2026-05-03T23:00 | B | 3 | pending | Riverpod Provider 健康度续探——B1 无声数据丢失, B2 乐观更新无声回退, B3 catch-all 吞错
+| R14 | 2026-05-03T23:00 | B | 3 | 3/3 (B1/B2/B3 verified) | Riverpod Provider 健康度续探——B1 无声数据丢失, B2 乐观更新无声回退, B3 catch-all 吞错 |
 
 ### Round R15 — 2026-05-04T00:00
 - **Domain**: B (Riverpod Provider 健康度 — 独立验证)
