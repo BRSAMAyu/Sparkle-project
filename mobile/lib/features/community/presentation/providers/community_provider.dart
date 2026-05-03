@@ -2046,11 +2046,13 @@ class CurrentUserStatusNotifier extends StateNotifier<UserStatus> {
   final CommunityRepository _repository;
 
   Future<void> updateStatus(UserStatus newStatus) async {
+    final previousStatus = state;
     try {
       state = newStatus;
       await _repository.updateStatus(newStatus);
     } catch (e) {
       debugPrint('Update Status Failed: $e');
+      state = previousStatus;
     }
   }
 }
