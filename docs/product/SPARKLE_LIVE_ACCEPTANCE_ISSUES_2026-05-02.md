@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 18:30 (R39 B-domain — 3 verified: B1/B2/B3; R40 G-domain — exhausted)
+> Updated: 2026-05-04 19:00 (R41 D-domain — 0 new issues, agent 0/8 false positive rate)
 
 ---
 
@@ -414,6 +414,7 @@
 | R38 | 2026-05-04T17:00 | F | 1 | 1/1 (F5 verified by opus-reviewer) | F 域续探——Task/Profile/Intervention 消费者子处理器吞噬异常旁路 EventBus DLQ/retry |
 | R39 | 2026-05-04T18:00 | B | 3 | 3/3 (B1/B2/B3 verified) | B 域续探——CurrentUserStatusNotifier 乐观更新无回滚 + confirmMinimumCriteria 纯本地无持久化 + GroupTasks/BlockedUsers 刷新丢数据 |
 | R40 | 2026-05-04T18:30 | G | 0 | N/A | G 域续探——mock_community_repository 核心方法全部正确实现，剩余空 stub 为非核心功能，domain exhausted |
+| R41 | 2026-05-04T19:00 | D | 0 | N/A | D 域续探——FSM 边界条件全面审查（8 处 agent 发现全部亲自验证为误报），orchestrator 健壮 |
 
 ---
 
@@ -2260,7 +2261,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1801-B2
-- **status**: in_progress
+- **status**: verified
 - **severity**: P1
 - **domain**: B
 - **fixer_started_at**: 2026-05-03T08:00:00Z
@@ -2280,6 +2281,31 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-04T18:15Z
 - **fix_commit**: 留空
+- **opus_review**: REJECTED by fix-reviewer at 2026-05-04T19:30Z
+- **rework_note**: |
+  **Root-cause fix (backend) is correct**: `PUT /experience/goal-detail/{goal_id}/criteria-status` correctly persists status into `goal.minimum_acceptance_criteria` JSON field. The `_criteria_payload()` function already reads `raw.get("status")` from the same field on load, so persistence flow is complete. Go gateway catch-all `experience.Any("/*path")` covers the new route. 4 Python tests pass and cover confirm/undo/invalid/404 flows correctly.
+
+  **BUT Flutter-side fix introduces the B5 pattern** (false-positive success + silent error swallowing). Three defects found:
+
+  1. **CRITICAL — `goal_detail_page.dart:71-85`**: `onConfirm` callback calls `confirmMinimumCriteria()` without `await`. The SnackBar "已确认" is shown unconditionally BEFORE the API call completes. If the API fails, the user sees false success. Compare with the `startNextStep` handler at lines 305-334 which correctly uses `async`/`await`/`try`/`catch` and only shows SnackBar after API success.
+
+  2. **MEDIUM — `goal_detail_provider.dart:91-92` and `110-111`**: `catch (e) { debugPrint(...); }` silently swallows all errors. Even if the UI DID `await`, there is no exception to catch. Compare with `startNextStep()` at line 50-52 which uses `rethrow` to propagate errors to the UI.
+
+  3. **MINOR — `goal_detail_page.dart:80-83`**: undo action in `SnackBarAction.onPressed` also calls `undoConfirmMinimumCriteria()` without `await` (less critical since undo-failure leaves state as "confirmed" which is the safer direction, but still the same pattern).
+
+  **No Flutter-side tests exist** for `goal_detail_provider.dart`, so this regression cannot be caught.
+
+  **Required rework**:
+  - `goal_detail_page.dart:71-85`: change `onConfirm` lambda to `() async`, `await confirmMinimumCriteria()`, show SnackBar only on success (pattern-match `startNextStep` at lines 305-334)
+  - `goal_detail_provider.dart:91-92,110-111`: change `catch (e) { debugPrint(...); }` to `rethrow` (pattern-match `startNextStep()`/`undoStartNextStep()`)
+  - Consider: change `MinimumCriteriaCard.onConfirm` from `VoidCallback` to `AsyncCallback` if loading state is desired on the button
+  - Add Flutter widget test for goal_detail_page confirmMinimumCriteria success/failure paths
+- **review_rules_check**:
+  - Rule guards: AX failed with 37 pre-existing missing route-tier comments in `proxy_routes.go` (not touched by this fix) — **unrelated**
+  - Python backend tests: 4/4 pass (test_b2_criteria_status_endpoint.py) — **PASS**
+  - Flutter tests: 0 tests exist for goal_detail_provider — **GAP**
+  - CLAUDE.md violations: none
+  - Cross-layer contracts: proto (N/A, REST endpoint), DB (no migration needed, uses existing JSON column), Go gateway (catch-all covers it), i18n (N/A) — **OK**
 
 ### ISSUE-20260504-1802-B3
 - **status**: verified
@@ -2644,3 +2670,24 @@
   6. **42 个仓库 demo 支持分布**: 仅 auth/community/cognitive/capsule/aurora/accountability 有 demo 支持——其余依赖真实后端 API，为设计选择
 - **Opus pass rate**: N/A (0 new issues)
 - **Next suggested domain**: D (Python orchestrator FSM) — 12 轮未回探；或 J (cold start / empty state) — 8 轮未回探
+
+### Round R41 — 2026-05-04T19:00
+- **Domain**: D (Python orchestrator FSM 流转完整性 — 续探)
+- **Paths covered**:
+  - `backend/app/orchestration/statechart_engine.py:206-366` — checkpoint resume flow, node validation, state merge
+  - `backend/app/orchestration/executor.py:230-269,400-449,685-830,874-906` — DAG parallel execution, output store, parameter resolution, tool timeout
+  - `backend/app/orchestration/dual_core_router.py:478-507` — Aurora preference string handling
+  - `backend/app/orchestration/experience_actuator.py:240-289` — decision_context None guard
+- **New issues**: 0
+- **Findings**: D 域续探对 FSM 边界条件进行二次深度审查。Explore agent 报告 8 处潜在问题，全部经亲自 Read 验证为误报：
+  1. **#1 (routing to None)**: FALSE POSITIVE — `statechart_engine.py:291` callable edge 返回 None 时，下一循环 `current_node_name not in self.edges` → 进入 `__end__` 分支，隐式但正确处理
+  2. **#2 (parallel race condition)**: FALSE POSITIVE — agent 引用 410-430（实际为 tool timeout），真正并行执行在 685-830。`asyncio.gather` 完成后才在顺序 for loop 中写入 `output_store`（line 746-776），无竞态
+  3. **#3 (DAG missing output keys)**: FALSE POSITIVE — required step 失败时 `layer_aborted=True` → `break`（line 798-815），后续层不再执行。非 required 失败是设计选择（标记为 optional）
+  4. **#4 (experience actuator None)**: FALSE POSITIVE — line 252 `if not isinstance(decision_context, dict): return {}` 显式 guard
+  5. **#5 (session_info None)**: FALSE POSITIVE — line 238 `session_info.get(...) if session_info is not None else None` 显式 None 检查
+  6. **#6 (dual core router enum)**: FALSE POSITIVE — line 488-491 是字符串偏好读取（带默认值），非 Python enum。用于 prompt assembly，错误值仅影响语气，不影响逻辑
+  7. **#7 (DAG param type mismatch)**: FALSE POSITIVE — `$ref:` 占位符替换为目标类型是设计意图，`params` 是 `dict[str, Any]`
+  8. **#8 (checkpoint resume validation)**: FALSE POSITIVE — line 218 `if checkpoint_node in self.nodes` 验证节点存在；空字符串/无效节点名不会匹配
+- **Agent quality**: 0/8 genuine findings (100% false positive rate) — agent 倾向于将防御性编码模式误判为 bug
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: J (cold start / empty state) — 9 轮未回探；或 A (Flutter UI E2E) — 8 轮未回探
