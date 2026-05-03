@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 10:45 (R32 H-domain exploration — 2 discovered: H7 H6-deferred residuals / H8 sprint_history hardcoded)
+> Updated: 2026-05-04 10:45 (R32 H-domain exploration — 2 verified: H7 H6-deferred residuals / H8 sprint_history hardcoded)
 
 ---
 
@@ -405,7 +405,7 @@
 | R29 | 2026-05-04T09:30 | G | 3 | 3/3 | G 域续探——reportMessage/claimTask/searchUsers/sendFriendRequest 等多处空 stub → 虚假成功 / 功能不可用 |
 | R30 | 2026-05-04T09:45 | E | 3 | 3/3 | E 域续探——双核路由 drill 缺失 + stage38 Prometheus 标签不一致 + privacy drill 内联 type 崩溃 |
 | R31 | 2026-05-04T10:15 | K | 4 | 3/4 (K6/K7/K8 verified, K5 rejected — duplicate of B3) | K 域续探——4 处 silent error swallowing: Flutter + 3× Python except:pass/return 零日志 |
-| R32 | 2026-05-04T10:45 | H | 2 | pending | H 域续探——H6 deferred residuals (5 strings in 2 files) + sprint_history loading/空状态硬编码 (4 strings) |
+| R32 | 2026-05-04T10:45 | H | 2 | 2/2 (H7/H8 verified) | H 域续探——H6 deferred residuals (5 strings in 2 files) + sprint_history loading/空状态硬编码 (4 strings) |
 
 ---
 
@@ -1994,7 +1994,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1030-H7
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: H
 - **title**: H6 修复后 user_search_screen 和 group_tasks_screen 仍残留 5 处硬编码英文/中文——H6 reviewer 明确标注为"out of scope"
@@ -2011,11 +2011,11 @@
 - **blast_radius**: 影响社区模块两个核心交互界面——用户搜索（好友发现入口）和群组任务（任务协作入口）的中文用户体验。中英混搭降低产品完成度，尤其在同一面板内出现时（如搜索错误面板："搜索失败，请检查网络后重试"（中文）+ "重试"（中文button）+ 其他英文UI）。对北极星有轻微影响——不阻断核心学习流程，但损害社区功能的品质感
 - **suggested_fix_direction**: 将 5 处字符串替换为 `I18nService.instance.isChinese` 模式：(1) 'Send Friend Request' → `zh ? '发送好友请求' : 'Send Friend Request'`；(2) '重试' → `zh ? '重试' : 'Retry'`；(3) 'Claim' → `zh ? '认领' : 'Claim'`；(4) 'Complete' → `zh ? '完成' : 'Complete'`；(5) 'Create Group Task' → `zh ? '创建群组任务' : 'Create Group Task'`
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T10:45
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1031-H8
-- **status**: discovered
+- **status**: verified
 - **severity**: P3
 - **domain**: H
 - **title**: sprint_history_screen 的 loading/空状态文案为硬编码英文——文件内其他字符串已通过 AppLocalizations 国际化
@@ -2031,7 +2031,7 @@
 - **blast_radius**: 影响冲刺历史页面的中文用户体验。该页面是 plan 模块的核心入口（`/plans/sprint/history`），无历史记录的新用户每次进入都会看到全英文空状态。对北极星有轻微影响——冲刺历史是非核心功能，但 i18n 不一致降低产品完成度
 - **suggested_fix_direction**: (1) loading text 改为 `I18nService.instance.isChinese ? '加载冲刺历史...' : 'Loading sprint history...'` 或添加 `l10n.sprintHistoryLoading` getter；(2) 空状态 title 使用已有的 `l10n.noSprintHistory`；(3) description 和 actionText 添加对应的 l10n getter 或使用 `I18nService.instance.isChinese` 内联模式
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T10:45
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
