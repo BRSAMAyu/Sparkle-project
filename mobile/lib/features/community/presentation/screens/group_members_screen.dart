@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -454,26 +455,26 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                   if (widget.myRole == GroupRole.owner) {
                     if (member.role == GroupRole.admin) {
                       items.add(
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'demote',
                           child: Row(
                             children: [
                               Icon(Icons.arrow_downward, size: 18),
                               SizedBox(width: DS.sm),
-                              Text('Demote to Member'),
+                              Text(I18nService.instance.isChinese ? '降为普通成员' : 'Demote to Member'),
                             ],
                           ),
                         ),
                       );
                     } else {
                       items.add(
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'promote',
                           child: Row(
                             children: [
                               Icon(Icons.arrow_upward, size: 18),
                               SizedBox(width: DS.sm),
-                              Text('Promote to Admin'),
+                              Text(I18nService.instance.isChinese ? '晋升为管理员' : 'Promote to Admin'),
                             ],
                           ),
                         ),
@@ -491,7 +492,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                             ),
                             const SizedBox(width: DS.sm),
                             Text(
-                              'Transfer Ownership',
+                              I18nService.instance.isChinese ? '转让群主' : 'Transfer Ownership',
                               style: TextStyle(color: DS.warning),
                             ),
                           ],
@@ -590,9 +591,10 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
   ) async {
     switch (action) {
       case 'promote':
+        final zh = I18nService.instance.isChinese;
         final confirmed = await _showConfirmDialog(
-          'Promote ${member.user.displayName}?',
-          'This member will become an admin and can manage the group.',
+          zh ? '晋升 ${member.user.displayName}？' : 'Promote ${member.user.displayName}?',
+          zh ? '此成员将成为管理员，可以管理群组。' : 'This member will become an admin and can manage the group.',
         );
         if ((confirmed ?? false) && mounted) {
           try {
@@ -602,20 +604,21 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
             if (mounted) {
               AppFeedback.success(
                 context,
-                '${member.user.displayName} promoted to admin',
+                zh ? '${member.user.displayName} 已晋升为管理员' : '${member.user.displayName} promoted to admin',
               );
             }
           } catch (e) {
             if (mounted) {
-              AppFeedback.error(context, 'Failed to promote: $e');
+              AppFeedback.error(context, zh ? '晋升失败：$e' : 'Failed to promote: $e');
             }
           }
         }
 
       case 'demote':
+        final zh = I18nService.instance.isChinese;
         final confirmed = await _showConfirmDialog(
-          'Demote ${member.user.displayName}?',
-          'This admin will become a regular member.',
+          zh ? '降权 ${member.user.displayName}？' : 'Demote ${member.user.displayName}?',
+          zh ? '此管理员将成为普通成员。' : 'This admin will become a regular member.',
         );
         if ((confirmed ?? false) && mounted) {
           try {
@@ -625,20 +628,21 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
             if (mounted) {
               AppFeedback.success(
                 context,
-                '${member.user.displayName} demoted to member',
+                zh ? '${member.user.displayName} 已降为普通成员' : '${member.user.displayName} demoted to member',
               );
             }
           } catch (e) {
             if (mounted) {
-              AppFeedback.error(context, 'Failed to demote: $e');
+              AppFeedback.error(context, zh ? '降权失败：$e' : 'Failed to demote: $e');
             }
           }
         }
 
       case 'transfer':
+        final zh = I18nService.instance.isChinese;
         final confirmed = await _showConfirmDialog(
-          'Transfer ownership to ${member.user.displayName}?',
-          'You will become a regular member. This action cannot be undone.',
+          zh ? '将群主转让给 ${member.user.displayName}？' : 'Transfer ownership to ${member.user.displayName}?',
+          zh ? '你将成为普通成员。此操作无法撤销。' : 'You will become a regular member. This action cannot be undone.',
           isDestructive: true,
         );
         if ((confirmed ?? false) && mounted) {
@@ -649,13 +653,13 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
             if (mounted) {
               AppFeedback.success(
                 context,
-                'Ownership transferred to ${member.user.displayName}',
+                zh ? '群主已转让给 ${member.user.displayName}' : 'Ownership transferred to ${member.user.displayName}',
               );
               context.pop(); // Go back to group detail
             }
           } catch (e) {
             if (mounted) {
-              AppFeedback.error(context, 'Failed to transfer: $e');
+              AppFeedback.error(context, zh ? '转让失败：$e' : 'Failed to transfer: $e');
             }
           }
         }

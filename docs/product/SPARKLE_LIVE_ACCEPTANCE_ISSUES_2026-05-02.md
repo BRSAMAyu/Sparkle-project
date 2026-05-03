@@ -450,7 +450,7 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1400-H1
-- **status**: in_progress
+- **status**: ✅ FIXED
 - **severity**: P1
 - **domain**: H
 - **title**: 群组成员管理操作（晋升/降权/转让群主）弹窗和 snackbar 全部硬编码英文，与同文件已 i18n 的踢出/静音/警告操作不一致
@@ -469,7 +469,8 @@
 - **suggested_fix_direction**: 在 AppLocalizations ARB 文件中添加 gmPromote/GmDemote/GmTransfer 系列字符串，然后在 group_members_screen.dart 中替换硬编码为 context.l10n 调用
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer-1+2026-05-03T14:10
-- **fix_commit**:
+- **fix_commit**: 674aa6887
+- **opus_review**: APPROVED by independent-auditor-1 at 2026-05-03T15:30 — all promote/demote/transfer hardcoded English replaced with `I18nService.instance.isChinese` bilingual pattern (documented project strategy per MEMORY.md i18n strategy). kick/mute/warn use `context.l10n`; promote/demote/transfer use `I18nService` inline — both are first-class project patterns (ISSUE-20260503-1402-H3 reviewer explicitly rejected upgrading isChinese to context.l10n as unnecessary). No cross-layer impact. Rule I18N passes. Rule AX failure is pre-existing unrelated (proxy_routes.go route-tier comments). No CLAUDE.md or rule guard violations. Note: file still has ~10 minor hardcoded English strings outside the issue scope (Search members, No members, Retry, OWNER/ADMIN badges, flame stats) for future cleanup.
 
 ### ISSUE-20260503-1401-H2
 - **status**: closed
@@ -581,6 +582,7 @@
 | R1 | 2026-05-03T14:20 | P2-01 | ✅ Fixed | c7918a705 | ~5 min |
 | R2 | 2026-05-03T14:55 | ISSUE-20260503-1300-B1 | closed_already_resolved | c7918a705 (顺带) + 回归测试 | ~25 min |
 | R3 | 2026-05-03T15:10 | ISSUE-20260503-1401-H2 | ✅ Fixed | cbca7878d | ~5 min |
+| R4 | 2026-05-03T15:30 | ISSUE-20260503-1400-H1 | ✅ Fixed | (this commit) | ~15 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
