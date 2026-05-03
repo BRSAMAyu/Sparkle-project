@@ -182,7 +182,28 @@ func TestGeneratedEnumScannersAndNullValues(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, "EXPIRED", got)
 		}},
-		{name: "Depthlevel", exercise: func(t *testing.T) {
+		{name: "Taskstatus", exercise: func(t *testing.T) {
+				// ISSUE-20260503-2100-I1: all 7 values must be scannable
+				for _, status := range []string{"PENDING", "IN_PROGRESS", "PAUSED", "RESTORE", "STUCK", "COMPLETED", "ABANDONED"} {
+					var value Taskstatus
+					require.NoError(t, value.Scan(status))
+					require.Equal(t, Taskstatus(status), value)
+				}
+				var value Taskstatus
+				require.Error(t, value.Scan(7))
+				var nullable NullTaskstatus
+				require.NoError(t, nullable.Scan(nil))
+				require.False(t, nullable.Valid)
+				got, err := nullable.Value()
+				require.NoError(t, err)
+				require.Nil(t, got)
+				require.NoError(t, nullable.Scan("RESTORE"))
+				require.True(t, nullable.Valid)
+				got, err = nullable.Value()
+				require.NoError(t, err)
+				require.Equal(t, "RESTORE", got)
+			}},
+			{name: "Depthlevel", exercise: func(t *testing.T) {
 			var value Depthlevel
 			require.NoError(t, value.Scan("SHALLOW"))
 			require.Equal(t, Depthlevel("SHALLOW"), value)

@@ -130,7 +130,9 @@ CREATE TYPE achievementtype AS ENUM (
     'CONTRACT',
     'STUDY_TIME',
     'NODE_EXPLORE',
-    'SPRINT'
+    'SPRINT',
+    'planning',
+    'PLANNING'
 );
 
 
@@ -208,6 +210,34 @@ CREATE TYPE contractstatus AS ENUM (
 ALTER TYPE contractstatus OWNER TO postgres;
 
 --
+-- Name: delivery_channel_enum; Type: TYPE; Schema: public; Owner: brsama
+--
+
+CREATE TYPE delivery_channel_enum AS ENUM (
+    'CHAT',
+    'PUSH',
+    'IN_APP',
+    'FOCUS_MODE'
+);
+
+
+ALTER TYPE delivery_channel_enum OWNER TO brsama;
+
+--
+-- Name: delivery_strategy_enum; Type: TYPE; Schema: public; Owner: brsama
+--
+
+CREATE TYPE delivery_strategy_enum AS ENUM (
+    'CURIOUS',
+    'SUPPORTIVE',
+    'DIRECT',
+    'MICRO_RESTART'
+);
+
+
+ALTER TYPE delivery_strategy_enum OWNER TO brsama;
+
+--
 -- Name: depthlevel; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -258,6 +288,19 @@ CREATE TYPE friendshipstatus AS ENUM (
 ALTER TYPE friendshipstatus OWNER TO postgres;
 
 --
+-- Name: groupfiletrustlevel; Type: TYPE; Schema: public; Owner: brsama
+--
+
+CREATE TYPE groupfiletrustlevel AS ENUM (
+    'official',
+    'verified',
+    'member'
+);
+
+
+ALTER TYPE groupfiletrustlevel OWNER TO brsama;
+
+--
 -- Name: grouprole; Type: TYPE; Schema: public; Owner: postgres
 --
 
@@ -282,6 +325,52 @@ CREATE TYPE grouptype AS ENUM (
 
 
 ALTER TYPE grouptype OWNER TO postgres;
+
+--
+-- Name: intervention_acceptance_enum; Type: TYPE; Schema: public; Owner: brsama
+--
+
+CREATE TYPE intervention_acceptance_enum AS ENUM (
+    'CREATED',
+    'DELIVERED',
+    'SEEN',
+    'DISMISSED',
+    'SNOOZED',
+    'ACCEPTED',
+    'ACTED'
+);
+
+
+ALTER TYPE intervention_acceptance_enum OWNER TO brsama;
+
+--
+-- Name: intervention_outcome_enum; Type: TYPE; Schema: public; Owner: brsama
+--
+
+CREATE TYPE intervention_outcome_enum AS ENUM (
+    'PENDING',
+    'EFFECTIVE',
+    'INEFFECTIVE',
+    'UNKNOWN'
+);
+
+
+ALTER TYPE intervention_outcome_enum OWNER TO brsama;
+
+--
+-- Name: intervention_trigger_enum; Type: TYPE; Schema: public; Owner: brsama
+--
+
+CREATE TYPE intervention_trigger_enum AS ENUM (
+    'CONCEPT_GAP',
+    'PLAN_RISK',
+    'STALL_PATTERN',
+    'OVERLOAD',
+    'MISALIGNMENT'
+);
+
+
+ALTER TYPE intervention_trigger_enum OWNER TO brsama;
 
 --
 -- Name: messagerole; Type: TYPE; Schema: public; Owner: postgres
@@ -463,7 +552,10 @@ CREATE TYPE taskstatus AS ENUM (
     'PENDING',
     'IN_PROGRESS',
     'COMPLETED',
-    'ABANDONED'
+    'ABANDONED',
+    'STUCK',
+    'PAUSED',
+    'RESTORE'
 );
 
 
@@ -558,6 +650,21 @@ CREATE TYPE visualelementunlocksource AS ENUM (
 
 
 ALTER TYPE visualelementunlocksource OWNER TO postgres;
+
+--
+-- Name: admin_audit_log_prevent_mutation(); Type: FUNCTION; Schema: public; Owner: brsama
+--
+
+CREATE FUNCTION admin_audit_log_prevent_mutation() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+            BEGIN
+                RAISE EXCEPTION 'admin_audit_log is append-only';
+            END;
+            $$;
+
+
+ALTER FUNCTION admin_audit_log_prevent_mutation() OWNER TO brsama;
 
 SET default_tablespace = '';
 
@@ -703,6 +810,38 @@ CREATE TABLE accountability_partnership (
 ALTER TABLE accountability_partnership OWNER TO postgres;
 
 --
+-- Name: accountability_policies; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE accountability_policies (
+    policy_id character varying(128) NOT NULL,
+    user_id uuid NOT NULL,
+    commitment_id uuid NOT NULL,
+    policy_version character varying(32) NOT NULL,
+    policy_type character varying(64) NOT NULL,
+    trigger_type character varying(64) NOT NULL,
+    action_type character varying(64) NOT NULL,
+    ir_payload json NOT NULL,
+    ir_hash character varying(64) NOT NULL,
+    next_trigger_at timestamp without time zone,
+    last_triggered_at timestamp without time zone,
+    cooldown_until timestamp without time zone,
+    last_event_key character varying(128),
+    execution_count integer DEFAULT 0 NOT NULL,
+    is_enabled boolean DEFAULT true NOT NULL,
+    is_shadow boolean DEFAULT false NOT NULL,
+    revoked_at timestamp without time zone,
+    last_skip_reason character varying(64),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE accountability_policies OWNER TO brsama;
+
+--
 -- Name: achievements; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -739,6 +878,37 @@ CREATE TABLE achievements (
 
 
 ALTER TABLE achievements OWNER TO postgres;
+
+--
+-- Name: admin_audit_log; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE admin_audit_log (
+    id uuid NOT NULL,
+    admin_user_id uuid,
+    action character varying(160) NOT NULL,
+    category character varying(80) NOT NULL,
+    risk character varying(20) NOT NULL,
+    method character varying(10) NOT NULL,
+    path character varying(500) NOT NULL,
+    query_hash character varying(64),
+    status_code integer NOT NULL,
+    outcome character varying(20) NOT NULL,
+    duration_ms double precision NOT NULL,
+    ip_address character varying(45),
+    user_agent text,
+    request_id character varying(100),
+    trace_id character varying(100),
+    actor_claims json,
+    error_message text,
+    details json,
+    occurred_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    retention_until timestamp without time zone DEFAULT (CURRENT_TIMESTAMP + '90 days'::interval) NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE admin_audit_log OWNER TO brsama;
 
 --
 -- Name: agent_execution_stats; Type: TABLE; Schema: public; Owner: postgres
@@ -904,6 +1074,164 @@ CREATE TABLE asset_suggestion_logs (
 ALTER TABLE asset_suggestion_logs OWNER TO postgres;
 
 --
+-- Name: aurora_core_session_snapshots; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE aurora_core_session_snapshots (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    session_id character varying(128) NOT NULL,
+    user_id character varying(128) NOT NULL,
+    conversation_id character varying(128),
+    surface character varying(64) NOT NULL,
+    status character varying(32) NOT NULL,
+    stage character varying(32) NOT NULL,
+    resume_token_hash character varying(64),
+    last_activity_at timestamp without time zone NOT NULL,
+    expires_at timestamp without time zone NOT NULL,
+    payload jsonb NOT NULL,
+    metadata jsonb NOT NULL
+);
+
+
+ALTER TABLE aurora_core_session_snapshots OWNER TO brsama;
+
+--
+-- Name: aurora_decision_telemetry; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE aurora_decision_telemetry (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    decision_id character varying(36) NOT NULL,
+    user_id uuid NOT NULL,
+    surface character varying(64) NOT NULL,
+    conversation_id character varying(128) NOT NULL,
+    request_id character varying(128),
+    decided_at timestamp without time zone NOT NULL,
+    wake_score double precision DEFAULT '0'::double precision NOT NULL,
+    energy_level character varying(16) DEFAULT 'light'::character varying NOT NULL,
+    strategy_payload jsonb NOT NULL,
+    expression_payload jsonb NOT NULL,
+    context_mask jsonb NOT NULL,
+    action character varying(64) NOT NULL,
+    chat_directive_core jsonb NOT NULL,
+    standard_layer_contract jsonb NOT NULL,
+    strategy_confidence double precision DEFAULT '0.7'::double precision NOT NULL,
+    outcome character varying(32),
+    outcome_filled_at timestamp without time zone,
+    outcome_reason text
+);
+
+
+ALTER TABLE aurora_decision_telemetry OWNER TO brsama;
+
+--
+-- Name: aurora_judgment_records; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE aurora_judgment_records (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    task_sufficiency_score double precision NOT NULL,
+    task_missing_dimensions json DEFAULT '[]'::json NOT NULL,
+    context_sufficiency_score double precision NOT NULL,
+    context_missing_dimensions json DEFAULT '[]'::json NOT NULL,
+    judge_version character varying(16) DEFAULT 'v1'::character varying NOT NULL,
+    computed_at timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE aurora_judgment_records OWNER TO brsama;
+
+--
+-- Name: aurora_policy_versions; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE aurora_policy_versions (
+    id character varying(128) NOT NULL,
+    version character varying(64) NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    author character varying(64) NOT NULL,
+    changelog jsonb NOT NULL,
+    persona_invariants jsonb NOT NULL,
+    audit_invariants jsonb NOT NULL,
+    proactive_policy jsonb NOT NULL,
+    reconciliation_policy jsonb NOT NULL,
+    continuous_learning_policy jsonb NOT NULL,
+    parameter_write_authority jsonb NOT NULL,
+    interaction_model_registry jsonb NOT NULL,
+    materiality_threshold double precision NOT NULL,
+    default_rollback_anchor_schema jsonb NOT NULL
+);
+
+
+ALTER TABLE aurora_policy_versions OWNER TO brsama;
+
+--
+-- Name: aurora_scheduled_wakes; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE aurora_scheduled_wakes (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    wake_id character varying(128) NOT NULL,
+    user_id uuid NOT NULL,
+    surface character varying(64) NOT NULL,
+    conversation_id character varying(128) NOT NULL,
+    session_id uuid,
+    runtime_session_id character varying(128),
+    scheduled_at timestamp without time zone NOT NULL,
+    reason text NOT NULL,
+    planned_action character varying(128) NOT NULL,
+    status character varying(32) NOT NULL,
+    executed_at timestamp without time zone,
+    urgency_score double precision DEFAULT '0.5'::double precision NOT NULL,
+    payload jsonb NOT NULL,
+    metadata jsonb NOT NULL,
+    suppression_reason character varying(64)
+);
+
+
+ALTER TABLE aurora_scheduled_wakes OWNER TO brsama;
+
+--
+-- Name: aurora_state_snapshots; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE aurora_state_snapshots (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    surface character varying(64) NOT NULL,
+    conversation_id character varying(128) NOT NULL,
+    runtime_session_id character varying(128),
+    snapshot_version integer DEFAULT 1 NOT NULL,
+    snapshot_at timestamp without time zone NOT NULL,
+    user_model_snapshot jsonb NOT NULL,
+    informational_tensions jsonb NOT NULL,
+    current_intent jsonb,
+    latent_threads jsonb NOT NULL,
+    activity_profile jsonb NOT NULL,
+    last_decision_at timestamp without time zone,
+    metadata jsonb NOT NULL
+);
+
+
+ALTER TABLE aurora_state_snapshots OWNER TO brsama;
+
+--
 -- Name: auth_audit_log; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1043,6 +1371,27 @@ CREATE TABLE calendar_events (
 ALTER TABLE calendar_events OWNER TO postgres;
 
 --
+-- Name: candidate_action_feedback; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE candidate_action_feedback (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    candidate_id character varying(64) NOT NULL,
+    action_type character varying(32) NOT NULL,
+    feedback_type character varying(16) NOT NULL,
+    executed boolean DEFAULT false NOT NULL,
+    completion_result jsonb,
+    context_snapshot jsonb NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE candidate_action_feedback OWNER TO brsama;
+
+--
 -- Name: capsule_favorites; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1109,6 +1458,124 @@ CREATE TABLE capsule_generation_jobs (
 
 
 ALTER TABLE capsule_generation_jobs OWNER TO postgres;
+
+--
+-- Name: card_adoption_records; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE card_adoption_records (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    share_record_id uuid NOT NULL,
+    adopter_user_id uuid NOT NULL,
+    adopted_root_card_id uuid,
+    import_mode character varying(24) NOT NULL,
+    attribution_payload jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+ALTER TABLE card_adoption_records OWNER TO brsama;
+
+--
+-- Name: card_edges; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE card_edges (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    from_card_id uuid NOT NULL,
+    to_card_id uuid NOT NULL,
+    edge_type character varying(32) NOT NULL,
+    binding_mode character varying(24) DEFAULT '''OWNED'''::character varying NOT NULL,
+    order_index integer,
+    weight double precision,
+    temporal_window jsonb,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    removed_at timestamp without time zone
+);
+
+
+ALTER TABLE card_edges OWNER TO brsama;
+
+--
+-- Name: card_share_records; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE card_share_records (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    snapshot_id uuid NOT NULL,
+    root_card_id uuid,
+    shared_by_user_id uuid NOT NULL,
+    target_user_id uuid,
+    group_id uuid,
+    scope character varying(24) NOT NULL,
+    permission character varying(24) DEFAULT '''ADOPT'''::character varying NOT NULL,
+    message character varying(500),
+    adoption_count integer DEFAULT 0 NOT NULL,
+    view_count integer DEFAULT 0 NOT NULL,
+    revoked_at timestamp without time zone,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+ALTER TABLE card_share_records OWNER TO brsama;
+
+--
+-- Name: card_snapshots; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE card_snapshots (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    root_card_id uuid,
+    source_owner_id uuid,
+    source_card_type character varying(32) NOT NULL,
+    schema_version character varying(16) DEFAULT '''1.0'''::character varying NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+ALTER TABLE card_snapshots OWNER TO brsama;
+
+--
+-- Name: cards; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE cards (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    card_type character varying(32) NOT NULL,
+    owner_id uuid NOT NULL,
+    holder_id uuid NOT NULL,
+    version integer DEFAULT 1 NOT NULL,
+    schema_version character varying(16) DEFAULT '''3.0'''::character varying NOT NULL,
+    lifecycle_status character varying(24) DEFAULT '''DRAFT'''::character varying NOT NULL,
+    visibility character varying(24) DEFAULT '''PRIVATE'''::character varying NOT NULL,
+    tags jsonb DEFAULT '[]'::jsonb NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL,
+    source_type character varying(24) DEFAULT '''ORIGINAL'''::character varying NOT NULL,
+    origin_card_id uuid,
+    origin_snapshot_id uuid,
+    created_by character varying(16) DEFAULT '''AI'''::character varying NOT NULL,
+    updated_by character varying(16) DEFAULT '''AI'''::character varying NOT NULL,
+    archived_at timestamp without time zone
+);
+
+
+ALTER TABLE cards OWNER TO brsama;
 
 --
 -- Name: chat_messages; Type: TABLE; Schema: public; Owner: postgres
@@ -1198,11 +1665,74 @@ CREATE TABLE collaborative_galaxies (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    group_id uuid,
+    galaxy_scope character varying(32) DEFAULT 'shared'::character varying NOT NULL
 );
 
 
 ALTER TABLE collaborative_galaxies OWNER TO postgres;
+
+--
+-- Name: commitments; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE commitments (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    description text NOT NULL,
+    node_id character varying(255) NOT NULL,
+    success_criteria text NOT NULL,
+    status character varying(32) NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    activated_at timestamp without time zone,
+    resolved_at timestamp without time zone,
+    resolution text,
+    deadline timestamp without time zone NOT NULL,
+    milestone_ids jsonb NOT NULL,
+    witness_ids jsonb NOT NULL,
+    window_override character varying(32),
+    evidence_refs jsonb NOT NULL,
+    projection_policy character varying(64) NOT NULL,
+    write_path character varying(64) NOT NULL,
+    shareability character varying(64) NOT NULL
+);
+
+
+ALTER TABLE commitments OWNER TO brsama;
+
+--
+-- Name: community_aggregate_signals; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE community_aggregate_signals (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    signal_id character varying(128) NOT NULL,
+    cohort_id character varying(128) NOT NULL,
+    cohort_key character varying(256) NOT NULL,
+    cohort_criteria jsonb NOT NULL,
+    signal_type character varying(64) NOT NULL,
+    stat_name character varying(128) NOT NULL,
+    cohort_size integer NOT NULL,
+    min_cohort_size integer NOT NULL,
+    privacy_tier character varying(32) NOT NULL,
+    value double precision,
+    noise_std double precision NOT NULL,
+    confidence_interval jsonb NOT NULL,
+    pattern jsonb NOT NULL,
+    observation jsonb NOT NULL,
+    privacy_cost double precision NOT NULL,
+    status character varying(32) NOT NULL,
+    generated_at timestamp without time zone NOT NULL,
+    expires_at timestamp without time zone,
+    metadata jsonb NOT NULL
+);
+
+
+ALTER TABLE community_aggregate_signals OWNER TO brsama;
 
 --
 -- Name: compliance_check_logs; Type: TABLE; Schema: public; Owner: postgres
@@ -1224,6 +1754,31 @@ CREATE TABLE compliance_check_logs (
 
 
 ALTER TABLE compliance_check_logs OWNER TO postgres;
+
+--
+-- Name: conflict_resolution_records; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE conflict_resolution_records (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    loser_record_id uuid,
+    winner_record_id uuid,
+    loser_lane character varying(40),
+    winner_lane character varying(40),
+    resolution_action character varying(32) NOT NULL,
+    resolution_reason character varying(128) NOT NULL,
+    resolved_at timestamp without time zone NOT NULL,
+    conflict_key character varying(64),
+    evidence_tokens json DEFAULT '[]'::json NOT NULL,
+    metadata_payload json DEFAULT '{}'::json NOT NULL
+);
+
+
+ALTER TABLE conflict_resolution_records OWNER TO brsama;
 
 --
 -- Name: context_budget_profiles; Type: TABLE; Schema: public; Owner: postgres
@@ -1282,6 +1837,34 @@ CREATE TABLE context_pack_runs (
 
 
 ALTER TABLE context_pack_runs OWNER TO postgres;
+
+--
+-- Name: counterfactual_evaluation_reports; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE counterfactual_evaluation_reports (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id character varying(128) NOT NULL,
+    context_signature jsonb NOT NULL,
+    context_hash character varying(64) NOT NULL,
+    policy_a character varying(128) NOT NULL,
+    policy_b character varying(128) NOT NULL,
+    estimate jsonb NOT NULL,
+    confidence double precision DEFAULT '0'::double precision NOT NULL,
+    evidence_grade integer DEFAULT 0 NOT NULL,
+    generated_at timestamp without time zone NOT NULL,
+    replaced_by_id uuid,
+    promotion_candidate jsonb NOT NULL,
+    promotion_status character varying(32) DEFAULT 'not_ready'::character varying NOT NULL,
+    iron_law_compliance jsonb NOT NULL,
+    metadata jsonb NOT NULL
+);
+
+
+ALTER TABLE counterfactual_evaluation_reports OWNER TO brsama;
 
 --
 -- Name: crdt_operation_log; Type: TABLE; Schema: public; Owner: postgres
@@ -1429,6 +2012,26 @@ CREATE TABLE custom_expert_teams (
 ALTER TABLE custom_expert_teams OWNER TO postgres;
 
 --
+-- Name: daily_behavior_vector; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE daily_behavior_vector (
+    user_id uuid NOT NULL,
+    vector_date date NOT NULL,
+    dims_payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    active_event_count integer DEFAULT 0 NOT NULL,
+    stage30_dim_count integer DEFAULT 0 NOT NULL,
+    silent_window_cut boolean DEFAULT false NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE daily_behavior_vector OWNER TO brsama;
+
+--
 -- Name: data_access_logs; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1492,6 +2095,26 @@ CREATE TABLE dictionary_entries (
 ALTER TABLE dictionary_entries OWNER TO postgres;
 
 --
+-- Name: distilled_strategy_cache; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE distilled_strategy_cache (
+    id uuid NOT NULL,
+    title character varying(255) NOT NULL,
+    description text NOT NULL,
+    applicability_scope text NOT NULL,
+    status character varying(64) NOT NULL,
+    shareability character varying(64) NOT NULL,
+    source_trajectory_type character varying(128) NOT NULL,
+    payload jsonb NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL
+);
+
+
+ALTER TABLE distilled_strategy_cache OWNER TO brsama;
+
+--
 -- Name: dlq_replay_audit_logs; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1535,6 +2158,52 @@ CREATE TABLE document_chunks (
 ALTER TABLE document_chunks OWNER TO postgres;
 
 --
+-- Name: document_retrieval_feedback; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE document_retrieval_feedback (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    file_id uuid NOT NULL,
+    chunk_id uuid,
+    query_intent_type character varying(64),
+    feedback_score integer NOT NULL,
+    feedback_source character varying(32) NOT NULL,
+    conversation_id character varying(128),
+    context json
+);
+
+
+ALTER TABLE document_retrieval_feedback OWNER TO brsama;
+
+--
+-- Name: durable_session_state_snapshots; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE durable_session_state_snapshots (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    session_id character varying(128) NOT NULL,
+    user_id character varying(128),
+    request_id character varying(128),
+    fsm_state character varying(32) NOT NULL,
+    details text NOT NULL,
+    payload jsonb NOT NULL,
+    recoverable boolean NOT NULL,
+    last_seen_at timestamp without time zone NOT NULL,
+    expires_at timestamp without time zone NOT NULL,
+    metadata jsonb NOT NULL
+);
+
+
+ALTER TABLE durable_session_state_snapshots OWNER TO brsama;
+
+--
 -- Name: episodic_memories; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1559,7 +2228,18 @@ CREATE TABLE episodic_memories (
     updated_at timestamp without time zone NOT NULL,
     deleted_at timestamp without time zone,
     last_consumed_at timestamp without time zone,
-    archived_at timestamp without time zone
+    archived_at timestamp without time zone,
+    source_lane character varying(40) DEFAULT 'direct_capture'::character varying NOT NULL,
+    confidence double precision,
+    evidence_token character varying(128),
+    decay_policy character varying(32),
+    semantic_key character varying(64),
+    revoked_at timestamp without time zone,
+    subject_type character varying(32) NOT NULL,
+    due_at timestamp without time zone,
+    resolved_at timestamp without time zone,
+    mentioned_entity_hash character varying(64),
+    mentioned_entity_owner_user_id uuid
 );
 
 
@@ -1587,17 +2267,41 @@ CREATE TABLE error_records (
     latest_analysis jsonb,
     cognitive_tags character varying[],
     ai_analysis_summary text,
-    affected_node_id uuid,
-    mastery_delta double precision,
     linked_knowledge_node_ids uuid[],
     suggested_concepts text[],
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
-    is_deleted boolean
+    is_deleted boolean,
+    affected_node_id uuid,
+    mastery_delta double precision
 );
 
 
 ALTER TABLE error_records OWNER TO postgres;
+
+--
+-- Name: event_bus_dlq; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE event_bus_dlq (
+    stream character varying(255) NOT NULL,
+    event_type character varying(255) NOT NULL,
+    user_id uuid,
+    group_name character varying(255) NOT NULL,
+    consumer_name character varying(255) NOT NULL,
+    message_id character varying(255) NOT NULL,
+    retry_count integer DEFAULT 0 NOT NULL,
+    failure_stage character varying(64) DEFAULT 'consume'::character varying NOT NULL,
+    error text NOT NULL,
+    payload jsonb NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE event_bus_dlq OWNER TO brsama;
 
 --
 -- Name: event_outbox; Type: TABLE; Schema: public; Owner: postgres
@@ -1676,6 +2380,25 @@ CREATE TABLE evolution_predictions (
 ALTER TABLE evolution_predictions OWNER TO postgres;
 
 --
+-- Name: execution_audit_log; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE execution_audit_log (
+    id uuid NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    intent_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    action character varying(64) NOT NULL,
+    actor character varying(32) NOT NULL,
+    details json,
+    occurred_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE execution_audit_log OWNER TO brsama;
+
+--
 -- Name: execution_intents; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1744,6 +2467,28 @@ CREATE TABLE execution_records (
 ALTER TABLE execution_records OWNER TO postgres;
 
 --
+-- Name: execution_schedules; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE execution_schedules (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    task_id uuid NOT NULL,
+    intent_template jsonb NOT NULL,
+    trigger_type character varying(32) NOT NULL,
+    trigger_config jsonb NOT NULL,
+    last_run_at timestamp without time zone,
+    next_run_at timestamp without time zone,
+    is_active boolean DEFAULT true NOT NULL
+);
+
+
+ALTER TABLE execution_schedules OWNER TO brsama;
+
+--
 -- Name: expansion_feedback; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1765,6 +2510,30 @@ CREATE TABLE expansion_feedback (
 
 
 ALTER TABLE expansion_feedback OWNER TO postgres;
+
+--
+-- Name: focus_contracts; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE focus_contracts (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    version integer NOT NULL,
+    scenario_pack_id character varying(128) NOT NULL,
+    active_node character varying(255) NOT NULL,
+    focus_description text NOT NULL,
+    desire_hypothesis text,
+    commitment_ids jsonb NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    created_by character varying(32) NOT NULL,
+    trigger_decision_ref character varying(36),
+    evidence_refs jsonb NOT NULL,
+    projection_policy character varying(64) NOT NULL,
+    write_path character varying(64) NOT NULL
+);
+
+
+ALTER TABLE focus_contracts OWNER TO brsama;
 
 --
 -- Name: focus_sessions; Type: TABLE; Schema: public; Owner: postgres
@@ -1845,6 +2614,60 @@ CREATE TABLE galaxy_user_permissions (
 ALTER TABLE galaxy_user_permissions OWNER TO postgres;
 
 --
+-- Name: goal_world_graph_snapshots; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE goal_world_graph_snapshots (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    graph_id character varying(128) NOT NULL,
+    user_id character varying(128) NOT NULL,
+    goal_id character varying(128) NOT NULL,
+    goal_type character varying(64) NOT NULL,
+    coverage double precision NOT NULL,
+    payload jsonb NOT NULL,
+    last_saved_at timestamp without time zone NOT NULL,
+    metadata jsonb NOT NULL
+);
+
+
+ALTER TABLE goal_world_graph_snapshots OWNER TO brsama;
+
+--
+-- Name: goals; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE goals (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    user_id uuid NOT NULL,
+    title character varying(255) NOT NULL,
+    goal_type character varying(64) DEFAULT 'general'::character varying NOT NULL,
+    description text,
+    status character varying(32) DEFAULT 'active'::character varying NOT NULL,
+    target_date date,
+    mastery double precision DEFAULT '0'::double precision,
+    progress double precision DEFAULT '0'::double precision,
+    priority character varying(16) DEFAULT 'normal'::character varying,
+    is_primary boolean DEFAULT false,
+    minimum_acceptance_criteria jsonb,
+    domain_pack_id character varying(64),
+    plan_id uuid,
+    source character varying(32),
+    source_metadata jsonb,
+    completed_at timestamp without time zone,
+    archived_at timestamp without time zone,
+    metadata jsonb,
+    created_at timestamp without time zone DEFAULT now() NOT NULL,
+    updated_at timestamp without time zone DEFAULT now() NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE goals OWNER TO brsama;
+
+--
 -- Name: group_files; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -1860,7 +2683,14 @@ CREATE TABLE group_files (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    trust_level groupfiletrustlevel DEFAULT 'member'::groupfiletrustlevel NOT NULL,
+    is_knowledge_base boolean DEFAULT false NOT NULL,
+    download_count integer DEFAULT 0 NOT NULL,
+    citation_count integer DEFAULT 0 NOT NULL,
+    rating_count integer DEFAULT 0 NOT NULL,
+    rating_total double precision DEFAULT '0'::double precision NOT NULL,
+    description character varying(500)
 );
 
 
@@ -2020,19 +2850,146 @@ CREATE TABLE groups (
 ALTER TABLE groups OWNER TO postgres;
 
 --
+-- Name: growth_chronicle_snapshots; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE growth_chronicle_snapshots (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id character varying(128) NOT NULL,
+    entry_count integer NOT NULL,
+    confirmed_count integer NOT NULL,
+    payload jsonb NOT NULL,
+    last_saved_at timestamp without time zone NOT NULL,
+    metadata jsonb NOT NULL
+);
+
+
+ALTER TABLE growth_chronicle_snapshots OWNER TO brsama;
+
+--
 -- Name: idempotency_keys; Type: TABLE; Schema: public; Owner: postgres
 --
 
 CREATE TABLE idempotency_keys (
-    key character varying(64) NOT NULL,
+    key character varying(255) NOT NULL,
     user_id uuid NOT NULL,
     response json NOT NULL,
     created_at timestamp with time zone DEFAULT now(),
-    expires_at timestamp with time zone NOT NULL
+    expires_at timestamp with time zone NOT NULL,
+    endpoint character varying(128) DEFAULT ''::character varying NOT NULL,
+    response_hash character varying(64) DEFAULT ''::character varying NOT NULL
 );
 
 
 ALTER TABLE idempotency_keys OWNER TO postgres;
+
+--
+-- Name: identity_evidence; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE identity_evidence (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    dimension character varying(128) NOT NULL,
+    evidence_type character varying(128) NOT NULL,
+    description text NOT NULL,
+    strength double precision NOT NULL,
+    valence character varying(32) NOT NULL,
+    source character varying(64) NOT NULL,
+    evidence_refs jsonb NOT NULL,
+    projection_policy character varying(64) NOT NULL,
+    shareability character varying(64) NOT NULL
+);
+
+
+ALTER TABLE identity_evidence OWNER TO brsama;
+
+--
+-- Name: idiographic_associations; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE idiographic_associations (
+    user_id uuid NOT NULL,
+    dim_a character varying(64) NOT NULL,
+    dim_b character varying(64) NOT NULL,
+    dim_pair character varying(128) NOT NULL,
+    direction character varying(24) DEFAULT 'positive_sync'::character varying NOT NULL,
+    correlation double precision DEFAULT '0'::double precision NOT NULL,
+    p_value_raw double precision DEFAULT '1'::double precision NOT NULL,
+    p_value_bh double precision DEFAULT '1'::double precision NOT NULL,
+    sample_days integer DEFAULT 0 NOT NULL,
+    active_days integer DEFAULT 0 NOT NULL,
+    rank_pair_count integer DEFAULT 0 NOT NULL,
+    confidence double precision DEFAULT '0'::double precision NOT NULL,
+    density_insufficient boolean DEFAULT true NOT NULL,
+    visible boolean DEFAULT false NOT NULL,
+    path_mode character varying(16) DEFAULT 'B'::character varying NOT NULL,
+    window_start date,
+    window_end date,
+    disclaimer_text character varying(255) DEFAULT ''::character varying NOT NULL,
+    rendered_text character varying(2000) DEFAULT ''::character varying NOT NULL,
+    user_disconfirmed boolean DEFAULT false NOT NULL,
+    user_disconfirmed_until timestamp without time zone,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE idiographic_associations OWNER TO brsama;
+
+--
+-- Name: idiographic_changepoints; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE idiographic_changepoints (
+    user_id uuid NOT NULL,
+    dim character varying(64) NOT NULL,
+    change_date date NOT NULL,
+    confidence double precision DEFAULT '0'::double precision NOT NULL,
+    path_mode character varying(16) DEFAULT 'B'::character varying NOT NULL,
+    rendered_text character varying(1000) DEFAULT ''::character varying NOT NULL,
+    window_start date,
+    window_end date,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE idiographic_changepoints OWNER TO brsama;
+
+--
+-- Name: insight_claims; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE insight_claims (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    claim_type character varying(128) NOT NULL,
+    content text NOT NULL,
+    source character varying(64) NOT NULL,
+    confidence double precision NOT NULL,
+    status character varying(32) NOT NULL,
+    probed_at timestamp without time zone,
+    resolved_at timestamp without time zone,
+    evidence_refs jsonb NOT NULL,
+    probe_outcome_ids jsonb NOT NULL,
+    projection_policy character varying(64) NOT NULL,
+    write_path character varying(64) NOT NULL,
+    shareability character varying(64) NOT NULL
+);
+
+
+ALTER TABLE insight_claims OWNER TO brsama;
 
 --
 -- Name: intervention_audit_logs; Type: TABLE; Schema: public; Owner: postgres
@@ -2080,6 +3037,67 @@ CREATE TABLE intervention_feedback (
 ALTER TABLE intervention_feedback OWNER TO postgres;
 
 --
+-- Name: intervention_outcomes; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE intervention_outcomes (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    plan_id uuid,
+    task_id uuid,
+    intervention_type character varying(64),
+    trigger_reason character varying(128),
+    target_concept character varying(256),
+    target_node_id uuid,
+    triggered_at timestamp without time zone NOT NULL,
+    follow_up_at timestamp without time zone,
+    outcome_checked_at timestamp without time zone,
+    outcome_status character varying(32),
+    mastery_before double precision,
+    mastery_after double precision,
+    effective boolean,
+    user_adopted boolean,
+    adopted_at timestamp without time zone,
+    notes text
+);
+
+
+ALTER TABLE intervention_outcomes OWNER TO brsama;
+
+--
+-- Name: intervention_records; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE intervention_records (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    plan_card_id uuid,
+    phase_card_id uuid,
+    task_occurrence_id uuid,
+    knowledge_card_id uuid,
+    trigger_type character varying(32) NOT NULL,
+    trigger_source_ref character varying(128),
+    diagnosis_payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    delivery_strategy character varying(24) NOT NULL,
+    delivery_channel character varying(24) NOT NULL,
+    content_version character varying(64) DEFAULT '''1'''::character varying NOT NULL,
+    acceptance_status character varying(24) DEFAULT '''CREATED'''::character varying NOT NULL,
+    action_payload jsonb,
+    outcome_window_days integer DEFAULT 7 NOT NULL,
+    outcome_status character varying(24) DEFAULT '''PENDING'''::character varying NOT NULL,
+    evidence_payload jsonb
+);
+
+
+ALTER TABLE intervention_records OWNER TO brsama;
+
+--
 -- Name: intervention_requests; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2112,6 +3130,29 @@ CREATE TABLE intervention_requests (
 
 
 ALTER TABLE intervention_requests OWNER TO postgres;
+
+--
+-- Name: intervention_strategy_outcomes; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE intervention_strategy_outcomes (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    intervention_id uuid NOT NULL,
+    trigger_type intervention_trigger_enum NOT NULL,
+    delivery_tone delivery_strategy_enum NOT NULL,
+    delivery_channel delivery_channel_enum NOT NULL,
+    acceptance_status intervention_acceptance_enum NOT NULL,
+    outcome intervention_outcome_enum NOT NULL,
+    time_to_action_seconds integer,
+    context_snapshot json DEFAULT '{}'::json NOT NULL
+);
+
+
+ALTER TABLE intervention_strategy_outcomes OWNER TO brsama;
 
 --
 -- Name: intervention_templates; Type: TABLE; Schema: public; Owner: postgres
@@ -2199,6 +3240,24 @@ CREATE TABLE jobs (
 ALTER TABLE jobs OWNER TO postgres;
 
 --
+-- Name: knowledge_node_documents; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE knowledge_node_documents (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    node_id uuid NOT NULL,
+    file_id uuid NOT NULL,
+    is_primary boolean DEFAULT false NOT NULL
+);
+
+
+ALTER TABLE knowledge_node_documents OWNER TO brsama;
+
+--
 -- Name: knowledge_nodes; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2223,11 +3282,43 @@ CREATE TABLE knowledge_nodes (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    sector_weights jsonb,
+    dominant_sector_code character varying(20) DEFAULT 'VOID'::character varying NOT NULL,
+    sector_classification_status character varying(20) DEFAULT 'pending'::character varying NOT NULL,
+    sector_classification_model character varying(100),
+    sector_classified_at timestamp without time zone,
+    community_signal json,
+    exam_weight double precision DEFAULT '0'::double precision NOT NULL,
+    difficulty double precision DEFAULT '0.5'::double precision NOT NULL,
+    trainability double precision DEFAULT '0.5'::double precision NOT NULL,
+    mistakes integer DEFAULT 0 NOT NULL
 );
 
 
 ALTER TABLE knowledge_nodes OWNER TO postgres;
+
+--
+-- Name: leaderboard_snapshots; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE leaderboard_snapshots (
+    snapshot_type character varying(50) NOT NULL,
+    period character varying(20) NOT NULL,
+    subject_id uuid,
+    snapshot_date timestamp without time zone NOT NULL,
+    snapshot_version integer NOT NULL,
+    rankings json NOT NULL,
+    total_participants integer NOT NULL,
+    generation_time_ms double precision,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE leaderboard_snapshots OWNER TO brsama;
 
 --
 -- Name: learning_assets; Type: TABLE; Schema: public; Owner: postgres
@@ -2326,6 +3417,87 @@ CREATE TABLE ltm_daily_snapshots (
 
 
 ALTER TABLE ltm_daily_snapshots OWNER TO postgres;
+
+--
+-- Name: marketplace_packs; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE marketplace_packs (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    pack_id character varying(64) NOT NULL,
+    name character varying(160) NOT NULL,
+    description text DEFAULT ''::text NOT NULL,
+    domain character varying(96) DEFAULT ''::character varying NOT NULL,
+    version integer DEFAULT 1 NOT NULL,
+    source character varying(128) DEFAULT 'system'::character varying NOT NULL,
+    status character varying(32) DEFAULT 'draft'::character varying NOT NULL,
+    node_schema jsonb DEFAULT '{}'::jsonb NOT NULL,
+    task_templates jsonb DEFAULT '[]'::jsonb NOT NULL,
+    risk_rules jsonb DEFAULT '[]'::jsonb NOT NULL,
+    skill_ids jsonb DEFAULT '[]'::jsonb NOT NULL,
+    quality_evidence jsonb DEFAULT '{}'::jsonb NOT NULL,
+    quality_score double precision DEFAULT '0'::double precision NOT NULL,
+    negative_feedback_rate double precision DEFAULT '0'::double precision NOT NULL,
+    revoke_rate double precision DEFAULT '0'::double precision NOT NULL,
+    adoption_count integer DEFAULT 0 NOT NULL,
+    privacy_report jsonb DEFAULT '{}'::jsonb NOT NULL,
+    governance jsonb DEFAULT '{}'::jsonb NOT NULL,
+    previous_versions jsonb DEFAULT '[]'::jsonb NOT NULL,
+    rollback_of_id uuid,
+    auto_deprecation_reason character varying(128),
+    listed_at timestamp without time zone,
+    deprecated_at timestamp without time zone
+);
+
+
+ALTER TABLE marketplace_packs OWNER TO brsama;
+
+--
+-- Name: marketplace_skills; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE marketplace_skills (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    skill_id character varying(64) NOT NULL,
+    source_skill_id character varying(128),
+    name character varying(160) NOT NULL,
+    description text DEFAULT ''::text NOT NULL,
+    goal_type character varying(64) DEFAULT ''::character varying NOT NULL,
+    domain character varying(96) DEFAULT ''::character varying NOT NULL,
+    author_id uuid,
+    version integer DEFAULT 1 NOT NULL,
+    status character varying(32) DEFAULT 'draft'::character varying NOT NULL,
+    trigger_condition text DEFAULT ''::text NOT NULL,
+    action_template text DEFAULT ''::text NOT NULL,
+    expected_outcome text DEFAULT ''::text NOT NULL,
+    prerequisites jsonb DEFAULT '[]'::jsonb NOT NULL,
+    contraindications jsonb DEFAULT '[]'::jsonb NOT NULL,
+    context_signatures jsonb DEFAULT '[]'::jsonb NOT NULL,
+    evidence_grade integer DEFAULT 0 NOT NULL,
+    evidence_summary text DEFAULT ''::text NOT NULL,
+    episode_count integer DEFAULT 0 NOT NULL,
+    success_rate double precision DEFAULT '0'::double precision NOT NULL,
+    quality_score double precision DEFAULT '0'::double precision NOT NULL,
+    negative_feedback_rate double precision DEFAULT '0'::double precision NOT NULL,
+    revoke_rate double precision DEFAULT '0'::double precision NOT NULL,
+    adoption_count integer DEFAULT 0 NOT NULL,
+    privacy_report jsonb DEFAULT '{}'::jsonb NOT NULL,
+    governance jsonb DEFAULT '{}'::jsonb NOT NULL,
+    previous_versions jsonb DEFAULT '[]'::jsonb NOT NULL,
+    rollback_of_id uuid,
+    auto_deprecation_reason character varying(128),
+    listed_at timestamp without time zone,
+    deprecated_at timestamp without time zone
+);
+
+
+ALTER TABLE marketplace_skills OWNER TO brsama;
 
 --
 -- Name: mastery_audit_log; Type: TABLE; Schema: public; Owner: postgres
@@ -2625,6 +3797,33 @@ CREATE TABLE node_relations (
 ALTER TABLE node_relations OWNER TO postgres;
 
 --
+-- Name: north_star_metric_events; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE north_star_metric_events (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    plan_id uuid,
+    task_id uuid,
+    event_type character varying(64) NOT NULL,
+    event_key character varying(160) NOT NULL,
+    source character varying(64) NOT NULL,
+    metric_date date NOT NULL,
+    occurred_at timestamp without time zone NOT NULL,
+    value_float double precision,
+    numerator integer,
+    denominator integer,
+    passed boolean,
+    payload jsonb NOT NULL
+);
+
+
+ALTER TABLE north_star_metric_events OWNER TO brsama;
+
+--
 -- Name: notification_interactions; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2675,7 +3874,8 @@ CREATE TABLE notification_preferences (
     quiet_hours_enabled boolean NOT NULL,
     quiet_hours_start character varying(5),
     quiet_hours_end character varying(5),
-    updated_at timestamp without time zone NOT NULL
+    updated_at timestamp without time zone NOT NULL,
+    disabled_types jsonb NOT NULL
 );
 
 
@@ -2741,6 +3941,32 @@ CREATE TABLE offline_message_queue (
 ALTER TABLE offline_message_queue OWNER TO postgres;
 
 --
+-- Name: pack_adoption_history; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE pack_adoption_history (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    adoption_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    asset_id character varying(64) NOT NULL,
+    asset_type character varying(24) NOT NULL,
+    trace_id character varying(128) NOT NULL,
+    impact_type character varying(32) NOT NULL,
+    impact_summary text DEFAULT ''::text NOT NULL,
+    target_id character varying(128),
+    before_snapshot jsonb DEFAULT '{}'::jsonb NOT NULL,
+    after_snapshot jsonb DEFAULT '{}'::jsonb NOT NULL,
+    outcome character varying(32) DEFAULT 'pending'::character varying NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+ALTER TABLE pack_adoption_history OWNER TO brsama;
+
+--
 -- Name: passive_signals; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2758,6 +3984,26 @@ CREATE TABLE passive_signals (
 
 
 ALTER TABLE passive_signals OWNER TO postgres;
+
+--
+-- Name: persdyn_attractors; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE persdyn_attractors (
+    user_id uuid NOT NULL,
+    dim character varying(40) NOT NULL,
+    baseline double precision DEFAULT '0'::double precision NOT NULL,
+    variability double precision DEFAULT '0'::double precision NOT NULL,
+    recovery_rate double precision DEFAULT '0'::double precision NOT NULL,
+    confidence double precision DEFAULT '0'::double precision NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE persdyn_attractors OWNER TO brsama;
 
 --
 -- Name: persona_snapshots; Type: TABLE; Schema: public; Owner: postgres
@@ -2898,6 +4144,30 @@ CREATE TABLE plan_states (
 ALTER TABLE plan_states OWNER TO postgres;
 
 --
+-- Name: planning_artifacts; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE planning_artifacts (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    plan_card_id uuid NOT NULL,
+    artifact_type character varying(32) NOT NULL,
+    version integer DEFAULT 1 NOT NULL,
+    status character varying(24) DEFAULT '''DRAFT'''::character varying NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    based_on_versions jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_by_agent character varying(64),
+    approved_by_user_id uuid,
+    approved_at timestamp without time zone,
+    superseded_at timestamp without time zone
+);
+
+
+ALTER TABLE planning_artifacts OWNER TO brsama;
+
+--
 -- Name: plans; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2965,6 +4235,31 @@ CREATE TABLE posts (
 ALTER TABLE posts OWNER TO postgres;
 
 --
+-- Name: privacy_budget_ledger; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE privacy_budget_ledger (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    subject_id character varying(128) NOT NULL,
+    subject_type character varying(32) NOT NULL,
+    query_type character varying(64) NOT NULL,
+    epsilon_spent double precision NOT NULL,
+    max_epsilon double precision NOT NULL,
+    remaining_epsilon double precision NOT NULL,
+    window_key character varying(64) NOT NULL,
+    allowed boolean NOT NULL,
+    denial_reason character varying(128) NOT NULL,
+    spent_at timestamp without time zone NOT NULL,
+    metadata jsonb NOT NULL
+);
+
+
+ALTER TABLE privacy_budget_ledger OWNER TO brsama;
+
+--
 -- Name: private_messages; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -2998,6 +4293,25 @@ CREATE TABLE private_messages (
 
 
 ALTER TABLE private_messages OWNER TO postgres;
+
+--
+-- Name: probe_outcomes; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE probe_outcomes (
+    id uuid NOT NULL,
+    claim_id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    probe_type character varying(64) NOT NULL,
+    probe_content text NOT NULL,
+    result character varying(64) NOT NULL,
+    evidence text NOT NULL,
+    confidence_adjustment double precision NOT NULL,
+    evidence_refs jsonb NOT NULL
+);
+
+
+ALTER TABLE probe_outcomes OWNER TO brsama;
 
 --
 -- Name: processed_events; Type: TABLE; Schema: public; Owner: postgres
@@ -3045,6 +4359,39 @@ CREATE TABLE projection_snapshots (
 
 
 ALTER TABLE projection_snapshots OWNER TO postgres;
+
+--
+-- Name: push_delivery_records; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE push_delivery_records (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    notification_id uuid,
+    policy_id character varying(64) NOT NULL,
+    category character varying(64) NOT NULL,
+    message_template_id character varying(128) NOT NULL,
+    title character varying(255) NOT NULL,
+    body character varying(1000) NOT NULL,
+    evidence_token character varying(255) NOT NULL,
+    delivery_channel character varying(32) DEFAULT 'websocket'::character varying NOT NULL,
+    status character varying(32) DEFAULT 'sent'::character varying NOT NULL,
+    scheduled_send_at timestamp without time zone NOT NULL,
+    sent_at timestamp without time zone,
+    read_at timestamp without time zone,
+    dismissed_at timestamp without time zone,
+    acted_at timestamp without time zone,
+    retracted_at timestamp without time zone,
+    retractable_until timestamp without time zone,
+    category_disabled boolean DEFAULT false NOT NULL,
+    metadata_payload json DEFAULT '{}'::json NOT NULL
+);
+
+
+ALTER TABLE push_delivery_records OWNER TO brsama;
 
 --
 -- Name: push_histories; Type: TABLE; Schema: public; Owner: postgres
@@ -3107,6 +4454,93 @@ CREATE TABLE recommendation_cache (
 
 
 ALTER TABLE recommendation_cache OWNER TO postgres;
+
+--
+-- Name: release_approval_requests; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE release_approval_requests (
+    id uuid NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    deleted_at timestamp without time zone,
+    category character varying(64) NOT NULL,
+    object_type character varying(64) NOT NULL,
+    object_id character varying(128) NOT NULL,
+    title character varying(200) NOT NULL,
+    description text,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    status character varying(32) DEFAULT 'draft'::character varying NOT NULL,
+    requested_by_id uuid,
+    submitted_at timestamp without time zone,
+    required_approvals integer DEFAULT 1 NOT NULL,
+    approvals jsonb DEFAULT '[]'::jsonb NOT NULL,
+    rejections jsonb DEFAULT '[]'::jsonb NOT NULL,
+    reviewer_ids jsonb DEFAULT '[]'::jsonb NOT NULL,
+    reviewed_at timestamp without time zone,
+    rejection_reason text,
+    applied_at timestamp without time zone,
+    applied_by_id uuid,
+    apply_result jsonb,
+    notification_state jsonb DEFAULT '{}'::jsonb NOT NULL,
+    needs_admin_attention boolean DEFAULT false NOT NULL,
+    CONSTRAINT chk_release_approval_category CHECK (((category)::text = ANY ((ARRAY['policy_publish'::character varying, 'experiment_promote'::character varying, 'skill_systemize'::character varying, 'domain_pack_release'::character varying, 'kill_switch_promote'::character varying, 'high_risk_config'::character varying])::text[]))),
+    CONSTRAINT chk_release_approval_required_positive CHECK ((required_approvals >= 1)),
+    CONSTRAINT chk_release_approval_status CHECK (((status)::text = ANY ((ARRAY['draft'::character varying, 'pending_review'::character varying, 'approved'::character varying, 'rejected'::character varying, 'applied'::character varying])::text[])))
+);
+
+
+ALTER TABLE release_approval_requests OWNER TO brsama;
+
+--
+-- Name: report_snapshots; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE report_snapshots (
+    report_id character varying(128) NOT NULL,
+    user_id uuid NOT NULL,
+    snapshot_type character varying(64) NOT NULL,
+    cache_version character varying(128),
+    delivery_mode character varying(64),
+    quality_mode character varying(64),
+    trigger_source text,
+    payload jsonb NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE report_snapshots OWNER TO brsama;
+
+--
+-- Name: research_consent_records; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE research_consent_records (
+    user_id character varying(64) NOT NULL,
+    protocol_id character varying(64) NOT NULL,
+    granted_at timestamp without time zone NOT NULL,
+    revoked_at timestamp without time zone,
+    scope jsonb NOT NULL,
+    evidence jsonb NOT NULL,
+    version character varying(32) NOT NULL,
+    source character varying(64) NOT NULL,
+    grant_reason text,
+    grant_initiator character varying(16) NOT NULL,
+    grant_ip_hash character varying(64),
+    revoke_reason text,
+    revoke_initiator character varying(16),
+    revoke_ip_hash character varying(64),
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE research_consent_records OWNER TO brsama;
 
 --
 -- Name: response_feedback; Type: TABLE; Schema: public; Owner: postgres
@@ -3225,6 +4659,121 @@ CREATE TABLE review_overrides (
 ALTER TABLE review_overrides OWNER TO postgres;
 
 --
+-- Name: routing_decision_log; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE routing_decision_log (
+    decision_id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    user_id uuid NOT NULL,
+    decided_at timestamp without time zone NOT NULL,
+    input_aggregator_snapshot_id character varying(128) NOT NULL,
+    sufficiency_judgment_id uuid,
+    decision_type character varying(64) NOT NULL,
+    decision_payload json DEFAULT '{}'::json NOT NULL,
+    outcome_signal_id character varying(128),
+    outcome_type character varying(32),
+    outcome_collected_at timestamp without time zone,
+    skills_injected json,
+    source_state_v2 json,
+    source_state_v2_key character varying(255),
+    outcome character varying(32),
+    outcome_timestamp timestamp without time zone,
+    idiographic_associations_injected jsonb
+);
+
+
+ALTER TABLE routing_decision_log OWNER TO brsama;
+
+--
+-- Name: safe_experiment_episodes; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE safe_experiment_episodes (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    experiment_id uuid NOT NULL,
+    experiment_key character varying(64) NOT NULL,
+    user_id uuid,
+    context_signature jsonb DEFAULT '{}'::jsonb NOT NULL,
+    candidate_actions jsonb DEFAULT '[]'::jsonb NOT NULL,
+    selected_action character varying(160) NOT NULL,
+    selection_reason character varying(160) DEFAULT ''::character varying NOT NULL,
+    assignment_mode character varying(32) DEFAULT 'shadow'::character varying NOT NULL,
+    risk_level character varying(32) DEFAULT 'low'::character varying NOT NULL,
+    reward double precision,
+    outcome_vector jsonb DEFAULT '{}'::jsonb NOT NULL,
+    guardrail_result jsonb DEFAULT '{}'::jsonb NOT NULL,
+    incident_trace jsonb
+);
+
+
+ALTER TABLE safe_experiment_episodes OWNER TO brsama;
+
+--
+-- Name: safe_experiments; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE safe_experiments (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    experiment_key character varying(64) NOT NULL,
+    name character varying(200) NOT NULL,
+    hypothesis text NOT NULL,
+    domain character varying(80) NOT NULL,
+    status character varying(32) DEFAULT 'draft'::character varying NOT NULL,
+    eligible_context jsonb DEFAULT '{}'::jsonb NOT NULL,
+    excluded_context jsonb DEFAULT '[]'::jsonb NOT NULL,
+    policies jsonb DEFAULT '[]'::jsonb NOT NULL,
+    assignment_mode character varying(32) DEFAULT 'shadow'::character varying NOT NULL,
+    reward_model jsonb DEFAULT '{}'::jsonb NOT NULL,
+    guardrails jsonb DEFAULT '{}'::jsonb NOT NULL,
+    min_episodes integer DEFAULT 50 NOT NULL,
+    min_distinct_users integer DEFAULT 15 NOT NULL,
+    evidence_grade_required integer DEFAULT 3 NOT NULL,
+    current_episodes integer DEFAULT 0 NOT NULL,
+    distinct_users jsonb DEFAULT '[]'::jsonb NOT NULL,
+    outcome_history jsonb DEFAULT '[]'::jsonb NOT NULL,
+    rollback_version character varying(80),
+    previous_versions jsonb DEFAULT '[]'::jsonb NOT NULL,
+    kill_switch_key character varying(120) NOT NULL,
+    incident_trace jsonb DEFAULT '[]'::jsonb NOT NULL,
+    promotion_candidate jsonb,
+    created_by uuid,
+    started_at timestamp without time zone,
+    paused_at timestamp without time zone,
+    concluded_at timestamp without time zone
+);
+
+
+ALTER TABLE safe_experiments OWNER TO brsama;
+
+--
+-- Name: saga_instances; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE saga_instances (
+    id uuid NOT NULL,
+    saga_type text NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    current_step integer DEFAULT 0 NOT NULL,
+    input_data jsonb DEFAULT '{}'::jsonb NOT NULL,
+    step_results jsonb DEFAULT '[]'::jsonb NOT NULL,
+    error text DEFAULT ''::text NOT NULL,
+    correlation_id text DEFAULT ''::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE saga_instances OWNER TO brsama;
+
+--
 -- Name: scaffolding_states; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -3246,6 +4795,30 @@ CREATE TABLE scaffolding_states (
 
 
 ALTER TABLE scaffolding_states OWNER TO postgres;
+
+--
+-- Name: scenes; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE scenes (
+    scene_id character varying(80) NOT NULL,
+    user_id uuid NOT NULL,
+    title character varying(200) NOT NULL,
+    summary character varying(200) NOT NULL,
+    member_memory_ids json DEFAULT '[]'::json NOT NULL,
+    centroid_embedding vector(1024),
+    time_start timestamp without time zone NOT NULL,
+    time_end timestamp without time zone NOT NULL,
+    quality_score double precision DEFAULT '0'::double precision NOT NULL,
+    version character varying(32) DEFAULT 'scene.v1'::character varying NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE scenes OWNER TO brsama;
 
 --
 -- Name: security_audit_logs; Type: TABLE; Schema: public; Owner: postgres
@@ -3359,6 +4932,21 @@ CREATE TABLE semantic_links (
 ALTER TABLE semantic_links OWNER TO postgres;
 
 --
+-- Name: session_completions; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE session_completions (
+    session_id character varying(255) NOT NULL,
+    user_id uuid NOT NULL,
+    completion_type character varying(64) NOT NULL,
+    source_event character varying(64) NOT NULL,
+    created_at timestamp without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+
+ALTER TABLE session_completions OWNER TO brsama;
+
+--
 -- Name: shared_resources; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -3381,11 +4969,38 @@ CREATE TABLE shared_resources (
     deleted_at timestamp without time zone,
     knowledge_node_id uuid,
     seed_library_id uuid,
-    seed_item_id uuid
+    seed_item_id uuid,
+    card_share_record_id uuid,
+    adoption_count integer DEFAULT 0,
+    quality_score double precision DEFAULT 0,
+    quality_hidden boolean DEFAULT false,
+    negative_feedback_count integer DEFAULT 0
 );
 
 
 ALTER TABLE shared_resources OWNER TO postgres;
+
+--
+-- Name: shared_skills; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE shared_skills (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    share_slug character varying(80) NOT NULL,
+    name character varying(40) NOT NULL,
+    pattern_template character varying(4000) NOT NULL,
+    activation_conditions json DEFAULT '[]'::json NOT NULL,
+    examples json DEFAULT '[]'::json NOT NULL,
+    author_label character varying(32) DEFAULT 'anonymous'::character varying NOT NULL,
+    published_at timestamp without time zone NOT NULL,
+    source_schema_version character varying(16) DEFAULT 'skill.v1'::character varying NOT NULL
+);
+
+
+ALTER TABLE shared_skills OWNER TO brsama;
 
 --
 -- Name: shop_items; Type: TABLE; Schema: public; Owner: postgres
@@ -3561,6 +5176,56 @@ COMMENT ON COLUMN shop_purchases.photon_balance_after IS '购买后光子余额'
 
 
 --
+-- Name: simulation_runs; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE simulation_runs (
+    session_id character varying(128) NOT NULL,
+    user_id uuid NOT NULL,
+    scenario_key character varying(64) NOT NULL,
+    topic text NOT NULL,
+    state character varying(32) NOT NULL,
+    payload jsonb NOT NULL,
+    insight_summary text,
+    last_active_at timestamp without time zone,
+    completed_at timestamp without time zone,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE simulation_runs OWNER TO brsama;
+
+--
+-- Name: skill_share_moderation_queue; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE skill_share_moderation_queue (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    owner_user_id uuid NOT NULL,
+    user_skill_id uuid NOT NULL,
+    staged_name character varying(40) NOT NULL,
+    staged_pattern_template character varying(4000) NOT NULL,
+    staged_activation_conditions json DEFAULT '[]'::json NOT NULL,
+    staged_examples json DEFAULT '[]'::json NOT NULL,
+    pii_scan_reasons json DEFAULT '[]'::json NOT NULL,
+    injection_scan_reasons json DEFAULT '[]'::json NOT NULL,
+    moderation_status character varying(32) DEFAULT 'pending'::character varying NOT NULL,
+    reviewer_label character varying(64),
+    reviewed_at timestamp without time zone,
+    published_shared_skill_id uuid,
+    rejection_reason character varying(512)
+);
+
+
+ALTER TABLE skill_share_moderation_queue OWNER TO brsama;
+
+--
 -- Name: smoke_document_vectors; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -3603,6 +5268,27 @@ CREATE TABLE spark_contracts (
 ALTER TABLE spark_contracts OWNER TO postgres;
 
 --
+-- Name: srl_phase_states; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE srl_phase_states (
+    user_id uuid NOT NULL,
+    current_phase character varying(32) NOT NULL,
+    phase_started_at timestamp without time zone NOT NULL,
+    previous_phase character varying(32),
+    transition_evidence_ids json NOT NULL,
+    confidence double precision NOT NULL,
+    source character varying(32) NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE srl_phase_states OWNER TO brsama;
+
+--
 -- Name: stored_files; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -3620,11 +5306,45 @@ CREATE TABLE stored_files (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    document_quality_score double precision DEFAULT '0'::double precision NOT NULL,
+    source_file_id uuid,
+    lifecycle_status character varying(32) DEFAULT 'active'::character varying NOT NULL,
+    lifecycle_reason character varying(255),
+    lifecycle_updated_at timestamp without time zone,
+    archived_at timestamp without time zone,
+    revoked_at timestamp without time zone,
+    orphaned_at timestamp without time zone,
+    archive_review_due_at timestamp without time zone,
+    erased_at timestamp without time zone,
+    erasure_receipt character varying(255),
+    CONSTRAINT chk_stored_files_lifecycle_status CHECK (((lifecycle_status)::text = ANY ((ARRAY['active'::character varying, 'archived'::character varying, 'revoked'::character varying, 'orphaned'::character varying])::text[])))
 );
 
 
 ALTER TABLE stored_files OWNER TO postgres;
+
+--
+-- Name: strategy_belief_snapshots; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE strategy_belief_snapshots (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id character varying(128) NOT NULL,
+    strategy_key character varying(128) NOT NULL,
+    alpha double precision DEFAULT '1'::double precision NOT NULL,
+    beta double precision DEFAULT '1'::double precision NOT NULL,
+    evidence_count integer DEFAULT 0 NOT NULL,
+    last_updated character varying(64) DEFAULT ''::character varying NOT NULL,
+    counter_evidence jsonb DEFAULT '[]'::jsonb NOT NULL,
+    metadata jsonb DEFAULT '{}'::jsonb NOT NULL
+);
+
+
+ALTER TABLE strategy_belief_snapshots OWNER TO brsama;
 
 --
 -- Name: strategy_nodes; Type: TABLE; Schema: public; Owner: postgres
@@ -3780,6 +5500,25 @@ CREATE TABLE system_config_change_logs (
 ALTER TABLE system_config_change_logs OWNER TO postgres;
 
 --
+-- Name: task_documents; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE task_documents (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    task_id uuid NOT NULL,
+    file_id uuid NOT NULL,
+    linked_by character varying(16) DEFAULT 'user'::character varying NOT NULL,
+    source_reason character varying(500),
+    fallback_action character varying(500)
+);
+
+
+ALTER TABLE task_documents OWNER TO brsama;
+
+--
 -- Name: task_feedbacks; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -3824,6 +5563,33 @@ CREATE TABLE task_knowledge_links (
 
 
 ALTER TABLE task_knowledge_links OWNER TO postgres;
+
+--
+-- Name: task_occurrences; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE task_occurrences (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    series_card_id uuid NOT NULL,
+    plan_card_id uuid,
+    phase_card_id uuid,
+    scheduled_for date,
+    window_start timestamp without time zone,
+    window_end timestamp without time zone,
+    occurrence_status character varying(24) DEFAULT '''PLANNED'''::character varying NOT NULL,
+    actual_minutes integer,
+    completion_quality integer,
+    deferral_count integer DEFAULT 0 NOT NULL,
+    generated_by_rule_hash character varying(128) DEFAULT ''''''::character varying NOT NULL,
+    feedback_payload jsonb,
+    completed_at timestamp without time zone
+);
+
+
+ALTER TABLE task_occurrences OWNER TO brsama;
 
 --
 -- Name: task_resource_links; Type: TABLE; Schema: public; Owner: postgres
@@ -3880,11 +5646,77 @@ CREATE TABLE tasks (
     updated_at timestamp without time zone NOT NULL,
     deleted_at timestamp without time zone,
     order_index integer NOT NULL,
-    execution_mode character varying(20)
+    execution_mode character varying(20),
+    guide_json jsonb,
+    ai_prompt text,
+    source_planning_session_id character varying(64),
+    phase_index integer,
+    success_criteria text
 );
 
 
 ALTER TABLE tasks OWNER TO postgres;
+
+--
+-- Name: theater_candidate_bundles; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE theater_candidate_bundles (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    prediction_id character varying(64) NOT NULL,
+    topic text NOT NULL,
+    target_name character varying(255) NOT NULL,
+    target_resolution_mode character varying(32) NOT NULL,
+    status character varying(32) DEFAULT 'pending_review'::character varying NOT NULL,
+    nodes_payload jsonb NOT NULL,
+    edges_payload jsonb NOT NULL,
+    semantic_matches jsonb NOT NULL,
+    source_metadata jsonb NOT NULL
+);
+
+
+ALTER TABLE theater_candidate_bundles OWNER TO brsama;
+
+--
+-- Name: theater_predictions; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE theater_predictions (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    prediction_id character varying(64) NOT NULL,
+    user_id uuid NOT NULL,
+    topic text NOT NULL,
+    target_name character varying(255) NOT NULL,
+    target_node_id uuid,
+    target_resolution_mode character varying(32) NOT NULL,
+    horizon_days integer DEFAULT 14 NOT NULL,
+    preview_mode boolean DEFAULT false NOT NULL,
+    generated_at timestamp without time zone NOT NULL,
+    candidate_bundle_id uuid,
+    simulation_session_id character varying(128),
+    recommended_route_id character varying(64),
+    adopted_plan_id uuid,
+    adopted_at timestamp without time zone,
+    accuracy_status character varying(32) DEFAULT 'pending_feedback'::character varying NOT NULL,
+    accuracy_due_on timestamp without time zone,
+    paths jsonb NOT NULL,
+    discussion_turns jsonb NOT NULL,
+    timeline jsonb NOT NULL,
+    selected_prediction jsonb,
+    routing_notes jsonb NOT NULL,
+    accuracy_tracking jsonb NOT NULL,
+    accuracy_summary jsonb
+);
+
+
+ALTER TABLE theater_predictions OWNER TO brsama;
 
 --
 -- Name: token_usage; Type: TABLE; Schema: public; Owner: postgres
@@ -3934,6 +5766,68 @@ CREATE TABLE tracking_events (
 ALTER TABLE tracking_events OWNER TO postgres;
 
 --
+-- Name: transition_decision_records; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE transition_decision_records (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    decision_type character varying(64) NOT NULL,
+    proposed_transition character varying(255),
+    initiation_type character varying(32) NOT NULL,
+    decision_mechanism character varying(32) NOT NULL,
+    decision_basis character varying(64) NOT NULL,
+    input_snapshot_ref character varying(128) NOT NULL,
+    impact_class character varying(32) NOT NULL,
+    inference_knobs jsonb,
+    capability_gate jsonb,
+    interaction_model_variant character varying(64) NOT NULL,
+    rollback_anchor jsonb NOT NULL,
+    evidence_refs jsonb NOT NULL,
+    policy_version character varying(128) NOT NULL,
+    confirmed_by_user boolean,
+    user_feedback text,
+    ux_intent character varying(64) NOT NULL,
+    aurora_presence character varying(32) NOT NULL,
+    projection_policy character varying(64) NOT NULL
+);
+
+
+ALTER TABLE transition_decision_records OWNER TO brsama;
+
+--
+-- Name: unresolved_conflicts; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE unresolved_conflicts (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    conflict_key character varying(64) NOT NULL,
+    left_record_id uuid,
+    right_record_id uuid,
+    left_summary character varying(2000) NOT NULL,
+    right_summary character varying(2000) NOT NULL,
+    left_lane character varying(40) NOT NULL,
+    right_lane character varying(40) NOT NULL,
+    left_evidence_token character varying(128),
+    right_evidence_token character varying(128),
+    left_payload json DEFAULT '{}'::json NOT NULL,
+    right_payload json DEFAULT '{}'::json NOT NULL,
+    status character varying(32) DEFAULT 'pending_user'::character varying NOT NULL,
+    surfaced_at timestamp without time zone NOT NULL,
+    resolved_at timestamp without time zone,
+    resolution_reason character varying(128),
+    selected_side character varying(16)
+);
+
+
+ALTER TABLE unresolved_conflicts OWNER TO brsama;
+
+--
 -- Name: user_achievements; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -3951,7 +5845,8 @@ CREATE TABLE user_achievements (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    context_snapshot jsonb
 );
 
 
@@ -4208,6 +6103,32 @@ CREATE TABLE user_item_interactions (
 ALTER TABLE user_item_interactions OWNER TO postgres;
 
 --
+-- Name: user_learning_profiles; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE user_learning_profiles (
+    user_id uuid NOT NULL,
+    preferred_difficulty double precision,
+    preferred_duration_minutes integer,
+    preferred_time_of_day character varying(20),
+    subject_distribution json,
+    total_study_minutes integer DEFAULT 0 NOT NULL,
+    total_items_completed integer DEFAULT 0 NOT NULL,
+    average_session_duration double precision,
+    learning_vector json,
+    cluster_id integer,
+    last_updated_at timestamp without time zone NOT NULL,
+    update_version integer DEFAULT 1 NOT NULL,
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone
+);
+
+
+ALTER TABLE user_learning_profiles OWNER TO postgres;
+
+--
 -- Name: user_library_subscriptions; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -4244,7 +6165,8 @@ CREATE TABLE user_memory_settings (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    allow_inferred_episodic boolean DEFAULT true NOT NULL
 );
 
 
@@ -4314,11 +6236,60 @@ CREATE TABLE user_preferences_center (
     id uuid NOT NULL,
     created_at timestamp without time zone NOT NULL,
     updated_at timestamp without time zone NOT NULL,
-    deleted_at timestamp without time zone
+    deleted_at timestamp without time zone,
+    traits_prior jsonb DEFAULT '{}'::jsonb NOT NULL,
+    trait_observation_state jsonb DEFAULT '{}'::jsonb NOT NULL,
+    traits_coldstart_completed_at timestamp without time zone
 );
 
 
 ALTER TABLE user_preferences_center OWNER TO postgres;
+
+--
+-- Name: user_push_opt_in; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE user_push_opt_in (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    enabled boolean DEFAULT false NOT NULL,
+    allow_commitment_follow_up boolean DEFAULT false NOT NULL,
+    allow_engagement_recovery boolean DEFAULT false NOT NULL,
+    quiet_hours_start character varying(5) DEFAULT '22:00'::character varying NOT NULL,
+    quiet_hours_end character varying(5) DEFAULT '08:00'::character varying NOT NULL,
+    timezone character varying(64) DEFAULT 'Asia/Shanghai'::character varying NOT NULL
+);
+
+
+ALTER TABLE user_push_opt_in OWNER TO brsama;
+
+--
+-- Name: user_scenario_states; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE user_scenario_states (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    pack_id character varying(128) NOT NULL,
+    current_node character varying(255) NOT NULL,
+    current_focus_contract_id uuid NOT NULL,
+    current_focus_contract_version integer NOT NULL,
+    drift_from_backbone text,
+    is_on_backbone boolean NOT NULL,
+    overrides jsonb NOT NULL,
+    last_signal text,
+    last_signal_at timestamp without time zone,
+    projection_policy character varying(64) NOT NULL,
+    write_path character varying(64) NOT NULL
+);
+
+
+ALTER TABLE user_scenario_states OWNER TO brsama;
 
 --
 -- Name: user_sessions; Type: TABLE; Schema: public; Owner: postgres
@@ -4361,7 +6332,9 @@ CREATE TABLE user_settings (
     deleted_at timestamp without time zone,
     ai_reasoning_mode character varying(16) DEFAULT 'balanced'::character varying NOT NULL,
     current_goal_id character varying(64),
-    accessibility_settings json DEFAULT '{}'::json NOT NULL
+    safe_experiments_opt_out boolean DEFAULT false NOT NULL,
+    accessibility_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    community_intelligence_enabled boolean DEFAULT true NOT NULL
 );
 
 
@@ -4388,6 +6361,58 @@ CREATE TABLE user_similarities (
 
 
 ALTER TABLE user_similarities OWNER TO postgres;
+
+--
+-- Name: user_skill_adoptions; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE user_skill_adoptions (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    asset_id character varying(64) NOT NULL,
+    asset_type character varying(24) NOT NULL,
+    asset_version integer DEFAULT 1 NOT NULL,
+    status character varying(24) DEFAULT 'active'::character varying NOT NULL,
+    explicit_confirm boolean DEFAULT false NOT NULL,
+    context_signature jsonb DEFAULT '{}'::jsonb NOT NULL,
+    preview_snapshot jsonb DEFAULT '{}'::jsonb NOT NULL,
+    trace_id character varying(128),
+    revoked_at timestamp without time zone,
+    revoked_reason character varying(256)
+);
+
+
+ALTER TABLE user_skill_adoptions OWNER TO brsama;
+
+--
+-- Name: user_skills; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE user_skills (
+    id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    updated_at timestamp without time zone NOT NULL,
+    deleted_at timestamp without time zone,
+    user_id uuid NOT NULL,
+    forked_from_share_id uuid,
+    shared_catalog_id uuid,
+    name character varying(40) NOT NULL,
+    pattern_template character varying(4000) NOT NULL,
+    activation_conditions json DEFAULT '[]'::json NOT NULL,
+    examples json DEFAULT '[]'::json NOT NULL,
+    privacy_level character varying(16) DEFAULT 'private'::character varying NOT NULL,
+    usage_count integer DEFAULT 0 NOT NULL,
+    last_activated_at timestamp without time zone,
+    active boolean DEFAULT true NOT NULL,
+    forked_at timestamp without time zone,
+    schema_version character varying(16) DEFAULT 'skill.v1'::character varying NOT NULL
+);
+
+
+ALTER TABLE user_skills OWNER TO brsama;
 
 --
 -- Name: user_state_snapshots; Type: TABLE; Schema: public; Owner: postgres
@@ -4657,6 +6682,26 @@ CREATE TABLE visual_elements (
 
 
 ALTER TABLE visual_elements OWNER TO postgres;
+
+--
+-- Name: window_states; Type: TABLE; Schema: public; Owner: brsama
+--
+
+CREATE TABLE window_states (
+    id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    created_at timestamp without time zone NOT NULL,
+    global_mode character varying(32) NOT NULL,
+    commitment_overrides jsonb NOT NULL,
+    set_by character varying(32) NOT NULL,
+    trigger_decision_ref character varying(36),
+    evidence_refs jsonb NOT NULL,
+    projection_policy character varying(64) NOT NULL,
+    write_path character varying(64) NOT NULL
+);
+
+
+ALTER TABLE window_states OWNER TO brsama;
 
 --
 -- Name: word_books; Type: TABLE; Schema: public; Owner: postgres
@@ -5376,11 +7421,35 @@ ALTER TABLE ONLY accountability_partnership
 
 
 --
+-- Name: accountability_policies accountability_policies_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY accountability_policies
+    ADD CONSTRAINT accountability_policies_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: accountability_policies accountability_policies_policy_id_key; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY accountability_policies
+    ADD CONSTRAINT accountability_policies_policy_id_key UNIQUE (policy_id);
+
+
+--
 -- Name: achievements achievements_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY achievements
     ADD CONSTRAINT achievements_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: admin_audit_log admin_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY admin_audit_log
+    ADD CONSTRAINT admin_audit_log_pkey PRIMARY KEY (id);
 
 
 --
@@ -5432,6 +7501,54 @@ ALTER TABLE ONLY asset_suggestion_logs
 
 
 --
+-- Name: aurora_core_session_snapshots aurora_core_session_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY aurora_core_session_snapshots
+    ADD CONSTRAINT aurora_core_session_snapshots_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: aurora_decision_telemetry aurora_decision_telemetry_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY aurora_decision_telemetry
+    ADD CONSTRAINT aurora_decision_telemetry_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: aurora_judgment_records aurora_judgment_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY aurora_judgment_records
+    ADD CONSTRAINT aurora_judgment_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: aurora_policy_versions aurora_policy_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY aurora_policy_versions
+    ADD CONSTRAINT aurora_policy_versions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: aurora_scheduled_wakes aurora_scheduled_wakes_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY aurora_scheduled_wakes
+    ADD CONSTRAINT aurora_scheduled_wakes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: aurora_state_snapshots aurora_state_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY aurora_state_snapshots
+    ADD CONSTRAINT aurora_state_snapshots_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: auth_audit_log auth_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5480,6 +7597,14 @@ ALTER TABLE ONLY calendar_events
 
 
 --
+-- Name: candidate_action_feedback candidate_action_feedback_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY candidate_action_feedback
+    ADD CONSTRAINT candidate_action_feedback_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: capsule_favorites capsule_favorites_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5504,6 +7629,46 @@ ALTER TABLE ONLY capsule_generation_jobs
 
 
 --
+-- Name: card_adoption_records card_adoption_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_adoption_records
+    ADD CONSTRAINT card_adoption_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: card_edges card_edges_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_edges
+    ADD CONSTRAINT card_edges_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: card_share_records card_share_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_share_records
+    ADD CONSTRAINT card_share_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: card_snapshots card_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_snapshots
+    ADD CONSTRAINT card_snapshots_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: cards cards_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY cards
+    ADD CONSTRAINT cards_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: chat_messages chat_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5517,6 +7682,118 @@ ALTER TABLE ONLY chat_messages
 
 ALTER TABLE ONLY chat_sessions
     ADD CONSTRAINT chat_sessions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: shop_purchases chk_shop_purchases_balance_after_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE shop_purchases
+    ADD CONSTRAINT chk_shop_purchases_balance_after_non_negative CHECK ((photon_balance_after >= 0)) NOT VALID;
+
+
+--
+-- Name: shop_purchases chk_shop_purchases_balance_before_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE shop_purchases
+    ADD CONSTRAINT chk_shop_purchases_balance_before_non_negative CHECK ((photon_balance_before >= 0)) NOT VALID;
+
+
+--
+-- Name: shop_purchases chk_shop_purchases_price_paid_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE shop_purchases
+    ADD CONSTRAINT chk_shop_purchases_price_paid_non_negative CHECK ((price_paid >= 0)) NOT VALID;
+
+
+--
+-- Name: tasks chk_tasks_actual_minutes_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE tasks
+    ADD CONSTRAINT chk_tasks_actual_minutes_non_negative CHECK (((actual_minutes IS NULL) OR (actual_minutes >= 0))) NOT VALID;
+
+
+--
+-- Name: tasks chk_tasks_difficulty_range; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE tasks
+    ADD CONSTRAINT chk_tasks_difficulty_range CHECK (((difficulty >= 1) AND (difficulty <= 5))) NOT VALID;
+
+
+--
+-- Name: tasks chk_tasks_energy_cost_range; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE tasks
+    ADD CONSTRAINT chk_tasks_energy_cost_range CHECK (((energy_cost >= 1) AND (energy_cost <= 5))) NOT VALID;
+
+
+--
+-- Name: tasks chk_tasks_estimated_minutes_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE tasks
+    ADD CONSTRAINT chk_tasks_estimated_minutes_non_negative CHECK ((estimated_minutes >= 0)) NOT VALID;
+
+
+--
+-- Name: tasks chk_tasks_subtask_counts_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE tasks
+    ADD CONSTRAINT chk_tasks_subtask_counts_non_negative CHECK (((subtasks_total >= 0) AND (subtasks_completed >= 0))) NOT VALID;
+
+
+--
+-- Name: tasks chk_tasks_subtasks_completed_lte_total; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE tasks
+    ADD CONSTRAINT chk_tasks_subtasks_completed_lte_total CHECK ((subtasks_completed <= subtasks_total)) NOT VALID;
+
+
+--
+-- Name: users chk_users_curiosity_preference_range; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE users
+    ADD CONSTRAINT chk_users_curiosity_preference_range CHECK (((curiosity_preference >= (0)::double precision) AND (curiosity_preference <= (1)::double precision))) NOT VALID;
+
+
+--
+-- Name: users chk_users_depth_preference_range; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE users
+    ADD CONSTRAINT chk_users_depth_preference_range CHECK (((depth_preference >= (0)::double precision) AND (depth_preference <= (1)::double precision))) NOT VALID;
+
+
+--
+-- Name: users chk_users_flame_brightness_range; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE users
+    ADD CONSTRAINT chk_users_flame_brightness_range CHECK (((flame_brightness >= (0)::double precision) AND (flame_brightness <= (1)::double precision))) NOT VALID;
+
+
+--
+-- Name: users chk_users_flame_level_range; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE users
+    ADD CONSTRAINT chk_users_flame_level_range CHECK (((flame_level >= 0) AND (flame_level <= 100))) NOT VALID;
+
+
+--
+-- Name: users chk_users_photon_balance_non_negative; Type: CHECK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE users
+    ADD CONSTRAINT chk_users_photon_balance_non_negative CHECK ((photon_balance >= 0)) NOT VALID;
 
 
 --
@@ -5536,11 +7813,35 @@ ALTER TABLE ONLY collaborative_galaxies
 
 
 --
+-- Name: commitments commitments_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY commitments
+    ADD CONSTRAINT commitments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: community_aggregate_signals community_aggregate_signals_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY community_aggregate_signals
+    ADD CONSTRAINT community_aggregate_signals_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: compliance_check_logs compliance_check_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY compliance_check_logs
     ADD CONSTRAINT compliance_check_logs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: conflict_resolution_records conflict_resolution_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY conflict_resolution_records
+    ADD CONSTRAINT conflict_resolution_records_pkey PRIMARY KEY (id);
 
 
 --
@@ -5565,6 +7866,14 @@ ALTER TABLE ONLY context_pack_feedback
 
 ALTER TABLE ONLY context_pack_runs
     ADD CONSTRAINT context_pack_runs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: counterfactual_evaluation_reports counterfactual_evaluation_reports_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY counterfactual_evaluation_reports
+    ADD CONSTRAINT counterfactual_evaluation_reports_pkey PRIMARY KEY (id);
 
 
 --
@@ -5616,6 +7925,14 @@ ALTER TABLE ONLY custom_expert_teams
 
 
 --
+-- Name: daily_behavior_vector daily_behavior_vector_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY daily_behavior_vector
+    ADD CONSTRAINT daily_behavior_vector_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: data_access_logs data_access_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5640,6 +7957,14 @@ ALTER TABLE ONLY dictionary_entries
 
 
 --
+-- Name: distilled_strategy_cache distilled_strategy_cache_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY distilled_strategy_cache
+    ADD CONSTRAINT distilled_strategy_cache_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: dlq_replay_audit_logs dlq_replay_audit_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5656,6 +7981,22 @@ ALTER TABLE ONLY document_chunks
 
 
 --
+-- Name: document_retrieval_feedback document_retrieval_feedback_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY document_retrieval_feedback
+    ADD CONSTRAINT document_retrieval_feedback_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: durable_session_state_snapshots durable_session_state_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY durable_session_state_snapshots
+    ADD CONSTRAINT durable_session_state_snapshots_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: episodic_memories episodic_memories_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5669,6 +8010,14 @@ ALTER TABLE ONLY episodic_memories
 
 ALTER TABLE ONLY error_records
     ADD CONSTRAINT error_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: event_bus_dlq event_bus_dlq_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY event_bus_dlq
+    ADD CONSTRAINT event_bus_dlq_pkey PRIMARY KEY (id);
 
 
 --
@@ -5704,6 +8053,14 @@ ALTER TABLE ONLY evolution_predictions
 
 
 --
+-- Name: execution_audit_log execution_audit_log_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY execution_audit_log
+    ADD CONSTRAINT execution_audit_log_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: execution_intents execution_intents_idempotency_key_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -5736,11 +8093,27 @@ ALTER TABLE ONLY execution_records
 
 
 --
+-- Name: execution_schedules execution_schedules_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY execution_schedules
+    ADD CONSTRAINT execution_schedules_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: expansion_feedback expansion_feedback_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY expansion_feedback
     ADD CONSTRAINT expansion_feedback_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: focus_contracts focus_contracts_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY focus_contracts
+    ADD CONSTRAINT focus_contracts_pkey PRIMARY KEY (id);
 
 
 --
@@ -5773,6 +8146,22 @@ ALTER TABLE ONLY galaxy_skins
 
 ALTER TABLE ONLY galaxy_user_permissions
     ADD CONSTRAINT galaxy_user_permissions_pkey PRIMARY KEY (galaxy_id, user_id);
+
+
+--
+-- Name: goal_world_graph_snapshots goal_world_graph_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY goal_world_graph_snapshots
+    ADD CONSTRAINT goal_world_graph_snapshots_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: goals goals_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY goals
+    ADD CONSTRAINT goals_pkey PRIMARY KEY (id);
 
 
 --
@@ -5832,11 +8221,51 @@ ALTER TABLE ONLY groups
 
 
 --
+-- Name: growth_chronicle_snapshots growth_chronicle_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY growth_chronicle_snapshots
+    ADD CONSTRAINT growth_chronicle_snapshots_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: idempotency_keys idempotency_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY idempotency_keys
     ADD CONSTRAINT idempotency_keys_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: identity_evidence identity_evidence_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY identity_evidence
+    ADD CONSTRAINT identity_evidence_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idiographic_associations idiographic_associations_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY idiographic_associations
+    ADD CONSTRAINT idiographic_associations_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idiographic_changepoints idiographic_changepoints_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY idiographic_changepoints
+    ADD CONSTRAINT idiographic_changepoints_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: insight_claims insight_claims_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY insight_claims
+    ADD CONSTRAINT insight_claims_pkey PRIMARY KEY (id);
 
 
 --
@@ -5856,11 +8285,35 @@ ALTER TABLE ONLY intervention_feedback
 
 
 --
+-- Name: intervention_outcomes intervention_outcomes_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY intervention_outcomes
+    ADD CONSTRAINT intervention_outcomes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: intervention_records intervention_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY intervention_records
+    ADD CONSTRAINT intervention_records_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: intervention_requests intervention_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY intervention_requests
     ADD CONSTRAINT intervention_requests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: intervention_strategy_outcomes intervention_strategy_outcomes_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY intervention_strategy_outcomes
+    ADD CONSTRAINT intervention_strategy_outcomes_pkey PRIMARY KEY (id);
 
 
 --
@@ -5896,11 +8349,27 @@ ALTER TABLE ONLY jobs
 
 
 --
+-- Name: knowledge_node_documents knowledge_node_documents_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY knowledge_node_documents
+    ADD CONSTRAINT knowledge_node_documents_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: knowledge_nodes knowledge_nodes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY knowledge_nodes
     ADD CONSTRAINT knowledge_nodes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: leaderboard_snapshots leaderboard_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY leaderboard_snapshots
+    ADD CONSTRAINT leaderboard_snapshots_pkey PRIMARY KEY (id);
 
 
 --
@@ -5933,6 +8402,38 @@ ALTER TABLE ONLY login_attempts
 
 ALTER TABLE ONLY ltm_daily_snapshots
     ADD CONSTRAINT ltm_daily_snapshots_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: marketplace_packs marketplace_packs_pack_id_key; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY marketplace_packs
+    ADD CONSTRAINT marketplace_packs_pack_id_key UNIQUE (pack_id);
+
+
+--
+-- Name: marketplace_packs marketplace_packs_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY marketplace_packs
+    ADD CONSTRAINT marketplace_packs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: marketplace_skills marketplace_skills_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY marketplace_skills
+    ADD CONSTRAINT marketplace_skills_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: marketplace_skills marketplace_skills_skill_id_key; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY marketplace_skills
+    ADD CONSTRAINT marketplace_skills_skill_id_key UNIQUE (skill_id);
 
 
 --
@@ -6032,6 +8533,14 @@ ALTER TABLE ONLY node_relations
 
 
 --
+-- Name: north_star_metric_events north_star_metric_events_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY north_star_metric_events
+    ADD CONSTRAINT north_star_metric_events_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: notification_interactions notification_interactions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6064,11 +8573,27 @@ ALTER TABLE ONLY offline_message_queue
 
 
 --
+-- Name: pack_adoption_history pack_adoption_history_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY pack_adoption_history
+    ADD CONSTRAINT pack_adoption_history_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: passive_signals passive_signals_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY passive_signals
     ADD CONSTRAINT passive_signals_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: persdyn_attractors persdyn_attractors_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY persdyn_attractors
+    ADD CONSTRAINT persdyn_attractors_pkey PRIMARY KEY (id);
 
 
 --
@@ -6104,6 +8629,14 @@ ALTER TABLE ONLY plan_states
 
 
 --
+-- Name: planning_artifacts planning_artifacts_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY planning_artifacts
+    ADD CONSTRAINT planning_artifacts_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: plans plans_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6128,11 +8661,27 @@ ALTER TABLE ONLY posts
 
 
 --
+-- Name: privacy_budget_ledger privacy_budget_ledger_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY privacy_budget_ledger
+    ADD CONSTRAINT privacy_budget_ledger_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: private_messages private_messages_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY private_messages
     ADD CONSTRAINT private_messages_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: probe_outcomes probe_outcomes_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY probe_outcomes
+    ADD CONSTRAINT probe_outcomes_pkey PRIMARY KEY (id);
 
 
 --
@@ -6160,6 +8709,14 @@ ALTER TABLE ONLY projection_snapshots
 
 
 --
+-- Name: push_delivery_records push_delivery_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY push_delivery_records
+    ADD CONSTRAINT push_delivery_records_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: push_histories push_histories_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6181,6 +8738,30 @@ ALTER TABLE ONLY push_preferences
 
 ALTER TABLE ONLY recommendation_cache
     ADD CONSTRAINT recommendation_cache_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: release_approval_requests release_approval_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY release_approval_requests
+    ADD CONSTRAINT release_approval_requests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: report_snapshots report_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY report_snapshots
+    ADD CONSTRAINT report_snapshots_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: research_consent_records research_consent_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY research_consent_records
+    ADD CONSTRAINT research_consent_records_pkey PRIMARY KEY (id);
 
 
 --
@@ -6216,11 +8797,59 @@ ALTER TABLE ONLY review_overrides
 
 
 --
+-- Name: routing_decision_log routing_decision_log_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY routing_decision_log
+    ADD CONSTRAINT routing_decision_log_pkey PRIMARY KEY (decision_id);
+
+
+--
+-- Name: safe_experiment_episodes safe_experiment_episodes_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY safe_experiment_episodes
+    ADD CONSTRAINT safe_experiment_episodes_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: safe_experiments safe_experiments_experiment_key_key; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY safe_experiments
+    ADD CONSTRAINT safe_experiments_experiment_key_key UNIQUE (experiment_key);
+
+
+--
+-- Name: safe_experiments safe_experiments_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY safe_experiments
+    ADD CONSTRAINT safe_experiments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: saga_instances saga_instances_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY saga_instances
+    ADD CONSTRAINT saga_instances_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: scaffolding_states scaffolding_states_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY scaffolding_states
     ADD CONSTRAINT scaffolding_states_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: scenes scenes_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY scenes
+    ADD CONSTRAINT scenes_pkey PRIMARY KEY (id);
 
 
 --
@@ -6264,11 +8893,27 @@ ALTER TABLE ONLY semantic_links
 
 
 --
+-- Name: session_completions session_completions_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY session_completions
+    ADD CONSTRAINT session_completions_pkey PRIMARY KEY (session_id);
+
+
+--
 -- Name: shared_resources shared_resources_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY shared_resources
     ADD CONSTRAINT shared_resources_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: shared_skills shared_skills_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY shared_skills
+    ADD CONSTRAINT shared_skills_pkey PRIMARY KEY (id);
 
 
 --
@@ -6288,6 +8933,22 @@ ALTER TABLE ONLY shop_purchases
 
 
 --
+-- Name: simulation_runs simulation_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY simulation_runs
+    ADD CONSTRAINT simulation_runs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: skill_share_moderation_queue skill_share_moderation_queue_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY skill_share_moderation_queue
+    ADD CONSTRAINT skill_share_moderation_queue_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: smoke_document_vectors smoke_document_vectors_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6304,6 +8965,14 @@ ALTER TABLE ONLY spark_contracts
 
 
 --
+-- Name: srl_phase_states srl_phase_states_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY srl_phase_states
+    ADD CONSTRAINT srl_phase_states_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: stored_files stored_files_object_key_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6317,6 +8986,14 @@ ALTER TABLE ONLY stored_files
 
 ALTER TABLE ONLY stored_files
     ADD CONSTRAINT stored_files_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: strategy_belief_snapshots strategy_belief_snapshots_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY strategy_belief_snapshots
+    ADD CONSTRAINT strategy_belief_snapshots_pkey PRIMARY KEY (id);
 
 
 --
@@ -6368,6 +9045,14 @@ ALTER TABLE ONLY system_config_change_logs
 
 
 --
+-- Name: task_documents task_documents_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY task_documents
+    ADD CONSTRAINT task_documents_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: task_feedbacks task_feedbacks_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6384,6 +9069,14 @@ ALTER TABLE ONLY task_knowledge_links
 
 
 --
+-- Name: task_occurrences task_occurrences_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY task_occurrences
+    ADD CONSTRAINT task_occurrences_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: task_resource_links task_resource_links_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6397,6 +9090,22 @@ ALTER TABLE ONLY task_resource_links
 
 ALTER TABLE ONLY tasks
     ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: theater_candidate_bundles theater_candidate_bundles_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY theater_candidate_bundles
+    ADD CONSTRAINT theater_candidate_bundles_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: theater_predictions theater_predictions_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY theater_predictions
+    ADD CONSTRAINT theater_predictions_pkey PRIMARY KEY (id);
 
 
 --
@@ -6424,6 +9133,22 @@ ALTER TABLE ONLY tracking_events
 
 
 --
+-- Name: transition_decision_records transition_decision_records_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY transition_decision_records
+    ADD CONSTRAINT transition_decision_records_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: unresolved_conflicts unresolved_conflicts_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY unresolved_conflicts
+    ADD CONSTRAINT unresolved_conflicts_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: accountability_partnership uq_accountability_partnership_pair; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6432,11 +9157,67 @@ ALTER TABLE ONLY accountability_partnership
 
 
 --
+-- Name: planning_artifacts uq_artifact_version; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY planning_artifacts
+    ADD CONSTRAINT uq_artifact_version UNIQUE (plan_card_id, artifact_type, version);
+
+
+--
+-- Name: aurora_core_session_snapshots uq_aurora_core_session_snapshots_resume_token_hash; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY aurora_core_session_snapshots
+    ADD CONSTRAINT uq_aurora_core_session_snapshots_resume_token_hash UNIQUE (resume_token_hash);
+
+
+--
+-- Name: aurora_core_session_snapshots uq_aurora_core_session_snapshots_session_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY aurora_core_session_snapshots
+    ADD CONSTRAINT uq_aurora_core_session_snapshots_session_id UNIQUE (session_id);
+
+
+--
 -- Name: capsule_favorites uq_capsule_favorite; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY capsule_favorites
     ADD CONSTRAINT uq_capsule_favorite UNIQUE (user_id, capsule_id);
+
+
+--
+-- Name: card_edges uq_card_edge_unique; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_edges
+    ADD CONSTRAINT uq_card_edge_unique UNIQUE (from_card_id, to_card_id, edge_type);
+
+
+--
+-- Name: collaborative_galaxies uq_collaborative_galaxies_group_id; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY collaborative_galaxies
+    ADD CONSTRAINT uq_collaborative_galaxies_group_id UNIQUE (group_id);
+
+
+--
+-- Name: community_aggregate_signals uq_community_aggregate_signal_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY community_aggregate_signals
+    ADD CONSTRAINT uq_community_aggregate_signal_id UNIQUE (signal_id);
+
+
+--
+-- Name: durable_session_state_snapshots uq_durable_session_state_snapshots_session_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY durable_session_state_snapshots
+    ADD CONSTRAINT uq_durable_session_state_snapshots_session_id UNIQUE (session_id);
 
 
 --
@@ -6472,6 +9253,14 @@ ALTER TABLE ONLY group_message_reads
 
 
 --
+-- Name: growth_chronicle_snapshots uq_growth_chronicle_snapshots_user_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY growth_chronicle_snapshots
+    ADD CONSTRAINT uq_growth_chronicle_snapshots_user_id UNIQUE (user_id);
+
+
+--
 -- Name: intervention_feedback uq_intervention_feedback_idempotency; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6485,6 +9274,22 @@ ALTER TABLE ONLY intervention_feedback
 
 ALTER TABLE ONLY item_similarities
     ADD CONSTRAINT uq_item_similarity_pair UNIQUE (item_id_1, item_type_1, item_id_2, item_type_2);
+
+
+--
+-- Name: knowledge_node_documents uq_knowledge_node_documents_user_node_file; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY knowledge_node_documents
+    ADD CONSTRAINT uq_knowledge_node_documents_user_node_file UNIQUE (user_id, node_id, file_id);
+
+
+--
+-- Name: north_star_metric_events uq_north_star_metric_events_event_key; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY north_star_metric_events
+    ADD CONSTRAINT uq_north_star_metric_events_event_key UNIQUE (event_key);
 
 
 --
@@ -6512,6 +9317,14 @@ ALTER TABLE ONLY response_feedback
 
 
 --
+-- Name: scenes uq_scenes_scene_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY scenes
+    ADD CONSTRAINT uq_scenes_scene_id UNIQUE (scene_id);
+
+
+--
 -- Name: seed_library_ratings uq_seed_library_ratings_user_library; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6520,11 +9333,51 @@ ALTER TABLE ONLY seed_library_ratings
 
 
 --
+-- Name: strategy_belief_snapshots uq_strategy_belief_snapshots_user_strategy; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY strategy_belief_snapshots
+    ADD CONSTRAINT uq_strategy_belief_snapshots_user_strategy UNIQUE (user_id, strategy_key);
+
+
+--
+-- Name: intervention_strategy_outcomes uq_strategy_outcome_intervention; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY intervention_strategy_outcomes
+    ADD CONSTRAINT uq_strategy_outcome_intervention UNIQUE (intervention_id);
+
+
+--
 -- Name: group_task_claims uq_task_claim; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY group_task_claims
     ADD CONSTRAINT uq_task_claim UNIQUE (group_task_id, user_id);
+
+
+--
+-- Name: task_documents uq_task_documents_task_file; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY task_documents
+    ADD CONSTRAINT uq_task_documents_task_file UNIQUE (task_id, file_id);
+
+
+--
+-- Name: theater_candidate_bundles uq_theater_candidate_bundles_prediction_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY theater_candidate_bundles
+    ADD CONSTRAINT uq_theater_candidate_bundles_prediction_id UNIQUE (prediction_id);
+
+
+--
+-- Name: theater_predictions uq_theater_predictions_prediction_id; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY theater_predictions
+    ADD CONSTRAINT uq_theater_predictions_prediction_id UNIQUE (prediction_id);
 
 
 --
@@ -6541,6 +9394,22 @@ ALTER TABLE ONLY user_blocks
 
 ALTER TABLE ONLY user_daily_metrics
     ADD CONSTRAINT uq_user_daily_metric UNIQUE (user_id, date);
+
+
+--
+-- Name: user_learning_profiles uq_user_learning_profile; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_learning_profiles
+    ADD CONSTRAINT uq_user_learning_profile UNIQUE (user_id);
+
+
+--
+-- Name: user_skill_adoptions uq_user_marketplace_asset_adoption; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY user_skill_adoptions
+    ADD CONSTRAINT uq_user_marketplace_asset_adoption UNIQUE (user_id, asset_type, asset_id);
 
 
 --
@@ -6640,6 +9509,14 @@ ALTER TABLE ONLY user_item_interactions
 
 
 --
+-- Name: user_learning_profiles user_learning_profiles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_learning_profiles
+    ADD CONSTRAINT user_learning_profiles_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: user_library_subscriptions user_library_subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6680,6 +9557,30 @@ ALTER TABLE ONLY user_preferences_center
 
 
 --
+-- Name: user_push_opt_in user_push_opt_in_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY user_push_opt_in
+    ADD CONSTRAINT user_push_opt_in_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_push_opt_in user_push_opt_in_user_id_key; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY user_push_opt_in
+    ADD CONSTRAINT user_push_opt_in_user_id_key UNIQUE (user_id);
+
+
+--
+-- Name: user_scenario_states user_scenario_states_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY user_scenario_states
+    ADD CONSTRAINT user_scenario_states_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: user_sessions user_sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6709,6 +9610,22 @@ ALTER TABLE ONLY user_settings
 
 ALTER TABLE ONLY user_similarities
     ADD CONSTRAINT user_similarities_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_skill_adoptions user_skill_adoptions_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY user_skill_adoptions
+    ADD CONSTRAINT user_skill_adoptions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: user_skills user_skills_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY user_skills
+    ADD CONSTRAINT user_skills_pkey PRIMARY KEY (id);
 
 
 --
@@ -6800,6 +9717,14 @@ ALTER TABLE ONLY visual_elements
 
 
 --
+-- Name: window_states window_states_pkey; Type: CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY window_states
+    ADD CONSTRAINT window_states_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: word_books word_books_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -6852,6 +9777,20 @@ CREATE INDEX idx_accountability_partner_status ON accountability_partnership USI
 
 
 --
+-- Name: idx_accountability_policies_commitment_enabled; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_accountability_policies_commitment_enabled ON accountability_policies USING btree (commitment_id, is_enabled);
+
+
+--
+-- Name: idx_accountability_policies_user_next_trigger; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_accountability_policies_user_next_trigger ON accountability_policies USING btree (user_id, next_trigger_at);
+
+
+--
 -- Name: idx_accountability_slot_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -6873,6 +9812,83 @@ CREATE INDEX idx_achievements_type_rarity ON achievements USING btree (type, rar
 
 
 --
+-- Name: idx_admin_audit_category_occurred; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_admin_audit_category_occurred ON admin_audit_log USING btree (category, occurred_at);
+
+
+--
+-- Name: idx_admin_audit_user_occurred; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_admin_audit_user_occurred ON admin_audit_log USING btree (admin_user_id, occurred_at);
+
+
+--
+-- Name: idx_aurora_core_session_conversation; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_aurora_core_session_conversation ON aurora_core_session_snapshots USING btree (user_id, conversation_id, last_activity_at);
+
+
+--
+-- Name: idx_aurora_core_session_user_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_aurora_core_session_user_status ON aurora_core_session_snapshots USING btree (user_id, status, last_activity_at);
+
+
+--
+-- Name: idx_aurora_decision_telemetry_scope_ts; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_aurora_decision_telemetry_scope_ts ON aurora_decision_telemetry USING btree (user_id, conversation_id, decided_at);
+
+
+--
+-- Name: idx_aurora_decision_telemetry_surface_ts; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_aurora_decision_telemetry_surface_ts ON aurora_decision_telemetry USING btree (surface, decided_at);
+
+
+--
+-- Name: idx_aurora_judgment_records_user_computed; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_aurora_judgment_records_user_computed ON aurora_judgment_records USING btree (user_id, computed_at);
+
+
+--
+-- Name: idx_aurora_snapshot_scope; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_aurora_snapshot_scope ON aurora_state_snapshots USING btree (user_id, surface, conversation_id, snapshot_at);
+
+
+--
+-- Name: idx_aurora_wake_due; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_aurora_wake_due ON aurora_scheduled_wakes USING btree (status, scheduled_at);
+
+
+--
+-- Name: idx_aurora_wake_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_aurora_wake_id ON aurora_scheduled_wakes USING btree (wake_id);
+
+
+--
+-- Name: idx_aurora_wake_scope; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_aurora_wake_scope ON aurora_scheduled_wakes USING btree (user_id, surface, conversation_id);
+
+
+--
 -- Name: idx_auth_audit_user_occurred; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -6891,6 +9907,34 @@ CREATE INDEX idx_background_tasks_type ON background_tasks USING btree (task_typ
 --
 
 CREATE INDEX idx_background_tasks_user_status ON background_tasks USING btree (user_id, status);
+
+
+--
+-- Name: idx_candidate_feedback_action; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_candidate_feedback_action ON candidate_action_feedback USING btree (action_type);
+
+
+--
+-- Name: idx_candidate_feedback_created; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_candidate_feedback_created ON candidate_action_feedback USING btree (created_at);
+
+
+--
+-- Name: idx_candidate_feedback_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_candidate_feedback_type ON candidate_action_feedback USING btree (feedback_type);
+
+
+--
+-- Name: idx_candidate_feedback_user_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_candidate_feedback_user_type ON candidate_action_feedback USING btree (user_id, action_type);
 
 
 --
@@ -6971,6 +10015,41 @@ CREATE INDEX idx_cognitive_fragments_embedding_hnsw ON cognitive_fragments USING
 
 
 --
+-- Name: idx_commitments_user_status_deadline; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_commitments_user_status_deadline ON commitments USING btree (user_id, status, deadline);
+
+
+--
+-- Name: idx_community_aggregate_cohort_stat; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_community_aggregate_cohort_stat ON community_aggregate_signals USING btree (cohort_key, stat_name, generated_at);
+
+
+--
+-- Name: idx_community_aggregate_status_generated; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_community_aggregate_status_generated ON community_aggregate_signals USING btree (status, generated_at);
+
+
+--
+-- Name: idx_conflict_resolution_records_user_conflict_key; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_conflict_resolution_records_user_conflict_key ON conflict_resolution_records USING btree (user_id, conflict_key);
+
+
+--
+-- Name: idx_conflict_resolution_records_user_resolved; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_conflict_resolution_records_user_resolved ON conflict_resolution_records USING btree (user_id, resolved_at);
+
+
+--
 -- Name: idx_context_budget_profiles_intent; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -6992,6 +10071,20 @@ CREATE INDEX idx_context_pack_runs_user_created ON context_pack_runs USING btree
 
 
 --
+-- Name: idx_counterfactual_report_pending; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_counterfactual_report_pending ON counterfactual_evaluation_reports USING btree (promotion_status, generated_at);
+
+
+--
+-- Name: idx_counterfactual_report_user_context_policies; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_counterfactual_report_user_context_policies ON counterfactual_evaluation_reports USING btree (user_id, context_hash, policy_a, policy_b, generated_at);
+
+
+--
 -- Name: idx_custom_expert_profiles_user_enabled; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7006,6 +10099,20 @@ CREATE INDEX idx_custom_expert_teams_user_enabled ON custom_expert_teams USING b
 
 
 --
+-- Name: idx_daily_behavior_vector_user_active; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_daily_behavior_vector_user_active ON daily_behavior_vector USING btree (user_id, active_event_count);
+
+
+--
+-- Name: idx_daily_behavior_vector_user_date; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX idx_daily_behavior_vector_user_date ON daily_behavior_vector USING btree (user_id, vector_date);
+
+
+--
 -- Name: idx_dict_word; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7013,10 +10120,45 @@ CREATE INDEX idx_dict_word ON dictionary_entries USING btree (word);
 
 
 --
+-- Name: idx_document_chunks_embedding_hnsw; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_document_chunks_embedding_hnsw ON document_chunks USING hnsw (embedding vector_cosine_ops) WHERE (embedding IS NOT NULL);
+
+
+--
+-- Name: idx_durable_session_state_recovery; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_durable_session_state_recovery ON durable_session_state_snapshots USING btree (session_id, recoverable, expires_at);
+
+
+--
+-- Name: idx_durable_session_state_user_seen; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_durable_session_state_user_seen ON durable_session_state_snapshots USING btree (user_id, last_seen_at);
+
+
+--
 -- Name: idx_episodic_memories_archived_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_episodic_memories_archived_at ON episodic_memories USING btree (archived_at);
+
+
+--
+-- Name: idx_episodic_memories_due_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_episodic_memories_due_at ON episodic_memories USING btree (user_id, due_at);
+
+
+--
+-- Name: idx_episodic_memories_embedding_hnsw; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_episodic_memories_embedding_hnsw ON episodic_memories USING hnsw (embedding vector_cosine_ops) WHERE (embedding IS NOT NULL);
 
 
 --
@@ -7034,10 +10176,38 @@ CREATE INDEX idx_episodic_memories_evidence_score ON episodic_memories USING btr
 
 
 --
+-- Name: idx_episodic_memories_evidence_token; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_episodic_memories_evidence_token ON episodic_memories USING btree (user_id, evidence_token);
+
+
+--
 -- Name: idx_episodic_memories_last_consumed_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_episodic_memories_last_consumed_at ON episodic_memories USING btree (last_consumed_at);
+
+
+--
+-- Name: idx_episodic_memories_semantic_key; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_episodic_memories_semantic_key ON episodic_memories USING btree (user_id, semantic_key);
+
+
+--
+-- Name: idx_episodic_memories_source_lane; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_episodic_memories_source_lane ON episodic_memories USING btree (user_id, source_lane);
+
+
+--
+-- Name: idx_episodic_memories_subject_type; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_episodic_memories_subject_type ON episodic_memories USING btree (user_id, subject_type);
 
 
 --
@@ -7048,17 +10218,17 @@ CREATE INDEX idx_episodic_memories_user_occurred ON episodic_memories USING btre
 
 
 --
--- Name: idx_error_records_cognitive_tags; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX idx_error_records_cognitive_tags ON error_records USING gin (cognitive_tags);
-
-
---
 -- Name: idx_error_records_affected_node; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_error_records_affected_node ON error_records USING btree (affected_node_id);
+
+
+--
+-- Name: idx_error_records_cognitive_tags; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_error_records_cognitive_tags ON error_records USING gin (cognitive_tags);
 
 
 --
@@ -7146,6 +10316,20 @@ CREATE INDEX idx_exec_record_user ON execution_records USING btree (user_id);
 
 
 --
+-- Name: idx_execution_audit_intent_occurred; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_execution_audit_intent_occurred ON execution_audit_log USING btree (intent_id, occurred_at);
+
+
+--
+-- Name: idx_execution_audit_user_action; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_execution_audit_user_action ON execution_audit_log USING btree (user_id, action);
+
+
+--
 -- Name: idx_execution_records_created; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7164,6 +10348,20 @@ CREATE INDEX idx_execution_records_plan_user ON plan_execution_records USING btr
 --
 
 CREATE INDEX idx_execution_records_status ON plan_execution_records USING btree (validation_status);
+
+
+--
+-- Name: idx_execution_schedule_due; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_execution_schedule_due ON execution_schedules USING btree (is_active, next_run_at);
+
+
+--
+-- Name: idx_execution_schedule_user_trigger; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_execution_schedule_user_trigger ON execution_schedules USING btree (user_id, trigger_type);
 
 
 --
@@ -7195,6 +10393,48 @@ CREATE INDEX idx_friendship_user ON friendships USING btree (user_id);
 
 
 --
+-- Name: idx_goal_world_graph_user_goal; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX idx_goal_world_graph_user_goal ON goal_world_graph_snapshots USING btree (user_id, goal_id);
+
+
+--
+-- Name: idx_goal_world_graph_user_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_goal_world_graph_user_type ON goal_world_graph_snapshots USING btree (user_id, goal_type, last_saved_at);
+
+
+--
+-- Name: idx_goals_target_date; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_goals_target_date ON goals USING btree (target_date);
+
+
+--
+-- Name: idx_goals_user_primary; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_goals_user_primary ON goals USING btree (user_id, is_primary);
+
+
+--
+-- Name: idx_goals_user_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_goals_user_status ON goals USING btree (user_id, status);
+
+
+--
+-- Name: idx_goals_user_type_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_goals_user_type_status ON goals USING btree (user_id, goal_type, status);
+
+
+--
 -- Name: idx_group_files_category; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7213,6 +10453,13 @@ CREATE INDEX idx_group_files_file ON group_files USING btree (file_id);
 --
 
 CREATE INDEX idx_group_files_group ON group_files USING btree (group_id);
+
+
+--
+-- Name: idx_group_files_knowledge_base; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_group_files_knowledge_base ON group_files USING btree (group_id, is_knowledge_base);
 
 
 --
@@ -7258,10 +10505,45 @@ CREATE INDEX idx_group_type ON groups USING btree (type);
 
 
 --
+-- Name: idx_growth_chronicle_user_saved; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_growth_chronicle_user_saved ON growth_chronicle_snapshots USING btree (user_id, last_saved_at);
+
+
+--
 -- Name: idx_idempotency_expires; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX idx_idempotency_expires ON idempotency_keys USING btree (expires_at);
+
+
+--
+-- Name: idx_idiographic_associations_user_pair; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX idx_idiographic_associations_user_pair ON idiographic_associations USING btree (user_id, dim_pair);
+
+
+--
+-- Name: idx_idiographic_associations_user_visible; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_idiographic_associations_user_visible ON idiographic_associations USING btree (user_id, visible);
+
+
+--
+-- Name: idx_idiographic_changepoints_user_dim_date; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX idx_idiographic_changepoints_user_dim_date ON idiographic_changepoints USING btree (user_id, dim, change_date);
+
+
+--
+-- Name: idx_insight_claims_user_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_insight_claims_user_status ON insight_claims USING btree (user_id, status);
 
 
 --
@@ -7304,6 +10586,34 @@ CREATE INDEX idx_jobs_status_timeout ON jobs USING btree (status, timeout_at) WH
 --
 
 CREATE INDEX idx_jobs_user_id ON jobs USING btree (user_id);
+
+
+--
+-- Name: idx_knowledge_node_documents_user_file_primary; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_knowledge_node_documents_user_file_primary ON knowledge_node_documents USING btree (user_id, file_id, is_primary);
+
+
+--
+-- Name: idx_knowledge_nodes_embedding_hnsw; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_knowledge_nodes_embedding_hnsw ON knowledge_nodes USING hnsw (embedding vector_cosine_ops) WHERE (embedding IS NOT NULL);
+
+
+--
+-- Name: idx_leaderboard_snapshot_period; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_leaderboard_snapshot_period ON leaderboard_snapshots USING btree (period);
+
+
+--
+-- Name: idx_leaderboard_snapshot_type_date; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_leaderboard_snapshot_type_date ON leaderboard_snapshots USING btree (snapshot_type, snapshot_date);
 
 
 --
@@ -7510,6 +10820,27 @@ CREATE INDEX idx_message_reports_status ON message_reports USING btree (status);
 
 
 --
+-- Name: idx_north_star_metric_events_plan_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_north_star_metric_events_plan_type ON north_star_metric_events USING btree (plan_id, event_type);
+
+
+--
+-- Name: idx_north_star_metric_events_type_date; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_north_star_metric_events_type_date ON north_star_metric_events USING btree (event_type, metric_date);
+
+
+--
+-- Name: idx_north_star_metric_events_user_date; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_north_star_metric_events_user_date ON north_star_metric_events USING btree (user_id, metric_date);
+
+
+--
 -- Name: idx_offline_queue_user_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7528,6 +10859,20 @@ CREATE INDEX idx_outbox_aggregate ON event_outbox USING btree (aggregate_type, a
 --
 
 CREATE INDEX idx_outbox_unpublished ON event_outbox USING btree (created_at) WHERE (published_at IS NULL);
+
+
+--
+-- Name: idx_persdyn_attractors_user_confidence; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_persdyn_attractors_user_confidence ON persdyn_attractors USING btree (user_id, confidence);
+
+
+--
+-- Name: idx_persdyn_attractors_user_dim; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX idx_persdyn_attractors_user_dim ON persdyn_attractors USING btree (user_id, dim);
 
 
 --
@@ -7615,6 +10960,20 @@ CREATE INDEX idx_post_like_user ON post_likes USING btree (user_id);
 
 
 --
+-- Name: idx_privacy_budget_allowed_spent; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_privacy_budget_allowed_spent ON privacy_budget_ledger USING btree (allowed, spent_at);
+
+
+--
+-- Name: idx_privacy_budget_subject_window; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_privacy_budget_subject_window ON privacy_budget_ledger USING btree (subject_id, window_key, query_type);
+
+
+--
 -- Name: idx_private_message_conversation; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7643,6 +11002,20 @@ CREATE UNIQUE INDEX idx_projection_snapshots_projection_aggregate ON projection_
 
 
 --
+-- Name: idx_push_delivery_user_category; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_push_delivery_user_category ON push_delivery_records USING btree (user_id, category);
+
+
+--
+-- Name: idx_push_delivery_user_sent; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_push_delivery_user_sent ON push_delivery_records USING btree (user_id, sent_at);
+
+
+--
 -- Name: idx_rec_cache_expires; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7654,6 +11027,125 @@ CREATE INDEX idx_rec_cache_expires ON recommendation_cache USING btree (expires_
 --
 
 CREATE INDEX idx_rec_cache_user_type ON recommendation_cache USING btree (user_id, recommendation_type);
+
+
+--
+-- Name: idx_release_approval_category_status_created; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_release_approval_category_status_created ON release_approval_requests USING btree (category, status, created_at);
+
+
+--
+-- Name: idx_release_approval_object_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_release_approval_object_status ON release_approval_requests USING btree (object_type, object_id, status);
+
+
+--
+-- Name: idx_routing_decision_log_source_state_v2_key; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_routing_decision_log_source_state_v2_key ON routing_decision_log USING btree (source_state_v2_key);
+
+
+--
+-- Name: idx_routing_decision_log_user_decided; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_routing_decision_log_user_decided ON routing_decision_log USING btree (user_id, decided_at);
+
+
+--
+-- Name: idx_routing_decision_log_user_outcome; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_routing_decision_log_user_outcome ON routing_decision_log USING btree (user_id, outcome_collected_at);
+
+
+--
+-- Name: idx_routing_decision_log_user_outcome_v2; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_routing_decision_log_user_outcome_v2 ON routing_decision_log USING btree (user_id, outcome_timestamp);
+
+
+--
+-- Name: idx_safe_experiment_episodes_exp_created; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_safe_experiment_episodes_exp_created ON safe_experiment_episodes USING btree (experiment_id, created_at);
+
+
+--
+-- Name: idx_safe_experiments_status_domain; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_safe_experiments_status_domain ON safe_experiments USING btree (status, domain);
+
+
+--
+-- Name: idx_saga_instances_created; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_saga_instances_created ON saga_instances USING btree (created_at DESC);
+
+
+--
+-- Name: idx_saga_instances_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_saga_instances_status ON saga_instances USING btree (status);
+
+
+--
+-- Name: idx_saga_instances_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_saga_instances_type ON saga_instances USING btree (saga_type);
+
+
+--
+-- Name: idx_scenes_centroid_embedding_hnsw; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_scenes_centroid_embedding_hnsw ON scenes USING hnsw (centroid_embedding vector_cosine_ops) WHERE (centroid_embedding IS NOT NULL);
+
+
+--
+-- Name: idx_scenes_user_quality; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_scenes_user_quality ON scenes USING btree (user_id, quality_score);
+
+
+--
+-- Name: idx_scenes_user_time_window; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_scenes_user_time_window ON scenes USING btree (user_id, time_start, time_end);
+
+
+--
+-- Name: idx_scenes_user_version; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_scenes_user_version ON scenes USING btree (user_id, version);
+
+
+--
+-- Name: idx_seed_items_embedding_hnsw; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_seed_items_embedding_hnsw ON seed_items USING hnsw (embedding vector_cosine_ops) WHERE (embedding IS NOT NULL);
+
+
+--
+-- Name: idx_share_card_share_record; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_share_card_share_record ON shared_resources USING btree (card_share_record_id);
 
 
 --
@@ -7713,6 +11205,34 @@ CREATE INDEX idx_share_target_user ON shared_resources USING btree (target_user_
 
 
 --
+-- Name: idx_shared_skills_published; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_shared_skills_published ON shared_skills USING btree (published_at);
+
+
+--
+-- Name: idx_skill_share_queue_owner_created; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_skill_share_queue_owner_created ON skill_share_moderation_queue USING btree (owner_user_id, created_at);
+
+
+--
+-- Name: idx_smoke_document_vectors_embedding_hnsw; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_smoke_document_vectors_embedding_hnsw ON smoke_document_vectors USING hnsw (embedding vector_cosine_ops) WHERE (embedding IS NOT NULL);
+
+
+--
+-- Name: idx_strategy_belief_user_score_inputs; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_strategy_belief_user_score_inputs ON strategy_belief_snapshots USING btree (user_id, strategy_key, evidence_count);
+
+
+--
 -- Name: idx_subtasks_order; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7745,6 +11265,13 @@ CREATE INDEX idx_suggestion_log_policy ON asset_suggestion_logs USING btree (pol
 --
 
 CREATE INDEX idx_suggestion_log_user_created ON asset_suggestion_logs USING btree (user_id, created_at);
+
+
+--
+-- Name: idx_task_documents_task_created; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_task_documents_task_created ON task_documents USING btree (task_id, created_at);
 
 
 --
@@ -7818,6 +11345,13 @@ CREATE INDEX idx_tasks_user_status_created_at ON tasks USING btree (user_id, sta
 
 
 --
+-- Name: idx_tdr_user_created_snapshot; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_tdr_user_created_snapshot ON transition_decision_records USING btree (user_id, created_at, input_snapshot_ref);
+
+
+--
 -- Name: idx_token_usage_created_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -7836,6 +11370,20 @@ CREATE INDEX idx_token_usage_session_id ON token_usage USING btree (session_id);
 --
 
 CREATE INDEX idx_token_usage_user_id ON token_usage USING btree (user_id);
+
+
+--
+-- Name: idx_unresolved_conflicts_user_conflict_key; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_unresolved_conflicts_user_conflict_key ON unresolved_conflicts USING btree (user_id, conflict_key);
+
+
+--
+-- Name: idx_unresolved_conflicts_user_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_unresolved_conflicts_user_status ON unresolved_conflicts USING btree (user_id, status);
 
 
 --
@@ -7909,10 +11457,38 @@ CREATE INDEX idx_user_interaction_user_item ON user_item_interactions USING btre
 
 
 --
+-- Name: idx_user_learning_profiles_cluster_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_learning_profiles_cluster_id ON user_learning_profiles USING btree (cluster_id);
+
+
+--
+-- Name: idx_user_learning_profiles_user_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_user_learning_profiles_user_id ON user_learning_profiles USING btree (user_id);
+
+
+--
 -- Name: idx_user_memory_settings_user; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX idx_user_memory_settings_user ON user_memory_settings USING btree (user_id);
+
+
+--
+-- Name: idx_user_push_opt_in_user; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX idx_user_push_opt_in_user ON user_push_opt_in USING btree (user_id);
+
+
+--
+-- Name: idx_user_scenario_states_user_focus; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_user_scenario_states_user_focus ON user_scenario_states USING btree (user_id, current_focus_contract_id, current_focus_contract_version);
 
 
 --
@@ -7948,6 +11524,20 @@ CREATE INDEX idx_user_sim_user1 ON user_similarities USING btree (user_id_1);
 --
 
 CREATE INDEX idx_user_sim_user2 ON user_similarities USING btree (user_id_2);
+
+
+--
+-- Name: idx_user_skills_user_active; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_user_skills_user_active ON user_skills USING btree (user_id, active);
+
+
+--
+-- Name: idx_user_skills_user_updated; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX idx_user_skills_user_updated ON user_skills USING btree (user_id, updated_at);
 
 
 --
@@ -8105,6 +11695,27 @@ CREATE INDEX ix_ab_experiments_status ON ab_experiments USING btree (status);
 
 
 --
+-- Name: ix_accountability_policies_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_accountability_policies_deleted_at ON accountability_policies USING btree (deleted_at);
+
+
+--
+-- Name: ix_accountability_policies_policy_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_accountability_policies_policy_id ON accountability_policies USING btree (policy_id);
+
+
+--
+-- Name: ix_accountability_policies_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_accountability_policies_user_id ON accountability_policies USING btree (user_id);
+
+
+--
 -- Name: ix_achievements_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8123,6 +11734,104 @@ CREATE INDEX ix_achievements_trigger_code ON achievements USING btree (trigger_c
 --
 
 CREATE INDEX ix_achievements_type ON achievements USING btree (type);
+
+
+--
+-- Name: ix_admin_audit_log_action; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_action ON admin_audit_log USING btree (action);
+
+
+--
+-- Name: ix_admin_audit_log_admin_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_admin_user_id ON admin_audit_log USING btree (admin_user_id);
+
+
+--
+-- Name: ix_admin_audit_log_category; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_category ON admin_audit_log USING btree (category);
+
+
+--
+-- Name: ix_admin_audit_log_created_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_created_at ON admin_audit_log USING btree (created_at);
+
+
+--
+-- Name: ix_admin_audit_log_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_id ON admin_audit_log USING btree (id);
+
+
+--
+-- Name: ix_admin_audit_log_ip_address; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_ip_address ON admin_audit_log USING btree (ip_address);
+
+
+--
+-- Name: ix_admin_audit_log_occurred_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_occurred_at ON admin_audit_log USING btree (occurred_at);
+
+
+--
+-- Name: ix_admin_audit_log_outcome; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_outcome ON admin_audit_log USING btree (outcome);
+
+
+--
+-- Name: ix_admin_audit_log_path; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_path ON admin_audit_log USING btree (path);
+
+
+--
+-- Name: ix_admin_audit_log_request_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_request_id ON admin_audit_log USING btree (request_id);
+
+
+--
+-- Name: ix_admin_audit_log_retention_until; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_retention_until ON admin_audit_log USING btree (retention_until);
+
+
+--
+-- Name: ix_admin_audit_log_risk; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_risk ON admin_audit_log USING btree (risk);
+
+
+--
+-- Name: ix_admin_audit_log_status_code; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_status_code ON admin_audit_log USING btree (status_code);
+
+
+--
+-- Name: ix_admin_audit_log_trace_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_admin_audit_log_trace_id ON admin_audit_log USING btree (trace_id);
 
 
 --
@@ -8266,6 +11975,223 @@ CREATE INDEX ix_arbitration_decisions_deleted_at ON arbitration_decisions USING 
 
 
 --
+-- Name: ix_artifacts_artifact_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_artifacts_artifact_type ON planning_artifacts USING btree (artifact_type);
+
+
+--
+-- Name: ix_artifacts_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_artifacts_deleted_at ON planning_artifacts USING btree (deleted_at);
+
+
+--
+-- Name: ix_artifacts_plan_card_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_artifacts_plan_card_id ON planning_artifacts USING btree (plan_card_id);
+
+
+--
+-- Name: ix_artifacts_plan_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_artifacts_plan_type ON planning_artifacts USING btree (plan_card_id, artifact_type);
+
+
+--
+-- Name: ix_artifacts_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_artifacts_status ON planning_artifacts USING btree (status);
+
+
+--
+-- Name: ix_artifacts_type_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_artifacts_type_status ON planning_artifacts USING btree (artifact_type, status);
+
+
+--
+-- Name: ix_aurora_core_session_snapshots_conversation_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_core_session_snapshots_conversation_id ON aurora_core_session_snapshots USING btree (conversation_id);
+
+
+--
+-- Name: ix_aurora_core_session_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_core_session_snapshots_deleted_at ON aurora_core_session_snapshots USING btree (deleted_at);
+
+
+--
+-- Name: ix_aurora_core_session_snapshots_expires_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_core_session_snapshots_expires_at ON aurora_core_session_snapshots USING btree (expires_at);
+
+
+--
+-- Name: ix_aurora_core_session_snapshots_last_activity_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_core_session_snapshots_last_activity_at ON aurora_core_session_snapshots USING btree (last_activity_at);
+
+
+--
+-- Name: ix_aurora_core_session_snapshots_resume_token_hash; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_aurora_core_session_snapshots_resume_token_hash ON aurora_core_session_snapshots USING btree (resume_token_hash);
+
+
+--
+-- Name: ix_aurora_core_session_snapshots_session_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_core_session_snapshots_session_id ON aurora_core_session_snapshots USING btree (session_id);
+
+
+--
+-- Name: ix_aurora_core_session_snapshots_stage; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_core_session_snapshots_stage ON aurora_core_session_snapshots USING btree (stage);
+
+
+--
+-- Name: ix_aurora_core_session_snapshots_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_core_session_snapshots_status ON aurora_core_session_snapshots USING btree (status);
+
+
+--
+-- Name: ix_aurora_core_session_snapshots_surface; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_core_session_snapshots_surface ON aurora_core_session_snapshots USING btree (surface);
+
+
+--
+-- Name: ix_aurora_core_session_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_core_session_snapshots_user_id ON aurora_core_session_snapshots USING btree (user_id);
+
+
+--
+-- Name: ix_aurora_decision_telemetry_action; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_decision_telemetry_action ON aurora_decision_telemetry USING btree (action);
+
+
+--
+-- Name: ix_aurora_decision_telemetry_conversation_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_decision_telemetry_conversation_id ON aurora_decision_telemetry USING btree (conversation_id);
+
+
+--
+-- Name: ix_aurora_decision_telemetry_decided_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_decision_telemetry_decided_at ON aurora_decision_telemetry USING btree (decided_at);
+
+
+--
+-- Name: ix_aurora_decision_telemetry_decision_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_aurora_decision_telemetry_decision_id ON aurora_decision_telemetry USING btree (decision_id);
+
+
+--
+-- Name: ix_aurora_decision_telemetry_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_decision_telemetry_deleted_at ON aurora_decision_telemetry USING btree (deleted_at);
+
+
+--
+-- Name: ix_aurora_decision_telemetry_energy_level; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_decision_telemetry_energy_level ON aurora_decision_telemetry USING btree (energy_level);
+
+
+--
+-- Name: ix_aurora_decision_telemetry_outcome; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_decision_telemetry_outcome ON aurora_decision_telemetry USING btree (outcome);
+
+
+--
+-- Name: ix_aurora_decision_telemetry_outcome_filled_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_decision_telemetry_outcome_filled_at ON aurora_decision_telemetry USING btree (outcome_filled_at);
+
+
+--
+-- Name: ix_aurora_decision_telemetry_request_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_decision_telemetry_request_id ON aurora_decision_telemetry USING btree (request_id);
+
+
+--
+-- Name: ix_aurora_decision_telemetry_surface; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_decision_telemetry_surface ON aurora_decision_telemetry USING btree (surface);
+
+
+--
+-- Name: ix_aurora_decision_telemetry_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_decision_telemetry_user_id ON aurora_decision_telemetry USING btree (user_id);
+
+
+--
+-- Name: ix_aurora_policy_versions_created_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_policy_versions_created_at ON aurora_policy_versions USING btree (created_at);
+
+
+--
+-- Name: ix_aurora_scheduled_wakes_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_scheduled_wakes_user_id ON aurora_scheduled_wakes USING btree (user_id);
+
+
+--
+-- Name: ix_aurora_scheduled_wakes_wake_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_scheduled_wakes_wake_id ON aurora_scheduled_wakes USING btree (wake_id);
+
+
+--
+-- Name: ix_aurora_state_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_aurora_state_snapshots_user_id ON aurora_state_snapshots USING btree (user_id);
+
+
+--
 -- Name: ix_auth_audit_log_action; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8378,6 +12304,13 @@ CREATE INDEX ix_calendar_events_user_time ON calendar_events USING btree (user_i
 
 
 --
+-- Name: ix_candidate_action_feedback_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_candidate_action_feedback_deleted_at ON candidate_action_feedback USING btree (deleted_at);
+
+
+--
 -- Name: ix_capsule_favorites_capsule_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8462,6 +12395,272 @@ CREATE INDEX ix_capsule_generation_jobs_user_id ON capsule_generation_jobs USING
 
 
 --
+-- Name: ix_card_adoption_records_adopted_root_card_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_adoption_records_adopted_root_card_id ON card_adoption_records USING btree (adopted_root_card_id);
+
+
+--
+-- Name: ix_card_adoption_records_adopter_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_adoption_records_adopter_user_id ON card_adoption_records USING btree (adopter_user_id);
+
+
+--
+-- Name: ix_card_adoption_records_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_adoption_records_deleted_at ON card_adoption_records USING btree (deleted_at);
+
+
+--
+-- Name: ix_card_adoption_records_import_mode; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_adoption_records_import_mode ON card_adoption_records USING btree (import_mode);
+
+
+--
+-- Name: ix_card_adoption_records_share_record_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_adoption_records_share_record_id ON card_adoption_records USING btree (share_record_id);
+
+
+--
+-- Name: ix_card_adoption_user_mode; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_adoption_user_mode ON card_adoption_records USING btree (adopter_user_id, import_mode);
+
+
+--
+-- Name: ix_card_edges_active; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_edges_active ON card_edges USING btree (active);
+
+
+--
+-- Name: ix_card_edges_active_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_edges_active_type ON card_edges USING btree (active, edge_type);
+
+
+--
+-- Name: ix_card_edges_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_edges_deleted_at ON card_edges USING btree (deleted_at);
+
+
+--
+-- Name: ix_card_edges_edge_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_edges_edge_type ON card_edges USING btree (edge_type);
+
+
+--
+-- Name: ix_card_edges_from_card_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_edges_from_card_id ON card_edges USING btree (from_card_id);
+
+
+--
+-- Name: ix_card_edges_from_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_edges_from_type ON card_edges USING btree (from_card_id, edge_type);
+
+
+--
+-- Name: ix_card_edges_to_card_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_edges_to_card_id ON card_edges USING btree (to_card_id);
+
+
+--
+-- Name: ix_card_edges_to_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_edges_to_type ON card_edges USING btree (to_card_id, edge_type);
+
+
+--
+-- Name: ix_card_share_owner_scope; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_share_owner_scope ON card_share_records USING btree (shared_by_user_id, scope);
+
+
+--
+-- Name: ix_card_share_records_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_share_records_deleted_at ON card_share_records USING btree (deleted_at);
+
+
+--
+-- Name: ix_card_share_records_group_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_share_records_group_id ON card_share_records USING btree (group_id);
+
+
+--
+-- Name: ix_card_share_records_root_card_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_share_records_root_card_id ON card_share_records USING btree (root_card_id);
+
+
+--
+-- Name: ix_card_share_records_scope; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_share_records_scope ON card_share_records USING btree (scope);
+
+
+--
+-- Name: ix_card_share_records_shared_by_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_share_records_shared_by_user_id ON card_share_records USING btree (shared_by_user_id);
+
+
+--
+-- Name: ix_card_share_records_snapshot_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_share_records_snapshot_id ON card_share_records USING btree (snapshot_id);
+
+
+--
+-- Name: ix_card_share_records_target_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_share_records_target_user_id ON card_share_records USING btree (target_user_id);
+
+
+--
+-- Name: ix_card_share_scope_group; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_share_scope_group ON card_share_records USING btree (scope, group_id);
+
+
+--
+-- Name: ix_card_share_scope_target; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_share_scope_target ON card_share_records USING btree (scope, target_user_id);
+
+
+--
+-- Name: ix_card_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_snapshots_deleted_at ON card_snapshots USING btree (deleted_at);
+
+
+--
+-- Name: ix_card_snapshots_owner_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_snapshots_owner_type ON card_snapshots USING btree (source_owner_id, source_card_type);
+
+
+--
+-- Name: ix_card_snapshots_root_card_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_snapshots_root_card_id ON card_snapshots USING btree (root_card_id);
+
+
+--
+-- Name: ix_card_snapshots_root_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_snapshots_root_type ON card_snapshots USING btree (root_card_id, source_card_type);
+
+
+--
+-- Name: ix_card_snapshots_source_card_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_snapshots_source_card_type ON card_snapshots USING btree (source_card_type);
+
+
+--
+-- Name: ix_card_snapshots_source_owner_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_card_snapshots_source_owner_id ON card_snapshots USING btree (source_owner_id);
+
+
+--
+-- Name: ix_cards_card_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_cards_card_type ON cards USING btree (card_type);
+
+
+--
+-- Name: ix_cards_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_cards_deleted_at ON cards USING btree (deleted_at);
+
+
+--
+-- Name: ix_cards_holder_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_cards_holder_id ON cards USING btree (holder_id);
+
+
+--
+-- Name: ix_cards_holder_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_cards_holder_status ON cards USING btree (holder_id, lifecycle_status);
+
+
+--
+-- Name: ix_cards_lifecycle_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_cards_lifecycle_status ON cards USING btree (lifecycle_status);
+
+
+--
+-- Name: ix_cards_owner_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_cards_owner_id ON cards USING btree (owner_id);
+
+
+--
+-- Name: ix_cards_owner_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_cards_owner_type ON cards USING btree (owner_id, card_type);
+
+
+--
+-- Name: ix_cards_type_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_cards_type_status ON cards USING btree (card_type, lifecycle_status);
+
+
+--
 -- Name: ix_chat_messages_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8515,6 +12714,118 @@ CREATE INDEX ix_cognitive_fragments_user_id ON cognitive_fragments USING btree (
 --
 
 CREATE INDEX ix_collaborative_galaxies_deleted_at ON collaborative_galaxies USING btree (deleted_at);
+
+
+--
+-- Name: ix_collaborative_galaxies_galaxy_scope; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_collaborative_galaxies_galaxy_scope ON collaborative_galaxies USING btree (galaxy_scope);
+
+
+--
+-- Name: ix_collaborative_galaxies_group_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_collaborative_galaxies_group_id ON collaborative_galaxies USING btree (group_id);
+
+
+--
+-- Name: ix_commitments_deadline; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_commitments_deadline ON commitments USING btree (deadline);
+
+
+--
+-- Name: ix_commitments_node_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_commitments_node_id ON commitments USING btree (node_id);
+
+
+--
+-- Name: ix_commitments_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_commitments_status ON commitments USING btree (status);
+
+
+--
+-- Name: ix_commitments_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_commitments_user_id ON commitments USING btree (user_id);
+
+
+--
+-- Name: ix_community_aggregate_signals_cohort_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_community_aggregate_signals_cohort_id ON community_aggregate_signals USING btree (cohort_id);
+
+
+--
+-- Name: ix_community_aggregate_signals_cohort_key; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_community_aggregate_signals_cohort_key ON community_aggregate_signals USING btree (cohort_key);
+
+
+--
+-- Name: ix_community_aggregate_signals_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_community_aggregate_signals_deleted_at ON community_aggregate_signals USING btree (deleted_at);
+
+
+--
+-- Name: ix_community_aggregate_signals_expires_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_community_aggregate_signals_expires_at ON community_aggregate_signals USING btree (expires_at);
+
+
+--
+-- Name: ix_community_aggregate_signals_generated_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_community_aggregate_signals_generated_at ON community_aggregate_signals USING btree (generated_at);
+
+
+--
+-- Name: ix_community_aggregate_signals_privacy_tier; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_community_aggregate_signals_privacy_tier ON community_aggregate_signals USING btree (privacy_tier);
+
+
+--
+-- Name: ix_community_aggregate_signals_signal_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_community_aggregate_signals_signal_id ON community_aggregate_signals USING btree (signal_id);
+
+
+--
+-- Name: ix_community_aggregate_signals_signal_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_community_aggregate_signals_signal_type ON community_aggregate_signals USING btree (signal_type);
+
+
+--
+-- Name: ix_community_aggregate_signals_stat_name; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_community_aggregate_signals_stat_name ON community_aggregate_signals USING btree (stat_name);
+
+
+--
+-- Name: ix_community_aggregate_signals_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_community_aggregate_signals_status ON community_aggregate_signals USING btree (status);
 
 
 --
@@ -8578,6 +12889,69 @@ CREATE INDEX ix_context_pack_runs_deleted_at ON context_pack_runs USING btree (d
 --
 
 CREATE INDEX ix_context_pack_runs_user_id ON context_pack_runs USING btree (user_id);
+
+
+--
+-- Name: ix_counterfactual_evaluation_reports_context_hash; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_counterfactual_evaluation_reports_context_hash ON counterfactual_evaluation_reports USING btree (context_hash);
+
+
+--
+-- Name: ix_counterfactual_evaluation_reports_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_counterfactual_evaluation_reports_deleted_at ON counterfactual_evaluation_reports USING btree (deleted_at);
+
+
+--
+-- Name: ix_counterfactual_evaluation_reports_evidence_grade; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_counterfactual_evaluation_reports_evidence_grade ON counterfactual_evaluation_reports USING btree (evidence_grade);
+
+
+--
+-- Name: ix_counterfactual_evaluation_reports_generated_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_counterfactual_evaluation_reports_generated_at ON counterfactual_evaluation_reports USING btree (generated_at);
+
+
+--
+-- Name: ix_counterfactual_evaluation_reports_policy_a; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_counterfactual_evaluation_reports_policy_a ON counterfactual_evaluation_reports USING btree (policy_a);
+
+
+--
+-- Name: ix_counterfactual_evaluation_reports_policy_b; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_counterfactual_evaluation_reports_policy_b ON counterfactual_evaluation_reports USING btree (policy_b);
+
+
+--
+-- Name: ix_counterfactual_evaluation_reports_promotion_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_counterfactual_evaluation_reports_promotion_status ON counterfactual_evaluation_reports USING btree (promotion_status);
+
+
+--
+-- Name: ix_counterfactual_evaluation_reports_replaced_by_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_counterfactual_evaluation_reports_replaced_by_id ON counterfactual_evaluation_reports USING btree (replaced_by_id);
+
+
+--
+-- Name: ix_counterfactual_evaluation_reports_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_counterfactual_evaluation_reports_user_id ON counterfactual_evaluation_reports USING btree (user_id);
 
 
 --
@@ -8777,6 +13151,41 @@ CREATE UNIQUE INDEX ix_dictionary_entries_word ON dictionary_entries USING btree
 
 
 --
+-- Name: ix_distilled_strategy_cache_shareability; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_distilled_strategy_cache_shareability ON distilled_strategy_cache USING btree (shareability);
+
+
+--
+-- Name: ix_distilled_strategy_cache_source_trajectory_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_distilled_strategy_cache_source_trajectory_type ON distilled_strategy_cache USING btree (source_trajectory_type);
+
+
+--
+-- Name: ix_distilled_strategy_cache_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_distilled_strategy_cache_status ON distilled_strategy_cache USING btree (status);
+
+
+--
+-- Name: ix_distilled_strategy_cache_status_source; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_distilled_strategy_cache_status_source ON distilled_strategy_cache USING btree (status, source_trajectory_type);
+
+
+--
+-- Name: ix_distilled_strategy_cache_updated_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_distilled_strategy_cache_updated_at ON distilled_strategy_cache USING btree (updated_at);
+
+
+--
 -- Name: ix_dlq_replay_audit_logs_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8812,6 +13221,90 @@ CREATE INDEX ix_document_chunks_user_id ON document_chunks USING btree (user_id)
 
 
 --
+-- Name: ix_document_retrieval_feedback_created_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_document_retrieval_feedback_created_at ON document_retrieval_feedback USING btree (created_at);
+
+
+--
+-- Name: ix_document_retrieval_feedback_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_document_retrieval_feedback_deleted_at ON document_retrieval_feedback USING btree (deleted_at);
+
+
+--
+-- Name: ix_document_retrieval_feedback_file_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_document_retrieval_feedback_file_id ON document_retrieval_feedback USING btree (file_id);
+
+
+--
+-- Name: ix_document_retrieval_feedback_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_document_retrieval_feedback_user_id ON document_retrieval_feedback USING btree (user_id);
+
+
+--
+-- Name: ix_durable_session_state_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_durable_session_state_snapshots_deleted_at ON durable_session_state_snapshots USING btree (deleted_at);
+
+
+--
+-- Name: ix_durable_session_state_snapshots_expires_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_durable_session_state_snapshots_expires_at ON durable_session_state_snapshots USING btree (expires_at);
+
+
+--
+-- Name: ix_durable_session_state_snapshots_fsm_state; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_durable_session_state_snapshots_fsm_state ON durable_session_state_snapshots USING btree (fsm_state);
+
+
+--
+-- Name: ix_durable_session_state_snapshots_last_seen_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_durable_session_state_snapshots_last_seen_at ON durable_session_state_snapshots USING btree (last_seen_at);
+
+
+--
+-- Name: ix_durable_session_state_snapshots_recoverable; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_durable_session_state_snapshots_recoverable ON durable_session_state_snapshots USING btree (recoverable);
+
+
+--
+-- Name: ix_durable_session_state_snapshots_request_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_durable_session_state_snapshots_request_id ON durable_session_state_snapshots USING btree (request_id);
+
+
+--
+-- Name: ix_durable_session_state_snapshots_session_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_durable_session_state_snapshots_session_id ON durable_session_state_snapshots USING btree (session_id);
+
+
+--
+-- Name: ix_durable_session_state_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_durable_session_state_snapshots_user_id ON durable_session_state_snapshots USING btree (user_id);
+
+
+--
 -- Name: ix_episodic_memories_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8823,6 +13316,62 @@ CREATE INDEX ix_episodic_memories_deleted_at ON episodic_memories USING btree (d
 --
 
 CREATE INDEX ix_episodic_memories_user_id ON episodic_memories USING btree (user_id);
+
+
+--
+-- Name: ix_event_bus_dlq_created_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_event_bus_dlq_created_at ON event_bus_dlq USING btree (created_at);
+
+
+--
+-- Name: ix_event_bus_dlq_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_event_bus_dlq_deleted_at ON event_bus_dlq USING btree (deleted_at);
+
+
+--
+-- Name: ix_event_bus_dlq_event_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_event_bus_dlq_event_type ON event_bus_dlq USING btree (event_type);
+
+
+--
+-- Name: ix_event_bus_dlq_failure_stage; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_event_bus_dlq_failure_stage ON event_bus_dlq USING btree (failure_stage);
+
+
+--
+-- Name: ix_event_bus_dlq_group_name; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_event_bus_dlq_group_name ON event_bus_dlq USING btree (group_name);
+
+
+--
+-- Name: ix_event_bus_dlq_message_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_event_bus_dlq_message_id ON event_bus_dlq USING btree (message_id);
+
+
+--
+-- Name: ix_event_bus_dlq_stream; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_event_bus_dlq_stream ON event_bus_dlq USING btree (stream);
+
+
+--
+-- Name: ix_event_bus_dlq_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_event_bus_dlq_user_id ON event_bus_dlq USING btree (user_id);
 
 
 --
@@ -8861,6 +13410,76 @@ CREATE INDEX ix_evolution_predictions_prediction_type ON evolution_predictions U
 
 
 --
+-- Name: ix_execution_audit_log_action; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_execution_audit_log_action ON execution_audit_log USING btree (action);
+
+
+--
+-- Name: ix_execution_audit_log_actor; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_execution_audit_log_actor ON execution_audit_log USING btree (actor);
+
+
+--
+-- Name: ix_execution_audit_log_intent_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_execution_audit_log_intent_id ON execution_audit_log USING btree (intent_id);
+
+
+--
+-- Name: ix_execution_audit_log_occurred_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_execution_audit_log_occurred_at ON execution_audit_log USING btree (occurred_at);
+
+
+--
+-- Name: ix_execution_audit_log_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_execution_audit_log_user_id ON execution_audit_log USING btree (user_id);
+
+
+--
+-- Name: ix_execution_schedules_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_execution_schedules_deleted_at ON execution_schedules USING btree (deleted_at);
+
+
+--
+-- Name: ix_execution_schedules_is_active; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_execution_schedules_is_active ON execution_schedules USING btree (is_active);
+
+
+--
+-- Name: ix_execution_schedules_next_run_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_execution_schedules_next_run_at ON execution_schedules USING btree (next_run_at);
+
+
+--
+-- Name: ix_execution_schedules_task_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_execution_schedules_task_id ON execution_schedules USING btree (task_id);
+
+
+--
+-- Name: ix_execution_schedules_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_execution_schedules_user_id ON execution_schedules USING btree (user_id);
+
+
+--
 -- Name: ix_expansion_feedback_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8886,6 +13505,34 @@ CREATE INDEX ix_expansion_feedback_trigger_node_id ON expansion_feedback USING b
 --
 
 CREATE INDEX ix_expansion_feedback_user_id ON expansion_feedback USING btree (user_id);
+
+
+--
+-- Name: ix_focus_contracts_active_node; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_focus_contracts_active_node ON focus_contracts USING btree (active_node);
+
+
+--
+-- Name: ix_focus_contracts_scenario_pack_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_focus_contracts_scenario_pack_id ON focus_contracts USING btree (scenario_pack_id);
+
+
+--
+-- Name: ix_focus_contracts_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_focus_contracts_user_id ON focus_contracts USING btree (user_id);
+
+
+--
+-- Name: ix_focus_contracts_user_version; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_focus_contracts_user_version ON focus_contracts USING btree (user_id, version);
 
 
 --
@@ -8938,6 +13585,55 @@ CREATE INDEX ix_galaxy_skins_deleted_at ON galaxy_skins USING btree (deleted_at)
 
 
 --
+-- Name: ix_goal_world_graph_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_goal_world_graph_snapshots_deleted_at ON goal_world_graph_snapshots USING btree (deleted_at);
+
+
+--
+-- Name: ix_goal_world_graph_snapshots_goal_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_goal_world_graph_snapshots_goal_id ON goal_world_graph_snapshots USING btree (goal_id);
+
+
+--
+-- Name: ix_goal_world_graph_snapshots_goal_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_goal_world_graph_snapshots_goal_type ON goal_world_graph_snapshots USING btree (goal_type);
+
+
+--
+-- Name: ix_goal_world_graph_snapshots_graph_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_goal_world_graph_snapshots_graph_id ON goal_world_graph_snapshots USING btree (graph_id);
+
+
+--
+-- Name: ix_goal_world_graph_snapshots_last_saved_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_goal_world_graph_snapshots_last_saved_at ON goal_world_graph_snapshots USING btree (last_saved_at);
+
+
+--
+-- Name: ix_goal_world_graph_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_goal_world_graph_snapshots_user_id ON goal_world_graph_snapshots USING btree (user_id);
+
+
+--
+-- Name: ix_goals_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_goals_user_id ON goals USING btree (user_id);
+
+
+--
 -- Name: ix_group_files_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -8959,10 +13655,24 @@ CREATE INDEX ix_group_files_group_id ON group_files USING btree (group_id);
 
 
 --
+-- Name: ix_group_files_is_knowledge_base; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_group_files_is_knowledge_base ON group_files USING btree (is_knowledge_base);
+
+
+--
 -- Name: ix_group_files_shared_by_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_group_files_shared_by_id ON group_files USING btree (shared_by_id);
+
+
+--
+-- Name: ix_group_files_trust_level; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_group_files_trust_level ON group_files USING btree (trust_level);
 
 
 --
@@ -9071,6 +13781,27 @@ CREATE INDEX ix_groups_deleted_at ON groups USING btree (deleted_at);
 
 
 --
+-- Name: ix_growth_chronicle_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_growth_chronicle_snapshots_deleted_at ON growth_chronicle_snapshots USING btree (deleted_at);
+
+
+--
+-- Name: ix_growth_chronicle_snapshots_last_saved_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_growth_chronicle_snapshots_last_saved_at ON growth_chronicle_snapshots USING btree (last_saved_at);
+
+
+--
+-- Name: ix_growth_chronicle_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_growth_chronicle_snapshots_user_id ON growth_chronicle_snapshots USING btree (user_id);
+
+
+--
 -- Name: ix_idempotency_keys_expires_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9082,6 +13813,62 @@ CREATE INDEX ix_idempotency_keys_expires_at ON idempotency_keys USING btree (exp
 --
 
 CREATE INDEX ix_idempotency_keys_user_id ON idempotency_keys USING btree (user_id);
+
+
+--
+-- Name: ix_identity_evidence_created_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_identity_evidence_created_at ON identity_evidence USING btree (created_at);
+
+
+--
+-- Name: ix_identity_evidence_dimension; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_identity_evidence_dimension ON identity_evidence USING btree (dimension);
+
+
+--
+-- Name: ix_identity_evidence_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_identity_evidence_user_id ON identity_evidence USING btree (user_id);
+
+
+--
+-- Name: ix_insight_claims_created_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_insight_claims_created_at ON insight_claims USING btree (created_at);
+
+
+--
+-- Name: ix_insight_claims_source; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_insight_claims_source ON insight_claims USING btree (source);
+
+
+--
+-- Name: ix_insight_claims_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_insight_claims_status ON insight_claims USING btree (status);
+
+
+--
+-- Name: ix_insight_claims_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_insight_claims_user_id ON insight_claims USING btree (user_id);
+
+
+--
+-- Name: ix_intervention_acceptance_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_acceptance_status ON intervention_records USING btree (acceptance_status);
 
 
 --
@@ -9110,6 +13897,13 @@ CREATE INDEX ix_intervention_audit_logs_request_id ON intervention_audit_logs US
 --
 
 CREATE INDEX ix_intervention_audit_logs_user_id ON intervention_audit_logs USING btree (user_id);
+
+
+--
+-- Name: ix_intervention_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_deleted_at ON intervention_records USING btree (deleted_at);
 
 
 --
@@ -9148,6 +13942,34 @@ CREATE INDEX ix_intervention_feedback_user_id ON intervention_feedback USING btr
 
 
 --
+-- Name: ix_intervention_outcome; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_outcome ON intervention_records USING btree (outcome_status, outcome_window_days);
+
+
+--
+-- Name: ix_intervention_outcomes_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_outcomes_deleted_at ON intervention_outcomes USING btree (deleted_at);
+
+
+--
+-- Name: ix_intervention_outcomes_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_outcomes_user_id ON intervention_outcomes USING btree (user_id);
+
+
+--
+-- Name: ix_intervention_plan_card_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_plan_card_id ON intervention_records USING btree (plan_card_id);
+
+
+--
 -- Name: ix_intervention_requests_dedupe_key; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9183,6 +14005,34 @@ CREATE INDEX ix_intervention_requests_user_id ON intervention_requests USING btr
 
 
 --
+-- Name: ix_intervention_strategy_outcomes_intervention_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_strategy_outcomes_intervention_id ON intervention_strategy_outcomes USING btree (intervention_id);
+
+
+--
+-- Name: ix_intervention_strategy_outcomes_outcome; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_strategy_outcomes_outcome ON intervention_strategy_outcomes USING btree (outcome);
+
+
+--
+-- Name: ix_intervention_strategy_outcomes_trigger_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_strategy_outcomes_trigger_type ON intervention_strategy_outcomes USING btree (trigger_type);
+
+
+--
+-- Name: ix_intervention_strategy_outcomes_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_strategy_outcomes_user_id ON intervention_strategy_outcomes USING btree (user_id);
+
+
+--
 -- Name: ix_intervention_templates_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9201,6 +14051,34 @@ CREATE INDEX ix_intervention_templates_intent_type ON intervention_templates USI
 --
 
 CREATE UNIQUE INDEX ix_intervention_templates_template_id ON intervention_templates USING btree (template_id);
+
+
+--
+-- Name: ix_intervention_trigger_channel; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_trigger_channel ON intervention_records USING btree (trigger_type, delivery_channel);
+
+
+--
+-- Name: ix_intervention_trigger_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_trigger_type ON intervention_records USING btree (trigger_type);
+
+
+--
+-- Name: ix_intervention_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_user_id ON intervention_records USING btree (user_id);
+
+
+--
+-- Name: ix_intervention_user_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_intervention_user_status ON intervention_records USING btree (user_id, acceptance_status);
 
 
 --
@@ -9246,10 +14124,52 @@ CREATE INDEX ix_jobs_user_id ON jobs USING btree (user_id);
 
 
 --
+-- Name: ix_knowledge_node_documents_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_knowledge_node_documents_deleted_at ON knowledge_node_documents USING btree (deleted_at);
+
+
+--
+-- Name: ix_knowledge_node_documents_file_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_knowledge_node_documents_file_id ON knowledge_node_documents USING btree (file_id);
+
+
+--
+-- Name: ix_knowledge_node_documents_is_primary; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_knowledge_node_documents_is_primary ON knowledge_node_documents USING btree (is_primary);
+
+
+--
+-- Name: ix_knowledge_node_documents_node_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_knowledge_node_documents_node_id ON knowledge_node_documents USING btree (node_id);
+
+
+--
+-- Name: ix_knowledge_node_documents_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_knowledge_node_documents_user_id ON knowledge_node_documents USING btree (user_id);
+
+
+--
 -- Name: ix_knowledge_nodes_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_knowledge_nodes_deleted_at ON knowledge_nodes USING btree (deleted_at);
+
+
+--
+-- Name: ix_knowledge_nodes_dominant_sector_code; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_knowledge_nodes_dominant_sector_code ON knowledge_nodes USING btree (dominant_sector_code);
 
 
 --
@@ -9274,6 +14194,13 @@ CREATE INDEX ix_knowledge_nodes_position_y ON knowledge_nodes USING btree (posit
 
 
 --
+-- Name: ix_knowledge_nodes_sector_classification_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_knowledge_nodes_sector_classification_status ON knowledge_nodes USING btree (sector_classification_status);
+
+
+--
 -- Name: ix_knowledge_nodes_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9285,6 +14212,27 @@ CREATE INDEX ix_knowledge_nodes_status ON knowledge_nodes USING btree (status);
 --
 
 CREATE INDEX ix_knowledge_nodes_subject_id ON knowledge_nodes USING btree (subject_id);
+
+
+--
+-- Name: ix_leaderboard_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_leaderboard_snapshots_deleted_at ON leaderboard_snapshots USING btree (deleted_at);
+
+
+--
+-- Name: ix_leaderboard_snapshots_snapshot_date; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_leaderboard_snapshots_snapshot_date ON leaderboard_snapshots USING btree (snapshot_date);
+
+
+--
+-- Name: ix_leaderboard_snapshots_snapshot_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_leaderboard_snapshots_snapshot_type ON leaderboard_snapshots USING btree (snapshot_type);
 
 
 --
@@ -9369,6 +14317,111 @@ CREATE INDEX ix_ltm_daily_snapshots_deleted_at ON ltm_daily_snapshots USING btre
 --
 
 CREATE UNIQUE INDEX ix_ltm_daily_snapshots_snapshot_date ON ltm_daily_snapshots USING btree (snapshot_date);
+
+
+--
+-- Name: ix_marketplace_packs_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_packs_deleted_at ON marketplace_packs USING btree (deleted_at);
+
+
+--
+-- Name: ix_marketplace_packs_domain; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_packs_domain ON marketplace_packs USING btree (domain);
+
+
+--
+-- Name: ix_marketplace_packs_pack_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_marketplace_packs_pack_id ON marketplace_packs USING btree (pack_id);
+
+
+--
+-- Name: ix_marketplace_packs_quality; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_packs_quality ON marketplace_packs USING btree (status, quality_score);
+
+
+--
+-- Name: ix_marketplace_packs_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_packs_status ON marketplace_packs USING btree (status);
+
+
+--
+-- Name: ix_marketplace_packs_status_domain; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_packs_status_domain ON marketplace_packs USING btree (status, domain);
+
+
+--
+-- Name: ix_marketplace_skills_author_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_skills_author_id ON marketplace_skills USING btree (author_id);
+
+
+--
+-- Name: ix_marketplace_skills_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_skills_deleted_at ON marketplace_skills USING btree (deleted_at);
+
+
+--
+-- Name: ix_marketplace_skills_domain; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_skills_domain ON marketplace_skills USING btree (domain);
+
+
+--
+-- Name: ix_marketplace_skills_evidence_grade; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_skills_evidence_grade ON marketplace_skills USING btree (evidence_grade);
+
+
+--
+-- Name: ix_marketplace_skills_quality; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_skills_quality ON marketplace_skills USING btree (status, quality_score);
+
+
+--
+-- Name: ix_marketplace_skills_skill_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_marketplace_skills_skill_id ON marketplace_skills USING btree (skill_id);
+
+
+--
+-- Name: ix_marketplace_skills_source_skill_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_skills_source_skill_id ON marketplace_skills USING btree (source_skill_id);
+
+
+--
+-- Name: ix_marketplace_skills_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_skills_status ON marketplace_skills USING btree (status);
+
+
+--
+-- Name: ix_marketplace_skills_status_domain; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_marketplace_skills_status_domain ON marketplace_skills USING btree (status, domain);
 
 
 --
@@ -9575,6 +14628,69 @@ CREATE INDEX ix_node_relations_target_node_id ON node_relations USING btree (tar
 
 
 --
+-- Name: ix_north_star_metric_events_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_north_star_metric_events_deleted_at ON north_star_metric_events USING btree (deleted_at);
+
+
+--
+-- Name: ix_north_star_metric_events_event_key; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_north_star_metric_events_event_key ON north_star_metric_events USING btree (event_key);
+
+
+--
+-- Name: ix_north_star_metric_events_event_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_north_star_metric_events_event_type ON north_star_metric_events USING btree (event_type);
+
+
+--
+-- Name: ix_north_star_metric_events_metric_date; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_north_star_metric_events_metric_date ON north_star_metric_events USING btree (metric_date);
+
+
+--
+-- Name: ix_north_star_metric_events_occurred_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_north_star_metric_events_occurred_at ON north_star_metric_events USING btree (occurred_at);
+
+
+--
+-- Name: ix_north_star_metric_events_plan_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_north_star_metric_events_plan_id ON north_star_metric_events USING btree (plan_id);
+
+
+--
+-- Name: ix_north_star_metric_events_source; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_north_star_metric_events_source ON north_star_metric_events USING btree (source);
+
+
+--
+-- Name: ix_north_star_metric_events_task_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_north_star_metric_events_task_id ON north_star_metric_events USING btree (task_id);
+
+
+--
+-- Name: ix_north_star_metric_events_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_north_star_metric_events_user_id ON north_star_metric_events USING btree (user_id);
+
+
+--
 -- Name: ix_notification_interactions_action_time; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9610,6 +14726,62 @@ CREATE INDEX ix_notifications_user_id ON notifications USING btree (user_id);
 
 
 --
+-- Name: ix_occurrences_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_occurrences_deleted_at ON task_occurrences USING btree (deleted_at);
+
+
+--
+-- Name: ix_occurrences_plan_card_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_occurrences_plan_card_id ON task_occurrences USING btree (plan_card_id);
+
+
+--
+-- Name: ix_occurrences_plan_date; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_occurrences_plan_date ON task_occurrences USING btree (plan_card_id, scheduled_for);
+
+
+--
+-- Name: ix_occurrences_scheduled_date; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_occurrences_scheduled_date ON task_occurrences USING btree (scheduled_for, occurrence_status);
+
+
+--
+-- Name: ix_occurrences_scheduled_for; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_occurrences_scheduled_for ON task_occurrences USING btree (scheduled_for);
+
+
+--
+-- Name: ix_occurrences_series_card_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_occurrences_series_card_id ON task_occurrences USING btree (series_card_id);
+
+
+--
+-- Name: ix_occurrences_series_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_occurrences_series_status ON task_occurrences USING btree (series_card_id, occurrence_status);
+
+
+--
+-- Name: ix_occurrences_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_occurrences_status ON task_occurrences USING btree (occurrence_status);
+
+
+--
 -- Name: ix_offline_message_queue_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9621,6 +14793,76 @@ CREATE INDEX ix_offline_message_queue_deleted_at ON offline_message_queue USING 
 --
 
 CREATE INDEX ix_offline_message_queue_user_id ON offline_message_queue USING btree (user_id);
+
+
+--
+-- Name: ix_pack_adoption_history_adoption_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_pack_adoption_history_adoption_id ON pack_adoption_history USING btree (adoption_id);
+
+
+--
+-- Name: ix_pack_adoption_history_asset_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_pack_adoption_history_asset_id ON pack_adoption_history USING btree (asset_id);
+
+
+--
+-- Name: ix_pack_adoption_history_asset_trace; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_pack_adoption_history_asset_trace ON pack_adoption_history USING btree (asset_type, asset_id, trace_id);
+
+
+--
+-- Name: ix_pack_adoption_history_asset_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_pack_adoption_history_asset_type ON pack_adoption_history USING btree (asset_type);
+
+
+--
+-- Name: ix_pack_adoption_history_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_pack_adoption_history_deleted_at ON pack_adoption_history USING btree (deleted_at);
+
+
+--
+-- Name: ix_pack_adoption_history_impact_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_pack_adoption_history_impact_type ON pack_adoption_history USING btree (impact_type);
+
+
+--
+-- Name: ix_pack_adoption_history_outcome; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_pack_adoption_history_outcome ON pack_adoption_history USING btree (outcome);
+
+
+--
+-- Name: ix_pack_adoption_history_trace_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_pack_adoption_history_trace_id ON pack_adoption_history USING btree (trace_id);
+
+
+--
+-- Name: ix_pack_adoption_history_user_created; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_pack_adoption_history_user_created ON pack_adoption_history USING btree (user_id, created_at);
+
+
+--
+-- Name: ix_pack_adoption_history_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_pack_adoption_history_user_id ON pack_adoption_history USING btree (user_id);
 
 
 --
@@ -9841,6 +15083,55 @@ CREATE INDEX ix_posts_user_id ON posts USING btree (user_id);
 
 
 --
+-- Name: ix_privacy_budget_ledger_allowed; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_privacy_budget_ledger_allowed ON privacy_budget_ledger USING btree (allowed);
+
+
+--
+-- Name: ix_privacy_budget_ledger_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_privacy_budget_ledger_deleted_at ON privacy_budget_ledger USING btree (deleted_at);
+
+
+--
+-- Name: ix_privacy_budget_ledger_query_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_privacy_budget_ledger_query_type ON privacy_budget_ledger USING btree (query_type);
+
+
+--
+-- Name: ix_privacy_budget_ledger_spent_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_privacy_budget_ledger_spent_at ON privacy_budget_ledger USING btree (spent_at);
+
+
+--
+-- Name: ix_privacy_budget_ledger_subject_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_privacy_budget_ledger_subject_id ON privacy_budget_ledger USING btree (subject_id);
+
+
+--
+-- Name: ix_privacy_budget_ledger_subject_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_privacy_budget_ledger_subject_type ON privacy_budget_ledger USING btree (subject_type);
+
+
+--
+-- Name: ix_privacy_budget_ledger_window_key; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_privacy_budget_ledger_window_key ON privacy_budget_ledger USING btree (window_key);
+
+
+--
 -- Name: ix_private_messages_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -9866,6 +15157,20 @@ CREATE INDEX ix_private_messages_sender_id ON private_messages USING btree (send
 --
 
 CREATE INDEX ix_private_messages_thread_root_id ON private_messages USING btree (thread_root_id);
+
+
+--
+-- Name: ix_probe_outcomes_claim_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_probe_outcomes_claim_id ON probe_outcomes USING btree (claim_id);
+
+
+--
+-- Name: ix_probe_outcomes_created_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_probe_outcomes_created_at ON probe_outcomes USING btree (created_at);
 
 
 --
@@ -9908,6 +15213,174 @@ CREATE UNIQUE INDEX ix_push_preferences_user_id ON push_preferences USING btree 
 --
 
 CREATE INDEX ix_recommendation_cache_deleted_at ON recommendation_cache USING btree (deleted_at);
+
+
+--
+-- Name: ix_release_approval_requests_applied_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_release_approval_requests_applied_at ON release_approval_requests USING btree (applied_at);
+
+
+--
+-- Name: ix_release_approval_requests_applied_by_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_release_approval_requests_applied_by_id ON release_approval_requests USING btree (applied_by_id);
+
+
+--
+-- Name: ix_release_approval_requests_category; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_release_approval_requests_category ON release_approval_requests USING btree (category);
+
+
+--
+-- Name: ix_release_approval_requests_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_release_approval_requests_deleted_at ON release_approval_requests USING btree (deleted_at);
+
+
+--
+-- Name: ix_release_approval_requests_needs_admin_attention; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_release_approval_requests_needs_admin_attention ON release_approval_requests USING btree (needs_admin_attention);
+
+
+--
+-- Name: ix_release_approval_requests_object_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_release_approval_requests_object_id ON release_approval_requests USING btree (object_id);
+
+
+--
+-- Name: ix_release_approval_requests_object_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_release_approval_requests_object_type ON release_approval_requests USING btree (object_type);
+
+
+--
+-- Name: ix_release_approval_requests_requested_by_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_release_approval_requests_requested_by_id ON release_approval_requests USING btree (requested_by_id);
+
+
+--
+-- Name: ix_release_approval_requests_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_release_approval_requests_status ON release_approval_requests USING btree (status);
+
+
+--
+-- Name: ix_release_approval_requests_submitted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_release_approval_requests_submitted_at ON release_approval_requests USING btree (submitted_at);
+
+
+--
+-- Name: ix_report_snapshots_cache_version; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_report_snapshots_cache_version ON report_snapshots USING btree (cache_version);
+
+
+--
+-- Name: ix_report_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_report_snapshots_deleted_at ON report_snapshots USING btree (deleted_at);
+
+
+--
+-- Name: ix_report_snapshots_delivery_mode; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_report_snapshots_delivery_mode ON report_snapshots USING btree (delivery_mode);
+
+
+--
+-- Name: ix_report_snapshots_report_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_report_snapshots_report_id ON report_snapshots USING btree (report_id);
+
+
+--
+-- Name: ix_report_snapshots_snapshot_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_report_snapshots_snapshot_type ON report_snapshots USING btree (snapshot_type);
+
+
+--
+-- Name: ix_report_snapshots_user_cache; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_report_snapshots_user_cache ON report_snapshots USING btree (user_id, cache_version);
+
+
+--
+-- Name: ix_report_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_report_snapshots_user_id ON report_snapshots USING btree (user_id);
+
+
+--
+-- Name: ix_research_consent_records_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_research_consent_records_deleted_at ON research_consent_records USING btree (deleted_at);
+
+
+--
+-- Name: ix_research_consent_records_granted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_research_consent_records_granted_at ON research_consent_records USING btree (granted_at);
+
+
+--
+-- Name: ix_research_consent_records_protocol_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_research_consent_records_protocol_id ON research_consent_records USING btree (protocol_id);
+
+
+--
+-- Name: ix_research_consent_records_revoked_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_research_consent_records_revoked_at ON research_consent_records USING btree (revoked_at);
+
+
+--
+-- Name: ix_research_consent_records_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_research_consent_records_user_id ON research_consent_records USING btree (user_id);
+
+
+--
+-- Name: ix_research_consent_user_active; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_research_consent_user_active ON research_consent_records USING btree (user_id, protocol_id, revoked_at);
+
+
+--
+-- Name: ix_research_consent_user_protocol; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_research_consent_user_protocol ON research_consent_records USING btree (user_id, protocol_id);
 
 
 --
@@ -10058,6 +15531,62 @@ CREATE INDEX ix_review_overrides_user_id ON review_overrides USING btree (user_i
 
 
 --
+-- Name: ix_safe_experiment_episodes_experiment_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_safe_experiment_episodes_experiment_id ON safe_experiment_episodes USING btree (experiment_id);
+
+
+--
+-- Name: ix_safe_experiment_episodes_experiment_key; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_safe_experiment_episodes_experiment_key ON safe_experiment_episodes USING btree (experiment_key);
+
+
+--
+-- Name: ix_safe_experiment_episodes_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_safe_experiment_episodes_user_id ON safe_experiment_episodes USING btree (user_id);
+
+
+--
+-- Name: ix_safe_experiments_created_by; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_safe_experiments_created_by ON safe_experiments USING btree (created_by);
+
+
+--
+-- Name: ix_safe_experiments_domain; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_safe_experiments_domain ON safe_experiments USING btree (domain);
+
+
+--
+-- Name: ix_safe_experiments_experiment_key; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_safe_experiments_experiment_key ON safe_experiments USING btree (experiment_key);
+
+
+--
+-- Name: ix_safe_experiments_kill_switch_key; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_safe_experiments_kill_switch_key ON safe_experiments USING btree (kill_switch_key);
+
+
+--
+-- Name: ix_safe_experiments_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_safe_experiments_status ON safe_experiments USING btree (status);
+
+
+--
 -- Name: ix_scaffolding_states_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -10069,6 +15598,13 @@ CREATE INDEX ix_scaffolding_states_deleted_at ON scaffolding_states USING btree 
 --
 
 CREATE UNIQUE INDEX ix_scaffolding_states_user_id ON scaffolding_states USING btree (user_id);
+
+
+--
+-- Name: ix_scenes_scene_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_scenes_scene_id ON scenes USING btree (scene_id);
 
 
 --
@@ -10268,6 +15804,27 @@ CREATE INDEX ix_semantic_links_target_type ON semantic_links USING btree (target
 
 
 --
+-- Name: ix_session_completions_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_session_completions_user_id ON session_completions USING btree (user_id);
+
+
+--
+-- Name: ix_session_completions_user_id_created_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_session_completions_user_id_created_at ON session_completions USING btree (user_id, created_at);
+
+
+--
+-- Name: ix_shared_resources_card_share_record_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_shared_resources_card_share_record_id ON shared_resources USING btree (card_share_record_id);
+
+
+--
 -- Name: ix_shared_resources_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -10286,6 +15843,13 @@ CREATE INDEX ix_shared_resources_group_id ON shared_resources USING btree (group
 --
 
 CREATE INDEX ix_shared_resources_target_user_id ON shared_resources USING btree (target_user_id);
+
+
+--
+-- Name: ix_shared_skills_share_slug; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_shared_skills_share_slug ON shared_skills USING btree (share_slug);
 
 
 --
@@ -10352,10 +15916,94 @@ CREATE INDEX ix_shop_purchases_user_id_created_at ON shop_purchases USING btree 
 
 
 --
+-- Name: ix_simulation_runs_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_simulation_runs_deleted_at ON simulation_runs USING btree (deleted_at);
+
+
+--
+-- Name: ix_simulation_runs_last_active_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_simulation_runs_last_active_at ON simulation_runs USING btree (last_active_at);
+
+
+--
+-- Name: ix_simulation_runs_scenario_key; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_simulation_runs_scenario_key ON simulation_runs USING btree (scenario_key);
+
+
+--
+-- Name: ix_simulation_runs_session_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_simulation_runs_session_id ON simulation_runs USING btree (session_id);
+
+
+--
+-- Name: ix_simulation_runs_state; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_simulation_runs_state ON simulation_runs USING btree (state);
+
+
+--
+-- Name: ix_simulation_runs_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_simulation_runs_user_id ON simulation_runs USING btree (user_id);
+
+
+--
+-- Name: ix_simulation_runs_user_last_active; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_simulation_runs_user_last_active ON simulation_runs USING btree (user_id, last_active_at);
+
+
+--
+-- Name: ix_skill_share_moderation_queue_user_skill_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_skill_share_moderation_queue_user_skill_id ON skill_share_moderation_queue USING btree (user_skill_id);
+
+
+--
 -- Name: ix_spark_contracts_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_spark_contracts_deleted_at ON spark_contracts USING btree (deleted_at);
+
+
+--
+-- Name: ix_srl_phase_states_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_srl_phase_states_deleted_at ON srl_phase_states USING btree (deleted_at);
+
+
+--
+-- Name: ix_srl_phase_states_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_srl_phase_states_user_id ON srl_phase_states USING btree (user_id);
+
+
+--
+-- Name: ix_stored_files_archive_review_due_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_stored_files_archive_review_due_at ON stored_files USING btree (archive_review_due_at);
+
+
+--
+-- Name: ix_stored_files_archived_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_stored_files_archived_at ON stored_files USING btree (archived_at);
 
 
 --
@@ -10366,10 +16014,59 @@ CREATE INDEX ix_stored_files_deleted_at ON stored_files USING btree (deleted_at)
 
 
 --
+-- Name: ix_stored_files_lifecycle_status; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_stored_files_lifecycle_status ON stored_files USING btree (lifecycle_status);
+
+
+--
+-- Name: ix_stored_files_orphaned_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_stored_files_orphaned_at ON stored_files USING btree (orphaned_at);
+
+
+--
+-- Name: ix_stored_files_revoked_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_stored_files_revoked_at ON stored_files USING btree (revoked_at);
+
+
+--
+-- Name: ix_stored_files_source_file_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_stored_files_source_file_id ON stored_files USING btree (source_file_id);
+
+
+--
 -- Name: ix_stored_files_user_id; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_stored_files_user_id ON stored_files USING btree (user_id);
+
+
+--
+-- Name: ix_strategy_belief_snapshots_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_strategy_belief_snapshots_deleted_at ON strategy_belief_snapshots USING btree (deleted_at);
+
+
+--
+-- Name: ix_strategy_belief_snapshots_strategy_key; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_strategy_belief_snapshots_strategy_key ON strategy_belief_snapshots USING btree (strategy_key);
+
+
+--
+-- Name: ix_strategy_belief_snapshots_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_strategy_belief_snapshots_user_id ON strategy_belief_snapshots USING btree (user_id);
 
 
 --
@@ -10391,6 +16088,20 @@ CREATE INDEX ix_strategy_nodes_deleted_at ON strategy_nodes USING btree (deleted
 --
 
 CREATE INDEX ix_strategy_nodes_user_id ON strategy_nodes USING btree (user_id);
+
+
+--
+-- Name: ix_strategy_outcomes_user_trigger; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_strategy_outcomes_user_trigger ON intervention_strategy_outcomes USING btree (user_id, trigger_type);
+
+
+--
+-- Name: ix_strategy_outcomes_user_trigger_tone; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_strategy_outcomes_user_trigger_tone ON intervention_strategy_outcomes USING btree (user_id, trigger_type, delivery_tone);
 
 
 --
@@ -10499,6 +16210,27 @@ CREATE INDEX ix_system_config_change_logs_id ON system_config_change_logs USING 
 
 
 --
+-- Name: ix_task_documents_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_task_documents_deleted_at ON task_documents USING btree (deleted_at);
+
+
+--
+-- Name: ix_task_documents_file_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_task_documents_file_id ON task_documents USING btree (file_id);
+
+
+--
+-- Name: ix_task_documents_task_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_task_documents_task_id ON task_documents USING btree (task_id);
+
+
+--
 -- Name: ix_task_feedbacks_completion_quality; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -10590,6 +16322,13 @@ CREATE INDEX ix_tasks_plan_id ON tasks USING btree (plan_id);
 
 
 --
+-- Name: ix_tasks_source_planning_session_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_tasks_source_planning_session_id ON tasks USING btree (source_planning_session_id);
+
+
+--
 -- Name: ix_tasks_status; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -10608,6 +16347,132 @@ CREATE INDEX ix_tasks_tool_result_id ON tasks USING btree (tool_result_id);
 --
 
 CREATE INDEX ix_tasks_user_id ON tasks USING btree (user_id);
+
+
+--
+-- Name: ix_tdr_created_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_tdr_created_at ON transition_decision_records USING btree (created_at);
+
+
+--
+-- Name: ix_tdr_input_snapshot_ref; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_tdr_input_snapshot_ref ON transition_decision_records USING btree (input_snapshot_ref);
+
+
+--
+-- Name: ix_tdr_policy_version; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_tdr_policy_version ON transition_decision_records USING btree (policy_version);
+
+
+--
+-- Name: ix_tdr_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_tdr_user_id ON transition_decision_records USING btree (user_id);
+
+
+--
+-- Name: ix_theater_candidate_bundles_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_candidate_bundles_deleted_at ON theater_candidate_bundles USING btree (deleted_at);
+
+
+--
+-- Name: ix_theater_candidate_bundles_prediction_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_candidate_bundles_prediction_id ON theater_candidate_bundles USING btree (prediction_id);
+
+
+--
+-- Name: ix_theater_candidate_bundles_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_candidate_bundles_status ON theater_candidate_bundles USING btree (status);
+
+
+--
+-- Name: ix_theater_candidate_bundles_target_resolution_mode; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_candidate_bundles_target_resolution_mode ON theater_candidate_bundles USING btree (target_resolution_mode);
+
+
+--
+-- Name: ix_theater_candidate_bundles_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_candidate_bundles_user_id ON theater_candidate_bundles USING btree (user_id);
+
+
+--
+-- Name: ix_theater_predictions_accuracy_due_on; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_predictions_accuracy_due_on ON theater_predictions USING btree (accuracy_due_on);
+
+
+--
+-- Name: ix_theater_predictions_accuracy_pending; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_predictions_accuracy_pending ON theater_predictions USING btree (accuracy_status, accuracy_due_on);
+
+
+--
+-- Name: ix_theater_predictions_accuracy_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_predictions_accuracy_status ON theater_predictions USING btree (accuracy_status);
+
+
+--
+-- Name: ix_theater_predictions_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_predictions_deleted_at ON theater_predictions USING btree (deleted_at);
+
+
+--
+-- Name: ix_theater_predictions_generated_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_predictions_generated_at ON theater_predictions USING btree (generated_at);
+
+
+--
+-- Name: ix_theater_predictions_prediction_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_predictions_prediction_id ON theater_predictions USING btree (prediction_id);
+
+
+--
+-- Name: ix_theater_predictions_target_resolution_mode; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_predictions_target_resolution_mode ON theater_predictions USING btree (target_resolution_mode);
+
+
+--
+-- Name: ix_theater_predictions_user_generated; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_predictions_user_generated ON theater_predictions USING btree (user_id, generated_at DESC);
+
+
+--
+-- Name: ix_theater_predictions_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_theater_predictions_user_id ON theater_predictions USING btree (user_id);
 
 
 --
@@ -10842,6 +16707,13 @@ CREATE INDEX ix_user_item_interactions_deleted_at ON user_item_interactions USIN
 
 
 --
+-- Name: ix_user_learning_profiles_deleted_at; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_user_learning_profiles_deleted_at ON user_learning_profiles USING btree (deleted_at);
+
+
+--
 -- Name: ix_user_library_subscriptions_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -10926,6 +16798,27 @@ CREATE UNIQUE INDEX ix_user_preferences_center_user_id ON user_preferences_cente
 
 
 --
+-- Name: ix_user_scenario_states_current_node; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_user_scenario_states_current_node ON user_scenario_states USING btree (current_node);
+
+
+--
+-- Name: ix_user_scenario_states_pack_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_user_scenario_states_pack_id ON user_scenario_states USING btree (pack_id);
+
+
+--
+-- Name: ix_user_scenario_states_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX ix_user_scenario_states_user_id ON user_scenario_states USING btree (user_id);
+
+
+--
 -- Name: ix_user_sessions_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -11000,6 +16893,69 @@ CREATE UNIQUE INDEX ix_user_settings_user_id ON user_settings USING btree (user_
 --
 
 CREATE INDEX ix_user_similarities_deleted_at ON user_similarities USING btree (deleted_at);
+
+
+--
+-- Name: ix_user_skill_adoptions_asset_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_user_skill_adoptions_asset_id ON user_skill_adoptions USING btree (asset_id);
+
+
+--
+-- Name: ix_user_skill_adoptions_asset_type; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_user_skill_adoptions_asset_type ON user_skill_adoptions USING btree (asset_type);
+
+
+--
+-- Name: ix_user_skill_adoptions_deleted_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_user_skill_adoptions_deleted_at ON user_skill_adoptions USING btree (deleted_at);
+
+
+--
+-- Name: ix_user_skill_adoptions_status; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_user_skill_adoptions_status ON user_skill_adoptions USING btree (status);
+
+
+--
+-- Name: ix_user_skill_adoptions_trace_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_user_skill_adoptions_trace_id ON user_skill_adoptions USING btree (trace_id);
+
+
+--
+-- Name: ix_user_skill_adoptions_user_asset; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_user_skill_adoptions_user_asset ON user_skill_adoptions USING btree (user_id, asset_type, asset_id);
+
+
+--
+-- Name: ix_user_skill_adoptions_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_user_skill_adoptions_user_id ON user_skill_adoptions USING btree (user_id);
+
+
+--
+-- Name: ix_user_skills_forked_from_share_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_user_skills_forked_from_share_id ON user_skills USING btree (forked_from_share_id);
+
+
+--
+-- Name: ix_user_skills_shared_catalog_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_user_skills_shared_catalog_id ON user_skills USING btree (shared_catalog_id);
 
 
 --
@@ -11178,6 +17134,27 @@ CREATE INDEX ix_visual_elements_type_rarity ON visual_elements USING btree (elem
 
 
 --
+-- Name: ix_window_states_created_at; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_window_states_created_at ON window_states USING btree (created_at);
+
+
+--
+-- Name: ix_window_states_trigger_decision_ref; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_window_states_trigger_decision_ref ON window_states USING btree (trigger_decision_ref);
+
+
+--
+-- Name: ix_window_states_user_id; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE INDEX ix_window_states_user_id ON window_states USING btree (user_id);
+
+
+--
 -- Name: ix_word_books_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -11199,6 +17176,13 @@ CREATE INDEX ix_word_books_word ON word_books USING btree (word);
 
 
 --
+-- Name: uq_aurora_policy_versions_version; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX uq_aurora_policy_versions_version ON aurora_policy_versions USING btree (version);
+
+
+--
 -- Name: uq_execution_intents_active_task; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -11217,6 +17201,20 @@ CREATE UNIQUE INDEX uq_memory_preferences_version ON memory_preferences USING bt
 --
 
 CREATE UNIQUE INDEX uq_memory_rank_policies_scope ON memory_rank_policies USING btree (scope_type, scope_key);
+
+
+--
+-- Name: uq_research_consent_active_protocol; Type: INDEX; Schema: public; Owner: brsama
+--
+
+CREATE UNIQUE INDEX uq_research_consent_active_protocol ON research_consent_records USING btree (user_id, protocol_id) WHERE (revoked_at IS NULL);
+
+
+--
+-- Name: admin_audit_log trg_admin_audit_log_prevent_mutation; Type: TRIGGER; Schema: public; Owner: brsama
+--
+
+CREATE TRIGGER trg_admin_audit_log_prevent_mutation BEFORE DELETE OR UPDATE ON admin_audit_log FOR EACH ROW EXECUTE FUNCTION admin_audit_log_prevent_mutation();
 
 
 --
@@ -11324,11 +17322,27 @@ ALTER TABLE ONLY accountability_partnership
 
 
 --
+-- Name: accountability_policies accountability_policies_commitment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY accountability_policies
+    ADD CONSTRAINT accountability_policies_commitment_id_fkey FOREIGN KEY (commitment_id) REFERENCES episodic_memories(id) ON DELETE CASCADE;
+
+
+--
+-- Name: accountability_policies accountability_policies_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY accountability_policies
+    ADD CONSTRAINT accountability_policies_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: achievements achievements_first_unlocker_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY achievements
-    ADD CONSTRAINT achievements_first_unlocker_id_fkey FOREIGN KEY (first_unlocker_id) REFERENCES users(id);
+    ADD CONSTRAINT achievements_first_unlocker_id_fkey FOREIGN KEY (first_unlocker_id) REFERENCES users(id) ON DELETE SET NULL;
 
 
 --
@@ -11336,7 +17350,15 @@ ALTER TABLE ONLY achievements
 --
 
 ALTER TABLE ONLY achievements
-    ADD CONSTRAINT achievements_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES achievements(id);
+    ADD CONSTRAINT achievements_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES achievements(id) ON DELETE SET NULL;
+
+
+--
+-- Name: admin_audit_log admin_audit_log_admin_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY admin_audit_log
+    ADD CONSTRAINT admin_audit_log_admin_user_id_fkey FOREIGN KEY (admin_user_id) REFERENCES users(id) ON DELETE SET NULL;
 
 
 --
@@ -11356,6 +17378,38 @@ ALTER TABLE ONLY asset_suggestion_logs
 
 
 --
+-- Name: aurora_decision_telemetry aurora_decision_telemetry_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY aurora_decision_telemetry
+    ADD CONSTRAINT aurora_decision_telemetry_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: aurora_judgment_records aurora_judgment_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY aurora_judgment_records
+    ADD CONSTRAINT aurora_judgment_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: aurora_scheduled_wakes aurora_scheduled_wakes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY aurora_scheduled_wakes
+    ADD CONSTRAINT aurora_scheduled_wakes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: aurora_state_snapshots aurora_state_snapshots_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY aurora_state_snapshots
+    ADD CONSTRAINT aurora_state_snapshots_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: auth_audit_log auth_audit_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -11368,7 +17422,7 @@ ALTER TABLE ONLY auth_audit_log
 --
 
 ALTER TABLE ONLY behavior_patterns
-    ADD CONSTRAINT behavior_patterns_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT behavior_patterns_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -11420,6 +17474,14 @@ ALTER TABLE ONLY calendar_events
 
 
 --
+-- Name: candidate_action_feedback candidate_action_feedback_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY candidate_action_feedback
+    ADD CONSTRAINT candidate_action_feedback_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: capsule_favorites capsule_favorites_capsule_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -11460,11 +17522,131 @@ ALTER TABLE ONLY capsule_generation_jobs
 
 
 --
+-- Name: card_adoption_records card_adoption_records_adopted_root_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_adoption_records
+    ADD CONSTRAINT card_adoption_records_adopted_root_card_id_fkey FOREIGN KEY (adopted_root_card_id) REFERENCES cards(id) ON DELETE SET NULL;
+
+
+--
+-- Name: card_adoption_records card_adoption_records_adopter_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_adoption_records
+    ADD CONSTRAINT card_adoption_records_adopter_user_id_fkey FOREIGN KEY (adopter_user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: card_adoption_records card_adoption_records_share_record_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_adoption_records
+    ADD CONSTRAINT card_adoption_records_share_record_id_fkey FOREIGN KEY (share_record_id) REFERENCES card_share_records(id) ON DELETE CASCADE;
+
+
+--
+-- Name: card_edges card_edges_from_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_edges
+    ADD CONSTRAINT card_edges_from_card_id_fkey FOREIGN KEY (from_card_id) REFERENCES cards(id) ON DELETE CASCADE;
+
+
+--
+-- Name: card_edges card_edges_to_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_edges
+    ADD CONSTRAINT card_edges_to_card_id_fkey FOREIGN KEY (to_card_id) REFERENCES cards(id) ON DELETE CASCADE;
+
+
+--
+-- Name: card_share_records card_share_records_group_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_share_records
+    ADD CONSTRAINT card_share_records_group_id_fkey FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: card_share_records card_share_records_root_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_share_records
+    ADD CONSTRAINT card_share_records_root_card_id_fkey FOREIGN KEY (root_card_id) REFERENCES cards(id) ON DELETE SET NULL;
+
+
+--
+-- Name: card_share_records card_share_records_shared_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_share_records
+    ADD CONSTRAINT card_share_records_shared_by_user_id_fkey FOREIGN KEY (shared_by_user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: card_share_records card_share_records_snapshot_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_share_records
+    ADD CONSTRAINT card_share_records_snapshot_id_fkey FOREIGN KEY (snapshot_id) REFERENCES card_snapshots(id) ON DELETE CASCADE;
+
+
+--
+-- Name: card_share_records card_share_records_target_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_share_records
+    ADD CONSTRAINT card_share_records_target_user_id_fkey FOREIGN KEY (target_user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: card_snapshots card_snapshots_root_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_snapshots
+    ADD CONSTRAINT card_snapshots_root_card_id_fkey FOREIGN KEY (root_card_id) REFERENCES cards(id) ON DELETE SET NULL;
+
+
+--
+-- Name: card_snapshots card_snapshots_source_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY card_snapshots
+    ADD CONSTRAINT card_snapshots_source_owner_id_fkey FOREIGN KEY (source_owner_id) REFERENCES users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: cards cards_holder_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY cards
+    ADD CONSTRAINT cards_holder_id_fkey FOREIGN KEY (holder_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: cards cards_origin_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY cards
+    ADD CONSTRAINT cards_origin_card_id_fkey FOREIGN KEY (origin_card_id) REFERENCES cards(id) ON DELETE SET NULL;
+
+
+--
+-- Name: cards cards_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY cards
+    ADD CONSTRAINT cards_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: chat_messages chat_messages_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY chat_messages
-    ADD CONSTRAINT chat_messages_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id);
+    ADD CONSTRAINT chat_messages_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
 
 
 --
@@ -11472,7 +17654,7 @@ ALTER TABLE ONLY chat_messages
 --
 
 ALTER TABLE ONLY chat_messages
-    ADD CONSTRAINT chat_messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT chat_messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -11480,7 +17662,7 @@ ALTER TABLE ONLY chat_messages
 --
 
 ALTER TABLE ONLY chat_sessions
-    ADD CONSTRAINT chat_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT chat_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -11488,7 +17670,7 @@ ALTER TABLE ONLY chat_sessions
 --
 
 ALTER TABLE ONLY cognitive_fragments
-    ADD CONSTRAINT cognitive_fragments_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id);
+    ADD CONSTRAINT cognitive_fragments_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL;
 
 
 --
@@ -11496,7 +17678,7 @@ ALTER TABLE ONLY cognitive_fragments
 --
 
 ALTER TABLE ONLY cognitive_fragments
-    ADD CONSTRAINT cognitive_fragments_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT cognitive_fragments_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -11516,11 +17698,35 @@ ALTER TABLE ONLY collaborative_galaxies
 
 
 --
+-- Name: commitments commitments_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY commitments
+    ADD CONSTRAINT commitments_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: compliance_check_logs compliance_check_logs_executed_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY compliance_check_logs
     ADD CONSTRAINT compliance_check_logs_executed_by_fkey FOREIGN KEY (executed_by) REFERENCES users(id);
+
+
+--
+-- Name: conflict_resolution_records conflict_resolution_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY conflict_resolution_records
+    ADD CONSTRAINT conflict_resolution_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: counterfactual_evaluation_reports counterfactual_evaluation_reports_replaced_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY counterfactual_evaluation_reports
+    ADD CONSTRAINT counterfactual_evaluation_reports_replaced_by_id_fkey FOREIGN KEY (replaced_by_id) REFERENCES counterfactual_evaluation_reports(id) ON DELETE SET NULL;
 
 
 --
@@ -11560,7 +17766,7 @@ ALTER TABLE ONLY crypto_shredding_certificates
 --
 
 ALTER TABLE ONLY curiosity_capsules
-    ADD CONSTRAINT curiosity_capsules_related_task_id_fkey FOREIGN KEY (related_task_id) REFERENCES tasks(id);
+    ADD CONSTRAINT curiosity_capsules_related_task_id_fkey FOREIGN KEY (related_task_id) REFERENCES tasks(id) ON DELETE SET NULL;
 
 
 --
@@ -11568,7 +17774,7 @@ ALTER TABLE ONLY curiosity_capsules
 --
 
 ALTER TABLE ONLY curiosity_capsules
-    ADD CONSTRAINT curiosity_capsules_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT curiosity_capsules_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -11585,6 +17791,14 @@ ALTER TABLE ONLY custom_expert_profiles
 
 ALTER TABLE ONLY custom_expert_teams
     ADD CONSTRAINT custom_expert_teams_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: daily_behavior_vector daily_behavior_vector_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY daily_behavior_vector
+    ADD CONSTRAINT daily_behavior_vector_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -11636,11 +17850,35 @@ ALTER TABLE ONLY document_chunks
 
 
 --
+-- Name: document_retrieval_feedback document_retrieval_feedback_chunk_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY document_retrieval_feedback
+    ADD CONSTRAINT document_retrieval_feedback_chunk_id_fkey FOREIGN KEY (chunk_id) REFERENCES document_chunks(id) ON DELETE SET NULL;
+
+
+--
+-- Name: document_retrieval_feedback document_retrieval_feedback_file_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY document_retrieval_feedback
+    ADD CONSTRAINT document_retrieval_feedback_file_id_fkey FOREIGN KEY (file_id) REFERENCES stored_files(id) ON DELETE CASCADE;
+
+
+--
+-- Name: document_retrieval_feedback document_retrieval_feedback_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY document_retrieval_feedback
+    ADD CONSTRAINT document_retrieval_feedback_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: episodic_memories episodic_memories_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY episodic_memories
-    ADD CONSTRAINT episodic_memories_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT episodic_memories_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -11649,6 +17887,22 @@ ALTER TABLE ONLY episodic_memories
 
 ALTER TABLE ONLY error_records
     ADD CONSTRAINT error_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: execution_audit_log execution_audit_log_intent_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY execution_audit_log
+    ADD CONSTRAINT execution_audit_log_intent_id_fkey FOREIGN KEY (intent_id) REFERENCES execution_intents(id) ON DELETE CASCADE;
+
+
+--
+-- Name: execution_audit_log execution_audit_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY execution_audit_log
+    ADD CONSTRAINT execution_audit_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -11700,6 +17954,22 @@ ALTER TABLE ONLY execution_records
 
 
 --
+-- Name: execution_schedules execution_schedules_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY execution_schedules
+    ADD CONSTRAINT execution_schedules_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+
+
+--
+-- Name: execution_schedules execution_schedules_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY execution_schedules
+    ADD CONSTRAINT execution_schedules_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: expansion_feedback expansion_feedback_expansion_queue_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -11732,6 +18002,22 @@ ALTER TABLE ONLY ab_experiments
 
 
 --
+-- Name: collaborative_galaxies fk_collaborative_galaxies_group_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY collaborative_galaxies
+    ADD CONSTRAINT fk_collaborative_galaxies_group_id FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: shared_resources fk_shared_resources_card_share_record_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY shared_resources
+    ADD CONSTRAINT fk_shared_resources_card_share_record_id FOREIGN KEY (card_share_record_id) REFERENCES card_share_records(id) ON DELETE SET NULL;
+
+
+--
 -- Name: shared_resources fk_shared_resources_seed_item_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -11748,6 +18034,14 @@ ALTER TABLE ONLY shared_resources
 
 
 --
+-- Name: stored_files fk_stored_files_source_file_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY stored_files
+    ADD CONSTRAINT fk_stored_files_source_file_id FOREIGN KEY (source_file_id) REFERENCES stored_files(id) ON DELETE SET NULL;
+
+
+--
 -- Name: subtasks fk_subtasks_knowledge_node_id; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -11756,11 +18050,19 @@ ALTER TABLE ONLY subtasks
 
 
 --
+-- Name: focus_contracts focus_contracts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY focus_contracts
+    ADD CONSTRAINT focus_contracts_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: focus_sessions focus_sessions_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY focus_sessions
-    ADD CONSTRAINT focus_sessions_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id);
+    ADD CONSTRAINT focus_sessions_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL;
 
 
 --
@@ -11768,7 +18070,7 @@ ALTER TABLE ONLY focus_sessions
 --
 
 ALTER TABLE ONLY focus_sessions
-    ADD CONSTRAINT focus_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT focus_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -11809,6 +18111,22 @@ ALTER TABLE ONLY galaxy_user_permissions
 
 ALTER TABLE ONLY galaxy_user_permissions
     ADD CONSTRAINT galaxy_user_permissions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: goals goals_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY goals
+    ADD CONSTRAINT goals_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plans(id);
+
+
+--
+-- Name: goals goals_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY goals
+    ADD CONSTRAINT goals_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
 
 
 --
@@ -11956,6 +18274,38 @@ ALTER TABLE ONLY idempotency_keys
 
 
 --
+-- Name: identity_evidence identity_evidence_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY identity_evidence
+    ADD CONSTRAINT identity_evidence_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: idiographic_associations idiographic_associations_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY idiographic_associations
+    ADD CONSTRAINT idiographic_associations_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: idiographic_changepoints idiographic_changepoints_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY idiographic_changepoints
+    ADD CONSTRAINT idiographic_changepoints_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: insight_claims insight_claims_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY insight_claims
+    ADD CONSTRAINT insight_claims_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: intervention_audit_logs intervention_audit_logs_request_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -11988,6 +18338,46 @@ ALTER TABLE ONLY intervention_feedback
 
 
 --
+-- Name: intervention_records intervention_records_knowledge_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY intervention_records
+    ADD CONSTRAINT intervention_records_knowledge_card_id_fkey FOREIGN KEY (knowledge_card_id) REFERENCES cards(id) ON DELETE SET NULL;
+
+
+--
+-- Name: intervention_records intervention_records_phase_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY intervention_records
+    ADD CONSTRAINT intervention_records_phase_card_id_fkey FOREIGN KEY (phase_card_id) REFERENCES cards(id) ON DELETE SET NULL;
+
+
+--
+-- Name: intervention_records intervention_records_plan_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY intervention_records
+    ADD CONSTRAINT intervention_records_plan_card_id_fkey FOREIGN KEY (plan_card_id) REFERENCES cards(id) ON DELETE SET NULL;
+
+
+--
+-- Name: intervention_records intervention_records_task_occurrence_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY intervention_records
+    ADD CONSTRAINT intervention_records_task_occurrence_id_fkey FOREIGN KEY (task_occurrence_id) REFERENCES task_occurrences(id) ON DELETE SET NULL;
+
+
+--
+-- Name: intervention_records intervention_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY intervention_records
+    ADD CONSTRAINT intervention_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: intervention_requests intervention_requests_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -11996,11 +18386,51 @@ ALTER TABLE ONLY intervention_requests
 
 
 --
+-- Name: intervention_strategy_outcomes intervention_strategy_outcomes_intervention_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY intervention_strategy_outcomes
+    ADD CONSTRAINT intervention_strategy_outcomes_intervention_id_fkey FOREIGN KEY (intervention_id) REFERENCES intervention_records(id) ON DELETE CASCADE;
+
+
+--
+-- Name: intervention_strategy_outcomes intervention_strategy_outcomes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY intervention_strategy_outcomes
+    ADD CONSTRAINT intervention_strategy_outcomes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: jobs jobs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY jobs
     ADD CONSTRAINT jobs_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: knowledge_node_documents knowledge_node_documents_file_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY knowledge_node_documents
+    ADD CONSTRAINT knowledge_node_documents_file_id_fkey FOREIGN KEY (file_id) REFERENCES stored_files(id) ON DELETE CASCADE;
+
+
+--
+-- Name: knowledge_node_documents knowledge_node_documents_node_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY knowledge_node_documents
+    ADD CONSTRAINT knowledge_node_documents_node_id_fkey FOREIGN KEY (node_id) REFERENCES knowledge_nodes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: knowledge_node_documents knowledge_node_documents_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY knowledge_node_documents
+    ADD CONSTRAINT knowledge_node_documents_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12076,6 +18506,30 @@ ALTER TABLE ONLY login_attempts
 
 
 --
+-- Name: marketplace_packs marketplace_packs_rollback_of_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY marketplace_packs
+    ADD CONSTRAINT marketplace_packs_rollback_of_id_fkey FOREIGN KEY (rollback_of_id) REFERENCES marketplace_packs(id) ON DELETE SET NULL;
+
+
+--
+-- Name: marketplace_skills marketplace_skills_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY marketplace_skills
+    ADD CONSTRAINT marketplace_skills_author_id_fkey FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: marketplace_skills marketplace_skills_rollback_of_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY marketplace_skills
+    ADD CONSTRAINT marketplace_skills_rollback_of_id_fkey FOREIGN KEY (rollback_of_id) REFERENCES marketplace_skills(id) ON DELETE SET NULL;
+
+
+--
 -- Name: mastery_audit_log mastery_audit_log_node_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -12096,7 +18550,7 @@ ALTER TABLE ONLY mastery_audit_log
 --
 
 ALTER TABLE ONLY memory_corrections
-    ADD CONSTRAINT memory_corrections_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT memory_corrections_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12104,7 +18558,7 @@ ALTER TABLE ONLY memory_corrections
 --
 
 ALTER TABLE ONLY memory_goals
-    ADD CONSTRAINT memory_goals_linked_plan_id_fkey FOREIGN KEY (linked_plan_id) REFERENCES plans(id);
+    ADD CONSTRAINT memory_goals_linked_plan_id_fkey FOREIGN KEY (linked_plan_id) REFERENCES plans(id) ON DELETE SET NULL;
 
 
 --
@@ -12112,7 +18566,7 @@ ALTER TABLE ONLY memory_goals
 --
 
 ALTER TABLE ONLY memory_goals
-    ADD CONSTRAINT memory_goals_linked_task_id_fkey FOREIGN KEY (linked_task_id) REFERENCES tasks(id);
+    ADD CONSTRAINT memory_goals_linked_task_id_fkey FOREIGN KEY (linked_task_id) REFERENCES tasks(id) ON DELETE SET NULL;
 
 
 --
@@ -12120,7 +18574,7 @@ ALTER TABLE ONLY memory_goals
 --
 
 ALTER TABLE ONLY memory_goals
-    ADD CONSTRAINT memory_goals_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT memory_goals_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12128,7 +18582,7 @@ ALTER TABLE ONLY memory_goals
 --
 
 ALTER TABLE ONLY memory_preferences
-    ADD CONSTRAINT memory_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT memory_preferences_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12192,7 +18646,7 @@ ALTER TABLE ONLY message_reports
 --
 
 ALTER TABLE ONLY nightly_reviews
-    ADD CONSTRAINT nightly_reviews_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT nightly_reviews_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12236,6 +18690,30 @@ ALTER TABLE ONLY node_relations
 
 
 --
+-- Name: north_star_metric_events north_star_metric_events_plan_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY north_star_metric_events
+    ADD CONSTRAINT north_star_metric_events_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE SET NULL;
+
+
+--
+-- Name: north_star_metric_events north_star_metric_events_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY north_star_metric_events
+    ADD CONSTRAINT north_star_metric_events_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL;
+
+
+--
+-- Name: north_star_metric_events north_star_metric_events_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY north_star_metric_events
+    ADD CONSTRAINT north_star_metric_events_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: notification_interactions notification_interactions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -12268,6 +18746,22 @@ ALTER TABLE ONLY offline_message_queue
 
 
 --
+-- Name: pack_adoption_history pack_adoption_history_adoption_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY pack_adoption_history
+    ADD CONSTRAINT pack_adoption_history_adoption_id_fkey FOREIGN KEY (adoption_id) REFERENCES user_skill_adoptions(id) ON DELETE CASCADE;
+
+
+--
+-- Name: pack_adoption_history pack_adoption_history_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY pack_adoption_history
+    ADD CONSTRAINT pack_adoption_history_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: passive_signals passive_signals_intervention_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -12281,6 +18775,14 @@ ALTER TABLE ONLY passive_signals
 
 ALTER TABLE ONLY passive_signals
     ADD CONSTRAINT passive_signals_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: persdyn_attractors persdyn_attractors_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY persdyn_attractors
+    ADD CONSTRAINT persdyn_attractors_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
 
 
 --
@@ -12332,11 +18834,27 @@ ALTER TABLE ONLY plan_states
 
 
 --
+-- Name: planning_artifacts planning_artifacts_approved_by_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY planning_artifacts
+    ADD CONSTRAINT planning_artifacts_approved_by_user_id_fkey FOREIGN KEY (approved_by_user_id) REFERENCES users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: planning_artifacts planning_artifacts_plan_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY planning_artifacts
+    ADD CONSTRAINT planning_artifacts_plan_card_id_fkey FOREIGN KEY (plan_card_id) REFERENCES cards(id) ON DELETE CASCADE;
+
+
+--
 -- Name: plans plans_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY plans
-    ADD CONSTRAINT plans_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT plans_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12404,6 +18922,30 @@ ALTER TABLE ONLY private_messages
 
 
 --
+-- Name: probe_outcomes probe_outcomes_claim_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY probe_outcomes
+    ADD CONSTRAINT probe_outcomes_claim_id_fkey FOREIGN KEY (claim_id) REFERENCES insight_claims(id) ON DELETE CASCADE;
+
+
+--
+-- Name: push_delivery_records push_delivery_records_notification_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY push_delivery_records
+    ADD CONSTRAINT push_delivery_records_notification_id_fkey FOREIGN KEY (notification_id) REFERENCES notifications(id);
+
+
+--
+-- Name: push_delivery_records push_delivery_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY push_delivery_records
+    ADD CONSTRAINT push_delivery_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
 -- Name: push_histories push_histories_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -12428,11 +18970,75 @@ ALTER TABLE ONLY recommendation_cache
 
 
 --
+-- Name: release_approval_requests release_approval_requests_applied_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY release_approval_requests
+    ADD CONSTRAINT release_approval_requests_applied_by_id_fkey FOREIGN KEY (applied_by_id) REFERENCES users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: release_approval_requests release_approval_requests_requested_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY release_approval_requests
+    ADD CONSTRAINT release_approval_requests_requested_by_id_fkey FOREIGN KEY (requested_by_id) REFERENCES users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: report_snapshots report_snapshots_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY report_snapshots
+    ADD CONSTRAINT report_snapshots_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: routing_decision_log routing_decision_log_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY routing_decision_log
+    ADD CONSTRAINT routing_decision_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: safe_experiment_episodes safe_experiment_episodes_experiment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY safe_experiment_episodes
+    ADD CONSTRAINT safe_experiment_episodes_experiment_id_fkey FOREIGN KEY (experiment_id) REFERENCES safe_experiments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: safe_experiment_episodes safe_experiment_episodes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY safe_experiment_episodes
+    ADD CONSTRAINT safe_experiment_episodes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: safe_experiments safe_experiments_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY safe_experiments
+    ADD CONSTRAINT safe_experiments_created_by_fkey FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL;
+
+
+--
 -- Name: scaffolding_states scaffolding_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY scaffolding_states
     ADD CONSTRAINT scaffolding_states_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: scenes scenes_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY scenes
+    ADD CONSTRAINT scenes_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
 
 
 --
@@ -12473,6 +19079,14 @@ ALTER TABLE ONLY seed_library_ratings
 
 ALTER TABLE ONLY seed_library_ratings
     ADD CONSTRAINT seed_library_ratings_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: session_completions session_completions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY session_completions
+    ADD CONSTRAINT session_completions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12564,11 +19178,35 @@ ALTER TABLE ONLY shop_purchases
 
 
 --
+-- Name: simulation_runs simulation_runs_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY simulation_runs
+    ADD CONSTRAINT simulation_runs_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: skill_share_moderation_queue skill_share_moderation_queue_owner_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY skill_share_moderation_queue
+    ADD CONSTRAINT skill_share_moderation_queue_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES users(id);
+
+
+--
 -- Name: spark_contracts spark_contracts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY spark_contracts
     ADD CONSTRAINT spark_contracts_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: srl_phase_states srl_phase_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY srl_phase_states
+    ADD CONSTRAINT srl_phase_states_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12644,6 +19282,22 @@ ALTER TABLE ONLY system_config_change_logs
 
 
 --
+-- Name: task_documents task_documents_file_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY task_documents
+    ADD CONSTRAINT task_documents_file_id_fkey FOREIGN KEY (file_id) REFERENCES stored_files(id) ON DELETE CASCADE;
+
+
+--
+-- Name: task_documents task_documents_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY task_documents
+    ADD CONSTRAINT task_documents_task_id_fkey FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE;
+
+
+--
 -- Name: task_feedbacks task_feedbacks_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -12676,6 +19330,30 @@ ALTER TABLE ONLY task_knowledge_links
 
 
 --
+-- Name: task_occurrences task_occurrences_phase_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY task_occurrences
+    ADD CONSTRAINT task_occurrences_phase_card_id_fkey FOREIGN KEY (phase_card_id) REFERENCES cards(id) ON DELETE SET NULL;
+
+
+--
+-- Name: task_occurrences task_occurrences_plan_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY task_occurrences
+    ADD CONSTRAINT task_occurrences_plan_card_id_fkey FOREIGN KEY (plan_card_id) REFERENCES cards(id) ON DELETE SET NULL;
+
+
+--
+-- Name: task_occurrences task_occurrences_series_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY task_occurrences
+    ADD CONSTRAINT task_occurrences_series_card_id_fkey FOREIGN KEY (series_card_id) REFERENCES cards(id) ON DELETE CASCADE;
+
+
+--
 -- Name: task_resource_links task_resource_links_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -12688,7 +19366,7 @@ ALTER TABLE ONLY task_resource_links
 --
 
 ALTER TABLE ONLY tasks
-    ADD CONSTRAINT tasks_knowledge_node_id_fkey FOREIGN KEY (knowledge_node_id) REFERENCES knowledge_nodes(id);
+    ADD CONSTRAINT tasks_knowledge_node_id_fkey FOREIGN KEY (knowledge_node_id) REFERENCES knowledge_nodes(id) ON DELETE SET NULL;
 
 
 --
@@ -12696,7 +19374,7 @@ ALTER TABLE ONLY tasks
 --
 
 ALTER TABLE ONLY tasks
-    ADD CONSTRAINT tasks_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plans(id);
+    ADD CONSTRAINT tasks_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES plans(id) ON DELETE CASCADE;
 
 
 --
@@ -12704,7 +19382,31 @@ ALTER TABLE ONLY tasks
 --
 
 ALTER TABLE ONLY tasks
-    ADD CONSTRAINT tasks_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT tasks_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: theater_candidate_bundles theater_candidate_bundles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY theater_candidate_bundles
+    ADD CONSTRAINT theater_candidate_bundles_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: theater_predictions theater_predictions_candidate_bundle_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY theater_predictions
+    ADD CONSTRAINT theater_predictions_candidate_bundle_id_fkey FOREIGN KEY (candidate_bundle_id) REFERENCES theater_candidate_bundles(id) ON DELETE SET NULL;
+
+
+--
+-- Name: theater_predictions theater_predictions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY theater_predictions
+    ADD CONSTRAINT theater_predictions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12724,11 +19426,27 @@ ALTER TABLE ONLY tracking_events
 
 
 --
+-- Name: transition_decision_records transition_decision_records_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY transition_decision_records
+    ADD CONSTRAINT transition_decision_records_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: unresolved_conflicts unresolved_conflicts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY unresolved_conflicts
+    ADD CONSTRAINT unresolved_conflicts_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
 -- Name: user_achievements user_achievements_achievement_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
 ALTER TABLE ONLY user_achievements
-    ADD CONSTRAINT user_achievements_achievement_id_fkey FOREIGN KEY (achievement_id) REFERENCES achievements(id);
+    ADD CONSTRAINT user_achievements_achievement_id_fkey FOREIGN KEY (achievement_id) REFERENCES achievements(id) ON DELETE CASCADE;
 
 
 --
@@ -12736,7 +19454,7 @@ ALTER TABLE ONLY user_achievements
 --
 
 ALTER TABLE ONLY user_achievements
-    ADD CONSTRAINT user_achievements_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT user_achievements_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12784,7 +19502,7 @@ ALTER TABLE ONLY user_daily_metrics
 --
 
 ALTER TABLE ONLY user_devices
-    ADD CONSTRAINT user_devices_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT user_devices_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12800,7 +19518,7 @@ ALTER TABLE ONLY user_encryption_keys
 --
 
 ALTER TABLE ONLY user_galaxy_skins
-    ADD CONSTRAINT user_galaxy_skins_skin_id_fkey FOREIGN KEY (skin_id) REFERENCES galaxy_skins(id);
+    ADD CONSTRAINT user_galaxy_skins_skin_id_fkey FOREIGN KEY (skin_id) REFERENCES galaxy_skins(id) ON DELETE CASCADE;
 
 
 --
@@ -12808,7 +19526,7 @@ ALTER TABLE ONLY user_galaxy_skins
 --
 
 ALTER TABLE ONLY user_galaxy_skins
-    ADD CONSTRAINT user_galaxy_skins_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT user_galaxy_skins_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12836,6 +19554,14 @@ ALTER TABLE ONLY user_item_interactions
 
 
 --
+-- Name: user_learning_profiles user_learning_profiles_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY user_learning_profiles
+    ADD CONSTRAINT user_learning_profiles_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
 -- Name: user_library_subscriptions user_library_subscriptions_library_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -12856,7 +19582,7 @@ ALTER TABLE ONLY user_library_subscriptions
 --
 
 ALTER TABLE ONLY user_memory_settings
-    ADD CONSTRAINT user_memory_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT user_memory_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12888,7 +19614,31 @@ ALTER TABLE ONLY user_persona_keys
 --
 
 ALTER TABLE ONLY user_preferences_center
-    ADD CONSTRAINT user_preferences_center_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT user_preferences_center_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_push_opt_in user_push_opt_in_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY user_push_opt_in
+    ADD CONSTRAINT user_push_opt_in_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+
+
+--
+-- Name: user_scenario_states user_scenario_states_current_focus_contract_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY user_scenario_states
+    ADD CONSTRAINT user_scenario_states_current_focus_contract_id_fkey FOREIGN KEY (current_focus_contract_id) REFERENCES focus_contracts(id) ON DELETE RESTRICT;
+
+
+--
+-- Name: user_scenario_states user_scenario_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY user_scenario_states
+    ADD CONSTRAINT user_scenario_states_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12896,7 +19646,7 @@ ALTER TABLE ONLY user_preferences_center
 --
 
 ALTER TABLE ONLY user_sessions
-    ADD CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12904,7 +19654,7 @@ ALTER TABLE ONLY user_sessions
 --
 
 ALTER TABLE ONLY user_settings
-    ADD CONSTRAINT user_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT user_settings_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12921,6 +19671,22 @@ ALTER TABLE ONLY user_similarities
 
 ALTER TABLE ONLY user_similarities
     ADD CONSTRAINT user_similarities_user_id_2_fkey FOREIGN KEY (user_id_2) REFERENCES users(id);
+
+
+--
+-- Name: user_skill_adoptions user_skill_adoptions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY user_skill_adoptions
+    ADD CONSTRAINT user_skill_adoptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: user_skills user_skills_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY user_skills
+    ADD CONSTRAINT user_skills_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
 
 
 --
@@ -12944,7 +19710,7 @@ ALTER TABLE ONLY user_streak_days
 --
 
 ALTER TABLE ONLY user_streak_stats
-    ADD CONSTRAINT user_streak_stats_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT user_streak_stats_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -12952,7 +19718,7 @@ ALTER TABLE ONLY user_streak_stats
 --
 
 ALTER TABLE ONLY user_titles
-    ADD CONSTRAINT user_titles_source_achievement_id_fkey FOREIGN KEY (source_achievement_id) REFERENCES achievements(id);
+    ADD CONSTRAINT user_titles_source_achievement_id_fkey FOREIGN KEY (source_achievement_id) REFERENCES achievements(id) ON DELETE SET NULL;
 
 
 --
@@ -12960,7 +19726,7 @@ ALTER TABLE ONLY user_titles
 --
 
 ALTER TABLE ONLY user_titles
-    ADD CONSTRAINT user_titles_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id);
+    ADD CONSTRAINT user_titles_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 
 --
@@ -13020,6 +19786,14 @@ ALTER TABLE ONLY user_visual_elements
 
 
 --
+-- Name: window_states window_states_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: brsama
+--
+
+ALTER TABLE ONLY window_states
+    ADD CONSTRAINT window_states_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+
+--
 -- Name: word_books word_books_source_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -13036,5 +19810,2346 @@ ALTER TABLE ONLY word_books
 
 
 --
+-- Name: admin_audit_log; Type: ROW SECURITY; Schema: public; Owner: brsama
+--
+
+ALTER TABLE admin_audit_log ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: admin_audit_log admin_audit_log_insert_only; Type: POLICY; Schema: public; Owner: brsama
+--
+
+CREATE POLICY admin_audit_log_insert_only ON admin_audit_log FOR INSERT WITH CHECK (true);
+
+
+--
+-- Name: admin_audit_log admin_audit_log_select_only; Type: POLICY; Schema: public; Owner: brsama
+--
+
+CREATE POLICY admin_audit_log_select_only ON admin_audit_log FOR SELECT USING (true);
+
+
+--
+-- Name: SCHEMA public; Type: ACL; Schema: -; Owner: pg_database_owner
+--
+
+GRANT USAGE ON SCHEMA public TO sparkle_gateway;
+GRANT USAGE ON SCHEMA public TO sparkle_engine;
+GRANT USAGE ON SCHEMA public TO sparkle_celery;
+GRANT USAGE ON SCHEMA public TO sparkle_readonly;
+
+
+--
+-- Name: SCHEMA sparkle_galaxy; Type: ACL; Schema: -; Owner: postgres
+--
+
+GRANT USAGE ON SCHEMA sparkle_galaxy TO sparkle_engine;
+GRANT USAGE ON SCHEMA sparkle_galaxy TO sparkle_celery;
+GRANT USAGE ON SCHEMA sparkle_galaxy TO sparkle_readonly;
+
+
+--
+-- Name: TABLE ab_experiment_assignments; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE ab_experiment_assignments TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE ab_experiment_assignments TO sparkle_celery;
+GRANT SELECT ON TABLE ab_experiment_assignments TO sparkle_readonly;
+
+
+--
+-- Name: TABLE ab_experiment_metrics; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE ab_experiment_metrics TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE ab_experiment_metrics TO sparkle_celery;
+GRANT SELECT ON TABLE ab_experiment_metrics TO sparkle_readonly;
+
+
+--
+-- Name: TABLE ab_experiment_variants; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE ab_experiment_variants TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE ab_experiment_variants TO sparkle_celery;
+GRANT SELECT ON TABLE ab_experiment_variants TO sparkle_readonly;
+
+
+--
+-- Name: TABLE ab_experiments; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE ab_experiments TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE ab_experiments TO sparkle_celery;
+GRANT SELECT ON TABLE ab_experiments TO sparkle_readonly;
+
+
+--
+-- Name: TABLE accountability_checkin; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE accountability_checkin TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE accountability_checkin TO sparkle_celery;
+GRANT SELECT ON TABLE accountability_checkin TO sparkle_readonly;
+
+
+--
+-- Name: TABLE accountability_partnership; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE accountability_partnership TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE accountability_partnership TO sparkle_celery;
+GRANT SELECT ON TABLE accountability_partnership TO sparkle_readonly;
+
+
+--
+-- Name: TABLE accountability_policies; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE accountability_policies TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE accountability_policies TO sparkle_celery;
+GRANT SELECT ON TABLE accountability_policies TO sparkle_readonly;
+
+
+--
+-- Name: TABLE achievements; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE achievements TO sparkle_readonly;
+
+
+--
+-- Name: TABLE admin_audit_log; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE admin_audit_log TO sparkle_readonly;
+
+
+--
+-- Name: TABLE agent_execution_stats; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE agent_execution_stats TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE agent_execution_stats TO sparkle_celery;
+GRANT SELECT ON TABLE agent_execution_stats TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE agent_execution_stats_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE agent_execution_stats_id_seq TO sparkle_gateway;
+GRANT SELECT,USAGE ON SEQUENCE agent_execution_stats_id_seq TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE agent_execution_stats_id_seq TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE agent_execution_stats_id_seq TO sparkle_readonly;
+
+
+--
+-- Name: TABLE alembic_version; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE alembic_version TO sparkle_readonly;
+
+
+--
+-- Name: TABLE appeals; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE appeals TO sparkle_readonly;
+
+
+--
+-- Name: TABLE arbitration_cases; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE arbitration_cases TO sparkle_readonly;
+
+
+--
+-- Name: TABLE arbitration_decisions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE arbitration_decisions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE asset_suggestion_logs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE asset_suggestion_logs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE aurora_core_session_snapshots; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_core_session_snapshots TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_core_session_snapshots TO sparkle_celery;
+GRANT SELECT ON TABLE aurora_core_session_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE aurora_decision_telemetry; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_decision_telemetry TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_decision_telemetry TO sparkle_celery;
+GRANT SELECT ON TABLE aurora_decision_telemetry TO sparkle_readonly;
+
+
+--
+-- Name: TABLE aurora_judgment_records; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_judgment_records TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_judgment_records TO sparkle_celery;
+GRANT SELECT ON TABLE aurora_judgment_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE aurora_policy_versions; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_policy_versions TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_policy_versions TO sparkle_celery;
+GRANT SELECT ON TABLE aurora_policy_versions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE aurora_scheduled_wakes; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_scheduled_wakes TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_scheduled_wakes TO sparkle_celery;
+GRANT SELECT ON TABLE aurora_scheduled_wakes TO sparkle_readonly;
+
+
+--
+-- Name: TABLE aurora_state_snapshots; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_state_snapshots TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE aurora_state_snapshots TO sparkle_celery;
+GRANT SELECT ON TABLE aurora_state_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE auth_audit_log; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE auth_audit_log TO sparkle_gateway;
+GRANT SELECT ON TABLE auth_audit_log TO sparkle_readonly;
+
+
+--
+-- Name: TABLE background_tasks; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE background_tasks TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE background_tasks TO sparkle_celery;
+GRANT SELECT ON TABLE background_tasks TO sparkle_readonly;
+
+
+--
+-- Name: TABLE behavior_patterns; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE behavior_patterns TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE behavior_patterns TO sparkle_celery;
+GRANT SELECT ON TABLE behavior_patterns TO sparkle_readonly;
+
+
+--
+-- Name: TABLE behavioral_outcomes; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE behavioral_outcomes TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE behavioral_outcomes TO sparkle_celery;
+GRANT SELECT ON TABLE behavioral_outcomes TO sparkle_readonly;
+
+
+--
+-- Name: TABLE broadcast_messages; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE broadcast_messages TO sparkle_readonly;
+
+
+--
+-- Name: TABLE calendar_events; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE calendar_events TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE calendar_events TO sparkle_celery;
+GRANT SELECT ON TABLE calendar_events TO sparkle_readonly;
+
+
+--
+-- Name: TABLE candidate_action_feedback; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE candidate_action_feedback TO sparkle_readonly;
+
+
+--
+-- Name: TABLE capsule_favorites; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE capsule_favorites TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE capsule_favorites TO sparkle_celery;
+GRANT SELECT ON TABLE capsule_favorites TO sparkle_readonly;
+
+
+--
+-- Name: TABLE capsule_feedbacks; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE capsule_feedbacks TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE capsule_feedbacks TO sparkle_celery;
+GRANT SELECT ON TABLE capsule_feedbacks TO sparkle_readonly;
+
+
+--
+-- Name: TABLE capsule_generation_jobs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE capsule_generation_jobs TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE capsule_generation_jobs TO sparkle_celery;
+GRANT SELECT ON TABLE capsule_generation_jobs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE card_adoption_records; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE card_adoption_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE card_edges; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE card_edges TO sparkle_readonly;
+
+
+--
+-- Name: TABLE card_share_records; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE card_share_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE card_snapshots; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE card_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE cards; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE cards TO sparkle_readonly;
+
+
+--
+-- Name: TABLE chat_messages; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE chat_messages TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE chat_messages TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE chat_messages TO sparkle_celery;
+GRANT SELECT ON TABLE chat_messages TO sparkle_readonly;
+
+
+--
+-- Name: TABLE chat_sessions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE chat_sessions TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE chat_sessions TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE chat_sessions TO sparkle_celery;
+GRANT SELECT ON TABLE chat_sessions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE cognitive_fragments; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE cognitive_fragments TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE cognitive_fragments TO sparkle_celery;
+GRANT SELECT ON TABLE cognitive_fragments TO sparkle_readonly;
+
+
+--
+-- Name: TABLE collaborative_galaxies; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE collaborative_galaxies TO sparkle_readonly;
+
+
+--
+-- Name: TABLE commitments; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE commitments TO sparkle_readonly;
+
+
+--
+-- Name: TABLE community_aggregate_signals; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE community_aggregate_signals TO sparkle_readonly;
+
+
+--
+-- Name: TABLE compliance_check_logs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE compliance_check_logs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE conflict_resolution_records; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE conflict_resolution_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE context_budget_profiles; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE context_budget_profiles TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE context_budget_profiles TO sparkle_celery;
+GRANT SELECT ON TABLE context_budget_profiles TO sparkle_readonly;
+
+
+--
+-- Name: TABLE context_pack_feedback; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE context_pack_feedback TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE context_pack_feedback TO sparkle_celery;
+GRANT SELECT ON TABLE context_pack_feedback TO sparkle_readonly;
+
+
+--
+-- Name: TABLE context_pack_runs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE context_pack_runs TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE context_pack_runs TO sparkle_celery;
+GRANT SELECT ON TABLE context_pack_runs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE counterfactual_evaluation_reports; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE counterfactual_evaluation_reports TO sparkle_readonly;
+
+
+--
+-- Name: TABLE crdt_operation_log; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE crdt_operation_log TO sparkle_gateway;
+GRANT SELECT ON TABLE crdt_operation_log TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE crdt_operation_log_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE crdt_operation_log_id_seq TO sparkle_gateway;
+GRANT SELECT,USAGE ON SEQUENCE crdt_operation_log_id_seq TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE crdt_operation_log_id_seq TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE crdt_operation_log_id_seq TO sparkle_readonly;
+
+
+--
+-- Name: TABLE crdt_snapshots; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE crdt_snapshots TO sparkle_gateway;
+GRANT SELECT ON TABLE crdt_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE crypto_shredding_certificates; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE crypto_shredding_certificates TO sparkle_readonly;
+
+
+--
+-- Name: TABLE curiosity_capsules; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE curiosity_capsules TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE curiosity_capsules TO sparkle_celery;
+GRANT SELECT ON TABLE curiosity_capsules TO sparkle_readonly;
+
+
+--
+-- Name: TABLE custom_expert_profiles; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE custom_expert_profiles TO sparkle_readonly;
+
+
+--
+-- Name: TABLE custom_expert_teams; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE custom_expert_teams TO sparkle_readonly;
+
+
+--
+-- Name: TABLE daily_behavior_vector; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE daily_behavior_vector TO sparkle_readonly;
+
+
+--
+-- Name: TABLE data_access_logs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE data_access_logs TO sparkle_gateway;
+GRANT SELECT ON TABLE data_access_logs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE decision_records; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE decision_records TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE decision_records TO sparkle_celery;
+GRANT SELECT ON TABLE decision_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE dictionary_entries; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE dictionary_entries TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE dictionary_entries TO sparkle_celery;
+GRANT SELECT ON TABLE dictionary_entries TO sparkle_readonly;
+
+
+--
+-- Name: TABLE distilled_strategy_cache; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE distilled_strategy_cache TO sparkle_readonly;
+
+
+--
+-- Name: TABLE dlq_replay_audit_logs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE dlq_replay_audit_logs TO sparkle_celery;
+GRANT SELECT ON TABLE dlq_replay_audit_logs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE document_chunks; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE document_chunks TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE document_chunks TO sparkle_celery;
+GRANT SELECT ON TABLE document_chunks TO sparkle_readonly;
+
+
+--
+-- Name: TABLE document_retrieval_feedback; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE document_retrieval_feedback TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE document_retrieval_feedback TO sparkle_celery;
+GRANT SELECT ON TABLE document_retrieval_feedback TO sparkle_readonly;
+
+
+--
+-- Name: TABLE durable_session_state_snapshots; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE durable_session_state_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE episodic_memories; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE episodic_memories TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE episodic_memories TO sparkle_celery;
+GRANT SELECT ON TABLE episodic_memories TO sparkle_readonly;
+
+
+--
+-- Name: TABLE error_records; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE error_records TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE error_records TO sparkle_celery;
+GRANT SELECT ON TABLE error_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE event_bus_dlq; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE event_bus_dlq TO sparkle_readonly;
+
+
+--
+-- Name: TABLE event_outbox; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE event_outbox TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE event_outbox TO sparkle_celery;
+GRANT SELECT ON TABLE event_outbox TO sparkle_readonly;
+
+
+--
+-- Name: TABLE event_sequence_counters; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE event_sequence_counters TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE event_sequence_counters TO sparkle_celery;
+GRANT SELECT ON TABLE event_sequence_counters TO sparkle_readonly;
+
+
+--
+-- Name: TABLE event_store; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE event_store TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE event_store TO sparkle_celery;
+GRANT SELECT ON TABLE event_store TO sparkle_readonly;
+
+
+--
+-- Name: TABLE evolution_predictions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE evolution_predictions TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE evolution_predictions TO sparkle_celery;
+GRANT SELECT ON TABLE evolution_predictions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE execution_audit_log; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE execution_audit_log TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE execution_audit_log TO sparkle_celery;
+GRANT SELECT ON TABLE execution_audit_log TO sparkle_readonly;
+
+
+--
+-- Name: TABLE execution_intents; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE execution_intents TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE execution_intents TO sparkle_celery;
+GRANT SELECT ON TABLE execution_intents TO sparkle_readonly;
+
+
+--
+-- Name: TABLE execution_records; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE execution_records TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE execution_records TO sparkle_celery;
+GRANT SELECT ON TABLE execution_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE execution_schedules; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE execution_schedules TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE execution_schedules TO sparkle_celery;
+GRANT SELECT ON TABLE execution_schedules TO sparkle_readonly;
+
+
+--
+-- Name: TABLE expansion_feedback; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE expansion_feedback TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE expansion_feedback TO sparkle_celery;
+GRANT SELECT ON TABLE expansion_feedback TO sparkle_readonly;
+
+
+--
+-- Name: TABLE focus_contracts; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE focus_contracts TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE focus_contracts TO sparkle_celery;
+GRANT SELECT ON TABLE focus_contracts TO sparkle_readonly;
+
+
+--
+-- Name: TABLE focus_sessions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE focus_sessions TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE focus_sessions TO sparkle_celery;
+GRANT SELECT ON TABLE focus_sessions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE friendships; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE friendships TO sparkle_readonly;
+
+
+--
+-- Name: TABLE galaxy_skins; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE galaxy_skins TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE galaxy_skins TO sparkle_celery;
+GRANT SELECT ON TABLE galaxy_skins TO sparkle_readonly;
+
+
+--
+-- Name: TABLE galaxy_user_permissions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE galaxy_user_permissions TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE galaxy_user_permissions TO sparkle_celery;
+GRANT SELECT ON TABLE galaxy_user_permissions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE goal_world_graph_snapshots; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE goal_world_graph_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE goals; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE goals TO sparkle_readonly;
+
+
+--
+-- Name: TABLE group_files; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE group_files TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE group_files TO sparkle_celery;
+GRANT SELECT ON TABLE group_files TO sparkle_readonly;
+
+
+--
+-- Name: TABLE group_members; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE group_members TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE group_members TO sparkle_celery;
+GRANT SELECT ON TABLE group_members TO sparkle_readonly;
+
+
+--
+-- Name: TABLE group_message_reads; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE group_message_reads TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE group_message_reads TO sparkle_celery;
+GRANT SELECT ON TABLE group_message_reads TO sparkle_readonly;
+
+
+--
+-- Name: TABLE group_messages; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE group_messages TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE group_messages TO sparkle_celery;
+GRANT SELECT ON TABLE group_messages TO sparkle_readonly;
+
+
+--
+-- Name: TABLE group_task_claims; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE group_task_claims TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE group_task_claims TO sparkle_celery;
+GRANT SELECT ON TABLE group_task_claims TO sparkle_readonly;
+
+
+--
+-- Name: TABLE group_tasks; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE group_tasks TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE group_tasks TO sparkle_celery;
+GRANT SELECT ON TABLE group_tasks TO sparkle_readonly;
+
+
+--
+-- Name: TABLE groups; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE groups TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE groups TO sparkle_celery;
+GRANT SELECT ON TABLE groups TO sparkle_readonly;
+
+
+--
+-- Name: TABLE growth_chronicle_snapshots; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE growth_chronicle_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE idempotency_keys; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE idempotency_keys TO sparkle_gateway;
+GRANT SELECT ON TABLE idempotency_keys TO sparkle_readonly;
+
+
+--
+-- Name: TABLE identity_evidence; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE identity_evidence TO sparkle_readonly;
+
+
+--
+-- Name: TABLE idiographic_associations; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE idiographic_associations TO sparkle_readonly;
+
+
+--
+-- Name: TABLE idiographic_changepoints; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE idiographic_changepoints TO sparkle_readonly;
+
+
+--
+-- Name: TABLE insight_claims; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE insight_claims TO sparkle_readonly;
+
+
+--
+-- Name: TABLE intervention_audit_logs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_audit_logs TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_audit_logs TO sparkle_celery;
+GRANT SELECT ON TABLE intervention_audit_logs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE intervention_feedback; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_feedback TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_feedback TO sparkle_celery;
+GRANT SELECT ON TABLE intervention_feedback TO sparkle_readonly;
+
+
+--
+-- Name: TABLE intervention_outcomes; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_outcomes TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_outcomes TO sparkle_celery;
+GRANT SELECT ON TABLE intervention_outcomes TO sparkle_readonly;
+
+
+--
+-- Name: TABLE intervention_records; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_records TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_records TO sparkle_celery;
+GRANT SELECT ON TABLE intervention_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE intervention_requests; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_requests TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_requests TO sparkle_celery;
+GRANT SELECT ON TABLE intervention_requests TO sparkle_readonly;
+
+
+--
+-- Name: TABLE intervention_strategy_outcomes; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_strategy_outcomes TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_strategy_outcomes TO sparkle_celery;
+GRANT SELECT ON TABLE intervention_strategy_outcomes TO sparkle_readonly;
+
+
+--
+-- Name: TABLE intervention_templates; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_templates TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE intervention_templates TO sparkle_celery;
+GRANT SELECT ON TABLE intervention_templates TO sparkle_readonly;
+
+
+--
+-- Name: TABLE irt_item_parameters; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE irt_item_parameters TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE irt_item_parameters TO sparkle_celery;
+GRANT SELECT ON TABLE irt_item_parameters TO sparkle_readonly;
+
+
+--
+-- Name: TABLE item_similarities; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE item_similarities TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE item_similarities TO sparkle_celery;
+GRANT SELECT ON TABLE item_similarities TO sparkle_readonly;
+
+
+--
+-- Name: TABLE jobs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE jobs TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE jobs TO sparkle_celery;
+GRANT SELECT ON TABLE jobs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE knowledge_node_documents; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE knowledge_node_documents TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE knowledge_node_documents TO sparkle_celery;
+GRANT SELECT ON TABLE knowledge_node_documents TO sparkle_readonly;
+
+
+--
+-- Name: TABLE knowledge_nodes; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE knowledge_nodes TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE knowledge_nodes TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE knowledge_nodes TO sparkle_celery;
+GRANT SELECT ON TABLE knowledge_nodes TO sparkle_readonly;
+
+
+--
+-- Name: TABLE leaderboard_snapshots; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE leaderboard_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE learning_assets; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE learning_assets TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE learning_assets TO sparkle_celery;
+GRANT SELECT ON TABLE learning_assets TO sparkle_readonly;
+
+
+--
+-- Name: TABLE legal_holds; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE legal_holds TO sparkle_readonly;
+
+
+--
+-- Name: TABLE login_attempts; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE login_attempts TO sparkle_gateway;
+GRANT SELECT ON TABLE login_attempts TO sparkle_readonly;
+
+
+--
+-- Name: TABLE ltm_daily_snapshots; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE ltm_daily_snapshots TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE ltm_daily_snapshots TO sparkle_celery;
+GRANT SELECT ON TABLE ltm_daily_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE marketplace_packs; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE marketplace_packs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE marketplace_skills; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE marketplace_skills TO sparkle_readonly;
+
+
+--
+-- Name: TABLE mastery_audit_log; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE mastery_audit_log TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE mastery_audit_log TO sparkle_celery;
+GRANT SELECT ON TABLE mastery_audit_log TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE mastery_audit_log_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE mastery_audit_log_id_seq TO sparkle_gateway;
+GRANT SELECT,USAGE ON SEQUENCE mastery_audit_log_id_seq TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE mastery_audit_log_id_seq TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE mastery_audit_log_id_seq TO sparkle_readonly;
+
+
+--
+-- Name: TABLE memory_corrections; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE memory_corrections TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE memory_corrections TO sparkle_celery;
+GRANT SELECT ON TABLE memory_corrections TO sparkle_readonly;
+
+
+--
+-- Name: TABLE memory_evolutions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE memory_evolutions TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE memory_evolutions TO sparkle_celery;
+GRANT SELECT ON TABLE memory_evolutions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE memory_goals; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE memory_goals TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE memory_goals TO sparkle_celery;
+GRANT SELECT ON TABLE memory_goals TO sparkle_readonly;
+
+
+--
+-- Name: TABLE memory_preferences; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE memory_preferences TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE memory_preferences TO sparkle_celery;
+GRANT SELECT ON TABLE memory_preferences TO sparkle_readonly;
+
+
+--
+-- Name: TABLE memory_rank_policies; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE memory_rank_policies TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE memory_rank_policies TO sparkle_celery;
+GRANT SELECT ON TABLE memory_rank_policies TO sparkle_readonly;
+
+
+--
+-- Name: TABLE message_favorites; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE message_favorites TO sparkle_gateway;
+GRANT SELECT ON TABLE message_favorites TO sparkle_readonly;
+
+
+--
+-- Name: TABLE message_reports; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE message_reports TO sparkle_gateway;
+GRANT SELECT ON TABLE message_reports TO sparkle_readonly;
+
+
+--
+-- Name: TABLE next_action_selections; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE next_action_selections TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE next_action_selections TO sparkle_celery;
+GRANT SELECT ON TABLE next_action_selections TO sparkle_readonly;
+
+
+--
+-- Name: TABLE nightly_reviews; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE nightly_reviews TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE nightly_reviews TO sparkle_celery;
+GRANT SELECT ON TABLE nightly_reviews TO sparkle_readonly;
+
+
+--
+-- Name: TABLE node_expansion_queue; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE node_expansion_queue TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE node_expansion_queue TO sparkle_celery;
+GRANT SELECT ON TABLE node_expansion_queue TO sparkle_readonly;
+
+
+--
+-- Name: TABLE node_relations; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE node_relations TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE node_relations TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE node_relations TO sparkle_celery;
+GRANT SELECT ON TABLE node_relations TO sparkle_readonly;
+
+
+--
+-- Name: TABLE north_star_metric_events; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE north_star_metric_events TO sparkle_readonly;
+
+
+--
+-- Name: TABLE notification_interactions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE notification_interactions TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE notification_interactions TO sparkle_celery;
+GRANT SELECT ON TABLE notification_interactions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE notification_preferences; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE notification_preferences TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE notification_preferences TO sparkle_celery;
+GRANT SELECT ON TABLE notification_preferences TO sparkle_readonly;
+
+
+--
+-- Name: TABLE notifications; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE notifications TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE notifications TO sparkle_celery;
+GRANT SELECT ON TABLE notifications TO sparkle_readonly;
+
+
+--
+-- Name: TABLE offline_message_queue; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE offline_message_queue TO sparkle_gateway;
+GRANT SELECT ON TABLE offline_message_queue TO sparkle_readonly;
+
+
+--
+-- Name: TABLE pack_adoption_history; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE pack_adoption_history TO sparkle_readonly;
+
+
+--
+-- Name: TABLE passive_signals; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE passive_signals TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE passive_signals TO sparkle_celery;
+GRANT SELECT ON TABLE passive_signals TO sparkle_readonly;
+
+
+--
+-- Name: TABLE persdyn_attractors; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE persdyn_attractors TO sparkle_readonly;
+
+
+--
+-- Name: TABLE persona_snapshots; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE persona_snapshots TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE persona_snapshots TO sparkle_celery;
+GRANT SELECT ON TABLE persona_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE photon_transaction_history; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE photon_transaction_history TO sparkle_readonly;
+
+
+--
+-- Name: TABLE plan_execution_records; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE plan_execution_records TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE plan_execution_records TO sparkle_celery;
+GRANT SELECT ON TABLE plan_execution_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE plan_states; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE plan_states TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE plan_states TO sparkle_celery;
+GRANT SELECT ON TABLE plan_states TO sparkle_readonly;
+
+
+--
+-- Name: TABLE planning_artifacts; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE planning_artifacts TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE planning_artifacts TO sparkle_celery;
+GRANT SELECT ON TABLE planning_artifacts TO sparkle_readonly;
+
+
+--
+-- Name: TABLE plans; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE plans TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE plans TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE plans TO sparkle_celery;
+GRANT SELECT ON TABLE plans TO sparkle_readonly;
+
+
+--
+-- Name: TABLE post_likes; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE post_likes TO sparkle_readonly;
+
+
+--
+-- Name: TABLE posts; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE posts TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE posts TO sparkle_celery;
+GRANT SELECT ON TABLE posts TO sparkle_readonly;
+
+
+--
+-- Name: TABLE privacy_budget_ledger; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE privacy_budget_ledger TO sparkle_readonly;
+
+
+--
+-- Name: TABLE private_messages; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE private_messages TO sparkle_readonly;
+
+
+--
+-- Name: TABLE probe_outcomes; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE probe_outcomes TO sparkle_readonly;
+
+
+--
+-- Name: TABLE processed_events; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE processed_events TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE processed_events TO sparkle_celery;
+GRANT SELECT ON TABLE processed_events TO sparkle_readonly;
+
+
+--
+-- Name: TABLE projection_metadata; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE projection_metadata TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE projection_metadata TO sparkle_celery;
+GRANT SELECT ON TABLE projection_metadata TO sparkle_readonly;
+
+
+--
+-- Name: TABLE projection_snapshots; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE projection_snapshots TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE projection_snapshots TO sparkle_celery;
+GRANT SELECT ON TABLE projection_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE push_delivery_records; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE push_delivery_records TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE push_delivery_records TO sparkle_celery;
+GRANT SELECT ON TABLE push_delivery_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE push_histories; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE push_histories TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE push_histories TO sparkle_celery;
+GRANT SELECT ON TABLE push_histories TO sparkle_readonly;
+
+
+--
+-- Name: TABLE push_preferences; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE push_preferences TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE push_preferences TO sparkle_celery;
+GRANT SELECT ON TABLE push_preferences TO sparkle_readonly;
+
+
+--
+-- Name: TABLE recommendation_cache; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE recommendation_cache TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE recommendation_cache TO sparkle_celery;
+GRANT SELECT ON TABLE recommendation_cache TO sparkle_readonly;
+
+
+--
+-- Name: TABLE release_approval_requests; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE release_approval_requests TO sparkle_readonly;
+
+
+--
+-- Name: TABLE report_snapshots; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE report_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE research_consent_records; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE research_consent_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE response_feedback; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE response_feedback TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE response_feedback TO sparkle_celery;
+GRANT SELECT ON TABLE response_feedback TO sparkle_readonly;
+
+
+--
+-- Name: TABLE review_feedback; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE review_feedback TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE review_feedback TO sparkle_celery;
+GRANT SELECT ON TABLE review_feedback TO sparkle_readonly;
+
+
+--
+-- Name: TABLE review_history; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE review_history TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE review_history TO sparkle_celery;
+GRANT SELECT ON TABLE review_history TO sparkle_readonly;
+
+
+--
+-- Name: TABLE review_overrides; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE review_overrides TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE review_overrides TO sparkle_celery;
+GRANT SELECT ON TABLE review_overrides TO sparkle_readonly;
+
+
+--
+-- Name: TABLE routing_decision_log; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE routing_decision_log TO sparkle_readonly;
+
+
+--
+-- Name: TABLE safe_experiment_episodes; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE safe_experiment_episodes TO sparkle_readonly;
+
+
+--
+-- Name: TABLE safe_experiments; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE safe_experiments TO sparkle_readonly;
+
+
+--
+-- Name: TABLE saga_instances; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE saga_instances TO sparkle_readonly;
+
+
+--
+-- Name: TABLE scaffolding_states; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE scaffolding_states TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE scaffolding_states TO sparkle_celery;
+GRANT SELECT ON TABLE scaffolding_states TO sparkle_readonly;
+
+
+--
+-- Name: TABLE scenes; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE scenes TO sparkle_readonly;
+
+
+--
+-- Name: TABLE security_audit_logs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE security_audit_logs TO sparkle_gateway;
+GRANT SELECT ON TABLE security_audit_logs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE seed_items; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE seed_items TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE seed_items TO sparkle_celery;
+GRANT SELECT ON TABLE seed_items TO sparkle_readonly;
+
+
+--
+-- Name: TABLE seed_libraries; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE seed_libraries TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE seed_libraries TO sparkle_celery;
+GRANT SELECT ON TABLE seed_libraries TO sparkle_readonly;
+
+
+--
+-- Name: TABLE seed_library_ratings; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE seed_library_ratings TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE seed_library_ratings TO sparkle_celery;
+GRANT SELECT ON TABLE seed_library_ratings TO sparkle_readonly;
+
+
+--
+-- Name: TABLE semantic_links; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE semantic_links TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE semantic_links TO sparkle_celery;
+GRANT SELECT ON TABLE semantic_links TO sparkle_readonly;
+
+
+--
+-- Name: TABLE session_completions; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE session_completions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE shared_resources; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE shared_resources TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE shared_resources TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE shared_resources TO sparkle_celery;
+GRANT SELECT ON TABLE shared_resources TO sparkle_readonly;
+
+
+--
+-- Name: TABLE shared_skills; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE shared_skills TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE shared_skills TO sparkle_celery;
+GRANT SELECT ON TABLE shared_skills TO sparkle_readonly;
+
+
+--
+-- Name: TABLE shop_items; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE shop_items TO sparkle_readonly;
+
+
+--
+-- Name: TABLE shop_purchases; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE shop_purchases TO sparkle_readonly;
+
+
+--
+-- Name: TABLE simulation_runs; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE simulation_runs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE skill_share_moderation_queue; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE skill_share_moderation_queue TO sparkle_readonly;
+
+
+--
+-- Name: TABLE smoke_document_vectors; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE smoke_document_vectors TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE smoke_document_vectors TO sparkle_celery;
+GRANT SELECT ON TABLE smoke_document_vectors TO sparkle_readonly;
+
+
+--
+-- Name: TABLE spark_contracts; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE spark_contracts TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE spark_contracts TO sparkle_celery;
+GRANT SELECT ON TABLE spark_contracts TO sparkle_readonly;
+
+
+--
+-- Name: TABLE srl_phase_states; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE srl_phase_states TO sparkle_readonly;
+
+
+--
+-- Name: TABLE stored_files; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE stored_files TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE stored_files TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE stored_files TO sparkle_celery;
+GRANT SELECT ON TABLE stored_files TO sparkle_readonly;
+
+
+--
+-- Name: TABLE strategy_belief_snapshots; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE strategy_belief_snapshots TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE strategy_belief_snapshots TO sparkle_celery;
+GRANT SELECT ON TABLE strategy_belief_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE strategy_nodes; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE strategy_nodes TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE strategy_nodes TO sparkle_celery;
+GRANT SELECT ON TABLE strategy_nodes TO sparkle_readonly;
+
+
+--
+-- Name: TABLE study_buddies; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE study_buddies TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE study_buddies TO sparkle_celery;
+GRANT SELECT ON TABLE study_buddies TO sparkle_readonly;
+
+
+--
+-- Name: TABLE study_records; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE study_records TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE study_records TO sparkle_celery;
+GRANT SELECT ON TABLE study_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE subjects; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE subjects TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE subjects TO sparkle_celery;
+GRANT SELECT ON TABLE subjects TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE subjects_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE subjects_id_seq TO sparkle_gateway;
+GRANT SELECT,USAGE ON SEQUENCE subjects_id_seq TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE subjects_id_seq TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE subjects_id_seq TO sparkle_readonly;
+
+
+--
+-- Name: TABLE subtasks; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE subtasks TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE subtasks TO sparkle_celery;
+GRANT SELECT ON TABLE subtasks TO sparkle_readonly;
+
+
+--
+-- Name: TABLE system_config_change_logs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE system_config_change_logs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE task_documents; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE task_documents TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE task_documents TO sparkle_celery;
+GRANT SELECT ON TABLE task_documents TO sparkle_readonly;
+
+
+--
+-- Name: TABLE task_feedbacks; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE task_feedbacks TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE task_feedbacks TO sparkle_celery;
+GRANT SELECT ON TABLE task_feedbacks TO sparkle_readonly;
+
+
+--
+-- Name: TABLE task_knowledge_links; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE task_knowledge_links TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE task_knowledge_links TO sparkle_celery;
+GRANT SELECT ON TABLE task_knowledge_links TO sparkle_readonly;
+
+
+--
+-- Name: TABLE task_occurrences; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE task_occurrences TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE task_occurrences TO sparkle_celery;
+GRANT SELECT ON TABLE task_occurrences TO sparkle_readonly;
+
+
+--
+-- Name: TABLE task_resource_links; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE task_resource_links TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE task_resource_links TO sparkle_celery;
+GRANT SELECT ON TABLE task_resource_links TO sparkle_readonly;
+
+
+--
+-- Name: TABLE tasks; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE tasks TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE tasks TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE tasks TO sparkle_celery;
+GRANT SELECT ON TABLE tasks TO sparkle_readonly;
+
+
+--
+-- Name: TABLE theater_candidate_bundles; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE theater_candidate_bundles TO sparkle_readonly;
+
+
+--
+-- Name: TABLE theater_predictions; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE theater_predictions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE token_usage; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE token_usage TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE token_usage TO sparkle_celery;
+GRANT SELECT ON TABLE token_usage TO sparkle_readonly;
+
+
+--
+-- Name: TABLE tracking_events; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE tracking_events TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE tracking_events TO sparkle_celery;
+GRANT SELECT ON TABLE tracking_events TO sparkle_readonly;
+
+
+--
+-- Name: TABLE transition_decision_records; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE transition_decision_records TO sparkle_readonly;
+
+
+--
+-- Name: TABLE unresolved_conflicts; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE unresolved_conflicts TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_achievements; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_achievements TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_achievements TO sparkle_celery;
+GRANT SELECT ON TABLE user_achievements TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_blocks; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_blocks TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_blocks TO sparkle_celery;
+GRANT SELECT ON TABLE user_blocks TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_consumables; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_consumables TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_consumables TO sparkle_celery;
+GRANT SELECT ON TABLE user_consumables TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_daily_metrics; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_daily_metrics TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_daily_metrics TO sparkle_celery;
+GRANT SELECT ON TABLE user_daily_metrics TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_devices; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_devices TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_devices TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_devices TO sparkle_celery;
+GRANT SELECT ON TABLE user_devices TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_encryption_keys; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_encryption_keys TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_encryption_keys TO sparkle_celery;
+GRANT SELECT ON TABLE user_encryption_keys TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_galaxy_skins; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_galaxy_skins TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_galaxy_skins TO sparkle_celery;
+GRANT SELECT ON TABLE user_galaxy_skins TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_intervention_settings; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_intervention_settings TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_intervention_settings TO sparkle_celery;
+GRANT SELECT ON TABLE user_intervention_settings TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_irt_ability; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_irt_ability TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_irt_ability TO sparkle_celery;
+GRANT SELECT ON TABLE user_irt_ability TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_item_interactions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_item_interactions TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_item_interactions TO sparkle_celery;
+GRANT SELECT ON TABLE user_item_interactions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_learning_profiles; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_learning_profiles TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_learning_profiles TO sparkle_celery;
+GRANT SELECT ON TABLE user_learning_profiles TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_library_subscriptions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_library_subscriptions TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_library_subscriptions TO sparkle_celery;
+GRANT SELECT ON TABLE user_library_subscriptions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_memory_settings; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_memory_settings TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_memory_settings TO sparkle_celery;
+GRANT SELECT ON TABLE user_memory_settings TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_node_status; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE user_node_status TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_node_status TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_node_status TO sparkle_celery;
+GRANT SELECT ON TABLE user_node_status TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_persona_keys; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_persona_keys TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_persona_keys TO sparkle_celery;
+GRANT SELECT ON TABLE user_persona_keys TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_preferences_center; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_preferences_center TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_preferences_center TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_preferences_center TO sparkle_celery;
+GRANT SELECT ON TABLE user_preferences_center TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_push_opt_in; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_push_opt_in TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_push_opt_in TO sparkle_celery;
+GRANT SELECT ON TABLE user_push_opt_in TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_scenario_states; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_scenario_states TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_scenario_states TO sparkle_celery;
+GRANT SELECT ON TABLE user_scenario_states TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_sessions; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_sessions TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_sessions TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_sessions TO sparkle_celery;
+GRANT SELECT ON TABLE user_sessions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_settings; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_settings TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_settings TO sparkle_celery;
+GRANT SELECT ON TABLE user_settings TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_similarities; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_similarities TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_similarities TO sparkle_celery;
+GRANT SELECT ON TABLE user_similarities TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_skill_adoptions; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE user_skill_adoptions TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_skills; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_skills TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_skills TO sparkle_celery;
+GRANT SELECT ON TABLE user_skills TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_state_snapshots; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_state_snapshots TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_state_snapshots TO sparkle_celery;
+GRANT SELECT ON TABLE user_state_snapshots TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_streak_days; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_streak_days TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_streak_days TO sparkle_celery;
+GRANT SELECT ON TABLE user_streak_days TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_streak_stats; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_streak_stats TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_streak_stats TO sparkle_celery;
+GRANT SELECT ON TABLE user_streak_stats TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_titles; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_titles TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_titles TO sparkle_celery;
+GRANT SELECT ON TABLE user_titles TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_tool_history; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_tool_history TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_tool_history TO sparkle_celery;
+GRANT SELECT ON TABLE user_tool_history TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE user_tool_history_id_seq; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE user_tool_history_id_seq TO sparkle_gateway;
+GRANT SELECT,USAGE ON SEQUENCE user_tool_history_id_seq TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE user_tool_history_id_seq TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE user_tool_history_id_seq TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_visual_configs; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_visual_configs TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_visual_configs TO sparkle_celery;
+GRANT SELECT ON TABLE user_visual_configs TO sparkle_readonly;
+
+
+--
+-- Name: TABLE user_visual_elements; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_visual_elements TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE user_visual_elements TO sparkle_celery;
+GRANT SELECT ON TABLE user_visual_elements TO sparkle_readonly;
+
+
+--
+-- Name: TABLE users; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT ON TABLE users TO sparkle_gateway;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE users TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE users TO sparkle_celery;
+GRANT SELECT ON TABLE users TO sparkle_readonly;
+
+
+--
+-- Name: TABLE visual_elements; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE visual_elements TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE visual_elements TO sparkle_celery;
+GRANT SELECT ON TABLE visual_elements TO sparkle_readonly;
+
+
+--
+-- Name: TABLE window_states; Type: ACL; Schema: public; Owner: brsama
+--
+
+GRANT SELECT ON TABLE window_states TO sparkle_readonly;
+
+
+--
+-- Name: TABLE word_books; Type: ACL; Schema: public; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE word_books TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE word_books TO sparkle_celery;
+GRANT SELECT ON TABLE word_books TO sparkle_readonly;
+
+
+--
+-- Name: TABLE _ag_label_edge; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy._ag_label_edge TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy._ag_label_edge TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy._ag_label_edge TO sparkle_readonly;
+
+
+--
+-- Name: TABLE "APPLICATION"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."APPLICATION" TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."APPLICATION" TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy."APPLICATION" TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE "APPLICATION_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."APPLICATION_id_seq" TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."APPLICATION_id_seq" TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."APPLICATION_id_seq" TO sparkle_readonly;
+
+
+--
+-- Name: TABLE "APPLIES_TO"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."APPLIES_TO" TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."APPLIES_TO" TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy."APPLIES_TO" TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE "APPLIES_TO_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."APPLIES_TO_id_seq" TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."APPLIES_TO_id_seq" TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."APPLIES_TO_id_seq" TO sparkle_readonly;
+
+
+--
+-- Name: TABLE "INTERESTED_IN"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."INTERESTED_IN" TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."INTERESTED_IN" TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy."INTERESTED_IN" TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE "INTERESTED_IN_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."INTERESTED_IN_id_seq" TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."INTERESTED_IN_id_seq" TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."INTERESTED_IN_id_seq" TO sparkle_readonly;
+
+
+--
+-- Name: TABLE _ag_label_vertex; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy._ag_label_vertex TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy._ag_label_vertex TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy._ag_label_vertex TO sparkle_readonly;
+
+
+--
+-- Name: TABLE "KnowledgeNode"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."KnowledgeNode" TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."KnowledgeNode" TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy."KnowledgeNode" TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE "KnowledgeNode_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."KnowledgeNode_id_seq" TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."KnowledgeNode_id_seq" TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."KnowledgeNode_id_seq" TO sparkle_readonly;
+
+
+--
+-- Name: TABLE "MASTERED"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."MASTERED" TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."MASTERED" TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy."MASTERED" TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE "MASTERED_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."MASTERED_id_seq" TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."MASTERED_id_seq" TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."MASTERED_id_seq" TO sparkle_readonly;
+
+
+--
+-- Name: TABLE "PREREQUISITE"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."PREREQUISITE" TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."PREREQUISITE" TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy."PREREQUISITE" TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE "PREREQUISITE_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."PREREQUISITE_id_seq" TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."PREREQUISITE_id_seq" TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."PREREQUISITE_id_seq" TO sparkle_readonly;
+
+
+--
+-- Name: TABLE "RELATED"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."RELATED" TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."RELATED" TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy."RELATED" TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE "RELATED_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."RELATED_id_seq" TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."RELATED_id_seq" TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."RELATED_id_seq" TO sparkle_readonly;
+
+
+--
+-- Name: TABLE "STUDIED"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."STUDIED" TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."STUDIED" TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy."STUDIED" TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE "STUDIED_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."STUDIED_id_seq" TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."STUDIED_id_seq" TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."STUDIED_id_seq" TO sparkle_readonly;
+
+
+--
+-- Name: TABLE "STUDIES"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."STUDIES" TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."STUDIES" TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy."STUDIES" TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE "STUDIES_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."STUDIES_id_seq" TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."STUDIES_id_seq" TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."STUDIES_id_seq" TO sparkle_readonly;
+
+
+--
+-- Name: TABLE "User"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."User" TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."User" TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy."User" TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE "User_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."User_id_seq" TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."User_id_seq" TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."User_id_seq" TO sparkle_readonly;
+
+
+--
+-- Name: TABLE "__SchemaSeed"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."__SchemaSeed" TO sparkle_engine;
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE sparkle_galaxy."__SchemaSeed" TO sparkle_celery;
+GRANT SELECT ON TABLE sparkle_galaxy."__SchemaSeed" TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE "__SchemaSeed_id_seq"; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."__SchemaSeed_id_seq" TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."__SchemaSeed_id_seq" TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy."__SchemaSeed_id_seq" TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE _ag_label_edge_id_seq; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._ag_label_edge_id_seq TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._ag_label_edge_id_seq TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._ag_label_edge_id_seq TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE _ag_label_vertex_id_seq; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._ag_label_vertex_id_seq TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._ag_label_vertex_id_seq TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._ag_label_vertex_id_seq TO sparkle_readonly;
+
+
+--
+-- Name: SEQUENCE _label_id_seq; Type: ACL; Schema: sparkle_galaxy; Owner: postgres
+--
+
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._label_id_seq TO sparkle_engine;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._label_id_seq TO sparkle_celery;
+GRANT SELECT,USAGE ON SEQUENCE sparkle_galaxy._label_id_seq TO sparkle_readonly;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: public; Owner: brsama
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sparkle_gateway;
+ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sparkle_engine;
+ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sparkle_celery;
+ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA public GRANT SELECT,USAGE ON SEQUENCES TO sparkle_readonly;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: public; Owner: brsama
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA public GRANT SELECT ON TABLES TO sparkle_readonly;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR SEQUENCES; Type: DEFAULT ACL; Schema: sparkle_galaxy; Owner: brsama
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA sparkle_galaxy GRANT SELECT,USAGE ON SEQUENCES TO sparkle_engine;
+ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA sparkle_galaxy GRANT SELECT,USAGE ON SEQUENCES TO sparkle_celery;
+ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA sparkle_galaxy GRANT SELECT,USAGE ON SEQUENCES TO sparkle_readonly;
+
+
+--
+-- Name: DEFAULT PRIVILEGES FOR TABLES; Type: DEFAULT ACL; Schema: sparkle_galaxy; Owner: brsama
+--
+
+ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA sparkle_galaxy GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO sparkle_engine;
+ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA sparkle_galaxy GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO sparkle_celery;
+ALTER DEFAULT PRIVILEGES FOR ROLE brsama IN SCHEMA sparkle_galaxy GRANT SELECT ON TABLES TO sparkle_readonly;
+
+
+--
 -- PostgreSQL database dump complete
 --
+
+

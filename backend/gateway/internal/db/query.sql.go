@@ -621,7 +621,7 @@ func (q *Queries) GetGroupMessages(ctx context.Context, arg GetGroupMessagesPara
 }
 
 const getKnowledgeNodeByID = `-- name: GetKnowledgeNodeByID :one
-SELECT subject_id, parent_id, name, name_en, description, keywords, importance_level, is_seed, source_type, source_task_id, source_file_id, chunk_refs, status, embedding, position_x, position_y, global_spark_count, id, created_at, updated_at, deleted_at FROM knowledge_nodes WHERE id = $1 AND deleted_at IS NULL
+SELECT subject_id, parent_id, name, name_en, description, keywords, importance_level, is_seed, source_type, source_task_id, source_file_id, chunk_refs, status, embedding, position_x, position_y, global_spark_count, id, created_at, updated_at, deleted_at, sector_weights, dominant_sector_code, sector_classification_status, sector_classification_model, sector_classified_at, community_signal, exam_weight, difficulty, trainability, mistakes FROM knowledge_nodes WHERE id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) GetKnowledgeNodeByID(ctx context.Context, id pgtype.UUID) (KnowledgeNode, error) {
@@ -649,6 +649,16 @@ func (q *Queries) GetKnowledgeNodeByID(ctx context.Context, id pgtype.UUID) (Kno
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.SectorWeights,
+		&i.DominantSectorCode,
+		&i.SectorClassificationStatus,
+		&i.SectorClassificationModel,
+		&i.SectorClassifiedAt,
+		&i.CommunitySignal,
+		&i.ExamWeight,
+		&i.Difficulty,
+		&i.Trainability,
+		&i.Mistakes,
 	)
 	return i, err
 }
@@ -925,7 +935,7 @@ func (q *Queries) GetSnapshotCount(ctx context.Context, projectionName string) (
 
 const getTaskByID = `-- name: GetTaskByID :one
 
-SELECT user_id, plan_id, title, type, tags, estimated_minutes, difficulty, energy_cost, guide_content, status, started_at, confirmed_at, completed_at, tool_result_id, actual_minutes, user_note, priority, due_date, knowledge_node_id, auto_expand_enabled, subtasks_total, subtasks_completed, id, created_at, updated_at, deleted_at, order_index, execution_mode FROM tasks WHERE id = $1 AND deleted_at IS NULL
+SELECT user_id, plan_id, title, type, tags, estimated_minutes, difficulty, energy_cost, guide_content, status, started_at, confirmed_at, completed_at, tool_result_id, actual_minutes, user_note, priority, due_date, knowledge_node_id, auto_expand_enabled, subtasks_total, subtasks_completed, id, created_at, updated_at, deleted_at, order_index, execution_mode, guide_json, ai_prompt, source_planning_session_id, phase_index, success_criteria FROM tasks WHERE id = $1 AND deleted_at IS NULL
 `
 
 // =====================
@@ -963,6 +973,11 @@ func (q *Queries) GetTaskByID(ctx context.Context, id pgtype.UUID) (Task, error)
 		&i.DeletedAt,
 		&i.OrderIndex,
 		&i.ExecutionMode,
+		&i.GuideJson,
+		&i.AiPrompt,
+		&i.SourcePlanningSessionID,
+		&i.PhaseIndex,
+		&i.SuccessCriteria,
 	)
 	return i, err
 }
