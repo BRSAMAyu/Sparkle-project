@@ -363,7 +363,7 @@
 
 ## Progress Summary
 
-- **Total Issues**: 31 (+ 7 explorer issues)
+- **Total Issues**: 31 (+ 11 explorer issues)
 - **Fixed**: 23 (includes explorer G1, G2)
 - **Partially Fixed**: 3
 - **Routes Verified (working with data)**: 5
@@ -382,6 +382,7 @@
 | R3 | 2026-05-03T13:30 | C | 0 | N/A | Proto/WebSocket contract sound; reconnection has offline queue persistence |
 | R4 | 2026-05-03T14:00 | J | 0 | N/A | Cold-start well-designed: skeleton loading, first-goal empty state, wizard with AI, error recovery |
 | R5 | 2026-05-03T14:10 | H | 4 | 3/4 (H3 rejected as designed) | i18n residuals: H1/H2/H4 verified, H3 rejected (isChinese is project documented pattern) |
+| R6 | 2026-05-03T15:00 | K | 4 | pending Opus review | Error handling: leaderboard percentile, chat history lost, silent error swallowing, LLM timeout fallback |
 | R6 | 2026-05-03T15:00 | K | 1 | 1/1 (K1 verified) | Error handling gaps in goal detail actions |
 
 ---
@@ -478,6 +479,7 @@
 - **domain**: H
 - **fix_commit**: cbca7878d
 - **closed_at**: 2026-05-03T15:10:00
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-03T15:38:00Z
 - **title**: memory_detail_screen 的记忆修正按钮（Not true/No longer applies/Lower confidence/Merge）和版本管理标签（Diff/Revert/Evidence/Versions）全部硬编码英文
 - **symptom**: 中文模式下，记忆详情页的版本历史区显示 "Diff"、"Revert"、"Evidence: N"、"Versions: N"、"Budget: N/A" 等英文标签；记忆修正操作区显示 "Not true"、"No longer applies"、"Lower confidence"、"Merge" 四个英文按钮。文件开头已导入 context_l10n 且多数文本已 i18n，但这几个标签和按钮遗漏了
 - **root_cause_hypothesis**: 记忆详情页的 _buildVersionHistory、_buildDetailSummary、_buildCorrectionActions 三个方法中直接使用了硬编码英文字符串作为 Text 内容和按钮 label。这些字符串没有对应的 l10n key，开发时直接写死了
@@ -516,7 +518,7 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1403-H4
-- **status**: in_progress
+- **status**: ✅ FIXED
 - **severity**: P2
 - **domain**: H
 - **fixer_started_at**: 2026-05-03T15:35:00Z
@@ -535,6 +537,87 @@
 - **suggested_fix_direction**: 将 "Claim"/"Complete"/"Create Group Task"/hint 替换为 `I18nService.instance.isChinese ? '中文' : 'English'` 模式，与同文件中已有的 i18n 模式保持一致
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer-4+2026-05-03T14:10
+- **fix_commit**:
+### ISSUE-20260503-1500-K1
+- **status**: discovered
+- **severity**: P1
+- **domain**: K
+- **title**: leaderboard percentile 计算在 GLOBAL 榜使用 total_participants=-1 产生无意义百分位（>100%），在其他榜为 0 时触发 ZeroDivisionError
+- **symptom**: GLOBAL 排行榜显示的用户百分位始终超过 100%（如 rank=3 显示 400%）。FRIENDS/GROUP/WEEKLY 榜在无其他用户数据时，百分位计算崩溃并返回 500 错误
+- **root_cause_hypothesis**: get_my_rank() 方法在 line 153 无条件执行 1.0 - (rank / total_participants)。GLOBAL 榜在 line 311 硬编码 total_participants=-1（哨兵值），导致 1.0 - (rank/-1) = 1.0 + rank。其他榜使用 total_participants=len(scored_users)，在空列表时返回 0 触发 ZeroDivisionError
+- **evidence**:
+  - backend/app/services/leaderboard_service.py:153 — percentile=1.0 - (my_entry.rank / full_leaderboard.total_participants) 无条件除法，无零值守卫
+  - backend/app/services/leaderboard_service.py:311 — total_participants=-1,  # Exact count not available without full scan
+  - backend/app/services/leaderboard_service.py:420 — total_participants=len(scored_users) FRIENDS 榜使用 len()
+  - backend/app/services/leaderboard_service.py:496,722,785,871 — GROUP/WEEKLY/STREAK/PHOTON 榜同样使用 len(rows)
+- **repro_or_trigger**: (GLOBAL) 查看全局排行榜 → 用户百分位显示 >100%。 (ZeroDivisionError) 唯一用户查看空 FRIENDS 榜 → 500 错误
+- **expected_vs_actual**: 期望：GLOBAL 榜跳过百分位或显示 N/A；空榜返回安全默认值。实际：GLOBAL 榜显示无意义百分位；空榜抛 ZeroDivisionError
+- **blast_radius**: 影响所有排行榜页面。GLOBAL 榜百分位在所有用户中都显示错误。ZeroDivisionError 影响只有单个参与者的榜单。对北极星影响中等——排行榜是社交激励引擎核心，错误百分位破坏信任
+- **suggested_fix_direction**: 在 get_my_rank() 的百分位计算前添加守卫：if total_participants <= 0: percentile = None。UI 层处理 None 百分位
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-1511-K2
+- **status**: discovered
+- **severity**: P1
+- **domain**: K
+- **title**: gRPC stream 中途断裂时 handleChatMessage 的 return false 跳过 saveMessage()，导致多轮对话历史从 Redis 丢失
+- **symptom**: 与 AI 对话中途（LLM 响应流进行中），若 gRPC stream 因网络抖动或后端重启而断裂，用户看到错误提示。重新进入对话后，刚才那轮的消息完全消失——对话上下文丢失，后续轮次无法引用之前的讨论
+- **root_cause_hypothesis**: chat_orchestrator_chatflow.go:693-697 中，当 stream.Recv() 返回非 EOF 错误时，立即执行 return false。这导致提前退出，跳过了 line 900-915 的 saveMessage() 调用。已累积在 textBuilder 中的部分响应文本和用户的原始 query 都没有被持久化到 Redis
+- **evidence**:
+  - backend/gateway/internal/handler/chat_orchestrator_chatflow.go:689-697 — if err == io.EOF { break } → if err != nil { respondStreamRecvError(responder, err); return false } 跳过后续持久化
+  - backend/gateway/internal/handler/chat_orchestrator_chatflow.go:900-915 — h.saveMessage(ctx, userID, sessionID, "assistant", result, ...) 仅在 for 循环正常退出后执行
+  - backend/gateway/internal/handler/chat_orchestrator_chatflow.go:901-904 — 注释明确说明依赖："Multi-turn chat depends on the assistant turn being visible in Redis"
+- **repro_or_trigger**: 正常聊天 → 中途重启 Python gRPC 服务 → 流断裂 → 用户看到错误 → 重新发送消息 → 之前的对话上下文丢失
+- **expected_vs_actual**: 期望：stream 断裂时至少保存已生成的部分文本（用于上下文连续性）；实际：全部丢失，多轮对话退化为单轮
+- **blast_radius**: 直接影响北极星——多轮对话是 AI 辅导的核心交互模式。对话上下文丢失意味着学生需要从头解释所有背景，严重破坏学习连续性
+- **suggested_fix_direction**: 在 return false 之前添加部分持久化：若 textBuilder 非空，调用 saveMessage() 保存部分文本并标记为 truncated: true
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-1512-K3
+- **status**: discovered
+- **severity**: P2
+- **domain**: K
+- **title**: 12+ Flutter 首页/体验卡片在 provider 错误时使用 SizedBox.shrink() 静默消失，用户无任何错误提示
+- **symptom**: 当任何体验相关的后端 API 返回错误时，首页和体验页面的多个卡片区域会静默消失——不显示错误消息、不提供重试按钮、不留任何占位。用户看到的只是页面突然少了内容，无法区分是功能不存在还是加载失败
+- **root_cause_hypothesis**: 多个 ConsumerWidget 子类在 .when() 的 error 分支使用 error: (_, __) => const SizedBox.shrink() 模式。当 Riverpod provider 进入 AsyncError 状态时，卡片完全不可见。与同项目中 dashboard_screen 的 _buildErrorCard（提供重试按钮）形成对比
+- **evidence**:
+  - mobile/lib/features/experience/presentation/widgets/growth_quality_card.dart:17 — error: (_, __) => const SizedBox.shrink()
+  - mobile/lib/features/experience/presentation/widgets/understanding_snapshot_card.dart:25 — error: (_, __) => const SizedBox.shrink()
+  - mobile/lib/features/experience/presentation/widgets/community_accountability_hub_card.dart:28 — error: (_, __) => const SizedBox.shrink()
+  - mobile/lib/features/home/presentation/widgets/multi_goal_dashboard_card.dart:32 — error: (_, __) => const SizedBox.shrink()
+  - mobile/lib/features/home/presentation/widgets/home_notification_card.dart:67 — 同样模式
+  - mobile/lib/features/insights/presentation/widgets/return_case_file_card.dart:33 — 同样模式
+  - mobile/lib/features/home/presentation/widgets/learning_heatmap_widget.dart:95 — 同样模式
+  - mobile/lib/features/plan/presentation/widgets/plan_context_summary.dart:70 — 同样模式
+- **repro_or_trigger**: 关闭后端服务 → 打开 app 首页 → 观察到多个卡片区域空白无提示
+- **expected_vs_actual**: 期望：错误时显示紧凑的错误指示器 + 轻触重试；实际：卡片静默变为 0px 高度，无任何视觉提示
+- **blast_radius**: 影响首页和体验页的多个核心卡片（成长质量、Sparkle懂我、问责 hub、多目标仪表板、学习热力图、计划摘要）。网络问题时大面积静默消失破坏用户信任。对北极星有间接影响——看不到激励性卡片降低坚持学习的动力
+- **suggested_fix_direction**: 将 SizedBox.shrink() 替换为统一的紧凑 error widget，可抽取为 SparkleErrorCard.compact() 复用组件（图标 + 文字 + TapToRetry）
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-1513-K4
+- **status**: discovered
+- **severity**: P2
+- **domain**: K
+- **title**: OpenAICompatibleProvider 在 openai.Timeout 导入失败时创建无超时配置的 AsyncOpenAI 客户端，LLM 调用可能永久挂起
+- **symptom**: 在 openai 包版本过旧或不导出 Timeout 的环境中，LLM API 调用没有超时保护。若外部 LLM API 响应挂起，gRPC stream 会一直等待直到客户端超时
+- **root_cause_hypothesis**: providers.py:6-12 中 Timeout 导入使用 try/except：成功→类，失败→None。Line 43 timeout_config = Timeout(...) if Timeout else None → None 时无超时。Line 48-52 AsyncOpenAI(timeout=None) → 无超时。且导入失败无日志警告
+- **evidence**:
+  - backend/app/services/llm/providers.py:6-12 — try: from openai import Timeout → except ImportError: Timeout = None 静默退化
+  - backend/app/services/llm/providers.py:43-46 — timeout_config = Timeout(timeout=timeout_seconds, connect=10.0) if Timeout else None
+  - backend/app/services/llm/providers.py:48-52 — self.client = AsyncOpenAI(..., timeout=timeout_config) timeout=None 无超时
+- **repro_or_trigger**: 安装不包含 openai.Timeout 的旧版 openai 包 → 发起聊天 → LLM API 挂起 → stream 永久等待
+- **expected_vs_actual**: 期望：即使 Timeout 导入失败，也应使用 httpx.Timeout 回退配置超时；实际：无超时配置，静默退化
+- **blast_radius**: 仅影响 openai 包不兼容的环境（开发/测试阶段更常见）。LLM 挂起会耗尽 gRPC stream 并发槽位。对北极星影响较低
+- **suggested_fix_direction**: 在 Timeout is None 时使用 httpx.Timeout(timeout_seconds, connect=10.0) 作为回退，并添加 logger.warning 警告操作者
+- **discovered_by**: explorer-loop
+- **verified_by**:
 - **fix_commit**:
 
 ### ISSUE-20260503-1300-B1
@@ -616,6 +699,18 @@
 - **Findings**: 4/5 i18n issues are in community features (group members, group tasks, group chat). Pattern: features developed in batches where later additions used proper l10n but earlier hardcoded English was never retrofitted. memory_detail_screen is the outlier — Aurora cognitive feature with version management and correction mechanism, mostly i18n'd but missed 10+ labels.
 - **Opus pass rate**: 3/4 (H1/H2/H4 verified, H3 rejected — isChinese is project documented i18n pattern)
 - **Next suggested domain**: K (错误处理/降级/边界) — error handling and degradation patterns emerged as key gap from R3/R4 clean results
+
+### Round R6 — 2026-05-03T15:00
+- **Domain**: K (错误处理 / 降级 / 边界)
+- **Paths covered**:
+  - leaderboard_service.py (percentile math: division by zero + negative sentinel)
+  - chat_orchestrator_chatflow.go (gRPC stream break → skip saveMessage → history lost)
+  - growth_quality_card.dart, understanding_snapshot_card.dart, community_accountability_hub_card.dart, multi_goal_dashboard_card.dart, home_notification_card.dart, learning_heatmap_widget.dart, plan_context_summary.dart, return_case_file_card.dart (12+ SizedBox.shrink on error)
+  - providers.py (openai.Timeout import failure → no timeout fallback)
+- **New issues**: K1(P1), K2(P1), K3(P2), K4(P2)
+- **Findings**: Two P1s cross the Go↔Python boundary. K1 (leaderboard): GLOBAL percentile is a pure math bug (total_participants=-1 sentinel used in division); empty leaderboards crash with ZeroDivisionError. K2 (chat): gRPC stream error handling sacrifices conversation history integrity — return false before saveMessage means multi-turn context is silently lost. K3 (Flutter): 12+ dashboard/experience cards use SizedBox.shrink() on error, silently vanishing when backend is unreachable. K4 (LLM): Timeout import fallback creates no-timeout client — rare but LLM hangs can block gRPC slots.
+- **Opus pass rate**: pending (4 discovered, 0 verified yet)
+- **Next suggested domain**: E (Aurora kill switch real observability) or F (event bus consumer DLQ/retry) — backend resilience areas not yet explored
 
 ### Round R6 — 2026-05-03T15:00
 - **Domain**: K (错误处理 / 降级 / 边界)
