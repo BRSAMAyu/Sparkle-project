@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 21:30 (R45 F-domain — 1 discovered: F6 EventBus DLQ zero redrive)
+> Updated: 2026-05-04 21:30 (R45 F-domain — 0 discovered: F6 APPROVED by opus review)
 
 ---
 
@@ -418,7 +418,7 @@
 | R42 | 2026-05-04T20:00 | J | 0 | N/A | J 域——cold start / empty state 全面审查：dashboard/community/marketplace/tool-library/notifications/onboarding 全部健壮 |
 | R43 | 2026-05-04T20:30 | E | 2 | 2/2 (E8/E9 verified) | E 域续探——E7 fix_commit 错误（指向 B5 提交）+ privacy drill 内联 binding 缺 allowed_modes 崩溃 + drill 写 Redis 但生产读 settings 零影响 |
 | R44 | 2026-05-04T21:00 | A | 1 | 1/1 (A1 verified) | A 域——OmniBar error book prediction chip 导航到未注册路由 /error-book（应为 /errors） |
-| R45 | 2026-05-04T21:30 | F | 1 | pending (F6) | F 域续探——EventBus DLQ PostgreSQL 表 + Redis 流无任何管理/重放 API |
+| R45 | 2026-05-04T21:30 | F | 1 | 1/1 (F6 verified) | F 域续探——EventBus DLQ PostgreSQL 表 + Redis 流无任何管理/重放 API |
 
 ---
 
@@ -2315,7 +2315,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-2130-F6
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: F
 - **title**: EventBus DLQ 有 PostgreSQL 持久化 + Redis 流但零管理/重放 API
@@ -2332,7 +2332,7 @@
 - **blast_radius**: 生产消费者级联失败时死信永久丢失。DLQ PostgreSQL 持久化设计意图是审计+恢复，缺失读取端使此意图落空。对北极星无直接影响但降低系统韧性。
 - **suggested_fix_direction**: (1) 新增 /api/v1/event-bus/dlq/entries GET 分页查询 event_bus_dlq 表；(2) 新增 /api/v1/event-bus/dlq/replay POST 从 event_bus_dlq 读 payload 并 publish 回 sparkle_events；(3) 复用 DlqReplayAuditLog 模型记录 replay 审计
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-review+2026-05-04T21:30
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1800-B1
@@ -2561,6 +2561,26 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T21:00Z
 - **reviewer_note**: APPROVED — independent review confirms all 3 evidence references match code exactly. (1) intent_prediction_provider.dart:591 uses `GoRouter.of(context).push('/error-book')` — incorrect route string. (2) error_book_routes.dart:30 registers error book at `path: '/errors'` — the correct route. (3) intent_prediction_provider.dart:498-501 "View Error Book" chip action is `_navigateToErrorBook` which leads to the bad push call. Full call chain traced: EnhancedIntentType.review → chip generation (line 497-501) → `_navigateToErrorBook()` (line 588-593) → `push('/error-book')` (line 591) → GoRouter no match → silent fail (no errorBuilder configured in routes.dart). All 5 other prediction navigation targets (`/focus`, `/tasks/new`, `/calendar-stats`, `/curiosity-capsule`, `/cognitive/patterns`) verified against registered routes — all correct. Confirmed one-off typo. Not "by design" — the hardcoded `/error-book` is the only reference to this string in the entire mobile codebase (grep confirmed). Not a duplicate of any closed/verified entry. ErrorBookRoutes class has no path constants (unlike FocusRoutes), so the fix is changing the string literal from `/error-book` to `/errors`.
+- **fix_commit**: 留空
+
+### ISSUE-20260505-0800-H9
+- **status**: discovered
+- **severity**: P2
+- **domain**: H
+- **title**: document_library_screen 归档/恢复/撤回操作的 10 处用户可见文案为纯中文硬编码，英文用户完全无法理解
+- **symptom**: English locale user opens Document Library → taps archive → SnackBar shows "资料已归档，不会再进入 RAG 上下文" (Chinese only). Taps revoke → dialog title "撤回资料权限", content "撤回后，{filename} 会从共享与检索缓存中移除。", confirm button "撤回" — all Chinese only. Error SnackBars like "归档失败：{error}" also Chinese only. Meanwhile the cancel button on the same dialog correctly shows localized "Cancel" via `context.l10n.cancel`, and the delete button uses `context.l10n.studyMaterialsDeleteAction` — creating mixed-language UI within a single dialog.
+- **root_cause_hypothesis**: The file was partially migrated to l10n (upload, search, metrics, delete, empty states all use `context.l10n.*`), but the archive/restore/revoke feature (added later) was implemented with hardcoded Chinese strings. No corresponding `studyMaterialsArchive*` or `studyMaterialsRevoke*` keys exist in the ARB files. The file uses `context.l10n` at 20+ other locations, confirming l10n infrastructure is available and the developer simply forgot to add keys for these 10 strings.
+- **evidence**:
+  - `mobile/lib/features/documents/presentation/screens/document_library_screen.dart:360` — `const SnackBar(content: Text('资料已归档，不会再进入 RAG 上下文'))` — archive success feedback, Chinese only
+  - `mobile/lib/features/documents/presentation/screens/document_library_screen.dart:391-400` — `_confirmRevoke()` dialog: title `const Text('撤回资料权限')`, content `Text('撤回后，${document.filename} 会从共享与检索缓存中移除。')`, confirm button `const Text('撤回')` — all Chinese only. But cancel button at line 396 uses `context.l10n.cancel` — mixed i18n in same dialog
+  - `mobile/lib/features/documents/presentation/screens/document_library_screen.dart:1280-1288` — archive/restore button label: `'归档'` / `'恢复'` (conditional on lifecycleStatus), revoke button label: `const Text('撤权')` — all Chinese only. Adjacent delete button at line 1297 correctly uses `context.l10n.studyMaterialsDeleteAction`
+  - `mobile/lib/l10n/app_zh.arb:3081-3251` — 40+ `studyMaterials*` l10n keys exist for upload, search, metrics, delete, empty states, but zero keys for archive/restore/revoke operations
+- **repro_or_trigger**: Set device to English → Open Document Library → (a) tap archive on any document → observe Chinese SnackBar "资料已归档"; (b) tap revoke → observe full Chinese dialog; (c) trigger archive/restore failure → observe Chinese error SnackBar
+- **expected_vs_actual**: Expected: All user-visible text uses l10n with English fallback (matching the file's own pattern for upload, delete, and empty states). Actual: 10 strings across archive/restore/revoke flow are Chinese-only, making these features completely inaccessible to English users. Mixed i18n within a single dialog (revoke dialog: Chinese title+content+confirm, English cancel).
+- **blast_radius**: English users cannot understand archive/restore/revoke operations. Document library is a core feature for the study flow (managing learning materials). The mixed-language revoke dialog is particularly confusing — users see "Cancel" in English but "撤回" for the destructive action. Moderate impact on north star — study material management is part of the 7-day learning flow but not a blocking path.
+- **suggested_fix_direction**: Add l10n keys to `app_zh.arb` and `app_en.arb` for: `studyMaterialsArchiveSuccess`, `studyMaterialsArchiveFailed`, `studyMaterialsRestoreSuccess`, `studyMaterialsRestoreFailed`, `studyMaterialsRevokeTitle`, `studyMaterialsRevokeMessage` (with {filename} placeholder), `studyMaterialsRevokeConfirm`, `studyMaterialsRevokeSuccess`, `studyMaterialsRevokeFailed`, `studyMaterialsArchiveAction`, `studyMaterialsRestoreAction`, `studyMaterialsRevokeAction`. Then replace all 10 hardcoded strings with `context.l10n.*` references.
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
@@ -3034,5 +3054,25 @@
   3. **DLQ 碎片化全景**: 4 套独立 DLQ——(a) EventBus DLQ（Redis sparkle_events:dlq + PostgreSQL event_bus_dlq）write-only；(b) CognitiveStreamWorker DLQ（自有流）有 replay 但仅覆盖认知流；(c) PreferenceEventConsumer 自建 DLQ（cqrs:stream:user:dlq）完全独立；(d) DLQ admin API 仅连接 (b)
   4. **正确模式存在**: NudgeEventConsumer（line 46: `raise`）和 CognitiveEventConsumer（line 84: `raise`）在 except 后正确传播异常，JourneyEventConsumerBase 使用 @reliable_consumer 装饰器。证明"raise after log"是已知正确模式，F5 所涉消费者应统一采用
   5. **排除项**: (a) PreferenceEventConsumer 的独立 DLQ 系统是 CQRS 设计（Go 网关写入 cqrs:stream:user），非 bug；(b) CognitiveStreamWorker 的独立 DLQ 是其内部机制，非 EventBus 缺陷；(c) Journey consumer base 的正确模式已确认；(d) 所有 22 个 consumer group 均已注册（含新增 journey consumers）
-- **Opus pass rate**: pending
+- **Opus pass rate**: 1/1 (F6 APPROVED by opus-review+2026-05-04T21:30)
 - **Next suggested domain**: A (Flutter UI E2E) — 10 轮未回探（R27）；或 H (i18n) — 8 轮未回探（R32）
+
+### Round R46 — 2026-05-05T08:00
+- **Domain**: H (i18n 残留 / 硬编码裸字符串)
+- **Paths covered**:
+  - `mobile/lib/features/home/presentation/widgets/expanded_toolbar_section.dart` — all strings use `I18nService` pattern
+  - `mobile/lib/features/home/presentation/widgets/next_actions_card.dart` — all strings use `I18nService` pattern
+  - `mobile/lib/features/home/presentation/widgets/aurora_status_band.dart` — all strings use `I18nService` pattern
+  - `mobile/lib/features/documents/presentation/screens/document_library_screen.dart:350-420,1275-1300` — archive/restore/revoke operations: 10 hardcoded Chinese strings while rest of file uses `context.l10n.*`
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart` — all 24 strings use `I18nService` pattern correctly
+  - `mobile/lib/features/user/presentation/` — no hardcoded Chinese or English-only strings found
+  - Cross-feature scan: `grep -rn "const Text('" mobile/lib/features/ --include="*.dart" | grep -P '[\x{4e00}-\x{9fff}]'` — only 3 hits, all in document_library_screen.dart
+  - Cross-feature scan: `grep -rn "SnackBar(content: Text('" | grep -P '[\x{4e00}-\x{9fff}]'` — only 6 hits, all in document_library_screen.dart
+  - `mobile/lib/l10n/app_zh.arb:3081-3251` — 40+ studyMaterials l10n keys exist, zero for archive/restore/revoke
+- **New issues**: 1 — H9 (P2: document_library_screen 归档/恢复/撤回操作 10 处纯中文硬编码，英文用户无法理解)
+- **Findings**: H 域全面扫描 Flutter presentation 层所有 hardcoded strings：
+  1. **H9 (P2) — document_library_screen 部分国际化**: 文件的 upload/search/metrics/delete/empty states 全部正确使用 `context.l10n.*`（20+ 处），但归档/恢复/撤回功能的 10 个用户可见字符串为纯中文硬编码。同一个 revoke dialog 内出现混合 i18n：cancel 按钮用 `context.l10n.cancel`（英文），确认按钮用 `const Text('撤回')`（中文）。ARB 文件有 40+ 个 `studyMaterials*` key 但无任何 archive/revoke 相关 key
+  2. **排除项**: (a) 所有其他 feature 的 presentation 层（home, community, user, goal, task, focus, calendar, cognitive, plan）无裸中文硬编码——全部通过 `I18nService` 或 `context.l10n` 处理；(b) group_tasks_screen.dart 使用 24 处 `I18nService` inline pattern 正确；(c) 用户设置/个人资料界面完全无裸字符串；(d) home widgets (expanded_toolbar, next_actions, aurora_status_band) 全部正确 i18n
+  3. **全量统计**: `const Text('中文字符')` 在 features/ 下仅 3 处（全在 document_library），`SnackBar(content: Text('中文'))` 仅 6 处（全在 document_library），`I18nService.instance.isChinese` 在 features/ 下有 872 处——document_library 是唯一遗漏
+- **Opus pass rate**: pending
+- **Next suggested domain**: K (错误处理/降级/边界) — 7 轮未回探；或 D (Python orchestrator FSM) — 8 轮未回探
