@@ -564,7 +564,7 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1511-K2
-- **status**: discovered
+- **status**: verified
 - **severity**: P1
 - **domain**: K
 - **title**: gRPC stream 中途断裂时 handleChatMessage 的 return false 跳过 saveMessage()，导致多轮对话历史从 Redis 丢失
@@ -579,11 +579,12 @@
 - **blast_radius**: 直接影响北极星——多轮对话是 AI 辅导的核心交互模式。对话上下文丢失意味着学生需要从头解释所有背景，严重破坏学习连续性
 - **suggested_fix_direction**: 在 return false 之前添加部分持久化：若 textBuilder 非空，调用 saveMessage() 保存部分文本并标记为 truncated: true
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer-K+2026-05-03T15:15
+- **reviewer_note**: APPROVED — 调用链确认：handleChatMessage line 274 → line 355 saveMessage("user") 保存用户消息 → line 647 gRPC stream → line 683 for stream.Recv() → line 693-696 非 EOF 错误时 return false → 跳过 line 900-915 saveMessage("assistant")。envelopeResponder/protobufResponder 只是 WebSocket 消息写入器，不负责历史持久化。line 477-478 显示多轮上下文 via h.chatHistory.GetMessages() 唯一依赖 saveMessage 写入的 Redis 数据。user 消息已存 (line 355) 但 assistant 消息丢失，导致下一轮从 Redis 恢复的 history 只有用户提问、没有 AI 回复，对话连续性断裂。
 - **fix_commit**:
 
 ### ISSUE-20260503-1512-K3
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: K
 - **title**: 12+ Flutter 首页/体验卡片在 provider 错误时使用 SizedBox.shrink() 静默消失，用户无任何错误提示
@@ -603,11 +604,12 @@
 - **blast_radius**: 影响首页和体验页的多个核心卡片（成长质量、Sparkle懂我、问责 hub、多目标仪表板、学习热力图、计划摘要）。网络问题时大面积静默消失破坏用户信任。对北极星有间接影响——看不到激励性卡片降低坚持学习的动力
 - **suggested_fix_direction**: 将 SizedBox.shrink() 替换为统一的紧凑 error widget，可抽取为 SparkleErrorCard.compact() 复用组件（图标 + 文字 + TapToRetry）
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer-K+2026-05-03T15:15
+- **reviewer_note**: APPROVED — 抽查确认 8/8 引用文件中所有 .when() error 分支都使用 SizedBox.shrink()。非设计意图：同项目 dashboard_screen 的 _buildErrorCard 模式证明项目期望的错误处理方式是显示带重试按钮的 error card。部分卡片的 loading 分支也用 SizedBox.shrink()（如 growth_quality_card.dart:16），这是有意的 skeleton-less loading；但 error 分支消失失去"无数据"vs"加载失败"的区分，是真实 UX 缺口。12+ 卡片覆盖首页/体验页的核心激励区域，大面积静默消失直接影响北极星体验。
 - **fix_commit**:
 
 ### ISSUE-20260503-1513-K4
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: K
 - **title**: OpenAICompatibleProvider 在 openai.Timeout 导入失败时创建无超时配置的 AsyncOpenAI 客户端，LLM 调用可能永久挂起
@@ -622,7 +624,8 @@
 - **blast_radius**: 仅影响 openai 包不兼容的环境（开发/测试阶段更常见）。LLM 挂起会耗尽 gRPC stream 并发槽位。对北极星影响较低
 - **suggested_fix_direction**: 在 Timeout is None 时使用 httpx.Timeout(timeout_seconds, connect=10.0) 作为回退，并添加 logger.warning 警告操作者
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer-K+2026-05-03T15:15
+- **reviewer_note**: APPROVED — 代码确认：providers.py:6-12 try/except ImportError → Timeout=None（无日志）；line 43 timeout_config=None 当 Timeout is None；line 48-52 AsyncOpenAI(timeout=None)。httpx.Timeout(None) 表示无限等待（已通过 python3 验证）。现实风险较低：requirements.txt line 55 指定 openai>=1.10.0，而 openai.Timeout 从 v1.0.0+ 一直可用（当前环境 openai 2.30.0 正常导入）。GgRPC stream 有 300s 超时 (chat_orchestrator_chatflow.go:284) 提供二级保护。但防御性 try/except 的存在说明开发者预期此场景，缺少 fallback + 无日志警告是真实缺口。P2 评级合理。
 - **fix_commit**:
 
 ### ISSUE-20260503-1300-B1
