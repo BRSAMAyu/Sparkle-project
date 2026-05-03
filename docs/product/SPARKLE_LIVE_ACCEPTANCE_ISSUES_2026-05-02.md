@@ -1353,7 +1353,7 @@
 - **closed_at**: 2026-05-04T09:35:00Z
 
 ### ISSUE-20260503-2301-B2
-- **status**: verified
+- **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-04T07:50:00Z
 - **domain**: B
@@ -1467,8 +1467,9 @@
   **(f) CLAUDE.md / Rule guards: NO VIOLATIONS.** No secrets, no hardcoded tokens, no cross-layer boundary violations. Go gateway schema.sql update follows established pattern. Rule guards all pass (AX pre-existing unrelated).
 
 ### ISSUE-20260504-0016-H5
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
+- **fixer_started_at**: 2026-05-04T08:30:00Z
 - **domain**: H
 - **title**: group_members_screen 残留 6 处硬编码英文（搜索框、空状态、角色分区标题），H1 修复未完全覆盖
 - **symptom**: 中文模式下，群组成员列表页仍显示 "Search members..." 搜索提示、"No members yet" 空状态、"Owner (1)" / "Admins (2)" / "Members (5)" 角色分区标题。H1 修复覆盖了管理操作（晋升/降权/转让群主）的 i18n，但遗漏了这些基础 UI 标签
