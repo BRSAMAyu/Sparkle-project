@@ -2178,7 +2178,8 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1200-G4
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-04T20:45:00Z
 - **severity**: P2
 - **domain**: G
 - **title**: Mock 群聊消息分页参数被忽略——demo 模式下"加载更多"静默失败
