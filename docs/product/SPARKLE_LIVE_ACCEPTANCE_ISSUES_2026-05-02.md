@@ -363,14 +363,14 @@
 
 ## Progress Summary
 
-- **Total Issues**: 31 (+ 15 explorer issues)
+- **Total Issues**: 31 (+ 19 explorer issues)
 - **Fixed**: 23 (includes explorer G1, G2)
 - **Partially Fixed**: 3
 - **Routes Verified (working with data)**: 5
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
-- **Discovered (not verified)**: 1 (D1 pending review)
-- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 1 (A1 — fix commit pending)
+- **Discovered (not verified)**: 4 (F1/F2/F3/F4 pending review)
+- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 1 (A1 — fix commit pending) + 1 (D1)
 
 ---
 
@@ -388,6 +388,7 @@
 | R7 | 2026-05-03T15:30 | A | 1 | 1/1 (A1 verified) | Task execution navigation missing activeTaskProvider |
 | R8 | 2026-05-03T16:00 | E | 4 | 4/4 | Aurora kill switch: E1 Dual-Core Router zero KS, E2 Privacy Prometheus gauge bypass, E3 drill_all.sh missing 37-39, E4 permissions 644 |
 | R9 | 2026-05-03T16:30 | D | 1 | 1/1 (D1 verified) | LangGraph planner timeout missing in 2/3 callers |
+| R10 | 2026-05-03T17:00 | F | 4 | pending opus review | Event bus consumers: F1 subscribe silent fail, F2 Preference bypass, F3 health blind spot, F4 missing stop() |
 
 ---
 
@@ -571,10 +572,11 @@
 - **opus_review**: APPROVED by opus-independent-auditor at 2026-05-03T19:45:00Z — **Root cause resolved**: Fix adds `if total > 0 else None` guard at service line 150, covering both total=-1 (GLOBAL sentinel) and total=0 (empty leaderboard). Also fixes the user-not-found early return path (line 134-141) to return percentile=None instead of percentile=0. **Schema change**: `MyRankResponse.percentile` changed from `float` (non-nullable, no default) to `float | None = Field(default=None)` — necessary for the service to emit None. **No regression risk**: sole API caller at `leaderboards.py:156` uses `my_rank.model_dump()` which serializes None to JSON null; Flutter client already types percentile as `double?` and reads `data['percentile'] as double?`; Go gateway does not reference percentile field; proto does not include percentile. **Cross-layer contracts**: No proto/DB/i18n changes needed — Python-only fix. **Regression test quality**: 5/5 tests pass; 4/5 would FAIL on old code (negative sentinel guard, zero-total guard, user-not-found path, schema nullability); 1/5 (happy-path normal calculation) correctly passes both old and new (guard does not change the normal case). **No CLAUDE.md or rule guard violations**: no secrets, no hardcoded tokens, no cross-layer boundary violations, pure Python service+schema change.
 
 ### ISSUE-20260503-1511-K2
-- **status**: in_progress
+- **status**: closed
 - **severity**: P1
 - **domain**: K
 - **fixer_started_at**: 2026-05-03T20:10:00Z
+- **closed_at**: 2026-05-03T20:30:00Z
 - **title**: gRPC stream 中途断裂时 handleChatMessage 的 return false 跳过 saveMessage()，导致多轮对话历史从 Redis 丢失
 - **symptom**: 与 AI 对话中途（LLM 响应流进行中），若 gRPC stream 因网络抖动或后端重启而断裂，用户看到错误提示。重新进入对话后，刚才那轮的消息完全消失——对话上下文丢失，后续轮次无法引用之前的讨论
 - **root_cause_hypothesis**: chat_orchestrator_chatflow.go:693-697 中，当 stream.Recv() 返回非 EOF 错误时，立即执行 return false。这导致提前退出，跳过了 line 900-915 的 saveMessage() 调用。已累积在 textBuilder 中的部分响应文本和用户的原始 query 都没有被持久化到 Redis
@@ -589,7 +591,16 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer-K+2026-05-03T15:15
 - **reviewer_note**: APPROVED — 调用链确认：handleChatMessage line 274 → line 355 saveMessage("user") 保存用户消息 → line 647 gRPC stream → line 683 for stream.Recv() → line 693-696 非 EOF 错误时 return false → 跳过 line 900-915 saveMessage("assistant")。envelopeResponder/protobufResponder 只是 WebSocket 消息写入器，不负责历史持久化。line 477-478 显示多轮上下文 via h.chatHistory.GetMessages() 唯一依赖 saveMessage 写入的 Redis 数据。user 消息已存 (line 355) 但 assistant 消息丢失，导致下一轮从 Redis 恢复的 history 只有用户提问、没有 AI 回复，对话连续性断裂。
-- **fix_commit**:
+- **fix_commit**: 58e05cbae
+- **opus_review**: APPROVED by opus-reviewer-K2-2026-05-03T12:10
+  - Root cause: CONFIRMED — 原 code path 在 stream 非 EOF 错误时 return false 跳过 saveMessage(), 修复在 return false 前检查 textBuilder.Len()>0 并保存部分文本
+  - Correctness: PASS — saveMessage 是同步调用, 与 line 355 user-save / line 916 normal-assistant-save 一致; textBuilder pool defer (line 666-669) 不受 return path 影响; chatHistory nil 风险与现有代码一致 (构造函数 line 184 保证非 nil)
+  - Regression risk: LOW — 影响面仅 chat_orchestrator_chatflow.go 一个函数一个新增 if-block; saveMessage 三个调用点行为一致; textBuilder.String() 只读不写
+  - Cross-layer: N/A — Go-only 修复, 无 proto/DB/i18n 变更; truncated:true 作为顶层 JSON key 写入 Redis, GetMessages→ChatHistoryMessage 反序列化时该字段被安全忽略 (json omitempty), 内容仍可用于下游 context 构建
+  - Test efficacy: PARTIAL — TestSaveMessageTruncatedPersistsPartialResponse 验证 saveMessage 支持 truncated 持久化和检索, 但未模拟 gRPC stream 断裂下的 handleChatMessage 完整路径; 需要 gRPC stream mock 来做真正的回归保护, 建议 follow-up 中添加
+  - Rule guards: ALL PASS (AX pre-existing fail excluded per instructions, BG staleness warnings excluded)
+  - Gateway handler tests: ALL 124 PASS (including new regression test)
+  - CLAUDE.md compliance: PASS — Go Gateway 层无 business logic (纯持久化 logic), 无跨层泄漏, no hardcoded secrets, no proto 变更
 
 ### ISSUE-20260503-1512-K3
 - **status**: verified
@@ -796,6 +807,88 @@
 - **verified_by**: opus-independent-auditor+2026-05-03T16:45:00Z
 - **fix_commit**:
 
+
+### ISSUE-20260503-1700-F1
+- **status**: discovered
+- **severity**: P2
+- **domain**: F
+- **title**: EventBus.subscribe() 在 xgroup_create 返回非 BUSYGROUP 的 ResponseError 时静默返回，消费者在启动时无声死亡且 start() 方法无感知
+- **symptom**: Redis 环境异常时（如 stream key 类型冲突、非 BUSYGROUP Redis 错误），EventBus 消费者静默启动失败。操作者看到消费者"已启动"的日志（来自 start 方法的 logger.info），但消费循环从未开始。Prometheus 消费者组 lag 指标显示为 0 因为消费者组根本不存在，事件堆叠在 stream 中不被处理
+- **root_cause_hypothesis**: EventBus.subscribe() 在 event_bus.py:1065-1070 中，非 BUSYGROUP 的 ResponseError 被 `except ResponseError` 捕获后仅 `logger.error` 然后 `return`，不抛出异常。所有使用 "break after subscribe" 模式的消费者 start() 方法（AchievementEventConsumer:64-72, GalaxyEventConsumer:53-58, ExecutionEventConsumer:38-48 等 10+ 消费者）将 subscribe 返回视为成功、break 退出重试循环。TaskEventConsumer:45-53 的 `_subscribed` 模式同样受影响——subscribe 返回后 `_subscribed=True`，后续 subscribe 永远不再调用
+- **evidence**:
+  - `backend/app/core/event_bus.py:1065-1070` — `except ResponseError as e: if "BUSYGROUP" in str(e): logger.debug(...) else: logger.error(f"Error creating consumer group: {e}"); return` — 非 BUSYGROUP 错误静默返回
+  - `backend/app/core/event_bus.py:1072-1075` — `self._running = True; task = asyncio.create_task(self._consume_loop(...))` — 仅在 xgroup_create 成功后执行，return 分支跳过了这 4 行
+  - `backend/app/services/achievement_event_consumer.dart:64-72` — `await self.event_bus.subscribe(...); break` — subscribe 返回视为成功
+  - `backend/app/services/task_event_consumer.dart:45-53` — `await self.event_bus.subscribe(...); self._subscribed = True` — 同样无错误检查
+- **repro_or_trigger**: 在 Redis 中 SET sparkle_events "not_a_stream" → 启动 Python 服务 → 查看消费日志只有 "started, listening on sparkle_events" 没有 "Created consumer group" → 发布事件 → 事件堆积无人消费
+- **expected_vs_actual**: 期望：非 BUSYGROUP 的 xgroup_create 错误应 raise 异常，让 start() 的 retry 循环捕获并重试；实际：subscribe 静默返回，消费者假启动成功
+- **blast_radius**: 影响所有使用 EventBus.subscribe() 的约 20 个消费者。如果 xgroup_create 因非 BUSYGROUP 原因失败（如 Redis OOM、类型冲突），所有消费者集体静默死亡。对北极星有中等影响——成就、Galaxy、任务、认知等核心事件处理全部停止
+- **suggested_fix_direction**: 在非 BUSYGROUP ResponseError 分支中 raise 而非 return，让上层 start() retry 循环处理。同时订阅失败不应设置 `self._running = True`
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-1701-F2
+- **status**: discovered
+- **severity**: P2
+- **domain**: F
+- **title**: PreferenceEventConsumer 绕过 EventBus 框架手工操作 Redis Stream，无 DLQ/重试计数/幂等保护/stop()，毒消息永久重试且无法优雅关闭
+- **symptom**: 当缓存失效事件处理失败时（如 user_id 格式错误、user_service 异常），PreferenceEventConsumer 不会将毒消息移入 DLQ，Redis consumer group 会反复重新投递该消息，形成无限重试循环。同时该消费者使用 `while True:` 无 `_running` 标志和 `stop()` 方法，服务关闭时_task 被粗暴取消，最后一条正在处理的事件可能丢失
+- **root_cause_hypothesis**: PreferenceEventConsumer 是唯一直接使用 Redis Stream 原始 API（xreadgroup/xack）而非 EventBus 框架的消费者。它没有重试计数、没有 DLQ、没有幂等锁、没有 poison message 检测。其 start() 方法使用 `while True:` 无退出条件，且类定义中无 `stop()` 方法（与 EventBus 生态的 16 个消费者对比，其中 11 个有 stop()）
+- **evidence**:
+  - `backend/app/services/preference_event_consumer.dart:46-65` — `while True: try: messages = await self.redis.xreadgroup(...) for entry_id, data in entries: await self._handle_event(entry_id, data); await self.redis.xack(...)` — 手工 xreadgroup/xack 循环，无重试计数，无 DLQ
+  - `backend/app/services/preference_event_consumer.dart:67-73` — `except Exception as e: logger.error(...); await asyncio.sleep(1)` — 异常仅日志+sleep，无消息移入 DLQ
+  - `backend/app/core/event_bus.py:885-916` — 对比：EventBus._handle_failed_message() 有 `_requeue_for_retry()` + `_move_to_dlq()` 完整重试/DLQ 机制
+  - `backend/app/services/preference_event_consumer.py` — grep 'def stop' 返回空 — 无法优雅关闭
+- **repro_or_trigger**: 发布一个 user_id 格式异常（如 "not-a-uuid"）的 `user.preferences.updated` 事件到 `cqrs:stream:user` → 查看日志 → 异常被反复记录但消息永不移入 DLQ → 监控 PREFERENCE_EVENT_ERRORS_TOTAL 持续递增 → 重启服务 → consumer start 因无 stop() 被粗暴取消
+- **expected_vs_actual**: 期望：PreferenceEventConsumer 迁移到 EventBus.subscribe() 框架，享受 DLQ/重试/幂等等机制；实际：独立实现的手工循环，无保护机制
+- **blast_radius**: 影响偏好缓存失效这一关键路径。Go Gateway 发布的偏好更新事件由该消费者处理以使 Python 端缓存失效。如果消费者卡在毒消息上，后续缓存失效事件都被阻塞，导致 Python 端使用过期用户偏好。对北极星有间接影响——用户偏好是 Aurora 个性化 AI 响应的基础
+- **suggested_fix_direction**: 将 PreferenceEventConsumer 重构为使用 EventBus.subscribe() 框架（与其他 16 个消费者一致），或至少添加重试计数 + 超限移入 DLQ + `_running` 标志 + `stop()` 方法
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-1702-F3
+- **severity**: P2
+- **domain**: F
+- **title**: 20+ EventBus 消费者的 start() 方法在 subscribe() 返回后退出重试循环，后台 consume_loop 任务崩溃无人检测——消费者永久静默死亡
+- **symptom**: 如果后台 `_consume_loop` asyncio 任务因未捕获异常崩溃（如`asyncio.CancelledError` 传播到任务顶层、MemoryError、或 callback 中某个库的内部异常穿透了 `_process_stream_message` 的 try/except），消费者 start() 方法对此完全不知情。该 stream 的 consumer group 不再消费新消息，lag 持续增长。直到操作者通过 Prometheus lag 告警或用户投诉发现
+- **root_cause_hypothesis**: EventBus.subscribe() 通过 `asyncio.create_task(self._consume_loop(...))` 创建后台任务后立即返回。所有消费者的 start() 方法在 subscribe 返回后：(a) break 退出重试循环（AchievementEventConsumer 等 10+ 消费者），或 (b) 设置 `_subscribed=True` 后进入 `await asyncio.sleep(1)` 死循环（TaskEventConsumer, MainChainArtifactConsumer）。两种模式都不会检查后台任务是否仍然存活。`_consume_loop` 虽有内部异常处理但仅覆盖 `Exception`，`CancelledError`/`KeyboardInterrupt` 等 BaseException 子类会穿透到任务顶层
+- **evidence**:
+  - `backend/app/core/event_bus.py:1074` — `task = asyncio.create_task(self._consume_loop(...))` — 任务创建后 caller 无引用
+  - `backend/app/services/achievement_event_consumer.py:64-72` — `while self._running: try: await self.event_bus.subscribe(...); break` — 10+ 消费者使用此模式，subscribe 后 break
+  - `backend/app/services/task_event_consumer.py:43-57` — `while self._running: if not self._subscribed: await self.event_bus.subscribe(...); self._subscribed = True; await asyncio.sleep(1)` — 2 消费者使用此模式，`_subscribed` 永不为 False
+  - `backend/app/core/event_bus.py:1207` — `except Exception as e:` — consume_loop 仅捕获 Exception，BaseException 子类（CancelledError 等）会穿透
+- **repro_or_trigger**: 模拟：在 callback 处理器中注入 `raise BaseException("simulated crash")` → 观察到 consume_loop 任务终止 → 消费者 start() 方法无感知 → 继续发布事件到 stream → 监控确认消费者 lag 持续增长
+- **expected_vs_actual**: 期望：消费者在后台任务死亡时检测到并自动重启（如 task.done() 检查 + 重置 _subscribed 标志）；实际：无健康检查，消费者静默死亡
+- **blast_radius**: 影响全部约 20 个 EventBus 消费者。每个消费者是独立任务，一个消费者死亡只影响其对应的业务域（成就/Galaxy/任务/认知等）。但多个消费者同时死亡（如 Redis 重启后重连时序问题）会导致大面积事件处理瘫痪。对北极星有中等影响
+- **suggested_fix_direction**: 在 EventBus 中添加 `_consume_loop` 健康监控：将任务引用返回给 subscribe 调用方，或通过 `task.add_done_callback()` 触发自动重启。在 start() 的 sleep 循环中检查 `task.done()` 并在完成后重置 `_subscribed` 标志
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-1703-F4
+- **severity**: P3
+- **domain**: F
+- **title**: 5 个事件消费者（Cognitive/Nudge/Execution/Profile/Preference）无 stop() 方法，服务关闭时无法优雅停机和刷新待处理消息
+- **symptom**: 服务关闭（SIGTERM/SIGINT）时，这 5 个消费者的事件处理任务被 Asyncio 直接取消。正在处理中的事件消息可能已完成业务操作但未 xack，Redis consumer group 会在超时后重新投递。日志中可能出现 "Task was destroyed but it is pending" 警告
+- **root_cause_hypothesis**: 这 5 个消费者在开发时未实现 stop() 方法。对比 EventBus 生态中其余 11 个消费者（AchievementEventConsumer, GalaxyEventConsumer, TaskEventConsumer, MainChainArtifactConsumer 等均有 stop() 设置 `self._running = False` 并支持优雅退出）
+- **evidence**:
+  - `backend/app/services/cognitive_event_consumer.py` — grep 'def stop' 返回 0；使用 `_is_running` 但无外部 stop() 入口
+  - `backend/app/services/nudge_event_consumer.py` — grep 'def stop' 返回 0
+  - `backend/app/services/execution_event_consumer.py` — grep 'def stop' 返回 0（虽有 `_running` flag 但无 stop 方法设置它）
+  - `backend/app/services/preference_event_consumer.py` — 使用 `while True:` 无 `_running`，无 stop()
+  - `backend/app/services/profile_event_consumer.py` — grep 'def stop' 返回 0
+  - 对比：`backend/app/services/achievement_event_consumer.py:327` — `def stop(self): self._running = False` 正确实现
+- **repro_or_trigger**: 启动服务 → 等待消费者处理一批事件 → 发送 SIGTERM → 检查日志中的 pending task 警告 → 检查 Redis pending 消息计数（XPENDING）是否增加
+- **expected_vs_actual**: 期望：所有消费者统一实现 stop() → set_running(false) 模式，服务关闭时先调 stop() 等待 drain；实际：5 个消费者无 stop()，被粗暴取消
+- **blast_radius**: 影响优雅关闭质量。在 Redis consumer group 有 idle 超时机制保护（XPENDING → XCLAIM 重分配给其他消费者），单实例部署时短暂的消息重复处理风险。对北极星影响低——消息最终会被重新投递处理
+- **suggested_fix_direction**: 为 5 个消费者添加 `stop()` 方法设置 `_running = False`，并在 main.py 的 shutdown handler 中按顺序调用 stop() + 等待 drain。PreferenceEventConsumer 需重构添加 `_running` 标志
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+
 ---
 
 ## 探索日志
@@ -907,6 +1000,24 @@
 - **Opus pass rate**: 4/4 (E1/E2/E3/E4 all APPROVED by opus-reviewer at 2026-05-03T16:30)
 - **Next suggested domain**: F (事件总线消费者 DLQ/retry) or I (DB 迁移 vs 代码字段) — infrastructure resilience domains not yet explored
 
+### Round R10 — 2026-05-03T17:00
+- **Domain**: F (事件总线消费者 DLQ / 重试)
+- **Paths covered**:
+  - event_bus.py (full 1400-line EventBus implementation: subscribe/publish/retry/DLQ/consume_loop/idempotency)
+  - achievement_event_consumer.py (break-after-subscribe pattern, stop() implementation)
+  - galaxy_event_consumer.py (break-after-subscribe + reliable_consumer decorator)
+  - task_event_consumer.py (_subscribed flag pattern, adaptive replanner integration)
+  - execution_event_consumer.py (break-after-subscribe, no stop())
+  - main_chain_artifact_consumer.py (_subscribed flag pattern)
+  - preference_event_consumer.py (manual Redis xreadgroup/xack, while True, no DLQ/stop)
+  - cognitive_event_consumer.py, capsule_event_consumer.py, nudge_event_consumer.py, profile_event_consumer.py (stop() gaps)
+  - dlq_admin.py (DLQ replay admin API — confirmed exists)
+  - main.py:170-330 (20+ consumer startup sequence)
+- **New issues**: F1(P2), F2(P2), F3(P2), F4(P3)
+- **Findings**: EventBus infrastructure is well-architected with comprehensive DLQ, retry, idempotency, and stale message claiming. Discovered 4 gaps: (1) subscribe() silently returns on non-BUSYGROUP ResponseError, causing consumers to appear started when they're dead; (2) PreferenceEventConsumer bypasses the entire EventBus framework with manual Redis stream operations, lacking all safety mechanisms; (3) background consume_loop task death is undetected by all ~20 consumer start() methods because the task runs independently via asyncio.create_task() with no health monitoring; (4) 5 consumers lack stop() method, preventing graceful shutdown. DLQ redrive mechanism confirmed functional via admin API (dlq_admin.py). No un-consumed event types found (tracking_events consumed by CognitiveStreamWorker, all sparkle_events types have matching consumers).
+- **Opus pass rate**: pending
+- **Next suggested domain**: I (DB 迁移 vs 代码字段) or L (治理规则与文档承诺 vs 真实实现) — remaining unexplored domains
+
 ### Round R9 — 2026-05-03T16:30
 - **Domain**: D (Python orchestrator FSM 流转完整性)
 - **Paths covered**:
@@ -920,3 +1031,13 @@
 - **Findings**: The LangGraph planner's `graph.ainvoke()` at lang_graph_planner.py:206 has no internal timeout. 3 callers invoke `planner.plan()`: execution_engine wraps it correctly with `asyncio.wait_for(timeout=10.0)`, but plan_review_service.py:2199 and multi_agent_adapter.py:87 call it directly without timeout. If the LangGraph graph enters an infinite loop or LLM hangs, these two paths block indefinitely. The main chat path through execution_engine IS protected. Investigated STATE_FAILED recovery — confirmed the next request resets to STATE_INIT at orchestrator.py:2123, so STATE_FAILED is NOT a dead-end. Corrupted session state in state_manager returns None but orchestrator recovers with fresh state; conversation history is lost but session is functional.
 - **Opus pass rate**: 1/1 (D1 verified by opus-independent-auditor)
 - **Next suggested domain**: F (事件总线消费者 DLQ/retry) or I (DB 迁移 vs 代码字段) — infrastructure domains not yet explored
+
+### Round R11 — 2026-05-03T20:45
+- **Domain**: F (事件总线消费者 DLQ / 重试 — 续探)
+- **Paths covered**:
+  - preference_event_consumer.py (lines 30-143: manual xreadgroup/xack loop, ACK on failure, no DLQ)
+  - graph_sync_worker.py (lines 40-145: _process_message ACKs on success, re-raises on failure, no DLQ/retry)
+- **New issues**: 0
+- **Findings**: Domain F already comprehensively covered by R10's F1-F4. Verified PreferenceEventConsumer ACK-after-handle pattern (lines 131-132 catch exceptions silently, so ACK always fires even on failure — covered by F2). GraphSyncWorker lacks DLQ/retry but is less critical than PreferenceEventConsumer (covered by F2 pattern). No new gaps discovered beyond existing entries.
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: I (DB 迁移 vs 代码字段) or L (治理规则与文档承诺 vs 真实实现) — last remaining unexplored domains
