@@ -637,7 +637,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		case *protobufResponder:
 			r.SendError("unavailable", "AI Service Unavailable", true)
 		case *wsSafeWriter:
-			writeLegacyJSONLogged(r, "agent unavailable error", gin.H{"type": "error", "message": "AI Service Unavailable"})
+			writeLegacyJSONLogged(r, "agent unavailable error", gin.H{"type": "message_nack", "message_id": requestID, "error_code": "service_unavailable", "error_message": "AI Service Unavailable", "retry_after_ms": 5000, "permanent": false})
 		}
 		return false
 	}
@@ -655,7 +655,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		case *protobufResponder:
 			r.SendError("unavailable", "AI Service Unavailable", true)
 		case *wsSafeWriter:
-			writeLegacyJSONLogged(r, "agent call unavailable error", gin.H{"type": "error", "message": "AI Service Unavailable"})
+			writeLegacyJSONLogged(r, "agent call unavailable error", gin.H{"type": "message_nack", "message_id": requestID, "error_code": "service_unavailable", "error_message": "AI Service Unavailable", "retry_after_ms": 5000, "permanent": false})
 		}
 		return false
 	}
@@ -745,7 +745,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 					case *protobufResponder:
 						r.SendError("resource_exhausted", "Daily quota exceeded", false)
 					case *wsSafeWriter:
-						writeLegacyJSONLogged(r, "daily quota error", gin.H{"type": "error", "message": "Daily quota exceeded"})
+						writeLegacyJSONLogged(r, "daily quota error", gin.H{"type": "message_nack", "message_id": requestID, "error_code": "quota_exceeded", "error_message": "Daily quota exceeded", "retry_after_ms": 60000, "permanent": false})
 					}
 					return false
 				}

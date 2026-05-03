@@ -404,7 +404,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				msgMap := make(map[string]interface{})
 				if err := json.Unmarshal(msg, &msgMap); err != nil {
 					log.Printf("Failed to parse message: %v", err)
-					if !writeWSJSONLogged(writer, "invalid legacy JSON error", gin.H{"type": "error", "message": "Invalid JSON format"}) {
+					if !writeWSJSONLogged(writer, "invalid legacy JSON error", gin.H{"type": "message_nack", "message_id": generateRequestID(), "error_code": "invalid_json", "error_message": "Invalid JSON format", "permanent": true}) {
 						return true
 					}
 					return false
@@ -454,7 +454,7 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					}
 
 					if len(toolInput.ToolResultJSON) > maxToolResultLength {
-						if !writeWSJSONLogged(writer, "tool result too large error", gin.H{"type": "error", "message": "Tool result too large"}) {
+						if !writeWSJSONLogged(writer, "tool result too large error", gin.H{"type": "message_nack", "message_id": toolInput.RequestID, "error_code": "tool_result_too_large", "error_message": "Tool result too large", "permanent": true}) {
 							toolInput.Reset()
 							chatInputPool.Put(toolInput)
 							return true
@@ -489,7 +489,11 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 					// Continue with normal chat message handling
 				default:
 					log.Printf("Unknown message type: %s", msgType)
-					if !writeWSJSONLogged(writer, "unknown message type error", gin.H{"type": "error", "message": "Unknown message type"}) {
+					requestIDForNack, _ := msgMap["request_id"].(string)
+					if requestIDForNack == "" {
+						requestIDForNack = generateRequestID()
+					}
+					if !writeWSJSONLogged(writer, "unknown message type error", gin.H{"type": "message_nack", "message_id": requestIDForNack, "error_code": "unknown_message_type", "error_message": "Unknown message type", "permanent": true}) {
 						return true
 					}
 					return false
@@ -508,14 +512,14 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 				// Parse JSON input
 				if err := json.Unmarshal(msg, input); err != nil {
 					log.Printf("Failed to parse message: %v", err)
-					if !writeWSJSONLogged(writer, "invalid chat JSON error", gin.H{"type": "error", "message": "Invalid JSON format"}) {
+					if !writeWSJSONLogged(writer, "invalid chat JSON error", gin.H{"type": "message_nack", "message_id": generateRequestID(), "error_code": "invalid_json", "error_message": "Invalid JSON format", "permanent": true}) {
 						return true
 					}
 					return false
 				}
 
 				if input.Message == "" {
-					if !writeWSJSONLogged(writer, "empty message error", gin.H{"type": "error", "message": "Empty message"}) {
+					if !writeWSJSONLogged(writer, "empty message error", gin.H{"type": "message_nack", "message_id": input.RequestID, "error_code": "empty_message", "error_message": "Empty message", "permanent": true}) {
 						return true
 					}
 					return false

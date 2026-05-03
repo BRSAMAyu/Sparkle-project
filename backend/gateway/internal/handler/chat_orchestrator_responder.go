@@ -74,13 +74,17 @@ func (r *envelopeResponder) SendError(code, message string, retryable bool) {
 		"error_code": normalizeErrorCodeString(enumCode),
 		"message":    message,
 		"retryable":  retryable,
+		"permanent":  !retryable,
+	}
+	if r.envelope != nil && r.envelope.MessageID != "" {
+		errBody["message_id"] = r.envelope.MessageID
 	}
 	raw, err := json.Marshal(errBody)
 	if err != nil {
 		log.Printf("Failed to encode error: %v", err)
 		return
 	}
-	payload["error"] = raw
+	payload["message_nack"] = raw
 	if err := r.writeEnvelope(payload, traceparentFromContext(r.ctx)); err != nil {
 		log.Printf("Failed to send error: %v", err)
 	}
@@ -295,8 +299,12 @@ func (r *protobufResponder) SendError(code, message string, retryable bool) {
 		"error_code": normalizeErrorCodeString(enumCode),
 		"message":    message,
 		"retryable":  retryable,
+		"permanent":  !retryable,
 	}
-	r.sendProto("error", marshalJSON(errBody))
+	if r.msg != nil && r.msg.GetRequestId() != "" {
+		errBody["message_id"] = r.msg.GetRequestId()
+	}
+	r.sendProto("message_nack", marshalJSON(errBody))
 }
 
 func (r *protobufResponder) SendActionStatus(actionID, status string, data map[string]interface{}) {
