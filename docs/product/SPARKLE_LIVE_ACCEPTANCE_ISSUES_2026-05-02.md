@@ -402,6 +402,7 @@
 | R26 | 2026-05-04T06:00 | J | 0 | N/A | J 域续探——achievement/galaxy/auth/router/splash 冷启动全部健壮，零缺口 |
 | R27 | 2026-05-04T07:00 | A | 0 | N/A | A 域续探——task/goal/report/contract E2E 全链路验证通过，B5 模式未扩散 |
 | R28 | 2026-05-04T09:00 | D | 0 | N/A | D 域续探——D2 fix 验证通过（snapshot/rationale 已传递），FSM/锁/断路器/检查点/双核路由全部健壮，零缺口 |
+| R29 | 2026-05-04T09:30 | G | 3 | pending | G 域续探——reportMessage/claimTask/searchUsers/sendFriendRequest 等多处空 stub → 虚假成功 / 功能不可用 |
 
 ---
 
@@ -1074,6 +1075,7 @@
 | R24 | 2026-05-04T08:05 | ISSUE-20260503-0432-L3 | ✅ Fixed | d4a98b44b | ~45 min |
 | R25 | 2026-05-04T09:35 | ISSUE-20260503-2300-B1 | ✅ Fixed | ad825322c | ~10 min |
 | R26 | 2026-05-04T08:25 | ISSUE-20260503-2301-B2 | ✅ Fixed | 6b69c479d | ~35 min |
+| R27 | 2026-05-03T08:20 | ISSUE-20260504-0016-H5 | ✅ Fixed | b8a11dfea | ~5 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1467,7 +1469,7 @@
   **(f) CLAUDE.md / Rule guards: NO VIOLATIONS.** No secrets, no hardcoded tokens, no cross-layer boundary violations. Go gateway schema.sql update follows established pattern. Rule guards all pass (AX pre-existing unrelated).
 
 ### ISSUE-20260504-0016-H5
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-04T08:30:00Z
 - **domain**: H
@@ -1486,7 +1488,9 @@
 - **suggested_fix_direction**: 将 6 处硬编码英文替换为 `I18nService.instance.isChinese ? '中文' : 'English'` 模式，与 H1 修复中 promote/demote/transfer 的 i18n 方式保持一致
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T01:00:00Z
-- **fix_commit**:
+- **fix_commit**: b8a11dfea
+- **opus_review**: APPROVED by opus-independent-reviewer at 2026-05-03T08:18:19Z
+- **closed_at**: 2026-05-03T08:20:00Z
 
 ### Round R16 — 2026-05-04T00:30
 - **Domain**: Cross-domain regression (G + I + H integration check)
@@ -1741,6 +1745,67 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T05:15:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) capsule_provider.dart:160-162 catch 块返回 null: `} catch (e) { return null; }`。(2) submitFeedback 方法成功时返回 CapsuleFeedbackModel，失败时返回 null 不更新 state。(3) capsule_detail_screen.dart:265-276 UI 层 `await ref.read(...).submitFeedback(...)` 后无条件调用 `AppFeedback.success(...)`，不检查返回值是否为 null。(4) capsule_repository.dart:94-121 实际 POST `/capsules/$id/feedback` 无 fallback。调用链完整：UI onSubmitted → await provider.submitFeedback() → repository.submitFeedback() → POST /capsules/$id/feedback → API 失败 → catch 返回 null → UI 不检查 null → mounted 检查通过 → 无条件显示成功 toast。与 B1 (_payload 静默转换), B2 (乐观更新无声回退), B3 (catch-all), B4 (空 catch) 均不重复——B5 是"provider 返回 null 表示失败 + UI 不检查 null → 虚假成功 toast"的独立组合模式。与 K1 也不重复——K1 是 startNextStep/completeNextStep 无 try/catch 导致异常未被捕获，B5 是有 catch 但返回 null 且 UI 不检查。P2 评级合理——反馈数据是 Aurora 认知系统个性化推荐的关键信号，虚假成功导致反馈回路断裂。
+- **fix_commit**: 留空
+
+### ISSUE-20260504-0930-G4
+- **status**: discovered
+- **severity**: P2
+- **domain**: G
+- **title**: Mock reportMessage 静默空实现导致举报提交后 UI 显示虚假成功 toast
+- **symptom**: 在 demo 模式下，用户在群聊中点击消息举报、选择原因、填写说明、提交后，UI 弹出 "Report submitted" 成功 toast，但举报数据实际上被静默丢弃——mock 不进行任何 HTTP 调用也不更新任何内部状态
+- **root_cause_hypothesis**: MockCommunityRepository.reportMessage() (line 1898) 为空函数体 `async {}`，立即返回成功的 Future<void>。UI 层 group_chat_screen.dart:254 在 await 调用后无条件显示 `AppFeedback.success()`，不检查 mock 是否真正执行了操作。real 实现通过 POST /community/reports 提交举报，mock 完全跳过此步骤。这是 B5 虚假成功模式在 G 域的独立实例
+- **evidence**:
+  - `mobile/lib/features/community/data/repositories/mock_community_repository.dart:1894-1898` — reportMessage 空实现: `Future<void> reportMessage(String messageId, ReportReason reason, {String? description}) async {}`
+  - `mobile/lib/features/chat/presentation/screens/group_chat_screen.dart:245-259` — UI 调用后无条件显示成功: `await ref.read(communityRepositoryProvider).reportMessage(msg.id, selectedReason, ...); if (!mounted) return; AppFeedback.success(context, context.l10n.chatGroupReportSubmitted);`
+  - `mobile/lib/features/community/data/repositories/community_repository.dart:946-959` — real 实现 POST 到 `/community/reports` 含 reason/description/message_id，mock 完全跳过
+- **repro_or_trigger**: Demo 模式 → Community → 进入群聊 → 长按消息 → Report → 选择原因 → 填写说明 → 点击 Submit → 看到绿色 "Report submitted" toast（实际举报被丢弃）
+- **expected_vs_actual**: 期望：mock 至少应在内存中记录举报（如 append 到 _mockReports 列表），或提示 "Demo 模式不支持举报"；实际：虚假成功 toast，用户信任被侵蚀
+- **blast_radius**: 影响 demo 模式下社区举报功能。用户在 demo 中学习产品行为后会误以为举报功能正常工作，形成错误的心理模型。对北极星影响低——demo 模式数据非持久化，但信任侵蚀是累积性损害
+- **suggested_fix_direction**: 让 mock reportMessage 至少追加到内部列表（如 _mockReports），或以 toast 明确提示 "Demo 模式：举报已记录但不会发送到服务器"。禁止静默丢弃
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-0931-G5
+- **status**: discovered
+- **severity**: P2
+- **domain**: G
+- **title**: Mock getGroupTasks 硬编码返回 [] 使群组任务看板完全不可用，且创建任务后立即消失
+- **symptom**: 在 demo 模式下，群组任务看板（Group Tasks）始终显示 "No tasks yet" 空状态。用户点击 "+" 按钮创建任务后，看到 loading 然后立即回到 "No tasks yet"——刚创建的任务消失了。claimTask/completeTask 由于总是空列表而永远无法被触发
+- **root_cause_hypothesis**: MockCommunityRepository.getGroupTasks() (line 1446) 硬编码返回 `[]`。createGroupTask() (line 1448-1463) 虽然返回 GroupTaskInfo 对象但 id/ title 为空字符串。provider.createTask() 在调用 createGroupTask 后立即调用 loadTasks() → getGroupTasks() 返回 [] → state = AsyncData([]) → 刚创建的任务消失。claimTask (line 1465) 和 completeTask (line 1937) 也是空 stub，但由于列表恒为空而永远不会被触发
+- **evidence**:
+  - `mobile/lib/features/community/data/repositories/mock_community_repository.dart:1446` — `Future<List<GroupTaskInfo>> getGroupTasks(String groupId) async => [];`
+  - `mobile/lib/features/community/presentation/providers/community_provider.dart:1532-1539` — loadTasks() 将 getGroupTasks 返回值直接设为 state: `final tasks = await _repository.getGroupTasks(_groupId); state = AsyncValue.data(tasks);`
+  - `mobile/lib/features/community/presentation/providers/community_provider.dart:1553-1559` — createTask() 创建后立即 loadTasks() 导致任务消失: `await _repository.createGroupTask(_groupId, task); await loadTasks();`
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:44-50` — tasks.isEmpty 时显示 "No tasks yet" 空状态
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:35-40` — "+" FAB 触发创建任务对话框
+- **repro_or_trigger**: Demo 模式 → Community → 进入群组 → Tasks tab → 看到 "No tasks yet" → 点击 "+" → 填写任务标题 → 点击创建 → 看到 loading → 回到 "No tasks yet"（任务消失）
+- **expected_vs_actual**: 期望：demo 模式下群组任务看板展示示例任务（类似 G2 fix 为 feed 创建示例帖子），创建的任务应在列表中保留；实际：任务看板永远空，创建的任务立即可见消失——这比纯空列表更差，因为它给出了"操作成功"的短暂幻觉然后反悔
+- **blast_radius**: 影响 demo 模式下社区问责制（accountability）任务系统的完整体验。群组任务是社区北极星功能之一——用户通过互相监督任务完成形成社会约束。demo 中该功能完全不可体验。对北极星有间接影响
+- **suggested_fix_direction**: 让 mock getGroupTasks 返回内部可变列表 `_mockGroupTasks`（类似 G1 fix 为 getGroupMembers 的做法），createGroupTask/claimTask/completeTask 操作该列表。至少创建 2-3 条示例任务（不同状态：unclaimed/in-progress/completed）展示看板功能
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-0932-G6
+- **status**: discovered
+- **severity**: P3
+- **domain**: G
+- **title**: Mock searchUsers 硬编码返回 [] 且 sendFriendRequest 为空 stub——demo 模式用户发现与添加好友链路完全不可用
+- **symptom**: 在 demo 模式下，用户打开好友搜索页面（UserSearchScreen），输入任何关键词搜索都返回空结果 "No users found"。即使用户通过其他路径看到用户列表，点击 "Send Friend Request" 后 UI 显示 "Friend request sent" 成功 toast，但 mock 的 sendFriendRequest 为空 stub——好友请求被静默丢弃
+- **root_cause_hypothesis**: MockCommunityRepository.searchUsers() (line 1242-1243) 硬编码返回 `[]`，忽略所有搜索关键词。sendFriendRequest() (line 1035-1038) 为空函数体 `async {}`。两个断开点叠加：searchUsers 返回空使好友发现不可能，sendFriendRequest 空 stub 使任何通过搜索以外途径发出的好友请求也被静默丢弃
+- **evidence**:
+  - `mobile/lib/features/community/data/repositories/mock_community_repository.dart:1242-1243` — `Future<List<UserBrief>> searchUsers(String keyword, {int limit = 20}) async => [];`
+  - `mobile/lib/features/community/data/repositories/mock_community_repository.dart:1035-1038` — `Future<void> sendFriendRequest(String targetUserId, {String? message}) async {}`
+  - `mobile/lib/features/community/presentation/screens/user_search_screen.dart:32-37` — 搜索触发: `ref.read(userSearchProvider.notifier).search(query);` → provider 调用 repository.searchUsers() → 返回 []
+  - `mobile/lib/features/community/presentation/screens/user_search_screen.dart:66-73` — 发送好友请求后无条件显示成功: `await ref.read(communityRepositoryProvider).sendFriendRequest(user.id); if (mounted) { AppFeedback.success(context, 'Friend request sent to ${user.displayName}'); }`
+  - `mobile/lib/features/community/data/repositories/community_repository.dart:198-206` — real 实现 GET `/community/users/search?keyword=` 和 POST `/community/friends/request`，mock 均跳过
+- **repro_or_trigger**: Demo 模式 → Community → Friends → 搜索用户 → 输入任意关键词 → 看到 "No users found" → 如果从群组成员列表点击用户 → 选择 "Send Friend Request" → 看到 "Friend request sent" toast（实际请求被丢弃）
+- **expected_vs_actual**: 期望：searchUsers 返回与关键词匹配的 mock 用户（_mockUsers 有 5 个用户数据可用），sendFriendRequest 至少将请求记录到内部列表；实际：搜索永远无结果，好友请求静默丢弃 + 虚假成功 toast
+- **blast_radius**: 影响 demo 模式下社区好友系统的完整体验。好友系统是社区的基础设施——用户无法在 demo 中发现和添加好友，无法体验好友动态、私聊等依赖好友关系的功能。对北极星影响低——demo 模式非持久化
+- **suggested_fix_direction**: 让 searchUsers 对 _mockUsers 做简单本地过滤（按 displayName/username 匹配关键词），让 sendFriendRequest 将被请求用户追加到 _mockPendingRequests 列表
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
