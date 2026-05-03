@@ -1682,7 +1682,7 @@
 
 
 ### ISSUE-20260504-0500-B4
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: B
 - **title**: NotificationNotifier.markAsRead API 标记已读失败时 catch 块完全为空，用户无任何错误反馈
@@ -1698,11 +1698,12 @@
 - **blast_radius**: 影响通知列表页的标记已读操作。通知系统是用户接收任务提醒、成就推送、社区动态的入口，标记已读失败会累积"未读"通知造成信息焦虑。对北极星有间接影响——用户可能被无法消除的未读通知困扰
 - **suggested_fix_direction**: 在 catch 块中至少添加 `debugPrint('markAsRead failed: $e')` 记录错误日志；更好的方案是设置短暂的 error 状态或通过 callback 通知 UI 显示 snackbar（与 friends_screen.dart 的 deleteFriend 模式一致）
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T05:15:00Z
+- **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) notification_provider.dart:40-42 的 catch 块仅含 `// Handle error` 注释，完全空。(2) markAsRead 使用正确的 API-first 模式，但由于空 catch 导致 API 失败时 state 保持旧值、通知留在列表中。(3) notification_list_screen.dart:101-104 UI 层 onTap 直接调用 markAsRead 不 await/try-catch，无错误反馈路径。(4) notification_repository.dart:71-77 repository 层 PUT 无 fallback。调用链完整：UI onTap → ref.read().markAsRead() → repository.markAsRead() → PUT /notifications/$id/read → API 失败 → catch 空 → 无 state 更新 → 蓝点不消失。对比同文件 fetchUnreadNotifications() (line 25-27) 正确使用 `catch (e, st) { state = AsyncValue.error(e, st); }` 证明空 catch 非设计意图。与 B1 (_payload 静默转换), B2 (乐观更新无声回退), B3 (catch-all 使 error 状态不可达) 均不重复——B4 是"API-first 正确但 catch 完全为空"的独立模式。P2 评级合理——通知标记已读失败累积未读通知造成信息焦虑，对北极星有间接影响。
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-0501-B5
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: B
 - **title**: CapsuleDetailNotifier.submitFeedback API 失败时返回 null 但 UI 无条件显示"反馈提交成功"toast
@@ -1718,7 +1719,8 @@
 - **blast_radius**: 影响好奇心胶囊的反馈功能——这是 Aurora 认知系统收集用户对有价值内容偏好的关键信号。虚假成功意味着：(1) 用户偏好的反馈数据丢失，(2) Aurora 的个性化推荐质量下降，(3) 用户信任被侵蚀（"明明评价了为什么还推荐同样的内容"）。对北极星有间接影响——认知系统的反馈回路断裂
 - **suggested_fix_direction**: (1) provider 层：失败时抛出异常而非返回 null（remove `catch (e) { return null; }` 改为让异常传播）；(2) UI 层：用 try/catch 包裹 await，catch 中显示 error toast 而非 success。或保持 provider 返回 null 模式，UI 层检查 `if (result != null)` 再显示 success
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T05:15:00Z
+- **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) capsule_provider.dart:160-162 catch 块返回 null: `} catch (e) { return null; }`。(2) submitFeedback 方法成功时返回 CapsuleFeedbackModel，失败时返回 null 不更新 state。(3) capsule_detail_screen.dart:265-276 UI 层 `await ref.read(...).submitFeedback(...)` 后无条件调用 `AppFeedback.success(...)`，不检查返回值是否为 null。(4) capsule_repository.dart:94-121 实际 POST `/capsules/$id/feedback` 无 fallback。调用链完整：UI onSubmitted → await provider.submitFeedback() → repository.submitFeedback() → POST /capsules/$id/feedback → API 失败 → catch 返回 null → UI 不检查 null → mounted 检查通过 → 无条件显示成功 toast。与 B1 (_payload 静默转换), B2 (乐观更新无声回退), B3 (catch-all), B4 (空 catch) 均不重复——B5 是"provider 返回 null 表示失败 + UI 不检查 null → 虚假成功 toast"的独立组合模式。与 K1 也不重复——K1 是 startNextStep/completeNextStep 无 try/catch 导致异常未被捕获，B5 是有 catch 但返回 null 且 UI 不检查。P2 评级合理——反馈数据是 Aurora 认知系统个性化推荐的关键信号，虚假成功导致反馈回路断裂。
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
