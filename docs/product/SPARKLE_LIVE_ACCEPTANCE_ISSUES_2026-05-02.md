@@ -604,10 +604,11 @@
   - CLAUDE.md compliance: PASS — Go Gateway 层无 business logic (纯持久化 logic), 无跨层泄漏, no hardcoded secrets, no proto 变更
 
 ### ISSUE-20260503-1512-K3
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: K
 - **fixer_started_at**: 2026-05-03T20:45:00Z
+- **closed_at**: 2026-05-03T21:30:00Z
 - **title**: 12+ Flutter 首页/体验卡片在 provider 错误时使用 SizedBox.shrink() 静默消失，用户无任何错误提示
 - **symptom**: 当任何体验相关的后端 API 返回错误时，首页和体验页面的多个卡片区域会静默消失——不显示错误消息、不提供重试按钮、不留任何占位。用户看到的只是页面突然少了内容，无法区分是功能不存在还是加载失败
 - **root_cause_hypothesis**: 多个 ConsumerWidget 子类在 .when() 的 error 分支使用 error: (_, __) => const SizedBox.shrink() 模式。当 Riverpod provider 进入 AsyncError 状态时，卡片完全不可见。与同项目中 dashboard_screen 的 _buildErrorCard（提供重试按钮）形成对比
@@ -627,7 +628,24 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer-K+2026-05-03T15:15
 - **reviewer_note**: APPROVED — 抽查确认 8/8 引用文件中所有 .when() error 分支都使用 SizedBox.shrink()。非设计意图：同项目 dashboard_screen 的 _buildErrorCard 模式证明项目期望的错误处理方式是显示带重试按钮的 error card。部分卡片的 loading 分支也用 SizedBox.shrink()（如 growth_quality_card.dart:16），这是有意的 skeleton-less loading；但 error 分支消失失去"无数据"vs"加载失败"的区分，是真实 UX 缺口。12+ 卡片覆盖首页/体验页的核心激励区域，大面积静默消失直接影响北极星体验。
-- **fix_commit**:
+- **fix_commit**: 4d3bae8d8
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-03T21:30:00Z
+
+  (a) Root cause genuinely resolved: All 8 evidence-cited files replace `const SizedBox.shrink()` with `CompactErrorCard(onRetry: ref.invalidate(provider))`. New widget gives visible inline error feedback ("加载失败"/"Failed to load") with tap-to-retry ("轻触重试"/"Tap to retry"). Silent disappearance replaced with actionable error recovery.
+
+  (b) No regression risk: Change is purely additive UI presentation. Each file only modifies the error branch of `.when()`. `ref.invalidate()` is standard Riverpod. All 8 `import 'compact_error_card.dart'` added correctly. `plan_context_summary.dart:72` `ref.invalidate(planDetailProvider(plan))` resolves `plan` to String planId from line 62 (lexically correct — error branch has no `plan` param, so it resolves to the outer scope String, not the shadowed `data:` branch param).
+
+  (c) Cross-layer: N/A — pure Flutter UI change. No proto/DB/i18n changes.
+
+  (d) Tests: N/A — Flutter tests cannot run due to pre-existing IsarCore compilation errors (MEMORY.md). Fix is visual — would be verified by UI inspection.
+
+  (e) CLAUDE.md / Rule guards: I18N PASS. AX FAIL = pre-existing proxy_routes.go route-tier comments (31 violations, documented in prior reviews). BG WARN = pre-existing proto staleness. All other rules PASS. No new violations. i18n pattern uses documented `I18nService.instance.isChinese ? '中文' : 'English'`. All design system constants verified present: DS.spacing6/8/16, DS.textTertiary, DS.brandPrimary.
+
+  (f) Provider validity: All 8 onRetry providers exist — communityAccountabilitySnapshotProvider, experienceGrowthDashboardProvider, understandingSnapshotProvider, unreadNotificationsProvider, multiGoalOverviewProvider, returnCaseFileProvider, learningHeatmapProvider, planDetailProvider. `learningHeatmapProvider(days)` correctly preserves family arg. `planDetailProvider(plan)` correctly uses String planId.
+
+  (g) Missed card (follow-up): `goal_detail_snapshot_card.dart:28` in same directory as 3 fixed cards still uses `error: (_, __) => const SizedBox.shrink()`. Not in issue evidence. Recommend follow-up: `CompactErrorCard(onRetry: () => ref.invalidate(currentGoalDetailSnapshotProvider))`.
+
+  (h) Remaining invisible-error cards (11 files, outside evidence scope): calendar/smart_schedule_chip, error_book screens (2), error_book/remediable_patterns_card, aurora/calibration_strip, user/profile_screen, task/task_detail_screen, task/task_protocol_panel, community/accountability_screen, community/similar_goal_pursuers_card, reviews/nightly_review_panel. Worth a broader cleanup pass.
 
 ### ISSUE-20260503-1513-K4
 - **status**: verified
@@ -985,6 +1003,7 @@
 | R9 | 2026-05-03T20:25 | ISSUE-20260503-1530-A1 | ✅ Fixed | 1c22526b7 | ~20 min |
 | R10 | 2026-05-03T20:30 | ISSUE-20260503-1511-K2 | closed | 58e05cbae | ~20 min |
 | R11 | 2026-05-03T21:10 | ISSUE-20260503-1600-E1 | ✅ Fixed | (pending) | ~35 min |
+| R12 | 2026-05-03T21:45 | ISSUE-20260503-1512-K3 | closed | 4d3bae8d8 | ~45 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
