@@ -7,6 +7,8 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from loguru import logger
+
 from app.services.personalization.preference_service import PreferenceService
 from app.services.plan_state_service import PlanStateService
 
@@ -235,7 +237,8 @@ class SelfRevisionService:
                 parsed = json.loads(raw)
                 if isinstance(parsed, (dict, list)):
                     return parsed
-        except Exception:
+        except Exception as e:
+            logger.warning("Failed to read/parse Redis key={}: {}", key, e)
             return None
         return None
 
