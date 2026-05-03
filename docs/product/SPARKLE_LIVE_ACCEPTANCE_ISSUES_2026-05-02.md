@@ -1819,7 +1819,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-0945-E5
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: E
 - **title**: dual_core_router kill switch 已正确集成到 routing_engine 但未纳入 drill 自动化——状态变更不可观测
@@ -1835,11 +1835,12 @@
 - **blast_radius**: 影响运维完整性。dual_core_router 控制双核路由路径（off→balanced 回退，live→Aurora 全路由），是架构关键开关。无法通过 drill 验证意味着在 dual_core_router kill switch 变更后无自动化验证。对北极星有间接影响——如果 dual_core_router kill switch 意外关闭，Aurora 双核路由回退到 balanced 模式，个性化路由失效
 - **suggested_fix_direction**: 在 run_kill_switch_drills.py 的 DEFAULT_SPECS 中添加 "dual_core_router"，并实现对应的 `_dual_core_apply()` 函数调用 `AuroraDualCoreRouterKillSwitchService().set_mode()`
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T09:45
+- **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) DEFAULT_SPECS 共 21 个条目（stage18-39 + privacy + doc_context + stage40-calendar），`grep -n dual_core_router run_kill_switch_drills.py` 零匹配——确认完全缺席。(2) drill_all.sh 先调用 run_kill_switch_drills.py 再逐个 bash stage33-39 legacy drills，全程无 dual_core_router。(3) routing_engine.py:1180-1224 运行时 kill switch 集成正确——off→balanced 回退，live/shadow→Aurora 路由。(4) AuroraDualCoreRouterKillSwitchService 提供 set_mode()/get_mode()/summary()，表明设计上支持 drill 但未接入。调用链：drill_all.sh → run_kill_switch_drills.py → 迭代 DEFAULT_SPECS → 无 dual_core_router 条目 → 永远不调用 service.set_mode()。与 E1（dual_core_router 完全缺失 kill switch）不重复——E1 是 kill switch 不存在，E5 是 kill switch 存在但 drill 未覆盖。非"设计如此"——service 有 set_mode() 方法即为 drill 接口，未挂接是疏漏。
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-0946-E6
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: E
 - **title**: Stage38 kill switch 的 Prometheus stage 标签使用 "stage38" 而非 "38"——打破跨 stage 的标签一致性
@@ -1856,11 +1857,12 @@
 - **blast_radius**: 影响 Prometheus 查询和 Grafana 面板的跨 stage 聚合。运维人员使用 `stage=~"\\d+"` 过滤时遗漏 Stage38 指标。不影响运行时行为——仅可观测性受影响。对北极星无直接影响
 - **suggested_fix_direction**: 将 `_ERR_REPLAN_BINDING` 和 `_PUSH_SCHEDULER_BINDING` 的 `stage="stage38"` 改为 `stage="38"`。同时检查 module-level `record_mode_gauge` 调用（lines 68-77）是否也需要同步修改（当前使用 `_ERR_REPLAN_BINDING.stage` / `_PUSH_SCHEDULER_BINDING.stage` 引用，修改 binding 即可自动跟随）
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T09:45
+- **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) _ERR_REPLAN_BINDING line 13: stage="stage38"。(2) _PUSH_SCHEDULER_BINDING line 21: stage="stage38"。(3) _STAGE37_BINDING line 16: stage="37"——纯数字。(4) _BINDING_MASTER line 12: stage="39"——纯数字。(5) KILL_SWITCH_MODE Gauge labels=["stage","feature"] 无 schema 约束。跨 stage 对比审计：stage18/19/21/23-31/33-35/37/39/40 全部使用纯数字，仅 stage38 使用 "stage38"。module-level record_mode_gauge (line 68-77) 引用 binding.stage——修改 binding 即可自动跟随，无需单独修改。与 E3/E4（drill 覆盖/权限）不重复。非"设计如此"——无其他 stage 使用 "stage{N}" 格式，纯数字是明确规范。
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-0947-E7
-- **status**: discovered
+- **status**: verified
 - **severity**: P3
 - **domain**: E
 - **title**: Privacy kill switch drill 使用临时的 inline type() 替代 KillSwitchBinding——缺少 allowed_modes 字段会导致 write_mode() 崩溃
@@ -1876,7 +1878,8 @@
 - **blast_radius**: 影响 drill_all 完整性——如果 privacy 条目崩溃，drill_all 可能在 privacy 处中断，后续 doc_context 和 stage40-calendar 条目无法执行。不影响运行时——privacy.py 的 `pii_redaction_mode()` 直接读取 settings 而非通过 kill_switch module。对北极星无直接影响
 - **suggested_fix_direction**: 将 `_PRIVACY_BINDING` 替换为正式的 `KillSwitchBinding(stage="privacy", feature="pii_redaction", redis_key="aurora:privacy:pii_redaction", settings_attr="AURORA_PRIVACY_PII_REDACTION_MODE", fallback_mode="live")`。如隐私不应被 Redis 覆盖（安全设计），则从 DEFAULT_SPECS 中移除 privacy 并添加注释说明原因
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T09:45
+- **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) line 230-235: `_PRIVACY_BINDING = type("PrivacyBinding", (), {5 attrs})()` 仅有 stage/feature/redis_key/settings_attr/fallback_mode，缺少 allowed_modes/enabled_legacy_modes/legacy_bool_attr/enabled_mode。(2) kill_switch.py:125: `write_mode()` 访问 `binding.allowed_modes` —— 对 inline type() 对象触发 AttributeError。(3) kill_switch.py:9: TRI_STATE_MODES = frozenset({"off","shadow","live"})；line 34: KillSwitchBinding.allowed_modes 默认值 = TRI_STATE_MODES。(4) DEFAULT_SPECS line 63 含 "privacy" → SPECS["privacy"] (line 385-391) 使用 apply_mode=_privacy_apply → 调用 _ks_write_mode(即 kill_switch.write_mode) → crash。调用链完整：drill_all.sh → run_kill_switch_drills.py → iter DEFAULT_SPECS → "privacy" → _privacy_apply(mode) → _ks_write_mode(binding=_PRIVACY_BINDING) → write_mode() → binding.allowed_modes → AttributeError。backend/app/services/ 下无 AuroraPrivacyKillSwitchService（grep 零匹配），确认唯一绑定是此 inline type()。与 E2（privacy 读路径绕过 read_mode 缺失 gauge）不重复——E2 是运行时读路径可观测性，E7 是 drill 写路径崩溃。非"设计如此"——其他 drill 条目（stage18-39, doc_context, stage40-calendar）均使用正式 KillSwitchBinding 或专用 kill switch 服务。
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
