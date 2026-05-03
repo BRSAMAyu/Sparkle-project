@@ -369,8 +369,8 @@
 - **Routes Verified (working with data)**: 5
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
-- **Discovered (not verified)**: 0
-- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 3 (I1/I2/I3)
+- **Discovered (not verified)**: 4 (L1/L2/L3/L4)
+- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 3 (I1/I2/I3) + 3 (I1/I2/I3)
 
 ---
 
@@ -389,6 +389,9 @@
 | R8 | 2026-05-03T16:00 | E | 4 | 4/4 | Aurora kill switch: E1 Dual-Core Router zero KS, E2 Privacy Prometheus gauge bypass, E3 drill_all.sh missing 37-39, E4 permissions 644 |
 | R9 | 2026-05-03T16:30 | D | 1 | 1/1 (D1 verified) | LangGraph planner timeout missing in 2/3 callers |
 | R10 | 2026-05-03T17:00 | F | 4 | 4/4 | Event bus consumers: F1 subscribe silent fail, F2 Preference bypass, F3 health blind spot, F4 missing stop() |
+| R11 | 2026-05-03T20:45 | F | 0 | N/A | F-domain 续探——PreferenceEventConsumer + GraphSyncWorker，无新增 |
+| R12 | 2026-05-03T21:00 | I | 3 | 3/3 | DB schema vs code field: I1 TaskStatus enum三层不一致, I2 paused_at缺失, I3 ReportReason不匹配 |
+| R13 | 2026-05-03T22:00 | L | 4 | pending | Governance rules vs real implementation: L1 BH orphan, L2 AV stale lists, L3 no secret guard, L4 shallow checks |
 | R12 | 2026-05-03T21:00 | I | 3 | 3/3 | DB migration vs code field comparison — I1 TaskStatus enum, I2 paused_at/reason columns, I3 ReportReason enum |
 
 ---
@@ -916,12 +919,15 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-2100-I1
-- **status**: in_progress
+- **status**: closed
 - **severity**: P1
 - **domain**: I
 - **title**: TaskStatus 枚举三层不一致：Go sqlc 缺失 PAUSED/RESTORE/STUCK，RESTORE 从未加入 PostgreSQL enum
 - **fixer_started_at**: 2026-05-03T21:50:00Z
+- **closed_at**: 2026-05-03T22:15:00Z
+- **fix_commit**: cde0cb99b
 - **reviewer_note**: APPROVED — 独立审阅确认全部 7 处 evidence：(1) schema.sql:462-467 仅 4 值 PENDING/IN_PROGRESS/COMPLETED/ABANDONED；(2) models.go:1205-1210 sqlc 生成的 Taskstatus 常量仅 4 个；(3) task.py:46-54 Python 定义 7 值含 PAUSED/RESTORE/STUCK；(4) task_model.dart:22-37 Flutter 定义 7 值；(5) c21 迁移将 PAUSED 加入 PostgreSQL enum；(6) lane_d 迁移将 STUCK 加入 PostgreSQL enum；(7) grep RESTORE 在所有 Alembic versions/ 中无结果。调用链验证：Go 侧 schema.sql 是 sqlc 源，缺失 3 值导致 Go 无法识别 PAUSED/STUCK 状态的任务（Scan 方法虽接受任意字符串但常量定义不完整）。Python 侧 goal_router.py:253 和 experience.py:277 的 WHERE status IN (..., RESTORE) 查询不会报错（仅 WHERE 过滤），但任何 task.status = TaskStatus.RESTORE; session.commit() 会触发 PostgreSQL invalid input value for enum taskstatus 错误。非设计意图——RESTORE 在代码中被用于 DB 查询过滤，说明开发者期望它是持久化状态。与其他任何条目无重复。
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-03T21:50:00Z. Fix commit cde0cb99b verified across all 5 review dimensions: (a) Root cause resolved — schema.sql now has 7 values (PENDING/IN_PROGRESS/COMPLETED/ABANDONED/STUCK/PAUSED/RESTORE), alembic c27 adds RESTORE to PostgreSQL enum, sqlc regenerated 7 Taskstatus constants. Not a hack — each change targets a specific missing piece. (b) No regression risk — Go handlers have 0 string-based task status comparisons (only task_sync.go:196 uses constant db.TaskstatusPENDING); Python RESTORE usage in experience.py:277/goal_router.py:253 is read-only WHERE filters. (c) 4-layer cross-layer sync verified — PostgreSQL enum (schema.sql + c21 + lane_d + c27) = 7, Python TaskStatus (task.py:46-53) = 7, Go Taskstatus constants (models.go:1475-1481) = 7, Flutter TaskStatus (task_model.dart:22-36) = 7. All identical values. (d) Tests pass — Go TestGeneratedEnumScanners/Taskstatus PASS (exercises all 7 values including RESTORE NullTaskstatus); Python 6/6 PASS (test_task_status_enum.py). Note: tests verify code-level enum completeness but would not catch DB drift without integration test. (e) Rule guards 64/64 pass — AX comment-tier + BG proto staleness are pre-existing, not caused by this fix. schema.sql 14159+/2679- diff is from make sync-db pg_dump catching up committed schema to actual DB state (Aurora tables, card tables, etc.) — no unintended schema changes. query.sql.go diff (19 lines) adds columns already existing in DB to GetKnowledgeNodeByID and GetTaskByID queries — sqlc regeneration artifact only.
 - **symptom**: 当 Go gateway 读取到 status=PAUSED/STUCK 的任务行时，sqlc 生成的 Taskstatus 类型无法识别这些值。当 Python 尝试写入 status=RESTORE 时，PostgreSQL 直接报 invalid input value for enum taskstatus 错误
 - **root_cause_hypothesis**: Alembic 迁移 c21 和 lane_d 分别向 PostgreSQL 的 taskstatus enum 添加了 PAUSED 和 STUCK，但 Go 侧的 schema.sql 从未同步更新（仍只有 PENDING/IN_PROGRESS/COMPLETED/ABANDONED 四值）。sqlc 从 schema.sql 生成的 Go 代码自然缺失这三个值。同时 Python SQLAlchemy model 定义了 RESTORE 但没有任何 Alembic 迁移将其添加到 PostgreSQL enum，导致 RESTORE 值在 DB 层面不存在
 - **evidence**:
@@ -938,7 +944,7 @@
 - **suggested_fix_direction**: (1) 更新 schema.sql 的 taskstatus enum 添加 PAUSED/RESTORE/STUCK 并重新运行 `make sync-db` + sqlc gen。(2) 添加 Alembic 迁移将 RESTORE 加入 PostgreSQL enum。(3) 确保三层 enum 完全同步后，考虑添加 CI guard 防止未来漂移
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T21:00:00Z
-- **fix_commit**:
+- **fix_commit**: cde0cb99b
 
 ### ISSUE-20260503-2101-I2
 - **status**: verified
@@ -1005,6 +1011,7 @@
 | R10 | 2026-05-03T20:30 | ISSUE-20260503-1511-K2 | closed | 58e05cbae | ~20 min |
 | R11 | 2026-05-03T21:10 | ISSUE-20260503-1600-E1 | ✅ Fixed | (pending) | ~35 min |
 | R12 | 2026-05-03T21:45 | ISSUE-20260503-1512-K3 | closed | 4d3bae8d8 | ~45 min |
+| R13 | 2026-05-03T22:15 | ISSUE-20260503-2100-I1 | closed | cde0cb99b | ~25 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1156,3 +1163,106 @@
 - **Findings**: I1 — Go schema.sql is the sqlc source of truth with only 4 TaskStatus values, while Python+Flutter use 7; PAUSED and STUCK were added to PostgreSQL enum via Alembic but Go never synced; RESTORE exists in Python enum but has zero Alembic migrations, meaning any attempt to persist RESTORE to DB would fail with PostgreSQL enum violation. I2 — Flutter defines paused_at/paused_reason as TaskModel fields but the Python Task model (49 columns) has no corresponding columns, no Pydantic schema references them, and no Alembic migration ever added them to the tasks table; the paused_at variable in task_service.py is purely in-memory/event-level, never persisted. I3 — Flutter's ReportReason.hateSpeech serializes to "hate_speech" but backend ReportReasonEnum has "inappropriate" instead, with zero overlap for these two values; the POST /community/message-reports endpoint validates reason against the backend enum and will 422 on "hate_speech"; reverse deserialization of "inappropriate" on Flutter would also fail since the @JsonValue mapping doesn't include this string.
 - **Opus pass rate**: 3/3 (I1/I2/I3 all APPROVED by opus-reviewer at 2026-05-03T21:00)
 - **Next suggested domain**: L (治理规则与文档承诺 vs 真实实现) — last remaining unexplored domain
+
+### ISSUE-20260503-0432-L1
+- **status**: verified
+- **severity**: P2
+- **domain**: L
+- **title**: BH 元学习参数安全守卫脚本已存在但未注册到 rule_guard_manifest.tsv，CI 中从不运行
+- **symptom**: 运行 `bash scripts/run_all_rule_guards.sh`（CLAUDE.md 推荐的 CI 入口）后，元学习参数的安全检查（参数边界、kill switch 绑定、默认值回退、实验安全性）从未被执行。操作者看到 "64 rules passed" 后误以为所有治理规则均已覆盖，但实际上 BH 守卫被遗漏
+- **root_cause_hypothesis**: `scripts/guards/check_rule_bh_meta_learning_safety.py` 是一个完整的守卫脚本（使用 AST 解析验证 RoutingParameterRegistry 的默认值回退、PARAMETER_BOUNDS 完整性、META_LEARNING_BINDING kill switch 绑定、实验服务安全性），但开发者在创建后未将其添加到 `scripts/rule_guard_manifest.tsv`。manifest 中有 64 条规则（从 K 到 GOV-DATA-MIN），但没有 BH 条目
+- **evidence**:
+  - `scripts/guards/check_rule_bh_meta_learning_safety.py:1-167` — 完整的守卫脚本，含 4 个检查函数（check_registry_defaults_fallback / check_all_parameters_have_bounds / check_kill_switch_binding / check_experiment_safety），使用 AST 解析而非简单字符串匹配
+  - `scripts/rule_guard_manifest.tsv:1-65` — 64 条规则注册，从 K 到 GOV-DATA-MIN，无 BH 条目
+  - `scripts/guards/check_rule_bh_meta_learning_safety.py:149-163` — `main()` 返回 0 或 1，当前手动运行输出 "Rule BH: meta-learning safety — PASS"
+  - `bash scripts/run_all_rule_guards.sh --list` 输出 64 条规则，不含 BH
+- **repro_or_trigger**: `bash scripts/run_all_rule_guards.sh` → 观察输出 → BH 从未出现 → 检查 manifest → 无 BH 条目 → 手动运行 `python3 scripts/guards/check_rule_bh_meta_learning_safety.py` → PASS（但从未在 CI 中运行）
+- **expected_vs_actual**: 期望：所有守卫脚本注册到 manifest 并在 CI 中运行；实际：BH 守卫可运行但从未被调度
+- **blast_radius**: 影响元学习参数安全性。如果开发者修改了 `routing_parameter_registry.py` 中的参数、移除默认值回退、或删除 kill switch 绑定，CI 不会检测到。元学习参数直接影响双核路由的决策质量。对北极星有间接影响——路由参数漂移可能导致 AI 响应质量下降
+- **suggested_fix_direction**: 在 manifest 中添加一行 `BH	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bh_meta_learning_safety.py"`。同时考虑添加 CI 守卫确保所有 `scripts/guards/check_rule_*.py` 文件都在 manifest 中有对应条目
+- **discovered_by**: explorer-loop
+- **verified_by**: opus-reviewer+2026-05-03T22:30:00Z
+- **fix_commit**:
+
+### ISSUE-20260503-0432-L2
+- **status**: discovered
+- **severity**: P1
+- **domain**: L
+- **title**: AV 守卫的硬编码 Aurora kill switch 服务和模式列表已过时，缺失 3 个服务文件 + 8 个模式设置，新服务/模式的合规性不被检查
+- **symptom**: 当新的 Aurora kill switch 服务被添加（如 E1 修复创建的 dual_core_router kill switch service）时，AV 规则 `check_rule_av_kill_switch_mode_enum.py` 不会检查其是否使用共享的 `app.core.kill_switch` helper、其模式设置是否为有效的 tri-state 值。Stage 37（LLM Safety——安全关键）、Stage 39 及 Dual-Core Router 的 kill switch 服务完全在 AV 守卫的监控范围之外
+- **root_cause_hypothesis**: AV 守卫使用两个硬编码列表：`SERVICE_PATHS`（18 个文件路径）和 `MODE_SETTINGS`（44 个设置名）。当新 Aurora 阶段被添加时（Stage 37/39），它们的 kill switch service 文件和对应的 `AURORA_STAGE*_MODE` 设置被创建，但 AV 守卫的硬编码列表未同步更新。代码库中现有 21 个 kill switch 服务文件和 48 个 Aurora 模式设置，但 AV 守卫只检查 18 个服务和 44 个模式
+- **evidence**:
+  - `scripts/check_rule_av_kill_switch_mode_enum.py:12-31` — `SERVICE_PATHS` 硬编码列表仅 18 个文件，缺少 `aurora_dual_core_router_kill_switch_service.py`、`aurora_stage37_llm_safety_kill_switch_service.py`、`aurora_stage39_kill_switch_service.py`
+  - `scripts/check_rule_av_kill_switch_mode_enum.py:32-77` — `MODE_SETTINGS` 硬编码列表仅 44 个设置名，缺少 `AURORA_DUAL_CORE_ROUTER_MODE`、`AURORA_PRIVACY_PII_REDACTION_MODE`、`AURORA_STAGE37_LLM_SAFETY_MODE`、`AURORA_STAGE39_MODE` 等 8 个
+  - `backend/app/services/` 目录实际包含 21 个 `aurora_*kill_switch*.py` 文件 — 3 个不在 AV 列表中
+  - `CLAUDE.md` — "Every Aurora feature ships behind tri-state: off → shadow → live. All switches expose Prometheus gauge" → AV 守卫声称为此承诺提供 CI 强制执行，但 3/21 服务和 8/48 模式未被覆盖
+- **repro_or_trigger**: 创建一个新的 Aurora kill switch 服务文件（不导入 `app.core.kill_switch`）→ 运行 `bash scripts/run_all_rule_guards.sh --rule AV` → 显示 PASS（因为新文件不在硬编码列表中）
+- **expected_vs_actual**: 期望：AV 守卫动态发现所有 Aurora kill switch 服务和模式设置，确保 100% 覆盖；实际：依赖手动更新的硬编码列表，当前覆盖率为 18/21 (86%) 服务和 44/48 (92%) 模式
+- **blast_radius**: 直接影响 Aurora kill switch 架构的治理完整性。Stage 37（LLM Safety）是安全关键阶段——其 kill switch 未经验证意味着 LLM 安全功能可能在没有 tri-state 保护的情况下运行。Dual-Core Router 刚刚被 E1 修复添加了 kill switch，但 AV 守卫不会检查其合规性。对北极星有中等影响——kill switch 是可观测性和安全运维的基础
+- **suggested_fix_direction**: 将 AV 守卫重构为动态发现：扫描 `backend/app/services/aurora_*kill_switch*.py` 获取服务列表，扫描 `settings.py` 中匹配 `AURORA_*_MODE` 模式的设置获取模式列表。同时添加 CI 守卫确保动态发现不低于某个覆盖率阈值
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-0432-L3
+- **status**: discovered
+- **severity**: P2
+- **domain**: L
+- **title**: CLAUDE.md 安全清单"No hardcoded tokens or passwords"无对应自动化守卫，是唯一缺乏 CI 强制执行的安全清单条目
+- **symptom**: CLAUDE.md 的 Pre-Commit Checklist 和 Security Checklist 声明 "No hardcoded tokens or passwords (including test files)" 是合并前必检项。但与其他安全清单条目不同（DEBUG=True→ValueError / SECRET_KEY 弱值拒绝 / CORS '*' 拒绝 / gRPC reflection 禁用 等均有运行时守卫或 CI 守卫），硬编码凭据检测完全依赖人工代码审查。硬编码的 API key 或 token 可能在不被发现的情况下合入
+- **root_cause_hypothesis**: 项目的治理规则体系（64 条 CI 规则）覆盖了路由所有权（AX）、LLM 安全性（AY）、金融原子性（BB）、幂等键（BC）等，但没有守卫脚本扫描代码库中的硬编码凭据模式（如 `api_key = "sk-..."`、`password = "..."`、`token = "ghp_..."`）
+- **evidence**:
+  - `CLAUDE.md:310-321` — Security Checklist 第 2 条："No hardcoded tokens or passwords (including test files)"
+  - `scripts/rule_guard_manifest.tsv:1-65` — 64 条规则，无一条涉及 hardcoded secrets/tokens/passwords 扫描
+  - `grep -rn "hardcoded.*token\|hardcoded.*password\|secret.*scan\|token.*scan" scripts/guards/ scripts/check_rule_* — 零结果（BH 中 "hardcoded defaults" 指参数默认值，与凭据无关）
+  - 对比：`backend/app/config/settings.py:1000,1024,1046` — DEBUG/SECRET_KEY/CORS 生产守卫有运行时强制执行（`raise ValueError(...)`），证明项目有能力做此类检查但未覆盖硬编码凭据
+- **repro_or_trigger**: 在任意 Python/Go/Dart 文件中添加 `const apiKey = "sk-proj-1234567890abcdef"` → 运行 `bash scripts/run_all_rule_guards.sh` → 全部 64 条规则通过 → 代码可通过 CI 合入
+- **expected_vs_actual**: 期望：有自动化守卫（如 git-secrets、truffleHog、或自定义扫描脚本）检测常见凭据模式并阻止合入；实际：完全依赖人工审查，无自动化检测
+- **blast_radius**: 影响安全态势。硬编码凭据是 OWASP Top 10 中 "Hardcoded Credentials" (CWE-798) 类别。Sparkle 项目使用多个外部 API（LLM 提供商、MinIO、支付等），凭据泄露风险真实存在。对北极星无直接影响（不影响核心学习功能），但违反安全最佳实践
+- **suggested_fix_direction**: 添加一个轻量级守卫脚本（如 `check_rule_bh_hardcoded_secrets.py`），使用正则扫描常见凭据模式（`api_key\s*=\s*["'][A-Za-z0-9_-](20,)["']`、`password\s*=\s*["'][^"']+["']`、GitHub token 格式 `ghp_[A-Za-z0-9]36` 等），并注册到 manifest。可使用现有的 `scripts/guards/` 模式。同时考虑使用 .gitattributes 或 pre-commit hooks 加强
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-0432-L4
+- **status**: discovered
+- **severity**: P3
+- **domain**: L
+- **title**: 多个治理守卫脚本使用浅层字符串匹配检测而非行为验证，函数重命名/重构可能导致守卫静默失效
+- **symptom**: 开发者重构 `photon_service.py` 中的 `_deduct_balance_atomically` 方法（如重命名为 `_atomic_deduct` 或提取到新模块），BB 守卫会立即失败——不是因为原子性被破坏，而是因为魔术字符串消失。相反，如果开发者保留函数名但移除了其中的 `User.photon_balance >= amount` 守卫条件，BB 守卫仍然通过——因为只检查函数名存在，不检查语义正确性。这导致守卫既产生误报（重构时）又产生漏报（语义破坏时）
+- **root_cause_hypothesis**: 至少 3 个守卫（AW rate limiter sanity、BB financial atomicity、BE shadow semantics）使用 `needle not in source` 模式进行验证。这些守卫不解析 AST、不执行代码、不验证行为——只检查特定文件中是否存在特定字符串。这种设计在快速原型阶段可接受，但作为 CI 治理规则的唯一防线是不充分的
+- **evidence**:
+  - `scripts/guards/check_rule_aw_rate_limiter_sanity.py:17-26` — 5 个 required tokens 检查，如 `"tokens_added = (elapsed_ms / 1000.0) * (rate_per_s)"` — 检查精确字符串存在但无法验证数学正确性
+  - `scripts/guards/check_rule_bb_financial_atomicity.py:21-31` — 检查 `"_deduct_balance_atomically"` 和 `"photon_balance=User.photon_balance - amount"` 字符串存在，但不验证函数实际上执行了原子操作（如使用 `SELECT FOR UPDATE` 或 `RETURNING` 子句）
+  - `scripts/guards/check_rule_be_shadow_semantics.py:14-35` — 4 个文件的 checks 字典，每个包含 2-5 个字符串 needle，如 `'if mode == "live":'` 和 `'if mode == "off":'` — 检查模式守卫存在但无法验证 shadow 模式下的写操作是否真正被阻止
+  - 对比：`scripts/guards/check_rule_bh_meta_learning_safety.py:24-49` — BH 守卫使用 `ast.parse()` 进行 AST 级类和方法名验证，是更深层验证的正确范例
+- **repro_or_trigger**: (误报) 重命名 `_deduct_balance_atomically` → `_deduct_photons_atomically` → BB 守卫失败。(漏报) 从 `_deduct_balance_atomically` 中移除 `WHERE User.photon_balance >= amount` 条件 → BB 守卫仍然通过（因为函数名还在）
+- **expected_vs_actual**: 期望：守卫验证行为不变量（如"光子扣除操作是原子的"），而非检查魔术字符串；实际：守卫只检查特定字符串在特定文件中的存在性
+- **blast_radius**: 影响 AW/BB/BE 三个守卫的可靠性。AW 保护速率限制器维度正确性，BB 保护光子经济的原子性（金融安全），BE 保护 shadow 模式语义（所有 Aurora 功能的降级行为）。这三个都是生产安全关键领域。对北极星有间接影响——如果金融守卫失效，用户光子余额可能出现不一致
+- **suggested_fix_direction**: 短期：为关键守卫（BB financial）添加 AST 级验证和语义测试（如验证 `update(User)` 语句包含 `WHERE User.photon_balance >= amount` 条件）。长期：将守卫分为两类——"契约存在"（轻量字符串检查，快速失败）和"契约正确性"（AST/行为验证，深度检查），前者用于快速门控，后者用于定期深度审计
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### Round R13 — 2026-05-03T22:00
+- **Domain**: L (治理规则与文档承诺 vs 真实实现)
+- **Paths covered**:
+  - scripts/rule_guard_manifest.tsv (64 registered rules, full audit)
+  - scripts/run_all_rule_guards.sh (CI entry point)
+  - scripts/guards/check_rule_ax_route_ownership.py (route-tier: 898 violations in FULL mode)
+  - scripts/guards/check_rule_ay_llm_safety.py (LLM vendor client enforcement — real AST check)
+  - scripts/guards/check_rule_aw_rate_limiter_sanity.py (shallow string-match check)
+  - scripts/guards/check_rule_bb_financial_atomicity.py (shallow string-match check)
+  - scripts/guards/check_rule_be_shadow_semantics.py (shallow string-match check)
+  - scripts/guards/check_rule_bh_meta_learning_safety.py (orphan — exists but not in manifest)
+  - scripts/check_rule_av_kill_switch_mode_enum.py (stale hardcoded service/mode lists: 3 services + 8 modes missing)
+  - backend/app/config/settings.py (production guards: DEBUG/SECRET_KEY/CORS all verified operational)
+  - backend/app/core/kill_switch.py (read_mode/write_mode/record_mode_gauge — confirmed proper implementation)
+  - backend/gateway/internal/handler/websocket_proxy.go (bluemonday sanitization confirmed operational)
+  - backend/app/api/internal/auto_degrade.py + grpc_auth.py + persona_service.py (hmac.compare_digest confirmed)
+  - backend/app/services/aurora_*kill_switch*.py (21 files total, 3 missing from AV guard)
+- **New issues**: L1(P2), L2(P1), L3(P2), L4(P3)
+- **Findings**: The governance rule system has 64 registered rules with generally solid coverage of write boundaries, eval/safety, vision compliance, financial, and security domains. Discovered 4 gaps: (1) BH meta-learning parameter safety guard exists but is not registered in manifest — never runs in CI; (2) AV kill switch guard has stale hardcoded SERVICE_PATHS (18/21) and MODE_SETTINGS (44/48) lists, missing dual-core router, stage37 LLM safety, stage39, and privacy modes — new kill switch services won''t be checked for compliance; (3) No automated guard for "no hardcoded tokens/passwords" — the only security checklist item without CI enforcement; (4) AW/BB/BE guards use shallow string-match detection that can''t distinguish function rename (false positive) from semantic break (false negative). On the positive side: all production guards documented in CLAUDE.md (DEBUG/SECRET_KEY/CORS/gRPC reflection) actually exist in settings.py; bluemonday sanitization is operational in websocket_proxy.go and chat_orchestrator.go; hmac.compare_digest is used for timing-attack resistant comparison; all 64 manifest-referenced scripts exist on disk.
+- **Opus pass rate**: pending
+- **Next suggested domain**: I (DB 迁移 vs 代码字段) — already done (R12). All 12 domains now explored at least once.
+
