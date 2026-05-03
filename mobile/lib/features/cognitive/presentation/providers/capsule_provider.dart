@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_feedback_model.dart';
 import 'package:sparkle/features/cognitive/data/models/capsule_generation_job_model.dart';
@@ -158,7 +159,8 @@ class CapsuleDetailNotifier extends StateNotifier<AsyncValue<CuriosityCapsuleMod
 
       return feedback;
     } catch (e) {
-      return null;
+      debugPrint('submitFeedback failed: $e');
+      rethrow;
     }
   }
 }

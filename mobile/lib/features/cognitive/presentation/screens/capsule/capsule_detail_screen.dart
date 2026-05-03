@@ -263,16 +263,22 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
           capsule: capsule,
           localizePattern: _localizePatternName,
           onSubmitted: (rating, category, comment) async {
-            await ref
-                .read(capsuleDetailProvider(widget.capsuleId).notifier)
-                .submitFeedback(
-                  capsule.id,
-                  rating: rating,
-                  category: category,
-                  comment: comment,
-                );
-            if (mounted) {
-              AppFeedback.success(context, context.l10n.capsuleFeedbackThanks);
+            try {
+              await ref
+                  .read(capsuleDetailProvider(widget.capsuleId).notifier)
+                  .submitFeedback(
+                    capsule.id,
+                    rating: rating,
+                    category: category,
+                    comment: comment,
+                  );
+              if (mounted) {
+                AppFeedback.success(context, context.l10n.capsuleFeedbackThanks);
+              }
+            } catch (_) {
+              if (mounted) {
+                AppFeedback.error(context, context.l10n.capsuleSubmitFailed(''));
+              }
             }
           },
         ),
