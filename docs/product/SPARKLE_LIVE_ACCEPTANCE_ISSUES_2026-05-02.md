@@ -909,10 +909,11 @@
 - **opus_review**: CONDITIONALLY APPROVED by opus-reviewer at 2026-05-04T03:20:00Z — Root cause fully addressed: _running flag + stop(), retry/DLQ routing, exception re-raise chain. 5/5 static regression tests pass. Cross-layer contracts intact. Condition: main.py shutdown handler calls task.cancel() but never consumer.stop() — follow-up under F4 umbrella. No CLAUDE.md violations.
 
 ### ISSUE-20260503-1702-F3
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: F
 - **title**: 20+ EventBus 消费者的 start() 方法在 subscribe() 返回后退出重试循环，后台 consume_loop 任务崩溃无人检测——消费者永久静默死亡
+- **fixer_started_at**: 2026-05-04T03:55:00Z
 - **symptom**: 如果后台 `_consume_loop` asyncio 任务因未捕获异常崩溃（如`asyncio.CancelledError` 传播到任务顶层、MemoryError、或 callback 中某个库的内部异常穿透了 `_process_stream_message` 的 try/except），消费者 start() 方法对此完全不知情。该 stream 的 consumer group 不再消费新消息，lag 持续增长。直到操作者通过 Prometheus lag 告警或用户投诉发现
 - **root_cause_hypothesis**: EventBus.subscribe() 通过 `asyncio.create_task(self._consume_loop(...))` 创建后台任务后立即返回。所有消费者的 start() 方法在 subscribe 返回后：(a) break 退出重试循环（AchievementEventConsumer 等 10+ 消费者），或 (b) 设置 `_subscribed=True` 后进入 `await asyncio.sleep(1)` 死循环（TaskEventConsumer, MainChainArtifactConsumer）。两种模式都不会检查后台任务是否仍然存活。`_consume_loop` 虽有内部异常处理但仅覆盖 `Exception`，`CancelledError`/`KeyboardInterrupt` 等 BaseException 子类会穿透到任务顶层
 - **evidence**:
