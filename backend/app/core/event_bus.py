@@ -1067,7 +1067,7 @@ class EventBus:
                 logger.debug(f"Consumer group {group_name} already exists")
             else:
                 logger.error(f"Error creating consumer group: {e}")
-                return
+                raise
 
         # 2. Start Consumption Loop
         self._running = True
