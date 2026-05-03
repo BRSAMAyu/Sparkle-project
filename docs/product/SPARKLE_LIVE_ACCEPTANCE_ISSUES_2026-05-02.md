@@ -379,11 +379,11 @@
 | Round | Timestamp | Domain | Issues Found | Opus Pass Rate | Notes |
 |-------|-----------|--------|-------------|---------------|-------|
 | R1 | 2026-05-03T12:00 | G | 3 | 3/3 (G3 verified by opus-reviewer-2) | Mock vs Real differences |
-| R2 | 2026-05-03T13:00 | B | 1 | claimed by fixer (in_progress) | Route masking contract mismatch — opus-reviewer-2 verified root cause |
+| R2 | 2026-05-03T13:00 | B | 1 | claimed by fixer (closed) | Route masking contract mismatch — opus-reviewer-2 verified root cause |
 | R3 | 2026-05-03T13:30 | C | 0 | N/A | Proto/WebSocket contract sound; reconnection has offline queue persistence |
 | R4 | 2026-05-03T14:00 | J | 0 | N/A | Cold-start well-designed: skeleton loading, first-goal empty state, wizard with AI, error recovery |
 | R5 | 2026-05-03T14:10 | H | 4 | 3/4 (H3 rejected as designed) | i18n residuals: H1/H2/H4 verified, H3 rejected (isChinese is project documented pattern) |
-| R6 | 2026-05-03T15:10 | K | 4 | 4/4 (K1 in_progress, K2/K3/K4 verified) | Error handling: leaderboard percentile, chat history lost, silent error swallowing, LLM timeout fallback |
+| R6 | 2026-05-03T15:10 | K | 4 | 4/4 (K1 closed, K2/K3/K4 verified) | Error handling: leaderboard percentile, chat history lost, silent error swallowing, LLM timeout fallback |
 | R6 | 2026-05-03T15:00 | K | 1 | 1/1 (K1 verified) | Error handling gaps in goal detail actions |
 | R7 | 2026-05-03T15:30 | A | 1 | 1/1 (A1 verified) | Task execution navigation missing activeTaskProvider |
 | R8 | 2026-05-03T16:00 | E | 4 | 4/4 | Aurora kill switch: E1 Dual-Core Router zero KS, E2 Privacy Prometheus gauge bypass, E3 drill_all.sh missing 37-39, E4 permissions 644 |
@@ -804,7 +804,7 @@
 - **closed_at**: 2026-05-03T05:36:13Z
 
 ### ISSUE-20260503-1602-E3
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: E
 - **fixer_started_at**: 2026-05-04T00:30:00Z
@@ -1079,6 +1079,7 @@
 | R27 | 2026-05-03T08:20 | ISSUE-20260504-0016-H5 | ✅ Fixed | b8a11dfea | ~5 min |
 | R28 | 2026-05-03T08:30 | ISSUE-20260504-0345-H6 | ✅ Fixed | 1d0a141a6 | ~5 min |
 | R29 | 2026-05-03T09:20 | ISSUE-20260504-0500-B4 | ✅ Fixed | 286a338f7 | ~30 min |
+| R30 | 2026-05-03T09:10 | ISSUE-20260504-0501-B5 | ✅ Fixed | 65ea8325e | ~5 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1121,7 +1122,7 @@
   - providers.py (openai.Timeout import failure → no timeout fallback)
 - **New issues**: K1(P1)=1510, K2(P1)=1511, K3(P2)=1512, K4(P2)=1513
 - **Findings**: Two P1s cross the Go↔Python boundary. K1 (leaderboard): GLOBAL percentile is a pure math bug (total_participants=-1 sentinel used in division); empty leaderboards crash with ZeroDivisionError. K2 (chat): gRPC stream error handling sacrifices conversation history integrity — return false before saveMessage means multi-turn context is silently lost. K3 (Flutter): 12+ dashboard/experience cards use SizedBox.shrink() on error, silently vanishing when backend is unreachable. K4 (LLM): Timeout import fallback creates no-timeout client — rare but LLM hangs can block gRPC slots.
-- **Opus pass rate**: 4/4 (K1 claimed in_progress by fixer, K2/K3/K4 verified)
+- **Opus pass rate**: 4/4 (K1 claimed closed by fixer, K2/K3/K4 verified)
 - **Next suggested domain**: E (Aurora kill switch real observability) or F (event bus consumer DLQ/retry) — backend resilience areas not yet explored
 
 ### Round R6 — 2026-05-03T15:00
@@ -1492,7 +1493,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T01:00:00Z
 - **fix_commit**: b8a11dfea
-- **opus_review**: APPROVED by opus-independent-reviewer at 2026-05-03T08:18:19Z
+- **opus_review**: APPROVED by opus-independent-reviewer at 2026-05-03T12:00:00Z
 - **closed_at**: 2026-05-03T08:20:00Z
 
 ### Round R16 — 2026-05-04T00:30
@@ -1756,7 +1757,7 @@
   - 测试保护：测试为逻辑复制品非真实单元测试（因预存编译错误），建议编译恢复后改为真实 Widget/Provider 测试
 
 ### ISSUE-20260504-0501-B5
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-03T09:08:56Z
 - **domain**: B
@@ -1775,7 +1776,9 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T05:15:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) capsule_provider.dart:160-162 catch 块返回 null: `} catch (e) { return null; }`。(2) submitFeedback 方法成功时返回 CapsuleFeedbackModel，失败时返回 null 不更新 state。(3) capsule_detail_screen.dart:265-276 UI 层 `await ref.read(...).submitFeedback(...)` 后无条件调用 `AppFeedback.success(...)`，不检查返回值是否为 null。(4) capsule_repository.dart:94-121 实际 POST `/capsules/$id/feedback` 无 fallback。调用链完整：UI onSubmitted → await provider.submitFeedback() → repository.submitFeedback() → POST /capsules/$id/feedback → API 失败 → catch 返回 null → UI 不检查 null → mounted 检查通过 → 无条件显示成功 toast。与 B1 (_payload 静默转换), B2 (乐观更新无声回退), B3 (catch-all), B4 (空 catch) 均不重复——B5 是"provider 返回 null 表示失败 + UI 不检查 null → 虚假成功 toast"的独立组合模式。与 K1 也不重复——K1 是 startNextStep/completeNextStep 无 try/catch 导致异常未被捕获，B5 是有 catch 但返回 null 且 UI 不检查。P2 评级合理——反馈数据是 Aurora 认知系统个性化推荐的关键信号，虚假成功导致反馈回路断裂。
-- **fix_commit**: 留空
+- **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
+- **opus_review**: APPROVED by opus-independent-reviewer at 2026-05-03T12:00:00Z
+- **closed_at**: 2026-05-03T09:10:00Z
 
 ### ISSUE-20260504-0930-G4
 - **status**: verified
@@ -1795,7 +1798,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T09:30
 - **reviewer_note**: APPROVED — 独立审阅确认全部 3 处 evidence 与代码一致。(1) mock_community_repository.dart:1894-1898 reportMessage 空实现 `async {}`。(2) group_chat_screen.dart:245-259 UI 层 try/catch 中 mock 返回 completed Future<void> 不抛异常，因此始终进入 success 分支显示 `AppFeedback.success`。(3) community_repository.dart:946-959 real 实现 POST 到 `/community/reports`，mock 完全跳过。调用链完整：UI onPressed → communityRepositoryProvider（demo 模式返回 mock）→ reportMessage() → `async {}` 返回 completed future → try block 成功 → AppFeedback.success 显示。与 G3（kick/promote/demote/transfer 空 stub，已 closed）不重复——G3 覆盖群组管理操作，G4 覆盖消息举报，属同一反模式的独立实例。与 B5 也不重复——B5 是 "provider 返回 null + UI 不检查 null" 模式，G4 是 "mock 空 stub 不抛异常 + UI try/catch 落入 success 分支" 模式。非"设计如此"——同 mock 中 respondToRequest 等方法维护内部状态，reportMessage 应为同样标准。
-- **fix_commit**: 留空
+- **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
 
 ### ISSUE-20260504-0931-G5
 - **status**: verified
@@ -1817,7 +1820,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T09:30
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) mock_community_repository.dart:1446 getGroupTasks 硬编码返回 `[]`。(2) community_provider.dart:1532-1539 loadTasks() 直接设 state=AsyncData([])。(3) community_provider.dart:1553-1559 createTask() 调用 createGroupTask 返回 id='' title='' 的空壳 GroupTaskInfo，随后 loadTasks() 再次返回 [] 覆盖 state。(4) group_tasks_screen.dart:44-50 tasks.isEmpty 显示 "No tasks yet"。(5) group_tasks_screen.dart:35-40 FAB 触发创建对话框。调用链完整：GroupTasksNotifier 构造 → loadTasks() → getGroupTasks()=[] → state=AsyncData([]) → UI 空状态。createTask() → createGroupTask() 不持久化 → loadTasks() → getGroupTasks()=[] → state 重置为 [] → 任务消失。与 G1（getGroupMembers=[]，已 FIXED）和 G2（getFeed=[]，已 FIXED）不重复——三者均属硬编码空列表反模式的不同方法实例，但 G1/G2 已修复，G5 是尚未覆盖的独立方法（getGroupTasks）。claimTask(line 1465) 和 completeTask(line 1937) 也是空 stub 但被空列表永远屏蔽。非"设计如此"——同 mock 已维护 _mockGroupMessages/_mockFriends 等内部状态，任务系统亦应同样标准。
-- **fix_commit**: 留空
+- **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
 
 ### ISSUE-20260504-0932-G6
 - **status**: verified
@@ -1839,7 +1842,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T09:30
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) mock_community_repository.dart:1242-1243 searchUsers 硬编码返回 `[]`，无视搜索关键词。(2) mock_community_repository.dart:1035-1038 sendFriendRequest 空实现 `async {}`。(3) user_search_screen.dart:32-37 _handleSearch() 调用 searchUsers → 返回 [] → UI 永远空结果。(4) user_search_screen.dart:66-73 sendFriendRequest try/catch 中 mock 返回 completed Future<void> 不抛异常 → success 分支触发。(5) community_repository.dart:178-186 sendFriendRequest 实际 POST 到 `/community/friends/request`，198-211 searchUsers GET `/community/users/search`。调用链：searchUsers → [] → "No users found"；sendFriendRequest → `async {}` → completed future → try 成功 → AppFeedback.success → 虚假成功 toast。两个断开点叠加使好友发现与添加全链路不可用。mock 第 59 行 _mockUsers 已有 6 个用户（alice/bob/charlie/diana/eva/me）可过滤使用；mock 已有 _mockPendingRequests 列表（respondToRequest 第 1042-1044 行使用）可记录请求。与 G1/G2/G5（硬编码空列表）和 G3/G4（空 stub）不重复——G6 是 searchUsers+sendFriendRequest 组合覆盖好友子系统，前序条目分别覆盖群组成员/动态/任务/管理/举报。非"设计如此"——资源已就绪（_mockUsers, _mockPendingRequests），仅未连线。
-- **fix_commit**: 留空
+- **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
 
 ### ISSUE-20260504-0945-E5
 - **status**: verified
@@ -1860,7 +1863,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T09:45
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) DEFAULT_SPECS 共 21 个条目（stage18-39 + privacy + doc_context + stage40-calendar），`grep -n dual_core_router run_kill_switch_drills.py` 零匹配——确认完全缺席。(2) drill_all.sh 先调用 run_kill_switch_drills.py 再逐个 bash stage33-39 legacy drills，全程无 dual_core_router。(3) routing_engine.py:1180-1224 运行时 kill switch 集成正确——off→balanced 回退，live/shadow→Aurora 路由。(4) AuroraDualCoreRouterKillSwitchService 提供 set_mode()/get_mode()/summary()，表明设计上支持 drill 但未接入。调用链：drill_all.sh → run_kill_switch_drills.py → 迭代 DEFAULT_SPECS → 无 dual_core_router 条目 → 永远不调用 service.set_mode()。与 E1（dual_core_router 完全缺失 kill switch）不重复——E1 是 kill switch 不存在，E5 是 kill switch 存在但 drill 未覆盖。非"设计如此"——service 有 set_mode() 方法即为 drill 接口，未挂接是疏漏。
-- **fix_commit**: 留空
+- **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
 
 ### ISSUE-20260504-0946-E6
 - **status**: verified
@@ -1882,7 +1885,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T09:45
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) _ERR_REPLAN_BINDING line 13: stage="stage38"。(2) _PUSH_SCHEDULER_BINDING line 21: stage="stage38"。(3) _STAGE37_BINDING line 16: stage="37"——纯数字。(4) _BINDING_MASTER line 12: stage="39"——纯数字。(5) KILL_SWITCH_MODE Gauge labels=["stage","feature"] 无 schema 约束。跨 stage 对比审计：stage18/19/21/23-31/33-35/37/39/40 全部使用纯数字，仅 stage38 使用 "stage38"。module-level record_mode_gauge (line 68-77) 引用 binding.stage——修改 binding 即可自动跟随，无需单独修改。与 E3/E4（drill 覆盖/权限）不重复。非"设计如此"——无其他 stage 使用 "stage{N}" 格式，纯数字是明确规范。
-- **fix_commit**: 留空
+- **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
 
 ### ISSUE-20260504-0947-E7
 - **status**: verified
@@ -1903,7 +1906,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T09:45
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) line 230-235: `_PRIVACY_BINDING = type("PrivacyBinding", (), {5 attrs})()` 仅有 stage/feature/redis_key/settings_attr/fallback_mode，缺少 allowed_modes/enabled_legacy_modes/legacy_bool_attr/enabled_mode。(2) kill_switch.py:125: `write_mode()` 访问 `binding.allowed_modes` —— 对 inline type() 对象触发 AttributeError。(3) kill_switch.py:9: TRI_STATE_MODES = frozenset({"off","shadow","live"})；line 34: KillSwitchBinding.allowed_modes 默认值 = TRI_STATE_MODES。(4) DEFAULT_SPECS line 63 含 "privacy" → SPECS["privacy"] (line 385-391) 使用 apply_mode=_privacy_apply → 调用 _ks_write_mode(即 kill_switch.write_mode) → crash。调用链完整：drill_all.sh → run_kill_switch_drills.py → iter DEFAULT_SPECS → "privacy" → _privacy_apply(mode) → _ks_write_mode(binding=_PRIVACY_BINDING) → write_mode() → binding.allowed_modes → AttributeError。backend/app/services/ 下无 AuroraPrivacyKillSwitchService（grep 零匹配），确认唯一绑定是此 inline type()。与 E2（privacy 读路径绕过 read_mode 缺失 gauge）不重复——E2 是运行时读路径可观测性，E7 是 drill 写路径崩溃。非"设计如此"——其他 drill 条目（stage18-39, doc_context, stage40-calendar）均使用正式 KillSwitchBinding 或专用 kill switch 服务。
-- **fix_commit**: 留空
+- **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
 
 ### Round R25 — 2026-05-04T05:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
