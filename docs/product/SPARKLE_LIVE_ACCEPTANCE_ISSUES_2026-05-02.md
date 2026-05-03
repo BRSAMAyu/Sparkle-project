@@ -2281,7 +2281,7 @@
 - **suggested_fix_direction**: (1) 添加后端 `POST /goals/{id}/confirm-criteria` 端点持久化确认状态；(2) `confirmMinimumCriteria()`/`undoConfirmMinimumCriteria()` 改为 async，先调用 API 再更新本地状态；(3) 或合并入 `load()` 的 GET 响应中由服务端返回确认状态
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-04T18:15Z
-- **fix_commit**: 留空
+- **fix_commit**: ddcad1e8a
 - **opus_review**: REJECTED by fix-reviewer at 2026-05-04T19:30Z
 - **opus_review_r2**: APPROVED by opus-reviewer-r2 at 2026-05-04T20:20Z
 - **review_r2_summary**: |
