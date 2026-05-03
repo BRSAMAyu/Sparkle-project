@@ -1069,6 +1069,7 @@
 | R21 | 2026-05-04T03:25 | ISSUE-20260503-1701-F2 | ✅ Fixed | 38992aea0 | ~20 min |
 | R22 | 2026-05-04T04:15 | ISSUE-20260504-0300-C2 | ✅ Fixed | 10d2e958d | ~15 min |
 | R23 | 2026-05-04T04:25 | ISSUE-20260503-2101-I2 | ✅ Fixed | 9c5e89afa | ~15 min |
+| R24 | 2026-05-04T08:05 | ISSUE-20260503-0432-L3 | ✅ Fixed | d4a98b44b | ~45 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1281,7 +1282,7 @@
   - **verification**: `bash scripts/run_all_rule_guards.sh --rule AV` → PASS (57 mode settings, 21 services). `pytest tests/test_av_kill_switch_guard.py -v` → 7/7 passed.
 
 ### ISSUE-20260503-0432-L3
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-04T07:20:00Z
 - **domain**: L
@@ -1299,7 +1300,9 @@
 - **suggested_fix_direction**: 添加一个轻量级守卫脚本（如 `check_rule_bh_hardcoded_secrets.py`），使用正则扫描常见凭据模式（`api_key\s*=\s*["'][A-Za-z0-9_-](20,)["']`、`password\s*=\s*["'][^"']+["']`、GitHub token 格式 `ghp_[A-Za-z0-9]36` 等），并注册到 manifest。可使用现有的 `scripts/guards/` 模式。同时考虑使用 .gitattributes 或 pre-commit hooks 加强
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T22:30:00Z
-- **fix_commit**:
+- **fix_commit**: d4a98b44b
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-04T08:00:00Z
+- **closed_at**: 2026-05-04T08:05:00Z
 
 ### ISSUE-20260503-0432-L4
 - **status**: verified
