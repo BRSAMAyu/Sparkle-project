@@ -1932,8 +1932,9 @@
 - **opus_review**: APPROVED by opus-independent-reviewer at 2026-05-03T18:30:00Z
 
 ### ISSUE-20260504-0946-E6
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
+- **fixer_started_at**: 2026-05-03T10:12:00Z
 - **domain**: E
 - **title**: Stage38 kill switch 的 Prometheus stage 标签使用 "stage38" 而非 "38"——打破跨 stage 的标签一致性
 - **symptom**: 在 Prometheus 中查询 `sparkle_kill_switch_mode` 指标时，所有 Aurora stage 的 `stage` 标签均为纯数字字符串（"18", "19", "21", ..., "37", "39", "40"），唯独 Stage38 显示为 "stage38"。操作者使用 `stage=~"\\d+"` 正则过滤时 Stage38 的指标被排除在外。Grafana 面板中按 stage 分组时 Stage38 单独成组
