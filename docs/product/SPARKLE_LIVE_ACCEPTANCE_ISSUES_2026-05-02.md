@@ -413,6 +413,7 @@
 | R37 | 2026-05-04T16:20 | K | 0 | N/A | K 域续探——Flutter 20+ catch blocks 审查 + Python 15+ except:pass 审查，全部为设计合理的防御性编码或已被 R6/R31 归档 |
 | R38 | 2026-05-04T17:00 | F | 1 | 1/1 (F5 verified by opus-reviewer) | F 域续探——Task/Profile/Intervention 消费者子处理器吞噬异常旁路 EventBus DLQ/retry |
 | R39 | 2026-05-04T18:00 | B | 3 | pending Opus | B 域续探——CurrentUserStatusNotifier 乐观更新无回滚 + confirmMinimumCriteria 纯本地无持久化 + GroupTasks/BlockedUsers 刷新丢数据 |
+| R40 | 2026-05-04T18:30 | G | 0 | N/A | G 域续探——mock_community_repository 核心方法全部正确实现，剩余空 stub 为非核心功能，domain exhausted |
 
 ---
 
@@ -2280,7 +2281,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1802-B3
-- **status**: discovered
+- **status**: verified
 - **severity**: P3
 - **domain**: B
 - **title**: GroupTasksNotifier 与 BlockedUsersNotifier 刷新失败时丢弃已有数据进入 error 态，与同文件其他 Notifier 不一致
@@ -2296,7 +2297,7 @@
 - **blast_radius**: 影响群任务和黑名单管理两个功能的刷新容错性。对北极星影响低——任务数据仍可通过再次刷新或重新进入恢复。但用户体验差：正在查看的 Kanban 任务被错误页面完全覆盖
 - **suggested_fix_direction**: 对 `GroupTasksNotifier.loadTasks()` 和 `BlockedUsersNotifier.loadBlockedUsers()` 采用与 `GroupDetailNotifier` 相同的 previous 保留模式，仅在无 previous 时进入 error 态
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-auditor+2026-05-04T18:15Z
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
@@ -2623,3 +2624,22 @@
   4. **排除项**: (a) FeedNotifier.toggleLike 虽命名 misleading（无 unlike 路径，系统仅支持 like），但乐观更新逻辑本身正确（API 成功→本地+1；API 失败→回滚），不属于 bug；(b) chat_provider.dart 使用自定义 ChatState 非 AsyncValue，其状态管理已通过 multi-generation stream 隔离 + stale-guard 机制正确实现并发安全；(c) dashboard_provider.dart 的 auto-retry on error (line 670-674) 是设计特性非 bug；(d) home_growth_provider.dart 6 个 FutureProvider 仅 catch DioException 让 TypeError 传播——正确设计（代码 bug 应进入 error 态可见）
 - **Opus pass rate**: pending
 - **Next suggested domain**: G (Mock vs Real) — 8 轮未回探（上次 R33）；或 D (Python orchestrator FSM) — 多轮未回探（上次 R28）
+
+### Round R40 — 2026-05-04T18:30
+- **Domain**: G (Mock vs Real 实现差异 — 续探)
+- **Paths covered**:
+  - `mobile/lib/features/community/data/repositories/mock_community_repository.dart` (全量 2366 行审查)
+  - `mobile/lib/features/cognitive/data/repositories/mock_cognitive_repository.dart` (116 行，3 方法，已确认实现正确)
+  - `mobile/lib/features/cognitive/data/repositories/capsule_repository.dart` (240 行，11 方法全部使用 DemoDataService.isDemoMode 内联切换)
+  - `mobile/lib/features/community/data/repositories/community_share_repository.dart` (132 行，3 个 API 调用无 demo 模式支持)
+  - 所有 42 个 API 调用仓库的 demo 支持状况扫描
+- **New issues**: 0
+- **Findings**: G 域续探全面审查 2 个 mock 仓库 + 1 个内联 demo 仓库 + 42 个仓库的 demo 支持状况。关键发现：
+  1. **mock_community_repository 核心方法全部正确实现**: `claimTask` (line 1626-1649) 正确查找+更新 isClaimedByMe+totalClaims；`completeTask` (line 2128-2153) 正确更新 myCompletionStatus+totalCompletions+completionRate；`joinGroup`/`leaveGroup`/`checkin`/`searchGroups`/`getGroupDirectory` 全部实现完整逻辑
+  2. **剩余空 stub 均为非核心功能**: muteMember/unmuteMember/warnMember/updateModerationSettings 为管理员操作；addFavorite/removeFavorite/getFavorites 为收藏功能；forwardMessage 为转发功能——demo 模式可接受的简化
+  3. **CapsuleRepository 使用内联 demo 模式**: 11 个方法全部以 DemoDataService.isDemoMode 开头，不使用 mock 接口模式——不同设计但功能等效
+  4. **mock_cognitive_repository 确认正确**: 3 方法全部正确实现含分页参数
+  5. **community_share_repository 无 demo 支持**: 3 个 API 调用无 demo 检查，但分享功能非核心学习流程
+  6. **42 个仓库 demo 支持分布**: 仅 auth/community/cognitive/capsule/aurora/accountability 有 demo 支持——其余依赖真实后端 API，为设计选择
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: D (Python orchestrator FSM) — 12 轮未回探；或 J (cold start / empty state) — 8 轮未回探
