@@ -1325,8 +1325,9 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-2300-B1
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
+- **fixer_started_at**: 2026-05-04T07:40:00Z
 - **domain**: B
 - **title**: experience_repository._payload 将非 Map 响应无声转换为空对象，4 个 experience 端点的 API 契约变化完全不可探测
 - **symptom**: 当 experience API（understanding-snapshot / growth-dashboard / goal-detail / community-accountability）返回非 Map 结构的响应时（如 List、String、null），用户看到全零/全空的有效对象（confidence=0, summary='', tasksTotal=0 等），没有任何错误提示。API 返回了数据但客户端无法解析的事实被完全隐藏
