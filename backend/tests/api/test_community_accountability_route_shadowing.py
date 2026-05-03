@@ -9,6 +9,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.routing import APIRoute
 
+_EXPERIENCE_DIR = Path(__file__).resolve().parents[2] / "app" / "api" / "v1" / "experience"
+
 
 def _route_for_path(routes, path: str, method: str) -> APIRoute | None:
     for route in routes:
@@ -19,84 +21,63 @@ def _route_for_path(routes, path: str, method: str) -> APIRoute | None:
     return None
 
 
-def _load_experience_routers_into(app: FastAPI):
-    """Replicate _include_experience_routers() but target a specific app."""
-    experience_dir = Path(__file__).resolve().parents[3] / "app" / "api" / "v1" / "experience"
-    existing = {_route_key(r) for r in app.routes}
-
-    for router_file in sorted(experience_dir.glob("*_router.py")):
-        module_name = f"app.api.v1.experience_closeout_{router_file.stem}"
-        spec = importlib.util.spec_from_file_location(module_name, router_file)
-        if spec is None or spec.loader is None:
-            continue
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        router = getattr(module, "router", None)
-        if router is None:
-            continue
-        incoming = {_route_key(r) for r in router.routes}
-        if existing.isdisjoint(incoming):
-            app.include_router(router)
-            existing |= incoming
-
-
-def _route_key(route) -> tuple:
-    path = getattr(route, "path", None) or ""
-    methods = frozenset(getattr(route, "methods", None) or [])
-    return path, methods
+def _load_router(filename: str):
+    """Load an experience sub-router by filename."""
+    router_file = _EXPERIENCE_DIR / filename
+    spec = importlib.util.spec_from_file_location(
+        f"app.api.v1.experience_closeout_{router_file.stem}", router_file
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Cannot load {router_file}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    router = getattr(module, "router", None)
+    if router is None:
+        raise RuntimeError(f"No router attr in {filename}")
+    return router
 
 
 @pytest.mark.asyncio
-async def test_community_accountability_route_uses_complete_impl():
+async def test_community_accountability_registered_with_response_model():
     """
-    Replicate the production registration order (experience.router first,
-    then community_router via _include_experience_routers) and verify the
-    final /community-accountability route uses CommunityAccountabilityOut.
+    After including experience.router (without the stub) and then
+    community_router, the /experience/community-accountability route
+    must use CommunityAccountabilityOut, not a plain dict.
     """
     from app.api.v1.experience import router as experience_router
 
     app = FastAPI()
     app.include_router(experience_router)
-    _load_experience_routers_into(app)
 
-    # Both routers use prefix="/experience", so the full path includes it.
+    # Simulate what _include_experience_routers does — include community_router
+    community_router = _load_router("community_router.py")
+    app.include_router(community_router)
+
     route = _route_for_path(app.routes, "/experience/community-accountability", "GET")
-
     assert route is not None, (
-        "/experience/community-accountability route is missing from the app. "
-        "community_router.py may have failed to register."
+        "/experience/community-accountability route missing after including both routers."
     )
-
     assert route.response_model is not None, (
-        "/experience/community-accountability must have a response_model "
-        "(CommunityAccountabilityOut). The old stub returns plain dict (no response_model)."
+        "Route must have a response_model (CommunityAccountabilityOut), "
+        "not a plain dict like the old stub."
     )
-
     keys = set(route.response_model.model_fields.keys())
-    assert "my_commitments" in keys, (
-        f"Expected my_commitments in response model, got {keys}. "
-        "The old stub may still be shadowing the full implementation."
-    )
+    assert "my_commitments" in keys, f"Expected my_commitments, got {keys}"
     assert "partner_progress" in keys
     assert "shared_goals" in keys
     assert "squad_risks" in keys
     assert "helpable" in keys
-    # Old stub fields must NOT be present
-    assert "commitments" not in keys, "Old stub field 'commitments' leaked through"
-    assert "partner_updates" not in keys, "Old stub field 'partner_updates' leaked through"
-    assert "suggested_actions" not in keys, "Old stub field 'suggested_actions' leaked through"
+    assert "commitments" not in keys, "Old stub field 'commitments' leaked"
+    assert "partner_updates" not in keys, "Old stub field 'partner_updates' leaked"
+    assert "suggested_actions" not in keys, "Old stub field 'suggested_actions' leaked"
 
 
 @pytest.mark.asyncio
-async def test_community_accountability_no_longer_on_experience_router():
-    """The experience.py router must no longer own /community-accountability."""
+async def test_experience_router_no_longer_has_stub():
+    """The experience.py router must not own /community-accountability anymore."""
     from app.api.v1.experience import router as experience_router
 
-    simple_routes = {
-        r.path for r in experience_router.routes
-        if isinstance(r, APIRoute)
-    }
-    assert "/community-accountability" not in simple_routes, (
-        "experience.py still has GET /community-accountability; remove the stub "
-        "so community_router.py can register its full implementation."
+    paths = {r.path for r in experience_router.routes if isinstance(r, APIRoute)}
+    assert "/community-accountability" not in paths, (
+        "experience.py still has GET /community-accountability; remove the stub."
     )

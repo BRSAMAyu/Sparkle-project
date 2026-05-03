@@ -363,13 +363,13 @@
 
 ## Progress Summary
 
-- **Total Issues**: 31 (+ 3 explorer issues)
-- **Fixed**: 23
+- **Total Issues**: 31 (+ 7 explorer issues)
+- **Fixed**: 23 (includes explorer G1, G2)
 - **Partially Fixed**: 3
 - **Routes Verified (working with data)**: 5
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
-- **Discovered (not verified)**: 2 (G3, B1)
+- **Discovered (not verified)**: 5 (B1 in_progress, H1-H4 discovered)
 
 ---
 
@@ -381,6 +381,7 @@
 | R2 | 2026-05-03T13:00 | B | 1 | claimed by fixer (in_progress) | Route masking contract mismatch — opus-reviewer-2 verified root cause |
 | R3 | 2026-05-03T13:30 | C | 0 | N/A | Proto/WebSocket contract sound; reconnection has offline queue persistence |
 | R4 | 2026-05-03T14:00 | J | 0 | N/A | Cold-start well-designed: skeleton loading, first-goal empty state, wizard with AI, error recovery |
+| R5 | 2026-05-03T14:05 | H | 4 | pending Opus review | i18n residuals: group members, memory detail, group chat report, group tasks |
 
 ---
 
@@ -447,27 +448,100 @@
 - **verified_by**: opus-reviewer-2+2026-05-03T13:05
 - **fix_commit**:
 
-### ISSUE-20260503-1300-B1
-- **status**: in_progress
+### ISSUE-20260503-1400-H1
+- **status**: discovered
 - **severity**: P1
-- **fixer_started_at**: 2026-05-03T14:30:00
-- **domain**: B
-- **title**: 社区问责 hub 在真实模式下永远显示空数据——后端路由遮蔽导致契约不匹配
-- **symptom**: 在非 demo 模式下，社区问责 hub（社区 tab 里的责任空间卡片）永远显示空内容——没有承诺、没有伙伴进度、没有共享目标。Demo 模式下正常显示丰富数据
-- **root_cause_hypothesis**: Python 后端存在两个 `/experience/community-accountability` GET 端点。`experience.py:590` 的简单硬编码版本先注册（router.py:193），返回 `commitments`/`partner_updates`/`suggested_actions` 字段。`experience/community_router.py:164` 的完整实现后注册（router.py:194），返回 `my_commitments`/`partner_progress`/`shared_goals`/`squad_risks`/`helpable`——与 Flutter 模型匹配。由于 `_include_router_if_new()` 的去重逻辑，完整版被跳过，简单版胜出。Flutter 的 `CommunityAccountabilityHub.fromJson()` 解析不匹配的字段名得到全空列表
+- **domain**: H
+- **title**: 群组成员管理操作（晋升/降权/转让群主）弹窗和 snackbar 全部硬编码英文，与同文件已 i18n 的踢出/静音/警告操作不一致
+- **symptom**: 中文模式下，群组成员列表的弹窗菜单显示 "Promote to Admin"、"Demote to Member"、"Transfer Ownership"；确认对话框标题和正文、操作成功/失败的 snackbar 消息全部显示英文。但同文件中的 "Mute"（静音）、"Warn"（发送警告）、"Kick"（踢出）已正确使用 `context.l10n` 进行 i18n
+- **root_cause_hypothesis**: 开发者分批添加了管理操作：踢出/静音/警告是后加的操作，正确使用了 `context.l10n`；晋升/降权/转让是最早写的操作，写死在代码中。PopupMenuButton itemBuilder 和 _handleMemberAction switch 分支中都存在硬编码
 - **evidence**:
-  - `backend/app/api/v1/experience.py:590-609` — 简单端点返回 `{"commitments": [], "partner_updates": [], ...}`，字段名与 Flutter 不匹配
-  - `backend/app/api/v1/experience/community_router.py:164-324` — 完整端点返回 `CommunityAccountabilityOut(my_commitments=..., partner_progress=..., ...)`，字段名匹配
-  - `backend/app/api/v1/router.py:193-194` — `experience.router` 先注册，`_include_experience_routers()` 后执行，`_include_router_if_new()` 因路由键重复而跳过完整版
-  - `mobile/lib/features/community/data/models/community_accountability_hub_model.dart:10-27` — `fromJson` 解析 `my_commitments`/`partner_progress`/`shared_goals`/`squad_risks`/`helpable`
-  - `mobile/lib/features/community/data/models/community_accountability_hub_model.dart:221-227` — `_list(null)` 返回 `[]`，不崩溃但所有字段为空
-- **repro_or_trigger**: 非 demo 模式 → 首页/社区 tab → 问责 hub 卡片 → 观察到空内容。或在 Python 中 `curl /experience/community-accountability`，确认返回 `commitments` 而非 `my_commitments`
-- **expected_vs_actual**: 期望：问责 hub 显示用户的承诺、伙伴进度、共享目标、风险提醒等；实际：所有列表为空，用户看到空白卡片
-- **blast_radius**: 直接影响北极星 — 问责伙伴是 Sparkle 的核心差异化功能。真实模式下该功能完全不可用，用户看到的问责空间是空的。影响所有使用问责 hub 的入口（首页卡片、社区 tab）
-- **suggested_fix_direction**: 从 `experience.py` 中删除 `/community-accountability` 的简单版本（或重命名），让 `community_router.py` 的完整版通过 `_include_router_if_new()` 注册。或者直接在 router.py 中用 `include_router` 显式注册完整版
+  - `mobile/lib/features/community/presentation/screens/group_members_screen.dart:463` — `Text('Demote to Member')` 菜单项硬编码英文
+  - `mobile/lib/features/community/presentation/screens/group_members_screen.dart:476` — `Text('Promote to Admin')` 菜单项硬编码英文
+  - `mobile/lib/features/community/presentation/screens/group_members_screen.dart:494` — `Text('Transfer Ownership')` 菜单项硬编码英文
+  - `mobile/lib/features/community/presentation/screens/group_members_screen.dart:593-595` — promote 确认对话框 `'Promote ${member.user.displayName}?'` / `'This member will become an admin and can manage the group.'`
+  - `mobile/lib/features/community/presentation/screens/group_members_screen.dart:671-689` — 对比：kick 操作正确使用 `context.l10n.gmKickConfirm(...)` / `context.l10n.gmKicked(...)`
+- **repro_or_trigger**: 中文模式 → Community tab → 进入任意群组 → 点击成员列表 → 对非群主成员点击 ⋮ 菜单 → 看到菜单项为英文 → 执行任何操作 → 确认对话框和 toast 全部英文
+- **expected_vs_actual**: 期望：所有管理操作与同文件的 kick/mute/warn 一致，使用 `context.l10n` 显示双语；实际：promote/demote/transfer 完全硬编码英文
+- **blast_radius**: 影响中文用户进行群组成员管理操作的完整体验流——从菜单到对话框到 toast 全是英文。群组管理是社区系统的核心交互。对北极星有中等影响——中文用户无法理解管理操作的后果和反馈
+- **suggested_fix_direction**: 在 AppLocalizations ARB 文件中添加 gmPromote/GmDemote/GmTransfer 系列字符串，然后在 group_members_screen.dart 中替换硬编码为 context.l10n 调用
 - **discovered_by**: explorer-loop
 - **verified_by**:
 - **fix_commit**:
+
+### ISSUE-20260503-1401-H2
+- **status**: discovered
+- **severity**: P2
+- **domain**: H
+- **title**: memory_detail_screen 的记忆修正按钮（Not true/No longer applies/Lower confidence/Merge）和版本管理标签（Diff/Revert/Evidence/Versions）全部硬编码英文
+- **symptom**: 中文模式下，记忆详情页的版本历史区显示 "Diff"、"Revert"、"Evidence: N"、"Versions: N"、"Budget: N/A" 等英文标签；记忆修正操作区显示 "Not true"、"No longer applies"、"Lower confidence"、"Merge" 四个英文按钮。文件开头已导入 context_l10n 且多数文本已 i18n，但这几个标签和按钮遗漏了
+- **root_cause_hypothesis**: 记忆详情页的 _buildVersionHistory、_buildDetailSummary、_buildCorrectionActions 三个方法中直接使用了硬编码英文字符串作为 Text 内容和按钮 label。这些字符串没有对应的 l10n key，开发时直接写死了
+- **evidence**:
+  - `mobile/lib/features/memory/presentation/screens/memory_detail_screen.dart:463` — `Text('Diff', ...)` 硬编码英文标签
+  - `mobile/lib/features/memory/presentation/screens/memory_detail_screen.dart:475` — `label: 'Revert'` SparkleButton 硬编码英文
+  - `mobile/lib/features/memory/presentation/screens/memory_detail_screen.dart:595-598` — `Text('Evidence: $evidenceCount')` / `Text('Versions: $versions')` / `Text('Budget: ${budget ?? 'N/A'}')` 三个指标行硬编码英文
+  - `mobile/lib/features/memory/presentation/screens/memory_detail_screen.dart:735-739` — `_buildCorrectionButton('Not true', ...)` / `'No longer applies'` / `'Lower confidence'` / `'Merge'` 四个修正按钮硬编码英文
+- **repro_or_trigger**: 中文模式 → 成长记录/Chronicle → 进入任意记忆详情 → 查看版本历史区域 → 查看修正操作区域 → 观察到英文标签和按钮
+- **expected_vs_actual**: 期望：所有 UI 标签和按钮使用 i18n 模式显示中文/英文；实际：10+ 个标签和按钮硬编码英文
+- **blast_radius**: 影响中文用户使用记忆修正和版本管理功能——这是 Aurora 认知系统的核心交互（用户可修正 AI 对自身的记忆）。中文用户可能不理解 "Revert"、"Merge" 等操作按钮的含义。对北极星有间接影响——如果用户因语言障碍不使用记忆修正，AI 模型将积累错误记忆
+- **suggested_fix_direction**: 在 AppLocalizations ARB 文件中添加 memoryDiff、memoryRevert、memoryEvidence、memoryVersions、memoryBudget、memoryCorrectionReject、memoryCorrectionNoLongerApplies、memoryCorrectionLowerConfidence、memoryCorrectionMerge 等 key，然后在 memory_detail_screen.dart 中替换硬编码
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-1402-H3
+- **status**: discovered
+- **severity**: P3
+- **domain**: H
+- **title**: group_chat_screen 的举报原因列表中 3/6 项使用内联 isChinese 三元而非 context.l10n，与同列表其他 3 项不一致
+- **symptom**: 中文模式下可以正常显示中文（骚扰/暴力/其他），但代码中 harassment、violence、other 三个 ReportReason 的本地化字符串使用了 `I18nService.instance.isChinese ? '中文' : 'English'` 内联模式，而非同列表中 spam、hateSpeech、misinformation 三个原因使用的 `context.l10n` 集中管理模式
+- **root_cause_hypothesis**: 举报功能分两次开发：spam/hate/misinfo 是第一轮，正确使用了 AppLocalizations；harassment/violence/other 是第二轮补充的，直接用了内联 i18n 快捷方式
+- **evidence**:
+  - `mobile/lib/features/chat/presentation/screens/group_chat_screen.dart:212` — `context.l10n.chatGroupReportSpam` ← 正确使用 l10n
+  - `mobile/lib/features/chat/presentation/screens/group_chat_screen.dart:213` — `I18nService.instance.isChinese ? '骚扰' : 'Harassment'` ← 内联模式
+  - `mobile/lib/features/chat/presentation/screens/group_chat_screen.dart:214` — `I18nService.instance.isChinese ? '暴力' : 'Violence'` ← 内联模式
+  - `mobile/lib/features/chat/presentation/screens/group_chat_screen.dart:217` — `I18nService.instance.isChinese ? '其他' : 'Other'` ← 内联模式
+- **repro_or_trigger**: 群聊界面 → 长按消息 → Report → 观察举报原因列表 → 功能正常但代码不一致
+- **expected_vs_actual**: 期望：所有 6 个举报原因统一使用 `context.l10n` 集中在 ARB 文件中管理；实际：3 个用 l10n、3 个用内联 isChinese
+- **blast_radius**: 对用户无直接影响（功能正常）。但增加了 i18n 维护负担——修改文案需要改代码而非修改 ARB 文件。对北极星无影响
+- **suggested_fix_direction**: 在 AppLocalizations ARB 文件中添加 chatGroupReportHarassment、chatGroupReportViolence、chatGroupReportOther 三个 key，替换 group_chat_screen.dart 中的内联 isChinese 三元表达式
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-1403-H4
+- **status**: discovered
+- **severity**: P2
+- **domain**: H
+- **title**: group_tasks_screen 的集群任务操作按钮（Claim/Complete）和创建对话框标题硬编码英文，与同对话框已 i18n 的内容不一致
+- **symptom**: 中文模式下，集群任务卡片显示 "Claim"/"Complete" 按钮（英文），创建任务对话框标题为 "Create Group Task"（英文），对话框内的 hint 文本 "e.g. Complete Chapter 3 exercises" 也是英文。但同对话框的其他文本（Title/Description/Cancel/Create）已使用 `I18nService.instance.isChinese` 进行了双语处理
+- **root_cause_hypothesis**: 开发者在群任务功能中混合了 i18n 模式：对话框中的 labelText 和操作按钮已用 `I18nService.instance.isChinese` 处理，但任务卡片的 "Claim"/"Complete" 按钮 label 和对话框 "Create Group Task" 标题直接写了死英文
+- **evidence**:
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:269-271` — `label: 'Claim'` SparkleButton 硬编码英文
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:274-276` — `label: 'Complete'` SparkleButton 硬编码英文
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:299` — `title: Text('Create Group Task')` 对话框标题硬编码英文
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:309` — `hintText: 'e.g. Complete Chapter 3 exercises'` 提示文本硬编码英文
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:308` — 对比：同对话框 `I18nService.instance.isChinese ? '任务标题' : 'Task Title'` 已做 i18n
+- **repro_or_trigger**: 中文模式 → Community tab → 进入任意群组 → Tasks tab → 观察任务卡片的 Claim/Complete 按钮 → 点击 Create Group Task → 观察对话框标题和 hint
+- **expected_vs_actual**: 期望：所有 UI 文本统一使用 i18n 模式；实际：Claim/Complete 按钮和对话框标题/hint 为硬编码英文
+- **blast_radius**: 影响中文用户在群组任务功能中的操作体验。群组任务是社区问责系统的核心功能。对北极星有中等影响——影响中文用户完成协作任务的效率
+- **suggested_fix_direction**: 将 "Claim"/"Complete"/"Create Group Task"/hint 替换为 `I18nService.instance.isChinese ? '中文' : 'English'` 模式，与同文件中已有的 i18n 模式保持一致
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-1300-B1
+- **status**: closed_already_resolved
+- **severity**: P1
+- **domain**: B
+- **title**: 社区问责 hub 在真实模式下永远显示空数据——后端路由遮蔽导致契约不匹配
+- **symptom**: 在非 demo 模式下，社区问责 hub（社区 tab 里的责任空间卡片）永远显示空内容
+- **root_cause_hypothesis**: `experience.py` 的简单硬编码存根先注册，遮蔽了 `community_router.py` 的完整实现
+- **fix_commit**: c7918a705 (P2-01 fix removed the stub from experience.py; community_router now registers correctly)
+- **closed_at**: 2026-05-03T14:55:00
+- **close_reason**: 顺带修复 — P2-01 demo data quality 提交 (c7918a705) 删除了 experience.py 中的社区问责存根，完整实现现已正确注册。回归测试已添加于 test_community_accountability_route_shadowing.py
+- **discovered_by**: explorer-loop
+- **verified_by**: -
 
 ---
 
@@ -480,6 +554,7 @@
 | Round | Timestamp | Issue ID | Final Status | Commit | Duration |
 |-------|-----------|----------|--------------|--------|----------|
 | R1 | 2026-05-03T14:20 | P2-01 | ✅ Fixed | c7918a705 | ~5 min |
+| R2 | 2026-05-03T14:55 | ISSUE-20260503-1300-B1 | closed_already_resolved | c7918a705 (顺带) + 回归测试 | ~25 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -499,3 +574,16 @@
 - **New issues**: 0
 - **Findings**: Cold-start experience is well-designed. Dashboard has: (1) proper skeleton loading via `_buildDashboardSkeletonSections()`, (2) "Set First Goal" empty state with quick-start chips and AI CTA, (3) contextual error cards with failure-type-specific icons and messages. Goal creation wizard is a guided 5-step process with AI decomposition, validation, and error banners. Community screen shows accountability hub and goal-focus section even when feed is empty. Sub-providers use `.maybeWhen()` for graceful degradation. No P0/P1 gaps found.
 - **Next suggested domain**: H (i18n 残留 / 硬编码裸字符串) or K (错误处理/降级/边界)
+
+### Round R5 — 2026-05-03T14:05
+- **Domain**: H (i18n 残留 / 硬编码裸字符串)
+- **Paths covered**:
+  - group_members_screen.dart (management action dialogs + popup menus + snackbars)
+  - memory_detail_screen.dart (correction buttons + version history labels + metrics)
+  - group_chat_screen.dart (report reason i18n consistency)
+  - group_tasks_screen.dart (task action buttons + create dialog + hints)
+  - data_usage_dashboard_screen.dart (entire screen zero i18n — dead code, not included)
+- **New issues**: H1(P1), H2(P2), H3(P3), H4(P2)
+- **Findings**: 4/5 i18n issues are in community features (group members, group tasks, group chat). Pattern: features developed in batches where later additions used proper l10n but earlier hardcoded English was never retrofitted. memory_detail_screen is the outlier — Aurora cognitive feature with version management and correction mechanism, mostly i18n'd but missed 10+ labels.
+- **Opus pass rate**: pending (4 discovered, 0 verified yet)
+- **Next suggested domain**: K (错误处理/降级/边界) — error handling and degradation patterns emerged as key gap from R3/R4 clean results
