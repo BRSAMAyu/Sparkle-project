@@ -2251,6 +2251,41 @@
   **Rule guards**: 与 AX 失败无关（AX001 仅影响 proxy_routes.go，fix 未触及）。
 
   **不违规项**: CLAUDE.md 协议、proto 契约、i18n 策略均无新增违规。
+- **opus_review**: REJECTED by fix-reviewer at 2026-05-03T13:37Z (R2)
+- **rework_note_R2**: |
+  **Verdict**: REJECTED (第二轮复审) -- 修复取得实质进展（8 处 JSON 点 + 2 条 Responder 路径均改为 message_nack 类型，4 个回归测试通过），但存在 5 个残留缺陷阻塞批准。
+
+  **D1 (CRITICAL) -- protobufResponder.SendError 缺少 message_id**: chat_orchestrator_responder.go:293-302 的 errBody 包含 error_code/message/retryable/permanent 但无 message_id 字段。r.msg.RequestId 可用但未加入。影响 chatflow.go:638,656,746 三条错误路径。Flutter 解析器收到不含 message_id key 的 JSON 时 data["message_id"] 为 null -- if (messageId != null) 失败 -- 返回 UnknownEvent -- canRetry 仍为死代码。protobuf 路径在第二轮修复中仅改了 type（error 变为 message_nack），未添加 message_id。
+
+  **D2 (CRITICAL) -- envelopeResponder.SendError 缺少 message_id**: chat_orchestrator_responder.go:70-88 的 errBody 同样缺少 message_id 字段。r.envelope.MessageID 可用但未加入。影响 chatflow.go:636,654,744 三条错误路径。行为同 D1 -- envelope 内嵌 message_nack payload 因缺少 message_id key 被 Flutter 解析为 UnknownEvent。
+
+  修复建议 D1/D2: 在 errBody 中添加 "message_id" 字段（protobufResponder 用 r.msg.RequestId，envelopeResponder 用 r.envelope.MessageID）。同时考虑扩展 SendError 签名增加 retryAfterMs int 参数以支持 retry_after_ms 字段。
+
+  **D3 (MODERATE) -- 2 处 invalid_json NACK 使用空字符串而非 generateRequestID()**: chat_orchestrator.go:407 和 :512 的 "message_id": "" 违反 rework 指令 (1)。虽然 Dart 中 "" != null 为 true（NackEvent 会构造），但语义上空 ID 无法关联到任何客户端消息。指令 (1) 明确要求"对于不可获取 request_id 的场景，使用 generateRequestID() 生成"。generateRequestID() 在同一文件内可用，直接调用即可。
+
+  **D4 (MODERATE) -- unknown_message_type 无 generateRequestID() 回退**: chat_orchestrator.go:492 -- requestIDForNack, _ := msgMap["request_id"].(string) 可能为空字符串。应添加回退: if requestIDForNack == "" { requestIDForNack = generateRequestID() }。
+
+  **D5 (IMPORTANT) -- TestMessageNackIncludesRetryFieldsForTemporaryErrors 未按指令 (3) 修复**: 该测试仍发送 {"type":"nonexistent"...} 触发 unknown_message_type（permanent 错误），未改为测试临时错误路径（如 agentClient==nil 的 service_unavailable）。测试不断言 retry_after_ms 存在且 >0。指令 (3) 明确要求改测临时错误路径并断言 retry_after_ms > 0。
+
+  **Minor issues**:
+  - TestMessageNackEmittedForInvalidJSON (line 67) 和 TestNoLegacyErrorTypeInNackPaths (line 202) 使用 assert.Contains(t, parsed, "message_id") 仅检查 key 存在性，空字符串也能通过断言。应改为 assert.NotEmpty(t, parsed["message_id"]) 或等效的值断言。
+
+  **已确认的修复进展**:
+  - 8 处 JSON gin.H 错误点 100% 改为 message_nack 类型
+  - 3 处 chatflow.go JSON 路径（service_unavailable x2 + quota_exceeded）正确包含 message_id=requestID
+  - 5/8 JSON 路径 message_id 非空且有意义
+  - protobufResponder.SendError type 从 "error" 改为 "message_nack"
+  - envelopeResponder.SendError payload key 从 "error" 改为 "message_nack"
+  - 4 个回归测试全部通过（go test 确认）
+  - Rule guards 无新增失败（AX 为 proxy_routes.go 预存问题，与本次 fix 无关）
+
+  **重做要求 (R2)**:
+  1. 在 protobufResponder.SendError 和 envelopeResponder.SendError 的 errBody 中添加 message_id 字段
+  2. 两处 invalid_json NACK (chat_orchestrator.go:407,512) 使用 generateRequestID() 替代 ""
+  3. unknown_message_type NACK (line 492) 添加 generateRequestID() 回退（当 requestIDForNack 为空时）
+  4. 修复 TestMessageNackIncludesRetryFieldsForTemporaryErrors：改为测试临时错误路径（agentClient==nil 的 service_unavailable），并断言 retry_after_ms 存在且 >0
+  5. 将 TestMessageNackEmittedForInvalidJSON 和 TestNoLegacyErrorTypeInNackPaths 的 message_id 断言从 assert.Contains 升级为 assert.NotEmpty
+  6. 重新运行 go test ./internal/handler/ -run "TestMessageNack|TestNoLegacyError" -v -timeout 30s 确认全部通过且含值断言
 
 ### ISSUE-20260504-1431-C7
 - **status**: verified
@@ -3096,8 +3131,7 @@
   1. **A1 (P2) — error book prediction 路由拼写错误**: intent_prediction_provider.dart:591 使用 `'/error-book'` 但 error_book_routes.dart:30 注册路径为 `'/errors'`。所有其他 5 个 prediction 导航目标（`/focus`, `/tasks/new`, `/calendar-stats`, `/curiosity-capsule`, `/cognitive/patterns`）均使用正确路径。典型的一次性 typo
   2. **排除项**: (a) tool_host_screen embeddedBuilder null → 显示"暂不可用"文字 + 返回按钮，不是死胡同；(b) confirmMinimumCriteria 已修复（B2 fix ddcad1e8a），现在调用 API 后再更新 state；(c) completeNextStep 的 taskId null guard 不会触发——UI 通过 `hasTask` 检查确保按钮仅在 taskId 非 null 时显示（goal_detail_provider.dart:340）；(d) community group tasks 直接调用 repository 后 invalidate provider 是合法模式（不理想但不 broken）；(e) edit profile 的 _saveProfile 正确使用 try/catch，success 仅在 API 成功后显示；(f) dashboard prediction 导航使用 server-provided targetRoute，非客户端 bug；(g) tool host 的"Go Back"按钮使用 `canPop()/go('/home')` fallback，导航正确
   3. **Agent 质量分析**: 15 项报告中有 14 项为误报（93% false positive rate）。主要问题：(a) 将 hasTask guard 保护的按钮报告为"silent failure"——未检查 UI 侧的条件渲染；(b) 将 try/catch 包裹的成功回调报告为"success shown without server validation"——未注意到 await 在 try 内；(c) 将 provider invalidation 报告为"no state update"——未理解 invalidate 触发 re-fetch
-- **Opus pass rate**: pending
-- **Next suggested domain**: H (i18n) — 8 轮未回探；或 K (error handling) — 5 轮未回探
+- **Opus pass rate**: N/A (R44 A1 already verified)
 
 ### Round R45 — 2026-05-04T21:30
 - **Domain**: F (Event bus consumers DLQ/retry — 续探)
@@ -3167,7 +3201,7 @@
   1. **K1 (P1) — NackEvent 未处理**: C6 的 Go 端修复已部分落地（chatflow 3 路径发送 message_nack），Flutter ws_chat_service_v2 正确解析 NackEvent，但 chat_provider.dart 的 `await for (event in timedStream)` 没有 `event is NackEvent` 分支。同时 _routeEventToRequest 仅对 DoneEvent/ErrorEvent 关闭 controller。结果：NackEvent 被添加到 controller 但不关闭，chat_provider 忽略，用户等待 8 分钟超时
   2. **排除项**: (a) leaderboard_service getMyRank 使用 next() with None default 是正确模式；(b) intelligent_task_service 的 except Exception fallback 是有意降级（AI 建议失败时给默认值）；(c) chat_orchestrator 重复检测在 cache failure 时正确继续（比阻止用户好）；(d) stream error 处理（693-703）实际很健壮：发送错误给客户端 + 保存部分文本 + return false；(e) nudge_service 推送通知 best-effort 是行业标准；(f) achievement event consumer 的 exception swallow 是 F 域已覆盖的 F5 问题；(g) `legacyStreamErrorPayload` 使用 `type: "error"` 但被 Flutter 正确解析为 ErrorEvent（含 error_code + retryable）；(h) 消息长度超限使用 `type: "error"` 而非 `message_nack`，但被 Flutter 正确解析为 ErrorEvent(code: 'UNKNOWN')——功能正确但缺少 error_code 粒度
   3. **C6 与 K1 的关系**: C6 发现 Go 不发 message_nack → 修复后 Go 发了但 Flutter 不处理 → K1 是 C6 修复的必要后续。C6 的建议 "(3) Flutter 端无需修改——NackEvent 解析器已完备" 不完整——解析器完备但 chat_provider 未接入
-- **Opus pass rate**: pending
+- **Opus pass rate**: 1/1 (K1 verified)
 - **Next suggested domain**: I (DB 迁移 vs 代码字段) — 11 轮未回探；或 L (治理规则 vs 真实实现) — 10 轮未回探
 
 ### Round R48 — 2026-05-05T09:00
