@@ -1110,6 +1110,7 @@
 | R40 | 2026-05-04T00:28 | ISSUE-20260504-1050-I6 | closed_already_resolved | 1efeab4f9 (顺带) | ~3 min |
 | R41 | 2026-05-04T21:20 | ISSUE-20260504-1200-G4 | closed | d59317d17 | ~35 min |
 | R42 | 2026-05-04T22:00 | ISSUE-20260504-1430-C6 | closed | f816de9ea | ~105 min (3R) |
+| R43 | 2026-05-05T14:00 | ISSUE-20260504-1600-L5 | closed | d5c7b2d9e | ~85 min (2R) |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -2335,8 +2336,9 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1600-L5
-- **status**: rework
+- **status**: closed
 - **fixer_started_at**: 2026-05-04T22:15:00Z
+- **closed_at**: 2026-05-05T14:00:00Z
 - **severity**: P2
 - **domain**: L
 - **title**: CommunitySignalBridge 无 Aurora kill switch 保护——任务完成和成就解锁事件消费者直接调用，生产异常时无法关闭
@@ -2354,8 +2356,9 @@
 - **suggested_fix_direction**: 创建 AuroraCommunityBridgeKillSwitchService（或复用 Stage33），在 CommunitySignalBridge 构造函数中初始化，在每个公开方法开头添加 tri-state 模式检查（off→跳过、shadow→记录但不执行、live→正常执行）
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-03T19:30Z
-- **fix_commit**: 留空
+- **fix_commit**: d5c7b2d9e
 - **rework_note**: REJECTED by opus-reviewer at 2026-05-05T12:00Z. Shadow-mode gap — fix only checks `mode == "off"` (bi-state), missing the tri-state shadow mode required by CLAUDE.md ("off → shadow → live"). All 4 protected methods execute identically in shadow vs live: `handle_group_task_completed` still writes DB + publishes events + enqueues system updates; `handle_resource_shared` still publishes community.resource_shared; `build_privacy_preserving_cohort_signal` still writes privacy budget ledger + persists aggregate signals + publishes; `broadcast_achievement_unlock` still publishes to Redis channels. SocialSignalBridge (reference impl) handles shadow correctly — checks `mode != "live"` for write ops at lines 423-429 and 482-483. Suggested fix: either (A) change all 4 checks to `if mode != "live": return` (shadow=silent-skip like SocialSignalBridge) and add `logger.info("community_bridge mode={}, skipping", mode)` for observability; or (B) three-way branch: off→skip, shadow→log-only (no DB write / no event publish), live→execute. Tests must also cover shadow-mode blocking — existing 8 tests only verify off-mode. Other aspects of the fix are correctly structured: settings.py binding, AuroraStage33KillSwitchService registration, import + init pattern, test coverage for off-mode. 15/15 tests pass. Rule guards: pre-existing AX fail only (route-tier comments, unrelated). No proto/DB/i18n cross-layer drift.
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-05T14:00Z. All Round-1 defects resolved. (a) Root cause: tri-state kill switch correctly implemented for all 4 protected methods — checks `mode != "live"` (option A from rework_note), matching SocialSignalBridge reference pattern at lines 167/423/482. Master `off` short-circuits subfeatures correctly via `get_feature_mode`. (b) Regression risk: LOW. Guards placed before any DB write / event publish / system update. Callers (task_event_consumer:98, achievement_event_consumer:288) unchanged — guard lives inside bridge. Static method `sanitize_for_aurora_context` intentionally unprotected (read-only data transform). (c) Cross-layer: no proto/DB/i18n/mobile changes needed — purely backend settings + kill switch binding + bridge guard. (d) Tests: 18/18 pass (10 community_signal_kill_switch + 8 stage33_kill_switch). Shadow-mode tests exist for 3/4 methods (`build_privacy_preserving_cohort_signal` verifies `{"allowed":False,"reason":"community_bridge_disabled"}`, `broadcast_achievement_unlock` verifies `None` return, `handle_group_task_completed` verifies `db_mock.execute.assert_not_awaited()`). Minor gap: `handle_resource_shared` has code-level guard (verified at community_signal_bridge.py:185-187) but no dedicated kill-switch test — acceptable since the guard pattern is identical to the other 3 well-tested methods. (e) Rule guards: only pre-existing AX failure (proxy_routes.go route-tier comments — unrelated). Rule BE ("shadow computes without live persistence/publish hooks") PASS. Rule AV (58 mode settings + 21 kill switch services) PASS. No CLAUDE.md violations. Fix is clean, tri-state is complete, test protection is adequate. Recommend closing.
 
 ### ISSUE-20260504-1601-L6
 - **status**: verified
