@@ -18,6 +18,7 @@ import 'package:sparkle/features/task/data/models/task_completion_result.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_response.dart';
 import 'package:sparkle/features/task/data/models/task_feedback_submission.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
+import 'package:sparkle/shared/entities/task_model.dart';
 
 class TaskFeedbackDialog extends ConsumerStatefulWidget {
   const TaskFeedbackDialog({
@@ -336,6 +337,21 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
 
     widget.onClose();
     if (action.existingTaskId != null) {
+      // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+      ref.read(activeTaskProvider.notifier).state = TaskModel(
+        id: action.existingTaskId!,
+        userId: '',
+        title: action.title,
+        type: TaskType.learning,
+        tags: [],
+        estimatedMinutes: action.estimatedMinutes,
+        difficulty: action.difficulty,
+        energyCost: action.energyCost,
+        status: TaskStatus.inProgress,
+        priority: 5,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
       context.go('/tasks/${action.existingTaskId}/execute');
     } else if (action.quickCreateParams != null && action.canQuickCreate) {
       final title = action.quickCreateParams!['title'] as String?;

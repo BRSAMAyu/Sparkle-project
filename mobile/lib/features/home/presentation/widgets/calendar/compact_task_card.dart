@@ -145,8 +145,11 @@ class CompactTaskCard extends ConsumerWidget {
         return _ActionButton(
           icon: Icons.check_rounded,
           color: DS.brandPrimaryConst,
-          onTap: () => context
-              .push(TaskRoutes.taskExecution.replaceFirst(':id', task.id)),
+          onTap: () {
+            // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+            ref.read(activeTaskProvider.notifier).state = task;
+            context.push(TaskRoutes.taskExecution.replaceFirst(':id', task.id));
+          },
         );
       case TaskStatus.paused:
       case TaskStatus.restore:
@@ -156,6 +159,8 @@ class CompactTaskCard extends ConsumerWidget {
           onTap: () async {
             await ref.read(taskListProvider.notifier).resumeTask(task.id);
             if (!context.mounted) return;
+            // 🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取
+            ref.read(activeTaskProvider.notifier).state = task;
             await context.push(
               TaskRoutes.taskExecution.replaceFirst(':id', task.id),
             );
