@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 20:00 (R42 J-domain — 0 new issues, cold-start comprehensive audit passed)
+> Updated: 2026-05-04 20:00 (R42 J-domain — 0 new; R43 E-domain in progress)
 
 ---
 
@@ -416,6 +416,7 @@
 | R40 | 2026-05-04T18:30 | G | 0 | N/A | G 域续探——mock_community_repository 核心方法全部正确实现，剩余空 stub 为非核心功能，domain exhausted |
 | R41 | 2026-05-04T19:30 | D | 3 | 3/3 (D1/D2/D3 verified) | D 域续探（纠正上轮 0/8 false positive）——Statechart engine 吞异常返回部分状态 + compile() 不验证边目标 + max_steps 静默截断 |
 | R42 | 2026-05-04T20:00 | J | 0 | N/A | J 域——cold start / empty state 全面审查：dashboard/community/marketplace/tool-library/notifications/onboarding 全部健壮 |
+| R43 | 2026-05-04T20:15 | E | 2 | pending（待 Opus 独立复审） | E 域续探——E7 fix_commit 错误（指向 B5 提交）+ privacy drill 内联 binding 缺 allowed_modes 崩溃 + drill 写 Redis 但生产读 settings 零影响 |
 
 ---
 
@@ -2412,6 +2413,48 @@
 - **verified_by**: opus-independent-reviewer+2026-05-04T19:45Z
 - **fix_commit**: 留空
 
+### ISSUE-20260504-1930-E8
+- **status**: discovered
+- **severity**: P2
+- **domain**: E
+- **title**: Privacy kill switch drill 的 _PRIVACY_BINDING 内联 type() 缺少 allowed_modes 字段导致 write_mode() 抛出 AttributeError——E7 的 fix_commit 指向错误的 B5 提交，该 bug 实际未修复
+- **symptom**: 运行 `python scripts/stage40/run_kill_switch_drills.py --only privacy` 时，`_privacy_apply()` → `_ks_write_mode()` → `kill_switch.write_mode()` 在 line 125 访问 `binding.allowed_modes` 时抛出 `AttributeError: 'PrivacyBinding' object has no attribute 'allowed_modes'`。整个 drill 流程在 privacy 条目中断。
+- **root_cause_hypothesis**: `_PRIVACY_BINDING`（line 238-243）使用 `type("PrivacyBinding", (), {5个属性})()` 内联构造类实例，仅有 `stage`/`feature`/`redis_key`/`settings_attr`/`fallback_mode` 五个属性，缺少 `allowed_modes`（KillSwitchBinding dataclass 默认 `TRI_STATE_MODES`）。`kill_switch.write_mode()` (line 125) 无条件访问 `binding.allowed_modes`——对 inline type() 对象触发 AttributeError。E7（ISSUE-20260504-0947-E7）正确诊断了相同根因并标记为 verified，但其 fix_commit（65ea8325）实际是 B5 的修复（capsule_provider submitFeedback），未修改 run_kill_switch_drills.py。
+- **evidence**:
+  - `scripts/stage40/run_kill_switch_drills.py:238-243` — `_PRIVACY_BINDING = type("PrivacyBinding", (), {"stage": "privacy", "feature": "pii_redaction", "redis_key": "aurora:privacy:pii_redaction", "settings_attr": "AURORA_PRIVACY_PII_REDACTION_MODE", "fallback_mode": "live"})()` — 仅有 5 个属性，缺少 allowed_modes
+  - `backend/app/core/kill_switch.py:122-127` — `write_mode()` 调用 `normalize_mode(mode, allowed_modes=binding.allowed_modes, ...)` — `binding.allowed_modes` 对 inline type() 对象触发 AttributeError
+  - `backend/app/core/kill_switch.py:34` — `KillSwitchBinding.allowed_modes: frozenset[str] = TRI_STATE_MODES` — dataclass 默认值，inline type() 不继承
+  - `scripts/stage40/run_kill_switch_drills.py:248-249` — `_privacy_apply()` 调用 `_ks_write_mode(binding=_PRIVACY_BINDING, ...)` —— crash 触发点
+  - `git show 65ea8325 --name-only` — 仅修改 capsule_provider.dart + capsule_detail_screen.dart + test，未触及 run_kill_switch_drills.py
+- **repro_or_trigger**: `cd scripts/stage40 && python run_kill_switch_drills.py --only privacy` → `AttributeError: 'PrivacyBinding' object has no attribute 'allowed_modes'`
+- **expected_vs_actual**: 期望：隐私 drill 使用正式的 KillSwitchBinding 或至少包含所有必需属性，正常执行 off→shadow→live→shadow→off 转换。实际：inline type() 缺少 allowed_modes，write_mode() 崩溃，drill 中断。
+- **blast_radius**: 影响 drill_all 完整性——privacy 是 DEFAULT_SPECS 成员，默认 drill_all 执行到 privacy 时崩溃，后续 doc_context/dual_core_router/stage40-calendar 条目无法执行。E7 的 fix_commit 错误可能导致维护者误以为已修复而跳过。对北极星无直接影响（PII redaction 本身不依赖 drill）。
+- **suggested_fix_direction**: 将 `_PRIVACY_BINDING` 替换为 `KillSwitchBinding(stage="privacy", feature="pii_redaction", redis_key="aurora:privacy:pii_redaction", settings_attr="AURORA_PRIVACY_PII_REDACTION_MODE", fallback_mode="live")`。同时修正 E7 条目的 fix_commit 字段。
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1931-E9
+- **status**: discovered
+- **severity**: P2
+- **domain**: E
+- **title**: Privacy drill 写入 Redis 但 pii_redaction_mode() 仅从 settings 读取——drill 对实际行为零影响
+- **symptom**: 运行 privacy drill（即使 E8 修复后），drill 输出显示 off→shadow→live 转换"成功"，但 PII redaction 的实际行为完全未改变。运维人员以为通过 drill 切换了隐私模式，实际上生产代码从未读取 Redis 中的对应 key。
+- **root_cause_hypothesis**: `pii_redaction_mode()` (privacy.py:53-58) 使用 `normalize_mode(getattr(settings, "AURORA_PRIVACY_PII_REDACTION_MODE", "live"))` 直接从 settings 读取，不调用 `read_mode()`，不查询 Redis。而 drill 的 `_privacy_apply()` 通过 `write_mode()` 写入 Redis（提供了非 None 的 redis_client）。读路径和写路径使用不同的数据源——drill 写入 Redis 但生产忽略 Redis 值。这可能是安全设计（PII redaction 不应被运行时 Redis 覆盖），但 drill 应反映真实行为。
+- **evidence**:
+  - `backend/app/aurora/privacy.py:53-58` — `def pii_redaction_mode() -> str: mode = normalize_mode(getattr(settings, "AURORA_PRIVACY_PII_REDACTION_MODE", "live"), fallback="live"); record_mode_gauge("privacy", "pii_redaction", mode); return mode` — 仅从 settings 读取，不查 Redis，不调用 read_mode()
+  - `scripts/stage40/run_kill_switch_drills.py:248-249` — `await _ks_write_mode(redis_client=redis_client, prefix="sparkle:", binding=_PRIVACY_BINDING, mode=mode)` —— drill 写入 Redis（redis_client 非 None）
+  - `backend/app/core/kill_switch.py:133-134` — `write_mode()` 的 else 分支：`await redis_client.set(f"{prefix}{binding.redis_key}", normalized)` —— 写入 Redis key `sparkle:aurora:privacy:pii_redaction`
+  - `backend/app/core/kill_switch.py:94-112` — `read_mode()` 的正常流程：先读 settings → 再查 Redis 覆盖 → 记录 gauge。privacy 不使用此函数
+  - 对比参照：`backend/app/services/aurora_stage35_kill_switch_service.py:29-34` — `get_mode()` 使用 `read_mode(redis_client=cache_service.redis, ...)` ——正确同时读取 settings + Redis
+- **repro_or_trigger**: 1. `redis-cli SET sparkle:aurora:privacy:pii_redaction off` 2. 发送聊天消息包含 PII（如 email）3. 观察：PII 仍被 redact——Redis 值被忽略。反之亦然：drill 将 Redis 设为 off → PII 仍在 redact。
+- **expected_vs_actual**: 期望：privacy kill switch 的读路径与写路径使用相同的数据源（要么都走 settings，要么都走 settings+Redis），drill 反映真实控制路径。实际：drill 写入 Redis 但生产忽略 Redis，drill 的 off→shadow→live 转换对 PII redaction 行为零影响。如果这是安全设计（禁止 Redis 覆盖 PII 保护），drill 应从 DEFAULT_SPECS 移除或改为直接操作 settings 属性并加注释说明。
+- **blast_radius**: 不影响用户 PII 保护——PII redaction 始终按 settings 配置工作。影响运维认知——drill 输出给人虚假的控制感。对北极星无直接影响。
+- **suggested_fix_direction**: 方案 A：修改 `pii_redaction_mode()` 使用 `read_mode()`（需评估 Redis 覆盖 PII 的安全风险）。方案 B：修改 `_privacy_apply()` 直接操作 `settings.AURORA_PRIVACY_PII_REDACTION_MODE` 而非写 Redis（当 redis_client 不可用时 write_mode 已有 settings 回退逻辑，可传 redis_client=None）。方案 C：从 DEFAULT_SPECS 移除 privacy 并在 DrillSpec.description 中说明原因。
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
 ### Round R25 — 2026-05-04T05:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
@@ -2811,3 +2854,23 @@
   9. **Agent 误报分析**: Agent 将所有防御性编码模式（null safe fallbacks, maybeWhen with orElse, defensive DioException catch）误判为 bug。特别是在明知代码有 `isLoading` 标志传递给子 widget（line 611）的情况下，仍将 `growthState == null during loading` 报为问题
 - **Opus pass rate**: N/A (0 new issues)
 - **Next suggested domain**: A (Flutter UI E2E) — 9 轮未回探；或 H (i18n) — 7 轮未回探
+
+### Round R43 — 2026-05-04T20:15
+- **Domain**: E (Aurora kill switch 真实可观测 — 续探)
+- **Paths covered**:
+  - `backend/app/core/kill_switch.py:1-139` — 全量审查：KillSwitchBinding dataclass, normalize_mode, read_mode, write_mode, record_mode_gauge
+  - `scripts/stage40/run_kill_switch_drills.py:1-420` — 全量审查：DEFAULT_SPECS（22 targets）, SPECS dict, _PRIVACY_BINDING inline type()
+  - `backend/app/aurora/privacy.py:53-58` — pii_redaction_mode(): settings-only, 不查 Redis
+  - `backend/app/services/aurora_stage*_kill_switch_service.py` — 21 service files 全量对比：均使用 read_mode(redis_client=...) 模式，仅 privacy 例外
+  - `backend/app/orchestration/routing_engine.py:1070-1099` — 运行时 kill switch 读取（stage33/35/39 summary）
+  - E5/E6/E7 fix verification: E5 (dual_core_router 已纳入 drill) ✅, E6 (stage38 label 已修复) ✅, E7 (privacy inline type 未修复 ❌)
+- **New issues**: 2 — E8 (P2: _PRIVACY_BINDING 内联 type() 缺 allowed_modes → write_mode() AttributeError 崩溃；E7 fix_commit 指向错误的 B5 提交), E9 (P2: privacy drill 写入 Redis 但 pii_redaction_mode() 仅从 settings 读取 → drill 对实际行为零影响)
+- **Findings**: E 域续探全面审查 21 个 kill switch service + 1 个集中 drill runner。关键发现：
+  1. **E8 — E7 未修复 + crash bug**: E7（ISSUE-20260504-0947-E7）正确诊断了 `_PRIVACY_BINDING` 缺 `allowed_modes` 会导致 `write_mode()` 崩溃，标记为 verified 但其 fix_commit（65ea8325）实际是 B5 的 capsule_provider submitFeedback 修复。该 commit 仅修改 Flutter 文件，从未触及 run_kill_switch_drills.py。`_PRIVACY_BINDING` 当前仍是仅有 5 个属性的 inline type()——`write_mode()` line 125 的 `binding.allowed_modes` 仍会触发 AttributeError
+  2. **E9 — drill 读/写数据源不一致**: `pii_redaction_mode()` 使用 `normalize_mode(getattr(settings, ...))` 直接从 settings 读取——不调用 `read_mode()`，不查询 Redis。但 drill 的 `_privacy_apply()` 通过 `write_mode()` 写入 Redis。这是唯一有此不一致的 Aurora feature——所有其他 20 个 kill switch service 的 `get_mode()` 均使用 `read_mode(redis_client=cache_service.redis, ...)` 同时读取 settings + Redis
+  3. **E5/E6 修复验证通过**: dual_core_router 已纳入 DEFAULT_SPECS（E5 ✅），Stage38 的 stage label 已改为 "38"（E6 ✅）
+  4. **所有 21 个 kill switch service 均有运行时 caller**: 无死代码服务。所有 service 的 get_mode()/summary() 在生产代码中被调用
+  5. **DEFAULT_SPECS 覆盖完整**: 22 个 drill target（18-21, 23-31, 33-35, 37-40, privacy, doc_context, dual_core_router）全部在 SPECS dict 中有对应 DrillSpec
+  6. **排除项**: (a) auto_degrade.py 的 5 个 SLO kill switch binding 用于基础设施自动降级，不需 Aurora 功能 drill；(b) aurora.py config 中的 AURORA_SHADOW_MODE/AURORA_ACTIVE 布尔值用于整体 Aurora 开关，已有 shadow/active cohort 机制；(c) routing_parameter_registry.py 的 META_LEARNING_BINDING 是参数注册不独立控制功能
+- **Opus pass rate**: pending
+- **Next suggested domain**: F (Event bus consumers DLQ/retry) — 4 轮未回探（R38）；或 A (Flutter UI E2E) — 9 轮未回探
