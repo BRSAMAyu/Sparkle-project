@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 21:30 (R45 F-domain — 0 discovered: F6 APPROVED by opus review)
+> Updated: 2026-05-05 08:00 (opus review pass — F6 + H9 both APPROVED)
 
 ---
 
@@ -370,7 +370,7 @@
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
 - **Discovered (not verified)**: 0
-- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 1 (D2) + 3 (I1/I2/I3) + 4 (L1/L2/L3/L4) + 3 (B1/B2/B3) + 1 (H5)
+- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (F5) + 1 (F6) + 1 (A1 — fix commit pending) + 1 (D1) + 1 (D2) + 3 (I1/I2/I3) + 4 (L1/L2/L3/L4) + 3 (B1/B2/B3) + 1 (H5) + 1 (H9)
 
 ---
 
@@ -2332,7 +2332,8 @@
 - **blast_radius**: 生产消费者级联失败时死信永久丢失。DLQ PostgreSQL 持久化设计意图是审计+恢复，缺失读取端使此意图落空。对北极星无直接影响但降低系统韧性。
 - **suggested_fix_direction**: (1) 新增 /api/v1/event-bus/dlq/entries GET 分页查询 event_bus_dlq 表；(2) 新增 /api/v1/event-bus/dlq/replay POST 从 event_bus_dlq 读 payload 并 publish 回 sparkle_events；(3) 复用 DlqReplayAuditLog 模型记录 replay 审计
 - **discovered_by**: explorer-loop
-- **verified_by**: opus-review+2026-05-04T21:30
+- **verified_by**: opus-reviewer+2026-05-05T08:00:00Z
+- **reviewer_note**: APPROVED — independent review confirms all 5 evidence references. (1) event_bus.py:740-818 — _persist_dlq_entry() writes to PostgreSQL via db.add(EventBusDLQEntry(...)), _move_to_dlq() writes to Redis via xadd to sparkle_events:dlq stream. Both are write-only paths. (2) EventBusDLQEntry model (event_bus_dlq.py:1-26) has 10 fully-indexed columns (stream, event_type, user_id, message_id, etc.) but is only used once in the entire backend — the INSERT at event_bus.py:767. Zero SELECT queries exist. (3) event_bus_health.py:60-70 — /event-bus/dlq calls get_dlq_stats() (event_bus.py:1244-1282) which returns only {dlq_stream, message_count, oldest_message_age_seconds}. No entry-level data. (4) dlq_admin.py:16-95 — GET /dlq/ reads CognitiveStreamWorker.DLQ_STREAM ("stream:dlq:persona") via xrevrange. POST /dlq/replay writes to same stream via worker.replay_dlq_event(). CognitiveStreamWorker.DLQ_STREAM != EventBus DLQ ("sparkle_events:dlq"). The admin API is completely isolated from EventBus DLQ. (5) CognitiveStreamWorker.replay_dlq_event() (line 243-261) is the sole replay implementation, operating only on CognitiveStreamWorker's private stream. Call chain for DLQ write: consumer fails → _handle_failed_message → _move_to_dlq → Redis xadd + _persist_dlq_entry → PostgreSQL INSERT. Call chain for DLQ read: NONE — no API endpoint, no service method, no SELECT query reads from event_bus_dlq table or sparkle_events:dlq stream. Not "by design" — the event_bus_dlq table has 8 indexes optimized for querying (by stream, event_type, user_id, failure_stage, message_id, etc.), clearly indicating read-side intent. The DLQ write path includes audit fields (retry_count, failure_stage, error) meant for operational visibility. The dlq_admin.py pattern for CognitiveStreamWorker proves the team knows how to build DLQ management APIs — EventBus DLQ simply lacks the equivalent. Not duplicate of F1-F5: F1-F5 all concern consumer-side error handling (subscribe failure, framework bypass, task health detection, stop() methods, exception swallowing); F6 is about the DLQ infrastructure itself having no read/replay API despite a complete write path.
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1800-B1
@@ -2580,7 +2581,8 @@
 - **blast_radius**: English users cannot understand archive/restore/revoke operations. Document library is a core feature for the study flow (managing learning materials). The mixed-language revoke dialog is particularly confusing — users see "Cancel" in English but "撤回" for the destructive action. Moderate impact on north star — study material management is part of the 7-day learning flow but not a blocking path.
 - **suggested_fix_direction**: Add l10n keys to `app_zh.arb` and `app_en.arb` for: `studyMaterialsArchiveSuccess`, `studyMaterialsArchiveFailed`, `studyMaterialsRestoreSuccess`, `studyMaterialsRestoreFailed`, `studyMaterialsRevokeTitle`, `studyMaterialsRevokeMessage` (with {filename} placeholder), `studyMaterialsRevokeConfirm`, `studyMaterialsRevokeSuccess`, `studyMaterialsRevokeFailed`, `studyMaterialsArchiveAction`, `studyMaterialsRestoreAction`, `studyMaterialsRevokeAction`. Then replace all 10 hardcoded strings with `context.l10n.*` references.
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-05T08:00:00Z
+- **reviewer_note**: APPROVED — independent review confirms all 4 evidence references match code exactly. (1) document_library_screen.dart:360 — `const SnackBar(content: Text('资料已归档，不会再进入 RAG 上下文'))` hardcoded Chinese, confirmed at line 360. (2) Lines 391-400 — `_confirmRevoke()` dialog: title `const Text('撤回资料权限')` (line 391), content `Text('撤回后，${document.filename} 会从共享与检索缓存中移除。')` (line 392), confirm `const Text('撤回')` (line 400) — all Chinese only. Cancel button at line 396 uses `context.l10n.cancel` — mixed i18n in same dialog confirmed. (3) Lines 1280-1288 — archive/restore button labels `'归档'`/`'恢复'` (line 1281-1282 conditional on lifecycleStatus), revoke button `const Text('撤权')` (line 1288) — all Chinese. Adjacent delete button at line 1297 uses `context.l10n.studyMaterialsDeleteAction` — correct pattern exists next to broken pattern. (4) app_zh.arb has 40+ studyMaterials* keys for upload/search/metrics/delete/empty states, confirmed zero keys matching studyMaterialsArchive*, studyMaterialsRestore*, studyMaterialsRevoke* via grep. Additional verification: (a) File has 52 context.l10n usages (grep -c), confirming l10n infrastructure is fully available. (b) All 10 hardcoded Chinese strings in the file are in the archive/restore/revoke flow (grep confirmed: exactly 10 lines with hardcoded Chinese Text/SnackBar). (c) Restore success/error at lines 377/382 and revoke success/error at lines 413/418 also hardcoded Chinese — total is 10 user-facing strings: archive success+error (360,365), restore success+error (377,382), revoke dialog title+content+confirm (391,392,400), revoke success+error (413,418), plus 3 button labels (1280-1282,1288) = 13 strings total, though the button labels at 1280-1282 are the same '归档'/'恢复' from the action. Not "by design" — same file demonstrates correct l10n pattern in adjacent delete operation. Not duplicate of H1-H8: H1-H5 concern group_members_screen/group_tasks_screen hardcoded English; H6-H8 are different files. H9 is document_library_screen with hardcoded Chinese.
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
