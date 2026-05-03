@@ -75,7 +75,7 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        zh ? '目标问责空间' : 'Accountability space',
+                        zh ? '目标责任空间' : 'Accountability space',
                         style: TextStyle(
                           color: DS.textSecondary,
                           fontSize: DS.fontSizeXs,

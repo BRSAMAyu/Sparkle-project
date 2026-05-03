@@ -310,6 +310,20 @@ class AchievementEngine:
         result = await self.db.execute(query)
         achievements = result.scalars().all()
 
+        # Safety net: auto-seed achievement definitions if the table is empty.
+        # This ensures achievements are visible even if the startup seed failed
+        # or the database was freshly created after the application started.
+        if not achievements:
+            try:
+                from app.data.populate_achievements import sync_achievement_definitions
+
+                await sync_achievement_definitions(self.db)
+                result = await self.db.execute(query)
+                achievements = result.scalars().all()
+                logger.info("Auto-seeded {} achievement definitions on first query", len(achievements))
+            except Exception:
+                logger.warning("Auto-seed of achievement definitions failed", exc_info=True)
+
         async with self._cache_lock:
             self._achievement_cache = {a.id: a for a in achievements}
             self._cache_last_update = now

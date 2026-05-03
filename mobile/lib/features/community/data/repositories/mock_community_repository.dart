@@ -419,7 +419,7 @@ class MockCommunityRepository implements CommunityRepository {
           content: zh ? '分享一个认知棱镜' : 'Sharing a cognitive prism',
           contentData: {
             'resource_type': 'cognitive_prism_pattern',
-            'resource_title': zh ? '计划谬误' : 'Planning Fallacy',
+            'resource_title': zh ? '任务复杂度低估' : 'Task Complexity Underestimation',
             'resource_summary': zh
                 ? '我经常低估任务复杂度，导致计划频繁延期...'
                 : 'I often underestimate task complexity, leading to frequent plan delays...',
@@ -1476,8 +1476,54 @@ class MockCommunityRepository implements CommunityRepository {
   @override
   Future<List<Post>> getFeed(
       {int page = 1, int limit = 20, String? scope}) async {
-    // Return empty list for mock - feed would be handled by community_providers
-    return [];
+    final zh = I18nService.instance.isChinese;
+    final now = DateTime.now();
+    return [
+      Post(
+        id: 'post_001',
+        userId: _mockUsers[0].id,
+        content: zh
+            ? '今天用番茄工作法复习了第三章，25分钟一节真的很有效。之前总觉得学不完，拆成小块后反而多做了两节。'
+            : 'Used Pomodoro to review chapter 3 today. 25-min blocks really work. I used to feel overwhelmed, but breaking it into chunks helped me do two extra sections.',
+        createdAt: now.subtract(const Duration(hours: 2)),
+        user: PostUser(id: _mockUsers[0].id, username: _mockUsers[0].nickname ?? _mockUsers[0].username),
+        likeCount: 7,
+        topic: zh ? '学习方法' : 'Study Methods',
+      ),
+      Post(
+        id: 'post_002',
+        userId: _mockUsers[2].id,
+        content: zh
+            ? '终于把线性代数的特征值分解搞懂了！关键是把矩阵看作变换而不是一堆数字。'
+            : 'Finally understood eigendecomposition in linear algebra! The key was seeing matrices as transformations, not just arrays of numbers.',
+        createdAt: now.subtract(const Duration(hours: 5)),
+        user: PostUser(id: _mockUsers[2].id, username: _mockUsers[2].nickname ?? _mockUsers[2].username),
+        likeCount: 12,
+        topic: zh ? '数学突破' : 'Math Breakthrough',
+      ),
+      Post(
+        id: 'post_003',
+        userId: _mockUsers[1].id,
+        content: zh
+            ? '连续7天早起打卡了！虽然今天差点放弃，但想到责任伙伴在等我，就还是起来了。'
+            : '7-day early rising streak! Almost gave up today, but knowing my accountability partner was waiting got me up.',
+        createdAt: now.subtract(const Duration(hours: 8)),
+        user: PostUser(id: _mockUsers[1].id, username: _mockUsers[1].nickname ?? _mockUsers[1].username),
+        likeCount: 15,
+        topic: zh ? '习惯养成' : 'Habit Building',
+      ),
+      Post(
+        id: 'post_004',
+        userId: _mockUsers[3].id,
+        content: zh
+            ? '分享一下我总结的错题复盘模板：1) 错因归类 2) 找到知识盲区 3) 出一道变式题验证。用了两周，同类错误减少了60%。'
+            : 'Sharing my error review template: 1) Categorize error type 2) Find knowledge gap 3) Create a variant problem to verify. Used for 2 weeks, same-type errors down 60%.',
+        createdAt: now.subtract(const Duration(days: 1)),
+        user: PostUser(id: _mockUsers[3].id, username: _mockUsers[3].nickname ?? _mockUsers[3].username),
+        likeCount: 23,
+        topic: zh ? '错题复盘' : 'Error Review',
+      ),
+    ];
   }
 
   @override
@@ -1597,8 +1643,24 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<List<GroupMemberInfo>> getGroupMembers(String groupId) async {
-    // Mock implementation - return empty list
-    return [];
+    final group = _mockGroups.where((g) => g.id == groupId).firstOrNull;
+    if (group == null) return [];
+    final roles = [GroupRole.member, GroupRole.member, GroupRole.member, GroupRole.admin];
+    final members = <GroupMemberInfo>[];
+    for (int i = 0; i < _mockUsers.length && members.length < group.memberCount; i++) {
+      final user = _mockUsers[i];
+      final role = user.id == currentUserId ? group.myRole : roles[i % roles.length];
+      members.add(GroupMemberInfo(
+        user: user,
+        role: role,
+        flameContribution: 100 + i * 50,
+        tasksCompleted: 5 + i * 3,
+        checkinStreak: i < 3 ? 3 + i : 0,
+        joinedAt: DateTime.now().subtract(Duration(days: 10 - i)),
+        lastActiveAt: DateTime.now().subtract(Duration(hours: i)),
+      ));
+    }
+    return members;
   }
 
   @override

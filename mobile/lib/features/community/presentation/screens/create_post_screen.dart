@@ -105,7 +105,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             padding: const EdgeInsets.all(DS.lg),
             child: GraphiteCardSurface(
               surfaceRole: SparkleSurfaceRole.card,
-              child: Column(
+              child: SingleChildScrollView(
+                child: Column(
                 children: [
                   TextField(
                     controller: _contentController,
@@ -134,7 +135,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                       ),
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(height: DS.spacing24),
                   // Toolbar (Placeholder)
                   SparkleStaggerItem(
                     index: 1,
@@ -165,6 +166,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     ),
                   ),
                 ],
+              ),
               ),
             ),
           ),

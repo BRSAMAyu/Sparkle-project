@@ -91,7 +91,7 @@ class ToolHostScreen extends StatelessWidget {
                 child: tool.embeddedBuilder?.call(request) ??
                     Center(
                       child: Text(
-                        I18nService.instance.isChinese ? '${tool.title}暂不可用' : '${tool.title} is currently unavailable',
+                        I18nService.instance.isChinese ? '${tool.getLocalizedTitle()}暂不可用' : '${tool.getLocalizedTitle()} is currently unavailable',
                         style: Theme.of(context).textTheme.bodyLarge,
                       ),
                     ),

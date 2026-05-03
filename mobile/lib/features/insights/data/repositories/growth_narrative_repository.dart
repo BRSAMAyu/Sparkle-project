@@ -17,19 +17,37 @@ class GrowthNarrativeRepository {
 
   final ApiClient _apiClient;
 
+  /// Fetch weekly narrative from the growth dashboard endpoint.
+  ///
+  /// The `/experience/growth-dashboard` response includes a `weekly_narrative`
+  /// field in the raw format that [WeeklyGrowthNarrative.fromJson] expects
+  /// (period, week_start, week_end, body, sentences, highlights, data_points,
+  /// etc.).  The older standalone `/growth/weekly-narrative` route may not be
+  /// reliably available, so we derive the narrative from the dashboard
+  /// aggregate instead.
   Future<WeeklyGrowthNarrative> getWeeklyNarrative() async {
     if (DemoDataService.isDemoMode) {
       return WeeklyGrowthNarrative.placeholder();
     }
     try {
       final response = await _apiClient.get<dynamic>(
-        ApiEndpoints.growthWeeklyNarrative,
+        ApiEndpoints.experienceGrowthDashboard,
       );
-      final data = ApiResponseParser.unwrapMap(
+      final dashboard = ApiResponseParser.unwrapMap(
         response.data,
         action: 'getWeeklyNarrative',
       );
-      return WeeklyGrowthNarrative.fromJson(data);
+      final raw = dashboard['weekly_narrative'];
+      if (raw is Map<String, dynamic>) {
+        return WeeklyGrowthNarrative.fromJson(raw);
+      }
+      if (raw is Map) {
+        return WeeklyGrowthNarrative.fromJson(
+          Map<String, dynamic>.from(raw),
+        );
+      }
+      // Fallback: the dashboard responded but had no weekly_narrative.
+      return WeeklyGrowthNarrative.placeholder();
     } on DioException catch (e) {
       throw Exception(_extractDioMessage(e, 'Failed to load growth story'));
     } catch (_) {

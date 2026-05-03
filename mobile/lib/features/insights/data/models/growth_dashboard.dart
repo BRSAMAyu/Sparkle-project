@@ -210,12 +210,41 @@ class WeeklyDashboardNarrative {
   });
 
   factory WeeklyDashboardNarrative.fromJson(Map<String, dynamic> json) {
+    // The backend may return either the story-wrapped format
+    // (title, story, key_insights) or the raw format (period, body,
+    // highlights).  Map both so the card always renders useful content.
+    final title = json['title']?.toString().trim();
+    final story = json['story']?.toString().trim();
+    final keyInsights = _strings(json['key_insights']);
+    final nextWeekSuggestion =
+        json['next_week_suggestion']?.toString().trim() ?? '';
+
+    final hasStory = (title?.isNotEmpty ?? false) ||
+        (story?.isNotEmpty ?? false) ||
+        keyInsights.isNotEmpty;
+
+    if (hasStory) {
+      return WeeklyDashboardNarrative(
+        title: title ?? '',
+        story: story ?? '',
+        keyInsights: keyInsights,
+        rejectedInsights: _strings(json['rejected_insights']),
+        nextWeekSuggestion: nextWeekSuggestion,
+      );
+    }
+
+    // Raw format from ProgressNarrativeService.to_dict().
+    final period = json['period']?.toString().trim() ?? '';
+    final body = json['body']?.toString().trim() ?? '';
+    final highlights = _strings(json['highlights']);
+    final sentences = _strings(json['sentences']);
+
     return WeeklyDashboardNarrative(
-      title: json['title']?.toString() ?? '',
-      story: json['story']?.toString() ?? '',
-      keyInsights: _strings(json['key_insights']),
-      rejectedInsights: _strings(json['rejected_insights']),
-      nextWeekSuggestion: json['next_week_suggestion']?.toString() ?? '',
+      title: period,
+      story: body,
+      keyInsights: highlights.isNotEmpty ? highlights : sentences,
+      rejectedInsights: const [],
+      nextWeekSuggestion: nextWeekSuggestion,
     );
   }
 

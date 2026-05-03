@@ -31,6 +31,31 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     }
   }
 
+  Future<void> toggleLike(String postId) async {
+    final currentList = state.value ?? [];
+    final idx = currentList.indexWhere((p) => p.id == postId);
+    if (idx == -1) return;
+
+    final post = currentList[idx];
+    final newCount = post.likeCount + 1;
+
+    // Optimistic update
+    state = AsyncValue.data([
+      for (int i = 0; i < currentList.length; i++)
+        if (i == idx)
+          post.copyWith(likeCount: newCount)
+        else
+          currentList[i],
+    ]);
+
+    try {
+      await _repository.likePost(postId, _currentUserId ?? '');
+    } catch (_) {
+      // Revert on failure
+      state = AsyncValue.data(currentList);
+    }
+  }
+
   // Optimistic Update: Add post locally before sync
   Future<void> addPostOptimistically(
     String content,

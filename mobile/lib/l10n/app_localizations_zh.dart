@@ -28831,7 +28831,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get understandingChatDrawerOpen => '打开当前自我模型';
 
   @override
-  String get cahTitle => '问责空间';
+  String get cahTitle => '责任伙伴空间';
 
   @override
   String get cahSubtitle => '承诺、伙伴进度和共同目标都在这里';
@@ -28903,7 +28903,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get goalDetailPlanHealth => '计划健康状态';
 
   @override
-  String get goalDetailAccountability => '社群问责';
+  String get goalDetailAccountability => '责任伙伴';
 
   @override
   String get goalDetailRelatedSources => '相关资料来源';

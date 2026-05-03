@@ -99,9 +99,11 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
       if (query.isEmpty) {
         return true;
       }
-      return tool.title.toLowerCase().contains(query) ||
-          (tool.description ?? '').toLowerCase().contains(query) ||
-          tool.searchTerms.any((term) => term.toLowerCase().contains(query));
+      final localizedTitle = tool.getLocalizedTitle(l10n: context.l10n).toLowerCase();
+      final localizedDesc = (tool.getLocalizedDescription(l10n: context.l10n) ?? '').toLowerCase();
+      return localizedTitle.contains(query) ||
+          localizedDesc.contains(query) ||
+          tool.getLocalizedSearchTerms().any((term) => term.toLowerCase().contains(query));
     }).toList();
 
     final grouped = <ToolCategory, List<ToolDefinition>>{};
@@ -282,7 +284,7 @@ class _ToolLibraryScreenState extends ConsumerState<ToolLibraryScreen>
                 ),
                 child: ListTile(
                   leading: Icon(tool.icon, color: DS.brandPrimaryConst),
-                  title: Text(tool.title),
+                  title: Text(tool.getLocalizedTitle(l10n: context.l10n)),
                   subtitle: Text(
                     '$positionLabel · ${_categoryLabel(tool.category, context)}',
                   ),
@@ -434,7 +436,7 @@ class _LibraryToolCard extends StatelessWidget {
                 ),
                 const SizedBox(height: DS.spacing12),
                 Text(
-                  tool.title,
+                  tool.getLocalizedTitle(l10n: context.l10n),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleSmall?.copyWith(
@@ -452,10 +454,11 @@ class _LibraryToolCard extends StatelessWidget {
                       ),
                 ),
                 const Spacer(),
-                if (tool.description != null) ...[
+                final localizedDesc = tool.getLocalizedDescription(l10n: context.l10n);
+                if (localizedDesc != null) ...[
                   const SizedBox(height: DS.spacing8),
                   Text(
-                    tool.description!,
+                    localizedDesc,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(

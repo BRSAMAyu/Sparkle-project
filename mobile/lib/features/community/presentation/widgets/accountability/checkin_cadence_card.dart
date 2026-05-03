@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class AccountabilityCheckInCadenceCard extends StatelessWidget {
   const AccountabilityCheckInCadenceCard({
@@ -17,6 +18,7 @@ class AccountabilityCheckInCadenceCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final formattedTime = DateFormat('MM/dd HH:mm').format(nextCheckInAt);
 
     return Card(
@@ -33,13 +35,13 @@ class AccountabilityCheckInCadenceCard extends StatelessWidget {
             ),
             const SizedBox(height: DS.xs),
             Text(
-              '$cadenceDays 天一次，下一次提醒是 $formattedTime',
+              zh ? '$cadenceDays 天一次，下一次提醒是 $formattedTime' : 'Every $cadenceDays days, next reminder at $formattedTime',
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             if (milestoneLabel != null) ...[
               const SizedBox(height: DS.spacing8),
               Text(
-                '绑定里程碑：$milestoneLabel',
+                zh ? '绑定里程碑：$milestoneLabel' : 'Milestone: $milestoneLabel',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: DS.textSecondary,
                     ),

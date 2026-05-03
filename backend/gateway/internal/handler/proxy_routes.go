@@ -60,6 +60,8 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		accountability.POST("/checkin/:id/encourage", h.proxyWithHeaders)
 		accountability.GET("/achievements", h.proxyWithHeaders)
 		accountability.GET("/:id/achievements", h.proxyWithHeaders)
+		accountability.POST("/struggle-alerts/:notificationId/encourage", h.proxyWithHeaders)
+		accountability.POST("/hints/:notificationId/dismiss", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered accountability proxy routes")
 
@@ -235,6 +237,15 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		achievements.GET("/:id", h.proxyWithHeaders)
 		achievements.POST("/:id/share", h.proxyWithHeaders)
 		achievements.GET("/contracts", h.proxyWithHeaders)
+		achievements.POST("/:id/pin", h.proxyWithHeaders)
+		achievements.POST("/contracts", h.proxyWithHeaders)
+		achievements.DELETE("/contracts", h.proxyWithHeaders)
+		achievements.GET("/skins", h.proxyWithHeaders)
+		achievements.POST("/skins/:skinId/equip", h.proxyWithHeaders)
+		achievements.GET("/titles", h.proxyWithHeaders)
+		achievements.POST("/titles/:titleId/equip", h.proxyWithHeaders)
+		achievements.GET("/close-to-unlock", h.proxyWithHeaders)
+		achievements.GET("/share-templates", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered achievements proxy routes")
 
@@ -367,6 +378,33 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered seed-libraries proxy routes")
 
+	// ==================== Marketplace Routes ====================
+	marketplace := api.Group("/marketplace")
+	marketplace.Use(authMiddleware)
+	{
+		marketplace.GET("/skills", h.proxyWithHeaders)
+		marketplace.GET("/skills/:skillId", h.proxyWithHeaders)
+		marketplace.GET("/skills/:skillId/preview", h.proxyWithHeaders)
+		marketplace.POST("/skills/:skillId/adopt", h.proxyWithHeaders)
+		marketplace.GET("/packs", h.proxyWithHeaders)
+		marketplace.GET("/packs/:packId", h.proxyWithHeaders)
+		marketplace.GET("/packs/:packId/preview", h.proxyWithHeaders)
+		marketplace.POST("/packs/:packId/adopt", h.proxyWithHeaders)
+		marketplace.POST("/adoptions/:adoptionId/revoke", h.proxyWithHeaders)
+		marketplace.GET("/adoptions/:adoptionId/impact", h.proxyWithHeaders)
+		marketplace.POST("/adoptions/:adoptionId/impact", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered marketplace proxy routes")
+
+	// ==================== Tool History Routes ====================
+	toolHistory := api.Group("/tool-history")
+	toolHistory.Use(authMiddleware)
+	{
+		toolHistory.POST("/client-events", h.proxyWithHeaders)
+		toolHistory.DELETE("/client-events/:historyId", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered tool-history proxy routes")
+
 	// ==================== Community Routes ====================
 	community := api.Group("/community")
 	community.Use(authMiddleware)
@@ -454,6 +492,11 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		community.GET("/feed", h.proxyWithHeaders)
 		community.POST("/posts", h.proxyWithHeaders)
 		community.POST("/posts/:post_id/like", h.proxyWithHeaders)
+		community.DELETE("/posts/:post_id", h.proxyWithHeaders)
+		community.PATCH("/posts/:post_id", h.proxyWithHeaders)
+		community.GET("/posts/:post_id/comments", h.proxyWithHeaders)
+		community.POST("/posts/:post_id/comments", h.proxyWithHeaders)
+		community.DELETE("/posts/:post_id/comments/:comment_id", h.proxyWithHeaders)
 		// Check-in
 		community.POST("/checkin", h.proxyWithHeaders)
 		// User Status
@@ -777,6 +820,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		profileTransparency.Any("/*path", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered profile-transparency proxy routes")
+
+	// ==================== Experience Routes ====================
+	experience := api.Group("/experience")
+	experience.Use(authMiddleware)
+	{
+		experience.Any("/*path", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered experience proxy routes")
 
 	// ==================== Observability Routes ====================
 	// route-tier: authed

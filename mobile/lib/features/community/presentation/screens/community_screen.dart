@@ -56,7 +56,12 @@ class CommunityScreen extends ConsumerWidget {
                       final post = posts[index - 1];
                       return SparkleStaggerItem(
                         index: index - 1,
-                        child: FeedPostCard(post: post),
+                        child: FeedPostCard(
+                          post: post,
+                          onLike: () => ref
+                              .read(feedProvider.notifier)
+                              .toggleLike(post.id),
+                        ),
                       );
                     },
                   ),

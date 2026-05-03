@@ -242,7 +242,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           title: l10n.editProfileVerifyEmailTitle,
           showHandle: false,
           borderRadius: BorderRadius.circular(28),
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -296,6 +297,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 ],
               ),
             ],
+          ),
           ),
         ),
       ),

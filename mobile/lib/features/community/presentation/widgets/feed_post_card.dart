@@ -13,7 +13,9 @@ class FeedPostCard extends StatelessWidget {
   final VoidCallback? onLike;
 
   @override
-  Widget build(BuildContext context) => Semantics(
+  Widget build(BuildContext context) {
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+    return Semantics(
         container: true,
         explicitChildNodes: true,
         label: '${post.user.username}. ${post.content}',
@@ -156,16 +158,18 @@ class FeedPostCard extends StatelessWidget {
                 children: [
                   _ActionButton(
                     icon: Icons.favorite_border,
+                    activeIcon: Icons.favorite,
                     label: '${post.likeCount}',
                     semanticLabel: context.l10n.communityLikesCount(
                       post.likeCount,
                     ),
+                    color: post.likeCount > 0 ? DS.error : null,
                     onTap: onLike,
                   ),
                   _ActionButton(
                     icon: Icons.chat_bubble_outline,
-                    label: context.l10n.communityTabPlans,
-                    semanticLabel: context.l10n.communityTabPlans,
+                    label: zh ? '评论' : 'Comment',
+                    semanticLabel: zh ? '评论' : 'Comment',
                   ),
                   if (post.topic != null)
                     Semantics(
@@ -208,11 +212,15 @@ class _ActionButton extends StatelessWidget {
   const _ActionButton({
     required this.icon,
     required this.label,
+    this.activeIcon,
+    this.color,
     this.semanticLabel,
     this.onTap,
   });
   final IconData icon;
+  final IconData? activeIcon;
   final String label;
+  final Color? color;
   final String? semanticLabel;
   final VoidCallback? onTap;
 
@@ -227,12 +235,16 @@ class _ActionButton extends StatelessWidget {
           child: ExcludeSemantics(
             child: Row(
               children: [
-                Icon(icon, color: DS.textSecondary, size: 20),
+                Icon(
+                  activeIcon ?? icon,
+                  color: color ?? DS.textSecondary,
+                  size: 20,
+                ),
                 const SizedBox(width: 6),
                 Text(
                   label,
                   style: TextStyle(
-                    color: DS.textSecondary,
+                    color: color ?? DS.textSecondary,
                     fontSize: 14,
                   ),
                 ),

@@ -34,13 +34,23 @@ class MultiGoalDashboardCard extends ConsumerWidget {
   }
 }
 
-class _MultiGoalDashboardContent extends ConsumerWidget {
+class _MultiGoalDashboardContent extends ConsumerStatefulWidget {
   const _MultiGoalDashboardContent({required this.overview});
 
   final MultiGoalOverview overview;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_MultiGoalDashboardContent> createState() =>
+      _MultiGoalDashboardContentState();
+}
+
+class _MultiGoalDashboardContentState
+    extends ConsumerState<_MultiGoalDashboardContent> {
+  bool _expanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    final overview = widget.overview;
     if (overview.goals.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -71,50 +81,83 @@ class _MultiGoalDashboardContent extends ConsumerWidget {
                 summary: overview.goals.length == 1
                     ? context.l10n.dashboardBriefingSummary
                     : (zh
-                        ? '${overview.goals.length} 个活跃目标，当前关注会同步到聊天、任务和星图'
-                        : '${overview.goals.length} active goals. Focus syncs to chat, tasks, and galaxy.'),
-                trailing: GoalSwitcher(overview: overview, dense: true),
-              ),
-              if (suggestion != null && suggestion.hasConflict) ...[
-                const SizedBox(height: DS.spacing14),
-                _SuggestionCard(
-                  suggestion: suggestion,
-                  isSelected: suggestion.primaryGoalId == selectedGoalId,
-                ),
-              ],
-              const SizedBox(height: DS.spacing14),
-              Column(
-                children: [
-                  for (final goal in overview.goals.take(5)) ...[
-                    _GoalRow(
-                      goal: goal,
-                      isSelected: goal.id == selectedGoalId,
-                      onTap: () {
-                        unawaited(
-                          ref
-                              .read(activeGoalProvider.notifier)
-                              .selectGoal(goal.id),
-                        );
-                        ref.invalidate(multiGoalOverviewProvider);
-                        try {
-                          unawaited(
-                            context.push(
-                              '/goals/${Uri.encodeComponent(goal.id)}',
-                            ),
-                          );
-                        } catch (_) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(context.l10n.planViewDetails),
-                            ),
-                          );
-                        }
-                      },
+                        ? '${overview.goals.length} 个活跃目标'
+                        : '${overview.goals.length} active goals'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GoalSwitcher(overview: overview, dense: true),
+                    const SizedBox(width: DS.spacing4),
+                    GestureDetector(
+                      onTap: () => setState(() => _expanded = !_expanded),
+                      child: Padding(
+                        padding: const EdgeInsets.all(DS.spacing4),
+                        child: AnimatedRotation(
+                          turns: _expanded ? 0.5 : 0,
+                          duration: DS.durationFast,
+                          child: Icon(
+                            Icons.expand_more_rounded,
+                            size: 18,
+                            color: DS.textSecondary,
+                          ),
+                        ),
+                      ),
                     ),
-                    if (goal != overview.goals.take(5).last)
-                      const SizedBox(height: DS.spacing8),
                   ],
-                ],
+                ),
+              ),
+              AnimatedCrossFade(
+                firstChild: const SizedBox(width: double.infinity, height: 0),
+                secondChild: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (suggestion != null && suggestion.hasConflict) ...[
+                      const SizedBox(height: DS.spacing14),
+                      _SuggestionCard(
+                        suggestion: suggestion,
+                        isSelected: suggestion.primaryGoalId == selectedGoalId,
+                      ),
+                    ],
+                    const SizedBox(height: DS.spacing14),
+                    Column(
+                      children: [
+                        for (final goal in overview.goals.take(5)) ...[
+                          _GoalRow(
+                            goal: goal,
+                            isSelected: goal.id == selectedGoalId,
+                            onTap: () {
+                              unawaited(
+                                ref
+                                    .read(activeGoalProvider.notifier)
+                                    .selectGoal(goal.id),
+                              );
+                              ref.invalidate(multiGoalOverviewProvider);
+                              try {
+                                unawaited(
+                                  context.push(
+                                    '/goals/${Uri.encodeComponent(goal.id)}',
+                                  ),
+                                );
+                              } catch (_) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(context.l10n.planViewDetails),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                          if (goal != overview.goals.take(5).last)
+                            const SizedBox(height: DS.spacing8),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                crossFadeState: _expanded
+                    ? CrossFadeState.showSecond
+                    : CrossFadeState.showFirst,
+                duration: DS.durationFast,
               ),
             ],
           ),

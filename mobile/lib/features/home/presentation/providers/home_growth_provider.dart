@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
 @immutable
@@ -603,16 +604,16 @@ Map<String, dynamic>? _asStringKeyedMap(dynamic value) {
 }
 
 String _asString(dynamic value, {String fallback = ''}) {
-  final text = value?.toString().trim();
-  if (text == null || text.isEmpty) {
+  final text = sanitizeDisplayText(value?.toString().trim() ?? '');
+  if (text.isEmpty) {
     return fallback;
   }
   return text;
 }
 
 String? _asNullableString(dynamic value) {
-  final text = _asString(value);
-  return text.isEmpty ? null : text;
+  final text = sanitizeNullableDisplayText(value);
+  return text;
 }
 
 List<String> _asStringList(dynamic value) {

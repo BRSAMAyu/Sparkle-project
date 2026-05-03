@@ -1,0 +1,376 @@
+好的，直接流式输出 Codex 分发 prompt。共 12 个任务，分 2 波，每波 6 个并行。
+
+---
+
+## 🌊 第一波（6 个并行 Codex，全部独立文件域，无冲突）
+
+---
+
+### **Codex-P2-01: TASK-002 任务暂停/重启完整 UI**
+
+**问题**: FV-16 后端已实现 PAUSED 任务状态 + 自动暂停检测，但 Flutter UI 完全没有消费这个状态——用户看不到"已暂停"标识，没有"继续"按钮，PAUSED 任务在列表里和 IN_PROGRESS 任务视觉无差别。
+
+**目标**:
+1. 任务列表项显示 PAUSED 视觉标识（独立颜色 / 暂停图标 / "已暂停 X 小时"标签）
+2. 任务执行屏顶部显示暂停横幅，含"继续任务"主按钮 + "查看暂停原因"次按钮
+3. 暂停原因展示：调用 `GET /tasks/{id}` 后读取 `paused_reason`（如 inactivity/manual/system）+ `paused_at` 时间戳
+4. "继续"按钮调用 `POST /tasks/{id}/resume`（Repository 层已存在 resumeTask 方法）
+5. 任务卡片增加"暂停"次级菜单项（调用 pauseTask）
+6. PAUSED 状态下隐藏"完成"按钮，仅暴露"继续 / 取消"
+7. 编写至少 2 个 widget test：暂停状态渲染 + 继续按钮回调
+
+**当前现状**:
+- 后端: `backend/app/services/task_service.py` 已实现 pause/resume，`Task` model 有 `status='PAUSED'` + `paused_reason` + `paused_at` 字段
+- Flutter: `mobile/lib/features/task/data/repositories/task_repository.dart` 已有 pauseTask/resumeTask（最近一轮加了 offline 支持）
+- 缺失: `mobile/lib/features/task/presentation/` 整层未消费 PAUSED 状态
+- 设计系统: 用 `DS.warning` / `DS.warningSubtle` 表达暂停态；图标 `Icons.pause_circle_outline`
+- i18n: 遵循 `isChinese ? '已暂停' : 'Paused'` 模式
+
+**期望产出**: 1 个新 PausedTaskBanner widget + 任务卡片 / 列表 / 执行屏 3 处 UI 改造 + widget tests，单提交 `feat(TASK-002): paused task UI surface`，运行 `flutter analyze` 0 error。
+
+---
+
+### **Codex-P2-02: KG-005 错题模式 → 任务模板自动生成**
+
+**问题**: ErrorBook 系统能识别错题模式（同类错误聚类），但缺少把"识别到的弱点"转换成"针对性练习任务模板"的闭环。当前用户做错 5 道同类题后，系统只在认知棱镜里展示模式，不会主动建议或生成补救任务。
+
+**目标**:
+1. **后端**: 创建 `backend/app/services/error_pattern_template_service.py`，提供：
+   - `identify_remediable_patterns(user_id, db) -> List[RemediablePattern]`：扫描 ErrorBook 近 14 天，聚类错误模式（按 knowledge_node_id + error_type），返回 confidence ≥ 0.6 的模式
+   - `generate_task_template(pattern, db) -> TaskTemplate`：基于模式生成 ExecutablePlan v5.0 兼容的任务草案（含 success_criteria / minimum_output / structured_steps）
+   - `accept_template(user_id, pattern_id, db) -> Task`：用户接受后实例化为真实任务
+2. **API**: 新增 `backend/app/api/v1/error_book.py` 端点：
+   - `GET /error-book/remediable-patterns` 列出可补救模式
+   - `POST /error-book/patterns/{id}/generate-template` 预览任务模板
+   - `POST /error-book/patterns/{id}/accept-template` 接受并创建任务
+3. **Flutter UI**: `mobile/lib/features/error_book/presentation/widgets/remediable_patterns_card.dart`
+   - 展示 Top 3 可补救模式（错题数 + 涉及节点 + 建议练习时长）
+   - "生成补救任务"按钮 → 弹出 TaskTemplate 预览 → "接受并加入今日计划"
+4. 嵌入 ErrorBook 主屏 + Insights 屏
+5. 后端 6+ 个 pytest 单测覆盖 service + API；Flutter 1 个 widget test
+
+**当前现状**:
+- ErrorBook 已存在: `backend/app/models/error_book.py`, `backend/app/services/error_book_service.py`, Flutter `mobile/lib/features/error_book/`
+- 错题已带 `knowledge_node_id` + `error_type` + `confidence` 字段
+- TaskCardProtocol 9 字段结构已就绪: `backend/app/services/task_card_builder.py`
+- 不需要新增 Alembic 迁移（复用现有表）
+- 用 `app.api.deps.get_current_user` + `get_db` 依赖注入
+
+**期望产出**: 后端服务 + API + 单测 + Flutter widget + 嵌入点，单提交 `feat(KG-005): error pattern to task template flow`。
+
+---
+
+### **Codex-P2-03: KG-009 "今天为什么是这个"解释面板**
+
+**问题**: 用户每天看到"今日推荐任务"，但完全不知道 AI 为什么挑这个。审计明确指出："priority_reasoning 字段后端未暴露，前端无展示"——这违反了完全体愿景中"AI 必须透明"的核心原则。
+
+**目标**:
+1. **后端**: 扩展 `backend/app/services/task_priority_service.py`（如不存在则新建），生成结构化的 `priority_reasoning`：
+   ```python
+   {
+     "primary_reason": "knowledge_node_X 的间隔重复到期",
+     "supporting_signals": [
+       {"type": "spaced_repetition", "weight": 0.4, "detail": "..."},
+       {"type": "goal_progress", "weight": 0.3, "detail": "目标完成度 60%, 此任务推进 +8%"},
+       {"type": "energy_match", "weight": 0.2, "detail": "当前精力评分 7/10, 任务难度匹配"},
+       {"type": "social_context", "weight": 0.1, "detail": "学习伙伴正在做相关任务"}
+     ],
+     "alternative_options_skipped": [{"task_id": "...", "reason": "..."}]
+   }
+   ```
+2. **API**: `GET /tasks/{id}/priority-reasoning` 返回上述结构，未生成时返回 202 + 异步触发计算
+3. **Flutter**:
+   - `mobile/lib/features/task/data/models/priority_reasoning.dart` 模型
+   - `mobile/lib/features/task/data/repositories/priority_reasoning_repository.dart` + Provider
+   - `mobile/lib/features/task/presentation/widgets/why_this_today_panel.dart`：
+     - 收起态：单行 "为什么今天选这个？" + 展开图标
+     - 展开态：primary_reason 大字 + 4 类信号横向条形图（按 weight）+ 跳过的备选
+4. 嵌入到 task_execution_screen + task_card 详情态
+5. 6+ 后端单测 + 1 widget test
+
+**当前现状**:
+- 任务排序已存在但 reasoning 不持久化: 查 `backend/app/orchestration/` 下任务推荐相关代码
+- 信号源已存在: `backend/app/signals/` 多个模块（spaced_repetition / goal_progress / state_aggregator）
+- TaskCardProtocol 已有 `why_this_task` 字段但只是文本，需结构化升级
+- 设计系统横条用 `DS.brandPrimary` + 半透明背景
+
+**期望产出**: 后端 service 扩展 + API + Flutter 模型/Repo/Provider/widget + 嵌入点 + 单测，单提交 `feat(KG-009): why-this-today reasoning panel`。
+
+---
+
+### **Codex-P2-04: GOAL-012 + GOAL 创建向导**
+
+**问题**:
+- (a) 用户的目标策略（StrategyBelief）会随时间被反证降权，但当 belief.confidence 跌破阈值时，没有 UI 引导用户切换到替代策略
+- (b) 当前目标创建是裸 Form（标题 + 描述 + 截止日期），没有引导式拆解，导致目标质量低
+
+**目标**:
+1. **GOAL-012 策略迁移向导** (`mobile/lib/features/cognitive/presentation/widgets/strategy_migration_wizard.dart`):
+   - 当 StrategyBelief.confidence < 0.4 且有 counter_evidence 时触发
+   - Step 1: 展示当前策略 + 反证证据
+   - Step 2: 列出 2-3 个 AI 推荐的替代策略（调 `GET /cognitive/alternative-strategies?goal_id=X`）
+   - Step 3: 用户选择 → 确认 → 调 `POST /cognitive/strategies/migrate`
+   - 后端: 在 `backend/app/services/strategy_belief_service.py` 增加 `suggest_alternatives(goal_id, db)` + `migrate_strategy(user_id, goal_id, new_strategy_id, db)` 方法 + 对应 API
+2. **GOAL 创建向导** (`mobile/lib/features/user/goals/presentation/screens/goal_creation_wizard_screen.dart`):
+   - Step 1: 类型选择（学术/技能/习惯/项目/其他）
+   - Step 2: 标题 + 为什么重要（动机捕获）
+   - Step 3: 时间范围（短期 7-30d / 中期 1-3m / 长期 3m+）
+   - Step 4: 拆解（AI 调用 `POST /goals/decompose-preview` 给出 3-5 个里程碑建议，用户可编辑）
+   - Step 5: 确认创建 → 调 `POST /goals` 同时创建里程碑
+   - 后端: `backend/app/api/v1/goals.py` 增加 `decompose-preview` 端点（调用现有 GoalDecompositionService 或简单 LLM prompt）
+3. 替换现有 GoalCreationScreen 的入口（保留旧的为"快速创建"次入口）
+4. 4+ 后端单测 + 2 widget tests
+
+**当前现状**:
+- StrategyBelief: `backend/app/models/strategy_belief.py` 有 counter_evidence 字段（FV-18 已加）
+- 目标拆解服务存在: `backend/app/services/goal_decomposition_service.py`（或类似命名）
+- 设计系统 stepper: 用 `Stepper` widget 或自建 progress dots
+- 现有目标 API: `backend/app/api/v1/goals.py`
+
+**期望产出**: 2 个 Flutter 屏 + 后端 API 扩展 + 单测，单提交 `feat(GOAL-012): strategy migration + creation wizard`。
+
+---
+
+### **Codex-P2-05: COM-011 社群目标关联视图 + 资源质量徽章**
+
+**问题**:
+- (a) 用户在社群里分享目标 / 看其他人目标时，不知道"哪些人和我追同样的目标"——错失了高价值的同伴动力
+- (b) FV-22 已实现社群分享资源质量评分（quality_score 持久化），但 UI 完全没消费——用户看到一堆资源但不知道谁是高质量的
+
+**目标**:
+1. **COM-011 同目标伙伴视图**:
+   - 后端 `backend/app/services/community_service.py` 增加 `find_users_with_similar_goals(user_id, goal_id, db, limit=10) -> List[SimilarGoalUser]`
+     - 相似度算法: 标题向量距离 (pgvector) + 类型匹配 + 时间窗重合
+     - 返回字段: user_id, display_name, avatar, goal_progress, last_active, mutual_friends_count
+   - API: `GET /community/goals/{goal_id}/similar-pursuers`
+   - Flutter `mobile/lib/features/community/presentation/widgets/similar_goal_pursuers_card.dart`
+     - 在目标详情屏底部展示，"和你追同样目标的 N 位伙伴"
+     - 头像列表（最多 5 个）+ 进度环 + "查看全部"按钮
+     - 点击头像 → 加好友 / 邀请加入小组
+2. **资源质量徽章**:
+   - 在 `mobile/lib/features/community/presentation/widgets/shared_resource_card.dart`（如不存在则创建）展示：
+     - quality_score ≥ 0.8: 金色徽章 "精选"
+     - quality_score 0.6-0.8: 银色徽章 "推荐"
+     - quality_score < 0.4: 灰色 + "新手友好" / 不显示徽章
+   - 卡片底部新增"采纳次数 N · 平均评分 X.X"统计行
+   - Repository 层: `community_share_repository.dart` 在 fetchSharedResources 返回中确保 quality_score / adoption_count / avg_rating 被解析
+3. 4+ 后端单测 + 1 widget test
+
+**当前现状**:
+- 社群服务: `backend/app/services/community_service.py`
+- 资源质量: `backend/app/models/shared_resource.py` 已有 quality_score 字段（FV-22）
+- 目标向量化: 检查 `backend/app/services/galaxy_service.py` 是否已对 goal 标题做嵌入；若无则用 `embedding_service.embed(text)` 现场计算
+- pgvector 距离: `<=>` 操作符（cosine）
+
+**期望产出**: 后端 service + API + 2 个 Flutter widget + 嵌入点 + 单测，单提交 `feat(COM-011): similar goal pursuers + resource quality badges`。
+
+---
+
+### **Codex-P2-06: SRC 生命周期徽章 + TASK-014 ExecutionDirective 审计**
+
+**问题**:
+- (a) FV-17 实现了 SourceAsset 完整生命周期（active/archived/revoked/orphaned + GDPR erase），但任务卡片不显示绑定来源的当前状态——任务可能引用了已撤销的来源用户却不知情
+- (b) Causal Control OS 8 层已落地，但用户完全无法看到 ExecutionDirective 日志——AI 为什么决定"现在通知你做这个 / 跳过这个 / 降级这个"完全是黑盒
+
+**目标**:
+1. **SRC 生命周期徽章**:
+   - Flutter `mobile/lib/features/task/presentation/widgets/source_lifecycle_badge.dart`
+     - 单 widget 接收 `SourceAsset` 状态，渲染对应徽章
+     - active: 绿色 "已绑定" + 来源标题
+     - archived: 灰色 "已归档" + "切换替代来源"按钮
+     - revoked: 红色 "来源已撤销" + warning 提示 + "重新选择"按钮
+     - orphaned: 橙色 "来源失联" + "查找类似"按钮
+   - 嵌入 task_card 详情态 + task_execution_screen 顶部
+   - 后端确认 `GET /tasks/{id}` 返回 `bound_sources: [{id, title, lifecycle_status, ...}]`；若未返回则在 `backend/app/api/v1/tasks.py` 补全
+2. **TASK-014 ExecutionDirective 审计 UI**:
+   - 后端: `backend/app/api/v1/insights.py`（或新建 directives.py）增加 `GET /insights/recent-directives?limit=20` 返回近 N 个 ExecutionDirective + 关联 signal/policy
+   - 数据源: `backend/app/signals/` 下的 directive 持久化层（查 `execution_directive` 相关 model）
+   - Flutter `mobile/lib/features/insights/presentation/screens/directive_audit_screen.dart`
+     - 时间线视图，每条 directive 一卡片
+     - 显示: 时间 / Directive 类型（NotifyUser/SkipReminder/DowngradeIntensity 等 9 类）/ 触发信号 / 策略名 / 实际结果
+     - 顶部筛选: 按 Directive 类型 / 时间窗
+     - 嵌入 Insights 主屏作为可点击入口"AI 决策日志"
+3. 4+ 后端单测 + 2 widget tests
+
+**当前现状**:
+- SourceAsset: `backend/app/models/source_asset.py` 有 lifecycle_status 字段（FV-17）
+- ExecutionDirective: 查 `backend/app/signals/` 找具体 model（可能在 `causal_pipeline.py` 或独立文件）
+- 9 种 directive 类型在 `docs/product/SPARKLE_CAUSAL_CONTROL_OS_FINAL_2026-04-27.md` 有列表
+- Insights 主屏: `mobile/lib/features/insights/presentation/screens/insights_screen.dart`
+
+**期望产出**: 1 个 Flutter 徽章 widget + 1 个审计屏 + 后端 API 扩展 + 单测 + 嵌入点，单提交 `feat(SRC-TASK-014): lifecycle badge + directive audit`。
+
+---
+
+## 🌊 第二波（6 个并行 Codex，需第一波完成后再启动；A-003 i18n 占用大量域文件，单独管理）
+
+---
+
+### **Codex-P2-07: A-003 i18n 第二批清理（前半 64 文件）**
+
+**问题**: FV-23 清理了 459 字符串后，仍有 128 文件包含约 459 个硬编码中文/英文字符串，违反 `isChinese ? '中文' : 'English'` 统一模式。
+
+**目标**:
+1. 处理 `mobile/lib/features/{achievement,auth,calendar,chat,cognitive,community,error_book,focus,galaxy}` 9 个目录下所有文件
+2. 每个硬编码字符串改为 `I18nService.instance.isChinese ? '中文' : 'English'` 或抽到组件级 `_t(zh, en)` 辅助函数
+3. 不改动行为，仅替换字符串字面量
+4. 跳过：debug print / log message / 错误堆栈 / 注释
+5. 完成后运行 `flutter analyze` 必须 0 error
+6. 至少 1 个 golden test 验证关键屏 zh/en 切换
+
+**当前现状**:
+- 已处理基线: FV-23 commit `feat(FV-23): clear i18n residual strings`
+- 工具: `mobile/lib/core/services/i18n_service.dart` 已存在
+- 模式参考: 任意 FV-23 修改的文件
+- 检测: 用 `rg "['\"][\u4e00-\u9fff]+['\"]" mobile/lib/features/{...} -l` 找候选文件
+
+**期望产出**: 单提交 `chore(i18n): batch 2 first half — 9 features cleaned`，附带涉及文件数 + 字符串替换数统计。
+
+---
+
+### **Codex-P2-08: A-003 i18n 第二批清理（后半 64 文件）**
+
+**问题**: 同上，处理另 9 个 feature 目录。
+
+**目标**:
+1. 处理 `mobile/lib/features/{home,insights,memory,notification_center,openclaw,photon,plan,report,seed_library,shop,simulation,splash,task,theater,tools,translation,user,visual_elements}` 剩余目录
+2. 同 P2-07 规则
+3. **关键**: 与 P2-07 文件域严格不重叠，避免 git 冲突
+4. 完成后 `flutter analyze` 0 error + 1 golden test
+
+**当前现状**: 同 P2-07
+
+**期望产出**: 单提交 `chore(i18n): batch 2 second half — remaining features cleaned`。
+
+---
+
+### **Codex-P2-09: A-006 Go Gateway 测试覆盖率提升**
+
+**问题**: Go Gateway 当前测试覆盖率未达内部目标（详见 `quality/tech_debt_budget.json` 的 go_coverage 项），关键 handler 和 middleware 缺单测。
+
+**目标**:
+1. 阅读 `quality/tech_debt_budget.json` 确认当前 go_coverage 数值与目标
+2. 优先补齐覆盖率最低的 6-8 个文件（用 `cd backend/gateway && go test -cover ./...` 找出）
+3. 重点目标：
+   - `backend/gateway/internal/handler/websocket_proxy.go`（核心实时通道）
+   - `backend/gateway/internal/handler/chat_orchestrator.go`
+   - `backend/gateway/internal/middleware/network_resilience.go`（FV-24 新增）
+   - `backend/gateway/internal/middleware/distributed_rate_limiter.go`
+   - `backend/gateway/internal/agent/client.go`（gRPC 客户端边缘场景）
+4. 用 testify + httptest + miniredis 模拟依赖
+5. 不动生产代码逻辑，仅在必要时为可测性提取小函数
+6. 提升整体覆盖率至 ≥ 65%（或 budget 文件中目标值）
+7. 更新 `quality/tech_debt_budget.json` 反映新基线
+
+**当前现状**:
+- 现有 Go 测试: 34 个 test 文件
+- CI 覆盖率检查: `.github/workflows/ci.yml` backend-test job
+- Mock 库: 项目已用 testify/mock 或 gomock，沿用现有约定
+
+**期望产出**: 6-8 个新 _test.go 文件 + budget 更新，单提交 `test(gateway): raise coverage to {N}%`。
+
+---
+
+### **Codex-P2-10: A-007 Flutter 核心服务单测**
+
+**问题**: Flutter 核心基础设施服务（offline / sync / cache / event_stream）单测覆盖薄弱，回归风险高。
+
+**目标**:
+补齐以下 8 个核心服务的单测，每个文件至少 5 个 test case：
+1. `mobile/lib/core/offline/sync_engine.dart` — 测试 outbox enqueue / retry / dedupe / 各 topic 路由
+2. `mobile/lib/core/offline/crdt_sync_manager.dart` — 测试 CRDT merge / ACK 验证（FV-11）
+3. `mobile/lib/features/task/data/services/task_offline_queue.dart` — 测试 enqueue / pending count provider
+4. `mobile/lib/core/services/app_event_stream_service.dart` — 测试事件去重 / 持久化
+5. `mobile/lib/core/network/api_client.dart` — 测试 401 刷新 / 重试 / 超时
+6. `mobile/lib/core/services/i18n_service.dart` — 测试 zh/en 切换 / 缺失 key 行为
+7. `mobile/lib/core/services/sensory_feedback_service.dart` — 测试预算限流
+8. `mobile/lib/core/services/bgm_service.dart` — 测试路由感知切换
+
+工具: flutter_test + mocktail + fake_async
+
+**当前现状**:
+- 已有测试: `mobile/test/` 目录约 131 个文件
+- Mock 约定: 项目主要用 mocktail（非 mockito）
+- ProviderContainer + ProviderScope override 模式
+
+**期望产出**: 8 个新 _test.dart 文件，覆盖率提升至少 +8%，单提交 `test(core): unit tests for offline+infra services`。
+
+---
+
+### **Codex-P2-11: 预存量 rule guard 修复（K + AS + AT + AX + I18N）**
+
+**问题**: 5 个 rule guard 在 baseline 即失败，与 FV 工作无关但持续阻塞 CI green。具体：
+- **K**: 聚合器写边界违规
+- **AS**: 信号必须有消费者
+- **AT**: 无孤儿信号
+- **AX**: EventBus 可靠性
+- **I18N**: i18n 残留检查
+
+**目标**:
+1. 逐条运行 `bash scripts/run_all_rule_guards.sh --rule K`（其他同理）拿到精确失败信息
+2. 阅读对应 guard 脚本 `scripts/guards/check_rule_*.py` 理解判定规则
+3. 修复违规代码（不修改 guard 本身，除非确认 guard 误报需调整阈值——任何 guard 阈值变更必须在 commit message 解释）
+4. 全部 5 条最终通过
+5. 不引入新的 guard 失败
+
+**约束**:
+- I18N guard 与 P2-07/P2-08 可能有重叠 → 本任务先跑一遍找出 P2-07/P2-08 之外的非 features 目录残留（如 `mobile/lib/core/`）
+- AS/AT 涉及信号编排：信号在 `backend/app/signals/`，消费者在 `backend/app/services/`
+- AX EventBus: 检查 `backend/app/core/event_bus.py` 是否所有 publish 点有 DLQ 兜底
+
+**当前现状**:
+- Manifest: `scripts/rule_guard_manifest.tsv`
+- Guard 实现: `scripts/guards/`
+- 运行: `bash scripts/run_all_rule_guards.sh`
+
+**期望产出**: 修复后 `bash scripts/run_all_rule_guards.sh` 全 62/62 通过，单提交 `fix(governance): resolve baseline guard failures K/AS/AT/AX/I18N`。
+
+---
+
+### **Codex-P2-12: 第二波收尾整合 + Phase 2 完成报告**
+
+**问题**: 第一波 + 第二波 11 个并行任务完成后需要：
+- 解决任何残留合并冲突
+- 跑完整测试矩阵
+- 写 Phase 2 完成报告
+- 更新 MEMORY.md + roadmap 文档
+
+**注意**: 此任务必须在 P2-01 至 P2-11 全部完成且合并到 `codex/final-closeout-integration-2026-05-02` 后才能启动。**不要与第二波的其他任务并行**。
+
+**目标**:
+1. 合并所有 P2-XX 分支到 `codex/phase2-integration-2026-05-02`
+2. 解决所有冲突（特别是 i18n 文件和 budget 文件）
+3. 运行完整验证：
+   - `cd backend && pytest -q`（期望 7000+ 通过）
+   - `cd backend/gateway && go test -race ./...`
+   - `cd mobile && flutter test`
+   - `bash scripts/run_all_rule_guards.sh`（期望 62/62）
+   - `python scripts/check_tech_debt_budget.py`
+4. 写完成报告 `docs/product/SPARKLE_PHASE2_COMPLETION_2026-05-15.md`，包含：
+   - 12 个任务清单 + 完成状态
+   - 测试通过数 / 覆盖率前后对比
+   - 新增文件清单
+   - 已知遗留 / 风险项
+   - 决策建议（merge to main timing）
+5. 更新 `MEMORY.md` 顶部加 Phase 2 完成段落
+6. 更新 `docs/product/SPARKLE_COMPLETE_VISION_ROADMAP_2026-05-02.md`，把 P2/P1 项标记为完成
+
+**期望产出**: 整合分支 + 测试报告 + 完成文档 + memory 更新，单提交 `docs(phase2): completion report + roadmap update`。
+
+---
+
+## 📋 调度建议
+
+```
+🌊 第一波 (并行 6): P2-01, P2-02, P2-03, P2-04, P2-05, P2-06
+   ↓ 全部完成 + 合并到 codex/final-closeout-integration-2026-05-02
+
+🌊 第二波 (并行 5): P2-07, P2-08, P2-09, P2-10, P2-11
+   ↓ 全部完成 + 合并
+
+🎯 收敛 (单独 1): P2-12 (整合 + 报告)
+```
+
+**总计 12 任务 / 13 个 codex 调用次数（P2-12 算 1 次）/ 单次最大并发 6**
+
+每个 prompt 独立可执行，已包含：问题、目标、当前现状（基础信息）、期望产出。可以直接复制粘贴分发。

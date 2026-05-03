@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/features/home/data/models/prediction_insight_data.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 
@@ -355,12 +356,12 @@ String _asString(dynamic value, {String fallback = ''}) {
   if (text == null || text.isEmpty) {
     return fallback;
   }
-  return text;
+  return sanitizeDisplayText(text);
 }
 
 String? _asNullableString(dynamic value) {
-  final text = _asString(value);
-  return text.isEmpty ? null : text;
+  final text = sanitizeNullableDisplayText(value);
+  return text;
 }
 
 int _asInt(dynamic value, {int fallback = 0}) {

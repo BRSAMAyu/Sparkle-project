@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 class PartnerVisibilityBanner extends StatelessWidget {
   const PartnerVisibilityBanner({
@@ -15,7 +16,10 @@ class PartnerVisibilityBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title = isOwner ? '你看到完整视图' : '伙伴只看到摘要';
+    final zh = I18nService.instance.isChinese;
+    final title = isOwner
+        ? (zh ? '你看到完整视图' : 'You see the full view')
+        : (zh ? '伙伴只看到摘要' : 'Partner sees summary only');
 
     return Container(
       width: double.infinity,
@@ -39,7 +43,7 @@ class PartnerVisibilityBanner extends StatelessWidget {
           if (redactedFields.isNotEmpty) ...[
             const SizedBox(height: DS.spacing8),
             Text(
-              '已隐藏：${redactedFields.join('、')}',
+              '${zh ? '已隐藏' : 'Hidden'}：${redactedFields.join('、')}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                   ),

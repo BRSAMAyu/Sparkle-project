@@ -176,18 +176,20 @@ class _SharePosterCanvas extends StatelessWidget {
     );
     final metrics = _buildMetrics();
 
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: posterTheme.background,
+    return DefaultTextStyle.merge(
+      style: const TextStyle(decoration: TextDecoration.none),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: posterTheme.background,
+          ),
         ),
-      ),
-      child: Stack(
-        children: [
-          ...posterTheme.buildDecorations(),
-          Padding(
+        child: Stack(
+          children: [
+            ...posterTheme.buildDecorations(),
+            Padding(
             padding: const EdgeInsets.fromLTRB(28, 28, 28, 26),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -289,7 +291,8 @@ class _SharePosterCanvas extends StatelessWidget {
               ],
             ),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

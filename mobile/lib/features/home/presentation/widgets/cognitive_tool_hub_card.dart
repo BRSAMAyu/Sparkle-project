@@ -609,7 +609,7 @@ class _ToolShortcutChip extends ConsumerWidget {
                 const SizedBox(width: DS.spacing10),
                 Expanded(
                   child: Text(
-                    tool.title,
+                    tool.getLocalizedTitle(l10n: context.l10n),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
@@ -702,7 +702,7 @@ class _CompactToolTile extends ConsumerWidget {
                     const SizedBox(width: DS.spacing8),
                     Expanded(
                       child: Text(
-                        tool.title,
+                        tool.getLocalizedTitle(l10n: context.l10n),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: context.sparkleTypography.labelSmall.copyWith(

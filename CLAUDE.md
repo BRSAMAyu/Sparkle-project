@@ -1,38 +1,23 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 # CLAUDE.md — Sparkle (星火) AI Growth Companion
 
-> **Project**: Sparkle (星火) — Dual-Core Growth OS for University Students
 > **Architecture**: Go Gateway + Python Engine + Flutter Mobile | **Scale**: Large Monorepo (1,200+ source files)
-> **Version**: 1.0.0+1 | **Last Updated**: 2026-05-02
+> **Version**: 1.0.0+1 | **Updated**: 2026-05-03
 
 ---
 
 ## Project Vision
 
-Sparkle is a Dual-Core Growth OS that helps users become better versions of themselves: achieve goals, reduce internal friction, gain fulfillment and happiness. Every subsystem serves this single purpose.
+Sparkle is a Dual-Core Growth OS that helps users become better versions of themselves: achieve goals, reduce internal friction, gain fulfillment and happiness.
 
-### The Dual-Core Architecture
+### Dual-Core Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  EXECUTION CORE                                                          │
-│  Goal Clarification → Sufficiency Evaluation → Staged Plan              │
-│  → Executable Tasks → Execution Feedback → Dynamic Adjustment           │
-├─────────────────────────────────────────────────────────────────────────┤
-│  COGNITIVE CORE                                                          │
-│  User Profile → Long/Short-term Memory → Cognitive Prism               │
-│  → Emotion/Motivation/State Understanding → Personalized Support        │
-├─────────────────────────────────────────────────────────────────────────┤
-│  Both cores collaborate via DualCoreRouter, not run in parallel isolation │
-└─────────────────────────────────────────────────────────────────────────┘
+EXECUTION CORE:  Goal Clarification → Sufficiency Evaluation → Staged Plan → Tasks → Feedback → Adjustment
+COGNITIVE CORE:  User Profile → Memory → Cognitive Prism → Emotion/Motivation/State → Personalized Support
+Both cores collaborate via DualCoreRouter, not run in parallel isolation.
 ```
 
-### Growth Loop: 7 Phases
-
-All modules map to one of these phases:
+### Growth Loop
 
 ```
 Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
@@ -46,461 +31,222 @@ Sense → Clarify → Plan → Execute → Reflect → Reinforce → Adapt
   └─ ContextOrchestrator (6-dim aggregation) + Community signals
 ```
 
----
-
-## Mental Model: The Three-Layer Sandwich
+### Three-Layer Sandwich
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  FLUTTER (Presentation)  →  User intent, UI state, UX flow     │
-│  732 .dart files | Riverpod | GoRouter | Multi-sensory UX      │
-├─────────────────────────────────────────────────────────────────┤
-│  GO GATEWAY (Coordination) →  Auth, routing, caching, streams  │
-│  24 .go files (production) | 16 middleware | Gin + WebSocket   │
-├─────────────────────────────────────────────────────────────────┤
-│  PYTHON ENGINE (Intelligence) →  AI logic, RAG, tools, LLM     │
-│  319+ .py files | LangGraph FSM | FastAPI + gRPC | 30+ services │
-└─────────────────────────────────────────────────────────────────┘
-         ↕ PostgreSQL 16 + pgvector + AGE    ↕ Redis Stack    ↕ gRPC/WebSocket
+FLUTTER (Presentation)   →  UI, state, UX | Riverpod | GoRouter | Multi-sensory
+GO GATEWAY (Coordination) →  Auth, routing, caching, streams | Gin + WebSocket
+PYTHON ENGINE (Intelligence) →  AI, RAG, tools, LLM | LangGraph FSM | FastAPI + gRPC
+     ↕ PostgreSQL 16 + pgvector + AGE    ↕ Redis Stack    ↕ gRPC/WebSocket
 ```
 
 ---
 
 ## Aurora Adaptive Kernel
 
-Sparkle includes an Aurora adaptive cognitive kernel (Stages 4-40) that governs how user behavioral signals flow into AI reasoning, routing, and prompt assembly. Aurora enforces safety through **53 governance rules** enforced by CI guard scripts.
+Aurora (Stages 4-40) governs how user behavioral signals flow into AI reasoning, routing, and prompt assembly. Safety enforced through **53+ governance rules** (CI via `scripts/run_all_rule_guards.sh`).
 
-### Core Data Flow
+**Kill Switch Protocol**: Every Aurora feature ships behind tri-state: `off` → `shadow` → `live`. All switches expose Prometheus gauge. Drill scripts in `scripts/stage{N}/drill_transitions.sh`.
 
-```
-User Behavior → State Aggregator (UserStateV1) → Dual-Core Router + Prompt Assembly
-                    ↑                                    ↓
-         PersDyn / SRL / Social /              Router Decision Log
-         Working Memory / Metacognition /            ↓
-         Idiographic / Foresight              Bayesian Learner
-```
+**Key services**: State Aggregator (`backend/app/state_aggregator/service.py`), Dual-Core Router (`backend/app/orchestration/dual_core_router.py`), Metacognition, Idiographic Association, SRL Phase Tracker, Social Signal Bridge, PII Privacy (`backend/app/aurora/privacy.py`), Kill Switch (`backend/app/core/kill_switch.py`).
 
-### Key Aurora Services
-
-| Service | File | Purpose |
-|---------|------|---------|
-| State Aggregator | `backend/app/state_aggregator/service.py` | Unified user state v1.12 from 15+ subsystems |
-| Metacognition | `backend/app/services/metacognition_service.py` | Bias unification, confidence proxies, process scaffolding |
-| Idiographic Association | `backend/app/services/idiographic_association_service.py` | Within-person correlation (association-only, no causal claims) |
-| SRL Phase Tracker | `backend/app/services/srl_phase_tracker_service.py` | Self-regulated learning phase transitions |
-| Social Signal Bridge | `backend/app/services/social_signal_bridge.py` | Social context → Router (read-only) |
-| PII Privacy | `backend/app/aurora/privacy.py` | Redacts phone/email/CN ID/bank card before LLM export |
-| Kill Switch | `backend/app/core/kill_switch.py` | Unified tri-state (off/shadow/live) with Prometheus gauge |
-
-### Kill Switch Protocol
-
-Every Aurora feature ships behind a **tri-state kill switch**: `off` (disabled) → `shadow` (compute but don't affect live) → `live` (active). All switches expose `sparkle_kill_switch_mode{stage,feature}` to Prometheus. Drill scripts in `scripts/stage{N}/drill_transitions.sh` exercise off→shadow→live→shadow→off transitions.
-
-### Governance Rules & Guard System
-
-53 rules are registered in `scripts/rule_guard_manifest.tsv` and enforced by CI via `scripts/run_all_rule_guards.sh`. Key rule families:
-
-| Family | Rules | Domain |
-|--------|-------|--------|
-| Write boundary | K, Y, Z, AB, AF | Aggregator write isolation, inferred extraction, social boundary |
-| Eval / Safety | AM, AN, AO, AP, AQ | Confidence cap, user isolation, diagnostic label ban, association discipline, proto parity |
-| Vision compliance | AS, AT, AU, AV | Signal must have consumer, no orphans, mobile parity (0% black hole rate), kill switch enum |
-| Financial | BB, BC | Atomic photon grants, idempotency keys |
-| Security | AW, AX, AY, AZ | Rate limiter sanity, route ownership, LLM safety layer, EventBus reliability |
-
-Run guards: `bash scripts/run_all_rule_guards.sh` or per-rule: `bash scripts/run_all_rule_guards.sh --rule AO`
-
-### Aurora Branches
-
-Aurora work lives on feature branches: `claude/stage{N}-impl`, `codex/stage{N}-*`. The `integration/phase-i-exit` branch consolidates Stage 33-40. Handoff documents for each stage are in `docs/product/SPARKLE_AURORA_STAGE{N}_HANDOFF_*.md`.
+**Governance**: Rules registered in `scripts/rule_guard_manifest.tsv`. Key families: write boundary (K/Y/Z/AB/AF), eval/safety (AM-AN-AO-AP-AQ), vision compliance (AS-AT-AU-AV), financial (BB/BC), security (AW-AX-AY-AZ). Run: `bash scripts/run_all_rule_guards.sh [--rule XX]`.
 
 ---
 
 ## Cognitive Protocol
 
-### Task Complexity Classification
-
-Before any action, classify the task:
-
 | Level | Indicators | Protocol |
 |-------|-----------|----------|
 | **L1 Atomic** | Single file, <50 lines, typo/config | Execute immediately |
-| **L2 Local** | 2-5 files, same language, single feature | Brief intent statement → Execute |
+| **L2 Local** | 2-5 files, same language, single feature | Brief intent → Execute |
 | **L3 Cross-Boundary** | Proto change, Go↔Python↔Flutter, DB schema | **Plan Required** |
-| **L4 Architectural** | New subsystem, major refactor, design pattern | **Deep Analysis Required** |
+| **L4 Architectural** | New subsystem, major refactor | **Deep Analysis Required** |
 
-### Planning Protocol (L3+)
-
-For cross-boundary or architectural tasks, output this structure BEFORE any tool calls:
-
+For L3+, output before any tool calls:
 ```
 ## Analysis
-
-**Impact Scope**: [List affected layers: Go/Python/Flutter/DB/Proto]
-**Risk Assessment**: [Low/Medium/High] — [One-line justification]
-**Dependency Chain**: [A → B → C order of changes]
+**Impact Scope**: [Go/Python/Flutter/DB/Proto]
+**Risk Assessment**: [Low/Medium/High]
+**Dependency Chain**: [A → B → C]
 
 ## Execution Plan
-
-1. [Verification step - what to check first]
-2. [Primary change - the core modification]
-3. [Propagation - downstream updates]
-4. [Validation - how to verify success]
+1. [Verify] 2. [Change] 3. [Propagate] 4. [Validate]
 ```
 
 ---
 
 ## Anti-Patterns (Hard Rules)
 
-These rules are NON-NEGOTIABLE. Violating them causes cascading failures.
-
-### Code Generation Anti-Patterns
 ```
-❌ NEVER wrap XML tool tags in markdown code blocks
-❌ NEVER say "I will now..." or "Here is the code..." — just execute
-❌ NEVER assume file paths exist — verify with ls or Glob if >20% uncertain
-❌ NEVER modify generated files directly (see Source of Truth below)
-❌ NEVER make partial edits that leave code in broken state
-```
-
-### Architectural Anti-Patterns
-```
-❌ NEVER add direct DB calls in Go handlers (use service layer)
-❌ NEVER add business logic in Go Gateway (belongs in Python)
-❌ NEVER call Python REST from Python gRPC (internal only)
-❌ NEVER store secrets in code (use .env files)
-❌ NEVER skip proto regeneration after proto changes
-❌ NEVER add hardcoded tokens or passwords in production code
+NEVER wrap XML tool tags in markdown code blocks
+NEVER say "I will now..." — just execute
+NEVER assume file paths exist — verify if >20% uncertain
+NEVER modify generated files directly (see Source of Truth)
+NEVER make partial edits that leave code in broken state
+NEVER add direct DB calls in Go handlers (use service layer)
+NEVER add business logic in Go Gateway (belongs in Python)
+NEVER call Python REST from Python gRPC (internal only)
+NEVER store secrets in code (use .env files)
+NEVER skip proto regeneration after proto changes
+NEVER add hardcoded tokens or passwords in production code
 ```
 
 ---
 
-## Source of Truth Hierarchy
+## Source of Truth
 
-Understanding this hierarchy prevents 90% of bugs in this codebase.
-
-### The Golden Rule
 ```
 Proto Definition  →  Generated Code  →  Implementation
      (Edit)              (Generate)        (Edit)
 ```
 
-### Detailed Truth Table
+| Domain | Source of Truth | Generate |
+|--------|-----------------|----------|
+| **API Contract** | `proto/*.proto` (buf.yaml) | `make proto-gen` |
+| **DB Schema (Go)** | `backend/gateway/internal/db/schema.sql` | `make sync-db` |
+| **DB Schema (Py)** | Alembic migrations | `alembic upgrade head` |
+| **Design Tokens** | `mobile/lib/core/design/design_system.dart` | Manual |
 
-| Domain | Source of Truth | Generated From | Never Edit Directly |
-|--------|-----------------|----------------|---------------------|
-| **API Contract** | `proto/*.proto` (buf.yaml) | `make proto-gen` (Buf) | `backend/gateway/gen/`, `backend/app/gen/`, `mobile/lib/gen/` |
-| **DB Schema (Go)** | `backend/gateway/internal/db/schema.sql` | `make sync-db` | `backend/gateway/internal/db/models.go` |
-| **DB Schema (Py)** | Alembic migrations (52 files) | `alembic upgrade head` | SQLAlchemy models (must match) |
-| **Design Tokens** | `mobile/lib/core/design/design_system.dart` | Manual | Component hardcoded values |
+**Never edit directly**: `backend/gateway/gen/`, `backend/app/gen/`, `mobile/lib/gen/`, `backend/gateway/internal/db/models.go`.
 
-### Proto Files Overview (6 files)
+### Proto Files (6 files)
 
 ```
 proto/
-├── agent_service.proto      # Main agent RPC (StreamChat, SubmitPlanReview, etc.)
+├── agent_service.proto      # Main agent RPC (StreamChat, SubmitPlanReview)
 ├── galaxy_service.proto     # Knowledge graph / Galaxy service
-├── community_service.proto  # Community, friends, groups, accountability
-├── error_book.proto         # Error archive / 错题本 system
-├── stt_service.proto        # Speech-to-text service
+├── community_service.proto  # Community, friends, groups
+├── error_book.proto         # Error archive / 错题本
+├── stt_service.proto        # Speech-to-text
 └── websocket.proto          # WebSocket message types
 ```
 
-### Change Propagation Flowchart
+### Change Propagation
 
 ```
-Proto Change?
-    │
-    ├─→ make proto-gen (uses buf.build, falls back to protoc)
-    │       │
-    │       ├─→ Update Go client (backend/gateway/internal/agent/client.go)
-    │       ├─→ Update Python service (backend/app/services/agent_grpc_service.py)
-    │       └─→ Update Flutter: make mobile-gen
-    │
-DB Schema Change?
-    │
-    ├─→ Create Alembic migration (alembic revision -m "...")
-    ├─→ Apply migration (alembic upgrade head)
-    └─→ If Go needs data: Update queries → make sync-db
+Proto change?     → make proto-gen → Update Go client + Python service + Flutter (make mobile-gen)
+DB schema change? → alembic revision → alembic upgrade head → (if Go needs) make sync-db
 ```
 
 ---
 
-## Codebase Navigation Map
+## Codebase Navigation
 
-### Critical Path Analysis
-
-These are the files you'll touch most often. Memorize their roles.
-
-#### Request Flow (Chat Message)
+### Request Flow (Chat)
 ```
-1. mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart  # WebSocket client
-   ↓ WebSocket message
-2. backend/gateway/internal/handler/websocket_proxy.go   # Connection handler
-   ↓ Parse & validate
-3. backend/gateway/internal/handler/chat_orchestrator.go  # Flow control
-   ↓ gRPC call
-4. backend/gateway/internal/agent/client.go              # gRPC client wrapper
-   ↓ StreamChat RPC
-5. backend/app/services/agent_grpc_service.py            # gRPC service impl
-   ↓ Orchestrate
-6. backend/app/orchestration/orchestrator.py             # FSM state machine
-   ↓ Tool calls / LLM
-7. backend/app/services/llm_service.py                   # LLM abstraction
+Flutter websocket_chat_service_v2.dart → Go websocket_proxy.go → chat_orchestrator.go
+→ agent/client.go (gRPC) → Python agent_grpc_service.py → orchestrator.py (FSM) → llm_service.py
 ```
 
-#### Request Flow (Plan Review)
+### Request Flow (Plan Review)
 ```
-1. backend/app/orchestration/plan_review_service.py  # Review orchestration
-   ↓ Two-tier review (rule-based + LLM-based)
-2. backend/app/orchestration/orchestrator.py         # Invokes review
-   ↓ Stream response with review result
-3. backend/gateway/internal/handler/websocket_proxy.go  # Forwards to client
-   ↓ WebSocket message with delta + metadata
-4. mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart  # Parses delta
-   ↓ Detects metadata['requires_review'] == true
-5. Emits PlanReviewWidgetEvent(reviewData: metadata)
-   ↓
-6. mobile/lib/features/chat/presentation/providers/chat_provider.dart  # State update
-   ↓
-7. mobile/lib/features/chat/presentation/widgets/plan_review_card.dart  # UI rendering
+Python plan_review_service.py → orchestrator.py → Go websocket_proxy.go
+→ Flutter websocket_chat_service_v2.dart → chat_provider.dart → plan_review_card.dart
 ```
 
-#### Dual-Core Routing Flow
+### Dual-Core Routing
 ```
-1. backend/app/orchestration/dual_core_router.py      # Routes Execution vs Cognitive core
-   ↓ DualCoreRoutingInput (intent, confidence, sentiment, plan health, etc.)
-   ↓ Outputs DualCoreDecision (mode, reason, cognitive_adjustments, execution_constraints)
-2. backend/app/orchestration/orchestrator.py          # Consumes routing decision
-   ↓ Adjusts prompt, tone, tool access, verbosity
-3. backend/app/orchestration/ux_envelope.py           # UX presentation layer
-   ↓ PresentationProfile (mode_label, companion_frame, answer_kind, next_actions)
-4. Streamed to Flutter via Go Gateway
+dual_core_router.py → orchestrator.py (adjusts prompt/tone/tools) → ux_envelope.py → Streamed to Flutter
 ```
 
-#### Event Bus Signal Mesh
+### Event Bus (Redis Streams)
 ```
-EventBus (Redis Streams) → Consumer Groups → DLQ + Retry
-    │
-    ├── KnowledgeNodeUpdated  → Galaxy display refresh
-    ├── TaskCompleted         → AchievementEngine check + photon reward
-    ├── TaskAbandoned         → Reflection trigger + pattern analysis
-    ├── ErrorCreated          → Cognitive fragment + knowledge penalty
-    ├── ProfilePreferenceUpdated → Prompt injection update
-    ├── UserSettingsUpdated   → UX envelope re-evaluation
-    └── CalendarEvent*        → Notification scheduling
+KnowledgeNodeUpdated → Galaxy refresh | TaskCompleted → Achievement + photon reward
+TaskAbandoned → Reflection | ErrorCreated → Cognitive fragment
+ProfilePreferenceUpdated → Prompt update | CalendarEvent* → Notification scheduling
 
-Cross-system bridges:
-    community_signal_bridge.py  → Group activity → Personal context
-    galaxy_event_consumer.py    → Knowledge events → Plan constraints
-    achievement_event_consumer.py → Achievement unlock → Frontend notification
+Bridges: community_signal_bridge.py, galaxy_event_consumer.py, achievement_event_consumer.py
 ```
 
-#### State Management Layers
+### State Management
 ```
-Flutter State:    Riverpod providers → mobile/lib/features/*/presentation/providers/
-Go State:         Redis cache → backend/gateway/internal/service/chat_history.go
-Python State:     FSM context → backend/app/orchestration/orchestrator.py
-Persistent State: PostgreSQL (143 tables) → backend/gateway/internal/db/queries/
-```
-
-### File Importance Ranking
-
-When exploring unfamiliar territory, prioritize these files:
-
-```
-★★★★★ (Core Logic)
-├── proto/agent_service.proto              # Main API contract
-├── proto/galaxy_service.proto             # Knowledge graph API
-├── backend/app/orchestration/orchestrator.py         # AI brain (LangGraph FSM)
-├── backend/app/orchestration/dual_core_router.py     # Dual-core routing decision
-├── backend/gateway/internal/handler/websocket_proxy.go  # Real-time hub
-└── mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart  # Client connection
-
-★★★★☆ (Integration Points)
-├── backend/gateway/internal/agent/client.go   # Go→Python bridge
-├── backend/app/services/agent_grpc_service.py  # Python gRPC impl
-├── backend/app/orchestration/plan_review_service.py  # Plan review orchestration
-├── backend/app/orchestration/ux_envelope.py    # UX presentation adaptation
-├── backend/gateway/internal/service/*.go       # Business services (12 files)
-├── mobile/lib/features/chat/presentation/providers/*.dart   # State providers (10 files)
-└── mobile/lib/features/chat/presentation/widgets/plan_review_card.dart  # Plan review UI
-
-★★★☆☆ (Supporting Infrastructure)
-├── backend/gateway/internal/db/schema.sql      # DB structure (13K lines, 143 tables)
-├── backend/app/orchestration/dynamic_tool_registry.py  # Tool system
-├── backend/app/core/event_bus.py               # Redis Streams event bus
-├── backend/app/services/achievement_engine.py  # Achievement + contract + sprint events
-├── backend/app/services/cognitive_service.py   # Cognitive prism
-├── backend/app/services/memory_service.py      # Long/short-term memory
-├── backend/app/services/galaxy_service.py      # Knowledge graph operations
-├── backend/app/services/community_service.py   # Community + groups + accountability
-├── backend/alembic/                            # DB migrations (52 files)
-├── docker-compose.yml                          # 17 services (app + infra + monitoring)
-├── mobile/lib/core/design/design_system.dart   # UI tokens
-├── mobile/lib/core/services/bgm_service.dart   # Route-aware BGM orchestration
-├── mobile/lib/core/services/sensory_feedback_service.dart  # Haptic/SFX budget
-├── mobile/lib/core/widgets/scene_audio_scope.dart  # Scene-scoped audio
-├── mobile/lib/core/design/widgets/sparkle_motion_primitives.dart  # Motion primitives
-└── mobile/lib/core/design/widgets/sparkle_confetti.dart  # Celebration layer
+Flutter:  Riverpod → mobile/lib/features/*/presentation/providers/
+Go:       Redis cache → backend/gateway/internal/service/
+Python:   FSM context → backend/app/orchestration/orchestrator.py
+Persist:  PostgreSQL → backend/gateway/internal/db/queries/
 ```
 
----
+### Core Files (★★★★★)
 
-## System Inventory
+| File | Role |
+|------|------|
+| `proto/agent_service.proto` | Main API contract |
+| `backend/app/orchestration/orchestrator.py` | AI brain (LangGraph FSM) |
+| `backend/app/orchestration/dual_core_router.py` | Dual-core routing |
+| `backend/gateway/internal/handler/websocket_proxy.go` | Real-time hub |
+| `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart` | Client connection |
 
-### Backend Services (26 service files in `backend/app/services/`)
+### Integration Points (★★★★☆)
 
-| Service | File | Purpose |
-|---------|------|---------|
-| LLM Service | `llm_service.py` | Multi-provider LLM abstraction |
-| Memory Service | `memory_service.py` | Episodic + semantic memory |
-| Cognitive Service | `cognitive_service.py` | Cognitive prism / patterns |
-| Galaxy Service | `galaxy_service.py` | Knowledge graph operations |
-| Community Service | `community_service.py` | Groups, friends, accountability |
-| Achievement Engine | `achievement_engine.py` | 19 event types, contracts, sprints |
-| Community Signal Bridge | `community_signal_bridge.py` | Group→Personal context bridge |
-| Galaxy Event Consumer | `galaxy_event_consumer.py` | Knowledge events→Plan constraints |
-| Achievement Event Consumer | `achievement_event_consumer.py` | Unlock→Notification |
-| Progress Narrative | `progress_narrative_service.py` | Growth storytelling |
-| Behavior Signal Collector | `behavior_signal_collector.py` | Behavioral pattern detection |
-| Metacognition Service | `metacognition_service.py` | Bias unification, confidence proxies |
-| Idiographic Association | `idiographic_association_service.py` | Within-person correlation analysis |
-| SRL Phase Tracker | `srl_phase_tracker_service.py` | Self-regulated learning phases |
-| Social Signal Bridge | `social_signal_bridge.py` | Social → Router signal bridge |
-| Journey Event Service | `stage33_journey_event_service.py` | user.registered / plan.created events |
-| OpenClaw Client | `adapters/openclaw/client.py` | Digital task execution |
-| OpenClaw URL Guard | `services/openclaw/url_guard.py` | SSRF protection (private IP blocklist) |
-| Theater Service | `services/theater/` | Path prediction + what-if analysis |
-| Simulation Engine | `services/simulation/` | Scenario simulation |
-| Learning Report | `services/report/` | Mastery report generation |
-| STT Service | `services/stt/` | Speech-to-text |
-
-### Go Gateway Middleware (16 files in `backend/gateway/internal/middleware/`)
-
-| Middleware | File | Purpose |
-|-----------|------|---------|
-| Auth | `auth.go` | JWT (HS256) with blacklist + fail-closed |
-| WS Auth | `ws_auth.go` | WebSocket JWT (header/query/ticket) |
-| Rate Limit | `rate_limit.go` | IP + auth + WebSocket + adaptive |
-| Distributed Rate Limit | `distributed_rate_limiter.go` | Redis sliding window |
-| CORS | `cors.go` | Origin allowlist (not wildcard) |
-| Security Headers | `security.go` | CSP + HSTS + X-Frame-Options + Permissions-Policy |
-| Timeout | `timeout.go` | Request timeout enforcement |
-| Internal API | `internal_api.go` | API key validation (timing-attack resistant) |
-| IP Whitelist | `internal_ip_whitelist.go` | /internal endpoints protection |
-| Chaos Guard | `chaos_guard.go` | Chaos engineering |
-| A/B Test | `ab_test_middleware.go` | Experiment routing |
-| Request Context | `request_context.go` | Context injection |
-
-### Flutter Feature Modules (24 route modules)
-
-```
-achievement | auth | calendar | chat | cognitive | community | error_book |
-focus | galaxy | home | insights | memory | notification_center | openclaw |
-photon | plan | report | seed_library | shop | simulation | splash |
-task | theater | tools | translation | user | visual_elements
-```
-
-### Docker Services (17 containers)
-
-| Category | Services |
-|----------|---------|
-| **Infrastructure** | sparkle_db (PG16+pgvector+AGE), redis (Stack), minio |
-| **Application** | sparkle_api (FastAPI:8000), sparkle_agent (gRPC:50051), sparkle_gateway (Go:8080), celery_worker, celery_glm_batch_worker |
-| **Monitoring** | prometheus, grafana, loki, tempo, promtail, alertmanager |
+| File | Role |
+|------|------|
+| `backend/gateway/internal/agent/client.go` | Go→Python gRPC bridge |
+| `backend/app/services/agent_grpc_service.py` | Python gRPC impl |
+| `backend/app/orchestration/plan_review_service.py` | Plan review |
+| `backend/app/orchestration/ux_envelope.py` | UX presentation adaptation |
 
 ---
 
 ## Command Reference
 
-### Quick Reference Card
-
 ```bash
-# === DAILY WORKFLOW ===
+# Daily
 make dev-all              # Start infrastructure (DB + Redis + MinIO)
 make proto-gen            # After proto changes (uses buf)
 make sync-db              # After DB changes (migrate + dump + sqlc)
 
-# === COMPONENT STARTUP ===
+# Component startup
 make gateway-dev          # Go Gateway with hot reload
 make grpc-server          # Python gRPC server
 make mobile-run           # Flutter mobile app
 
-# === SIGNOFF & VERIFICATION ===
+# Signoff & verification
 make env-check                        # Config + connectivity self-check
 make smoke                            # Health check on all services
 make local-signoff-preflight          # Full preflight: DB/Redis/ports/migrations/indexes
-make local-final-signoff              # Complete signoff suite: preflight + smoke + tests + acceptances
+make local-final-signoff              # Complete signoff suite
 
-# === CELERY TASK QUEUE ===
-make celery-up            # Start Celery worker + beat (optional flower: FLOWER_ENABLE=1)
-make celery-status        # Check Celery services status
-make celery-logs-worker   # View worker logs
-make celery-flush         # Flush Redis queues
-make celery-stop          # Stop all Celery services
+# Celery
+make celery-up / celery-status / celery-logs-worker / celery-flush / celery-stop
 
-# === PROTO GENERATION (Buf-based) ===
-make proto-gen            # Generate Go/Python/Dart from proto (via buf)
-make proto-lint           # Lint proto files
-make proto-breaking       # Check for breaking changes vs main branch
-make mobile-proto         # Generate only Dart protobufs
-make mobile-gen           # Generate Dart protobufs + run build_runner
+# Proto (Buf-based)
+make proto-gen / proto-lint / proto-breaking / mobile-proto / mobile-gen
 
-# === TESTING ===
-cd backend && pytest                                              # Python tests (asyncio_mode=auto)
-cd backend && pytest tests/test_specific.py -v                    # Single Python test file
-cd backend && python scripts/ai_chat_multiturn_acceptance.py      # Run specific acceptance
+# Testing
+cd backend && pytest tests/test_specific.py -v                    # Single Python test
+cd backend && python scripts/ai_chat_multiturn_acceptance.py      # Acceptance script
 cd backend/gateway && go test ./...                               # Go tests
 cd mobile && flutter test                                         # Flutter tests
 
-# === DEBUGGING ===
-docker compose logs -f gateway      # Go logs
-docker compose logs -f grpc-server  # Python logs
-grpcurl -plaintext localhost:50051 list  # List gRPC services
+# Debugging
+docker compose logs -f gateway / grpc-server                     # Service logs
+grpcurl -plaintext localhost:50051 list                           # List gRPC services
 
-# === UTILITIES ===
-alembic revision -m "desc"              # New Alembic migration
-alembic upgrade head                    # Apply migrations
-make init-rag                           # Initialize Redis search index (RAG v2.0)
-make sync-rag                           # Sync PG knowledge nodes to Redis
-cd backend && python scripts/seed_demo_user_enhanced.py  # Seed demo data for testing
+# Utilities
+alembic revision -m "desc" && alembic upgrade head                # DB migration
+make init-rag / sync-rag                                          # RAG index
+cd backend && python scripts/seed_demo_user_enhanced.py           # Demo data
 
-# === QUALITY ===
-make quality-baseline                   # Run full quality baseline checks
-python scripts/check_tech_debt_budget.py  # Check tech debt against budget
-
-# === AURORA GOVERNANCE ===
-bash scripts/run_all_rule_guards.sh          # Run all 53 rule guards
-bash scripts/run_all_rule_guards.sh --rule AO  # Run single rule guard
-bash scripts/journey_smoke.sh all            # 7-hop main + 3-hop error journey smoke
-python scripts/add_core_phase_headers.py     # Add Core/Phase declaration headers
-python scripts/check_core_phase_header.py    # Verify header coverage
+# Quality & governance
+make quality-baseline                                             # Full quality checks
+python scripts/check_tech_debt_budget.py                          # Tech debt budget
+bash scripts/run_all_rule_guards.sh [--rule AO]                   # Rule guards
+bash scripts/journey_smoke.sh all                                 # Journey smoke
 ```
 
-### Command Decision Tree
-
+### Decision Tree
 ```
-What changed?
-│
-├─→ Proto file? → make proto-gen → Update implementations
-│
-├─→ SQL schema? → alembic revision → alembic upgrade head → make sync-db
-│
-├─→ Go code? → make gateway-dev (auto-reload)
-│
-├─→ Python code? → Restart grpc-server
-│
-└─→ Flutter code? → Hot reload (r) or Hot restart (R)
+Proto file?    → make proto-gen → Update implementations
+SQL schema?    → alembic revision → alembic upgrade head → make sync-db
+Go code?       → make gateway-dev (auto-reload)
+Python code?   → Restart grpc-server
+Flutter code?  → Hot reload (r) or Hot restart (R)
 ```
 
 ---
 
 ## Architectural Invariants
-
-These rules define the system's structural integrity. Never violate them.
-
-### Layer Responsibility Matrix
 
 | Layer | MUST Do | MUST NOT Do |
 |-------|---------|-------------|
@@ -508,421 +254,58 @@ These rules define the system's structural integrity. Never violate them.
 | **Go Gateway** | Auth, WebSocket, caching, routing, rate limiting | AI reasoning, LLM calls, vector search |
 | **Python Engine** | AI orchestration, RAG, tool execution, dual-core routing | User auth, session management |
 | **PostgreSQL** | Persistent storage, vector similarity, graph queries | Caching (use Redis) |
-| **Redis** | Session cache, rate limiting, event bus (Streams), pub/sub | Long-term storage |
+| **Redis** | Session cache, rate limiting, event bus, pub/sub | Long-term storage |
 
 ### Interface Contracts
 
 ```
-Flutter ←→ Go Gateway
-  Protocol: WebSocket (ws://localhost:8080/ws/chat)
-  Format: JSON messages with type field
-  Auth: JWT in connection header or single-use ticket
-
-Go Gateway ←→ Python Engine
-  Protocol: gRPC (localhost:50051)
-  Contract: proto/agent_service.proto (and 5 other proto files)
-  Streaming: Server-side streaming for chat
-
-Python Engine ←→ Database
-  ORM: SQLAlchemy (async)
-  Vectors: pgvector with L2/Cosine distance
-  Graph: Apache AGE (sparkle_galaxy schema)
-  Migrations: Alembic (52 files)
+Flutter ←→ Go:    WebSocket (ws://localhost:8080/ws/chat), JSON, JWT auth
+Go ←→ Python:     gRPC (localhost:50051), proto/agent_service.proto, server-streaming
+Python ←→ DB:     SQLAlchemy (async), pgvector, Apache AGE, Alembic migrations
 ```
 
 ---
 
-## Security Architecture
+## Common Patterns
 
-### Authentication Flow
-- **JWT (HS256)**: Access + Refresh tokens with exp/iat/jti/type/iss/aud claims
-- **Token Blacklist**: JTI-based revocation + user-level revocation (user_revoked_before)
-- **Fail-Closed**: Non-development boots force `REDIS_FAIL_CLOSED=true` when unset; development defaults remain fail-open for local debugging
-- **Timing-Attack Resistant**: Gateway secret checks use constant-time comparison when secrets are configured; backend internal endpoints still depend on a non-empty `INTERNAL_API_KEY` to enforce validation
-
-### Multi-Layer Rate Limiting
-- IP-based: 10 req/s, burst 30
-- Auth endpoints: 5 req/s, burst 15
-- WebSocket connection: 5/min, burst 10
-- Adaptive: Stricter for auth endpoints under load
-- Distributed: Redis sliding window with local fallback
-
-### Security Headers (auto-injected)
-- `Content-Security-Policy` (strict, no unsafe-inline for scripts)
-- `X-Frame-Options: DENY`
-- `X-Content-Type-Options: nosniff`
-- `Strict-Transport-Security` (production only)
-- `Referrer-Policy: strict-origin-when-cross-origin`
-- `Permissions-Policy` (restricts geolocation, camera, microphone, payment)
-
-### Production Guards
-- `DEBUG=True` in production raises `ValueError`
-- Weak `SECRET_KEY` values rejected in production
-- `BACKEND_CORS_ORIGINS=["*"]` rejected in production
-- gRPC reflection only enabled in DEBUG mode
-- HTML sanitization via bluemonday in Go Gateway
+### Add AI Tool: `backend/app/tools/` → register in `dynamic_tool_registry.py` → (optional) expose via proto
+### Add API Endpoint: Define in proto → `make proto-gen` → implement Python gRPC → implement Go client → expose handler
+### DB Migration: `alembic revision` → write upgrade/downgrade → `alembic upgrade head` → (if Go) update queries + `make sync-db`
+### Event Bus Signal: Define in `event_bus.py` → publish from source → create consumer with DLQ+retry → wire into bridges
+### Backend-Driven Widget: Python sends metadata in delta → Go forwards unchanged → Flutter parses + emits widget event
+### Aurora Kill Switch: `KillSwitchBinding` + settings attr + `read_mode()` check + register in manifest + drill script
+### Governance Rule Guard: Script exits 0/non-zero → register in `rule_guard_manifest.tsv` → CI auto-discovers
 
 ---
 
-## Monitoring & Observability
-
-### Stack
-```
-Prometheus (9090) → Metrics collection + alerting
-Grafana (3000)    → Dashboards + datasources (Prometheus + Loki + Tempo)
-Loki (3100)       → Log aggregation
-Tempo (4317)      → Distributed tracing (OTLP gRPC + HTTP)
-Promtail          → Log shipping (Docker socket, read-only)
-Alertmanager (9093) → Alert routing (webhook + email)
-```
-
-### SLO Alert Rules (11 rules)
-
-| Alert | Severity | Condition |
-|-------|----------|-----------|
-| SparkleGatewayDown | P1 Critical | Gateway unreachable for 2m |
-| SparkleBackendDown | P1 Critical | Backend unreachable for 2m |
-| SparkleBackendHigh5xxRate | P2 Warning | 5xx ratio > 2% for 10m |
-| SparkleBackendP95LatencyHigh | P2 Warning | P95 > 1.5s for 10m |
-| SparkleEventStreamLagHigh | P2 Warning | Event stream lag > 120s |
-| SparkleContextPackOverBudgetSpike | P3 Warning | > 20 over-budget events in 10m |
-| AIFirstTokenLatency | Baseline | First token latency monitoring |
-| AITotalDuration | Baseline | Total AI call duration |
-| OutboxBacklog | Baseline | Event outbox accumulation |
-| BackendMemory | Baseline | Python backend memory |
-| GatewayGoroutines | Baseline | Go goroutine count |
-
-Runbook: `monitoring/runbooks/incident_response.md`
-
----
-
-## CI/CD Pipeline
-
-### Main CI (`.github/workflows/ci.yml`)
-
-**Triggers**: push to main/develop, tags `v*`, PRs to main
-**Tool versions**: Go 1.22.0, Python 3.11, Flutter 3.24.0
-
-| Job | Runs | Key Steps |
-|-----|------|-----------|
-| **lint** | Always | golangci-lint (22 linters), ruff + mypy, flutter analyze + tech debt budget |
-| **backend-test** | After lint | Go tests (race + coverage), Python tests (contract + workflow), proto/OpenAPI/dependency checks |
-| **flutter-test** | After lint | Flutter tests + coverage, critical smoke + regression suites |
-| **security-scan** | After lint | Trivy vulnerability scanner, Gitleaks secret detection |
-
-### Additional Workflows (9 files)
-
-| Workflow | Purpose |
-|----------|---------|
-| `e2e-tests.yml` | Nightly E2E test suite |
-| `e2e-smoke.yml` | E2E smoke tests |
-| `quality-baseline.yml` | Weekly quality baseline |
-| `benchmark.yml` | Performance benchmarks |
-| `ui-lint.yml` | UI-specific linting |
-| `deploy-prod.yml` | Production deployment |
-| `cd_k8s.yml` | Kubernetes CD pipeline |
-| `gemini-review.yml` | AI-powered code review |
-| `gemini-triage.yml` | AI issue triage |
-
-### Pre-commit Hooks (10 hooks)
-
-Python: Ruff lint + format, MyPy type checking
-Go: go-fmt, go-vet, go-imports, golangci-lint
-Protobuf: buf-lint
-Security: gitleaks
-Formatting: trailing whitespace, end-of-file, YAML/JSON, merge conflicts, private keys, large files
-
----
-
-## Testing Strategy
-
-### Test Scale
-
-| Layer | Test Files | Key Acceptance Scripts |
-|-------|-----------|----------------------|
-| Python | 3214+ passed (incl. 53 rule guards) | 21 acceptance scripts covering all major chains |
-| Go | 34 (incl. 20 handler tests) | Contract tests, benchmark tests |
-| Flutter | 131+ | Smoke tests, golden tests, widget tests, integration tests |
-
-### Acceptance Test Coverage (21 scripts in `backend/scripts/`)
-
-```
-ai_chat_multiturn_acceptance.py      # AI对话多轮验收
-accountability_acceptance.py          # 责任伙伴验收
-galaxy_plan_acceptance.py             # 星图计划验收
-achievement_visual_acceptance.py      # 成就视觉元素验收
-seed_library_acceptance.py            # 种子库验收
-insights_acceptance.py                # 学习洞察验收
-cognitive_capsule_acceptance.py       # 认知胶囊验收
-community_acceptance.py               # 社群验收
-community_share_adopt_acceptance.py   # 社群采纳验收
-focus_acceptance.py                   # 专注系统验收
-calendar_weather_acceptance.py        # 日历天气验收
-memory_acceptance.py                  # 记忆系统验收
-notes_errorbook_acceptance.py         # 错题本验收
-translation_dictionary_acceptance.py  # 翻译词典验收
-document_stt_acceptance.py            # 文档语音验收
-long_term_plan_acceptance.py          # 长期计划验收
-celery_acceptance.py                  # Celery队列验收
-security_acceptance.py                # 安全验收
-api_contract_acceptance.py            # API契约验收
-community_admin_acceptance.py         # 社群管理验收
-ai_expert_acceptance.py               # AI专家模式验收
-```
-
-### Code Quality Configuration
-
-| Tool | Config | Key Settings |
-|------|--------|-------------|
-| Python Ruff | `pyproject.toml` | Python 3.11, line-length 120, rules: E/W/F/I/B/C4/UP/ARG/SIM |
-| Python MyPy | `pyproject.toml` | `warn_return_any`, `warn_unused_configs`, `ignore_missing_imports` |
-| Go golangci-lint | `.golangci.yml` | 22 linters (gosec audit, staticcheck, gocritic), complexity threshold 15 |
-| Flutter analyze | `analysis_options.yaml` | strict-casts, strict-inference, strict-raw-types, 60+ rules |
-
----
-
-## Common Refactoring Patterns
-
-### Pattern 1: Adding a New AI Tool
-
-```
-1. Create tool file: backend/app/tools/my_tool.py
-   - Inherit from BaseTool
-   - Implement execute() method
-   - Define schema for LLM function calling
-
-2. Register tool: backend/app/orchestration/dynamic_tool_registry.py
-   - Add to tool registry
-   - Tool auto-available to orchestrator
-
-3. (Optional) Expose via API: proto/agent_service.proto
-   - Only if direct client access needed
-```
-
-### Pattern 2: Adding a New API Endpoint
-
-```
-1. Define in proto: proto/agent_service.proto (or relevant proto)
-   - Add message types
-   - Add RPC method
-
-2. Regenerate: make proto-gen
-
-3. Implement Python: backend/app/services/agent_grpc_service.py
-   - Add method matching proto definition
-
-4. Implement Go client: backend/gateway/internal/agent/client.go
-   - Add wrapper method
-
-5. Expose endpoint: backend/gateway/internal/handler/
-   - REST: Add Gin handler
-   - WebSocket: Add message type handler
-```
-
-### Pattern 3: Database Schema Migration
-
-```
-1. Plan migration: Consider both Go and Python access patterns
-
-2. Create Alembic migration:
-   cd backend && alembic revision -m "add_user_preferences"
-
-3. Write migration: backend/alembic/versions/xxxx_add_user_preferences.py
-   - def upgrade(): ADD changes
-   - def downgrade(): REVERSE changes
-
-4. Apply: alembic upgrade head
-
-5. If Go needs access:
-   - Update queries: backend/gateway/internal/db/queries/
-   - Regenerate: make sync-db
-```
-
-### Pattern 4: Adding an Event Bus Signal
-
-```
-1. Define event: backend/app/core/event_bus.py
-   - Add event class with event_type string
-
-2. Publish event from source service:
-   await event_bus.publish(MyEvent(...))
-
-3. Create consumer (if new service needed):
-   - Subscribe to event_type
-   - Process with DLQ + retry
-
-4. Wire into existing bridges if cross-system:
-   - community_signal_bridge.py (community → personal)
-   - galaxy_event_consumer.py (knowledge → plan)
-   - achievement_event_consumer.py (achievement → UI)
-```
-
-### Pattern 5: Backend-Driven Widget Events (Plan Review Style)
-
-```
-1. Python Backend (orchestrator.py):
-   - Generate review result using plan_review_service.py
-   - Send review data in metadata field of delta response
-
-2. Go Gateway (websocket_proxy.go):
-   - Forwards response unchanged to Flutter client
-   - No special handling needed
-
-3. Flutter WebSocket Service (websocket_chat_service_v2.dart):
-   - Parse delta message
-   - Check if metadata['requires_review'] == true
-   - Emit PlanReviewWidgetEvent(reviewData: metadata)
-
-4. Flutter UI (plan_review_card.dart):
-   - Listen for PlanReviewWidgetEvent in chat provider
-   - Display review card with animations
-   - Handle user actions (approve, reject, modify)
-
-5. User Feedback Loop:
-   - User submits decision via SubmitPlanReview gRPC
-   - Backend processes and updates plan accordingly
-```
-
-### Pattern 7: Adding an Aurora Kill Switch
-
-```
-1. Define kill switch binding in the service:
-   from app.core.kill_switch import KillSwitchBinding, read_mode
-
-   binding = KillSwitchBinding(
-       stage="stageN", feature="my_feature",
-       redis_key="aurora:stageN:my_feature",
-       settings_attr="AURORA_STAGE_N_MY_FEATURE_MODE",
-       fallback_mode="shadow",
-   )
-
-2. Add setting in backend/app/config/settings.py:
-   AURORA_STAGE_N_MY_FEATURE_MODE: str = "shadow"
-
-3. Check mode in service code:
-   mode = await read_mode(redis_client=redis, prefix="sparkle:", binding=binding)
-   if mode == "off": return
-
-4. Register in scripts/rule_guard_manifest.tsv if applicable
-
-5. Create drill script: scripts/stageN/drill_transitions.sh
-   Tests off→shadow→live→shadow→off transitions
-```
-
-### Pattern 8: Adding a Governance Rule Guard
-
-```
-1. Create guard script: scripts/guards/check_rule_XX_description.py
-   - Must exit 0 on pass, non-zero on fail
-   - Print findings to stdout
-
-2. Register in scripts/rule_guard_manifest.tsv:
-   XX	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_XX_description.py"
-
-3. Document rule: docs/aurora/rule_xx_description.md
-
-4. CI will auto-discover via run_all_rule_guards.sh
-```
-
-### Pattern 9: OpenClaw Integration
-
-```
-1. Backend adapter: backend/app/adapters/openclaw/
-   - client.py: HTTP or Gateway WebSocket transport
-   - intent_translator.py: Internal → OpenClaw format
-   - result_parser.py: OpenClaw → Internal format
-
-2. Execution services: backend/app/services/execution/
-   - execution_service.py, execution_router.py
-
-3. API exposure: backend/app/api/v1/executions.py
-   - REST endpoints for execution management
-
-4. Flutter: features/openclaw/ + settings screens
-   - Hub screen, connection panel, settings
-```
-
----
-
-## Debugging Strategies
-
-### Symptom → Diagnosis Table
-
-| Symptom | Likely Cause | Diagnostic Command |
-|---------|--------------|-------------------|
-| WebSocket won't connect | Gateway not running | `curl http://localhost:8080/api/v1/health` |
+## Debugging
+
+| Symptom | Likely Cause | Fix |
+|---------|--------------|-----|
+| WebSocket won't connect | Gateway down | `curl localhost:8080/api/v1/health` |
 | gRPC timeout | Python server down | `grpcurl -plaintext localhost:50051 list` |
-| "Field not found" error | Proto out of sync | `make proto-gen` then restart |
+| "Field not found" | Proto out of sync | `make proto-gen` then restart |
 | DB query fails | Migration not applied | `alembic current` vs `alembic heads` |
 | Flutter type error | Outdated generated code | `flutter pub get && flutter clean` |
 | Redis connection refused | Docker not running | `docker compose ps` |
-| Signoff preflight fails | Config drift or port conflict | `make env-check` then check `.env` ports |
-| Star map / learning path fails | Missing prerequisite baseline | `make local-signoff-preflight` → check knowledge_prerequisite_baseline |
-| Achievement / visual elements empty | Demo data not seeded | `python scripts/seed_demo_user_enhanced.py` |
+| Signoff preflight fails | Config drift | `make env-check` then check `.env` ports |
+| Achievement/visual empty | Demo data not seeded | `python scripts/seed_demo_user_enhanced.py` |
 
-### Log Correlation Strategy
-
-```bash
-# Trace a request across layers
-# 1. Get request ID from Flutter logs
-# 2. Search Go Gateway logs
-docker compose logs gateway 2>&1 | grep "request_id"
-
-# 3. Search Python logs
-docker compose logs sparkle_agent 2>&1 | grep "request_id"
-
-# 4. Check database if needed
-docker compose exec sparkle_db psql -U postgres -d sparkle -c "SELECT * FROM chat_messages ORDER BY created_at DESC LIMIT 5;"
-```
+Trace across layers: `docker compose logs gateway 2>&1 | grep "request_id"` → same for `sparkle_agent` → DB query.
 
 ---
 
-## Performance Considerations
+## Performance Hot Paths
 
-### Hot Paths (Optimize First)
-1. **WebSocket message parsing** — Every chat message goes through here
-2. **Orchestrator state transitions** — FSM bottleneck
-3. **Vector similarity search** — pgvector HNSW query performance
-4. **LLM token streaming** — Real-time responsiveness
-5. **Event bus throughput** — Redis Streams consumer group lag
-
-### Caching Layers
-```
-Request → Redis (chat history, rate limits, event streams)
-        → Go semantic cache (RAG results)
-        → Python LRU (embeddings, tool schemas)
-        → PostgreSQL (persistent, 143 tables)
-```
-
-### Connection Pools
-- Go → PostgreSQL: sqlc with pgxpool (default 10 connections)
-- Go → Redis: go-redis with pooling
-- Python → PostgreSQL: asyncpg pool
-- Go → Python gRPC: Connection reuse
+1. WebSocket message parsing — every chat message
+2. Orchestrator state transitions — FSM bottleneck
+3. Vector similarity search — pgvector HNSW
+4. LLM token streaming — real-time responsiveness
+5. Event bus throughput — Redis Streams consumer lag
 
 ---
 
-## Documentation Locations
-
-| Topic | Location |
-|-------|----------|
-| Developer Docs Entry | `docs/README.md` |
-| Architecture Overview | `docs/00_项目概览/02_技术架构.md` |
-| API Reference | `docs/02_技术设计文档/03_API参考.md` |
-| Knowledge Graph Design | `docs/02_技术设计文档/02_知识星图系统设计_v3.0.md` |
-| Implementation Guides | `docs/03_功能实现指南/` |
-| Deployment & Ops | `docs/05_部署与运维/` |
-| Engineering Standards | `docs/engineering/` (quality guardrails, SLO targets, tech debt register) |
-| Verification Checklists | `docs/verification/` (acceptance checklists, signoff baselines) |
-| ADR Records | `docs/adr/` (3 ADRs) |
-| Proto Definitions | `proto/*.proto` (6 files, canonical) |
-| Runbook | `monitoring/runbooks/incident_response.md` |
-
----
-
-## Security Checklist
-
-Before any PR involving auth, data, or external calls:
+## Security Checklist (before any PR with auth/data/external calls)
 
 ```
 □ Secrets only in .env files (never in code)
@@ -937,27 +320,24 @@ Before any PR involving auth, data, or external calls:
 □ Security headers present (CSP, HSTS, X-Frame-Options)
 ```
 
+Production guards: `DEBUG=True` raises ValueError, weak SECRET_KEY rejected, CORS `["*"]` rejected, gRPC reflection only in DEBUG.
+
 ---
 
 ## Pre-Commit Checklist
-
-Before considering any task complete:
 
 ```
 □ Code compiles/lints without errors
 □ Generated files regenerated if sources changed
 □ Tests pass (at minimum, affected area)
 □ No hardcoded secrets or debug code
-□ Comments updated if behavior changed
 □ Proto backward compatible (if API change)
-□ Tech debt budget not exceeded (python scripts/check_tech_debt_budget.py)
+□ Tech debt budget not exceeded
 ```
 
 ---
 
 ## Local Signoff Protocol
-
-Before final manual verification, run this sequence (do not skip steps):
 
 ```
 1. Infrastructure:  docker compose up -d sparkle_db redis minio
@@ -969,68 +349,8 @@ Before final manual verification, run this sequence (do not skip steps):
 7. Flutter:         flutter run (iOS/Android simulator)
 ```
 
-**Critical principles**:
-- Confirm valid config and ports before trusting service status
-- Confirm 8000/8080 healthy before entering simulator
-- Seed demo data before testing achievements/visual/community/galaxy
-- Local DB default: `127.0.0.1:5432` — if changed, sync `.env` + `backend/.env` + `backend/gateway/.env`
+Confirm valid config/ports before trusting service status. Seed demo data before testing achievements/community/galaxy.
 
 ---
 
-## Technical Debt Register
-
-Tracked in `docs/engineering/technical_debt_register_2026-03-22.md` with 10 items (TD-001 through TD-010).
-
-Budget enforced by `scripts/check_tech_debt_budget.py` using `quality/tech_debt_budget.json`.
-
----
-
-## Full Vision Completion (2026-05-02)
-
-25 FV cards completed. See `docs/product/SPARKLE_FULL_VISION_FINAL_DISPATCH_2026-05-02.md` for the full dispatch.
-
-### Critical Infrastructure
-- FV-06: DB/Redis RBAC with `SPARKLE_RBAC_ENABLED` toggle
-- FV-08: Admin audit logging middleware + `@audit_admin_action` decorator
-- FV-09: Release approval workflow (dual-approver for policy/experiment/skill)
-- FV-10: DataMinimization fail-closed with 15 model scope coverage
-
-### P4 Research-Grade Production Pipeline (FV-01–05)
-- FV-01: CounterfactualEvaluation → DB persistence + Celery daily scan + promote API
-- FV-02: SafeExperimentPlatform → lifecycle state machine + guardrail monitor
-- FV-03: SimulationLab → CI gate integration + weekly benchmark
-- FV-04: Marketplace → user opt-in adoption + PII pre-scan + quality scoring
-- FV-05: PrivacyCommunityIntelligence → k=5 anonymity + DP + budget ledger
-
-### Mobile UX (FV-11–15)
-- FV-11: CRDT real merge (Yjs) + bidirectional ACK
-- FV-12: Emotion-adaptive UI (font/animation/color temp respond to fatigue)
-- FV-13: Recall notification value display + "why now" explanation
-- FV-14: Centralized accessibility settings panel (WCAG AA)
-- FV-15: Multi-goal dashboard + GoalSwitcher
-
-### Execution & Learning (FV-16–22)
-- FV-16: PAUSED task status + auto-pause detection
-- FV-17: SourceAsset lifecycle (active/archived/revoked/orphaned + GDPR erase)
-- FV-18: StrategyBelief.counter_evidence (rebuttal downgrade, max -0.3)
-- FV-19: CrisisMode FSM (normal→warning→crisis→recovery)
-- FV-20: Saga/compensation transactions (4 cross-service flows)
-- FV-21: ML recall trigger (4→8 triggers + decision tree ranker)
-- FV-22: Community resource quality scoring + k threshold 3→5
-
-### Resilience & Cleanup (FV-23–25)
-- FV-23: i18n residual 459 strings cleared
-- FV-24: SLO auto-response (5 alert types → kill switch auto-flip) + server-side weak network resilience
-- FV-25: v1 module deprecation (_v1 suffix exports) + full vision ADR
-
-### Key New Files
-- `backend/app/api/internal/auto_degrade.py` — SLO auto-response webhook handler
-- `backend/gateway/internal/middleware/network_resilience.go` — keepalive + retry + disconnect detection
-- `docs/adr/0008-full-vision-completion-2026-05-02.md` — 25-card completion ADR
-
----
-
-**Document Version**: 3.2.0
-**Last Updated**: 2026-05-02
-**Project Version**: Sparkle v1.0.0+1
 **Aurora Status**: Full Vision Complete (25/25 FV cards + 62/62 governance rules passing)

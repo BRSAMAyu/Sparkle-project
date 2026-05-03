@@ -52413,7 +52413,7 @@ abstract class AppLocalizations {
   /// No description provided for @cahTitle.
   ///
   /// In zh, this message translates to:
-  /// **'问责空间'**
+  /// **'责任伙伴空间'**
   String get cahTitle;
 
   /// No description provided for @cahSubtitle.
@@ -52557,7 +52557,7 @@ abstract class AppLocalizations {
   /// No description provided for @goalDetailAccountability.
   ///
   /// In zh, this message translates to:
-  /// **'社群问责'**
+  /// **'责任伙伴'**
   String get goalDetailAccountability;
 
   /// No description provided for @goalDetailRelatedSources.

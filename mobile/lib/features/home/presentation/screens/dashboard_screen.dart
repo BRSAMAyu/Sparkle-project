@@ -1948,51 +1948,6 @@ class _DailyBriefingCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (hasObservation) ...[
-                const SizedBox(height: DS.spacing12),
-                _BriefingBlock(
-                  eyebrow: context.l10n.dashboardSparkleObservation,
-                  title: observationTitle ?? '',
-                  summary: observationSummary ?? '',
-                ),
-              ],
-              if (hasNextMove) ...[
-                const SizedBox(height: DS.spacing12),
-                _BriefingBlock(
-                  eyebrow: context.l10n.dashboardStartWithThis,
-                  title: nextTitle ?? '',
-                  summary: nextSummary ?? '',
-                  footer: Wrap(
-                    spacing: DS.spacing8,
-                    runSpacing: DS.spacing8,
-                    children: [
-                      if (estimatedMinutes != null && estimatedMinutes > 0)
-                        _DashboardChip(
-                          icon: Icons.schedule_rounded,
-                          label: '$estimatedMinutes min',
-                        ),
-                      if (planName != null && planName.isNotEmpty)
-                        _DashboardChip(
-                          icon: Icons.flag_rounded,
-                          label: planName,
-                        ),
-                      if (daysToDeadline != null)
-                        _DashboardChip(
-                          icon: Icons.timelapse_rounded,
-                          label: _formatDeadlineLabel(
-                            context: context,
-                            daysToDeadline: daysToDeadline,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-              const SizedBox(height: DS.spacing12),
-              _BriefingActions(
-                hasTaskAction: taskId != null && taskId.isNotEmpty,
-                taskId: taskId,
-              ),
               ClipRect(
                 child: AnimatedSize(
                   duration: DS.quick,
@@ -2000,13 +1955,58 @@ class _DailyBriefingCard extends StatelessWidget {
                   alignment: Alignment.topCenter,
                   child: !isExpanded
                       ? const SizedBox.shrink()
-                      : Padding(
-                          padding: const EdgeInsets.only(top: DS.spacing12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              if (growthSignal != null)
-                                _BriefingDetailTile(
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (hasObservation) ...[
+                              const SizedBox(height: DS.spacing12),
+                              _BriefingBlock(
+                                eyebrow: context.l10n.dashboardSparkleObservation,
+                                title: observationTitle ?? '',
+                                summary: observationSummary ?? '',
+                              ),
+                            ],
+                            if (hasNextMove) ...[
+                              const SizedBox(height: DS.spacing12),
+                              _BriefingBlock(
+                                eyebrow: context.l10n.dashboardStartWithThis,
+                                title: nextTitle ?? '',
+                                summary: nextSummary ?? '',
+                                footer: Wrap(
+                                  spacing: DS.spacing8,
+                                  runSpacing: DS.spacing8,
+                                  children: [
+                                    if (estimatedMinutes != null && estimatedMinutes > 0)
+                                      _DashboardChip(
+                                        icon: Icons.schedule_rounded,
+                                        label: '$estimatedMinutes min',
+                                      ),
+                                    if (planName != null && planName.isNotEmpty)
+                                      _DashboardChip(
+                                        icon: Icons.flag_rounded,
+                                        label: planName,
+                                      ),
+                                    if (daysToDeadline != null)
+                                      _DashboardChip(
+                                        icon: Icons.timelapse_rounded,
+                                        label: _formatDeadlineLabel(
+                                          context: context,
+                                          daysToDeadline: daysToDeadline,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: DS.spacing12),
+                            _BriefingActions(
+                              hasTaskAction: taskId != null && taskId.isNotEmpty,
+                              taskId: taskId,
+                            ),
+                            if (growthSignal != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: DS.spacing12),
+                                child: _BriefingDetailTile(
                                   icon: Icons.trending_up_rounded,
                                   iconColor: DS.success,
                                   title: context.l10n.dashboardGrowthSignal,
@@ -2014,42 +2014,45 @@ class _DailyBriefingCard extends StatelessWidget {
                                   summary: growthSignal.summary,
                                   trailing: growthSignal.source,
                                 ),
-                              if (growthSignal != null && activePlan != null)
-                                const SizedBox(height: DS.spacing10),
-                              if (activePlan != null)
-                                _PlanProgressTile(
+                              ),
+                            if (growthSignal != null && activePlan != null)
+                              const SizedBox(height: DS.spacing10),
+                            if (activePlan != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: DS.spacing10),
+                                child: _PlanProgressTile(
                                   plan: activePlan,
                                 ),
-                              if (nextActionCount > 1) ...[
-                                const SizedBox(height: DS.spacing12),
-                                Text(
-                                  context.l10n.dashboardMoreTasksQueued(
-                                    nextActionCount - 1,
-                                  ),
-                                  style: context.sparkleTypography.bodySmall
-                                      .copyWith(
-                                    color: DS.textSecondary,
-                                    height: 1.35,
-                                  ),
-                                ),
-                              ],
+                              ),
+                            if (nextActionCount > 1) ...[
                               const SizedBox(height: DS.spacing12),
-                              Wrap(
-                                spacing: DS.spacing10,
-                                runSpacing: DS.spacing10,
-                                children: [
-                                  SparkleButton.ghost(
-                                    label: context.l10n.dashboardStartFocus,
-                                    onPressed: () => context.push('/focus'),
-                                  ),
-                                  SparkleButton.ghost(
-                                    label: 'Chat',
-                                    onPressed: () => context.go('/chat'),
-                                  ),
-                                ],
+                              Text(
+                                context.l10n.dashboardMoreTasksQueued(
+                                  nextActionCount - 1,
+                                ),
+                                style: context.sparkleTypography.bodySmall
+                                    .copyWith(
+                                  color: DS.textSecondary,
+                                  height: 1.35,
+                                ),
                               ),
                             ],
-                          ),
+                            const SizedBox(height: DS.spacing12),
+                            Wrap(
+                              spacing: DS.spacing10,
+                              runSpacing: DS.spacing10,
+                              children: [
+                                SparkleButton.ghost(
+                                  label: context.l10n.dashboardStartFocus,
+                                  onPressed: () => context.push('/focus'),
+                                ),
+                                SparkleButton.ghost(
+                                  label: 'Chat',
+                                  onPressed: () => context.go('/chat'),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                 ),
               ),

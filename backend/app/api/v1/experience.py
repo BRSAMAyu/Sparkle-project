@@ -586,24 +586,6 @@ async def get_experience_growth_dashboard(
     }
 
 
-# route-tier: authed
-@router.get("/community-accountability")
-async def get_community_accountability(
-    current_user: User = Depends(get_current_user),
-) -> dict[str, Any]:
-    """First-screen accountability hub. Detailed community data stays in existing community APIs."""
-    # Keep this endpoint deliberately conservative: it gives the UI an
-    # accountability-first frame even when richer partner data is unavailable.
-    return {
-        "active": True,
-        "headline": "责任空间",
-        "summary": "这里优先展示承诺、伙伴进度和目标同路人，而不是普通信息流。",
-        "commitments": [],
-        "partner_updates": [],
-        "suggested_actions": [
-            {"label": "设定本周承诺", "action": "create_commitment"},
-            {"label": "找目标伙伴", "action": "find_goal_mates"},
-            {"label": "同步一次进度", "action": "share_progress"},
-        ],
-        "updated_at": _utcnow().isoformat(),
-    }
+# /community-accountability moved to experience/community_router.py
+# (fully implemented with DB-backed partnerships, shared goals, squad risks).
+# The stub that was here shadowed it via _include_router_if_new() dedup.

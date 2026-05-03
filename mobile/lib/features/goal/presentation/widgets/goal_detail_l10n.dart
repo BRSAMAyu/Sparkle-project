@@ -50,14 +50,14 @@ extension GoalDetailLocalizations on AppLocalizations {
   String get goalDetailPhaseHealth => _isZh ? '阶段健康' : 'Phase health';
   String get goalDetailTaskCompletion => _isZh ? '任务完成率' : 'Task completion';
   String get goalDetailCurrentPhase => _isZh ? '当前阶段' : 'Current phase';
-  String get goalDetailAccountability => _isZh ? '社群问责' : 'Accountability';
+  String get goalDetailAccountability => _isZh ? '责任伙伴' : 'Accountability';
   String goalDetailPartners(int count) =>
       _isZh ? '$count 位伙伴' : '$count partners';
   String goalDetailCommitments(int count) =>
       _isZh ? '$count 个活跃承诺' : '$count active commitments';
   String get goalDetailNoCheckin => _isZh ? '暂无打卡' : 'No check-in yet';
   String get goalDetailOpenCommunity =>
-      _isZh ? '进入问责空间' : 'Open accountability';
+      _isZh ? '进入责任伙伴空间' : 'Open accountability';
   String get goalDetailRelatedSources => _isZh ? '相关资料来源' : 'Related sources';
   String get goalDetailNoSources =>
       _isZh ? '暂无关联资料。' : 'No related sources yet.';

@@ -268,8 +268,16 @@
 
 **Symptom**: Demo data is unrealistic and covers too narrow a range.
 
-**Status**: in_progress
-**fixer_started_at**: 2026-05-03T14:20:00Z
+**Status**: ✅ FIXED
+- Mock feed: 4 realistic bilingual posts covering study methods, math, habit building, error review
+- Mock group members: generated from _mockUsers with proper roles and stats
+- Achievement auto-seed: 40+ definitions populated when table is empty
+- Label fix: "计划谬误" → "任务复杂度低估"
+- All demo text now bilingual via i18n pattern
+
+**fix_commit**: pending-commit
+**closed_at**: 2026-05-03T14:25:00Z
+**opus_review**: APPROVED by opus-reviewer at 2026-05-03T14:24:00Z
 
 ---
 
@@ -344,7 +352,7 @@
 | P1-22 | Dashboard edit sheet overflow | P1 | ✅ Fixed |
 | P1-23 | Create post keyboard overflow | P1 | ✅ Fixed |
 | P1-24 | Edit profile email dialog overflow | P1 | ✅ Fixed |
-| P2-01 | Demo data quality | P2 | Pending |
+| P2-01 | Demo data quality | P2 | ✅ Fixed |
 | P2-02 | Poster workshop yellow lines | P2 | ✅ Fixed |
 | P2-03 | Achievement system empty | P2 | ✅ Fixed |
 | P2-04 | Learning materials not usable | P2 | ✅ Routes OK |
@@ -356,11 +364,12 @@
 ## Progress Summary
 
 - **Total Issues**: 31 (+ 3 explorer issues)
-- **Fixed**: 22
+- **Fixed**: 23
 - **Partially Fixed**: 3
 - **Routes Verified (working with data)**: 5
-- **Pending**: 1 (P2-01 Demo data quality)
+- **Pending**: 0
 - **Phase 2 (Deferred)**: 3
+- **Discovered (not verified)**: 2 (G3, B1)
 
 ---
 
@@ -465,6 +474,17 @@
 ## 探索日志
 
 <!-- 每轮探索结束后追加记录 -->
+
+## 修复日志
+
+| Round | Timestamp | Issue ID | Final Status | Commit | Duration |
+|-------|-----------|----------|--------------|--------|----------|
+| R1 | 2026-05-03T14:20 | P2-01 | ✅ Fixed | pending | ~5 min |
+
+**P2-01 Fix Details**:
+- root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
+- approach: Populated mock data with realistic bilingual content, generated group members from _mockUsers, added auto-seed in achievement_engine, fixed label
+- opus reviewer: APPROVED
 
 ### Round R3 — 2026-05-03T13:30
 - **Domain**: C (WebSocket / gRPC Contract Consistency)

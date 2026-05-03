@@ -588,7 +588,7 @@ class LeaderboardService:
         """本周学习排行榜"""
         # 计算本周时间范围
         today = date.today()
-        week_start = datetime(today.year, today.month, today.day - today.weekday())
+        week_start = datetime.combine(today - timedelta(days=today.weekday()), datetime.min.time())
         week_end = week_start + timedelta(days=7)
 
         # 查询本周活跃用户的学习数据

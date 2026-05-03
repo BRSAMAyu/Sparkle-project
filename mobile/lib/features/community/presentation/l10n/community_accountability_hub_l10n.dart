@@ -3,7 +3,7 @@ import 'package:sparkle/l10n/app_localizations.dart';
 extension CommunityAccountabilityHubL10n on AppLocalizations {
   bool get _zh => localeName.startsWith('zh');
 
-  String get cahTitle => _zh ? '问责空间' : 'Accountability Hub';
+  String get cahTitle => _zh ? '责任伙伴空间' : 'Accountability Hub';
   String get cahSubtitle => _zh
       ? '承诺、伙伴进度和共同目标都在这里'
       : 'Commitments, partner progress, and shared goals in one place';
@@ -19,7 +19,7 @@ extension CommunityAccountabilityHubL10n on AppLocalizations {
   String get cahFriendsEntry => _zh ? '好友' : 'Friends';
   String get cahGroupsEntry => _zh ? '小组' : 'Groups';
   String get cahEmptyTitle =>
-      _zh ? '还没有问责承诺' : 'No accountability commitments yet';
+      _zh ? '还没有责任承诺' : 'No accountability commitments yet';
   String get cahEmptyBody => _zh
       ? '先邀请一位伙伴，或从 Feed 里找到同目标的人一起前进。'
       : 'Invite a partner or find people with similar goals from the feed.';
@@ -53,7 +53,7 @@ extension CommunityAccountabilityHubL10n on AppLocalizations {
   String get cahBoundaryChanged =>
       _zh ? '提醒边界已更新' : 'Reminder boundary updated';
   String get cahLoadFailed =>
-      _zh ? '问责空间加载失败' : 'Failed to load accountability hub';
+      _zh ? '责任伙伴空间加载失败' : 'Failed to load accountability hub';
   String cahDueDate(String value) => _zh ? '截止 $value' : 'Due $value';
   String cahPercent(int value) => _zh ? '$value%' : '$value%';
   String cahPartnerGoal(String name) => _zh ? '$name 的目标' : '$name goal';

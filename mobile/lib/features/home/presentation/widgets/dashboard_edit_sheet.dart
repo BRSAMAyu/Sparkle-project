@@ -14,8 +14,10 @@ class DashboardEditSheet extends ConsumerWidget {
 
     return GraphiteModalSurface(
       title: context.l10n.dashboardEditTitle,
-      child: SizedBox(
-        height: 520,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -78,6 +78,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   bool _bgmAdvancedExpanded = false;
   bool _themeExpanded = false;
   bool _auroraPrefsExpanded = false;
+  bool _notificationExpanded = false;
   bool _bgmEnabled = true;
   bool _bgmReady = false;
   double _bgmVolume = 0.85;
@@ -1509,233 +1510,260 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.notifications_active_outlined),
-                      title: Text(l10n.notificationSettings),
-                      subtitle: Text(
-                        notificationPrefs.isLoaded
-                            ? l10n.notificationManageSubtitle
-                            : l10n.notificationLoadingPrefs,
-                      ),
+                    _buildCollapsibleHeader(
+                      icon: Icons.notifications_active_outlined,
+                      title: l10n.notificationSettings,
+                      subtitle: notificationPrefs.isLoaded
+                          ? l10n.notificationManageSubtitle
+                          : l10n.notificationLoadingPrefs,
+                      expanded: _notificationExpanded,
+                      onToggle: () => setState(
+                          () => _notificationExpanded = !_notificationExpanded),
                     ),
-                    if (!notificationPrefs.isLoaded)
-                      const LinearProgressIndicator(minHeight: 3)
-                    else ...[
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.notificationSystem),
-                        subtitle: Text(l10n.notificationSystemSubtitle),
-                        value: notificationPrefs.enableSystem,
-                        onChanged: (value) => unawaited(
-                          _updateNotificationPreferences(
-                            context,
-                            enableSystem: value,
-                          ),
-                        ),
-                        activeThumbColor: DS.primaryBase,
-                      ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.notificationInterventions),
-                        subtitle: Text(l10n.notificationInterventionsSubtitle),
-                        value: notificationPrefs.enableInterventions,
-                        onChanged: (value) => unawaited(
-                          _updateNotificationPreferences(
-                            context,
-                            enableInterventions: value,
-                          ),
-                        ),
-                        activeThumbColor: DS.primaryBase,
-                      ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.notificationReminders),
-                        subtitle: Text(l10n.notificationRemindersSubtitle),
-                        onChanged: (value) => unawaited(
-                          _updateNotificationTypePreference(
-                            context,
-                            type: 'reminder',
-                            enabled: value,
-                          ),
-                        ),
-                        value: _isNotificationTypeEnabled(
-                          notificationPrefs,
-                          'reminder',
-                        ),
-                        activeThumbColor: DS.primaryBase,
-                      ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.notificationSpacedRepetition),
-                        subtitle:
-                            Text(l10n.notificationSpacedRepetitionSubtitle),
-                        onChanged: (value) => unawaited(
-                          _updateNotificationTypePreference(
-                            context,
-                            type: 'spaced_repetition',
-                            enabled: value,
-                          ),
-                        ),
-                        value: _isNotificationTypeEnabled(
-                          notificationPrefs,
-                          'spaced_repetition',
-                        ),
-                        activeThumbColor: DS.primaryBase,
-                      ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.notificationWeeklyReport),
-                        subtitle: Text(l10n.notificationWeeklyReportSubtitle),
-                        onChanged: (value) => unawaited(
-                          _updateNotificationTypePreference(
-                            context,
-                            type: 'weekly_report',
-                            enabled: value,
-                          ),
-                        ),
-                        value: _isNotificationTypeEnabled(
-                          notificationPrefs,
-                          'weekly_report',
-                        ),
-                        activeThumbColor: DS.primaryBase,
-                      ),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.notificationMilestone),
-                        subtitle: Text(l10n.notificationMilestoneSubtitle),
-                        onChanged: (value) => unawaited(
-                          _updateNotificationTypePreference(
-                            context,
-                            type: 'milestone',
-                            enabled: value,
-                          ),
-                        ),
-                        value: _isNotificationTypeEnabled(
-                          notificationPrefs,
-                          'milestone',
-                        ),
-                        activeThumbColor: DS.primaryBase,
-                      ),
-                      const Divider(height: DS.spacing24),
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.tune_rounded),
-                        title: Text(l10n.notificationLevel),
-                        subtitle: Text(
-                          _notificationLevelDescription(
-                            l10n,
-                            notificationLevel,
-                          ),
-                        ),
-                      ),
-                      _buildSettingsDropdownField<String>(
-                        value: notificationLevel,
-                        items: [
-                          DropdownMenuItem(
-                            value: 'minimal',
-                            child: Text(
-                              _notificationLevelLabel(l10n, 'minimal'),
+                    AnimatedCrossFade(
+                      firstChild: const SizedBox(width: double.infinity),
+                      secondChild: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (!notificationPrefs.isLoaded)
+                            const LinearProgressIndicator(minHeight: 3)
+                          else ...[
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(l10n.notificationSystem),
+                              subtitle: Text(l10n.notificationSystemSubtitle),
+                              value: notificationPrefs.enableSystem,
+                              onChanged: (value) => unawaited(
+                                _updateNotificationPreferences(
+                                  context,
+                                  enableSystem: value,
+                                ),
+                              ),
+                              activeThumbColor: DS.primaryBase,
                             ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'standard',
-                            child: Text(
-                              _notificationLevelLabel(l10n, 'standard'),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(l10n.notificationInterventions),
+                              subtitle:
+                                  Text(l10n.notificationInterventionsSubtitle),
+                              value: notificationPrefs.enableInterventions,
+                              onChanged: (value) => unawaited(
+                                _updateNotificationPreferences(
+                                  context,
+                                  enableInterventions: value,
+                                ),
+                              ),
+                              activeThumbColor: DS.primaryBase,
                             ),
-                          ),
-                          DropdownMenuItem(
-                            value: 'verbose',
-                            child: Text(
-                              _notificationLevelLabel(l10n, 'verbose'),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(l10n.notificationReminders),
+                              subtitle: Text(l10n.notificationRemindersSubtitle),
+                              onChanged: (value) => unawaited(
+                                _updateNotificationTypePreference(
+                                  context,
+                                  type: 'reminder',
+                                  enabled: value,
+                                ),
+                              ),
+                              value: _isNotificationTypeEnabled(
+                                notificationPrefs,
+                                'reminder',
+                              ),
+                              activeThumbColor: DS.primaryBase,
                             ),
-                          ),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(l10n.notificationSpacedRepetition),
+                              subtitle: Text(
+                                  l10n.notificationSpacedRepetitionSubtitle),
+                              onChanged: (value) => unawaited(
+                                _updateNotificationTypePreference(
+                                  context,
+                                  type: 'spaced_repetition',
+                                  enabled: value,
+                                ),
+                              ),
+                              value: _isNotificationTypeEnabled(
+                                notificationPrefs,
+                                'spaced_repetition',
+                              ),
+                              activeThumbColor: DS.primaryBase,
+                            ),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(l10n.notificationWeeklyReport),
+                              subtitle:
+                                  Text(l10n.notificationWeeklyReportSubtitle),
+                              onChanged: (value) => unawaited(
+                                _updateNotificationTypePreference(
+                                  context,
+                                  type: 'weekly_report',
+                                  enabled: value,
+                                ),
+                              ),
+                              value: _isNotificationTypeEnabled(
+                                notificationPrefs,
+                                'weekly_report',
+                              ),
+                              activeThumbColor: DS.primaryBase,
+                            ),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(l10n.notificationMilestone),
+                              subtitle:
+                                  Text(l10n.notificationMilestoneSubtitle),
+                              onChanged: (value) => unawaited(
+                                _updateNotificationTypePreference(
+                                  context,
+                                  type: 'milestone',
+                                  enabled: value,
+                                ),
+                              ),
+                              value: _isNotificationTypeEnabled(
+                                notificationPrefs,
+                                'milestone',
+                              ),
+                              activeThumbColor: DS.primaryBase,
+                            ),
+                            const Divider(height: DS.spacing24),
+                            ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.tune_rounded),
+                              title: Text(l10n.notificationLevel),
+                              subtitle: Text(
+                                _notificationLevelDescription(
+                                  l10n,
+                                  notificationLevel,
+                                ),
+                              ),
+                            ),
+                            _buildSettingsDropdownField<String>(
+                              value: notificationLevel,
+                              items: [
+                                DropdownMenuItem(
+                                  value: 'minimal',
+                                  child: Text(
+                                    _notificationLevelLabel(l10n, 'minimal'),
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'standard',
+                                  child: Text(
+                                    _notificationLevelLabel(l10n, 'standard'),
+                                  ),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'verbose',
+                                  child: Text(
+                                    _notificationLevelLabel(l10n, 'verbose'),
+                                  ),
+                                ),
+                              ],
+                              onChanged: (level) {
+                                if (level == null) {
+                                  return;
+                                }
+                                unawaited(
+                                  _updateNotificationPreferences(
+                                    context,
+                                    notificationLevel: level,
+                                    successMessage:
+                                        l10n.notificationLevelSwitched(
+                                            _notificationLevelLabel(
+                                                l10n, level)),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: DS.spacing12),
+                            _buildSelectionPreviewCard(
+                              icon: Icons.notifications_active_outlined,
+                              title: l10n.notificationLevelPreviewTitle(
+                                  _notificationLevelLabel(
+                                      l10n, notificationLevel)),
+                              description: _notificationLevelPreview(
+                                l10n,
+                                notificationLevel,
+                              ),
+                            ),
+                            const Divider(height: DS.spacing24),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(l10n.notificationQuietHours),
+                              subtitle: Text(
+                                notificationPrefs.quietHoursEnabled
+                                    ? '${notificationPrefs.quietHoursStart} - ${notificationPrefs.quietHoursEnd}'
+                                    : l10n.notificationQuietHoursSubtitle,
+                              ),
+                              value: notificationPrefs.quietHoursEnabled,
+                              onChanged: (value) {
+                                final nextStart =
+                                    notificationPrefs.quietHoursStart;
+                                final nextEnd = notificationPrefs.quietHoursEnd;
+                                unawaited(
+                                  _updateNotificationPreferences(
+                                    context,
+                                    quietHoursEnabled: value,
+                                    quietHoursStart: nextStart,
+                                    quietHoursEnd: nextEnd,
+                                  ),
+                                );
+                              },
+                              activeThumbColor: DS.primaryBase,
+                            ),
+                            if (notificationPrefs.quietHoursEnabled) ...[
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading:
+                                    const Icon(Icons.nights_stay_outlined),
+                                title: Text(l10n.notificationQuietHoursStart),
+                                subtitle:
+                                    Text(notificationPrefs.quietHoursStart),
+                                trailing:
+                                    const Icon(Icons.chevron_right_rounded),
+                                onTap: () => unawaited(
+                                  _pickQuietHoursTime(
+                                    context,
+                                    isStart: true,
+                                    currentValue:
+                                        notificationPrefs.quietHoursStart,
+                                  ),
+                                ),
+                              ),
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading:
+                                    const Icon(Icons.wb_sunny_outlined),
+                                title: Text(l10n.notificationQuietHoursEnd),
+                                subtitle: Text(notificationPrefs.quietHoursEnd),
+                                trailing:
+                                    const Icon(Icons.chevron_right_rounded),
+                                onTap: () => unawaited(
+                                  _pickQuietHoursTime(
+                                    context,
+                                    isStart: false,
+                                    currentValue:
+                                        notificationPrefs.quietHoursEnd,
+                                  ),
+                                ),
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.only(top: DS.spacing4),
+                                child: _buildInlineStatusMessage(
+                                  l10n.notificationQuietHoursHint,
+                                ),
+                              ),
+                            ],
+                          ],
                         ],
-                        onChanged: (level) {
-                          if (level == null) {
-                            return;
-                          }
-                          unawaited(
-                            _updateNotificationPreferences(
-                              context,
-                              notificationLevel: level,
-                              successMessage: l10n.notificationLevelSwitched(
-                                  _notificationLevelLabel(l10n, level)),
-                            ),
-                          );
-                        },
                       ),
-                      const SizedBox(height: DS.spacing12),
-                      _buildSelectionPreviewCard(
-                        icon: Icons.notifications_active_outlined,
-                        title: l10n.notificationLevelPreviewTitle(
-                            _notificationLevelLabel(l10n, notificationLevel)),
-                        description: _notificationLevelPreview(
-                          l10n,
-                          notificationLevel,
-                        ),
-                      ),
-                      const Divider(height: DS.spacing24),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(l10n.notificationQuietHours),
-                        subtitle: Text(
-                          notificationPrefs.quietHoursEnabled
-                              ? '${notificationPrefs.quietHoursStart} - ${notificationPrefs.quietHoursEnd}'
-                              : l10n.notificationQuietHoursSubtitle,
-                        ),
-                        value: notificationPrefs.quietHoursEnabled,
-                        onChanged: (value) {
-                          final nextStart = notificationPrefs.quietHoursStart;
-                          final nextEnd = notificationPrefs.quietHoursEnd;
-                          unawaited(
-                            _updateNotificationPreferences(
-                              context,
-                              quietHoursEnabled: value,
-                              quietHoursStart: nextStart,
-                              quietHoursEnd: nextEnd,
-                            ),
-                          );
-                        },
-                        activeThumbColor: DS.primaryBase,
-                      ),
-                      if (notificationPrefs.quietHoursEnabled) ...[
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.nights_stay_outlined),
-                          title: Text(l10n.notificationQuietHoursStart),
-                          subtitle: Text(notificationPrefs.quietHoursStart),
-                          trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: () => unawaited(
-                            _pickQuietHoursTime(
-                              context,
-                              isStart: true,
-                              currentValue: notificationPrefs.quietHoursStart,
-                            ),
-                          ),
-                        ),
-                        ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: const Icon(Icons.wb_sunny_outlined),
-                          title: Text(l10n.notificationQuietHoursEnd),
-                          subtitle: Text(notificationPrefs.quietHoursEnd),
-                          trailing: const Icon(Icons.chevron_right_rounded),
-                          onTap: () => unawaited(
-                            _pickQuietHoursTime(
-                              context,
-                              isStart: false,
-                              currentValue: notificationPrefs.quietHoursEnd,
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(top: DS.spacing4),
-                          child: _buildInlineStatusMessage(
-                            l10n.notificationQuietHoursHint,
-                          ),
-                        ),
-                      ],
-                    ],
+                      crossFadeState: _notificationExpanded
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      duration: const Duration(milliseconds: 250),
+                    ),
                     const Divider(height: DS.spacing24),
                     ListTile(
                       contentPadding: EdgeInsets.zero,
