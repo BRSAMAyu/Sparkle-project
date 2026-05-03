@@ -830,9 +830,10 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1600-D1
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: D
+- **fixer_started_at**: 2026-05-04T00:45:00Z
 - **title**: LangGraph planner.plan() 在 plan_review_service 和 multi_agent_adapter 中无超时保护，主路径已用 asyncio.wait_for 但两处调用未覆盖
 - **symptom**: 用户在计划修改流程或混合代理模式中触发 LangGraph 规划时，如果 LangGraph 图进入循环或 LLM 响应挂起，该请求将无限期阻塞，直到 HTTP/gRPC 传输层超时。用户看到超时错误而非优雅降级的回退计划。同时 Python 端协程继续运行，占用会话锁和 Redis 连接
 - **root_cause_hypothesis**: `LangGraphPlanner.plan()` 内部调用 `self.graph.ainvoke()` (lang_graph_planner.py:206) 无 asyncio 超时。3 个调用方中只有 `execution_engine.py:2048` 正确使用 `asyncio.wait_for(timeout=10.0)` 包裹。`plan_review_service.py:2199` 和 `multi_agent_adapter.py:87` 直接 `await planner.plan()` 无超时
