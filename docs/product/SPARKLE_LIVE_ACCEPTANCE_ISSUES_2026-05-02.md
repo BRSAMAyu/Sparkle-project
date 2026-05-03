@@ -2744,8 +2744,9 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-2100-A1
-- **status**: in_progress
+- **status**: closed
 - **fixer_started_at**: 2026-05-03T18:05:00Z
+- **closed_at**: 2026-05-03T18:10:00Z
 - **severity**: P2
 - **domain**: A
 - **title**: OmniBar error book prediction chip navigates to non-existent route
@@ -2762,7 +2763,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T21:00Z
 - **reviewer_note**: APPROVED — independent review confirms all 3 evidence references match code exactly. (1) intent_prediction_provider.dart:591 uses `GoRouter.of(context).push('/error-book')` — incorrect route string. (2) error_book_routes.dart:30 registers error book at `path: '/errors'` — the correct route. (3) intent_prediction_provider.dart:498-501 "View Error Book" chip action is `_navigateToErrorBook` which leads to the bad push call. Full call chain traced: EnhancedIntentType.review → chip generation (line 497-501) → `_navigateToErrorBook()` (line 588-593) → `push('/error-book')` (line 591) → GoRouter no match → silent fail (no errorBuilder configured in routes.dart). All 5 other prediction navigation targets (`/focus`, `/tasks/new`, `/calendar-stats`, `/curiosity-capsule`, `/cognitive/patterns`) verified against registered routes — all correct. Confirmed one-off typo. Not "by design" — the hardcoded `/error-book` is the only reference to this string in the entire mobile codebase (grep confirmed). Not a duplicate of any closed/verified entry. ErrorBookRoutes class has no path constants (unlike FocusRoutes), so the fix is changing the string literal from `/error-book` to `/errors`.
-- **fix_commit**: 留空
+- **fix_commit**: 8c35f9ba6
+- **opus_review**: APPROVED by independent-fix-reviewer at 2026-05-04T22:15:00Z — (a) Root cause addressed: commit 8c35f9ba6 changes line 591 from `push('/error-book')` to `push('/errors')`, matching the registered GoRouter path at error_book_routes.dart:30. This is the exact fix suggested in root_cause_hypothesis — not a hack, not a workaround. (b) Regression risk: NONE. Single 1-line string literal change. `_navigateToErrorBook()` has exactly one caller (line 501 action callback). `ErrorBookRoutes` class has no path constants, so string literal is the only viable approach. Post-fix grep confirms zero remaining references to `'/error-book'` in GoRouter push calls (remaining `error-book` references are backend API paths in error_book_repository.dart, which are correct and unrelated). (c) Cross-layer sync: N/A — Flutter-internal route string fix. No proto, DB, or i18n contract affected. The `/errors` path is used consistently across 7 other references (expanded_toolbar_section.dart:68, tool_registry.dart:266, error_repository.dart:19, error_book_repository.dart:18, node_detail_sheet.dart:200, error_book_routes.dart:30, routes.dart:310). (d) Tests: No automated test exists for this navigation path. This is a Flutter GoRouter route string fix — the protection is the string now matching the registered route. A manual test path exists: OmniBar → type "review errors" → tap chip → error book page opens. Removing the fix (reverting to `/error-book`) would cause the original silent failure, confirming testability. (e) Rule guards: all pass except pre-existing AX (proxy_routes.go route-tier comments, unrelated to this fix). No CLAUDE.md violations.
 
 ### ISSUE-20260505-0800-H9
 - **status**: verified
