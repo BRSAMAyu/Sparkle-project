@@ -397,6 +397,7 @@
 | R21 | 2026-05-04T03:15 | F | 1 | 1/1 (F1 closed) | F1 subscribe non-BUSYGROUP raise fix — commit 8e7179e41 |
 | R23 | 2026-05-04T03:45 | H | 1 | 1/1 (H6 verified) | H-domain 续探——community 三个屏幕 hintText/空状态残留 5 处硬编码英文 |
 | R24 | 2026-05-04T03:50 | L | 1 | 1/1 (L1 closed) | L1 BH guard registered in manifest — commit c2e5c62b4 |
+| R25 | 2026-05-04T04:00 | F | 1 | 1/1 (F3 closed) | F3 consume_loop auto-restart on death — commit 1a4ec61d9 |
 
 ---
 
@@ -909,7 +910,7 @@
 - **opus_review**: CONDITIONALLY APPROVED by opus-reviewer at 2026-05-04T03:20:00Z — Root cause fully addressed: _running flag + stop(), retry/DLQ routing, exception re-raise chain. 5/5 static regression tests pass. Cross-layer contracts intact. Condition: main.py shutdown handler calls task.cancel() but never consumer.stop() — follow-up under F4 umbrella. No CLAUDE.md violations.
 
 ### ISSUE-20260503-1702-F3
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: F
 - **title**: 20+ EventBus 消费者的 start() 方法在 subscribe() 返回后退出重试循环，后台 consume_loop 任务崩溃无人检测——消费者永久静默死亡
@@ -928,7 +929,9 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T04:08:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认 event_bus.py:1074 asyncio.create_task(_consume_loop(...)) 创建后台任务后仅存入 self._consumer_tasks (line 1075)，消费者无法访问。break 模式 (achievement_event_consumer.py:66-72, galaxy_event_consumer.py:53-59, execution_event_consumer.py:39-45, profile_event_consumer.py:70-76) subscribe 返回后立即 break 退出 while 循环。_subscribed 模式 (task_event_consumer.py:46-52, main_chain_artifact_consumer.py 类似) subscribe 返回后 _subscribed=True，仅 asyncio.sleep(1) 循环无 task.done() 检查。consume_loop 的 except Exception (line 1207) 不覆盖 BaseException 子类（如 CancelledError）。实际风险评级：_process_stream_message (line 1110-1160) 内部 try/except Exception 覆盖 callback 异常并路由到 DLQ/retry，Redis 连接错误被 line 1210 的重连逻辑捕获。BaseException 穿透场景在实际中少见（CancelledError 仅在主动 task.cancel() 时触发）。但架构缺口确实存在：无 task.done_callback 健康监控、无 consumer 自愈重启。P2 评级合理。与 ISSUE-20260503-1700-F1 无重复：F1 是 subscribe 初始化阶段失败，F3 是 consume_loop 运行时任务死亡检测。
-- **fix_commit**:
+- **closed_at**: 2026-05-04T04:30:00Z
+- **fix_commit**: 1a4ec61d9
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-04T04:30:00Z. Fix commit 1a4ec61d9 verified across all 5 review dimensions: (a) Root cause resolved — subscribe() now registers task.add_done_callback(lambda t: self._restart_consume_loop(t, stream, group_name, consumer_name, callback)) on the consume_loop asyncio task. _restart_consume_loop() checks task.exception(), and if self._running and exc is not None, creates a new task with same parameters + same done_callback chain (self-healing). Graceful shutdown protected: close() sets _running=False before task.cancel(), so callback sees _running=False and skips restart. CancelledError from task.exception() (cancelled task case) is caught as exc=None, no false restart. Not a hack — uses standard asyncio Task.done_callback pattern. (b) Regression risk LOW — only additive code (+26 lines in event_bus.py), no existing behavior modified. add_done_callback is non-blocking. 15+ consumers benefit automatically via their existing event_bus.subscribe() calls. EventBus reliability tests (4/4) pass. Minor observation: restart has no backoff limit; but BaseException leaks are extremely rare (consume_loop catches Exception), and asyncio scheduling provides natural throttling. (c) Cross-layer sync N/A — no proto/DB/i18n changes. (d) Tests 5/5 pass — test_done_callback_registered_in_subscribe uses inspect.getsource to statically verify add_done_callback exists in subscribe() source; reverting the fix would fail this test. Other 4 tests verify _restart_consume_loop behavior directly (crash→new task, stopped→no restart, param preservation, no-restart-on-clean-exit). Minor gap: no E2E test that fully simulates subscribe→task crash→callback fires→consume_loop restarts; the inspect.getsource test is the main regression guard. (e) Rule guards — 0 new failures. AX (comment-tier) and BG (proto staleness) are pre-existing. BF/BH/I18N/GOV-DATA-MIN all pass.
 
 ### ISSUE-20260503-1703-F4
 - **status**: verified
