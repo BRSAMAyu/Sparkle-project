@@ -588,7 +588,7 @@ class IntentPredictionNotifier extends StateNotifier<IntentPredictionState> {
   void _navigateToErrorBook() {
     final context = navigatorKey.currentContext;
     if (context != null) {
-      GoRouter.of(context).push('/error-book');
+      GoRouter.of(context).push('/errors');
     }
   }
 
