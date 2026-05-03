@@ -2516,6 +2516,26 @@
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) privacy.py:53-58: pii_redaction_mode() 仅从 settings 读取 getattr(settings, "AURORA_PRIVACY_PII_REDACTION_MODE", "live")，不调用 read_mode()，不查询 Redis。(2) run_kill_switch_drills.py:248-249: _privacy_apply() 通过 _ks_write_mode(redis_client=redis_client, ...) 写入 Redis，读/写数据源不同。(3) kill_switch.py:133-134: write_mode() else 分支 await redis_client.set(...) 写入 Redis key sparkle:aurora:privacy:pii_redaction。(4) kill_switch.py:94-112: read_mode() 的标准流程为 settings → Redis 覆盖 → gauge，privacy 绕过此流程。(5) aurora_stage35_kill_switch_service.py:29-34: get_mode() 使用了 read_mode() 同时读取 settings+Redis 作为正确参照。调用链完整：drill write path: _privacy_apply → _ks_write_mode → kill_switch.write_mode → redis_client.set(sparkle:aurora:privacy:pii_redaction)；production read path: pii_redaction_mode → normalize_mode(getattr(settings, ...)) → 不查 Redis。两路径使用不同数据源，drill 的模式切换对 PII redaction 零影响。与 E2 不重复——E2 是 Prometheus gauge 缺记录（可观测性，已 closed via 540ba1b97），E9 是读/写数据源不对称（功能性 gap）。非"设计如此"的确定结论——条目本身承认可能是安全设计（Redis 不应覆盖 PII），但 drill 的 DEFAULT_SPECS 包含 privacy 条目且写入 Redis 却从未被读取，属于工具与实际行为脱节，drill 应反映真实控制路径（方案 A/B/C 任一均可）。对用户 PII 保护无影响（始终按 settings 工作），但运维人员通过 drill 获得的"成功"反馈是虚假的。
 - **fix_commit**: 留空
 
+### ISSUE-20260504-2100-A1
+- **status**: verified
+- **severity**: P2
+- **domain**: A
+- **title**: OmniBar error book prediction chip navigates to non-existent route
+- **symptom**: User types error/review-related text in OmniBar, sees "View Error Book" / "查看错题本" prediction chip. Tapping it does nothing — navigation silently fails because route `/error-book` doesn't exist.
+- **root_cause_hypothesis**: Hardcoded route string `/error-book` in intent_prediction_provider.dart doesn't match the registered route `/errors` in error_book_routes.dart. All other prediction navigation targets (`/focus`, `/tasks/new`, `/calendar-stats`, `/curiosity-capsule`, `/cognitive/patterns`) use correct registered paths, making this a one-off typo.
+- **evidence**:
+  - `mobile/lib/features/home/presentation/providers/intent_prediction_provider.dart:591` — `GoRouter.of(context).push('/error-book');` navigates to non-existent route
+  - `mobile/lib/features/error_book/error_book_routes.dart:30` — error book registered at `path: '/errors'`
+  - `mobile/lib/features/home/presentation/providers/intent_prediction_provider.dart:498-501` — "View Error Book" chip triggers `_navigateToErrorBook()` for review/error-related intent classification
+- **repro_or_trigger**: 1. Open dashboard OmniBar 2. Type text related to errors/review (e.g., "review my errors") 3. Tap "View Error Book" chip 4. Observe: nothing happens
+- **expected_vs_actual**: 期望：tapping chip navigates to error book at `/errors`. 实际：navigates to `/error-book` which is unregistered → GoRouter silent fail / 404.
+- **blast_radius**: Error book access via prediction chip is broken. Error book is accessible from tool registry (route `/errors`) and expanded toolbar. Does not block core study flow. Minor impact on north star — users who rely on predictions for error review lose that discovery path.
+- **suggested_fix_direction**: Change `intent_prediction_provider.dart:591` from `'/error-book'` to `'/errors'`, or import and use `ErrorBookRoutes` constant if one exists.
+- **discovered_by**: explorer-loop
+- **verified_by**: opus-independent-reviewer+2026-05-04T21:00Z
+- **reviewer_note**: APPROVED — independent review confirms all 3 evidence references match code exactly. (1) intent_prediction_provider.dart:591 uses `GoRouter.of(context).push('/error-book')` — incorrect route string. (2) error_book_routes.dart:30 registers error book at `path: '/errors'` — the correct route. (3) intent_prediction_provider.dart:498-501 "View Error Book" chip action is `_navigateToErrorBook` which leads to the bad push call. Full call chain traced: EnhancedIntentType.review → chip generation (line 497-501) → `_navigateToErrorBook()` (line 588-593) → `push('/error-book')` (line 591) → GoRouter no match → silent fail (no errorBuilder configured in routes.dart). All 5 other prediction navigation targets (`/focus`, `/tasks/new`, `/calendar-stats`, `/curiosity-capsule`, `/cognitive/patterns`) verified against registered routes — all correct. Confirmed one-off typo. Not "by design" — the hardcoded `/error-book` is the only reference to this string in the entire mobile codebase (grep confirmed). Not a duplicate of any closed/verified entry. ErrorBookRoutes class has no path constants (unlike FocusRoutes), so the fix is changing the string literal from `/error-book` to `/errors`.
+- **fix_commit**: 留空
+
 ### Round R25 — 2026-05-04T05:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
@@ -2935,3 +2955,29 @@
   6. **排除项**: (a) auto_degrade.py 的 5 个 SLO kill switch binding 用于基础设施自动降级，不需 Aurora 功能 drill；(b) aurora.py config 中的 AURORA_SHADOW_MODE/AURORA_ACTIVE 布尔值用于整体 Aurora 开关，已有 shadow/active cohort 机制；(c) routing_parameter_registry.py 的 META_LEARNING_BINDING 是参数注册不独立控制功能
 - **Opus pass rate**: pending
 - **Next suggested domain**: F (Event bus consumers DLQ/retry) — 4 轮未回探（R38）；或 A (Flutter UI E2E) — 9 轮未回探
+
+### Round R44 — 2026-05-04T21:00
+- **Domain**: A (Flutter UI 端到端链路)
+- **Paths covered**:
+  - `mobile/lib/features/home/presentation/providers/intent_prediction_provider.dart:100-625` — 全量审查 7 个 prediction 导航目标 + intent classification + _sendChatMessage
+  - `mobile/lib/features/home/presentation/widgets/unified_omni_bar.dart:694-730` — _IntentChip tap handler
+  - `mobile/lib/features/tools/presentation/screens/tool_host_screen.dart:1-165` — tool 加载/缺失处理
+  - `mobile/lib/features/goal/presentation/pages/goal_detail_page.dart:60-390` — confirm/start/complete step E2E
+  - `mobile/lib/features/goal/presentation/providers/goal_detail_provider.dart:40-89,319-341` — step action methods + TodaysMinimalNextStep.hasTask guard
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:70-130` — claim/complete task E2E
+  - `mobile/lib/features/seed_library/presentation/marketplace/marketplace_screen.dart:180-202` — adopt skill E2E
+  - `mobile/lib/features/seed_library/presentation/marketplace/marketplace_provider.dart:60-90` — adoptSkill/previewSkill
+  - `mobile/lib/features/user/presentation/screens/edit_profile_screen.dart:182-219` — save profile E2E
+  - `mobile/lib/features/home/home_routes.dart:1-47` — route registrations
+  - `mobile/lib/features/error_book/error_book_routes.dart:27-44` — error book registered at `/errors`
+  - `mobile/lib/features/task/task_routes.dart:17-76` — task routes registered
+  - `mobile/lib/features/focus/focus_routes.dart:14` — focus route registered
+  - `mobile/lib/features/calendar/calendar_routes.dart:11-36` — calendar routes
+  - `mobile/lib/features/cognitive/cognitive_routes.dart:26-37` — cognitive routes
+- **New issues**: 1 — A1 (P2: OmniBar error book prediction chip navigates to non-existent `/error-book` route)
+- **Findings**: A 域全面追踪 7 个高频 UI E2E 链路，agent 报告 15 处潜在问题，大部分经亲自 Read 验证为误报。发现 1 个真实断链：
+  1. **A1 (P2) — error book prediction 路由拼写错误**: intent_prediction_provider.dart:591 使用 `'/error-book'` 但 error_book_routes.dart:30 注册路径为 `'/errors'`。所有其他 5 个 prediction 导航目标（`/focus`, `/tasks/new`, `/calendar-stats`, `/curiosity-capsule`, `/cognitive/patterns`）均使用正确路径。典型的一次性 typo
+  2. **排除项**: (a) tool_host_screen embeddedBuilder null → 显示"暂不可用"文字 + 返回按钮，不是死胡同；(b) confirmMinimumCriteria 已修复（B2 fix ddcad1e8a），现在调用 API 后再更新 state；(c) completeNextStep 的 taskId null guard 不会触发——UI 通过 `hasTask` 检查确保按钮仅在 taskId 非 null 时显示（goal_detail_provider.dart:340）；(d) community group tasks 直接调用 repository 后 invalidate provider 是合法模式（不理想但不 broken）；(e) edit profile 的 _saveProfile 正确使用 try/catch，success 仅在 API 成功后显示；(f) dashboard prediction 导航使用 server-provided targetRoute，非客户端 bug；(g) tool host 的"Go Back"按钮使用 `canPop()/go('/home')` fallback，导航正确
+  3. **Agent 质量分析**: 15 项报告中有 14 项为误报（93% false positive rate）。主要问题：(a) 将 hasTask guard 保护的按钮报告为"silent failure"——未检查 UI 侧的条件渲染；(b) 将 try/catch 包裹的成功回调报告为"success shown without server validation"——未注意到 await 在 try 内；(c) 将 provider invalidation 报告为"no state update"——未理解 invalidate 触发 re-fetch
+- **Opus pass rate**: pending
+- **Next suggested domain**: H (i18n) — 8 轮未回探；或 K (error handling) — 5 轮未回探
