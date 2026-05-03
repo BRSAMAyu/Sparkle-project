@@ -553,6 +553,158 @@ class MockCommunityRepository implements CommunityRepository {
     };
 
     _mockReports = [];
+
+    final zh = I18nService.instance.isChinese;
+    final now = DateTime.now();
+    _mockGroupTasks = {
+      'group_sprint_001': [
+        GroupTaskInfo(
+          id: 'task_sprint_1',
+          title: zh ? '完成每日算法练习' : 'Complete daily algorithm practice',
+          description: zh ? 'LeetCode 3 题' : '3 LeetCode problems',
+          tags: ['algorithms', 'daily'],
+          estimatedMinutes: 45,
+          difficulty: 3,
+          totalClaims: 2,
+          totalCompletions: 1,
+          completionRate: 0.5,
+          createdAt: now.subtract(const Duration(days: 2)),
+          updatedAt: now,
+          creator: alice,
+          isClaimedByMe: true,
+        ),
+        GroupTaskInfo(
+          id: 'task_sprint_2',
+          title: zh ? '阅读系统设计文章' : 'Read system design article',
+          tags: ['system-design'],
+          estimatedMinutes: 30,
+          difficulty: 2,
+          totalClaims: 3,
+          totalCompletions: 3,
+          completionRate: 1.0,
+          createdAt: now.subtract(const Duration(days: 5)),
+          updatedAt: now.subtract(const Duration(days: 1)),
+          creator: bob,
+          myCompletionStatus: true,
+        ),
+        GroupTaskInfo(
+          id: 'task_sprint_3',
+          title: zh ? '复习动态规划' : 'Review dynamic programming',
+          description: zh ? '重点：背包问题' : 'Focus: knapsack problems',
+          tags: ['algorithms', 'dp'],
+          estimatedMinutes: 60,
+          difficulty: 4,
+          totalClaims: 1,
+          totalCompletions: 0,
+          completionRate: 0.0,
+          createdAt: now.subtract(const Duration(days: 1)),
+          updatedAt: now.subtract(const Duration(days: 1)),
+          creator: charlie,
+        ),
+      ],
+      'group_study_001': [
+        GroupTaskInfo(
+          id: 'task_study_1',
+          title: zh ? '完成第三章习题' : 'Complete Chapter 3 exercises',
+          tags: ['study', 'chapter3'],
+          estimatedMinutes: 90,
+          difficulty: 3,
+          totalClaims: 4,
+          totalCompletions: 2,
+          completionRate: 0.5,
+          createdAt: now.subtract(const Duration(days: 3)),
+          updatedAt: now,
+          creator: diana,
+          isClaimedByMe: true,
+        ),
+        GroupTaskInfo(
+          id: 'task_study_2',
+          title: zh ? '整理课堂笔记' : 'Organize lecture notes',
+          tags: ['notes', 'review'],
+          estimatedMinutes: 45,
+          difficulty: 1,
+          totalClaims: 2,
+          totalCompletions: 2,
+          completionRate: 1.0,
+          createdAt: now.subtract(const Duration(days: 4)),
+          updatedAt: now.subtract(const Duration(days: 2)),
+          creator: me,
+          myCompletionStatus: true,
+        ),
+      ],
+      'group_ai_001': [
+        GroupTaskInfo(
+          id: 'task_ai_1',
+          title: zh ? '实现 Transformer 注意力机制' : 'Implement Transformer attention',
+          description: zh ? '从头实现多头注意力' : 'Multi-head attention from scratch',
+          tags: ['transformer', 'attention', 'deep-learning'],
+          estimatedMinutes: 120,
+          difficulty: 5,
+          totalClaims: 5,
+          totalCompletions: 3,
+          completionRate: 0.6,
+          createdAt: now.subtract(const Duration(days: 7)),
+          updatedAt: now.subtract(const Duration(days: 1)),
+          creator: bob,
+        ),
+        GroupTaskInfo(
+          id: 'task_ai_2',
+          title: zh ? '训练一个简单 CNN' : 'Train a simple CNN',
+          tags: ['cnn', 'computer-vision'],
+          estimatedMinutes: 60,
+          difficulty: 3,
+          totalClaims: 3,
+          totalCompletions: 2,
+          completionRate: 0.67,
+          createdAt: now.subtract(const Duration(days: 5)),
+          updatedAt: now.subtract(const Duration(days: 2)),
+          creator: alice,
+          isClaimedByMe: true,
+        ),
+      ],
+      'group_math_001': [
+        GroupTaskInfo(
+          id: 'task_math_1',
+          title: zh ? '证明拉格朗日中值定理' : 'Prove Lagrange Mean Value Theorem',
+          tags: ['calculus', 'proof'],
+          estimatedMinutes: 60,
+          difficulty: 4,
+          totalClaims: 1,
+          totalCompletions: 0,
+          completionRate: 0.0,
+          createdAt: now.subtract(const Duration(days: 2)),
+          updatedAt: now.subtract(const Duration(days: 2)),
+          creator: charlie,
+          isClaimedByMe: true,
+        ),
+        GroupTaskInfo(
+          id: 'task_math_2',
+          title: zh ? '做 10 道积分练习题' : 'Do 10 integral practice problems',
+          tags: ['calculus', 'practice'],
+          estimatedMinutes: 45,
+          difficulty: 2,
+          totalClaims: 2,
+          totalCompletions: 1,
+          completionRate: 0.5,
+          createdAt: now.subtract(const Duration(days: 3)),
+          updatedAt: now,
+          creator: diana,
+        ),
+        GroupTaskInfo(
+          id: 'task_math_3',
+          title: zh ? '总结微分方程解法' : 'Summarize differential equation methods',
+          tags: ['differential-equations', 'summary'],
+          estimatedMinutes: 30,
+          difficulty: 3,
+          totalClaims: 2,
+          totalCompletions: 2,
+          completionRate: 1.0,
+          createdAt: now.subtract(const Duration(days: 6)),
+          updatedAt: now.subtract(const Duration(days: 3)),
+          creator: bob,
+        ),
+      ],
+    };
   }
   factory MockCommunityRepository.instance() => _instance;
 
@@ -586,6 +738,7 @@ class MockCommunityRepository implements CommunityRepository {
   late final Map<RecommendationItemType, RecommendationFeedbackInsight>
       _mockFeedbackInsights;
   late final List<Map<String, dynamic>> _mockReports;
+  late final Map<String, List<GroupTaskInfo>> _mockGroupTasks;
 
   static final MockCommunityRepository _instance =
       MockCommunityRepository._init();
@@ -1446,26 +1599,55 @@ class MockCommunityRepository implements CommunityRepository {
         groupCheckinCount: 1,
       );
   @override
-  Future<List<GroupTaskInfo>> getGroupTasks(String groupId) async => [];
+  Future<List<GroupTaskInfo>> getGroupTasks(String groupId) async =>
+      List.from(_mockGroupTasks[groupId] ?? []);
   @override
   Future<GroupTaskInfo> createGroupTask(
     String groupId,
     GroupTaskCreate task,
-  ) async =>
-      GroupTaskInfo(
-        id: '',
-        title: '',
-        tags: [],
-        estimatedMinutes: 0,
-        difficulty: 1,
-        totalClaims: 0,
-        totalCompletions: 0,
-        completionRate: 0,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+  ) async {
+    final newTask = GroupTaskInfo(
+      id: const Uuid().v4(),
+      title: task.title,
+      description: task.description,
+      tags: task.tags,
+      estimatedMinutes: task.estimatedMinutes,
+      difficulty: task.difficulty,
+      totalClaims: 0,
+      totalCompletions: 0,
+      completionRate: 0,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    _mockGroupTasks.putIfAbsent(groupId, () => []).add(newTask);
+    return newTask;
+  }
   @override
-  Future<void> claimTask(String taskId) async {}
+  Future<void> claimTask(String taskId) async {
+    for (final tasks in _mockGroupTasks.values) {
+      final idx = tasks.indexWhere((t) => t.id == taskId);
+      if (idx != -1) {
+        tasks[idx] = GroupTaskInfo(
+          id: tasks[idx].id,
+          title: tasks[idx].title,
+          description: tasks[idx].description,
+          tags: tasks[idx].tags,
+          estimatedMinutes: tasks[idx].estimatedMinutes,
+          difficulty: tasks[idx].difficulty,
+          totalClaims: tasks[idx].totalClaims + 1,
+          totalCompletions: tasks[idx].totalCompletions,
+          completionRate: tasks[idx].completionRate,
+          dueDate: tasks[idx].dueDate,
+          creator: tasks[idx].creator,
+          isClaimedByMe: true,
+          myCompletionStatus: tasks[idx].myCompletionStatus,
+          createdAt: tasks[idx].createdAt,
+          updatedAt: DateTime.now(),
+        );
+        return;
+      }
+    }
+  }
   @override
   Future<GroupFlameStatus> getFlameStatus(String groupId) async =>
       GroupFlameStatus(
@@ -1943,7 +2125,32 @@ class MockCommunityRepository implements CommunityRepository {
   // ── Phase 2d: Complete Task ────────────────────────────────────────────────
 
   @override
-  Future<void> completeTask(String taskId) async {}
+  Future<void> completeTask(String taskId) async {
+    for (final tasks in _mockGroupTasks.values) {
+      final idx = tasks.indexWhere((t) => t.id == taskId);
+      if (idx != -1) {
+        tasks[idx] = GroupTaskInfo(
+          id: tasks[idx].id,
+          title: tasks[idx].title,
+          description: tasks[idx].description,
+          tags: tasks[idx].tags,
+          estimatedMinutes: tasks[idx].estimatedMinutes,
+          difficulty: tasks[idx].difficulty,
+          totalClaims: tasks[idx].totalClaims,
+          totalCompletions: tasks[idx].totalCompletions + 1,
+          completionRate: (tasks[idx].totalCompletions + 1) /
+              (tasks[idx].totalClaims > 0 ? tasks[idx].totalClaims : 1),
+          dueDate: tasks[idx].dueDate,
+          creator: tasks[idx].creator,
+          isClaimedByMe: tasks[idx].isClaimedByMe,
+          myCompletionStatus: true,
+          createdAt: tasks[idx].createdAt,
+          updatedAt: DateTime.now(),
+        );
+        return;
+      }
+    }
+  }
 
   // ── Phase 4: Friend Management ─────────────────────────────────────────────
 
