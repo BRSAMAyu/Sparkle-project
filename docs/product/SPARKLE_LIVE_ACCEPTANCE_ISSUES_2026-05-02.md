@@ -916,10 +916,11 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-2100-I1
-- **status**: verified
+- **status**: in_progress
 - **severity**: P1
 - **domain**: I
 - **title**: TaskStatus 枚举三层不一致：Go sqlc 缺失 PAUSED/RESTORE/STUCK，RESTORE 从未加入 PostgreSQL enum
+- **fixer_started_at**: 2026-05-03T21:50:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认全部 7 处 evidence：(1) schema.sql:462-467 仅 4 值 PENDING/IN_PROGRESS/COMPLETED/ABANDONED；(2) models.go:1205-1210 sqlc 生成的 Taskstatus 常量仅 4 个；(3) task.py:46-54 Python 定义 7 值含 PAUSED/RESTORE/STUCK；(4) task_model.dart:22-37 Flutter 定义 7 值；(5) c21 迁移将 PAUSED 加入 PostgreSQL enum；(6) lane_d 迁移将 STUCK 加入 PostgreSQL enum；(7) grep RESTORE 在所有 Alembic versions/ 中无结果。调用链验证：Go 侧 schema.sql 是 sqlc 源，缺失 3 值导致 Go 无法识别 PAUSED/STUCK 状态的任务（Scan 方法虽接受任意字符串但常量定义不完整）。Python 侧 goal_router.py:253 和 experience.py:277 的 WHERE status IN (..., RESTORE) 查询不会报错（仅 WHERE 过滤），但任何 task.status = TaskStatus.RESTORE; session.commit() 会触发 PostgreSQL invalid input value for enum taskstatus 错误。非设计意图——RESTORE 在代码中被用于 DB 查询过滤，说明开发者期望它是持久化状态。与其他任何条目无重复。
 - **symptom**: 当 Go gateway 读取到 status=PAUSED/STUCK 的任务行时，sqlc 生成的 Taskstatus 类型无法识别这些值。当 Python 尝试写入 status=RESTORE 时，PostgreSQL 直接报 invalid input value for enum taskstatus 错误
 - **root_cause_hypothesis**: Alembic 迁移 c21 和 lane_d 分别向 PostgreSQL 的 taskstatus enum 添加了 PAUSED 和 STUCK，但 Go 侧的 schema.sql 从未同步更新（仍只有 PENDING/IN_PROGRESS/COMPLETED/ABANDONED 四值）。sqlc 从 schema.sql 生成的 Go 代码自然缺失这三个值。同时 Python SQLAlchemy model 定义了 RESTORE 但没有任何 Alembic 迁移将其添加到 PostgreSQL enum，导致 RESTORE 值在 DB 层面不存在
