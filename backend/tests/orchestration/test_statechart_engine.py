@@ -768,6 +768,34 @@ class TestErrorHandling:
             await graph.invoke(sample_state)
 
     @pytest.mark.asyncio
+    async def test_node_error_still_emits_graph_end(self, sample_state):
+        """A1 regression: RuntimeError must NOT skip GRAPH_END and checkpointer cleanup."""
+
+        async def failing_node(state: WorkflowState) -> WorkflowState:
+            raise RuntimeError("boom")
+
+        graph = StateGraph("CleanupGraph")
+        graph.add_node("fail", failing_node)
+        graph.set_entry_point("fail")
+        graph.compile()
+
+        events = []
+        original_emit = graph._emit_event
+
+        async def capturing_emit(event_type, node_name, state, details=""):
+            events.append(event_type)
+            await original_emit(event_type, node_name, state, details)
+
+        graph._emit_event = capturing_emit
+
+        with pytest.raises(RuntimeError, match="aborted due to node error"):
+            await graph.invoke(sample_state)
+
+        assert GraphEventType.GRAPH_END in events, (
+            f"GRAPH_END must fire even when node errors occur, got: {events}"
+        )
+
+    @pytest.mark.asyncio
     async def test_nested_graph_error_propagation(self, sample_state):
         """D1 regression: nested graph exceptions must propagate to parent and raise."""
 

@@ -306,11 +306,8 @@ class StateGraph:
         if steps >= max_steps:
             logger.warning(f"⚠️ [{self.name}] Max steps reached ({max_steps})")
 
-        if node_exception_occurred:
-            raise RuntimeError(
-                f"Graph '{self.name}' aborted due to node error(s): "
-                + "; ".join(str(e) for e in state.errors[-3:])
-            )
+        # Always emit GRAPH_END and checkpoint before raising,
+        # so visualizers and checkpointers never get stuck.
         logger.info(f"🏁 [{self.name}] Execution finished")
         await self._emit_event(GraphEventType.GRAPH_END, self.name, state)
         if self.checkpointer:
@@ -319,6 +316,12 @@ class StateGraph:
             mark_completed = getattr(self.checkpointer, "mark_completed", None)
             if session_id and callable(mark_completed):
                 await mark_completed(session_id, request_id or None)
+
+        if node_exception_occurred:
+            raise RuntimeError(
+                f"Graph '{self.name}' aborted due to node error(s): "
+                + "; ".join(str(e) for e in state.errors[-3:])
+            )
         return state
 
     async def _load_interrupted_checkpoint(self, initial_state: WorkflowState) -> tuple[WorkflowState, str] | None:
