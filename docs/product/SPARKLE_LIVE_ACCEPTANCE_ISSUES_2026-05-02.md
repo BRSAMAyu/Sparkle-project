@@ -363,13 +363,14 @@
 
 ## Progress Summary
 
-- **Total Issues**: 31 (+ 11 explorer issues)
+- **Total Issues**: 31 (+ 15 explorer issues)
 - **Fixed**: 23 (includes explorer G1, G2)
 - **Partially Fixed**: 3
 - **Routes Verified (working with data)**: 5
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
-- **Discovered (not verified)**: 0 (B1 closed, H1/H2/H4 verified, H3 rejected, K1 verified, A1 verified)
+- **Discovered (not verified)**: 1 (D1 pending review)
+- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 1 (A1 — fix commit pending)
 
 ---
 
@@ -385,7 +386,7 @@
 | R6 | 2026-05-03T15:10 | K | 4 | 4/4 (K1 in_progress, K2/K3/K4 verified) | Error handling: leaderboard percentile, chat history lost, silent error swallowing, LLM timeout fallback |
 | R6 | 2026-05-03T15:00 | K | 1 | 1/1 (K1 verified) | Error handling gaps in goal detail actions |
 | R7 | 2026-05-03T15:30 | A | 1 | 1/1 (A1 verified) | Task execution navigation missing activeTaskProvider |
-| R8 | 2026-05-03T16:00 | E | 4 | pending opus review | Aurora kill switch gaps: E1 Dual-Core Router, E2 Privacy Prometheus, E3 drill_all.sh, E4 permissions |
+| R8 | 2026-05-03T16:00 | E | 4 | 4/4 | Aurora kill switch: E1 Dual-Core Router zero KS, E2 Privacy Prometheus gauge bypass, E3 drill_all.sh missing 37-39, E4 permissions 644 |
 | R9 | 2026-05-03T16:30 | D | 1 | 1/1 (D1 verified) | LangGraph planner timeout missing in 2/3 callers |
 
 ---
@@ -691,7 +692,7 @@
 - **suggested_fix_direction**: 在 compact_task_card.dart 和 task_feedback_dialog.dart 的导航前添加 `ref.read(activeTaskProvider.notifier).state = task`，与 focus_action_card.dart 的修复模式一致。长期方案：TaskExecutionScreen 应从 route 参数提取 taskId 并在 activeTaskProvider 为 null 时从 API 加载任务
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T16:45
-- **fix_commit**: pending commit on codex/final-closeout-integration-2026-05-02
+- **fix_commit**: 1c22526b7
 - **opus_review**: APPROVED by opus-reviewer at 2026-05-03T16:45Z — All 5 evidence locations verified by independent code reading. (1) compact_task_card.dart:148-150 inProgress/stuck navigates without setting activeTaskProvider; widget has WidgetRef and activeTaskProvider importable via task.dart barrel. (2) compact_task_card.dart:159-161 paused/restore calls resumeTask then navigates without setting provider. (3) task_feedback_dialog.dart:338-339 context.go() without setting provider; ConsumerStatefulWidget with ref access. (4) task_execution_screen.dart:782 watches activeTaskProvider, null branch shows error page. (5) focus_action_card.dart:80-81 correct pattern with explicit fix comment. Route pageBuilder at task_routes.dart:79-96 extracts query params but never extracts :id path param (contrast with taskDetail route line 62). Not a duplicate of any existing issue. Not by-design — 8 other callers correctly set the provider. Additional note: openclaw_hub_screen.dart:1106 has the same pattern (navigates without setting provider) — same root cause, lower-traffic entry point. ||| independent-fix-review at 2026-05-03T20:30Z — APPROVED. (a) Root cause genuinely addressed: both compact_task_card.dart (lines 150, 163) and task_feedback_dialog.dart (lines 341-354) now set activeTaskProvider before navigation, exactly matching the established pattern in focus_action_card.dart:81. compact_task_card passes the existing full TaskModel `task` field; task_feedback_dialog constructs a minimal TaskModel with all 12 required constructor fields satisfied (verified against task_model.dart:120-156). (b) No regression risk: both widgets are ConsumerWidget/ConsumerStatefulWidget with proper ref access; imports verified — compact_task_card resolves activeTaskProvider via task.dart barrel export of task_provider.dart (where activeTaskProvider is defined at line 1356 as StateProvider<TaskModel?>); task_feedback_dialog imports task_provider.dart directly and adds new import of task_model.dart. No other callers affected — task_execution_screen.dart and focus_action_card.dart have zero diff. Flutter analyze: 0 errors, 0 warnings on fixed code (3 pre-existing info-level issues in task_feedback_dialog unrelated to fix). (c) Flutter-only fix, no cross-layer contract changes needed. (d) UI navigation fix; regression requires manual app verification or widget test. (e) No CLAUDE.md or rule guard violations — no secrets, no hardcoded tokens, no cross-layer violations.
 
 ### ISSUE-20260503-1600-E1
@@ -889,6 +890,21 @@
 - **Findings**: TaskExecutionScreen completely relies on `activeTaskProvider` being pre-set by the calling screen. The route has `:id` path parameter but pageBuilder never extracts it and never passes it to the screen. The screen has a graceful null fallback (shows "No task" error with back button), but 2 out of 10 navigation paths fail to set the provider: (1) calendar card `compact_task_card.dart` — in-progress/stuck/paused/restore tasks all navigate without setting activeTaskProvider; (2) task feedback dialog `task_feedback_dialog.dart` — "do this next" action uses `context.go()` without setting provider. All other callers correctly set the provider, and `focus_action_card.dart:81` has an explicit "🔧 修复" comment showing this is a known required pattern. The hardcoded API endpoint in `growth_dashboard_repository.dart:25` is a style issue (same value as `ApiEndpoints.experienceGrowthDashboard`), not a bug. Silent SizedBox.shrink() on errors already covered by K3.
 - **Opus pass rate**: pending
 - **Next suggested domain**: D (Python orchestrator FSM) or E (Aurora kill switch) — backend domains not yet explored
+### Round R8 — 2026-05-03T16:00
+- **Domain**: E (Aurora kill switch 真实可观测)
+- **Paths covered**:
+  - dual_core_router.py (1089 lines, 0 kill_switch references — grep confirmed)
+  - routing_engine.py:1178-1186 (calls dual_core_router.route() without kill switch guard)
+  - state_aggregator/service.py:156-158 (correct kill switch pattern for comparison)
+  - privacy.py:10,53-57 (only imports normalize_mode, bypasses read_mode gauge)
+  - kill_switch.py:68-69,94-112 (read_mode/record_mode_gauge definitions)
+  - drill_all.sh:16-23 (Stage 18-31+40 + 33/34/35, missing 37/38/39)
+  - stage33/drill_transitions.sh, stage38/drill_transitions.sh (mode 644 vs expected 755)
+  - stage37/drill_transitions.sh, stage39/drill_transitions.sh (exist but unreferenced)
+- **New issues**: E1(P1), E2(P2), E3(P2), E4(P3)
+- **Findings**: Dual-Core Router — the central routing decision point for the entire AI pipeline — has zero kill switch protection despite CLAUDE.md listing it as a "key service" under Kill Switch Protocol. All peer Aurora services (State Aggregator, SRL Phase Tracker, Social Signal Bridge) correctly integrate kill switch checks. Privacy module pii_redaction_mode() bypasses read_mode() and directly calls normalize_mode(getattr(settings, ...)), which skips Prometheus gauge recording — making privacy the only Aurora module whose read-path mode is invisible to operators. The unified drill entry point drill_all.sh omits Stage 37 (LLM Safety — security critical), 38, and 39 despite all three having valid drill scripts. Two drill scripts (stage33, stage38) are non-executable (644) while 16 others are 755 — a permissions inconsistency that breaks direct ./script.sh execution.
+- **Opus pass rate**: 4/4 (E1/E2/E3/E4 all APPROVED by opus-reviewer at 2026-05-03T16:30)
+- **Next suggested domain**: F (事件总线消费者 DLQ/retry) or I (DB 迁移 vs 代码字段) — infrastructure resilience domains not yet explored
 
 ### Round R9 — 2026-05-03T16:30
 - **Domain**: D (Python orchestrator FSM 流转完整性)
