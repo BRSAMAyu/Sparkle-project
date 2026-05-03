@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 19:30 (R41 D-domain — 3 discovered: D1/D2/D3; R42 pending Opus review)
+> Updated: 2026-05-04 19:45 (R41 D-domain — 3 verified: D1/D2/D3; Opus review pass 3/3)
 
 ---
 
@@ -414,7 +414,7 @@
 | R38 | 2026-05-04T17:00 | F | 1 | 1/1 (F5 verified by opus-reviewer) | F 域续探——Task/Profile/Intervention 消费者子处理器吞噬异常旁路 EventBus DLQ/retry |
 | R39 | 2026-05-04T18:00 | B | 3 | 3/3 (B1/B2/B3 verified) | B 域续探——CurrentUserStatusNotifier 乐观更新无回滚 + confirmMinimumCriteria 纯本地无持久化 + GroupTasks/BlockedUsers 刷新丢数据 |
 | R40 | 2026-05-04T18:30 | G | 0 | N/A | G 域续探——mock_community_repository 核心方法全部正确实现，剩余空 stub 为非核心功能，domain exhausted |
-| R41 | 2026-05-04T19:30 | D | 3 | pending（待 Opus 独立复审） | D 域续探（纠正上轮 0/8 false positive）——Statechart engine 吞异常返回部分状态 + compile() 不验证边目标 + max_steps 静默截断 |
+| R41 | 2026-05-04T19:30 | D | 3 | 3/3 (D1/D2/D3 verified) | D 域续探（纠正上轮 0/8 false positive）——Statechart engine 吞异常返回部分状态 + compile() 不验证边目标 + max_steps 静默截断 |
 
 ---
 
@@ -2092,6 +2092,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T10:45
 - **fix_commit**: 留空
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-04T22:25:00Z
 
 ### ISSUE-20260504-1031-H8
 - **status**: verified
@@ -2347,7 +2348,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1900-D1
-- **status**: discovered
+- **status**: verified
 - **severity**: P1
 - **domain**: D
 - **title**: Statechart engine silently swallows node exceptions and returns partial state; orchestrator never checks state.errors
@@ -2363,11 +2364,11 @@
 - **blast_radius**: Affects every AI chat interaction. Any node-level bug (generation, collaboration, tool_execution, etc.) manifests as a silent partial response rather than a properly surfaced error. Directly impacts North Star (7-day zero-knowledge student): a broken planning or generation step produces incomplete guidance with no indication of failure.
 - **suggested_fix_direction**: Either (A) re-raise in statechart_engine.py:281 after appending errors, allowing orchestrator top-level handler to catch it; or (B) add `if final_state.errors:` check in orchestrator.py:3382-3383 with degraded response + STATE_DEGRADED; or (C) both — re-raise for catastrophic failures, degrade for recoverable ones. Minimum: check errors count at orchestrator level and at least log a warning.
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-reviewer+2026-05-04T19:45Z
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1901-D2
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: D
 - **title**: StateGraph compile() validates entry point but not edge targets; conditional edges returning invalid node names silently fail via generic except handler
@@ -2384,11 +2385,11 @@
 - **blast_radius**: Low in current codebase (all next_step values are well-known constants) but represents an engineering safety gap. A refactoring that renames a node without updating all conditional edge returns would introduce a silent partial-response bug that's difficult to diagnose.
 - **suggested_fix_direction**: (A) In compile(): iterate edges dict, verify static targets in self.nodes, and for conditional edges at minimum log a warning that runtime validation is needed. (B) At runtime line 292: wrap `next_node = edge(state)` with validation — if returned node not in self.nodes, log error + set next_node = "__end__" + append to state.errors. (C) At line 247: use `self.nodes.get(current_node_name)` with explicit error handling.
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-reviewer+2026-05-04T19:45Z
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1902-D3
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: D
 - **title**: Graph max_steps exceeded silently — WorkflowState.is_finished never set to True anywhere, no error appended on truncation
@@ -2404,7 +2405,7 @@
 - **blast_radius**: Low practical risk — standard graph has 12 nodes and max_steps=50, so 4+ full traversals needed to exceed. Most relevant for recursive patterns (reflection max 3 rounds) or nested graphs. However, the is_finished=False-forever design gap means no code can programmatically distinguish complete from truncated state.
 - **suggested_fix_direction**: At line 304-305: append `state.errors.append(f"[{self.name}] Max steps {max_steps} reached — execution truncated")` and set `state.is_finished = True`. Additionally, fix the orchestrator or response_builder to check `final_state.is_finished` or `final_state.errors` before marking session STATE_DONE.
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-reviewer+2026-05-04T19:45Z
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
@@ -2768,5 +2769,5 @@
   3. **D3 (P2) — max_steps 静默截断**: line 304-305 仅 logger.warning，不追加 errors、不设 is_finished=True。WorkflowState.is_finished 定义后从未设为 True（全后端 grep 零匹配）。编排器将截断状态与正常完成状态等价处理
   4. **误报排除**: 对上一轮 agent 报告的 8 处潜在问题全部重新亲自验证，确认均为误报（与上轮结论一致）
   5. **排除项**: (a) 编排器顶层 except 处理正确（已验证错误响应 + STATE_FAILED + episodic memory event_kind="error"）；(b) 协作节点内部 try/except 是设计上的优雅降级（回退到 tool_planning），不是 bug；(c) _plan_and_validate except 降级到 direct 模式正确；(d) checkpoint 恢复中 `checkpoint_node not in self.nodes` 静默回退到全新启动是合理设计（图结构可能已变更）
-- **Opus pass rate**: pending
+- **Opus pass rate**: 3/3 (D1/D2/D3 all APPROVED)
 - **Next suggested domain**: F (Event bus consumers DLQ/retry) — 3 轮未回探，F5 fix 验证待查；或 E (Aurora kill switch) — 6 轮未回探
