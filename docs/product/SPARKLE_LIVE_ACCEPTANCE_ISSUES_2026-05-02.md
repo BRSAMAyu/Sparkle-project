@@ -382,7 +382,7 @@
 | R3 | 2026-05-03T13:30 | C | 0 | N/A | Proto/WebSocket contract sound; reconnection has offline queue persistence |
 | R4 | 2026-05-03T14:00 | J | 0 | N/A | Cold-start well-designed: skeleton loading, first-goal empty state, wizard with AI, error recovery |
 | R5 | 2026-05-03T14:10 | H | 4 | 3/4 (H3 rejected as designed) | i18n residuals: H1/H2/H4 verified, H3 rejected (isChinese is project documented pattern) |
-| R6 | 2026-05-03T15:00 | K | 4 | pending Opus review | Error handling: leaderboard percentile, chat history lost, silent error swallowing, LLM timeout fallback |
+| R6 | 2026-05-03T15:10 | K | 4 | pending Opus review | Error handling: K1 leaderboard percentile, K2 chat history lost, K3 silent error swallowing, K4 LLM timeout fallback |
 | R6 | 2026-05-03T15:00 | K | 1 | 1/1 (K1 verified) | Error handling gaps in goal detail actions |
 
 ---
@@ -538,7 +538,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer-4+2026-05-03T14:10
 - **fix_commit**:
-### ISSUE-20260503-1500-K1
+- **opus_review**: APPROVED by independent-auditor at 2026-05-03T16:20:00Z — all 4 hardcoded English strings (Claim, Complete, Create Group Task, e.g. hint) replaced with I18nService.instance.isChinese bilingual pattern; 24/24 user-facing strings now i18n; no regression risk (pure UI text swap); no cross-layer contract change; i18n rule guard PASS; file already imported I18nService
+### ISSUE-20260503-1510-K1
 - **status**: discovered
 - **severity**: P1
 - **domain**: K
@@ -707,7 +708,7 @@
   - chat_orchestrator_chatflow.go (gRPC stream break → skip saveMessage → history lost)
   - growth_quality_card.dart, understanding_snapshot_card.dart, community_accountability_hub_card.dart, multi_goal_dashboard_card.dart, home_notification_card.dart, learning_heatmap_widget.dart, plan_context_summary.dart, return_case_file_card.dart (12+ SizedBox.shrink on error)
   - providers.py (openai.Timeout import failure → no timeout fallback)
-- **New issues**: K1(P1), K2(P1), K3(P2), K4(P2)
+- **New issues**: K1(P1)=1510, K2(P1)=1511, K3(P2)=1512, K4(P2)=1513
 - **Findings**: Two P1s cross the Go↔Python boundary. K1 (leaderboard): GLOBAL percentile is a pure math bug (total_participants=-1 sentinel used in division); empty leaderboards crash with ZeroDivisionError. K2 (chat): gRPC stream error handling sacrifices conversation history integrity — return false before saveMessage means multi-turn context is silently lost. K3 (Flutter): 12+ dashboard/experience cards use SizedBox.shrink() on error, silently vanishing when backend is unreachable. K4 (LLM): Timeout import fallback creates no-timeout client — rare but LLM hangs can block gRPC slots.
 - **Opus pass rate**: pending (4 discovered, 0 verified yet)
 - **Next suggested domain**: E (Aurora kill switch real observability) or F (event bus consumer DLQ/retry) — backend resilience areas not yet explored
