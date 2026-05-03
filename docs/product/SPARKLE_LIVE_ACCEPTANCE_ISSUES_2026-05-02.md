@@ -3243,4 +3243,22 @@
   1. **I7 (P2) — GroupInfo schema 缺 announcement**: GroupService.get_group() 在返回 dict 中包含 `'announcement': group.announcement`（行 717），但 Pydantic `GroupInfo` 响应模型未声明该字段。Pydantic v2 默认丢弃额外字段 → `GET /groups/{id}` JSON 响应不含 announcement → Flutter GroupInfo.fromJson 始终 null。DB 列存在 (`community.py:207`)，service 返回，Flutter 期望，唯独 Pydantic 层截断。修复只需在 GroupInfo schema 添加 `announcement: str | None = Field(default=None)`
   2. **排除项**: (a) ReportReason 三层一致（Flutter @JsonValue ↔ Python StrEnum ↔ DB ALTER TYPE）——I6 fix 已验证；(b) Go schema tasks 表含所有 s40a 字段（guide_json/ai_prompt/source_planning_session_id/phase_index/success_criteria）+ paused 字段（paused_at/paused_reason）——I2/I5 fixes 已验证；(c) wp18 FK ON DELETE 动作（CASCADE/SET NULL for 39 constraints）全部正确反映在 Go schema；(d) wp18 CHECK constraints（6 个 tasks 约束）全部存在于 Go schema；(e) aurora_runtime_v1 新表（5 个）为 Python-only，Go 无需查询——非 gap；(f) Go Grouptype/Taskstatus/Reportreason 等自定义类型与 PostgreSQL enum 定义完全一致；(g) Flutter GroupTaskInfo 与 Python GroupTaskInfo 字段完整对应（含 computed fields: completion_rate/is_claimed_by_me/my_completion_status）
 - **Opus pass rate**: pending (I7)
-- **Next suggested domain**: G (Mock vs Real) — 9 轮未回探，mock_community_repository reportMessage 空实现；或 C (WebSocket/gRPC 契约) — 11 轮未回探
+- **Next suggested domain**: G (Mock vs Real) — 10 轮未回探；或 B (Riverpod Provider 健康度) — 14 轮未回探
+
+### Round R49 — 2026-05-05T09:30
+- **Domain**: L (治理规则与文档承诺 vs 真实实现)
+- **Paths covered**:
+  - `scripts/rule_guard_manifest.tsv` — 66 rules registered (CLAUDE.md claims 53+, actual 66 ✅)
+  - `scripts/guards/check_rule_ax_route_ownership.py:1-209` — Rule AX guard: diff-only mode
+  - `scripts/guards/check_rule_bg_proto_cross_language_parity.py` — Rule BG: 16 staleness warnings (cosmetic deprecation annotation only)
+  - `scripts/run_all_rule_guards.sh:1-94` — CI orchestrator: 70 PASS + 1 FAIL (AX only)
+  - `backend/gateway/internal/handler/proxy_routes.go:1-979` — 68 route-tier comments exist, 36 missing (pre-existing)
+  - `.github/workflows/*.yml` — CI runs `run_all_rule_guards.sh --jobs 4` as required job
+  - `docs/product/codex/PHASE2_REMAINING_ACCEPTANCE_2026-05-03.md` — 8/8 Phase 2 items accepted
+  - `mobile/lib/core/constants/api_constants.dart:5-79` — Flutter → Go Gateway only ✅
+  - `backend/gateway/internal/middleware/auth.go:418` — timing-attack resistant ✅
+  - `Makefile` — all CLAUDE.md referenced targets exist ✅
+- **New issues**: 0
+- **Findings**: L 域全面审查。治理框架健壮：66 注册规则，65 PASS，1 FAIL (AX pre-existing tech debt)。CI 强制执行。CLAUDE.md 所有声称验证通过。Phase 2 承诺 8/8 兑现。三层架构约束严格。Rule BG 16 warnings 为 cosmetic（proto 仅加 deprecation 注释）。域已穷尽。
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: G (Mock vs Real) — 10 轮未回探；或 B (Riverpod Provider 健康度) — 14 轮未回探
