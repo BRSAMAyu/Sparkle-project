@@ -384,6 +384,7 @@
 | R5 | 2026-05-03T14:10 | H | 4 | 3/4 (H3 rejected as designed) | i18n residuals: H1/H2/H4 verified, H3 rejected (isChinese is project documented pattern) |
 | R6 | 2026-05-03T15:10 | K | 4 | pending Opus review | Error handling: K1 leaderboard percentile, K2 chat history lost, K3 silent error swallowing, K4 LLM timeout fallback |
 | R6 | 2026-05-03T15:00 | K | 1 | 1/1 (K1 verified) | Error handling gaps in goal detail actions |
+| R7 | 2026-05-03T15:30 | A | 1 | pending opus review | Task execution navigation missing activeTaskProvider |
 
 ---
 
@@ -541,9 +542,10 @@
 - **fix_commit**:
 - **opus_review**: APPROVED by independent-auditor at 2026-05-03T16:20:00Z — all 4 hardcoded English strings (Claim, Complete, Create Group Task, e.g. hint) replaced with I18nService.instance.isChinese bilingual pattern; 24/24 user-facing strings now i18n; no regression risk (pure UI text swap); no cross-layer contract change; i18n rule guard PASS; file already imported I18nService
 ### ISSUE-20260503-1510-K1
-- **status**: discovered
+- **status**: in_progress
 - **severity**: P1
 - **domain**: K
+- **fixer_started_at**: 2026-05-03T19:00:00Z
 - **title**: leaderboard percentile 计算在 GLOBAL 榜使用 total_participants=-1 产生无意义百分位（>100%），在其他榜为 0 时触发 ZeroDivisionError
 - **symptom**: GLOBAL 排行榜显示的用户百分位始终超过 100%（如 rank=3 显示 400%）。FRIENDS/GROUP/WEEKLY 榜在无其他用户数据时，百分位计算崩溃并返回 500 错误
 - **root_cause_hypothesis**: get_my_rank() 方法在 line 153 无条件执行 1.0 - (rank / total_participants)。GLOBAL 榜在 line 311 硬编码 total_participants=-1（哨兵值），导致 1.0 - (rank/-1) = 1.0 + rank。其他榜使用 total_participants=len(scored_users)，在空列表时返回 0 触发 ZeroDivisionError
@@ -557,7 +559,8 @@
 - **blast_radius**: 影响所有排行榜页面。GLOBAL 榜百分位在所有用户中都显示错误。ZeroDivisionError 影响只有单个参与者的榜单。对北极星影响中等——排行榜是社交激励引擎核心，错误百分位破坏信任
 - **suggested_fix_direction**: 在 get_my_rank() 的百分位计算前添加守卫：if total_participants <= 0: percentile = None。UI 层处理 None 百分位
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer-K+2026-05-03T15:15
+- **reviewer_note**: APPROVED — GLOBAL 榜百分位 bug 确认：line 153 `1.0 - (rank / -1)` = `1.0 + rank` 始终 >100%。调用链确认：API GET /leaderboards/my-rank → service.get_my_rank() → line 124 get_leaderboard() → _get_global_leaderboard() line 311 total_participants=-1 → line 153 无条件除法。FRIENDS/GROUP 等榜 ZeroDivisionError 在正常流程中受 line 127-132 early return (entries 为空 → my_entry=None → 提前返回) 保护，但在有异常数据时仍可能触发。非设计意图（get_my_rank API 明确返回 percentile 字段期望有意义的值）。与 ISSUE-20260503-1500-K1 (goal_detail start/complete error handling) 完全不同，无重复。
 - **fix_commit**:
 
 ### ISSUE-20260503-1511-K2
@@ -657,6 +660,27 @@
 - **fix_commit**:
 - **opus_review**: APPROVED by independent-review-agent at 2026-05-03T18:30Z
 
+### ISSUE-20260503-1530-A1
+- **status**: discovered
+- **severity**: P1
+- **domain**: A
+- **title**: 日历卡片和任务反馈对话框跳转任务执行页时未设置 activeTaskProvider，导致屏幕显示"No task"错误页
+- **symptom**: 用户从日历卡片点击进行中任务的执行按钮，或从任务反馈对话框选择"做下一步"后，进入任务执行页面看到"当前没有执行中的任务"错误屏幕，而非任务执行界面
+- **root_cause_hypothesis**: `TaskExecutionScreen` 在 build 方法中读取 `ref.watch(activeTaskProvider)` 判断当前任务，但路由 pageBuilder 不提取 URL `:id` 参数，也不从 API 加载任务。整个屏幕完全依赖调用方在导航前通过 `ref.read(activeTaskProvider.notifier).state = task` 预设。`compact_task_card.dart` 和 `task_feedback_dialog.dart` 在 push/go 到执行路由前未设置此 provider，导致屏幕读到 null 走入错误分支。其他调用方（focus_action_card.dart:81、dashboard_screen.dart:376、task_detail_screen.dart:943）都正确设置了此 provider，并有明确注释 "🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取"
+- **evidence**:
+  - `mobile/lib/features/home/presentation/widgets/calendar/compact_task_card.dart:145-150` — inProgress/stuck 任务：直接 `context.push(TaskRoutes.taskExecution.replaceFirst(':id', task.id))` 无 activeTaskProvider 设置
+  - `mobile/lib/features/home/presentation/widgets/calendar/compact_task_card.dart:156-161` — paused/restore 任务：先 resumeTask 但未设置 activeTaskProvider，然后 push
+  - `mobile/lib/features/task/presentation/widgets/task_feedback_dialog.dart:338-339` — `context.go('/tasks/${action.existingTaskId}/execute')` 无 activeTaskProvider 设置
+  - `mobile/lib/features/task/presentation/screens/task_execution_screen.dart:782-824` — `ref.watch(activeTaskProvider)` 为 null 时显示"No task"错误页
+  - `mobile/lib/features/chat/presentation/widgets/focus_action_card.dart:80-81` — 对比：正确设置 `ref.read(activeTaskProvider.notifier).state = taskModel`，注释 "🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取"
+- **repro_or_trigger**: (日历) 首页 → 日历区域 → 点击进行中任务的执行按钮 → 看到 "No task" 错误页。(反馈) 完成任务 → 反馈对话框 → 选择"做下一步"建议 → 看到 "No task" 错误页
+- **expected_vs_actual**: 期望：从任何入口进入任务执行都能正确显示任务执行界面；实际：日历和反馈对话框入口导致 "No task" 错误页
+- **blast_radius**: 影响两个高价值入口：日历快捷执行和任务完成后的下一步引导。日历是首页核心组件，任务反馈是增长循环中 Execute→Reflect 的衔接点。对北极星有中等影响——学生无法从日历快速进入专注执行，也无法顺畅衔接下一步任务
+- **suggested_fix_direction**: 在 compact_task_card.dart 和 task_feedback_dialog.dart 的导航前添加 `ref.read(activeTaskProvider.notifier).state = task`，与 focus_action_card.dart 的修复模式一致。长期方案：TaskExecutionScreen 应从 route 参数提取 taskId 并在 activeTaskProvider 为 null 时从 API 加载任务
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
 ---
 
 ## 探索日志
@@ -731,3 +755,21 @@
 - **Findings**: Community module error handling is well-designed — all destructive operations (deleteFriend, blockUser, endPartnership, kickMember/promoteMember/demoteMember/transferOwnership) have proper try/catch at the UI layer with user-facing error feedback. Provider methods correctly update state after successful API calls (not before), so failures leave state unchanged. The one gap is in goal detail: `startNextStep()`/`completeNextStep()` have zero error handling at both provider and UI layers. If the API fails, the user sees no feedback at all — the dialog/button just silently does nothing. This affects the core growth loop (Execute phase).
 - **Opus pass rate**: 1/1 (K1 verified by opus-independent-reviewer)
 - **Next suggested domain**: A (Flutter UI 端到端链路) or L (治理规则与文档承诺 vs 真实实现)
+
+### Round R7 — 2026-05-03T15:30
+- **Domain**: A (Flutter UI 端到端链路)
+- **Paths covered**:
+  - task_execution_screen.dart (activeTaskProvider dependency, null handling)
+  - task_routes.dart (route definition, pageBuilder parameter extraction)
+  - compact_task_card.dart (calendar task action navigation)
+  - task_feedback_dialog.dart (next-action navigation)
+  - focus_action_card.dart (correct pattern with fix comment)
+  - dashboard_screen.dart (correct pattern)
+  - task_detail_screen.dart (correct pattern)
+  - next_actions_card.dart (correct pattern)
+  - intent_prediction_provider.dart (correct pattern)
+  - focus_main_screen.dart (correct pattern)
+- **New issues**: A1(P1)
+- **Findings**: TaskExecutionScreen completely relies on `activeTaskProvider` being pre-set by the calling screen. The route has `:id` path parameter but pageBuilder never extracts it and never passes it to the screen. The screen has a graceful null fallback (shows "No task" error with back button), but 2 out of 10 navigation paths fail to set the provider: (1) calendar card `compact_task_card.dart` — in-progress/stuck/paused/restore tasks all navigate without setting activeTaskProvider; (2) task feedback dialog `task_feedback_dialog.dart` — "do this next" action uses `context.go()` without setting provider. All other callers correctly set the provider, and `focus_action_card.dart:81` has an explicit "🔧 修复" comment showing this is a known required pattern. The hardcoded API endpoint in `growth_dashboard_repository.dart:25` is a style issue (same value as `ApiEndpoints.experienceGrowthDashboard`), not a bug. Silent SizedBox.shrink() on errors already covered by K3.
+- **Opus pass rate**: pending
+- **Next suggested domain**: D (Python orchestrator FSM) or E (Aurora kill switch) — backend domains not yet explored
