@@ -1654,6 +1654,34 @@ class ChatNotifier extends StateNotifier<ChatState> {
             restoreAttachments: hasQueuedAttachments,
           );
           return; // 提前退出
+        } else if (event is NackEvent) {
+          final userFriendlyMessage = ErrorMessages.getUserFriendlyMessage(
+            event.errorCode,
+            event.errorMessage,
+          );
+          final actionSuggestion =
+              ErrorMessages.getActionSuggestion(event.errorCode);
+          final isRetryable = ErrorMessages.isRetryable(event.errorCode);
+
+          state = state.copyWith(
+            activeRunSummary: _buildRunSummary(
+              status: lastAiStatus,
+              details: event.errorMessage,
+            ),
+          );
+          finalizeRun(
+            phase: ChatRunPhase.failed,
+            errorMessage: actionSuggestion.isEmpty
+                ? userFriendlyMessage
+                : I18nService.instance.l10n.chatErrorWithSuggestion(
+                    userFriendlyMessage,
+                    actionSuggestion,
+                  ),
+            errorCode: event.errorCode,
+            isRetryable: isRetryable,
+            restoreAttachments: hasQueuedAttachments,
+          );
+          return; // 提前退出
         } else if (event is WidgetEvent) {
           if (event.widgetType == 'system_update' &&
               !_shouldIncludeSystemUpdate(event.widgetData)) {

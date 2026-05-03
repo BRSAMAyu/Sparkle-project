@@ -2745,8 +2745,9 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260505-0830-K1
-- **status**: in_progress
+- **status**: closed
 - **fixer_started_at**: 2026-05-05T15:00:00Z
+- **closed_at**: 2026-05-03T16:45:00Z
 - **severity**: P1
 - **domain**: K
 - **title**: NackEvent 未被 chat_provider 处理——服务器拒绝消息后客户端冻结 8 分钟无反馈
@@ -2765,7 +2766,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-05T08:30:00Z
 - **reviewer_note**: APPROVED — independent review confirms all 5 evidence references match code exactly. (1) chat_orchestrator_chatflow.go:640,658,748 — Go sends `{"type": "message_nack", "message_id": requestID, "error_code": "service_unavailable"/"quota_exceeded", "retry_after_ms": 5000/60000, "permanent": false}` for wsSafeWriter path when agent unavailable (lines 640,658) or quota exceeded (line 748). Note: envelopeResponder and protobufResponder paths still use `r.SendError()` (not message_nack format), but the primary wsSafeWriter path is fixed per C6 rework. (2) websocket_chat_service_v2.dart:853-871 — Flutter correctly parses `message_nack`/`nack` type into NackEvent with messageId/errorCode/errorMessage/retryAfterMs and canRetry getter. (3) chat_provider.dart — grep confirms ZERO NackEvent references in the entire file. Event dispatch chain traced: TextEvent (line 1297) → FullTextEvent (1492) → ErrorEvent (1629) → WidgetEvent (1657) → ToolStartEvent (1670) → ... → DoneEvent (1883). NackEvent is not in any branch. chat_stream_events.dart IS imported (line 23), so NackEvent type is available but simply not handled. (4) websocket_chat_service_v2.dart:1856-1860 — `_routeEventToRequest` closes controller only on `DoneEvent || ErrorEvent`. NackEvent does not trigger closure, so the stream controller stays open and the NackEvent is silently added to the controller but never consumed by chat_provider. (5) chat_provider.dart:1241 — `const streamTimeout = Duration(minutes: 8)` confirmed. NackEvent keeps stream open until timeout. NOT DUPLICATE OF C6: C6 (line 2206, status: verified) addresses the Go sender layer — making Go send `message_nack` instead of ad-hoc `{"type": "error"}`. K1 addresses the Flutter consumer layer — chat_provider.dart does not handle NackEvent even though Go now correctly sends it. These are complementary fixes on different layers: C6 = sender, K1 = consumer. Without K1, C6's fix is ineffective for the wsSafeWriter path. NOT BY DESIGN: NackEvent class explicitly defines canRetry getter (chat_stream_events.dart:392) and retryAfterMs field, indicating it was designed to be consumed by the presentation layer. The Flutter parsing layer correctly constructs NackEvent, proving intent to handle it. The omission in chat_provider is a gap, not a design choice.
-- **fix_commit**: 留空
+- **fix_commit**: {待填入}
+- **opus_review**: APPROVED by opus-fix-reviewer at 2026-05-05T16:30:00Z — (a) Root cause addressed at 3 layers: routing (`_extractRequestIdFromRawMessage` message_id fallback for message_nack payloads), service (`_routeEventToRequest`: +NackEvent to terminal close + fallback exclusion), provider (`chat_provider`: `else if (event is NackEvent)` → `finalizeRun(phase: ChatRunPhase.failed)`). Consistent with ErrorEvent pattern, not a hack. (b) Regression risk: NONE. Changes purely additive — new else-if branch, widened conditions. `sawTerminalEvent` guard prevents double-finalization. (c) Cross-layer sync: N/A — Flutter-internal, no proto/DB/i18n. (d) Tests: ADEQUATE. 7 new tests (2 parsing, 2 property validation, 2 error message, 1 terminal state). Full event-loop integration blocked by pre-existing Flutter compilation errors in community/tools modules (unrelated). (e) Rule guards: all pass except pre-existing AX (proxy_routes.go route-tier comments, unrelated). Security clean.
 
 ### ISSUE-20260505-0900-I7
 - **status**: verified

@@ -157,6 +157,41 @@ void main() {
         expect(toolEvent.toolName, equals('search_knowledge'));
       });
 
+      test('should parse NackEvent from message_nack JSON', () {
+        final nackJson = {
+          'type': 'message_nack',
+          'message_id': 'req-nack-1',
+          'error_code': 'service_unavailable',
+          'error_message': 'Agent temporarily unreachable',
+          'retry_after_ms': 5000,
+        };
+
+        final event = WebSocketChatServiceV2Parser.parseEvent(nackJson);
+        expect(event, isA<NackEvent>());
+        final nackEvent = event as NackEvent;
+        expect(nackEvent.messageId, equals('req-nack-1'));
+        expect(nackEvent.errorCode, equals('service_unavailable'));
+        expect(nackEvent.errorMessage, equals('Agent temporarily unreachable'));
+        expect(nackEvent.retryAfterMs, equals(5000));
+        expect(nackEvent.canRetry, isTrue);
+      });
+
+      test('should parse NackEvent without retry_after_ms as permanent', () {
+        final nackJson = {
+          'type': 'message_nack',
+          'message_id': 'req-nack-2',
+          'error_code': 'quota_exceeded',
+          'error_message': 'Daily quota exceeded',
+        };
+
+        final event = WebSocketChatServiceV2Parser.parseEvent(nackJson);
+        expect(event, isA<NackEvent>());
+        final nackEvent = event as NackEvent;
+        expect(nackEvent.errorCode, equals('quota_exceeded'));
+        expect(nackEvent.retryAfterMs, isNull);
+        expect(nackEvent.canRetry, isFalse);
+      });
+
       test('should parse ToolResultEvent', () {
         final toolResultJson = {
           'type': 'tool_result',

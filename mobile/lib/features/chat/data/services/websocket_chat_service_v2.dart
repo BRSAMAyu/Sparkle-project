@@ -1811,6 +1811,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       if (requestId != null && requestId.isNotEmpty) {
         return requestId;
       }
+      // Fallback: some error payloads (e.g. message_nack) use message_id
+      final messageId = jsonData['message_id'] as String?;
+      if (messageId != null && messageId.isNotEmpty) {
+        return messageId;
+      }
     } catch (_) {}
     return null;
   }
@@ -1850,10 +1855,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     }
     if (_terminalFallbackTimers.containsKey(targetRequestId) &&
         event is! DoneEvent &&
-        event is! ErrorEvent) {
+        event is! ErrorEvent &&
+        event is! NackEvent) {
       _scheduleTerminalFallback(targetRequestId);
     }
-    if (event is DoneEvent || event is ErrorEvent) {
+    if (event is DoneEvent || event is ErrorEvent || event is NackEvent) {
       _cancelTerminalFallback(targetRequestId);
       _requestControllers.remove(targetRequestId);
       _safeClose(controller);

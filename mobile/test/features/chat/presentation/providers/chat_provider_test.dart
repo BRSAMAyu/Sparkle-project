@@ -8,6 +8,7 @@ import 'package:sparkle/features/chat/presentation/providers/chat_state.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/services/websocket_chat_service_v2.dart';
+import 'package:sparkle/core/utils/error_messages.dart';
 
 void main() {
   // Initialize Flutter test bindings
@@ -643,6 +644,52 @@ void main() {
         );
 
         expect(notifier.state.currentStepIndex, equals(2));
+      });
+    });
+
+    group('NackEvent Error Handling', () {
+      test('should handle NackEvent service_unavailable error code', () {
+        final nackEvent = NackEvent(
+          messageId: 'req-nack-1',
+          errorCode: 'service_unavailable',
+          errorMessage: 'Agent temporarily unreachable',
+          retryAfterMs: 5000,
+        );
+
+        expect(nackEvent.canRetry, isTrue);
+        expect(nackEvent.retryAfterMs, equals(5000));
+        final msg = ErrorMessages.getUserFriendlyMessage(
+          nackEvent.errorCode,
+          nackEvent.errorMessage,
+        );
+        expect(msg, isNotEmpty);
+        expect(ErrorMessages.isRetryable(nackEvent.errorCode), isTrue);
+      });
+
+      test('should handle NackEvent quota_exceeded as non-retryable', () {
+        final nackEvent = NackEvent(
+          messageId: 'req-nack-2',
+          errorCode: 'quota_exceeded',
+          errorMessage: 'Daily limit reached',
+        );
+
+        expect(nackEvent.canRetry, isFalse);
+        final msg = ErrorMessages.getUserFriendlyMessage(
+          nackEvent.errorCode,
+          nackEvent.errorMessage,
+        );
+        expect(msg, isNotEmpty);
+      });
+
+      test('should mark run as failed on NackEvent', () {
+        expect(ChatRunPhase.failed.isTerminal, isTrue);
+        notifier.state = notifier.state.copyWith(
+          error: 'Service unavailable',
+          errorCode: 'service_unavailable',
+          isErrorRetryable: true,
+        );
+        expect(notifier.state.error, isNotEmpty);
+        expect(notifier.state.isErrorRetryable, isTrue);
       });
     });
 
