@@ -2072,9 +2072,10 @@
 - **opus_review**: SELF_REVIEWED (Opus API billing unavailable). Fix verified: 0 warnings before, 1 warning after. 1/1 regression test passes.
 
 ### ISSUE-20260504-1030-H7
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: H
+- **fixer_started_at**: 2026-05-04T00:00:00Z
 - **title**: H6 修复后 user_search_screen 和 group_tasks_screen 仍残留 5 处硬编码英文/中文——H6 reviewer 明确标注为"out of scope"
 - **symptom**: 中文模式下：(1) 用户搜索结果中，好友操作显示英文 "Send Friend Request"；(2) 搜索错误时重试按钮显示中文 "重试"（英文用户看到中文）；(3) 群组任务卡片操作按钮显示英文 "Claim" 和 "Complete"；(4) 创建群组任务对话框标题显示英文 "Create Group Task"。这些字符串所在文件的其他 UI 已通过 H6 修复完成 i18n（如 hintText/空状态），形成同一文件内中英混搭的不一致体验
 - **root_cause_hypothesis**: H6 修复范围严格限定在 issue 正文列出的 5 处 hintText/空状态字符串。H6 reviewer（opus-independent-reviewer）在 review_summary 中明确标注 `'Send Friend Request'`, `'Claim'`, `'Complete'`, `'Create Group Task'` 和 `'重试'` 为 "out of scope for this issue and should be tracked separately"。这些字符串未被后续修复覆盖
