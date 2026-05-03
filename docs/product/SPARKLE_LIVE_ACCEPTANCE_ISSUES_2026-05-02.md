@@ -1864,8 +1864,9 @@
 - **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
 
 ### ISSUE-20260504-0945-E5
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
+- **fixer_started_at**: 2026-05-03T10:00:00Z
 - **domain**: E
 - **title**: dual_core_router kill switch 已正确集成到 routing_engine 但未纳入 drill 自动化——状态变更不可观测
 - **symptom**: 操作者运行 `drill_all.sh` 或 `run_kill_switch_drills.py` 验证所有 kill switch 的 off→shadow→live→shadow→off 状态转换时，dual_core_router kill switch 被完全跳过。操作者可能误以为已覆盖所有 kill switch，但实际上无法验证 dual_core_router 从 off（回退 balanced 模式）到 live（Aurora 路由）的转换是否正常。Prometheus gauge `sparkle_kill_switch_mode{stage="dual_core_router"}` 仅在 routing_engine.py 调用 `get_mode()` 时才记录，缺少 drill 写入路径的 gauge 记录
@@ -2046,7 +2047,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1200-G4
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: G
 - **title**: Mock 群聊消息分页参数被忽略——demo 模式下"加载更多"静默失败
@@ -2062,7 +2063,7 @@
 - **blast_radius**: 仅影响 demo 模式（DemoDataService.isDemoMode=true）的群聊消息分页。生产环境使用真实 CommunityRepository，分页正常。对北极星无直接影响——demo 模式用于首次体验演示，群聊历史加载失败不影响核心学习流程
 - **suggested_fix_direction**: MockCommunityRepository.getMessages() 应根据 beforeId 过滤消息（排除 ID 匹配的消息及之后的消息），并根据 limit 截断返回数量。同方法 getPrivateMessages() 也应做类似处理以保持一致性
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-03T22:30
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
