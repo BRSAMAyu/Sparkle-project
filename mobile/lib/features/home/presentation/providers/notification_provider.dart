@@ -38,7 +38,8 @@ class NotificationNotifier
             AsyncValue.data(list.where((element) => element.id != id).toList());
       });
     } catch (e) {
-      // Handle error
+      debugPrint('markAsRead failed: $e');
+      rethrow;
     }
   }
 }

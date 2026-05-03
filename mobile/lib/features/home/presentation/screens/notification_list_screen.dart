@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/services/deep_link_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/data/models/notification_model.dart';
@@ -101,7 +102,17 @@ class NotificationItem extends ConsumerWidget {
             onTap: () {
               ref
                   .read(unreadNotificationsProvider.notifier)
-                  .markAsRead(notification.id);
+                  .markAsRead(notification.id)
+                  .catchError((_) {
+                    if (context.mounted) {
+                      AppFeedback.error(
+                        context,
+                        I18nService.instance.isChinese
+                            ? '标记已读失败，请重试'
+                            : 'Failed to mark as read',
+                      );
+                    }
+                  });
               final data = notification.data;
               if (data != null) {
                 final destinationRoute = data['destination_route']?.toString();
