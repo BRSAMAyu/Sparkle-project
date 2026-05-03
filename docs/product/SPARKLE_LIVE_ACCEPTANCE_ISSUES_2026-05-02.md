@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 19:45 (R41 D-domain — 3 verified: D1/D2/D3; Opus review pass 3/3)
+> Updated: 2026-05-04 20:00 (R42 J-domain — 0 new issues, cold-start comprehensive audit passed)
 
 ---
 
@@ -415,6 +415,7 @@
 | R39 | 2026-05-04T18:00 | B | 3 | 3/3 (B1/B2/B3 verified) | B 域续探——CurrentUserStatusNotifier 乐观更新无回滚 + confirmMinimumCriteria 纯本地无持久化 + GroupTasks/BlockedUsers 刷新丢数据 |
 | R40 | 2026-05-04T18:30 | G | 0 | N/A | G 域续探——mock_community_repository 核心方法全部正确实现，剩余空 stub 为非核心功能，domain exhausted |
 | R41 | 2026-05-04T19:30 | D | 3 | 3/3 (D1/D2/D3 verified) | D 域续探（纠正上轮 0/8 false positive）——Statechart engine 吞异常返回部分状态 + compile() 不验证边目标 + max_steps 静默截断 |
+| R42 | 2026-05-04T20:00 | J | 0 | N/A | J 域——cold start / empty state 全面审查：dashboard/community/marketplace/tool-library/notifications/onboarding 全部健壮 |
 
 ---
 
@@ -2774,3 +2775,39 @@
   5. **排除项**: (a) 编排器顶层 except 处理正确（已验证错误响应 + STATE_FAILED + episodic memory event_kind="error"）；(b) 协作节点内部 try/except 是设计上的优雅降级（回退到 tool_planning），不是 bug；(c) _plan_and_validate except 降级到 direct 模式正确；(d) checkpoint 恢复中 `checkpoint_node not in self.nodes` 静默回退到全新启动是合理设计（图结构可能已变更）
 - **Opus pass rate**: 3/3 (D1/D2/D3 all APPROVED)
 - **Next suggested domain**: F (Event bus consumers DLQ/retry) — 3 轮未回探，F5 fix 验证待查；或 E (Aurora kill switch) — 6 轮未回探
+
+### Round R42 — 2026-05-04T20:00
+- **Domain**: J (冷启动 / 空状态 / 首屏)
+- **Paths covered**:
+  - `mobile/lib/features/home/presentation/screens/dashboard_screen.dart:100-900` — 全量冷启动流程审查：loading state, error recovery, first-goal empty state, growth section rendering, refresh mechanism
+  - `mobile/lib/features/home/presentation/providers/dashboard_provider.dart:420-600` — fetchData() 全链路：API fallback, default values, nullable fields
+  - `mobile/lib/features/home/presentation/providers/home_growth_provider.dart:326-454` — 6 个 FutureProvider 的 DioException 防御降级模式
+  - `mobile/lib/features/home/presentation/widgets/goal_switcher.dart:1-60` — 多目标切换器 loading/error/data 状态
+  - `mobile/lib/features/home/presentation/widgets/cognitive_tool_hub_card.dart:1-150` — 工具集线器空状态处理
+  - `mobile/lib/features/home/presentation/widgets/dashboard_card_section.dart:1-100` — 卡片区空卡处理
+  - `mobile/lib/features/home/presentation/widgets/dashboard_edit_sheet.dart:1-100` — 编辑面板默认配置
+  - `mobile/lib/features/home/presentation/widgets/multi_goal_dashboard_card.dart:1-80` — 多目标卡片 AsyncValue.when 处理
+  - `mobile/lib/features/home/presentation/screens/notification_list_screen.dart:1-153` — 通知列表 loading/error/empty
+  - `mobile/lib/features/seed_library/presentation/marketplace/marketplace_screen.dart:1-120` — 技能市场 loading/error/empty
+  - `mobile/lib/features/community/presentation/screens/community_screen.dart:1-130` — 社区动态 loading/error/empty
+  - `mobile/lib/features/tools/presentation/screens/tool_library_screen.dart:40-100` — 工具库首屏
+  - `mobile/lib/features/tools/providers/tool_preferences_provider.dart:1-30` — 工具偏好初始化（同步默认值）
+  - `mobile/lib/features/splash/presentation/screens/splash_screen.dart:1-75` — 启动屏（GoRouter redirect 控制）
+  - `mobile/lib/app/routes.dart:65-124` — 路由守卫：auth loading → splash, authenticated → /home, unauthenticated → /login, onboarding → persona
+  - `mobile/lib/features/plan/presentation/providers/active_goal_provider.dart:184-312` — 多目标概览（双重 API 失败降级）
+  - `mobile/lib/features/insights/presentation/widgets/weekly_growth_narrative_card.dart:1-418` — 周成长叙事 loading/error/data + 空数据指标处理
+  - `mobile/lib/features/home/presentation/screens/dashboard_screen.dart:1035-1060` — 社区责任伙伴槽 loading/error skeleton
+  - `mobile/lib/features/user/presentation/screens/persona_onboarding_screen.dart:1-80` — 新用户引导
+- **New issues**: 0
+- **Findings**: J 域全面审查 19 个关键文件（dashboard 完整冷启动链路 + 所有主要首屏）。Agent 报告 11 处潜在问题，全部经亲自 Read 验证为误报。关键发现：
+  1. **Dashboard 防御降级模式设计优秀**: `dashboardProvider.fetchData()` 对每个 API 都有独立 try/catch（line 432-442），growth/predictive dashboard 失败不阻塞主流程。所有字段有合理默认值（weather='sunny', flame level=1, cognitive status='stable'）。`_shouldShowFirstGoalEmptyState()` (line 187-194) 正确检测新用户空状态
+  2. **Growth providers 的 silent fallback 是设计而非 bug**: 6 个 FutureProvider 捕获 DioException 返回空/默认值，使 dashboard 在 API 不稳定时仍可渲染。用户有 RefreshIndicator (line 866-870) 可手动刷新
+  3. **MultiGoalDashboardCard 正确使用 `asyncOverview.when(data/loading/error)` (line 30-36)**: 加载时显示 skeleton，错误时显示 CompactErrorCard + retry，空目标时 SizedBox.shrink()
+  4. **Community accountability slot 正确使用 `overview.when(data/loading/error)` (line 1041-1057)**: 加载时 SparkleCardSkeleton，错误时 _HomeErrorCard + retry
+  5. **Marketplace 完整状态机 (line 43-68)**: loading → error (with retry) → empty/data
+  6. **Tool library 无需 skeleton**: ToolPreferencesNotifier 同步初始化默认 pinnedToolIds（line 10-15），首屏立即可用
+  7. **Weekly narrative card 精心设计 (line 298-306)**: 指标为空时显示 "first week" pill，而非空白
+  8. **Splash 屏由 GoRouter redirect 控制 (line 93-98)**: auth loading 时保持 splash，完成后立即跳转，无需 splash 自身超时
+  9. **Agent 误报分析**: Agent 将所有防御性编码模式（null safe fallbacks, maybeWhen with orElse, defensive DioException catch）误判为 bug。特别是在明知代码有 `isLoading` 标志传递给子 widget（line 611）的情况下，仍将 `growthState == null during loading` 报为问题
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: A (Flutter UI E2E) — 9 轮未回探；或 H (i18n) — 7 轮未回探
