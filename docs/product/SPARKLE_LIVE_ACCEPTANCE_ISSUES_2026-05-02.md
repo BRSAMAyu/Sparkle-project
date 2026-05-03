@@ -1279,8 +1279,9 @@
   - **verification**: `bash scripts/run_all_rule_guards.sh --rule AV` → PASS (57 mode settings, 21 services). `pytest tests/test_av_kill_switch_guard.py -v` → 7/7 passed.
 
 ### ISSUE-20260503-0432-L3
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
+- **fixer_started_at**: 2026-05-04T07:20:00Z
 - **domain**: L
 - **title**: CLAUDE.md 安全清单"No hardcoded tokens or passwords"无对应自动化守卫，是唯一缺乏 CI 强制执行的安全清单条目
 - **symptom**: CLAUDE.md 的 Pre-Commit Checklist 和 Security Checklist 声明 "No hardcoded tokens or passwords (including test files)" 是合并前必检项。但与其他安全清单条目不同（DEBUG=True→ValueError / SECRET_KEY 弱值拒绝 / CORS '*' 拒绝 / gRPC reflection 禁用 等均有运行时守卫或 CI 守卫），硬编码凭据检测完全依赖人工代码审查。硬编码的 API key 或 token 可能在不被发现的情况下合入
