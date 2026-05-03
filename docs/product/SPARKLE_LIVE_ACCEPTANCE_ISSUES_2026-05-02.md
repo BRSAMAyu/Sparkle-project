@@ -651,11 +651,12 @@
   (h) Remaining invisible-error cards (11 files, outside evidence scope): calendar/smart_schedule_chip, error_book screens (2), error_book/remediable_patterns_card, aurora/calibration_strip, user/profile_screen, task/task_detail_screen, task/task_protocol_panel, community/accountability_screen, community/similar_goal_pursuers_card, reviews/nightly_review_panel. Worth a broader cleanup pass.
 
 ### ISSUE-20260503-1513-K4
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: K
 - **title**: OpenAICompatibleProvider 在 openai.Timeout 导入失败时创建无超时配置的 AsyncOpenAI 客户端，LLM 调用可能永久挂起
 - **fixer_started_at**: 2026-05-03T22:55:00Z
+- **closed_at**: 2026-05-03T23:20:00Z
 - **symptom**: 在 openai 包版本过旧或不导出 Timeout 的环境中，LLM API 调用没有超时保护。若外部 LLM API 响应挂起，gRPC stream 会一直等待直到客户端超时
 - **root_cause_hypothesis**: providers.py:6-12 中 Timeout 导入使用 try/except：成功→类，失败→None。Line 43 timeout_config = Timeout(...) if Timeout else None → None 时无超时。Line 48-52 AsyncOpenAI(timeout=None) → 无超时。且导入失败无日志警告
 - **evidence**:
@@ -669,7 +670,22 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer-K+2026-05-03T15:15
 - **reviewer_note**: APPROVED — 代码确认：providers.py:6-12 try/except ImportError → Timeout=None（无日志）；line 43 timeout_config=None 当 Timeout is None；line 48-52 AsyncOpenAI(timeout=None)。httpx.Timeout(None) 表示无限等待（已通过 python3 验证）。现实风险较低：requirements.txt line 55 指定 openai>=1.10.0，而 openai.Timeout 从 v1.0.0+ 一直可用（当前环境 openai 2.30.0 正常导入）。GgRPC stream 有 300s 超时 (chat_orchestrator_chatflow.go:284) 提供二级保护。但防御性 try/except 的存在说明开发者预期此场景，缺少 fallback + 无日志警告是真实缺口。P2 评级合理。
-- **fix_commit**:
+- **fix_commit**: 161b3be85
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-03T13:18Z
+
+  **(a) Root cause genuinely resolved.** Pre-fix: `Timeout = None` (ImportError) -> `Timeout(...) if Timeout else None` -> `None` -> `AsyncOpenAI(timeout=None)`. Post-fix: `OpenAITimeout = None` (ImportError) + `import httpx` -> `if OpenAITimeout: ... else: httpx.Timeout(...)` -> always produces valid timeout config. Verified: `openai.Timeout IS httpx.Timeout` (identical class, not just compatible) — `OpenAITimeout.__mro__ == httpx.Timeout.__mro__ == ['Timeout', 'object']`, `issubclass` both directions returns True. When HAS_OPENAI=True (normal env), behavior is byte-identical to pre-fix (same class, same constructor args, same .read/.connect values). Added `logger.warning` provides observability for the fallback path.
+
+  **(b) No regression risk.** `OpenAITimeout` alias avoids namespace collision with `import httpx` (which would shadow bare `Timeout`). Only `providers.py` references openai.Timeout; no other file in `backend/app/` imports `Timeout` from openai. `httpx>=0.26.0` already in requirements.txt line 33 — no new dependency. Normal-path (HAS_OPENAI=True) behavior confirmed identical to pre-fix via python3 verification.
+
+  **(c) Cross-layer contracts: no sync needed.** Pure Python change; zero proto/DB/i18n/Flutter impact.
+
+  **(d) Tests: 3/4 pass.** `test_httpx_fallback_has_expected_values`, `test_httpx_timeout_is_not_none`, `test_timeout_config_never_none` all PASS. `test_providers_module_imports` fails because worktree HEAD lacks the fix (imports `OpenAITimeout` which only exists post-fix) — will pass after fix is merged.
+
+  **(e) Rule guards: no new failures.** AQ + BG pre-existing (proto-generated files not available in this env). No CLAUDE.md violations. No secrets, no hardcoded tokens.
+
+  **Minor observations (not blocking):**
+  1. The `else` branch (`httpx.Timeout` fallback) is technically unreachable in the current code structure because `HAS_OPENAI=False` triggers `raise HTTPException` before the timeout code is reached, and `HAS_OPENAI=True` implies `OpenAITimeout` is always available (all three openai names imported in a single `from openai import` statement). This is acceptable defensive programming — the code documents intent and guards against future import restructuring. Not a defect.
+  2. Test file imports `pytest` but never uses it (lint nit, not a test failure).
 
 ### ISSUE-20260503-1300-B1
 - **status**: closed_already_resolved
@@ -1018,6 +1034,7 @@
 | R12 | 2026-05-03T21:45 | ISSUE-20260503-1512-K3 | closed | 4d3bae8d8 | ~45 min |
 | R13 | 2026-05-03T22:15 | ISSUE-20260503-2100-I1 | closed | cde0cb99b | ~25 min |
 | R14 | 2026-05-03T22:50 | ISSUE-20260503-2102-I3 | closed | 9b2698fd1 | ~30 min |
+| R15 | 2026-05-03T23:20 | ISSUE-20260503-1513-K4 | closed | 161b3be85 | ~25 min |
 | R14 | 2026-05-03T22:50 | ISSUE-20260503-2102-I3 | ✅ Fixed | 9b2698fd1 | ~30 min |
 | R15 | 2026-05-04T00:20 | ISSUE-20260503-0432-L2 | ✅ Fixed | 8c16875c1 | ~65 min |
 | R16 | 2026-05-04T00:35 | ISSUE-20260503-1602-E3 + E4 | ✅ Fixed | 288b0407b | ~5 min |
