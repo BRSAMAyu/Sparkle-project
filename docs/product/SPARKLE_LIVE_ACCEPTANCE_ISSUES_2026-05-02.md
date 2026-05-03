@@ -1523,7 +1523,6 @@
 ### ISSUE-20260504-0300-C2
 - **status**: closed
 - **severity**: P2
-- **fixer_started_at**: 2026-05-04T03:30:00Z
 - **domain**: C
 - **title**: Go gateway 缺少 2 个 task guidance 代理路由（GET/POST），用户点击生成指南后报错
 - **symptom**: 用户在任务详情页打开 Guidance 面板 → 首次加载时 API 返回 404 → UI 认为无 guidance → 自动触发 POST generation → 再次 404 → 用户看到错误 snackbar "Guidance generation failed"。GET 路径静默降级（404→null→空状态），但 POST 路径硬失败
