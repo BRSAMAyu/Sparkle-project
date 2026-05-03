@@ -1714,7 +1714,7 @@
 ### ISSUE-20260504-0500-B4
 - **status**: in_progress
 - **severity**: P2
-- **fixer_started_at**: 2026-05-03T08:49:52Z
+- **fixer_started_at**: 2026-05-03T09:01:14Z
 - **domain**: B
 - **title**: NotificationNotifier.markAsRead API 标记已读失败时 catch 块完全为空，用户无任何错误反馈
 - **symptom**: 用户在通知列表页点击某条通知期望标记为已读。如果 API 调用失败（网络超时/500），通知保持未读状态留在列表中，但用户看到的是：点击后蓝点不消失、通知不移动，无任何 toast/snackbar 提示操作失败。用户可能反复点击同一通知但不知道为何无效
@@ -1732,6 +1732,24 @@
 - **verified_by**: opus-reviewer+2026-05-04T05:15:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) notification_provider.dart:40-42 的 catch 块仅含 `// Handle error` 注释，完全空。(2) markAsRead 使用正确的 API-first 模式，但由于空 catch 导致 API 失败时 state 保持旧值、通知留在列表中。(3) notification_list_screen.dart:101-104 UI 层 onTap 直接调用 markAsRead 不 await/try-catch，无错误反馈路径。(4) notification_repository.dart:71-77 repository 层 PUT 无 fallback。调用链完整：UI onTap → ref.read().markAsRead() → repository.markAsRead() → PUT /notifications/$id/read → API 失败 → catch 空 → 无 state 更新 → 蓝点不消失。对比同文件 fetchUnreadNotifications() (line 25-27) 正确使用 `catch (e, st) { state = AsyncValue.error(e, st); }` 证明空 catch 非设计意图。与 B1 (_payload 静默转换), B2 (乐观更新无声回退), B3 (catch-all 使 error 状态不可达) 均不重复——B4 是"API-first 正确但 catch 完全为空"的独立模式。P2 评级合理——通知标记已读失败累积未读通知造成信息焦虑，对北极星有间接影响。
 - **fix_commit**: 留空
+- **opus_review**: REJECTED by opus-independent-reviewer at 2026-05-03T09:05:00Z
+- **rework_note**: |
+  修复逻辑正确（provider debugPrint+rethrow, UI catchError+AppFeedback.error），但存在 1 个编译期缺陷导致被拒：
+
+  **缺陷 D1 — 缺少 debugPrint 所需的 import [编译阻断]**
+  `notification_provider.dart:41` 新增 `debugPrint('markAsRead failed: $e')` 但文件未导入 `package:flutter/foundation.dart`（或 `package:flutter/material.dart`）。同目录下所有其他使用 `debugPrint` 的 provider 文件均显式导入 foundation.dart（dashboard_provider.dart, home_growth_provider.dart）或 material.dart（intent_prediction_provider.dart）。当前因 feed_post_card.dart 预存语法错误导致全项目编译被阻断，此 import 缺失在修复该预存错误后会立即暴露为编译错误。
+
+  **重做指令**：
+  1. 在 `notification_provider.dart` 第 2 行（`import 'dart:async';` 之后）新增 `import 'package:flutter/foundation.dart';`
+  2. 无需改动其他文件（notification_list_screen.dart 的 catchError 和 i18n 模式正确，测试文件 3/3 pass）
+  3. 修复后 re-verify：确认 `flutter analyze` 对 notification_provider.dart 零错误
+
+  **验证结果**：
+  - 规则守卫：全 PASS（AX WARN 为预存量）
+  - notification_provider_test.dart：3/3 pass
+  - 跨层契约：无 proto/DB/i18n 变更，无需同步
+  - 回归风险：仅 1 个调用方（notification_list_screen.dart:105），catchError 正确处理 rethrow
+  - 测试保护：测试为逻辑复制品非真实单元测试（因预存编译错误），建议编译恢复后改为真实 Widget/Provider 测试
 
 ### ISSUE-20260504-0501-B5
 - **status**: verified
