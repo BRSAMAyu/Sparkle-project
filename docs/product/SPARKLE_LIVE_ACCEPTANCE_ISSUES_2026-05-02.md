@@ -1072,6 +1072,7 @@
 | R23 | 2026-05-04T04:25 | ISSUE-20260503-2101-I2 | ✅ Fixed | 9c5e89afa | ~15 min |
 | R24 | 2026-05-04T08:05 | ISSUE-20260503-0432-L3 | ✅ Fixed | d4a98b44b | ~45 min |
 | R25 | 2026-05-04T09:35 | ISSUE-20260503-2300-B1 | ✅ Fixed | ad825322c | ~10 min |
+| R26 | 2026-05-04T08:25 | ISSUE-20260503-2301-B2 | ✅ Fixed | 6b69c479d | ~35 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1351,7 +1352,7 @@
 - **closed_at**: 2026-05-04T09:35:00Z
 
 ### ISSUE-20260503-2301-B2
-- **status**: in_progress
+- **status**: verified
 - **severity**: P2
 - **fixer_started_at**: 2026-05-04T07:50:00Z
 - **domain**: B
@@ -1369,7 +1370,9 @@
 - **reviewer_note**: APPROVED — 独立审阅确认全部 3 处 evidence 代码与条目描述一致。(1) aurora_preferences_provider.dart:70-83 的 updatePreference 在 line 73 执行乐观更新 state=AsyncData(updated)，line 76-80 try API PUT，line 81-83 catch(_){ state=AsyncData(current) } 无声回退，无任何用户通知。(2) aurora_preferences_provider.dart:55-67 的 build() 在 catch(_) 中返回 const AuroraPreferences() 全默认值——用户看到 deep/guided/detailed/motivating 但无法区分这是真实偏好还是默认值。(3) aurora_preferences_provider.dart:12-18 默认值确认。调用链完整：用户切换选项 → updatePreference → 乐观 state 更新 → API PUT 失败 → catch(_) 无声回退 → 用户看到选项弹回无提示。非设计意图——项目其他处（如 friends_screen.dart 的 deleteFriend）在 API 失败时有 SnackBar 反馈。P2 评级合理。
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T00:15:00Z
-- **fix_commit**:
+- **fix_commit**: 6b69c479d
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-04T08:20:00Z
+- **closed_at**: 2026-05-04T08:25:00Z
 
 ### ISSUE-20260503-2302-B3
 - **status**: verified
