@@ -1479,7 +1479,7 @@
   **(f) CLAUDE.md / Rule guards: NO VIOLATIONS.** No secrets, no hardcoded tokens, no cross-layer boundary violations. Go gateway schema.sql update follows established pattern. Rule guards all pass (AX pre-existing unrelated).
 
 ### ISSUE-20260504-1045-I5
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: I
 - **title**: Go schema.sql tasks 表 + sqlc Task struct 缺失 paused_at/paused_reason 列——I2 修复后未运行 make sync-db
@@ -1487,7 +1487,7 @@
 - **root_cause_hypothesis**: I2 修复通过 alembic migration de30c736266b 向 DB tasks 表添加了 paused_at 和 paused_reason 列，Python model 同步添加。但 `make sync-db`（pg_dump → schema.sql → sqlc gen）未运行，导致 Go schema.sql 的 tasks 表定义和 sqlc 生成的 Task struct 均停留在 I2 之前的状态。
 - **evidence**:
   - `backend/gateway/internal/db/schema.sql:5622-5656` — tasks 表 CREATE TABLE 共 33 列，无 paused_at、paused_reason
-  - `backend/gateway/internal/db/models.go:5120-5154` — Go Task struct 共 30 字段，无 PausedAt/PausedReason
+  - `backend/gateway/internal/db/models.go:5120-5154` — Go Task struct 共 33 字段，无 PausedAt/PausedReason
   - `backend/gateway/internal/db/query.sql.go:936` — GetTaskByID 查询 SELECT 列表不含 paused_at/paused_reason
   - `backend/app/models/task.py:97-98` — Python Task model 含 `paused_at = Column(DateTime)` 和 `paused_reason = Column(Text)`
   - `backend/alembic/versions/de30c736266b_add_paused_at_reason_to_tasks.py:28-30` — `op.add_column("tasks", sa.Column("paused_at", ...)); op.add_column("tasks", sa.Column("paused_reason", ...))`
@@ -1497,19 +1497,19 @@
 - **blast_radius**: Go gateway task 数据完整性。当前 Go handler/service 无 paused 字段引用（零 grep 结果），paused 数据通过 Python REST API 直接返回 Flutter 不受影响。但 Go schema.sql 作为 source of truth 已过期，后续基于它的开发会产生更多漂移。对北极星影响低
 - **suggested_fix_direction**: 运行 `make sync-db` 更新 schema.sql + 重新生成 sqlc。可在 CI 或 pre-commit hook 中添加 `make sync-db && git diff --exit-code` 检查防止未来漂移
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-reviewer+2026-05-04T11:15
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1050-I6
-- **status**: discovered
+- **status**: verified
 - **severity**: P3
 - **domain**: I
 - **title**: Go sqlc Reportreason 常量缺失 HATE_SPEECH——schema.sql 已含 7 值但 sqlc 未重生
 - **symptom**: Go models.go 中 Reportreason 类型仅有 6 个常量（SPAM/HARASSMENT/VIOLENCE/MISINFORMATION/INAPPROPRIATE/OTHER），缺少 HATE_SPEECH。当前 Go 不处理举报原因（query.sql.go 零引用），但常量集不完整。
 - **root_cause_hypothesis**: I4 修复更新了 schema.sql 的 reportreason enum（添加 HATE_SPEECH），且 c28 迁移已应用到 DB。但 sqlc 未重新生成，Go models.go 的 Reportreason 常量停留在 6 值状态。与 I5 同根因——`make sync-db` 未在 I4 修复后运行。
 - **evidence**:
-  - `backend/gateway/internal/db/schema.sql` — `CREATE TYPE reportreason AS ENUM (...'HATE_SPEECH'...)` — 7 值含 HATE_SPEECH
-  - `backend/gateway/internal/db/models.go` — `ReportreasonSPAM / ReportreasonHARASSMENT / ... / ReportreasonOTHER` 仅 6 常量，无 `ReportreasonHATESPEECH`
+  - `backend/gateway/internal/db/schema.sql:482-490` — `CREATE TYPE reportreason AS ENUM (7 values incl. 'HATE_SPEECH')`
+  - `backend/gateway/internal/db/models.go:1256-1261` — `ReportreasonSPAM / ReportreasonHARASSMENT / ... / ReportreasonOTHER` 仅 6 常量，无 `ReportreasonHATESPEECH`
   - `backend/gateway/internal/db/query.sql.go` — grep Reportreason 零结果，确认 Go 当前不查询举报原因
   - `backend/app/models/community.py:90-98` — Python ReportReason enum 含 HATE_SPEECH（7 值）
 - **repro_or_trigger**: grep models.go `Reportreason` → 仅 6 常量 → 对比 schema.sql reportreason enum 有 7 值
@@ -1517,7 +1517,7 @@
 - **blast_radius**: 极低——Go gateway 不处理举报原因（仅 JSON 透传），无运行时影响。但违反"schema.sql 为 source of truth"原则，未来若 Go 添加举报查询会引入遗漏 bug
 - **suggested_fix_direction**: 运行 `make sync-db`（与 I5 同一操作）。I5 和 I6 共享根因：I2/I4 修复后未运行 `make sync-db`，一次性修复两处漂移
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-reviewer+2026-05-04T11:15
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-0016-H5
