@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/materials.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/features/task/task_routes.dart';
@@ -92,7 +93,9 @@ class LearningHeatmapWidget extends ConsumerWidget {
     final asyncData = ref.watch(learningHeatmapProvider(days));
     return asyncData.when(
       loading: () => const _HeatmapSkeleton(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => CompactErrorCard(
+        onRetry: () => ref.invalidate(learningHeatmapProvider(days)),
+      ),
       data: (loadedData) => _HeatmapContent(days: days, data: loadedData),
     );
   }

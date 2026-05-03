@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/chat.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
@@ -64,7 +65,9 @@ class HomeNotificationCard extends ConsumerWidget {
         );
       },
       loading: SizedBox.shrink,
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => CompactErrorCard(
+        onRetry: () => ref.invalidate(unreadNotificationsProvider),
+      ),
     );
   }
 

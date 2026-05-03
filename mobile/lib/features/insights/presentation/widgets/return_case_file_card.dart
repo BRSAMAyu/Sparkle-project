@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/insights/data/models/return_case_file.dart';
 import 'package:sparkle/features/insights/presentation/providers/return_case_file_provider.dart';
@@ -30,7 +31,9 @@ class ReturnCaseFileCard extends ConsumerWidget {
 
     return asyncCase.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => CompactErrorCard(
+        onRetry: () => ref.invalidate(returnCaseFileProvider),
+      ),
       data: (caseFile) {
         if (caseFile == null || caseFile.isEmpty) {
           return const SizedBox.shrink();

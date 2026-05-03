@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
@@ -67,7 +68,9 @@ class PlanContextSummary extends ConsumerWidget {
     return planAsync.when(
       data: (plan) => _PlanContextCard(plan: plan, isDark: isDark),
       loading: () => _buildLoadingCard(isDark),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => CompactErrorCard(
+        onRetry: () => ref.invalidate(planDetailProvider(plan)),
+      ),
     );
   }
 

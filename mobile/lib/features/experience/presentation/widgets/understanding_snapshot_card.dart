@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/experience/data/experience_models.dart';
 import 'package:sparkle/features/experience/presentation/providers/experience_provider.dart';
@@ -22,7 +23,9 @@ class UnderstandingSnapshotCard extends ConsumerWidget {
         onOpenChat: onOpenChat,
       ),
       loading: () => const _ExperienceCardSkeleton(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => CompactErrorCard(
+        onRetry: () => ref.invalidate(understandingSnapshotProvider),
+      ),
     );
   }
 }
