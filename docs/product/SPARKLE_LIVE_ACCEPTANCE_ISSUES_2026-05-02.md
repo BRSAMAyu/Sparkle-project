@@ -750,7 +750,7 @@
 - **suggested_fix_direction**: 创建 `AuroraStage{DualCore}KillSwitchService`，在 `dual_core_router.route()` 入口处添加 `get_feature_mode()` 检查：off→返回默认直通决策，shadow→记录但不应用路由重定向，live→完整双核路由。同时在 routing_engine.py 调用点添加守卫
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T17:00:00Z
-- **fix_commit**:
+- **fix_commit**: 96fe0329c
 
 ### ISSUE-20260503-1601-E2
 - **status**: verified
@@ -1012,7 +1012,7 @@
 | R8 | 2026-05-03T20:00 | ISSUE-20260503-1510-K1 | ✅ Fixed | 6001a2e04 | ~15 min |
 | R9 | 2026-05-03T20:25 | ISSUE-20260503-1530-A1 | ✅ Fixed | 1c22526b7 | ~20 min |
 | R10 | 2026-05-03T20:30 | ISSUE-20260503-1511-K2 | closed | 58e05cbae | ~20 min |
-| R11 | 2026-05-03T21:10 | ISSUE-20260503-1600-E1 | ✅ Fixed | (pending) | ~35 min |
+| R11 | 2026-05-03T21:10 | ISSUE-20260503-1600-E1 | ✅ Fixed | 96fe0329c | ~35 min |
 | R12 | 2026-05-03T21:45 | ISSUE-20260503-1512-K3 | closed | 4d3bae8d8 | ~45 min |
 | R13 | 2026-05-03T22:15 | ISSUE-20260503-2100-I1 | closed | cde0cb99b | ~25 min |
 | R14 | 2026-05-03T22:50 | ISSUE-20260503-2102-I3 | closed | 9b2698fd1 | ~30 min |
@@ -1249,7 +1249,65 @@
 - **verified_by**: opus-reviewer+2026-05-03T22:30:00Z
 - **fix_commit**:
 
-### Round R13 — 2026-05-03T22:00
+### ISSUE-20260503-2300-B1
+- **status**: discovered
+- **severity**: P2
+- **domain**: B
+- **title**: experience_repository._payload 将非 Map 响应无声转换为空对象，4 个 experience 端点的 API 契约变化完全不可探测
+- **symptom**: 当 experience API（understanding-snapshot / growth-dashboard / goal-detail / community-accountability）返回非 Map 结构的响应时（如 List、String、null），用户看到全零/全空的有效对象（confidence=0, summary='', tasksTotal=0 等），没有任何错误提示。API 返回了数据但客户端无法解析的事实被完全隐藏
+- **root_cause_hypothesis**: `ExperienceRepository._payload()` 对非 Map 数据返回 `const {}` 而不是抛出异常或传播错误。4 个 FutureProvider 调用的 repository 方法（getUnderstandingSnapshot / getGrowthDashboard / getGoalDetail / getCommunityAccountability）全部经过 `_payload(response.data)` 将响应转换为 Map。当 `response.data` 是 List 或 String 时，`_payload` 返回空 Map。`experience_models.dart` 的 `fromJson` 工厂方法使用防御性 helper（`_string` 返回 ''、`_int` 返回 0、`_unit` 返回 0.0、`_list` 返回 []），对空 Map 不会崩溃，而是产生全默认值的有效对象。FutureProvider 成功 resolve——无 error 状态触发
+- **evidence**:
+  - `mobile/lib/features/experience/data/experience_repository.dart:49-52` — `_payload(Object? data)` 对非 Map 返回 `const {}`:`if (data is Map<String, dynamic>) return data; if (data is Map) return Map<String, dynamic>.from(data); return const {};`
+  - `mobile/lib/features/experience/data/experience_models.dart:216-219` — `_map()` helper 对非 Map 返回 `null`，所有 fromJson 在遇到 `null` 时回退到默认值:`Map<String, dynamic>? _map(Object? value) { if (value is Map<String, dynamic>) return value; if (value is Map) return Map<String, dynamic>.from(value); return null; }`
+  - `mobile/lib/features/experience/data/experience_models.dart:18-43` — `UnderstandingSnapshot.fromJson({})` 产生 `UnderstandingSnapshot(active: false, status: 'sensing', summary: '', confidence: 0, ...)`——完全有效的对象
+  - `mobile/lib/features/experience/presentation/providers/experience_provider.dart:5-9` — `understandingSnapshotProvider` 无 try/catch，完全依赖 repository 层返回或抛异常。repository 永远不抛异常，所以 provider 永远不进入 error 状态
+- **repro_or_trigger**: 修改 Go gateway 代理使 `/experience/understanding-snapshot` 返回 `["unexpected", "array"]` → 启动 Flutter → 打开"Sparkle懂我"卡片 → 看到 "未激活, 置信度 0%, 无摘要" 而非错误提示
+- **expected_vs_actual**: 期望：非 Map 响应触发 FutureProvider error 状态 → UI 显示 CompactErrorCard 并提供重试；实际：FutureProvider 成功返回全默认值对象 → UI 渲染为有效但内容为空的卡片
+- **blast_radius**: 影响 4 个 experience FutureProvider 的错误可观测性。如果后端 API 被重构、Go gateway 代理配置错误、或中间件篡改响应格式，用户和开发者都无法通过 UI 发现。对北极星有间接影响——experience 数据是 Aurora 个性化引擎的基础，"看似正常但全为空"的数据会导致 Aurora 做出错误推断
+- **suggested_fix_direction**: 将 `_payload` 改为对非 Map 响应抛出 `FormatException` 或返回 `null` 让调用方处理。或为每个 repository 方法添加响应类型断言。至少应在非 Map 时记录 warning 日志（`debugPrint`）
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260503-2301-B2
+- **status**: discovered
+- **severity**: P2
+- **domain**: B
+- **title**: AuroraPreferencesNotifier.updatePreference 乐观更新在 API 失败时无声回退到旧值，用户无任何反馈
+- **symptom**: 用户在设置中修改 Aurora 偏好（分析深度/指导风格/解释详细度/压力风格），UI 立即显示新值。但 API 调用失败时，UI 无声地回退到旧值。用户看到开关/选项自己弹回去了，不知道发生了什么
+- **root_cause_hypothesis**: `updatePreference()` 使用"乐观更新 + catch (_) 回退"模式，但回退时没有通知用户失败原因。`catch (_)` 丢弃了所有错误信息（包括 DioException 的 statusCode/message），用户无感知。对比同级方法 `build()` 也有 `catch (_)` 返回默认值，但 4 种偏好全都是默认值 'deep'/'guided'/'detailed'/'motivating'——如果 build 阶段 API 失败，用户永远不知道自己看到的是默认值而不是服务端存储的偏好
+- **evidence**:
+  - `mobile/lib/features/aurora/presentation/providers/aurora_preferences_provider.dart:70-83` — `updatePreference` 乐观更新 + 无声回退:`state = AsyncData(updated); ... try { await apiClient.put(...); } catch (_) { state = AsyncData(current); }`
+  - `mobile/lib/features/aurora/presentation/providers/aurora_preferences_provider.dart:55-67` — `build()` 在 API 失败时返回全默认值:`catch (_) { return const AuroraPreferences(); }` —— 4 个字段全部是默认值，用户永远不知道自己看到的是默认值
+  - `mobile/lib/features/aurora/presentation/providers/aurora_preferences_provider.dart:12-18` — `AuroraPreferences` 默认值：analysisDepth='deep', directness='guided', explanationLevel='detailed', pressureStyle='motivating'
+- **repro_or_trigger**: 修改 `/aurora/preferences` 的 Go gateway 代理使 PUT 返回 500 → Flutter 设置页 → 修改分析深度从 'deep' 到 'quick' → 看到变为 'quick' → 约 1 秒后自动弹回 'deep'（无 toast / snackbar / 错误提示）
+- **expected_vs_actual**: 期望：API 失败时回退到旧值 + snackbar/toast 提示"保存失败，已恢复"；实际：无声回退，用户看到选项自己弹回去
+- **blast_radius**: 影响 Aurora 偏好设置的所有 4 个维度。用户可能反复尝试修改但不知道为什么改不了。对北极星有间接影响——错误的偏好值会影响 Aurora 的响应风格和深度
+- **suggested_fix_direction**: 在 `updatePreference` 的 catch 块中回退状态后，通过某种机制（callback / global error bus / 返回 Result 类型）通知 UI 显示 snackbar。或改为非乐观模式（先 API 后更新 state），代价是 UI 响应稍慢
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260503-2302-B3
+- **status**: discovered
+- **severity**: P3
+- **domain**: B
+- **title**: spineStatusBandProvider 使用 catch (_) 吞没所有异常，provider 永远不进入 error 状态，代码 bug 与网络故障不可区分
+- **symptom**: Dashboard 上的 Aurora 脊柱状态栏（spine status band）在 API 故障时静默消失。但如果 `SpineStatusBand.fromJson` 有代码 bug（如字段类型不匹配导致 TypeError），同样静默消失——开发者无法通过 UI 或日志区分"API 不可用"和"代码有 bug"
+- **root_cause_hypothesis**: `spineStatusBandProvider` 是 `FutureProvider<SpineStatusBand?>`，`catch (_)` 捕获所有异常并返回 `null`。`null` 表示"无数据显示"，UI 据此隐藏该组件。但 DioException（网络故障）和 TypeError（代码 bug）被同等处理——都返回 null
+- **evidence**:
+  - `mobile/lib/features/home/presentation/providers/spine_status_band_provider.dart:117-130` — catch-all 吞错:`try { ... return SpineStatusBand.fromJson(data); } catch (_) { return null; }`
+  - `mobile/lib/features/home/presentation/providers/spine_status_band_provider.dart:118` — `FutureProvider<SpineStatusBand?>` 的 `<SpineStatusBand?>` 使 null 成为合法返回值，不会触发 error 状态
+  - `mobile/lib/features/home/presentation/providers/spine_status_band_provider.dart:121-122` — API 调用使用非空端点:`final response = await api.get<Map<String, dynamic>>(ApiEndpoints.auroraSpineStatusBand);`
+- **repro_or_trigger**: (网络故障) 停止 Go gateway → Dashboard 上脊柱状态栏静默消失。(代码 bug) 修改 `SpineStatusBand.fromJson` 使其在某个字段上 throw TypeError → Dashboard 上脊柱状态栏同样静默消失。两者完全无法区分
+- **expected_vs_actual**: 期望：代码 bug 导致 FutureProvider error 状态 → CompactErrorCard 显示并提供重试；网络故障可以静默降级（返回 null）。实际：所有异常统一返回 null，error 状态永远不可达
+- **blast_radius**: 仅影响脊柱状态栏这一非关键 UI 组件。但该模式可能被复制到其他 FutureProvider。对北极星无直接影响
+- **suggested_fix_direction**: 区分异常类型：`on DioException catch (_) { return null; }`（网络故障静默降级）+ `catch (e, st) { debugPrint('spineStatusBand bug: $e\n$st'); return null; }`（代码 bug 至少记录日志）。长期：考虑添加全局 provider 异常监控
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### Round R14 — 2026-05-03T23:00
 - **Domain**: L (治理规则与文档承诺 vs 真实实现)
 - **Paths covered**:
   - scripts/rule_guard_manifest.tsv (64 registered rules, full audit)
@@ -1270,4 +1328,6 @@
 - **Findings**: The governance rule system has 64 registered rules with generally solid coverage of write boundaries, eval/safety, vision compliance, financial, and security domains. Discovered 4 gaps: (1) BH meta-learning parameter safety guard exists but is not registered in manifest — never runs in CI; (2) AV kill switch guard has stale hardcoded SERVICE_PATHS (18/21) and MODE_SETTINGS (44/48) lists, missing dual-core router, stage37 LLM safety, stage39, and privacy modes — new kill switch services won''t be checked for compliance; (3) No automated guard for "no hardcoded tokens/passwords" — the only security checklist item without CI enforcement; (4) AW/BB/BE guards use shallow string-match detection that can''t distinguish function rename (false positive) from semantic break (false negative). On the positive side: all production guards documented in CLAUDE.md (DEBUG/SECRET_KEY/CORS/gRPC reflection) actually exist in settings.py; bluemonday sanitization is operational in websocket_proxy.go and chat_orchestrator.go; hmac.compare_digest is used for timing-attack resistant comparison; all 64 manifest-referenced scripts exist on disk.
 - **Opus pass rate**: 4/4 (L1/L2/L3/L4 all APPROVED by opus-reviewer at 2026-05-03T22:30)
 - **Next suggested domain**: I (DB 迁移 vs 代码字段) — already done (R12). All 12 domains now explored at least once.
+| R14 | 2026-05-03T23:00 | B | 3 | pending | Riverpod Provider 健康度续探——B1 无声数据丢失, B2 乐观更新无声回退, B3 catch-all 吞错
 
+---
