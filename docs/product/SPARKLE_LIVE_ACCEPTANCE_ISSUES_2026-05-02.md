@@ -1384,9 +1384,10 @@
 ---
 
 ### ISSUE-20260504-0015-I4
-- **status**: verified
+- **status**: in_progress
 - **severity**: P1
 - **domain**: I
+- **fixer_started_at**: 2026-05-04T02:15:00Z
 - **title**: ReportReason I3 修复不完整：Python model enum 缺失 HATE_SPEECH，schema 接受但 DB 写入失败
 - **symptom**: Flutter 端选择 "仇恨言论" (hate_speech) 提交举报 → API schema 验证通过（ReportReasonEnum 包含 hate_speech）→ Python 尝试写入 DB（ReportReason model enum 不包含 HATE_SPEECH）→ PostgreSQL 报 invalid input value for enum reportreason: "hate_speech"
 - **root_cause_hypothesis**: I3 修复同步了 Flutter 和 schema 层（community.py:882-889 的 ReportReasonEnum 添加了 HATE_SPEECH），但遗漏了 model 层（community.py:90-97 的 ReportReason enum 仍不包含 HATE_SPEECH）。DB 列定义使用 model enum（community.py:652 `Column(Enum(ReportReason))`），导致 schema 接受但 DB 拒绝
