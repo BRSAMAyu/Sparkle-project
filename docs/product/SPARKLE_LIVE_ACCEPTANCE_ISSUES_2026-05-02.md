@@ -382,7 +382,7 @@
 | R3 | 2026-05-03T13:30 | C | 0 | N/A | Proto/WebSocket contract sound; reconnection has offline queue persistence |
 | R4 | 2026-05-03T14:00 | J | 0 | N/A | Cold-start well-designed: skeleton loading, first-goal empty state, wizard with AI, error recovery |
 | R5 | 2026-05-03T14:10 | H | 4 | 3/4 (H3 rejected as designed) | i18n residuals: H1/H2/H4 verified, H3 rejected (isChinese is project documented pattern) |
-| R6 | 2026-05-03T15:10 | K | 4 | pending Opus review | Error handling: K1 leaderboard percentile, K2 chat history lost, K3 silent error swallowing, K4 LLM timeout fallback |
+| R6 | 2026-05-03T15:10 | K | 4 | 4/4 (K1 in_progress, K2/K3/K4 verified) | Error handling: leaderboard percentile, chat history lost, silent error swallowing, LLM timeout fallback |
 | R6 | 2026-05-03T15:00 | K | 1 | 1/1 (K1 verified) | Error handling gaps in goal detail actions |
 | R7 | 2026-05-03T15:30 | A | 1 | pending opus review | Task execution navigation missing activeTaskProvider |
 
@@ -742,7 +742,7 @@
   - providers.py (openai.Timeout import failure → no timeout fallback)
 - **New issues**: K1(P1)=1510, K2(P1)=1511, K3(P2)=1512, K4(P2)=1513
 - **Findings**: Two P1s cross the Go↔Python boundary. K1 (leaderboard): GLOBAL percentile is a pure math bug (total_participants=-1 sentinel used in division); empty leaderboards crash with ZeroDivisionError. K2 (chat): gRPC stream error handling sacrifices conversation history integrity — return false before saveMessage means multi-turn context is silently lost. K3 (Flutter): 12+ dashboard/experience cards use SizedBox.shrink() on error, silently vanishing when backend is unreachable. K4 (LLM): Timeout import fallback creates no-timeout client — rare but LLM hangs can block gRPC slots.
-- **Opus pass rate**: pending (4 discovered, 0 verified yet)
+- **Opus pass rate**: 4/4 (K1 claimed in_progress by fixer, K2/K3/K4 verified)
 - **Next suggested domain**: E (Aurora kill switch real observability) or F (event bus consumer DLQ/retry) — backend resilience areas not yet explored
 
 ### Round R6 — 2026-05-03T15:00
