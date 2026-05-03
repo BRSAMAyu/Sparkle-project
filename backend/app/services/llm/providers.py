@@ -4,13 +4,15 @@ from fastapi import HTTPException
 from loguru import logger
 
 try:
-    from openai import APIError, AsyncOpenAI, Timeout
+    from openai import APIError, AsyncOpenAI, Timeout as OpenAITimeout
     HAS_OPENAI = True
 except ImportError:
     AsyncOpenAI = None
     APIError = Exception
-    Timeout = None
+    OpenAITimeout = None
     HAS_OPENAI = False
+
+import httpx
 
 from app.services.llm.base import LLMProvider
 from app.services.llm.concurrency import llm_concurrency
@@ -40,10 +42,20 @@ class OpenAICompatibleProvider(LLMProvider):
         # - read: 60s for response (covers GLM thinking mode which can take 30s+)
         # - write: 30s for request upload
         # - pool: 10s for connection pool acquisition
-        timeout_config = Timeout(
-            timeout=timeout_seconds,
-            connect=10.0,
-        ) if Timeout else None
+        if OpenAITimeout:
+            timeout_config = OpenAITimeout(
+                timeout=timeout_seconds,
+                connect=10.0,
+            )
+        else:
+            logger.warning(
+                "openai.Timeout not available; falling back to httpx.Timeout. "
+                "Upgrade openai package for full timeout support."
+            )
+            timeout_config = httpx.Timeout(
+                timeout=timeout_seconds,
+                connect=10.0,
+            )
 
         self.client = AsyncOpenAI(
             api_key=api_key,
