@@ -651,10 +651,11 @@
   (h) Remaining invisible-error cards (11 files, outside evidence scope): calendar/smart_schedule_chip, error_book screens (2), error_book/remediable_patterns_card, aurora/calibration_strip, user/profile_screen, task/task_detail_screen, task/task_protocol_panel, community/accountability_screen, community/similar_goal_pursuers_card, reviews/nightly_review_panel. Worth a broader cleanup pass.
 
 ### ISSUE-20260503-1513-K4
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: K
 - **title**: OpenAICompatibleProvider 在 openai.Timeout 导入失败时创建无超时配置的 AsyncOpenAI 客户端，LLM 调用可能永久挂起
+- **fixer_started_at**: 2026-05-03T22:55:00Z
 - **symptom**: 在 openai 包版本过旧或不导出 Timeout 的环境中，LLM API 调用没有超时保护。若外部 LLM API 响应挂起，gRPC stream 会一直等待直到客户端超时
 - **root_cause_hypothesis**: providers.py:6-12 中 Timeout 导入使用 try/except：成功→类，失败→None。Line 43 timeout_config = Timeout(...) if Timeout else None → None 时无超时。Line 48-52 AsyncOpenAI(timeout=None) → 无超时。且导入失败无日志警告
 - **evidence**:
