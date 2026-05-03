@@ -267,12 +267,12 @@ class _TaskCard extends StatelessWidget {
               const Spacer(),
               if (onClaim != null)
                 SparkleButton.primary(
-                  label: 'Claim',
+                  label: I18nService.instance.isChinese ? '认领' : 'Claim',
                   onPressed: onClaim!,
                 )
               else if (onComplete != null)
                 SparkleButton.primary(
-                  label: 'Complete',
+                  label: I18nService.instance.isChinese ? '完成' : 'Complete',
                   onPressed: onComplete!,
                 ),
             ],
@@ -296,7 +296,7 @@ extension on GroupTasksScreen {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text('Create Group Task'),
+          title: Text(I18nService.instance.isChinese ? '创建群组任务' : 'Create Group Task'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,

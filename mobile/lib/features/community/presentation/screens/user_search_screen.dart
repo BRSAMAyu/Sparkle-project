@@ -59,7 +59,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
             const Divider(),
             ListTile(
               leading: Icon(Icons.person_add, color: DS.primaryBase),
-              title: const Text('Send Friend Request'),
+              title: Text(I18nService.instance.isChinese ? '发送好友请求' : 'Send Friend Request'),
               onTap: () async {
                 Navigator.pop(context);
                 try {
@@ -255,7 +255,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
               Text(I18nService.instance.isChinese ? '搜索失败，请检查网络后重试' : 'Search failed, check your network and retry', style: TextStyle(color: DS.textSecondary)),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
-                label: '重试',
+                label: I18nService.instance.isChinese ? '重试' : 'Retry',
                 onPressed: _handleSearch,
               ),
             ],
