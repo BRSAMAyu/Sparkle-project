@@ -1416,3 +1416,19 @@
 - **discovered_by**: explorer-loop
 - **verified_by**:
 - **fix_commit**:
+
+### Round R16 — 2026-05-04T00:30
+- **Domain**: Cross-domain regression (G + I + H integration check)
+- **Paths covered**:
+  - mock_community_repository.dart (G-domain regression: G1/G2/G3 fixes verified intact; found getGroupTasks=[], createGroupTask with empty id, searchUsers=[])
+  - backend/app/models/community.py:90-97 + backend/app/schemas/community.py:882-889 (I4: ReportReason model vs schema mismatch)
+  - backend/app/models/community.py:652 (DB column uses model enum)
+  - group_members_screen.dart:96,141-142,163,172,182 (H5: 6 remaining hardcoded English strings)
+  - leaderboard_service.py:145-150 (K1 fix verified correct — percentile=None for global sentinel)
+  - chat_orchestrator_chatflow.go:696-703 (K2 fix verified — truncated partial response saved correctly)
+- **New issues**: I4(P1), H5(P2)
+- **Findings**: Cross-domain regression pass on 16 recently fixed/explored files. G-domain fixes (G1/G2/G3) verified intact. Discovered 2 new issues: (1) I4 — ReportReason I3 fix was incomplete: Python model enum (community.py:90-97) missing HATE_SPEECH while schema (community.py:882-889) has it, causing DB write failures when Flutter sends hate_speech. This is a regression-in-fix — the I3 fix was applied to schema/Flutter but missed the model layer. (2) H5 — group_members_screen.dart has 6 remaining hardcoded English strings (search hint, empty states, role section headers) that were outside H1 fix scope. Verified K1 percentile fix is correct (returns None for global sentinel, not a bug). Verified K2 truncated response save works correctly.
+- **Opus pass rate**: pending
+- **Next suggested domain**: Cross-domain integration checks continue — verify I4 fix propagates correctly to DB enum migration
+
+---
