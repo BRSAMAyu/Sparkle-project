@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 18:00 (R39 B-domain exploration — 3 discovered: B1/B2/B3, pending Opus review)
+> Updated: 2026-05-04 18:30 (R39 B-domain — 3 verified: B1/B2/B3; R40 G-domain — exhausted)
 
 ---
 
@@ -412,7 +412,7 @@
 | R36 | 2026-05-04T16:00 | L | 2 | 2/2 (L5/L6 verified) | L 域续探——governance rule effectiveness: CommunitySignalBridge 无 kill switch（同级 SocialSignalBridge 有 Stage33 tri-state）+ Stage 20 SufficiencyJudge/ConflictResolver 用布尔开关非 Aurora tri-state（无 shadow/gauge/drill） |
 | R37 | 2026-05-04T16:20 | K | 0 | N/A | K 域续探——Flutter 20+ catch blocks 审查 + Python 15+ except:pass 审查，全部为设计合理的防御性编码或已被 R6/R31 归档 |
 | R38 | 2026-05-04T17:00 | F | 1 | 1/1 (F5 verified by opus-reviewer) | F 域续探——Task/Profile/Intervention 消费者子处理器吞噬异常旁路 EventBus DLQ/retry |
-| R39 | 2026-05-04T18:00 | B | 3 | pending Opus | B 域续探——CurrentUserStatusNotifier 乐观更新无回滚 + confirmMinimumCriteria 纯本地无持久化 + GroupTasks/BlockedUsers 刷新丢数据 |
+| R39 | 2026-05-04T18:00 | B | 3 | 3/3 (B1/B2/B3 verified) | B 域续探——CurrentUserStatusNotifier 乐观更新无回滚 + confirmMinimumCriteria 纯本地无持久化 + GroupTasks/BlockedUsers 刷新丢数据 |
 | R40 | 2026-05-04T18:30 | G | 0 | N/A | G 域续探——mock_community_repository 核心方法全部正确实现，剩余空 stub 为非核心功能，domain exhausted |
 
 ---
