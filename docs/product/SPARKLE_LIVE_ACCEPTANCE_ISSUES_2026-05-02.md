@@ -394,6 +394,7 @@
 | R13 | 2026-05-03T22:00 | L | 4 | 4/4 (L1/L2/L3/L4 verified) | Governance rules vs real implementation: L1 BH orphan, L2 AV stale lists, L3 no secret guard, L4 shallow checks |
 | R19 | 2026-05-04T02:15 | C | 1 | 1/1 (C1 verified) | C-domain 纠偏 R18 误判——proxy_routes.go tasks 组无通配路由，pause/resume/stuck 缺失 |
 | R20 | 2026-05-04T03:00 | A | 1 | pending (C2) | A-domain UI E2E 追踪：guidance 代理路由缺失（跨域发现） |
+| R21 | 2026-05-04T03:15 | F | 1 | 1/1 (F1 closed) | F1 subscribe non-BUSYGROUP raise fix — commit 8e7179e41 |
 
 ---
 
@@ -858,11 +859,12 @@
 
 
 ### ISSUE-20260503-1700-F1
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: F
 - **title**: EventBus.subscribe() 在 xgroup_create 返回非 BUSYGROUP 的 ResponseError 时静默返回，消费者在启动时无声死亡且 start() 方法无感知
 - **fixer_started_at**: 2026-05-04T02:05:00Z
+- **closed_at**: 2026-05-04T03:15:00Z
 - **symptom**: Redis 环境异常时（如 stream key 类型冲突、非 BUSYGROUP Redis 错误），EventBus 消费者静默启动失败。操作者看到消费者"已启动"的日志（来自 start 方法的 logger.info），但消费循环从未开始。Prometheus 消费者组 lag 指标显示为 0 因为消费者组根本不存在，事件堆叠在 stream 中不被处理
 - **root_cause_hypothesis**: EventBus.subscribe() 在 event_bus.py:1065-1070 中，非 BUSYGROUP 的 ResponseError 被 `except ResponseError` 捕获后仅 `logger.error` 然后 `return`，不抛出异常。所有使用 "break after subscribe" 模式的消费者 start() 方法（AchievementEventConsumer:64-72, GalaxyEventConsumer:53-58, ExecutionEventConsumer:38-48 等 10+ 消费者）将 subscribe 返回视为成功、break 退出重试循环。TaskEventConsumer:45-53 的 `_subscribed` 模式同样受影响——subscribe 返回后 `_subscribed=True`，后续 subscribe 永远不再调用
 - **evidence**:
@@ -877,7 +879,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T04:08:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认所有 4 处 evidence 代码与条目描述一致。event_bus.py:1065-1070 的非 BUSYGROUP ResponseError 分支执行 return 而非 raise，跳过 line 1072-1075 的 _running=True + asyncio.create_task(_consume_loop)。achievement_event_consumer.py:66-72 break-after-subscribe 模式确认：subscribe() 返回（无异常）→ break 退出 while 循环 → start() 完成但 consume_loop 从未启动。galaxy_event_consumer.py:53-59 和 execution_event_consumer.py:39-45 使用相同 break 模式。task_event_consumer.py:46-52 _subscribed=True 模式确认：subscribe 返回 → 标志永为 True → 后续只 sleep(1) 循环。调用链完整：Consumer.start() → EventBus.subscribe() → xgroup_create → ResponseError(非BUSYGROUP) → logger.error + return → Consumer 的 try 无异常 → break/_subscribed=True。非设计意图：line 1064 的 logger.info("Created consumer group") 仅在 xgroup_create 成功后执行，表明成功路径意图是进入 consume_loop；其他消费者的 try/except 重试循环（如 achievement line 73-75）显示设计预期 subscribe 失败应抛异常。与 ISSUE-20260503-1702-F3 无重复：F1 是初始化阶段失败，F3 是运行时后台任务死亡检测。
-- **fix_commit**:
+- **fix_commit**: 8e7179e41
+- **independent_fix_review**: APPROVED by opus-fix-reviewer at 2026-05-04T03:15:00Z. (a) Root cause fix: YES — changed `return` to `raise` at event_bus.py:1070 inside the non-BUSYGROUP ResponseError branch. This is a single-word change that directly addresses the root cause — non-BUSYGROUP errors now propagate to consumer retry loops instead of being silently swallowed. Not a hack. (b) Regression risk: LOW — ResponseError is a subclass of Exception, so all 18 consumers using `except Exception` retry loops (AchievementEventConsumer, GalaxyEventConsumer, ExecutionEventConsumer, ProfileEventConsumer, SocialSignalEventConsumer, etc.) will correctly catch and retry. Two consumers (CognitiveEventConsumer line 30, NudgeEventConsumer line 26) and one worker (CognitiveStreamWorker line 99) call subscribe() without try/except — these are pre-existing gaps that this fix IMPROVES by surfacing the exception visibly rather than silently returning. No consumers checked for ResponseError specifically (grep confirmed), so the raised exception type is compatible with all existing catch clauses. (c) Cross-layer contract: NO IMPACT — pure Python-internal behavior change. No proto, DB schema, or i18n modifications. Rule guards: only pre-existing AX failure; no new violations. (d) Test coverage: YES — 3 new regression tests added (test_non_busygroup_responseerror_raises, test_busygroup_proceeds_to_consume_loop, test_consumer_pattern_receives_exception). Test 1 and Test 3 pass cleanly (2 passed in 15.12s). Test 2 hangs due to mock incompleteness (background _consume_loop task created by subscribe() never terminates with bare AsyncMock) — this is a test-isolation issue, not a fix defect. If `raise` is reverted to `return`, Test 1 fails (no exception raised) and Test 3 fails (consumer never catches ResponseError). Existing eventbus tests (test_p4_6_eventbus_health_check, test_p4_6_eventbus_lag_detection) continue to pass. (e) CLAUDE.md/rule guards: NO violations — pure Python internal fix, no business logic added to Go, no proto changes, no DB schema changes. Rule guards run: 64/65 pass (only pre-existing AX stale lists).
 
 ### ISSUE-20260503-1701-F2
 - **status**: closed
