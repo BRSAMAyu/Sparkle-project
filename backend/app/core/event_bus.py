@@ -1072,6 +1072,9 @@ class EventBus:
         # 2. Start Consumption Loop
         self._running = True
         task = asyncio.create_task(self._consume_loop(stream, group_name, consumer_name, callback))
+        task.add_done_callback(
+            lambda t: self._restart_consume_loop(t, stream, group_name, consumer_name, callback)
+        )
         self._consumer_tasks.append(task)
 
     async def _get_idempotency_store(self):
@@ -1158,6 +1161,29 @@ class EventBus:
                 parsed_data=parsed_data,
                 error=exc,
             )
+
+    def _restart_consume_loop(self, finished_task: asyncio.Task, stream: str, group_name: str, consumer_name: str, callback: Callable):
+        """Auto-restart consume_loop if it dies unexpectedly (F3 fix)."""
+        try:
+            exc = finished_task.exception()
+        except (asyncio.CancelledError, Exception):
+            exc = None
+        if self._running and exc is not None:
+            logger.warning(
+                f"Consumer loop {group_name}:{consumer_name} died with {type(exc).__name__}, restarting..."
+            )
+            task = asyncio.create_task(self._consume_loop(stream, group_name, consumer_name, callback))
+            task.add_done_callback(
+                lambda t: self._restart_consume_loop(t, stream, group_name, consumer_name, callback)
+            )
+            for i, old_task in enumerate(self._consumer_tasks):
+                if old_task is finished_task or old_task.done():
+                    self._consumer_tasks[i] = task
+                    break
+            else:
+                self._consumer_tasks.append(task)
+        elif exc is not None:
+            logger.info(f"Consumer loop {group_name}:{consumer_name} exited (stopped): {type(exc).__name__}")
 
     async def _consume_loop(self, stream: str, group_name: str, consumer_name: str, callback: Callable):
         logger.info(f"Starting consumer loop: {group_name}:{consumer_name} on {stream}")
