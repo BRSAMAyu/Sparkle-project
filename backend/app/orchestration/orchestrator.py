@@ -3457,10 +3457,13 @@ class ChatOrchestrator(
                     followup_updates, _, _, _, _, _, _ = await self._drain_system_updates(user_id)
                     for update_resp in followup_updates:
                         yield self._bind_response_session_id(update_resp, session_id, request_id=request_id)
+                    completion_note = "Response completed"
+                    if final_state.is_finished:
+                        completion_note = f"Response completed (graph truncated: max steps reached)"
                     await self._update_state(
                         session_id,
                         STATE_DONE,
-                        "Response completed",
+                        completion_note,
                         request_id=request_id,
                         user_id=user_id,
                     )
