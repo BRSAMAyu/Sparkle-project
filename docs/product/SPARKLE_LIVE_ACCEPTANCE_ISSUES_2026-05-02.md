@@ -968,11 +968,12 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-2102-I3
-- **status**: in_progress
+- **status**: closed
 - **severity**: P1
 - **domain**: I
 - **title**: 举报原因枚举 Flutter `hate_speech` 与后端 `inappropriate` 不一致，跨层传输时序列化/反序列化失败
 - **fixer_started_at**: 2026-05-03T22:20:00Z
+- **closed_at**: 2026-05-03T22:50:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence：(1) community_model.dart:114-127 Flutter enum 值：spam, harassment, violence, hate_speech, misinformation, other；(2) community.py:882-888 后端 enum 值：spam, harassment, violence, misinformation, inappropriate, other；(3) hate_speech 在 backend/ 全量 grep 零结果——后端完全不认识此值；(4) inappropriate 在 mobile/ 全量 grep 零结果——Flutter 完全不认识此值。调用链验证：Flutter group_chat_screen.dart:215 用户选 hateSpeech → community_repository.dart:1036 _reportReasonToApi() 返回字符串 "hate_speech" → POST /community/message-reports body: {"reason": "hate_speech"} → 后端 Pydantic community.py:909 ReportReasonEnum 验证失败 (hate_speech not in enum) → 422 Validation Error。反向链：后端存储 inappropriate → Flutter JSON 反序列化 → ReportReason.fromJson 无 @JsonValue('inappropriate') 映射 → 解析失败或 null。非设计意图——两套 enum 语义部分重叠（spam/harassment/violence/misinformation/other 这 5 个一致），但 hate_speech vs inappropriate 完全互斥。与 ISSUE-20260503-1402-H3 无重复——H3 是 i18n 展示层代码风格（isChinese vs context.l10n），I3 是跨层 enum 值契约不一致导致功能阻断。
 - **symptom**: 用户在 Flutter 端选择 "仇恨言论" (hate_speech) 作为举报原因提交时，后端 Pydantic 验证拒绝该值。反之，若后端存储的举报原因是 `inappropriate`，Flutter 无法将其映射到任何 ReportReason enum 值导致解析崩溃
 - **root_cause_hypothesis**: Flutter 的 ReportReason enum 使用 `hate_speech` (community_model.dart:121)，后端的 ReportReasonEnum 使用 `inappropriate` (community.py:887)。两者语义相近但字符串值完全不同，且 Flutter 没有 `inappropriate` 对应值，后端没有 `hate_speech` 对应值
@@ -987,7 +988,8 @@
 - **suggested_fix_direction**: 统一为一套值。建议在两方都保留 hate_speech 和 inappropriate（因为语义不完全相同），或在 Flutter 和后端统一为同一个值。同时更新 Go gateway 的代理验证（如果有的话）
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T21:00:00Z
-- **fix_commit**:
+- **fix_commit**: 9b2698fd1
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-03T12:50:00Z
 
 
 ---
@@ -1013,6 +1015,8 @@
 | R11 | 2026-05-03T21:10 | ISSUE-20260503-1600-E1 | ✅ Fixed | (pending) | ~35 min |
 | R12 | 2026-05-03T21:45 | ISSUE-20260503-1512-K3 | closed | 4d3bae8d8 | ~45 min |
 | R13 | 2026-05-03T22:15 | ISSUE-20260503-2100-I1 | closed | cde0cb99b | ~25 min |
+| R14 | 2026-05-03T22:50 | ISSUE-20260503-2102-I3 | closed | 9b2698fd1 | ~30 min |
+| R14 | 2026-05-03T22:50 | ISSUE-20260503-2102-I3 | ✅ Fixed | 9b2698fd1 | ~30 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
