@@ -437,8 +437,9 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1300-B1
-- **status**: discovered
+- **status**: in_progress
 - **severity**: P1
+- **fixer_started_at**: 2026-05-03T14:30:00
 - **domain**: B
 - **title**: 社区问责 hub 在真实模式下永远显示空数据——后端路由遮蔽导致契约不匹配
 - **symptom**: 在非 demo 模式下，社区问责 hub（社区 tab 里的责任空间卡片）永远显示空内容——没有承诺、没有伙伴进度、没有共享目标。Demo 模式下正常显示丰富数据
