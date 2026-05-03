@@ -48,7 +48,7 @@ func TestGrpcStreamErrorDetailsSanitizesNonGRPCErrors(t *testing.T) {
 }
 
 func TestLegacyStreamErrorPayloadCarriesWsContract(t *testing.T) {
-	payload := legacyStreamErrorPayload("unavailable", "agent offline", true)
+	payload := legacyStreamErrorPayload("unavailable", "agent offline", true, "req-123")
 	if payload["type"] != "error" {
 		t.Fatalf("expected error type, got %v", payload["type"])
 	}
@@ -61,7 +61,39 @@ func TestLegacyStreamErrorPayloadCarriesWsContract(t *testing.T) {
 	if payload["retryable"] != true {
 		t.Fatalf("expected retryable=true, got %v", payload["retryable"])
 	}
-	if len(payload) != 4 {
-		t.Fatalf("expected stable four-field payload, got %d", len(payload))
+	if payload["request_id"] != "req-123" {
+		t.Fatalf("expected request_id=req-123, got %v", payload["request_id"])
+	}
+}
+
+func TestLegacyStreamErrorPayloadOmitsEmptyRequestID(t *testing.T) {
+	payload := legacyStreamErrorPayload("resource_exhausted", "busy", true, "")
+	if _, exists := payload["request_id"]; exists {
+		t.Fatalf("expected no request_id key when empty, got %v", payload["request_id"])
+	}
+}
+
+func TestLegacyStreamErrorPayloadIncludesRequestIDForAllPaths(t *testing.T) {
+	tests := []struct {
+		name      string
+		code      string
+		message   string
+		retryable bool
+		requestID string
+	}{
+		{"resource_exhausted", "resource_exhausted", "Server busy", true, "req-res-1"},
+		{"duplicate_request", "duplicate_request", "Already accepted", false, "req-dup-2"},
+		{"stream_recv_error", "unavailable", "Stream interrupted", true, "req-str-3"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			payload := legacyStreamErrorPayload(tt.code, tt.message, tt.retryable, tt.requestID)
+			if payload["request_id"] != tt.requestID {
+				t.Errorf("expected request_id=%s, got %v", tt.requestID, payload["request_id"])
+			}
+			if payload["error_code"] != tt.code {
+				t.Errorf("expected error_code=%s, got %v", tt.code, payload["error_code"])
+			}
+		})
 	}
 }

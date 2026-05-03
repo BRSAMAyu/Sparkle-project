@@ -304,7 +304,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		case *protobufResponder:
 			r.SendError("resource_exhausted", "Server busy, please retry", true)
 		case *wsSafeWriter:
-			writeLegacyJSONLogged(r, "resource exhausted error", legacyStreamErrorPayload("resource_exhausted", "Server busy, please retry", true))
+			writeLegacyJSONLogged(r, "resource exhausted error", legacyStreamErrorPayload("resource_exhausted", "Server busy, please retry", true, requestID))
 		}
 		return false
 	}
@@ -339,7 +339,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			case *protobufResponder:
 				r.SendError("duplicate_request", "Request already accepted; refresh conversation if the response is missing.", false)
 			case *wsSafeWriter:
-				writeLegacyJSONLogged(r, "duplicate request error", legacyStreamErrorPayload("duplicate_request", "Request already accepted; refresh conversation if the response is missing.", false))
+				writeLegacyJSONLogged(r, "duplicate request error", legacyStreamErrorPayload("duplicate_request", "Request already accepted; refresh conversation if the response is missing.", false, reqID))
 			}
 			return false
 		}
@@ -692,7 +692,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		}
 		if err != nil {
 			log.Printf("Stream recv error: %v", err)
-			respondStreamRecvError(responder, err)
+			respondStreamRecvError(responder, err, reqID)
 			if textBuilder.Len() > 0 && input.SessionID != "" {
 				partialText := textBuilder.String()
 				h.saveMessage(ctx, userID, input.SessionID, "assistant", partialText, map[string]interface{}{
@@ -936,7 +936,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 	return false
 }
 
-func respondStreamRecvError(responder interface{}, err error) {
+func respondStreamRecvError(responder interface{}, err error, requestID string) {
 	code, message, retryable := grpcStreamErrorDetails(err)
 	switch r := responder.(type) {
 	case *envelopeResponder:
@@ -944,7 +944,7 @@ func respondStreamRecvError(responder interface{}, err error) {
 	case *protobufResponder:
 		r.SendError(code, message, retryable)
 	case *wsSafeWriter:
-		writeLegacyJSONLogged(r, "stream error", legacyStreamErrorPayload(code, message, retryable))
+		writeLegacyJSONLogged(r, "stream error", legacyStreamErrorPayload(code, message, retryable, requestID))
 	}
 }
 
@@ -988,13 +988,17 @@ func grpcStreamErrorDetails(err error) (string, string, bool) {
 	}
 }
 
-func legacyStreamErrorPayload(code, message string, retryable bool) gin.H {
-	return gin.H{
+func legacyStreamErrorPayload(code, message string, retryable bool, requestID string) gin.H {
+	payload := gin.H{
 		"type":       "error",
 		"message":    message,
 		"error_code": code,
 		"retryable":  retryable,
 	}
+	if requestID != "" {
+		payload["request_id"] = requestID
+	}
+	return payload
 }
 
 func estimateTokensFromRunes(runes int) int64 {
