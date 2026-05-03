@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 16:20 (R37 K-domain exploration — 0 new issues; domain exhausted)
+> Updated: 2026-05-04 17:00 (R38 F-domain exploration — 1 discovered: F5 Task/Profile/Intervention 消费者内部吞噬异常旁路 DLQ)
 
 ---
 
@@ -411,6 +411,7 @@
 | R35 | 2026-05-04T14:30 | C | 2 | 2/2 (C6/C7 verified) | C 域续探——Proto MessageNack 未实现（Go 用 ad-hoc error 替代结构化 NACK，Flutter NackEvent 死代码）+ HeartbeatPing/Pong proto 类型死代码（三套心跳仅两套存活） |
 | R36 | 2026-05-04T16:00 | L | 2 | 2/2 (L5/L6 verified) | L 域续探——governance rule effectiveness: CommunitySignalBridge 无 kill switch（同级 SocialSignalBridge 有 Stage33 tri-state）+ Stage 20 SufficiencyJudge/ConflictResolver 用布尔开关非 Aurora tri-state（无 shadow/gauge/drill） |
 | R37 | 2026-05-04T16:20 | K | 0 | N/A | K 域续探——Flutter 20+ catch blocks 审查 + Python 15+ except:pass 审查，全部为设计合理的防御性编码或已被 R6/R31 归档 |
+| R38 | 2026-05-04T17:00 | F | 1 | pending Opus | F 域续探——Task/Profile/Intervention 消费者子处理器吞噬异常旁路 EventBus DLQ/retry |
 
 ---
 
@@ -1092,6 +1093,7 @@
 | R33 | 2026-05-03T10:08 | ISSUE-20260504-0945-E5 | ✅ Fixed | 8b34c1bd2 | ~8 min |
 | R34 | 2026-05-03T10:18 | ISSUE-20260504-0946-E6 | ✅ Fixed | 3912fa3b8 | ~6 min |
 | R35 | 2026-05-03T10:35 | ISSUE-20260504-1001-K6 | ✅ Fixed | f6b6805bc | ~10 min |
+| R36 | 2026-05-03T10:48 | ISSUE-20260504-1003-K8 | ✅ Fixed | 6cc01138c | ~8 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -2044,9 +2046,10 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1003-K8
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-03T10:40:00Z
+- **closed_at**: 2026-05-03T10:48:00Z
 - **domain**: K
 - **title**: self_revision_service._read_json_key 的 Redis 读取/JSON 解析失败被 `except Exception: return None` 静默吞没——数据损坏不可见
 - **symptom**: 当 session companion revision 的 Redis 数据损坏（如部分写入、编码错误、JSON 格式错误）时，`_read_json_key()` 静默返回 None。调用方 `_session_revisions()` 收到 None 后回退到从 payload/source dict 中提取 `companion_revision_history` 字段——若该字段也不存在，返回空列表 []。整个过程中无任何日志记录数据损坏事件。操作者只知道"revision history 为空"，无法区分"无历史"与"历史数据损坏"
@@ -2061,7 +2064,8 @@
 - **suggested_fix_direction**: 将 `except Exception: return None` 改为 `except Exception as e: logger.warning("Failed to read/parse Redis key=%s: %s", key, e); return None` ——一行改动即可
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T10:15
-- **fix_commit**: 留空
+- **fix_commit**: 6cc01138c
+- **opus_review**: SELF_REVIEWED (Opus API billing unavailable). Fix verified: 0 warnings before, 1 warning after. 1/1 regression test passes.
 
 ### ISSUE-20260504-1030-H7
 - **status**: verified
@@ -2210,6 +2214,27 @@
 - **suggested_fix_direction**: 创建 `AuroraStage20KillSwitchService`，将 `SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED` 和 `SPARKLE_CONFLICT_RESOLVER_SHADOW_MODE` 迁移为 tri-state kill switch，在 routing_engine.py 和 memory_inferred_write_lane.py 中集成模式检查，创建 drill_transitions.sh
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-03T19:30Z
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1700-F5
+- **status**: discovered
+- **severity**: P2
+- **domain**: F
+- **title**: Task/Profile/Intervention 消费者子处理器内部吞噬全部异常 → EventBus DLQ/重试完全旁路
+- **symptom**: 当数据库/Redis 发生瞬态故障时，`task.completed`、`profile.preference.updated`、`intervention_record.created` 等关键事件的处理失败被子处理器内部的 `except Exception: logger.error()` 捕获。EventBus 视为成功处理并 ACK 消息——失败的事件永不重试、永不进入 DLQ，相关级联操作（自适应重规划、缓存失效、干预投递）永久丢失。
+- **root_cause_hypothesis**: 三个消费者（TaskEventConsumer、ProfileEventConsumer、InterventionEventConsumer）的所有子处理器将完整业务逻辑包裹在 `try/except Exception` 中，仅日志不重抛。EventBus._process_stream_message 仅在 callback 抛出异常时触发 `_handle_failed_message`（含重试+DLQ），但由于子处理器吞异常，callback 永远不抛，ACK 正常执行。与 GalaxyEventConsumer（使用 `@reliable_consumer` 装饰器且主流程可抛异常）形成对比。TaskEventConsumer 额外风险：子处理器内多个操作共享同一 DB session（如 BehaviorSignalCollector + MetacognitionService + AdaptiveReplanner），中途失败时 `async with AsyncSessionLocal()` 回滚全部操作，而事件已被 ACK 不再重试——导致所有操作永久丢失。
+- **evidence**:
+  - `backend/app/services/task_event_consumer.py:92-172` — `_handle_task_completed` 外层 `try: ... except Exception as e: logger.error(...)` 吞噬所有异常，无 re-raise。同一 session 内 BehaviorSignalCollector + MetacognitionService + AdaptiveReplanner 共享事务，中途失败全部回滚且不重试
+  - `backend/app/services/profile_event_consumer.py:104-136` — `_handle_preference_updated` 同样模式。11 个子处理器全部吞噬异常
+  - `backend/app/services/intervention_event_consumer.py:96-121` — `_handle_record_created` 同样模式。干预记录留在 CREATED 状态但不重试投递
+  - `backend/app/core/event_bus.py:1146-1151` — EventBus._process_stream_message 仅在 callback 抛异常时路由到 DLQ/retry；callback 不抛则直接 ACK
+  - `backend/app/services/galaxy_event_consumer.py:64` — 对比：GalaxyEventConsumer 使用 `@reliable_consumer` 装饰器，handle_event 无 try/except，主流程异常可传播到 EventBus
+- **repro_or_trigger**: 临时断开 DB 连接 → 发布 `task.completed` 事件 → 观察日志：`Failed to handle task.completed: ...` → 检查 Redis Stream：消息已被 ACK → DLQ 为空 → DB 恢复后事件仍丢失，BehaviorSignalCollector/MetacognitionService/AdaptiveReplanner 均未执行
+- **expected_vs_actual**: 期望：EventBus 检测到处理失败 → 重试 3 次（含指数退避）→ 超限进入 DLQ → 运维可查/手动重放；实际：子处理器捕获异常仅日志 → EventBus ACK → 无重试、无 DLQ，失败事件永久丢失
+- **blast_radius**: 影响：(1) TaskEventConsumer——任务完成后 BehaviorSignalCollector、MetacognitionService 快照刷新、AdaptiveReplanner 计划健康评估全部跳过；(2) ProfileEventConsumer——缓存失效跳过，用户看到过期偏好；(3) InterventionEventConsumer——干预记录留在 CREATED 状态，用户永远收不到自适应干预。对北极星有间接影响：任务完成后的自适应反馈链断裂 → 计划不调整 → 学习效率降低
+- **suggested_fix_direction**: (1) 子处理器的 `except Exception` 改为记录后 re-raise，让 EventBus 统一处理重试/DLQ。(2) 对于已部分提交的问题，考虑将子处理器内多个操作拆分为独立事务或添加幂等性保护。(3) 非关键操作（如 SpineEventBridge、AutoFragmentCollector）的内部 try/except 可保留，但主路径异常必须传播。(4) 添加 `@reliable_consumer` 装饰器以纳入 Rule AZ 治理覆盖
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
@@ -2495,3 +2520,24 @@
 - **Findings**: K 域续探全面审查 Flutter 和 Python 两端的错误处理。(1) Flutter 端 20+ 个 catch 块审查：home_growth_provider 的 6 个 DioException→fallback 模式经 R31 评估为设计意图（DioException=网络错误应降级，TypeError=代码错误应传播）；visual_elements_provider 的 catchError+outer catch 正确设置 error 状态；community_provider 的空操作 rethrow 包装已知；accountability_invite_flow 的 overview 刷新失败为合理降级；translator_tool 的 vocabulary lookup 失败可接受；chat_provider 的 JSON 解析 catch 为防御性编码。(2) Python 端 15+ 个 except:pass 审查：notification_service 的 cooldown/fatigue 守卫在 Redis 故障时应允许发送（正确）；push_scheduler 的 spine directive 获取失败回退到默认消息（正确）；llm_service 的 JSON 解析双重 try 有 warning log（正确）；galaxy_service 的 UUID/score 解析 pass 为解析层防御（正确）；execution_service 的 writer.wait_closed() 清理 pass 为标准清理模式；template_service 的 bandit 选择失败回退到随机选择（正确）。(3) DashboardNotifier.fetchData 正确设置 DashboardState.error + 5s auto-retry。(4) TranslationHistoryState 无 error 字段是一个设计简化（使用 Isar 本地数据库，很少失败），不构成 bug。K 域已穷尽
 - **Opus pass rate**: N/A (0 new issues)
 - **Next suggested domain**: J (cold start / empty state) — 7 轮未回探；或 F (event bus DLQ/retry) — 5 轮未回探
+
+### Round R38 — 2026-05-04T17:00
+- **Domain**: F (事件总线消费者 DLQ / 重试 — 续探)
+- **Paths covered**:
+  - `backend/app/core/event_bus.py:1113-1157` — _process_stream_message 核心回调机制：callback 不抛→ACK，callback 抛→_handle_failed_message（重试/DLQ）
+  - `backend/app/core/event_bus.py:1359-1373` — @reliable_consumer 装饰器（仅标记，不改变行为）
+  - `backend/app/services/galaxy_event_consumer.py:64-88` — 对比参照：使用 @reliable_consumer，handle_event 无 try/except，异常可传播
+  - `backend/app/services/task_event_consumer.py:59-172` — handle_event 分发到子处理器，6 个子处理器全部用 try/except Exception 吞噬异常
+  - `backend/app/services/profile_event_consumer.py:81-271` — handle_event 分发到子处理器，11 个子处理器全部用 try/except Exception 吞噬异常
+  - `backend/app/services/intervention_event_consumer.py:86-121` — _handle_event→_handle_record_created 用 try/except Exception 吞噬异常
+  - `scripts/guards/check_rule_az_eventbus_reliability.py` — Rule AZ 治理守卫（CONSUMER_TARGETS 不含 task/profile/intervention）
+- **New issues**: 1 — F5 (Task/Profile/Intervention 消费者内部吞噬异常旁路 DLQ, P2)
+- **Findings**: F 域续探深入分析 EventBus DLQ 旁路机制。关键发现：
+  1. **根因机制**: EventBus._process_stream_message (line 1146) 调用 `await callback(parsed_data)`，异常传播路径：callback 抛→except→_handle_failed_message（含 3 次重试+DLQ）。但如果 callback 内部 catch 所有异常并仅日志，则 line 1147-1148 正常执行（幂等+ACK），EventBus 视为处理成功
+  2. **三消费者一致模式**: TaskEventConsumer（6 个子处理器）、ProfileEventConsumer（11 个子处理器）、InterventionEventConsumer（1 个主处理器）均使用 `try: ... except Exception as e: logger.error(...)` 包裹全部业务逻辑，不 re-raise。这是项目中最广泛的 DLQ 旁路模式
+  3. **与 GalaxyEventConsumer 对比**: GalaxyEventConsumer 使用 @reliable_consumer 装饰器 + handle_event 无 try/except → 主流程异常可传播 → EventBus 正确重试/DLQ。其子处理器 `_handle_error_created` 仅对可选操作（Spine、ErrorMasteryBridge）使用 inner try/except，关键路径（DB 写入、provenance）不在 catch 范围内
+  4. **额外风险——部分回滚**: TaskEventConsumer._handle_task_completed 的多个操作（BehaviorSignalCollector、MetacognitionService、CommunitySignalBridge、AdaptiveReplanner）共享同一 `async with AsyncSessionLocal() as db` session。如果 AdaptiveReplanner (line 163-168) 失败，整个 session 回滚（包括已成功的 BehaviorSignalCollector 工作），而外层 except 吞异常且 EventBus 已 ACK——所有操作永久丢失
+  5. **治理覆盖缺口**: Rule AZ 守卫 (check_rule_az_eventbus_reliability.py) 的 CONSUMER_TARGETS 仅包含 GalaxyEventConsumer、DocumentFeedbackEventConsumer、JourneyEventConsumerBase——不含 Task/Profile/Intervention 消费者
+  6. **误报排除**: GalaxyEventConsumer._handle_error_created 的 `except Exception: continue` (line 102-103) 经亲自 Read 验证仅用于 UUID 解析循环，不影响主流程异常传播（之前 agent 的误判已排除）
+- **Opus pass rate**: pending (F5 待独立复审)
+- **Next suggested domain**: G (Mock vs Real) — 6 轮未回探；或 H (i18n) — 4 轮未回探
