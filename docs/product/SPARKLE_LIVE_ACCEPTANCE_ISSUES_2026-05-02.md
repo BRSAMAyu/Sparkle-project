@@ -363,13 +363,13 @@
 
 ## Progress Summary
 
-- **Total Issues**: 31 (+ 19 explorer issues)
+- **Total Issues**: 31 (+ 20 explorer issues)
 - **Fixed**: 23 (includes explorer G1, G2)
 - **Partially Fixed**: 3
 - **Routes Verified (working with data)**: 5
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
-- **Discovered (not verified)**: 0
+- **Discovered (not verified)**: 1 (D2)
 - **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 3 (I1/I2/I3) + 4 (L1/L2/L3/L4) + 3 (B1/B2/B3) + 2 (I4/H5)
 
 ---
@@ -770,7 +770,7 @@
 - **fix_commit**: 96fe0329c
 
 ### ISSUE-20260503-1601-E2
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: E
 - **title**: Privacy 模块 pii_redaction_mode() 绕过 read_mode() 直接读 settings，导致隐私 kill switch 的 Prometheus 指标在读路径缺失
@@ -788,7 +788,9 @@
 - **suggested_fix_direction**: 在 `pii_redaction_mode()` 或 `redact_pii_with_report()` 入口处调用 `record_mode_gauge(stage="privacy", feature="pii_redaction", resolved_mode)` 记录当前模式到 Prometheus
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T17:00:00Z
-- **fix_commit**:
+- **fix_commit**: 540ba1b97405d908b07d93202e8cae694c1de102
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-03T05:36:13Z
+- **closed_at**: 2026-05-03T05:36:13Z
 
 ### ISSUE-20260503-1602-E3
 - **status**: in_progress
@@ -1435,3 +1437,44 @@
 - **Next suggested domain**: Cross-domain integration checks continue — verify I4 fix propagates correctly to DB enum migration
 
 ---
+
+### ISSUE-20260504-0145-D2
+- **status**: discovered
+- **severity**: P1
+- **domain**: D
+- **title**: D1 修复的 LangGraph planner 超时回退调用 build_fallback_plan() 缺少 2 个必需关键字参数 (snapshot, rationale)，超时路径抛 TypeError
+- **symptom**: 当 LangGraph planner 超过 10 秒超时时（LLM 响应慢或图结构循环），D1 修复正确捕获 TimeoutError 并尝试调用 build_fallback_plan() 生成回退计划。但两个新调用点（multi_agent_adapter.py:111 和 plan_review_service.py:2214）只传递了 message/user_id/session_id 三个参数，缺少 snapshot 和 rationale 两个必需关键字参数，导致 fallback 路径本身抛出 TypeError 而非生成回退计划
+- **root_cause_hypothesis**: D1 修复参照 execution_engine.py:2067-2079 的超时模式添加了 asyncio.wait_for wrapper，但在编写 build_fallback_plan() 回退调用时只传递了部分参数。execution_engine.py 的正确调用传递了全部 5 个参数 (message, snapshot, user_id, session_id, rationale)，但 D1 修复的两个调用点遗漏了 snapshot 和 rationale
+- **evidence**:
+  - `backend/app/orchestration/lang_graph_planner.py:541-549` — `def build_fallback_plan(self, *, message: str, snapshot: StateSnapshot, user_id: str, session_id: str, rationale: str, plan_version: int = 1)` — 4 个必需关键字参数
+  - `backend/app/orchestration/multi_agent_adapter.py:111-115` — `plan = self.orchestrator.lang_graph_planner.build_fallback_plan(message=message, user_id=user_id, session_id=session_id)` — 缺少 snapshot 和 rationale
+  - `backend/app/orchestration/plan_review_service.py:2214-2218` — `executable_plan = planner.build_fallback_plan(message=replan_message, user_id=user_id, session_id=session_id)` — 同样缺少 snapshot 和 rationale
+  - `backend/app/orchestration/execution_engine.py:2073-2079` — 对比：正确模式 `build_fallback_plan(message=user_message, snapshot=snapshot, user_id=user_id, session_id=session_id, rationale=...)`
+- **repro_or_trigger**: 在 plan_review_service 或 multi_agent_adapter 中触发 LangGraph planner 超时（如调低超时值或注入延迟）→ asyncio.wait_for raises TimeoutError → 进入 except 块 → build_fallback_plan() 调用缺少参数 → TypeError: build_fallback_plan() missing 2 required keyword-only arguments: 'snapshot' and 'rationale'
+- **expected_vs_actual**: 期望：超时后生成回退计划继续执行；实际：超时后 fallback 路径本身崩溃，用户看到 500 错误
+- **blast_radius**: 影响两条 LangGraph planner 超时路径：(1) multi_agent_adapter 的混合代理协作模式，(2) plan_review_service 的计划修改流程。主聊天路径（通过 execution_engine）不受影响（已正确实现）。超时场景在 LLM 响应慢时实际发生。对北极星有中等影响——学生在需要调整计划或使用混合代理时，超时会导致完全失败而非优雅降级
+- **suggested_fix_direction**: 在两个调用点补充缺失参数：(1) multi_agent_adapter.py:111 添加 `snapshot=snapshot, rationale="Planner timeout in multi-agent adapter, synthesized fallback"`（snapshot 在 line 83-87 已构造）；(2) plan_review_service.py:2214 添加 `snapshot=snapshot, rationale="Planner timeout during replan, synthesized fallback"`（snapshot 在 line 2183 已构造）
+- **discovered_by**: explorer-loop
+- **verified_by**: 
+- **fix_commit**: 
+
+
+### Round R17 — 2026-05-04T01:45
+- **Domain**: D (Python orchestrator — cross-domain regression on D1 fix)
+- **Paths covered**:
+  - lang_graph_planner.py:541-549 (build_fallback_plan signature — 4 required kwargs)
+  - multi_agent_adapter.py:89-115 (D1 fix timeout wrapper + fallback call — missing snapshot/rationale)
+  - plan_review_service.py:2200-2218 (D1 fix timeout wrapper + fallback call — missing snapshot/rationale)
+  - execution_engine.py:2067-2079 (original correct pattern — all 5 args including snapshot + rationale)
+  - backend/app/aurora/privacy.py:50-59 (E2 fix verified — record_mode_gauge called)
+  - scripts/stage40/drill_all.sh:25-28 (E3 fix verified — stage37/38/39 included)
+  - event_bus.py:1060-1075 (F1 fix NOT applied — still uses return instead of raise)
+  - backend/app/models/community.py:90-97,652 (I4 NOT fixed — model enum still missing HATE_SPEECH)
+- **New issues**: D2(P1)
+- **Findings**: Cross-domain regression verification focused on D1 fixer's uncommitted changes. Discovered D2 — D1 修复引入的回归：两个新的 build_fallback_plan() 调用缺少 snapshot 和 rationale 必需参数。当 LangGraph planner 超时时，timeout fallback 路径本身会崩溃（TypeError），而非生成回退计划。execution_engine.py 的原始正确模式传递了全部 5 个参数，但 D1 修复的两个调用点只传递了 3 个。同时验证：E2 (privacy gauge) 已修复 ✓, E3 (drill_all.sh) 已修复 ✓, F1 (EventBus subscribe) 未修复 ✗, I4 (ReportReason model) 未修复 ✗, E1 (dual-core router kill switch) 已正确集成到 routing_engine.py ✓。
+- **Opus pass rate**: pending
+- **Next suggested domain**: 继续跨域回归——验证 D1 fixer 提交后 D2 的 snapshot/rationale 参数是否被正确补充
+
+| R17 | 2026-05-04T01:45 | D | 1 | pending (D2) | D1 修复回归——build_fallback_plan 缺少必需参数 |
+| R18 | 2026-05-04T01:00 | ISSUE-20260503-1601-E2 | closed | 540ba1b97 | ~25 min |
+
