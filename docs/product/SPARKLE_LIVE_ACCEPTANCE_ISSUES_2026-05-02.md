@@ -985,10 +985,11 @@
 - **fix_commit**: cde0cb99b
 
 ### ISSUE-20260503-2101-I2
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: I
 - **title**: Flutter TaskModel 定义 paused_at/paused_reason 字段，但后端 Task model 和 DB schema 均无对应列
+- **fixer_started_at**: 2026-05-04T04:10:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence：(1) task_model.dart:185-188 定义 pausedReason/pausedAt 两个字段；(2) task.py:78-111 Task 模型共 49 列（title 到 subtasks_completed），无 paused_at 或 paused_reason；(3) c14 迁移的 paused_at (line 65) 属于 safe_experiments 表，非 tasks 表；(4) 全量 grep backend/app/schemas/ 和 backend/gateway/ 均无 paused_reason 或 paused_at。调用链验证：Python task_service.py:300-306 在 task pause 处理中创建 paused_at 作为局部变量存入 response dict，但从未将其写入 Task model 或 DB。Go gateway 零引用。Pydantic schema 零引用。数据流完整：Flutter → JSON {paused_reason, paused_at} → 后端 Pydantic 忽略未知字段 → DB 不存储 → GET 返回时字段缺失 → Flutter pausedAt/pausedReason 始终 null。与 ISSUE-20260503-2100-I1 无重复——I1 是 enum 定义同步，I2 是列缺失。非设计意图——Flutter 端字段定义明确表明设计意图是持久化暂停元数据。
 - **symptom**: Flutter 发送含 paused_at/paused_reason 的 JSON 给后端时，后端 Pydantic schema 忽略这些字段（无声数据丢失）。后端永远不会返回 paused_at 值，Flutter 的 pausedAt 始终为 null，暂停时间戳无法持久化
 - **root_cause_hypothesis**: Flutter 端 task_model.dart:185-188 定义了 `pausedReason` 和 `pausedAt` 两个可选字段，设计意图是记录任务暂停的时间和原因。但 Python 端 Task model (task.py:78-104) 没有 `paused_at` 或 `paused_reason` 列，Alembic 迁移中也从未给 tasks 表添加这些列（c14 迁移的 paused_at 属于 safe_experiments 表，不是 tasks 表）
