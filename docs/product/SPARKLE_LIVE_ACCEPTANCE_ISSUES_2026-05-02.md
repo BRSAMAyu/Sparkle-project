@@ -1108,6 +1108,7 @@
 | R39 | 2026-05-04T00:25 | ISSUE-20260504-1045-I5 | ✅ Fixed | 1efeab4f9 | ~25 min |
 | R40 | 2026-05-04T00:28 | ISSUE-20260504-1050-I6 | closed_already_resolved | 1efeab4f9 (顺带) | ~3 min |
 | R41 | 2026-05-04T21:20 | ISSUE-20260504-1200-G4 | closed | d59317d17 | ~35 min |
+| R42 | 2026-05-04T22:00 | ISSUE-20260504-1430-C6 | closed | f816de9ea | ~105 min (3R) |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -2225,7 +2226,7 @@
 - **suggested_fix_direction**: (1) Go JSON 路径：在错误发射点将 `gin.H{"type": "error", ...}` 改为 `gin.H{"type": "message_nack", "message_id": ..., "error_code": ..., "retry_after_ms": ..., ...}`；(2) Go protobuf 路径：在 handleProtobufMessage error 处理中构建 MessageNack protobuf 消息并序列化发送；(3) Flutter 端无需修改——NackEvent 解析器已完备
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-03T18:45Z
-- **fix_commit**: 留空（待 commit）
+- **fix_commit**: f816de9ea
 - **closed_at**: 2026-05-04T22:00:00Z
 - **opus_review**: APPROVED by fix-reviewer at 2026-05-04T21:47Z (R3)
 - **rework_note**: |
