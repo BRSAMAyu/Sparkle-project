@@ -2464,5 +2464,5 @@
   - `backend/app/api/v1/achievements.py:340-390` — create_contract 幂等键验证
 - **New issues**: L5(P2), L6(P3)
 - **Findings**: L 域续探聚焦 Aurora kill switch 覆盖率 + 治理规则有效性。(1) 21 个 Aurora kill switch 服务覆盖 Stage 18-40（缺 20/22/32/36）。Stage 32 为 SQAM 质量守卫（非运行时功能）。Stage 36 不存在。Stage 20/22 为实际缺口。(2) L5: CommunitySignalBridge 零 kill switch 引用——7 个公开方法无模式守卫，在 task_event_consumer 和 achievement_event_consumer 中无条件调用。同级 SocialSignalBridge 正确集成 Stage33 tri-state。若社区桥接在生产中出现性能或数据问题，无法通过标准 kill switch 关闭。(3) L6: Stage 20 SufficiencyJudge + ConflictResolver 使用简单布尔配置开关（settings.SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED），而非 Aurora tri-state kill switch——无 shadow 渐进发布、无 Prometheus gauge、无 drill 脚本。其他所有 Aurora Stage 均使用标准 kill switch 服务。(4) 验证了 achievement_engine.py 的金融原子性——with_for_update() 行锁正确，manage_transaction=False 为设计意图（父事务管理），非 bug。(5) 治理守卫（BB/BE）使用 token-presence 检查而非语义验证——已知 L4 已归档
-- **Opus pass rate**: pending (L5/L6)
+- **Opus pass rate**: 2/2 (L5/L6 verified by opus-independent-auditor+2026-05-03T19:30Z)
 - **Next suggested domain**: K (error handling) — 5 轮未回探；或 J (cold start / empty state) — 6 轮未回探
