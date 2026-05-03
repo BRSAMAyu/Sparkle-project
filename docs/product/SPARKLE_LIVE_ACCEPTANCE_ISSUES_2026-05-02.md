@@ -403,7 +403,7 @@
 | R27 | 2026-05-04T07:00 | A | 0 | N/A | A 域续探——task/goal/report/contract E2E 全链路验证通过，B5 模式未扩散 |
 | R28 | 2026-05-04T09:00 | D | 0 | N/A | D 域续探——D2 fix 验证通过（snapshot/rationale 已传递），FSM/锁/断路器/检查点/双核路由全部健壮，零缺口 |
 | R29 | 2026-05-04T09:30 | G | 3 | 3/3 | G 域续探——reportMessage/claimTask/searchUsers/sendFriendRequest 等多处空 stub → 虚假成功 / 功能不可用 |
-| R30 | 2026-05-04T09:45 | E | 3 | pending | E 域续探——双核路由 drill 缺失 + stage38 Prometheus 标签不一致 + privacy drill 内联 type 崩溃 |
+| R30 | 2026-05-04T09:45 | E | 3 | 3/3 | E 域续探——双核路由 drill 缺失 + stage38 Prometheus 标签不一致 + privacy drill 内联 type 崩溃 |
 
 ---
 
