@@ -110,8 +110,10 @@ class MultiAgentWorkflowAdapter:
             )
             plan = self.orchestrator.lang_graph_planner.build_fallback_plan(
                 message=message,
+                snapshot=snapshot,
                 user_id=user_id,
                 session_id=session_id,
+                rationale="Planner timeout in multi-agent adapter, synthesized fallback",
             )
 
         plan = self._apply_tool_policy(plan, config, context_data)

@@ -2213,8 +2213,10 @@ Please review this plan and provide your assessment."""
                     )
                     executable_plan = planner.build_fallback_plan(
                         message=replan_message,
+                        snapshot=snapshot,
                         user_id=user_id,
                         session_id=session_id,
+                        rationale="Planner timeout during replan, synthesized fallback",
                     )
 
                 user_context = {}

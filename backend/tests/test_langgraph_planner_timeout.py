@@ -17,9 +17,10 @@ EXEC_ENGINE_PATH = REPO_ROOT / "backend" / "app" / "orchestration" / "execution_
 
 @pytest.mark.asyncio
 async def test_plan_review_replan_timeout_uses_fallback():
-    """Simulated replan should use fallback plan when planner.plan() times out."""
+    """Simulated replan should use fallback plan with all required kwargs when planner.plan() times out."""
     mock_plan = MagicMock()
     mock_plan.steps = []
+    mock_snapshot = MagicMock()
 
     mock_planner = MagicMock()
     mock_planner.plan = AsyncMock(side_effect=TimeoutError())
@@ -28,19 +29,24 @@ async def test_plan_review_replan_timeout_uses_fallback():
     try:
         result = await asyncio.wait_for(mock_planner.plan(message="test"), timeout=0.1)
     except TimeoutError:
-        result = mock_planner.build_fallback_plan(message="test", user_id="u", session_id="s")
+        result = mock_planner.build_fallback_plan(
+            message="test", snapshot=mock_snapshot, user_id="u", session_id="s", rationale="timeout fallback",
+        )
 
     assert result == mock_plan
-    mock_planner.build_fallback_plan.assert_called_once()
+    mock_planner.build_fallback_plan.assert_called_once_with(
+        message="test", snapshot=mock_snapshot, user_id="u", session_id="s", rationale="timeout fallback",
+    )
 
 
 @pytest.mark.asyncio
 async def test_multi_agent_plan_timeout_uses_fallback():
-    """Multi-agent adapter should use fallback plan when planner.plan() times out."""
+    """Multi-agent adapter should use fallback plan with all required kwargs when planner.plan() times out."""
     mock_plan = MagicMock()
     mock_plan.collaboration_mode = "single"
     mock_plan.agents_involved = []
     mock_plan.tool_calls = []
+    mock_snapshot = MagicMock()
 
     mock_planner = MagicMock()
     mock_planner.plan = AsyncMock(side_effect=TimeoutError())
@@ -49,10 +55,14 @@ async def test_multi_agent_plan_timeout_uses_fallback():
     try:
         result = await asyncio.wait_for(mock_planner.plan(message="test"), timeout=0.1)
     except TimeoutError:
-        result = mock_planner.build_fallback_plan(message="test", user_id="u", session_id="s")
+        result = mock_planner.build_fallback_plan(
+            message="test", snapshot=mock_snapshot, user_id="u", session_id="s", rationale="timeout fallback",
+        )
 
     assert result == mock_plan
-    mock_planner.build_fallback_plan.assert_called_once()
+    mock_planner.build_fallback_plan.assert_called_once_with(
+        message="test", snapshot=mock_snapshot, user_id="u", session_id="s", rationale="timeout fallback",
+    )
 
 
 def test_plan_review_service_has_timeout_guard():
@@ -70,6 +80,14 @@ def test_multi_agent_adapter_has_timeout_guard():
     assert "except TimeoutError" in source, "multi_agent_adapter must handle TimeoutError"
     assert "build_fallback_plan" in source, "multi_agent_adapter must use fallback on timeout"
     assert "import asyncio" in source, "multi_agent_adapter must import asyncio"
+
+
+def test_fallback_calls_pass_required_kwargs():
+    """Both build_fallback_plan calls must include snapshot= and rationale= kwargs."""
+    for path, label in [(PLAN_REVIEW_PATH, "plan_review_service"), (MULTI_AGENT_PATH, "multi_agent_adapter")]:
+        source = path.read_text()
+        assert "snapshot=snapshot" in source, f"{label} must pass snapshot= to build_fallback_plan"
+        assert "rationale=" in source, f"{label} must pass rationale= to build_fallback_plan"
 
 
 def test_timeout_value_matches_execution_engine():
