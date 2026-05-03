@@ -668,9 +668,10 @@
 - **opus_review**: APPROVED by independent-review-agent at 2026-05-03T18:30Z
 
 ### ISSUE-20260503-1530-A1
-- **status**: verified
+- **status**: in_progress
 - **severity**: P1
 - **domain**: A
+- **fixer_started_at**: 2026-05-03T20:05:00Z
 - **title**: 日历卡片和任务反馈对话框跳转任务执行页时未设置 activeTaskProvider，导致屏幕显示"No task"错误页
 - **symptom**: 用户从日历卡片点击进行中任务的执行按钮，或从任务反馈对话框选择"做下一步"后，进入任务执行页面看到"当前没有执行中的任务"错误屏幕，而非任务执行界面
 - **root_cause_hypothesis**: `TaskExecutionScreen` 在 build 方法中读取 `ref.watch(activeTaskProvider)` 判断当前任务，但路由 pageBuilder 不提取 URL `:id` 参数，也不从 API 加载任务。整个屏幕完全依赖调用方在导航前通过 `ref.read(activeTaskProvider.notifier).state = task` 预设。`compact_task_card.dart` 和 `task_feedback_dialog.dart` 在 push/go 到执行路由前未设置此 provider，导致屏幕读到 null 走入错误分支。其他调用方（focus_action_card.dart:81、dashboard_screen.dart:376、task_detail_screen.dart:943）都正确设置了此 provider，并有明确注释 "🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取"
