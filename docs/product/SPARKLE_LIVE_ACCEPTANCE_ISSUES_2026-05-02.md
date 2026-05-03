@@ -603,9 +603,10 @@
   - CLAUDE.md compliance: PASS — Go Gateway 层无 business logic (纯持久化 logic), 无跨层泄漏, no hardcoded secrets, no proto 变更
 
 ### ISSUE-20260503-1512-K3
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: K
+- **fixer_started_at**: 2026-05-03T20:45:00Z
 - **title**: 12+ Flutter 首页/体验卡片在 provider 错误时使用 SizedBox.shrink() 静默消失，用户无任何错误提示
 - **symptom**: 当任何体验相关的后端 API 返回错误时，首页和体验页面的多个卡片区域会静默消失——不显示错误消息、不提供重试按钮、不留任何占位。用户看到的只是页面突然少了内容，无法区分是功能不存在还是加载失败
 - **root_cause_hypothesis**: 多个 ConsumerWidget 子类在 .when() 的 error 分支使用 error: (_, __) => const SizedBox.shrink() 模式。当 Riverpod provider 进入 AsyncError 状态时，卡片完全不可见。与同项目中 dashboard_screen 的 _buildErrorCard（提供重试按钮）形成对比
