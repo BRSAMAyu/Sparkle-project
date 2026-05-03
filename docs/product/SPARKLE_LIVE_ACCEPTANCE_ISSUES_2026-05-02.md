@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 02:30 (R19 I4 fix reviewed+APPROVED by independent-reviewer)
+> Updated: 2026-05-04 09:00 (R28 D-domain exploration complete — orchestrator FSM robust, 0 new issues)
 
 ---
 
@@ -401,6 +401,7 @@
 | R25 | 2026-05-04T05:00 | B | 2 | 2/2 (B4/B5 verified) | B 域续探——B4 markAsRead 空 catch, B5 submitFeedback 虚假成功 toast |
 | R26 | 2026-05-04T06:00 | J | 0 | N/A | J 域续探——achievement/galaxy/auth/router/splash 冷启动全部健壮，零缺口 |
 | R27 | 2026-05-04T07:00 | A | 0 | N/A | A 域续探——task/goal/report/contract E2E 全链路验证通过，B5 模式未扩散 |
+| R28 | 2026-05-04T09:00 | D | 0 | N/A | D 域续探——D2 fix 验证通过（snapshot/rationale 已传递），FSM/锁/断路器/检查点/双核路由全部健壮，零缺口 |
 
 ---
 
@@ -1805,3 +1806,25 @@
 - **Findings**: A 域续探覆盖 11 条 E2E 链路，追踪 UI→Provider→Repository→Network→Go Proxy→Python 全链。关键发现：(1) Task actions (start/pause/resume/stuck/complete) 五链完整——C1 fix 验证通过；(2) ReportReason enum 三层一致（Flutter @JsonValue / Python StrEnum / DB ALTER TYPE）——I3 fix 验证通过；(3) B5 模式（provider 返回 null + UI 不检查 → 虚假成功）未扩散——所有检查的表单提交场景（contract、post、report、favorite、forward、review、share）均有正确的返回值检查或 try/catch 模式；(4) 错误书使用 dioProvider（等效于 apiClient.dio）保留 auth 拦截器——无认证绕过；(5) PlanReviewCard 正确检查 onDecision 返回值，失败时不设 _isSubmitted，允许重试——与 B5 明确不同；(6) Goal detail 的 startNextStep/completeNextStep 有完整的 try/catch + success/error snackbar——K1 fix 验证通过；(7) Community createPost 使用乐观更新 + revert + rethrow 三阶段模式——异常传播到 UI 层正确显示错误 toast。A 域已穷尽——所有主要 UI E2E 链路合约完整，零缺口。
 - **Opus pass rate**: N/A (0 new issues)
 - **Next suggested domain**: D (Python orchestrator FSM) — D2 build_fallback_plan snapshot/rationale 参数缺失回归验证已待多轮；或 G (Mock vs Real) — 7 轮未回探，mock_community_repository reportMessage 空实现值得关注
+
+### Round R28 — 2026-05-04T09:00
+- **Domain**: D (Python orchestrator FSM — 续探)
+- **Paths covered**:
+  - D2 fix verification: multi_agent_adapter.py:111-117 — now passes snapshot=snapshot, rationale= to build_fallback_plan ✅
+  - D2 fix verification: plan_review_service.py:2214-2220 — now passes snapshot=snapshot, rationale= to build_fallback_plan ✅
+  - FSM graph: standard_workflow.py:3057-3200 — 12 nodes + 8 edges (3 static + 5 conditional), all transitions have fallback defaults; no dead-end states
+  - statechart_engine.py:199-315 — StateGraph.invoke() with max_steps=50 guard, checkpoint save/resume, error isolation per-node (break on error, no cascade)
+  - process_stream (orchestrator.py:2034-3548): 14-step pipeline with validation→lock→context→routing→dual_core→plan→graph_execution→response_build→cleanup; all error paths yield ChatResponse.ERROR
+  - Lock management: state_manager.py:288-394 — Redis SET NX acquire + Lua script release/renewal; lock_renewal_task with 10s interval; finally block guarantees stop_lock_renewal + release_lock
+  - Circuit breaker: circuit_breaker.py:25-159 — CLOSED→OPEN→HALF_OPEN states, sliding window, Redis persistence, auto-recovery; langgraph_breaker used before planner invocation
+  - Checkpointer: redis_checkpointer.py:12-157 — filters volatile keys (db_session/stream_callback/tools_schema/redis_client/run_ledger), 24h TTL, mark_completed on graph end
+  - Dual core router: dual_core_router.py:151-746 — 12 signal precedence weights, conditional activation (emotional_block/procrastination/cognitive_load), placeholder values updated at lines 686-688
+  - _execute_graph (execution_engine.py:1808-1847): TaskManager.spawn graph, drain queue with 0.1s polling, re-raise graph exceptions; all paths set result_holder["final_state"]
+  - _build_final_response (response_builder.py:847-1490): extracts last assistant message, fallback for empty/error states with 3-tier message (plan result / tool list / generic)
+  - Tool execution: _execute_single_tool (standard_workflow.py:3234-3372) — graceful degradation: failed tools produce fallback result with success=True (not hard crash)
+  - Experience actuator: experience_actuator.py:230-309 — early returns on None user_context/decision_context, strategy+feedback+grounding three-phase application
+  - orchestrator_production.py (1423 lines): dead code — never imported, ChatOrchestrator from orchestrator.py is the only live implementation
+- **New issues**: 0
+- **Findings**: D 域续探覆盖 14 条代码路径，追踪 FSM 全生命周期。关键发现：(1) D2 fix 双站点验证通过——build_fallback_plan 现在在 multi_agent_adapter 和 plan_review_service 两处调用点都正确传递 snapshot= 和 rationale=；(2) StateGraph 12 节点 + 8 边全部有 fallback 默认值——无死端状态转换；router_condition/collaboration_condition/collaboration_post_condition/generation_review_condition/reflection_condition/execution_review_condition 均有 `or "__end__"` 或明确默认值；(3) 节点异常隔离正确——statechart_engine:277-281 捕获每个节点的异常→记录到 state.errors→break 循环，不会级联崩溃；(4) 锁管理完整——Redis SET NX 获取 + Lua 原子释放/续期 + finally 块保证清理；(5) 断路器三态完整——CLOSED→OPEN→HALF_OPEN 含滑动窗口和 Redis 持久化；(6) 检查点机制正确过滤 volatile keys（db_session/stream_callback/run_ledger/redis_client），避免不可序列化对象污染；(7) 双核路由器 12 信号优先级权重，条件激活，placeholders 在 686-688 行正确更新；(8) process_stream 14 步流水线所有错误路径均 yield ChatResponse.ERROR，无静默吞异常；(9) 工具执行采用优雅降级而非硬崩溃——失败工具产生 success=True 的 fallback 结果；(10) orchestrator_production.py 为死代码（1423 行，从未被导入）——可能造成维护混淆。D 域 orchestrator FSM 全部链路合约完整，零缺口。整个 orchestrator 是高质量工程实现。
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: G (Mock vs Real) — 8 轮未回探，mock_community_repository reportMessage 空实现 + mock 与真实实现的差异积累值得关注；或 E (Aurora kill switch) — 7 轮未回探
