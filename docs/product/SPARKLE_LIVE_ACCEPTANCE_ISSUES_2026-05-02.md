@@ -516,9 +516,10 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1403-H4
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: H
+- **fixer_started_at**: 2026-05-03T15:35:00Z
 - **title**: group_tasks_screen 的集群任务操作按钮（Claim/Complete）和创建对话框标题硬编码英文，与同对话框已 i18n 的内容不一致
 - **symptom**: 中文模式下，集群任务卡片显示 "Claim"/"Complete" 按钮（英文），创建任务对话框标题为 "Create Group Task"（英文），对话框内的 hint 文本 "e.g. Complete Chapter 3 exercises" 也是英文。但同对话框的其他文本（Title/Description/Cancel/Create）已使用 `I18nService.instance.isChinese` 进行了双语处理
 - **root_cause_hypothesis**: 开发者在群任务功能中混合了 i18n 模式：对话框中的 labelText 和操作按钮已用 `I18nService.instance.isChinese` 处理，但任务卡片的 "Claim"/"Complete" 按钮 label 和对话框 "Create Group Task" 标题直接写了死英文
