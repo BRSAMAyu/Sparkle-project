@@ -1076,6 +1076,7 @@
 | R25 | 2026-05-04T09:35 | ISSUE-20260503-2300-B1 | ✅ Fixed | ad825322c | ~10 min |
 | R26 | 2026-05-04T08:25 | ISSUE-20260503-2301-B2 | ✅ Fixed | 6b69c479d | ~35 min |
 | R27 | 2026-05-03T08:20 | ISSUE-20260504-0016-H5 | ✅ Fixed | b8a11dfea | ~5 min |
+| R28 | 2026-05-03T08:30 | ISSUE-20260504-0345-H6 | ✅ Fixed | 1d0a141a6 | ~5 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1586,7 +1587,7 @@
 
 
 ### ISSUE-20260504-0345-H6
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-03T08:29:54Z
 - **domain**: H
@@ -1605,7 +1606,10 @@
 - **suggested_fix_direction**: 将 5 处硬编码英文替换为 `I18nService.instance.isChinese ? '中文' : 'English'` 模式：(1) user_search_screen.dart 的 3 处采用与 line 249 相同的 i18n 模式；(2) group_tasks_screen.dart:309 和 create_group_screen.dart:182 的 hintText 采用与相邻 labelText 相同的 `I18nService.instance.isChinese` 模式
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T03:30:00Z
-- **fix_commit**: 留空
+- **fix_commit**: 1d0a141a6b0c69464dac1c38bd4896bc87b01606
+- **opus_review**: APPROVED by opus-independent-reviewer at 2026-05-04T03:45:00Z
+- **closed_at**: 2026-05-03T08:30:00Z
+- **review_summary**: 5/5 hardcoded English strings replaced with `I18nService.instance.isChinese ? '中文' : 'English'` pattern consistent with adjacent labelText. Flutter analyze: 0 new issues (13 pre-existing info warnings). Rule guards: I18N PASS; AX failure is pre-existing (proxy_routes.go route-tier comments unrelated to this Flutter fix). No regression risk — pure string substitution. Minor note: user_search_screen.dart:258 hardcoded Chinese button label `'重试'` and several remaining hardcoded English strings (`'Send Friend Request'`, `'Claim'`, `'Complete'`, `'Create Group Task'`) are out of scope for this issue and should be tracked separately.
 
 
 ### Round R17 — 2026-05-04T01:45
