@@ -432,9 +432,10 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1202-G3
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: G
+- **fixer_started_at**: 2026-05-03T16:00:00
 - **title**: Mock 群组管理操作（踢出/晋升/降权/转让）全部静默 no-op 但 UI 显示成功提示
 - **symptom**: 在 demo 模式下，对群组成员执行踢出、晋升管理员、降权、转让群主操作后，UI 弹出 "xxx promoted to admin" 等成功消息，但成员列表和角色状态未发生任何变化
 - **root_cause_hypothesis**: MockCommunityRepository 的 kickMember()、promoteMember()、demoteMember()、transferOwnership() 全部为空函数（async {}），不更新任何内部状态。但 GroupMembersNotifier 在调用后重新 loadMembers()，返回的仍是空列表。group_members_screen.dart 在调用完成后直接显示成功 Toast。
