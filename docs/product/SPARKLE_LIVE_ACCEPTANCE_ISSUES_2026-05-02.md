@@ -880,9 +880,10 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1701-F2
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: F
+- **fixer_started_at**: 2026-05-04T03:05:00Z
 - **title**: PreferenceEventConsumer 绕过 EventBus 框架手工操作 Redis Stream，无 DLQ/重试计数/幂等保护/stop()，毒消息永久重试且无法优雅关闭
 - **symptom**: 当缓存失效事件处理失败时（如 user_id 格式错误、user_service 异常），PreferenceEventConsumer 不会将毒消息移入 DLQ，Redis consumer group 会反复重新投递该消息，形成无限重试循环。同时该消费者使用 `while True:` 无 `_running` 标志和 `stop()` 方法，服务关闭时_task 被粗暴取消，最后一条正在处理的事件可能丢失
 - **root_cause_hypothesis**: PreferenceEventConsumer 是唯一直接使用 Redis Stream 原始 API（xreadgroup/xack）而非 EventBus 框架的消费者。它没有重试计数、没有 DLQ、没有幂等锁、没有 poison message 检测。其 start() 方法使用 `while True:` 无退出条件，且类定义中无 `stop()` 方法（与 EventBus 生态的 16 个消费者对比，其中 11 个有 stop()）
