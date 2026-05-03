@@ -1209,10 +1209,11 @@
 - **Next suggested domain**: L (治理规则与文档承诺 vs 真实实现) — last remaining unexplored domain
 
 ### ISSUE-20260503-0432-L1
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: L
 - **title**: BH 元学习参数安全守卫脚本已存在但未注册到 rule_guard_manifest.tsv，CI 中从不运行
+- **fixer_started_at**: 2026-05-04T03:20:00Z
 - **symptom**: 运行 `bash scripts/run_all_rule_guards.sh`（CLAUDE.md 推荐的 CI 入口）后，元学习参数的安全检查（参数边界、kill switch 绑定、默认值回退、实验安全性）从未被执行。操作者看到 "64 rules passed" 后误以为所有治理规则均已覆盖，但实际上 BH 守卫被遗漏
 - **root_cause_hypothesis**: `scripts/guards/check_rule_bh_meta_learning_safety.py` 是一个完整的守卫脚本（使用 AST 解析验证 RoutingParameterRegistry 的默认值回退、PARAMETER_BOUNDS 完整性、META_LEARNING_BINDING kill switch 绑定、实验服务安全性），但开发者在创建后未将其添加到 `scripts/rule_guard_manifest.tsv`。manifest 中有 64 条规则（从 K 到 GOV-DATA-MIN），但没有 BH 条目
 - **evidence**:
@@ -1519,7 +1520,7 @@
 
 
 ### ISSUE-20260504-0300-C2
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-04T03:30:00Z
 - **domain**: C
@@ -1538,8 +1539,9 @@
 - **suggested_fix_direction**: 在 proxy_routes.go 的 tasks 路由组中添加：`tasks.GET("/:id/guidance", h.proxyWithHeaders)` 和 `tasks.POST("/:id/guidance", h.proxyWithHeaders)`。与 C1 修复的 pause/resume/stuck 保持一致的注册模式
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T03:15:00Z
-- **fix_commit**: 留空
+- **fix_commit**: pending commit (unstaged working tree change on main branch)
 - **reviewer_note**: APPROVED — independent review confirms all 6 evidence references match code exactly. (1) proxy_routes.go:69-132 tasks group: 32+ explicit routes covering start/complete/abandon/pause/resume/stuck/snooze/too-hard/skip/generate-guide/feedback/next-action-selection/card-protocol/priority-reasoning/resources. No `Any("/*path")` catch-all — unlike users/interventions/dashboard groups which use catch-alls. grep for "guidance" returns empty. The existing `POST /:id/generate-guide` (line 112) is a DIFFERENT endpoint (writes to task.guide_content directly, not the TaskGuidance sidecar system). (2) tasks.py:876 — `@router.get("/{task_id}/guidance")` EXISTS. tasks.py:904 — `@router.post("/{task_id}/guidance")` EXISTS. Both are fully implemented. (3) task_repository.dart:313 — `_taskGuidancePath(taskId) => '${ApiEndpoints.task(taskId)}/guidance'` constructs `/tasks/{id}/guidance`. getTaskGuidance (line 969): GET, catches 404→null (silent degradation). createOrRefreshTaskGuidance (line 999): POST, DioException→_handleDioError→Exception (hard failure). (4) task_guidance_surface.dart:69-78 — _primeHumanGuidance calls loadTaskGuidance then createOrRefreshTaskGuidance on null. Line 107 — user-triggered _generateSelected also calls createOrRefreshTaskGuidance. Call chain: Flutter HTTP→Go Gin router→no explicit route match→NoRoute handler→shouldProxyNoRoutePath returns false (only /api/v1/auth/* paths)→404 JSON→Flutter error. Not design intent: guidance follows identical pattern to 32+ registered task sub-routes; omission is unintentional. Not duplicate of C1: C1 (commit 0fd0c3b6d) added exactly 3 lines — pause/resume/stuck only — confirmed by git diff. Guidance is a distinct endpoint pair discovered in R20 during A-domain UI exploration.
+- **opus_review**: APPROVED by independent-fix-reviewer (GLM-5.1) at 2026-05-04T04:10:00Z. **Verdict**: Fix correctly resolves root cause — adds exactly 2 lines (GET+POST /:id/guidance) using identical pattern as 34 sibling routes with `h.proxyWithHeaders`. Not a hack or workaround. **(a) Root cause**: Confirmed. The tasks group in proxy_routes.go uses explicit route registration (no catch-all wildcard), and guidance was genuinely omitted. Fix registers both routes at the correct location (lines 119-120, within the Error Book Extended Routes block alongside all other /:id/* task action routes). **(b) Regression risk**: Low. The two new routes use the same `proxyWithHeaders` handler as every sibling route. No handler logic changed. No other callers affected. Routes are added inside existing Gin group with authMiddleware already applied. **(c) Cross-layer contract**: Synchronized. Python: tasks.py:876 GET + tasks.py:904 POST both exist. Flutter: task_repository.dart:313 `_taskGuidancePath` constructs `/tasks/{id}/guidance`, called by `getTaskGuidance` (GET) and `createOrRefreshTaskGuidance` (POST). No proto/DB/i18n changes needed (pure proxy route). **(d) Test regression protection**: PARTIAL. TestProxyRoutesHandler_RegisterProxyRoutes passes (4/4 tests PASS) but `expectedTasksRoutes` list does NOT include `GET /:id/guidance` or `POST /:id/guidance`. Removing the fix would NOT cause any test to fail — the test has a pre-existing coverage gap (also missing pause/resume/stuck/recommended/card-protocol/priority-reasoning). This is a pre-existing weakness not introduced by this fix. **Recommendation**: Add `GET /api/v1/tasks/:id/guidance` and `POST /api/v1/tasks/:id/guidance` to `expectedTasksRoutes` in proxy_routes_test.go to prevent silent regression. **(e) CLAUDE.md / rule guards**: No violations. Fix follows established pattern in codebase. No business logic added to Gateway (correct — routing only). No proto/DB changes required.
 
 
 ### Round R17 — 2026-05-04T01:45
