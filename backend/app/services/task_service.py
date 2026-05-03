@@ -313,7 +313,9 @@ class TaskService:
 
         db_obj.status = TaskStatus.PAUSED
         db_obj.guide_json = guide_json
+        db_obj.paused_at = paused_at
         if reason:
+            db_obj.paused_reason = reason
             db_obj.user_note = f"Paused: {reason}"
 
         db.add(db_obj)

@@ -93,6 +93,10 @@ class Task(BaseModel):
     tool_result_id = Column(String(50), nullable=True, index=True)
     execution_mode = Column(String(20), nullable=True, default=None)
 
+    # 暂停信息
+    paused_at = Column(DateTime, nullable=True)
+    paused_reason = Column(Text, nullable=True)
+
     # 完成信息
     actual_minutes = Column(Integer, nullable=True)
     user_note = Column(Text, nullable=True)

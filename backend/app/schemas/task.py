@@ -233,6 +233,8 @@ class TaskDetail(TaskBase):
     started_at: datetime | None = Field(description="Started time")
     confirmed_at: datetime | None = Field(description="Confirmed time")
     completed_at: datetime | None = Field(description="Completed time")
+    paused_at: datetime | None = Field(description="Paused time")
+    paused_reason: str | None = Field(description="Pause reason")
     actual_minutes: int | None = Field(description="Actual minutes")
     user_note: str | None = Field(description="User note")
     knowledge_node_id: UUID | None = Field(description="Knowledge node ID")
