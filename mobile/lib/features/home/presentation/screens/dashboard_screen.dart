@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -23,15 +24,18 @@ import 'package:sparkle/features/experience/presentation/providers/experience_pr
 import 'package:sparkle/features/experience/presentation/widgets/goal_detail_snapshot_card.dart';
 import 'package:sparkle/features/experience/presentation/widgets/growth_quality_card.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_slot_config_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/notification_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/spine_status_band_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/aurora_status_band.dart';
+import 'package:sparkle/features/home/presentation/widgets/collapsible_slot.dart';
 import 'package:sparkle/features/home/presentation/widgets/compact_status_bar.dart';
 import 'package:sparkle/features/home/presentation/widgets/daily_context_line.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_card_section.dart';
+import 'package:sparkle/features/home/presentation/widgets/dashboard_edit_sheet.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/exam_sprint_dashboard_card.dart';
 import 'package:sparkle/features/home/presentation/widgets/goal_switcher.dart';
@@ -515,6 +519,287 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
       ];
 
+  /// Resolve the actual widget for a given customizable slot id. Returns
+  /// `null` when the slot's underlying data isn't present (e.g. an exam
+  /// sprint hasn't been started) so the slot is skipped entirely instead
+  /// of rendering a placeholder shell.
+  Widget? _buildSlotContent(
+    String slotId, {
+    required DashboardState dashboardState,
+    required HomeGrowthState? growthState,
+    required AsyncValue<HomeGrowthState> growthAsync,
+    required ExamSprintDashboardData? examSprintDashboard,
+    required HomeBottleneck? activeBottleneck,
+  }) {
+    switch (slotId) {
+      case DashboardSlotIds.dailyBriefing:
+        return _DailyBriefingCard(
+          dashboardState: dashboardState,
+          isExpanded: _isBriefingExpanded,
+          onToggleExpanded: () {
+            setState(() {
+              _isBriefingExpanded = !_isBriefingExpanded;
+            });
+          },
+        );
+      case DashboardSlotIds.metricsRow:
+        return MetricsRow(dashboardState: dashboardState);
+      case DashboardSlotIds.commandCenter:
+        return _HomeCommandCenterCard(
+          dashboardState: dashboardState,
+          growthState: growthState,
+          isLoading: growthState == null && growthAsync.isLoading,
+          onStartTask: _startNextAction,
+          onOpenTasks: () {
+            unawaited(context.push('/tasks'));
+          },
+          onCreatePlan: () {
+            unawaited(context.push('/plans/new?type=growth'));
+          },
+          onOpenAurora: () {
+            unawaited(context.push(ChatRoutes.chat));
+          },
+          onOpenBottleneckChat: activeBottleneck == null
+              ? null
+              : () => _openBottleneckChat(activeBottleneck),
+        );
+      case DashboardSlotIds.understanding:
+        return _UnderstandingExpansionSlot(
+          isExpanded: _isUnderstandingExpanded,
+          onToggle: () {
+            setState(() {
+              _isUnderstandingExpanded = !_isUnderstandingExpanded;
+            });
+          },
+        );
+      case DashboardSlotIds.returnCaseFile:
+        return const ReturnCaseFileCard();
+      case DashboardSlotIds.goalDetailSnapshot:
+        return GoalDetailSnapshotCard(
+          onOpenGoal: () => unawaited(context.push('/goals/current')),
+        );
+      case DashboardSlotIds.multiGoalDashboard:
+        return const MultiGoalDashboardCard();
+      case DashboardSlotIds.taskBoard:
+        return const TaskBoardCard();
+      case DashboardSlotIds.examSprint:
+        if (examSprintDashboard == null) return null;
+        return ExamSprintDashboardCard(
+          data: examSprintDashboard,
+          onRecordResult: () {
+            unawaited(
+              context.push(
+                '/exam-sprint/review?plan_id=${examSprintDashboard.planId}'
+                '&subject=${Uri.encodeComponent(examSprintDashboard.subject)}',
+              ),
+            );
+          },
+        );
+      case DashboardSlotIds.dashboardUpdates:
+        return const _DashboardUpdatesSection();
+      case DashboardSlotIds.growthQuality:
+        return const GrowthQualityCard();
+      case DashboardSlotIds.weeklyNarrative:
+        return const _WeeklyNarrativeSlot();
+      case DashboardSlotIds.community:
+        return const _CommunityAccountabilitySlot();
+      case DashboardSlotIds.achievementProgress:
+        return const AchievementProgressCard();
+      case DashboardSlotIds.learningHeatmap:
+        return const Padding(
+          padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
+          child: LearningHeatmapWidget(),
+        );
+      case DashboardSlotIds.workspaceCards:
+        return const DashboardCardSection();
+    }
+    return null;
+  }
+
+  _SlotMeta _slotMeta(String slotId) {
+    final zh = I18nService.instance.isChinese;
+    switch (slotId) {
+      case DashboardSlotIds.dailyBriefing:
+        return _SlotMeta(
+          title: zh ? '今日简报' : 'Daily briefing',
+          icon: Icons.wb_sunny_outlined,
+          summary: zh ? '当天的状态、节奏与重点' : 'Today\'s status, pace, focus',
+          accent: DS.brandPrimary,
+        );
+      case DashboardSlotIds.metricsRow:
+        return _SlotMeta(
+          title: zh ? '关键指标' : 'Key metrics',
+          icon: Icons.insights_rounded,
+          summary: zh ? '进度、连续天数、动力' : 'Progress, streak, momentum',
+          accent: DS.info,
+        );
+      case DashboardSlotIds.commandCenter:
+        return _SlotMeta(
+          title: zh ? '指挥中心' : 'Command center',
+          icon: Icons.bolt_rounded,
+          summary: zh ? '下一步行动入口' : 'Pick up the next action',
+          accent: DS.brandPrimary,
+        );
+      case DashboardSlotIds.understanding:
+        return _SlotMeta(
+          title: zh ? '理解面板' : 'Understanding',
+          icon: Icons.psychology_outlined,
+          summary: zh ? 'Sparkle 对你的认知拆解' : 'How Sparkle reads you',
+          accent: DS.info,
+        );
+      case DashboardSlotIds.returnCaseFile:
+        return _SlotMeta(
+          title: zh ? '回归档案' : 'Return case file',
+          icon: Icons.history_edu_rounded,
+          summary: zh ? '上次离开时的现场' : 'Where you left off',
+          accent: DS.warning,
+        );
+      case DashboardSlotIds.goalDetailSnapshot:
+        return _SlotMeta(
+          title: zh ? '目标详情' : 'Goal snapshot',
+          icon: Icons.flag_outlined,
+          summary: zh ? '当前目标的近况' : 'Active goal snapshot',
+          accent: DS.success,
+        );
+      case DashboardSlotIds.multiGoalDashboard:
+        return _SlotMeta(
+          title: zh ? '多目标看板' : 'Multi-goal board',
+          icon: Icons.dashboard_customize_outlined,
+          summary: zh ? '所有目标的总览' : 'All goals at a glance',
+          accent: DS.brandPrimary,
+        );
+      case DashboardSlotIds.taskBoard:
+        return _SlotMeta(
+          title: zh ? '任务面板' : 'Task board',
+          icon: Icons.checklist_rounded,
+          summary: zh ? '今日待办与进度' : 'Today\'s tasks & progress',
+          accent: DS.success,
+        );
+      case DashboardSlotIds.examSprint:
+        return _SlotMeta(
+          title: zh ? '考试冲刺' : 'Exam sprint',
+          icon: Icons.local_fire_department_outlined,
+          summary: zh ? '剩余天数与节奏' : 'Days left & cadence',
+          accent: DS.warning,
+        );
+      case DashboardSlotIds.dashboardUpdates:
+        return _SlotMeta(
+          title: zh ? '动态' : 'Updates',
+          icon: Icons.notifications_outlined,
+          summary: zh ? '通知、洞察、提醒' : 'Notifications & insights',
+          accent: DS.info,
+        );
+      case DashboardSlotIds.growthQuality:
+        return _SlotMeta(
+          title: zh ? '成长质量' : 'Growth quality',
+          icon: Icons.trending_up_rounded,
+          summary: zh ? '深度、稳定性、平衡' : 'Depth, stability, balance',
+          accent: DS.success,
+        );
+      case DashboardSlotIds.weeklyNarrative:
+        return _SlotMeta(
+          title: zh ? '本周叙事' : 'Weekly narrative',
+          icon: Icons.menu_book_outlined,
+          summary: zh ? '一周变化的故事线' : 'This week\'s story',
+          accent: DS.info,
+        );
+      case DashboardSlotIds.community:
+        return _SlotMeta(
+          title: zh ? '同行社群' : 'Community',
+          icon: Icons.group_outlined,
+          summary: zh ? '伙伴动态与监督' : 'Partners & accountability',
+          accent: DS.brandPrimary,
+        );
+      case DashboardSlotIds.achievementProgress:
+        return _SlotMeta(
+          title: zh ? '成就进度' : 'Achievements',
+          icon: Icons.emoji_events_outlined,
+          summary: zh ? '近期解锁与里程碑' : 'Recent unlocks & milestones',
+          accent: DS.warning,
+        );
+      case DashboardSlotIds.learningHeatmap:
+        return _SlotMeta(
+          title: zh ? '学习热力图' : 'Learning heatmap',
+          icon: Icons.calendar_view_month_rounded,
+          summary: zh ? '过去30天的活跃度' : 'Last 30 days of activity',
+          accent: DS.info,
+        );
+      case DashboardSlotIds.workspaceCards:
+        return _SlotMeta(
+          title: zh ? '工作区卡片' : 'Workspace cards',
+          icon: Icons.view_module_outlined,
+          summary: zh ? '可滑动 / 网格的功能卡' : 'Swipe or grid feature cards',
+          accent: DS.brandPrimary,
+        );
+    }
+    return _SlotMeta(
+      title: slotId,
+      icon: Icons.extension_outlined,
+      accent: DS.brandPrimary,
+    );
+  }
+
+  Widget _buildEmptyDashboardCta() {
+    final zh = I18nService.instance.isChinese;
+    return ContentConstraint(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          DS.spacing24,
+          DS.spacing16,
+          DS.spacing24,
+        ),
+        child: DashboardSectionShell(
+          tone: DashboardSurfaceTone.summary,
+          padding: const EdgeInsets.all(DS.spacing20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.tune_rounded,
+                    size: 22,
+                    color: DS.brandPrimary,
+                  ),
+                  const SizedBox(width: DS.spacing8),
+                  Expanded(
+                    child: Text(
+                      zh ? '驾驶舱已经清空' : 'Your dashboard is empty',
+                      style: DS.titleMedium.copyWith(
+                        color: DS.textPrimary,
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: DS.spacing8),
+              Text(
+                zh
+                    ? '点开下方"自定义"重新选择想要常驻的模块。'
+                    : 'Tap "Customize" below to bring slots back.',
+                style: DS.bodySmall.copyWith(color: DS.textSecondary),
+              ),
+              const SizedBox(height: DS.spacing16),
+              SparkleButton.primary(
+                label: zh ? '自定义驾驶舱' : 'Customize dashboard',
+                onPressed: () => unawaited(
+                  showSensoryModalBottomSheet<void>(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => const DashboardEditSheet(),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
@@ -564,6 +849,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
     final activeBottleneck = growthState?.activeBottleneck;
     final examSprintDashboard = examSprintDashboardAsync.valueOrNull;
+    final slotConfig = ref.watch(dashboardSlotConfigProvider);
     var growthSectionIndex = 0;
     final showGrowthHeader = dashboardState.error == null;
     final growthSections = !showGrowthHeader
@@ -772,30 +1058,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         );
       }
     } else {
-      dashboardSections.addAll([
-        _staggeredSection(
-          index: sectionIndex++,
-          child: _DailyBriefingCard(
-            dashboardState: dashboardState,
-            isExpanded: _isBriefingExpanded,
-            onToggleExpanded: () {
-              setState(() {
-                _isBriefingExpanded = !_isBriefingExpanded;
-              });
-            },
-          ),
-        ),
-        _staggeredSection(
-          index: sectionIndex++,
-          child: MetricsRow(dashboardState: dashboardState),
-        ),
-      ]);
-
-      // Always show the full rich dashboard sections — workspace modules,
-      // achievement progress, heatmap, and task board handle their own
-      // empty/loading states internally.  Only prepend the "set first goal"
-      // prompt when the legacy dashboard provider confirms there are no
-      // actions, sprints or growth plans yet.
+      // First-goal empty state always pins to the top of the customizable
+      // surface so brand-new users get guidance regardless of which slots
+      // they've enabled.
       if (showFirstGoalEmptyState) {
         dashboardSections.add(
           _staggeredSection(
@@ -804,27 +1069,46 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         );
       }
-      dashboardSections.addAll([
-        _staggeredSection(
-          index: sectionIndex++,
-          child: const _DashboardUpdatesSection(),
-        ),
-        _staggeredSection(
-          index: sectionIndex++,
-          child: const DashboardCardSection(),
-        ),
-        _staggeredSection(
-          index: sectionIndex++,
-          child: const AchievementProgressCard(),
-        ),
-        _staggeredSection(
-          index: sectionIndex++,
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: DS.spacing16),
-            child: LearningHeatmapWidget(),
+
+      // Walk the user's slot order, render only what's visible, wrap each
+      // in CollapsibleSlot so they can shrink to a 64px header without
+      // losing access via the header tap / overflow menu.
+      for (final slotId in slotConfig.visibleOrderedSlots) {
+        final content = _buildSlotContent(
+          slotId,
+          dashboardState: dashboardState,
+          growthState: growthState,
+          growthAsync: growthAsync,
+          examSprintDashboard: examSprintDashboard,
+          activeBottleneck: activeBottleneck,
+        );
+        if (content == null) continue;
+        final meta = _slotMeta(slotId);
+        dashboardSections.add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: CollapsibleSlot(
+              slotId: slotId,
+              title: meta.title,
+              icon: meta.icon,
+              summary: meta.summary,
+              accentColor: meta.accent,
+              child: content,
+            ),
           ),
-        ),
-      ]);
+        );
+      }
+
+      // If user has hidden every customizable slot, surface a recovery CTA
+      // so the dashboard isn't a blank scroll.
+      if (slotConfig.visibleSlotIds.isEmpty) {
+        dashboardSections.add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: _buildEmptyDashboardCta(),
+          ),
+        );
+      }
     }
 
     return SparklePageScaffold(
@@ -918,6 +1202,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ),
     );
   }
+}
+
+class _SlotMeta {
+  const _SlotMeta({
+    required this.title,
+    required this.icon,
+    required this.accent,
+    this.summary,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color accent;
+  final String? summary;
 }
 
 class _DashboardGoalSwitcherBand extends StatelessWidget {
