@@ -636,9 +636,10 @@
 - **verified_by**: -
 
 ### ISSUE-20260503-1500-K1
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: K
+- **fixer_started_at**: 2026-05-03T16:25:00Z
 - **title**: 目标详情页"开始"/"完成"按钮 API 调用无错误处理，失败时用户零反馈
 - **symptom**: 用户在目标详情页点击"开始"或"完成"按钮后，如果后端 API 返回错误（网络超时/500/任务状态冲突），按钮无反应，无 SnackBar 提示，无 loading 状态恢复。对"开始"按钮，成功时显示的 Snackbar 不会出现；对"完成"按钮，确认对话框关闭后无任何反馈。
 - **root_cause_hypothesis**: `GoalDetailNotifier.startNextStep()` 和 `completeNextStep()` 两个方法直接 `await` API 调用后 `unawaited(load())`，没有 try/catch。UI 层 `goal_detail_page.dart` 的按钮回调也没有 try/catch 包裹。异常在 async 回调中未被捕获，Flutter 静默吞掉。
