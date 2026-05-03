@@ -1018,7 +1018,7 @@
 | R13 | 2026-05-03T22:15 | ISSUE-20260503-2100-I1 | closed | cde0cb99b | ~25 min |
 | R14 | 2026-05-03T22:50 | ISSUE-20260503-2102-I3 | closed | 9b2698fd1 | ~30 min |
 | R14 | 2026-05-03T22:50 | ISSUE-20260503-2102-I3 | ✅ Fixed | 9b2698fd1 | ~30 min |
-| R15 | 2026-05-04T00:20 | ISSUE-20260503-0432-L2 | ✅ Fixed | (pending) | ~65 min |
+| R15 | 2026-05-04T00:20 | ISSUE-20260503-0432-L2 | ✅ Fixed | 8c16875c1 | ~65 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1211,7 +1211,7 @@
 - **suggested_fix_direction**: 将 AV 守卫重构为动态发现：扫描 `backend/app/services/aurora_*kill_switch*.py` 获取服务列表，扫描 `settings.py` 中匹配 `AURORA_*_MODE` 模式的设置获取模式列表。同时添加 CI 守卫确保动态发现不低于某个覆盖率阈值
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T22:30:00Z
-- **fix_commit**: (pending commit)
+- **fix_commit**: 8c16875c1
 - **opus_review**: APPROVED by independent-auditor at 2026-05-04T00:15:00Z
   - **5a root cause**: FIXED — hardcoded `SERVICE_PATHS` (18 items) and `MODE_SETTINGS` (44 items) replaced with dynamic discovery (`_discover_service_paths` via `glob("aurora_*kill_switch*.py")` and `_discover_mode_settings` via regex parsing of `settings.py`). Now correctly finds all 21 service files and 57 mode settings. No hack; architectural improvement that eliminates the entire class of stale-list bugs.
   - **5b regression**: LOW RISK — guard is standalone script invoked from `scripts/rule_guard_manifest.tsv` line 59. Only caller outside CI is `scripts/stage40/run_activation_smoke.py:142-156` which checks for string literals in guard source (`if attr not in text`). That smoke test now reports 40 "missing" attributes because the guard no longer contains hardcoded names. However: (1) `run_activation_smoke.py` is not in CI pipeline (not in Makefile, not in run_all_rule_guards.sh), (2) its own `LIVE_EXPECTED` set is also hardcoded and has the same staleness problem. This is a pre-existing issue in the smoke test, not a regression from the fix. Flagged for separate cleanup.
@@ -1302,7 +1302,7 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-2302-B3
-- **status**: discovered
+- **status**: verified
 - **severity**: P3
 - **domain**: B
 - **title**: spineStatusBandProvider 使用 catch (_) 吞没所有异常，provider 永远不进入 error 状态，代码 bug 与网络故障不可区分
