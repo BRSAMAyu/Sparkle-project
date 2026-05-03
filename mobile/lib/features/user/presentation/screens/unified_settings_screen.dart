@@ -1391,10 +1391,22 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                     ),
                                   ],
                                   selected: prefs.analysisDepth,
-                                  onChanged: (v) => ref
-                                      .read(auroraPreferencesProvider.notifier)
-                                      .updatePreference(
-                                          'aurora_analysis_depth', v),
+                                  onChanged: (v) async {
+                                    try {
+                                      await ref
+                                          .read(auroraPreferencesProvider.notifier)
+                                          .updatePreference(
+                                              'aurora_analysis_depth', v);
+                                    } catch (_) {
+                                      if (context.mounted) {
+                                        AppFeedback.error(
+                                            context,
+                                            AppLocalizations.of(context)!
+                                                .learningPreferenceSaveFailed(
+                                                    ''));
+                                      }
+                                    }
+                                  },
                                 ),
                                 const Divider(height: DS.spacing24),
                                 _buildAuroraPrefSegmented(
@@ -1418,9 +1430,22 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                     ),
                                   ],
                                   selected: prefs.directness,
-                                  onChanged: (v) => ref
-                                      .read(auroraPreferencesProvider.notifier)
-                                      .updatePreference('aurora_directness', v),
+                                  onChanged: (v) async {
+                                    try {
+                                      await ref
+                                          .read(auroraPreferencesProvider.notifier)
+                                          .updatePreference(
+                                              'aurora_directness', v);
+                                    } catch (_) {
+                                      if (context.mounted) {
+                                        AppFeedback.error(
+                                            context,
+                                            AppLocalizations.of(context)!
+                                                .learningPreferenceSaveFailed(
+                                                    ''));
+                                      }
+                                    }
+                                  },
                                 ),
                                 const Divider(height: DS.spacing24),
                                 _buildAuroraPrefSegmented(
@@ -1444,10 +1469,22 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                     ),
                                   ],
                                   selected: prefs.explanationLevel,
-                                  onChanged: (v) => ref
-                                      .read(auroraPreferencesProvider.notifier)
-                                      .updatePreference(
-                                          'aurora_explanation_level', v),
+                                  onChanged: (v) async {
+                                    try {
+                                      await ref
+                                          .read(auroraPreferencesProvider.notifier)
+                                          .updatePreference(
+                                              'aurora_explanation_level', v);
+                                    } catch (_) {
+                                      if (context.mounted) {
+                                        AppFeedback.error(
+                                            context,
+                                            AppLocalizations.of(context)!
+                                                .learningPreferenceSaveFailed(
+                                                    ''));
+                                      }
+                                    }
+                                  },
                                 ),
                                 const Divider(height: DS.spacing24),
                                 _buildAuroraPrefSegmented(
@@ -1471,10 +1508,22 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                     ),
                                   ],
                                   selected: prefs.pressureStyle,
-                                  onChanged: (v) => ref
-                                      .read(auroraPreferencesProvider.notifier)
-                                      .updatePreference(
-                                          'aurora_pressure_style', v),
+                                  onChanged: (v) async {
+                                    try {
+                                      await ref
+                                          .read(auroraPreferencesProvider.notifier)
+                                          .updatePreference(
+                                              'aurora_pressure_style', v);
+                                    } catch (_) {
+                                      if (context.mounted) {
+                                        AppFeedback.error(
+                                            context,
+                                            AppLocalizations.of(context)!
+                                                .learningPreferenceSaveFailed(
+                                                    ''));
+                                      }
+                                    }
+                                  },
                                 ),
                                 const SizedBox(height: DS.spacing12),
                               ],

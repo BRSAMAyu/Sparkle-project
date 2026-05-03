@@ -80,6 +80,7 @@ class AuroraPreferencesNotifier extends AsyncNotifier<AuroraPreferences> {
       );
     } catch (_) {
       state = AsyncData(current);
+      rethrow;
     }
   }
 
