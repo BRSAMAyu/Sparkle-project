@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 11:15 (R34 I-domain exploration — 2 discovered: I5 Go schema.sql tasks 缺 paused 列 / I6 Go Reportreason 缺 HATE_SPEECH)
+> Updated: 2026-05-04 14:30 (R35 C-domain exploration — 2 discovered: C6 Proto MessageNack 未实现 / C7 HeartbeatPing/Pong 死代码)
 
 ---
 
@@ -408,6 +408,7 @@
 | R32 | 2026-05-04T10:45 | H | 2 | 2/2 (H7/H8 verified) | H 域续探——H6 deferred residuals (5 strings in 2 files) + sprint_history loading/空状态硬编码 (4 strings) |
 | R33 | 2026-05-04T12:00 | G | 1 | pending (G4) | G 域续探——mock 群聊消息分页参数被忽略，demo 模式下"加载更多"静默失败 |
 | R34 | 2026-05-04T11:15 | I | 2 | pending（待 Opus 独立复审） | I 域续探——I1-I4 fixes 全部验证通过 + I5 Go schema.sql tasks 缺 paused 列 + I6 Go Reportreason 缺 HATE_SPEECH（同根因：fix 后未 make sync-db） |
+| R35 | 2026-05-04T14:30 | C | 2 | pending（待 Opus 独立复审） | C 域续探——Proto MessageNack 未实现（Go 用 ad-hoc error 替代结构化 NACK，Flutter NackEvent 死代码）+ HeartbeatPing/Pong proto 类型死代码（三套心跳仅两套存活） |
 
 ---
 
@@ -2115,6 +2116,50 @@
 - **suggested_fix_direction**: MockCommunityRepository.getMessages() 应根据 beforeId 过滤消息（排除 ID 匹配的消息及之后的消息），并根据 limit 截断返回数量。同方法 getPrivateMessages() 也应做类似处理以保持一致性
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T22:30
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1430-C6
+- **status**: verified
+- **severity**: P2
+- **domain**: C
+- **title**: Proto MessageNack 协议未实现——服务器使用 ad-hoc error 替代结构化 NACK，Flutter NackEvent 解析器为死代码
+- **symptom**: 当服务器拒绝客户端消息（如频率限制、无效 payload）时，Go gateway 发送 `{"type": "error", "message": "..."}` 而非 proto 定义的 `message_nack` 格式（含 error_code、retry_after_ms、permanent 标志）。Flutter 客户端的 NackEvent.canRetry 逻辑从未触发，客户端无法区分"可重试的临时错误"和"永久性拒绝"
+- **root_cause_hypothesis**: websocket.proto:74-90 定义了完整的 MessageAck/MessageNack 协议，但 Go gateway 的 handleProtobufMessage 交换机（chat_orchestrator_protocol.go:573）仅处理 "chat" 和 "update_node_mastery" 两种类型。Go JSON 路径错误统一用 `gin.H{"type": "error"}` 发送。Python 后端无任何 message_nack 发射。Flutter 的 NackEvent 解析器（websocket_chat_service_v2.dart:853-872）正确识别 `message_nack`/`nack` type 并提取 retryAfterMs + canRetry 逻辑，但无后端代码触发此路径
+- **evidence**:
+  - `proto/websocket.proto:74-90` — 定义 MessageNack（message_id + error_code + error_message + retry_after_ms + permanent）完整结构化拒绝协议；MessageAck（message_id + status + timestamp）支持 received/processing/failed 三态
+  - `backend/gateway/internal/handler/chat_orchestrator_protocol.go:553-617` — handleProtobufMessage switch 仅有 case "chat" 和 case "update_node_mastery"，default 返回 "Unknown protobuf message type"——message_ack/message_nack 不在处理范围内
+  - `backend/gateway/internal/handler/chat_orchestrator.go:492` — JSON 路径错误处理使用 `gin.H{"type": "error", "message": "Unknown message type"}` 而非 proto NACK 格式，丢失 retry_after_ms/permanent 语义
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:853-872` — Flutter 已有完整 message_nack JSON 解析逻辑，提取 errorCode/errorMessage/retryAfterMs，提供 canRetry getter
+  - `mobile/lib/features/chat/data/models/chat_stream_events.dart:375-393` — NackEvent 类具备 canRetry getter——因 Go 从不发送 message_nack 而从未执行
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:143-165` — sendChatAccepted 仅发送 message_ack（status: "received"），不发送任何 NACK——接受确认存在但拒绝确认缺失
+- **repro_or_trigger**: 向 WebSocket 发送超长消息（超过 maxMessageLength）→ Go 返回 `{"type": "error", "message": "..."}` → Flutter 解析为通用 ErrorEvent 而非 NackEvent → canRetry 逻辑未触发。对比：若使用 proto 定义的 message_nack 格式，客户端可检查 retry_after_ms 实现智能重试
+- **expected_vs_actual**: 期望：消息被拒绝时，服务器发送 proto 定义的 message_nack 格式（含 error_code、retry_after_ms、permanent），Flutter 解析为 NackEvent 并提供 canRetry/retryAfterMs 给上层；实际：服务器发送 ad-hoc `{"type": "error"}` JSON，Flutter 的 NackEvent 解析器从未被触发，结构化重试语义丢失
+- **blast_radius**: 影响 WebSocket 消息级错误处理精度。当前 ad-hoc error 格式对简单聊天场景可接受（用户看到错误消息后手动重试），但丢失了程序化重试能力。对北极星无直接阻塞——核心聊天流通过隐式响应流确认消息已处理
+- **suggested_fix_direction**: (1) Go JSON 路径：在错误发射点将 `gin.H{"type": "error", ...}` 改为 `gin.H{"type": "message_nack", "message_id": ..., "error_code": ..., "retry_after_ms": ..., ...}`；(2) Go protobuf 路径：在 handleProtobufMessage error 处理中构建 MessageNack protobuf 消息并序列化发送；(3) Flutter 端无需修改——NackEvent 解析器已完备
+- **discovered_by**: explorer-loop
+- **verified_by**: opus-independent-auditor+2026-05-03T18:45Z
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1431-C7
+- **status**: verified
+- **severity**: P3
+- **domain**: C
+- **title**: Proto HeartbeatPing/HeartbeatPong 消息类型为死代码——三套心跳机制仅两套存活
+- **symptom**: websocket.proto 定义了 HeartbeatPing/HeartbeatPong 应用层消息类型（含 timestamp + client_id 用于 RTT 计算），但 Go 和 Flutter 各有自己的心跳机制——proto 类型在所有端（Go/Flutter）均零引用（gen/ 目录除外），是彻底的死代码
+- **root_cause_hypothesis**: proto 定义了一套应用层心跳协议但从未被任何端实现。实际运行中有两套并存的心跳：(1) Go 使用 RFC 6455 WebSocket 控制帧 Ping/Pong（chat_orchestrator.go:268-284，30s 间隔 / 90s 超时），属于传输层心跳；(2) Flutter 使用 JSON `{"type": "ping"}` / `{"type": "pong"}`（websocket_chat_service_v2.dart:2299 / chat_orchestrator.go:420-421），属于应用层心跳。proto 的 HeartbeatPing/HeartbeatPong 作为第三套协议——Go binary 路径的 handleProtobufMessage 无 heartbeat case（chat_orchestrator_protocol.go:573），若客户端发送 binary HeartbeatPing 将触发 "Unknown protobuf message type" 错误
+- **evidence**:
+  - `proto/websocket.proto:93-101` — 定义 HeartbeatPing（timestamp + client_id）和 HeartbeatPong（client_timestamp + server_timestamp）——完整应用层心跳协议
+  - `backend/gateway/internal/handler/chat_orchestrator.go:268-284` — Go 使用 `websocket.PingMessage`（RFC 6455 控制帧）+ `SetPongHandler` 实现传输层心跳，替代 proto 应用层心跳
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:2296-2299` — Flutter 发送 `json.encode({'type': 'ping'})` JSON 文本帧作为应用层心跳
+  - `backend/gateway/internal/handler/chat_orchestrator.go:420-421` — Go JSON 路径响应 `{"type": "pong"}`，形成 JSON ping/pong 回路
+  - `backend/gateway/internal/handler/chat_orchestrator_protocol.go:553-617` — binary 路径交换机无 heartbeat case，若发送 binary HeartbeatPing 触发 "Unknown protobuf message type" 错误
+  - 零引用验证：`grep -rn 'HeartbeatPing\|HeartbeatPong' backend/ mobile/lib/ --include='*.go' --include='*.dart' | grep -v 'gen/\|.pb.go'` 返回零结果
+- **repro_or_trigger**: 查看 websocket.proto 定义 → 在 Go handler + Flutter 搜索 HeartbeatPing/HeartbeatPong → 仅 gen/ 目录有自动生成代码 → 确认 proto 心跳类型为死代码
+- **expected_vs_actual**: 期望：proto 定义的应用层心跳协议被统一使用，提供 RTT 指标和 client_id 追踪；实际：proto 心跳类型完全未使用，两套独立心跳机制（RFC 6455 + JSON ping-pong）正常工作但 proto 成为误导性文档
+- **blast_radius**: 无运行时影响——RFC 6455 传输层心跳和 JSON ping/pong 应用层心跳均正常工作。仅影响 proto 文件的可信度：开发者阅读 websocket.proto 会误以为存在统一的心跳协议含 RTT 计算。对北极星无影响
+- **suggested_fix_direction**: (1) 短期：在 websocket.proto 的 HeartbeatPing/HeartbeatPong 上方添加注释说明实际心跳机制，标记 "reserved for future use"；(2) 长期：决策是否统一为 proto 心跳（获得标准化 RTT 指标和 client_id 追踪），或从 proto 中删除未使用的消息类型
+- **discovered_by**: explorer-loop
+- **verified_by**: opus-independent-auditor+2026-05-03T18:45Z
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
