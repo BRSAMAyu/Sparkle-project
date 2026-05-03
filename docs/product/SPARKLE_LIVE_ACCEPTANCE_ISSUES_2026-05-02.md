@@ -568,9 +568,10 @@
 - **opus_review**: APPROVED by opus-independent-auditor at 2026-05-03T19:45:00Z — **Root cause resolved**: Fix adds `if total > 0 else None` guard at service line 150, covering both total=-1 (GLOBAL sentinel) and total=0 (empty leaderboard). Also fixes the user-not-found early return path (line 134-141) to return percentile=None instead of percentile=0. **Schema change**: `MyRankResponse.percentile` changed from `float` (non-nullable, no default) to `float | None = Field(default=None)` — necessary for the service to emit None. **No regression risk**: sole API caller at `leaderboards.py:156` uses `my_rank.model_dump()` which serializes None to JSON null; Flutter client already types percentile as `double?` and reads `data['percentile'] as double?`; Go gateway does not reference percentile field; proto does not include percentile. **Cross-layer contracts**: No proto/DB/i18n changes needed — Python-only fix. **Regression test quality**: 5/5 tests pass; 4/5 would FAIL on old code (negative sentinel guard, zero-total guard, user-not-found path, schema nullability); 1/5 (happy-path normal calculation) correctly passes both old and new (guard does not change the normal case). **No CLAUDE.md or rule guard violations**: no secrets, no hardcoded tokens, no cross-layer boundary violations, pure Python service+schema change.
 
 ### ISSUE-20260503-1511-K2
-- **status**: verified
+- **status**: in_progress
 - **severity**: P1
 - **domain**: K
+- **fixer_started_at**: 2026-05-03T20:10:00Z
 - **title**: gRPC stream 中途断裂时 handleChatMessage 的 return false 跳过 saveMessage()，导致多轮对话历史从 Redis 丢失
 - **symptom**: 与 AI 对话中途（LLM 响应流进行中），若 gRPC stream 因网络抖动或后端重启而断裂，用户看到错误提示。重新进入对话后，刚才那轮的消息完全消失——对话上下文丢失，后续轮次无法引用之前的讨论
 - **root_cause_hypothesis**: chat_orchestrator_chatflow.go:693-697 中，当 stream.Recv() 返回非 EOF 错误时，立即执行 return false。这导致提前退出，跳过了 line 900-915 的 saveMessage() 调用。已累积在 textBuilder 中的部分响应文本和用户的原始 query 都没有被持久化到 Redis
@@ -668,7 +669,7 @@
 - **opus_review**: APPROVED by independent-review-agent at 2026-05-03T18:30Z
 
 ### ISSUE-20260503-1530-A1
-- **status**: in_progress
+- **status**: fixed
 - **severity**: P1
 - **domain**: A
 - **fixer_started_at**: 2026-05-03T20:05:00Z
@@ -691,7 +692,7 @@
 - **opus_review**: APPROVED by opus-reviewer at 2026-05-03T16:45Z — All 5 evidence locations verified by independent code reading. (1) compact_task_card.dart:148-150 inProgress/stuck navigates without setting activeTaskProvider; widget has WidgetRef and activeTaskProvider importable via task.dart barrel. (2) compact_task_card.dart:159-161 paused/restore calls resumeTask then navigates without setting provider. (3) task_feedback_dialog.dart:338-339 context.go() without setting provider; ConsumerStatefulWidget with ref access. (4) task_execution_screen.dart:782 watches activeTaskProvider, null branch shows error page. (5) focus_action_card.dart:80-81 correct pattern with explicit fix comment. Route pageBuilder at task_routes.dart:79-96 extracts query params but never extracts :id path param (contrast with taskDetail route line 62). Not a duplicate of any existing issue. Not by-design — 8 other callers correctly set the provider. Additional note: openclaw_hub_screen.dart:1106 has the same pattern (navigates without setting provider) — same root cause, lower-traffic entry point.
 
 ### ISSUE-20260503-1600-E1
-- **status**: discovered
+- **status**: verified
 - **severity**: P1
 - **domain**: E
 - **title**: Dual-Core Router 完全无 Aurora kill switch 保护——1089 行代码零引用 kill_switch，与 CLAUDE.md 承诺矛盾
@@ -708,11 +709,11 @@
 - **blast_radius**: 直接影响 Aurora 安全架构的完整性。双核路由决策错误会将执行请求路由到认知核心或将反思请求路由到执行核心，破坏 AI 响应质量。CLAUDE.md 声明 "53+ governance rules" 和 "Kill Switch Protocol" 涵盖所有 Aurora 服务，但最核心的路由组件缺失保护。对北极星影响显著——路由决策质量直接影响 AI 辅导效果
 - **suggested_fix_direction**: 创建 `AuroraStage{DualCore}KillSwitchService`，在 `dual_core_router.route()` 入口处添加 `get_feature_mode()` 检查：off→返回默认直通决策，shadow→记录但不应用路由重定向，live→完整双核路由。同时在 routing_engine.py 调用点添加守卫
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer+2026-05-03T17:00:00Z
 - **fix_commit**:
 
 ### ISSUE-20260503-1601-E2
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: E
 - **title**: Privacy 模块 pii_redaction_mode() 绕过 read_mode() 直接读 settings，导致隐私 kill switch 的 Prometheus 指标在读路径缺失
@@ -728,11 +729,11 @@
 - **blast_radius**: 影响可观测性——操作者无法通过 Prometheus 确认隐私模块在生产中的实际运行模式。在 shadow→live 切换期间尤其危险：操作者以为已经切换到 live 但指标显示的是旧值。对北极星影响较低——不影响功能正确性（PII 脱敏本身正确执行），但影响运维安全
 - **suggested_fix_direction**: 在 `pii_redaction_mode()` 或 `redact_pii_with_report()` 入口处调用 `record_mode_gauge(stage="privacy", feature="pii_redaction", resolved_mode)` 记录当前模式到 Prometheus
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer+2026-05-03T17:00:00Z
 - **fix_commit**:
 
 ### ISSUE-20260503-1602-E3
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: E
 - **title**: drill_all.sh 统合钻取脚本遗漏 Stage 37/38/39，三阶段的 kill switch 变更无法通过统合入口验证
@@ -748,11 +749,11 @@
 - **blast_radius**: 影响运维完整性。Stage 37 对应 LLM Safety（安全关键），遗漏其 drill 意味着 LLM 安全 kill switch 的变更可能在无人知晓的情况下生效。对北极星有间接影响——LLM Safety 是 AI 辅导的安全网
 - **suggested_fix_direction**: 在 drill_all.sh 末尾添加 stage37/drill_transitions.sh、stage38/drill_transitions.sh、stage39/drill_transitions.sh 的调用。同时修复 stage38/drill_transitions.sh 的权限
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer+2026-05-03T17:00:00Z
 - **fix_commit**:
 
 ### ISSUE-20260503-1603-E4
-- **status**: discovered
+- **status**: verified
 - **severity**: P3
 - **domain**: E
 - **title**: stage33 和 stage38 的 drill_transitions.sh 脚本不可执行（mode 644），直接 ./ 调用失败
@@ -767,7 +768,7 @@
 - **blast_radius**: 仅影响直接 `./` 执行方式。对北极星无影响——可通过 bash 调用绕过
 - **suggested_fix_direction**: `chmod +x scripts/stage33/drill_transitions.sh scripts/stage38/drill_transitions.sh`
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer+2026-05-03T17:00:00Z
 - **fix_commit**:
 
 ---
