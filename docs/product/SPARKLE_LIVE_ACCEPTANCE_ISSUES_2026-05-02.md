@@ -2532,7 +2532,7 @@
 - **suggested_fix_direction**: catch 块中添加 `state = previousStatus` 回滚（需在 try 前捕获 `final previousStatus = state`），并可选通过 `AppFeedback.error()` 通知用户
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-04T18:15Z
-- **fix_commit**: 留空
+- **fix_commit**: 36d7b88c8
 - **opus_review**: APPROVED by independent-fix-reviewer at 2026-05-03T23:55:00Z
 
 ### ISSUE-20260504-1801-B2
