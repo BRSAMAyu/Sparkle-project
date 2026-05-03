@@ -2202,7 +2202,8 @@
 - **opus_review**: APPROVED by fix-reviewer at 2026-05-04T21:15Z
 
 ### ISSUE-20260504-1430-C6
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-04T21:25:00Z
 - **severity**: P2
 - **domain**: C
 - **title**: Proto MessageNack 协议未实现——服务器使用 ad-hoc error 替代结构化 NACK，Flutter NackEvent 解析器为死代码
