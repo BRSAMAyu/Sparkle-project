@@ -393,8 +393,9 @@
 | R12 | 2026-05-03T21:00 | I | 3 | 3/3 | DB schema vs code field: I1 TaskStatus enum三层不一致, I2 paused_at缺失, I3 ReportReason不匹配 |
 | R13 | 2026-05-03T22:00 | L | 4 | 4/4 (L1/L2/L3/L4 verified) | Governance rules vs real implementation: L1 BH orphan, L2 AV stale lists, L3 no secret guard, L4 shallow checks |
 | R19 | 2026-05-04T02:15 | C | 1 | 1/1 (C1 verified) | C-domain 纠偏 R18 误判——proxy_routes.go tasks 组无通配路由，pause/resume/stuck 缺失 |
-| R20 | 2026-05-04T03:00 | A | 1 | pending (C2) | A-domain UI E2E 追踪：guidance 代理路由缺失（跨域发现） |
+| R20 | 2026-05-04T03:00 | A | 1 | 1/1 (C2 closed) | A-domain UI E2E 追踪：guidance 代理路由缺失（跨域发现） |
 | R21 | 2026-05-04T03:15 | F | 1 | 1/1 (F1 closed) | F1 subscribe non-BUSYGROUP raise fix — commit 8e7179e41 |
+| R23 | 2026-05-04T03:45 | H | 1 | 1/1 (H6 verified) | H-domain 续探——community 三个屏幕 hintText/空状态残留 5 处硬编码英文 |
 
 ---
 
@@ -1622,7 +1623,7 @@
 - **Next suggested domain**: 继续跨域回归——C1 修复后验证 pause/resume/stuck 端到端可达。考虑回探 I（DB schema）域，I4 ReportReason 仍缺少 HATE_SPEECH
 
 | R19 | 2026-05-04T02:15 | C | 1 | 1/1 (C1 verified) | C-domain 纠偏 R18 误判——proxy_routes.go tasks 组无通配路由，pause/resume/stuck 缺失 |
-| R20 | 2026-05-04T03:00 | A | 1 | pending (C2) | A-domain UI E2E 追踪发现 guidance 代理路由缺失——跨域发现 |
+| R20 | 2026-05-04T03:00 | A | 1 | 1/1 (C2 closed) | A-domain UI E2E 追踪发现 guidance 代理路由缺失——跨域发现 |
 
 
 ### Round R20 — 2026-05-04T03:00
