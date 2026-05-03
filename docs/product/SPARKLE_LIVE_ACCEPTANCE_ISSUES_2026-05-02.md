@@ -2708,7 +2708,8 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260505-0830-K1
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-05T15:00:00Z
 - **severity**: P1
 - **domain**: K
 - **title**: NackEvent 未被 chat_provider 处理——服务器拒绝消息后客户端冻结 8 分钟无反馈
