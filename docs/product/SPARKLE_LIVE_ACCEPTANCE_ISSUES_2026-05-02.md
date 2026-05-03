@@ -1999,8 +1999,9 @@
 - **reviewer_note**: REJECTED — 与 ISSUE-20260503-2302-B3 (status: verified, line 1385) 重复。B3 已覆盖同一代码位置 (spine_status_band_provider.dart:117-130)、同根因 (catch(_) → return null 使 error 状态不可达)、同标题核心（"provider 永远不进入 error 状态"）。K5 额外发现 dashboard_screen.dart:337,342 的 loading/error 分支为死代码，以及 _refreshGrowthState 的 debugPrint 模式对比——但这两点是对 B3 已识别问题在同一文件中的证据深化，不构成独立 bug。建议将 dashboard_screen.dart 死代码分支的观察合并到 B3 的 evidence 中，K5 关闭。
 
 ### ISSUE-20260504-1001-K6
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
+- **fixer_started_at**: 2026-05-03T10:25:00Z
 - **domain**: K
 - **title**: galaxy_event_consumer._fallback_gap_node 的 semantic_search_nodes 失败被 `except Exception: pass` 静默吞没——零可观测性
 - **symptom**: 当语义搜索（semantic_search_nodes）因任何原因失败时（pgvector 索引损坏、DB 连接中断、超时），消费者静默回退到 UserNodeStatus 查询。该降级行为本身正确，但失败完全不可见——无日志、无指标、无告警。操作者可能长期不知道语义搜索已损坏，因为回退查询（最近学习的节点）仍能正常返回结果
