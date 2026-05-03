@@ -392,7 +392,7 @@
 | R11 | 2026-05-03T20:45 | F | 0 | N/A | F-domain 续探——PreferenceEventConsumer + GraphSyncWorker，无新增 |
 | R12 | 2026-05-03T21:00 | I | 3 | 3/3 | DB schema vs code field: I1 TaskStatus enum三层不一致, I2 paused_at缺失, I3 ReportReason不匹配 |
 | R13 | 2026-05-03T22:00 | L | 4 | 4/4 (L1/L2/L3/L4 verified) | Governance rules vs real implementation: L1 BH orphan, L2 AV stale lists, L3 no secret guard, L4 shallow checks |
-| R12 | 2026-05-03T21:00 | I | 3 | 3/3 | DB migration vs code field comparison — I1 TaskStatus enum, I2 paused_at/reason columns, I3 ReportReason enum |
+| R19 | 2026-05-04T02:15 | C | 1 | pending (C1) | C-domain 重探纠正 R18 误判——proxy_routes.go tasks 组无 Any("/*path") 通配，3 条路由缺失 |
 
 ---
 
@@ -857,10 +857,11 @@
 
 
 ### ISSUE-20260503-1700-F1
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: F
 - **title**: EventBus.subscribe() 在 xgroup_create 返回非 BUSYGROUP 的 ResponseError 时静默返回，消费者在启动时无声死亡且 start() 方法无感知
+- **fixer_started_at**: 2026-05-04T02:05:00Z
 - **symptom**: Redis 环境异常时（如 stream key 类型冲突、非 BUSYGROUP Redis 错误），EventBus 消费者静默启动失败。操作者看到消费者"已启动"的日志（来自 start 方法的 logger.info），但消费循环从未开始。Prometheus 消费者组 lag 指标显示为 0 因为消费者组根本不存在，事件堆叠在 stream 中不被处理
 - **root_cause_hypothesis**: EventBus.subscribe() 在 event_bus.py:1065-1070 中，非 BUSYGROUP 的 ResponseError 被 `except ResponseError` 捕获后仅 `logger.error` 然后 `return`，不抛出异常。所有使用 "break after subscribe" 模式的消费者 start() 方法（AchievementEventConsumer:64-72, GalaxyEventConsumer:53-58, ExecutionEventConsumer:38-48 等 10+ 消费者）将 subscribe 返回视为成功、break 退出重试循环。TaskEventConsumer:45-53 的 `_subscribed` 模式同样受影响——subscribe 返回后 `_subscribed=True`，后续 subscribe 永远不再调用
 - **evidence**:
@@ -1463,6 +1464,30 @@
 - **verified_by**: opus-independent-reviewer+2026-05-04T02:00:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 代码与条目描述完全一致。(1) lang_graph_planner.py:541-549 的 build_fallback_plan 签名使用 `*` 强制 keyword-only，5 个必需参数（message/snapshot/user_id/session_id/rationale）均无默认值，缺少任何一个都会在调用时立即抛 TypeError。(2) multi_agent_adapter.py:111-115 只传递 3 个参数（message/user_id/session_id），缺少 snapshot 和 rationale；snapshot 在 line 83-87 同一作用域已构造，可直接引用。(3) plan_review_service.py:2214-2218 同样只传递 3 个参数，缺少 snapshot 和 rationale。(4) execution_engine.py:2073-2082 正确传递全部 5 个必需参数 + plan_version=1 作为参照。调用链验证：planner.plan() 超时 → asyncio.wait_for raises TimeoutError → except TimeoutError → build_fallback_plan(message=..., user_id=..., session_id=...) → TypeError: missing 2 required keyword-only arguments 'snapshot' and 'rationale'。非设计意图——D1 修复的目的就是在超时时优雅降级到回退计划，缺少参数导致 fallback 路径本身崩溃恰恰违背修复意图。与 ISSUE-20260503-1600-D1 不重复——D1 是缺少 asyncio.wait_for 超时包装，D2 是 D1 修复中 build_fallback_plan 调用缺少必需参数。
 - **fix_commit**:
+
+
+### ISSUE-20260504-0215-C1
+- **status**: discovered
+- **severity**: P1
+- **domain**: C
+- **title**: Go gateway 缺少 3 个 task 生命周期代理路由（pause/resume/stuck），Flutter 调用全部返回 404
+- **symptom**: 用户在任务执行中点击暂停 → 404 错误；恢复已暂停任务 → 404 错误；任务卡住请求 AI 诊断 → 404 错误。三个操作全部静默失败，用户看到 DioException 转换的通用 Exception
+- **root_cause_hypothesis**: proxy_routes.go 中 tasks 路由组使用显式路由注册（非 Any("/*path") 通配），29 条路由覆盖 start/complete/abandon/snooze/too-hard/skip 等操作，但遗漏了 pause/resume/stuck 三条路由。NoRoute handler（setup.go:810-842）仅代理 auth 路径，不代理 task 路径，导致请求返回 404 JSON
+- **evidence**:
+  - `backend/gateway/internal/handler/proxy_routes.go:69-129` — tasks 路由组注册了 29 条显式路由（start/complete/abandon/snooze/too-hard/too_hard/skip/feedback 等），但无 pause/resume/stuck；且 tasks 组无 `Any("/*path")` 通配路由（与其他组如 users/interventions 不同）
+  - `backend/app/api/v1/tasks.py:984` — `@router.post("/{task_id}/stuck")` Python 端存在 stuck 端点
+  - `backend/app/api/v1/tasks.py:1124` — `@router.post("/{task_id}/pause")` Python 端存在 pause 端点
+  - `backend/app/api/v1/tasks.py:1141` — `@router.post("/{task_id}/resume")` Python 端存在 resume 端点
+  - `mobile/lib/core/network/api_endpoints.dart:64-65,73` — Flutter 定义了 `pauseTask`/`resumeTask`/`taskStuck` 三个端点调用
+  - `mobile/lib/features/task/data/repositories/task_repository.dart:1295-1338` — `pauseTask()` 通过 `ApiEndpoints.pauseTask(id)` 发起 POST，DioException 经 `_handleDioError` 转换为通用 Exception
+  - `backend/gateway/cmd/server/setup.go:847-868` — `shouldProxyNoRoutePath()` 仅前缀匹配 `/api/v1/auth/*` 路径，`/api/v1/tasks/:id/pause` 不匹配 → NoRoute 返回 `{"error": "route not found"}`
+- **repro_or_trigger**: Flutter → 进入任务详情 → 点击暂停按钮 → `taskRepository.pauseTask(id)` → POST `/api/v1/tasks/{id}/pause` → Go gateway 无匹配路由 → NoRoute handler → shouldProxyNoRoutePath("/api/v1/tasks/.../pause") 返回 false → 404 `{"error": "route not found"}` → DioException → `_handleDioError` 转换为 Exception → UI 显示通用错误
+- **expected_vs_actual**: 期望：Go gateway 将 pause/resume/stuck 请求透明代理到 Python 后端，与 start/complete/abandon 等其他任务操作一致；实际：三个端点全部返回 404，功能完全不可用
+- **blast_radius**: 影响三个任务生命周期操作：(1) 暂停任务——用户在任务中途需要中断时无法暂停；(2) 恢复任务——暂停后的任务无法恢复执行；(3) 任务卡住诊断——用户感到困难时无法获取 Aurora AI 诊断。三个功能对北极星有直接高影响——"7 天 0 基础通过考试"要求任务系统流畅运作，暂停/恢复是学习者节奏控制的核心操作
+- **suggested_fix_direction**: 在 proxy_routes.go 的 tasks 路由组中添加三条路由：`tasks.POST("/:id/pause", h.proxyWithHeaders)`、`tasks.POST("/:id/resume", h.proxyWithHeaders)`、`tasks.POST("/:id/stuck", h.proxyWithHeaders)`。与其他 task action 路由（start/complete/abandon）保持一致的注册模式
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
 
 
 ### Round R17 — 2026-05-04T01:45
