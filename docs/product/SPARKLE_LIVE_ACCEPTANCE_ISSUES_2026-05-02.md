@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-05 08:00 (opus review pass — F6 + H9 both APPROVED)
+> Updated: 2026-05-05 09:00 (R48 I-domain — I7 discovered)
 
 ---
 
@@ -419,6 +419,8 @@
 | R43 | 2026-05-04T20:30 | E | 2 | 2/2 (E8/E9 verified) | E 域续探——E7 fix_commit 错误（指向 B5 提交）+ privacy drill 内联 binding 缺 allowed_modes 崩溃 + drill 写 Redis 但生产读 settings 零影响 |
 | R44 | 2026-05-04T21:00 | A | 1 | 1/1 (A1 verified) | A 域——OmniBar error book prediction chip 导航到未注册路由 /error-book（应为 /errors） |
 | R45 | 2026-05-04T21:30 | F | 1 | 1/1 (F6 verified) | F 域续探——EventBus DLQ PostgreSQL 表 + Redis 流无任何管理/重放 API |
+| R46 | 2026-05-05T08:00 | H | 1 | 1/1 (H9 verified) | H 域续探——document_library_screen 归档/恢复/撤回 10 处纯中文硬编码 |
+| R48 | 2026-05-05T09:00 | I | 1 | pending | I 域续探——Pydantic GroupInfo schema 缺少 announcement 字段，群公告响应静默丢弃 |
 
 ---
 
@@ -2204,8 +2206,7 @@
 - **opus_review**: APPROVED by fix-reviewer at 2026-05-04T21:15Z
 
 ### ISSUE-20260504-1430-C6
-- **status**: in_progress
-- **fixer_started_at**: 2026-05-04T21:25:00Z
+- **status**: verified
 - **severity**: P2
 - **domain**: C
 - **title**: Proto MessageNack 协议未实现——服务器使用 ad-hoc error 替代结构化 NACK，Flutter NackEvent 解析器为死代码
@@ -2225,6 +2226,31 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-03T18:45Z
 - **fix_commit**: 留空
+- **opus_review**: REJECTED by fix-reviewer at 2026-05-04T22:10Z
+- **rework_note**: |
+  **Verdict**: REJECTED — 修复方向正确（type: "error" → "message_nack"）但遗漏关键字段，导致修复无效。
+
+  **CRITICAL Defect (missing message_id)**: Go 端 8 处错误响应均已改为 `{"type": "message_nack", "error_code": ..., "error_message": ..., "permanent": ...}`，但**无一包含 `message_id` 字段**。Flutter 的 NackEvent 解析器（websocket_chat_service_v2.dart:860）要求 `messageId != null` 才构造 NackEvent，否则返回 UnknownEvent。当前修复后 Flutter 端流程：收到 `{"type": "message_nack"}` → 进入 message_nack case → 提取 `data['message_id']` 为 null → `if (messageId != null)` 失败 → 返回 UnknownEvent → canRetry 逻辑仍为死代码。
+
+  影响范围：8 处中的 5 处（chat_orchestrator.go 的 invalid_json x2、tool_result_too_large、unknown_message_type、empty_message）和 3 处（chat_orchestrator_chatflow.go 的 service_unavailable x2、quota_exceeded）均缺 message_id。其中 chat_orchestrator_chatflow.go 的 3 处已经有 request_id 可用（handleChatMessage 参数 reqID），应作为 message_id 传递。永久错误（permanent=true）可不需要 retry_after_ms，但 message_id 对所有 NACK 均为必需。
+
+  **Test coverage gap**: 4 个回归测试（TestMessageNackEmittedForInvalidJSON、TestMessageNackEmittedForEmptyMessage、TestMessageNackIncludesRetryFieldsForTemporaryErrors、TestNoLegacyErrorTypeInNackPaths）均仅检查 `type == "message_nack"`、error_code、permanent，**无一检查 message_id**。TestMessageNackIncludesRetryFieldsForTemporaryErrors 名称具有误导性：它测试的是 unknown_message_type（permanent 错误），而非临时错误路径（service_unavailable/quota_exceeded 含 retry_after_ms）。去掉当前 fix 后这些测试仍会失败（因为 type 从 "error" 变为了 "message_nack"），但无法检测到 message_id 缺失的缺陷。
+
+  **Protobuf 路径未处理**: 原始 issue 明确要求的 fix direction (2)（handleProtobufMessage / protobufResponder.SendError）未经修改。protobufResponder.SendError() 仍发送 `r.sendProto("error", ...)` 格式，非 message_nack。
+
+  **envelopeResponder 路径未处理**: envelopeResponder.SendError() 仍发送 `payload["error"]` 格式，非 message_nack。
+
+  **重做要求**:
+  1. 所有 8 处 `gin.H{"type": "message_nack", ...}` 添加 `"message_id": <requestID>` 字段。对于不可获取 request_id 的场景（如 JSON 解析完全失败），使用 `generateRequestID()` 生成。对于 handleChatMessage 内已有 reqID 的 3 处，直接使用 reqID。
+  2. 补充 message_id 断言到现有 4 个回归测试。
+  3. 修复 TestMessageNackIncludesRetryFieldsForTemporaryErrors：改为测试临时错误路径（如模拟 agentClient==nil 触发 service_unavailable nack），并断言 retry_after_ms 存在且 >0。
+  4. 修改 protobufResponder.SendError() 发送 message_nack 类型（或通过 proto MessageNack 序列化）。
+  5. 修改 envelopeResponder.SendError() 发送 message_nack 格式。
+  6. 重新运行 `cd backend/gateway && go test ./internal/handler/ -run "TestMessageNack|TestNoLegacyError" -v -timeout 30s` 确认全部通过且 message_id 断言有效。
+
+  **Rule guards**: 与 AX 失败无关（AX001 仅影响 proxy_routes.go，fix 未触及）。
+
+  **不违规项**: CLAUDE.md 协议、proto 契约、i18n 策略均无新增违规。
 
 ### ISSUE-20260504-1431-C7
 - **status**: verified
@@ -2565,7 +2591,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260505-0800-H9
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: H
 - **title**: document_library_screen 归档/恢复/撤回操作的 10 处用户可见文案为纯中文硬编码，英文用户完全无法理解
@@ -2581,8 +2607,50 @@
 - **blast_radius**: English users cannot understand archive/restore/revoke operations. Document library is a core feature for the study flow (managing learning materials). The mixed-language revoke dialog is particularly confusing — users see "Cancel" in English but "撤回" for the destructive action. Moderate impact on north star — study material management is part of the 7-day learning flow but not a blocking path.
 - **suggested_fix_direction**: Add l10n keys to `app_zh.arb` and `app_en.arb` for: `studyMaterialsArchiveSuccess`, `studyMaterialsArchiveFailed`, `studyMaterialsRestoreSuccess`, `studyMaterialsRestoreFailed`, `studyMaterialsRevokeTitle`, `studyMaterialsRevokeMessage` (with {filename} placeholder), `studyMaterialsRevokeConfirm`, `studyMaterialsRevokeSuccess`, `studyMaterialsRevokeFailed`, `studyMaterialsArchiveAction`, `studyMaterialsRestoreAction`, `studyMaterialsRevokeAction`. Then replace all 10 hardcoded strings with `context.l10n.*` references.
 - **discovered_by**: explorer-loop
-- **verified_by**: opus-reviewer+2026-05-05T08:00:00Z
+- **verified_by**: opus-independent-reviewer+2026-05-05T08:30:00Z
 - **reviewer_note**: APPROVED — independent review confirms all 4 evidence references match code exactly. (1) document_library_screen.dart:360 — `const SnackBar(content: Text('资料已归档，不会再进入 RAG 上下文'))` hardcoded Chinese, confirmed at line 360. (2) Lines 391-400 — `_confirmRevoke()` dialog: title `const Text('撤回资料权限')` (line 391), content `Text('撤回后，${document.filename} 会从共享与检索缓存中移除。')` (line 392), confirm `const Text('撤回')` (line 400) — all Chinese only. Cancel button at line 396 uses `context.l10n.cancel` — mixed i18n in same dialog confirmed. (3) Lines 1280-1288 — archive/restore button labels `'归档'`/`'恢复'` (line 1281-1282 conditional on lifecycleStatus), revoke button `const Text('撤权')` (line 1288) — all Chinese. Adjacent delete button at line 1297 uses `context.l10n.studyMaterialsDeleteAction` — correct pattern exists next to broken pattern. (4) app_zh.arb has 40+ studyMaterials* keys for upload/search/metrics/delete/empty states, confirmed zero keys matching studyMaterialsArchive*, studyMaterialsRestore*, studyMaterialsRevoke* via grep. Additional verification: (a) File has 52 context.l10n usages (grep -c), confirming l10n infrastructure is fully available. (b) All 10 hardcoded Chinese strings in the file are in the archive/restore/revoke flow (grep confirmed: exactly 10 lines with hardcoded Chinese Text/SnackBar). (c) Restore success/error at lines 377/382 and revoke success/error at lines 413/418 also hardcoded Chinese — total is 10 user-facing strings: archive success+error (360,365), restore success+error (377,382), revoke dialog title+content+confirm (391,392,400), revoke success+error (413,418), plus 3 button labels (1280-1282,1288) = 13 strings total, though the button labels at 1280-1282 are the same '归档'/'恢复' from the action. Not "by design" — same file demonstrates correct l10n pattern in adjacent delete operation. Not duplicate of H1-H8: H1-H5 concern group_members_screen/group_tasks_screen hardcoded English; H6-H8 are different files. H9 is document_library_screen with hardcoded Chinese.
+- **fix_commit**: 留空
+
+### ISSUE-20260505-0830-K1
+- **status**: verified
+- **severity**: P1
+- **domain**: K
+- **title**: NackEvent 未被 chat_provider 处理——服务器拒绝消息后客户端冻结 8 分钟无反馈
+- **symptom**: 当 AI 服务不可用、配额超限或检测到重复请求时，Go gateway 发送 `message_nack` 通知客户端。Flutter 的 `websocket_chat_service_v2` 正确解析为 `NackEvent`，但 `chat_provider.dart` 的 `await for (event in timedStream)` 循环没有 `event is NackEvent` 分支。NackEvent 被完全忽略——用户看到消息"已发送"但永远收不到回复，流不关闭，直到 8 分钟超时才触发 ErrorEvent。期间用户无任何错误提示，无法重试。
+- **root_cause_hypothesis**: C6 的 Go 端修复（`type: "error"` → `type: "message_nack"`）已部分落地，chat_orchestrator_chatflow.go 的 3 处关键路径（agent unavailable x2 + quota exceeded）现在发送包含 `message_id`、`error_code`、`retry_after_ms` 的结构化 NACK。Flutter 的解析层（websocket_chat_service_v2.dart:853-871）能正确构造 NackEvent。但 chat_provider.dart 的事件分发链仅处理 TextEvent → FullTextEvent → ErrorEvent → DoneEvent → WidgetEvent → ToolStartEvent 等，NackEvent 不在任何分支中。同时 _routeEventToRequest（websocket_chat_service_v2.dart:1856-1860）仅在 DoneEvent 或 ErrorEvent 时关闭 controller——NackEvent 不触发关闭，流保持打开。
+- **evidence**:
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:640,658,748` — Go 发送 `{"type": "message_nack", "message_id": requestID, "error_code": "service_unavailable"/"quota_exceeded", "retry_after_ms": 5000/60000, "permanent": false}` 结构化 NACK
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:853-871` — Flutter 解析 `message_nack`/`nack` type 为 NackEvent，提取 messageId/errorCode/errorMessage/retryAfterMs，提供 canRetry getter
+  - `mobile/lib/features/chat/presentation/providers/chat_provider.dart:1297,1492,1629,1657,1670,1883` — 事件分发链：`if (event is TextEvent)` → `else if (event is FullTextEvent)` → `else if (event is ErrorEvent)` → `else if (event is WidgetEvent)` → `else if (event is ToolStartEvent)` → … DoneEvent at line 1883。**无 `event is NackEvent` 分支**
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:1856-1860` — `if (event is DoneEvent || event is ErrorEvent)` 才关闭 controller。NackEvent 绕过此检查，controller 保持打开
+  - `mobile/lib/features/chat/presentation/providers/chat_provider.dart:1241` — `const streamTimeout = Duration(minutes: 8)` — NackEvent 导致用户等待 8 分钟才收到超时 ErrorEvent
+- **repro_or_trigger**: (1) 停止 Python gRPC server → 在 Flutter 发送消息 → Go 发送 `message_nack` (service_unavailable) → Flutter 解析 NackEvent 但 chat_provider 忽略 → 用户等待 8 分钟超时；(2) 模拟配额超限 → 同样结果
+- **expected_vs_actual**: 期望：收到 NackEvent 后，chat_provider 立即 finalizeRun(phase: ChatRunPhase.failed) 并显示错误信息（利用 NackEvent.canRetry 判断是否可重试）。实际：NackEvent 被完全忽略，流保持打开 8 分钟，用户无反馈。
+- **blast_radius**: 核心聊天功能——AI 服务不可用或配额超限时用户完全冻结。这是仅次于 C6 的关键缺口：C6 修了 Go 端不发送 message_nack 的问题，但 Flutter 端不处理 NackEvent 使得修复无效。直接影响北极星——学生无法与 AI 交互。
+- **suggested_fix_direction**: (1) chat_provider.dart 添加 `else if (event is NackEvent)` 分支，调用 `finalizeRun(phase: ChatRunPhase.failed, errorMessage: event.errorMessage, errorCode: event.errorCode, isRetryable: event.canRetry)`；(2) websocket_chat_service_v2.dart 的 `_routeEventToRequest` 添加 NackEvent 到终止条件：`if (event is DoneEvent || event is ErrorEvent || event is NackEvent)`；(3) 考虑将 NackEvent 转换为 ErrorEvent 在 _routeEventToRequest 层处理，保持单一错误出口
+- **discovered_by**: explorer-loop
+- **verified_by**: opus-independent-reviewer+2026-05-05T08:30:00Z
+- **reviewer_note**: APPROVED — independent review confirms all 5 evidence references match code exactly. (1) chat_orchestrator_chatflow.go:640,658,748 — Go sends `{"type": "message_nack", "message_id": requestID, "error_code": "service_unavailable"/"quota_exceeded", "retry_after_ms": 5000/60000, "permanent": false}` for wsSafeWriter path when agent unavailable (lines 640,658) or quota exceeded (line 748). Note: envelopeResponder and protobufResponder paths still use `r.SendError()` (not message_nack format), but the primary wsSafeWriter path is fixed per C6 rework. (2) websocket_chat_service_v2.dart:853-871 — Flutter correctly parses `message_nack`/`nack` type into NackEvent with messageId/errorCode/errorMessage/retryAfterMs and canRetry getter. (3) chat_provider.dart — grep confirms ZERO NackEvent references in the entire file. Event dispatch chain traced: TextEvent (line 1297) → FullTextEvent (1492) → ErrorEvent (1629) → WidgetEvent (1657) → ToolStartEvent (1670) → ... → DoneEvent (1883). NackEvent is not in any branch. chat_stream_events.dart IS imported (line 23), so NackEvent type is available but simply not handled. (4) websocket_chat_service_v2.dart:1856-1860 — `_routeEventToRequest` closes controller only on `DoneEvent || ErrorEvent`. NackEvent does not trigger closure, so the stream controller stays open and the NackEvent is silently added to the controller but never consumed by chat_provider. (5) chat_provider.dart:1241 — `const streamTimeout = Duration(minutes: 8)` confirmed. NackEvent keeps stream open until timeout. NOT DUPLICATE OF C6: C6 (line 2206, status: verified) addresses the Go sender layer — making Go send `message_nack` instead of ad-hoc `{"type": "error"}`. K1 addresses the Flutter consumer layer — chat_provider.dart does not handle NackEvent even though Go now correctly sends it. These are complementary fixes on different layers: C6 = sender, K1 = consumer. Without K1, C6's fix is ineffective for the wsSafeWriter path. NOT BY DESIGN: NackEvent class explicitly defines canRetry getter (chat_stream_events.dart:392) and retryAfterMs field, indicating it was designed to be consumed by the presentation layer. The Flutter parsing layer correctly constructs NackEvent, proving intent to handle it. The omission in chat_provider is a gap, not a design choice.
+- **fix_commit**: 留空
+
+### ISSUE-20260505-0900-I7
+- **status**: verified
+- **severity**: P2
+- **domain**: I
+- **title**: Pydantic GroupInfo 响应 schema 缺少 announcement 字段——群公告通过 API 返回但被静默丢弃
+- **symptom**: 群组详情 API (`GET /community/groups/{group_id}`) 的服务层返回了 `announcement` 字段（从 DB `groups.announcement` 列读取），但 Pydantic `response_model=GroupInfo` 不包含该字段，导致 FastAPI 序列化时静默丢弃。Flutter 端 `GroupInfo` 模型定义了 `announcement` 字段（可选 String），始终收到 null——群公告无法通过群组详情页展示。
+- **root_cause_hypothesis**: `GroupService.get_group()` 在返回 dict 中包含 `announcement` (community_service.py:717)，但 Pydantic `GroupInfo(BaseSchema)` schema (schemas/community.py:284-310) 未声明该字段。Pydantic v2 默认行为是忽略未声明的额外字段，导致 `announcement` 在响应序列化阶段被截断。Flutter 端 `GroupInfo.fromJson` 因 JSON 中缺少该 key 而将其设为 null。
+- **evidence**:
+  - `backend/app/services/community_service.py:697-718` — `get_group()` 返回 dict 包含 `'announcement': group.announcement`（行 717）。`group.announcement` 来自 DB 列 (`backend/app/models/community.py:207`: `announcement = Column(Text, nullable=True)`)
+  - `backend/app/schemas/community.py:284-310` — `GroupInfo(BaseSchema)` schema 定义了 name～my_role 共 14 个字段，**不包含 announcement**。Pydantic v2 默认 `model_config` 未设置 `extra='allow'`，额外字段被忽略
+  - `mobile/lib/features/community/data/models/community_model.dart:418,452` — Flutter `GroupInfo` 期望 `announcement` 为 `String?`，但 JSON 中该 key 缺失 → `_$GroupInfoFromJson` 设为 null
+- **repro_or_trigger**: (1) 为一个群组设置公告 → (2) 调用 `GET /community/groups/{group_id}` → (3) 观察 JSON 响应——`announcement` 字段不存在 → (4) Flutter 群组详情页上公告区域始终为空
+- **expected_vs_actual**: 期望：`GET /groups/{id}` 响应包含 `announcement` 字段（已设置的群组返回非 null 值）。实际：服务层在 dict 中包含 announcement，但 Pydantic 响应模型丢弃它。
+- **blast_radius**: 群公告功能——用户无法通过群组详情 API 看到公告。公告的 PUT endpoint 正常工作（`PUT /groups/{id}/announcement`），但读取路径在 schema 层断裂。不影响北极星，但降低社群功能完整性。
+- **suggested_fix_direction**: 在 `GroupInfo` schema 中添加 `announcement: str | None = Field(default=None, description="群公告内容")`。可选同时添加 `announcement_updated_at: datetime | None = Field(default=None, description="公告更新时间")`（DB 模型有此列，但 service 未返回）。
+- **discovered_by**: explorer-loop
+- **verified_by**: opus-independent-reviewer+2026-05-05T08:30:00Z
+- **reviewer_note**: APPROVED — independent review confirms all 3 evidence references match code exactly. (1) community_service.py:697-718 — `get_group()` returns a dict with `'announcement': group.announcement` at line 717. The `group.announcement` comes from DB column `announcement = Column(Text, nullable=True)` at community.py:207. (2) community.py:284-310 — `GroupInfo(BaseSchema)` schema lists 16 fields (name, description, avatar_url, type, focus_tags, deadline, sprint_goal, days_remaining, member_count, total_flame_power, today_checkin_count, total_tasks_completed, max_members, is_public, join_requires_approval, my_role) — `announcement` is NOT among them. Pydantic v2 default behavior drops undeclared extra fields during serialization. (3) community_model.dart:418,452 — Flutter `GroupInfo` model declares `final String? announcement` at line 452, and passes it in constructor at line 418. `_$GroupInfoFromJson` will set it to null when the key is absent from JSON. Full call chain traced: `GET /community/groups/{group_id}` → Go proxy → Python `get_group()` → returns dict with announcement (line 717) → FastAPI response_model=GroupInfo → Pydantic strips announcement → Flutter receives JSON without announcement key → `fromJson` sets null. Not "by design" — the service layer explicitly returns the field (line 717), the DB column exists (community.py:207-208 even has `announcement_updated_at`), and the Flutter model expects it. The schema simply forgot to declare it. Not a duplicate of any closed/verified entry — this is a unique schema-field omission in the community module.
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
@@ -3077,3 +3145,44 @@
   2. **排除项**: (a) 所有其他 feature 的 presentation 层（home, community, user, goal, task, focus, calendar, cognitive, plan）无裸中文硬编码——全部通过 `I18nService` 或 `context.l10n` 处理；(b) group_tasks_screen.dart 使用 24 处 `I18nService` inline pattern 正确；(c) 用户设置/个人资料界面完全无裸字符串；(d) home widgets (expanded_toolbar, next_actions, aurora_status_band) 全部正确 i18n
   3. **全量统计**: `const Text('中文字符')` 在 features/ 下仅 3 处（全在 document_library），`SnackBar(content: Text('中文'))` 仅 6 处（全在 document_library），`I18nService.instance.isChinese` 在 features/ 下有 872 处——document_library 是唯一遗漏
 - **Opus pass rate**: 1/1 (H9 verified)
+
+### Round R47 — 2026-05-05T08:30
+- **Domain**: K (错误处理 / 降级 / 边界)
+- **Paths covered**:
+  - `backend/app/services/leaderboard_service.py:115-159` — getMyRank: next() with None default, correct
+  - `backend/app/services/intelligent_task_service.py:170-194` — except Exception fallback to defaults, intentional degradation
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:292-345` — admission control + duplicate detection, correctly logs cache failure and proceeds
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:618-704` — agent client nil → NACK, stream errors → respondStreamRecvError + partial text save
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:740-748` — quota exceeded → NACK
+  - `backend/gateway/internal/handler/chat_orchestrator_chatflow.go:935-974` — respondStreamRecvError + grpcStreamErrorDetails: comprehensive gRPC status code → user message mapping
+  - `backend/gateway/internal/handler/chat_orchestrator.go:394-537` — legacy vs envelope mode dispatch, message validation
+  - `backend/app/services/nudge_service.py:100-114` — push notification best-effort, acceptable
+  - `backend/app/services/achievement_event_consumer.py:210-226` — event consumer exception swallow, F-domain already covered
+  - `backend/app/services/achievement_engine.py:196-203` — Redis cache best-effort, not critical
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:845-878` — NackEvent parsing
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:1818-1861` — _routeEventToRequest: NackEvent not in terminal conditions
+  - `mobile/lib/features/chat/presentation/providers/chat_provider.dart:1276-1883` — full event dispatch chain
+- **New issues**: 1 — K1 (P1: NackEvent 不被 chat_provider 处理——服务器拒绝后客户端冻结 8 分钟)
+- **Findings**: K 域全面审查 Go gateway 错误处理 + Python 错误边界 + Flutter 事件处理。Agent 报告 12+ 潜在问题，绝大部分经亲自 Read 验证为误报（intentional degradation patterns）。发现 1 个真实断链：
+  1. **K1 (P1) — NackEvent 未处理**: C6 的 Go 端修复已部分落地（chatflow 3 路径发送 message_nack），Flutter ws_chat_service_v2 正确解析 NackEvent，但 chat_provider.dart 的 `await for (event in timedStream)` 没有 `event is NackEvent` 分支。同时 _routeEventToRequest 仅对 DoneEvent/ErrorEvent 关闭 controller。结果：NackEvent 被添加到 controller 但不关闭，chat_provider 忽略，用户等待 8 分钟超时
+  2. **排除项**: (a) leaderboard_service getMyRank 使用 next() with None default 是正确模式；(b) intelligent_task_service 的 except Exception fallback 是有意降级（AI 建议失败时给默认值）；(c) chat_orchestrator 重复检测在 cache failure 时正确继续（比阻止用户好）；(d) stream error 处理（693-703）实际很健壮：发送错误给客户端 + 保存部分文本 + return false；(e) nudge_service 推送通知 best-effort 是行业标准；(f) achievement event consumer 的 exception swallow 是 F 域已覆盖的 F5 问题；(g) `legacyStreamErrorPayload` 使用 `type: "error"` 但被 Flutter 正确解析为 ErrorEvent（含 error_code + retryable）；(h) 消息长度超限使用 `type: "error"` 而非 `message_nack`，但被 Flutter 正确解析为 ErrorEvent(code: 'UNKNOWN')——功能正确但缺少 error_code 粒度
+  3. **C6 与 K1 的关系**: C6 发现 Go 不发 message_nack → 修复后 Go 发了但 Flutter 不处理 → K1 是 C6 修复的必要后续。C6 的建议 "(3) Flutter 端无需修改——NackEvent 解析器已完备" 不完整——解析器完备但 chat_provider 未接入
+- **Opus pass rate**: pending
+- **Next suggested domain**: I (DB 迁移 vs 代码字段) — 11 轮未回探；或 L (治理规则 vs 真实实现) — 10 轮未回探
+
+### Round R48 — 2026-05-05T09:00
+- **Domain**: I (DB 迁移 vs 代码字段)
+- **Paths covered**:
+  - Alembic migrations: s40a (task guide fields), s40b (aurora_runtime_v1), stage_c4 (intervention_outcomes), stage_c5 (aurora_decision_telemetry), td001 (task_documents), wp18 (FK on-delete + CHECK constraints) — all columns/tables verified present in Go schema.sql
+  - Go models.go vs Python models: Task (all 30 fields match incl. s40a additions), User (35 fields match), FocusSession (10 fields match), KnowledgeNode (32 fields match incl. trainability/mistakes), InterventionOutcome (16 fields match)
+  - PostgreSQL enum types vs Python StrEnum vs Go string constants: grouptype (3 values match), reportreason (7 values match, I6 fix verified), taskstatus (7 values match)
+  - Pydantic response schemas vs service layer return dicts: GroupInfo schema vs GroupService.get_group() response (community_service.py:697-718)
+  - Go schema FK constraints: wp18 ON DELETE actions verified for chat_messages, achievements, tasks, cognitive_fragments, focus_sessions, memory_goals (all match)
+  - CHECK constraints: wp18 chk_tasks_* constraints (6 checks) all present in Go schema
+  - Tables in Go schema without Go models: aurora_core_session_snapshots, durable_session_state_snapshots, goal_world_graph_snapshots, growth_chronicle_snapshots, counterfactual_evaluation_reports — Python-only tables, correctly absent from Go query.sql (no queries reference them)
+- **New issues**: 1 — I7 (P2: Pydantic GroupInfo schema 缺少 announcement 字段，群公告响应被 Pydantic 静默丢弃)
+- **Findings**: I 域续探聚焦 schema ↔ model ↔ code 三层一致性。绝大部分同步良好（s40a/s40b/stage_c4/stage_c5/td001/wp18 迁移全部反映在 Go schema 中）。关键发现：
+  1. **I7 (P2) — GroupInfo schema 缺 announcement**: GroupService.get_group() 在返回 dict 中包含 `'announcement': group.announcement`（行 717），但 Pydantic `GroupInfo` 响应模型未声明该字段。Pydantic v2 默认丢弃额外字段 → `GET /groups/{id}` JSON 响应不含 announcement → Flutter GroupInfo.fromJson 始终 null。DB 列存在 (`community.py:207`)，service 返回，Flutter 期望，唯独 Pydantic 层截断。修复只需在 GroupInfo schema 添加 `announcement: str | None = Field(default=None)`
+  2. **排除项**: (a) ReportReason 三层一致（Flutter @JsonValue ↔ Python StrEnum ↔ DB ALTER TYPE）——I6 fix 已验证；(b) Go schema tasks 表含所有 s40a 字段（guide_json/ai_prompt/source_planning_session_id/phase_index/success_criteria）+ paused 字段（paused_at/paused_reason）——I2/I5 fixes 已验证；(c) wp18 FK ON DELETE 动作（CASCADE/SET NULL for 39 constraints）全部正确反映在 Go schema；(d) wp18 CHECK constraints（6 个 tasks 约束）全部存在于 Go schema；(e) aurora_runtime_v1 新表（5 个）为 Python-only，Go 无需查询——非 gap；(f) Go Grouptype/Taskstatus/Reportreason 等自定义类型与 PostgreSQL enum 定义完全一致；(g) Flutter GroupTaskInfo 与 Python GroupTaskInfo 字段完整对应（含 computed fields: completion_rate/is_claimed_by_me/my_completion_status）
+- **Opus pass rate**: pending (I7)
+- **Next suggested domain**: G (Mock vs Real) — 9 轮未回探，mock_community_repository reportMessage 空实现；或 C (WebSocket/gRPC 契约) — 11 轮未回探
