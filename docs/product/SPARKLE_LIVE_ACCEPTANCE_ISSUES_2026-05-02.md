@@ -2196,7 +2196,7 @@
 - **suggested_fix_direction**: MockCommunityRepository.getMessages() 应根据 beforeId 过滤消息（排除 ID 匹配的消息及之后的消息），并根据 limit 截断返回数量。同方法 getPrivateMessages() 也应做类似处理以保持一致性
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T22:30
-- **fix_commit**: 留空（待 commit）
+- **fix_commit**: d59317d17
 - **closed_at**: 2026-05-04T21:20:00Z
 - **opus_review**: APPROVED by fix-reviewer at 2026-05-04T21:15Z
 
