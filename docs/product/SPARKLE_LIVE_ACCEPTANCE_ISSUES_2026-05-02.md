@@ -1056,6 +1056,7 @@
 | R19 | 2026-05-04T02:30 | ISSUE-20260504-0015-I4 | ✅ Fixed | e57c82be8 | ~15 min |
 | R20 | 2026-05-04T02:40 | ISSUE-20260504-0215-C1 | ✅ Fixed | 0fd0c3b6d | ~15 min |
 | R21 | 2026-05-04T03:25 | ISSUE-20260503-1701-F2 | ✅ Fixed | 38992aea0 | ~20 min |
+| R22 | 2026-05-04T04:15 | ISSUE-20260504-0300-C2 | ✅ Fixed | (this commit) | ~15 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1539,9 +1540,32 @@
 - **suggested_fix_direction**: 在 proxy_routes.go 的 tasks 路由组中添加：`tasks.GET("/:id/guidance", h.proxyWithHeaders)` 和 `tasks.POST("/:id/guidance", h.proxyWithHeaders)`。与 C1 修复的 pause/resume/stuck 保持一致的注册模式
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T03:15:00Z
-- **fix_commit**: pending commit (unstaged working tree change on main branch)
+- **closed_at**: 2026-05-04T04:15:00Z
+- **fix_commit**: (this commit)
 - **reviewer_note**: APPROVED — independent review confirms all 6 evidence references match code exactly. (1) proxy_routes.go:69-132 tasks group: 32+ explicit routes covering start/complete/abandon/pause/resume/stuck/snooze/too-hard/skip/generate-guide/feedback/next-action-selection/card-protocol/priority-reasoning/resources. No `Any("/*path")` catch-all — unlike users/interventions/dashboard groups which use catch-alls. grep for "guidance" returns empty. The existing `POST /:id/generate-guide` (line 112) is a DIFFERENT endpoint (writes to task.guide_content directly, not the TaskGuidance sidecar system). (2) tasks.py:876 — `@router.get("/{task_id}/guidance")` EXISTS. tasks.py:904 — `@router.post("/{task_id}/guidance")` EXISTS. Both are fully implemented. (3) task_repository.dart:313 — `_taskGuidancePath(taskId) => '${ApiEndpoints.task(taskId)}/guidance'` constructs `/tasks/{id}/guidance`. getTaskGuidance (line 969): GET, catches 404→null (silent degradation). createOrRefreshTaskGuidance (line 999): POST, DioException→_handleDioError→Exception (hard failure). (4) task_guidance_surface.dart:69-78 — _primeHumanGuidance calls loadTaskGuidance then createOrRefreshTaskGuidance on null. Line 107 — user-triggered _generateSelected also calls createOrRefreshTaskGuidance. Call chain: Flutter HTTP→Go Gin router→no explicit route match→NoRoute handler→shouldProxyNoRoutePath returns false (only /api/v1/auth/* paths)→404 JSON→Flutter error. Not design intent: guidance follows identical pattern to 32+ registered task sub-routes; omission is unintentional. Not duplicate of C1: C1 (commit 0fd0c3b6d) added exactly 3 lines — pause/resume/stuck only — confirmed by git diff. Guidance is a distinct endpoint pair discovered in R20 during A-domain UI exploration.
 - **opus_review**: APPROVED by independent-fix-reviewer (GLM-5.1) at 2026-05-04T04:10:00Z. **Verdict**: Fix correctly resolves root cause — adds exactly 2 lines (GET+POST /:id/guidance) using identical pattern as 34 sibling routes with `h.proxyWithHeaders`. Not a hack or workaround. **(a) Root cause**: Confirmed. The tasks group in proxy_routes.go uses explicit route registration (no catch-all wildcard), and guidance was genuinely omitted. Fix registers both routes at the correct location (lines 119-120, within the Error Book Extended Routes block alongside all other /:id/* task action routes). **(b) Regression risk**: Low. The two new routes use the same `proxyWithHeaders` handler as every sibling route. No handler logic changed. No other callers affected. Routes are added inside existing Gin group with authMiddleware already applied. **(c) Cross-layer contract**: Synchronized. Python: tasks.py:876 GET + tasks.py:904 POST both exist. Flutter: task_repository.dart:313 `_taskGuidancePath` constructs `/tasks/{id}/guidance`, called by `getTaskGuidance` (GET) and `createOrRefreshTaskGuidance` (POST). No proto/DB/i18n changes needed (pure proxy route). **(d) Test regression protection**: PARTIAL. TestProxyRoutesHandler_RegisterProxyRoutes passes (4/4 tests PASS) but `expectedTasksRoutes` list does NOT include `GET /:id/guidance` or `POST /:id/guidance`. Removing the fix would NOT cause any test to fail — the test has a pre-existing coverage gap (also missing pause/resume/stuck/recommended/card-protocol/priority-reasoning). This is a pre-existing weakness not introduced by this fix. **Recommendation**: Add `GET /api/v1/tasks/:id/guidance` and `POST /api/v1/tasks/:id/guidance` to `expectedTasksRoutes` in proxy_routes_test.go to prevent silent regression. **(e) CLAUDE.md / rule guards**: No violations. Fix follows established pattern in codebase. No business logic added to Gateway (correct — routing only). No proto/DB changes required.
+
+
+### ISSUE-20260504-0345-H6
+- **status**: discovered
+- **severity**: P2
+- **domain**: H
+- **title**: community 三个屏幕的 hintText/空状态残留 5 处硬编码英文，labelText 已国际化但 placeholder 遗漏
+- **symptom**: 中文模式下，用户搜索页面 (user_search_screen) 搜索框显示 "Search users by name or username..." 英文提示、空状态显示 "Search for users by name or username" / "No users found" 英文文本；群组任务创建 (group_tasks_screen) 标题输入框 hintText 显示 "e.g. Complete Chapter 3 exercises" 英文；创建群组 (create_group_screen) 名称输入框 hintText 显示 "e.g. Daily Algorithm Sprint" 英文。注意 labelText 已正确国际化（如 "任务标题" / "Task Title"），但相邻的 hintText 仍是硬编码英文——同一 TextField 内中英混搭
+- **root_cause_hypothesis**: 开发者使用 `I18nService.instance.isChinese ? '中文' : 'English'` 模式处理了 labelText，但遗漏了 hintText。user_search_screen 更严重——整个文件仅 1 处 i18n 引用（line 249 错误状态），其余全部硬编码英文，可能是在 i18n 规范确立前编写且未被 H1/H2/H5 扫描覆盖
+- **evidence**:
+  - `mobile/lib/features/community/presentation/screens/user_search_screen.dart:115` — `hintText: 'Search users by name or username...'` 搜索框英文提示，文件仅 1 处 i18n 引用（line 249）
+  - `mobile/lib/features/community/presentation/screens/user_search_screen.dart:137-138` — `'Search for users by name or username'` / `'No users found'` 空状态英文文本
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:308-309` — `labelText: I18nService.instance.isChinese ? '任务标题' : 'Task Title'` 已国际化，但紧邻 `hintText: 'e.g. Complete Chapter 3 exercises'` 硬编码英文（labelText 已 i18n 但 hintText 遗漏）
+  - `mobile/lib/features/community/presentation/screens/create_group_screen.dart:181-182` — `labelText: I18nService.instance.isChinese ? '社群名称' : 'Group Name'` 已国际化，但紧邻 `hintText: 'e.g. Daily Algorithm Sprint'` 硬编码英文（labelText 已 i18n 但 hintText 遗漏）
+  - `mobile/lib/features/community/presentation/l10n/community_accountability_hub_l10n.dart` — 已有 60 个双语 getter 的 l10n 扩展，但未被这三个文件使用——基础设施已就绪但未应用
+- **repro_or_trigger**: 中文模式 → Community → 用户搜索 → 观察搜索框提示为英文；空状态文本为英文 → 群组 → 创建任务 → 观察标题 hintText 为英文（但 labelText 为中文）→ 创建群组 → 观察名称 hintText 为英文（但 labelText 为中文）
+- **expected_vs_actual**: 期望：labelText 和 hintText 统一使用 `I18nService.instance.isChinese` 或 `context.l10n` 双语模式；实际：labelText 已国际化但 hintText/空状态为硬编码英文，同一 TextField 内中英混搭，用户体验不连贯
+- **blast_radius**: 影响三个社区屏幕的中文用户体验——用户搜索（搜索入口）、群组任务创建（任务创建流程）、创建群组（群组创建流程）。hintText 是用户输入前的引导文本，中英混搭降低产品完成度。对北极星有轻微影响——不阻断核心学习流程，但社区功能是差异化体验的基础
+- **suggested_fix_direction**: 将 5 处硬编码英文替换为 `I18nService.instance.isChinese ? '中文' : 'English'` 模式：(1) user_search_screen.dart 的 3 处采用与 line 249 相同的 i18n 模式；(2) group_tasks_screen.dart:309 和 create_group_screen.dart:182 的 hintText 采用与相邻 labelText 相同的 `I18nService.instance.isChinese` 模式
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
 
 
 ### Round R17 — 2026-05-04T01:45
