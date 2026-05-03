@@ -1911,7 +1911,7 @@
 - **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
 
 ### ISSUE-20260504-1000-K5
-- **status**: discovered
+- **status**: rejected
 - **severity**: P3
 - **domain**: K
 - **title**: spineStatusBandProvider 的 catch (_) 返回 null 导致所有错误静默消失——FutureProvider 永不进入 error 态
@@ -1928,9 +1928,10 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: 留空
 - **fix_commit**: 留空
+- **reviewer_note**: REJECTED — 与 ISSUE-20260503-2302-B3 (status: verified, line 1385) 重复。B3 已覆盖同一代码位置 (spine_status_band_provider.dart:117-130)、同根因 (catch(_) → return null 使 error 状态不可达)、同标题核心（"provider 永远不进入 error 状态"）。K5 额外发现 dashboard_screen.dart:337,342 的 loading/error 分支为死代码，以及 _refreshGrowthState 的 debugPrint 模式对比——但这两点是对 B3 已识别问题在同一文件中的证据深化，不构成独立 bug。建议将 dashboard_screen.dart 死代码分支的观察合并到 B3 的 evidence 中，K5 关闭。
 
 ### ISSUE-20260504-1001-K6
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: K
 - **title**: galaxy_event_consumer._fallback_gap_node 的 semantic_search_nodes 失败被 `except Exception: pass` 静默吞没——零可观测性
@@ -1945,11 +1946,11 @@
 - **blast_radius**: 影响 Galaxy 事件消费的可观测性。语义搜索是知识图谱节点关联的核心能力——若其长期静默失败，模拟缺口场景的知识节点关联质量会持续退化（回退到最近节点而非最相关节点），而运维人员无法从任何监控渠道发现。对北极星有间接影响——知识图谱推荐质量下降会降低学习体验
 - **suggested_fix_direction**: 将 `except Exception: pass` 改为 `except Exception as e: logger.warning("semantic_search failed for topic=%s: %s", topic, e)` ——一行改动即可恢复可观测性
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T10:15
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1002-K7
-- **status**: discovered
+- **status**: verified
 - **severity**: P3
 - **domain**: K
 - **title**: intelligent_task_service._recognize_intent 的 LLM 调用失败被 `except Exception: return defaults` 静默吞没——零可观测性
@@ -1964,11 +1965,11 @@
 - **blast_radius**: 影响任务创建建议和碎片时间微任务推荐功能。用户始终能看到默认意图"日常学习"，不会遇到错误——但若 MIMO API 长期不可用，所有用户的意图识别都会退化到同一默认值，任务个性化推荐失效。对北极星无直接影响——任务系统核心功能（CRUD）不依赖此 LLM 调用
 - **suggested_fix_direction**: 在 `except Exception:` 块中添加 `logger.warning("Task intent recognition failed for input=%s: %s", input_text[:100], e)` ——保留降级默认值，恢复可观测性
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T10:15
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1003-K8
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: K
 - **title**: self_revision_service._read_json_key 的 Redis 读取/JSON 解析失败被 `except Exception: return None` 静默吞没——数据损坏不可见
@@ -1983,7 +1984,7 @@
 - **blast_radius**: 影响 session companion 的自我修正 revision 历史。Revision 历史是 AI 对话持续改进的关键机制——若 Redis 数据因任何原因损坏（内存压力导致的截断、编码问题、并发写入冲突），revision 历史会静默丢失，AI 自我修正能力退化。无告警意味着可能长期运行在损坏状态。对北极星有间接影响——AI 辅导的自我修正能力依赖 revision 历史质量
 - **suggested_fix_direction**: 将 `except Exception: return None` 改为 `except Exception as e: logger.warning("Failed to read/parse Redis key=%s: %s", key, e); return None` ——一行改动即可
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T10:15
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
