@@ -36,6 +36,7 @@ from app.services.aurora_stage38_kill_switch_service import AuroraStage38KillSwi
 from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwitchService
 from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
 from app.services.aurora_stage40_calendar_kill_switch_service import AuroraStage40CalendarKillSwitchService
+from app.services.aurora_dual_core_router_kill_switch_service import AuroraDualCoreRouterKillSwitchService
 from app.core.kill_switch import write_mode as _ks_write_mode
 from app.core.cache import cache_service as _cache
 
@@ -62,6 +63,7 @@ DEFAULT_SPECS = (
     "stage39",
     "privacy",
     "doc_context",
+    "dual_core_router",
     "stage40-calendar",
 )
 
@@ -227,6 +229,12 @@ async def _stage39_apply(mode: str) -> dict[str, Any]:
     return await service.summary()
 
 
+async def _dual_core_router_apply(mode: str) -> dict[str, str]:
+    service = AuroraDualCoreRouterKillSwitchService()
+    await service.set_mode(mode)
+    return await service.summary()
+
+
 _PRIVACY_BINDING = type(
     "PrivacyBinding",
     (),
@@ -381,6 +389,13 @@ SPECS = {
         description="Stage 39 master + scaffolding_prompt/cogload_route/galaxy_inject",
         mode_keys=("mode", "scaffolding_prompt_mode", "cogload_route_mode", "galaxy_inject_mode"),
         apply_mode=_stage39_apply,
+    ),
+    "dual_core_router": DrillSpec(
+        name="dual_core_router",
+        stage="dual_core_router",
+        description="Dual-core router mode",
+        mode_keys=("mode",),
+        apply_mode=_dual_core_router_apply,
     ),
     "privacy": DrillSpec(
         name="privacy",
