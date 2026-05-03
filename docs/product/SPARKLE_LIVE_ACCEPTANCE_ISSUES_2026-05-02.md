@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 09:45 (R30 E-domain exploration — 3 discovered: E5 drill gap / E6 stage38 label / E7 privacy drill crash)
+> Updated: 2026-05-04 10:15 (R31 K-domain exploration — 4 discovered: K5 silent catch null / K6 except:pass / K7 except:defaults / K8 except:None)
 
 ---
 
@@ -404,6 +404,7 @@
 | R28 | 2026-05-04T09:00 | D | 0 | N/A | D 域续探——D2 fix 验证通过（snapshot/rationale 已传递），FSM/锁/断路器/检查点/双核路由全部健壮，零缺口 |
 | R29 | 2026-05-04T09:30 | G | 3 | 3/3 | G 域续探——reportMessage/claimTask/searchUsers/sendFriendRequest 等多处空 stub → 虚假成功 / 功能不可用 |
 | R30 | 2026-05-04T09:45 | E | 3 | 3/3 | E 域续探——双核路由 drill 缺失 + stage38 Prometheus 标签不一致 + privacy drill 内联 type 崩溃 |
+| R31 | 2026-05-04T10:15 | K | 4 | pending | K 域续探——4 处 silent error swallowing: Flutter catch(_) null + 3× Python except:pass/return defaults 零日志 |
 
 ---
 
@@ -1908,6 +1909,82 @@
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) line 230-235: `_PRIVACY_BINDING = type("PrivacyBinding", (), {5 attrs})()` 仅有 stage/feature/redis_key/settings_attr/fallback_mode，缺少 allowed_modes/enabled_legacy_modes/legacy_bool_attr/enabled_mode。(2) kill_switch.py:125: `write_mode()` 访问 `binding.allowed_modes` —— 对 inline type() 对象触发 AttributeError。(3) kill_switch.py:9: TRI_STATE_MODES = frozenset({"off","shadow","live"})；line 34: KillSwitchBinding.allowed_modes 默认值 = TRI_STATE_MODES。(4) DEFAULT_SPECS line 63 含 "privacy" → SPECS["privacy"] (line 385-391) 使用 apply_mode=_privacy_apply → 调用 _ks_write_mode(即 kill_switch.write_mode) → crash。调用链完整：drill_all.sh → run_kill_switch_drills.py → iter DEFAULT_SPECS → "privacy" → _privacy_apply(mode) → _ks_write_mode(binding=_PRIVACY_BINDING) → write_mode() → binding.allowed_modes → AttributeError。backend/app/services/ 下无 AuroraPrivacyKillSwitchService（grep 零匹配），确认唯一绑定是此 inline type()。与 E2（privacy 读路径绕过 read_mode 缺失 gauge）不重复——E2 是运行时读路径可观测性，E7 是 drill 写路径崩溃。非"设计如此"——其他 drill 条目（stage18-39, doc_context, stage40-calendar）均使用正式 KillSwitchBinding 或专用 kill switch 服务。
 - **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
 
+### ISSUE-20260504-1000-K5
+- **status**: discovered
+- **severity**: P3
+- **domain**: K
+- **title**: spineStatusBandProvider 的 catch (_) 返回 null 导致所有错误静默消失——FutureProvider 永不进入 error 态
+- **symptom**: 当 Aurora spine status band API 失败（网络错误、500、响应格式变更）时，dashboard 上的 AuroraStatusBand 卡片静默回退到本地计算值。用户看不到任何错误提示，操作者也无法从日志中发现 API 已不可用。与同 dashboard 中其他 FutureProvider（如 growthDashboardProvider）进入 error 态展示 CompactErrorCard 的模式不一致
+- **root_cause_hypothesis**: `spineStatusBandProvider`（FutureProvider<SpineStatusBand?>）在 catch 块中 `return null` 而非 rethrow 或记录错误。Riverpod FutureProvider 仅在异常传播时进入 AsyncError 状态——catch 块返回 null 意味着 provider 永远处于 AsyncData(null) 状态。UI 的 `.when(data: (band) => ...)` 分支收到 null 后静默回退到 `_resolveAuroraState(dashboardState)` 本地计算，不执行 error 分支
+- **evidence**:
+  - `mobile/lib/features/home/presentation/providers/spine_status_band_provider.dart:117-130` — `FutureProvider<SpineStatusBand?>((ref) async { try { ... } catch (_) { return null; } });` ——所有异常被 catch 吞没，返回 null
+  - `mobile/lib/features/home/presentation/screens/dashboard_screen.dart:253-261` — `bandAsync.when(data: (band) => AuroraStatusBand(state: band != null ? ... : _resolveAuroraState(dashboardState), ...))` ——UI 在 data 分支内处理 null，永远不会走 error 分支
+  - `mobile/lib/features/home/presentation/screens/dashboard_screen.dart:245-248` — 同文件中 `_refreshGrowthState()` 方法使用 `try { ... } catch (e, st) { debugPrint(...); }` 记录错误，与 spine status band 的静默 catch 形成模式对比
+- **repro_or_trigger**: 关闭后端服务 → 打开 app 进入 dashboard → spineStatusBandProvider 的 API 调用失败 → AuroraStatusBand 卡片静默显示本地计算状态 → 无任何错误提示或日志
+- **expected_vs_actual**: 期望：API 失败时至少通过 debugPrint 记录错误，或让 provider 进入 error 态由 UI 展示 CompactErrorCard；实际：所有错误被 catch (_) 吞没，Provider 永远 AsyncData(null)，操作者无法获知 API 不可用
+- **blast_radius**: 影响 dashboard 的 Aurora 脊状态条（核心导航入口）。不影响功能正确性——本地回退计算保底。但若 API 响应格式变更导致 fromJson 抛出 TypeError，该编程错误也会被静默吞没，导致功能静默退化而无人知晓。对北极星无直接影响——本地回退提供基本可用性
+- **suggested_fix_direction**: 在 catch 块中添加 `debugPrint('spineStatusBand fetch failed: $e')` 记录错误（与同文件 `_refreshGrowthState` 模式一致），或改为 rethrow 让 provider 进入 error 态由 UI 展示 CompactErrorCard + 本地回退双保险
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1001-K6
+- **status**: discovered
+- **severity**: P2
+- **domain**: K
+- **title**: galaxy_event_consumer._fallback_gap_node 的 semantic_search_nodes 失败被 `except Exception: pass` 静默吞没——零可观测性
+- **symptom**: 当语义搜索（semantic_search_nodes）因任何原因失败时（pgvector 索引损坏、DB 连接中断、超时），消费者静默回退到 UserNodeStatus 查询。该降级行为本身正确，但失败完全不可见——无日志、无指标、无告警。操作者可能长期不知道语义搜索已损坏，因为回退查询（最近学习的节点）仍能正常返回结果
+- **root_cause_hypothesis**: `_fallback_gap_node()` 方法（galaxy_event_consumer.py:460-478）中，semantic_search_nodes 调用被 `except Exception: pass` 包裹（lines 469-470）。意图是"语义搜索失败时回退到最近节点"——这是正确的降级策略。但空 except 块意味着没有任何 logger.warning/logger.error 记录失败，操作者完全不知道语义搜索功能是否健康
+- **evidence**:
+  - `backend/app/services/galaxy_event_consumer.py:464-470` — `try: related = await galaxy_service.semantic_search_nodes(...) ... except Exception: pass` ——语义搜索失败完全静默，零日志
+  - `backend/app/services/galaxy_event_consumer.py:471-477` — fallback 路径：`select(UserNodeStatus).where(...).order_by(...).limit(1)` ——正确的降级查询，但触发该路径时无任何可观测信号
+  - `backend/app/services/galaxy_event_consumer.py:455` — 同文件中成功路径有 `logger.info("Persisted simulation gap fragment %s", fragment.id)` ——证明开发者有日志意识，唯独此 except 遗漏
+- **repro_or_trigger**: 模拟 pgvector 索引不可用（如 DROP INDEX）或 GalaxyService 初始化失败 → 触发 SimulationGapRevealed 事件 → 检查应用日志 → 无任何 semantic_search 失败记录，但回退路径正常执行
+- **expected_vs_actual**: 期望：except 块中至少有 `logger.warning("semantic search failed for topic=%s, falling back to recent node", topic)`；实际：`pass`——完全静默
+- **blast_radius**: 影响 Galaxy 事件消费的可观测性。语义搜索是知识图谱节点关联的核心能力——若其长期静默失败，模拟缺口场景的知识节点关联质量会持续退化（回退到最近节点而非最相关节点），而运维人员无法从任何监控渠道发现。对北极星有间接影响——知识图谱推荐质量下降会降低学习体验
+- **suggested_fix_direction**: 将 `except Exception: pass` 改为 `except Exception as e: logger.warning("semantic_search failed for topic=%s: %s", topic, e)` ——一行改动即可恢复可观测性
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1002-K7
+- **status**: discovered
+- **severity**: P3
+- **domain**: K
+- **title**: intelligent_task_service._recognize_intent 的 LLM 调用失败被 `except Exception: return defaults` 静默吞没——零可观测性
+- **symptom**: 当任务意图识别 LLM 调用（Xiaomi MIMO API）失败时——API 超时、认证失败、响应格式错误——服务静默返回硬编码默认值 `{"intent": "日常学习", "keywords": [], ...}`。API 调用方（tasks.py 的 create_task 和 suggest_tasks）无法区分"LLM 未返回结果"和"LLM 判断意图为默认值"。操作者无法知道 MIMO API 是否健康
+- **root_cause_hypothesis**: `_recognize_intent()` 方法（intelligent_task_service.py:121-194）中，整个 LLM 调用链路（HTTP POST → JSON parse → field extraction）被单个 `except Exception: return {...defaults...}` 包裹（lines 186-194）。降级策略（返回安全默认值）本身合理——比硬崩溃好。但 catch 块中没有任何 logger.warning 调用，LLM 失败完全不可观测
+- **evidence**:
+  - `backend/app/services/intelligent_task_service.py:139-186` — try 块覆盖 HTTP 调用 + JSON 解析 + 字段清洗全流程；任何环节失败都落入 line 186 的 `except Exception:`
+  - `backend/app/services/intelligent_task_service.py:186-194` — `except Exception: return {"intent": "日常学习", "keywords": [], "potential_nodes": [], "estimated_minutes": 25, "difficulty": 1}` ——降级正确但无日志
+  - `backend/app/api/v1/tasks.py:414-415` — 调用方 `get_task_nudges` 有自己的 `except Exception as e: logger.warning(f"Failed to get task nudges: {e}")` ——调用方有日志意识，但被调用方（_recognize_intent）的失败在到达调用方之前已被吞没
+- **repro_or_trigger**: 设置无效的 XIAOMI_MIMO_API_KEY → 调用 POST /tasks/suggestions → _recognize_intent LLM 调用返回 401 → except 返回默认值 → API 正常返回 200 含默认意图 → 日志中无任何异常记录
+- **expected_vs_actual**: 期望：except 块中至少有 `logger.warning("LLM intent recognition failed, using defaults: %s", e)`；实际：无任何日志
+- **blast_radius**: 影响任务创建建议和碎片时间微任务推荐功能。用户始终能看到默认意图"日常学习"，不会遇到错误——但若 MIMO API 长期不可用，所有用户的意图识别都会退化到同一默认值，任务个性化推荐失效。对北极星无直接影响——任务系统核心功能（CRUD）不依赖此 LLM 调用
+- **suggested_fix_direction**: 在 `except Exception:` 块中添加 `logger.warning("Task intent recognition failed for input=%s: %s", input_text[:100], e)` ——保留降级默认值，恢复可观测性
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1003-K8
+- **status**: discovered
+- **severity**: P2
+- **domain**: K
+- **title**: self_revision_service._read_json_key 的 Redis 读取/JSON 解析失败被 `except Exception: return None` 静默吞没——数据损坏不可见
+- **symptom**: 当 session companion revision 的 Redis 数据损坏（如部分写入、编码错误、JSON 格式错误）时，`_read_json_key()` 静默返回 None。调用方 `_session_revisions()` 收到 None 后回退到从 payload/source dict 中提取 `companion_revision_history` 字段——若该字段也不存在，返回空列表 []。整个过程中无任何日志记录数据损坏事件。操作者只知道"revision history 为空"，无法区分"无历史"与"历史数据损坏"
+- **root_cause_hypothesis**: `_read_json_key()` 方法（self_revision_service.py:221-239）的整个 Redis 读取→类型判断→JSON 解析流程被 `except Exception: return None` 包裹（line 238-239）。`json.loads()` 在原始数据为截断 JSON 时抛出 `json.JSONDecodeError`，被此 except 静默捕获。返回 None 后，调用方 `_session_revisions()`（line 203-219）有完善的 None/类型回退链，但数据损坏事件完全不可观测
+- **evidence**:
+  - `backend/app/services/self_revision_service.py:221-239` — `_read_json_key()` 全流程：`redis.get` → `isawaitable` → `bytes.decode` → `isinstance` → `json.loads` → 所有异常在 line 238 被 `except Exception: return None` 吞没，零日志
+  - `backend/app/services/self_revision_service.py:203-219` — `_session_revisions()` 调用 `_read_json_key()` 并处理 None 返回：先尝试 revisions key → 若 None 回退到 companion key → 若仍无 `companion_revision_history` 字段返回 `[]` ——回退链设计正确但无数据损坏可观测性
+  - `backend/app/services/self_revision_service.py:245` — `_write_json_key()` 使用 `json.dumps` + `redis.setex` ——写入路径正常，读写不对称（写用 json.dumps，读用 json.loads，但读失败不记录）
+- **repro_or_trigger**: 手动向 Redis 写入截断的 JSON（如 `redis-cli SET "sparkle:session_companion_revisions:test-session" '{broken'`） → 触发 revision 读取 → `json.loads('{broken')` 抛出 JSONDecodeError → except 返回 None → 回退链返回空 history → 日志中无任何异常记录
+- **expected_vs_actual**: 期望：`except Exception:` 中至少有 `logger.warning("Failed to read/parse Redis key=%s: %s", key, e)`；实际：`return None` 无日志
+- **blast_radius**: 影响 session companion 的自我修正 revision 历史。Revision 历史是 AI 对话持续改进的关键机制——若 Redis 数据因任何原因损坏（内存压力导致的截断、编码问题、并发写入冲突），revision 历史会静默丢失，AI 自我修正能力退化。无告警意味着可能长期运行在损坏状态。对北极星有间接影响——AI 辅导的自我修正能力依赖 revision 历史质量
+- **suggested_fix_direction**: 将 `except Exception: return None` 改为 `except Exception as e: logger.warning("Failed to read/parse Redis key=%s: %s", key, e); return None` ——一行改动即可
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
 ### Round R25 — 2026-05-04T05:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
@@ -2034,5 +2111,28 @@
   4. **E1-E4 fix 验证**: 全部 4 个原始 E 域 issue 已验证通过。E1（dual-core router zero KS）→ 服务已存在且正确集成 ✓；E2（privacy gauge bypass）→ privacy.py 现在调用 record_mode_gauge ✓；E3（drill_all.sh missing 37-39）→ drill_all.sh 现在包含 stage37/38/39 ✓；E4（permissions 644）→ AV 规则使用动态发现 ✓
   5. **Prometheus 告警盲区**: `sparkle_kill_switch_mode` gauge 正确记录所有 kill switch 状态，但 monitoring/*.yml 中零条告警规则引用 kill_switch。kill switch 意外关闭时无 Prometheus 告警——依赖人工 Grafana 观察。这不如其他关键指标（SLO latency/error rate）有完整的告警覆盖
   6. **SLO auto-degrade**: auto_degrade.py 的 5 个绑定使用 `KillSwitchBinding(stage="slo_auto", ...)`，由 Alertmanager webhook 触发——是合理的基础设施层 kill switch，不属于 Aurora 阶段范畴
-- **Opus pass rate**: pending（待 Opus 独立复审）
+- **Opus pass rate**: 3/3 (E5/E6/E7 all APPROVED → verified by opus-reviewer+2026-05-04T09:45)
 - **Next suggested domain**: H (i18n residuals) — 7 轮未回探，H5/H6 fix 验证长期待查；或 K (error handling) — 10+ 轮未回探
+
+### Round R31 — 2026-05-04T10:15
+- **Domain**: K (Error handling / 降级 / 边界 — 续探)
+- **Paths covered**:
+  - spine_status_band_provider.dart:117-130 → dashboard_screen.dart:253-261 — catch (_) null return → UI never sees error state
+  - galaxy_event_consumer.py:460-478 → _fallback_gap_node → semantic_search_nodes → except:pass
+  - intelligent_task_service.py:121-194 → _recognize_intent → LLM HTTP call → except:return defaults
+  - self_revision_service.py:203-239 → _session_revisions → _read_json_key → Redis get / json.loads → except:return None
+  - Also scanned: calendar_remote_datasource.dart (response.data! protected by repository try/catch — false alarm)
+  - Also scanned: galaxy_event_consumer.py:102 (except:continue in UUID parse — acceptable, unparseable UUID is not actionable)
+  - Also scanned: galaxy_execution_consumer.py:156 (except:return None in _parse_uuid — acceptable, same pattern)
+  - Also scanned: vocabulary_repository.dart (as List cast caught by provider try/catch — acceptable)
+  - Also scanned: aurora_core_session_service.dart (response.data! used without try/catch in service, but caller aurora_core_session_sheet.dart:452 has try/catch — acceptable)
+- **New issues**: 4 — K5 (spineStatusBand silent catch null, P3), K6 (galaxy_event_consumer except:pass, P2), K7 (intelligent_task_service except:return defaults, P3), K8 (self_revision_service except:return None, P2)
+- **Findings**: K 域续探聚焦"静默错误吞没 + 零可观测性"模式——该模式在 R6 的 K3（SizedBox.shrink）和 K4（OpenAI Timeout fallback）中已被识别，但本轮发现 Python 服务层存在更隐蔽的变体。关键发现：
+  1. **Flutter**: spineStatusBand 使用 `catch (_) { return null; }` 模式——与 K3（SizedBox.shrink 静默消失）不同，K5 的返回 null 意味着 FutureProvider 永不进入 error 态，UI 的 `.when(data: ...)` 分支永远触发——通过本地回退隐藏了 API 失败。同文件的 `_refreshGrowthState()` 正确使用 `debugPrint` 记录异常，形成对比
+  2. **Python silent pass**: galaxy_event_consumer._fallback_gap_node 的语义搜索失败用 `except Exception: pass` 处理——零字符日志。同文件其他方法有 `logger.info`，证明并非疏忽而是该处遗漏。这是最严重的零可观测性实例
+  3. **Python silent return defaults**: intelligent_task_service._recognize_intent 的 LLM 调用全流程被 `except Exception: return hardcoded_defaults` 包裹——降级合理但无日志。调用方 tasks.py 有自己的 logger.warning——但被调用方的异常已在返回前吞没，调用方永远看不到失败
+  4. **Python silent return None**: self_revision_service._read_json_key 的 Redis JSON 解析失败 `except Exception: return None`——调用方 `_session_revisions()` 正确处理 None（回退到 source dict），但数据损坏事件完全不可观测。与写入路径 `json.dumps`+`redis.setex` 形成不对称（写完整，读失败不记录）
+  5. **误报排除**: calendar_remote_datasource 的 `response.data!` 在 repository 层有 try/catch 保护；vocabulary_repository 的 `as List` 强制转换被 provider try/catch 捕获并展示错误消息；aurora_core_session_service 的 `response.data!` 被调用方 try/catch 保护。均非真实问题
+- **Pattern insight**: 所有 4 个 issue 共享同一模式——设计者正确实现了降级/回退策略（本地回退、默认值、None→空列表），但遗漏了可观测性。修复成本极低（每个只需 +1 行 `logger.warning` 或 `debugPrint`），但影响运维人员对系统健康状态的感知能力
+- **Opus pass rate**: pending（待 Opus 独立复审）
+- **Next suggested domain**: H (i18n residuals) — 8 轮未回探，H5/H6 fix 验证长期待查；或 F (Event bus consumers) — 7 轮未回探，F4 fix 验证待查
