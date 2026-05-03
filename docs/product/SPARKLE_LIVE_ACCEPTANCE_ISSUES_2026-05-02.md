@@ -2676,8 +2676,9 @@
 - **opus_review**: APPROVED by independent-reviewer at 2026-05-03T16:50:51Z — (a) root cause addressed at both layers: compile()-time static edge target validation + runtime conditional edge return validation with graceful degradation to __end__; (b) zero regression risk — all 4 production StateGraph callers (standard_workflow.py, graph_workflows.py, graph_engine_poc.py, graph/workflow.py) use only valid targets; graph/workflow.py uses langgraph.graph.StateGraph not our custom class; (c) no cross-layer contract changes — statechart_engine.py is Python-internal only, no proto/DB/i18n dependencies; (d) both regression tests are effective — test_compile_rejects_invalid_static_edge_target fails without the compile-time check (compile succeeds instead of raising ValueError), test_conditional_edge_invalid_target_routes_to_end fails without the runtime check (KeyError caught by generic handler produces different error message); (e) no CLAUDE.md or rule guard violations; (f) line 253 direct dict access (self.nodes[current_node_name]) not changed but now indirectly protected by upstream validation layers
 
 ### ISSUE-20260504-1902-D3
-- **status**: in_progress
+- **status**: closed
 - **fixer_started_at**: 2026-05-04T02:00:00Z
+- **closed_at**: 2026-05-03T18:01:00Z
 - **severity**: P2
 - **domain**: D
 - **title**: Graph max_steps exceeded silently — WorkflowState.is_finished never set to True anywhere, no error appended on truncation
@@ -2694,9 +2695,7 @@
 - **suggested_fix_direction**: At line 304-305: append `state.errors.append(f"[{self.name}] Max steps {max_steps} reached — execution truncated")` and set `state.is_finished = True`. Additionally, fix the orchestrator or response_builder to check `final_state.is_finished` or `final_state.errors` before marking session STATE_DONE.
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T19:45Z
-- **fix_commit**: 留空
-
-### ISSUE-20260504-1930-E8
+- **fix_commit**: 863d41d7e + a7d59f346
 - **status**: verified
 - **severity**: P2
 - **domain**: E
