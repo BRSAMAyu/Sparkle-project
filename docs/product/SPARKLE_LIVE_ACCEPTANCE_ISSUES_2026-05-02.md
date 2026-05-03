@@ -1318,9 +1318,10 @@
 - **expected_vs_actual**: 期望：代码 bug 导致 FutureProvider error 状态 → CompactErrorCard 显示并提供重试；网络故障可以静默降级（返回 null）。实际：所有异常统一返回 null，error 状态永远不可达
 - **blast_radius**: 仅影响脊柱状态栏这一非关键 UI 组件。但该模式可能被复制到其他 FutureProvider。对北极星无直接影响
 - **suggested_fix_direction**: 区分异常类型：`on DioException catch (_) { return null; }`（网络故障静默降级）+ `catch (e, st) { debugPrint('spineStatusBand bug: $e\n$st'); return null; }`（代码 bug 至少记录日志）。长期：考虑添加全局 provider 异常监控
+- **reviewer_note**: APPROVED — 独立审阅确认全部 3 处 evidence 代码与条目描述一致。(1) spine_status_band_provider.dart:117-130 的 catch(_) { return null; } 在 line 127-129 吞没所有异常。(2) FutureProvider<SpineStatusBand?> 的 nullable 类型使 null 为合法返回值，不会触发 error 状态。(3) line 121-122 使用非空端点 auroraSpineStatusBand。调用链完整：API 调用 → 任何异常 (DioException 或 TypeError) → catch(_) → return null → FutureProvider resolve AsyncData(null) → UI 根据 null 隐藏 widget。非设计意图——网络故障静默降级为 null 可接受，但代码 bug (TypeError) 也被同等吞没，开发者无法通过 UI 或日志区分。与 B1/B2 不重复——B1 是 repository 层静默降级，B2 是乐观更新无声回退，B3 是 catch-all 吞错使 error 状态不可达。P3 评级合理——仅影响非关键 UI 组件，但对开发调试体验有影响。
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
-- **fix_commit**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T00:15:00Z
+- **fix_commit**:
 
 ### Round R14 — 2026-05-03T23:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
