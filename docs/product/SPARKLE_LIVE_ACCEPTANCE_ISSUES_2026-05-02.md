@@ -2178,7 +2178,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1200-G4
-- **status**: in_progress
+- **status**: closed
 - **fixer_started_at**: 2026-05-04T20:45:00Z
 - **severity**: P2
 - **domain**: G
@@ -2196,7 +2196,9 @@
 - **suggested_fix_direction**: MockCommunityRepository.getMessages() 应根据 beforeId 过滤消息（排除 ID 匹配的消息及之后的消息），并根据 limit 截断返回数量。同方法 getPrivateMessages() 也应做类似处理以保持一致性
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T22:30
-- **fix_commit**: 留空
+- **fix_commit**: 留空（待 commit）
+- **closed_at**: 2026-05-04T21:20:00Z
+- **opus_review**: APPROVED by fix-reviewer at 2026-05-04T21:15Z
 
 ### ISSUE-20260504-1430-C6
 - **status**: verified

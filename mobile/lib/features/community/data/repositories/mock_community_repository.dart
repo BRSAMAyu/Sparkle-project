@@ -777,9 +777,19 @@ class MockCommunityRepository implements CommunityRepository {
     String? beforeId,
     int limit = 50,
   }) async {
-    final messages = _mockPrivateMessages[friendId] ?? [];
+    final messages = List<PrivateMessageInfo>.from(
+      _mockPrivateMessages[friendId] ?? [],
+    );
     messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return messages;
+
+    if (beforeId != null) {
+      final index = messages.indexWhere((m) => m.id == beforeId);
+      if (index >= 0) {
+        final older = messages.sublist(index + 1);
+        return older.take(limit).toList();
+      }
+    }
+    return messages.take(limit).toList();
   }
 
   @override
@@ -950,8 +960,19 @@ class MockCommunityRepository implements CommunityRepository {
     String groupId, {
     String? beforeId,
     int limit = 50,
-  }) async =>
-      _mockGroupMessages[groupId] ?? [];
+  }) async {
+    final messages = List<MessageInfo>.from(_mockGroupMessages[groupId] ?? []);
+    messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    if (beforeId != null) {
+      final index = messages.indexWhere((m) => m.id == beforeId);
+      if (index >= 0) {
+        final older = messages.sublist(index + 1);
+        return older.take(limit).toList();
+      }
+    }
+    return messages.take(limit).toList();
+  }
 
   @override
   Future<MessageInfo> sendMessage(
