@@ -400,6 +400,7 @@
 | R25 | 2026-05-04T04:00 | F | 1 | 1/1 (F3 closed) | F3 consume_loop auto-restart on death — commit 1a4ec61d9 |
 | R25 | 2026-05-04T05:00 | B | 2 | 2/2 (B4/B5 verified) | B 域续探——B4 markAsRead 空 catch, B5 submitFeedback 虚假成功 toast |
 | R26 | 2026-05-04T06:00 | J | 0 | N/A | J 域续探——achievement/galaxy/auth/router/splash 冷启动全部健壮，零缺口 |
+| R27 | 2026-05-04T07:00 | A | 0 | N/A | A 域续探——task/goal/report/contract E2E 全链路验证通过，B5 模式未扩散 |
 
 ---
 
@@ -1778,3 +1779,22 @@
 - **Findings**: J 域续探覆盖 R4 未触及的 17 个文件。所有冷启动路径（成就空态、星系闪空防护、auth 决议转换、DemoDataService 静态字段时序、splash→home 过渡）均设计健壮。关键发现：(1) DemoDataService.isDemoMode 在 main.dart 中同步设置（runApp 前），消除所有 repository constructor 中的竞态窗口；(2) GoRouter redirect 在 auth isLoading 期间阻止所有受保护路由构建，DashboardNotifier/GalaxyNotifier 在 auth 解决前不会被构造；(3) 成就列表有骨架屏 + 上下文空状态（筛选空 vs 无成就） + 错误重试——完整模式；(4) 星系屏幕有 3 层防护：初始加载跳过 (isLoading && nodes.isEmpty && _graph == null)、完全空态面板含 3 条亮点 + CTA、每个统计卡片独立 isEmpty 标签；(5) _ColdStartFade 为纯装饰 320ms 渐入，无功能影响；(6) 社区空态提供指导文案 + 发帖 CTA + 刷新按钮；(7) 通知列表使用 AsyncValue.when(data/loading/error) 正确模式——唯一微小不足是错误态无重试按钮，但这是 K 域已覆盖；(8) 所有 17 个文件的空态文案均使用项目标准 isChinese/i18n 模式进行双语处理。与 R4（dashboard/wizard/community 基础覆盖）结论一致，并大幅扩展覆盖面。
 - **Opus pass rate**: N/A (0 new issues)
 - **Next suggested domain**: A (Flutter UI 端到端链路) — R25 建议回探 submitFeedback 虚假成功模式；或 D (Python orchestrator FSM) — D2 修复后回归验证
+
+### Round R27 — 2026-05-04T07:00
+- **Domain**: A (Flutter UI 端到端链路 — 续探)
+- **Paths covered**:
+  - Task actions E2E: goal_detail_page.dart:304-376 → goal_detail_provider.dart:44-73 → POST /tasks/$id/start → proxy_routes.go:113 → tasks.py:1107 (start_task); /pause → proxy:116 → py:1124; /resume → proxy:117 → py:1141; /stuck → proxy:118 → py:984; /complete → proxy:114
+  - Goal detail E2E: goal_detail_provider.dart:27-40 → GET /experience/goal-detail/$goalId → proxy_routes.go:833 (Any("/*path") catch-all) → Python
+  - Achievement E2E: achievement_list_screen.dart:164-227 → achievement_provider.dart:331-412 (6-parallel load with _loadWithFallback) → GET /achievements + /stats + /streak + /skins + /titles + /contracts → proxy:237-247
+  - Achievement contract E2E: achievement_contract_screen.dart:337-363 (null-check before success) → achievement_provider.dart:565-582 → POST /achievements/contracts → proxy:246; cancelContract same pattern
+  - Community post creation E2E: create_post_screen.dart:50-77 (try/catch with error toast) → community_providers.dart:87-109 (乐观更新 + revert + rethrow) → POST /community/posts → proxy
+  - Community report E2E: group_chat_screen.dart:171-260 (try/catch report sheet) → community_repository.dart:946-959 (_reportReasonToApi maps all 7 values incl. hateSpeech) → POST /community/reports → proxy:518
+  - ReportReason enum alignment: Flutter community_model.dart:114-129 (7 values + @JsonValue) ↔ Python community.py:90-98 (7 values StrEnum) ↔ DB c28 migration (ALTER TYPE reportreason ADD VALUE 'HATE_SPEECH')
+  - Plan review E2E: plan_review_card.dart:294-328 (checks onDecision return value before setting _isSubmitted) → chat_notifier_reviews.dart:5-80 (state management with lastActionStatus)
+  - B5 false-success pattern diffusion check: achievement_contract_screen (null-check guard), community create_post (rethrow), group_chat favorite (then/catchError), plan_review_card (checks return bool), milestone celebration (checks result.isSuccess) — NONE exhibit B5 unconditional-success pattern
+  - Error book E2E: error_book_provider.dart:22-29 (dioProvider wraps apiClient.dio, auth interceptor intact) → /errors/* → proxy has errors group
+  - Auth middleware coverage: verified all major route groups (goals, tasks, plans, achievements, community, chat, etc.) have authMiddleware
+- **New issues**: 0
+- **Findings**: A 域续探覆盖 11 条 E2E 链路，追踪 UI→Provider→Repository→Network→Go Proxy→Python 全链。关键发现：(1) Task actions (start/pause/resume/stuck/complete) 五链完整——C1 fix 验证通过；(2) ReportReason enum 三层一致（Flutter @JsonValue / Python StrEnum / DB ALTER TYPE）——I3 fix 验证通过；(3) B5 模式（provider 返回 null + UI 不检查 → 虚假成功）未扩散——所有检查的表单提交场景（contract、post、report、favorite、forward、review、share）均有正确的返回值检查或 try/catch 模式；(4) 错误书使用 dioProvider（等效于 apiClient.dio）保留 auth 拦截器——无认证绕过；(5) PlanReviewCard 正确检查 onDecision 返回值，失败时不设 _isSubmitted，允许重试——与 B5 明确不同；(6) Goal detail 的 startNextStep/completeNextStep 有完整的 try/catch + success/error snackbar——K1 fix 验证通过；(7) Community createPost 使用乐观更新 + revert + rethrow 三阶段模式——异常传播到 UI 层正确显示错误 toast。A 域已穷尽——所有主要 UI E2E 链路合约完整，零缺口。
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: D (Python orchestrator FSM) — D2 build_fallback_plan snapshot/rationale 参数缺失回归验证已待多轮；或 G (Mock vs Real) — 7 轮未回探，mock_community_repository reportMessage 空实现值得关注
