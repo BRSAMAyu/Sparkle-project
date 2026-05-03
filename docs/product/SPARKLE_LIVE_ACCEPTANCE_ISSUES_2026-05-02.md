@@ -544,10 +544,11 @@
 - **fix_commit**:
 - **opus_review**: APPROVED by independent-auditor at 2026-05-03T16:20:00Z — all 4 hardcoded English strings (Claim, Complete, Create Group Task, e.g. hint) replaced with I18nService.instance.isChinese bilingual pattern; 24/24 user-facing strings now i18n; no regression risk (pure UI text swap); no cross-layer contract change; i18n rule guard PASS; file already imported I18nService
 ### ISSUE-20260503-1510-K1
-- **status**: in_progress
+- **status**: ✅ FIXED
 - **severity**: P1
 - **domain**: K
 - **fixer_started_at**: 2026-05-03T19:00:00Z
+- **closed_at**: 2026-05-03T20:00:00Z
 - **title**: leaderboard percentile 计算在 GLOBAL 榜使用 total_participants=-1 产生无意义百分位（>100%），在其他榜为 0 时触发 ZeroDivisionError
 - **symptom**: GLOBAL 排行榜显示的用户百分位始终超过 100%（如 rank=3 显示 400%）。FRIENDS/GROUP/WEEKLY 榜在无其他用户数据时，百分位计算崩溃并返回 500 错误
 - **root_cause_hypothesis**: get_my_rank() 方法在 line 153 无条件执行 1.0 - (rank / total_participants)。GLOBAL 榜在 line 311 硬编码 total_participants=-1（哨兵值），导致 1.0 - (rank/-1) = 1.0 + rank。其他榜使用 total_participants=len(scored_users)，在空列表时返回 0 触发 ZeroDivisionError
@@ -563,7 +564,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer-K+2026-05-03T15:15
 - **reviewer_note**: APPROVED — GLOBAL 榜百分位 bug 确认：line 153 `1.0 - (rank / -1)` = `1.0 + rank` 始终 >100%。调用链确认：API GET /leaderboards/my-rank → service.get_my_rank() → line 124 get_leaderboard() → _get_global_leaderboard() line 311 total_participants=-1 → line 153 无条件除法。FRIENDS/GROUP 等榜 ZeroDivisionError 在正常流程中受 line 127-132 early return (entries 为空 → my_entry=None → 提前返回) 保护，但在有异常数据时仍可能触发。非设计意图（get_my_rank API 明确返回 percentile 字段期望有意义的值）。与 ISSUE-20260503-1500-K1 (goal_detail start/complete error handling) 完全不同，无重复。
-- **fix_commit**:
+- **fix_commit**: (pending commit)
+- **opus_review**: APPROVED by opus-independent-auditor at 2026-05-03T19:45:00Z — **Root cause resolved**: Fix adds `if total > 0 else None` guard at service line 150, covering both total=-1 (GLOBAL sentinel) and total=0 (empty leaderboard). Also fixes the user-not-found early return path (line 134-141) to return percentile=None instead of percentile=0. **Schema change**: `MyRankResponse.percentile` changed from `float` (non-nullable, no default) to `float | None = Field(default=None)` — necessary for the service to emit None. **No regression risk**: sole API caller at `leaderboards.py:156` uses `my_rank.model_dump()` which serializes None to JSON null; Flutter client already types percentile as `double?` and reads `data['percentile'] as double?`; Go gateway does not reference percentile field; proto does not include percentile. **Cross-layer contracts**: No proto/DB/i18n changes needed — Python-only fix. **Regression test quality**: 5/5 tests pass; 4/5 would FAIL on old code (negative sentinel guard, zero-total guard, user-not-found path, schema nullability); 1/5 (happy-path normal calculation) correctly passes both old and new (guard does not change the normal case). **No CLAUDE.md or rule guard violations**: no secrets, no hardcoded tokens, no cross-layer boundary violations, pure Python service+schema change.
 
 ### ISSUE-20260503-1511-K2
 - **status**: verified
@@ -784,6 +786,7 @@
 | R5 | 2026-05-03T16:00 | ISSUE-20260503-1403-H4 | ✅ Fixed | 31462e3af | ~5 min |
 | R6 | 2026-05-03T16:30 | ISSUE-20260503-1500-K1 | ✅ Fixed | (this commit) | ~10 min |
 | R7 | 2026-05-03T17:00 | ISSUE-20260503-1202-G3 | closed | 66c8303c8 | ~20 min |
+| R8 | 2026-05-03T20:00 | ISSUE-20260503-1510-K1 | ✅ Fixed | (pending) | ~15 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed

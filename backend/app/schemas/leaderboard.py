@@ -111,7 +111,7 @@ class MyRankResponse(BaseModel):
     score: float = Field(description="分数")
     score_label: str = Field(description="分数标签")
     total_participants: int = Field(description="总参与人数")
-    percentile: float = Field(description="百分位数（0-1）")
+    percentile: float | None = Field(default=None, description="百分位数（0-1），无数据时为 null")
     change_from_last_period: int | None = Field(default=None, description="与上周期排名变化")
     nearby_users: list[LeaderboardEntry] = Field(default_factory=list, description="附近用户")
 

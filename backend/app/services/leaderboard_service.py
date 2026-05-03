@@ -130,12 +130,13 @@ class LeaderboardService:
         )
 
         if not my_entry:
+            total = full_leaderboard.total_participants
             return MyRankResponse(
                 rank=0,
                 score=0,
                 score_label="0分",
-                total_participants=full_leaderboard.total_participants,
-                percentile=0,
+                total_participants=total if total > 0 else 0,
+                percentile=None,
                 nearby_users=[]
             )
 
@@ -145,12 +146,15 @@ class LeaderboardService:
         end = min(len(full_leaderboard.entries), my_idx + 3)
         nearby_users = full_leaderboard.entries[start:end]
 
+        total = full_leaderboard.total_participants
+        percentile = 1.0 - (my_entry.rank / total) if total > 0 else None
+
         return MyRankResponse(
             rank=my_entry.rank,
             score=my_entry.score,
             score_label=my_entry.score_label,
-            total_participants=full_leaderboard.total_participants,
-            percentile=1.0 - (my_entry.rank / full_leaderboard.total_participants),
+            total_participants=total if total > 0 else 0,
+            percentile=percentile,
             nearby_users=nearby_users
         )
 
