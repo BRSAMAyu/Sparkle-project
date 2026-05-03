@@ -2674,7 +2674,8 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1902-D3
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-04T02:00:00Z
 - **severity**: P2
 - **domain**: D
 - **title**: Graph max_steps exceeded silently — WorkflowState.is_finished never set to True anywhere, no error appended on truncation
