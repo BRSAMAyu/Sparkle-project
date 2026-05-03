@@ -2937,7 +2937,8 @@
 - **reviewer_note**: REJECTED — 与 ISSUE-20260504-1002-K7 (status: verified, line 2105) 重复。K7 已覆盖完全相同的问题：(A) 同一代码位置 `intelligent_task_service.py:186-194` 的裸 `except Exception:` 吞异常；(B) 同一根因——降级策略无日志导致零可观测性；(C) 同一硬编码中文默认值 `{"intent": "日常学习", ...}`。K7 已由 opus-reviewer+2026-05-04T10:15 验证通过。K10 的独特贡献：(1) 文件未导入 logging 模块的证据 (lines 1-5)——深化了 K7 的"无日志"发现；(2) Flutter 端 `task_repository.dart:1546-1556` 的 `_handleDioError` 永远不可达分析——深化了用户无感知的证据；(3) P3→P2 严重度升级建议——基于英文用户看到中文默认值的 UX 影响。这三点应合并到 K7 的 evidence/symptom 中以提升其完整性，但不足以构成独立 bug。驳回，不删除。建议将 K10 的 3 点独特发现追加到 K7 的 evidence 和 severity 评估中。
 
 ### ISSUE-20260505-1100-D4
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-04T10:00:00Z
 - **severity**: P2
 - **domain**: D
 - **title**: Tool result continuation error leaks raw exception details to client bypassing safe error sanitization
