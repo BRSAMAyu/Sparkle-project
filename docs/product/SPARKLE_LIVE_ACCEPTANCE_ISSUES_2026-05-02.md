@@ -422,6 +422,7 @@
 | R46 | 2026-05-05T08:00 | H | 1 | 1/1 (H9 verified) | H 域续探——document_library_screen 归档/恢复/撤回 10 处纯中文硬编码 |
 | R48 | 2026-05-05T09:00 | I | 1 | pending | I 域续探——Pydantic GroupInfo schema 缺少 announcement 字段，群公告响应静默丢弃 |
 | R50 | 2026-05-05T09:30 | C | 2 | 1/2 (C8 verified, C9 rejected as duplicate of K1) | C 域续探——legacyStreamErrorPayload 3 路径缺 request_id + message_nack 缺 request_id + Flutter NackEvent 死代码 |
+| R52 | 2026-05-05T10:30 | K | 1 | pending | K 域续探——intelligent_task_service _recognize_intent 静默吞所有异常返回硬编码中文默认值 |
 
 ---
 
@@ -2764,6 +2765,47 @@
 - **reviewer_note**: REJECTED — 与 ISSUE-20260505-0830-K1 (status: verified, line 2675) 重复。K1 已覆盖 C9 的核心发现：(A) chat_provider.dart 的 event loop (line 1297-1919) 不含 NackEvent 分支——K1 evidence line 2685 已确认；(B) _routeEventToRequest 仅在 DoneEvent/ErrorEvent 时关闭 controller——K1 evidence line 2686 已确认；(C) NackEvent 导致 8 分钟 streamTimeout 冻结——K1 evidence line 2687 已确认；(D) websocket_chat_service_v2.dart:853-871 正确解析 NackEvent——K1 evidence line 2684 已确认。C9 的独特贡献（Go message_nack JSON 含 message_id 但无 request_id → Flutter _extractRequestIdFromRawMessage 仅提取 request_id → 路由失败）是真实的次要发现，但应合并到 C8 的 fix 范围（C8 同样处理 Go 错误 payload 缺失 request_id 的路由问题），而非作为独立条目。C8 + K1 已完整覆盖 C9 的全部诊断。建议将 Go message_nack request_id 补充作为 C8 fix 的一部分一并处理。驳回，不删除。
 - **fix_commit**: 留空（fixer 填）
 
+### ISSUE-20260505-1030-A1
+- **status**: discovered
+- **severity**: P1
+- **domain**: A
+- **title**: D1 fix 引入回归：statechart RuntimeError 跳过 GRAPH_END 事件和 checkpointer 清理
+- **symptom**: D1 修复者在 statechart_engine.py 工作树中添加了 node 异常后 raise RuntimeError，但 raise 位置在 GRAPH_END 事件发射和 checkpointer.mark_completed 之前，导致：异常后可视化器收不到 GRAPH_END、checkpointer 永远不标记 session 完成、部分执行状态丢失。
+- **root_cause_hypothesis**: 修复者在 statechart_engine.py:309-313 添加了 `if node_exception_occurred: raise RuntimeError(...)`，但这段代码在 `await self._emit_event(GraphEventType.GRAPH_END, ...)` (line 315) 和 `checkpointer.mark_completed` (lines 316-321) 之前。RuntimeError 的 raise 会跳过所有后续代码，包括事件通知和检查点清理。
+- **evidence**:
+  - `backend/app/orchestration/statechart_engine.py:309-313` — `if node_exception_occurred: raise RuntimeError(...)` — raise 在 cleanup 之前
+  - `backend/app/orchestration/statechart_engine.py:315` — `await self._emit_event(GraphEventType.GRAPH_END, self.name, state)` — 被 RuntimeError 跳过
+  - `backend/app/orchestration/statechart_engine.py:316-321` — `if self.checkpointer: ... await mark_completed(...)` — 被 RuntimeError 跳过
+  - `backend/tests/orchestration/test_statechart_engine.py:894-902` — 正常流程测试检查 GRAPH_END，但错误流程测试 (lines 748-770) 改为 `pytest.raises(RuntimeError)` 后不再检查 GRAPH_END 是否发射
+- **repro_or_trigger**: 运行 `pytest tests/orchestration/test_statechart_engine.py::TestErrorHandling::test_node_error_propagation` — 测试通过（RuntimeError 被抛出），但 GRAPH_END 事件未被发射。若检查器有可视化器或 Redis checkpointer 监听 GRAPH_END，session 会卡在 in_progress 状态。
+- **expected_vs_actual**: 期望：节点异常后，应先发射 GRAPH_END 事件并标记 checkpointer 完成，再 raise（或通过 finally 块确保清理）。实际：RuntimeError 在 line 310 raise 后，line 315-322 全部跳过。
+- **blast_radius**: 影响 D1 修复质量。若此 fix 合入 main：(1) ExecutionTracer 和 realtime_visualizer 在异常后永远收不到 GRAPH_END → 前端实时可视化卡住；(2) RedisCheckpointer 的 session 永远留在 in_progress → 下次同 session 请求会尝试 resume 中断的检查点 → 数据不一致。影响范围：所有使用 StateGraph 的 workflow（StandardChat、TaskDecomposition、MultiAgent）。
+- **suggested_fix_direction**: 将 RuntimeError raise 移到 GRAPH_END + checkpointer 清理之后（swap lines 309-313 和 314-321），或用 try/finally 确保 cleanup 始终执行：`try: ... if node_exception_occurred: raise RuntimeError(...) finally: await self._emit_event(GRAPH_END, ...); if self.checkpointer: await mark_completed(...)`
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空（fixer 填）
+
+### ISSUE-20260505-1030-K10
+- **status**: discovered
+- **severity**: P2
+- **domain**: K
+- **title**: intelligent_task_service._recognize_intent() 静默吞所有异常返回硬编码默认值——任务建议 API 永不报错但可能返回无意义结果
+- **symptom**: 当 LLM API（Xiaomi MIMO）不可用、超时、鉴权失败、或返回非预期格式时，`POST /tasks/suggestions` 从不返回错误。用户收到 `TaskSuggestionResponse` 含 `intent: "日常学习"`（中文）、空建议节点列表、固定 `estimatedMinutes: 25`、`difficulty: 1`。英文 locale 用户看到中文意图描述，且无任何错误提示——用户以为 AI 正常工作但返回了无意义的建议。
+- **root_cause_hypothesis**: `_recognize_intent()` 在 `intelligent_task_service.py:186-194` 使用裸 `except Exception:` 捕获所有异常（网络错误、JSON 解析错误、API 错误、`ValueError`），返回硬编码默认字典，不调用 `logger.warning/error`。该文件甚至未导入 logging 模块。调用方 `get_suggestions()` 使用默认值构造正常响应，API 返回 HTTP 200，Flutter 端 `_handleDioError` 永远不会触发。
+- **evidence**:
+  - `backend/app/services/intelligent_task_service.py:186-194` — `except Exception:` 裸捕获所有异常，返回 `{"intent": "日常学习", "keywords": [], "potential_nodes": [], "estimated_minutes": 25, "difficulty": 1}`，无任何 logging 调用
+  - `backend/app/services/intelligent_task_service.py:1-5` — 文件仅导入 `json`, `UUID`, `httpx`, `AsyncSession`——未导入 `logging` 或 `logger`，即使想写日志也无法写
+  - `backend/app/services/intelligent_task_service.py:68-119` — `get_suggestions()` 调用 `_recognize_intent()` 后使用其返回值构造 `TaskSuggestionResponse`。line 114 的 `intent_data.get("intent", "学习探索")` 是另一个硬编码中文 fallback（当 LLM 返回不含 `intent` 键的 JSON 时触发）
+  - `backend/app/services/intelligent_task_service.py:148-149` — `response_format: {"type": "json_object"}` 要求 LLM 返回 JSON，但 `json.loads(content)` 在 line 164 可能因格式错误抛异常被 line 186 吞掉
+  - `mobile/lib/features/task/data/repositories/task_repository.dart:1546-1556` — Flutter 端调用 `POST /tasks/suggestions`，用 `_handleDioError` 处理 DioException——但 Python 端永不返回错误状态码，故此 error handler 对此端点永远不会执行
+- **repro_or_trigger**: (1) 临时修改 `settings.XIAOMI_MIMO_API_KEY` 为无效值 → (2) Flutter 创建任务时触发 task suggestion 请求 → (3) API 返回 200 with `{"intent": "日常学习", "suggested_nodes": [], ...}` → (4) 用户看到中文意图"日常学习" + 空建议列表，无错误提示。或：(1) 断开网络 → (2) 同流程 → (3) httpx.AsyncClient 超时被 `except Exception` 捕获 → (4) 同上结果。
+- **expected_vs_actual**: 期望：LLM 调用失败时，(A) 记录 error 级别日志（含异常详情和 traceback），(B) 返回 HTTP 503 或特定 error code 让客户端感知服务降级，(C) Flutter 展示 user-friendly 错误提示（如"AI 建议服务暂不可用"）含重试按钮。实际：所有异常被静默吞掉，API 返回看似正常的 200 响应含中文硬编码默认值，用户和开发者都无感知故障。
+- **blast_radius**: 影响任务创建时的 AI 建议功能。用户收到无意义的建议（英文用户看到中文意图）但不影响核心任务创建流程（建议是辅助功能）。P2——降低 AI 功能可靠性但不阻塞北极星（7 天 0 基础学生仍需 AI 建议来高效创建学习任务，但可手动创建）。
+- **suggested_fix_direction**: (1) 添加 `import logging` + `logger = logging.getLogger(__name__)`；(2) `_recognize_intent()` 的 `except Exception` 块中先 `logger.error("LLM intent recognition failed", exc_info=True)`，然后抛出异常或返回可区分的 error marker；(3) `get_suggestions()` 捕获 `_recognize_intent()` 的异常并转换为 HTTP 503 + user-friendly error message；(4) 移除中文硬编码 fallback，改用英文通用默认值或直接报错。
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空（Opus 填）
+- **fix_commit**: 留空（fixer 填）
+
 ### Round R25 — 2026-05-04T05:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
@@ -3354,3 +3396,23 @@
 - **Findings**: B 域续探审查 12 个未覆盖 provider。全部遵循项目正确模式：FutureProvider .when() 三态、StateNotifier 乐观更新+rollback+rethrow、defensive degradation、proper dispose。12 项 agent 报告全部误报。
 - **Opus pass rate**: N/A (0 new issues)
 - **Next suggested domain**: G (Mock vs Real) — 11 轮未回探；或 D (Python FSM) — 11 轮未回探
+
+### Round R52 — 2026-05-05T10:30
+- **Domain**: K (错误处理 / 降级 / 边界 — 续探)
+- **Paths covered**:
+  - `backend/app/services/intelligent_task_service.py:121-194` — `_recognize_intent()` LLM 调用 + 异常处理（裸 `except Exception:` 返回硬编码默认值，无 logging）
+  - `backend/app/services/intelligent_task_service.py:1-5` — 文件未导入 logging 模块
+  - `backend/app/services/intelligent_task_service.py:68-119` — `get_suggestions()` 调用链：intent → semantic_search → keyword_search → 构造 response
+  - `backend/app/services/intelligent_task_service.py:148-149` — `response_format: json_object` → `json.loads` 解析脆弱点
+  - `mobile/lib/features/task/data/repositories/task_repository.dart:1546-1556` — Flutter 端 `POST /tasks/suggestions` + `_handleDioError`（Python 永不返回错误，此 handler 对此端点永不触发）
+  - `backend/app/api/v1/tasks.py:452-460` — API endpoint `get_task_suggestions()` 直接返回 service 结果
+  - `backend/app/services/nudge_service.py:62-68` — `except Exception:` with `logger.debug(exc_info=True)` ✅ 正确模式（对比 intelligent_task_service 的缺失）
+  - `backend/app/services/feedback_learning_service.py:722-724` — `except Exception as e: logger.warning(...)` ✅
+  - `mobile/lib/features/insights/data/repositories/return_case_file_repository.dart:44-45` — `catch (_) { return null; }` 审定为设计合理的降级
+- **New issues**: 1 — K10 (P2: intelligent_task_service._recognize_intent 静默吞所有异常返回硬编码中文默认值，零日志)
+- **Findings**: K 域续探聚焦 Python backend 服务层静默异常吞没。核心发现：
+  1. **K10 — intelligent_task_service._recognize_intent()**: 文件未导入 logging 模块，`except Exception:` 裸捕获所有异常返回硬编码中文默认值 `{"intent": "日常学习", ...}`。调用链：`_recognize_intent` → `get_suggestions` → API 返回 200 → Flutter `_handleDioError` 永不触发 → 用户看到中文意图"日常学习" + 空建议列表。
+  2. **正确模式（排除项）**: nudge_service、feedback_learning_service、galaxy_execution_consumer 均正确使用 `except Exception as e: logger.warning/error(...)` 模式。
+  3. **return_case_file_repository 的 `catch (_) { return null; }`** 审定为设计合理——404→null 表示"无 case file"。
+- **Opus pass rate**: pending (K10)
+- **Next suggested domain**: G (Mock vs Real) — 12 轮未回探；或 D (Python FSM) — 12 轮未回探
