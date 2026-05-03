@@ -1680,3 +1680,65 @@
 
 | R19 | 2026-05-04T02:25 | A | 0 | N/A | A 域重探——focus/task execution 流程设计合理，FocusAgentSheet 未集成（已知 Phase 2） |
 
+
+### ISSUE-20260504-0500-B4
+- **status**: discovered
+- **severity**: P2
+- **domain**: B
+- **title**: NotificationNotifier.markAsRead API 标记已读失败时 catch 块完全为空，用户无任何错误反馈
+- **symptom**: 用户在通知列表页点击某条通知期望标记为已读。如果 API 调用失败（网络超时/500），通知保持未读状态留在列表中，但用户看到的是：点击后蓝点不消失、通知不移动，无任何 toast/snackbar 提示操作失败。用户可能反复点击同一通知但不知道为何无效
+- **root_cause_hypothesis**: markAsRead() 使用 API-first 模式（先调 API，成功后更新 state），这是正确的。但 catch 块为空（仅含 `// Handle error` 注释），丢弃了 DioException 的 statusCode/message。API 失败时 state 保持旧值（通知仍在列表中），无异常传播到 UI，notification_list_screen.dart 的 onTap 也未 await/try-catch，导致用户零反馈。对比同文件 fetchUnreadNotifications() 正确使用 `catch (e, st) { state = AsyncValue.error(e, st); }` 进入 error 状态
+- **evidence**:
+  - `mobile/lib/features/home/presentation/providers/notification_provider.dart:40-42` — catch 块仅含注释无代码: `} catch (e) { // Handle error }`
+  - `mobile/lib/features/home/presentation/providers/notification_provider.dart:30-43` — markAsRead 完整方法: API-first 模式正确（先 API 后更新 state），但 catch 无声吞错
+  - `mobile/lib/features/home/presentation/screens/notification_list_screen.dart:101-104` — UI 层 onTap 直接调用 markAsRead 无 await/try-catch: `ref.read(unreadNotificationsProvider.notifier).markAsRead(notification.id)`
+  - `mobile/lib/features/home/data/repositories/notification_repository.dart:71-77` — repository.markAsRead 直接 PUT `/notifications/$id/read`，无 fallback
+- **repro_or_trigger**: 模拟器 → 通知列表页（有未读通知）→ 断开后端 → 点击通知 → 蓝点不消失，无任何错误提示 → 重新连接后端 → 下拉刷新 → 通知仍为未读（API 从未调用成功）
+- **expected_vs_actual**: 期望：API 失败时显示 snackbar "标记失败，请重试" 或保持通知状态并触发 error；实际：完全静默失败，用户无法判断操作是否成功
+- **blast_radius**: 影响通知列表页的标记已读操作。通知系统是用户接收任务提醒、成就推送、社区动态的入口，标记已读失败会累积"未读"通知造成信息焦虑。对北极星有间接影响——用户可能被无法消除的未读通知困扰
+- **suggested_fix_direction**: 在 catch 块中至少添加 `debugPrint('markAsRead failed: $e')` 记录错误日志；更好的方案是设置短暂的 error 状态或通过 callback 通知 UI 显示 snackbar（与 friends_screen.dart 的 deleteFriend 模式一致）
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-0501-B5
+- **status**: discovered
+- **severity**: P2
+- **domain**: B
+- **title**: CapsuleDetailNotifier.submitFeedback API 失败时返回 null 但 UI 无条件显示"反馈提交成功"toast
+- **symptom**: 用户在好奇心胶囊详情页提交反馈（评分/分类/评论），无论 API 是否成功，UI 始终弹出"反馈已提交，感谢您的参与！"成功 toast。当 API 实际失败时（网络断开/500），用户被虚假成功提示误导——反馈数据永久丢失而不自知
+- **root_cause_hypothesis**: submitFeedback() 在 catch 块中返回 null（`catch (e) { return null; }`），但 UI 层 capsule_detail_screen.dart:274-276 在 await 调用后无条件显示 `AppFeedback.success(context, context.l10n.capsuleFeedbackThanks)`，不检查返回值是否为 null。这种"provider 返回 null 表示失败 + UI 不检查 null"的组合断开点导致虚假成功
+- **evidence**:
+  - `mobile/lib/features/cognitive/presentation/providers/capsule_provider.dart:160-162` — submitFeedback catch 块返回 null: `} catch (e) { return null; }`
+  - `mobile/lib/features/cognitive/presentation/providers/capsule_provider.dart:140-163` — submitFeedback 完整方法: try { await repository.submitFeedback(...) } catch (e) { return null; }，成功时返回 CapsuleFeedbackModel，失败时返回 null，不更新 state
+  - `mobile/lib/features/cognitive/presentation/screens/capsule/capsule_detail_screen.dart:265-276` — UI 层无条件显示成功: `await ref.read(capsuleDetailProvider(widget.capsuleId).notifier).submitFeedback(...); if (mounted) { AppFeedback.success(context, context.l10n.capsuleFeedbackThanks); }` — 不检查返回值
+  - `mobile/lib/features/cognitive/data/repositories/capsule_repository.dart:94-121` — repository.submitFeedback 实际调用 POST `/capsules/$id/feedback`
+- **repro_or_trigger**: 模拟器 → 好奇心胶囊详情 → 点击反馈按钮 → 填写评分/评论 → 断开后端 → 点击提交 → 看到 "反馈已提交" 成功 toast（实际 API 调用失败，反馈数据丢失）
+- **expected_vs_actual**: 期望：API 失败时显示错误 toast "提交失败，请重试" 且不关闭反馈面板；实际：始终显示成功 toast，反馈数据静默丢失
+- **blast_radius**: 影响好奇心胶囊的反馈功能——这是 Aurora 认知系统收集用户对有价值内容偏好的关键信号。虚假成功意味着：(1) 用户偏好的反馈数据丢失，(2) Aurora 的个性化推荐质量下降，(3) 用户信任被侵蚀（"明明评价了为什么还推荐同样的内容"）。对北极星有间接影响——认知系统的反馈回路断裂
+- **suggested_fix_direction**: (1) provider 层：失败时抛出异常而非返回 null（remove `catch (e) { return null; }` 改为让异常传播）；(2) UI 层：用 try/catch 包裹 await，catch 中显示 error toast 而非 success。或保持 provider 返回 null 模式，UI 层检查 `if (result != null)` 再显示 success
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### Round R25 — 2026-05-04T05:00
+- **Domain**: B (Riverpod Provider 健康度 — 续探)
+- **Paths covered**:
+  - notification_provider.dart (markAsRead empty catch → silent mutation failure)
+  - capsule_provider.dart + capsule_detail_screen.dart (submitFeedback null return + UI unconditional success → false positive)
+  - community_providers.dart:34-118 (toggleLike silent revert — same pattern as B2, not filed)
+  - goal_detail_provider.dart:44-74 (K1 fix verified — catch+rethrow now present)
+  - accountability_provider.dart:44-65 (endPartnership/requestPartnership — API-first pattern correct)
+  - focus_mode_provider.dart (local SharedPreferences only, no API)
+  - growth_dashboard_provider.dart (AsyncNotifier with AsyncValue.guard, correct)
+  - community_provider.dart:895-1145 (GroupChatNotifier dispose properly cancels wsSubscription)
+  - galaxy_provider.dart:340-420 (GalaxyNotifier dispose cleans up all 5 subscriptions)
+  - source_explanation_provider.dart:270-299 (JSON parse helpers with safe fallbacks — by design)
+  - context_decision_provider.dart:17-21 (JSON decode continue-on-failure — by design)
+  - home_growth_provider.dart:326-419 (6 FutureProviders only catch DioException, let TypeError propagate — correct for bug visibility)
+- **New issues**: B4(P2), B5(P2)
+- **Findings**: B 域续探覆盖 12+ provider 文件。发现 2 个新缺口：(1) NotificationNotifier.markAsRead 的 catch 块完全为空——API 失败时无任何用户反馈，与同文件 fetchUnreadNotifications 的正确 error 处理形成对比；(2) CapsuleDetailNotifier.submitFeedback catch 返回 null + capsule_detail_screen 无条件显示 AppFeedback.success——组合形成虚假成功 toast，用户的反馈数据在 API 失败时静默丢失。toggleLike 的 silent revert（community_providers.dart:53-55）与 B2 模式相同，不再重复提交。K1（goal_detail_provider catch+rethrow）修复已验证。多个社区/星系 provider 的 WebSocket 订阅生命周期管理正确（dispose 中 cancel/unsubscribe）。home_growth_provider 的 6 个 FutureProvider 只 catch DioException 而让 TypeError 传播——这实际上是正确设计（代码 bug 应进入 error 状态可见），与 B1 的 _payload 静默转换形成对比
+- **Opus pass rate**: pending
+- **Next suggested domain**: A (Flutter UI 端到端链路) — 验证 B5 的 submitFeedback 虚假成功模式是否在其他 feedback/form 提交场景中重复出现；或回探 K（错误处理）检查 K3 CompactErrorCard 修复后的回归
+
+| R25 | 2026-05-04T05:00 | B | 2 | pending | B 域续探——B4 markAsRead 空 catch, B5 submitFeedback 虚假成功 toast |
