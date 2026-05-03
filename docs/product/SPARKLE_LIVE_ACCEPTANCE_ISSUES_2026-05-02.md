@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 21:00 (R44 A-domain — 1 verified: A1 error-book prediction route mismatch)
+> Updated: 2026-05-04 21:30 (R45 F-domain — 1 discovered: F6 EventBus DLQ zero redrive)
 
 ---
 
@@ -417,6 +417,8 @@
 | R41 | 2026-05-04T19:30 | D | 3 | 3/3 (D1/D2/D3 verified) | D 域续探（纠正上轮 0/8 false positive）——Statechart engine 吞异常返回部分状态 + compile() 不验证边目标 + max_steps 静默截断 |
 | R42 | 2026-05-04T20:00 | J | 0 | N/A | J 域——cold start / empty state 全面审查：dashboard/community/marketplace/tool-library/notifications/onboarding 全部健壮 |
 | R43 | 2026-05-04T20:30 | E | 2 | 2/2 (E8/E9 verified) | E 域续探——E7 fix_commit 错误（指向 B5 提交）+ privacy drill 内联 binding 缺 allowed_modes 崩溃 + drill 写 Redis 但生产读 settings 零影响 |
+| R44 | 2026-05-04T21:00 | A | 1 | 1/1 (A1 verified) | A 域——OmniBar error book prediction chip 导航到未注册路由 /error-book（应为 /errors） |
+| R45 | 2026-05-04T21:30 | F | 1 | pending (F6) | F 域续探——EventBus DLQ PostgreSQL 表 + Redis 流无任何管理/重放 API |
 
 ---
 
@@ -2312,6 +2314,27 @@
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence：(1) task_event_consumer.py:90-171 — _handle_task_completed 外层 try/except Exception 仅 logger.error 无 re-raise，内部 BehaviorSignalCollector+MetacognitionService+CommunitySignalBridge 共享同一 AsyncSessionLocal 事务，中途失败全部回滚但事件已 ACK；(2) profile_event_consumer.py — 11 个子处理器（_handle_preference_updated/deleted/knowledge_updated/behavior_pattern_updated/focus_session_completed/error_created/insight_signal_family_updated/capsule_favorite_updated/seed_library_event/tool_history_recorded 及其 helper）全部使用 try/except Exception + logger.error 无 re-raise；(3) intervention_event_consumer.py:96-121 — _handle_record_created 同样模式，干预记录停留在 CREATED 状态不重试；(4) event_bus.py:1145-1151 — _process_stream_message 在 callback 正常返回后执行 xack，仅 callback 抛异常时路由到 _handle_failed_message；(5) galaxy_event_consumer.py:64 — 对比参照使用 @reliable_consumer 装饰器，handle_event 无 try/except 包裹，主流程异常可传播到 EventBus DLQ/retry。调用链验证：子处理器吞异常 → callback 正常返回 → EventBus xack → 消息永不重试/不进 DLQ。非设计意图——EventBus 的 DLQ/retry 基础设施存在目的就是处理消费者失败，吞异常完全旁路此机制。与其他任何条目无重复。
 - **fix_commit**: 留空
 
+### ISSUE-20260504-2130-F6
+- **status**: discovered
+- **severity**: P2
+- **domain**: F
+- **title**: EventBus DLQ 有 PostgreSQL 持久化 + Redis 流但零管理/重放 API
+- **symptom**: EventBus 消费者失败达最大重试后事件入 DLQ（Redis `sparkle_events:dlq` + PostgreSQL `event_bus_dlq`），但运维无法查看条目或重放。唯一 DLQ 端点 `/api/v1/dlq/` 硬编码到 CognitiveStreamWorker 独立 DLQ。`/event-bus/dlq` 仅返回聚合统计。
+- **root_cause_hypothesis**: EventBus._move_to_dlq() + _persist_dlq_entry() 设计完整 write 路径但零 read 路径。dlq_admin.py 被 CognitiveStreamWorker 独占（其 DLQ 不经 EventBus）。EventBus DLQ 为 write-only 数据池。
+- **evidence**:
+  - `backend/app/core/event_bus.py:740-818` — _persist_dlq_entry() 写 PostgreSQL event_bus_dlq 表，_move_to_dlq() 写 Redis DLQ 流，均为 write-only
+  - `backend/app/models/event_bus_dlq.py:1-26` — EventBusDLQEntry 含 stream/event_type/user_id/retry_count/failure_stage/error/payload 完整字段，全 backend 仅 INSERT 无 SELECT
+  - `backend/app/api/v1/event_bus_health.py:60-70` — /event-bus/dlq 返回 `{dlq_stream, message_count, oldest_message_age_seconds}` 聚合，无条目级数据
+  - `backend/app/api/v1/dlq_admin.py:16-95` — /dlq/ GET 列表和 POST replay 全部硬编码 `CognitiveStreamWorker.DLQ_STREAM`
+  - `backend/app/services/analytics/cognitive_stream_worker.py:243-261` — replay_dlq_event() 是唯一 DLQ 重放实现，仅操作 CognitiveStreamWorker 私有流
+- **repro_or_trigger**: 1. 制造消费者失败（如关停 DB）→ 发布事件 → max_retries 耗尽入 EventBus DLQ 2. GET /api/v1/event-bus/dlq?stream=sparkle_events → 仅返回 `{message_count: N}` 3. GET /api/v1/dlq/ → 返回 CognitiveStreamWorker 条目不含 EventBus DLQ 4. SELECT * FROM event_bus_dlq → 有数据但无 API
+- **expected_vs_actual**: 期望：DLQ 管理端点可 (a) 分页列出死信 (b) 重放回主流 (c) 确认/删除已处理条目。实际：EventBus DLQ 为 write-only 黑洞。
+- **blast_radius**: 生产消费者级联失败时死信永久丢失。DLQ PostgreSQL 持久化设计意图是审计+恢复，缺失读取端使此意图落空。对北极星无直接影响但降低系统韧性。
+- **suggested_fix_direction**: (1) 新增 /api/v1/event-bus/dlq/entries GET 分页查询 event_bus_dlq 表；(2) 新增 /api/v1/event-bus/dlq/replay POST 从 event_bus_dlq 读 payload 并 publish 回 sparkle_events；(3) 复用 DlqReplayAuditLog 模型记录 replay 审计
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
 ### ISSUE-20260504-1800-B1
 - **status**: verified
 - **severity**: P2
@@ -2985,3 +3008,31 @@
   3. **Agent 质量分析**: 15 项报告中有 14 项为误报（93% false positive rate）。主要问题：(a) 将 hasTask guard 保护的按钮报告为"silent failure"——未检查 UI 侧的条件渲染；(b) 将 try/catch 包裹的成功回调报告为"success shown without server validation"——未注意到 await 在 try 内；(c) 将 provider invalidation 报告为"no state update"——未理解 invalidate 触发 re-fetch
 - **Opus pass rate**: pending
 - **Next suggested domain**: H (i18n) — 8 轮未回探；或 K (error handling) — 5 轮未回探
+
+### Round R45 — 2026-05-04T21:30
+- **Domain**: F (Event bus consumers DLQ/retry — 续探)
+- **Paths covered**:
+  - `backend/app/core/event_bus.py:1-1426` — 全量审查：EventBus 类、_process_stream_message、_handle_failed_message、_move_to_dlq、_persist_dlq_entry、_requeue_for_retry、dlq_health_check、get_dlq_stats
+  - `backend/app/models/event_bus_dlq.py:1-26` — EventBusDLQEntry 模型：stream/event_type/user_id/retry_count/failure_stage/error/payload 完整字段
+  - `backend/app/api/v1/event_bus_health.py:1-86` — /event-bus/health + /dlq + /lag 端点（仅聚合统计）
+  - `backend/app/api/v1/dlq_admin.py:1-95` — /dlq/ list + replay 端点（硬编码 CognitiveStreamWorker.DLQ_STREAM）
+  - `backend/app/services/analytics/cognitive_stream_worker.py:233-262` — CognitiveStreamWorker._send_to_dlq + replay_dlq_event
+  - `backend/app/services/task_event_consumer.py:1-408` — F5 验证：TaskEventConsumer handle_event → _handle_task_completed except Exception 仍吞噬不重抛
+  - `backend/app/services/profile_event_consumer.py:1-401` — F5 验证：全部 11 个子处理器仍吞噬异常
+  - `backend/app/services/intervention_event_consumer.py:1-437` — F5 验证：_handle_record_created 仍吞噬异常
+  - `backend/app/services/preference_event_consumer.py:1-207` — 独立 DLQ 系统（cqrs:stream:user + 自建 retry/DLQ），不经 EventBus
+  - `backend/app/services/nudge_event_consumer.py:1-47` — 正确模式：except 后 raise 传播异常到 EventBus
+  - `backend/app/services/cognitive_event_consumer.py:1-85` — 正确模式：except 后 raise 传播异常
+  - `backend/app/services/galaxy_execution_consumer.py:57-66` — GalaxyExecutionConsumer.handle_event 吞噬异常不重抛（F5 扩展）
+  - `backend/app/services/plan_health_event_consumer.py:145-164` — PlanHealthEventConsumer 吞噬异常不重抛（F5 扩展）
+  - `backend/app/consumers/journey_consumer_base.py:1-117` — JourneyEventConsumerBase 使用 @reliable_consumer + EventBus.subscribe，正确传播异常
+  - DLQ 覆盖全景：4 套独立 DLQ 系统——EventBus DLQ（write-only）、CognitiveStreamWorker DLQ（唯一有 replay）、PreferenceEventConsumer 自建 DLQ（cqrs:stream:user:dlq）、主 DLQ admin API（仅连 CognitiveStreamWorker）
+- **New issues**: 1 — F6 (P2: EventBus DLQ zero redrive)
+- **Findings**: F 域续探全面审查 core EventBus + 17 消费者 + 3 套 DLQ 系统。关键发现：
+  1. **F5 未修复确认**: TaskEventConsumer（line 170-171）、ProfileEventConsumer（line 135-136）、InterventionEventConsumer（line 120-121）的 except Exception 仍仅 logger.error 不重抛。GalaxyExecutionConsumer（line 65-66）和 PlanHealthEventConsumer（line 163-164）有相同模式——5 个消费者全部旁路 EventBus DLQ/retry
+  2. **F6 (P2) — EventBus DLQ zero redrive**: EventBus._persist_dlq_entry() 写入 PostgreSQL event_bus_dlq 表（stream/event_type/user_id/retry_count/failure_stage/error/payload），_move_to_dlq() 写入 Redis `sparkle_events:dlq` 流。但全 backend 仅 INSERT 无 SELECT——无任何 API 可列出或重放 EventBus DLQ 条目。唯一 DLQ 管理端点 `/api/v1/dlq/` 硬编码到 CognitiveStreamWorker.DLQ_STREAM，与 EventBus DLQ 完全隔离。`/event-bus/dlq` 仅返回 `{message_count, oldest_age}` 聚合。结果：EventBus DLQ 是 write-only 数据池——数据可进不可出
+  3. **DLQ 碎片化全景**: 4 套独立 DLQ——(a) EventBus DLQ（Redis sparkle_events:dlq + PostgreSQL event_bus_dlq）write-only；(b) CognitiveStreamWorker DLQ（自有流）有 replay 但仅覆盖认知流；(c) PreferenceEventConsumer 自建 DLQ（cqrs:stream:user:dlq）完全独立；(d) DLQ admin API 仅连接 (b)
+  4. **正确模式存在**: NudgeEventConsumer（line 46: `raise`）和 CognitiveEventConsumer（line 84: `raise`）在 except 后正确传播异常，JourneyEventConsumerBase 使用 @reliable_consumer 装饰器。证明"raise after log"是已知正确模式，F5 所涉消费者应统一采用
+  5. **排除项**: (a) PreferenceEventConsumer 的独立 DLQ 系统是 CQRS 设计（Go 网关写入 cqrs:stream:user），非 bug；(b) CognitiveStreamWorker 的独立 DLQ 是其内部机制，非 EventBus 缺陷；(c) Journey consumer base 的正确模式已确认；(d) 所有 22 个 consumer group 均已注册（含新增 journey consumers）
+- **Opus pass rate**: pending
+- **Next suggested domain**: A (Flutter UI E2E) — 10 轮未回探（R27）；或 H (i18n) — 8 轮未回探（R32）
