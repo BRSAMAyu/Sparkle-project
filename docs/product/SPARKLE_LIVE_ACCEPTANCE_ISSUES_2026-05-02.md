@@ -1078,6 +1078,7 @@
 | R26 | 2026-05-04T08:25 | ISSUE-20260503-2301-B2 | ✅ Fixed | 6b69c479d | ~35 min |
 | R27 | 2026-05-03T08:20 | ISSUE-20260504-0016-H5 | ✅ Fixed | b8a11dfea | ~5 min |
 | R28 | 2026-05-03T08:30 | ISSUE-20260504-0345-H6 | ✅ Fixed | 1d0a141a6 | ~5 min |
+| R29 | 2026-05-03T09:20 | ISSUE-20260504-0500-B4 | ✅ Fixed | 286a338f7 | ~30 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1712,9 +1713,10 @@
 
 
 ### ISSUE-20260504-0500-B4
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-03T09:01:14Z
+- **closed_at**: 2026-05-03T09:20:00Z
 - **domain**: B
 - **title**: NotificationNotifier.markAsRead API 标记已读失败时 catch 块完全为空，用户无任何错误反馈
 - **symptom**: 用户在通知列表页点击某条通知期望标记为已读。如果 API 调用失败（网络超时/500），通知保持未读状态留在列表中，但用户看到的是：点击后蓝点不消失、通知不移动，无任何 toast/snackbar 提示操作失败。用户可能反复点击同一通知但不知道为何无效
@@ -1731,8 +1733,10 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T05:15:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) notification_provider.dart:40-42 的 catch 块仅含 `// Handle error` 注释，完全空。(2) markAsRead 使用正确的 API-first 模式，但由于空 catch 导致 API 失败时 state 保持旧值、通知留在列表中。(3) notification_list_screen.dart:101-104 UI 层 onTap 直接调用 markAsRead 不 await/try-catch，无错误反馈路径。(4) notification_repository.dart:71-77 repository 层 PUT 无 fallback。调用链完整：UI onTap → ref.read().markAsRead() → repository.markAsRead() → PUT /notifications/$id/read → API 失败 → catch 空 → 无 state 更新 → 蓝点不消失。对比同文件 fetchUnreadNotifications() (line 25-27) 正确使用 `catch (e, st) { state = AsyncValue.error(e, st); }` 证明空 catch 非设计意图。与 B1 (_payload 静默转换), B2 (乐观更新无声回退), B3 (catch-all 使 error 状态不可达) 均不重复——B4 是"API-first 正确但 catch 完全为空"的独立模式。P2 评级合理——通知标记已读失败累积未读通知造成信息焦虑，对北极星有间接影响。
-- **fix_commit**: 留空
+- **fix_commit**: 286a338f7 (R1: d1ba42794, R2: 286a338f7)
 - **opus_review**: REJECTED by opus-independent-reviewer at 2026-05-03T09:05:00Z
+- **opus_review**: APPROVED by opus-independent-reviewer at 2026-05-03T09:20:00Z (R2)
+- **reviewer_note_R2**: APPROVED — round 2 adds single `import 'package:flutter/foundation.dart';` to resolve D1 (missing debugPrint import). Verified: (a) root cause fully resolved — empty catch replaced with debugPrint+rethrow proper pattern, UI catchError shows AppFeedback.error snackbar — matching dashboard_provider/home_growth_provider convention; (b) zero regression risk — single caller at notification_list_screen.dart:105 with correct catchError wrapper, curiosity_capsule_card.dart:115 calls a different provider; (c) no cross-layer drift — no proto/DB/i18n key changes, i18n uses prescribed isChinese ? '中文' : 'English' inline pattern; (d) test 3/3 pass — logic-replica limitation already flagged, acceptable given pre-existing compilation blockers; (e) dart analyze clean on notification_provider.dart, rule guards all PASS except pre-existing AX (Go proxy_routes.go comment drift unrelated). Fix commit: 286a338f7.
 - **rework_note**: |
   修复逻辑正确（provider debugPrint+rethrow, UI catchError+AppFeedback.error），但存在 1 个编译期缺陷导致被拒：
 
