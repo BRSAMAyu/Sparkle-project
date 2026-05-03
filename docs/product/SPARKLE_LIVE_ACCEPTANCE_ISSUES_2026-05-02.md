@@ -1087,6 +1087,7 @@
 | R31 | 2026-05-03T09:35 | ISSUE-20260504-0930-G4 | ✅ Fixed | b9ad6569f | ~5 min |
 | R32 | 2026-05-03T09:55 | ISSUE-20260504-0931-G5 | ✅ Fixed | 331e0d397 | ~8 min |
 | R33 | 2026-05-03T10:08 | ISSUE-20260504-0945-E5 | ✅ Fixed | 8b34c1bd2 | ~8 min |
+| R34 | 2026-05-03T10:18 | ISSUE-20260504-0946-E6 | ✅ Fixed | 3912fa3b8 | ~6 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1932,9 +1933,10 @@
 - **opus_review**: APPROVED by opus-independent-reviewer at 2026-05-03T18:30:00Z
 
 ### ISSUE-20260504-0946-E6
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-03T10:12:00Z
+- **closed_at**: 2026-05-03T10:18:00Z
 - **domain**: E
 - **title**: Stage38 kill switch 的 Prometheus stage 标签使用 "stage38" 而非 "38"——打破跨 stage 的标签一致性
 - **symptom**: 在 Prometheus 中查询 `sparkle_kill_switch_mode` 指标时，所有 Aurora stage 的 `stage` 标签均为纯数字字符串（"18", "19", "21", ..., "37", "39", "40"），唯独 Stage38 显示为 "stage38"。操作者使用 `stage=~"\\d+"` 正则过滤时 Stage38 的指标被排除在外。Grafana 面板中按 stage 分组时 Stage38 单独成组
@@ -1952,7 +1954,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T09:45
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) _ERR_REPLAN_BINDING line 13: stage="stage38"。(2) _PUSH_SCHEDULER_BINDING line 21: stage="stage38"。(3) _STAGE37_BINDING line 16: stage="37"——纯数字。(4) _BINDING_MASTER line 12: stage="39"——纯数字。(5) KILL_SWITCH_MODE Gauge labels=["stage","feature"] 无 schema 约束。跨 stage 对比审计：stage18/19/21/23-31/33-35/37/39/40 全部使用纯数字，仅 stage38 使用 "stage38"。module-level record_mode_gauge (line 68-77) 引用 binding.stage——修改 binding 即可自动跟随，无需单独修改。与 E3/E4（drill 覆盖/权限）不重复。非"设计如此"——无其他 stage 使用 "stage{N}" 格式，纯数字是明确规范。
-- **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
+- **fix_commit**: 3912fa3b86a7755bc4c6af044b33f9142cb0cd17
+- **opus_review**: APPROVED by opus-independent-reviewer at 2026-05-03T10:45:00Z
 
 ### ISSUE-20260504-0947-E7
 - **status**: verified
