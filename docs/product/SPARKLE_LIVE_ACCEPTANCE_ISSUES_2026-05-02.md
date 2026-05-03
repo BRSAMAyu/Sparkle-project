@@ -2652,7 +2652,8 @@
   - **Residual gaps (pre-existing, not introduced by this fix)**: (1) Parallel branch errors append to `state.errors` but orchestrator still does not check `final_state.errors` — partial state with parallel errors returns as `event_kind="task_completed"`. This is consistent with the issue's design directive that parallel errors should be non-fatal. (2) `max_steps` truncation (ISSUE-20260504-1902-D3) still returns partial state silently — tracked separately. (3) Orchestrator still has zero checks for `final_state.errors` — tracked as D4-D6 follow-ups.
 
 ### ISSUE-20260504-1901-D2
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-04T08:30:00Z
 - **severity**: P2
 - **domain**: D
 - **title**: StateGraph compile() validates entry point but not edge targets; conditional edges returning invalid node names silently fail via generic except handler
