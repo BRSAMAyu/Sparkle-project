@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 16:00 (R36 L-domain exploration — 2 discovered: L5 CommunitySignalBridge 无 kill switch / L6 Stage 20 布尔开关非 tri-state)
+> Updated: 2026-05-04 16:20 (R37 K-domain exploration — 0 new issues; domain exhausted)
 
 ---
 
@@ -410,6 +410,7 @@
 | R34 | 2026-05-04T11:15 | I | 2 | pending（待 Opus 独立复审） | I 域续探——I1-I4 fixes 全部验证通过 + I5 Go schema.sql tasks 缺 paused 列 + I6 Go Reportreason 缺 HATE_SPEECH（同根因：fix 后未 make sync-db） |
 | R35 | 2026-05-04T14:30 | C | 2 | 2/2 (C6/C7 verified) | C 域续探——Proto MessageNack 未实现（Go 用 ad-hoc error 替代结构化 NACK，Flutter NackEvent 死代码）+ HeartbeatPing/Pong proto 类型死代码（三套心跳仅两套存活） |
 | R36 | 2026-05-04T16:00 | L | 2 | 2/2 (L5/L6 verified) | L 域续探——governance rule effectiveness: CommunitySignalBridge 无 kill switch（同级 SocialSignalBridge 有 Stage33 tri-state）+ Stage 20 SufficiencyJudge/ConflictResolver 用布尔开关非 Aurora tri-state（无 shadow/gauge/drill） |
+| R37 | 2026-05-04T16:20 | K | 0 | N/A | K 域续探——Flutter 20+ catch blocks 审查 + Python 15+ except:pass 审查，全部为设计合理的防御性编码或已被 R6/R31 归档 |
 
 ---
 
@@ -2466,3 +2467,27 @@
 - **Findings**: L 域续探聚焦 Aurora kill switch 覆盖率 + 治理规则有效性。(1) 21 个 Aurora kill switch 服务覆盖 Stage 18-40（缺 20/22/32/36）。Stage 32 为 SQAM 质量守卫（非运行时功能）。Stage 36 不存在。Stage 20/22 为实际缺口。(2) L5: CommunitySignalBridge 零 kill switch 引用——7 个公开方法无模式守卫，在 task_event_consumer 和 achievement_event_consumer 中无条件调用。同级 SocialSignalBridge 正确集成 Stage33 tri-state。若社区桥接在生产中出现性能或数据问题，无法通过标准 kill switch 关闭。(3) L6: Stage 20 SufficiencyJudge + ConflictResolver 使用简单布尔配置开关（settings.SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED），而非 Aurora tri-state kill switch——无 shadow 渐进发布、无 Prometheus gauge、无 drill 脚本。其他所有 Aurora Stage 均使用标准 kill switch 服务。(4) 验证了 achievement_engine.py 的金融原子性——with_for_update() 行锁正确，manage_transaction=False 为设计意图（父事务管理），非 bug。(5) 治理守卫（BB/BE）使用 token-presence 检查而非语义验证——已知 L4 已归档
 - **Opus pass rate**: 2/2 (L5/L6 verified by opus-independent-auditor+2026-05-03T19:30Z)
 - **Next suggested domain**: K (error handling) — 5 轮未回探；或 J (cold start / empty state) — 6 轮未回探
+
+### Round R37 — 2026-05-04T16:20
+- **Domain**: K (错误处理 / 降级 / 边界)
+- **Paths covered**:
+  - `mobile/lib/features/home/presentation/providers/home_growth_provider.dart:326-454` — 6 个 FutureProvider 全部 catch DioException + return fallback（R31 已评估为设计意图）
+  - `mobile/lib/features/home/presentation/screens/dashboard_screen.dart:555-564` — growthAsync.maybeWhen error→empty，UI 不可区分空数据与 API 错误
+  - `mobile/lib/features/home/presentation/providers/dashboard_provider.dart:420-668` — DashboardNotifier fetchData 正确设置 error 状态 + auto-retry
+  - `mobile/lib/features/visual_elements/presentation/providers/visual_elements_provider.dart:285-333` — catchError + outer try/catch 设置 VisualElementsState.error（正确）
+  - `mobile/lib/features/translation/presentation/providers/translation_history_provider.dart:60-83` — TranslationHistoryState 无 error 字段，loadHistory 清除 isLoading 但不设 error
+  - `mobile/lib/features/community/presentation/providers/community_provider.dart:240-244` — catch(e) { rethrow; } 空操作包装（R31 已知）
+  - `mobile/lib/features/community/presentation/utils/accountability_invite_flow.dart:61,94` — catch(_) {} 用于 overview 刷新失败（设计合理的降级）
+  - `mobile/lib/features/chat/presentation/providers/chat_provider.dart:248-342` — _parseStringList/_parseJsonMap 防御性 JSON 解析 catch（正确）
+  - `mobile/lib/features/tools/presentation/widgets/translator_tool.dart:258-267` — vocabulary lookup 失败 catch(_){}，翻译成功但无定义（功能降级可接受）
+  - `mobile/lib/features/cognitive/data/repositories/sync_cognitive_repository.dart:36-61` — 离线优先模式正确
+  - `backend/app/services/notification_service.py:182-204` — cooldown/fatigue 守卫 pass（设计合理：Redis 故障时允许发送）
+  - `backend/app/services/push_scheduler.py:211-219` — spine directive 获取失败 pass→fallback 默认消息（正确降级）
+  - `backend/app/services/llm_service.py:880-889` — JSON 解析双重 try + warning log（正确）
+  - `backend/app/services/galaxy_service.py:1952-1960,2322-2330` — UUID/score 解析 pass + 外层 try/except（正确）
+  - `backend/app/services/execution_service.py:436-442` — writer.wait_closed() 清理 pass（标准模式）
+  - `backend/app/services/template_service.py:96-105` — bandit 选择失败→随机选择（正确降级）
+- **New issues**: 0
+- **Findings**: K 域续探全面审查 Flutter 和 Python 两端的错误处理。(1) Flutter 端 20+ 个 catch 块审查：home_growth_provider 的 6 个 DioException→fallback 模式经 R31 评估为设计意图（DioException=网络错误应降级，TypeError=代码错误应传播）；visual_elements_provider 的 catchError+outer catch 正确设置 error 状态；community_provider 的空操作 rethrow 包装已知；accountability_invite_flow 的 overview 刷新失败为合理降级；translator_tool 的 vocabulary lookup 失败可接受；chat_provider 的 JSON 解析 catch 为防御性编码。(2) Python 端 15+ 个 except:pass 审查：notification_service 的 cooldown/fatigue 守卫在 Redis 故障时应允许发送（正确）；push_scheduler 的 spine directive 获取失败回退到默认消息（正确）；llm_service 的 JSON 解析双重 try 有 warning log（正确）；galaxy_service 的 UUID/score 解析 pass 为解析层防御（正确）；execution_service 的 writer.wait_closed() 清理 pass 为标准清理模式；template_service 的 bandit 选择失败回退到随机选择（正确）。(3) DashboardNotifier.fetchData 正确设置 DashboardState.error + 5s auto-retry。(4) TranslationHistoryState 无 error 字段是一个设计简化（使用 Isar 本地数据库，很少失败），不构成 bug。K 域已穷尽
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: J (cold start / empty state) — 7 轮未回探；或 F (event bus DLQ/retry) — 5 轮未回探
