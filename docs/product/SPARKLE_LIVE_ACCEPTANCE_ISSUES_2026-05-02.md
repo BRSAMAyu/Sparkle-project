@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 19:00 (R41 D-domain — 0 new issues, agent 0/8 false positive rate)
+> Updated: 2026-05-04 19:30 (R41 D-domain — 3 discovered: D1/D2/D3; R42 pending Opus review)
 
 ---
 
@@ -414,7 +414,7 @@
 | R38 | 2026-05-04T17:00 | F | 1 | 1/1 (F5 verified by opus-reviewer) | F 域续探——Task/Profile/Intervention 消费者子处理器吞噬异常旁路 EventBus DLQ/retry |
 | R39 | 2026-05-04T18:00 | B | 3 | 3/3 (B1/B2/B3 verified) | B 域续探——CurrentUserStatusNotifier 乐观更新无回滚 + confirmMinimumCriteria 纯本地无持久化 + GroupTasks/BlockedUsers 刷新丢数据 |
 | R40 | 2026-05-04T18:30 | G | 0 | N/A | G 域续探——mock_community_repository 核心方法全部正确实现，剩余空 stub 为非核心功能，domain exhausted |
-| R41 | 2026-05-04T19:00 | D | 0 | N/A | D 域续探——FSM 边界条件全面审查（8 处 agent 发现全部亲自验证为误报），orchestrator 健壮 |
+| R41 | 2026-05-04T19:30 | D | 3 | pending（待 Opus 独立复审） | D 域续探（纠正上轮 0/8 false positive）——Statechart engine 吞异常返回部分状态 + compile() 不验证边目标 + max_steps 静默截断 |
 
 ---
 
@@ -2327,6 +2327,67 @@
 - **verified_by**: opus-independent-auditor+2026-05-04T18:15Z
 - **fix_commit**: 留空
 
+### ISSUE-20260504-1900-D1
+- **status**: discovered
+- **severity**: P1
+- **domain**: D
+- **title**: Statechart engine silently swallows node exceptions and returns partial state; orchestrator never checks state.errors
+- **symptom**: When a graph node raises an exception during execution, the user receives a partial/truncated AI response with no error indication. The session is marked STATE_DONE and episodic memory records event_kind="task_completed" for what was actually a broken execution.
+- **root_cause_hypothesis**: The statechart engine's invoke() method catches all exceptions in its node execution try/except (line 277-281), logs + appends to state.errors, then breaks from the while loop. The graph returns the partially-executed state without re-raising. The execution_engine._execute_graph() at line 1841-1847 checks graph_task.exception() — but the graph never raises (exceptions caught internally), so it proceeds to set result_holder["final_state"] from the partial state. The orchestrator at line 3382-3404 builds the final response from this unchecked final_state — zero code anywhere checks state.errors.
+- **evidence**:
+  - `backend/app/orchestration/statechart_engine.py:277-281` — `except Exception as e: logger.exception(...); state.errors.append(...); break` — exceptions caught, errors appended, loop broken, no re-raise
+  - `backend/app/orchestration/statechart_engine.py:307-315` — `return state` — graph returns partial state (possibly mid-execution after break) regardless of errors
+  - `backend/app/orchestration/execution_engine.py:1841-1847` — `if graph_task.done(): exc = graph_task.exception(); if exc: raise exc; result_holder["final_state"] = graph_task.result()` — exception is None (graph caught it internally), so partial state is set as final
+  - `backend/app/orchestration/orchestrator.py:3382-3404` — `final_state = result_holder.get("final_state"); if final_state is not None: ...` — builds final response, writes episodic memory with event_kind="task_completed" at line 3413, updates session to STATE_DONE at line 3460-3466. Zero checks for `final_state.errors` (confirmed by grep — no matches for `state.errors` or `.errors` in orchestrator.py)
+- **repro_or_trigger**: 1. Introduce a temporary raise in any graph node (e.g., generation_node) 2. Send a chat message that routes through that node 3. Observe: chat response is partial/truncated, no error message shown to user, session marked complete
+- **expected_vs_actual**: Expected: node exception propagates to orchestrator's top-level except (line 3481) which correctly yields structured error with finish_reason=ERROR, sets session to STATE_FAILED, and writes episodic memory with event_kind="error". Actual: exception silenced at engine level, partial state returned as success, user receives truncated response.
+- **blast_radius**: Affects every AI chat interaction. Any node-level bug (generation, collaboration, tool_execution, etc.) manifests as a silent partial response rather than a properly surfaced error. Directly impacts North Star (7-day zero-knowledge student): a broken planning or generation step produces incomplete guidance with no indication of failure.
+- **suggested_fix_direction**: Either (A) re-raise in statechart_engine.py:281 after appending errors, allowing orchestrator top-level handler to catch it; or (B) add `if final_state.errors:` check in orchestrator.py:3382-3383 with degraded response + STATE_DEGRADED; or (C) both — re-raise for catastrophic failures, degrade for recoverable ones. Minimum: check errors count at orchestrator level and at least log a warning.
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1901-D2
+- **status**: discovered
+- **severity**: P2
+- **domain**: D
+- **title**: StateGraph compile() validates entry point but not edge targets; conditional edges returning invalid node names silently fail via generic except handler
+- **symptom**: If a graph node sets state.next_step to a string that does not match any registered node name, the graph silently terminates with a partial state — KeyError on node lookup is caught by the generic except handler, logged, and the graph returns without reaching completion.
+- **root_cause_hypothesis**: Graph compile() at line 179-186 only validates `self.entry_point in self.nodes` — it never iterates over self.edges to verify that static edge targets or possible conditional edge return values correspond to existing nodes. At runtime, line 247 does `node_action = self.nodes[current_node_name]` with direct dict access (no .get() with default). If current_node_name is not in self.nodes, KeyError propagates to line 277 which catches all exceptions and silently breaks. While current code's nodes only set well-known constants, future refactors or community contributions could easily introduce invalid next_step values.
+- **evidence**:
+  - `backend/app/orchestration/statechart_engine.py:179-186` — `def compile(self): if not self.entry_point: raise ValueError(...); if self.entry_point not in self.nodes: raise ValueError(...); self._compiled = True; return self` — validates entry_point only, zero edge target validation
+  - `backend/app/orchestration/statechart_engine.py:247` — `node_action = self.nodes[current_node_name]` — direct dict access, no `.get()` with error handling
+  - `backend/app/orchestration/statechart_engine.py:292` — `next_node = edge(state)` — conditional edge return value used directly, no validation that returned node exists
+  - `backend/app/orchestration/statechart_engine.py:277-281` — `except Exception as e: ... break` — KeyError from invalid node name caught here, turned into silent partial return
+  - `backend/app/agents/standard_workflow.py:3107-3108` — `collaboration_condition: return state.next_step or "tool_planning"` — example of edge that uses unvalidated state.next_step as target
+- **repro_or_trigger**: 1. In any node function, set `state.next_step = "nonexistent_node_name"` 2. Ensure the graph routes through that node's conditional edge 3. Observe: graph silently terminates, partial response returned with no indication of misconfiguration
+- **expected_vs_actual**: Expected: compile() validates all edge targets and raises clear error on mismatch, or at minimum, runtime detects invalid target and appends meaningful error + transitions to __end__. Actual: compile passes, runtime catches KeyError as generic Exception, breaks silently.
+- **blast_radius**: Low in current codebase (all next_step values are well-known constants) but represents an engineering safety gap. A refactoring that renames a node without updating all conditional edge returns would introduce a silent partial-response bug that's difficult to diagnose.
+- **suggested_fix_direction**: (A) In compile(): iterate edges dict, verify static targets in self.nodes, and for conditional edges at minimum log a warning that runtime validation is needed. (B) At runtime line 292: wrap `next_node = edge(state)` with validation — if returned node not in self.nodes, log error + set next_node = "__end__" + append to state.errors. (C) At line 247: use `self.nodes.get(current_node_name)` with explicit error handling.
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1902-D3
+- **status**: discovered
+- **severity**: P2
+- **domain**: D
+- **title**: Graph max_steps exceeded silently — WorkflowState.is_finished never set to True anywhere, no error appended on truncation
+- **symptom**: If a graph execution hits the 50-step max_steps limit, it returns the current state without any indication that execution was truncated. The orchestrator treats the partial state as a valid completion — builds final response, marks session STATE_DONE, and records episodic memory as task_completed. The WorkflowState.is_finished field is never set to True by any code path.
+- **root_cause_hypothesis**: At statechart_engine.py:304-305, max_steps exceeded only logs a warning — no errors appended, no is_finished flag set, no context_data marker. The returned state is indistinguishable from a normally completed state. The is_finished field (defined in WorkflowState dataclass at line 42) defaults to False and is never modified by any node or the engine itself. Downstream code (orchestrator, response_builder) never checks it (confirmed by grep — zero matches in orchestrator.py and response_builder.py).
+- **evidence**:
+  - `backend/app/orchestration/statechart_engine.py:304-305` — `if steps >= max_steps: logger.warning(...)` — only log, no errors.append, no is_finished=True, no context marker
+  - `backend/app/orchestration/statechart_engine.py:237` — `while current_node_name not in self.end_points and steps < max_steps:` — loop exits on max_steps without distinguishing from normal __end__ termination
+  - `backend/app/orchestration/statechart_engine.py:42` — `is_finished: bool = False` — defaults to False, never set to True anywhere in codebase (confirmed by grep — zero matches for `is_finished = True` in entire backend/)
+  - `backend/app/orchestration/orchestrator.py:3460-3466` — `await self._update_state(session_id, STATE_DONE, "Response completed", ...)` — session marked done regardless of truncation
+- **repro_or_trigger**: 1. Create a graph with a node that loops (e.g., sets next_step to itself) 2. Invoke with max_steps=3 3. Observe: state returned after 3 steps with no indication of truncation
+- **expected_vs_actual**: Expected: max_steps exceeded appends error to state.errors, sets is_finished=True with a "truncated" marker, and downstream code either surfaces a warning to the user or at minimum logs prominently. Actual: only a loguru warning in engine logs, zero user-visible indication.
+- **blast_radius**: Low practical risk — standard graph has 12 nodes and max_steps=50, so 4+ full traversals needed to exceed. Most relevant for recursive patterns (reflection max 3 rounds) or nested graphs. However, the is_finished=False-forever design gap means no code can programmatically distinguish complete from truncated state.
+- **suggested_fix_direction**: At line 304-305: append `state.errors.append(f"[{self.name}] Max steps {max_steps} reached — execution truncated")` and set `state.is_finished = True`. Additionally, fix the orchestrator or response_builder to check `final_state.is_finished` or `final_state.errors` before marking session STATE_DONE.
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
 ### Round R25 — 2026-05-04T05:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
@@ -2671,23 +2732,22 @@
 - **Opus pass rate**: N/A (0 new issues)
 - **Next suggested domain**: D (Python orchestrator FSM) — 12 轮未回探；或 J (cold start / empty state) — 8 轮未回探
 
-### Round R41 — 2026-05-04T19:00
-- **Domain**: D (Python orchestrator FSM 流转完整性 — 续探)
+### Round R41 — 2026-05-04T19:30
+- **Domain**: D (Python orchestrator FSM 流转完整性 — 续探，纠正上轮 0/8 false positive)
 - **Paths covered**:
-  - `backend/app/orchestration/statechart_engine.py:206-366` — checkpoint resume flow, node validation, state merge
-  - `backend/app/orchestration/executor.py:230-269,400-449,685-830,874-906` — DAG parallel execution, output store, parameter resolution, tool timeout
-  - `backend/app/orchestration/dual_core_router.py:478-507` — Aurora preference string handling
-  - `backend/app/orchestration/experience_actuator.py:240-289` — decision_context None guard
-- **New issues**: 0
-- **Findings**: D 域续探对 FSM 边界条件进行二次深度审查。Explore agent 报告 8 处潜在问题，全部经亲自 Read 验证为误报：
-  1. **#1 (routing to None)**: FALSE POSITIVE — `statechart_engine.py:291` callable edge 返回 None 时，下一循环 `current_node_name not in self.edges` → 进入 `__end__` 分支，隐式但正确处理
-  2. **#2 (parallel race condition)**: FALSE POSITIVE — agent 引用 410-430（实际为 tool timeout），真正并行执行在 685-830。`asyncio.gather` 完成后才在顺序 for loop 中写入 `output_store`（line 746-776），无竞态
-  3. **#3 (DAG missing output keys)**: FALSE POSITIVE — required step 失败时 `layer_aborted=True` → `break`（line 798-815），后续层不再执行。非 required 失败是设计选择（标记为 optional）
-  4. **#4 (experience actuator None)**: FALSE POSITIVE — line 252 `if not isinstance(decision_context, dict): return {}` 显式 guard
-  5. **#5 (session_info None)**: FALSE POSITIVE — line 238 `session_info.get(...) if session_info is not None else None` 显式 None 检查
-  6. **#6 (dual core router enum)**: FALSE POSITIVE — line 488-491 是字符串偏好读取（带默认值），非 Python enum。用于 prompt assembly，错误值仅影响语气，不影响逻辑
-  7. **#7 (DAG param type mismatch)**: FALSE POSITIVE — `$ref:` 占位符替换为目标类型是设计意图，`params` 是 `dict[str, Any]`
-  8. **#8 (checkpoint resume validation)**: FALSE POSITIVE — line 218 `if checkpoint_node in self.nodes` 验证节点存在；空字符串/无效节点名不会匹配
-- **Agent quality**: 0/8 genuine findings (100% false positive rate) — agent 倾向于将防御性编码模式误判为 bug
-- **Opus pass rate**: N/A (0 new issues)
-- **Next suggested domain**: J (cold start / empty state) — 9 轮未回探；或 A (Flutter UI E2E) — 8 轮未回探
+  - `backend/app/orchestration/statechart_engine.py:1-431` — 全量审查：StateGraph class, WorkflowState, compile(), invoke(), checkpoint resume, _merge_state, _execute_parallel
+  - `backend/app/orchestration/execution_engine.py:1808-1848` — _execute_graph(): graph_task spawn → queue drain → result_holder population
+  - `backend/app/orchestration/execution_engine.py:1884-2558` — _plan_and_validate(): circuit breaker, LangGraph planner, plan review, exception handler
+  - `backend/app/orchestration/orchestrator.py:3370-3548` — Steps 13-14 + top-level except + finally: graph execution → response build → STATE_DONE → episodic memory → cleanup
+  - `backend/app/orchestration/response_builder.py:847-896` — _build_final_response(): extracts last assistant message, zero errors check
+  - `backend/app/agents/standard_workflow.py:2725-2936,3057-3198` — collaboration_node, collaboration_post_process_node, graph definition (12 nodes, conditional edges)
+  - Grep: `state.errors` in orchestrator.py — 0 matches; `is_finished = True` in entire backend — 0 matches
+- **New issues**: 3 — D1 (P1: Statechart engine silently swallows node exceptions → partial state → orchestrator never checks errors), D2 (P2: compile() only validates entry_point, not edge targets), D3 (P2: max_steps exceeded silently, is_finished never set True)
+- **Findings**: D 域续探深入追踪 FSM 全链路（状态机引擎 → 执行引擎 → 编排器 → 响应构建器），发现 3 个真实缺口：
+  1. **D1 (P1) — 异常静默吞噬**: statechart_engine.py:277-281 `except Exception → logger + errors.append + break`，异常永不传播。execution_engine.py:1841-1847 检查 `graph_task.exception()` 但 graph 内部已吞噬（返回 None）。orchestrator.py:3382-3404 构建最终响应时零次检查 `state.errors`。结果：节点异常 → 部分状态返回 → 用户收到截断响应 → 会话标记 STATE_DONE → 情景记忆记录 task_completed。与编排器顶层 except (line 3481-3526，正确设置 STATE_FAILED + event_kind="error") 形成鲜明对比——该处理程序永远无法触发
+  2. **D2 (P2) — 编译时边验证缺失**: compile() (line 179-186) 仅验证 entry_point ∈ nodes，不遍历 edges 验证目标节点存在。运行时 line 247 `self.nodes[current_node_name]` 直接字典访问→KeyError→line 277 通用 except 静默吞噬。Line 292 `next_node = edge(state)` 不验证返回值。当前代码中所有 next_step 值均为已知常量，但工程安全缺口明确
+  3. **D3 (P2) — max_steps 静默截断**: line 304-305 仅 logger.warning，不追加 errors、不设 is_finished=True。WorkflowState.is_finished 定义后从未设为 True（全后端 grep 零匹配）。编排器将截断状态与正常完成状态等价处理
+  4. **误报排除**: 对上一轮 agent 报告的 8 处潜在问题全部重新亲自验证，确认均为误报（与上轮结论一致）
+  5. **排除项**: (a) 编排器顶层 except 处理正确（已验证错误响应 + STATE_FAILED + episodic memory event_kind="error"）；(b) 协作节点内部 try/except 是设计上的优雅降级（回退到 tool_planning），不是 bug；(c) _plan_and_validate except 降级到 direct 模式正确；(d) checkpoint 恢复中 `checkpoint_node not in self.nodes` 静默回退到全新启动是合理设计（图结构可能已变更）
+- **Opus pass rate**: pending
+- **Next suggested domain**: F (Event bus consumers DLQ/retry) — 3 轮未回探，F5 fix 验证待查；或 E (Aurora kill switch) — 6 轮未回探
