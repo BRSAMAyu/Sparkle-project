@@ -370,6 +370,7 @@
 |-------|-----------|--------|-------------|---------------|-------|
 | R1 | 2026-05-03T12:00 | G | 3 | 3/3 (G3 verified by opus-reviewer-2) | Mock vs Real differences |
 | R2 | 2026-05-03T13:00 | B | 1 | claimed by fixer (in_progress) | Route masking contract mismatch — opus-reviewer-2 verified root cause |
+| R3 | 2026-05-03T13:30 | C | 0 | N/A | Proto/WebSocket contract sound; reconnection has offline queue persistence |
 
 ---
 
@@ -463,3 +464,10 @@
 ## 探索日志
 
 <!-- 每轮探索结束后追加记录 -->
+
+### Round R3 — 2026-05-03T13:30
+- **Domain**: C (WebSocket / gRPC Contract Consistency)
+- **Paths covered**: proto/agent_service.proto → backend/gateway/internal/agent/client.go → backend/app/services/agent_grpc_service.py → mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart → backend/gateway/internal/handler/websocket_proxy.go
+- **New issues**: 0
+- **Findings**: Proto contract is consistent across all 3 layers. All 15 RPC methods, 20+ message types, and oneof variants are properly handled. Reconnection logic uses exponential backoff (6 attempts) with offline queue persistence — messages marked as failed survive reconnection failures and are retryable via sync center. No P0/P1 gaps found.
+- **Next suggested domain**: J (冷启动/空状态/首屏) — dashboard/home first-launch experience
