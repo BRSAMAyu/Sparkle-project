@@ -55,7 +55,7 @@ dependencies:
   firebase_core: ^3.0.0
   firebase_messaging: ^15.0.0
   jpush_flutter: ^2.4.0
-  device_info_plus: ^10.0.0
+  device_info_plus: ^12.4.0
 
   # UI Enhancement
   flutter_markdown: ^0.6.18
