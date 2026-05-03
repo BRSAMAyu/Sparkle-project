@@ -68,21 +68,35 @@ class GoalDetailPage extends ConsumerWidget {
               const SizedBox(height: 14),
               MinimumCriteriaCard(
                 criteria: data.minimumAcceptanceCriteria,
-                onConfirm: () {
-                  ref
-                      .read(goalDetailProvider(goalId).notifier)
-                      .confirmMinimumCriteria();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(l10n.goalDetailConfirmedSnack),
-                      action: SnackBarAction(
-                        label: l10n.goalDetailUndo,
-                        onPressed: () => ref
-                            .read(goalDetailProvider(goalId).notifier)
-                            .undoConfirmMinimumCriteria(),
+                onConfirm: () async {
+                  try {
+                    await ref
+                        .read(goalDetailProvider(goalId).notifier)
+                        .confirmMinimumCriteria();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l10n.goalDetailConfirmedSnack),
+                        action: SnackBarAction(
+                          label: l10n.goalDetailUndo,
+                          onPressed: () async {
+                            try {
+                              await ref
+                                  .read(goalDetailProvider(goalId).notifier)
+                                  .undoConfirmMinimumCriteria();
+                            } catch (_) {}
+                          },
+                        ),
                       ),
-                    ),
-                  );
+                    );
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l10n.goalDetailLoadFailed),
+                      ),
+                    );
+                  }
                 },
                 onModify: () {
                   ScaffoldMessenger.of(context).showSnackBar(

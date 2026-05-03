@@ -74,9 +74,13 @@ class GoalDetailNotifier extends StateNotifier<AsyncValue<GoalDetailData>> {
     }
   }
 
-  void confirmMinimumCriteria() {
+  Future<void> confirmMinimumCriteria() async {
     final value = state.valueOrNull;
     if (value == null) return;
+    await _ref.read(apiClientProvider).put<dynamic>(
+      '/experience/goal-detail/$_goalId/criteria-status',
+      data: {'status': 'confirmed'},
+    );
     state = AsyncValue.data(
       value.copyWith(
         minimumAcceptanceCriteria:
@@ -85,9 +89,13 @@ class GoalDetailNotifier extends StateNotifier<AsyncValue<GoalDetailData>> {
     );
   }
 
-  void undoConfirmMinimumCriteria() {
+  Future<void> undoConfirmMinimumCriteria() async {
     final value = state.valueOrNull;
     if (value == null) return;
+    await _ref.read(apiClientProvider).put<dynamic>(
+      '/experience/goal-detail/$_goalId/criteria-status',
+      data: {'status': 'pending_confirmation'},
+    );
     state = AsyncValue.data(
       value.copyWith(
         minimumAcceptanceCriteria: value.minimumAcceptanceCriteria

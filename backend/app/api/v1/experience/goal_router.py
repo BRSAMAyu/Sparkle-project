@@ -23,6 +23,10 @@ from app.models.user import User
 router = APIRouter(prefix="/experience", tags=["experience"])
 
 
+class CriteriaStatusPayload(BaseModel):
+    status: str = "confirmed"
+
+
 class GoalSummaryPayload(BaseModel):
     id: str
     title: str
@@ -146,6 +150,39 @@ async def get_goal_detail(
         related_sources=sources,
         strategy_belief=strategy_belief,
     )
+
+
+# route-tier: authed
+@router.put("/goal-detail/{goal_id}/criteria-status")
+async def update_criteria_status(
+    payload: CriteriaStatusPayload,
+    goal_id: UUID = Path(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> dict[str, str]:
+    goal = await _load_goal(db, goal_id=goal_id, user_id=current_user.id)
+    if goal is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Goal not found")
+
+    status_value = payload.status.strip()
+    if status_value not in ("confirmed", "pending_confirmation"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="status must be 'confirmed' or 'pending_confirmation'",
+        )
+
+    criteria = goal.minimum_acceptance_criteria
+    if isinstance(criteria, dict):
+        criteria = dict(criteria)
+    elif isinstance(criteria, list):
+        criteria = {"thresholds": criteria}
+    else:
+        criteria = {}
+    criteria["status"] = status_value
+    goal.minimum_acceptance_criteria = criteria
+    await db.commit()
+
+    return {"status": "ok", "criteria_status": status_value}
 
 
 async def _load_goal(db: AsyncSession, *, goal_id: UUID, user_id: UUID) -> Goal | None:

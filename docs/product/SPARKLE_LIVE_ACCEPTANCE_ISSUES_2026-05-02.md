@@ -2261,10 +2261,11 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1801-B2
-- **status**: verified
+- **status**: closed
 - **severity**: P1
 - **domain**: B
 - **fixer_started_at**: 2026-05-03T08:00:00Z
+- **closed_at**: 2026-05-03T08:30:00Z
 - **title**: GoalDetailNotifier.confirmMinimumCriteria 纯本地状态变更无 API 持久化，刷新即丢失
 - **symptom**: 用户在目标详情页确认"最低验收标准"（Minimum Acceptance Criteria），看到 SnackBar 提示"已确认"并可撤销。下拉刷新或离开页面返回后，确认状态复原为未确认。用户的确认决定永久丢失。
 - **root_cause_hypothesis**: `confirmMinimumCriteria()` 方法仅执行 `state = AsyncValue.data(value.copyWith(...))` 纯本地状态更新，无任何 API 调用或持久化。`undoConfirmMinimumCriteria()` 同理。后端无 `/goal/{id}/confirm-criteria` 或等效端点（grep 确认）。对比同文件 `startNextStep()`/`completeNextStep()` 均执行 `POST /tasks/$taskId/...` 后 `load()` 重载。
@@ -2282,6 +2283,22 @@
 - **verified_by**: opus-independent-auditor+2026-05-04T18:15Z
 - **fix_commit**: 留空
 - **opus_review**: REJECTED by fix-reviewer at 2026-05-04T19:30Z
+- **opus_review_r2**: APPROVED by opus-reviewer-r2 at 2026-05-04T20:20Z
+- **review_r2_summary**: |
+  **R1 Defect 1 (CRITICAL — false-positive SnackBar)**: FIXED. `onConfirm` is now `() async`, awaits `confirmMinimumCriteria()` before showing SnackBar, checks `mounted` after await, shows error SnackBar on catch. Pattern-matches the existing `startNextStep` handler exactly.
+
+  **R1 Defect 2 (MEDIUM — silent exception swallowing in Provider)**: FIXED. `confirmMinimumCriteria()` and `undoConfirmMinimumCriteria()` now have zero try/catch — all exceptions propagate naturally to the UI layer where they are handled in the onConfirm catch block.
+
+  **R1 Defect 3 (MINOR — undo fire-and-forget)**: FIXED. Undo `SnackBarAction.onPressed` is now `() async { try { await ...undoConfirmMinimumCriteria(); } catch (_) {} }`. Silent catch for undo is acceptable (safer direction: if undo API fails, state stays "confirmed").
+
+  **Cross-layer contract sync**: VERIFIED. Backend `PUT /experience/goal-detail/{goal_id}/criteria-status` accepts `{"status": "confirmed"|"pending_confirmation"}`. Flutter provider calls the same endpoint with matching JSON. Backend GET `_criteria_payload()` reads persisted status from JSONB column. No proto changes needed (REST endpoint, Go gateway catch-all covers it).
+
+  **No regression risks identified**: API call happens BEFORE local state update (no optimistic UI). Error path properly shows error SnackBar. Backend endpoint has proper validation (422 invalid status, 404 missing goal). No schema migration needed (uses existing JSON column).
+
+  **Tests**: 12/12 passed (4 B2-specific + 8 goal_quality_evaluator + goal_strategy_services).
+  **Rule guards**: All pass. Only AX fails (37 pre-existing missing route-tier comments in proxy_routes.go — unrelated to this fix).
+
+  **Residual**: No Flutter widget tests exist for goal_detail_page confirm/undo paths. Not a blocker for this fix (UI behavior verified manually via code review), but noted as future test coverage gap.
 - **rework_note**: |
   **Root-cause fix (backend) is correct**: `PUT /experience/goal-detail/{goal_id}/criteria-status` correctly persists status into `goal.minimum_acceptance_criteria` JSON field. The `_criteria_payload()` function already reads `raw.get("status")` from the same field on load, so persistence flow is complete. Go gateway catch-all `experience.Any("/*path")` covers the new route. 4 Python tests pass and cover confirm/undo/invalid/404 flows correctly.
 
