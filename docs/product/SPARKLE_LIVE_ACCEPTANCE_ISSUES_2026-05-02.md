@@ -369,8 +369,8 @@
 - **Routes Verified (working with data)**: 5
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
-- **Discovered (not verified)**: 1 (D2)
-- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 3 (I1/I2/I3) + 4 (L1/L2/L3/L4) + 3 (B1/B2/B3) + 2 (I4/H5)
+- **Discovered (not verified)**: 0
+- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 1 (D2) + 3 (I1/I2/I3) + 4 (L1/L2/L3/L4) + 3 (B1/B2/B3) + 2 (I4/H5)
 
 ---
 
@@ -1439,7 +1439,7 @@
 ---
 
 ### ISSUE-20260504-0145-D2
-- **status**: discovered
+- **status**: verified
 - **severity**: P1
 - **domain**: D
 - **title**: D1 修复的 LangGraph planner 超时回退调用 build_fallback_plan() 缺少 2 个必需关键字参数 (snapshot, rationale)，超时路径抛 TypeError
@@ -1455,8 +1455,9 @@
 - **blast_radius**: 影响两条 LangGraph planner 超时路径：(1) multi_agent_adapter 的混合代理协作模式，(2) plan_review_service 的计划修改流程。主聊天路径（通过 execution_engine）不受影响（已正确实现）。超时场景在 LLM 响应慢时实际发生。对北极星有中等影响——学生在需要调整计划或使用混合代理时，超时会导致完全失败而非优雅降级
 - **suggested_fix_direction**: 在两个调用点补充缺失参数：(1) multi_agent_adapter.py:111 添加 `snapshot=snapshot, rationale="Planner timeout in multi-agent adapter, synthesized fallback"`（snapshot 在 line 83-87 已构造）；(2) plan_review_service.py:2214 添加 `snapshot=snapshot, rationale="Planner timeout during replan, synthesized fallback"`（snapshot 在 line 2183 已构造）
 - **discovered_by**: explorer-loop
-- **verified_by**: 
-- **fix_commit**: 
+- **verified_by**: opus-independent-reviewer+2026-05-04T02:00:00Z
+- **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 代码与条目描述完全一致。(1) lang_graph_planner.py:541-549 的 build_fallback_plan 签名使用 `*` 强制 keyword-only，5 个必需参数（message/snapshot/user_id/session_id/rationale）均无默认值，缺少任何一个都会在调用时立即抛 TypeError。(2) multi_agent_adapter.py:111-115 只传递 3 个参数（message/user_id/session_id），缺少 snapshot 和 rationale；snapshot 在 line 83-87 同一作用域已构造，可直接引用。(3) plan_review_service.py:2214-2218 同样只传递 3 个参数，缺少 snapshot 和 rationale。(4) execution_engine.py:2073-2082 正确传递全部 5 个必需参数 + plan_version=1 作为参照。调用链验证：planner.plan() 超时 → asyncio.wait_for raises TimeoutError → except TimeoutError → build_fallback_plan(message=..., user_id=..., session_id=...) → TypeError: missing 2 required keyword-only arguments 'snapshot' and 'rationale'。非设计意图——D1 修复的目的就是在超时时优雅降级到回退计划，缺少参数导致 fallback 路径本身崩溃恰恰违背修复意图。与 ISSUE-20260503-1600-D1 不重复——D1 是缺少 asyncio.wait_for 超时包装，D2 是 D1 修复中 build_fallback_plan 调用缺少必需参数。
+- **fix_commit**:
 
 
 ### Round R17 — 2026-05-04T01:45
