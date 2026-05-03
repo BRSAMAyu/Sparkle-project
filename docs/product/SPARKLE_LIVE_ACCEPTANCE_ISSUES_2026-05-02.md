@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 14:30 (R35 C-domain exploration — 2 discovered: C6 Proto MessageNack 未实现 / C7 HeartbeatPing/Pong 死代码)
+> Updated: 2026-05-04 16:00 (R36 L-domain exploration — 2 discovered: L5 CommunitySignalBridge 无 kill switch / L6 Stage 20 布尔开关非 tri-state)
 
 ---
 
@@ -409,6 +409,7 @@
 | R33 | 2026-05-04T12:00 | G | 1 | pending (G4) | G 域续探——mock 群聊消息分页参数被忽略，demo 模式下"加载更多"静默失败 |
 | R34 | 2026-05-04T11:15 | I | 2 | pending（待 Opus 独立复审） | I 域续探——I1-I4 fixes 全部验证通过 + I5 Go schema.sql tasks 缺 paused 列 + I6 Go Reportreason 缺 HATE_SPEECH（同根因：fix 后未 make sync-db） |
 | R35 | 2026-05-04T14:30 | C | 2 | 2/2 (C6/C7 verified) | C 域续探——Proto MessageNack 未实现（Go 用 ad-hoc error 替代结构化 NACK，Flutter NackEvent 死代码）+ HeartbeatPing/Pong proto 类型死代码（三套心跳仅两套存活） |
+| R36 | 2026-05-04T16:00 | L | 2 | 2/2 (L5/L6 verified) | L 域续探——governance rule effectiveness: CommunitySignalBridge 无 kill switch（同级 SocialSignalBridge 有 Stage33 tri-state）+ Stage 20 SufficiencyJudge/ConflictResolver 用布尔开关非 Aurora tri-state（无 shadow/gauge/drill） |
 
 ---
 
@@ -2162,6 +2163,50 @@
 - **verified_by**: opus-independent-auditor+2026-05-03T18:45Z
 - **fix_commit**: 留空
 
+### ISSUE-20260504-1600-L5
+- **status**: verified
+- **severity**: P2
+- **domain**: L
+- **title**: CommunitySignalBridge 无 Aurora kill switch 保护——任务完成和成就解锁事件消费者直接调用，生产异常时无法关闭
+- **symptom**: CommunitySignalBridge 在两个关键事件消费者（task_event_consumer 和 achievement_event_consumer）中被无条件实例化和调用。若社区信号桥接逻辑在生产中出现性能问题（如隐私聚合计算耗时过长）或数据错误，运维无法通过 Aurora tri-state kill switch 关闭该桥接——因为代码中无任何 kill_switch 引用。同级 SocialSignalBridge 通过 AuroraStage33KillSwitchService 正确实现了 tri-state
+- **root_cause_hypothesis**: CommunitySignalBridge (`community_signal_bridge.py`) 从未集成 Aurora kill switch。其姊妹服务 SocialSignalBridge 在构造函数中初始化 `self.kill_switch = AuroraStage33KillSwitchService()` 并在每个公开方法中检查模式（off/shadow/live）。CommunitySignalBridge 的 7 个公开方法（handle_group_task_completed、handle_resource_shared、build_privacy_preserving_cohort_signal 等）直接执行，无模式守卫。CLAUDE.md 承诺 "Every Aurora feature ships behind tri-state"
+- **evidence**:
+  - `backend/app/services/community_signal_bridge.py:1-30` — 导入列表：无 `kill_switch` 相关导入；类定义无 kill switch 属性
+  - `backend/app/services/community_signal_bridge.py:115-167` — `handle_group_task_completed()` 和 `handle_resource_shared()` 直接执行，无模式检查
+  - `backend/app/services/social_signal_bridge.py:19,70,73` — 对比：SocialSignalBridge 导入 `AuroraStage33KillSwitchService`，构造函数初始化，方法开头检查 `await self.kill_switch.get_feature_mode("social")`
+  - `backend/app/services/task_event_consumer.py:98` — 事件消费者无条件实例化 `bridge = CommunitySignalBridge(db, cache_service.redis)`
+  - `backend/app/services/achievement_event_consumer.py:288-289` — 成就消费者无条件实例化并调用 `bridge.broadcast_achievement_unlock()`
+- **repro_or_trigger**: 在 Redis 中搜索 `aurora:community_bridge:*` 或 `aurora_stage*:community*` → 无对应 key → CommunitySignalBridge 不响应任何 kill switch 操作。尝试通过标准 kill switch 关闭社区桥接 → 无对应服务
+- **expected_vs_actual**: 期望：CommunitySignalBridge 与 SocialSignalBridge 一样通过 Aurora tri-state kill switch 保护，可在生产异常时快速关闭或降级为 shadow 模式；实际：零 kill switch 保护，无法在不修改代码+重启服务的情况下关闭社区信号桥接
+- **blast_radius**: 影响所有社区信号桥接功能。task_event_consumer 的 handle_group_task_completed 和 achievement_event_consumer 的 broadcast_achievement_unlock 均经过此桥接。若桥接逻辑出现死循环或隐私聚合错误，会阻塞事件消费者，影响任务完成和成就解锁的核心流程。对北极星有间接影响——事件消费者阻塞可能导致任务状态不一致
+- **suggested_fix_direction**: 创建 AuroraCommunityBridgeKillSwitchService（或复用 Stage33），在 CommunitySignalBridge 构造函数中初始化，在每个公开方法开头添加 tri-state 模式检查（off→跳过、shadow→记录但不执行、live→正常执行）
+- **discovered_by**: explorer-loop
+- **verified_by**: opus-independent-auditor+2026-05-03T19:30Z
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1601-L6
+- **status**: verified
+- **severity**: P3
+- **domain**: L
+- **title**: Stage 20 SufficiencyJudge 和 ConflictResolver 使用简单布尔开关而非 Aurora tri-state kill switch——无 shadow 模式、无 Prometheus gauge、无 drill 脚本
+- **symptom**: Stage 20 的两个核心功能（SufficiencyJudge 判断是否需要追问、ConflictResolver 解决记忆写入冲突）使用简单布尔配置开关（`SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED: bool = True`、`SPARKLE_CONFLICT_RESOLVER_SHADOW_MODE: bool = False`）而非 Aurora tri-state kill switch。无法通过 Redis 动态切换 off/shadow/live，无 Prometheus gauge 暴露当前模式状态，无 drill_transitions.sh 脚本验证模式切换。其他所有 Aurora Stage（18-40）均使用标准 kill switch 服务类
+- **root_cause_hypothesis**: Stage 20 是 Aurora Stage 系统的一部分（`backend/app/models/aurora_stage20.py` 存在），但其功能未像其他 Stage 一样创建独立的 `AuroraStage20KillSwitchService`。SufficiencyJudge 在 `routing_engine.py:949` 直接实例化，ConflictResolver 在 `memory_inferred_write_lane.py:522` 检查 `settings.SPARKLE_CONFLICT_RESOLVER_SHADOW_MODE`。这些是 Python 配置属性，需要重启服务才能切换，且无 shadow→live 渐进发布能力
+- **evidence**:
+  - `backend/app/config/settings.py:664` — `SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED: bool = True` — 简单布尔开关，非 tri-state
+  - `backend/app/config/settings.py:663` — `SPARKLE_CONFLICT_RESOLVER_SHADOW_MODE: bool = False` — 独立布尔 shadow 标志
+  - `backend/app/orchestration/routing_engine.py:949` — `judge = SufficiencyJudgeService()` — 直接实例化，无 kill switch 守卫
+  - `backend/app/services/memory_inferred_write_lane.py:522` — `if settings.SPARKLE_CONFLICT_RESOLVER_SHADOW_MODE:` — 使用配置属性而非 Aurora kill switch
+  - `backend/app/services/aurora_stage18_kill_switch_service.py` 到 `aurora_stage40_calendar_kill_switch_service.py` — 21 个标准 kill switch 服务，Stage 20 缺失
+  - `scripts/stage20/` — 有 gate_final.sh 和 run_stage20.sh，但无 drill_transitions.sh
+  - `CLAUDE.md` — "Kill Switch Protocol: Every Aurora feature ships behind tri-state: off → shadow → live. All switches expose Prometheus gauge. Drill scripts in scripts/stage{N}/drill_transitions.sh"
+- **repro_or_trigger**: 搜索 `aurora_stage20_kill_switch_service.py` → 不存在。搜索 `scripts/stage20/drill_transitions.sh` → 不存在。在 Prometheus 查询 `sparkle_aurora_stage20_*` → 无指标
+- **expected_vs_actual**: 期望：Stage 20 与其他 Aurora Stage（18-19, 21-40）一样使用标准 Aurora tri-state kill switch（off/shadow/live）+ Prometheus gauge + drill_transitions.sh；实际：使用两个独立布尔配置属性，需要代码修改+重启才能切换，无 Prometheus 可观测性
+- **blast_radius**: 低运行时影响——SufficiencyJudge 和 ConflictResolver 功能稳定。但违反 CLAUDE.md 的 Aurora kill switch 协议承诺，降低运维在紧急情况下快速关闭 Stage 20 功能的能力。对北极星无直接影响
+- **suggested_fix_direction**: 创建 `AuroraStage20KillSwitchService`，将 `SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED` 和 `SPARKLE_CONFLICT_RESOLVER_SHADOW_MODE` 迁移为 tri-state kill switch，在 routing_engine.py 和 memory_inferred_write_lane.py 中集成模式检查，创建 drill_transitions.sh
+- **discovered_by**: explorer-loop
+- **verified_by**: opus-independent-auditor+2026-05-03T19:30Z
+- **fix_commit**: 留空
+
 ### Round R25 — 2026-05-04T05:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
@@ -2398,3 +2443,26 @@
 - **Findings**: C 域 WebSocket/gRPC 契约全链路审查。(1) Go gateway chat_orchestrator_protocol.go 正确映射 11 种 proto oneof → JSON type。(2) 18 个 gRPC RPC 方法在 Python 和 Go 均已实现。(3) community_service.proto 已标 deprecated，社区功能走 REST。(4) Plan review 正确通过 delta+metadata 路径（requires_review=true）推送。(5) C6：MessageNack 协议未实现——Go gateway 错误时发 ad-hoc `type: error` 而非 proto 定义的 message_nack（含 retry_after_ms/permanent），Flutter NackEvent 解析器为死代码。(6) C7：HeartbeatPing/Pong proto 类型零引用——实际使用 RFC 6455 传输层心跳 + JSON ping/pong，proto 成为误导性文档。(7) 额外发现 aurora_state_band、reasoning_step、plan_review_widget 三个 top-level handler 为 dead code——实际数据通过 delta metadata 路径传递
 - **Opus pass rate**: 2/2 (C6/C7 verified by opus-independent-auditor+2026-05-03T18:45Z)
 - **Next suggested domain**: K (error handling) — 4 轮未回探；或 L (governance rules vs implementation) — 8 轮未回探
+
+### Round R36 — 2026-05-04T16:00
+- **Domain**: L (治理规则与文档承诺 vs 真实实现)
+- **Paths covered**:
+  - `scripts/rule_guard_manifest.tsv` — 67 条治理规则注册
+  - `scripts/guards/check_rule_bb_financial_atomicity.py` — BB 金融原子性守卫（token-presence 检查）
+  - `scripts/guards/check_rule_be_shadow_semantics.py` — BE shadow 语义守卫（token-presence 检查）
+  - `backend/app/services/achievement_engine.py:1403-1470` — `_unlock_achievement()` 使用 `with_for_update()` 行锁
+  - `backend/app/services/achievement_engine.py:1740-1770` — `_grant_rewards()` manage_transaction=False 正确（父事务管理）
+  - `backend/app/services/aurora_*_kill_switch_service.py` — 21 个 Aurora kill switch 服务
+  - `backend/app/services/community_signal_bridge.py` — 社区信号桥接（无 kill switch）
+  - `backend/app/services/social_signal_bridge.py:19,70,73` — 社交信号桥接（有 Stage33 kill switch）
+  - `backend/app/services/task_event_consumer.py:90-107` — 任务完成事件消费者
+  - `backend/app/services/achievement_event_consumer.py:260-294` — 成就解锁事件消费者
+  - `backend/app/orchestration/routing_engine.py:940-979` — Stage 20 SufficiencyJudge 调用
+  - `backend/app/services/memory_inferred_write_lane.py:510-539` — ConflictResolver shadow mode
+  - `backend/app/config/settings.py:663-664` — SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED + SPARKLE_CONFLICT_RESOLVER_SHADOW_MODE
+  - `scripts/stage*/drill_transitions.sh` — 19 个 drill 脚本（Stage 20/22/40 无标准 drill_transitions.sh）
+  - `backend/app/api/v1/achievements.py:340-390` — create_contract 幂等键验证
+- **New issues**: L5(P2), L6(P3)
+- **Findings**: L 域续探聚焦 Aurora kill switch 覆盖率 + 治理规则有效性。(1) 21 个 Aurora kill switch 服务覆盖 Stage 18-40（缺 20/22/32/36）。Stage 32 为 SQAM 质量守卫（非运行时功能）。Stage 36 不存在。Stage 20/22 为实际缺口。(2) L5: CommunitySignalBridge 零 kill switch 引用——7 个公开方法无模式守卫，在 task_event_consumer 和 achievement_event_consumer 中无条件调用。同级 SocialSignalBridge 正确集成 Stage33 tri-state。若社区桥接在生产中出现性能或数据问题，无法通过标准 kill switch 关闭。(3) L6: Stage 20 SufficiencyJudge + ConflictResolver 使用简单布尔配置开关（settings.SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED），而非 Aurora tri-state kill switch——无 shadow 渐进发布、无 Prometheus gauge、无 drill 脚本。其他所有 Aurora Stage 均使用标准 kill switch 服务。(4) 验证了 achievement_engine.py 的金融原子性——with_for_update() 行锁正确，manage_transaction=False 为设计意图（父事务管理），非 bug。(5) 治理守卫（BB/BE）使用 token-presence 检查而非语义验证——已知 L4 已归档
+- **Opus pass rate**: pending (L5/L6)
+- **Next suggested domain**: K (error handling) — 5 轮未回探；或 J (cold start / empty state) — 6 轮未回探
