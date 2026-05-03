@@ -1172,6 +1172,10 @@
 | R46 | 2026-05-03T17:15 | ISSUE-20260505-1030-A1 | closed | bfbf1bd8d | ~5 min (1R) |
 | R47 | 2026-05-03T23:55 | ISSUE-20260504-1800-B1 | closed | 36d7b88c81 | ~35 min (1R) |
 | R48 | 2026-05-04T01:00 | ISSUE-20260504-1902-D3 | closed | 863d41d7e + a7d59f346 | ~10 min (1R) |
+| R49 | 2026-05-03T18:00 | ISSUE-20260504-1901-D2 | closed | 863d41d7e | ~5 min (1R) |
+| R50 | 2026-05-03T18:05 | ISSUE-20260504-2100-A1 | closed | 8c35f9ba6 | ~5 min (1R) |
+| R51 | 2026-05-03T18:15 | ISSUE-20260505-0800-H9 | closed | 6ff7e2f88 + 47dfa7cc5 + 5374afb5c | ~25 min (3R) |
+| R52 | 2026-05-03T18:40 | ISSUE-20260505-0900-I7 | closed | 34ce33cfe | ~10 min (1R) |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
