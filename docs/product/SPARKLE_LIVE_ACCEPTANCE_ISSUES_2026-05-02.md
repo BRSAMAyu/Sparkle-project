@@ -275,7 +275,7 @@
 - Label fix: "计划谬误" → "任务复杂度低估"
 - All demo text now bilingual via i18n pattern
 
-**fix_commit**: pending-commit
+**fix_commit**: c7918a705
 **closed_at**: 2026-05-03T14:25:00Z
 **opus_review**: APPROVED by opus-reviewer at 2026-05-03T14:24:00Z
 
@@ -479,7 +479,7 @@
 
 | Round | Timestamp | Issue ID | Final Status | Commit | Duration |
 |-------|-----------|----------|--------------|--------|----------|
-| R1 | 2026-05-03T14:20 | P2-01 | ✅ Fixed | pending | ~5 min |
+| R1 | 2026-05-03T14:20 | P2-01 | ✅ Fixed | c7918a705 | ~5 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
