@@ -134,6 +134,7 @@ class ProfileEventConsumer:
                 )
         except Exception as exc:
             logger.error(f"Failed to handle profile.preference.updated: {exc}")
+            raise
 
     async def _handle_preference_deleted(self, event: dict):
         try:
@@ -145,6 +146,7 @@ class ProfileEventConsumer:
             invalidate_personalization_cache(user_id)
         except Exception as exc:
             logger.error(f"Failed to handle profile.preference.deleted: {exc}")
+            raise
 
     async def _handle_knowledge_updated(self, event: dict) -> None:
         try:
@@ -154,6 +156,7 @@ class ProfileEventConsumer:
             await self._invalidate_profile_context_cache(user_id)
         except Exception as exc:
             logger.error(f"Failed to handle knowledge update event: {exc}")
+            raise
 
     async def _handle_behavior_pattern_updated(self, event: dict) -> None:
         try:
@@ -163,6 +166,7 @@ class ProfileEventConsumer:
             await self._invalidate_profile_context_cache(user_id)
         except Exception as exc:
             logger.error(f"Failed to handle behavior pattern update event: {exc}")
+            raise
 
     async def _handle_focus_session_completed(self, event: dict) -> None:
         try:
@@ -175,6 +179,7 @@ class ProfileEventConsumer:
                 await processor.process_focus_event(UUID(user_id))
         except Exception as exc:
             logger.error(f"Failed to handle focus session event: {exc}")
+            raise
 
     async def _handle_error_created(self, event: dict) -> None:
         try:
@@ -200,6 +205,7 @@ class ProfileEventConsumer:
                 )
         except Exception as exc:
             logger.error(f"Failed to handle error created event: {exc}")
+            raise
 
     async def _handle_insight_signal_family_updated(self, event: dict) -> None:
         try:
@@ -210,6 +216,7 @@ class ProfileEventConsumer:
                 await self._invalidate_profile_context_cache(user_id)
         except Exception as exc:
             logger.error(f"Failed to handle insight signal family update event: {exc}")
+            raise
 
     async def _handle_capsule_favorite_updated(self, event: dict) -> None:
         try:
@@ -233,6 +240,7 @@ class ProfileEventConsumer:
                     )
         except Exception as exc:
             logger.error(f"Failed to handle capsule favorite update event: {exc}")
+            raise
 
     async def _handle_seed_library_event(self, event: dict) -> None:
         try:
@@ -256,6 +264,7 @@ class ProfileEventConsumer:
                     )
         except Exception as exc:
             logger.error(f"Failed to handle seed library event: {exc}")
+            raise
 
     async def _handle_tool_history_recorded(self, event: dict) -> None:
         try:
@@ -269,6 +278,7 @@ class ProfileEventConsumer:
                     await BehaviorSignalCollector(db, self.redis, self.event_bus).handle_tool_history_event(event)
         except Exception as exc:
             logger.error(f"Failed to handle tool history event: {exc}")
+            raise
 
     @staticmethod
     async def _load_seed_library(db: Any, library_id: Any) -> SeedLibrary | None:

@@ -119,6 +119,7 @@ class InterventionEventConsumer:
                 await db.commit()
         except Exception as exc:
             logger.error(f"InterventionEventConsumer failed: {exc}")
+            raise
 
     async def _deliver_record(self, db, record: InterventionRecord) -> dict[str, Any]:
         intent_type = _INTENT_BY_TRIGGER.get(record.trigger_type, "recover_self_efficacy")

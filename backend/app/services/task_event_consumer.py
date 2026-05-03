@@ -169,6 +169,7 @@ class TaskEventConsumer:
 
         except Exception as e:
             logger.error(f"Failed to handle task.completed: {e}")
+            raise
 
     async def _handle_task_abandoned(self, event: dict):
         """处理任务放弃。"""
@@ -205,6 +206,7 @@ class TaskEventConsumer:
 
         except Exception as e:
             logger.error(f"Failed to handle task.abandoned: {e}")
+            raise
 
     async def _handle_task_stuck(self, event: dict):
         """处理任务卡住 — H-01: 新增 Spine 信号。"""
@@ -220,6 +222,7 @@ class TaskEventConsumer:
             )
         except Exception as e:
             logger.error(f"Failed to handle task.stuck: {e}")
+            raise
 
     async def _handle_task_feedback(self, event: dict):
         try:
@@ -273,6 +276,7 @@ class TaskEventConsumer:
                     logger.debug("Spine on_quiz_result skipped: {}", spine_exc)
         except Exception as e:
             logger.error(f"Failed to handle task.feedback_submitted: {e}")
+            raise
 
     async def _handle_plan_replanned(self, event: dict):
         try:
@@ -281,6 +285,7 @@ class TaskEventConsumer:
                 await collector.handle_plan_replanned_event(event)
         except Exception as e:
             logger.error(f"Failed to handle plan.replanned: {e}")
+            raise
 
     async def _handle_behavior_pattern(self, event: dict):
         try:
@@ -289,6 +294,7 @@ class TaskEventConsumer:
                 await collector.handle_behavior_pattern_event(event)
         except Exception as e:
             logger.error(f"Failed to handle behavior.pattern.updated: {e}")
+            raise
 
     async def _handle_spine_bridge_event(self, event: dict) -> None:
         try:
@@ -297,6 +303,7 @@ class TaskEventConsumer:
             await SpineEventBridge(cache_service.redis).handle_event(event)
         except Exception as e:
             logger.warning("Spine event bridge failed for {}: {}", event.get("event_type"), e)
+            raise
 
     async def _trigger_adaptive_plan_health_event(
         self,
@@ -401,6 +408,7 @@ class TaskEventConsumer:
                 logger.info("Triggered adaptation after reflection: plan_id={}", plan_id)
         except Exception as exc:
             logger.warning("reflection→adapt failed for plan {}: {}", plan_id, exc)
+            raise
 
     def stop(self):
         """停止消费者"""
