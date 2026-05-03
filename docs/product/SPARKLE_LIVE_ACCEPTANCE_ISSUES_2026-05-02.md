@@ -2767,7 +2767,8 @@
 - **opus_review**: APPROVED by independent-fix-reviewer at 2026-05-04T22:15:00Z — (a) Root cause addressed: commit 8c35f9ba6 changes line 591 from `push('/error-book')` to `push('/errors')`, matching the registered GoRouter path at error_book_routes.dart:30. This is the exact fix suggested in root_cause_hypothesis — not a hack, not a workaround. (b) Regression risk: NONE. Single 1-line string literal change. `_navigateToErrorBook()` has exactly one caller (line 501 action callback). `ErrorBookRoutes` class has no path constants, so string literal is the only viable approach. Post-fix grep confirms zero remaining references to `'/error-book'` in GoRouter push calls (remaining `error-book` references are backend API paths in error_book_repository.dart, which are correct and unrelated). (c) Cross-layer sync: N/A — Flutter-internal route string fix. No proto, DB, or i18n contract affected. The `/errors` path is used consistently across 7 other references (expanded_toolbar_section.dart:68, tool_registry.dart:266, error_repository.dart:19, error_book_repository.dart:18, node_detail_sheet.dart:200, error_book_routes.dart:30, routes.dart:310). (d) Tests: No automated test exists for this navigation path. This is a Flutter GoRouter route string fix — the protection is the string now matching the registered route. A manual test path exists: OmniBar → type "review errors" → tap chip → error book page opens. Removing the fix (reverting to `/error-book`) would cause the original silent failure, confirming testability. (e) Rule guards: all pass except pre-existing AX (proxy_routes.go route-tier comments, unrelated to this fix). No CLAUDE.md violations.
 
 ### ISSUE-20260505-0800-H9
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-03T18:15:00Z
 - **severity**: P2
 - **domain**: H
 - **title**: document_library_screen 归档/恢复/撤回操作的 10 处用户可见文案为纯中文硬编码，英文用户完全无法理解
