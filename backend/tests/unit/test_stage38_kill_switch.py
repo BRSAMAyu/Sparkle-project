@@ -71,3 +71,19 @@ async def test_stage38_invalid_mode_falls_back_to_shadow(monkeypatch) -> None:
 
     service = AuroraStage38KillSwitchService()
     assert await service.get_feature_mode("err_replan") == "shadow"
+
+
+def test_stage38_stage_labels_use_plain_number():
+    """E6 fix: Bindings must use stage="38" (not "stage38") for Prometheus consistency."""
+    from app.services.aurora_stage38_kill_switch_service import (
+        _ERR_REPLAN_BINDING,
+        _PUSH_SCHEDULER_BINDING,
+    )
+    assert _ERR_REPLAN_BINDING.stage == "38", (
+        f"ERR_REPLAN_BINDING.stage must be '38', got '{_ERR_REPLAN_BINDING.stage}' — "
+        "breaks Prometheus stage=~\"\\\\d+\" queries"
+    )
+    assert _PUSH_SCHEDULER_BINDING.stage == "38", (
+        f"PUSH_SCHEDULER_BINDING.stage must be '38', got '{_PUSH_SCHEDULER_BINDING.stage}' — "
+        "breaks Prometheus stage=~\"\\\\d+\" queries"
+    )

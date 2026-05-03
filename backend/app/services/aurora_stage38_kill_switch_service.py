@@ -10,7 +10,7 @@ from app.core.kill_switch import (
 )
 
 _ERR_REPLAN_BINDING = KillSwitchBinding(
-    stage="stage38",
+    stage="38",
     feature="err_replan",
     redis_key="err_replan_mode",
     settings_attr="AURORA_STAGE38_ERR_REPLAN_MODE",
@@ -18,7 +18,7 @@ _ERR_REPLAN_BINDING = KillSwitchBinding(
 )
 
 _PUSH_SCHEDULER_BINDING = KillSwitchBinding(
-    stage="stage38",
+    stage="38",
     feature="push_scheduler",
     redis_key="push_scheduler_mode",
     settings_attr="AURORA_STAGE38_PUSH_SCHEDULER_MODE",
