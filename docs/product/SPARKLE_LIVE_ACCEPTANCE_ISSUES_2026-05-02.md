@@ -833,10 +833,11 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1600-D1
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: D
 - **fixer_started_at**: 2026-05-04T00:45:00Z
+- **closed_at**: 2026-05-04T02:00:00Z
 - **title**: LangGraph planner.plan() 在 plan_review_service 和 multi_agent_adapter 中无超时保护，主路径已用 asyncio.wait_for 但两处调用未覆盖
 - **symptom**: 用户在计划修改流程或混合代理模式中触发 LangGraph 规划时，如果 LangGraph 图进入循环或 LLM 响应挂起，该请求将无限期阻塞，直到 HTTP/gRPC 传输层超时。用户看到超时错误而非优雅降级的回退计划。同时 Python 端协程继续运行，占用会话锁和 Redis 连接
 - **root_cause_hypothesis**: `LangGraphPlanner.plan()` 内部调用 `self.graph.ainvoke()` (lang_graph_planner.py:206) 无 asyncio 超时。3 个调用方中只有 `execution_engine.py:2048` 正确使用 `asyncio.wait_for(timeout=10.0)` 包裹。`plan_review_service.py:2199` 和 `multi_agent_adapter.py:87` 直接 `await planner.plan()` 无超时
@@ -851,8 +852,8 @@
 - **suggested_fix_direction**: 在 plan_review_service.py:2199 和 multi_agent_adapter.py:87 的 planner.plan() 调用处添加 `asyncio.wait_for(..., timeout=10.0)` + `except TimeoutError: build_fallback_plan()`，与 execution_engine.py:2048-2073 模式一致
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-03T16:45:00Z
-- **fix_commit**:
-- **independent_review**: REJECTED by independent-auditor at 2026-05-04. **Root cause NOT fixed.** Commit `77ea55fb5` only changed issue metadata (status: verified->in_progress, added fixer_started_at). No source code was modified. Both target files remain unprotected: `plan_review_service.py:2199` and `multi_agent_adapter.py:87` still call `await planner.plan()` without `asyncio.wait_for` timeout wrapper. Test file `backend/tests/test_langgraph_planner_timeout.py` does not exist in git history (only a stale `.pyc` in `__pycache__`). Evidence: `git diff 77ea55fb5~1..77ea55fb5` shows only docs change; `grep -rn "asyncio.wait_for|TimeoutError" plan_review_service.py multi_agent_adapter.py` returns empty; `find backend/tests -name "*planner_timeout*.py"` returns nothing. The fix needs to be fully implemented before this issue can be re-reviewed.
+- **fix_commit**: dd0885789 (timeout wrapper) + bf56ba944 (missing kwargs fix)
+- **independent_review**: REWORK ROUND 1 REJECTED by independent-auditor (dd0885789 — missing snapshot+rationale kwargs). REWORK ROUND 2 APPROVED by independent-reviewer at 2026-05-03 (commit bf56ba944). **APPROVED — all 5 audit dimensions pass.** (a) Root cause resolved: both `build_fallback_plan` calls now pass all 5 required kwargs (message, snapshot, user_id, session_id, rationale). `snapshot` variable confirmed in scope at multi_agent_adapter.py:83 and plan_review_service.py:2187, both before the try block. Pattern matches execution_engine.py:2073-2082 reference implementation. (b) No regression risk: no control flow changes, no parameter renaming, snapshot pre-existing in scope. All 7 other `build_fallback_plan` callers in the codebase already pass all required kwargs. Optional `plan_version=1` omitted from these two calls but has default value 1 in signature. (c) No cross-layer impact: pure Python-internal fix, no proto/DB/i18n changes. (d) Tests protect regression: `test_fallback_calls_pass_required_kwargs` is a source-scanning test that will fail if snapshot= or rationale= are removed from either file; `test_plan_review_replan_timeout_uses_fallback` and `test_multi_agent_plan_timeout_uses_fallback` use `assert_called_once_with()` with exact kwargs. Previous round's weakness (MagicMock accepting any kwargs) addressed by strict assertion + source scan. (e) Rule guards: 6/6 timeout tests pass; AX pre-existing fail unrelated; no CLAUDE.md violations.
 
 
 ### ISSUE-20260503-1700-F1
@@ -1043,6 +1044,7 @@
 | R14 | 2026-05-03T22:50 | ISSUE-20260503-2102-I3 | ✅ Fixed | 9b2698fd1 | ~30 min |
 | R15 | 2026-05-04T00:20 | ISSUE-20260503-0432-L2 | ✅ Fixed | 8c16875c1 | ~65 min |
 | R16 | 2026-05-04T00:35 | ISSUE-20260503-1602-E3 + E4 | ✅ Fixed | 288b0407b | ~5 min |
+| R17 | 2026-05-04T01:45 | ISSUE-20260503-1600-D1 | ✅ Fixed | dd0885789+bf56ba944 | ~75 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
