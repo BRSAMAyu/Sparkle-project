@@ -11782,5 +11782,8 @@
   "studyMaterialsStatusActive": "可用",
   "studyMaterialsStatusArchived": "已归档",
   "studyMaterialsStatusRevoked": "已撤权",
-  "studyMaterialsStatusOrphaned": "目标已结束"
+  "studyMaterialsStatusOrphaned": "目标已结束",
+  "sprintHistoryLoading": "加载冲刺历史...",
+  "sprintHistoryEmptyDesc": "已关闭的冲刺会在这里汇聚，包括节奏、笔记和成果。",
+  "sprintHistoryStartSprint": "开始冲刺"
 }

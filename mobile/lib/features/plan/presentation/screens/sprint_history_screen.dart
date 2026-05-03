@@ -51,7 +51,7 @@ class SprintHistoryScreen extends ConsumerWidget {
     if (state.isLoading && state.items.isEmpty) {
       return LoadingIndicator.circular(
         showText: true,
-        loadingText: 'Loading sprint history...',
+        loadingText: l10n.sprintHistoryLoading,
       );
     }
 
@@ -84,11 +84,10 @@ class SprintHistoryScreen extends ConsumerWidget {
 
   Widget _buildEmptyState(BuildContext context, AppLocalizations l10n) =>
       EmptyState(
-        title: 'No sprint history yet',
-        description:
-            'Closed sprints will gather here with their rhythm, notes, and wins.',
+        title: l10n.noSprintHistory,
+        description: l10n.sprintHistoryEmptyDesc,
         icon: Icons.history,
-        actionText: 'Start a sprint',
+        actionText: l10n.sprintHistoryStartSprint,
         onAction: () => context.push('/plans/sprint'),
       );
 

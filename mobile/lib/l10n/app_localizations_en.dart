@@ -30208,4 +30208,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studyMaterialsStatusOrphaned => 'Target ended';
+
+  @override
+  String get sprintHistoryLoading => 'Loading sprint history...';
+
+  @override
+  String get sprintHistoryEmptyDesc =>
+      'Closed sprints will gather here with their rhythm, notes, and wins.';
+
+  @override
+  String get sprintHistoryStartSprint => 'Start a sprint';
 }

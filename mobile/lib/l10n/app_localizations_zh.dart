@@ -28969,4 +28969,13 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get studyMaterialsStatusOrphaned => '目标已结束';
+
+  @override
+  String get sprintHistoryLoading => '加载冲刺历史...';
+
+  @override
+  String get sprintHistoryEmptyDesc => '已关闭的冲刺会在这里汇聚，包括节奏、笔记和成果。';
+
+  @override
+  String get sprintHistoryStartSprint => '开始冲刺';
 }

@@ -11781,5 +11781,8 @@
   "studyMaterialsStatusActive": "Active",
   "studyMaterialsStatusArchived": "Archived",
   "studyMaterialsStatusRevoked": "Revoked",
-  "studyMaterialsStatusOrphaned": "Target ended"
+  "studyMaterialsStatusOrphaned": "Target ended",
+  "sprintHistoryLoading": "Loading sprint history...",
+  "sprintHistoryEmptyDesc": "Closed sprints will gather here with their rhythm, notes, and wins.",
+  "sprintHistoryStartSprint": "Start a sprint"
 }

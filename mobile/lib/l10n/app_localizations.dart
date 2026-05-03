@@ -52673,6 +52673,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'目标已结束'**
   String get studyMaterialsStatusOrphaned;
+
+  /// No description provided for @sprintHistoryLoading.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载冲刺历史...'**
+  String get sprintHistoryLoading;
+
+  /// No description provided for @sprintHistoryEmptyDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'已关闭的冲刺会在这里汇聚，包括节奏、笔记和成果。'**
+  String get sprintHistoryEmptyDesc;
+
+  /// No description provided for @sprintHistoryStartSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'开始冲刺'**
+  String get sprintHistoryStartSprint;
 }
 
 class _AppLocalizationsDelegate
