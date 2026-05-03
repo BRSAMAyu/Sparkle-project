@@ -774,9 +774,10 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1602-E3
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: E
+- **fixer_started_at**: 2026-05-04T00:30:00Z
 - **title**: drill_all.sh 统合钻取脚本遗漏 Stage 37/38/39，三阶段的 kill switch 变更无法通过统合入口验证
 - **symptom**: 执行统一的 `drill_all.sh`（CLAUDE.md 推荐的 kill switch drill 入口）不会验证 Stage 37 (LLM Safety)、Stage 38、Stage 39 的 kill switch 状态。操作者可能误以为已通过 drill_all 覆盖了所有阶段的 kill switch，但实际上这三个阶段的 kill switch 未被验证
 - **root_cause_hypothesis**: `drill_all.sh` 只运行了三个部分：(1) Python 统合 drill `run_kill_switch_drills.py`（覆盖 Stage 18-31 + 40），(2) `bash stage33/drill_transitions.sh`，(3) `bash stage34/drill_transitions.sh`，(4) `bash stage35/drill_transitions.sh`。Stage 37/38/39 各有独立的 `drill_transitions.sh` 但未被 `drill_all.sh` 引用
