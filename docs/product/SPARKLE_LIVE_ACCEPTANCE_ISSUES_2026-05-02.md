@@ -369,7 +369,7 @@
 - **Routes Verified (working with data)**: 5
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
-- **Discovered (not verified)**: 0 (B1 closed, H1/H2/H4 verified, H3 rejected)
+- **Discovered (not verified)**: 0 (B1 closed, H1/H2/H4 verified, H3 rejected, K1 verified)
 
 ---
 
@@ -382,6 +382,7 @@
 | R3 | 2026-05-03T13:30 | C | 0 | N/A | Proto/WebSocket contract sound; reconnection has offline queue persistence |
 | R4 | 2026-05-03T14:00 | J | 0 | N/A | Cold-start well-designed: skeleton loading, first-goal empty state, wizard with AI, error recovery |
 | R5 | 2026-05-03T14:10 | H | 4 | 3/4 (H3 rejected as designed) | i18n residuals: H1/H2/H4 verified, H3 rejected (isChinese is project documented pattern) |
+| R6 | 2026-05-03T15:00 | K | 1 | 1/1 (K1 verified) | Error handling gaps in goal detail actions |
 
 ---
 
@@ -546,6 +547,26 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: -
 
+### ISSUE-20260503-1500-K1
+- **status**: verified
+- **severity**: P2
+- **domain**: K
+- **title**: 目标详情页"开始"/"完成"按钮 API 调用无错误处理，失败时用户零反馈
+- **symptom**: 用户在目标详情页点击"开始"或"完成"按钮后，如果后端 API 返回错误（网络超时/500/任务状态冲突），按钮无反应，无 SnackBar 提示，无 loading 状态恢复。对"开始"按钮，成功时显示的 Snackbar 不会出现；对"完成"按钮，确认对话框关闭后无任何反馈。
+- **root_cause_hypothesis**: `GoalDetailNotifier.startNextStep()` 和 `completeNextStep()` 两个方法直接 `await` API 调用后 `unawaited(load())`，没有 try/catch。UI 层 `goal_detail_page.dart` 的按钮回调也没有 try/catch 包裹。异常在 async 回调中未被捕获，Flutter 静默吞掉。
+- **evidence**:
+  - `mobile/lib/features/goal/presentation/providers/goal_detail_provider.dart:44-49` — `startNextStep()`: `await _ref.read(apiClientProvider).post<dynamic>('/tasks/$taskId/start'); unawaited(load());` 无 try/catch
+  - `mobile/lib/features/goal/presentation/providers/goal_detail_provider.dart:58-63` — `completeNextStep()`: `await _ref.read(apiClientProvider).post<dynamic>('/tasks/$taskId/complete'); unawaited(load());` 无 try/catch
+  - `mobile/lib/features/goal/presentation/pages/goal_detail_page.dart:305-322` — `startNextStep()` 调用无 try/catch，直接 await 后显示 success snackbar
+  - `mobile/lib/features/goal/presentation/pages/goal_detail_page.dart:346-350` — `completeNextStep()` 调用无 try/catch，确认对话框关闭后静默
+- **repro_or_trigger**: 目标详情页 → 确保 `todaysMinimalNextStep` 有 taskId → 断开后端 API → 点击"开始"或"完成" → 无任何错误提示
+- **expected_vs_actual**: 期望：API 失败时显示错误 SnackBar 或重试提示，state 回退到调用前；实际：无任何反馈，用户无法判断操作是否成功
+- **blast_radius**: 影响所有用户在目标详情页执行核心操作（开始/完成任务）的体验。这是 Sparkle 增长循环中 Execute 阶段的关键交互。对北极星有中等影响——如果任务完成操作静默失败，用户可能误以为任务已完成，导致计划进度不更新
+- **suggested_fix_direction**: 在 provider 的 `startNextStep()`/`completeNextStep()` 中加 try/catch，失败时不调用 `load()` 并将 state 设为 error；或在 UI 层 try/catch 并显示 error SnackBar（与 friends_screen.dart 的 `deleteFriend` 模式一致）
+- **discovered_by**: explorer-loop
+- **verified_by**: opus-independent-reviewer+2026-05-03T15:30
+- **fix_commit**:
+
 ---
 
 ## 探索日志
@@ -590,3 +611,17 @@
 - **Findings**: 4/5 i18n issues are in community features (group members, group tasks, group chat). Pattern: features developed in batches where later additions used proper l10n but earlier hardcoded English was never retrofitted. memory_detail_screen is the outlier — Aurora cognitive feature with version management and correction mechanism, mostly i18n'd but missed 10+ labels.
 - **Opus pass rate**: 3/4 (H1/H2/H4 verified, H3 rejected — isChinese is project documented i18n pattern)
 - **Next suggested domain**: K (错误处理/降级/边界) — error handling and degradation patterns emerged as key gap from R3/R4 clean results
+
+### Round R6 — 2026-05-03T15:00
+- **Domain**: K (错误处理 / 降级 / 边界)
+- **Paths covered**:
+  - goal_detail_provider.dart (startNextStep/completeNextStep error handling)
+  - goal_detail_page.dart (UI layer error handling around provider calls)
+  - community_provider.dart (deleteFriend/blockUser/GroupMembersNotifier error handling)
+  - friends_screen.dart (deleteFriend/blockUser UI error handling)
+  - accountability_provider.dart (endPartnership error handling)
+  - accountability_detail_screen.dart (endPartnership UI error handling)
+- **New issues**: K1(P2)
+- **Findings**: Community module error handling is well-designed — all destructive operations (deleteFriend, blockUser, endPartnership, kickMember/promoteMember/demoteMember/transferOwnership) have proper try/catch at the UI layer with user-facing error feedback. Provider methods correctly update state after successful API calls (not before), so failures leave state unchanged. The one gap is in goal detail: `startNextStep()`/`completeNextStep()` have zero error handling at both provider and UI layers. If the API fails, the user sees no feedback at all — the dialog/button just silently does nothing. This affects the core growth loop (Execute phase).
+- **Opus pass rate**: 1/1 (K1 verified by opus-independent-reviewer)
+- **Next suggested domain**: A (Flutter UI 端到端链路) or L (治理规则与文档承诺 vs 真实实现)
