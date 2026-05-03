@@ -3076,5 +3076,4 @@
   1. **H9 (P2) — document_library_screen 部分国际化**: 文件的 upload/search/metrics/delete/empty states 全部正确使用 `context.l10n.*`（20+ 处），但归档/恢复/撤回功能的 10 个用户可见字符串为纯中文硬编码。同一个 revoke dialog 内出现混合 i18n：cancel 按钮用 `context.l10n.cancel`（英文），确认按钮用 `const Text('撤回')`（中文）。ARB 文件有 40+ 个 `studyMaterials*` key 但无任何 archive/revoke 相关 key
   2. **排除项**: (a) 所有其他 feature 的 presentation 层（home, community, user, goal, task, focus, calendar, cognitive, plan）无裸中文硬编码——全部通过 `I18nService` 或 `context.l10n` 处理；(b) group_tasks_screen.dart 使用 24 处 `I18nService` inline pattern 正确；(c) 用户设置/个人资料界面完全无裸字符串；(d) home widgets (expanded_toolbar, next_actions, aurora_status_band) 全部正确 i18n
   3. **全量统计**: `const Text('中文字符')` 在 features/ 下仅 3 处（全在 document_library），`SnackBar(content: Text('中文'))` 仅 6 处（全在 document_library），`I18nService.instance.isChinese` 在 features/ 下有 872 处——document_library 是唯一遗漏
-- **Opus pass rate**: pending
-- **Next suggested domain**: K (错误处理/降级/边界) — 7 轮未回探；或 D (Python orchestrator FSM) — 8 轮未回探
+- **Opus pass rate**: 1/1 (H9 verified)
