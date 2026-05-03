@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 17:00 (R38 F-domain exploration — 1 discovered: F5 Task/Profile/Intervention 消费者内部吞噬异常旁路 DLQ)
+> Updated: 2026-05-04 18:00 (R39 B-domain exploration — 3 discovered: B1/B2/B3, pending Opus review)
 
 ---
 
@@ -412,6 +412,7 @@
 | R36 | 2026-05-04T16:00 | L | 2 | 2/2 (L5/L6 verified) | L 域续探——governance rule effectiveness: CommunitySignalBridge 无 kill switch（同级 SocialSignalBridge 有 Stage33 tri-state）+ Stage 20 SufficiencyJudge/ConflictResolver 用布尔开关非 Aurora tri-state（无 shadow/gauge/drill） |
 | R37 | 2026-05-04T16:20 | K | 0 | N/A | K 域续探——Flutter 20+ catch blocks 审查 + Python 15+ except:pass 审查，全部为设计合理的防御性编码或已被 R6/R31 归档 |
 | R38 | 2026-05-04T17:00 | F | 1 | 1/1 (F5 verified by opus-reviewer) | F 域续探——Task/Profile/Intervention 消费者子处理器吞噬异常旁路 EventBus DLQ/retry |
+| R39 | 2026-05-04T18:00 | B | 3 | pending Opus | B 域续探——CurrentUserStatusNotifier 乐观更新无回滚 + confirmMinimumCriteria 纯本地无持久化 + GroupTasks/BlockedUsers 刷新丢数据 |
 
 ---
 
@@ -2238,6 +2239,66 @@
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence：(1) task_event_consumer.py:90-171 — _handle_task_completed 外层 try/except Exception 仅 logger.error 无 re-raise，内部 BehaviorSignalCollector+MetacognitionService+CommunitySignalBridge 共享同一 AsyncSessionLocal 事务，中途失败全部回滚但事件已 ACK；(2) profile_event_consumer.py — 11 个子处理器（_handle_preference_updated/deleted/knowledge_updated/behavior_pattern_updated/focus_session_completed/error_created/insight_signal_family_updated/capsule_favorite_updated/seed_library_event/tool_history_recorded 及其 helper）全部使用 try/except Exception + logger.error 无 re-raise；(3) intervention_event_consumer.py:96-121 — _handle_record_created 同样模式，干预记录停留在 CREATED 状态不重试；(4) event_bus.py:1145-1151 — _process_stream_message 在 callback 正常返回后执行 xack，仅 callback 抛异常时路由到 _handle_failed_message；(5) galaxy_event_consumer.py:64 — 对比参照使用 @reliable_consumer 装饰器，handle_event 无 try/except 包裹，主流程异常可传播到 EventBus DLQ/retry。调用链验证：子处理器吞异常 → callback 正常返回 → EventBus xack → 消息永不重试/不进 DLQ。非设计意图——EventBus 的 DLQ/retry 基础设施存在目的就是处理消费者失败，吞异常完全旁路此机制。与其他任何条目无重复。
 - **fix_commit**: 留空
 
+### ISSUE-20260504-1800-B1
+- **status**: discovered
+- **severity**: P2
+- **domain**: B
+- **title**: CurrentUserStatusNotifier.updateStatus 乐观更新后 API 失败不回滚本地状态
+- **symptom**: 用户切换在线状态（在线/离开/忙碌/隐身）后 API 静默失败时，UI 显示切换后的状态，但服务器未更新。用户被误导以为状态已生效，实际其他用户看不到状态变化。
+- **root_cause_hypothesis**: `updateStatus()` 先将 `state = newStatus` 再调用 API。catch 块仅 `debugPrint` 无 `state = previousStatus` 回滚。同文件 `FeedNotifier.toggleLike()`（community_providers.dart:53-55）展示了正确的乐观更新+回滚模式（`catch (_) { state = AsyncValue.data(currentList); }`），但 `CurrentUserStatusNotifier` 未遵循此模式。
+- **evidence**:
+  - `mobile/lib/features/community/presentation/providers/community_provider.dart:2048-2054` — `state = newStatus` 在 `await _repository.updateStatus(newStatus)` 之前；catch 块仅 `debugPrint('Update Status Failed: $e')` 不回滚
+  - `mobile/lib/features/community/presentation/providers/community_providers.dart:50-56` — 同文件对照：`FeedNotifier.toggleLike()` 乐观更新后 catch 回滚 `state = AsyncValue.data(currentList)`
+  - `mobile/lib/features/community/data/repositories/community_repository.dart:870` — `updateStatus()` 执行真实 PATCH API 调用，可能因网络/认证原因失败
+- **repro_or_trigger**: 切换用户在线状态 → 在 API 调用期间断开网络 → 观察 UI：状态已切换到新值 → 恢复网络 → 下拉刷新 → 状态回到旧值（因为服务器从未收到更新）
+- **expected_vs_actual**: 期望：API 失败时本地状态回滚到原值，用户看到错误提示；实际：本地状态停留在错误值，静默失败
+- **blast_radius**: 影响在线状态显示准确性。用户可能以为自己是"隐身"模式但实际对好友可见（隐私风险），或以为"在线"但好友看不到。对北极星影响低——不阻塞核心学习流程
+- **suggested_fix_direction**: catch 块中添加 `state = previousStatus` 回滚（需在 try 前捕获 `final previousStatus = state`），并可选通过 `AppFeedback.error()` 通知用户
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1801-B2
+- **status**: discovered
+- **severity**: P1
+- **domain**: B
+- **title**: GoalDetailNotifier.confirmMinimumCriteria 纯本地状态变更无 API 持久化，刷新即丢失
+- **symptom**: 用户在目标详情页确认"最低验收标准"（Minimum Acceptance Criteria），看到 SnackBar 提示"已确认"并可撤销。下拉刷新或离开页面返回后，确认状态复原为未确认。用户的确认决定永久丢失。
+- **root_cause_hypothesis**: `confirmMinimumCriteria()` 方法仅执行 `state = AsyncValue.data(value.copyWith(...))` 纯本地状态更新，无任何 API 调用或持久化。`undoConfirmMinimumCriteria()` 同理。后端无 `/goal/{id}/confirm-criteria` 或等效端点（grep 确认）。对比同文件 `startNextStep()`/`completeNextStep()` 均执行 `POST /tasks/$taskId/...` 后 `load()` 重载。
+- **evidence**:
+  - `mobile/lib/features/goal/presentation/providers/goal_detail_provider.dart:77-86` — `confirmMinimumCriteria()` 仅本地 copyWith status='confirmed'，无 API 调用
+  - `mobile/lib/features/goal/presentation/providers/goal_detail_provider.dart:88-97` — `undoConfirmMinimumCriteria` 同样纯本地，无 API 调用
+  - `mobile/lib/features/goal/presentation/providers/goal_detail_provider.dart:44-53` — 对照：`startNextStep()` 有 `POST /tasks/$taskId/start` + `load()` 重载
+  - `mobile/lib/features/goal/presentation/pages/goal_detail_page.dart:71-85` — UI 层调用 `confirmMinimumCriteria()` 后显示 SnackBar 含撤销按钮，无任何错误处理或网络状态感知
+  - backend grep 结果：零匹配 `confirmMinimumCriteria\|confirm.*criteria\|minimumAcceptance.*confirm`（无后端端点）
+- **repro_or_trigger**: 打开任意目标详情页 → 点击"确认"最低验收标准 → 看到 SnackBar "已确认" → 下拉刷新页面 → 确认状态回到未确认
+- **expected_vs_actual**: 期望：确认操作持久化到服务器，跨会话/设备保持；实际：确认仅存于内存，刷新/离开即丢失
+- **blast_radius**: 影响核心增长循环的"Clarify"阶段——用户确认验收标准是目标明确化的关键步骤。确认丢失导致：(1) 用户信任受损（"我明明确认了"）；(2) 无持久化确认意味着 Plan Review/AdaptiveReplanner 无法知道用户已接受标准；(3) 对北极星有直接影响——0 基础学生通过 7 天考试需要明确的目标确认，确认丢失使后续的计划健康评估失效
+- **suggested_fix_direction**: (1) 添加后端 `POST /goals/{id}/confirm-criteria` 端点持久化确认状态；(2) `confirmMinimumCriteria()`/`undoConfirmMinimumCriteria()` 改为 async，先调用 API 再更新本地状态；(3) 或合并入 `load()` 的 GET 响应中由服务端返回确认状态
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1802-B3
+- **status**: discovered
+- **severity**: P3
+- **domain**: B
+- **title**: GroupTasksNotifier 与 BlockedUsersNotifier 刷新失败时丢弃已有数据进入 error 态，与同文件其他 Notifier 不一致
+- **symptom**: 群任务或黑名单用户在后台刷新失败时，用户看到的不是陈旧但可用的数据，而是错误页面，必须手动重试。群任务页面（group_tasks_screen.dart）使用 `AsyncValue.when(data/loading/error)` 模式，error 状态显示完整错误页面覆盖所有内容。
+- **root_cause_hypothesis**: `GroupTasksNotifier.loadTasks()` (line 1533) 和 `BlockedUsersNotifier.loadBlockedUsers()` (line 2072) 无条件设置 `state = const AsyncValue.loading()` 后再请求。失败时进入 `AsyncValue.error`，丢弃已有数据。同文件 `GroupDetailNotifier.loadDetail()` (line 668-683)、`GroupDirectoryNotifier.loadDirectory()` (line 547-571)、`MyGroupsNotifier.loadGroups()` (line 748-767) 均先保存 `previous = state.valueOrNull`，失败时回退到 `state = AsyncValue.data(previous)`。这是同一文件内的模式不一致。
+- **evidence**:
+  - `mobile/lib/features/community/presentation/providers/community_provider.dart:1532-1539` — `GroupTasksNotifier.loadTasks()` 先 `state = const AsyncValue.loading()`，catch 中 `state = AsyncValue.error(e, st)` 无 previous 保留
+  - `mobile/lib/features/community/presentation/providers/community_provider.dart:2071-2078` — `BlockedUsersNotifier.loadBlockedUsers()` 同样模式，无 previous 保留
+  - `mobile/lib/features/community/presentation/providers/community_provider.dart:668-683` — 对照：`GroupDetailNotifier.loadDetail()` 正确保存 `final previous = state.valueOrNull`，失败时 `state = AsyncValue.data(previous)` + debugPrint
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:42-162` — UI 层 `tasksState.when(data/loading/error)`，error 状态渲染 `CustomErrorWidget.page` 完全覆盖任务列表
+- **repro_or_trigger**: 进入群任务页面加载成功（看到 Kanban 视图） → 断开网络 → 下拉刷新 → 全部任务消失 → 显示完整错误页面
+- **expected_vs_actual**: 期望：刷新失败时保留当前任务列表，顶部显示错误 banner 或 snackbar；实际：任务列表被错误页面完全替换，用户失去对当前任务状态的可见性
+- **blast_radius**: 影响群任务和黑名单管理两个功能的刷新容错性。对北极星影响低——任务数据仍可通过再次刷新或重新进入恢复。但用户体验差：正在查看的 Kanban 任务被错误页面完全覆盖
+- **suggested_fix_direction**: 对 `GroupTasksNotifier.loadTasks()` 和 `BlockedUsersNotifier.loadBlockedUsers()` 采用与 `GroupDetailNotifier` 相同的 previous 保留模式，仅在无 previous 时进入 error 态
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
 ### Round R25 — 2026-05-04T05:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
@@ -2542,3 +2603,23 @@
   6. **误报排除**: GalaxyEventConsumer._handle_error_created 的 `except Exception: continue` (line 102-103) 经亲自 Read 验证仅用于 UUID 解析循环，不影响主流程异常传播（之前 agent 的误判已排除）
 - **Opus pass rate**: 1/1 (F5 verified by opus-reviewer)
 - **Next suggested domain**: G (Mock vs Real) — 6 轮未回探；或 H (i18n) — 4 轮未回探
+
+### Round R39 — 2026-05-04T18:00
+- **Domain**: B (Riverpod Provider 健康度 — 续探)
+- **Paths covered**:
+  - `mobile/lib/features/community/presentation/providers/community_provider.dart:1-2093` — 全量审查 25 个社区 provider 的状态管理模式（optimistic update、previous-preserve、error propagation）
+  - `mobile/lib/features/community/presentation/providers/community_providers.dart:1-118` — FeedNotifier 状态管理（toggleLike 乐观更新+回滚、addPostOptimistically 正确模式）
+  - `mobile/lib/features/goal/presentation/providers/goal_detail_provider.dart:1-437` — GoalDetailNotifier 全量审查（load/startNextStep/completeNextStep/confirmMinimumCriteria/undoConfirmMinimumCriteria）
+  - `mobile/lib/features/goal/presentation/pages/goal_detail_page.dart:71-85` — confirmMinimumCriteria UI 调用链验证
+  - `mobile/lib/features/home/presentation/providers/dashboard_provider.dart:419-676` — DashboardNotifier 状态模式（auto-retry on error, correct）
+  - `mobile/lib/features/home/presentation/providers/home_growth_provider.dart:326-477` — 6 个 FutureProvider 错误处理（DioException catch + fallback, correct）
+  - `mobile/lib/features/community/data/repositories/community_repository.dart:62-67,870` — likePost/updateStatus API 调用链（后端真实端点证实）
+  - backend grep: `confirmMinimumCriteria` / `confirm.*criteria` / `minimumAcceptance.*confirm` — 零匹配（无后端端点）
+- **New issues**: 3 — B1 (CurrentUserStatusNotifier 乐观更新无回滚, P2), B2 (confirmMinimumCriteria 纯本地无持久化, P1), B3 (GroupTasks/BlockedUsers 刷新丢数据, P3)
+- **Findings**: B 域续探深入分析 5 个关键 provider 文件（~3,200 行 Dart）。发现 3 个模式不一致的缺口：
+  1. **B1**: `CurrentUserStatusNotifier.updateStatus()` 乐观更新后 API 失败时不回滚 `state`，与同文件 `FeedNotifier.toggleLike()` 的正确乐观更新+回滚模式形成对比。其他所有社区 provider（GroupChatNotifier.removeMember、GroupRecommendationsNotifier.dismiss/join）均采用 API-first 或乐观+回滚模式——此为唯一缺口
+  2. **B2**: `GoalDetailNotifier.confirmMinimumCriteria()` / `undoConfirmMinimumCriteria()` 为纯本地状态变更（void 返回，无 async），无任何 API 调用或持久化。后端无对应端点（grep 确认）。对比同文件 `startNextStep()` / `completeNextStep()` 均执行 POST + reload，形成明显的半成品实现模式。对北极星有直接影响：目标明确化（Clarify 阶段）是成长循环关键步骤，确认丢失使后续 Plan Review/AdaptiveReplanner 无法知晓用户已接受标准
+  3. **B3**: `GroupTasksNotifier.loadTasks()` 和 `BlockedUsersNotifier.loadBlockedUsers()` 无条件设置 loading 后请求，失败进入 error 态丢弃已有数据。同文件 `GroupDetailNotifier`、`GroupDirectoryNotifier`、`MyGroupsNotifier` 均先保存 previous 并在失败时回退。一致性分析：社区 provider 文件内 3/5 的 family notifier 使用 previous 保留模式，2/5 不使用——模式不统一导致不可预期的 UX 行为差异
+  4. **排除项**: (a) FeedNotifier.toggleLike 虽命名 misleading（无 unlike 路径，系统仅支持 like），但乐观更新逻辑本身正确（API 成功→本地+1；API 失败→回滚），不属于 bug；(b) chat_provider.dart 使用自定义 ChatState 非 AsyncValue，其状态管理已通过 multi-generation stream 隔离 + stale-guard 机制正确实现并发安全；(c) dashboard_provider.dart 的 auto-retry on error (line 670-674) 是设计特性非 bug；(d) home_growth_provider.dart 6 个 FutureProvider 仅 catch DioException 让 TypeError 传播——正确设计（代码 bug 应进入 error 态可见）
+- **Opus pass rate**: pending
+- **Next suggested domain**: G (Mock vs Real) — 8 轮未回探（上次 R33）；或 D (Python orchestrator FSM) — 多轮未回探（上次 R28）
