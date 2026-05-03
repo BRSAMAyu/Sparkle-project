@@ -1513,7 +1513,7 @@
 
 
 ### ISSUE-20260504-0300-C2
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: C
 - **title**: Go gateway 缺少 2 个 task guidance 代理路由（GET/POST），用户点击生成指南后报错
@@ -1530,8 +1530,9 @@
 - **blast_radius**: 影响任务学习指南（Task Guidance）功能的完整流程——用户无法获取或生成 AI 定制的任务学习指南。Guidance 是 Phase 2 新增的差异化功能（task_guidance_surface.dart 是 P2-05 产物），对北极星有中等影响——任务指南帮助学生理解如何完成复杂任务
 - **suggested_fix_direction**: 在 proxy_routes.go 的 tasks 路由组中添加：`tasks.GET("/:id/guidance", h.proxyWithHeaders)` 和 `tasks.POST("/:id/guidance", h.proxyWithHeaders)`。与 C1 修复的 pause/resume/stuck 保持一致的注册模式
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-reviewer+2026-05-04T03:15:00Z
 - **fix_commit**: 留空
+- **reviewer_note**: APPROVED — independent review confirms all 6 evidence references match code exactly. (1) proxy_routes.go:69-132 tasks group: 32+ explicit routes covering start/complete/abandon/pause/resume/stuck/snooze/too-hard/skip/generate-guide/feedback/next-action-selection/card-protocol/priority-reasoning/resources. No `Any("/*path")` catch-all — unlike users/interventions/dashboard groups which use catch-alls. grep for "guidance" returns empty. The existing `POST /:id/generate-guide` (line 112) is a DIFFERENT endpoint (writes to task.guide_content directly, not the TaskGuidance sidecar system). (2) tasks.py:876 — `@router.get("/{task_id}/guidance")` EXISTS. tasks.py:904 — `@router.post("/{task_id}/guidance")` EXISTS. Both are fully implemented. (3) task_repository.dart:313 — `_taskGuidancePath(taskId) => '${ApiEndpoints.task(taskId)}/guidance'` constructs `/tasks/{id}/guidance`. getTaskGuidance (line 969): GET, catches 404→null (silent degradation). createOrRefreshTaskGuidance (line 999): POST, DioException→_handleDioError→Exception (hard failure). (4) task_guidance_surface.dart:69-78 — _primeHumanGuidance calls loadTaskGuidance then createOrRefreshTaskGuidance on null. Line 107 — user-triggered _generateSelected also calls createOrRefreshTaskGuidance. Call chain: Flutter HTTP→Go Gin router→no explicit route match→NoRoute handler→shouldProxyNoRoutePath returns false (only /api/v1/auth/* paths)→404 JSON→Flutter error. Not design intent: guidance follows identical pattern to 32+ registered task sub-routes; omission is unintentional. Not duplicate of C1: C1 (commit 0fd0c3b6d) added exactly 3 lines — pause/resume/stuck only — confirmed by git diff. Guidance is a distinct endpoint pair discovered in R20 during A-domain UI exploration.
 
 
 ### Round R17 — 2026-05-04T01:45
