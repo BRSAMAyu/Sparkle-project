@@ -770,10 +770,11 @@
 - **fix_commit**: 96fe0329c
 
 ### ISSUE-20260503-1601-E2
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
 - **domain**: E
 - **title**: Privacy 模块 pii_redaction_mode() 绕过 read_mode() 直接读 settings，导致隐私 kill switch 的 Prometheus 指标在读路径缺失
+- **fixer_started_at**: 2026-05-04T00:35:00Z
 - **symptom**: 操作者无法通过 Prometheus `sparkle_kill_switch_mode{feature="privacy_pii_redaction"}` 指标观测隐私模块的实际运行模式（写路径通过 drill 脚本可以记录，但读路径——即每次 PII 脱敏调用时——不记录）。隐私模块是三态架构中唯一绕过集中式 `read_mode()` 的模块
 - **root_cause_hypothesis**: `privacy.py:53-57` 的 `pii_redaction_mode()` 直接调用 `normalize_mode(getattr(settings, ...))` 而非通过 `KillSwitchBinding.read_mode()`。`normalize_mode()` 只做字符串标准化，不记录 Prometheus gauge。而 `read_mode()` 内部会调用 `record_mode_gauge()` 将模式写入 `sparkle_kill_switch_mode` 指标
 - **evidence**:
@@ -1378,7 +1379,7 @@
 ---
 
 ### ISSUE-20260504-0015-I4
-- **status**: discovered
+- **status**: verified
 - **severity**: P1
 - **domain**: I
 - **title**: ReportReason I3 修复不完整：Python model enum 缺失 HATE_SPEECH，schema 接受但 DB 写入失败
@@ -1394,7 +1395,7 @@
 - **blast_radius**: 阻断"仇恨言论"类举报——社区安全核心功能。对北极星有高影响——社区安全是差异化功能基础
 - **suggested_fix_direction**: 在 `backend/app/models/community.py:90-97` 的 `ReportReason` enum 中添加 `HATE_SPEECH = "hate_speech"`，并添加 Alembic 迁移将 hate_speech 加入 PostgreSQL 的 reportreason enum
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-independent-reviewer+2026-05-04T01:00:00Z
 - **fix_commit**:
 
 ### ISSUE-20260504-0016-H5
