@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 20:30 (R43 E-domain — 2 verified: E8/E9; Opus review pass 2/2)
+> Updated: 2026-05-04 21:00 (R44 A-domain — 1 verified: A1 error-book prediction route mismatch)
 
 ---
 
