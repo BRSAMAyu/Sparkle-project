@@ -2241,7 +2241,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1800-B1
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: B
 - **title**: CurrentUserStatusNotifier.updateStatus 乐观更新后 API 失败不回滚本地状态
@@ -2256,11 +2256,11 @@
 - **blast_radius**: 影响在线状态显示准确性。用户可能以为自己是"隐身"模式但实际对好友可见（隐私风险），或以为"在线"但好友看不到。对北极星影响低——不阻塞核心学习流程
 - **suggested_fix_direction**: catch 块中添加 `state = previousStatus` 回滚（需在 try 前捕获 `final previousStatus = state`），并可选通过 `AppFeedback.error()` 通知用户
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-auditor+2026-05-04T18:15Z
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1801-B2
-- **status**: discovered
+- **status**: verified
 - **severity**: P1
 - **domain**: B
 - **title**: GoalDetailNotifier.confirmMinimumCriteria 纯本地状态变更无 API 持久化，刷新即丢失
@@ -2277,7 +2277,7 @@
 - **blast_radius**: 影响核心增长循环的"Clarify"阶段——用户确认验收标准是目标明确化的关键步骤。确认丢失导致：(1) 用户信任受损（"我明明确认了"）；(2) 无持久化确认意味着 Plan Review/AdaptiveReplanner 无法知道用户已接受标准；(3) 对北极星有直接影响——0 基础学生通过 7 天考试需要明确的目标确认，确认丢失使后续的计划健康评估失效
 - **suggested_fix_direction**: (1) 添加后端 `POST /goals/{id}/confirm-criteria` 端点持久化确认状态；(2) `confirmMinimumCriteria()`/`undoConfirmMinimumCriteria()` 改为 async，先调用 API 再更新本地状态；(3) 或合并入 `load()` 的 GET 响应中由服务端返回确认状态
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-auditor+2026-05-04T18:15Z
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1802-B3
