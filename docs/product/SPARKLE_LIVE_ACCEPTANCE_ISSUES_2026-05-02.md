@@ -1097,6 +1097,7 @@
 | R34 | 2026-05-03T10:18 | ISSUE-20260504-0946-E6 | ✅ Fixed | 3912fa3b8 | ~6 min |
 | R35 | 2026-05-03T10:35 | ISSUE-20260504-1001-K6 | ✅ Fixed | f6b6805bc | ~10 min |
 | R36 | 2026-05-03T10:48 | ISSUE-20260504-1003-K8 | ✅ Fixed | 6cc01138c | ~8 min |
+| R37 | 2026-05-03T20:20 | ISSUE-20260504-1801-B2 | ✅ Fixed | ddcad1e8a | ~45 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
