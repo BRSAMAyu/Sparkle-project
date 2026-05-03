@@ -268,7 +268,8 @@
 
 **Symptom**: Demo data is unrealistic and covers too narrow a range.
 
-**Status**: Pending.
+**Status**: in_progress
+**fixer_started_at**: 2026-05-03T14:20:00Z
 
 ---
 
@@ -417,7 +418,7 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1202-G3
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: G
 - **title**: Mock 群组管理操作（踢出/晋升/降权/转让）全部静默 no-op 但 UI 显示成功提示
@@ -432,7 +433,7 @@
 - **blast_radius**: 仅影响 demo 模式。但由于 ISSUE-G1（成员列表为空），用户实际无法看到成员来执行操作。如果 G1 修复后此问题会暴露。对北极星影响较低
 - **suggested_fix_direction**: 让 mock 管理方法更新内部 _mockGroups 状态（类似 joinGroup/leaveGroup 的做法），或至少在 UI 层检查 demo 模式并显示 "此操作在演示模式下不可用"
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer-2+2026-05-03T13:05
 - **fix_commit**:
 
 ### ISSUE-20260503-1300-B1
