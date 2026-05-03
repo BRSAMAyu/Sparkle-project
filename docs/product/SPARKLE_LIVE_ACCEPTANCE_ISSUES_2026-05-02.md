@@ -2464,7 +2464,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T21:50:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence：(1) task_event_consumer.py:90-171 — _handle_task_completed 外层 try/except Exception 仅 logger.error 无 re-raise，内部 BehaviorSignalCollector+MetacognitionService+CommunitySignalBridge 共享同一 AsyncSessionLocal 事务，中途失败全部回滚但事件已 ACK；(2) profile_event_consumer.py — 11 个子处理器（_handle_preference_updated/deleted/knowledge_updated/behavior_pattern_updated/focus_session_completed/error_created/insight_signal_family_updated/capsule_favorite_updated/seed_library_event/tool_history_recorded 及其 helper）全部使用 try/except Exception + logger.error 无 re-raise；(3) intervention_event_consumer.py:96-121 — _handle_record_created 同样模式，干预记录停留在 CREATED 状态不重试；(4) event_bus.py:1145-1151 — _process_stream_message 在 callback 正常返回后执行 xack，仅 callback 抛异常时路由到 _handle_failed_message；(5) galaxy_event_consumer.py:64 — 对比参照使用 @reliable_consumer 装饰器，handle_event 无 try/except 包裹，主流程异常可传播到 EventBus DLQ/retry。调用链验证：子处理器吞异常 → callback 正常返回 → EventBus xack → 消息永不重试/不进 DLQ。非设计意图——EventBus 的 DLQ/retry 基础设施存在目的就是处理消费者失败，吞异常完全旁路此机制。与其他任何条目无重复。
-- **fix_commit**: (pending commit)
+- **fix_commit**: 1f214a42b
 - **opus_review**: APPROVED by independent-fix-reviewer at 2026-05-04T00:15Z
 
     **Review scope**: All 4 modified files (3 consumers + 1 test file) + EventBus callback mechanism + calling chain verification.
