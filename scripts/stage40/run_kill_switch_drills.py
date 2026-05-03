@@ -37,7 +37,7 @@ from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwi
 from app.services.aurora_doc_context_kill_switch_service import AuroraDocContextKillSwitchService
 from app.services.aurora_stage40_calendar_kill_switch_service import AuroraStage40CalendarKillSwitchService
 from app.services.aurora_dual_core_router_kill_switch_service import AuroraDualCoreRouterKillSwitchService
-from app.core.kill_switch import write_mode as _ks_write_mode
+from app.core.kill_switch import KillSwitchBinding, write_mode as _ks_write_mode
 from app.core.cache import cache_service as _cache
 
 
@@ -235,12 +235,13 @@ async def _dual_core_router_apply(mode: str) -> dict[str, str]:
     return await service.summary()
 
 
-_PRIVACY_BINDING = type(
-    "PrivacyBinding",
-    (),
-    {"stage": "privacy", "feature": "pii_redaction", "redis_key": "aurora:privacy:pii_redaction",
-     "settings_attr": "AURORA_PRIVACY_PII_REDACTION_MODE", "fallback_mode": "live"},
-)()
+_PRIVACY_BINDING = KillSwitchBinding(
+    stage="privacy",
+    feature="pii_redaction",
+    redis_key="aurora:privacy:pii_redaction",
+    settings_attr="AURORA_PRIVACY_PII_REDACTION_MODE",
+    fallback_mode="live",
+)
 
 
 async def _privacy_apply(mode: str) -> dict[str, str]:
