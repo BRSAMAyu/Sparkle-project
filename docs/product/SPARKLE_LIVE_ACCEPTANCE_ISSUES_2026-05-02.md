@@ -2334,7 +2334,8 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1600-L5
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-04T22:15:00Z
 - **severity**: P2
 - **domain**: L
 - **title**: CommunitySignalBridge 无 Aurora kill switch 保护——任务完成和成就解锁事件消费者直接调用，生产异常时无法关闭
