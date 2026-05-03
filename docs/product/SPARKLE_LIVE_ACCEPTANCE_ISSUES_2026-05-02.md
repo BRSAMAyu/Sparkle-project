@@ -985,7 +985,7 @@
 - **fix_commit**: cde0cb99b
 
 ### ISSUE-20260503-2101-I2
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: I
 - **title**: Flutter TaskModel 定义 paused_at/paused_reason 字段，但后端 Task model 和 DB schema 均无对应列
@@ -1004,7 +1004,9 @@
 - **suggested_fix_direction**: 在 Alembic 迁移中为 tasks 表添加 paused_at (DateTime, nullable) 和 paused_reason (Text, nullable) 列，在 SQLAlchemy Task model 中添加对应属性，在 Pydantic schema 中添加对应字段
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T21:00:00Z
-- **fix_commit**:
+- **fix_commit**: 9c5e89afa
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-03T15:15:00Z
+- **closed_at**: 2026-05-04T04:25:00Z
 
 ### ISSUE-20260503-2102-I3
 - **status**: closed
@@ -1064,6 +1066,7 @@
 | R20 | 2026-05-04T02:40 | ISSUE-20260504-0215-C1 | ✅ Fixed | 0fd0c3b6d | ~15 min |
 | R21 | 2026-05-04T03:25 | ISSUE-20260503-1701-F2 | ✅ Fixed | 38992aea0 | ~20 min |
 | R22 | 2026-05-04T04:15 | ISSUE-20260504-0300-C2 | ✅ Fixed | 10d2e958d | ~15 min |
+| R23 | 2026-05-04T04:25 | ISSUE-20260503-2101-I2 | ✅ Fixed | 9c5e89afa | ~15 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
