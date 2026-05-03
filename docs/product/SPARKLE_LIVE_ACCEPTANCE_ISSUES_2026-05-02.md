@@ -1071,6 +1071,7 @@
 | R22 | 2026-05-04T04:15 | ISSUE-20260504-0300-C2 | ✅ Fixed | 10d2e958d | ~15 min |
 | R23 | 2026-05-04T04:25 | ISSUE-20260503-2101-I2 | ✅ Fixed | 9c5e89afa | ~15 min |
 | R24 | 2026-05-04T08:05 | ISSUE-20260503-0432-L3 | ✅ Fixed | d4a98b44b | ~45 min |
+| R25 | 2026-05-04T09:35 | ISSUE-20260503-2300-B1 | ✅ Fixed | ad825322c | ~10 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1326,7 +1327,7 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-2300-B1
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-04T07:40:00Z
 - **domain**: B
@@ -1345,7 +1346,9 @@
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 代码与条目描述一致。(1) experience_repository.dart:49-53 的 _payload 对非 Map 返回 const {} 而非抛异常。(2) experience_models.dart:216-220 的 _map helper 对非 Map 返回 null，全部 fromJson 工厂配合 _string/_int/_unit/_list 防御性 helper 对空 Map 生成全默认值有效对象。(3) UnderstandingSnapshot.fromJson({}) 产生 active=false, status='sensing', summary='', confidence=0。(4) experience_provider.dart:5-9 的 understandingSnapshotProvider 无 try/catch，provider 永远不进入 error 状态。调用链完整：API 响应 → _payload(非Map) → {} → fromJson({}) → 全默认值对象 → FutureProvider resolve AsyncData → UI 渲染为有效但空白卡片 → CompactErrorCard 的 error 分支永远不触发。非设计意图——understanding_snapshot_card.dart:26-28 证明设计意图是 error 状态时显示 CompactErrorCard。与 ISSUE-20260503-1512-K3 (SizedBox.shrink on error) 不重复——K3 解决 UI 层 error 分支渲染问题，B1 解决 repository 层静默降级导致 error 分支永远不触发的问题。P2 评级合理。
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T00:15:00Z
-- **fix_commit**:
+- **fix_commit**: ad825322c
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-03T09:30:00Z
+- **closed_at**: 2026-05-04T09:35:00Z
 
 ### ISSUE-20260503-2301-B2
 - **status**: verified
