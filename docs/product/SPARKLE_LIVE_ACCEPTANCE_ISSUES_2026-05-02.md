@@ -2742,7 +2742,8 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-2100-A1
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-03T18:05:00Z
 - **severity**: P2
 - **domain**: A
 - **title**: OmniBar error book prediction chip navigates to non-existent route
