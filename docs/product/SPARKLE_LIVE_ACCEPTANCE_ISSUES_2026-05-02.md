@@ -880,7 +880,7 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1701-F2
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: F
 - **fixer_started_at**: 2026-05-04T03:05:00Z
@@ -899,7 +899,9 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T04:08:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认 preference_event_consumer.py 使用 while True: (line 46) 无 _running 标志；手工 xreadgroup (line 51) + xack (line 65) 无重试计数/DLQ；异常处理 (line 67-73) 仅 logger.error + asyncio.sleep(1) 无消息移入 DLQ。EventBus._handle_failed_message (line 885-916) 提供完整的 _requeue_for_retry + _move_to_dlq 机制，PreferenceEventConsumer 完全未使用。grep def stop 返回空 — 无法优雅关闭。该消费者使用 cqrs:stream:user 流（不同于其他消费者的 sparkle_events），但其手工 xreadgroup 模式可以被 EventBus.subscribe() 替代（EventBus 支持任意 stream key）。非设计意图：项目有 16 个消费者使用 EventBus 框架（享有 DLQ/retry/idempotency），仅此 1 个绕过框架无注释说明理由。与 ISSUE-20260503-1703-F4 无重复：F2 的核心问题是绕过 EventBus 框架缺失安全机制；F4 仅聚焦 stop() 优雅关闭。
-- **fix_commit**:
+- **fix_commit**: 38992aea0
+- **closed_at**: 2026-05-04T03:25:00Z
+- **opus_review**: CONDITIONALLY APPROVED by opus-reviewer at 2026-05-04T03:20:00Z — Root cause fully addressed: _running flag + stop(), retry/DLQ routing, exception re-raise chain. 5/5 static regression tests pass. Cross-layer contracts intact. Condition: main.py shutdown handler calls task.cancel() but never consumer.stop() — follow-up under F4 umbrella. No CLAUDE.md violations.
 
 ### ISSUE-20260503-1702-F3
 - **status**: verified
@@ -1050,6 +1052,7 @@
 | R17 | 2026-05-04T01:45 | ISSUE-20260503-1600-D1 | ✅ Fixed | dd0885789+bf56ba944 | ~75 min |
 | R19 | 2026-05-04T02:30 | ISSUE-20260504-0015-I4 | ✅ Fixed | e57c82be8 | ~15 min |
 | R20 | 2026-05-04T02:40 | ISSUE-20260504-0215-C1 | ✅ Fixed | 0fd0c3b6d | ~15 min |
+| R21 | 2026-05-04T03:25 | ISSUE-20260503-1701-F2 | ✅ Fixed | 38992aea0 | ~20 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
