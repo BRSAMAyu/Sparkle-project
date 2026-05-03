@@ -22,4 +22,9 @@ bash "$ROOT_DIR/scripts/stage33/drill_transitions.sh"
 bash "$ROOT_DIR/scripts/stage34/drill_transitions.sh"
 bash "$ROOT_DIR/scripts/stage35/drill_transitions.sh"
 
+echo "[stage40] replaying Stage 37-39 drills"
+bash "$ROOT_DIR/scripts/stage37/drill_transitions.sh"
+bash "$ROOT_DIR/scripts/stage38/drill_transitions.sh"
+bash "$ROOT_DIR/scripts/stage39/drill_transitions.sh"
+
 echo "[stage40] PASS"
