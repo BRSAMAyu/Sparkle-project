@@ -2209,5 +2209,5 @@
   3. **新发现 sprint_history_screen 不一致**: 该文件使用 AppLocalizations (l10n) 国际化——AppBar 标题、错误消息、状态标签均正确使用 `l10n.*` getter。但 loading 分支和空状态分支使用硬编码英文，形成页面内中英混搭。`l10n.noSprintHistory` getter 已存在于 app_localizations_zh.dart/en.dart，但未被使用——l10n 基础设施就绪但未连线
   4. **误报排除**: data_usage_dashboard_screen.dart — 194 行、零 i18n 引用，但 grep 整个 mobile/lib 零次被导入或路由引用——确认为死代码，不在用户可达路径上，不构成 UX 问题。其他表面 "high hardcoded count" 的文件（accessibility_settings、legal_document、transparency_settings 等）经 Read 验证均使用 `_a11yCopy`、`_settingsCopy` 或 `context.l10n` 助手正确 i18n
   5. **H 域覆盖率评估**: 经过 R5 (4 issues)、R23 (H6)、R32 (H7/H8) 三轮扫描，community 模块的 i18n 覆盖率已从 ~70% 提升到 ~92%（H5/H6 修复 + H7 待修复）。非 community 模块（plan/settings/auth）的 i18n 覆盖率约 95%——login_screen 和大多数 settings 屏幕使用 AppLocalizations 或 I18nService 助手，仅 sprint_history_screen 的 loading/空状态有遗漏
-- **Opus pass rate**: pending（待 Opus 独立复审）
+- **Opus pass rate**: 2/2 (H7/H8 both APPROVED → verified by opus-reviewer+2026-05-04T10:45)
 - **Next suggested domain**: I (DB migration vs code fields) — 19 轮未回探，I3 ReportReason/I4 model-schema mismatch 修复验证长期待查；或 C (WebSocket/gRPC contracts) — 12 轮未回探
