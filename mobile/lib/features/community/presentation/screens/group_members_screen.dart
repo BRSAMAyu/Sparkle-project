@@ -93,7 +93,9 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                   child: TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      hintText: 'Search members...',
+                      hintText: I18nService.instance.isChinese
+                          ? '搜索成员...'
+                          : 'Search members...',
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: _searchQuery.isNotEmpty
                           ? SparkleIconButton(
@@ -138,8 +140,12 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                         return Center(
                           child: Text(
                             _searchQuery.isEmpty
-                                ? 'No members yet'
-                                : 'No members found',
+                                ? I18nService.instance.isChinese
+                                    ? '暂无成员'
+                                    : 'No members yet'
+                                : I18nService.instance.isChinese
+                                    ? '未找到成员'
+                                    : 'No members found',
                             style:
                                 TextStyle(color: DS.neutral500, fontSize: 16),
                           ),
@@ -160,7 +166,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                       return ListView(
                         children: [
                           if (owners.isNotEmpty) ...[
-                            _buildSectionHeader('Owner (${owners.length})'),
+                            _buildSectionHeader(
+                              I18nService.instance.isChinese
+                                  ? '群主 (${owners.length})'
+                                  : 'Owner (${owners.length})',
+                            ),
                             ...owners.asMap().entries.map(
                                   (entry) => SparkleStaggerItem(
                                     index: entry.key,
@@ -169,7 +179,11 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                                 ),
                           ],
                           if (admins.isNotEmpty) ...[
-                            _buildSectionHeader('Admins (${admins.length})'),
+                            _buildSectionHeader(
+                              I18nService.instance.isChinese
+                                  ? '管理员 (${admins.length})'
+                                  : 'Admins (${admins.length})',
+                            ),
                             ...admins.asMap().entries.map(
                                   (entry) => SparkleStaggerItem(
                                     index: owners.length + entry.key,
@@ -179,7 +193,9 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
                           ],
                           if (regularMembers.isNotEmpty) ...[
                             _buildSectionHeader(
-                              'Members (${regularMembers.length})',
+                              I18nService.instance.isChinese
+                                  ? '成员 (${regularMembers.length})'
+                                  : 'Members (${regularMembers.length})',
                             ),
                             ...regularMembers.asMap().entries.map(
                                   (entry) => SparkleStaggerItem(
