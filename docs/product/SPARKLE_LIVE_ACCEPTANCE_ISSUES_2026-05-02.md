@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 09:30 (R29 G-domain exploration — 3 discovered: G4/G5/G6 mock stubs → broken features)
+> Updated: 2026-05-04 09:45 (R30 E-domain exploration — 3 discovered: E5 drill gap / E6 stage38 label / E7 privacy drill crash)
 
 ---
 
@@ -403,6 +403,7 @@
 | R27 | 2026-05-04T07:00 | A | 0 | N/A | A 域续探——task/goal/report/contract E2E 全链路验证通过，B5 模式未扩散 |
 | R28 | 2026-05-04T09:00 | D | 0 | N/A | D 域续探——D2 fix 验证通过（snapshot/rationale 已传递），FSM/锁/断路器/检查点/双核路由全部健壮，零缺口 |
 | R29 | 2026-05-04T09:30 | G | 3 | 3/3 | G 域续探——reportMessage/claimTask/searchUsers/sendFriendRequest 等多处空 stub → 虚假成功 / 功能不可用 |
+| R30 | 2026-05-04T09:45 | E | 3 | pending | E 域续探——双核路由 drill 缺失 + stage38 Prometheus 标签不一致 + privacy drill 内联 type 崩溃 |
 
 ---
 
@@ -1711,8 +1712,9 @@
 
 
 ### ISSUE-20260504-0500-B4
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
+- **fixer_started_at**: 2026-05-03T08:49:52Z
 - **domain**: B
 - **title**: NotificationNotifier.markAsRead API 标记已读失败时 catch 块完全为空，用户无任何错误反馈
 - **symptom**: 用户在通知列表页点击某条通知期望标记为已读。如果 API 调用失败（网络超时/500），通知保持未读状态留在列表中，但用户看到的是：点击后蓝点不消失、通知不移动，无任何 toast/snackbar 提示操作失败。用户可能反复点击同一通知但不知道为何无效
@@ -1816,6 +1818,67 @@
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) mock_community_repository.dart:1242-1243 searchUsers 硬编码返回 `[]`，无视搜索关键词。(2) mock_community_repository.dart:1035-1038 sendFriendRequest 空实现 `async {}`。(3) user_search_screen.dart:32-37 _handleSearch() 调用 searchUsers → 返回 [] → UI 永远空结果。(4) user_search_screen.dart:66-73 sendFriendRequest try/catch 中 mock 返回 completed Future<void> 不抛异常 → success 分支触发。(5) community_repository.dart:178-186 sendFriendRequest 实际 POST 到 `/community/friends/request`，198-211 searchUsers GET `/community/users/search`。调用链：searchUsers → [] → "No users found"；sendFriendRequest → `async {}` → completed future → try 成功 → AppFeedback.success → 虚假成功 toast。两个断开点叠加使好友发现与添加全链路不可用。mock 第 59 行 _mockUsers 已有 6 个用户（alice/bob/charlie/diana/eva/me）可过滤使用；mock 已有 _mockPendingRequests 列表（respondToRequest 第 1042-1044 行使用）可记录请求。与 G1/G2/G5（硬编码空列表）和 G3/G4（空 stub）不重复——G6 是 searchUsers+sendFriendRequest 组合覆盖好友子系统，前序条目分别覆盖群组成员/动态/任务/管理/举报。非"设计如此"——资源已就绪（_mockUsers, _mockPendingRequests），仅未连线。
 - **fix_commit**: 留空
 
+### ISSUE-20260504-0945-E5
+- **status**: discovered
+- **severity**: P2
+- **domain**: E
+- **title**: dual_core_router kill switch 已正确集成到 routing_engine 但未纳入 drill 自动化——状态变更不可观测
+- **symptom**: 操作者运行 `drill_all.sh` 或 `run_kill_switch_drills.py` 验证所有 kill switch 的 off→shadow→live→shadow→off 状态转换时，dual_core_router kill switch 被完全跳过。操作者可能误以为已覆盖所有 kill switch，但实际上无法验证 dual_core_router 从 off（回退 balanced 模式）到 live（Aurora 路由）的转换是否正常。Prometheus gauge `sparkle_kill_switch_mode{stage="dual_core_router"}` 仅在 routing_engine.py 调用 `get_mode()` 时才记录，缺少 drill 写入路径的 gauge 记录
+- **root_cause_hypothesis**: E1 修复为 dual_core_router 添加了 kill switch 服务（`AuroraDualCoreRouterKillSwitchService`）并在 `routing_engine.py:1180` 正确集成。但集中式 drill runner `run_kill_switch_drills.py` 的 DEFAULT_SPECS（lines 44-60）未包含 "dual_core_router"，且没有独立的 `drill_transitions.sh` 脚本。`drill_all.sh` 调用 `run_kill_switch_drills.py` 后直接结束——不会覆盖 dual_core_router
+- **evidence**:
+  - `scripts/stage40/run_kill_switch_drills.py:44-60` — DEFAULT_SPECS 列出 21 个钻取目标（stage18/19/21/23-31/33-35/37-39/privacy/doc_context/stage40-calendar），但不包含 "dual_core_router"
+  - `scripts/stage40/drill_all.sh:16-31` — 先调用 `run_kill_switch_drills.py`，再逐个 bash stage33/34/35/37/38/39 的 legacy drill，全程无 dual_core_router
+  - `backend/app/orchestration/routing_engine.py:1180-1224` — `_dual_core_mode = await AuroraDualCoreRouterKillSwitchService().get_mode()` 在运行时正确读取 kill switch；off→fallback balanced 模式，live/shadow→Aurora 路由。kill switch 本身工作正常
+  - `backend/app/services/aurora_dual_core_router_kill_switch_service.py:12-41` — 服务存在，提供 `get_mode()`/`set_mode()`/`summary()`，但无 drill 脚本调用其 `set_mode()`
+- **repro_or_trigger**: 运行 `bash scripts/stage40/drill_all.sh` → 检查 audit 输出 → 无 `dual_core_router` 条目 → 运行 `python scripts/stage40/run_kill_switch_drills.py --only dual_core_router` → 报错 "unknown drill spec(s): dual_core_router"
+- **expected_vs_actual**: 期望：drill_all 覆盖所有带 kill switch 的 Aurora 功能，包括 dual_core_router；实际：dual_core_router 遗漏——其 kill switch 只能通过运行时 `summary()` 手动检查
+- **blast_radius**: 影响运维完整性。dual_core_router 控制双核路由路径（off→balanced 回退，live→Aurora 全路由），是架构关键开关。无法通过 drill 验证意味着在 dual_core_router kill switch 变更后无自动化验证。对北极星有间接影响——如果 dual_core_router kill switch 意外关闭，Aurora 双核路由回退到 balanced 模式，个性化路由失效
+- **suggested_fix_direction**: 在 run_kill_switch_drills.py 的 DEFAULT_SPECS 中添加 "dual_core_router"，并实现对应的 `_dual_core_apply()` 函数调用 `AuroraDualCoreRouterKillSwitchService().set_mode()`
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-0946-E6
+- **status**: discovered
+- **severity**: P2
+- **domain**: E
+- **title**: Stage38 kill switch 的 Prometheus stage 标签使用 "stage38" 而非 "38"——打破跨 stage 的标签一致性
+- **symptom**: 在 Prometheus 中查询 `sparkle_kill_switch_mode` 指标时，所有 Aurora stage 的 `stage` 标签均为纯数字字符串（"18", "19", "21", ..., "37", "39", "40"），唯独 Stage38 显示为 "stage38"。操作者使用 `stage=~"\\d+"` 正则过滤时 Stage38 的指标被排除在外。Grafana 面板中按 stage 分组时 Stage38 单独成组
+- **root_cause_hypothesis**: `aurora_stage38_kill_switch_service.py:13` 的 `_ERR_REPLAN_BINDING` 使用了 `stage="stage38"`，而所有其他 kill switch 服务使用纯数字如 `stage="37"`、`stage="39"`。这导致 `record_mode_gauge("stage38", ...)` 写入的标签与 `record_mode_gauge("37", ...)` 不一致。两个 binding（_ERR_REPLAN_BINDING 和 _PUSH_SCHEDULER_BINDING）都受影响
+- **evidence**:
+  - `backend/app/services/aurora_stage38_kill_switch_service.py:12-17` — `_ERR_REPLAN_BINDING = KillSwitchBinding(stage="stage38", feature="err_replan", ...)`
+  - `backend/app/services/aurora_stage38_kill_switch_service.py:20-26` — `_PUSH_SCHEDULER_BINDING = KillSwitchBinding(stage="stage38", feature="push_scheduler", ...)`
+  - `backend/app/services/aurora_stage37_llm_safety_kill_switch_service.py:15-16` — `_STAGE37_BINDING = KillSwitchBinding(stage="37", feature="llm_safety", ...)` — 所有其他服务使用纯数字
+  - `backend/app/services/aurora_stage39_kill_switch_service.py:11-13` — `_BINDING_MASTER = KillSwitchBinding(stage="39", feature="mode", ...)` — 进一步确认纯数字是标准
+  - `backend/app/core/metrics.py:877-882` — `KILL_SWITCH_MODE = Gauge("sparkle_kill_switch_mode", "Kill switch mode gauge by stage and feature", ["stage", "feature"])` — stage 标签无 schema 约束，依赖调用方一致性
+- **repro_or_trigger**: 启动服务 → 查询 Prometheus `/metrics` → 观察 `sparkle_kill_switch_mode{stage="stage38"}` vs `sparkle_kill_switch_mode{stage="37"}` → 标签值不一致
+- **expected_vs_actual**: 期望：所有 Aurora stage 使用统一的 stage 标签命名规范（纯数字 "38"）；实际：Stage38 使用 "stage38"，与其他 20+ 个 stage 不一致
+- **blast_radius**: 影响 Prometheus 查询和 Grafana 面板的跨 stage 聚合。运维人员使用 `stage=~"\\d+"` 过滤时遗漏 Stage38 指标。不影响运行时行为——仅可观测性受影响。对北极星无直接影响
+- **suggested_fix_direction**: 将 `_ERR_REPLAN_BINDING` 和 `_PUSH_SCHEDULER_BINDING` 的 `stage="stage38"` 改为 `stage="38"`。同时检查 module-level `record_mode_gauge` 调用（lines 68-77）是否也需要同步修改（当前使用 `_ERR_REPLAN_BINDING.stage` / `_PUSH_SCHEDULER_BINDING.stage` 引用，修改 binding 即可自动跟随）
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-0947-E7
+- **status**: discovered
+- **severity**: P3
+- **domain**: E
+- **title**: Privacy kill switch drill 使用临时的 inline type() 替代 KillSwitchBinding——缺少 allowed_modes 字段会导致 write_mode() 崩溃
+- **symptom**: 当 `run_kill_switch_drills.py` 迭代到 "privacy" 条目时，`_privacy_apply()` 函数调用 `_ks_write_mode(binding=_PRIVACY_BINDING, ...)`。`write_mode()` 内部访问 `binding.allowed_modes` 时，由于 `_PRIVACY_BINDING` 是通过 `type("PrivacyBinding", (), {...})()` 内联构造的类实例，缺少 KillSwitchBinding 的 `allowed_modes` 默认字段，触发 AttributeError。整个 drill 流程在 privacy 条目中断
+- **root_cause_hypothesis**: `run_kill_switch_drills.py` 的 `_PRIVACY_BINDING`（line ~244）使用 `type("PrivacyBinding", (), {stage/feature/redis_key/settings_attr/fallback_mode})()` 创建临时对象，而非使用正式的 `KillSwitchBinding` dataclass。该临时对象缺少 `allowed_modes`、`enabled_legacy_modes`、`enabled_mode` 等字段。`kill_switch.py:124-128` 的 `write_mode()` 函数访问 `binding.allowed_modes` 时会触发 AttributeError。由于 privacy 是 DEFAULT_SPECS 的成员，默认 `drill_all.sh` 执行到 privacy 时会崩溃
+- **evidence**:
+  - `scripts/stage40/run_kill_switch_drills.py:243-249` — `_PRIVACY_BINDING` 使用内联 type() 构造，仅有 5 个属性（stage/feature/redis_key/settings_attr/fallback_mode），缺少 `allowed_modes`、`enabled_legacy_modes`、`legacy_bool_attr`
+  - `backend/app/core/kill_switch.py:122-128` — `write_mode()` 调用 `normalize_mode(mode, allowed_modes=binding.allowed_modes, fallback=binding.fallback_mode)`——`binding.allowed_modes` 访问内联对象缺失属性会抛出 AttributeError
+  - `backend/app/core/kill_switch.py:9` — `TRI_STATE_MODES = frozenset({"off", "shadow", "live"})` ——KillSwitchBinding 的 `allowed_modes` 默认值
+  - `scripts/stage40/run_kill_switch_drills.py:57-59` — DEFAULT_SPECS 包含 "privacy"，意味着默认执行路径会触发该崩溃
+- **repro_or_trigger**: `cd scripts/stage40 && python run_kill_switch_drills.py --only privacy` → 预期结果：AttributeError: 'PrivacyBinding' object has no attribute 'allowed_modes'
+- **expected_vs_actual**: 期望：privacy drill 使用正式的 KillSwitchBinding 或至少包含所有必需属性；实际：内联 type() 缺少 `allowed_modes`，导致 `write_mode()` 崩溃
+- **blast_radius**: 影响 drill_all 完整性——如果 privacy 条目崩溃，drill_all 可能在 privacy 处中断，后续 doc_context 和 stage40-calendar 条目无法执行。不影响运行时——privacy.py 的 `pii_redaction_mode()` 直接读取 settings 而非通过 kill_switch module。对北极星无直接影响
+- **suggested_fix_direction**: 将 `_PRIVACY_BINDING` 替换为正式的 `KillSwitchBinding(stage="privacy", feature="pii_redaction", redis_key="aurora:privacy:pii_redaction", settings_attr="AURORA_PRIVACY_PII_REDACTION_MODE", fallback_mode="live")`。如隐私不应被 Redis 覆盖（安全设计），则从 DEFAULT_SPECS 中移除 privacy 并添加注释说明原因
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
 ### Round R25 — 2026-05-04T05:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
@@ -1917,5 +1980,30 @@
   2. **群组任务系统**: getGroupTasks 永远返回 [] → UI 永远显示空状态 → createTask 返回空 id 对象 + 立即 loadTasks() 返回 [] → 任务创建后立即消失（比纯空列表更差——给出成功幻觉后反悔）
   3. **好友发现与添加**: searchUsers 永远返回 [] → UI 显示 "No users found" → sendFriendRequest 为空 stub + 无条件成功 toast → 好友系统不可用
   mock_cognitive_repository 作为对比参照——3 个方法均返回正确的 mock 数据含延迟模拟，证明 mock_community_repository 的空实现是疏漏而非架构设计。所有 3 个 issue 都是独立的新发现——G1/G2/G3 已 closed/fixed，无冲突。附加发现：removeFavorite 和 updateStatus 也是空 stub，但 UI 层有乐观更新 / try-catch 部分掩盖了问题。
-- **Opus pass rate**: pending（待 Opus 独立复审）
+- **Opus pass rate**: 3/3 (G4/G5/G6 all APPROVED → verified by opus-reviewer+2026-05-04T09:30)
 - **Next suggested domain**: E (Aurora kill switch) — 9 轮未回探；或 H (i18n residuals) — 6 轮未回探，H5 fix 验证
+
+### Round R30 — 2026-05-04T09:45
+- **Domain**: E (Aurora kill switch — 续探)
+- **Paths covered**:
+  - kill_switch.py → read_mode/write_mode/record_mode_gauge 核心机制验证
+  - routing_engine.py:1178-1224 → dual_core_router kill switch 运行时集成验证
+  - aurora_dual_core_router_kill_switch_service.py → 服务实现验证
+  - run_kill_switch_drills.py + drill_all.sh → 集中化 drill 覆盖范围审计
+  - 18 个 stage*/drill_transitions.sh → 逐个审计
+  - settings.py → 全部 AURORA_* 模式设置与 kill switch 服务映射
+  - monitoring/prometheus.yml + alert ymls → kill switch gauge 的可观测性与告警覆盖
+  - privacy.py → PII redaction kill switch 读路径（绕过 read_mode）
+  - auto_degrade.py → SLO 自动降级 kill switch 绑定
+  - check_rule_av_kill_switch_mode_enum.py → AV 规则动态发现验证通过
+  - stage18/19/21/23-31/33-35/37-39/40 → 逐个绑定 stage 标签审计
+- **New issues**: 3 — E5 (dual_core_router drill gap, P2), E6 (stage38 Prometheus label "stage38" vs "38", P2), E7 (privacy drill inline type 崩溃, P3)
+- **Findings**: E 域续探覆盖 20+ 个 kill switch 服务文件和 18 个 drill 脚本，4 个维度审计：
+  1. **drill 覆盖**: 集中化 drill runner 覆盖 21 个条目（stage18-40 + privacy + doc_context），但遗漏 dual_core_router。E1 正确添加了 kill switch 服务并集成到 routing_engine，但未在 drill automation 中注册。drill_all.sh 通过 bash 调用覆盖 stage33/34/35/37/38/39 的遗留脚本，但同样不包含 dual_core_router
+  2. **Prometheus 标签一致性**: 审计了所有 20+ 个 kill switch 服务的 stage 标签。Stage38 使用 `stage="stage38"`（两个 binding），而所有其他 stage 使用纯数字（"18", "19", ..., "37", "39", "40"）或语义字符串（"dual_core_router", "doc_context", "privacy"）。这破坏了 `stage=~"\\d+"` 的 PromQL 跨 stage 查询
+  3. **drill 正确性**: `_PRIVACY_BINDING` 使用内联 `type("PrivacyBinding", (), {...})()` 构造，缺少 KillSwitchBinding 的 `allowed_modes` 默认字段。`write_mode()` 在 `kill_switch.py:125` 访问 `binding.allowed_modes` 时会触发 AttributeError。该代码路径在 `--only privacy` 或默认 `drill_all` 执行时触发
+  4. **E1-E4 fix 验证**: 全部 4 个原始 E 域 issue 已验证通过。E1（dual-core router zero KS）→ 服务已存在且正确集成 ✓；E2（privacy gauge bypass）→ privacy.py 现在调用 record_mode_gauge ✓；E3（drill_all.sh missing 37-39）→ drill_all.sh 现在包含 stage37/38/39 ✓；E4（permissions 644）→ AV 规则使用动态发现 ✓
+  5. **Prometheus 告警盲区**: `sparkle_kill_switch_mode` gauge 正确记录所有 kill switch 状态，但 monitoring/*.yml 中零条告警规则引用 kill_switch。kill switch 意外关闭时无 Prometheus 告警——依赖人工 Grafana 观察。这不如其他关键指标（SLO latency/error rate）有完整的告警覆盖
+  6. **SLO auto-degrade**: auto_degrade.py 的 5 个绑定使用 `KillSwitchBinding(stage="slo_auto", ...)`，由 Alertmanager webhook 触发——是合理的基础设施层 kill switch，不属于 Aurora 阶段范畴
+- **Opus pass rate**: pending（待 Opus 独立复审）
+- **Next suggested domain**: H (i18n residuals) — 7 轮未回探，H5/H6 fix 验证长期待查；或 K (error handling) — 10+ 轮未回探
