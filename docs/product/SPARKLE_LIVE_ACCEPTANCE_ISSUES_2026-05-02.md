@@ -2859,8 +2859,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-05T10:30:00Z
 - **reviewer_note**: APPROVED — independent review confirms all 4 evidence references match code exactly. (1) statechart_engine.py:309-313 — `if node_exception_occurred: raise RuntimeError(...)` confirmed in uncommitted working tree diff. The flag is set at line 282 inside the `except Exception` handler after `break`. (2) statechart_engine.py:315 — `await self._emit_event(GraphEventType.GRAPH_END, self.name, state)` confirmed at line 315, positioned AFTER the raise at line 310. No try/finally wraps lines 309-322. (3) statechart_engine.py:316-321 — `if self.checkpointer:` block with `mark_completed` confirmed at lines 316-321, also after the raise. Full call chain traced: raise → execution_engine.py:1842-1844 re-raises via `graph_task.exception()` → orchestrator top-level handler. GRAPH_END never fires, checkpointer never marks completed. (4) test_statechart_engine.py:894-902 — normal flow test checks GRAPH_END; test at lines 748-770 uses `pytest.raises(RuntimeError)` and never asserts GRAPH_END was emitted. Root cause hypothesis confirmed: raise position before cleanup is the bug. Not "by design" — D1's intent is to propagate exceptions, not to skip lifecycle events and checkpoint cleanup. The checkpointer's `load_interrupted` (redis_checkpointer.py:133) relies on `incomplete` flag being cleared by `mark_completed` — skipping it leaves stale checkpoints that cause data inconsistency on next session resume. Not a duplicate of D1/D2/D3 — D1 is the original silent-swallos bug, D2 is edge target validation, D3 is max_steps truncation. This is a regression introduced by D1's fix.
-- **fix_commit**: {待填入}
-- **opus_review**: APPROVED by haiku-reviewer at 2026-05-03T16:00:00Z
+- **fix_commit**: bfbf1bd8d
+- **opus_review**: APPROVED by independent-fix-auditor at 2026-05-03T23:32:00+08:00
 
 ### ISSUE-20260505-1030-K10
 - **status**: rejected
