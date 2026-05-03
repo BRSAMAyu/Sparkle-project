@@ -370,7 +370,7 @@
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
 - **Discovered (not verified)**: 0
-- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1)
+- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 3 (I1/I2/I3)
 
 ---
 
@@ -389,6 +389,7 @@
 | R8 | 2026-05-03T16:00 | E | 4 | 4/4 | Aurora kill switch: E1 Dual-Core Router zero KS, E2 Privacy Prometheus gauge bypass, E3 drill_all.sh missing 37-39, E4 permissions 644 |
 | R9 | 2026-05-03T16:30 | D | 1 | 1/1 (D1 verified) | LangGraph planner timeout missing in 2/3 callers |
 | R10 | 2026-05-03T17:00 | F | 4 | 4/4 | Event bus consumers: F1 subscribe silent fail, F2 Preference bypass, F3 health blind spot, F4 missing stop() |
+| R12 | 2026-05-03T21:00 | I | 3 | 3/3 | DB migration vs code field comparison — I1 TaskStatus enum, I2 paused_at/reason columns, I3 ReportReason enum |
 
 ---
 
@@ -896,6 +897,72 @@
 - **reviewer_note**: APPROVED — 独立审阅确认 5/5 消费者的 grep def stop 全部返回空：(1) execution_event_consumer.py 虽有 _running flag (line 30/34/37) 但无 stop() 设置它；(2) cognitive_event_consumer.py 使用 _is_running (line 20) 但无 stop() 入口；(3) nudge_event_consumer.py 使用 _is_running (line 16) 但无 stop() 入口；(4) profile_event_consumer.py 使用 while self._running (line 68) 但无 stop() 方法设置它为 False；(5) preference_event_consumer.py 使用 while True: (line 46) 无 _running 标志和 stop()。对比：achievement_event_consumer.py:327 stop() 和 galaxy_event_consumer.py:480 stop() 正确实现 _running=False。EventBus 本身无 central stop() 方法 (grep def stop 返回空)，优雅关闭完全依赖各消费者的独立 stop()。与 ISSUE-20260503-1701-F2 无重复：F2 的核心是绕过框架缺失 DLQ/retry/idempotency，F4 仅聚焦 stop() 优雅关闭。P3 评级合理——Redis consumer group idle 超时 + XCLAIM 提供二级保护。
 - **fix_commit**:
 
+### ISSUE-20260503-2100-I1
+- **status**: verified
+- **severity**: P1
+- **domain**: I
+- **title**: TaskStatus 枚举三层不一致：Go sqlc 缺失 PAUSED/RESTORE/STUCK，RESTORE 从未加入 PostgreSQL enum
+- **reviewer_note**: APPROVED — 独立审阅确认全部 7 处 evidence：(1) schema.sql:462-467 仅 4 值 PENDING/IN_PROGRESS/COMPLETED/ABANDONED；(2) models.go:1205-1210 sqlc 生成的 Taskstatus 常量仅 4 个；(3) task.py:46-54 Python 定义 7 值含 PAUSED/RESTORE/STUCK；(4) task_model.dart:22-37 Flutter 定义 7 值；(5) c21 迁移将 PAUSED 加入 PostgreSQL enum；(6) lane_d 迁移将 STUCK 加入 PostgreSQL enum；(7) grep RESTORE 在所有 Alembic versions/ 中无结果。调用链验证：Go 侧 schema.sql 是 sqlc 源，缺失 3 值导致 Go 无法识别 PAUSED/STUCK 状态的任务（Scan 方法虽接受任意字符串但常量定义不完整）。Python 侧 goal_router.py:253 和 experience.py:277 的 WHERE status IN (..., RESTORE) 查询不会报错（仅 WHERE 过滤），但任何 task.status = TaskStatus.RESTORE; session.commit() 会触发 PostgreSQL invalid input value for enum taskstatus 错误。非设计意图——RESTORE 在代码中被用于 DB 查询过滤，说明开发者期望它是持久化状态。与其他任何条目无重复。
+- **symptom**: 当 Go gateway 读取到 status=PAUSED/STUCK 的任务行时，sqlc 生成的 Taskstatus 类型无法识别这些值。当 Python 尝试写入 status=RESTORE 时，PostgreSQL 直接报 invalid input value for enum taskstatus 错误
+- **root_cause_hypothesis**: Alembic 迁移 c21 和 lane_d 分别向 PostgreSQL 的 taskstatus enum 添加了 PAUSED 和 STUCK，但 Go 侧的 schema.sql 从未同步更新（仍只有 PENDING/IN_PROGRESS/COMPLETED/ABANDONED 四值）。sqlc 从 schema.sql 生成的 Go 代码自然缺失这三个值。同时 Python SQLAlchemy model 定义了 RESTORE 但没有任何 Alembic 迁移将其添加到 PostgreSQL enum，导致 RESTORE 值在 DB 层面不存在
+- **evidence**:
+  - `backend/gateway/internal/db/schema.sql:462-467` — `CREATE TYPE taskstatus AS ENUM ('PENDING','IN_PROGRESS','COMPLETED','ABANDONED')` — 仅 4 值
+  - `backend/gateway/internal/db/models.go:1206-1209` — Go sqlc 生成的 Taskstatus 常量仅 4 个：PENDING, IN_PROGRESS, COMPLETED, ABANDONED
+  - `backend/app/models/task.py:46-54` — Python SQLAlchemy 定义 7 个值：PENDING, IN_PROGRESS, PAUSED, RESTORE, STUCK, COMPLETED, ABANDONED
+  - `mobile/lib/shared/entities/task_model.dart:22-37` — Flutter 定义 7 个值：pending, inProgress, paused, restore, stuck, completed, abandoned
+  - `backend/alembic/versions/c21_20260502_task_paused_status.py:24` — `ALTER TYPE taskstatus ADD VALUE IF NOT EXISTS 'PAUSED'` — PAUSED 已加入 DB
+  - `backend/alembic/versions/lane_d_task_stuck_status.py:24` — `ALTER TYPE taskstatus ADD VALUE IF NOT EXISTS 'STUCK'` — STUCK 已加入 DB
+  - `grep -rn "'RESTORE'" backend/alembic/versions/` — 无结果 — RESTORE 从未通过迁移加入 PostgreSQL enum
+- **repro_or_trigger**: (RESTORE) Python 端调用 `task.status = TaskStatus.RESTORE; session.commit()` → PostgreSQL 报 `invalid input value for enum taskstatus: "RESTORE"`。(Go) Go gateway 查询含 PAUSED/STUCK 状态的任务 → sqlc Scan 失败
+- **expected_vs_actual**: 期望：三层 enum 定义一致，所有代码中定义的值都在 DB 中存在；实际：Go 缺失 3 值，RESTORE 在 DB 层面不存在
+- **blast_radius**: 直接影响任务状态流转——暂停/恢复/卡住是 Sparkle Execute 阶段的核心状态。Go gateway 无法正确返回这些状态的任务，Flutter 能解析但后端无法持久化 RESTORE 状态。对北极星影响高——任务状态是学习执行循环的核心
+- **suggested_fix_direction**: (1) 更新 schema.sql 的 taskstatus enum 添加 PAUSED/RESTORE/STUCK 并重新运行 `make sync-db` + sqlc gen。(2) 添加 Alembic 迁移将 RESTORE 加入 PostgreSQL enum。(3) 确保三层 enum 完全同步后，考虑添加 CI guard 防止未来漂移
+- **discovered_by**: explorer-loop
+- **verified_by**: opus-reviewer+2026-05-03T21:00:00Z
+- **fix_commit**:
+
+### ISSUE-20260503-2101-I2
+- **status**: verified
+- **severity**: P2
+- **domain**: I
+- **title**: Flutter TaskModel 定义 paused_at/paused_reason 字段，但后端 Task model 和 DB schema 均无对应列
+- **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence：(1) task_model.dart:185-188 定义 pausedReason/pausedAt 两个字段；(2) task.py:78-111 Task 模型共 49 列（title 到 subtasks_completed），无 paused_at 或 paused_reason；(3) c14 迁移的 paused_at (line 65) 属于 safe_experiments 表，非 tasks 表；(4) 全量 grep backend/app/schemas/ 和 backend/gateway/ 均无 paused_reason 或 paused_at。调用链验证：Python task_service.py:300-306 在 task pause 处理中创建 paused_at 作为局部变量存入 response dict，但从未将其写入 Task model 或 DB。Go gateway 零引用。Pydantic schema 零引用。数据流完整：Flutter → JSON {paused_reason, paused_at} → 后端 Pydantic 忽略未知字段 → DB 不存储 → GET 返回时字段缺失 → Flutter pausedAt/pausedReason 始终 null。与 ISSUE-20260503-2100-I1 无重复——I1 是 enum 定义同步，I2 是列缺失。非设计意图——Flutter 端字段定义明确表明设计意图是持久化暂停元数据。
+- **symptom**: Flutter 发送含 paused_at/paused_reason 的 JSON 给后端时，后端 Pydantic schema 忽略这些字段（无声数据丢失）。后端永远不会返回 paused_at 值，Flutter 的 pausedAt 始终为 null，暂停时间戳无法持久化
+- **root_cause_hypothesis**: Flutter 端 task_model.dart:185-188 定义了 `pausedReason` 和 `pausedAt` 两个可选字段，设计意图是记录任务暂停的时间和原因。但 Python 端 Task model (task.py:78-104) 没有 `paused_at` 或 `paused_reason` 列，Alembic 迁移中也从未给 tasks 表添加这些列（c14 迁移的 paused_at 属于 safe_experiments 表，不是 tasks 表）
+- **evidence**:
+  - `mobile/lib/shared/entities/task_model.dart:185-188` — `@JsonKey(name: 'paused_reason') final String? pausedReason; @JsonKey(name: 'paused_at') final DateTime? pausedAt;`
+  - `backend/app/models/task.py:78-104` — Task 模型列定义：包含 confirmed_at, actual_minutes, user_note 等字段，但无 paused_at 和 paused_reason
+  - `backend/alembic/versions/c14_20260502_safe_experiments.py:65` — `sa.Column("paused_at", sa.DateTime(), nullable=True)` 属于 safe_experiments 表创建，与 tasks 表无关
+  - `grep -rn 'paused_reason' backend/alembic/versions/` — 无结果 — paused_reason 从未在任何迁移中出现过
+- **repro_or_trigger**: Flutter 端暂停任务 → task status 变为 paused → Flutter TaskModel 包含 pausedAt=now, pausedReason="用户主动暂停" → PUT/POST 到后端 → 后端 Pydantic 解析忽略 paused_at/paused_reason → 数据库不存储 → 下次 GET 返回的任务中这两个字段为 null
+- **expected_vs_actual**: 期望：暂停任务时 paused_at 和 paused_reason 被持久化并在后续查询中返回；实际：这两个字段永远为 null，暂停的审计信息丢失
+- **blast_radius**: 影响任务暂停功能的数据完整性。暂停原因对 AI 辅导理解学生学习行为模式有重要价值。对北极星有间接影响——暂停原因可以帮助 Aurora 识别学习阻力
+- **suggested_fix_direction**: 在 Alembic 迁移中为 tasks 表添加 paused_at (DateTime, nullable) 和 paused_reason (Text, nullable) 列，在 SQLAlchemy Task model 中添加对应属性，在 Pydantic schema 中添加对应字段
+- **discovered_by**: explorer-loop
+- **verified_by**: opus-reviewer+2026-05-03T21:00:00Z
+- **fix_commit**:
+
+### ISSUE-20260503-2102-I3
+- **status**: verified
+- **severity**: P1
+- **domain**: I
+- **title**: 举报原因枚举 Flutter `hate_speech` 与后端 `inappropriate` 不一致，跨层传输时序列化/反序列化失败
+- **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence：(1) community_model.dart:114-127 Flutter enum 值：spam, harassment, violence, hate_speech, misinformation, other；(2) community.py:882-888 后端 enum 值：spam, harassment, violence, misinformation, inappropriate, other；(3) hate_speech 在 backend/ 全量 grep 零结果——后端完全不认识此值；(4) inappropriate 在 mobile/ 全量 grep 零结果——Flutter 完全不认识此值。调用链验证：Flutter group_chat_screen.dart:215 用户选 hateSpeech → community_repository.dart:1036 _reportReasonToApi() 返回字符串 "hate_speech" → POST /community/message-reports body: {"reason": "hate_speech"} → 后端 Pydantic community.py:909 ReportReasonEnum 验证失败 (hate_speech not in enum) → 422 Validation Error。反向链：后端存储 inappropriate → Flutter JSON 反序列化 → ReportReason.fromJson 无 @JsonValue('inappropriate') 映射 → 解析失败或 null。非设计意图——两套 enum 语义部分重叠（spam/harassment/violence/misinformation/other 这 5 个一致），但 hate_speech vs inappropriate 完全互斥。与 ISSUE-20260503-1402-H3 无重复——H3 是 i18n 展示层代码风格（isChinese vs context.l10n），I3 是跨层 enum 值契约不一致导致功能阻断。
+- **symptom**: 用户在 Flutter 端选择 "仇恨言论" (hate_speech) 作为举报原因提交时，后端 Pydantic 验证拒绝该值。反之，若后端存储的举报原因是 `inappropriate`，Flutter 无法将其映射到任何 ReportReason enum 值导致解析崩溃
+- **root_cause_hypothesis**: Flutter 的 ReportReason enum 使用 `hate_speech` (community_model.dart:121)，后端的 ReportReasonEnum 使用 `inappropriate` (community.py:887)。两者语义相近但字符串值完全不同，且 Flutter 没有 `inappropriate` 对应值，后端没有 `hate_speech` 对应值
+- **evidence**:
+  - `mobile/lib/features/community/data/models/community_model.dart:121` — `@JsonValue('hate_speech') hateSpeech` — Flutter 使用 hate_speech
+  - `backend/app/schemas/community.py:882-888` — `class ReportReasonEnum(StrEnum): ... INAPPROPRIATE = "inappropriate"` — 后端使用 inappropriate
+  - `mobile/lib/features/community/data/models/community_model.dart:114-127` — Flutter enum 完整值：spam, harassment, violence, hate_speech, misinformation, other — 无 inappropriate
+  - `backend/app/schemas/community.py:882-888` — 后端 enum 完整值：spam, harassment, violence, misinformation, inappropriate, other — 无 hate_speech
+- **repro_or_trigger**: Flutter 端 → 群聊 → 长按消息 → Report → 选择 "仇恨言论" (hate_speech) → 提交 → 后端返回 422 Validation Error: "Input should be 'spam', 'harassment', 'violence', 'misinformation', 'inappropriate', 'other'"
+- **expected_vs_actual**: 期望：举报原因枚举在三端（Flutter/Go/Python）完全一致；实际：Flutter 有 hate_speech 但后端没有，后端有 inappropriate 但 Flutter 没有
+- **blast_radius**: 直接阻断用户举报功能——这是社区安全的核心交互。当用户选择 "仇恨言论" 举报时，操作永远失败且用户看到错误提示。对北极星有高影响——社区安全是差异化功能的基础
+- **suggested_fix_direction**: 统一为一套值。建议在两方都保留 hate_speech 和 inappropriate（因为语义不完全相同），或在 Flutter 和后端统一为同一个值。同时更新 Go gateway 的代理验证（如果有的话）
+- **discovered_by**: explorer-loop
+- **verified_by**: opus-reviewer+2026-05-03T21:00:00Z
+- **fix_commit**:
+
 
 ---
 
@@ -1051,3 +1118,21 @@
 - **Findings**: Domain F already comprehensively covered by R10's F1-F4. Verified PreferenceEventConsumer ACK-after-handle pattern (lines 131-132 catch exceptions silently, so ACK always fires even on failure — covered by F2). GraphSyncWorker lacks DLQ/retry but is less critical than PreferenceEventConsumer (covered by F2 pattern). No new gaps discovered beyond existing entries.
 - **Opus pass rate**: N/A (0 new issues)
 - **Next suggested domain**: I (DB 迁移 vs 代码字段) or L (治理规则与文档承诺 vs 真实实现) — last remaining unexplored domains
+
+### Round R12 — 2026-05-03T21:00
+- **Domain**: I (DB 迁移 vs 代码字段)
+- **Paths covered**:
+  - schema.sql:462-467 vs models.go:1205-1210 vs task.py:46-54 vs task_model.dart:22-37 (TaskStatus enum 4 vs 7 values)
+  - c21 migration (PAUSED added to PostgreSQL enum), lane_d migration (STUCK added)
+  - RESTORE grep across all alembic/versions/ (zero results)
+  - task.py:78-111 Task model columns (49 columns, no paused_at/paused_reason)
+  - task_model.dart:185-188 (pausedReason/pausedAt defined)
+  - c14 migration paused_at in safe_experiments (not tasks table)
+  - community_model.dart:114-127 (Flutter ReportReason: hate_speech) vs community.py:882-888 (backend ReportReasonEnum: inappropriate)
+  - community_repository.dart:1028-1043 (_reportReasonToApi serialization chain)
+  - group_chat_screen.dart:207-219 (Flutter report submission UI)
+  - community.py:909 (Pydantic ReportReasonEnum validation on POST)
+- **New issues**: 3 (all pre-existing from explorer-loop, opus review verified all 3)
+- **Findings**: I1 — Go schema.sql is the sqlc source of truth with only 4 TaskStatus values, while Python+Flutter use 7; PAUSED and STUCK were added to PostgreSQL enum via Alembic but Go never synced; RESTORE exists in Python enum but has zero Alembic migrations, meaning any attempt to persist RESTORE to DB would fail with PostgreSQL enum violation. I2 — Flutter defines paused_at/paused_reason as TaskModel fields but the Python Task model (49 columns) has no corresponding columns, no Pydantic schema references them, and no Alembic migration ever added them to the tasks table; the paused_at variable in task_service.py is purely in-memory/event-level, never persisted. I3 — Flutter's ReportReason.hateSpeech serializes to "hate_speech" but backend ReportReasonEnum has "inappropriate" instead, with zero overlap for these two values; the POST /community/message-reports endpoint validates reason against the backend enum and will 422 on "hate_speech"; reverse deserialization of "inappropriate" on Flutter would also fail since the @JsonValue mapping doesn't include this string.
+- **Opus pass rate**: 3/3 (I1/I2/I3 all APPROVED by opus-reviewer at 2026-05-03T21:00)
+- **Next suggested domain**: L (治理规则与文档承诺 vs 真实实现) — last remaining unexplored domain
