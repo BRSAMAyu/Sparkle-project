@@ -1375,3 +1375,44 @@
 - **Next suggested domain**: All 12 domains (A-L) have been explored at least once. Consider revisiting K (error handling) or E (Aurora kill switch) for regression checks on recent fixes, or exploring cross-domain integration issues
 
 ---
+
+### ISSUE-20260504-0015-I4
+- **status**: discovered
+- **severity**: P1
+- **domain**: I
+- **title**: ReportReason I3 修复不完整：Python model enum 缺失 HATE_SPEECH，schema 接受但 DB 写入失败
+- **symptom**: Flutter 端选择 "仇恨言论" (hate_speech) 提交举报 → API schema 验证通过（ReportReasonEnum 包含 hate_speech）→ Python 尝试写入 DB（ReportReason model enum 不包含 HATE_SPEECH）→ PostgreSQL 报 invalid input value for enum reportreason: "hate_speech"
+- **root_cause_hypothesis**: I3 修复同步了 Flutter 和 schema 层（community.py:882-889 的 ReportReasonEnum 添加了 HATE_SPEECH），但遗漏了 model 层（community.py:90-97 的 ReportReason enum 仍不包含 HATE_SPEECH）。DB 列定义使用 model enum（community.py:652 `Column(Enum(ReportReason))`），导致 schema 接受但 DB 拒绝
+- **evidence**:
+  - `backend/app/schemas/community.py:882-889` — `ReportReasonEnum` 含 7 值：spam, harassment, violence, hate_speech, misinformation, inappropriate, other
+  - `backend/app/models/community.py:90-97` — `ReportReason` 仅含 6 值：spam, harassment, violence, misinformation, inappropriate, other — 无 HATE_SPEECH
+  - `backend/app/models/community.py:652` — `reason = Column(Enum(ReportReason), nullable=False)` — DB 使用 model enum，不接受 hate_speech
+  - `mobile/lib/features/community/data/models/community_model.dart:114-129` — Flutter 含 7 值包括 hateSpeech 和 inappropriate
+- **repro_or_trigger**: Flutter → 群聊 → 长按消息 → Report → 选择 hateSpeech → API 验证通过 → DB INSERT 失败 → 500 错误返回给用户
+- **expected_vs_actual**: 期望：I3 修复后三层完全一致，hate_speech 可正常举报；实际：schema 接受但 DB 写入失败，举报操作 500 错误
+- **blast_radius**: 阻断"仇恨言论"类举报——社区安全核心功能。对北极星有高影响——社区安全是差异化功能基础
+- **suggested_fix_direction**: 在 `backend/app/models/community.py:90-97` 的 `ReportReason` enum 中添加 `HATE_SPEECH = "hate_speech"`，并添加 Alembic 迁移将 hate_speech 加入 PostgreSQL 的 reportreason enum
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260504-0016-H5
+- **status**: discovered
+- **severity**: P2
+- **domain**: H
+- **title**: group_members_screen 残留 6 处硬编码英文（搜索框、空状态、角色分区标题），H1 修复未完全覆盖
+- **symptom**: 中文模式下，群组成员列表页仍显示 "Search members..." 搜索提示、"No members yet" 空状态、"Owner (1)" / "Admins (2)" / "Members (5)" 角色分区标题。H1 修复覆盖了管理操作（晋升/降权/转让群主）的 i18n，但遗漏了这些基础 UI 标签
+- **root_cause_hypothesis**: H1 修复范围是"管理操作弹窗和 snackbar"（promote/demote/transfer 的对话框和 toast），搜索框、空状态文本和角色分区标题不在修复范围内，但同样使用硬编码英文
+- **evidence**:
+  - `mobile/lib/features/community/presentation/screens/group_members_screen.dart:96` — `hintText: 'Search members...'` 搜索框英文
+  - `mobile/lib/features/community/presentation/screens/group_members_screen.dart:141-142` — `'No members yet'` / `'No members found'` 空状态英文
+  - `mobile/lib/features/community/presentation/screens/group_members_screen.dart:163` — `_buildSectionHeader('Owner (${owners.length})')` 角色标题英文
+  - `mobile/lib/features/community/presentation/screens/group_members_screen.dart:172` — `_buildSectionHeader('Admins (${admins.length})')` 角色标题英文
+  - `mobile/lib/features/community/presentation/screens/group_members_screen.dart:182` — `'Members (${regularMembers.length})'` 角色标题英文
+- **repro_or_trigger**: 中文模式 → Community → 群组 → 成员列表 → 观察搜索框、空状态和角色分区标题为英文
+- **expected_vs_actual**: 期望：与 H1 修复的 promote/demote/transfer 一致，使用 `I18nService.instance.isChinese` 或 `context.l10n` 双语显示；实际：基础 UI 标签仍为硬编码英文
+- **blast_radius**: 影响中文用户的群组成员管理体验。搜索框和角色分区标题是每次进入成员列表都会看到的 UI 元素。对北极星有中等影响——群组管理是社区问责系统的核心交互
+- **suggested_fix_direction**: 将 6 处硬编码英文替换为 `I18nService.instance.isChinese ? '中文' : 'English'` 模式，与 H1 修复中 promote/demote/transfer 的 i18n 方式保持一致
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
