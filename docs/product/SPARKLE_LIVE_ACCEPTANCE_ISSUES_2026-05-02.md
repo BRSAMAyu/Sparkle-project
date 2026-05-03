@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-03 02:05 (continuously updated as new issues found and fixed)
+> Updated: 2026-05-03 22:30 (L-domain all 4 discovered verified by opus-reviewer)
 
 ---
 
@@ -369,8 +369,8 @@
 - **Routes Verified (working with data)**: 5
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
-- **Discovered (not verified)**: 4 (L1/L2/L3/L4)
-- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 3 (I1/I2/I3) + 3 (I1/I2/I3)
+- **Discovered (not verified)**: 0
+- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 3 (I1/I2/I3) + 4 (L1/L2/L3/L4)
 
 ---
 
@@ -1186,7 +1186,7 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-0432-L2
-- **status**: discovered
+- **status**: verified
 - **severity**: P1
 - **domain**: L
 - **title**: AV 守卫的硬编码 Aurora kill switch 服务和模式列表已过时，缺失 3 个服务文件 + 8 个模式设置，新服务/模式的合规性不被检查
@@ -1202,11 +1202,11 @@
 - **blast_radius**: 直接影响 Aurora kill switch 架构的治理完整性。Stage 37（LLM Safety）是安全关键阶段——其 kill switch 未经验证意味着 LLM 安全功能可能在没有 tri-state 保护的情况下运行。Dual-Core Router 刚刚被 E1 修复添加了 kill switch，但 AV 守卫不会检查其合规性。对北极星有中等影响——kill switch 是可观测性和安全运维的基础
 - **suggested_fix_direction**: 将 AV 守卫重构为动态发现：扫描 `backend/app/services/aurora_*kill_switch*.py` 获取服务列表，扫描 `settings.py` 中匹配 `AURORA_*_MODE` 模式的设置获取模式列表。同时添加 CI 守卫确保动态发现不低于某个覆盖率阈值
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer+2026-05-03T22:30:00Z
 - **fix_commit**:
 
 ### ISSUE-20260503-0432-L3
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: L
 - **title**: CLAUDE.md 安全清单"No hardcoded tokens or passwords"无对应自动化守卫，是唯一缺乏 CI 强制执行的安全清单条目
@@ -1222,11 +1222,11 @@
 - **blast_radius**: 影响安全态势。硬编码凭据是 OWASP Top 10 中 "Hardcoded Credentials" (CWE-798) 类别。Sparkle 项目使用多个外部 API（LLM 提供商、MinIO、支付等），凭据泄露风险真实存在。对北极星无直接影响（不影响核心学习功能），但违反安全最佳实践
 - **suggested_fix_direction**: 添加一个轻量级守卫脚本（如 `check_rule_bh_hardcoded_secrets.py`），使用正则扫描常见凭据模式（`api_key\s*=\s*["'][A-Za-z0-9_-](20,)["']`、`password\s*=\s*["'][^"']+["']`、GitHub token 格式 `ghp_[A-Za-z0-9]36` 等），并注册到 manifest。可使用现有的 `scripts/guards/` 模式。同时考虑使用 .gitattributes 或 pre-commit hooks 加强
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer+2026-05-03T22:30:00Z
 - **fix_commit**:
 
 ### ISSUE-20260503-0432-L4
-- **status**: discovered
+- **status**: verified
 - **severity**: P3
 - **domain**: L
 - **title**: 多个治理守卫脚本使用浅层字符串匹配检测而非行为验证，函数重命名/重构可能导致守卫静默失效
@@ -1242,7 +1242,7 @@
 - **blast_radius**: 影响 AW/BB/BE 三个守卫的可靠性。AW 保护速率限制器维度正确性，BB 保护光子经济的原子性（金融安全），BE 保护 shadow 模式语义（所有 Aurora 功能的降级行为）。这三个都是生产安全关键领域。对北极星有间接影响——如果金融守卫失效，用户光子余额可能出现不一致
 - **suggested_fix_direction**: 短期：为关键守卫（BB financial）添加 AST 级验证和语义测试（如验证 `update(User)` 语句包含 `WHERE User.photon_balance >= amount` 条件）。长期：将守卫分为两类——"契约存在"（轻量字符串检查，快速失败）和"契约正确性"（AST/行为验证，深度检查），前者用于快速门控，后者用于定期深度审计
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer+2026-05-03T22:30:00Z
 - **fix_commit**:
 
 ### Round R13 — 2026-05-03T22:00
@@ -1264,6 +1264,6 @@
   - backend/app/services/aurora_*kill_switch*.py (21 files total, 3 missing from AV guard)
 - **New issues**: L1(P2), L2(P1), L3(P2), L4(P3)
 - **Findings**: The governance rule system has 64 registered rules with generally solid coverage of write boundaries, eval/safety, vision compliance, financial, and security domains. Discovered 4 gaps: (1) BH meta-learning parameter safety guard exists but is not registered in manifest — never runs in CI; (2) AV kill switch guard has stale hardcoded SERVICE_PATHS (18/21) and MODE_SETTINGS (44/48) lists, missing dual-core router, stage37 LLM safety, stage39, and privacy modes — new kill switch services won''t be checked for compliance; (3) No automated guard for "no hardcoded tokens/passwords" — the only security checklist item without CI enforcement; (4) AW/BB/BE guards use shallow string-match detection that can''t distinguish function rename (false positive) from semantic break (false negative). On the positive side: all production guards documented in CLAUDE.md (DEBUG/SECRET_KEY/CORS/gRPC reflection) actually exist in settings.py; bluemonday sanitization is operational in websocket_proxy.go and chat_orchestrator.go; hmac.compare_digest is used for timing-attack resistant comparison; all 64 manifest-referenced scripts exist on disk.
-- **Opus pass rate**: pending
+- **Opus pass rate**: 4/4 (L1/L2/L3/L4 all APPROVED by opus-reviewer at 2026-05-03T22:30)
 - **Next suggested domain**: I (DB 迁移 vs 代码字段) — already done (R12). All 12 domains now explored at least once.
 
