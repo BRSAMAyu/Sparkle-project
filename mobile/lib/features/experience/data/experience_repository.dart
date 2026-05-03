@@ -49,6 +49,8 @@ class ExperienceRepository {
   Map<String, dynamic> _payload(Object? data) {
     if (data is Map<String, dynamic>) return data;
     if (data is Map) return Map<String, dynamic>.from(data);
-    return const {};
+    throw FormatException(
+      'experience: expected Map response, got ${data.runtimeType}',
+    );
   }
 }
