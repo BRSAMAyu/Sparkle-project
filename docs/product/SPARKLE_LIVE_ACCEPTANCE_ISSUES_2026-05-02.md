@@ -369,7 +369,7 @@
 - **Routes Verified (working with data)**: 5
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
-- **Discovered (not verified)**: 0 (B1 closed, H1/H2/H4 verified, H3 rejected, K1 verified)
+- **Discovered (not verified)**: 0 (B1 closed, H1/H2/H4 verified, H3 rejected, K1 verified, A1 verified)
 
 ---
 
@@ -384,7 +384,7 @@
 | R5 | 2026-05-03T14:10 | H | 4 | 3/4 (H3 rejected as designed) | i18n residuals: H1/H2/H4 verified, H3 rejected (isChinese is project documented pattern) |
 | R6 | 2026-05-03T15:10 | K | 4 | 4/4 (K1 in_progress, K2/K3/K4 verified) | Error handling: leaderboard percentile, chat history lost, silent error swallowing, LLM timeout fallback |
 | R6 | 2026-05-03T15:00 | K | 1 | 1/1 (K1 verified) | Error handling gaps in goal detail actions |
-| R7 | 2026-05-03T15:30 | A | 1 | pending opus review | Task execution navigation missing activeTaskProvider |
+| R7 | 2026-05-03T15:30 | A | 1 | 1/1 (A1 verified) | Task execution navigation missing activeTaskProvider |
 
 ---
 
@@ -664,7 +664,7 @@
 - **opus_review**: APPROVED by independent-review-agent at 2026-05-03T18:30Z
 
 ### ISSUE-20260503-1530-A1
-- **status**: discovered
+- **status**: verified
 - **severity**: P1
 - **domain**: A
 - **title**: 日历卡片和任务反馈对话框跳转任务执行页时未设置 activeTaskProvider，导致屏幕显示"No task"错误页
@@ -681,8 +681,9 @@
 - **blast_radius**: 影响两个高价值入口：日历快捷执行和任务完成后的下一步引导。日历是首页核心组件，任务反馈是增长循环中 Execute→Reflect 的衔接点。对北极星有中等影响——学生无法从日历快速进入专注执行，也无法顺畅衔接下一步任务
 - **suggested_fix_direction**: 在 compact_task_card.dart 和 task_feedback_dialog.dart 的导航前添加 `ref.read(activeTaskProvider.notifier).state = task`，与 focus_action_card.dart 的修复模式一致。长期方案：TaskExecutionScreen 应从 route 参数提取 taskId 并在 activeTaskProvider 为 null 时从 API 加载任务
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer+2026-05-03T16:45
 - **fix_commit**:
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-03T16:45Z — All 5 evidence locations verified by independent code reading. (1) compact_task_card.dart:148-150 inProgress/stuck navigates without setting activeTaskProvider; widget has WidgetRef and activeTaskProvider importable via task.dart barrel. (2) compact_task_card.dart:159-161 paused/restore calls resumeTask then navigates without setting provider. (3) task_feedback_dialog.dart:338-339 context.go() without setting provider; ConsumerStatefulWidget with ref access. (4) task_execution_screen.dart:782 watches activeTaskProvider, null branch shows error page. (5) focus_action_card.dart:80-81 correct pattern with explicit fix comment. Route pageBuilder at task_routes.dart:79-96 extracts query params but never extracts :id path param (contrast with taskDetail route line 62). Not a duplicate of any existing issue. Not by-design — 8 other callers correctly set the provider. Additional note: openclaw_hub_screen.dart:1106 has the same pattern (navigates without setting provider) — same root cause, lower-traffic entry point.
 
 ---
 
