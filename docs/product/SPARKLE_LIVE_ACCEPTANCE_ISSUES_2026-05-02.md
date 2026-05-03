@@ -433,10 +433,11 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1202-G3
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: G
 - **fixer_started_at**: 2026-05-03T16:00:00
+- **closed_at**: 2026-05-03T17:00:00Z
 - **title**: Mock 群组管理操作（踢出/晋升/降权/转让）全部静默 no-op 但 UI 显示成功提示
 - **symptom**: 在 demo 模式下，对群组成员执行踢出、晋升管理员、降权、转让群主操作后，UI 弹出 "xxx promoted to admin" 等成功消息，但成员列表和角色状态未发生任何变化
 - **root_cause_hypothesis**: MockCommunityRepository 的 kickMember()、promoteMember()、demoteMember()、transferOwnership() 全部为空函数（async {}），不更新任何内部状态。但 GroupMembersNotifier 在调用后重新 loadMembers()，返回的仍是空列表。group_members_screen.dart 在调用完成后直接显示成功 Toast。
@@ -450,7 +451,8 @@
 - **suggested_fix_direction**: 让 mock 管理方法更新内部 _mockGroups 状态（类似 joinGroup/leaveGroup 的做法），或至少在 UI 层检查 demo 模式并显示 "此操作在演示模式下不可用"
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer-2+2026-05-03T13:05
-- **fix_commit**:
+- **fix_commit**: 66c8303c8
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-03T17:00:00Z
 
 ### ISSUE-20260503-1400-H1
 - **status**: ✅ FIXED
@@ -685,6 +687,86 @@
 - **fix_commit**:
 - **opus_review**: APPROVED by opus-reviewer at 2026-05-03T16:45Z — All 5 evidence locations verified by independent code reading. (1) compact_task_card.dart:148-150 inProgress/stuck navigates without setting activeTaskProvider; widget has WidgetRef and activeTaskProvider importable via task.dart barrel. (2) compact_task_card.dart:159-161 paused/restore calls resumeTask then navigates without setting provider. (3) task_feedback_dialog.dart:338-339 context.go() without setting provider; ConsumerStatefulWidget with ref access. (4) task_execution_screen.dart:782 watches activeTaskProvider, null branch shows error page. (5) focus_action_card.dart:80-81 correct pattern with explicit fix comment. Route pageBuilder at task_routes.dart:79-96 extracts query params but never extracts :id path param (contrast with taskDetail route line 62). Not a duplicate of any existing issue. Not by-design — 8 other callers correctly set the provider. Additional note: openclaw_hub_screen.dart:1106 has the same pattern (navigates without setting provider) — same root cause, lower-traffic entry point.
 
+### ISSUE-20260503-1600-E1
+- **status**: discovered
+- **severity**: P1
+- **domain**: E
+- **title**: Dual-Core Router 完全无 Aurora kill switch 保护——1089 行代码零引用 kill_switch，与 CLAUDE.md 承诺矛盾
+- **symptom**: 无法通过 kill switch 三态 (off/shadow/live) 控制双核路由行为。若双核路由在生产中出现问题（如错误地将任务规划请求路由到认知核心），没有机制可以关闭或降级到 shadow 模式。而 State Aggregator、Social Signal Bridge、SRL Phase Tracker 等同级 Aurora 服务均已正确集成 kill switch
+- **root_cause_hypothesis**: Dual-Core Router (`dual_core_router.py`) 作为模块级单例 `dual_core_router` 被导入和调用，但其 `route()` 方法没有 kill switch 守卫。调用方 `routing_engine.py:1180/1186` 直接调用 `self.dual_core_router.route()` 无模式检查。CLAUDE.md 明确列出 Dual-Core Router 为 Kill Switch Protocol 下的 "key service"，但代码实现了零覆盖
+- **evidence**:
+  - `backend/app/orchestration/dual_core_router.py:1-11` — 导入列表：无 `app.core.kill_switch` 相关导入
+  - `backend/app/orchestration/dual_core_router.py` — grep -c kill_switch 结果：0
+  - `backend/app/orchestration/routing_engine.py:1178-1186` — `_route_with_shortcuts()` 直接调用 `self.dual_core_router.route()` 无 kill switch 守卫
+  - `backend/app/state_aggregator/service.py:156-158` — 对比：State Aggregator 正确检查 `await self.kill_switches.get_feature_mode("aggregator_enabled")`
+  - `CLAUDE.md` — "Kill Switch Protocol: Every Aurora feature ships behind tri-state. Key services: State Aggregator, Dual-Core Router, Metacognition..."
+- **repro_or_trigger**: 尝试通过 Redis 设置 kill switch 关闭双核路由 → 无对应 redis_key → 双核路由始终以 live 模式运行
+- **expected_vs_actual**: 期望：Dual-Core Router 有 `AURORA_DUAL_CORE_ROUTER_MODE` kill switch，可在 off/shadow/live 三态间切换；实际：无 kill switch，无法控制
+- **blast_radius**: 直接影响 Aurora 安全架构的完整性。双核路由决策错误会将执行请求路由到认知核心或将反思请求路由到执行核心，破坏 AI 响应质量。CLAUDE.md 声明 "53+ governance rules" 和 "Kill Switch Protocol" 涵盖所有 Aurora 服务，但最核心的路由组件缺失保护。对北极星影响显著——路由决策质量直接影响 AI 辅导效果
+- **suggested_fix_direction**: 创建 `AuroraStage{DualCore}KillSwitchService`，在 `dual_core_router.route()` 入口处添加 `get_feature_mode()` 检查：off→返回默认直通决策，shadow→记录但不应用路由重定向，live→完整双核路由。同时在 routing_engine.py 调用点添加守卫
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-1601-E2
+- **status**: discovered
+- **severity**: P2
+- **domain**: E
+- **title**: Privacy 模块 pii_redaction_mode() 绕过 read_mode() 直接读 settings，导致隐私 kill switch 的 Prometheus 指标在读路径缺失
+- **symptom**: 操作者无法通过 Prometheus `sparkle_kill_switch_mode{feature="privacy_pii_redaction"}` 指标观测隐私模块的实际运行模式（写路径通过 drill 脚本可以记录，但读路径——即每次 PII 脱敏调用时——不记录）。隐私模块是三态架构中唯一绕过集中式 `read_mode()` 的模块
+- **root_cause_hypothesis**: `privacy.py:53-57` 的 `pii_redaction_mode()` 直接调用 `normalize_mode(getattr(settings, ...))` 而非通过 `KillSwitchBinding.read_mode()`。`normalize_mode()` 只做字符串标准化，不记录 Prometheus gauge。而 `read_mode()` 内部会调用 `record_mode_gauge()` 将模式写入 `sparkle_kill_switch_mode` 指标
+- **evidence**:
+  - `backend/app/aurora/privacy.py:53-57` — `def pii_redaction_mode() -> str: return normalize_mode(getattr(settings, "AURORA_PRIVACY_PII_REDACTION_MODE", "live"), fallback="live")` — 绕过 read_mode()
+  - `backend/app/aurora/privacy.py:10` — `from app.core.kill_switch import normalize_mode` — 只导入 normalize_mode，未导入 read_mode 或 record_mode_gauge
+  - `backend/app/core/kill_switch.py:94-112` — `read_mode()` 内部调用 `self.record_mode_gauge(resolved)` 将模式写入 Prometheus — privacy 模块跳过了这一步
+  - `backend/app/core/kill_switch.py:68-69` — `record_mode_gauge()` 定义：`KILL_SWITCH_MODE.labels(stage=stage, feature=feature).set(mode_value(mode))`
+- **repro_or_trigger**: 启动服务 → 发起包含 PII 的聊天请求 → 查看 Prometheus `/metrics` → `sparkle_kill_switch_mode{feature="privacy_pii_redaction"}` 无数据（或仅为上次 drill 写入的陈旧值）
+- **expected_vs_actual**: 期望：每次 PII 脱敏调用都更新 Prometheus gauge，反映当前实际模式；实际：读路径不记录 gauge，指标可能陈旧
+- **blast_radius**: 影响可观测性——操作者无法通过 Prometheus 确认隐私模块在生产中的实际运行模式。在 shadow→live 切换期间尤其危险：操作者以为已经切换到 live 但指标显示的是旧值。对北极星影响较低——不影响功能正确性（PII 脱敏本身正确执行），但影响运维安全
+- **suggested_fix_direction**: 在 `pii_redaction_mode()` 或 `redact_pii_with_report()` 入口处调用 `record_mode_gauge(stage="privacy", feature="pii_redaction", resolved_mode)` 记录当前模式到 Prometheus
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-1602-E3
+- **status**: discovered
+- **severity**: P2
+- **domain**: E
+- **title**: drill_all.sh 统合钻取脚本遗漏 Stage 37/38/39，三阶段的 kill switch 变更无法通过统合入口验证
+- **symptom**: 执行统一的 `drill_all.sh`（CLAUDE.md 推荐的 kill switch drill 入口）不会验证 Stage 37 (LLM Safety)、Stage 38、Stage 39 的 kill switch 状态。操作者可能误以为已通过 drill_all 覆盖了所有阶段的 kill switch，但实际上这三个阶段的 kill switch 未被验证
+- **root_cause_hypothesis**: `drill_all.sh` 只运行了三个部分：(1) Python 统合 drill `run_kill_switch_drills.py`（覆盖 Stage 18-31 + 40），(2) `bash stage33/drill_transitions.sh`，(3) `bash stage34/drill_transitions.sh`，(4) `bash stage35/drill_transitions.sh`。Stage 37/38/39 各有独立的 `drill_transitions.sh` 但未被 `drill_all.sh` 引用
+- **evidence**:
+  - `scripts/stage40/drill_all.sh:16-23` — 只运行 Python drill (18-31+40) + bash stage33/34/35，无 stage37/38/39
+  - `scripts/stage37/drill_transitions.sh` — 存在且可执行，调用 `assert_llm_safety_transition.py`
+  - `scripts/stage38/drill_transitions.sh` — 存在但不可执行（mode 644）
+  - `scripts/stage39/drill_transitions.sh` — 存在且可执行
+- **repro_or_trigger**: 运行 `bash scripts/stage40/drill_all.sh` → 检查输出 → Stage 37/38/39 的 kill switch 未被验证
+- **expected_vs_actual**: 期望：drill_all.sh 覆盖所有阶段的 kill switch；实际：遗漏 Stage 37/38/39
+- **blast_radius**: 影响运维完整性。Stage 37 对应 LLM Safety（安全关键），遗漏其 drill 意味着 LLM 安全 kill switch 的变更可能在无人知晓的情况下生效。对北极星有间接影响——LLM Safety 是 AI 辅导的安全网
+- **suggested_fix_direction**: 在 drill_all.sh 末尾添加 stage37/drill_transitions.sh、stage38/drill_transitions.sh、stage39/drill_transitions.sh 的调用。同时修复 stage38/drill_transitions.sh 的权限
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
+### ISSUE-20260503-1603-E4
+- **status**: discovered
+- **severity**: P3
+- **domain**: E
+- **title**: stage33 和 stage38 的 drill_transitions.sh 脚本不可执行（mode 644），直接 ./ 调用失败
+- **symptom**: 操作者尝试 `./scripts/stage33/drill_transitions.sh` 或 `./scripts/stage38/drill_transitions.sh` 直接执行时收到 "Permission denied"。需要用 `bash script.sh` 方式调用才能运行。其他 18 个 drill 脚本均为可执行（mode 755）
+- **root_cause_hypothesis**: 这两个脚本在创建时未设置 execute 权限。`drill_all.sh` 使用 `bash script.sh` 调用方式不受影响（line 21），但直接 `./script.sh` 执行和 CI 自动化中可能依赖可执行权限
+- **evidence**:
+  - `scripts/stage33/drill_transitions.sh` — mode 644 (rw-r--r--)，不可执行
+  - `scripts/stage38/drill_transitions.sh` — mode 644 (rw-r--r--)，不可执行
+  - 其他 stage*/drill_transitions.sh 均为 mode 755 (rwxr-xr-x)，可执行
+- **repro_or_trigger**: `./scripts/stage33/drill_transitions.sh` → "Permission denied"
+- **expected_vs_actual**: 期望：所有 drill 脚本统一为可执行；实际：2/20 脚本不可执行
+- **blast_radius**: 仅影响直接 `./` 执行方式。对北极星无影响——可通过 bash 调用绕过
+- **suggested_fix_direction**: `chmod +x scripts/stage33/drill_transitions.sh scripts/stage38/drill_transitions.sh`
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
 ---
 
 ## 探索日志
@@ -701,6 +783,7 @@
 | R4 | 2026-05-03T15:30 | ISSUE-20260503-1400-H1 | ✅ Fixed | 4a8b9f7cc | ~15 min |
 | R5 | 2026-05-03T16:00 | ISSUE-20260503-1403-H4 | ✅ Fixed | 31462e3af | ~5 min |
 | R6 | 2026-05-03T16:30 | ISSUE-20260503-1500-K1 | ✅ Fixed | (this commit) | ~10 min |
+| R7 | 2026-05-03T17:00 | ISSUE-20260503-1202-G3 | closed | 66c8303c8 | ~20 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
