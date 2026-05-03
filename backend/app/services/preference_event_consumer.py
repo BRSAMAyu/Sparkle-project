@@ -17,6 +17,9 @@ from app.core.metrics import (
 )
 from app.services.user_service import UserService
 
+DLQ_STREAM_SUFFIX = ":dlq"
+MAX_RETRIES = 3
+
 
 class PreferenceEventConsumer:
     """消费 user.preferences.updated 事件"""
@@ -27,6 +30,11 @@ class PreferenceEventConsumer:
         self.stream_key = "cqrs:stream:user"
         self.consumer_group = "python_preference_consumer"
         self.consumer_name = "worker-1"
+        self._running = False
+
+    def stop(self):
+        """Signal the consumer to stop gracefully."""
+        self._running = False
 
     async def start(self):
         """启动事件消费循环"""
@@ -42,10 +50,10 @@ class PreferenceEventConsumer:
                 logger.error(f"Failed to create consumer group: {e}")
 
         logger.info(f"PreferenceEventConsumer started, listening on {self.stream_key}")
+        self._running = True
 
-        while True:
+        while self._running:
             try:
-                # 记录流长度（监控积压）
                 await self._report_stream_length()
 
                 messages = await self.redis.xreadgroup(
@@ -61,23 +69,73 @@ class PreferenceEventConsumer:
 
                 for _stream, entries in messages:
                     for entry_id, data in entries:
-                        await self._handle_event(entry_id, data)
-                        await self.redis.xack(self.stream_key, self.consumer_group, entry_id)
+                        retry_count = int(data.get("_retry_count", 0)) if isinstance(data, dict) else 0
+                        try:
+                            await self._handle_event(entry_id, data)
+                            await self.redis.xack(self.stream_key, self.consumer_group, entry_id)
+                        except Exception as e:
+                            await self._handle_failed_message(entry_id, data, e, retry_count)
 
             except Exception as e:
                 logger.error(f"Error consuming events: {e}")
                 PREFERENCE_EVENT_ERRORS_TOTAL.labels(
                     error_type=type(e).__name__,
-                    consumer_group=self.consumer_group
+                    consumer_group=self.consumer_group,
                 ).inc()
                 await asyncio.sleep(1)
+
+    async def _handle_failed_message(
+        self, entry_id: str, data: dict, error: Exception, retry_count: int,
+    ) -> None:
+        if retry_count < MAX_RETRIES:
+            await self._requeue_for_retry(entry_id, data, error, retry_count)
+        else:
+            await self._move_to_dlq(entry_id, data, error, retry_count)
+
+    async def _requeue_for_retry(
+        self, entry_id: str, data: dict, error: Exception, retry_count: int,
+    ) -> None:
+        next_retry = retry_count + 1
+        payload = dict(data) if isinstance(data, dict) else {"raw": str(data)}
+        payload["_retry_count"] = next_retry
+        payload["_last_error"] = str(error)
+        payload["_original_message_id"] = entry_id
+        await self.redis.xadd(self.stream_key, payload)
+        await self.redis.xack(self.stream_key, self.consumer_group, entry_id)
+        logger.warning(
+            "Requeued failed preference event: entry={} retry={}/{} error={}",
+            entry_id, next_retry, MAX_RETRIES, error,
+        )
+
+    async def _move_to_dlq(
+        self, entry_id: str, data: dict, error: Exception, retry_count: int,
+    ) -> None:
+        dlq_stream = f"{self.stream_key}{DLQ_STREAM_SUFFIX}"
+        dlq_payload = {
+            "event": json.dumps(data, ensure_ascii=False, default=str),
+            "error": str(error),
+            "stream": self.stream_key,
+            "group_name": self.consumer_group,
+            "message_id": entry_id,
+            "retry_count": retry_count,
+        }
+        await self.redis.xadd(dlq_stream, dlq_payload)
+        await self.redis.xack(self.stream_key, self.consumer_group, entry_id)
+        PREFERENCE_EVENT_ERRORS_TOTAL.labels(
+            error_type="dlq",
+            consumer_group=self.consumer_group,
+        ).inc()
+        logger.error(
+            "Moved preference event to DLQ: entry={} retries={} error={}",
+            entry_id, retry_count, error,
+        )
 
     async def _report_stream_length(self):
         """报告 Redis Stream 长度"""
         try:
             length = await self.redis.xlen(self.stream_key)
             PREFERENCE_EVENT_STREAM_LENGTH.labels(
-                stream_key=self.stream_key
+                stream_key=self.stream_key,
             ).set(length)
         except Exception:
             pass
@@ -100,12 +158,12 @@ class PreferenceEventConsumer:
                 # 计算消费延迟
                 consume_lag = consume_start - published_at
                 PREFERENCE_EVENT_CONSUME_LAG.labels(
-                    consumer_group=self.consumer_group
+                    consumer_group=self.consumer_group,
                 ).set(consume_lag)
 
                 logger.info(
                     f"Received preferences update for user {user_id}, "
-                    f"version={version}, lag={consume_lag:.3f}s"
+                    f"version={version}, lag={consume_lag:.3f}s",
                 )
 
                 # 测量缓存失效延迟
@@ -114,22 +172,23 @@ class PreferenceEventConsumer:
                 invalidate_latency = time.time() - invalidate_start
 
                 CACHE_INVALIDATION_LATENCY.labels(
-                    cache_type="user_preferences"
+                    cache_type="user_preferences",
                 ).observe(invalidate_latency)
 
                 # 端到端延迟
                 e2e_latency = time.time() - published_at
                 PREFERENCE_EVENT_E2E_LATENCY.labels(
                     event_type=event_type,
-                    source="gateway"
+                    source="gateway",
                 ).observe(e2e_latency)
 
             except Exception as e:
                 logger.error(f"Failed to handle preferences update event: {e}")
                 PREFERENCE_EVENT_ERRORS_TOTAL.labels(
                     error_type="handle_event",
-                    consumer_group=self.consumer_group
+                    consumer_group=self.consumer_group,
                 ).inc()
+                raise
 
     @staticmethod
     def _get_value(data: dict, key: str):
