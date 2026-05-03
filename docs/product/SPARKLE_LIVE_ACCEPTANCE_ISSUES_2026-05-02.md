@@ -2758,7 +2758,8 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260505-0930-C8
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-05T12:30:00Z
 - **severity**: P1
 - **domain**: C
 - **title**: legacyStreamErrorPayload 3 个调用路径缺失 request_id——多请求并发时错误事件被静默丢弃
