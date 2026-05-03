@@ -1546,7 +1546,7 @@
 
 
 ### ISSUE-20260504-0345-H6
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: H
 - **title**: community 三个屏幕的 hintText/空状态残留 5 处硬编码英文，labelText 已国际化但 placeholder 遗漏
@@ -1563,7 +1563,7 @@
 - **blast_radius**: 影响三个社区屏幕的中文用户体验——用户搜索（搜索入口）、群组任务创建（任务创建流程）、创建群组（群组创建流程）。hintText 是用户输入前的引导文本，中英混搭降低产品完成度。对北极星有轻微影响——不阻断核心学习流程，但社区功能是差异化体验的基础
 - **suggested_fix_direction**: 将 5 处硬编码英文替换为 `I18nService.instance.isChinese ? '中文' : 'English'` 模式：(1) user_search_screen.dart 的 3 处采用与 line 249 相同的 i18n 模式；(2) group_tasks_screen.dart:309 和 create_group_screen.dart:182 的 hintText 采用与相邻 labelText 相同的 `I18nService.instance.isChinese` 模式
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-reviewer+2026-05-04T03:30:00Z
 - **fix_commit**: 留空
 
 
