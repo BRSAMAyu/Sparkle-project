@@ -52649,6 +52649,30 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'撤权'**
   String get studyMaterialsRevokeAction;
+
+  /// No description provided for @studyMaterialsStatusActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'可用'**
+  String get studyMaterialsStatusActive;
+
+  /// No description provided for @studyMaterialsStatusArchived.
+  ///
+  /// In zh, this message translates to:
+  /// **'已归档'**
+  String get studyMaterialsStatusArchived;
+
+  /// No description provided for @studyMaterialsStatusRevoked.
+  ///
+  /// In zh, this message translates to:
+  /// **'已撤权'**
+  String get studyMaterialsStatusRevoked;
+
+  /// No description provided for @studyMaterialsStatusOrphaned.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标已结束'**
+  String get studyMaterialsStatusOrphaned;
 }
 
 class _AppLocalizationsDelegate

@@ -30196,4 +30196,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get studyMaterialsRevokeAction => 'Revoke';
+
+  @override
+  String get studyMaterialsStatusActive => 'Active';
+
+  @override
+  String get studyMaterialsStatusArchived => 'Archived';
+
+  @override
+  String get studyMaterialsStatusRevoked => 'Revoked';
+
+  @override
+  String get studyMaterialsStatusOrphaned => 'Target ended';
 }

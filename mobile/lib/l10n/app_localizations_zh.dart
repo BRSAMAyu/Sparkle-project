@@ -28957,4 +28957,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get studyMaterialsRevokeAction => '撤权';
+
+  @override
+  String get studyMaterialsStatusActive => '可用';
+
+  @override
+  String get studyMaterialsStatusArchived => '已归档';
+
+  @override
+  String get studyMaterialsStatusRevoked => '已撤权';
+
+  @override
+  String get studyMaterialsStatusOrphaned => '目标已结束';
 }

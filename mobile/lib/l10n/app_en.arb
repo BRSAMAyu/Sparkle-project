@@ -11777,5 +11777,9 @@
   "@studyMaterialsRevokeFailed": { "placeholders": { "error": { "type": "String" } } },
   "studyMaterialsArchiveAction": "Archive",
   "studyMaterialsRestoreAction": "Restore",
-  "studyMaterialsRevokeAction": "Revoke"
+  "studyMaterialsRevokeAction": "Revoke",
+  "studyMaterialsStatusActive": "Active",
+  "studyMaterialsStatusArchived": "Archived",
+  "studyMaterialsStatusRevoked": "Revoked",
+  "studyMaterialsStatusOrphaned": "Target ended"
 }

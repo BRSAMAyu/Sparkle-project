@@ -11778,5 +11778,9 @@
   "@studyMaterialsRevokeFailed": { "placeholders": { "error": { "type": "String" } } },
   "studyMaterialsArchiveAction": "归档",
   "studyMaterialsRestoreAction": "恢复",
-  "studyMaterialsRevokeAction": "撤权"
+  "studyMaterialsRevokeAction": "撤权",
+  "studyMaterialsStatusActive": "可用",
+  "studyMaterialsStatusArchived": "已归档",
+  "studyMaterialsStatusRevoked": "已撤权",
+  "studyMaterialsStatusOrphaned": "目标已结束"
 }
