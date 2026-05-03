@@ -60,6 +60,7 @@ async def test_stage33_redis_override_takes_precedence(monkeypatch) -> None:
     settings.AURORA_STAGE33_SRL_MODE = "off"
     settings.AURORA_STAGE33_WM_PROMPT_MODE = "off"
     settings.AURORA_STAGE33_EVENTS_MODE = "off"
+    settings.AURORA_STAGE33_COMMUNITY_MODE = "live"
 
     fake_redis = AsyncMock()
 
@@ -85,6 +86,7 @@ async def test_stage33_redis_override_takes_precedence(monkeypatch) -> None:
         "srl": "shadow",
         "wm_prompt": "live",
         "events": "shadow",
+        "community": "live",
     }
 
 
@@ -111,6 +113,7 @@ async def test_stage33_summary_returns_all_keys(monkeypatch) -> None:
     settings.AURORA_STAGE33_SRL_MODE = "shadow"
     settings.AURORA_STAGE33_WM_PROMPT_MODE = "shadow"
     settings.AURORA_STAGE33_EVENTS_MODE = "shadow"
+    settings.AURORA_STAGE33_COMMUNITY_MODE = "live"
 
     summary = await AuroraStage33KillSwitchService().summary()
-    assert set(summary.keys()) == {"mode", "social", "srl", "wm_prompt", "events"}
+    assert set(summary.keys()) == {"mode", "social", "srl", "wm_prompt", "events", "community"}

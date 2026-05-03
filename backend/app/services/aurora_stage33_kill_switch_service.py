@@ -42,6 +42,12 @@ class AuroraStage33KillSwitchService:
             redis_key="events_mode",
             settings_attr="AURORA_STAGE33_EVENTS_MODE",
         ),
+        "community": KillSwitchBinding(
+            stage="33",
+            feature="community",
+            redis_key="community_mode",
+            settings_attr="AURORA_STAGE33_COMMUNITY_MODE",
+        ),
     }
 
     async def get_mode(self) -> str:
@@ -87,6 +93,7 @@ class AuroraStage33KillSwitchService:
             "srl": await self.get_feature_mode("srl"),
             "wm_prompt": await self.get_feature_mode("wm_prompt"),
             "events": await self.get_feature_mode("events"),
+            "community": await self.get_feature_mode("community"),
         }
 
     @classmethod

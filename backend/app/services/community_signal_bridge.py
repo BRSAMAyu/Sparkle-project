@@ -21,6 +21,7 @@ from app.core.metrics import (
     COMMUNITY_PRIVACY_BUDGET_SPENT,
     COMMUNITY_PRIVACY_COHORT_SIZE,
 )
+from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.models.community import Group, GroupTask, GroupTaskClaim, GroupType
 from app.models.community_privacy import CommunityAggregateSignal, PrivacyBudgetLedger
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
@@ -68,6 +69,10 @@ class CommunitySignalBridge:
         self.db = db
         self.redis = redis
         self.privacy_engine = PrivacyPreservingCommunityEngine()
+        self.kill_switch = AuroraStage33KillSwitchService()
+
+    async def _community_mode(self) -> str:
+        return await self.kill_switch.get_feature_mode("community")
 
     @classmethod
     def sanitize_for_aurora_context(
@@ -113,6 +118,10 @@ class CommunitySignalBridge:
         return sanitized
 
     async def handle_group_task_completed(self, event: dict) -> None:
+        mode = await self._community_mode()
+        if mode != "live":
+            logger.info("community_bridge mode={mode}, skipping handle_group_task_completed", mode=mode)
+            return
         if str(event.get("source") or "") != "group":
             return
 
@@ -173,6 +182,9 @@ class CommunitySignalBridge:
         target_group_id: UUID | None,
         share_id: UUID,
     ) -> None:
+        if await self._community_mode() != "live":
+            logger.info("community_bridge mode=shadow_or_off, skipping handle_resource_shared")
+            return
         await event_bus.publish(
             "community.resource_shared",
             {
@@ -263,6 +275,9 @@ class CommunitySignalBridge:
         anonymized aggregates, and emits the result as a candidate soft-bias
         signal rather than writing personal state directly.
         """
+        if await self._community_mode() != "live":
+            logger.info("community_bridge mode=shadow_or_off, build_privacy_preserving_cohort_signal suppressed")
+            return {"allowed": False, "reason": "community_bridge_disabled"}
         requester = str(requester_user_id)
         if not getattr(settings, "COMMUNITY_INTELLIGENCE_ENABLED", True):
             COMMUNITY_PRIVACY_AGGREGATE_TOTAL.labels(result="disabled", query_type=query_type).inc()
@@ -526,6 +541,9 @@ class CommunitySignalBridge:
         Broadcast an achievement unlock to community feeds.
         Publishes to Redis channel for real-time notification and stores in user's activity feed.
         """
+        if await self._community_mode() != "live":
+            logger.info("community_bridge mode=shadow_or_off, skipping broadcast_achievement_unlock")
+            return
         payload = {
             "event_type": "community.achievement_unlocked",
             "user_id": str(user_id),

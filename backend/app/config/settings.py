@@ -345,6 +345,7 @@ class Settings(BaseSettings):
     AURORA_STAGE33_SRL_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE33_WM_PROMPT_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE33_EVENTS_MODE: str = "live"  # off | shadow | live
+    AURORA_STAGE33_COMMUNITY_MODE: str = "live"  # off | shadow | live
 
     # Aurora Stage 34
     AURORA_STAGE34_MODE: str = "live"  # off | shadow | live
