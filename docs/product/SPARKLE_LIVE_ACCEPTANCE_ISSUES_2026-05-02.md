@@ -422,7 +422,7 @@
 | R46 | 2026-05-05T08:00 | H | 1 | 1/1 (H9 verified) | H 域续探——document_library_screen 归档/恢复/撤回 10 处纯中文硬编码 |
 | R48 | 2026-05-05T09:00 | I | 1 | pending | I 域续探——Pydantic GroupInfo schema 缺少 announcement 字段，群公告响应静默丢弃 |
 | R50 | 2026-05-05T09:30 | C | 2 | 1/2 (C8 verified, C9 rejected as duplicate of K1) | C 域续探——legacyStreamErrorPayload 3 路径缺 request_id + message_nack 缺 request_id + Flutter NackEvent 死代码 |
-| R52 | 2026-05-05T10:30 | K | 1 | pending | K 域续探——intelligent_task_service _recognize_intent 静默吞所有异常返回硬编码中文默认值 |
+| R52 | 2026-05-05T10:30 | K | 1 | 0/1 (K10 rejected — duplicate of K7) | K 域续探——intelligent_task_service _recognize_intent 静默吞异常（已被 K7 覆盖） |
 | R53 | 2026-05-05T10:35 | A | 1 | 1/1 (A1 verified) | A 域——D1 fix 引入回归：statechart RuntimeError 跳过 GRAPH_END + checkpointer 清理 |
 
 ---
