@@ -2232,7 +2232,8 @@
 - **opus_review**: APPROVED by opus-reviewer at 2026-05-04T22:25:00Z
 
 ### ISSUE-20260504-1031-H8
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-04T10:15:00Z
 - **severity**: P3
 - **domain**: H
 - **title**: sprint_history_screen 的 loading/空状态文案为硬编码英文——文件内其他字符串已通过 AppLocalizations 国际化
