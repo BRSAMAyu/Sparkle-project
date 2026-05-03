@@ -2044,8 +2044,9 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1003-K8
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
+- **fixer_started_at**: 2026-05-03T10:40:00Z
 - **domain**: K
 - **title**: self_revision_service._read_json_key 的 Redis 读取/JSON 解析失败被 `except Exception: return None` 静默吞没——数据损坏不可见
 - **symptom**: 当 session companion revision 的 Redis 数据损坏（如部分写入、编码错误、JSON 格式错误）时，`_read_json_key()` 静默返回 None。调用方 `_session_revisions()` 收到 None 后回退到从 payload/source dict 中提取 `companion_revision_history` 字段——若该字段也不存在，返回空列表 []。整个过程中无任何日志记录数据损坏事件。操作者只知道"revision history 为空"，无法区分"无历史"与"历史数据损坏"
