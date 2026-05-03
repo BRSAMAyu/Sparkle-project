@@ -357,12 +357,12 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           .archiveDocument(document.fileId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('资料已归档，不会再进入 RAG 上下文')),
+        SnackBar(content: Text(context.l10n.studyMaterialsArchiveSuccess)),
       );
     } on Exception catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('归档失败：$error'), backgroundColor: DS.error),
+        SnackBar(content: Text(context.l10n.studyMaterialsArchiveFailed(error.toString())), backgroundColor: DS.error),
       );
     }
   }
@@ -374,12 +374,12 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           .restoreDocument(document.fileId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('资料已恢复')),
+        SnackBar(content: Text(context.l10n.studyMaterialsRestoreSuccess)),
       );
     } on Exception catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('恢复失败：$error'), backgroundColor: DS.error),
+        SnackBar(content: Text(context.l10n.studyMaterialsRestoreFailed(error.toString())), backgroundColor: DS.error),
       );
     }
   }
@@ -388,8 +388,8 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('撤回资料权限'),
-        content: Text('撤回后，${document.filename} 会从共享与检索缓存中移除。'),
+        title: Text(context.l10n.studyMaterialsRevokeTitle),
+        content: Text(context.l10n.studyMaterialsRevokeMessage(document.filename)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -397,7 +397,7 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('撤回'),
+            child: Text(context.l10n.studyMaterialsRevokeConfirm),
           ),
         ],
       ),
@@ -410,12 +410,12 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           .revokeDocument(document.fileId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('资料权限已撤回')),
+        SnackBar(content: Text(context.l10n.studyMaterialsRevokeSuccess)),
       );
     } on Exception catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('撤回失败：$error'), backgroundColor: DS.error),
+        SnackBar(content: Text(context.l10n.studyMaterialsRevokeFailed(error.toString())), backgroundColor: DS.error),
       );
     }
   }
@@ -1278,14 +1278,14 @@ class _DocumentCard extends StatelessWidget {
                       ),
                       label: Text(
                         document.lifecycleStatus == SourceLifecycleStatus.active
-                            ? '归档'
-                            : '恢复',
+                            ? context.l10n.studyMaterialsArchiveAction
+                            : context.l10n.studyMaterialsRestoreAction,
                       ),
                     ),
                     OutlinedButton.icon(
                       onPressed: onRevoke,
                       icon: const Icon(Icons.link_off_rounded),
-                      label: const Text('撤权'),
+                      label: Text(context.l10n.studyMaterialsRevokeAction),
                     ),
                     OutlinedButton.icon(
                       onPressed: onDelete,

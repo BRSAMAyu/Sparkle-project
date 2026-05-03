@@ -30151,4 +30151,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goalDetailRelatedSources => 'Related sources';
+
+  @override
+  String get studyMaterialsArchiveSuccess =>
+      'Material archived — it will no longer enter RAG context.';
+
+  @override
+  String studyMaterialsArchiveFailed(String error) {
+    return 'Archive failed: $error';
+  }
+
+  @override
+  String get studyMaterialsRestoreSuccess => 'Material restored.';
+
+  @override
+  String studyMaterialsRestoreFailed(String error) {
+    return 'Restore failed: $error';
+  }
+
+  @override
+  String get studyMaterialsRevokeTitle => 'Revoke material access';
+
+  @override
+  String studyMaterialsRevokeMessage(String filename) {
+    return 'After revoking, $filename will be removed from shared and search cache.';
+  }
+
+  @override
+  String get studyMaterialsRevokeConfirm => 'Revoke';
+
+  @override
+  String get studyMaterialsRevokeSuccess => 'Material access revoked.';
+
+  @override
+  String studyMaterialsRevokeFailed(String error) {
+    return 'Revoke failed: $error';
+  }
+
+  @override
+  String get studyMaterialsArchiveAction => 'Archive';
+
+  @override
+  String get studyMaterialsRestoreAction => 'Restore';
+
+  @override
+  String get studyMaterialsRevokeAction => 'Revoke';
 }

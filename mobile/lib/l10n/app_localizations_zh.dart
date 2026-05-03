@@ -28913,4 +28913,48 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get goalDetailRelatedSources => '相关资料来源';
+
+  @override
+  String get studyMaterialsArchiveSuccess => '资料已归档，不会再进入 RAG 上下文。';
+
+  @override
+  String studyMaterialsArchiveFailed(String error) {
+    return '归档失败：$error';
+  }
+
+  @override
+  String get studyMaterialsRestoreSuccess => '资料已恢复。';
+
+  @override
+  String studyMaterialsRestoreFailed(String error) {
+    return '恢复失败：$error';
+  }
+
+  @override
+  String get studyMaterialsRevokeTitle => '撤回资料权限';
+
+  @override
+  String studyMaterialsRevokeMessage(String filename) {
+    return '撤回后，$filename 会从共享与检索缓存中移除。';
+  }
+
+  @override
+  String get studyMaterialsRevokeConfirm => '撤回';
+
+  @override
+  String get studyMaterialsRevokeSuccess => '资料权限已撤回。';
+
+  @override
+  String studyMaterialsRevokeFailed(String error) {
+    return '撤回失败：$error';
+  }
+
+  @override
+  String get studyMaterialsArchiveAction => '归档';
+
+  @override
+  String get studyMaterialsRestoreAction => '恢复';
+
+  @override
+  String get studyMaterialsRevokeAction => '撤权';
 }

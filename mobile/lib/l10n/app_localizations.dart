@@ -52577,6 +52577,78 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'相关资料来源'**
   String get goalDetailRelatedSources;
+
+  /// No description provided for @studyMaterialsArchiveSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'资料已归档，不会再进入 RAG 上下文。'**
+  String get studyMaterialsArchiveSuccess;
+
+  /// No description provided for @studyMaterialsArchiveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'归档失败：{error}'**
+  String studyMaterialsArchiveFailed(String error);
+
+  /// No description provided for @studyMaterialsRestoreSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'资料已恢复。'**
+  String get studyMaterialsRestoreSuccess;
+
+  /// No description provided for @studyMaterialsRestoreFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复失败：{error}'**
+  String studyMaterialsRestoreFailed(String error);
+
+  /// No description provided for @studyMaterialsRevokeTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回资料权限'**
+  String get studyMaterialsRevokeTitle;
+
+  /// No description provided for @studyMaterialsRevokeMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回后，{filename} 会从共享与检索缓存中移除。'**
+  String studyMaterialsRevokeMessage(String filename);
+
+  /// No description provided for @studyMaterialsRevokeConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回'**
+  String get studyMaterialsRevokeConfirm;
+
+  /// No description provided for @studyMaterialsRevokeSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'资料权限已撤回。'**
+  String get studyMaterialsRevokeSuccess;
+
+  /// No description provided for @studyMaterialsRevokeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤回失败：{error}'**
+  String studyMaterialsRevokeFailed(String error);
+
+  /// No description provided for @studyMaterialsArchiveAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'归档'**
+  String get studyMaterialsArchiveAction;
+
+  /// No description provided for @studyMaterialsRestoreAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复'**
+  String get studyMaterialsRestoreAction;
+
+  /// No description provided for @studyMaterialsRevokeAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'撤权'**
+  String get studyMaterialsRevokeAction;
 }
 
 class _AppLocalizationsDelegate
