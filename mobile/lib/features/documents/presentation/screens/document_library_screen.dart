@@ -350,19 +350,6 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
     }
   }
 
-  String _lifecycleStatusLabel(BuildContext ctx, SourceLifecycleStatus status) {
-    switch (status) {
-      case SourceLifecycleStatus.active:
-        return ctx.l10n.studyMaterialsStatusActive;
-      case SourceLifecycleStatus.archived:
-        return ctx.l10n.studyMaterialsStatusArchived;
-      case SourceLifecycleStatus.revoked:
-        return ctx.l10n.studyMaterialsStatusRevoked;
-      case SourceLifecycleStatus.orphaned:
-        return ctx.l10n.studyMaterialsStatusOrphaned;
-    }
-  }
-
   Future<void> _archiveDocument(DocumentLibraryItem document) async {
     try {
       await ref
@@ -1587,6 +1574,19 @@ class _LifecycleBadge extends StatelessWidget {
 
   final SourceLifecycleStatus status;
 
+  static String _label(BuildContext ctx, SourceLifecycleStatus s) {
+    switch (s) {
+      case SourceLifecycleStatus.active:
+        return ctx.l10n.studyMaterialsStatusActive;
+      case SourceLifecycleStatus.archived:
+        return ctx.l10n.studyMaterialsStatusArchived;
+      case SourceLifecycleStatus.revoked:
+        return ctx.l10n.studyMaterialsStatusRevoked;
+      case SourceLifecycleStatus.orphaned:
+        return ctx.l10n.studyMaterialsStatusOrphaned;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final color = switch (status) {
@@ -1617,7 +1617,7 @@ class _LifecycleBadge extends StatelessWidget {
           Icon(icon, size: 14, color: color),
           const SizedBox(width: DS.spacing6),
           Text(
-            _lifecycleStatusLabel(context, status),
+            _LifecycleBadge._label(context, status),
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: color,
                   fontWeight: FontWeight.w700,
