@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 
 from app.config import settings
-from app.core.kill_switch import normalize_mode
+from app.core.kill_switch import normalize_mode, record_mode_gauge
 
 _EMAIL_RE = re.compile(
     r"(?<![A-Z0-9._%+-])[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}(?![A-Z0-9._%+-])",
@@ -51,10 +51,12 @@ def sha256_token(value: str) -> str:
 
 
 def pii_redaction_mode() -> str:
-    return normalize_mode(
+    mode = normalize_mode(
         getattr(settings, "AURORA_PRIVACY_PII_REDACTION_MODE", "live"),
         fallback="live",
     )
+    record_mode_gauge("privacy", "pii_redaction", mode)
+    return mode
 
 
 def _redact_pattern(text: str, pattern: re.Pattern[str], replacement: str, category: str, categories: set[str]) -> str:
