@@ -411,7 +411,7 @@
 | R35 | 2026-05-04T14:30 | C | 2 | 2/2 (C6/C7 verified) | C 域续探——Proto MessageNack 未实现（Go 用 ad-hoc error 替代结构化 NACK，Flutter NackEvent 死代码）+ HeartbeatPing/Pong proto 类型死代码（三套心跳仅两套存活） |
 | R36 | 2026-05-04T16:00 | L | 2 | 2/2 (L5/L6 verified) | L 域续探——governance rule effectiveness: CommunitySignalBridge 无 kill switch（同级 SocialSignalBridge 有 Stage33 tri-state）+ Stage 20 SufficiencyJudge/ConflictResolver 用布尔开关非 Aurora tri-state（无 shadow/gauge/drill） |
 | R37 | 2026-05-04T16:20 | K | 0 | N/A | K 域续探——Flutter 20+ catch blocks 审查 + Python 15+ except:pass 审查，全部为设计合理的防御性编码或已被 R6/R31 归档 |
-| R38 | 2026-05-04T17:00 | F | 1 | pending Opus | F 域续探——Task/Profile/Intervention 消费者子处理器吞噬异常旁路 EventBus DLQ/retry |
+| R38 | 2026-05-04T17:00 | F | 1 | 1/1 (F5 verified by opus-reviewer) | F 域续探——Task/Profile/Intervention 消费者子处理器吞噬异常旁路 EventBus DLQ/retry |
 
 ---
 
@@ -2540,5 +2540,5 @@
   4. **额外风险——部分回滚**: TaskEventConsumer._handle_task_completed 的多个操作（BehaviorSignalCollector、MetacognitionService、CommunitySignalBridge、AdaptiveReplanner）共享同一 `async with AsyncSessionLocal() as db` session。如果 AdaptiveReplanner (line 163-168) 失败，整个 session 回滚（包括已成功的 BehaviorSignalCollector 工作），而外层 except 吞异常且 EventBus 已 ACK——所有操作永久丢失
   5. **治理覆盖缺口**: Rule AZ 守卫 (check_rule_az_eventbus_reliability.py) 的 CONSUMER_TARGETS 仅包含 GalaxyEventConsumer、DocumentFeedbackEventConsumer、JourneyEventConsumerBase——不含 Task/Profile/Intervention 消费者
   6. **误报排除**: GalaxyEventConsumer._handle_error_created 的 `except Exception: continue` (line 102-103) 经亲自 Read 验证仅用于 UUID 解析循环，不影响主流程异常传播（之前 agent 的误判已排除）
-- **Opus pass rate**: pending (F5 待独立复审)
+- **Opus pass rate**: 1/1 (F5 verified by opus-reviewer)
 - **Next suggested domain**: G (Mock vs Real) — 6 轮未回探；或 H (i18n) — 4 轮未回探
