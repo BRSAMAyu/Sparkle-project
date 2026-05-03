@@ -748,7 +748,7 @@ class TestErrorHandling:
 
     @pytest.mark.asyncio
     async def test_node_error_propagation(self, sample_state):
-        """测试节点错误传播"""
+        """D1 regression: node exceptions must raise, not return partial state."""
 
         async def failing_node(state: WorkflowState) -> WorkflowState:
             raise RuntimeError("Node execution failed")
@@ -764,18 +764,12 @@ class TestErrorHandling:
         graph.set_entry_point("failing_node")
         graph.compile()
 
-        result = await graph.invoke(sample_state)
-
-        # 验证错误被记录
-        assert len(result.errors) == 1
-        assert "Node execution failed" in result.errors[0]
-
-        # 验证执行停止（next_node 未执行）
-        assert "Should not reach here" not in [m.get("content", "") for m in result.messages]
+        with pytest.raises(RuntimeError, match="Node execution failed"):
+            await graph.invoke(sample_state)
 
     @pytest.mark.asyncio
     async def test_nested_graph_error_propagation(self, sample_state):
-        """测试嵌套图中的错误传播"""
+        """D1 regression: nested graph exceptions must propagate to parent and raise."""
 
         async def failing_sub_node(state: WorkflowState) -> WorkflowState:
             raise ValueError("Sub graph failure")
@@ -796,14 +790,8 @@ class TestErrorHandling:
         main_graph.set_entry_point("main")
         main_graph.compile()
 
-        result = await main_graph.invoke(sample_state)
-
-        # 验证主节点执行了
-        assert result.context_data.get("main_executed") is True
-
-        # 验证错误被记录
-        assert len(result.errors) == 1
-        assert "Sub graph failure" in result.errors[0]
+        with pytest.raises(RuntimeError, match="Sub graph failure"):
+            await main_graph.invoke(sample_state)
 
     @pytest.mark.asyncio
     async def test_error_in_parallel_branch(self, sample_state):
@@ -948,7 +936,7 @@ class TestEventEmission:
 
     @pytest.mark.asyncio
     async def test_error_event_emission(self, sample_state, event_history):
-        """测试错误事件发射"""
+        """D1 regression: error events are emitted before exception propagates."""
 
         events, collector = event_history
 
@@ -961,9 +949,10 @@ class TestEventEmission:
         graph.on_event = collector
         graph.compile()
 
-        await graph.invoke(sample_state)
+        with pytest.raises(RuntimeError, match="Test error"):
+            await graph.invoke(sample_state)
 
-        # 验证错误事件被发射
+        # 验证错误事件被发射（在异常传播前）
         error_events = [e for e in events if e.type == GraphEventType.ERROR]
         assert len(error_events) == 1
         assert "Test error" in error_events[0].details

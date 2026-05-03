@@ -230,6 +230,7 @@ class StateGraph:
                     )
 
         steps = 0
+        node_exception_occurred = False
 
         logger.info(f"🚀 [{self.name}] Starting execution from '{current_node_name}'")
         await self._emit_event(GraphEventType.GRAPH_START, self.name, state)
@@ -278,6 +279,7 @@ class StateGraph:
                 logger.exception("❌ Error in node '{}' : {}", current_node_name, e)
                 state.errors.append(f"[{self.name}] Node {current_node_name} failed: {str(e)}")
                 await self._emit_event(GraphEventType.ERROR, current_node_name, state, str(e))
+                node_exception_occurred = True
                 break  # Or handle error transition
 
             await self._emit_event(GraphEventType.NODE_END, current_node_name, state)
@@ -304,6 +306,11 @@ class StateGraph:
         if steps >= max_steps:
             logger.warning(f"⚠️ [{self.name}] Max steps reached ({max_steps})")
 
+        if node_exception_occurred:
+            raise RuntimeError(
+                f"Graph '{self.name}' aborted due to node error(s): "
+                + "; ".join(str(e) for e in state.errors[-3:])
+            )
         logger.info(f"🏁 [{self.name}] Execution finished")
         await self._emit_event(GraphEventType.GRAPH_END, self.name, state)
         if self.checkpointer:
