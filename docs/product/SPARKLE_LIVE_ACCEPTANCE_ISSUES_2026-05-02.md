@@ -396,6 +396,7 @@
 | R20 | 2026-05-04T03:00 | A | 1 | 1/1 (C2 closed) | A-domain UI E2E 追踪：guidance 代理路由缺失（跨域发现） |
 | R21 | 2026-05-04T03:15 | F | 1 | 1/1 (F1 closed) | F1 subscribe non-BUSYGROUP raise fix — commit 8e7179e41 |
 | R23 | 2026-05-04T03:45 | H | 1 | 1/1 (H6 verified) | H-domain 续探——community 三个屏幕 hintText/空状态残留 5 处硬编码英文 |
+| R24 | 2026-05-04T03:50 | L | 1 | 1/1 (L1 closed) | L1 BH guard registered in manifest — commit c2e5c62b4 |
 
 ---
 
@@ -1211,11 +1212,12 @@
 - **Next suggested domain**: L (治理规则与文档承诺 vs 真实实现) — last remaining unexplored domain
 
 ### ISSUE-20260503-0432-L1
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: L
 - **title**: BH 元学习参数安全守卫脚本已存在但未注册到 rule_guard_manifest.tsv，CI 中从不运行
 - **fixer_started_at**: 2026-05-04T03:20:00Z
+- **closed_at**: 2026-05-04T03:50:00Z
 - **symptom**: 运行 `bash scripts/run_all_rule_guards.sh`（CLAUDE.md 推荐的 CI 入口）后，元学习参数的安全检查（参数边界、kill switch 绑定、默认值回退、实验安全性）从未被执行。操作者看到 "64 rules passed" 后误以为所有治理规则均已覆盖，但实际上 BH 守卫被遗漏
 - **root_cause_hypothesis**: `scripts/guards/check_rule_bh_meta_learning_safety.py` 是一个完整的守卫脚本（使用 AST 解析验证 RoutingParameterRegistry 的默认值回退、PARAMETER_BOUNDS 完整性、META_LEARNING_BINDING kill switch 绑定、实验服务安全性），但开发者在创建后未将其添加到 `scripts/rule_guard_manifest.tsv`。manifest 中有 64 条规则（从 K 到 GOV-DATA-MIN），但没有 BH 条目
 - **evidence**:
@@ -1229,7 +1231,15 @@
 - **suggested_fix_direction**: 在 manifest 中添加一行 `BH	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bh_meta_learning_safety.py"`。同时考虑添加 CI 守卫确保所有 `scripts/guards/check_rule_*.py` 文件都在 manifest 中有对应条目
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T22:30:00Z
-- **fix_commit**:
+- **fix_commit**: c2e5c62b4
+- **opus_review**: APPROVED by independent-fix-reviewer at 2026-05-04T03:45:00Z
+  - **5a root cause**: FIXED — 缺失的 BH 行已添加到 `scripts/rule_guard_manifest.tsv:63`。命令格式与其他条目一致：`BH	"${PYTHON_BIN}" "${REPO_ROOT}/scripts/guards/check_rule_bh_meta_learning_safety.py"`。`run_all_rule_guards.sh --list` 现在输出 65 条规则（含 BH），`--rule BH` 独立运行通过。直接根因修复，无 hack。
+  - **5b regression**: LOW RISK — 仅新增 1 行 manifest 条目，未修改任何已有条目。BH 守卫使用 AST 解析 + 静态文件读取，无副作用、无网络/外部调用、无 DB 写入。全量 `run_all_rule_guards.sh` 运行：65/65 通过（不含预存 AX 失败——缺少 route-tier 注释，与 BH 无关）。BG proto staleness 警告为预存问题。未发现回归。
+  - **5c cross-layer**: N/A — governance guard registration only. No proto/DB/i18n contracts.
+  - **5d test protection**: ADEQUATE — 新增 4 个回归测试于 `backend/tests/unit/test_bh_guard_registered.py`：（1）manifest 中存在 BH 行、（2）命令指向正确脚本、（3）脚本文件存在、（4）脚本执行 exit 0 并输出 PASS。4/4 通过。去附着验证：移除 manifest 中 BH 行后 test_bh_entry_exists_in_manifest 和 test_bh_command_points_to_correct_script 正确失败（2/4 FAIL），证明回归保护有效。
+  - **5e CLAUDE.md compliance**: PASS — 无 hardcoded secrets、无 business logic in gateway、guards 目录已有 16 个同类脚本使用相同模式、manifest 格式完全一致。无 anti-pattern 违反。
+  - **minor notes**: (1) commit message `feat(acceptance): explorer round R22 域=H +1 discovered (H6)` 未提及 L1 fix——commit 消息质量可改进但不影响功能；(2) BH 在 manifest 中位于 BF 与 BG 之间（BF→BH→BG），字母顺序应为 BF→BG→BH，但 manifest 本身并非严格字母排序，且 BG 在 fix 前已在该位置——此为预存问题不影响功能；(3) suggested_fix_direction 中"meta-guard 扫描所有 check_rule_*.py"的次要建议未实现——非阻塞，可作为独立改进。
+  - **verification**: `bash scripts/run_all_rule_guards.sh --rule BH` → PASS. `bash scripts/run_all_rule_guards.sh --list` → BH 出现（65 条规则）. `pytest backend/tests/unit/test_bh_guard_registered.py -v` → 4/4 passed. Full suite: BH passes, AX fails on pre-existing route-tier comments issue (unrelated).
 
 ### ISSUE-20260503-0432-L2
 - **status**: closed
