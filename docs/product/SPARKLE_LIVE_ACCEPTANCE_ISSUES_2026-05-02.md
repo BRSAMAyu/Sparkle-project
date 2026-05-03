@@ -2122,7 +2122,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T09:45
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) line 230-235: `_PRIVACY_BINDING = type("PrivacyBinding", (), {5 attrs})()` 仅有 stage/feature/redis_key/settings_attr/fallback_mode，缺少 allowed_modes/enabled_legacy_modes/legacy_bool_attr/enabled_mode。(2) kill_switch.py:125: `write_mode()` 访问 `binding.allowed_modes` —— 对 inline type() 对象触发 AttributeError。(3) kill_switch.py:9: TRI_STATE_MODES = frozenset({"off","shadow","live"})；line 34: KillSwitchBinding.allowed_modes 默认值 = TRI_STATE_MODES。(4) DEFAULT_SPECS line 63 含 "privacy" → SPECS["privacy"] (line 385-391) 使用 apply_mode=_privacy_apply → 调用 _ks_write_mode(即 kill_switch.write_mode) → crash。调用链完整：drill_all.sh → run_kill_switch_drills.py → iter DEFAULT_SPECS → "privacy" → _privacy_apply(mode) → _ks_write_mode(binding=_PRIVACY_BINDING) → write_mode() → binding.allowed_modes → AttributeError。backend/app/services/ 下无 AuroraPrivacyKillSwitchService（grep 零匹配），确认唯一绑定是此 inline type()。与 E2（privacy 读路径绕过 read_mode 缺失 gauge）不重复——E2 是运行时读路径可观测性，E7 是 drill 写路径崩溃。非"设计如此"——其他 drill 条目（stage18-39, doc_context, stage40-calendar）均使用正式 KillSwitchBinding 或专用 kill switch 服务。
-- **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
+- **fix_commit**: 1e58f08a79fe3af59aa23961a334958cd0e141f7
+- **opus_review**: APPROVED by independent-fix-reviewer at 2026-05-04T02:00:00Z — (a) root cause resolved: inline type() replaced with formal KillSwitchBinding(stage="privacy", feature="pii_redaction", ...) at line 238-244; dataclass provides all required fields including allowed_modes (defaults to TRI_STATE_MODES). (b) no regression risk: import changed from `write_mode as _ks_write_mode` to `KillSwitchBinding, write_mode as _ks_write_mode` — additive, no existing callers affected. _PRIVACY_BINDING is only used by _privacy_apply(). (c) cross-layer contract: write_mode() signature expects binding: KillSwitchBinding — now type-correct. No proto/DB/Go/Flutter propagation needed. (d) test coverage: 64/64 rule guards pass (AX failure is pre-existing route-tier comment issue, unrelated). The fix is a single-file, 8-insertion/7-deletion change with no behavioral side effects. (e) no CLAUDE.md or rule guard violations detected. Previous fix_commit (65ea8325) was incorrectly attributed (that was a Flutter fix for B5 capsule_provider); corrected to 1e58f08a7.
 
 ### ISSUE-20260504-1000-K5
 - **status**: rejected
@@ -2608,7 +2609,8 @@
   - Cross-layer contracts: proto (N/A, REST endpoint), DB (no migration needed, uses existing JSON column), Go gateway (catch-all covers it), i18n (N/A) — **OK**
 
 ### ISSUE-20260504-1802-B3
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-04T10:25:00Z
 - **severity**: P3
 - **domain**: B
 - **title**: GroupTasksNotifier 与 BlockedUsersNotifier 刷新失败时丢弃已有数据进入 error 态，与同文件其他 Notifier 不一致
