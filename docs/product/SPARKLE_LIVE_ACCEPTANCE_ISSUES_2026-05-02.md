@@ -1081,6 +1081,7 @@
 | R28 | 2026-05-03T08:30 | ISSUE-20260504-0345-H6 | ✅ Fixed | 1d0a141a6 | ~5 min |
 | R29 | 2026-05-03T09:20 | ISSUE-20260504-0500-B4 | ✅ Fixed | 286a338f7 | ~30 min |
 | R30 | 2026-05-03T09:10 | ISSUE-20260504-0501-B5 | ✅ Fixed | 65ea8325e | ~5 min |
+| R31 | 2026-05-03T09:35 | ISSUE-20260504-0930-G4 | ✅ Fixed | b9ad6569f | ~5 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1782,9 +1783,10 @@
 - **closed_at**: 2026-05-03T09:10:00Z
 
 ### ISSUE-20260504-0930-G4
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-03T09:29:07Z
+- **closed_at**: 2026-05-03T09:35:00Z
 - **domain**: G
 - **title**: Mock reportMessage 静默空实现导致举报提交后 UI 显示虚假成功 toast
 - **symptom**: 在 demo 模式下，用户在群聊中点击消息举报、选择原因、填写说明、提交后，UI 弹出 "Report submitted" 成功 toast，但举报数据实际上被静默丢弃——mock 不进行任何 HTTP 调用也不更新任何内部状态
@@ -1800,7 +1802,9 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T09:30
 - **reviewer_note**: APPROVED — 独立审阅确认全部 3 处 evidence 与代码一致。(1) mock_community_repository.dart:1894-1898 reportMessage 空实现 `async {}`。(2) group_chat_screen.dart:245-259 UI 层 try/catch 中 mock 返回 completed Future<void> 不抛异常，因此始终进入 success 分支显示 `AppFeedback.success`。(3) community_repository.dart:946-959 real 实现 POST 到 `/community/reports`，mock 完全跳过。调用链完整：UI onPressed → communityRepositoryProvider（demo 模式返回 mock）→ reportMessage() → `async {}` 返回 completed future → try block 成功 → AppFeedback.success 显示。与 G3（kick/promote/demote/transfer 空 stub，已 closed）不重复——G3 覆盖群组管理操作，G4 覆盖消息举报，属同一反模式的独立实例。与 B5 也不重复——B5 是 "provider 返回 null + UI 不检查 null" 模式，G4 是 "mock 空 stub 不抛异常 + UI try/catch 落入 success 分支" 模式。非"设计如此"——同 mock 中 respondToRequest 等方法维护内部状态，reportMessage 应为同样标准。
-- **fix_commit**: 留空
+- **fix_commit**: b9ad6569f
+- **opus_review**: APPROVED by opus-independent-reviewer at 2026-05-03T09:38:19Z
+- **opus_review_detail**: (a) Root cause resolved — reportMessage now appends to _mockReports (was empty async {}). _mockReports field was pre-declared at L588 and pre-initialized at L555 in _init(); fix simply wires it. (b) No regression risk — _mockReports has zero readers in codebase, method signature unchanged, no other methods/layers touched. (c) Cross-layer contract N/A — pure Flutter mock change, no proto/DB/i18n/Go/Python. (d) Test limitation noted — test does NOT import MockCommunityRepository; it tests local functions mimicking the pattern. If fix is reverted, test still passes. This is documented at L7-8 ("Tests the fix pattern in isolation because Flutter compilation is blocked by a pre-existing syntax error in feed_post_card.dart"). Test verifies conceptual correctness but provides weak regression guard. (e) Rule guards: AX failure is pre-existing on proxy_routes.go (unmodified by this commit, confirmed via git diff). All other guards pass. No CLAUDE.md anti-patterns violated.
 
 ### ISSUE-20260504-0931-G5
 - **status**: verified
