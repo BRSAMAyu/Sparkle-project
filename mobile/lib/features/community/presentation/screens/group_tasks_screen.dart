@@ -306,7 +306,9 @@ extension on GroupTasksScreen {
                   controller: titleController,
                   decoration: InputDecoration(
                     labelText: I18nService.instance.isChinese ? '任务标题' : 'Task Title',
-                    hintText: 'e.g. Complete Chapter 3 exercises',
+                    hintText: I18nService.instance.isChinese
+                        ? '例如：完成第三章练习'
+                        : 'e.g. Complete Chapter 3 exercises',
                     border: const OutlineInputBorder(),
                   ),
                   autofocus: true,

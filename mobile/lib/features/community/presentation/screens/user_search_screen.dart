@@ -112,7 +112,9 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
           controller: _searchController,
           autofocus: true,
           decoration: InputDecoration(
-            hintText: 'Search users by name or username...',
+            hintText: I18nService.instance.isChinese
+                ? '按姓名或用户名搜索...'
+                : 'Search users by name or username...',
             border: InputBorder.none,
             hintStyle: TextStyle(color: DS.textSecondary),
           ),
@@ -134,8 +136,12 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
             return Center(
               child: CompactEmptyState(
                 message: _searchController.text.isEmpty
-                    ? 'Search for users by name or username'
-                    : 'No users found',
+                    ? I18nService.instance.isChinese
+                        ? '按姓名或用户名搜索'
+                        : 'Search for users by name or username'
+                    : I18nService.instance.isChinese
+                        ? '未找到用户'
+                        : 'No users found',
                 icon: Icons.search,
               ),
             );

@@ -179,7 +179,9 @@ class _CreateGroupScreenState extends ConsumerState<CreateGroupScreen> {
                       controller: _nameController,
                       decoration: InputDecoration(
                         labelText: I18nService.instance.isChinese ? '社群名称' : 'Group Name',
-                        hintText: 'e.g. Daily Algorithm Sprint',
+                        hintText: I18nService.instance.isChinese
+                            ? '例如：每日算法冲刺'
+                            : 'e.g. Daily Algorithm Sprint',
                         border: const OutlineInputBorder(),
                       ),
                       validator: (value) {
