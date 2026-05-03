@@ -449,10 +449,11 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1400-H1
-- **status**: discovered
+- **status**: in_progress
 - **severity**: P1
 - **domain**: H
 - **title**: 群组成员管理操作（晋升/降权/转让群主）弹窗和 snackbar 全部硬编码英文，与同文件已 i18n 的踢出/静音/警告操作不一致
+- **fixer_started_at**: 2026-05-03T14:40:00Z
 - **symptom**: 中文模式下，群组成员列表的弹窗菜单显示 "Promote to Admin"、"Demote to Member"、"Transfer Ownership"；确认对话框标题和正文、操作成功/失败的 snackbar 消息全部显示英文。但同文件中的 "Mute"（静音）、"Warn"（发送警告）、"Kick"（踢出）已正确使用 `context.l10n` 进行 i18n
 - **root_cause_hypothesis**: 开发者分批添加了管理操作：踢出/静音/警告是后加的操作，正确使用了 `context.l10n`；晋升/降权/转让是最早写的操作，写死在代码中。PopupMenuButton itemBuilder 和 _handleMemberAction switch 分支中都存在硬编码
 - **evidence**:
@@ -466,11 +467,11 @@
 - **blast_radius**: 影响中文用户进行群组成员管理操作的完整体验流——从菜单到对话框到 toast 全是英文。群组管理是社区系统的核心交互。对北极星有中等影响——中文用户无法理解管理操作的后果和反馈
 - **suggested_fix_direction**: 在 AppLocalizations ARB 文件中添加 gmPromote/GmDemote/GmTransfer 系列字符串，然后在 group_members_screen.dart 中替换硬编码为 context.l10n 调用
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer-1+2026-05-03T14:10
 - **fix_commit**:
 
 ### ISSUE-20260503-1401-H2
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: H
 - **title**: memory_detail_screen 的记忆修正按钮（Not true/No longer applies/Lower confidence/Merge）和版本管理标签（Diff/Revert/Evidence/Versions）全部硬编码英文
@@ -486,11 +487,11 @@
 - **blast_radius**: 影响中文用户使用记忆修正和版本管理功能——这是 Aurora 认知系统的核心交互（用户可修正 AI 对自身的记忆）。中文用户可能不理解 "Revert"、"Merge" 等操作按钮的含义。对北极星有间接影响——如果用户因语言障碍不使用记忆修正，AI 模型将积累错误记忆
 - **suggested_fix_direction**: 在 AppLocalizations ARB 文件中添加 memoryDiff、memoryRevert、memoryEvidence、memoryVersions、memoryBudget、memoryCorrectionReject、memoryCorrectionNoLongerApplies、memoryCorrectionLowerConfidence、memoryCorrectionMerge 等 key，然后在 memory_detail_screen.dart 中替换硬编码
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer-2+2026-05-03T14:10
 - **fix_commit**:
 
 ### ISSUE-20260503-1402-H3
-- **status**: discovered
+- **status**: rejected
 - **severity**: P3
 - **domain**: H
 - **title**: group_chat_screen 的举报原因列表中 3/6 项使用内联 isChinese 三元而非 context.l10n，与同列表其他 3 项不一致
