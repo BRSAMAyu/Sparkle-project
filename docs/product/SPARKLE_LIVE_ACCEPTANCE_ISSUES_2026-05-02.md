@@ -1586,8 +1586,9 @@
 
 
 ### ISSUE-20260504-0345-H6
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
+- **fixer_started_at**: 2026-05-03T08:29:54Z
 - **domain**: H
 - **title**: community 三个屏幕的 hintText/空状态残留 5 处硬编码英文，labelText 已国际化但 placeholder 遗漏
 - **symptom**: 中文模式下，用户搜索页面 (user_search_screen) 搜索框显示 "Search users by name or username..." 英文提示、空状态显示 "Search for users by name or username" / "No users found" 英文文本；群组任务创建 (group_tasks_screen) 标题输入框 hintText 显示 "e.g. Complete Chapter 3 exercises" 英文；创建群组 (create_group_screen) 名称输入框 hintText 显示 "e.g. Daily Algorithm Sprint" 英文。注意 labelText 已正确国际化（如 "任务标题" / "Task Title"），但相邻的 hintText 仍是硬编码英文——同一 TextField 内中英混搭
