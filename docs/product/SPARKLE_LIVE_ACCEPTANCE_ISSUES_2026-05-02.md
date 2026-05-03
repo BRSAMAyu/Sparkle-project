@@ -1098,6 +1098,7 @@
 | R35 | 2026-05-03T10:35 | ISSUE-20260504-1001-K6 | ✅ Fixed | f6b6805bc | ~10 min |
 | R36 | 2026-05-03T10:48 | ISSUE-20260504-1003-K8 | ✅ Fixed | 6cc01138c | ~8 min |
 | R37 | 2026-05-03T20:20 | ISSUE-20260504-1801-B2 | ✅ Fixed | ddcad1e8a | ~45 min |
+| R38 | 2026-05-04T00:05 | ISSUE-20260504-1030-H7 | ✅ Fixed | 50ba407e8 | ~5 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -2092,7 +2093,7 @@
 - **suggested_fix_direction**: 将 5 处字符串替换为 `I18nService.instance.isChinese` 模式：(1) 'Send Friend Request' → `zh ? '发送好友请求' : 'Send Friend Request'`；(2) '重试' → `zh ? '重试' : 'Retry'`；(3) 'Claim' → `zh ? '认领' : 'Claim'`；(4) 'Complete' → `zh ? '完成' : 'Complete'`；(5) 'Create Group Task' → `zh ? '创建群组任务' : 'Create Group Task'`
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T10:45
-- **fix_commit**: 留空
+- **fix_commit**: 50ba407e8
 - **opus_review**: APPROVED by opus-reviewer at 2026-05-04T22:25:00Z
 
 ### ISSUE-20260504-1031-H8
