@@ -1808,8 +1808,9 @@
 - **opus_review_detail**: (a) Root cause resolved — reportMessage now appends to _mockReports (was empty async {}). _mockReports field was pre-declared at L588 and pre-initialized at L555 in _init(); fix simply wires it. (b) No regression risk — _mockReports has zero readers in codebase, method signature unchanged, no other methods/layers touched. (c) Cross-layer contract N/A — pure Flutter mock change, no proto/DB/i18n/Go/Python. (d) Test limitation noted — test does NOT import MockCommunityRepository; it tests local functions mimicking the pattern. If fix is reverted, test still passes. This is documented at L7-8 ("Tests the fix pattern in isolation because Flutter compilation is blocked by a pre-existing syntax error in feed_post_card.dart"). Test verifies conceptual correctness but provides weak regression guard. (e) Rule guards: AX failure is pre-existing on proxy_routes.go (unmodified by this commit, confirmed via git diff). All other guards pass. No CLAUDE.md anti-patterns violated.
 
 ### ISSUE-20260504-0931-G5
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
+- **fixer_started_at**: 2026-05-03T09:49:16Z
 - **domain**: G
 - **title**: Mock getGroupTasks 硬编码返回 [] 使群组任务看板完全不可用，且创建任务后立即消失
 - **symptom**: 在 demo 模式下，群组任务看板（Group Tasks）始终显示 "No tasks yet" 空状态。用户点击 "+" 按钮创建任务后，看到 loading 然后立即回到 "No tasks yet"——刚创建的任务消失了。claimTask/completeTask 由于总是空列表而永远无法被触发
@@ -1827,7 +1828,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T09:30
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) mock_community_repository.dart:1446 getGroupTasks 硬编码返回 `[]`。(2) community_provider.dart:1532-1539 loadTasks() 直接设 state=AsyncData([])。(3) community_provider.dart:1553-1559 createTask() 调用 createGroupTask 返回 id='' title='' 的空壳 GroupTaskInfo，随后 loadTasks() 再次返回 [] 覆盖 state。(4) group_tasks_screen.dart:44-50 tasks.isEmpty 显示 "No tasks yet"。(5) group_tasks_screen.dart:35-40 FAB 触发创建对话框。调用链完整：GroupTasksNotifier 构造 → loadTasks() → getGroupTasks()=[] → state=AsyncData([]) → UI 空状态。createTask() → createGroupTask() 不持久化 → loadTasks() → getGroupTasks()=[] → state 重置为 [] → 任务消失。与 G1（getGroupMembers=[]，已 FIXED）和 G2（getFeed=[]，已 FIXED）不重复——三者均属硬编码空列表反模式的不同方法实例，但 G1/G2 已修复，G5 是尚未覆盖的独立方法（getGroupTasks）。claimTask(line 1465) 和 completeTask(line 1937) 也是空 stub 但被空列表永远屏蔽。非"设计如此"——同 mock 已维护 _mockGroupMessages/_mockFriends 等内部状态，任务系统亦应同样标准。
-- **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
+- **fix_commit**: 留空
 
 ### ISSUE-20260504-0932-G6
 - **status**: verified
