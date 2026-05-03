@@ -2839,7 +2839,8 @@
 - **fix_commit**: 留空（fixer 填）
 
 ### ISSUE-20260505-1030-A1
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-03T17:00:00Z
 - **severity**: P1
 - **domain**: A
 - **title**: D1 fix 引入回归：statechart RuntimeError 跳过 GRAPH_END 事件和 checkpointer 清理
