@@ -398,6 +398,8 @@
 | R23 | 2026-05-04T03:45 | H | 1 | 1/1 (H6 verified) | H-domain 续探——community 三个屏幕 hintText/空状态残留 5 处硬编码英文 |
 | R24 | 2026-05-04T03:50 | L | 1 | 1/1 (L1 closed) | L1 BH guard registered in manifest — commit c2e5c62b4 |
 | R25 | 2026-05-04T04:00 | F | 1 | 1/1 (F3 closed) | F3 consume_loop auto-restart on death — commit 1a4ec61d9 |
+| R25 | 2026-05-04T05:00 | B | 2 | 2/2 (B4/B5 verified) | B 域续探——B4 markAsRead 空 catch, B5 submitFeedback 虚假成功 toast |
+| R26 | 2026-05-04T06:00 | J | 0 | N/A | J 域续探——achievement/galaxy/auth/router/splash 冷启动全部健壮，零缺口 |
 
 ---
 
@@ -1744,7 +1746,31 @@
   - home_growth_provider.dart:326-419 (6 FutureProviders only catch DioException, let TypeError propagate — correct for bug visibility)
 - **New issues**: B4(P2), B5(P2)
 - **Findings**: B 域续探覆盖 12+ provider 文件。发现 2 个新缺口：(1) NotificationNotifier.markAsRead 的 catch 块完全为空——API 失败时无任何用户反馈，与同文件 fetchUnreadNotifications 的正确 error 处理形成对比；(2) CapsuleDetailNotifier.submitFeedback catch 返回 null + capsule_detail_screen 无条件显示 AppFeedback.success——组合形成虚假成功 toast，用户的反馈数据在 API 失败时静默丢失。toggleLike 的 silent revert（community_providers.dart:53-55）与 B2 模式相同，不再重复提交。K1（goal_detail_provider catch+rethrow）修复已验证。多个社区/星系 provider 的 WebSocket 订阅生命周期管理正确（dispose 中 cancel/unsubscribe）。home_growth_provider 的 6 个 FutureProvider 只 catch DioException 而让 TypeError 传播——这实际上是正确设计（代码 bug 应进入 error 状态可见），与 B1 的 _payload 静默转换形成对比
-- **Opus pass rate**: pending
+- **Opus pass rate**: 2/2 (B4/B5 both verified)
 - **Next suggested domain**: A (Flutter UI 端到端链路) — 验证 B5 的 submitFeedback 虚假成功模式是否在其他 feedback/form 提交场景中重复出现；或回探 K（错误处理）检查 K3 CompactErrorCard 修复后的回归
 
-| R25 | 2026-05-04T05:00 | B | 2 | pending | B 域续探——B4 markAsRead 空 catch, B5 submitFeedback 虚假成功 toast |
+| R25 | 2026-05-04T05:00 | B | 2 | 2/2 (B4/B5 verified) | B 域续探——B4 markAsRead 空 catch, B5 submitFeedback 虚假成功 toast |
+
+### Round R26 — 2026-05-04T06:00
+- **Domain**: J (冷启动 / 空状态 / 首屏 — 续探)
+- **Paths covered**:
+  - achievement_list_screen.dart:164-227 (loading skeleton/error retry/empty contextual)
+  - achievement_provider.dart:28-412 (_loadWithFallback preserves state, 6-data parallel load)
+  - galaxy_screen.dart:411-415 (flash-of-empty guard during loading)
+  - galaxy_screen.dart:2850-2862 (comprehensive empty galaxy with highlights + action CTA)
+  - auth_provider.dart:100-142 (checkAuthStatus: isLoading→demo flag sync→isLoggedIn→fetch/guest→unauthenticated; DemoDataService set before first await)
+  - auth_provider.dart:52-55 (constructor unawaited(checkAuthStatus) — microtask scheduling safe)
+  - main.dart:103-104,110-119 (DemoDataService.isDemoMode set synchronously before runApp/ProviderScope)
+  - app.dart:92-98 (router redirect: auth loading→splash; unauthenticated→login; authenticated→home)
+  - app.dart:113-143 (_ColdStartFade — 320ms opacity entrance, cosmetic only)
+  - splash_screen.dart:10-74 (logo + i18n subtitle + CircularProgressIndicator — correct)
+  - community_screen.dart:186-221 (empty feed: EmptyState with guidance + refresh + create post CTA)
+  - notification_list_screen.dart:31-76 (AsyncValue.when: loading/empty i18n/error — correct, no retry on error minor)
+  - dashboard_provider.dart:419-422 (DashboardNotifier constructor triggers fetchData via microtask — safe because router redirect prevents shell build during auth loading)
+  - settings_provider.dart:941-950 (OnboardingCompletedNotifier defaults to false, syncs per user)
+  - routes.dart:45-125 (GoRouter redirect: auth loading→splash; not authed→login; authed→home; onboarding guard)
+  - api_interceptor.dart:102-107 (getToken() → Authorization header; 401→refresh→logout fallback)
+- **New issues**: 0
+- **Findings**: J 域续探覆盖 R4 未触及的 17 个文件。所有冷启动路径（成就空态、星系闪空防护、auth 决议转换、DemoDataService 静态字段时序、splash→home 过渡）均设计健壮。关键发现：(1) DemoDataService.isDemoMode 在 main.dart 中同步设置（runApp 前），消除所有 repository constructor 中的竞态窗口；(2) GoRouter redirect 在 auth isLoading 期间阻止所有受保护路由构建，DashboardNotifier/GalaxyNotifier 在 auth 解决前不会被构造；(3) 成就列表有骨架屏 + 上下文空状态（筛选空 vs 无成就） + 错误重试——完整模式；(4) 星系屏幕有 3 层防护：初始加载跳过 (isLoading && nodes.isEmpty && _graph == null)、完全空态面板含 3 条亮点 + CTA、每个统计卡片独立 isEmpty 标签；(5) _ColdStartFade 为纯装饰 320ms 渐入，无功能影响；(6) 社区空态提供指导文案 + 发帖 CTA + 刷新按钮；(7) 通知列表使用 AsyncValue.when(data/loading/error) 正确模式——唯一微小不足是错误态无重试按钮，但这是 K 域已覆盖；(8) 所有 17 个文件的空态文案均使用项目标准 isChinese/i18n 模式进行双语处理。与 R4（dashboard/wizard/community 基础覆盖）结论一致，并大幅扩展覆盖面。
+- **Opus pass rate**: N/A (0 new issues)
+- **Next suggested domain**: A (Flutter UI 端到端链路) — R25 建议回探 submitFeedback 虚假成功模式；或 D (Python orchestrator FSM) — D2 修复后回归验证
