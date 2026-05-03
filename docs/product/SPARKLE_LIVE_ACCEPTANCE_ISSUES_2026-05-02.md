@@ -1467,7 +1467,7 @@
 
 
 ### ISSUE-20260504-0215-C1
-- **status**: discovered
+- **status**: verified
 - **severity**: P1
 - **domain**: C
 - **title**: Go gateway 缺少 3 个 task 生命周期代理路由（pause/resume/stuck），Flutter 调用全部返回 404
@@ -1486,7 +1486,7 @@
 - **blast_radius**: 影响三个任务生命周期操作：(1) 暂停任务——用户在任务中途需要中断时无法暂停；(2) 恢复任务——暂停后的任务无法恢复执行；(3) 任务卡住诊断——用户感到困难时无法获取 Aurora AI 诊断。三个功能对北极星有直接高影响——"7 天 0 基础通过考试"要求任务系统流畅运作，暂停/恢复是学习者节奏控制的核心操作
 - **suggested_fix_direction**: 在 proxy_routes.go 的 tasks 路由组中添加三条路由：`tasks.POST("/:id/pause", h.proxyWithHeaders)`、`tasks.POST("/:id/resume", h.proxyWithHeaders)`、`tasks.POST("/:id/stuck", h.proxyWithHeaders)`。与其他 task action 路由（start/complete/abandon）保持一致的注册模式
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-independent-reviewer+2026-05-04T02:30:00Z
 - **fix_commit**: 留空
 
 
@@ -1527,4 +1527,19 @@
 - **Next suggested domain**: 所有 12 域已完成至少一轮。建议回探 H（i18n）或 K（错误处理）验证最近修复，或继续跨域集成验证
 
 | R18 | 2026-05-04T02:05 | C | 0 | N/A | C 域重探确认——合约一致性优秀，零回归 |
+| R19 | 2026-05-04T02:15 | C | 1 | pending (C1) | C-domain 纠偏 R18 误判——proxy_routes.go tasks 组无通配路由，pause/resume/stuck 缺失 |
 
+
+### Round R19 — 2026-05-04T02:15
+- **Domain**: C (WebSocket / gRPC 契约一致性 — 纠偏 R18 误判)
+- **Paths covered**:
+  - backend/gateway/internal/handler/proxy_routes.go:69-129 (tasks 路由组：29 条显式路由，无 Any("/*path") 通配，无 pause/resume/stuck)
+  - backend/app/api/v1/tasks.py:984,1124,1141 (Python 三个端点全部存在)
+  - mobile/lib/core/network/api_endpoints.dart:64-65,73 (Flutter 三个端点定义)
+  - mobile/lib/features/task/data/repositories/task_repository.dart:1295-1373 (Flutter 三个调用点)
+  - backend/gateway/cmd/server/setup.go:810-868 (NoRoute handler + shouldProxyNoRoutePath 仅匹配 auth 路径)
+  - backend/gateway/internal/handler/proxy_routes.go (完整审查：users/interventions/dashboard 等组使用 Any("/*path")，但 tasks/plans 使用显式路由——R18 未区分此差异)
+- **New issues**: C1(P1)
+- **Findings**: R18 声称 "50+ catch-all Any('/*path') 确保所有 Python API 端点可达" 是错误的。tasks 路由组（proxy_routes.go:69-129）使用显式路由注册而非 Any("/*path") 通配，因此未注册的端点不会被代理。对比其他组：users (line 216 Any("/*path"))、interventions (line 542 Any("/*path"))、dashboard (line 550 Any("/*path")) 等使用通配可自动覆盖所有子路径，但 tasks 组每条路由显式注册。29 条已注册的 task 路由覆盖了 start/complete/abandon/snooze/too-hard/skip/feedback/generate-guide/next-action-selection 等操作，但 pause/resume/stuck 三条未被注册。NoRoute handler 仅代理 auth 前缀路径（shouldProxyNoRoutePath 行 847-868），不代理 /api/v1/tasks/*。因此 Flutter 调用这三个端点时 Go gateway 返回 404。这是 R18 探索不彻底的误判——未区分 route group 的注册策略差异。
+- **Opus pass rate**: pending
+- **Next suggested domain**: 继续跨域回归——C1 修复后验证 pause/resume/stuck 端到端可达。考虑回探 I（DB schema）域，I4 ReportReason 仍缺少 HATE_SPEECH
