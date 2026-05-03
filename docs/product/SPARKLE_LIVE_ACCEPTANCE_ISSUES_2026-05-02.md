@@ -1112,6 +1112,7 @@
 | R41 | 2026-05-04T21:20 | ISSUE-20260504-1200-G4 | closed | d59317d17 | ~35 min |
 | R42 | 2026-05-04T22:00 | ISSUE-20260504-1430-C6 | closed | f816de9ea | ~105 min (3R) |
 | R43 | 2026-05-05T14:00 | ISSUE-20260504-1600-L5 | closed | d5c7b2d9e | ~85 min (2R) |
+| R44 | 2026-05-05T14:45 | ISSUE-20260504-1900-D1 | closed | 137351f84 | ~15 min (1R) |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -2532,8 +2533,9 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1900-D1
-- **status**: in_progress
+- **status**: closed
 - **fixer_started_at**: 2026-05-05T14:30:00Z
+- **closed_at**: 2026-05-05T14:45:00Z
 - **severity**: P1
 - **domain**: D
 - **title**: Statechart engine silently swallows node exceptions and returns partial state; orchestrator never checks state.errors
@@ -2550,7 +2552,16 @@
 - **suggested_fix_direction**: Either (A) re-raise in statechart_engine.py:281 after appending errors, allowing orchestrator top-level handler to catch it; or (B) add `if final_state.errors:` check in orchestrator.py:3382-3383 with degraded response + STATE_DEGRADED; or (C) both — re-raise for catastrophic failures, degrade for recoverable ones. Minimum: check errors count at orchestrator level and at least log a warning.
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T19:45Z
-- **fix_commit**: 留空
+- **fix_commit**: 137351f84
+- **opus_review**: APPROVED by opus-fix-reviewer at 2026-05-03T22:35Z
+- **review_notes**:
+  - **Root cause solved**: YES. `node_exception_occurred` flag (line 233) + post-loop `raise RuntimeError` (lines 309-313) correctly propagates serial node exceptions through `execution_engine.py:1842-1844` (existing `graph_task.exception()` re-raise) into `orchestrator.py:3481-3526` (existing top-level except handler → STATE_FAILED + event_kind="error" + finish_reason=ERROR). Nested graph exceptions propagate correctly: sub-graph raises RuntimeError → parent's except block at line 278 catches it → parent sets `node_exception_occurred = True` → parent re-raises.
+  - **Parallel branch errors still non-fatal**: YES. `_execute_parallel` (line 417) uses `return_exceptions=True` → exceptions returned as objects, appended to `state.errors` (line 424) → method returns normally → `node_exception_occurred` stays False → no re-raise. `test_error_in_parallel_branch` still passes (expects `await graph.invoke()` to succeed, checks `result.errors`).
+  - **Regression risk**: LOW. Change is purely additive (previously-silent return now raises). Both downstream callers (`execution_engine.py:1841-1847` and `orchestrator.py:3481-3526`) already had the correct error-handling paths — the fix simply makes them reachable. Error message sanitization: `build_safe_chat_error` maps `RuntimeError` to generic `_GENERIC_INTERNAL_ERROR_MESSAGE` via catch-all (line 104-108), no internal node names leak to user.
+  - **Cross-layer contract**: No proto/DB/i18n changes needed. Purely internal Python behavioral change.
+  - **Test protection**: STRONG. 3 tests updated to `pytest.raises(RuntimeError)` — `test_node_error_propagation`, `test_nested_graph_error_propagation`, `test_error_event_emission`. Removing the `raise RuntimeError` lines (309-313) would cause all 3 to fail. All 31 statechart engine tests pass (0.13s).
+  - **Rule guards**: 0 violations introduced. Only failure is pre-existing Rule AX (proxy_routes.go route-tier comments), unrelated to this change.
+  - **Residual gaps (pre-existing, not introduced by this fix)**: (1) Parallel branch errors append to `state.errors` but orchestrator still does not check `final_state.errors` — partial state with parallel errors returns as `event_kind="task_completed"`. This is consistent with the issue's design directive that parallel errors should be non-fatal. (2) `max_steps` truncation (ISSUE-20260504-1902-D3) still returns partial state silently — tracked separately. (3) Orchestrator still has zero checks for `final_state.errors` — tracked as D4-D6 follow-ups.
 
 ### ISSUE-20260504-1901-D2
 - **status**: verified
@@ -2766,7 +2777,7 @@
 - **fix_commit**: 留空（fixer 填）
 
 ### ISSUE-20260505-1030-A1
-- **status**: discovered
+- **status**: verified
 - **severity**: P1
 - **domain**: A
 - **title**: D1 fix 引入回归：statechart RuntimeError 跳过 GRAPH_END 事件和 checkpointer 清理
