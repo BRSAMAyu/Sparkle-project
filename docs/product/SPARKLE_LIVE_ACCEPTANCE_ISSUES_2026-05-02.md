@@ -1441,9 +1441,11 @@
 ---
 
 ### ISSUE-20260504-0145-D2
-- **status**: verified
+- **status**: closed_already_resolved
 - **severity**: P1
 - **domain**: D
+- **closed_at**: 2026-05-04T02:10:00Z
+- **close_reason**: Already fixed by bf56ba944 (D1 rework round 2) — both build_fallback_plan calls now pass all 5 required kwargs including snapshot= and rationale=
 - **title**: D1 修复的 LangGraph planner 超时回退调用 build_fallback_plan() 缺少 2 个必需关键字参数 (snapshot, rationale)，超时路径抛 TypeError
 - **symptom**: 当 LangGraph planner 超过 10 秒超时时（LLM 响应慢或图结构循环），D1 修复正确捕获 TimeoutError 并尝试调用 build_fallback_plan() 生成回退计划。但两个新调用点（multi_agent_adapter.py:111 和 plan_review_service.py:2214）只传递了 message/user_id/session_id 三个参数，缺少 snapshot 和 rationale 两个必需关键字参数，导致 fallback 路径本身抛出 TypeError 而非生成回退计划
 - **root_cause_hypothesis**: D1 修复参照 execution_engine.py:2067-2079 的超时模式添加了 asyncio.wait_for wrapper，但在编写 build_fallback_plan() 回退调用时只传递了部分参数。execution_engine.py 的正确调用传递了全部 5 个参数 (message, snapshot, user_id, session_id, rationale)，但 D1 修复的两个调用点遗漏了 snapshot 和 rationale
