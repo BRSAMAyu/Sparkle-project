@@ -408,7 +408,7 @@
 | R32 | 2026-05-04T10:45 | H | 2 | 2/2 (H7/H8 verified) | H 域续探——H6 deferred residuals (5 strings in 2 files) + sprint_history loading/空状态硬编码 (4 strings) |
 | R33 | 2026-05-04T12:00 | G | 1 | pending (G4) | G 域续探——mock 群聊消息分页参数被忽略，demo 模式下"加载更多"静默失败 |
 | R34 | 2026-05-04T11:15 | I | 2 | pending（待 Opus 独立复审） | I 域续探——I1-I4 fixes 全部验证通过 + I5 Go schema.sql tasks 缺 paused 列 + I6 Go Reportreason 缺 HATE_SPEECH（同根因：fix 后未 make sync-db） |
-| R35 | 2026-05-04T14:30 | C | 2 | pending（待 Opus 独立复审） | C 域续探——Proto MessageNack 未实现（Go 用 ad-hoc error 替代结构化 NACK，Flutter NackEvent 死代码）+ HeartbeatPing/Pong proto 类型死代码（三套心跳仅两套存活） |
+| R35 | 2026-05-04T14:30 | C | 2 | 2/2 (C6/C7 verified) | C 域续探——Proto MessageNack 未实现（Go 用 ad-hoc error 替代结构化 NACK，Flutter NackEvent 死代码）+ HeartbeatPing/Pong proto 类型死代码（三套心跳仅两套存活） |
 
 ---
 
@@ -2380,3 +2380,21 @@
 - **Findings**: I 域续探完成。(1) I1 fix 验证通过——taskstatus enum 五层一致：Go schema.sql 7 值、Go sqlc 7 常量、Python 7 值、Flutter 7 值、DB 7 值。(2) I2 fix 验证通过——Python model 含 paused_at/paused_reason，DB 含两列，Flutter 含 pausedReason/pausedAt，alembic de30c736266b 正确添加。(3) I3 fix 验证通过——ReportReason Flutter/Schema 统一 7 值含 hate_speech。(4) I4 fix 验证通过——Python model ReportReason 含 HATE_SPEECH 7 值，c28 down_revision 已修正为 "c27_20260503"（branched history 已消除），alembic 链式干净（单头 de30c736266b）。(5) 发现 2 处新漂移：I5 Go schema.sql tasks 表 + sqlc Task struct 缺失 paused_at/paused_reason——I2 修复后未运行 `make sync-db`（DB 有 35 列，Go schema 仅 33 列）。Go handler/service 零 paused 引用，paused 数据通过 Python REST API 直达 Flutter 不经过 Go——运行时无影响但 source of truth 过期。(6) I6 Go Reportreason 常量缺失 HATE_SPEECH——schema.sql 有 7 值但 sqlc 未重生（仅 6 常量）。Go 不查询举报原因——零运行时影响。I5+I6 共享根因：`make sync-db` 未在 I2/I4 修复后运行，一次性操作即可同时修复。
 - **Opus pass rate**: pending（待 Opus 独立复审）
 - **Next suggested domain**: C (WebSocket/gRPC contract consistency) — 15 轮未回探；或 K (error handling) — 3 轮未回探
+
+### Round R35 — 2026-05-04T14:00
+- **Domain**: C (WebSocket/gRPC 契约一致性)
+- **Paths covered**:
+  - `proto/websocket.proto:10-101` — WebSocketMessage envelope + MessageAck/MessageNack + HeartbeatPing/Pong
+  - `proto/agent_service.proto:214-256` — ChatResponse oneof content（11 种类型）
+  - `backend/gateway/internal/handler/chat_orchestrator_protocol.go:115-280` — Go gateway type 映射
+  - `backend/gateway/internal/handler/chat_orchestrator.go:204-700` — WebSocket 消息路由（legacy + envelope 双模式）
+  - `backend/gateway/internal/handler/chat_orchestrator.go:268-284` — RFC 6455 传输层心跳
+  - `backend/gateway/internal/handler/chat_orchestrator.go:420-421` — JSON ping/pong 应用层心跳
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:160-1200` — Flutter 消息解析（35+ case）
+  - `mobile/lib/features/chat/data/services/websocket_chat_service_v2.dart:443-452` — delta metadata plan_review 路径（working）
+  - `backend/app/orchestration/execution_engine.py:2491-2512` — plan review delta+metadata 推送
+  - `backend/app/core/sse.py:103-148` — SSE 独立通道
+- **New issues**: C6(P2), C7(P3)
+- **Findings**: C 域 WebSocket/gRPC 契约全链路审查。(1) Go gateway chat_orchestrator_protocol.go 正确映射 11 种 proto oneof → JSON type。(2) 18 个 gRPC RPC 方法在 Python 和 Go 均已实现。(3) community_service.proto 已标 deprecated，社区功能走 REST。(4) Plan review 正确通过 delta+metadata 路径（requires_review=true）推送。(5) C6：MessageNack 协议未实现——Go gateway 错误时发 ad-hoc `type: error` 而非 proto 定义的 message_nack（含 retry_after_ms/permanent），Flutter NackEvent 解析器为死代码。(6) C7：HeartbeatPing/Pong proto 类型零引用——实际使用 RFC 6455 传输层心跳 + JSON ping/pong，proto 成为误导性文档。(7) 额外发现 aurora_state_band、reasoning_step、plan_review_widget 三个 top-level handler 为 dead code——实际数据通过 delta metadata 路径传递
+- **Opus pass rate**: 2/2 (C6/C7 verified by opus-independent-auditor+2026-05-03T18:45Z)
+- **Next suggested domain**: K (error handling) — 4 轮未回探；或 L (governance rules vs implementation) — 8 轮未回探
