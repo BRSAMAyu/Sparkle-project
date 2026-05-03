@@ -385,6 +385,8 @@
 | R6 | 2026-05-03T15:10 | K | 4 | 4/4 (K1 in_progress, K2/K3/K4 verified) | Error handling: leaderboard percentile, chat history lost, silent error swallowing, LLM timeout fallback |
 | R6 | 2026-05-03T15:00 | K | 1 | 1/1 (K1 verified) | Error handling gaps in goal detail actions |
 | R7 | 2026-05-03T15:30 | A | 1 | 1/1 (A1 verified) | Task execution navigation missing activeTaskProvider |
+| R8 | 2026-05-03T16:00 | E | 4 | pending opus review | Aurora kill switch gaps: E1 Dual-Core Router, E2 Privacy Prometheus, E3 drill_all.sh, E4 permissions |
+| R9 | 2026-05-03T16:30 | D | 1 | pending opus review | LangGraph planner timeout missing in 2/3 callers |
 
 ---
 
@@ -771,6 +773,26 @@
 - **verified_by**: opus-reviewer+2026-05-03T17:00:00Z
 - **fix_commit**:
 
+### ISSUE-20260503-1600-D1
+- **status**: discovered
+- **severity**: P2
+- **domain**: D
+- **title**: LangGraph planner.plan() 在 plan_review_service 和 multi_agent_adapter 中无超时保护，主路径已用 asyncio.wait_for 但两处调用未覆盖
+- **symptom**: 用户在计划修改流程或混合代理模式中触发 LangGraph 规划时，如果 LangGraph 图进入循环或 LLM 响应挂起，该请求将无限期阻塞，直到 HTTP/gRPC 传输层超时。用户看到超时错误而非优雅降级的回退计划。同时 Python 端协程继续运行，占用会话锁和 Redis 连接
+- **root_cause_hypothesis**: `LangGraphPlanner.plan()` 内部调用 `self.graph.ainvoke()` (lang_graph_planner.py:206) 无 asyncio 超时。3 个调用方中只有 `execution_engine.py:2048` 正确使用 `asyncio.wait_for(timeout=10.0)` 包裹。`plan_review_service.py:2199` 和 `multi_agent_adapter.py:87` 直接 `await planner.plan()` 无超时
+- **evidence**:
+  - `backend/app/orchestration/lang_graph_planner.py:206` — `result_state = await self.graph.ainvoke(initial_state, config)` 内部无 timeout
+  - `backend/app/orchestration/execution_engine.py:2048-2065` — ✅ 正确模式：`asyncio.wait_for(self.lang_graph_planner.plan(...), timeout=_LANGGRAPH_PLANNER_TIMEOUT_SECONDS)` 其中 `_LANGGRAPH_PLANNER_TIMEOUT_SECONDS = 10.0`
+  - `backend/app/orchestration/plan_review_service.py:2199` — ❌ 无超时：`executable_plan = await planner.plan(message=replan_message, ...)`
+  - `backend/app/orchestration/multi_agent_adapter.py:87` — ❌ 无超时：`plan = await self.orchestrator.lang_graph_planner.plan(message=message, ...)`
+- **repro_or_trigger**: (计划修改) 用户在计划审查中选择修改计划 → 后端调用 planner.plan() → 如果 LLM 生成循环图结构 → plan_review 接口无限阻塞。(混合代理) 混合代理模式聊天 → LangGraph 挂起 → gRPC stream 超时
+- **expected_vs_actual**: 期望：所有 planner.plan() 调用统一使用 10s 超时 + 回退计划（与 execution_engine 一致）；实际：2/3 调用路径无超时保护
+- **blast_radius**: 影响计划修改流程和混合代理模式。主聊天路径（通过 execution_engine）已受保护。计划修改是增长循环中 Plan→Execute 的反馈环。对北极星有间接影响——学生在需要调整计划时被阻塞
+- **suggested_fix_direction**: 在 plan_review_service.py:2199 和 multi_agent_adapter.py:87 的 planner.plan() 调用处添加 `asyncio.wait_for(..., timeout=10.0)` + `except TimeoutError: build_fallback_plan()`，与 execution_engine.py:2048-2073 模式一致
+- **discovered_by**: explorer-loop
+- **verified_by**:
+- **fix_commit**:
+
 ---
 
 ## 探索日志
@@ -865,3 +887,17 @@
 - **Findings**: TaskExecutionScreen completely relies on `activeTaskProvider` being pre-set by the calling screen. The route has `:id` path parameter but pageBuilder never extracts it and never passes it to the screen. The screen has a graceful null fallback (shows "No task" error with back button), but 2 out of 10 navigation paths fail to set the provider: (1) calendar card `compact_task_card.dart` — in-progress/stuck/paused/restore tasks all navigate without setting activeTaskProvider; (2) task feedback dialog `task_feedback_dialog.dart` — "do this next" action uses `context.go()` without setting provider. All other callers correctly set the provider, and `focus_action_card.dart:81` has an explicit "🔧 修复" comment showing this is a known required pattern. The hardcoded API endpoint in `growth_dashboard_repository.dart:25` is a style issue (same value as `ApiEndpoints.experienceGrowthDashboard`), not a bug. Silent SizedBox.shrink() on errors already covered by K3.
 - **Opus pass rate**: pending
 - **Next suggested domain**: D (Python orchestrator FSM) or E (Aurora kill switch) — backend domains not yet explored
+
+### Round R9 — 2026-05-03T16:30
+- **Domain**: D (Python orchestrator FSM 流转完整性)
+- **Paths covered**:
+  - lang_graph_planner.py:206 (graph.ainvoke no internal timeout)
+  - execution_engine.py:2048-2073 (correct asyncio.wait_for pattern with 10s timeout + TimeoutError fallback)
+  - plan_review_service.py:2199 (missing timeout wrapper)
+  - multi_agent_adapter.py:87 (missing timeout wrapper)
+  - orchestrator.py:3481-3526 (STATE_FAILED exception handler — verified STATE_INIT resets on next request, NOT a dead-end)
+  - state_manager.py:129-157 (corrupted state returns None — verified orchestrator recovers with fresh STATE_INIT)
+- **New issues**: D1(P2)
+- **Findings**: The LangGraph planner's `graph.ainvoke()` at lang_graph_planner.py:206 has no internal timeout. 3 callers invoke `planner.plan()`: execution_engine wraps it correctly with `asyncio.wait_for(timeout=10.0)`, but plan_review_service.py:2199 and multi_agent_adapter.py:87 call it directly without timeout. If the LangGraph graph enters an infinite loop or LLM hangs, these two paths block indefinitely. The main chat path through execution_engine IS protected. Investigated STATE_FAILED recovery — confirmed the next request resets to STATE_INIT at orchestrator.py:2123, so STATE_FAILED is NOT a dead-end. Corrupted session state in state_manager returns None but orchestrator recovers with fresh state; conversation history is lost but session is functional.
+- **Opus pass rate**: pending
+- **Next suggested domain**: F (事件总线消费者 DLQ/retry) or I (DB 迁移 vs 代码字段) — infrastructure domains not yet explored
