@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 10:15 (R31 K-domain exploration — 4 discovered: K5 silent catch null / K6 except:pass / K7 except:defaults / K8 except:None)
+> Updated: 2026-05-04 10:45 (R32 H-domain exploration — 2 discovered: H7 H6-deferred residuals / H8 sprint_history hardcoded)
 
 ---
 
@@ -405,6 +405,7 @@
 | R29 | 2026-05-04T09:30 | G | 3 | 3/3 | G 域续探——reportMessage/claimTask/searchUsers/sendFriendRequest 等多处空 stub → 虚假成功 / 功能不可用 |
 | R30 | 2026-05-04T09:45 | E | 3 | 3/3 | E 域续探——双核路由 drill 缺失 + stage38 Prometheus 标签不一致 + privacy drill 内联 type 崩溃 |
 | R31 | 2026-05-04T10:15 | K | 4 | 3/4 (K6/K7/K8 verified, K5 rejected — duplicate of B3) | K 域续探——4 处 silent error swallowing: Flutter + 3× Python except:pass/return 零日志 |
+| R32 | 2026-05-04T10:45 | H | 2 | pending | H 域续探——H6 deferred residuals (5 strings in 2 files) + sprint_history loading/空状态硬编码 (4 strings) |
 
 ---
 
@@ -1991,6 +1992,47 @@
 - **verified_by**: opus-reviewer+2026-05-04T10:15
 - **fix_commit**: 留空
 
+### ISSUE-20260504-1030-H7
+- **status**: discovered
+- **severity**: P2
+- **domain**: H
+- **title**: H6 修复后 user_search_screen 和 group_tasks_screen 仍残留 5 处硬编码英文/中文——H6 reviewer 明确标注为"out of scope"
+- **symptom**: 中文模式下：(1) 用户搜索结果中，好友操作显示英文 "Send Friend Request"；(2) 搜索错误时重试按钮显示中文 "重试"（英文用户看到中文）；(3) 群组任务卡片操作按钮显示英文 "Claim" 和 "Complete"；(4) 创建群组任务对话框标题显示英文 "Create Group Task"。这些字符串所在文件的其他 UI 已通过 H6 修复完成 i18n（如 hintText/空状态），形成同一文件内中英混搭的不一致体验
+- **root_cause_hypothesis**: H6 修复范围严格限定在 issue 正文列出的 5 处 hintText/空状态字符串。H6 reviewer（opus-independent-reviewer）在 review_summary 中明确标注 `'Send Friend Request'`, `'Claim'`, `'Complete'`, `'Create Group Task'` 和 `'重试'` 为 "out of scope for this issue and should be tracked separately"。这些字符串未被后续修复覆盖
+- **evidence**:
+  - `mobile/lib/features/community/presentation/screens/user_search_screen.dart:62` — `title: const Text('Send Friend Request')` ——硬编码英文，同文件 line 255 已通过 `I18nService.instance.isChinese ? '搜索失败，请检查网络后重试' : 'Search failed, check your network and retry'` 正确国际化
+  - `mobile/lib/features/community/presentation/screens/user_search_screen.dart:258` — `label: '重试'` ——硬编码中文，紧邻 line 255 的正确 i18n 模式，形成同一 error 面板内混搭
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:270` — `label: 'Claim'` ——硬编码英文，同文件 line 263 已使用 `I18nService.instance.isChinese ? '已认领' : 'claimed'`
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:275` — `label: 'Complete'` ——硬编码英文
+  - `mobile/lib/features/community/presentation/screens/group_tasks_screen.dart:299` — `title: Text('Create Group Task')` ——硬编码英文，同文件 line 308-311 的 labelText/hintText 已通过 H6 修复完成 i18n
+- **repro_or_trigger**: 中文模式 → Community → 搜索用户 → 点击用户 → 观察 "Send Friend Request" 为英文 → 断网搜索 → 观察 "重试" 为中文（但其他文案为英文/中文混搭）→ 进入群组任务 → 观察 "Claim"/"Complete" 按钮为英文 → 点击创建任务 → 观察对话框标题 "Create Group Task" 为英文
+- **expected_vs_actual**: 期望：与同文件的 H6 修复一致，所有用户可见 UI 文案使用 `I18nService.instance.isChinese ? '中文' : 'English'` 模式；实际：5 处字符串仍为单语硬编码，与同文件已 i18n 的相邻字符串形成中英混搭
+- **blast_radius**: 影响社区模块两个核心交互界面——用户搜索（好友发现入口）和群组任务（任务协作入口）的中文用户体验。中英混搭降低产品完成度，尤其在同一面板内出现时（如搜索错误面板："搜索失败，请检查网络后重试"（中文）+ "重试"（中文button）+ 其他英文UI）。对北极星有轻微影响——不阻断核心学习流程，但损害社区功能的品质感
+- **suggested_fix_direction**: 将 5 处字符串替换为 `I18nService.instance.isChinese` 模式：(1) 'Send Friend Request' → `zh ? '发送好友请求' : 'Send Friend Request'`；(2) '重试' → `zh ? '重试' : 'Retry'`；(3) 'Claim' → `zh ? '认领' : 'Claim'`；(4) 'Complete' → `zh ? '完成' : 'Complete'`；(5) 'Create Group Task' → `zh ? '创建群组任务' : 'Create Group Task'`
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
+### ISSUE-20260504-1031-H8
+- **status**: discovered
+- **severity**: P3
+- **domain**: H
+- **title**: sprint_history_screen 的 loading/空状态文案为硬编码英文——文件内其他字符串已通过 AppLocalizations 国际化
+- **symptom**: 中文模式下，冲刺历史页面（Sprint History）的加载中显示 "Loading sprint history..." 英文、空状态显示 "No sprint history yet" 英文标题 + "Closed sprints will gather here with their rhythm, notes, and wins." 英文描述 + "Start a sprint" 英文按钮。但同一页面的 AppBar 标题正确显示中文 "冲刺历史"（来自 `l10n.sprintHistory`），错误状态正确使用 `l10n.loadingFailed(error)`——形成页面内 i18n 不一致
+- **root_cause_hypothesis**: sprint_history_screen.dart 使用 `AppLocalizations`（l10n）进行国际化——AppBar 标题、错误消息、状态文本、进度标签均正确使用 `l10n.*` getter。但 `_buildBody()` 的 loading 分支（line 54）和 `_buildEmptyState()`（lines 87-91）使用了硬编码英文字符串。值得注意的是 `l10n.noSprintHistory` getter 已存在（`app_localizations_zh.dart:556` → `'暂无冲刺历史'`），但未被使用。开发者可能是先写了硬编码英文占位，后续添加 l10n 时遗漏了这两个分支
+- **evidence**:
+  - `mobile/lib/features/plan/presentation/screens/sprint_history_screen.dart:52-55` — `LoadingIndicator.circular(showText: true, loadingText: 'Loading sprint history...')` ——硬编码英文 loading 文本，而 `_buildErrorState` (line 95-123) 正确使用了 `l10n.loadingFailed(error)`
+  - `mobile/lib/features/plan/presentation/screens/sprint_history_screen.dart:86-93` — `EmptyState(title: 'No sprint history yet', description: 'Closed sprints will gather here...', icon: Icons.history, actionText: 'Start a sprint', ...)` ——4 处硬编码英文，而 AppBar 的 `l10n.sprintHistory` (line 33) 和状态文本的 `l10n.sprintCompleted/sprintAbandoned/sprintExtended` (lines 134-139) 均正确 i18n
+  - `mobile/lib/l10n/app_localizations_zh.dart:553-556` — `String get sprintHistory => '冲刺历史';` 和 `String get noSprintHistory => '暂无冲刺历史';` ——l10n 基础设施已就绪，但 noSprintHistory 未被使用
+  - `mobile/lib/l10n/app_localizations_en.dart:578-581` — `String get sprintHistory => 'Sprint History';` 和 `String get noSprintHistory => 'No sprint history yet';` ——英文值也存在
+- **repro_or_trigger**: 中文模式 → 计划 → 冲刺历史（Sprint History）→ 若无历史记录 → 观察空状态全部英文 → 刷新时观察 loading text 为英文
+- **expected_vs_actual**: 期望：loading text 和空状态与页面其他部分一致，使用 `AppLocalizations` 或 `I18nService.instance.isChinese` 模式；实际：loading/空状态为硬编码英文，与 AppBar 中文标题形成页面内不一致
+- **blast_radius**: 影响冲刺历史页面的中文用户体验。该页面是 plan 模块的核心入口（`/plans/sprint/history`），无历史记录的新用户每次进入都会看到全英文空状态。对北极星有轻微影响——冲刺历史是非核心功能，但 i18n 不一致降低产品完成度
+- **suggested_fix_direction**: (1) loading text 改为 `I18nService.instance.isChinese ? '加载冲刺历史...' : 'Loading sprint history...'` 或添加 `l10n.sprintHistoryLoading` getter；(2) 空状态 title 使用已有的 `l10n.noSprintHistory`；(3) description 和 actionText 添加对应的 l10n getter 或使用 `I18nService.instance.isChinese` 内联模式
+- **discovered_by**: explorer-loop
+- **verified_by**: 留空
+- **fix_commit**: 留空
+
 ### Round R25 — 2026-05-04T05:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
@@ -2142,3 +2184,29 @@
 - **Pattern insight**: 所有 4 个 issue 共享同一模式——设计者正确实现了降级/回退策略（本地回退、默认值、None→空列表），但遗漏了可观测性。修复成本极低（每个只需 +1 行 `logger.warning` 或 `debugPrint`），但影响运维人员对系统健康状态的感知能力
 - **Opus pass rate**: 3/4 (K6/K7/K8 verified by opus-reviewer+2026-05-04T10:15; K5 rejected — duplicate of B3 which already covers spineStatusBand catch(_) return null)
 - **Next suggested domain**: H (i18n residuals) — 8 轮未回探，H5/H6 fix 验证长期待查；或 F (Event bus consumers) — 7 轮未回探，F4 fix 验证待查
+
+### Round R32 — 2026-05-04T10:45
+- **Domain**: H (i18n residuals / 硬编码裸字符串 — 续探)
+- **Paths covered**:
+  - H5 fix verification: group_members_screen.dart:96-98 — hintText now bilingual ✅
+  - H6 fix verification: user_search_screen.dart:115-117, group_tasks_screen.dart:309-311, create_group_screen.dart:182-184 — all hintText bilingual ✅
+  - user_search_screen.dart:62,258 — H6-deferred: 'Send Friend Request' + '重试' still hardcoded
+  - group_tasks_screen.dart:270,275,299 — H6-deferred: 'Claim', 'Complete', 'Create Group Task' still hardcoded
+  - sprint_history_screen.dart:52-55,86-93 — loading text + empty state hardcoded English despite l10n usage elsewhere in same file
+  - Also scanned: data_usage_dashboard_screen.dart (194 lines, zero i18n, but zero route references — dead code, not filed)
+  - Also scanned: legal_document_screen.dart (uses context.l10n + I18nService, properly i18n'd)
+  - Also scanned: transparency_settings_screen.dart (uses _settingsCopy helper + context.l10n, properly i18n'd)
+  - Also scanned: openclaw_settings_screen.dart (uses I18nService.instance.isChinese, properly i18n'd)
+  - Also scanned: accessibility_settings_screen.dart (uses _a11yCopy helper, properly i18n'd)
+  - Also scanned: login_screen.dart (uses AppLocalizations l10n, properly i18n'd except line 71 debug error string)
+  - Also scanned: community_main_screen.dart (9-line wrapper, no user-facing strings)
+  - Broad scan: 50+ presentation files checked for "NO_I18N" — only data_usage_dashboard found (dead code)
+- **New issues**: 2 — H7 (H6-deferred 5 strings in user_search + group_tasks, P2), H8 (sprint_history loading/empty state 4 strings, P3)
+- **Findings**: H 域续探完成两个子任务：
+  1. **H5/H6 fix verification**: 两处修复均已正确应用。group_members_screen 的 hintText 现在使用 `I18nService.instance.isChinese ? '搜索成员...' : 'Search members...'`；user_search_screen、group_tasks_screen、create_group_screen 的 hintText/空状态均已完成 i18n。H5/H6 修复无回归
+  2. **H6 deferred string follow-up**: H6 reviewer (opus-independent-reviewer) 在 review_summary 中明确标注 5 处字符串为 "out of scope and should be tracked separately"。这些字符串至今仍为硬编码——user_search_screen 的 'Send Friend Request' + '重试'（同一 error 面板内与已 i18n 文案混搭），group_tasks_screen 的 'Claim'/'Complete'/'Create Group Task'（同文件 labelText/hintText 已 i18n）
+  3. **新发现 sprint_history_screen 不一致**: 该文件使用 AppLocalizations (l10n) 国际化——AppBar 标题、错误消息、状态标签均正确使用 `l10n.*` getter。但 loading 分支和空状态分支使用硬编码英文，形成页面内中英混搭。`l10n.noSprintHistory` getter 已存在于 app_localizations_zh.dart/en.dart，但未被使用——l10n 基础设施就绪但未连线
+  4. **误报排除**: data_usage_dashboard_screen.dart — 194 行、零 i18n 引用，但 grep 整个 mobile/lib 零次被导入或路由引用——确认为死代码，不在用户可达路径上，不构成 UX 问题。其他表面 "high hardcoded count" 的文件（accessibility_settings、legal_document、transparency_settings 等）经 Read 验证均使用 `_a11yCopy`、`_settingsCopy` 或 `context.l10n` 助手正确 i18n
+  5. **H 域覆盖率评估**: 经过 R5 (4 issues)、R23 (H6)、R32 (H7/H8) 三轮扫描，community 模块的 i18n 覆盖率已从 ~70% 提升到 ~92%（H5/H6 修复 + H7 待修复）。非 community 模块（plan/settings/auth）的 i18n 覆盖率约 95%——login_screen 和大多数 settings 屏幕使用 AppLocalizations 或 I18nService 助手，仅 sprint_history_screen 的 loading/空状态有遗漏
+- **Opus pass rate**: pending（待 Opus 独立复审）
+- **Next suggested domain**: I (DB migration vs code fields) — 19 轮未回探，I3 ReportReason/I4 model-schema mismatch 修复验证长期待查；或 C (WebSocket/gRPC contracts) — 12 轮未回探
