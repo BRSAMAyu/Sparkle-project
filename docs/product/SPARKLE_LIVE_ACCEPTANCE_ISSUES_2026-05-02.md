@@ -1351,8 +1351,9 @@
 - **closed_at**: 2026-05-04T09:35:00Z
 
 ### ISSUE-20260503-2301-B2
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
+- **fixer_started_at**: 2026-05-04T07:50:00Z
 - **domain**: B
 - **title**: AuroraPreferencesNotifier.updatePreference 乐观更新在 API 失败时无声回退到旧值，用户无任何反馈
 - **symptom**: 用户在设置中修改 Aurora 偏好（分析深度/指导风格/解释详细度/压力风格），UI 立即显示新值。但 API 调用失败时，UI 无声地回退到旧值。用户看到开关/选项自己弹回去了，不知道发生了什么
