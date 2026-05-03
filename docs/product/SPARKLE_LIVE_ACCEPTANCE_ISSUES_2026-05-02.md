@@ -404,7 +404,7 @@
 | R28 | 2026-05-04T09:00 | D | 0 | N/A | D 域续探——D2 fix 验证通过（snapshot/rationale 已传递），FSM/锁/断路器/检查点/双核路由全部健壮，零缺口 |
 | R29 | 2026-05-04T09:30 | G | 3 | 3/3 | G 域续探——reportMessage/claimTask/searchUsers/sendFriendRequest 等多处空 stub → 虚假成功 / 功能不可用 |
 | R30 | 2026-05-04T09:45 | E | 3 | 3/3 | E 域续探——双核路由 drill 缺失 + stage38 Prometheus 标签不一致 + privacy drill 内联 type 崩溃 |
-| R31 | 2026-05-04T10:15 | K | 4 | pending | K 域续探——4 处 silent error swallowing: Flutter catch(_) null + 3× Python except:pass/return defaults 零日志 |
+| R31 | 2026-05-04T10:15 | K | 4 | 3/4 (K6/K7/K8 verified, K5 rejected — duplicate of B3) | K 域续探——4 处 silent error swallowing: Flutter + 3× Python except:pass/return 零日志 |
 
 ---
 
@@ -2136,5 +2136,5 @@
   4. **Python silent return None**: self_revision_service._read_json_key 的 Redis JSON 解析失败 `except Exception: return None`——调用方 `_session_revisions()` 正确处理 None（回退到 source dict），但数据损坏事件完全不可观测。与写入路径 `json.dumps`+`redis.setex` 形成不对称（写完整，读失败不记录）
   5. **误报排除**: calendar_remote_datasource 的 `response.data!` 在 repository 层有 try/catch 保护；vocabulary_repository 的 `as List` 强制转换被 provider try/catch 捕获并展示错误消息；aurora_core_session_service 的 `response.data!` 被调用方 try/catch 保护。均非真实问题
 - **Pattern insight**: 所有 4 个 issue 共享同一模式——设计者正确实现了降级/回退策略（本地回退、默认值、None→空列表），但遗漏了可观测性。修复成本极低（每个只需 +1 行 `logger.warning` 或 `debugPrint`），但影响运维人员对系统健康状态的感知能力
-- **Opus pass rate**: pending（待 Opus 独立复审）
+- **Opus pass rate**: 3/4 (K6/K7/K8 verified by opus-reviewer+2026-05-04T10:15; K5 rejected — duplicate of B3 which already covers spineStatusBand catch(_) return null)
 - **Next suggested domain**: H (i18n residuals) — 8 轮未回探，H5/H6 fix 验证长期待查；或 F (Event bus consumers) — 7 轮未回探，F4 fix 验证待查
