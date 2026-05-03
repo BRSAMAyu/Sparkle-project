@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 09:00 (R28 D-domain exploration complete — orchestrator FSM robust, 0 new issues)
+> Updated: 2026-05-04 09:30 (R29 G-domain exploration — 3 discovered: G4/G5/G6 mock stubs → broken features)
 
 ---
 
@@ -1748,7 +1748,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-0930-G4
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: G
 - **title**: Mock reportMessage 静默空实现导致举报提交后 UI 显示虚假成功 toast
@@ -1763,11 +1763,12 @@
 - **blast_radius**: 影响 demo 模式下社区举报功能。用户在 demo 中学习产品行为后会误以为举报功能正常工作，形成错误的心理模型。对北极星影响低——demo 模式数据非持久化，但信任侵蚀是累积性损害
 - **suggested_fix_direction**: 让 mock reportMessage 至少追加到内部列表（如 _mockReports），或以 toast 明确提示 "Demo 模式：举报已记录但不会发送到服务器"。禁止静默丢弃
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T09:30
+- **reviewer_note**: APPROVED — 独立审阅确认全部 3 处 evidence 与代码一致。(1) mock_community_repository.dart:1894-1898 reportMessage 空实现 `async {}`。(2) group_chat_screen.dart:245-259 UI 层 try/catch 中 mock 返回 completed Future<void> 不抛异常，因此始终进入 success 分支显示 `AppFeedback.success`。(3) community_repository.dart:946-959 real 实现 POST 到 `/community/reports`，mock 完全跳过。调用链完整：UI onPressed → communityRepositoryProvider（demo 模式返回 mock）→ reportMessage() → `async {}` 返回 completed future → try block 成功 → AppFeedback.success 显示。与 G3（kick/promote/demote/transfer 空 stub，已 closed）不重复——G3 覆盖群组管理操作，G4 覆盖消息举报，属同一反模式的独立实例。与 B5 也不重复——B5 是 "provider 返回 null + UI 不检查 null" 模式，G4 是 "mock 空 stub 不抛异常 + UI try/catch 落入 success 分支" 模式。非"设计如此"——同 mock 中 respondToRequest 等方法维护内部状态，reportMessage 应为同样标准。
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-0931-G5
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: G
 - **title**: Mock getGroupTasks 硬编码返回 [] 使群组任务看板完全不可用，且创建任务后立即消失
@@ -1784,11 +1785,12 @@
 - **blast_radius**: 影响 demo 模式下社区问责制（accountability）任务系统的完整体验。群组任务是社区北极星功能之一——用户通过互相监督任务完成形成社会约束。demo 中该功能完全不可体验。对北极星有间接影响
 - **suggested_fix_direction**: 让 mock getGroupTasks 返回内部可变列表 `_mockGroupTasks`（类似 G1 fix 为 getGroupMembers 的做法），createGroupTask/claimTask/completeTask 操作该列表。至少创建 2-3 条示例任务（不同状态：unclaimed/in-progress/completed）展示看板功能
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T09:30
+- **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) mock_community_repository.dart:1446 getGroupTasks 硬编码返回 `[]`。(2) community_provider.dart:1532-1539 loadTasks() 直接设 state=AsyncData([])。(3) community_provider.dart:1553-1559 createTask() 调用 createGroupTask 返回 id='' title='' 的空壳 GroupTaskInfo，随后 loadTasks() 再次返回 [] 覆盖 state。(4) group_tasks_screen.dart:44-50 tasks.isEmpty 显示 "No tasks yet"。(5) group_tasks_screen.dart:35-40 FAB 触发创建对话框。调用链完整：GroupTasksNotifier 构造 → loadTasks() → getGroupTasks()=[] → state=AsyncData([]) → UI 空状态。createTask() → createGroupTask() 不持久化 → loadTasks() → getGroupTasks()=[] → state 重置为 [] → 任务消失。与 G1（getGroupMembers=[]，已 FIXED）和 G2（getFeed=[]，已 FIXED）不重复——三者均属硬编码空列表反模式的不同方法实例，但 G1/G2 已修复，G5 是尚未覆盖的独立方法（getGroupTasks）。claimTask(line 1465) 和 completeTask(line 1937) 也是空 stub 但被空列表永远屏蔽。非"设计如此"——同 mock 已维护 _mockGroupMessages/_mockFriends 等内部状态，任务系统亦应同样标准。
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-0932-G6
-- **status**: discovered
+- **status**: verified
 - **severity**: P3
 - **domain**: G
 - **title**: Mock searchUsers 硬编码返回 [] 且 sendFriendRequest 为空 stub——demo 模式用户发现与添加好友链路完全不可用
@@ -1805,7 +1807,8 @@
 - **blast_radius**: 影响 demo 模式下社区好友系统的完整体验。好友系统是社区的基础设施——用户无法在 demo 中发现和添加好友，无法体验好友动态、私聊等依赖好友关系的功能。对北极星影响低——demo 模式非持久化
 - **suggested_fix_direction**: 让 searchUsers 对 _mockUsers 做简单本地过滤（按 displayName/username 匹配关键词），让 sendFriendRequest 将被请求用户追加到 _mockPendingRequests 列表
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空
+- **verified_by**: opus-reviewer+2026-05-04T09:30
+- **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) mock_community_repository.dart:1242-1243 searchUsers 硬编码返回 `[]`，无视搜索关键词。(2) mock_community_repository.dart:1035-1038 sendFriendRequest 空实现 `async {}`。(3) user_search_screen.dart:32-37 _handleSearch() 调用 searchUsers → 返回 [] → UI 永远空结果。(4) user_search_screen.dart:66-73 sendFriendRequest try/catch 中 mock 返回 completed Future<void> 不抛异常 → success 分支触发。(5) community_repository.dart:178-186 sendFriendRequest 实际 POST 到 `/community/friends/request`，198-211 searchUsers GET `/community/users/search`。调用链：searchUsers → [] → "No users found"；sendFriendRequest → `async {}` → completed future → try 成功 → AppFeedback.success → 虚假成功 toast。两个断开点叠加使好友发现与添加全链路不可用。mock 第 59 行 _mockUsers 已有 6 个用户（alice/bob/charlie/diana/eva/me）可过滤使用；mock 已有 _mockPendingRequests 列表（respondToRequest 第 1042-1044 行使用）可记录请求。与 G1/G2/G5（硬编码空列表）和 G3/G4（空 stub）不重复——G6 是 searchUsers+sendFriendRequest 组合覆盖好友子系统，前序条目分别覆盖群组成员/动态/任务/管理/举报。非"设计如此"——资源已就绪（_mockUsers, _mockPendingRequests），仅未连线。
 - **fix_commit**: 留空
 
 ### Round R25 — 2026-05-04T05:00
@@ -1894,3 +1897,20 @@
 - **Findings**: D 域续探覆盖 14 条代码路径，追踪 FSM 全生命周期。关键发现：(1) D2 fix 双站点验证通过——build_fallback_plan 现在在 multi_agent_adapter 和 plan_review_service 两处调用点都正确传递 snapshot= 和 rationale=；(2) StateGraph 12 节点 + 8 边全部有 fallback 默认值——无死端状态转换；router_condition/collaboration_condition/collaboration_post_condition/generation_review_condition/reflection_condition/execution_review_condition 均有 `or "__end__"` 或明确默认值；(3) 节点异常隔离正确——statechart_engine:277-281 捕获每个节点的异常→记录到 state.errors→break 循环，不会级联崩溃；(4) 锁管理完整——Redis SET NX 获取 + Lua 原子释放/续期 + finally 块保证清理；(5) 断路器三态完整——CLOSED→OPEN→HALF_OPEN 含滑动窗口和 Redis 持久化；(6) 检查点机制正确过滤 volatile keys（db_session/stream_callback/run_ledger/redis_client），避免不可序列化对象污染；(7) 双核路由器 12 信号优先级权重，条件激活，placeholders 在 686-688 行正确更新；(8) process_stream 14 步流水线所有错误路径均 yield ChatResponse.ERROR，无静默吞异常；(9) 工具执行采用优雅降级而非硬崩溃——失败工具产生 success=True 的 fallback 结果；(10) orchestrator_production.py 为死代码（1423 行，从未被导入）——可能造成维护混淆。D 域 orchestrator FSM 全部链路合约完整，零缺口。整个 orchestrator 是高质量工程实现。
 - **Opus pass rate**: N/A (0 new issues)
 - **Next suggested domain**: G (Mock vs Real) — 8 轮未回探，mock_community_repository reportMessage 空实现 + mock 与真实实现的差异积累值得关注；或 E (Aurora kill switch) — 7 轮未回探
+
+### Round R29 — 2026-05-04T09:30
+- **Domain**: G (Mock vs Real implementation differences — 续探)
+- **Paths covered**:
+  - reportMessage: group_chat_screen.dart:245-259 → community_provider.dart → mock_community_repository.dart:1894-1898 (async {} stub) → community_repository.dart:946-959 (real POST /community/reports)
+  - getGroupTasks → createGroupTask → claimTask → completeTask: group_tasks_screen.dart → community_provider.dart:1525-1559 → mock_community_repository.dart:1446/1448-1463/1465/1937 → community_repository.dart real POST endpoints
+  - searchUsers → sendFriendRequest: user_search_screen.dart:32-37/66-73 → community_provider.dart:617-638 → mock_community_repository.dart:1242-1243/1035-1038 → community_repository.dart:198-206 real GET/POST endpoints
+  - Also verified: removeFavorite (line 1878 async {}), updateStatus (line 1245 async {}), and 5 other empty stubs — all silently drop user actions
+  - Cross-check: mock_cognitive_repository.dart (116 lines) well-implemented — 3 methods all return proper mock data; contrast validates G-domain issue severity
+- **New issues**: 3 — G4 (reportMessage fake success, P2), G5 (task board broken, P2), G6 (friend discovery broken, P3)
+- **Findings**: G 域续探揭示 mock_community_repository 有 11 个空 stub (`async {}` + 2 个返回 `[]`)。逐一追踪了 3 条完整调用链的反常：
+  1. **reportMessage**: UI 无条件成功 toast → mock 空 stub → 用户对举报功能形成错误心理模型（B5 模式在 G 域独立实例）
+  2. **群组任务系统**: getGroupTasks 永远返回 [] → UI 永远显示空状态 → createTask 返回空 id 对象 + 立即 loadTasks() 返回 [] → 任务创建后立即消失（比纯空列表更差——给出成功幻觉后反悔）
+  3. **好友发现与添加**: searchUsers 永远返回 [] → UI 显示 "No users found" → sendFriendRequest 为空 stub + 无条件成功 toast → 好友系统不可用
+  mock_cognitive_repository 作为对比参照——3 个方法均返回正确的 mock 数据含延迟模拟，证明 mock_community_repository 的空实现是疏漏而非架构设计。所有 3 个 issue 都是独立的新发现——G1/G2/G3 已 closed/fixed，无冲突。附加发现：removeFavorite 和 updateStatus 也是空 stub，但 UI 层有乐观更新 / try-catch 部分掩盖了问题。
+- **Opus pass rate**: pending（待 Opus 独立复审）
+- **Next suggested domain**: E (Aurora kill switch) — 9 轮未回探；或 H (i18n residuals) — 6 轮未回探，H5 fix 验证
