@@ -1102,6 +1102,7 @@
 | R37 | 2026-05-03T20:20 | ISSUE-20260504-1801-B2 | ✅ Fixed | ddcad1e8a | ~45 min |
 | R38 | 2026-05-04T00:05 | ISSUE-20260504-1030-H7 | ✅ Fixed | 50ba407e8 | ~5 min |
 | R39 | 2026-05-04T00:25 | ISSUE-20260504-1045-I5 | ✅ Fixed | 1efeab4f9 | ~25 min |
+| R40 | 2026-05-04T00:28 | ISSUE-20260504-1050-I6 | closed_already_resolved | 1efeab4f9 (顺带) | ~3 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1573,9 +1574,10 @@
   This will regenerate query.sql.go with the correct 35-column SELECT list and also fix I6 by regenerating the Reportreason constants. Verify with `grep 'paused_at' query.sql.go` returning the new columns and `grep 'HATESPEECH' models.go` returning the new constant.
 
 ### ISSUE-20260504-1050-I6
-- **status**: verified
+- **status**: closed_already_resolved
 - **severity**: P3
 - **domain**: I
+- **closed_at**: 2026-05-04T00:25:00Z
 - **title**: Go sqlc Reportreason 常量缺失 HATE_SPEECH——schema.sql 已含 7 值但 sqlc 未重生
 - **symptom**: Go models.go 中 Reportreason 类型仅有 6 个常量（SPAM/HARASSMENT/VIOLENCE/MISINFORMATION/INAPPROPRIATE/OTHER），缺少 HATE_SPEECH。当前 Go 不处理举报原因（query.sql.go 零引用），但常量集不完整。
 - **root_cause_hypothesis**: I4 修复更新了 schema.sql 的 reportreason enum（添加 HATE_SPEECH），且 c28 迁移已应用到 DB。但 sqlc 未重新生成，Go models.go 的 Reportreason 常量停留在 6 值状态。与 I5 同根因——`make sync-db` 未在 I4 修复后运行。
@@ -1590,7 +1592,7 @@
 - **suggested_fix_direction**: 运行 `make sync-db`（与 I5 同一操作）。I5 和 I6 共享根因：I2/I4 修复后未运行 `make sync-db`，一次性修复两处漂移
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T11:15
-- **fix_commit**: 留空
+- **fix_commit**: 1efeab4f9 (顺带修复 — sqlc generate from I5)
 
 ### ISSUE-20260504-0016-H5
 - **status**: closed
