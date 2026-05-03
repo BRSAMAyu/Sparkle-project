@@ -551,6 +551,8 @@ class MockCommunityRepository implements CommunityRepository {
         },
       ),
     };
+
+    _mockReports = [];
   }
   factory MockCommunityRepository.instance() => _instance;
 
@@ -583,6 +585,7 @@ class MockCommunityRepository implements CommunityRepository {
   late final List<RecommendationFeedbackPrompt> _mockFeedbackPrompts;
   late final Map<RecommendationItemType, RecommendationFeedbackInsight>
       _mockFeedbackInsights;
+  late final List<Map<String, dynamic>> _mockReports;
 
   static final MockCommunityRepository _instance =
       MockCommunityRepository._init();
@@ -1895,7 +1898,13 @@ class MockCommunityRepository implements CommunityRepository {
     String messageId,
     ReportReason reason, {
     String? description,
-  }) async {}
+  }) async {
+    _mockReports.add({
+      'messageId': messageId,
+      'reason': reason,
+      'description': description,
+    });
+  }
 
   // ── Phase 2a: Group Member Moderation ─────────────────────────────────────
 
