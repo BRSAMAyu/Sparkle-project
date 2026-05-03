@@ -1312,24 +1312,21 @@
 ### Round R14 — 2026-05-03T23:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
-  - scripts/rule_guard_manifest.tsv (64 registered rules, full audit)
-  - scripts/run_all_rule_guards.sh (CI entry point)
-  - scripts/guards/check_rule_ax_route_ownership.py (route-tier: 898 violations in FULL mode)
-  - scripts/guards/check_rule_ay_llm_safety.py (LLM vendor client enforcement — real AST check)
-  - scripts/guards/check_rule_aw_rate_limiter_sanity.py (shallow string-match check)
-  - scripts/guards/check_rule_bb_financial_atomicity.py (shallow string-match check)
-  - scripts/guards/check_rule_be_shadow_semantics.py (shallow string-match check)
-  - scripts/guards/check_rule_bh_meta_learning_safety.py (orphan — exists but not in manifest)
-  - scripts/check_rule_av_kill_switch_mode_enum.py (stale hardcoded service/mode lists: 3 services + 8 modes missing)
-  - backend/app/config/settings.py (production guards: DEBUG/SECRET_KEY/CORS all verified operational)
-  - backend/app/core/kill_switch.py (read_mode/write_mode/record_mode_gauge — confirmed proper implementation)
-  - backend/gateway/internal/handler/websocket_proxy.go (bluemonday sanitization confirmed operational)
-  - backend/app/api/internal/auto_degrade.py + grpc_auth.py + persona_service.py (hmac.compare_digest confirmed)
-  - backend/app/services/aurora_*kill_switch*.py (21 files total, 3 missing from AV guard)
-- **New issues**: L1(P2), L2(P1), L3(P2), L4(P3)
-- **Findings**: The governance rule system has 64 registered rules with generally solid coverage of write boundaries, eval/safety, vision compliance, financial, and security domains. Discovered 4 gaps: (1) BH meta-learning parameter safety guard exists but is not registered in manifest — never runs in CI; (2) AV kill switch guard has stale hardcoded SERVICE_PATHS (18/21) and MODE_SETTINGS (44/48) lists, missing dual-core router, stage37 LLM safety, stage39, and privacy modes — new kill switch services won''t be checked for compliance; (3) No automated guard for "no hardcoded tokens/passwords" — the only security checklist item without CI enforcement; (4) AW/BB/BE guards use shallow string-match detection that can''t distinguish function rename (false positive) from semantic break (false negative). On the positive side: all production guards documented in CLAUDE.md (DEBUG/SECRET_KEY/CORS/gRPC reflection) actually exist in settings.py; bluemonday sanitization is operational in websocket_proxy.go and chat_orchestrator.go; hmac.compare_digest is used for timing-attack resistant comparison; all 64 manifest-referenced scripts exist on disk.
-- **Opus pass rate**: 4/4 (L1/L2/L3/L4 all APPROVED by opus-reviewer at 2026-05-03T22:30)
-- **Next suggested domain**: I (DB 迁移 vs 代码字段) — already done (R12). All 12 domains now explored at least once.
+  - experience_repository.dart + experience_models.dart + experience_provider.dart (_payload 无声转换为空对象链, 4 个 FutureProvider)
+  - aurora_preferences_provider.dart (AsyncNotifier build/updatePreference 乐观更新+无声回退)
+  - spine_status_band_provider.dart (FutureProvider catch-all 吞错)
+  - home_growth_provider.dart:326-477 (6 个 FutureProvider 链, DioException catch + 非 DioException 传播)
+  - community_providers.dart:8-118 (FeedNotifier 乐观更新+rethrow)
+  - community_provider.dart:239-246,688-852 (10+ catch+rethrow 无操作块)
+  - accountability_provider.dart:44-65 (MyPartnershipsNotifier error propagation)
+  - learning_heatmap_widget.dart:33-44 (FutureProvider unsafe cast 分析——已验证 UI 错误处理正确)
+  - goal_detail_provider.dart:44-74 (K1 报告的 startNextStep/completeNextStep catch+rethrow 仍未修复)
+  - api_client.dart (Dio get/post/put 方法——无类型安全保证, 依赖调用方正确指定泛型)
+- **New issues**: B1(P2), B2(P2), B3(P3)
+- **Findings**: Riverpod provider 生态整体健康——多数 StateNotifierProvider 正确使用 AsyncValue loading/data/error 模式并检查 mounted。发现 3 个值得修复的缺口: (1) experience_repository._payload() 对非 Map 响应返回 {}，结合 experience_models 的防御性 fromJson 工厂，形成完整的无声数据丢失链——4 个 experience FutureProvider 永远不进入 error 状态，API 契约变化完全不可探测; (2) AuroraPreferencesNotifier 的 build() 和 updatePreference() 使用 catch (_) 吞错——build 在 API 失败时返回全默认值（用户永远不知道看到的是默认值），updatePreference 乐观更新后 API 失败无声回退（用户看到选项自己弹回去）; (3) spineStatusBandProvider 用 catch (_) 吞没所有异常使 error 状态不可达。同时也发现 10+ 个 community_provider.dart 方法使用 try/catch+rethrow 模式——这虽然是正确的（让 UI 层处理错误），但 catch 块完全为空使其成为无操作包装。K1（goal_detail_provider startNextStep/completeNextStep 无错误处理）的 catch+rethrow 模式仍未修复——已在 R6 发现但 fix_commit 为空。provider 依赖链（home_growth_provider 的 4 层 .future 依赖）在错误传播方面行为正确——非 DioException 错误正确传播至 UI error 状态。
+- **Opus pass rate**: pending
+- **Next suggested domain**: A (Flutter UI 端到端链路) 或 C (WebSocket / gRPC 契约)——所有域至少一轮后，建议回探早期域查回归
+
 | R14 | 2026-05-03T23:00 | B | 3 | pending | Riverpod Provider 健康度续探——B1 无声数据丢失, B2 乐观更新无声回退, B3 catch-all 吞错
 
 ### Round R15 — 2026-05-04T00:00
