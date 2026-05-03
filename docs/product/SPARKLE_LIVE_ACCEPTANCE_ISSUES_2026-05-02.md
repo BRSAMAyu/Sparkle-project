@@ -2335,7 +2335,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1600-L5
-- **status**: in_progress
+- **status**: rework
 - **fixer_started_at**: 2026-05-04T22:15:00Z
 - **severity**: P2
 - **domain**: L
@@ -2355,6 +2355,7 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-03T19:30Z
 - **fix_commit**: 留空
+- **rework_note**: REJECTED by opus-reviewer at 2026-05-05T12:00Z. Shadow-mode gap — fix only checks `mode == "off"` (bi-state), missing the tri-state shadow mode required by CLAUDE.md ("off → shadow → live"). All 4 protected methods execute identically in shadow vs live: `handle_group_task_completed` still writes DB + publishes events + enqueues system updates; `handle_resource_shared` still publishes community.resource_shared; `build_privacy_preserving_cohort_signal` still writes privacy budget ledger + persists aggregate signals + publishes; `broadcast_achievement_unlock` still publishes to Redis channels. SocialSignalBridge (reference impl) handles shadow correctly — checks `mode != "live"` for write ops at lines 423-429 and 482-483. Suggested fix: either (A) change all 4 checks to `if mode != "live": return` (shadow=silent-skip like SocialSignalBridge) and add `logger.info("community_bridge mode={}, skipping", mode)` for observability; or (B) three-way branch: off→skip, shadow→log-only (no DB write / no event publish), live→execute. Tests must also cover shadow-mode blocking — existing 8 tests only verify off-mode. Other aspects of the fix are correctly structured: settings.py binding, AuroraStage33KillSwitchService registration, import + init pattern, test coverage for off-mode. 15/15 tests pass. Rule guards: pre-existing AX fail only (route-tier comments, unrelated). No proto/DB/i18n cross-layer drift.
 
 ### ISSUE-20260504-1601-L6
 - **status**: verified
@@ -2715,7 +2716,7 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260505-0930-C8
-- **status**: discovered
+- **status**: verified
 - **severity**: P1
 - **domain**: C
 - **title**: legacyStreamErrorPayload 3 个调用路径缺失 request_id——多请求并发时错误事件被静默丢弃
@@ -2733,11 +2734,12 @@
 - **blast_radius**: 影响 chat 模块的错误反馈可靠性。当用户有多个并发聊天请求时，stream_recv_error（gRPC 流中断）和 duplicate_request（重复请求拒绝）均无法展示给用户。不影响北极星（单请求场景 route 可 fallback 到唯一控制器），但降低多任务并发使用场景的健壮性。
 - **suggested_fix_direction**: (1) 为 `legacyStreamErrorPayload` 添加 `requestID string` 参数，在 3 个调用点传入可用的 requestID；(2) 或让 `_extractRequestIdFromRawMessage` 同时检查 `request_id` 和 `message_id`（两者在现有协议中值相同）；(3) 资源耗尽路径无 requestID 时可生成临时 ID 或使用 `_broadcastErrorToActiveRequests` 语义。
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空（Opus 填）
+- **verified_by**: opus-independent-reviewer+2026-05-05T09:30:00Z
+- **reviewer_note**: APPROVED — independent review confirms all 6 evidence references match code exactly. (1) legacyStreamErrorPayload (line 991-998): returns gin.H{"type":"error","message":...,"error_code":...,"retryable":...} — no request_id or message_id. (2) duplicate_request path (line 342): sendChatAccepted at line 333 sends gin.H with both "message_id" and "request_id" (verified at lines 157-158), but the subsequent legacyStreamErrorPayload at line 342 omits request_id — reqID is in scope (line 323) but not passed. (3) resource_exhausted path (line 307): streamSem full, reqID not yet assigned (line 323 is after), but generateRequestID() is available. (4) stream_recv_error path (line 947): respondStreamRecvError at line 695 is called inside handleChatMessage where reqID is in scope (line 323, derived from requestID parameter at line 274), but respondStreamRecvError signature (line 939) accepts only (responder, err) — no requestID parameter. (5) Flutter _extractRequestIdFromRawMessage (lines 1807-1816): only jsonData['request_id'] checked, not message_id. (6) _routeEventToRequest (lines 1818-1826): when requestId is null and _requestControllers.length != 1, event silently dropped. Call chain confirmed: Go legacyStreamErrorPayload → WriteJSON → WebSocket → Flutter json.decode → _extractRequestIdFromRawMessage → null (no request_id key) → _routeEventToRequest → return (>=2 controllers) → event lost. NOT BY DESIGN: sendChatAccepted already emits both message_id + request_id (lines 157-158), proving the intent to include routing IDs in all structured messages. handleChatMessage has reqID in scope (line 323). The omission is a gap, not a design decision. NOT DUPLICATE of any existing entry: C6 addressed message_nack format for validation paths; K1 addressed Flutter chat_provider NackEvent handling; K2 addressed stream error context loss (saveMessage). R47 (line 3272g) dismissed legacyStreamErrorPayload format as acceptable because Flutter can parse {"type":"error"} as ErrorEvent — but this only validates parsing, not ROUTING. C8 correctly identifies the routing dimension that R47 missed. P1 severity justified: multi-request concurrency is a realistic scenario (quick double-send, tool results arriving while typing next message).
 - **fix_commit**: 留空（fixer 填）
 
 ### ISSUE-20260505-0930-C9
-- **status**: discovered
+- **status**: rejected
 - **severity**: P1
 - **domain**: C
 - **title**: Go message_nack 缺 request_id（仅含 message_id）+ Flutter chat_provider 未处理 NackEvent——服务端消息拒绝完全不可见
@@ -2755,7 +2757,7 @@
 - **blast_radius**: 影响所有服务端消息拒绝场景的 UX——空消息检测、JSON 格式验证、未知消息类型、工具结果过大、agent 不可用、配额超限——共 8 个 Go 路径全部静默失败。用户可能重复发送无效消息而不自知。不影响北极星（正常聊天流不受影响），但严重降低错误 UX 完整性。
 - **suggested_fix_direction**: (A) Go 端：在所有 `message_nack` JSON 中添加 `"request_id": messageID`（值同 `message_id`），使 Flutter 可通过现有 `_extractRequestIdFromRawMessage` 路由；(B) Flutter 端：在 `chat_provider` event loop 中添加 `else if (event is NackEvent)` 分支，复用 ErrorEvent 的 `finalizeRun` 模式（phase: failed, errorMessage: event.errorMessage, errorCode: event.errorCode），并利用 `retryAfterMs` 区分瞬时/永久错误。
 - **discovered_by**: explorer-loop
-- **verified_by**: 留空（Opus 填）
+- **reviewer_note**: REJECTED — 与 ISSUE-20260505-0830-K1 (status: verified, line 2675) 重复。K1 已覆盖 C9 的核心发现：(A) chat_provider.dart 的 event loop (line 1297-1919) 不含 NackEvent 分支——K1 evidence line 2685 已确认；(B) _routeEventToRequest 仅在 DoneEvent/ErrorEvent 时关闭 controller——K1 evidence line 2686 已确认；(C) NackEvent 导致 8 分钟 streamTimeout 冻结——K1 evidence line 2687 已确认；(D) websocket_chat_service_v2.dart:853-871 正确解析 NackEvent——K1 evidence line 2684 已确认。C9 的独特贡献（Go message_nack JSON 含 message_id 但无 request_id → Flutter _extractRequestIdFromRawMessage 仅提取 request_id → 路由失败）是真实的次要发现，但应合并到 C8 的 fix 范围（C8 同样处理 Go 错误 payload 缺失 request_id 的路由问题），而非作为独立条目。C8 + K1 已完整覆盖 C9 的全部诊断。建议将 Go message_nack request_id 补充作为 C8 fix 的一部分一并处理。驳回，不删除。
 - **fix_commit**: 留空（fixer 填）
 
 ### Round R25 — 2026-05-04T05:00
@@ -3330,7 +3332,7 @@
   2. **C9 — message_nack 双层断裂**: (A) 所有 8 处 message_nack 均含 message_id 但无 request_id，Flutter 的 _extractRequestIdFromRawMessage 仅检查 request_id → 路由失败（≥2 并发时丢弃）；(B) 即使路由成功，chat_provider 的 event loop 不处理 NackEvent → 事件静默穿过。两个断点叠加使 message_nack 机制在客户端完全不可见。
   - 调用链完整追踪：Go gin.H → WriteJSON → WebSocket → Flutter json.decode → _extractRequestIdFromRawMessage（断点 1：无 request_id）→ _routeEventToRequest（断点 2：null requestId 丢弃）→ event loop（断点 3：NackEvent 未处理）。三层断裂，无一幸免。
   - C6 修复为部分修复——只改了 chat_orchestrator.go 的验证路径（协议层），未改 chat_orchestrator_chatflow.go 的流错误路径（流层），也未补 request_id 或 Flutter NackEvent 处理。
-- **Opus pass rate**: pending (C8/C9)
+- **Opus pass rate**: 1/2 (C8 verified, C9 rejected — duplicate of K1)
 - **Next suggested domain**: G (Mock vs Real) — 11 轮未回探；或 K (错误处理/降级/边界) — 13 轮未回探
 
 ### Round R51 — 2026-05-05T10:00
