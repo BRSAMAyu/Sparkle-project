@@ -1756,8 +1756,9 @@
   - 测试保护：测试为逻辑复制品非真实单元测试（因预存编译错误），建议编译恢复后改为真实 Widget/Provider 测试
 
 ### ISSUE-20260504-0501-B5
-- **status**: verified
+- **status**: in_progress
 - **severity**: P2
+- **fixer_started_at**: 2026-05-03T09:08:56Z
 - **domain**: B
 - **title**: CapsuleDetailNotifier.submitFeedback API 失败时返回 null 但 UI 无条件显示"反馈提交成功"toast
 - **symptom**: 用户在好奇心胶囊详情页提交反馈（评分/分类/评论），无论 API 是否成功，UI 始终弹出"反馈已提交，感谢您的参与！"成功 toast。当 API 实际失败时（网络断开/500），用户被虚假成功提示误导——反馈数据永久丢失而不自知
