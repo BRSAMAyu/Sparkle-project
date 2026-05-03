@@ -693,6 +693,13 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 		if err != nil {
 			log.Printf("Stream recv error: %v", err)
 			respondStreamRecvError(responder, err)
+			if textBuilder.Len() > 0 && input.SessionID != "" {
+				partialText := textBuilder.String()
+				h.saveMessage(ctx, userID, input.SessionID, "assistant", partialText, map[string]interface{}{
+					"trace_id":  traceID,
+					"truncated": true,
+				})
+			}
 			return false
 		}
 
