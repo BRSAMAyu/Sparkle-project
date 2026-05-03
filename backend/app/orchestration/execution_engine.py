@@ -22,6 +22,7 @@ from app.core.agent_profiles import AgentRole, agent_profile_registry
 from app.core.business_metrics import (
     EVIDENCE_BACKED_VISIBLE_UPDATE_TOTAL,
 )
+from app.core.safe_error_messages import build_safe_chat_error
 from app.core.metrics import (
     RESPONSE_FALLBACK_GENERATED_TOTAL,
     SESSION_FEEDBACK_VISIBLE_HINT_TOTAL,
@@ -1375,6 +1376,7 @@ class ExecutionEngineMixin:
             )
         except Exception as exc:
             logger.error(f"Tool result continuation failed: {exc}", exc_info=True)
+            safe_message, error_code, retryable = build_safe_chat_error(exc)
             yield agent_service_pb2.ChatResponse(
                 response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
@@ -1383,9 +1385,9 @@ class ExecutionEngineMixin:
                 workflow_id=workflow_id,
                 prompt_version=prompt_version,
                 error=agent_service_pb2.Error(
-                    message=f"工具结果续跑失败: {exc}",
-                    retryable=True,
-                    error_code=agent_service_pb2.ERROR_CODE_INTERNAL,
+                    message=safe_message,
+                    retryable=retryable,
+                    error_code=error_code,
                 ),
                 finish_reason=agent_service_pb2.ERROR,
             )
