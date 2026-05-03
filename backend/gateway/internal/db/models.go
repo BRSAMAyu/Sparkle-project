@@ -1256,6 +1256,7 @@ const (
 	ReportreasonSPAM           Reportreason = "SPAM"
 	ReportreasonHARASSMENT     Reportreason = "HARASSMENT"
 	ReportreasonVIOLENCE       Reportreason = "VIOLENCE"
+	ReportreasonHATESPEECH     Reportreason = "HATE_SPEECH"
 	ReportreasonMISINFORMATION Reportreason = "MISINFORMATION"
 	ReportreasonINAPPROPRIATE  Reportreason = "INAPPROPRIATE"
 	ReportreasonOTHER          Reportreason = "OTHER"
@@ -5151,6 +5152,8 @@ type Task struct {
 	SourcePlanningSessionID pgtype.Text      `json:"source_planning_session_id"`
 	PhaseIndex              pgtype.Int4      `json:"phase_index"`
 	SuccessCriteria         pgtype.Text      `json:"success_criteria"`
+	PausedAt                pgtype.Timestamp `json:"paused_at"`
+	PausedReason            pgtype.Text      `json:"paused_reason"`
 }
 
 type TaskDocument struct {

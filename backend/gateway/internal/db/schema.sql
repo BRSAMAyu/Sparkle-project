@@ -5652,7 +5652,9 @@ CREATE TABLE tasks (
     ai_prompt text,
     source_planning_session_id character varying(64),
     phase_index integer,
-    success_criteria text
+    success_criteria text,
+    paused_at timestamp without time zone,
+    paused_reason text
 );
 
 

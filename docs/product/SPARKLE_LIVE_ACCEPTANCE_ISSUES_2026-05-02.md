@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 20:00 (R42 J-domain — 0 new; R43 E-domain in progress)
+> Updated: 2026-05-04 20:30 (R43 E-domain — 2 verified: E8/E9; Opus review pass 2/2)
 
 ---
 
@@ -416,7 +416,7 @@
 | R40 | 2026-05-04T18:30 | G | 0 | N/A | G 域续探——mock_community_repository 核心方法全部正确实现，剩余空 stub 为非核心功能，domain exhausted |
 | R41 | 2026-05-04T19:30 | D | 3 | 3/3 (D1/D2/D3 verified) | D 域续探（纠正上轮 0/8 false positive）——Statechart engine 吞异常返回部分状态 + compile() 不验证边目标 + max_steps 静默截断 |
 | R42 | 2026-05-04T20:00 | J | 0 | N/A | J 域——cold start / empty state 全面审查：dashboard/community/marketplace/tool-library/notifications/onboarding 全部健壮 |
-| R43 | 2026-05-04T20:15 | E | 2 | pending（待 Opus 独立复审） | E 域续探——E7 fix_commit 错误（指向 B5 提交）+ privacy drill 内联 binding 缺 allowed_modes 崩溃 + drill 写 Redis 但生产读 settings 零影响 |
+| R43 | 2026-05-04T20:30 | E | 2 | 2/2 (E8/E9 verified) | E 域续探——E7 fix_commit 错误（指向 B5 提交）+ privacy drill 内联 binding 缺 allowed_modes 崩溃 + drill 写 Redis 但生产读 settings 零影响 |
 
 ---
 
@@ -1494,10 +1494,11 @@
   **(f) CLAUDE.md / Rule guards: NO VIOLATIONS.** No secrets, no hardcoded tokens, no cross-layer boundary violations. Go gateway schema.sql update follows established pattern. Rule guards all pass (AX pre-existing unrelated).
 
 ### ISSUE-20260504-1045-I5
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: I
 - **fixer_started_at**: 2026-05-04T00:10:00Z
+- **closed_at**: 2026-05-04T00:25:00Z
 - **title**: Go schema.sql tasks 表 + sqlc Task struct 缺失 paused_at/paused_reason 列——I2 修复后未运行 make sync-db
 - **symptom**: Go gateway 查询 tasks 时，sqlc 生成的 GetTaskByID 查询不包含 paused_at/paused_reason 列，Task struct 也无对应字段。当前 Go handler 未主动使用这些字段，但若未来通过 Go proxy 透传 task 数据给 Flutter，paused 元数据会静默丢失。
 - **root_cause_hypothesis**: I2 修复通过 alembic migration de30c736266b 向 DB tasks 表添加了 paused_at 和 paused_reason 列，Python model 同步添加。但 `make sync-db`（pg_dump → schema.sql → sqlc gen）未运行，导致 Go schema.sql 的 tasks 表定义和 sqlc 生成的 Task struct 均停留在 I2 之前的状态。
@@ -1515,7 +1516,31 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T11:15
 - **fix_commit**: 留空
-- **opus_review**: REJECTED by opus-reviewer at 2026-05-04T10:50:00Z
+- **opus_review**: APPROVED by opus-reviewer-r2 at 2026-05-04T11:50:00Z
+- **opus_review_r2**: |
+  **APPROVED — R1 3 defects all resolved (2026-05-04T11:50:00Z)**
+
+  **(1) query.sql.go regeneration: FIXED**
+  `GetTaskByID` at query.sql.go:938 now includes `paused_at, paused_reason` in its explicit SELECT list (35 columns). Row scan at lines 981-982 correctly maps `&i.PausedAt` and `&i.PausedReason`. Confirmed via direct file read.
+
+  **(2) make sync-db bypass: ACCEPTED with caveat**
+  `make sync-db` fails with 12 alembic heads (pre-existing infrastructure issue, not I5-specific). Fixer used `sqlc generate` directly, which correctly regenerated query.sql.go and models.go from schema.sql + query.sql. schema.sql columns remain manually added (pg_dump unreachable), but column names (`paused_at`, `paused_reason`), types (`timestamp without time zone`, `text`), and position (immediately after `success_criteria`) match the Python model and live DB. This is the best achievable fix without resolving the alembic heads issue.
+
+  **(3) I6 (Reportreason HATE_SPEECH): FIXED**
+  `models.go:1259` now has `ReportreasonHATESPEECH Reportreason = "HATE_SPEECH"`. The `sqlc generate` pass simultaneously resolved both I5 and I6.
+
+  **Cross-layer contract: ALL LAYERS CONSISTENT**
+  - DB (PostgreSQL): paused_at timestamp, paused_reason text (migration de30c736266b) ✅
+  - Python model (task.py:97-98): paused_at=Column(DateTime), paused_reason=Column(Text) ✅
+  - schema.sql (5656-5657): paused_at timestamp without time zone, paused_reason text ✅
+  - models.go (5155-5156): PausedAt pgtype.Timestamp, PausedReason pgtype.Text ✅
+  - query.sql.go (938, 981-982): SELECT + Scan include both columns ✅
+
+  **Verification results:**
+  - `go build ./...` → PASS (zero errors)
+  - `go test ./internal/db/...` → PASS (ok, cached)
+  - `bash scripts/run_all_rule_guards.sh` → Only pre-existing AX failures (route-tier comments in proxy_routes.go) + pre-existing BG proto staleness warnings. No new non-AX failures introduced.
+
 - **rework_note**: |
   **REJECTED — 3 defects found (2026-05-04T10:50:00Z)**
 
