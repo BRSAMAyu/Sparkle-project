@@ -421,7 +421,7 @@
 | R45 | 2026-05-04T21:30 | F | 1 | 1/1 (F6 verified) | F 域续探——EventBus DLQ PostgreSQL 表 + Redis 流无任何管理/重放 API |
 | R46 | 2026-05-05T08:00 | H | 1 | 1/1 (H9 verified) | H 域续探——document_library_screen 归档/恢复/撤回 10 处纯中文硬编码 |
 | R48 | 2026-05-05T09:00 | I | 1 | pending | I 域续探——Pydantic GroupInfo schema 缺少 announcement 字段，群公告响应静默丢弃 |
-| R50 | 2026-05-05T09:30 | C | 2 | pending | C 域续探——legacyStreamErrorPayload 3 路径缺 request_id + message_nack 缺 request_id + Flutter NackEvent 死代码 |
+| R50 | 2026-05-05T09:30 | C | 2 | 1/2 (C8 verified, C9 rejected as duplicate of K1) | C 域续探——legacyStreamErrorPayload 3 路径缺 request_id + message_nack 缺 request_id + Flutter NackEvent 死代码 |
 
 ---
 
