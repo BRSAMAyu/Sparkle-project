@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-04 01:00 (R16 I4/H5 verified by opus-independent-reviewer)
+> Updated: 2026-05-04 02:30 (R19 I4 fix reviewed+APPROVED by independent-reviewer)
 
 ---
 
@@ -370,7 +370,7 @@
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
 - **Discovered (not verified)**: 0
-- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 1 (D2) + 3 (I1/I2/I3) + 4 (L1/L2/L3/L4) + 3 (B1/B2/B3) + 2 (I4/H5)
+- **Verified (pending fix)**: 4 (E1/E2/E3/E4) + 4 (F1/F2/F3/F4) + 1 (A1 — fix commit pending) + 1 (D1) + 1 (D2) + 3 (I1/I2/I3) + 4 (L1/L2/L3/L4) + 3 (B1/B2/B3) + 1 (H5)
 
 ---
 
@@ -1046,6 +1046,7 @@
 | R15 | 2026-05-04T00:20 | ISSUE-20260503-0432-L2 | ✅ Fixed | 8c16875c1 | ~65 min |
 | R16 | 2026-05-04T00:35 | ISSUE-20260503-1602-E3 + E4 | ✅ Fixed | 288b0407b | ~5 min |
 | R17 | 2026-05-04T01:45 | ISSUE-20260503-1600-D1 | ✅ Fixed | dd0885789+bf56ba944 | ~75 min |
+| R19 | 2026-05-04T02:30 | ISSUE-20260504-0015-I4 | ✅ Fixed | e57c82be8 | ~15 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1385,10 +1386,11 @@
 ---
 
 ### ISSUE-20260504-0015-I4
-- **status**: in_progress
+- **status**: closed
 - **severity**: P1
 - **domain**: I
 - **fixer_started_at**: 2026-05-04T02:15:00Z
+- **closed_at**: 2026-05-04T02:30:00Z
 - **title**: ReportReason I3 修复不完整：Python model enum 缺失 HATE_SPEECH，schema 接受但 DB 写入失败
 - **symptom**: Flutter 端选择 "仇恨言论" (hate_speech) 提交举报 → API schema 验证通过（ReportReasonEnum 包含 hate_speech）→ Python 尝试写入 DB（ReportReason model enum 不包含 HATE_SPEECH）→ PostgreSQL 报 invalid input value for enum reportreason: "hate_speech"
 - **root_cause_hypothesis**: I3 修复同步了 Flutter 和 schema 层（community.py:882-889 的 ReportReasonEnum 添加了 HATE_SPEECH），但遗漏了 model 层（community.py:90-97 的 ReportReason enum 仍不包含 HATE_SPEECH）。DB 列定义使用 model enum（community.py:652 `Column(Enum(ReportReason))`），导致 schema 接受但 DB 拒绝
@@ -1403,7 +1405,20 @@
 - **suggested_fix_direction**: 在 `backend/app/models/community.py:90-97` 的 `ReportReason` enum 中添加 `HATE_SPEECH = "hate_speech"`，并添加 Alembic 迁移将 hate_speech 加入 PostgreSQL 的 reportreason enum
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T01:00:00Z
-- **fix_commit**:
+- **fix_commit**: e57c82be8
+- **opus_review**: APPROVED by independent-reviewer at 2026-05-04T02:30:00Z — 5-audit-dimension review below.
+
+  **(a) Root cause genuinely resolved.** Pre-fix: Python model `ReportReason` had 6 values (missing HATE_SPEECH) while schema `ReportReasonEnum` had 7. DB column `reason = Column(Enum(ReportReason))` used the model enum, causing INSERT failures when hate_speech passed schema validation. Post-fix: model enum now has 7 values matching schema. SQLAlchemy `Enum(ReportReason)` extracts `.name` (uppercase: SPAM, HATE_SPEECH) which matches the PostgreSQL enum values (also uppercase: 'SPAM', 'HATE_SPEECH'). Not a hack — each change targets a specific missing piece (model enum + Go schema.sql + Alembic migration).
+
+  **(b) Regression risk: LOW.** Only 2 callers of `ReportReason` in backend: `community.py:653` (Column definition) and `community.py:90` (enum class). Schema `ReportReasonEnum` used in 2 Pydantic schemas (`community.py:910,917`). Adding a new enum value is purely additive — existing values untouched. Go schema.sql change is documentation only (Go gateway does not interpret report reasons). Flutter already had hateSpeech from I3 fix. No control flow changes.
+
+  **(c) Cross-layer contracts: ALL 5 LAYERS SYNCHRONIZED.** (1) Python model ReportReason: 7 values (spam/harassment/violence/hate_speech/misinformation/inappropriate/other) ✓. (2) Python schema ReportReasonEnum: 7 values ✓. (3) Go schema.sql reportreason: 7 values (SPAM/HARASSMENT/VIOLENCE/HATE_SPEECH/MISINFORMATION/INAPPROPRIATE/OTHER) ✓. (4) Flutter ReportReason: 7 values (spam/harassment/violence/hateSpeech/misinformation/inappropriate/other) ✓. (5) Alembic migration c28: ALTER TYPE ADD VALUE 'HATE_SPEECH' ✓. SQLAlchemy case mapping verified: `.name` uppercase matches PostgreSQL uppercase.
+
+  **(d) Test efficacy: 4/4 PASS but LIMITED COVERAGE.** Tests verify source-level enum sync across model/schema/Go-schema + migration existence. Tests would catch if HATE_SPEECH were removed from any layer. However: (1) tests do not run against live DB to verify PostgreSQL enum actually has the value; (2) tests do not verify the migration's `down_revision` linkage. Manual DB verification confirmed pre-fix state was 6 values; post-`alembic upgrade c28` confirmed 7 values including HATE_SPEECH.
+
+  **(e) Alembic migration concern: down_revision = None creates branched history.** c28 has `down_revision = None` which creates a second alembic head alongside c27. Similar enum migrations (c21 with down_revision=wp18, c27 with down_revision=c26) correctly chain into the migration history. c28's independence is a structural issue: `alembic heads` shows two heads (c27 and c28), and `alembic branches` shows c28 as an unmerged branch. This does NOT block the fix (migration runs fine standalone and `ALTER TYPE ADD VALUE IF NOT EXISTS` is idempotent), but it means `alembic upgrade head` now requires handling multiple heads, and future merge migrations need to account for both branches. **Recommend follow-up**: add a merge migration or set c28's down_revision to 'c26_20260502' (or 'c27_20260503') to integrate into the main chain.
+
+  **(f) CLAUDE.md / Rule guards: NO VIOLATIONS.** No secrets, no hardcoded tokens, no cross-layer boundary violations. Go gateway schema.sql update follows established pattern. Rule guards all pass (AX pre-existing unrelated).
 
 ### ISSUE-20260504-0016-H5
 - **status**: verified
