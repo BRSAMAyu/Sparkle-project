@@ -40,7 +40,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   uuid: ^4.2.2
-  logger: ^2.0.2+1
+  logger: ^2.7.0
   url_launcher: ^6.2.2
   package_info_plus: ^8.0.0
 
