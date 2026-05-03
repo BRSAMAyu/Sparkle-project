@@ -308,6 +308,9 @@ class GroupInfo(BaseSchema):
     # 当前用户在群组中的角色（如果是成员）
     my_role: GroupRoleEnum | None = Field(default=None, description="我的角色")
 
+    # 群公告
+    announcement: str | None = Field(default=None, description="群公告内容")
+
 
 class GroupListItem(BaseModel):
     """群组列表项（简要信息）"""
