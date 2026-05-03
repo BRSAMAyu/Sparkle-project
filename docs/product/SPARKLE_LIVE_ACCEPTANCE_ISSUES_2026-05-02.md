@@ -795,7 +795,7 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1603-E4
-- **status**: verified
+- **status**: closed_already_resolved
 - **severity**: P3
 - **domain**: E
 - **title**: stage33 和 stage38 的 drill_transitions.sh 脚本不可执行（mode 644），直接 ./ 调用失败
