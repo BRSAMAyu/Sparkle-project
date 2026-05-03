@@ -2633,7 +2633,7 @@
   "memoryRetractedAt": "撤回时间",
   "memoryUpdate": "更新",
   "memoryConfidence": "置信度",
-  "memoryDiff": "Diff",
+  "memoryDiff": "差异",
   "memoryRevertToVersion": "撤回到此版本",
   "memoryNeedEnableRetraction": "需要开启 ENABLE_MEMORY_RETRACTION",
   "memoryInitialVersion": "初始版本",

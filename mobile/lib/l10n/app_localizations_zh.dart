@@ -6398,7 +6398,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get memoryConfidence => '置信度';
 
   @override
-  String get memoryDiff => 'Diff';
+  String get memoryDiff => '差异';
 
   @override
   String get memoryRevertToVersion => '撤回到此版本';

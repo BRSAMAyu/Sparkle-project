@@ -460,7 +460,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             Text(context.l10n.memoryConfidenceValue(item.confidence?.toStringAsFixed(2) ?? '-')),
             if (diff.isNotEmpty) ...[
               const SizedBox(height: DS.sm),
-              Text('Diff', style: Theme.of(context).textTheme.bodySmall),
+              Text(context.l10n.memoryDiff, style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: 4),
               Text(diff, style: Theme.of(context).textTheme.bodySmall),
             ],
@@ -472,7 +472,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
                       ? context.l10n.memoryRevertToVersion
                       : context.l10n.memoryNeedEnableRetraction,
                   child: SparkleButton(
-                    label: 'Revert',
+                    label: context.l10n.memoryRevertToVersion,
                     onPressed: () => _showRevertInfo(context),
                     variant: ButtonVariant.outline,
                     disabled: !AppFeatureFlags.enableMemoryRetraction,
@@ -592,10 +592,10 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
               ),
             ],
             const SizedBox(height: DS.sm),
-            Text('Evidence: $evidenceCount'),
+            Text('${context.l10n.memoryEvidenceCount}: $evidenceCount'),
             if (widget.args.type == MemoryDetailType.preference)
-              Text('Versions: $versions'),
-            Text('Budget: ${budget ?? 'N/A'}'),
+              Text('${context.l10n.memoryVersions}: $versions'),
+            Text('${context.l10n.memoryBudget}: ${budget ?? 'N/A'}'),
             if (AppFeatureFlags.enableEvidenceViewer)
               Align(
                 alignment: Alignment.centerLeft,
@@ -732,11 +732,11 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             spacing: DS.sm,
             runSpacing: DS.sm,
             children: [
-              _buildCorrectionButton('Not true', 'reject'),
+              _buildCorrectionButton(context.l10n.memoryCorrectionReject, 'reject'),
               _buildCorrectionButton(
-                  'No longer applies', 'no_longer_applicable',),
-              _buildCorrectionButton('Lower confidence', 'lower_confidence'),
-              _buildCorrectionButton('Merge', 'merge'),
+                  context.l10n.memoryCorrectionNoLongerApplies, 'no_longer_applicable',),
+              _buildCorrectionButton(context.l10n.memoryCorrectionLowerConfidence, 'lower_confidence'),
+              _buildCorrectionButton(context.l10n.memoryCorrectionMerge, 'merge'),
             ],
           ),
         ],
