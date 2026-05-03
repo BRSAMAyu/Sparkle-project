@@ -1101,6 +1101,7 @@
 | R36 | 2026-05-03T10:48 | ISSUE-20260504-1003-K8 | ✅ Fixed | 6cc01138c | ~8 min |
 | R37 | 2026-05-03T20:20 | ISSUE-20260504-1801-B2 | ✅ Fixed | ddcad1e8a | ~45 min |
 | R38 | 2026-05-04T00:05 | ISSUE-20260504-1030-H7 | ✅ Fixed | 50ba407e8 | ~5 min |
+| R39 | 2026-05-04T00:25 | ISSUE-20260504-1045-I5 | ✅ Fixed | 1efeab4f9 | ~25 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1515,7 +1516,7 @@
 - **suggested_fix_direction**: 运行 `make sync-db` 更新 schema.sql + 重新生成 sqlc。可在 CI 或 pre-commit hook 中添加 `make sync-db && git diff --exit-code` 检查防止未来漂移
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T11:15
-- **fix_commit**: 留空
+- **fix_commit**: 1efeab4f9
 - **opus_review**: APPROVED by opus-reviewer-r2 at 2026-05-04T11:50:00Z
 - **opus_review_r2**: |
   **APPROVED — R1 3 defects all resolved (2026-05-04T11:50:00Z)**
