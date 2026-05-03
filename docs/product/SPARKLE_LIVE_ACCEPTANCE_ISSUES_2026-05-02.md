@@ -708,10 +708,11 @@
 - **opus_review**: APPROVED by opus-reviewer at 2026-05-03T16:45Z — All 5 evidence locations verified by independent code reading. (1) compact_task_card.dart:148-150 inProgress/stuck navigates without setting activeTaskProvider; widget has WidgetRef and activeTaskProvider importable via task.dart barrel. (2) compact_task_card.dart:159-161 paused/restore calls resumeTask then navigates without setting provider. (3) task_feedback_dialog.dart:338-339 context.go() without setting provider; ConsumerStatefulWidget with ref access. (4) task_execution_screen.dart:782 watches activeTaskProvider, null branch shows error page. (5) focus_action_card.dart:80-81 correct pattern with explicit fix comment. Route pageBuilder at task_routes.dart:79-96 extracts query params but never extracts :id path param (contrast with taskDetail route line 62). Not a duplicate of any existing issue. Not by-design — 8 other callers correctly set the provider. Additional note: openclaw_hub_screen.dart:1106 has the same pattern (navigates without setting provider) — same root cause, lower-traffic entry point. ||| independent-fix-review at 2026-05-03T20:30Z — APPROVED. (a) Root cause genuinely addressed: both compact_task_card.dart (lines 150, 163) and task_feedback_dialog.dart (lines 341-354) now set activeTaskProvider before navigation, exactly matching the established pattern in focus_action_card.dart:81. compact_task_card passes the existing full TaskModel `task` field; task_feedback_dialog constructs a minimal TaskModel with all 12 required constructor fields satisfied (verified against task_model.dart:120-156). (b) No regression risk: both widgets are ConsumerWidget/ConsumerStatefulWidget with proper ref access; imports verified — compact_task_card resolves activeTaskProvider via task.dart barrel export of task_provider.dart (where activeTaskProvider is defined at line 1356 as StateProvider<TaskModel?>); task_feedback_dialog imports task_provider.dart directly and adds new import of task_model.dart. No other callers affected — task_execution_screen.dart and focus_action_card.dart have zero diff. Flutter analyze: 0 errors, 0 warnings on fixed code (3 pre-existing info-level issues in task_feedback_dialog unrelated to fix). (c) Flutter-only fix, no cross-layer contract changes needed. (d) UI navigation fix; regression requires manual app verification or widget test. (e) No CLAUDE.md or rule guard violations — no secrets, no hardcoded tokens, no cross-layer violations.
 
 ### ISSUE-20260503-1600-E1
-- **status**: in_progress
+- **status**: ✅ FIXED
 - **severity**: P1
 - **domain**: E
 - **fixer_started_at**: 2026-05-03T20:35:00Z
+- **closed_at**: 2026-05-03T21:10:00Z
 - **title**: Dual-Core Router 完全无 Aurora kill switch 保护——1089 行代码零引用 kill_switch，与 CLAUDE.md 承诺矛盾
 - **symptom**: 无法通过 kill switch 三态 (off/shadow/live) 控制双核路由行为。若双核路由在生产中出现问题（如错误地将任务规划请求路由到认知核心），没有机制可以关闭或降级到 shadow 模式。而 State Aggregator、Social Signal Bridge、SRL Phase Tracker 等同级 Aurora 服务均已正确集成 kill switch
 - **root_cause_hypothesis**: Dual-Core Router (`dual_core_router.py`) 作为模块级单例 `dual_core_router` 被导入和调用，但其 `route()` 方法没有 kill switch 守卫。调用方 `routing_engine.py:1180/1186` 直接调用 `self.dual_core_router.route()` 无模式检查。CLAUDE.md 明确列出 Dual-Core Router 为 Kill Switch Protocol 下的 "key service"，但代码实现了零覆盖
@@ -916,6 +917,7 @@
 | R8 | 2026-05-03T20:00 | ISSUE-20260503-1510-K1 | ✅ Fixed | 6001a2e04 | ~15 min |
 | R9 | 2026-05-03T20:25 | ISSUE-20260503-1530-A1 | ✅ Fixed | 1c22526b7 | ~20 min |
 | R10 | 2026-05-03T20:30 | ISSUE-20260503-1511-K2 | closed | 58e05cbae | ~20 min |
+| R11 | 2026-05-03T21:10 | ISSUE-20260503-1600-E1 | ✅ Fixed | (pending) | ~35 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed

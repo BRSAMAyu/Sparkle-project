@@ -36,6 +36,7 @@ from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwi
 from app.services.aurora_stage33_kill_switch_service import AuroraStage33KillSwitchService
 from app.services.aurora_stage35_kill_switch_service import AuroraStage35KillSwitchService
 from app.services.aurora_stage39_kill_switch_service import AuroraStage39KillSwitchService
+from app.services.aurora_dual_core_router_kill_switch_service import AuroraDualCoreRouterKillSwitchService
 from app.services.bayesian_routing_wire_service import BayesianRoutingWireService
 from app.services.cognitive_service import CognitiveService
 from app.services.follow_up_question_service import FollowUpQuestionService
@@ -1175,6 +1176,9 @@ class RoutingEngineMixin:
         stage35_metacognition_shadow_delta: dict[str, Any] | None = None
         stage39_cognitive_load_shadow_delta: dict[str, Any] | None = None
 
+        # Kill switch guard for dual-core router
+        _dual_core_mode = await AuroraDualCoreRouterKillSwitchService().get_mode()
+
         def _route_with_shortcuts(candidate_input: DualCoreRoutingInput) -> DualCoreDecision:
             if candidate_input.intent == "chat" and route_decision.execution_mode == "direct":
                 routed = self.dual_core_router.route(candidate_input)
@@ -1186,11 +1190,19 @@ class RoutingEngineMixin:
             return self.dual_core_router.route(candidate_input)
 
         legacy_decision: DualCoreDecision | None = None
-        if cutover_state.mode != "active":
+        if _dual_core_mode == "off":
+            legacy_decision = DualCoreDecision(
+                mode="balanced",
+                reason="dual-core router kill switch is off, using default balanced mode",
+                cognitive_adjustments=[],
+                execution_constraints=[],
+                routing_debug={"kill_switch": "off"},
+            )
+        elif cutover_state.mode != "active":
             legacy_decision = _route_with_shortcuts(effective_routing_input)
 
         aurora_projection = None
-        if cutover_state.mode in {"shadow", "active"}:
+        if _dual_core_mode != "off" and cutover_state.mode in {"shadow", "active"}:
             aurora_projection = route_dual_core_via_aurora(
                 effective_routing_input,
                 user_id=user_id,
@@ -1209,6 +1221,7 @@ class RoutingEngineMixin:
             "mode": cutover_state.mode,
             "reason": cutover_state.reason,
         }
+        state.context_data["dual_core_router_kill_switch"] = _dual_core_mode
         if aurora_projection is not None:
             shadow_diverged = False
             if legacy_decision is not None and cutover_state.mode == "shadow":

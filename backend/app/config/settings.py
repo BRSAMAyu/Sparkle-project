@@ -336,6 +336,9 @@ class Settings(BaseSettings):
     AURORA_IDIOGRAPHIC_MODE: str = "live"  # off | shadow | live
     AURORA_IDIOGRAPHIC_TTL_SECONDS: int = 300
 
+    # Dual-Core Router
+    AURORA_DUAL_CORE_ROUTER_MODE: str = "live"  # off | shadow | live
+
     # Aurora Stage 33
     AURORA_STAGE33_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE33_SOCIAL_MODE: str = "live"  # off | shadow | live
