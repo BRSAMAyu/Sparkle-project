@@ -2816,7 +2816,8 @@
 - **opus_review**: APPROVED by opus-fix-reviewer at 2026-05-05T16:30:00Z — (a) Root cause addressed at 3 layers: routing (`_extractRequestIdFromRawMessage` message_id fallback for message_nack payloads), service (`_routeEventToRequest`: +NackEvent to terminal close + fallback exclusion), provider (`chat_provider`: `else if (event is NackEvent)` → `finalizeRun(phase: ChatRunPhase.failed)`). Consistent with ErrorEvent pattern, not a hack. (b) Regression risk: NONE. Changes purely additive — new else-if branch, widened conditions. `sawTerminalEvent` guard prevents double-finalization. (c) Cross-layer sync: N/A — Flutter-internal, no proto/DB/i18n. (d) Tests: ADEQUATE. 7 new tests (2 parsing, 2 property validation, 2 error message, 1 terminal state). Full event-loop integration blocked by pre-existing Flutter compilation errors in community/tools modules (unrelated). (e) Rule guards: all pass except pre-existing AX (proxy_routes.go route-tier comments, unrelated). Security clean.
 
 ### ISSUE-20260505-0900-I7
-- **status**: verified
+- **status**: in_progress
+- **fixer_started_at**: 2026-05-03T18:40:00Z
 - **severity**: P2
 - **domain**: I
 - **title**: Pydantic GroupInfo 响应 schema 缺少 announcement 字段——群公告通过 API 返回但被静默丢弃
