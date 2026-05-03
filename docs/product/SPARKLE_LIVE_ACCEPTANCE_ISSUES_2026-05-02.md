@@ -1086,6 +1086,7 @@
 | R30 | 2026-05-03T09:10 | ISSUE-20260504-0501-B5 | ✅ Fixed | 65ea8325e | ~5 min |
 | R31 | 2026-05-03T09:35 | ISSUE-20260504-0930-G4 | ✅ Fixed | b9ad6569f | ~5 min |
 | R32 | 2026-05-03T09:55 | ISSUE-20260504-0931-G5 | ✅ Fixed | 331e0d397 | ~8 min |
+| R33 | 2026-05-03T10:08 | ISSUE-20260504-0945-E5 | ✅ Fixed | 8b34c1bd2 | ~8 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
@@ -1907,9 +1908,10 @@
 - **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
 
 ### ISSUE-20260504-0945-E5
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-03T10:00:00Z
+- **closed_at**: 2026-05-03T10:08:00Z
 - **domain**: E
 - **title**: dual_core_router kill switch 已正确集成到 routing_engine 但未纳入 drill 自动化——状态变更不可观测
 - **symptom**: 操作者运行 `drill_all.sh` 或 `run_kill_switch_drills.py` 验证所有 kill switch 的 off→shadow→live→shadow→off 状态转换时，dual_core_router kill switch 被完全跳过。操作者可能误以为已覆盖所有 kill switch，但实际上无法验证 dual_core_router 从 off（回退 balanced 模式）到 live（Aurora 路由）的转换是否正常。Prometheus gauge `sparkle_kill_switch_mode{stage="dual_core_router"}` 仅在 routing_engine.py 调用 `get_mode()` 时才记录，缺少 drill 写入路径的 gauge 记录
@@ -1926,7 +1928,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T09:45
 - **reviewer_note**: APPROVED — 独立审阅确认全部 4 处 evidence 与代码一致。(1) DEFAULT_SPECS 共 21 个条目（stage18-39 + privacy + doc_context + stage40-calendar），`grep -n dual_core_router run_kill_switch_drills.py` 零匹配——确认完全缺席。(2) drill_all.sh 先调用 run_kill_switch_drills.py 再逐个 bash stage33-39 legacy drills，全程无 dual_core_router。(3) routing_engine.py:1180-1224 运行时 kill switch 集成正确——off→balanced 回退，live/shadow→Aurora 路由。(4) AuroraDualCoreRouterKillSwitchService 提供 set_mode()/get_mode()/summary()，表明设计上支持 drill 但未接入。调用链：drill_all.sh → run_kill_switch_drills.py → 迭代 DEFAULT_SPECS → 无 dual_core_router 条目 → 永远不调用 service.set_mode()。与 E1（dual_core_router 完全缺失 kill switch）不重复——E1 是 kill switch 不存在，E5 是 kill switch 存在但 drill 未覆盖。非"设计如此"——service 有 set_mode() 方法即为 drill 接口，未挂接是疏漏。
-- **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
+- **fix_commit**: 8b34c1bd2479dfd7d7e95884bf28a942a3f7eda9
+- **opus_review**: APPROVED by opus-independent-reviewer at 2026-05-03T18:30:00Z
 
 ### ISSUE-20260504-0946-E6
 - **status**: verified
