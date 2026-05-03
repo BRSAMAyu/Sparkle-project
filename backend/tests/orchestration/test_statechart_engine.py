@@ -1031,3 +1031,69 @@ class TestGraphCompilation:
         # 第二次编译应该没问题
         graph.compile()
         assert graph._compiled is True
+
+
+class TestD2EdgeTargetValidation:
+    """Regression tests for ISSUE-20260504-1901-D2: edge target validation."""
+
+    def test_compile_rejects_invalid_static_edge_target(self):
+        """compile() must raise ValueError for static edges targeting non-existent nodes."""
+        graph = StateGraph("TestGraph")
+        graph.add_node("a", lambda s: s)
+        graph.add_node("b", lambda s: s)
+        graph.add_edge("a", "nonexistent")
+        graph.set_entry_point("a")
+
+        with pytest.raises(ValueError, match="target not found"):
+            graph.compile()
+
+    @pytest.mark.asyncio
+    async def test_conditional_edge_invalid_target_routes_to_end(self, sample_state):
+        """Runtime: conditional edge returning invalid node name routes to __end__ with error."""
+
+        async def node_a(state):
+            state.next_step = "nonexistent"
+            return state
+
+        def bad_router(state):
+            return "nonexistent"
+
+        graph = StateGraph("BadRouterGraph")
+        graph.add_node("a", node_a)
+        graph.add_conditional_edge("a", bad_router)
+        graph.set_entry_point("a")
+        graph.compile()
+
+        result = await graph.invoke(sample_state)
+
+        assert any("Invalid edge target" in e for e in result.errors), (
+            f"Expected invalid-edge-target error, got: {result.errors}"
+        )
+
+    # ── D3 regression: max_steps truncation must signal is_finished ──────────
+
+    async def test_max_steps_truncation_sets_is_finished_and_error(self, sample_state):
+        """D3 regression: max_steps exceeded must set is_finished=True and append error."""
+
+        infinite_count = 0
+
+        async def infinite_node(state: WorkflowState) -> WorkflowState:
+            nonlocal infinite_count
+            infinite_count += 1
+            state.next_step = "infinite_node"
+            return state
+
+        graph = StateGraph("InfiniteGraph")
+        graph.add_node("infinite_node", infinite_node)
+        graph.add_conditional_edge("infinite_node", lambda s: s.next_step or "__end__")
+        graph.set_entry_point("infinite_node")
+        graph.compile()
+
+        result = await graph.invoke(sample_state, max_steps=3)
+
+        assert result.is_finished, (
+            f"is_finished must be True when max_steps truncates, got: {result.is_finished}"
+        )
+        assert any("Max steps" in e and "truncated" in e for e in result.errors), (
+            f"Expected truncation error message in errors, got: {result.errors}"
+        )

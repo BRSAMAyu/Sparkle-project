@@ -182,6 +182,11 @@ class StateGraph:
             raise ValueError(f"Graph '{self.name}' entry point not set")
         if self.entry_point not in self.nodes:
             raise ValueError(f"Entry point '{self.entry_point}' not found in nodes of '{self.name}'")
+        for from_node, target in self.edges.items():
+            if isinstance(target, str) and target not in self.nodes and target not in self.end_points:
+                raise ValueError(
+                    f"Edge '{from_node} → {target}' target not found in nodes of '{self.name}'"
+                )
         self._compiled = True
         return self
 
@@ -293,6 +298,10 @@ class StateGraph:
                 elif callable(edge):
                     next_node = edge(state)
                     logger.info(f"🔀 Router decided: {next_node}")
+                    if next_node not in self.nodes and next_node not in self.end_points:
+                        logger.error(f"Conditional edge from '{current_node_name}' returned invalid target '{next_node}' — routing to __end__")
+                        state.errors.append(f"[{self.name}] Invalid edge target '{next_node}' from node '{current_node_name}'")
+                        next_node = "__end__"
                 else:
                     logger.warning(f"Unknown edge type for {current_node_name}")
                     next_node = "__end__"
@@ -305,6 +314,8 @@ class StateGraph:
 
         if steps >= max_steps:
             logger.warning(f"⚠️ [{self.name}] Max steps reached ({max_steps})")
+            state.errors.append(f"[{self.name}] Max steps {max_steps} reached — execution truncated")
+            state.is_finished = True
 
         # Always emit GRAPH_END and checkpoint before raising,
         # so visualizers and checkpointers never get stuck.

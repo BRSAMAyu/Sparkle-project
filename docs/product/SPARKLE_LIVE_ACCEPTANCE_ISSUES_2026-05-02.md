@@ -2652,8 +2652,9 @@
   - **Residual gaps (pre-existing, not introduced by this fix)**: (1) Parallel branch errors append to `state.errors` but orchestrator still does not check `final_state.errors` — partial state with parallel errors returns as `event_kind="task_completed"`. This is consistent with the issue's design directive that parallel errors should be non-fatal. (2) `max_steps` truncation (ISSUE-20260504-1902-D3) still returns partial state silently — tracked separately. (3) Orchestrator still has zero checks for `final_state.errors` — tracked as D4-D6 follow-ups.
 
 ### ISSUE-20260504-1901-D2
-- **status**: in_progress
+- **status**: closed
 - **fixer_started_at**: 2026-05-04T08:30:00Z
+- **closed_at**: 2026-05-03T18:00:00Z
 - **severity**: P2
 - **domain**: D
 - **title**: StateGraph compile() validates entry point but not edge targets; conditional edges returning invalid node names silently fail via generic except handler
@@ -2671,7 +2672,8 @@
 - **suggested_fix_direction**: (A) In compile(): iterate edges dict, verify static targets in self.nodes, and for conditional edges at minimum log a warning that runtime validation is needed. (B) At runtime line 292: wrap `next_node = edge(state)` with validation — if returned node not in self.nodes, log error + set next_node = "__end__" + append to state.errors. (C) At line 247: use `self.nodes.get(current_node_name)` with explicit error handling.
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T19:45Z
-- **fix_commit**: 留空
+- **fix_commit**: HEAD (codex/final-closeout-integration-2026-05-02)
+- **opus_review**: APPROVED by independent-reviewer at 2026-05-03T16:50:51Z — (a) root cause addressed at both layers: compile()-time static edge target validation + runtime conditional edge return validation with graceful degradation to __end__; (b) zero regression risk — all 4 production StateGraph callers (standard_workflow.py, graph_workflows.py, graph_engine_poc.py, graph/workflow.py) use only valid targets; graph/workflow.py uses langgraph.graph.StateGraph not our custom class; (c) no cross-layer contract changes — statechart_engine.py is Python-internal only, no proto/DB/i18n dependencies; (d) both regression tests are effective — test_compile_rejects_invalid_static_edge_target fails without the compile-time check (compile succeeds instead of raising ValueError), test_conditional_edge_invalid_target_routes_to_end fails without the runtime check (KeyError caught by generic handler produces different error message); (e) no CLAUDE.md or rule guard violations; (f) line 253 direct dict access (self.nodes[current_node_name]) not changed but now indirectly protected by upstream validation layers
 
 ### ISSUE-20260504-1902-D3
 - **status**: in_progress
