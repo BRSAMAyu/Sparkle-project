@@ -810,7 +810,7 @@
 
 
 ### ISSUE-20260503-1700-F1
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: F
 - **title**: EventBus.subscribe() 在 xgroup_create 返回非 BUSYGROUP 的 ResponseError 时静默返回，消费者在启动时无声死亡且 start() 方法无感知
@@ -826,11 +826,12 @@
 - **blast_radius**: 影响所有使用 EventBus.subscribe() 的约 20 个消费者。如果 xgroup_create 因非 BUSYGROUP 原因失败（如 Redis OOM、类型冲突），所有消费者集体静默死亡。对北极星有中等影响——成就、Galaxy、任务、认知等核心事件处理全部停止
 - **suggested_fix_direction**: 在非 BUSYGROUP ResponseError 分支中 raise 而非 return，让上层 start() retry 循环处理。同时订阅失败不应设置 `self._running = True`
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer+2026-05-03T04:08:00Z
+- **reviewer_note**: APPROVED — 独立审阅确认所有 4 处 evidence 代码与条目描述一致。event_bus.py:1065-1070 的非 BUSYGROUP ResponseError 分支执行 return 而非 raise，跳过 line 1072-1075 的 _running=True + asyncio.create_task(_consume_loop)。achievement_event_consumer.py:66-72 break-after-subscribe 模式确认：subscribe() 返回（无异常）→ break 退出 while 循环 → start() 完成但 consume_loop 从未启动。galaxy_event_consumer.py:53-59 和 execution_event_consumer.py:39-45 使用相同 break 模式。task_event_consumer.py:46-52 _subscribed=True 模式确认：subscribe 返回 → 标志永为 True → 后续只 sleep(1) 循环。调用链完整：Consumer.start() → EventBus.subscribe() → xgroup_create → ResponseError(非BUSYGROUP) → logger.error + return → Consumer 的 try 无异常 → break/_subscribed=True。非设计意图：line 1064 的 logger.info("Created consumer group") 仅在 xgroup_create 成功后执行，表明成功路径意图是进入 consume_loop；其他消费者的 try/except 重试循环（如 achievement line 73-75）显示设计预期 subscribe 失败应抛异常。与 ISSUE-20260503-1702-F3 无重复：F1 是初始化阶段失败，F3 是运行时后台任务死亡检测。
 - **fix_commit**:
 
 ### ISSUE-20260503-1701-F2
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: F
 - **title**: PreferenceEventConsumer 绕过 EventBus 框架手工操作 Redis Stream，无 DLQ/重试计数/幂等保护/stop()，毒消息永久重试且无法优雅关闭
@@ -846,10 +847,12 @@
 - **blast_radius**: 影响偏好缓存失效这一关键路径。Go Gateway 发布的偏好更新事件由该消费者处理以使 Python 端缓存失效。如果消费者卡在毒消息上，后续缓存失效事件都被阻塞，导致 Python 端使用过期用户偏好。对北极星有间接影响——用户偏好是 Aurora 个性化 AI 响应的基础
 - **suggested_fix_direction**: 将 PreferenceEventConsumer 重构为使用 EventBus.subscribe() 框架（与其他 16 个消费者一致），或至少添加重试计数 + 超限移入 DLQ + `_running` 标志 + `stop()` 方法
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer+2026-05-03T04:08:00Z
+- **reviewer_note**: APPROVED — 独立审阅确认 preference_event_consumer.py 使用 while True: (line 46) 无 _running 标志；手工 xreadgroup (line 51) + xack (line 65) 无重试计数/DLQ；异常处理 (line 67-73) 仅 logger.error + asyncio.sleep(1) 无消息移入 DLQ。EventBus._handle_failed_message (line 885-916) 提供完整的 _requeue_for_retry + _move_to_dlq 机制，PreferenceEventConsumer 完全未使用。grep def stop 返回空 — 无法优雅关闭。该消费者使用 cqrs:stream:user 流（不同于其他消费者的 sparkle_events），但其手工 xreadgroup 模式可以被 EventBus.subscribe() 替代（EventBus 支持任意 stream key）。非设计意图：项目有 16 个消费者使用 EventBus 框架（享有 DLQ/retry/idempotency），仅此 1 个绕过框架无注释说明理由。与 ISSUE-20260503-1703-F4 无重复：F2 的核心问题是绕过 EventBus 框架缺失安全机制；F4 仅聚焦 stop() 优雅关闭。
 - **fix_commit**:
 
 ### ISSUE-20260503-1702-F3
+- **status**: verified
 - **severity**: P2
 - **domain**: F
 - **title**: 20+ EventBus 消费者的 start() 方法在 subscribe() 返回后退出重试循环，后台 consume_loop 任务崩溃无人检测——消费者永久静默死亡
@@ -865,10 +868,12 @@
 - **blast_radius**: 影响全部约 20 个 EventBus 消费者。每个消费者是独立任务，一个消费者死亡只影响其对应的业务域（成就/Galaxy/任务/认知等）。但多个消费者同时死亡（如 Redis 重启后重连时序问题）会导致大面积事件处理瘫痪。对北极星有中等影响
 - **suggested_fix_direction**: 在 EventBus 中添加 `_consume_loop` 健康监控：将任务引用返回给 subscribe 调用方，或通过 `task.add_done_callback()` 触发自动重启。在 start() 的 sleep 循环中检查 `task.done()` 并在完成后重置 `_subscribed` 标志
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer+2026-05-03T04:08:00Z
+- **reviewer_note**: APPROVED — 独立审阅确认 event_bus.py:1074 asyncio.create_task(_consume_loop(...)) 创建后台任务后仅存入 self._consumer_tasks (line 1075)，消费者无法访问。break 模式 (achievement_event_consumer.py:66-72, galaxy_event_consumer.py:53-59, execution_event_consumer.py:39-45, profile_event_consumer.py:70-76) subscribe 返回后立即 break 退出 while 循环。_subscribed 模式 (task_event_consumer.py:46-52, main_chain_artifact_consumer.py 类似) subscribe 返回后 _subscribed=True，仅 asyncio.sleep(1) 循环无 task.done() 检查。consume_loop 的 except Exception (line 1207) 不覆盖 BaseException 子类（如 CancelledError）。实际风险评级：_process_stream_message (line 1110-1160) 内部 try/except Exception 覆盖 callback 异常并路由到 DLQ/retry，Redis 连接错误被 line 1210 的重连逻辑捕获。BaseException 穿透场景在实际中少见（CancelledError 仅在主动 task.cancel() 时触发）。但架构缺口确实存在：无 task.done_callback 健康监控、无 consumer 自愈重启。P2 评级合理。与 ISSUE-20260503-1700-F1 无重复：F1 是 subscribe 初始化阶段失败，F3 是 consume_loop 运行时任务死亡检测。
 - **fix_commit**:
 
 ### ISSUE-20260503-1703-F4
+- **status**: verified
 - **severity**: P3
 - **domain**: F
 - **title**: 5 个事件消费者（Cognitive/Nudge/Execution/Profile/Preference）无 stop() 方法，服务关闭时无法优雅停机和刷新待处理消息
@@ -886,7 +891,8 @@
 - **blast_radius**: 影响优雅关闭质量。在 Redis consumer group 有 idle 超时机制保护（XPENDING → XCLAIM 重分配给其他消费者），单实例部署时短暂的消息重复处理风险。对北极星影响低——消息最终会被重新投递处理
 - **suggested_fix_direction**: 为 5 个消费者添加 `stop()` 方法设置 `_running = False`，并在 main.py 的 shutdown handler 中按顺序调用 stop() + 等待 drain。PreferenceEventConsumer 需重构添加 `_running` 标志
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer+2026-05-03T04:08:00Z
+- **reviewer_note**: APPROVED — 独立审阅确认 5/5 消费者的 grep def stop 全部返回空：(1) execution_event_consumer.py 虽有 _running flag (line 30/34/37) 但无 stop() 设置它；(2) cognitive_event_consumer.py 使用 _is_running (line 20) 但无 stop() 入口；(3) nudge_event_consumer.py 使用 _is_running (line 16) 但无 stop() 入口；(4) profile_event_consumer.py 使用 while self._running (line 68) 但无 stop() 方法设置它为 False；(5) preference_event_consumer.py 使用 while True: (line 46) 无 _running 标志和 stop()。对比：achievement_event_consumer.py:327 stop() 和 galaxy_event_consumer.py:480 stop() 正确实现 _running=False。EventBus 本身无 central stop() 方法 (grep def stop 返回空)，优雅关闭完全依赖各消费者的独立 stop()。与 ISSUE-20260503-1701-F2 无重复：F2 的核心是绕过框架缺失 DLQ/retry/idempotency，F4 仅聚焦 stop() 优雅关闭。P3 评级合理——Redis consumer group idle 超时 + XCLAIM 提供二级保护。
 - **fix_commit**:
 
 
