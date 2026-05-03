@@ -472,10 +472,11 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1401-H2
-- **status**: in_progress
+- **status**: closed
 - **severity**: P2
 - **domain**: H
-- **fixer_started_at**: 2026-05-03T15:05:00
+- **fix_commit**: cbca7878d
+- **closed_at**: 2026-05-03T15:10:00
 - **title**: memory_detail_screen 的记忆修正按钮（Not true/No longer applies/Lower confidence/Merge）和版本管理标签（Diff/Revert/Evidence/Versions）全部硬编码英文
 - **symptom**: 中文模式下，记忆详情页的版本历史区显示 "Diff"、"Revert"、"Evidence: N"、"Versions: N"、"Budget: N/A" 等英文标签；记忆修正操作区显示 "Not true"、"No longer applies"、"Lower confidence"、"Merge" 四个英文按钮。文件开头已导入 context_l10n 且多数文本已 i18n，但这几个标签和按钮遗漏了
 - **root_cause_hypothesis**: 记忆详情页的 _buildVersionHistory、_buildDetailSummary、_buildCorrectionActions 三个方法中直接使用了硬编码英文字符串作为 Text 内容和按钮 label。这些字符串没有对应的 l10n key，开发时直接写死了
@@ -579,6 +580,7 @@
 |-------|-----------|----------|--------------|--------|----------|
 | R1 | 2026-05-03T14:20 | P2-01 | ✅ Fixed | c7918a705 | ~5 min |
 | R2 | 2026-05-03T14:55 | ISSUE-20260503-1300-B1 | closed_already_resolved | c7918a705 (顺带) + 回归测试 | ~25 min |
+| R3 | 2026-05-03T15:10 | ISSUE-20260503-1401-H2 | ✅ Fixed | cbca7878d | ~5 min |
 
 **P2-01 Fix Details**:
 - root cause: Mock getFeed()/getGroupMembers() returned empty lists; no demo posts; wrong label; no achievement auto-seed
