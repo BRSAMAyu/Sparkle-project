@@ -369,7 +369,7 @@
 - **Routes Verified (working with data)**: 5
 - **Pending**: 0
 - **Phase 2 (Deferred)**: 3
-- **Discovered (not verified)**: 5 (B1 in_progress, H1-H4 discovered)
+- **Discovered (not verified)**: 0 (B1 closed, H1/H2/H4 verified, H3 rejected)
 
 ---
 
@@ -381,7 +381,7 @@
 | R2 | 2026-05-03T13:00 | B | 1 | claimed by fixer (in_progress) | Route masking contract mismatch — opus-reviewer-2 verified root cause |
 | R3 | 2026-05-03T13:30 | C | 0 | N/A | Proto/WebSocket contract sound; reconnection has offline queue persistence |
 | R4 | 2026-05-03T14:00 | J | 0 | N/A | Cold-start well-designed: skeleton loading, first-goal empty state, wizard with AI, error recovery |
-| R5 | 2026-05-03T14:05 | H | 4 | pending Opus review | i18n residuals: group members, memory detail, group chat report, group tasks |
+| R5 | 2026-05-03T14:10 | H | 4 | 3/4 (H3 rejected as designed) | i18n residuals: H1/H2/H4 verified, H3 rejected (isChinese is project documented pattern) |
 
 ---
 
@@ -506,12 +506,13 @@
 - **expected_vs_actual**: 期望：所有 6 个举报原因统一使用 `context.l10n` 集中在 ARB 文件中管理；实际：3 个用 l10n、3 个用内联 isChinese
 - **blast_radius**: 对用户无直接影响（功能正常）。但增加了 i18n 维护负担——修改文案需要改代码而非修改 ARB 文件。对北极星无影响
 - **suggested_fix_direction**: 在 AppLocalizations ARB 文件中添加 chatGroupReportHarassment、chatGroupReportViolence、chatGroupReportOther 三个 key，替换 group_chat_screen.dart 中的内联 isChinese 三元表达式
+- **reviewer_note**: REJECTED — `I18nService.instance.isChinese ? '中文' : 'English'` 是项目文档化 i18n 策略（见 MEMORY.md: "i18n Bilingual Strategy — isChinese ? '中文' : 'English' pattern for presentation layer"）。3 个使用内联 isChinese 的条目符合项目规范，与同列表中使用 context.l10n 的 3 个条目均可产生正确的双语输出。功能正常，不存在 bug。代码风格偏好（统一到 l10n 或统一到 isChinese）是重构而非缺陷。
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer-3+2026-05-03T14:10
 - **fix_commit**:
 
 ### ISSUE-20260503-1403-H4
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: H
 - **title**: group_tasks_screen 的集群任务操作按钮（Claim/Complete）和创建对话框标题硬编码英文，与同对话框已 i18n 的内容不一致
@@ -528,7 +529,7 @@
 - **blast_radius**: 影响中文用户在群组任务功能中的操作体验。群组任务是社区问责系统的核心功能。对北极星有中等影响——影响中文用户完成协作任务的效率
 - **suggested_fix_direction**: 将 "Claim"/"Complete"/"Create Group Task"/hint 替换为 `I18nService.instance.isChinese ? '中文' : 'English'` 模式，与同文件中已有的 i18n 模式保持一致
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-reviewer-4+2026-05-03T14:10
 - **fix_commit**:
 
 ### ISSUE-20260503-1300-B1
@@ -586,5 +587,5 @@
   - data_usage_dashboard_screen.dart (entire screen zero i18n — dead code, not included)
 - **New issues**: H1(P1), H2(P2), H3(P3), H4(P2)
 - **Findings**: 4/5 i18n issues are in community features (group members, group tasks, group chat). Pattern: features developed in batches where later additions used proper l10n but earlier hardcoded English was never retrofitted. memory_detail_screen is the outlier — Aurora cognitive feature with version management and correction mechanism, mostly i18n'd but missed 10+ labels.
-- **Opus pass rate**: pending (4 discovered, 0 verified yet)
+- **Opus pass rate**: 3/4 (H1/H2/H4 verified, H3 rejected — isChinese is project documented i18n pattern)
 - **Next suggested domain**: K (错误处理/降级/边界) — error handling and degradation patterns emerged as key gap from R3/R4 clean results
