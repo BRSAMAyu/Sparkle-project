@@ -466,8 +466,8 @@ class GalaxyEventConsumer:
             related = await galaxy_service.semantic_search_nodes(normalized_topic, limit=1, threshold=0.08)
             if related:
                 return related[0]
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("semantic_search failed for topic={}: {}", normalized_topic, e)
         result = await db.execute(
             select(UserNodeStatus)
             .where(UserNodeStatus.user_id == user_id)
