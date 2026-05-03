@@ -2,7 +2,7 @@
 
 > Status: Collected during simulator-based live testing session
 > Priority: P0 (blocking) → P1 (important) → P2 (improvement)
-> Updated: 2026-05-05 09:00 (R48 I-domain — I7 discovered)
+> Updated: 2026-05-05 10:35 (R53 A-domain — A1 discovered)
 
 ---
 
@@ -423,6 +423,7 @@
 | R48 | 2026-05-05T09:00 | I | 1 | pending | I 域续探——Pydantic GroupInfo schema 缺少 announcement 字段，群公告响应静默丢弃 |
 | R50 | 2026-05-05T09:30 | C | 2 | 1/2 (C8 verified, C9 rejected as duplicate of K1) | C 域续探——legacyStreamErrorPayload 3 路径缺 request_id + message_nack 缺 request_id + Flutter NackEvent 死代码 |
 | R52 | 2026-05-05T10:30 | K | 1 | pending | K 域续探——intelligent_task_service _recognize_intent 静默吞所有异常返回硬编码中文默认值 |
+| R53 | 2026-05-05T10:35 | A | 1 | 1/1 (A1 verified) | A 域——D1 fix 引入回归：statechart RuntimeError 跳过 GRAPH_END + checkpointer 清理 |
 
 ---
 
@@ -1061,6 +1062,23 @@
 ---
 
 ## 探索日志
+
+### Round R53 — 2026-05-05T10:35
+- **Domain**: A (Flutter UI E2E — 跨层回归发现)
+- **Paths covered**:
+  - tool_library_screen.dart → tool_launcher.dart → tools_routes.dart → tool_host_screen.dart (tool E2E chain — clean)
+  - cognitive_tool_hub_card.dart → tool_preferences_provider (dashboard tool hub — clean)
+  - edit_profile_screen.dart → auth_provider (profile save/avatar — clean)
+  - marketplace_screen.dart → marketplace_provider (skill marketplace — clean)
+  - dashboard_edit_sheet.dart → dashboard_card_config_provider (layout editing — clean)
+  - create_post_screen.dart (post creation — clean, icon color ternary is cosmetic)
+  - unified_settings_screen.dart (settings — 30+ mutable fields but correct mounted checks)
+  - community_accountability_hub_card.dart, partner_visibility_banner.dart, checkin_cadence_card.dart (accountability — clean)
+  - **Cross-layer**: backend/app/orchestration/statechart_engine.py (D1 fix in working tree — regression found)
+- **New issues**: 1 (A1 — D1 fix regression: RuntimeError skips GRAPH_END + checkpointer cleanup)
+- **Opus pass rate**: 1/1 (A1 verified)
+- **Findings**: A-domain Flutter UI screens are well-structured with proper i18n, error handling, and navigation. The one substantive finding is a cross-layer regression: the fixer's D1 fix in statechart_engine.py raises RuntimeError before cleanup code (GRAPH_END event emission + checkpointer mark_completed), introducing a new bug while fixing D1. All Flutter screens examined follow established patterns with no P0/P1 gaps.
+- **Next suggested domain**: D (verify D1 fix after A1 fix applied) or L (governance — last explored at R36)
 
 <!-- 每轮探索结束后追加记录 -->
 
