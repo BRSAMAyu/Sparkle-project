@@ -386,7 +386,7 @@
 | R6 | 2026-05-03T15:00 | K | 1 | 1/1 (K1 verified) | Error handling gaps in goal detail actions |
 | R7 | 2026-05-03T15:30 | A | 1 | 1/1 (A1 verified) | Task execution navigation missing activeTaskProvider |
 | R8 | 2026-05-03T16:00 | E | 4 | pending opus review | Aurora kill switch gaps: E1 Dual-Core Router, E2 Privacy Prometheus, E3 drill_all.sh, E4 permissions |
-| R9 | 2026-05-03T16:30 | D | 1 | pending opus review | LangGraph planner timeout missing in 2/3 callers |
+| R9 | 2026-05-03T16:30 | D | 1 | 1/1 (D1 verified) | LangGraph planner timeout missing in 2/3 callers |
 
 ---
 
@@ -671,10 +671,11 @@
 - **opus_review**: APPROVED by independent-review-agent at 2026-05-03T18:30Z
 
 ### ISSUE-20260503-1530-A1
-- **status**: fixed
+- **status**: ✅ FIXED
 - **severity**: P1
 - **domain**: A
 - **fixer_started_at**: 2026-05-03T20:05:00Z
+- **closed_at**: 2026-05-03T20:25:00Z
 - **title**: 日历卡片和任务反馈对话框跳转任务执行页时未设置 activeTaskProvider，导致屏幕显示"No task"错误页
 - **symptom**: 用户从日历卡片点击进行中任务的执行按钮，或从任务反馈对话框选择"做下一步"后，进入任务执行页面看到"当前没有执行中的任务"错误屏幕，而非任务执行界面
 - **root_cause_hypothesis**: `TaskExecutionScreen` 在 build 方法中读取 `ref.watch(activeTaskProvider)` 判断当前任务，但路由 pageBuilder 不提取 URL `:id` 参数，也不从 API 加载任务。整个屏幕完全依赖调用方在导航前通过 `ref.read(activeTaskProvider.notifier).state = task` 预设。`compact_task_card.dart` 和 `task_feedback_dialog.dart` 在 push/go 到执行路由前未设置此 provider，导致屏幕读到 null 走入错误分支。其他调用方（focus_action_card.dart:81、dashboard_screen.dart:376、task_detail_screen.dart:943）都正确设置了此 provider，并有明确注释 "🔧 修复：设置activeTaskProvider以便TaskExecutionScreen能读取"
@@ -690,8 +691,8 @@
 - **suggested_fix_direction**: 在 compact_task_card.dart 和 task_feedback_dialog.dart 的导航前添加 `ref.read(activeTaskProvider.notifier).state = task`，与 focus_action_card.dart 的修复模式一致。长期方案：TaskExecutionScreen 应从 route 参数提取 taskId 并在 activeTaskProvider 为 null 时从 API 加载任务
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T16:45
-- **fix_commit**:
-- **opus_review**: APPROVED by opus-reviewer at 2026-05-03T16:45Z — All 5 evidence locations verified by independent code reading. (1) compact_task_card.dart:148-150 inProgress/stuck navigates without setting activeTaskProvider; widget has WidgetRef and activeTaskProvider importable via task.dart barrel. (2) compact_task_card.dart:159-161 paused/restore calls resumeTask then navigates without setting provider. (3) task_feedback_dialog.dart:338-339 context.go() without setting provider; ConsumerStatefulWidget with ref access. (4) task_execution_screen.dart:782 watches activeTaskProvider, null branch shows error page. (5) focus_action_card.dart:80-81 correct pattern with explicit fix comment. Route pageBuilder at task_routes.dart:79-96 extracts query params but never extracts :id path param (contrast with taskDetail route line 62). Not a duplicate of any existing issue. Not by-design — 8 other callers correctly set the provider. Additional note: openclaw_hub_screen.dart:1106 has the same pattern (navigates without setting provider) — same root cause, lower-traffic entry point.
+- **fix_commit**: pending commit on codex/final-closeout-integration-2026-05-02
+- **opus_review**: APPROVED by opus-reviewer at 2026-05-03T16:45Z — All 5 evidence locations verified by independent code reading. (1) compact_task_card.dart:148-150 inProgress/stuck navigates without setting activeTaskProvider; widget has WidgetRef and activeTaskProvider importable via task.dart barrel. (2) compact_task_card.dart:159-161 paused/restore calls resumeTask then navigates without setting provider. (3) task_feedback_dialog.dart:338-339 context.go() without setting provider; ConsumerStatefulWidget with ref access. (4) task_execution_screen.dart:782 watches activeTaskProvider, null branch shows error page. (5) focus_action_card.dart:80-81 correct pattern with explicit fix comment. Route pageBuilder at task_routes.dart:79-96 extracts query params but never extracts :id path param (contrast with taskDetail route line 62). Not a duplicate of any existing issue. Not by-design — 8 other callers correctly set the provider. Additional note: openclaw_hub_screen.dart:1106 has the same pattern (navigates without setting provider) — same root cause, lower-traffic entry point. ||| independent-fix-review at 2026-05-03T20:30Z — APPROVED. (a) Root cause genuinely addressed: both compact_task_card.dart (lines 150, 163) and task_feedback_dialog.dart (lines 341-354) now set activeTaskProvider before navigation, exactly matching the established pattern in focus_action_card.dart:81. compact_task_card passes the existing full TaskModel `task` field; task_feedback_dialog constructs a minimal TaskModel with all 12 required constructor fields satisfied (verified against task_model.dart:120-156). (b) No regression risk: both widgets are ConsumerWidget/ConsumerStatefulWidget with proper ref access; imports verified — compact_task_card resolves activeTaskProvider via task.dart barrel export of task_provider.dart (where activeTaskProvider is defined at line 1356 as StateProvider<TaskModel?>); task_feedback_dialog imports task_provider.dart directly and adds new import of task_model.dart. No other callers affected — task_execution_screen.dart and focus_action_card.dart have zero diff. Flutter analyze: 0 errors, 0 warnings on fixed code (3 pre-existing info-level issues in task_feedback_dialog unrelated to fix). (c) Flutter-only fix, no cross-layer contract changes needed. (d) UI navigation fix; regression requires manual app verification or widget test. (e) No CLAUDE.md or rule guard violations — no secrets, no hardcoded tokens, no cross-layer violations.
 
 ### ISSUE-20260503-1600-E1
 - **status**: verified
@@ -774,7 +775,7 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-1600-D1
-- **status**: discovered
+- **status**: verified
 - **severity**: P2
 - **domain**: D
 - **title**: LangGraph planner.plan() 在 plan_review_service 和 multi_agent_adapter 中无超时保护，主路径已用 asyncio.wait_for 但两处调用未覆盖
@@ -790,7 +791,7 @@
 - **blast_radius**: 影响计划修改流程和混合代理模式。主聊天路径（通过 execution_engine）已受保护。计划修改是增长循环中 Plan→Execute 的反馈环。对北极星有间接影响——学生在需要调整计划时被阻塞
 - **suggested_fix_direction**: 在 plan_review_service.py:2199 和 multi_agent_adapter.py:87 的 planner.plan() 调用处添加 `asyncio.wait_for(..., timeout=10.0)` + `except TimeoutError: build_fallback_plan()`，与 execution_engine.py:2048-2073 模式一致
 - **discovered_by**: explorer-loop
-- **verified_by**:
+- **verified_by**: opus-independent-auditor+2026-05-03T16:45:00Z
 - **fix_commit**:
 
 ---
@@ -899,5 +900,5 @@
   - state_manager.py:129-157 (corrupted state returns None — verified orchestrator recovers with fresh STATE_INIT)
 - **New issues**: D1(P2)
 - **Findings**: The LangGraph planner's `graph.ainvoke()` at lang_graph_planner.py:206 has no internal timeout. 3 callers invoke `planner.plan()`: execution_engine wraps it correctly with `asyncio.wait_for(timeout=10.0)`, but plan_review_service.py:2199 and multi_agent_adapter.py:87 call it directly without timeout. If the LangGraph graph enters an infinite loop or LLM hangs, these two paths block indefinitely. The main chat path through execution_engine IS protected. Investigated STATE_FAILED recovery — confirmed the next request resets to STATE_INIT at orchestrator.py:2123, so STATE_FAILED is NOT a dead-end. Corrupted session state in state_manager returns None but orchestrator recovers with fresh state; conversation history is lost but session is functional.
-- **Opus pass rate**: pending
+- **Opus pass rate**: 1/1 (D1 verified by opus-independent-auditor)
 - **Next suggested domain**: F (事件总线消费者 DLQ/retry) or I (DB 迁移 vs 代码字段) — infrastructure domains not yet explored
