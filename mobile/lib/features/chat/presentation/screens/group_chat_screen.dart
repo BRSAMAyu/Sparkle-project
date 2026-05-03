@@ -213,6 +213,7 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                           (ReportReason.harassment, I18nService.instance.isChinese ? '骚扰' : 'Harassment'),
                           (ReportReason.violence, I18nService.instance.isChinese ? '暴力' : 'Violence'),
                           (ReportReason.hateSpeech, context.l10n.chatGroupReportHate),
+                          (ReportReason.inappropriate, I18nService.instance.isChinese ? '不当内容' : 'Inappropriate'),
                           (ReportReason.misinformation, context.l10n.chatGroupReportMisinfo),
                           (ReportReason.other, I18nService.instance.isChinese ? '其他' : 'Other'),
                         ].map(

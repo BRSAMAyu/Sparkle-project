@@ -1035,6 +1035,8 @@ class CommunityRepository {
         return 'violence';
       case ReportReason.hateSpeech:
         return 'hate_speech';
+      case ReportReason.inappropriate:
+        return 'inappropriate';
       case ReportReason.misinformation:
         return 'misinformation';
       case ReportReason.other:

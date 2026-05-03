@@ -122,6 +122,8 @@ enum ReportReason {
   hateSpeech,
   @JsonValue('misinformation')
   misinformation,
+  @JsonValue('inappropriate')
+  inappropriate,
   @JsonValue('other')
   other,
 }

@@ -883,6 +883,7 @@ class ReportReasonEnum(StrEnum):
     SPAM = "spam"
     HARASSMENT = "harassment"
     VIOLENCE = "violence"
+    HATE_SPEECH = "hate_speech"
     MISINFORMATION = "misinformation"
     INAPPROPRIATE = "inappropriate"
     OTHER = "other"

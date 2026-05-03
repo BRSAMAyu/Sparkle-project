@@ -1106,6 +1106,7 @@ const _$ReportReasonEnumMap = {
   ReportReason.violence: 'violence',
   ReportReason.hateSpeech: 'hate_speech',
   ReportReason.misinformation: 'misinformation',
+  ReportReason.inappropriate: 'inappropriate',
   ReportReason.other: 'other',
 };
 
