@@ -1190,9 +1190,10 @@
 - **fix_commit**:
 
 ### ISSUE-20260503-0432-L2
-- **status**: verified
+- **status**: in_progress
 - **severity**: P1
 - **domain**: L
+- **fixer_started_at**: 2026-05-03T23:15:00Z
 - **title**: AV 守卫的硬编码 Aurora kill switch 服务和模式列表已过时，缺失 3 个服务文件 + 8 个模式设置，新服务/模式的合规性不被检查
 - **symptom**: 当新的 Aurora kill switch 服务被添加（如 E1 修复创建的 dual_core_router kill switch service）时，AV 规则 `check_rule_av_kill_switch_mode_enum.py` 不会检查其是否使用共享的 `app.core.kill_switch` helper、其模式设置是否为有效的 tri-state 值。Stage 37（LLM Safety——安全关键）、Stage 39 及 Dual-Core Router 的 kill switch 服务完全在 AV 守卫的监控范围之外
 - **root_cause_hypothesis**: AV 守卫使用两个硬编码列表：`SERVICE_PATHS`（18 个文件路径）和 `MODE_SETTINGS`（44 个设置名）。当新 Aurora 阶段被添加时（Stage 37/39），它们的 kill switch service 文件和对应的 `AURORA_STAGE*_MODE` 设置被创建，但 AV 守卫的硬编码列表未同步更新。代码库中现有 21 个 kill switch 服务文件和 48 个 Aurora 模式设置，但 AV 守卫只检查 18 个服务和 44 个模式
