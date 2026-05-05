@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import json
+import logging
+
 from dataclasses import asdict, dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
@@ -13,6 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.achievement import StreakDayStatus, UserStreakDay, UserStreakStats
 from app.models.galaxy import StudyRecord
 from app.models.task import Task, TaskStatus, TaskType
+
+logger = logging.getLogger(__name__)
 
 
 def _utcnow() -> datetime:
@@ -52,6 +57,8 @@ class StreakQualityService:
 
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
+        self._fatigue_cache: dict[str, dict[str, Any]] = {}
+        self._crisis_cache: dict[str, bool] = {}
 
     async def compute_quality(self, user_id: UUID | str, target_date: date | None = None) -> StreakQuality:
         day = target_date or _utcnow().date()
@@ -74,6 +81,29 @@ class StreakQualityService:
             + recovery_score * 0.08
         )
         quality_score = max(0.0, min(1.0, quality_score))
+
+        # ── GROW-002: integrate fatigue/crisis/late-night into quality ──
+        fatigue_state = await self._read_fatigue_state(user_id)
+        crisis_active = await self._read_crisis_state(user_id)
+        fatigue_level = fatigue_state.get("fatigue_level", "low")
+        is_late_night = any("深夜" in e for e in fatigue_state.get("evidence", []))
+
+        if fatigue_level == "critical":
+            quality_score = 0.0
+        elif fatigue_level == "high":
+            quality_score = max(0.0, quality_score - 0.20)
+            if is_late_night:
+                quality_score = min(quality_score, 0.55)
+        elif fatigue_level == "medium":
+            quality_score = max(0.0, quality_score - 0.10)
+            if is_late_night:
+                quality_score = min(quality_score, 0.65)
+        elif is_late_night:
+            quality_score = min(quality_score, 0.75)
+
+        if crisis_active:
+            quality_score = max(0.0, quality_score - 0.10)
+
         is_quality_day = quality_score >= 0.60 and (
             effective_minutes >= 25 or core_tasks_completed > 0 or difficult_breakthroughs > 0
         )
@@ -282,3 +312,36 @@ class StreakQualityService:
                 recoveries += 1
             previous_missed = status in {StreakDayStatus.MISSED.value, StreakDayStatus.FROZEN.value}
         return min(1.0, recoveries / 2)
+
+    async def _read_fatigue_state(self, user_id: UUID | str) -> dict[str, Any]:
+        uid = str(user_id)
+        if uid in self._fatigue_cache:
+            return self._fatigue_cache[uid]
+        try:
+            from app.core.cache import cache_service
+
+            raw = await cache_service.get(f"spine:fatigue:{uid}:latest")
+            if raw:
+                result: dict[str, Any] = json.loads(raw)
+            else:
+                result = {"fatigue_level": "low", "evidence": []}
+        except Exception:
+            logger.warning("Failed to read fatigue state for user %s", uid, exc_info=True)
+            result = {"fatigue_level": "low", "evidence": []}
+        self._fatigue_cache[uid] = result
+        return result
+
+    async def _read_crisis_state(self, user_id: UUID | str) -> bool:
+        uid = str(user_id)
+        if uid in self._crisis_cache:
+            return self._crisis_cache[uid]
+        try:
+            from app.core.cache import cache_service
+
+            raw = await cache_service.get(f"spine:crisis:{uid}:latest")
+            result = bool(json.loads(raw)) if raw else False
+        except Exception:
+            logger.warning("Failed to read crisis state for user %s", uid, exc_info=True)
+            result = False
+        self._crisis_cache[uid] = result
+        return result
