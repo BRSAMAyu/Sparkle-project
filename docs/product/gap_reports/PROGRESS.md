@@ -1,0 +1,105 @@
+# GAP Closer Progress Tracker
+
+> Single source of truth. Two parallel Claude instances coordinate through Claimed-By column.
+> Updated: 2026-05-06
+
+## Legend
+
+| Symbol | Meaning |
+|--------|---------|
+| ⬜ pending | Not started, available for claiming |
+| 🔵 in-progress | Claimed and being worked on |
+| ✅ done | Committed and verified |
+| 📋 spec-done | Spec written, awaiting user implementation |
+| 🚫 blocked | Blocked with reason in Note column |
+
+## Phase 0: Production Closed Loop (0.5-2 days)
+
+| ID | Title | Level | Effort | Mode | Status | Claimed-By | Commit | Note |
+|----|-------|-------|--------|------|--------|-----------|--------|------|
+| GAP-P0-1 | RetrievalDirective → RAG 消费 | L2 | S | you | ✅ done | — | user | graph_rag.py + retrieval_service.py + orchestrator, 20 tests pass |
+| GAP-P0-2 | 常规轮次轻量信号检测 + CausalTrace | L2 | S | claude | 🔵 in-progress | claude-01 | — | orchestrator.py signal pipeline on every turn + create_trace |
+
+**Phase 0 DOD**: ⬜ pending
+
+---
+
+## Phase 1: Architecture Completion (5-8 days)
+
+| ID | Title | Level | Effort | Mode | Status | Claimed-By | Commit | Note |
+|----|-------|-------|--------|------|--------|-----------|--------|------|
+| GAP-P1-1 | L1 Light Aurora 独立模块 | L3 | M | claude | ⬜ pending | — | — | Extract L1 logic to l1_light_aurora.py, 02 号报告 §1 |
+| GAP-P1-2 | Plan 版本化 + 回滚 | L3 | L | spec→you | ⬜ pending | — | — | DB + service + mobile, 04 号报告, 6.5-9.5 天 |
+| GAP-P1-3 | 非考试首分钟检测器 | L2 | M | claude | ⬜ pending | — | — | job_search/project/habit detectors, 08 号报告 E2E-007 |
+| GAP-P1-4 | MAGIC-001 统一连胜 + 差异化策略 | L2 | M | claude | ⬜ pending | — | — | 02 号报告 MAGIC-001, 7 天无差异化 + Flutter 叙事缺失 |
+| GAP-P1-5 | ExperienceEnvelope 状态模型 | L3 | M | claude | ⬜ pending | — | — | APP-001, 11 号报告, 专用状态管理 |
+| GAP-P1-6 | CRDT 冲突解决 | L3 | M | spec→you | ⬜ pending | — | — | APP-005, 11 号报告, 跨层冲突解决 |
+| GAP-P1-7 | MAGIC-004 自动缺席检测 | L2 | M | claude | ⬜ pending | — | — | 02 号报告, 后端无自动缺席 + 无 WebSocket idle 追踪 |
+
+**Phase 1 DOD**: ⬜ pending
+
+---
+
+## Phase 2: Flutter Experience (15-25 days)
+
+| ID | Title | Level | Effort | Mode | Status | Claimed-By | Commit | Note |
+|----|-------|-------|--------|------|--------|-----------|--------|------|
+| GAP-P2-1 | Source Tray 一等 UI 组件 | L3 | L | spec→you | ⬜ pending | — | — | 07 号报告, scope-based 排除 + EvidencePack 集成 |
+| GAP-P2-2 | Causal Timeline 集成主流程 | L2 | M | claude | ⬜ pending | — | — | 08 号报告 E2E-049, 后端 API 完整, Flutter 需集成 |
+| GAP-P2-3 | Stuck Type 运行时分类器 | L2 | M | spec→you | ⬜ pending | — | — | 08 号报告 E2E-045, 5 种卡点类型自动检测 |
+| GAP-P2-4 | Sprint 复盘页面 | L2 | M | claude | ⬜ pending | — | — | 08 号报告 E2E-048, 专用复盘 UI |
+| GAP-P2-5 | 星图页 goal-world-model overlay | L2 | M | claude | ⬜ pending | — | — | UX-005, 01 号报告 |
+| GAP-P2-6 | 设置页 5 个子版块 | L2 | L | spec→you | ⬜ pending | — | — | UX-010, 记忆管理/社群智能等 |
+| GAP-P2-7 | 通知中心目标价值渲染 | L1 | S | claude | ⬜ pending | — | — | UX-011, 突出目标价值 + 下一步 |
+
+**Phase 2 DOD**: ⬜ pending
+
+---
+
+## Phase 3: Stability / Data Sovereignty (8-12 days)
+
+| ID | Title | Level | Effort | Mode | Status | Claimed-By | Commit | Note |
+|----|-------|-------|--------|------|--------|-----------|--------|------|
+| GAP-P3-1 | SpineSnapshot 调度 + close_session 触发 | L1 | S | claude | ⬜ pending | — | — | STAB-002, celery_schedule 注册 + close_session 快照 |
+| GAP-P3-2 | FatigueGuard 独立服务 | L3 | M | spec→you | ⬜ pending | — | — | STAB-010, 疲劳信号统一服务 |
+| GAP-P3-3 | RecoveryModeOrchestrator | L3 | L | spec→you | ⬜ pending | — | — | STAB-013, 多依赖故障一致性恢复 |
+| GAP-P3-4 | GROW-009 数据删除/导出 | L3 | M | spec→you | ⬜ pending | — | — | 09 号报告, 永久删除 + 导出 (数据主权) |
+| GAP-P3-5 | NUDGE-002 每渠道交付策略 | L2 | M | claude | ⬜ pending | — | — | 09 号报告, push/in-app/email 选择 |
+| GAP-P3-6 | GROW-002 连胜质量门槛 | L2 | S | claude | ⬜ pending | — | — | 09 号报告, fatigue/crisis/late-night 纳入 StreakQuality |
+| GAP-P3-7 | GROW-007 retract_if 填充 | L1 | S | claude | ⬜ pending | — | — | 09 号报告, 条件字段检查 |
+
+**Phase 3 DOD**: ⬜ pending
+
+---
+
+## Phase 4: Observability / Community (8-12 days)
+
+| ID | Title | Level | Effort | Mode | Status | Claimed-By | Commit | Note |
+|----|-------|-------|--------|------|--------|-----------|--------|------|
+| GAP-P4-1 | Release Gate | L3 | L | spec→you | ⬜ pending | — | — | OBS-015, 部署阻断门禁 |
+| GAP-P4-2 | 成本预测框架 | L3 | L | spec→you | ⬜ pending | — | — | OBS-013, LLM/RAG/Aurora/P4 成本 |
+| GAP-P4-3 | 场景回归框架 SparkleGoalBench | L3 | L | spec→you | ⬜ pending | — | — | OBS-011, 目标场景回归测试 |
+| GAP-P4-4 | 社群 UI 目标价值渲染 | L2 | S | claude | ⬜ pending | — | — | COM-011, "这如何帮助我的目标" |
+| GAP-P4-5 | 混沌测试 MinIO 覆盖 | L2 | M | claude | ⬜ pending | — | — | OBS-020, 补充 MinIO 故障场景 |
+| GAP-P4-6 | SLO + Prometheus 告警 | L2 | M | claude | ⬜ pending | — | — | STAB-018, 性能 SLO 指标 |
+| GAP-P4-7 | MAGIC-002 "我改了 N 个任务" 展示 | L1 | S | claude | ⬜ pending | — | — | 02 号报告, 纠正后影响展示 |
+| GAP-P4-8 | MAGIC-003 向用户展示不用资料原因 | L1 | S | claude | ⬜ pending | — | — | 02 号报告, reason 面向用户 |
+| GAP-P4-9 | MAGIC-005 个性化收益 profile | L2 | S | claude | ⬜ pending | — | — | 02 号报告, 硬编码 → 个性化 |
+| GAP-P4-10 | MAGIC-006 任务模板注入 | L2 | M | claude | ⬜ pending | — | — | 02 号报告, 社群经验 → 任务模板 |
+| GAP-P4-11 | COM-012 社群策略 Outcome 记录 | L2 | M | claude | ⬜ pending | — | — | 05 号报告, 显式记录 |
+| GAP-P4-12 | STAB-011 非考试危机模式 | L2 | M | claude | ⬜ pending | — | — | 03 号报告, Crisis Mode 扩展到非考试 |
+
+**Phase 4 DOD**: ⬜ pending
+
+---
+
+## Summary
+
+| Phase | Total | ✅ done | 📋 spec | ⬜ pending | Est. Days |
+|-------|-------|---------|---------|-----------|-----------|
+| Phase 0 | 2 | 1 | 0 | 1 | 0.5-2 |
+| Phase 1 | 7 | 0 | 0 | 7 | 5-8 |
+| Phase 2 | 7 | 0 | 0 | 7 | 15-25 |
+| Phase 3 | 7 | 0 | 0 | 7 | 8-12 |
+| Phase 4 | 12 | 0 | 0 | 12 | 8-12 |
+| **Total** | **35** | **1** | **0** | **34** | **35-45** |
