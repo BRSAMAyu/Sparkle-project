@@ -61,7 +61,7 @@
 | ID | Title | Level | Effort | Mode | Status | Claimed-By | Commit | Note |
 |----|-------|-------|--------|------|--------|-----------|--------|------|
 | GAP-P3-1 | SpineSnapshot 调度 + close_session 触发 | L1 | S | claude | ✅ done | — | verified-existing | STAB-002: spine-snapshot-daily beat (b3307e5f) + session_end snapshot (623ca6c1) already wired |
-| GAP-P3-2 | FatigueGuard 独立服务 | L3 | M | spec→you | ⬜ pending | — | — | STAB-010, 疲劳信号统一服务 |
+| GAP-P3-2 | FatigueGuard 独立服务 | L3 | M | spec→you | 🔵 in-progress | claude-B | 2026-05-06T19:10:00Z | STAB-010, 疲劳信号统一服务 |
 | GAP-P3-3 | RecoveryModeOrchestrator | L3 | L | spec→you | ⬜ pending | — | — | STAB-013, 多依赖故障一致性恢复 |
 | GAP-P3-4 | GROW-009 数据删除/导出 | L3 | M | spec→you | ⬜ pending | — | — | 09 号报告, 永久删除 + 导出 (数据主权) |
 | GAP-P3-5 | NUDGE-002 每渠道交付策略 | L2 | M | claude | ⬜ pending | — | — | 09 号报告, push/in-app/email 选择 |
