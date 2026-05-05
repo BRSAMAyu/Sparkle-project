@@ -18,6 +18,7 @@ if str(BACKEND_ROOT) not in sys.path:
 
 from app.services.aurora_stage18_kill_switch_service import AuroraStage18KillSwitchService
 from app.services.aurora_stage19_kill_switch_service import AuroraStage19KillSwitchService
+from app.services.aurora_stage20_kill_switch_service import AuroraStage20KillSwitchService
 from app.services.aurora_stage21_kill_switch_service import AuroraStage21KillSwitchService
 from app.services.aurora_stage23_kill_switch_service import AuroraStage23KillSwitchService
 from app.services.aurora_stage24_policy_kill_switch_service import AuroraStage24PolicyKillSwitchService
@@ -46,6 +47,7 @@ TRANSITIONS = ("off", "shadow", "live", "shadow", "off")
 DEFAULT_SPECS = (
     "stage18",
     "stage19",
+    "stage20",
     "stage21",
     "stage23",
     "stage24",
@@ -89,6 +91,11 @@ async def _stage18_apply(mode: str) -> dict[str, str]:
 
 async def _stage19_apply(mode: str) -> dict[str, str]:
     service = AuroraStage19KillSwitchService()
+    return await service.set_flags({key: mode for key in service.BINDINGS})
+
+
+async def _stage20_apply(mode: str) -> dict[str, str]:
+    service = AuroraStage20KillSwitchService()
     return await service.set_flags({key: mode for key in service.BINDINGS})
 
 
@@ -278,6 +285,13 @@ SPECS = {
         description="Working memory / LLM extractor / consolidation",
         mode_keys=("working_memory_enabled", "llm_extractor_enabled", "consolidation_enabled"),
         apply_mode=_stage19_apply,
+    ),
+    "stage20": DrillSpec(
+        name="stage20",
+        stage="20",
+        description="Sufficiency judge / conflict resolver",
+        mode_keys=tuple(AuroraStage20KillSwitchService.BINDINGS.keys()),
+        apply_mode=_stage20_apply,
     ),
     "stage21": DrillSpec(
         name="stage21",
