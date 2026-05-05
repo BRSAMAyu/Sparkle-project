@@ -34,9 +34,6 @@ class ExecutionEventConsumer:
         self._running = True
         logger.info("ExecutionEventConsumer started, listening on {}", self.STREAM_NAME)
 
-    def stop(self):
-        self._running = False
-
         while self._running:
             try:
                 await self.event_bus.subscribe(
@@ -49,6 +46,9 @@ class ExecutionEventConsumer:
             except Exception as exc:
                 logger.error("ExecutionEventConsumer error: {}", exc)
                 await asyncio.sleep(1)
+
+    def stop(self):
+        self._running = False
 
     async def handle_event(self, event: dict):
         event_type = str(event.get("event_type") or "").strip()

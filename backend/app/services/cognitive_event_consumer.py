@@ -24,9 +24,6 @@ class CognitiveEventConsumer:
         if self._is_running:
             return
         self._is_running = True
-
-    def stop(self):
-        self._is_running = False
         logger.info("Starting CognitiveEventConsumer...")
 
         # Subscribe to fragment creation
@@ -36,6 +33,9 @@ class CognitiveEventConsumer:
             consumer_name=self.consumer_name,
             callback=self._handle_event
         )
+
+    def stop(self):
+        self._is_running = False
 
     async def _handle_event(self, event_data: dict) -> None:
         """Process incoming events."""
