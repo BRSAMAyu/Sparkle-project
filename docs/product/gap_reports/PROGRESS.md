@@ -44,7 +44,7 @@
 
 | ID | Title | Level | Effort | Mode | Status | Claimed-By | Commit | Note |
 |----|-------|-------|--------|------|--------|-----------|--------|------|
-| GAP-P2-1 | Source Tray 一等 UI 组件 | L3 | L | spec→you | ⬜ pending | — | — | 07 号报告, scope-based 排除 + EvidencePack 集成 |
+| GAP-P2-1 | Source Tray 一等 UI 组件 | L3 | L | spec→you | 🔵 in-progress | claude-B | 2026-05-06T22:00:00Z | 07 号报告, scope-based 排除 + EvidencePack 集成 |
 | GAP-P2-2 | Causal Timeline 集成主流程 | L2 | M | claude | ⬜ pending | — | — | 08 号报告 E2E-049, 后端 API 完整, Flutter 需集成 |
 | GAP-P2-3 | Stuck Type 运行时分类器 | L2 | M | spec→you | ⬜ pending | — | — | 08 号报告 E2E-045, 5 种卡点类型自动检测 |
 | GAP-P2-4 | Sprint 复盘页面 | L2 | M | claude | ⬜ pending | — | — | 08 号报告 E2E-048, 专用复盘 UI |
