@@ -1213,7 +1213,6 @@ class MockCommunityRepository implements CommunityRepository {
     String targetUserId, {
     String? message,
   }) async {
-    final currentUserId = await _getCurrentUserId();
     final alreadyRequested = _mockPendingRequests.any(
       (r) =>
           r.friend.id == targetUserId &&
@@ -1440,7 +1439,6 @@ class MockCommunityRepository implements CommunityRepository {
 
   @override
   Future<List<UserBrief>> searchUsers(String keyword, {int limit = 20}) async {
-    final currentUserId = await _getCurrentUserId();
     final lower = keyword.toLowerCase();
     return _mockUsers
         .where((u) =>
