@@ -1825,28 +1825,32 @@ class ExecutionEngineMixin:
         total_prompt_tokens = 0
         total_completion_tokens = 0
 
-        while not graph_task.done() or not queue.empty():
-            try:
-                item = await asyncio.wait_for(queue.get(), timeout=0.1)
-                if item.HasField("usage"):
-                    total_prompt_tokens = item.usage.prompt_tokens
-                    total_completion_tokens = item.usage.completion_tokens
-                    if self.token_tracker:
-                        TOKEN_USAGE.labels(model="gpt-4", type="prompt").inc(total_prompt_tokens)
-                        TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(total_completion_tokens)
-                yield item
-                queue.task_done()
-            except TimeoutError:
-                if graph_task.done():
-                    break
+        try:
+            while not graph_task.done() or not queue.empty():
+                try:
+                    item = await asyncio.wait_for(queue.get(), timeout=0.1)
+                    if item.HasField("usage"):
+                        total_prompt_tokens = item.usage.prompt_tokens
+                        total_completion_tokens = item.usage.completion_tokens
+                        if self.token_tracker:
+                            TOKEN_USAGE.labels(model="gpt-4", type="prompt").inc(total_prompt_tokens)
+                            TOKEN_USAGE.labels(model="gpt-4", type="completion").inc(total_completion_tokens)
+                    yield item
+                    queue.task_done()
+                except TimeoutError:
+                    if graph_task.done():
+                        break
 
-        if graph_task.done():
-            exc = graph_task.exception()
-            if exc:
-                raise exc
-            result_holder["final_state"] = graph_task.result()
-            result_holder["total_prompt_tokens"] = total_prompt_tokens
-            result_holder["total_completion_tokens"] = total_completion_tokens
+            if graph_task.done():
+                exc = graph_task.exception()
+                if exc:
+                    raise exc
+                result_holder["final_state"] = graph_task.result()
+                result_holder["total_prompt_tokens"] = total_prompt_tokens
+                result_holder["total_completion_tokens"] = total_completion_tokens
+        except GeneratorExit:
+            graph_task.cancel()
+            raise
 
     async def _plan_and_validate(
         self,
