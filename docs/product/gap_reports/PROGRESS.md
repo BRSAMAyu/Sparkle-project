@@ -48,7 +48,7 @@
 | GAP-P2-2 | Causal Timeline 集成主流程 | L2 | M | claude | ✅ done | — | 5b9a05724 | AppBar timeline button + badge + bottom sheet + CausalTraceEvent parsing, 6 files |
 | GAP-P2-3 | Stuck Type 运行时分类器 | L2 | M | spec→you | 📋 spec-done | — | bd4b3e0a9 | 08 号报告 E2E-045, 5 种卡点类型自动检测 |
 | GAP-P2-4 | Sprint 复盘页面 | L2 | M | claude | ✅ done | — | e27a328c0 | Sprint review screen + route + sprint header button, 3 files |
-| GAP-P2-5 | 星图页 goal-world-model overlay | L2 | M | claude | 🔵 in-progress | claude-B | 2026-05-07T02:00:00Z | UX-005, 01 号报告 |
+| GAP-P2-5 | 星图页 goal-world-model overlay | L2 | M | claude | ✅ done | — | 62a4404 | UX-005, 01 号报告 |
 | GAP-P2-6 | 设置页 5 个子版块 | L2 | L | spec→you | ⬜ pending | — | — | UX-010, 记忆管理/社群智能等 |
 | GAP-P2-7 | 通知中心目标价值渲染 | L1 | S | claude | ✅ done | — | 8e1f0b22e | Goal value chip + next step hint, always visible in notification card |
 
