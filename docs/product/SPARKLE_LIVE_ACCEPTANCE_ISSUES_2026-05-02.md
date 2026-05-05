@@ -962,7 +962,9 @@
 - **opus_review**: APPROVED by opus-reviewer at 2026-05-04T04:30:00Z. Fix commit 1a4ec61d9 verified across all 5 review dimensions: (a) Root cause resolved — subscribe() now registers task.add_done_callback(lambda t: self._restart_consume_loop(t, stream, group_name, consumer_name, callback)) on the consume_loop asyncio task. _restart_consume_loop() checks task.exception(), and if self._running and exc is not None, creates a new task with same parameters + same done_callback chain (self-healing). Graceful shutdown protected: close() sets _running=False before task.cancel(), so callback sees _running=False and skips restart. CancelledError from task.exception() (cancelled task case) is caught as exc=None, no false restart. Not a hack — uses standard asyncio Task.done_callback pattern. (b) Regression risk LOW — only additive code (+26 lines in event_bus.py), no existing behavior modified. add_done_callback is non-blocking. 15+ consumers benefit automatically via their existing event_bus.subscribe() calls. EventBus reliability tests (4/4) pass. Minor observation: restart has no backoff limit; but BaseException leaks are extremely rare (consume_loop catches Exception), and asyncio scheduling provides natural throttling. (c) Cross-layer sync N/A — no proto/DB/i18n changes. (d) Tests 5/5 pass — test_done_callback_registered_in_subscribe uses inspect.getsource to statically verify add_done_callback exists in subscribe() source; reverting the fix would fail this test. Other 4 tests verify _restart_consume_loop behavior directly (crash→new task, stopped→no restart, param preservation, no-restart-on-clean-exit). Minor gap: no E2E test that fully simulates subscribe→task crash→callback fires→consume_loop restarts; the inspect.getsource test is the main regression guard. (e) Rule guards — 0 new failures. AX (comment-tier) and BG (proto staleness) are pre-existing. BF/BH/I18N/GOV-DATA-MIN all pass.
 
 ### ISSUE-20260503-1703-F4
-- **status**: verified
+- **status**: closed
+- **fixer_started_at**: 2026-05-06T12:35:00Z
+- **closed_at**: 2026-05-06T12:40:00Z
 - **severity**: P3
 - **domain**: F
 - **title**: 5 个事件消费者（Cognitive/Nudge/Execution/Profile/Preference）无 stop() 方法，服务关闭时无法优雅停机和刷新待处理消息
@@ -982,9 +984,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T04:08:00Z
 - **reviewer_note**: APPROVED — 独立审阅确认 5/5 消费者的 grep def stop 全部返回空：(1) execution_event_consumer.py 虽有 _running flag (line 30/34/37) 但无 stop() 设置它；(2) cognitive_event_consumer.py 使用 _is_running (line 20) 但无 stop() 入口；(3) nudge_event_consumer.py 使用 _is_running (line 16) 但无 stop() 入口；(4) profile_event_consumer.py 使用 while self._running (line 68) 但无 stop() 方法设置它为 False；(5) preference_event_consumer.py 使用 while True: (line 46) 无 _running 标志和 stop()。对比：achievement_event_consumer.py:327 stop() 和 galaxy_event_consumer.py:480 stop() 正确实现 _running=False。EventBus 本身无 central stop() 方法 (grep def stop 返回空)，优雅关闭完全依赖各消费者的独立 stop()。与 ISSUE-20260503-1701-F2 无重复：F2 的核心是绕过框架缺失 DLQ/retry/idempotency，F4 仅聚焦 stop() 优雅关闭。P3 评级合理——Redis consumer group idle 超时 + XCLAIM 提供二级保护。
-- **fix_commit**:
-
-### ISSUE-20260503-2100-I1
+- **fix_commit**: a7c96e276
+- **closed_by**: fixer+2026-05-06T12:40Z — note: preference_event_consumer already had stop(), fixed only 4
 - **status**: closed
 - **severity**: P1
 - **domain**: I
