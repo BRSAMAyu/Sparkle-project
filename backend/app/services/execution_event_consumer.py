@@ -34,6 +34,9 @@ class ExecutionEventConsumer:
         self._running = True
         logger.info("ExecutionEventConsumer started, listening on {}", self.STREAM_NAME)
 
+    def stop(self):
+        self._running = False
+
         while self._running:
             try:
                 await self.event_bus.subscribe(

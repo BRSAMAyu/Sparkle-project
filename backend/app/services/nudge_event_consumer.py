@@ -20,6 +20,9 @@ class NudgeEventConsumer:
         if self._is_running:
             return
         self._is_running = True
+
+    def stop(self):
+        self._is_running = False
         logger.info("Starting NudgeEventConsumer...")
 
         # Subscribe to nudge triggered event

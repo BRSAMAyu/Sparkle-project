@@ -78,6 +78,9 @@ class ProfileEventConsumer:
                 logger.error(f"ProfileEventConsumer error: {exc}")
                 await asyncio.sleep(1)
 
+    def stop(self):
+        self._running = False
+
     async def handle_event(self, event: dict):
         event_type = event.get("event_type")
         if event_type == "profile.preference.updated":

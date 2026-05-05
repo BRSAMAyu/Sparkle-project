@@ -24,6 +24,9 @@ class CognitiveEventConsumer:
         if self._is_running:
             return
         self._is_running = True
+
+    def stop(self):
+        self._is_running = False
         logger.info("Starting CognitiveEventConsumer...")
 
         # Subscribe to fragment creation
