@@ -32,6 +32,7 @@ from app.api.v1 import (
     cognitive,
     community,
     community_aggregates,
+    community_strategy_outcomes,
     counterfactual,
     dashboard,
     data_export,
@@ -184,6 +185,7 @@ api_router.include_router(observability.router)
 api_router.include_router(capsules.router, prefix="/capsules", tags=["capsules"])
 api_router.include_router(community.router, prefix="/community", tags=["community"])
 api_router.include_router(community_aggregates.router)
+api_router.include_router(community_strategy_outcomes.router)
 api_router.include_router(cognitive.router, prefix="/cognitive", tags=["cognitive"])
 api_router.include_router(counterfactual.router)
 api_router.include_router(omnibar.router, prefix="/omnibar", tags=["omnibar"])

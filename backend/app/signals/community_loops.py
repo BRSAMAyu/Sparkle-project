@@ -234,6 +234,50 @@ class CommunityLoopManager:
         return state
 
 
+    async def record_strategy_outcome(
+        self,
+        redis_client: Any,
+        *,
+        user_id: str,
+        directive_id: str,
+        trigger_type: str,
+        decision: str,
+        context_snapshot: dict[str, Any] | None = None,
+        user_feedback: str | None = None,
+    ) -> dict[str, Any]:
+        """Record a community strategy outcome to Redis for spine pipeline consumption.
+
+        P4-9 / COM-012: Closes the CommunityDirective → User Accept/Reject → Outcome loop.
+        """
+        from datetime import UTC, datetime
+
+        outcome = {
+            "user_id": user_id,
+            "directive_id": directive_id,
+            "trigger_type": trigger_type,
+            "decision": decision,
+            "context_snapshot": context_snapshot or {},
+            "user_feedback": user_feedback,
+            "recorded_at": datetime.now(UTC).isoformat(),
+        }
+        key = f"spine:community_outcome:{user_id}:{directive_id}"
+        await redis_client.set(key, json.dumps(outcome), ex=90 * 24 * 3600)
+        logger.info(
+            "CommunityLoopManager: strategy outcome recorded user=%s directive=%s decision=%s",
+            user_id, directive_id, decision,
+        )
+        return {"recorded": True, "outcome": outcome}
+
+    async def get_strategy_outcome(
+        self, redis_client: Any, user_id: str, directive_id: str,
+    ) -> dict[str, Any] | None:
+        key = f"spine:community_outcome:{user_id}:{directive_id}"
+        raw = await redis_client.get(key)
+        if not raw:
+            return None
+        return json.loads(raw)
+
+
 def _now_iso() -> str:
     from datetime import UTC, datetime
     return datetime.now(UTC).isoformat()

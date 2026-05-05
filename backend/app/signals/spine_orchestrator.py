@@ -2677,6 +2677,37 @@ class SpineOrchestrator:
     async def get_community_directive(self, user_id: str) -> CommunityDirective | None:
         return await self.directive_store.retrieve(user_id, "community", CommunityDirective)
 
+    async def record_community_strategy_outcome(
+        self,
+        *,
+        user_id: str,
+        directive_id: str,
+        trigger_type: str,
+        decision: str,
+        context_snapshot: dict[str, Any] | None = None,
+        user_feedback: str | None = None,
+    ) -> dict[str, Any]:
+        """Record community strategy outcome in Redis (COM-012 / GAP-P4-11).
+
+        Closes the CommunityDirective → User Accept/Reject → Outcome loop.
+        """
+        return await self.community_loops.record_strategy_outcome(
+            redis_client=self.redis,
+            user_id=user_id,
+            directive_id=directive_id,
+            trigger_type=trigger_type,
+            decision=decision,
+            context_snapshot=context_snapshot,
+            user_feedback=user_feedback,
+        )
+
+    async def get_community_strategy_outcome(
+        self, user_id: str, directive_id: str,
+    ) -> dict[str, Any] | None:
+        return await self.community_loops.get_strategy_outcome(
+            self.redis, user_id, directive_id,
+        )
+
     async def get_latest_community_hint(self, user_id: str) -> dict[str, Any] | None:
         """Return the latest privacy-safe community hint for Flutter to render.
 
