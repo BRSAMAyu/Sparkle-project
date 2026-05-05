@@ -3,7 +3,10 @@ Intelligent Task Service
 Handles LLM-driven task assistance, intent recognition, and suggestions.
 """
 import json
+import logging
 from uuid import UUID
+
+logger = logging.getLogger(__name__)
 
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -183,7 +186,8 @@ class IntelligentTaskService:
             else:
                 raise ValueError(f"Unexpected response format: {data}")
 
-        except Exception:
+        except Exception as exc:
+            logger.warning("Task intent recognition failed for input=%s: %s", input_text[:100], exc)
             # Fallback to default values
             return {
                 "intent": "日常学习",
