@@ -28,7 +28,7 @@
 
 | ID | Title | Level | Effort | Mode | Status | Claimed-By | Commit | Note |
 |----|-------|-------|--------|------|--------|-----------|--------|------|
-| GAP-P1-1 | L1 Light Aurora 独立模块 | L3 | M | claude | 🔵 in-progress | claude-B | 2026-05-06T19:00:00Z | Extract L1 logic to l1_light_aurora.py, 02 号报告 §1 |
+| GAP-P1-1 | L1 Light Aurora 独立模块 | L3 | M | claude | ✅ done | — | 36a9a7eed | l1_light_aurora.py + orchestrator fast-path short-circuit |
 | GAP-P1-2 | Plan 版本化 + 回滚 | L3 | L | spec→you | ⬜ pending | — | — | DB + service + mobile, 04 号报告, 6.5-9.5 天 |
 | GAP-P1-3 | 非考试首分钟检测器 | L2 | M | claude | ⬜ pending | — | — | job_search/project/habit detectors, 08 号报告 E2E-007 |
 | GAP-P1-4 | MAGIC-001 统一连胜 + 差异化策略 | L2 | M | claude | ⬜ pending | — | — | 02 号报告 MAGIC-001, 7 天无差异化 + Flutter 叙事缺失 |
