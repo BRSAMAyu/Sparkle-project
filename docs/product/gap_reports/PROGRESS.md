@@ -18,7 +18,7 @@
 | ID | Title | Level | Effort | Mode | Status | Claimed-By | Commit | Note |
 |----|-------|-------|--------|------|--------|-----------|--------|------|
 | GAP-P0-1 | RetrievalDirective → RAG 消费 | L2 | S | you | ✅ done | — | user | graph_rag.py + retrieval_service.py + orchestrator, 20 tests pass |
-| GAP-P0-2 | 常规轮次轻量信号检测 + CausalTrace | L2 | S | claude | 🔵 in-progress | claude-01 | — | orchestrator.py signal pipeline on every turn + create_trace |
+| GAP-P0-2 | 常规轮次轻量信号检测 + CausalTrace | L2 | S | claude | ✅ done | — | 623ca6c1b | on_chat_turn + _detect_chat_turn_signal + heartbeat + CausalTrace every turn, 3 tests pass |
 
 **Phase 0 DOD**: ⬜ pending
 
@@ -97,9 +97,9 @@
 
 | Phase | Total | ✅ done | 📋 spec | ⬜ pending | Est. Days |
 |-------|-------|---------|---------|-----------|-----------|
-| Phase 0 | 2 | 1 | 0 | 1 | 0.5-2 |
+| Phase 0 | 2 | 2 | 0 | 0 | 0.5-2 |
 | Phase 1 | 7 | 0 | 0 | 7 | 5-8 |
 | Phase 2 | 7 | 0 | 0 | 7 | 15-25 |
 | Phase 3 | 7 | 0 | 0 | 7 | 8-12 |
 | Phase 4 | 12 | 0 | 0 | 12 | 8-12 |
-| **Total** | **35** | **1** | **0** | **34** | **35-45** |
+| **Total** | **35** | **2** | **0** | **33** | **35-45** |
