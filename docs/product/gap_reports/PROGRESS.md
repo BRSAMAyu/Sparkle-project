@@ -45,7 +45,7 @@
 | ID | Title | Level | Effort | Mode | Status | Claimed-By | Commit | Note |
 |----|-------|-------|--------|------|--------|-----------|--------|------|
 | GAP-P2-1 | Source Tray 一等 UI 组件 | L3 | L | spec→you | 📋 spec-done | — | 02d4f6c95 | 07 号报告, scope-based 排除 + EvidencePack 集成 |
-| GAP-P2-2 | Causal Timeline 集成主流程 | L2 | M | claude | 🔵 in-progress | claude-01 | 2026-05-07T08:30:00Z | 08 号报告 E2E-049, 后端 API 完整, Flutter 需集成 |
+| GAP-P2-2 | Causal Timeline 集成主流程 | L2 | M | claude | ✅ done | — | 5b9a05724 | AppBar timeline button + badge + bottom sheet + CausalTraceEvent parsing, 6 files |
 | GAP-P2-3 | Stuck Type 运行时分类器 | L2 | M | spec→you | ⬜ pending | — | — | 08 号报告 E2E-045, 5 种卡点类型自动检测 |
 | GAP-P2-4 | Sprint 复盘页面 | L2 | M | claude | ⬜ pending | — | — | 08 号报告 E2E-048, 专用复盘 UI |
 | GAP-P2-5 | 星图页 goal-world-model overlay | L2 | M | claude | ⬜ pending | — | — | UX-005, 01 号报告 |
@@ -99,7 +99,7 @@
 |-------|-------|---------|---------|-----------|-----------|
 | Phase 0 | 2 | 2 | 0 | 0 | 0.5-2 |
 | Phase 1 | 7 | 5 | 2 | 0 | 5-8 |
-| Phase 2 | 7 | 0 | 1 | 6 | 15-25 |
+| Phase 2 | 7 | 1 | 1 | 5 | 15-25 |
 | Phase 3 | 7 | 0 | 0 | 7 | 8-12 |
 | Phase 4 | 12 | 0 | 0 | 12 | 8-12 |
-| **Total** | **35** | **7** | **3** | **25** | **35-45** |
+| **Total** | **35** | **8** | **3** | **24** | **35-45** |
