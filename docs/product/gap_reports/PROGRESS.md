@@ -66,7 +66,7 @@
 | GAP-P3-4 | GROW-009 数据删除/导出 | L3 | M | spec→you | 📋 spec-done | — | 120dd4f | 09 号报告, 永久删除 + 导出 (数据主权) |
 | GAP-P3-5 | NUDGE-002 每渠道交付策略 | L2 | M | claude | ✅ done | — | adecfbd98 | Per-channel delivery: push/in_app/silent from Spine directive, backward compatible |
 | GAP-P3-6 | GROW-002 连胜质量门槛 | L2 | S | claude | ✅ done | — | 47cbfc7ff | 09 号报告, fatigue/crisis/late-night 纳入 StreakQuality |
-| GAP-P3-7 | GROW-007 retract_if 填充 | L1 | S | claude | 🔵 in-progress | claude-session-1778015083 | 2026-05-06T10:58:03Z | 09 号报告, 条件字段检查 |
+| GAP-P3-7 | GROW-007 retract_if 填充 | L1 | S | claude | ✅ done | — | 731699b11 | retract_if populated in milestones + patterns, _should_retract check in get_confirmed_entries |
 
 **Phase 3 DOD**: ⬜ pending
 
@@ -100,6 +100,6 @@
 | Phase 0 | 2 | 2 | 0 | 0 | 0.5-2 |
 | Phase 1 | 7 | 5 | 2 | 0 | 5-8 |
 | Phase 2 | 7 | 3 | 2 | 2 | 15-25 |
-| Phase 3 | 7 | 2 | 3 | 2 | 8-12 |
+| Phase 3 | 7 | 4 | 3 | 0 | 8-12 |
 | Phase 4 | 12 | 0 | 0 | 12 | 8-12 |
-| **Total** | **35** | **12** | **5** | **18** | **35-45** |
+| **Total** | **35** | **14** | **5** | **16** | **35-45** |
