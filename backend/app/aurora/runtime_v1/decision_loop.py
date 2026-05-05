@@ -429,10 +429,29 @@ def _achievement_stalled_scene(readout: DashboardReadout) -> bool:
     return momentum is not None and momentum < 0.2 and state["streak_active"] is False
 
 
-def _achievement_high_streak_scene(readout: DashboardReadout) -> bool:
+# ── streak milestone tiers (MAGIC-001) ──────────────────────────────────────
+_STREAK_MILESTONES: dict[int, dict[str, Any]] = {
+    30: {"tier_name": "divine_moment", "challenge_shift": 0.12, "acknowledgment": "celebrate"},
+    21: {"tier_name": "confidence_boost", "challenge_shift": 0.08, "acknowledgment": "celebrate"},
+    14: {"tier_name": "celebration", "challenge_shift": 0.05, "acknowledgment": "acknowledge"},
+    7:  {"tier_name": "acknowledgment", "challenge_shift": 0.03, "acknowledgment": "acknowledge"},
+}
+
+
+def _achievement_streak_milestone(readout: DashboardReadout) -> dict[str, Any] | None:
+    """Return streak milestone info if current streak hits a MAGIC-001 tier."""
     state = _achievement_signal_state(readout)
     current_streak_days = state.get("current_streak_days")
-    return current_streak_days is not None and current_streak_days >= 5
+    if current_streak_days is None:
+        return None
+    for days in sorted(_STREAK_MILESTONES, reverse=True):
+        if current_streak_days >= days:
+            return {"tier_days": days, "current_streak_days": current_streak_days, **_STREAK_MILESTONES[days]}
+    return None
+
+
+def _achievement_high_streak_scene(readout: DashboardReadout) -> bool:
+    return _achievement_streak_milestone(readout) is not None
 
 
 def _achievement_reentry_gap_scene(readout: DashboardReadout) -> bool:
@@ -444,15 +463,19 @@ def _achievement_reentry_gap_scene(readout: DashboardReadout) -> bool:
 def _achievement_signal_rules(readout: DashboardReadout) -> list[str]:
     state = _achievement_signal_state(readout)
     momentum = state.get("momentum")
-    current_streak_days = state.get("current_streak_days")
     gap_since_last_study_days = state.get("gap_since_last_study_days")
     rules: list[str] = []
-    if current_streak_days is not None and current_streak_days >= 5:
+    milestone = _achievement_streak_milestone(readout)
+    if milestone is not None:
+        tier = milestone["tier_name"]
+        days = milestone["current_streak_days"]
+        shift = milestone["challenge_shift"]
         rules.append(
-            "Achievement streak rule: current_streak_days >= 5; set "
+            f"Achievement streak milestone ({tier}): current_streak_days={days}; set "
             "harness_updates.strategy.retrieval_practice = true to consolidate the current streak state, "
+            f"raise challenge intensity by {shift:.0%} to honor the {tier} tier, "
             "and allow direct_answer_or_acknowledgment in chat_directive.standard_layer_contract.must_include "
-            "so Aurora can briefly confirm the user's momentum before the next challenge."
+            "so Aurora can celebrate the user's persistence before raising the bar."
         )
     if gap_since_last_study_days is not None and gap_since_last_study_days >= 3:
         rules.append(
@@ -1642,6 +1665,13 @@ class AuroraDecisionLoop:
             defaults["worked_example_first"] = True
         if _achievement_high_streak_scene(readout):
             defaults["retrieval_practice"] = True
+            _milestone = _achievement_streak_milestone(readout)
+            if _milestone is not None:
+                _tier_days = _milestone["tier_days"]
+                if _tier_days >= 14:
+                    defaults["interleaving"] = True
+                if _tier_days >= 21:
+                    defaults["spaced_review"] = True
         # Detect last-24h mode via either the explicit boolean flag or sprint_mode value.
         # exam_sprint_policy is built from ExamSprintPolicy.to_dict() which uses sprint_mode,
         # not a separate last_24h_mode key — so both checks are needed.

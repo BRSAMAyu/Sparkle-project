@@ -3302,6 +3302,81 @@ class SpineOrchestrator:
 
     # ── P1: Divine Moment Enrichers ──────────────────────────────────
 
+    # ── MAGIC-001 milestone definitions ───────────────────────────────────────
+    _MILESTONE_NARRATIVES: dict[int, dict[str, str]] = {
+        30: {
+            "title": "看见坚持 — 30天蜕变",
+            "narrative": (
+                "你已经连续30天保持学习了。这不仅仅是毅力——你的大脑正在形成"
+                "稳定的学习节律。Aurora 升级了你的策略：更深的交叉练习、间隔复习，"
+                "以及更高的挑战强度。这不是偶然，是你证明了你可以。"
+            ),
+            "strategy_effect": "retrieval_practice + interleaving + spaced_review — 全方位深化",
+        },
+        21: {
+            "title": "看见坚持 — 21天习惯固化",
+            "narrative": (
+                "21天的连续学习，一个新的习惯已经形成。"
+                "Aurora 将增加间隔复习来帮助记忆巩固，"
+                "同时继续提高挑战难度来匹配你增长的能力。"
+            ),
+            "strategy_effect": "retrieval_practice + spaced_review — 记忆巩固强化",
+        },
+        14: {
+            "title": "看见坚持 — 14天加速期",
+            "narrative": (
+                "连续14天！你已经渡过了最难的启动期。"
+                "Aurora 将开始引入交叉练习来拓宽你的学习覆盖面，"
+                "并在适当时候提高挑战强度。"
+            ),
+            "strategy_effect": "retrieval_practice + interleaving — 拓宽练习面",
+        },
+        7: {
+            "title": "看见坚持 — 7天起步",
+            "narrative": (
+                "连续7天完成任务——你已经证明了起步的能力。"
+                "Aurora 开始记录你的学习模式，并用检索练习来巩固当前所学。"
+                "接下来，让我们稳步提升。"
+            ),
+            "strategy_effect": "retrieval_practice — 检索练习巩固",
+        },
+    }
+
+    async def _emit_milestone_growth_card(
+        self,
+        *,
+        user_id: str,
+        streak_count: int,
+    ) -> None:
+        """Emit a rich growth card when streak hits a MAGIC-001 milestone tier."""
+        for days in sorted(self._MILESTONE_NARRATIVES, reverse=True):
+            if streak_count >= days:
+                info = self._MILESTONE_NARRATIVES[days]
+                break
+        else:
+            return
+        try:
+            import json as _json
+            card_data = {
+                "title": info["title"],
+                "narrative": info["narrative"],
+                "streak_days": streak_count,
+                "strategy_effect": info["strategy_effect"],
+                "is_milestone": True,
+                "actions": ["收到，继续加油", "这个连胜对我有什么变化"],
+            }
+            await self.redis.set(
+                f"spine:card:growth:{user_id}:latest",
+                _json.dumps(card_data, ensure_ascii=False),
+                ex=7 * 24 * 3600,
+            )
+            logger.debug(
+                "MAGIC-001 growth card emitted: user={}, streak={}, tier={}",
+                user_id, streak_count, days,
+            )
+        except Exception:
+            logger.warning("_emit_milestone_growth_card failed", exc_info=True)
+
     async def on_achievement_unlocked(
         self,
         *,
@@ -3345,6 +3420,12 @@ class SpineOrchestrator:
                     f"spine:card:growth:{user_id}:latest",
                     json.dumps(card_dict),
                     ex=7 * 24 * 3600,
+                )
+
+            # MAGIC-001: emit rich milestone growth card at 7/14/21/30 days
+            if streak_count >= 7:
+                await self._emit_milestone_growth_card(
+                    user_id=user_id, streak_count=streak_count,
                 )
 
             return {"achievement_recorded": True, "streak_count": streak_count}
