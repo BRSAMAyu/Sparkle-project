@@ -37,7 +37,7 @@ def _parse_dlq_message(message_id: str, data: dict) -> EventBusDlqEntry | None:
         message_id=message_id,
         stream=payload.get("stream", "unknown"),
         event_type=event.get("event_type", "unknown"),
-        user_id=payload.get("user_id"),
+        user_id=event.get("user_id"),
         group_name=payload.get("group_name", "unknown"),
         consumer_name=payload.get("consumer_name", "unknown"),
         retry_count=payload.get("retry_count", 0),
@@ -102,6 +102,8 @@ async def list_event_bus_dlq(
     limit: int = 50,
     _admin=Depends(get_current_active_superuser),
 ) -> EventBusDlqListResponse:
+    if limit > 500:
+        limit = 500
     await event_bus.connect()
     if not event_bus.redis:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Redis unavailable")
