@@ -6,6 +6,8 @@
 #   ./scripts/chaos_drill.sh db-slow        # Simulate slow DB queries
 #   ./scripts/chaos_drill.sh llm-timeout    # Simulate LLM provider timeout
 #   ./scripts/chaos_drill.sh network-partition  # Simulate network partition
+#   ./scripts/chaos_drill.sh minio-down      # Simulate MinIO outage
+#   ./scripts/chaos_drill.sh minio-slow      # Simulate slow MinIO
 #   ./scripts/chaos_drill.sh all            # Run all drills
 #   ./scripts/chaos_drill.sh restore        # Restore all services
 #
@@ -133,15 +135,72 @@ drill_network_partition() {
     log_info "Network restored"
 }
 
+# ── MinIO Drills (OBS-020) ──────────────────────────────────────────
+
+drill_minio_down() {
+    log_warn "DRILL: Simulating MinIO outage..."
+    docker compose pause minio 2>/dev/null || docker pause ${COMPOSE_PROJECT}-minio-1 2>/dev/null || {
+        log_error "Could not pause MinIO container"
+        return 1
+    }
+
+    log_info "MinIO is DOWN. Testing file upload degradation..."
+    sleep 5
+
+    # Check that API still responds (uploads should fail gracefully)
+    if curl -sf --max-time 10 http://localhost:8000/health > /dev/null 2>&1; then
+        log_info "PASS: API still responds with MinIO down"
+    else
+        log_warn "API health check failed with MinIO down (may be expected)"
+    fi
+
+    log_info "Restoring MinIO..."
+    docker compose unpause minio 2>/dev/null || docker unpause ${COMPOSE_PROJECT}-minio-1 2>/dev/null || true
+    sleep 3
+    log_info "MinIO restored"
+}
+
+drill_minio_slow() {
+    log_warn "DRILL: Simulating slow MinIO (CPU throttle)..."
+    local container_id
+    container_id=$(docker compose ps -q minio 2>/dev/null || echo "")
+
+    if [[ -n "$container_id" ]]; then
+        docker update --cpus=0.05 "$container_id" 2>/dev/null || {
+            log_warn "Could not throttle MinIO container"
+            return 0
+        }
+        log_info "MinIO is SLOW. Testing upload timeouts..."
+        sleep 5
+
+        if curl -sf --max-time 30 http://localhost:8000/health > /dev/null 2>&1; then
+            log_info "PASS: API responds despite slow MinIO"
+        else
+            log_warn "API health check slow/failed with throttled MinIO"
+        fi
+
+        log_info "Restoring MinIO performance..."
+        docker update --cpus=0 "$container_id" 2>/dev/null || true
+    else
+        log_warn "MinIO container not found, skipping"
+    fi
+    log_info "MinIO performance restored"
+}
+
 do_restore() {
     log_info "Restoring all services..."
     docker compose unpause redis 2>/dev/null || true
     docker compose unpause sparkle_db 2>/dev/null || true
-    local api_id
+    docker compose unpause minio 2>/dev/null || true
+    local api_id minio_id
     api_id=$(docker compose ps -q sparkle_api 2>/dev/null || echo "")
     if [[ -n "$api_id" ]]; then
         local network="${COMPOSE_PROJECT}_default"
         docker network connect "$network" "$api_id" 2>/dev/null || true
+    fi
+    minio_id=$(docker compose ps -q minio 2>/dev/null || echo "")
+    if [[ -n "$minio_id" ]]; then
+        docker update --cpus=0 "$minio_id" 2>/dev/null || true
     fi
     log_info "All services restored"
 }
@@ -153,19 +212,23 @@ case "${1:-all}" in
     db-slow)      drill_db_slow ;;
     llm-timeout)  drill_llm_timeout ;;
     network-partition) drill_network_partition ;;
+    minio-down)   drill_minio_down ;;
+    minio-slow)   drill_minio_slow ;;
     all)
         log_info "Running ALL chaos drills..."
         drill_redis_down
         drill_db_slow
         drill_llm_timeout
         drill_network_partition
+        drill_minio_down
+        drill_minio_slow
         log_info "ALL drills complete. Running restore..."
         do_restore
         log_info "Chaos drill session complete."
         ;;
     restore)      do_restore ;;
     *)
-        echo "Usage: $0 {redis-down|db-slow|llm-timeout|network-partition|all|restore}"
+        echo "Usage: $0 {redis-down|db-slow|llm-timeout|network-partition|minio-down|minio-slow|all|restore}"
         exit 1
         ;;
 esac
