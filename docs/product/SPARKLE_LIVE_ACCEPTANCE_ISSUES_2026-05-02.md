@@ -2170,7 +2170,9 @@
 - **opus_review**: SELF_REVIEWED (Opus API billing unavailable). Fix verified: 0 warnings before, 1 warning after. 1/1 regression test passes.
 
 ### ISSUE-20260504-1002-K7
-- **status**: verified
+- **status**: closed
+- **fixer_started_at**: 2026-05-06T12:05:00Z
+- **closed_at**: 2026-05-06T12:10:00Z
 - **severity**: P3
 - **domain**: K
 - **title**: intelligent_task_service._recognize_intent 的 LLM 调用失败被 `except Exception: return defaults` 静默吞没——零可观测性
@@ -2186,7 +2188,8 @@
 - **suggested_fix_direction**: 在 `except Exception:` 块中添加 `logger.warning("Task intent recognition failed for input=%s: %s", input_text[:100], e)` ——保留降级默认值，恢复可观测性
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T10:15
-- **fix_commit**: 留空
+- **fix_commit**: 2e32693d0
+- **closed_by**: fixer+2026-05-06T12:10Z
 
 ### ISSUE-20260504-1003-K8
 - **status**: closed
@@ -2736,7 +2739,9 @@
 - **fix_commit**: 留空
 
 ### ISSUE-20260504-1931-E9
-- **status**: verified
+- **status**: closed
+- **fixer_started_at**: 2026-05-06T12:15:00Z
+- **closed_at**: 2026-05-06T12:20:00Z
 - **severity**: P2
 - **domain**: E
 - **title**: Privacy drill 写入 Redis 但 pii_redaction_mode() 仅从 settings 读取——drill 对实际行为零影响
@@ -2755,9 +2760,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-04T20:30Z
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) privacy.py:53-58: pii_redaction_mode() 仅从 settings 读取 getattr(settings, "AURORA_PRIVACY_PII_REDACTION_MODE", "live")，不调用 read_mode()，不查询 Redis。(2) run_kill_switch_drills.py:248-249: _privacy_apply() 通过 _ks_write_mode(redis_client=redis_client, ...) 写入 Redis，读/写数据源不同。(3) kill_switch.py:133-134: write_mode() else 分支 await redis_client.set(...) 写入 Redis key sparkle:aurora:privacy:pii_redaction。(4) kill_switch.py:94-112: read_mode() 的标准流程为 settings → Redis 覆盖 → gauge，privacy 绕过此流程。(5) aurora_stage35_kill_switch_service.py:29-34: get_mode() 使用了 read_mode() 同时读取 settings+Redis 作为正确参照。调用链完整：drill write path: _privacy_apply → _ks_write_mode → kill_switch.write_mode → redis_client.set(sparkle:aurora:privacy:pii_redaction)；production read path: pii_redaction_mode → normalize_mode(getattr(settings, ...)) → 不查 Redis。两路径使用不同数据源，drill 的模式切换对 PII redaction 零影响。与 E2 不重复——E2 是 Prometheus gauge 缺记录（可观测性，已 closed via 540ba1b97），E9 是读/写数据源不对称（功能性 gap）。非"设计如此"的确定结论——条目本身承认可能是安全设计（Redis 不应覆盖 PII），但 drill 的 DEFAULT_SPECS 包含 privacy 条目且写入 Redis 却从未被读取，属于工具与实际行为脱节，drill 应反映真实控制路径（方案 A/B/C 任一均可）。对用户 PII 保护无影响（始终按 settings 工作），但运维人员通过 drill 获得的"成功"反馈是虚假的。
-- **fix_commit**: 留空
-
-### ISSUE-20260504-2100-A1
+- **fix_commit**: 44a13b400
+- **closed_by**: fixer+2026-05-06T12:20Z — used suggested_fix_direction 方案 B
 - **status**: closed
 - **fixer_started_at**: 2026-05-03T18:05:00Z
 - **closed_at**: 2026-05-03T18:10:00Z
