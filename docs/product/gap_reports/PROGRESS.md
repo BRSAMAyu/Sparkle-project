@@ -83,7 +83,7 @@
 | GAP-P4-5 | 混沌测试 MinIO 覆盖 | L2 | M | claude | ✅ done | — | a3c62f4df | OBS-020, 18 MinIO resilience tests + drill scenarios (minio-down, minio-slow) |
 | GAP-P4-6 | SLO + Prometheus 告警 | L2 | M | claude | 🔵 in-progress | claude-B | 2026-05-06T12:36:00Z | STAB-018, 性能 SLO 指标 |
 | GAP-P4-7 | MAGIC-002 "我改了 N 个任务" 展示 | L1 | S | claude | ✅ done | — | e6ef6cc72 | 02 号报告, correction_impact card + envelope + stream emission |
-| GAP-P4-8 | MAGIC-003 向用户展示不用资料原因 | L1 | S | claude | ⬜ pending | — | — | 02 号报告, reason 面向用户 |
+| GAP-P4-8 | MAGIC-003 向用户展示不用资料原因 | L1 | S | claude | 🔵 in-progress | claude-session-1778021086 | 2026-05-06T12:44:46Z | 02 号报告, reason 面向用户 |
 | GAP-P4-9 | MAGIC-005 个性化收益 profile | L2 | S | claude | ⬜ pending | — | — | 02 号报告, 硬编码 → 个性化 |
 | GAP-P4-10 | MAGIC-006 任务模板注入 | L2 | M | claude | ⬜ pending | — | — | 02 号报告, 社群经验 → 任务模板 |
 | GAP-P4-11 | COM-012 社群策略 Outcome 记录 | L2 | M | claude | ⬜ pending | — | — | 05 号报告, 显式记录 |
