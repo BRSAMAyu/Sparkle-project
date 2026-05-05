@@ -85,7 +85,7 @@
 | GAP-P4-7 | MAGIC-002 "我改了 N 个任务" 展示 | L1 | S | claude | ✅ done | — | e6ef6cc72 | 02 号报告, correction_impact card + envelope + stream emission |
 | GAP-P4-8 | MAGIC-003 向用户展示不用资料原因 | L1 | S | claude | ✅ done | — | 970f4d0ed | 02 号报告, 13 reason_for_user strings now explanatory |
 | GAP-P4-9 | MAGIC-005 个性化收益 profile | L2 | S | claude | 🔵 in-progress | claude-B | 2026-05-06T13:00:00Z | 02 号报告, 硬编码 → 个性化 |
-| GAP-P4-10 | MAGIC-006 任务模板注入 | L2 | M | claude | ⬜ pending | — | — | 02 号报告, 社群经验 → 任务模板 |
+| GAP-P4-10 | MAGIC-006 任务模板注入 | L2 | M | claude | 🔵 in-progress | claude-session-1778022329 | 2026-05-06T13:05:29Z | 02 号报告, 社群经验 → 任务模板 |
 | GAP-P4-11 | COM-012 社群策略 Outcome 记录 | L2 | M | claude | ⬜ pending | — | — | 05 号报告, 显式记录 |
 | GAP-P4-12 | STAB-011 非考试危机模式 | L2 | M | claude | ⬜ pending | — | — | 03 号报告, Crisis Mode 扩展到非考试 |
 
