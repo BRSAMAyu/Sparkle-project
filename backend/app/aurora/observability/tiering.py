@@ -49,7 +49,7 @@ AURORA_TIER_LATENCY_SECONDS = _get_or_create_metric(
     "sparkle_aurora_tier_latency_seconds",
     "Aurora Stage 4 tier latency in seconds",
     ["tier", "trigger_point"],
-    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 5.0, 30.0, 60.0],
+    buckets=[0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 5.0, 10.0, 15.0, 30.0, 60.0],
 )
 
 

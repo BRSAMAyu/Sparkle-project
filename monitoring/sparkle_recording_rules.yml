@@ -26,17 +26,42 @@ groups:
         expr: sum(increase(sparkle_cost_estimated_usd_total[24h])) by (category)
 
       # SLO compliance ratios (28-day window)
+      # le label values include .0 suffix per prometheus_client floatToGoString formatting
       - record: sparkle:slo:chat_first_token_compliance
         expr: |
-          sum(rate(sparkle_ai_response_first_token_duration_seconds_bucket{le="2"}[28d]))
+          sum(rate(sparkle_ai_response_first_token_duration_seconds_bucket{le="2.0"}[28d]))
           /
           clamp_min(sum(rate(sparkle_ai_response_first_token_duration_seconds_count[28d])), 1)
 
+      - record: sparkle:slo:task_generation_compliance
+        expr: |
+          sum(rate(sparkle_task_generation_e2e_seconds_bucket{le="5.0"}[28d]))
+          /
+          clamp_min(sum(rate(sparkle_task_generation_e2e_seconds_count[28d])), 1)
+
+      - record: sparkle:slo:planning_compliance
+        expr: |
+          sum(rate(sparkle_langgraph_planning_latency_seconds_bucket{le="5.0"}[28d]))
+          /
+          clamp_min(sum(rate(sparkle_langgraph_planning_latency_seconds_count[28d])), 1)
+
       - record: sparkle:slo:rag_retrieval_compliance
         expr: |
-          sum(rate(sparkle_rag_retrieval_seconds_bucket{le="1"}[28d]))
+          sum(rate(sparkle_rag_retrieval_seconds_bucket{le="1.0"}[28d]))
           /
           clamp_min(sum(rate(sparkle_rag_retrieval_seconds_count[28d])), 1)
+
+      - record: sparkle:slo:galaxy_compliance
+        expr: |
+          sum(rate(sparkle_galaxy_e2e_latency_seconds_bucket{le="3.0"}[28d]))
+          /
+          clamp_min(sum(rate(sparkle_galaxy_e2e_latency_seconds_count[28d])), 1)
+
+      - record: sparkle:slo:aurora_l3_compliance
+        expr: |
+          sum(rate(sparkle_aurora_tier_latency_seconds_bucket{tier="L3",le="15.0"}[28d]))
+          /
+          clamp_min(sum(rate(sparkle_aurora_tier_latency_seconds_count{tier="L3"}[28d])), 1)
 
       # Event bus health
       - record: sparkle:eventbus:lag_seconds

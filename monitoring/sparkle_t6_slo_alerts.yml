@@ -1,5 +1,6 @@
 # Phase 6 / T6.1: Performance SLO Alert Rules
 # SLO targets: chat first token <2s, task gen <5s, retrieval <1s, galaxy <3s, Aurora L3 <15s
+# le label values include .0 suffix per prometheus_client floatToGoString formatting
 
 groups:
   - name: sparkle_performance_slo
@@ -111,3 +112,145 @@ groups:
           summary: "SLO 违规: Aurora L3 延迟 P95 > 15s"
           description: "Aurora L3 P95 超过 SLO 目标 15s，已持续 10 分钟。当前阈值: {{ $value | printf \"%.1f\" }}s"
           runbook: "monitoring/runbooks/incident_response.md#slo-aurora-l3"
+
+      # ── Multi-window burn rate alerts ──────────────────────────────────
+      # Based on Google SRE workbook multi-window, multi-burn-rate approach.
+      # Short window (1h, 14.4x burn rate, 2% of 30d budget): catches fast burns → critical page.
+      # Long window (6h, 6.0x burn rate, 5% of 30d budget): catches slow burns → warning.
+      # Alert threshold: non_compliance_ratio > burn_rate * error_budget_fraction
+
+      # Chat first token burn rate (SLO: 2s P95, error budget 0.1%)
+      - alert: SparkleSLOFastBurnChatFirstToken
+        expr: |
+          (
+            1 - (
+              sum(rate(sparkle_ai_response_first_token_duration_seconds_bucket{le="2.0"}[1h]))
+              /
+              clamp_min(sum(rate(sparkle_ai_response_first_token_duration_seconds_count[1h])), 1)
+            )
+          ) > 0.0144
+          and
+          sum(rate(sparkle_ai_response_first_token_duration_seconds_count[1h])) > 60
+        for: 10m
+        labels:
+          severity: critical
+          tier: P1
+          service: ai
+          slo: "chat_first_token_p95_lt_2s"
+          burn_window: "1h"
+        annotations:
+          summary: "SLO Fast Burn: 聊天首包延迟错误预算快速消耗"
+          description: "1h 窗口内非合规率 > 1.44%，错误预算消耗速率 14.4x。当前值: {{ $value | humanizePercentage }}"
+
+      - alert: SparkleSLOSlowBurnChatFirstToken
+        expr: |
+          (
+            1 - (
+              sum(rate(sparkle_ai_response_first_token_duration_seconds_bucket{le="2.0"}[6h]))
+              /
+              clamp_min(sum(rate(sparkle_ai_response_first_token_duration_seconds_count[6h])), 1)
+            )
+          ) > 0.006
+          and
+          sum(rate(sparkle_ai_response_first_token_duration_seconds_count[6h])) > 300
+        for: 30m
+        labels:
+          severity: warning
+          tier: P2
+          service: ai
+          slo: "chat_first_token_p95_lt_2s"
+          burn_window: "6h"
+        annotations:
+          summary: "SLO Slow Burn: 聊天首包延迟错误预算持续消耗"
+          description: "6h 窗口内非合规率 > 0.6%，错误预算消耗速率 6x。当前值: {{ $value | humanizePercentage }}"
+
+      # RAG retrieval burn rate (SLO: 1s P95, error budget 0.1%)
+      - alert: SparkleSLOFastBurnRAG
+        expr: |
+          (
+            1 - (
+              sum(rate(sparkle_rag_retrieval_seconds_bucket{le="1.0"}[1h]))
+              /
+              clamp_min(sum(rate(sparkle_rag_retrieval_seconds_count[1h])), 1)
+            )
+          ) > 0.0144
+          and
+          sum(rate(sparkle_rag_retrieval_seconds_count[1h])) > 30
+        for: 10m
+        labels:
+          severity: critical
+          tier: P1
+          service: retrieval
+          slo: "retrieval_p95_lt_1s"
+          burn_window: "1h"
+        annotations:
+          summary: "SLO Fast Burn: RAG 检索错误预算快速消耗"
+          description: "1h 窗口内 RAG 非合规率 > 1.44%。当前值: {{ $value | humanizePercentage }}"
+
+      - alert: SparkleSLOSlowBurnRAG
+        expr: |
+          (
+            1 - (
+              sum(rate(sparkle_rag_retrieval_seconds_bucket{le="1.0"}[6h]))
+              /
+              clamp_min(sum(rate(sparkle_rag_retrieval_seconds_count[6h])), 1)
+            )
+          ) > 0.006
+          and
+          sum(rate(sparkle_rag_retrieval_seconds_count[6h])) > 150
+        for: 30m
+        labels:
+          severity: warning
+          tier: P2
+          service: retrieval
+          slo: "retrieval_p95_lt_1s"
+          burn_window: "6h"
+        annotations:
+          summary: "SLO Slow Burn: RAG 检索错误预算持续消耗"
+          description: "6h 窗口内 RAG 非合规率 > 0.6%。当前值: {{ $value | humanizePercentage }}"
+
+      # Task generation burn rate (SLO: 5s P95, error budget 0.1%)
+      - alert: SparkleSLOFastBurnTaskGen
+        expr: |
+          (
+            1 - (
+              sum(rate(sparkle_task_generation_e2e_seconds_bucket{le="5.0"}[1h]))
+              /
+              clamp_min(sum(rate(sparkle_task_generation_e2e_seconds_count[1h])), 1)
+            )
+          ) > 0.0144
+          and
+          sum(rate(sparkle_task_generation_e2e_seconds_count[1h])) > 20
+        for: 10m
+        labels:
+          severity: critical
+          tier: P1
+          service: planning
+          slo: "task_gen_p95_lt_5s"
+          burn_window: "1h"
+        annotations:
+          summary: "SLO Fast Burn: 任务生成错误预算快速消耗"
+          description: "1h 窗口内任务生成非合规率 > 1.44%。当前值: {{ $value | humanizePercentage }}"
+
+      # Galaxy burn rate (SLO: 3s P95, error budget 0.1%)
+      - alert: SparkleSLOFastBurnGalaxy
+        expr: |
+          (
+            1 - (
+              sum(rate(sparkle_galaxy_e2e_latency_seconds_bucket{le="3.0"}[1h]))
+              /
+              clamp_min(sum(rate(sparkle_galaxy_e2e_latency_seconds_count[1h])), 1)
+            )
+          ) > 0.0144
+          and
+          sum(rate(sparkle_galaxy_e2e_latency_seconds_count[1h])) > 20
+        for: 10m
+        labels:
+          severity: critical
+          tier: P1
+          service: galaxy
+          slo: "galaxy_p95_lt_3s"
+          burn_window: "1h"
+        annotations:
+          summary: "SLO Fast Burn: Galaxy 延迟错误预算快速消耗"
+          description: "1h 窗口内 Galaxy 非合规率 > 1.44%。当前值: {{ $value | humanizePercentage }}"
