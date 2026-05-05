@@ -24,6 +24,7 @@ import 'package:sparkle/core/services/openclaw_connection_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_comeback_context.dart';
+import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_core_session.dart';
 import 'package:sparkle/features/aurora/data/repositories/aurora_daily_startup_repository.dart';
 import 'package:sparkle/features/chat/chat_routes.dart';
@@ -1273,6 +1274,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             semanticLabel: l10n.chatHistoryTitle,
             variant: ButtonVariant.ghost,
           ),
+          SparkleIconButton(
+            icon: Badge(
+              isLabelVisible: chatState.causalTraceCount > 0,
+              label: Text('${chatState.causalTraceCount}'),
+              child: Icon(Icons.timeline, color: DS.textSecondary),
+            ),
+            onPressed: () => _showCausalTimelineSheet(context),
+            semanticLabel: I18nService.instance.isChinese ? '决策时间线' : 'Decision Timeline',
+            variant: ButtonVariant.ghost,
+          ),
           PopupMenuButton<_ChatShortcutAction>(
             tooltip: context.l10n.chatMoreActions,
             color: DS.surfacePrimary,
@@ -2311,6 +2322,21 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             currentConversationId: ref.read(chatProvider).conversationId,
             onSelectSession: _loadHistorySessionFromSheet,
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showCausalTimelineSheet(BuildContext context) {
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
+        useRootNavigator: true,
+        isScrollControlled: true,
+        builder: (_) => FractionallySizedBox(
+          heightFactor: 0.70,
+          child: const CausalTimelinePanel(),
         ),
       ),
     );

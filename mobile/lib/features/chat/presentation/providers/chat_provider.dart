@@ -23,6 +23,7 @@ import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
 import 'package:sparkle/features/chat/data/models/reasoning_step_model.dart';
+import 'package:sparkle/features/chat/presentation/widgets/causal_timeline_panel.dart';
 import 'package:sparkle/features/chat/data/repositories/chat_repository.dart';
 import 'package:sparkle/features/chat/data/services/agent_session_store.dart';
 import 'package:sparkle/features/chat/data/services/plan_review_grpc_service.dart';
@@ -1903,6 +1904,14 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is SpineDegradedEvent) {
           // STAB-012: Spine pipeline degraded — show subtle indicator
           state = state.copyWith(spineDegraded: true);
+          flushPending();
+        } else if (event is CausalTraceEvent) {
+          // GAP-P2-2: Causal trace created — refresh timeline & show indicator
+          state = state.copyWith(
+            pendingCausalTraceId: event.traceIdValue,
+            causalTraceCount: state.causalTraceCount + 1,
+          );
+          _refreshCausalTimeline();
           flushPending();
         } else if (event is NotificationEvent) {
           // Notification Event - 实时通知推送

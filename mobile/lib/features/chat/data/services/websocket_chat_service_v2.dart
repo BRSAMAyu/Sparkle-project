@@ -557,6 +557,20 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           );
         }
 
+        // Spine: Causal trace created — timeline integration (GAP-P2-2)
+        if (metadata != null && metadata['spine_causal_trace_id'] != null) {
+          final causalId = metadata['spine_causal_trace_id'];
+          if (causalId is String && causalId.isNotEmpty) {
+            return CausalTraceEvent(
+              traceIdValue: causalId,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
         return TextEvent(
           content: deltaContent,
           responseId: responseId,

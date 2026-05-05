@@ -740,6 +740,16 @@ extension ChatNotifierActions on ChatNotifier {
     state = state.copyWith(clearGoalArbitration: true);
   }
 
+  void dismissCausalTrace() {
+    state = state.copyWith(pendingCausalTraceId: '');
+  }
+
+  void _refreshCausalTimeline() {
+    try {
+      _ref.read(causalTimelineProvider.notifier).load();
+    } catch (_) {}
+  }
+
   void _handleSprintModeSwitch(SprintModeSwitchEvent event) {
     debugPrint('🔄 Sprint mode switch event received');
 

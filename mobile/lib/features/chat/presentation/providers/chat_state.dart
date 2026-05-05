@@ -160,6 +160,8 @@ class ChatState {
     this.pendingGrowthCard,
     this.pendingGoalArbitration,
     this.spineDegraded = false,
+    this.pendingCausalTraceId,
+    this.causalTraceCount = 0,
   });
 
   static const int maxRetainedMessages = 500;
@@ -236,6 +238,12 @@ class ChatState {
 
   /// Spine: degraded mode flag — true when Spine pipeline failed.
   final bool spineDegraded;
+
+  /// Spine: latest causal trace ID from signal pipeline.
+  final String? pendingCausalTraceId;
+
+  /// Spine: count of causal traces generated in this session.
+  final int causalTraceCount;
 
   static List<ChatMessageModel> _boundedMessages(
     List<ChatMessageModel> messages,
@@ -336,6 +344,8 @@ class ChatState {
     GoalArbitrationEvent? pendingGoalArbitration,
     bool clearGoalArbitration = false,
     bool? spineDegraded,
+    String? pendingCausalTraceId,
+    int? causalTraceCount,
   }) =>
       ChatState(
         isLoading: isLoading ?? this.isLoading,
@@ -441,5 +451,7 @@ class ChatState {
             ? null
             : pendingGoalArbitration ?? this.pendingGoalArbitration,
         spineDegraded: spineDegraded ?? this.spineDegraded,
+        pendingCausalTraceId: pendingCausalTraceId ?? this.pendingCausalTraceId,
+        causalTraceCount: causalTraceCount ?? this.causalTraceCount,
       );
 }

@@ -1957,3 +1957,16 @@ class NodeMasteryErrorEvent extends ChatStreamEvent {
   final String? error;
   final bool? retryable;
 }
+
+/// Spine: causal trace created during signal pipeline — triggers timeline refresh.
+class CausalTraceEvent extends ChatStreamEvent {
+  CausalTraceEvent({
+    required this.traceIdValue,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final String traceIdValue;
+}
