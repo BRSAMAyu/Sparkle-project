@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/errors/failures.dart';
 import 'package:sparkle/core/network/api_client.dart';
+import 'package:sparkle/core/providers/experience_envelope_provider.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -1304,6 +1305,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             captureCitationMetadata(metadata['citations']);
             captureStructuredAdjustments(metadata);
             captureLowYieldBlock(metadata);
+            _ref.read(experienceEnvelopeProvider.notifier).updateFromMetadata(accumulatedRawMetadata);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {
@@ -1499,6 +1501,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
             captureCitationMetadata(metadata['citations']);
             captureStructuredAdjustments(metadata);
             captureLowYieldBlock(metadata);
+            _ref.read(experienceEnvelopeProvider.notifier).updateFromMetadata(accumulatedRawMetadata);
           }
           final uxEnvelope = _extractUxEnvelope(metadata);
           if (uxEnvelope.isNotEmpty) {

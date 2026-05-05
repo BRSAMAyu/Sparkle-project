@@ -1,0 +1,78 @@
+class ExperienceEnvelope {
+  const ExperienceEnvelope({
+    this.traceId,
+    this.turnId,
+    this.userState = const {},
+    this.profileContext = const {},
+    this.structuredCognitiveAdjustments = const [],
+    this.raw = const {},
+    this.updatedAt,
+  });
+
+  factory ExperienceEnvelope.fromMetadata(Map<String, dynamic> metadata) {
+    final profileContext = _mapValue(metadata['profile_context']);
+    final userState = _mapValue(
+      metadata['user_state_v1'] ?? profileContext['user_state_v1'],
+    );
+    return ExperienceEnvelope(
+      traceId: _stringValue(metadata['trace_id']),
+      turnId: _stringValue(metadata['turn_id']),
+      userState: userState,
+      profileContext: profileContext,
+      structuredCognitiveAdjustments: _mapList(
+        metadata['structured_cognitive_adjustments'] ??
+            profileContext['structured_cognitive_adjustments'],
+      ),
+      raw: metadata,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  final String? traceId;
+  final String? turnId;
+  final Map<String, dynamic> userState;
+  final Map<String, dynamic> profileContext;
+  final List<Map<String, dynamic>> structuredCognitiveAdjustments;
+  final Map<String, dynamic> raw;
+  final DateTime? updatedAt;
+
+  bool get isEmpty =>
+      userState.isEmpty &&
+      profileContext.isEmpty &&
+      structuredCognitiveAdjustments.isEmpty;
+
+  bool get hasAdjustments => structuredCognitiveAdjustments.isNotEmpty;
+
+  ExperienceEnvelope merge(ExperienceEnvelope next) {
+    return ExperienceEnvelope(
+      traceId: next.traceId ?? traceId,
+      turnId: next.turnId ?? turnId,
+      userState: {...userState, ...next.userState},
+      profileContext: {...profileContext, ...next.profileContext},
+      structuredCognitiveAdjustments: next.hasAdjustments
+          ? next.structuredCognitiveAdjustments
+          : structuredCognitiveAdjustments,
+      raw: {...raw, ...next.raw},
+      updatedAt: next.updatedAt ?? updatedAt,
+    );
+  }
+}
+
+Map<String, dynamic> _mapValue(Object? raw) {
+  if (raw is Map<String, dynamic>) return raw;
+  if (raw is Map<Object?, Object?>) return Map<String, dynamic>.from(raw);
+  return const {};
+}
+
+List<Map<String, dynamic>> _mapList(Object? raw) {
+  if (raw is! List) return const [];
+  return raw
+      .whereType<Map<Object?, Object?>>()
+      .map(Map<String, dynamic>.from)
+      .toList(growable: false);
+}
+
+String? _stringValue(Object? raw) {
+  final value = raw?.toString().trim();
+  return value == null || value.isEmpty ? null : value;
+}
