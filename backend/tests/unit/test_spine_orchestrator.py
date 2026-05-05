@@ -284,6 +284,74 @@ class TestRegularChatTurn:
         assert fake_redis._store["spine:last_chat_turn_at:user-chat-3"] != "2026-05-05T00:00:00"
 
 
+class TestNonExamFirstMinuteDetector:
+    """GAP-P1-3: Non-exam first-minute detection for job_search, project, habit."""
+
+    def test_job_search_interview_detected(self):
+        from app.signals.non_exam_first_minute_detector import NonExamFirstMinuteDetector
+
+        det = NonExamFirstMinuteDetector()
+        snap = det.analyze_first_message("下周有面试，好紧张，还没怎么准备")
+        assert snap is not None
+        assert "job_search" in snap.detected_mode
+        assert snap.subject == "job_search"
+        assert snap.confidence >= 0.6
+
+    def test_project_deadline_detected(self):
+        from app.signals.non_exam_first_minute_detector import NonExamFirstMinuteDetector
+
+        det = NonExamFirstMinuteDetector()
+        snap = det.analyze_first_message("毕设下周要交了，完全不知道从哪开始，做不完")
+        assert snap is not None
+        assert "project" in snap.detected_mode
+        assert snap.subject == "project"
+
+    def test_habit_struggle_detected(self):
+        from app.signals.non_exam_first_minute_detector import NonExamFirstMinuteDetector
+
+        det = NonExamFirstMinuteDetector()
+        snap = det.analyze_first_message("想养成每天跑步的习惯，但总是三天打鱼两天晒网，坚持不了")
+        assert snap is not None
+        assert "habit" in snap.detected_mode
+        assert snap.subject == "habit"
+
+    def test_no_match_returns_none(self):
+        from app.signals.non_exam_first_minute_detector import NonExamFirstMinuteDetector
+
+        det = NonExamFirstMinuteDetector()
+        snap = det.analyze_first_message("今天天气真好")
+        assert snap is None
+
+    def test_exam_not_falsely_detected(self):
+        """Exam-like messages should return None (handled by ExamRescueDetector)."""
+        from app.signals.non_exam_first_minute_detector import NonExamFirstMinuteDetector
+
+        det = NonExamFirstMinuteDetector()
+        snap = det.analyze_first_message("我明天要考高数，什么都不会")
+        assert snap is None
+
+    def test_to_actionable_signal(self):
+        from app.signals.non_exam_first_minute_detector import NonExamFirstMinuteDetector
+
+        det = NonExamFirstMinuteDetector()
+        snap = det.analyze_first_message("找工作好焦虑，简历还没投，不知道怎么准备面试")
+        assert snap is not None
+        signal = det.to_actionable_signal(snap, user_id="user-1")
+        assert signal is not None
+        assert signal.state_key == "goal_mode"
+        assert "job_search" in signal.claim or "interview" in signal.claim
+
+    @pytest.mark.asyncio
+    async def test_on_first_message_non_exam_integration(self, orchestrator):
+        """SpineOrchestrator.on_first_message should detect non-exam goals."""
+        trace = await orchestrator.on_first_message(
+            user_id="user-ne-1",
+            message="投了好几家互联网公司简历都没回复，不知道怎么准备面试，好焦虑",
+        )
+        assert trace is not None
+        assert "non_exam" in trace.raw_event_ids[0]
+
+
 # ═══════════════════════════════════════════════════════════════
 # 1. Init wiring
 # ═══════════════════════════════════════════════════════════════

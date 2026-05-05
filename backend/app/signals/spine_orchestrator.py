@@ -43,6 +43,7 @@ from app.signals.core_session import CoreSession, CoreSessionManager
 from app.signals.directive_applier import DirectiveApplier, DirectiveAuditor
 from app.signals.directive_quota import DirectiveQuotaService
 from app.signals.exam_rescue_detector import ExamRescueDetector
+from app.signals.non_exam_first_minute_detector import NonExamFirstMinuteDetector
 from app.signals.exam_sprint_policy import ExamSprintPolicyService
 from app.signals.goal_type_adapter import GoalTypeAdapter
 from app.signals.goal_world_graph import GoalWorldGraphService
@@ -129,6 +130,7 @@ class SpineOrchestrator:
         self.recall_detector = RecallOpportunityDetector()
         self.recall_notification_builder = RecallNotificationBuilder()
         self.exam_rescue = ExamRescueDetector()
+        self.non_exam_detector = NonExamFirstMinuteDetector()
         self.stale_guard = StaleStateGuard()
         self.state_packet_builder = ActionableStatePacketBuilder()
         self.self_model = SparkleSelfModelService(redis_client)
@@ -1618,9 +1620,23 @@ class SpineOrchestrator:
         user_id: str,
         message: str,
     ) -> CausalTrace | None:
-        """首条消息 → ExamRescueDetector → PolicyEngine → trace。"""
+        """首条消息 → ExamRescueDetector → NonExamDetector → PolicyEngine → trace。"""
         snapshot = self.exam_rescue.analyze_first_message(message)
+
+        # Fallback to non-exam goal detection if exam detector returns None
+        non_exam_signal = None
         if snapshot is None:
+            ne_snapshot = self.non_exam_detector.analyze_first_message(message)
+            if ne_snapshot is not None:
+                non_exam_signal = self.non_exam_detector.to_actionable_signal(
+                    ne_snapshot, user_id=user_id,
+                )
+                if non_exam_signal is not None:
+                    return await self._run_signal_pipeline(
+                        user_id=user_id,
+                        signal=non_exam_signal,
+                        event_ids=["first_message_non_exam"],
+                    )
             return None
 
         # Persist deadline context so ExamSprintPolicy can activate on every turn
