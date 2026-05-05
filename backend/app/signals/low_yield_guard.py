@@ -9,6 +9,7 @@ Instead of hard blocking, provides gentle suggestions with high-yield alternativ
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -42,6 +43,44 @@ _HIGH_YIELD_ALTERNATIVES: dict[str, list[str]] = {
 
 _LOW_YIELD_THRESHOLD = 0.35
 
+# P4-9 / MAGIC-005: Learning style → activity type → yield_score adjustment.
+# Users learn differently; a visual learner benefits more from videos than a reading learner.
+# Adjustments are capped at ±0.25 so personalization nudges but doesn't override base profiles.
+_LEARNING_STYLE_ADJUSTMENTS: dict[str, dict[str, float]] = {
+    "visual": {
+        "watch_lecture_video": 0.18,
+        "browse_supplementary": 0.12,
+        "make_pretty_notes": 0.10,
+        "re_read_textbook": -0.05,
+    },
+    "auditory": {
+        "watch_lecture_video": 0.15,
+        "review_notes": 0.10,
+        "re_read_textbook": -0.05,
+    },
+    "reading": {
+        "re_read_textbook": 0.18,
+        "review_notes": 0.12,
+        "worked_examples": 0.08,
+        "watch_lecture_video": -0.05,
+    },
+    "kinesthetic": {
+        "practice_problems": 0.20,
+        "drill": 0.18,
+        "mock_exam": 0.15,
+        "flashcards": 0.10,
+        "watch_lecture_video": -0.10,
+        "re_read_textbook": -0.10,
+    },
+    "balanced": {
+        "practice_problems": 0.05,
+        "error_review": 0.05,
+        "drill": 0.05,
+    },
+}
+
+_MAX_ADJUSTMENT = 0.25
+
 
 @dataclass
 class YieldCheckResult:
@@ -58,17 +97,51 @@ class LowYieldGuard:
 
     P1-17: Under deadline pressure (exam within 3 days), low-yield activities
     are intercepted and replaced with high-yield alternatives.
+
+    P4-9 / MAGIC-005: Yield scores personalized via user's learning_style
+    (read from Redis cache key user:prefs:center:{user_id}).
     """
 
     def __init__(self, redis_client: Any = None):
         self.redis = redis_client
 
-    def check_activity(
+    async def _get_personalized_adjustment(
+        self,
+        user_id: str,
+        activity_type: str,
+    ) -> float:
+        """Read user's learning_style from Redis and return yield adjustment.
+
+        Returns 0.0 if Redis unavailable, user not cached, or no adjustment defined.
+        """
+        if not self.redis or not user_id:
+            return 0.0
+        try:
+            raw = await self.redis.get(f"user:prefs:center:{user_id}")
+            if not raw:
+                return 0.0
+            data = json.loads(raw)
+            explicit = data.get("explicit", {}) if isinstance(data, dict) else {}
+            learning_style = explicit.get("learning_style", "balanced")
+            adjustments = _LEARNING_STYLE_ADJUSTMENTS.get(learning_style, {})
+            adj = adjustments.get(activity_type, 0.0)
+            if adj:
+                logger.debug(
+                    "LowYieldGuard: personalization user=%s style=%s activity=%s adj=%+.2f",
+                    user_id, learning_style, activity_type, adj,
+                )
+            return adj
+        except Exception:
+            logger.debug("LowYieldGuard: personalization lookup failed user=%s", user_id, exc_info=True)
+            return 0.0
+
+    async def check_activity(
         self,
         activity_type: str,
         *,
         deadline_hours: float | None = None,
         is_exam_context: bool = False,
+        user_id: str = "",
     ) -> YieldCheckResult:
         """Check if an activity type is appropriate given current context.
 
@@ -76,12 +149,18 @@ class LowYieldGuard:
             activity_type: Type of activity being suggested (e.g. 're_read_textbook')
             deadline_hours: Hours until the nearest deadline (None = no deadline pressure)
             is_exam_context: Whether user is in exam preparation mode
+            user_id: Optional user ID for personalized yield adjustment (P4-9)
         """
         profile = _ACTIVITY_YIELD_PROFILE.get(
             activity_type,
             {"yield_score": 0.5, "time_cost": "medium"},
         )
-        yield_score = profile["yield_score"]
+        base_yield = profile["yield_score"]
+
+        # P4-9: Apply personalization adjustment (clamped to ±_MAX_ADJUSTMENT)
+        adj = await self._get_personalized_adjustment(user_id, activity_type) if user_id else 0.0
+        adj = max(-_MAX_ADJUSTMENT, min(_MAX_ADJUSTMENT, adj))
+        yield_score = round(base_yield + adj, 2)
 
         # No deadline pressure → no blocking needed
         if deadline_hours is None or deadline_hours > 72:
@@ -101,8 +180,8 @@ class LowYieldGuard:
         )
 
         logger.info(
-            "LowYieldGuard: blocked activity={} yield={:.2f} deadline_hours={:.0f}",
-            activity_type, yield_score, deadline_hours,
+            "LowYieldGuard: blocked activity=%s yield=%.2f (base=%.2f adj=%+.2f) deadline_hours=%.0f",
+            activity_type, yield_score, base_yield, adj, deadline_hours,
         )
 
         return YieldCheckResult(

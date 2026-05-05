@@ -1425,14 +1425,16 @@ class SpineOrchestrator:
         directive = await self._apply_exam_sprint_overlay(user_id, directive)
 
         # P1-17: Low-yield gentle block — redirect low-yield activities under deadline pressure
+        # P4-9: Personalized yield scores via user_id-based learning_style adjustment
         try:
             task_type = getattr(directive, "task_type", None) or getattr(directive, "suggested_activity", None)
             if task_type:
                 dl_hours = await self._estimate_deadline_hours(user_id)
-                yield_result = self.low_yield_guard.check_activity(
+                yield_result = await self.low_yield_guard.check_activity(
                     str(task_type),
                     deadline_hours=dl_hours,
                     is_exam_context=getattr(signal, "goal_type", "") in ("exam_sprint", "exam_rescue", "exam_build"),
+                    user_id=user_id,
                 )
                 if not yield_result.passed:
                     alt = self.low_yield_guard.get_best_alternative(str(task_type))
