@@ -2660,6 +2660,22 @@ class ChatOrchestrator(
                     except Exception:
                         logger.debug("stream_callback failed for spine_growth_card, stream may be closed")
 
+                # MAGIC-002: Emit correction impact card metadata for Flutter
+                if stream_callback:
+                    try:
+                        _corr_raw = await self.redis.get(f"spine:card:correction_impact:{user_id}:latest")
+                        if _corr_raw:
+                            _corr_data = json.loads(_corr_raw if isinstance(_corr_raw, str) else _corr_raw.decode())
+                            await stream_callback(
+                                agent_service_pb2.ChatResponse(
+                                    metadata={
+                                        "spine_correction_impact_card": json.dumps(_corr_data, ensure_ascii=False),
+                                    },
+                                ),
+                            )
+                    except Exception:
+                        logger.debug("stream_callback failed for spine_correction_impact_card, stream may be closed")
+
                 # STAB-012: Emit spine degraded flag when Spine pipeline failed
                 if request_extra_context and request_extra_context.get("spine_degraded"):
                     if stream_callback:

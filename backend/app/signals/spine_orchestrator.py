@@ -3412,6 +3412,34 @@ class SpineOrchestrator:
         except Exception:
             logger.warning("_emit_milestone_growth_card failed", exc_info=True)
 
+    async def _emit_correction_impact_card(
+        self,
+        *,
+        user_id: str,
+        correction_type: str,
+    ) -> None:
+        """MAGIC-002: Emit a growth card acknowledging user correction and task adjustment."""
+        try:
+            import json as _json
+            card_data = {
+                "title": "收到，我记住了",
+                "narrative": "你的纠正很重要，我正在重新调整接下来的任务安排。",
+                "correction_type": correction_type,
+                "is_milestone": False,
+                "actions": ["看看调整后的安排", "继续当前任务"],
+            }
+            await self.redis.set(
+                f"spine:card:correction_impact:{user_id}:latest",
+                _json.dumps(card_data, ensure_ascii=False),
+                ex=72 * 3600,
+            )
+            logger.debug(
+                "MAGIC-002 correction impact card emitted: user={}, type={}",
+                user_id, correction_type,
+            )
+        except Exception:
+            logger.warning("_emit_correction_impact_card failed", exc_info=True)
+
     async def on_achievement_unlocked(
         self,
         *,
@@ -3549,6 +3577,12 @@ class SpineOrchestrator:
                 f"spine:correction:{user_id}:latest",
                 json.dumps(correction_event),
                 ex=72 * 3600,
+            )
+
+            # MAGIC-002: Emit correction-impact growth card
+            await self._emit_correction_impact_card(
+                user_id=user_id,
+                correction_type=correction_type,
             )
 
             return correction_event
@@ -3867,6 +3901,11 @@ class SpineOrchestrator:
             growth_raw = await self.redis.get(f"spine:card:growth:{user_id}:latest")
             if growth_raw:
                 envelope["cards"].append(json.loads(growth_raw if isinstance(growth_raw, str) else growth_raw.decode()))
+
+            # Correction impact card (MAGIC-002)
+            corr_raw = await self.redis.get(f"spine:card:correction_impact:{user_id}:latest")
+            if corr_raw:
+                envelope["cards"].append(json.loads(corr_raw if isinstance(corr_raw, str) else corr_raw.decode()))
 
             # Community hint card
             comm_raw = await self.redis.get(f"spine:card:community_hint:{user_id}:latest")
