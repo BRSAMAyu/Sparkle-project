@@ -1212,7 +1212,30 @@ class MockCommunityRepository implements CommunityRepository {
   Future<void> sendFriendRequest(
     String targetUserId, {
     String? message,
-  }) async {}
+  }) async {
+    final currentUserId = await _getCurrentUserId();
+    final alreadyRequested = _mockPendingRequests.any(
+      (r) =>
+          r.friend.id == targetUserId &&
+          r.initiatedByMe,
+    );
+    if (alreadyRequested) return;
+
+    final target = _mockUsers.firstWhere(
+      (u) => u.id == targetUserId,
+      orElse: () => _mockUsers.first,
+    );
+    _mockPendingRequests.add(
+      FriendshipInfo(
+        id: 'freq_${DateTime.now().millisecondsSinceEpoch}',
+        friend: target,
+        status: FriendshipStatus.pending,
+        initiatedByMe: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    );
+  }
   @override
   Future<void> respondToRequest(String friendshipId, bool accept) async {
     final index =
@@ -1416,8 +1439,17 @@ class MockCommunityRepository implements CommunityRepository {
   }
 
   @override
-  Future<List<UserBrief>> searchUsers(String keyword, {int limit = 20}) async =>
-      [];
+  Future<List<UserBrief>> searchUsers(String keyword, {int limit = 20}) async {
+    final currentUserId = await _getCurrentUserId();
+    final lower = keyword.toLowerCase();
+    return _mockUsers
+        .where((u) =>
+            u.id != currentUserId &&
+            (u.nickname?.toLowerCase().contains(lower) == true ||
+                u.username.toLowerCase().contains(lower)))
+        .take(limit)
+        .toList();
+  }
   @override
   Future<void> updateStatus(UserStatus status) async {}
   @override
