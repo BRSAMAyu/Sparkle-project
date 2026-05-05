@@ -749,6 +749,11 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
     );
   }
 
+  /// AI Coach is the *primary* creative companion on this screen — wears
+  /// a brand-tinted gradient surface, sparkle glyph, and brand-coloured
+  /// label so it reads as "tap me to think with AI" at a glance. The
+  /// Stuck Help pill (left side) intentionally uses a quieter
+  /// warning-amber treatment so the two never get mistaken.
   Widget _buildCoachFab(TaskModel task) => Positioned(
         right: DS.spacing16,
         bottom: DS.spacing64 + DS.spacing24,
@@ -756,35 +761,55 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
           top: false,
           child: Tooltip(
             message: context.l10n.taskExecutionCoachTooltip,
-            child: Material(
-              color: DS.surfaceOverlay.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(999),
-              child: InkWell(
-                key: const Key('focus-coach-fab'),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    DS.brandPrimary.withValues(alpha: 0.95),
+                    DS.brandPrimary.withValues(alpha: 0.78),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(999),
-                onTap: () => unawaited(_openFocusCoach(task)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: DS.spacing10,
-                    vertical: DS.spacing8,
+                boxShadow: [
+                  BoxShadow(
+                    color: DS.brandPrimary.withValues(alpha: 0.32),
+                    blurRadius: 16,
+                    offset: const Offset(0, 6),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.auto_awesome_rounded,
-                        color: DS.brandPrimary,
-                        size: 17,
-                      ),
-                      const SizedBox(width: DS.spacing4),
-                      Text(
-                        context.l10n.taskExecutionCoachLabel,
-                        style: DS.bodySmall.copyWith(
-                          color: DS.textSecondary,
-                          fontWeight: DS.fontWeightBold,
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(999),
+                child: InkWell(
+                  key: const Key('focus-coach-fab'),
+                  borderRadius: BorderRadius.circular(999),
+                  onTap: () => unawaited(_openFocusCoach(task)),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: DS.spacing12,
+                      vertical: DS.spacing10,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.auto_awesome_rounded,
+                          color: DS.surfaceCanvas,
+                          size: 18,
                         ),
-                      ),
-                    ],
+                        const SizedBox(width: DS.spacing6),
+                        Text(
+                          context.l10n.taskExecutionCoachLabel,
+                          style: DS.bodySmall.copyWith(
+                            color: DS.surfaceCanvas,
+                            fontWeight: DS.fontWeightBold,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -793,6 +818,11 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         ),
       );
 
+  /// Stuck Help is the *escape-hatch* support action — wears a quieter
+  /// warning-amber outline pill so it reads as "I'm in trouble" rather
+  /// than competing with the brand-tinted AI Coach. Visually distinct
+  /// in colour, weight, and surface so the two pills are never mistaken
+  /// for variants of the same control.
   Widget _buildStuckHelpFab(TaskModel task) => Positioned(
         left: DS.spacing16,
         bottom: DS.spacing64 + DS.spacing24,
@@ -807,7 +837,13 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                 key: const Key('stuck-help-fab'),
                 borderRadius: BorderRadius.circular(999),
                 onTap: () => unawaited(_showStuckHelp(task)),
-                child: Padding(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: DS.warning.withValues(alpha: 0.45),
+                    ),
+                  ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: DS.spacing10,
                     vertical: DS.spacing8,
@@ -817,14 +853,14 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                     children: [
                       Icon(
                         Icons.lightbulb_outline_rounded,
-                        color: DS.primaryBase,
+                        color: DS.warning,
                         size: 17,
                       ),
                       const SizedBox(width: DS.spacing4),
                       Text(
                         context.l10n.taskExecutionStuckLabel,
                         style: DS.bodySmall.copyWith(
-                          color: DS.textSecondary,
+                          color: DS.warning,
                           fontWeight: DS.fontWeightBold,
                         ),
                       ),
