@@ -5,6 +5,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
@@ -254,6 +255,26 @@ class _SprintHeader extends StatelessWidget {
                   ? (zh ? '剩余 $daysLeft 天' : '$daysLeft days left')
                   : (zh ? '冲刺已结束' : 'Sprint ended')),
               avatar: const Icon(Icons.timelapse),
+            ),
+            const SizedBox(height: DS.md),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection);
+                  unawaited(context.push('/plans/${plan.id}/review'));
+                },
+                icon: const Icon(Icons.rate_review_outlined, size: 18),
+                label: Text(zh ? '冲刺复盘' : 'Sprint Review'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: DS.brandPrimary,
+                  side: BorderSide(color: DS.brandPrimary.withValues(alpha: 0.4)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                ),
+              ),
             ),
           ],
         ),

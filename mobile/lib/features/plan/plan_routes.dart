@@ -17,6 +17,7 @@ import 'package:sparkle/features/plan/presentation/screens/plan_history_screen.d
 import 'package:sparkle/features/plan/presentation/screens/post_exam_review_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_completion_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_history_screen.dart';
+import 'package:sparkle/features/plan/presentation/screens/sprint_review_screen.dart';
 import 'package:sparkle/features/plan/presentation/screens/sprint_screen.dart';
 
 class PlanRoutes {
@@ -25,6 +26,7 @@ class PlanRoutes {
   static const String planCreate = '/plans/new';
   static const String planDetail = '/plans/:id';
   static const String planEdit = '/plans/:id/edit';
+  static const String sprintReview = '/plans/:id/review';
   static const String planHistory = '/plans/history';
   static const String sprint = '/sprint';
   static const String sprintHistory = '/sprint/history';
@@ -178,6 +180,26 @@ class PlanRoutes {
                   trackOverride: BgmTrack.plan,
                 ),
                 child: PlanEditScreen(planId: planId),
+              ),
+              type: SharedAxisTransitionType.scaled,
+            );
+          },
+        ),
+        // Sprint review (detail page, full-screen)
+        GoRoute(
+          path: sprintReview,
+          name: 'sprintReview',
+          parentNavigatorKey: navigatorKey,
+          pageBuilder: (context, state) {
+            final planId = state.pathParameters['id']!;
+            return buildSparkleTransitionPage(
+              state: state,
+              motionToken: SparkleMotionToken.scene,
+              child: SceneAudioScope(
+                policy: ExperienceProfiles.dashboardProductive.audioPolicy(
+                  trackOverride: BgmTrack.plan,
+                ),
+                child: SprintReviewScreen(planId: planId),
               ),
               type: SharedAxisTransitionType.scaled,
             );
