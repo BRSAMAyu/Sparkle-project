@@ -221,31 +221,37 @@ from app.models.subject import Subject
 from app.models.task import Task, TaskStatus, TaskType
 from app.models.task_document import TaskDocument
 from app.models.task_feedback import TaskFeedback, TaskFeedbackCategory
-from app.models.task_history import TaskHistory
+try:
+    from app.models.task_history import TaskHistory
+except ImportError:
+    TaskHistory = None
 from app.models.theater_prediction import TheaterPrediction
 from app.models.tool_history import UserToolHistory
 from app.models.user import User
 from app.models.user_preferences import UserPreferencesCenter
 from app.models.user_settings import UserSettings
 from app.models.visual_element import VisualElement
-from app.models.workflow_conversation import (
-    ContentReview,
-    ContentReviewFeedback,
-    ConversationAnalysis,
-    ConversationPattern,
-    ConversationRoutine,
-    ConversationTrace,
-    ConversationTraceEvent,
-    ConversationTurn,
-    ConversationWorkflow,
-    ConversationWorkflowEvent,
-    ConversationWorkflowState,
-    RegenerationRequest,
-    ResponseFeedback,
-    ResponseQualityMeasure,
-    WorkflowAgent,
-    WorkflowCheckpoint,
-)
+try:
+    from app.models.workflow_conversation import (
+        ContentReview,
+        ContentReviewFeedback,
+        ConversationAnalysis,
+        ConversationPattern,
+        ConversationRoutine,
+        ConversationTrace,
+        ConversationTraceEvent,
+        ConversationTurn,
+        ConversationWorkflow,
+        ConversationWorkflowEvent,
+        ConversationWorkflowState,
+        RegenerationRequest,
+        ResponseFeedback,
+        ResponseQualityMeasure,
+        WorkflowAgent,
+        WorkflowCheckpoint,
+    )
+except ImportError:
+    pass
 
 __all__ = [
     # Base

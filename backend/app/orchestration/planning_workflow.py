@@ -1022,6 +1022,19 @@ class PlanningWorkflowManager:
         except Exception as _spine_exc:
             logger.debug("Spine directive fetch skipped: {}", _spine_exc)
 
+        # MAGIC-006: load community cohort mistakes for template injection
+        _cohort_hints: list[dict[str, Any]] = []
+        try:
+            _hint_raw = await cache_service.redis.get(
+                f"spine:community_loop:{str(user_id)}:cohort_mistake_hint:latest"
+            )
+            if _hint_raw:
+                _hint_data = json.loads(_hint_raw)
+                if isinstance(_hint_data, dict):
+                    _cohort_hints.append(_hint_data)
+        except Exception as _hint_exc:
+            logger.debug("MAGIC-006 cohort hint load skipped: {}", _hint_exc)
+
         # Apply PlanDirective constraints to the planning flow
         if plan_directive is not None:
             constraints = plan_directive.constraints
@@ -1089,6 +1102,22 @@ class PlanningWorkflowManager:
                         spine = None  # directive consumed once
                     except Exception as _spine_exc:
                         logger.debug("Spine apply_directive skipped: {}", _spine_exc)
+
+                # MAGIC-006: inject community cohort mistakes into day_spec
+                if _cohort_hints:
+                    _day_nodes = list(day_spec.get("sprint_pack_nodes") or [])
+                    _day_node_ids = {n.get("node_id") for n in _day_nodes if isinstance(n, dict)}
+                    _day_focus = (day_spec.get("focus") or "").lower()
+                    for _hint in _cohort_hints:
+                        _affected = set(_hint.get("affected_nodes") or [])
+                        if _affected & _day_node_ids or any(
+                            _n.lower() in _day_focus for _n in _affected
+                        ):
+                            day_spec.setdefault("_community_mistakes", []).append({
+                                "tip": _hint.get("tip", ""),
+                                "summary": _hint.get("anonymous_summary", ""),
+                            })
+                            break
 
                 guide_json = self._build_task_guide_json(
                     session=session,
@@ -2485,6 +2514,12 @@ class PlanningWorkflowManager:
         ]
         if common_mistakes_to_watch:
             common_mistakes = common_mistakes_to_watch
+        # MAGIC-006: merge community cohort mistakes into task template
+        _community_mistakes = list((day_spec or {}).get("_community_mistakes") or [])
+        for _cm in _community_mistakes:
+            _tip = _strip(_cm.get("tip"))
+            if _tip and _tip not in common_mistakes:
+                common_mistakes.append(_tip)
         if not common_mistakes:
             common_mistakes = ["只看内容不做自测，最后很难知道自己到底会不会。"]
         guide_json = {
