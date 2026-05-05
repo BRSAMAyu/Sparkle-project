@@ -34,7 +34,7 @@
 | GAP-P1-4 | MAGIC-001 统一连胜 + 差异化策略 | L2 | M | claude | ✅ done | — | 5372936c0 | Graduated milestones 7/14/21/30 + Chinese narratives + GrowthCard emission |
 | GAP-P1-5 | ExperienceEnvelope 状态模型 | L3 | M | claude | ✅ done | — | be22b3bc3 | model + provider + chat stream wiring, 2 tests pass |
 | GAP-P1-6 | CRDT 冲突解决 | L3 | M | spec→you | 📋 spec-done | — | addfd9716 | APP-005, 11 号报告, 跨层冲突解决 |
-| GAP-P1-7 | MAGIC-004 自动缺席检测 | L2 | M | claude | 🔵 in-progress | claude-01 | 2026-05-06T21:00:00Z | 02 号报告, 后端无自动缺席 + 无 WebSocket idle 追踪 |
+| GAP-P1-7 | MAGIC-004 自动缺席检测 | L2 | M | claude | ✅ done | — | f8f1775ac | AbsenceDetector: idle/short/prolonged/extended + Celery scan 30min + spine pipeline, 13 tests pass |
 
 **Phase 1 DOD**: ⬜ pending
 
@@ -98,8 +98,8 @@
 | Phase | Total | ✅ done | 📋 spec | ⬜ pending | Est. Days |
 |-------|-------|---------|---------|-----------|-----------|
 | Phase 0 | 2 | 2 | 0 | 0 | 0.5-2 |
-| Phase 1 | 7 | 4 | 2 | 1 | 5-8 |
+| Phase 1 | 7 | 5 | 2 | 0 | 5-8 |
 | Phase 2 | 7 | 0 | 0 | 7 | 15-25 |
 | Phase 3 | 7 | 0 | 0 | 7 | 8-12 |
 | Phase 4 | 12 | 0 | 0 | 12 | 8-12 |
-| **Total** | **35** | **6** | **2** | **27** | **35-45** |
+| **Total** | **35** | **7** | **2** | **26** | **35-45** |
