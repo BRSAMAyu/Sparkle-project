@@ -2613,8 +2613,9 @@
   - Cross-layer contracts: proto (N/A, REST endpoint), DB (no migration needed, uses existing JSON column), Go gateway (catch-all covers it), i18n (N/A) — **OK**
 
 ### ISSUE-20260504-1802-B3
-- **status**: in_progress
+- **status**: closed
 - **fixer_started_at**: 2026-05-04T10:25:00Z
+- **closed_at**: 2026-05-06T12:00:00Z
 - **severity**: P3
 - **domain**: B
 - **title**: GroupTasksNotifier 与 BlockedUsersNotifier 刷新失败时丢弃已有数据进入 error 态，与同文件其他 Notifier 不一致
@@ -2631,7 +2632,8 @@
 - **suggested_fix_direction**: 对 `GroupTasksNotifier.loadTasks()` 和 `BlockedUsersNotifier.loadBlockedUsers()` 采用与 `GroupDetailNotifier` 相同的 previous 保留模式，仅在无 previous 时进入 error 态
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-04T18:15Z
-- **fix_commit**: 留空
+- **fix_commit**: 9e95d5f02
+- **closed_by**: opus-reviewer+2026-05-06T12:00Z — APPROVED
 
 ### ISSUE-20260504-1900-D1
 - **status**: closed
