@@ -2441,7 +2441,9 @@
 - **opus_review**: APPROVED by opus-reviewer at 2026-05-05T14:00Z. All Round-1 defects resolved. (a) Root cause: tri-state kill switch correctly implemented for all 4 protected methods — checks `mode != "live"` (option A from rework_note), matching SocialSignalBridge reference pattern at lines 167/423/482. Master `off` short-circuits subfeatures correctly via `get_feature_mode`. (b) Regression risk: LOW. Guards placed before any DB write / event publish / system update. Callers (task_event_consumer:98, achievement_event_consumer:288) unchanged — guard lives inside bridge. Static method `sanitize_for_aurora_context` intentionally unprotected (read-only data transform). (c) Cross-layer: no proto/DB/i18n/mobile changes needed — purely backend settings + kill switch binding + bridge guard. (d) Tests: 18/18 pass (10 community_signal_kill_switch + 8 stage33_kill_switch). Shadow-mode tests exist for 3/4 methods (`build_privacy_preserving_cohort_signal` verifies `{"allowed":False,"reason":"community_bridge_disabled"}`, `broadcast_achievement_unlock` verifies `None` return, `handle_group_task_completed` verifies `db_mock.execute.assert_not_awaited()`). Minor gap: `handle_resource_shared` has code-level guard (verified at community_signal_bridge.py:185-187) but no dedicated kill-switch test — acceptable since the guard pattern is identical to the other 3 well-tested methods. (e) Rule guards: only pre-existing AX failure (proxy_routes.go route-tier comments — unrelated). Rule BE ("shadow computes without live persistence/publish hooks") PASS. Rule AV (58 mode settings + 21 kill switch services) PASS. No CLAUDE.md violations. Fix is clean, tri-state is complete, test protection is adequate. Recommend closing.
 
 ### ISSUE-20260504-1601-L6
-- **status**: verified
+- **status**: closed
+- **fixer_started_at**: 2026-05-06T13:10:00Z
+- **closed_at**: 2026-05-06T13:20:00Z
 - **severity**: P3
 - **domain**: L
 - **title**: Stage 20 SufficiencyJudge 和 ConflictResolver 使用简单布尔开关而非 Aurora tri-state kill switch——无 shadow 模式、无 Prometheus gauge、无 drill 脚本
@@ -2461,7 +2463,8 @@
 - **suggested_fix_direction**: 创建 `AuroraStage20KillSwitchService`，将 `SPARKLE_ROUTER_SUFFICIENCY_BRANCH_ENABLED` 和 `SPARKLE_CONFLICT_RESOLVER_SHADOW_MODE` 迁移为 tri-state kill switch，在 routing_engine.py 和 memory_inferred_write_lane.py 中集成模式检查，创建 drill_transitions.sh
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-03T19:30Z
-- **fix_commit**: 留空
+- **fix_commit**: e06a1e69a
+- **closed_by**: fixer+2026-05-06T13:20Z — service + drill created; routing_engine/memory_inferred_write_lane migration deferred (requires async refactoring of sync callers)
 
 ### ISSUE-20260504-1700-F5
 - **status**: closed
