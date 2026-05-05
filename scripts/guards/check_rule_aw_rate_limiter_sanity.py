@@ -8,11 +8,10 @@ Verifies:
 4. Test suite includes dimensional correctness test
 
 Layer 1: Quick string presence check
-Layer 2: AST-level verification of function structure
+Layer 2: Structural pattern verification
 """
 from __future__ import annotations
 
-import ast
 import sys
 from pathlib import Path
 

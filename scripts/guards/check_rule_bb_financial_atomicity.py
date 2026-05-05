@@ -69,9 +69,6 @@ def scan_rule_bb(
 
     # Layer 2: AST-level verification of _deduct_balance_atomically
     method_body = _extract_method_source(photon_source, "PhotonService", "_deduct_balance_atomically")
-    if method_body is None:
-        # Try without class context — method may be standalone or on different class
-        method_body = _extract_method_source(photon_source, None, "_deduct_balance_atomically")  # type: ignore[arg-type]
 
     if method_body is not None:
         # Verify the method body contains the critical SQL safety clauses
@@ -85,7 +82,6 @@ def scan_rule_bb(
                     f"BB003 _deduct_balance_atomically missing {description} (`{clause}`)"
                 )
     else:
-        # Fallback: verify via full-file string that critical clauses exist near the method
         violations.append(
             "BB003 could not locate _deduct_balance_atomically for AST verification"
         )
