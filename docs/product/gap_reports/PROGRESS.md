@@ -82,7 +82,7 @@
 | GAP-P4-4 | 社群 UI 目标价值渲染 | L2 | S | claude | ✅ done | — | a32976238 | COM-011, "这如何帮助我的目标" |
 | GAP-P4-5 | 混沌测试 MinIO 覆盖 | L2 | M | claude | ✅ done | — | a3c62f4df | OBS-020, 18 MinIO resilience tests + drill scenarios (minio-down, minio-slow) |
 | GAP-P4-6 | SLO + Prometheus 告警 | L2 | M | claude | 🔵 in-progress | claude-B | 2026-05-06T12:36:00Z | STAB-018, 性能 SLO 指标 |
-| GAP-P4-7 | MAGIC-002 "我改了 N 个任务" 展示 | L1 | S | claude | 🔵 in-progress | claude-session-1778019965 | 2026-05-06T12:26:05Z | 02 号报告, 纠正后影响展示 |
+| GAP-P4-7 | MAGIC-002 "我改了 N 个任务" 展示 | L1 | S | claude | ✅ done | — | e6ef6cc72 | 02 号报告, correction_impact card + envelope + stream emission |
 | GAP-P4-8 | MAGIC-003 向用户展示不用资料原因 | L1 | S | claude | ⬜ pending | — | — | 02 号报告, reason 面向用户 |
 | GAP-P4-9 | MAGIC-005 个性化收益 profile | L2 | S | claude | ⬜ pending | — | — | 02 号报告, 硬编码 → 个性化 |
 | GAP-P4-10 | MAGIC-006 任务模板注入 | L2 | M | claude | ⬜ pending | — | — | 02 号报告, 社群经验 → 任务模板 |
@@ -101,5 +101,5 @@
 | Phase 1 | 7 | 5 | 2 | 0 | 5-8 |
 | Phase 2 | 7 | 3 | 2 | 2 | 15-25 |
 | Phase 3 | 7 | 4 | 3 | 0 | 8-12 |
-| Phase 4 | 12 | 2 | 3 | 7 | 8-12 |
-| **Total** | **35** | **16** | **8** | **11** | **35-45** |
+| Phase 4 | 12 | 3 | 3 | 6 | 8-12 |
+| **Total** | **35** | **17** | **8** | **10** | **35-45** |
