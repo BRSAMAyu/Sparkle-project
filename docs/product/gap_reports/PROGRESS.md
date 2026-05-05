@@ -62,7 +62,7 @@
 |----|-------|-------|--------|------|--------|-----------|--------|------|
 | GAP-P3-1 | SpineSnapshot 调度 + close_session 触发 | L1 | S | claude | ✅ done | — | verified-existing | STAB-002: spine-snapshot-daily beat (b3307e5f) + session_end snapshot (623ca6c1) already wired |
 | GAP-P3-2 | FatigueGuard 独立服务 | L3 | M | spec→you | 🔵 in-progress | claude-B | 2026-05-06T19:10:00Z | STAB-010, 疲劳信号统一服务 |
-| GAP-P3-3 | RecoveryModeOrchestrator | L3 | L | spec→you | 🔵 in-progress | claude-session-1778012685 | 2026-05-06T10:18:05Z | STAB-013, 多依赖故障一致性恢复 |
+| GAP-P3-3 | RecoveryModeOrchestrator | L3 | L | spec→you | 📋 spec-done | — | 6dd6412c7 | STAB-013, 4-phase spec: health monitor + event buffer + recovery orchestration + consistency verify |
 | GAP-P3-4 | GROW-009 数据删除/导出 | L3 | M | spec→you | ⬜ pending | — | — | 09 号报告, 永久删除 + 导出 (数据主权) |
 | GAP-P3-5 | NUDGE-002 每渠道交付策略 | L2 | M | claude | ⬜ pending | — | — | 09 号报告, push/in-app/email 选择 |
 | GAP-P3-6 | GROW-002 连胜质量门槛 | L2 | S | claude | ⬜ pending | — | — | 09 号报告, fatigue/crisis/late-night 纳入 StreakQuality |
@@ -100,6 +100,6 @@
 | Phase 0 | 2 | 2 | 0 | 0 | 0.5-2 |
 | Phase 1 | 7 | 5 | 2 | 0 | 5-8 |
 | Phase 2 | 7 | 3 | 2 | 2 | 15-25 |
-| Phase 3 | 7 | 1 | 0 | 6 | 8-12 |
+| Phase 3 | 7 | 1 | 1 | 5 | 8-12 |
 | Phase 4 | 12 | 0 | 0 | 12 | 8-12 |
-| **Total** | **35** | **11** | **4** | **20** | **35-45** |
+| **Total** | **35** | **11** | **5** | **19** | **35-45** |
