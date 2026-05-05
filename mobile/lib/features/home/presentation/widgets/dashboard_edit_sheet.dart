@@ -119,8 +119,8 @@ class _SlotEditor extends ConsumerWidget {
             Expanded(
               child: Text(
                 zh
-                    ? '勾选要显示的分区，长按拖拽重新排序，点折叠按钮让分区只占 64px。'
-                    : 'Toggle visibility, drag to reorder, collapse to shrink a section to a 64px header.',
+                    ? '所有分区默认可见。开关隐藏，拖拽排序，按 ⇕ 让低频分区收成 64px 标题条。'
+                    : 'All sections start visible. Switch to hide, drag to reorder, tap ⇕ to collapse low-glance sections into a 64px header.',
                 style: context.sparkleTypography.bodySmall.copyWith(
                   color: DS.textSecondary,
                 ),

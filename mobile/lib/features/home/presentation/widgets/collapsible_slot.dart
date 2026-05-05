@@ -130,6 +130,18 @@ class _CollapsedHeader extends StatelessWidget {
           onLongPress: onLongPress,
           child: Row(
             children: [
+              // Accent rail — gives each collapsed slot a strong colour
+              // identity at the tiny 64px height, where a tinted icon
+              // chip alone is too easily lost in the row.
+              Container(
+                width: 3,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.85),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: DS.spacing10),
               Container(
                 width: 32,
                 height: 32,
@@ -175,7 +187,7 @@ class _CollapsedHeader extends StatelessWidget {
               Icon(
                 Icons.expand_more_rounded,
                 size: 20,
-                color: DS.textTertiary,
+                color: accent.withValues(alpha: 0.55),
               ),
             ],
           ),
