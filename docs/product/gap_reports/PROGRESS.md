@@ -60,7 +60,7 @@
 
 | ID | Title | Level | Effort | Mode | Status | Claimed-By | Commit | Note |
 |----|-------|-------|--------|------|--------|-----------|--------|------|
-| GAP-P3-1 | SpineSnapshot 调度 + close_session 触发 | L1 | S | claude | ⬜ pending | — | — | STAB-002, celery_schedule 注册 + close_session 快照 |
+| GAP-P3-1 | SpineSnapshot 调度 + close_session 触发 | L1 | S | claude | 🔵 in-progress | claude-session-1778011479 | 2026-05-06T09:54:39Z | STAB-002, celery_schedule 注册 + close_session 快照 |
 | GAP-P3-2 | FatigueGuard 独立服务 | L3 | M | spec→you | ⬜ pending | — | — | STAB-010, 疲劳信号统一服务 |
 | GAP-P3-3 | RecoveryModeOrchestrator | L3 | L | spec→you | ⬜ pending | — | — | STAB-013, 多依赖故障一致性恢复 |
 | GAP-P3-4 | GROW-009 数据删除/导出 | L3 | M | spec→you | ⬜ pending | — | — | 09 号报告, 永久删除 + 导出 (数据主权) |
