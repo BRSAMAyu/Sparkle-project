@@ -274,7 +274,7 @@ class RetrievalIntentClassifier:
                 should_retrieve=False,
                 budget_tokens=0,
                 reason="aurora_doc_context_mode_skip",
-                reason_for_user="Aurora · 本轮未调用课件",
+                reason_for_user="资料检索已关闭，如需查资料可以告诉我",
             )
         if use_document_context is False:
             return ContextPlan(
@@ -282,7 +282,7 @@ class RetrievalIntentClassifier:
                 should_retrieve=False,
                 budget_tokens=0,
                 reason="session_use_document_context_false",
-                reason_for_user="Aurora · 资料检索已关闭",
+                reason_for_user="当前会话的资料检索已关闭",
             )
         if not text:
             return ContextPlan(
@@ -306,7 +306,7 @@ class RetrievalIntentClassifier:
                 pollution_guard=base.pollution_guard,
                 citation_required=base.citation_required,
                 user_visible_receipt=base.user_visible_receipt,
-                reason_for_user=base.reason_for_user or "Aurora · 已参考知识星图摘要",
+                reason_for_user=base.reason_for_user or "参考了知识星图摘要，未调用课件",
             )
         if mode_override == "aggressive" and base.retrieval_mode == "graph_only":
             return ContextPlan(
@@ -317,7 +317,7 @@ class RetrievalIntentClassifier:
                 pollution_guard="moderate",
                 citation_required=True,
                 user_visible_receipt=True,
-                reason_for_user=base.reason_for_user or "Aurora · 已参考相关资料",
+                reason_for_user=base.reason_for_user or "参考了相关资料进行回答",
             )
         return base
 
@@ -351,7 +351,7 @@ class RetrievalIntentClassifier:
                 budget_tokens=0,
                 reason="emotional_or_social_turn",
                 user_visible_receipt=True,
-                reason_for_user="Aurora · 本轮未调用课件",
+                reason_for_user="你在聊情绪或日常，课件帮不上忙，我专注听你说",
             )
 
         if _matches_any(text, _SIMPLE_TASK_PATTERNS) or route in self.SIMPLE_ROUTE_HINTS or scores["simple_task"] >= 0.32:
@@ -361,7 +361,7 @@ class RetrievalIntentClassifier:
                 budget_tokens=0,
                 reason="simple_task_turn",
                 user_visible_receipt=True,
-                reason_for_user="Aurora · 本轮未调用课件",
+                reason_for_user="这是个简单操作，不需要查资料",
             )
 
         knowledge_signal = _matches_any(text, _KNOWLEDGE_PATTERNS) or scores["knowledge"] >= 0.24
@@ -386,7 +386,7 @@ class RetrievalIntentClassifier:
                 pollution_guard="moderate",
                 citation_required=False,
                 user_visible_receipt=True,
-                reason_for_user="Aurora · 已参考知识星图摘要",
+                reason_for_user="规划类问题主要参考知识星图，不需要课件",
             )
 
         # P1-9: deep_source_synthesis — multi-source cross-reference synthesis
@@ -403,7 +403,7 @@ class RetrievalIntentClassifier:
                 pollution_guard="moderate",
                 citation_required=True,
                 user_visible_receipt=True,
-                reason_for_user="Aurora · 已综合多方资料分析",
+                reason_for_user="综合了多份资料进行交叉分析",
             )
 
         if case_file_signal:
@@ -416,7 +416,7 @@ class RetrievalIntentClassifier:
                 pollution_guard="moderate",
                 citation_required=False,
                 user_visible_receipt=True,
-                reason_for_user="Aurora · 已参考历史分析记录",
+                reason_for_user="参考了之前的分析记录",
             )
 
         if knowledge_signal:
@@ -429,7 +429,7 @@ class RetrievalIntentClassifier:
                 pollution_guard="strict",
                 citation_required=True,
                 user_visible_receipt=True,
-                reason_for_user="Aurora · 已参考相关资料",
+                reason_for_user="参考了相关资料来回答你的问题",
             )
 
         if ambiguous_signal or linked_docs:
@@ -446,7 +446,7 @@ class RetrievalIntentClassifier:
                 pollution_guard="moderate",
                 citation_required=False,
                 user_visible_receipt=True,
-                reason_for_user="Aurora · 已参考知识星图摘要",
+                reason_for_user="问题比较模糊，先参考知识星图摘要",
             )
 
         return ContextPlan(
@@ -455,7 +455,7 @@ class RetrievalIntentClassifier:
             budget_tokens=0,
             reason="no_document_retrieval_signal",
             user_visible_receipt=True,
-            reason_for_user="Aurora · 本轮未调用课件",
+            reason_for_user="本轮没有明确的资料查询需求",
         )
 
 
@@ -502,7 +502,7 @@ def build_retrieval_decision(
                         pollution_guard="moderate",
                         citation_required=True,
                         user_visible_receipt=True,
-                        reason_for_user="Aurora · 按你的课件回答",
+                        reason_for_user="按你选的课件来回答",
                     )
                 return normal
 
