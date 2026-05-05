@@ -20,7 +20,7 @@
 | GAP-P0-1 | RetrievalDirective → RAG 消费 | L2 | S | you | ✅ done | — | user | graph_rag.py + retrieval_service.py + orchestrator, 20 tests pass |
 | GAP-P0-2 | 常规轮次轻量信号检测 + CausalTrace | L2 | S | claude | ✅ done | — | 623ca6c1b | on_chat_turn + _detect_chat_turn_signal + heartbeat + CausalTrace every turn, 3 tests pass |
 
-**Phase 0 DOD**: ⬜ pending
+**Phase 0 DOD**: ✅ PASS — 2/2 items done, 40 tests pass, security PASS, correctness PASS. (AT001 on untracked plan_version_service.py is P1-2 scope; Go coverage needs infra.)
 
 ---
 
