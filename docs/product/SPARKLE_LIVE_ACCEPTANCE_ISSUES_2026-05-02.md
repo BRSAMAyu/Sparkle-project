@@ -2516,7 +2516,9 @@
     Fix code (19 `raise` additions + test file) is currently in git stash@{0}, NOT in the working tree. The working tree HEAD lacks the raises. Before marking this issue closed, the fix must be applied from stash and committed. Test file (backend/tests/services/test_consumer_exception_propagation.py) is untracked — also needs git add + commit.
 
 ### ISSUE-20260504-2130-F6
-- **status**: verified
+- **status**: closed
+- **fixer_started_at**: 2026-05-06T13:30:00Z
+- **closed_at**: 2026-05-06T13:40:00Z
 - **severity**: P2
 - **domain**: F
 - **title**: EventBus DLQ 有 PostgreSQL 持久化 + Redis 流但零管理/重放 API
@@ -2535,9 +2537,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-05T08:00:00Z
 - **reviewer_note**: APPROVED — independent review confirms all 5 evidence references. (1) event_bus.py:740-818 — _persist_dlq_entry() writes to PostgreSQL via db.add(EventBusDLQEntry(...)), _move_to_dlq() writes to Redis via xadd to sparkle_events:dlq stream. Both are write-only paths. (2) EventBusDLQEntry model (event_bus_dlq.py:1-26) has 10 fully-indexed columns (stream, event_type, user_id, message_id, etc.) but is only used once in the entire backend — the INSERT at event_bus.py:767. Zero SELECT queries exist. (3) event_bus_health.py:60-70 — /event-bus/dlq calls get_dlq_stats() (event_bus.py:1244-1282) which returns only {dlq_stream, message_count, oldest_message_age_seconds}. No entry-level data. (4) dlq_admin.py:16-95 — GET /dlq/ reads CognitiveStreamWorker.DLQ_STREAM ("stream:dlq:persona") via xrevrange. POST /dlq/replay writes to same stream via worker.replay_dlq_event(). CognitiveStreamWorker.DLQ_STREAM != EventBus DLQ ("sparkle_events:dlq"). The admin API is completely isolated from EventBus DLQ. (5) CognitiveStreamWorker.replay_dlq_event() (line 243-261) is the sole replay implementation, operating only on CognitiveStreamWorker's private stream. Call chain for DLQ write: consumer fails → _handle_failed_message → _move_to_dlq → Redis xadd + _persist_dlq_entry → PostgreSQL INSERT. Call chain for DLQ read: NONE — no API endpoint, no service method, no SELECT query reads from event_bus_dlq table or sparkle_events:dlq stream. Not "by design" — the event_bus_dlq table has 8 indexes optimized for querying (by stream, event_type, user_id, failure_stage, message_id, etc.), clearly indicating read-side intent. The DLQ write path includes audit fields (retry_count, failure_stage, error) meant for operational visibility. The dlq_admin.py pattern for CognitiveStreamWorker proves the team knows how to build DLQ management APIs — EventBus DLQ simply lacks the equivalent. Not duplicate of F1-F5: F1-F5 all concern consumer-side error handling (subscribe failure, framework bypass, task health detection, stop() methods, exception swallowing); F6 is about the DLQ infrastructure itself having no read/replay API despite a complete write path.
-- **fix_commit**: 留空
-
-### ISSUE-20260504-1800-B1
+- **fix_commit**: f003da8c3
+- **closed_by**: fixer+2026-05-06T13:40Z
 - **status**: closed
 - **closed_at**: 2026-05-03T23:55:00Z
 - **fixer_started_at**: 2026-05-03T17:20:00Z
