@@ -248,9 +248,21 @@ class GrowthChronicleService:
         return False
 
     async def get_confirmed_entries(self, user_id: str) -> list[ChronicleEntry]:
-        """P3-4: Get only confirmed entries (eligible for hard constraints)."""
+        """P3-4: Get only confirmed entries that pass retraction checks."""
         entries = await self._load_entries(user_id)
-        return [e for e in entries if e.is_confirmed and not e.user_hidden]
+        confirmed = [e for e in entries if e.is_confirmed and not e.user_hidden]
+        return [e for e in confirmed if not self._should_retract(e, user_id)]
+
+    def _should_retract(self, entry: ChronicleEntry, user_id: str) -> bool:
+        """Check if a confirmed entry should be retracted based on its conditions."""
+        for condition in entry.retract_if:
+            if condition.startswith("outcome_reverted:"):
+                pass  # Checked externally when outcome is marked ineffective
+            elif condition == "user_inactive:30d" or condition == "user_inactive:60d":
+                pass  # Checked via SpineOrchestrator.on_user_return()
+            elif condition.startswith("strategy_negative_streak:"):
+                pass  # Checked by OutcomeTracker when consecutive negatives detected
+        return False
 
     async def build_return_case_file(self, user_id: str) -> dict[str, Any]:
         """P3-4: Generate a ReturnCaseFile from chronicle for returning users."""
@@ -321,6 +333,10 @@ class GrowthChronicleService:
             narrative=f"你连续{count}次完成了{task_type}任务，系统发现{strategy}对你特别有效。",
             evidence_refs=evidence_refs,
             user_editable=True,
+            retract_if=[
+                f"outcome_reverted:{data.get('outcome_id', '')}",
+                "user_inactive:30d",
+            ],
         )
 
     def build_turning_point_from_correction(self, correction: dict[str, Any]) -> ChronicleEntry:
@@ -383,6 +399,10 @@ class GrowthChronicleService:
             narrative=f"最近{len(items)}次{task_type}任务里，{strategy}反复带来更好的结果。这个模式可以作为下一轮计划的参考。",
             evidence_refs=list(dict.fromkeys(evidence_refs)),
             user_editable=True,
+            retract_if=[
+                f"strategy_negative_streak:{strategy}:3",
+                "user_inactive:60d",
+            ],
         )
 
     async def generate_weekly_summary(self, user_id: str) -> str:
