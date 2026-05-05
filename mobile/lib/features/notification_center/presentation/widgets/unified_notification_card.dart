@@ -136,6 +136,19 @@ class UnifiedNotificationCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
 
+                    // Goal value highlight — always visible when present
+                    if (_hasText(notification.valueReason)) ...[
+                      const SizedBox(height: DS.sm),
+                      _buildGoalValueChip(context),
+                    ],
+
+                    // Suggested next step — always visible when present
+                    if (notification.isIntervention &&
+                        _hasText(notification.suggestedStep)) ...[
+                      const SizedBox(height: DS.sm),
+                      _buildNextStepHint(context),
+                    ],
+
                     const SizedBox(height: DS.sm),
 
                     // Timestamp
@@ -570,6 +583,62 @@ class UnifiedNotificationCard extends StatelessWidget {
       );
 
   bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
+
+  Widget _buildGoalValueChip(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: DS.brandPrimary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.flag_outlined, size: 14, color: DS.brandPrimary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              notification.valueReason!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.brandPrimary,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNextStepHint(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: DS.success.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: DS.success.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.arrow_forward_rounded, size: 14, color: DS.success),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              notification.suggestedStep!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.success,
+                    fontWeight: DS.fontWeightMedium,
+                  ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   String _labelForInteractionState(BuildContext context, String state) {
     switch (state) {
