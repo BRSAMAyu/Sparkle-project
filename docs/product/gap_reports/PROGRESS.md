@@ -32,7 +32,7 @@
 | GAP-P1-2 | Plan 版本化 + 回滚 | L3 | L | spec→you | 📋 spec-done | — | 7f12af33c | Spec: _specs/GAP-P1-2.md, 5 phases, 6.5-9.5 day est. |
 | GAP-P1-3 | 非考试首分钟检测器 | L2 | M | claude | ✅ done | — | 642a095a1 | NonExamFirstMinuteDetector: job_search/project/habit, 7 tests pass |
 | GAP-P1-4 | MAGIC-001 统一连胜 + 差异化策略 | L2 | M | claude | 🔵 in-progress | claude-B | 2026-05-06T19:30:00Z | 02 号报告 MAGIC-001, 7 天无差异化 + Flutter 叙事缺失 |
-| GAP-P1-5 | ExperienceEnvelope 状态模型 | L3 | M | claude | ⬜ pending | — | — | APP-001, 11 号报告, 专用状态管理 |
+| GAP-P1-5 | ExperienceEnvelope 状态模型 | L3 | M | claude | 🔵 in-progress | claude-01 | — | APP-001, 11 号报告, 专用状态管理 |
 | GAP-P1-6 | CRDT 冲突解决 | L3 | M | spec→you | ⬜ pending | — | — | APP-005, 11 号报告, 跨层冲突解决 |
 | GAP-P1-7 | MAGIC-004 自动缺席检测 | L2 | M | claude | ⬜ pending | — | — | 02 号报告, 后端无自动缺席 + 无 WebSocket idle 追踪 |
 
