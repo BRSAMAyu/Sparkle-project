@@ -50,7 +50,7 @@
 | GAP-P2-4 | Sprint 复盘页面 | L2 | M | claude | ✅ done | — | e27a328c0 | Sprint review screen + route + sprint header button, 3 files |
 | GAP-P2-5 | 星图页 goal-world-model overlay | L2 | M | claude | 🔵 in-progress | claude-B | 2026-05-07T02:00:00Z | UX-005, 01 号报告 |
 | GAP-P2-6 | 设置页 5 个子版块 | L2 | L | spec→you | ⬜ pending | — | — | UX-010, 记忆管理/社群智能等 |
-| GAP-P2-7 | 通知中心目标价值渲染 | L1 | S | claude | 🔵 in-progress | claude-1778010282 | 2026-05-06T09:51:22Z | UX-011, 突出目标价值 + 下一步 |
+| GAP-P2-7 | 通知中心目标价值渲染 | L1 | S | claude | ✅ done | — | 8e1f0b22e | Goal value chip + next step hint, always visible in notification card |
 
 **Phase 2 DOD**: ⬜ pending
 
@@ -99,7 +99,7 @@
 |-------|-------|---------|---------|-----------|-----------|
 | Phase 0 | 2 | 2 | 0 | 0 | 0.5-2 |
 | Phase 1 | 7 | 5 | 2 | 0 | 5-8 |
-| Phase 2 | 7 | 2 | 2 | 3 | 15-25 |
+| Phase 2 | 7 | 3 | 2 | 2 | 15-25 |
 | Phase 3 | 7 | 0 | 0 | 7 | 8-12 |
 | Phase 4 | 12 | 0 | 0 | 12 | 8-12 |
-| **Total** | **35** | **9** | **4** | **22** | **35-45** |
+| **Total** | **35** | **10** | **4** | **21** | **35-45** |
