@@ -2978,7 +2978,9 @@
 - **opus_review_2**: APPROVED by independent-fix-reviewer at 2026-05-06T12:00:00Z. Independent re-verification confirms: (a) Root cause addressed — commit e1d488fab diff shows 1 import added (`build_safe_chat_error`), 3 lines changed (`message=safe_message`, `retryable=retryable`, `error_code=error_code`), raw `f"...{exc}"` fully removed. Confirmed by reading execution_engine.py:1377-1393. (b) Regression risk minimal — `build_safe_chat_error` is existing pure function; 2 regression tests executed and pass (0.87s). (c) Cross-layer: no proto/DB changes needed; Go forwards Error proto as-is. (d) Test effectiveness confirmed by live execution: both tests pass, testing both the sanitization path and the logging path. (e) Rule guards: only AX fails (pre-existing, unrelated). APPROVED.
 
 ### ISSUE-20260505-1100-D5
-- **status**: verified
+- **status**: closed
+- **fixer_started_at**: 2026-05-06T12:45:00Z
+- **closed_at**: 2026-05-06T12:50:00Z
 - **severity**: P3
 - **domain**: D
 - **title**: _execute_graph does not cancel graph_task when client disconnects — continues consuming LLM tokens until graph naturally completes or queue backpressure triggers
@@ -2997,7 +2999,8 @@
 - **suggested_fix_direction**: Add `try/finally` in `_execute_graph`: in the `finally` block, check `graph_task.done()`, if not done then `graph_task.cancel()`. Or in orchestrator's `_cleanup` accept a `graph_task` reference and cancel it. Must be careful about cancellation timing — do not cancel on normal completion path.
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-reviewer+2026-05-03T23:15
-- **fix_commit**: 留空（fixer 填）
+- **fix_commit**: d3a96cea7
+- **closed_by**: fixer+2026-05-06T12:50Z
 - **reviewer_note**: APPROVED — independent verification confirms all 6 evidence references match committed code exactly. (1) execution_engine.py:1808-1847 — `_execute_graph` confirmed as async generator with no try/finally. `graph_task = await task_manager.spawn(...)` at line 1817. While loop at 1826 with `yield item` at 1835. GeneratorExit from `yield` has no handler. (2) orchestrator.py:3376-3379 — caller `async for item in self._execute_graph(...)` confirmed. When process_stream's consumer stops iterating, generator cleanup fires but no finally block exists. (3) orchestrator.py:336/2096 — `_STREAM_QUEUE_MAXSIZE = 512` and `asyncio.Queue(maxsize=self._STREAM_QUEUE_MAXSIZE)` confirmed. (4) orchestrator.py:2543-2558 — `stream_callback` confirmed: calls `_enqueue_stream_response` at 2552, catches TimeoutError at 2553 and logs only — does NOT re-raise. This means graph nodes continue executing even when queue is full. (5) orchestrator.py:338/1547-1549 — `_STREAM_QUEUE_CRITICAL_PUT_TIMEOUT_SECONDS = 1.5` and `await asyncio.wait_for(queue.put(resp), timeout=...)` confirmed. (6) response_builder.py:1492-1550 — `_cleanup()` confirmed: releases locks, records metrics, no graph_task cancellation. NOT "by design" — the code has no explicit comment or pattern suggesting intentional non-cancellation. The 512-item queue + 1.5s timeout is a safety backstop, not a designed solution. The suggested fix (try/finally in _execute_graph) is the standard Python async generator cleanup pattern. NOT duplicate of any existing entry — D1/D2/D3 address different issues (exception swallowing, edge targets, max_steps). No other entry covers client-disconnect graph_task cleanup. P3 severity confirmed — resource waste with no data correctness impact, partially mitigated by queue backpressure.
 
 ### Round R25 — 2026-05-04T05:00
