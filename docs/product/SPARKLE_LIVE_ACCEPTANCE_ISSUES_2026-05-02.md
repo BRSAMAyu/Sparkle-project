@@ -2391,7 +2391,9 @@
     **Rule guards**: 63 规则通过. 1 个预存失败 (Rule AX -- proxy_routes.go 缺少 route-tier 注释, 与本 fix 无关). 16 个 BG003 警告 (proto 生成文件过期, 预存问题).
 
 ### ISSUE-20260504-1431-C7
-- **status**: verified
+- **status**: closed
+- **fixer_started_at**: 2026-05-06T13:00:00Z
+- **closed_at**: 2026-05-06T13:05:00Z
 - **severity**: P3
 - **domain**: C
 - **title**: Proto HeartbeatPing/HeartbeatPong 消息类型为死代码——三套心跳机制仅两套存活
@@ -2410,7 +2412,8 @@
 - **suggested_fix_direction**: (1) 短期：在 websocket.proto 的 HeartbeatPing/HeartbeatPong 上方添加注释说明实际心跳机制，标记 "reserved for future use"；(2) 长期：决策是否统一为 proto 心跳（获得标准化 RTT 指标和 client_id 追踪），或从 proto 中删除未使用的消息类型
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-independent-auditor+2026-05-03T18:45Z
-- **fix_commit**: 留空
+- **fix_commit**: a2a366729
+- **closed_by**: fixer+2026-05-06T13:05Z
 
 ### ISSUE-20260504-1600-L5
 - **status**: closed
