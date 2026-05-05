@@ -1412,7 +1412,9 @@
 - **closed_at**: 2026-05-04T08:05:00Z
 
 ### ISSUE-20260503-0432-L4
-- **status**: verified
+- **status**: closed
+- **fixer_started_at**: 2026-05-06T13:45:00Z
+- **closed_at**: 2026-05-06T14:00:00Z
 - **severity**: P3
 - **domain**: L
 - **title**: 多个治理守卫脚本使用浅层字符串匹配检测而非行为验证，函数重命名/重构可能导致守卫静默失效
@@ -1429,7 +1431,8 @@
 - **suggested_fix_direction**: 短期：为关键守卫（BB financial）添加 AST 级验证和语义测试（如验证 `update(User)` 语句包含 `WHERE User.photon_balance >= amount` 条件）。长期：将守卫分为两类——"契约存在"（轻量字符串检查，快速失败）和"契约正确性"（AST/行为验证，深度检查），前者用于快速门控，后者用于定期深度审计
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-03T22:30:00Z
-- **fix_commit**:
+- **fix_commit**: af8b7bae0
+- **closed_by**: fixer+2026-05-06T14:00Z — also fixed BE state_aggregator path (was pointing to non-existent directory)
 
 ### ISSUE-20260503-2300-B1
 - **status**: closed
