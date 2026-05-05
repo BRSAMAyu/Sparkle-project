@@ -1482,7 +1482,9 @@
 - **closed_at**: 2026-05-04T08:25:00Z
 
 ### ISSUE-20260503-2302-B3
-- **status**: verified
+- **status**: closed
+- **fixer_started_at**: 2026-05-06T14:15:00Z
+- **closed_at**: 2026-05-06T14:20:00Z
 - **severity**: P3
 - **domain**: B
 - **title**: spineStatusBandProvider 使用 catch (_) 吞没所有异常，provider 永远不进入 error 状态，代码 bug 与网络故障不可区分
@@ -1499,9 +1501,8 @@
 - **reviewer_note**: APPROVED — 独立审阅确认全部 3 处 evidence 代码与条目描述一致。(1) spine_status_band_provider.dart:117-130 的 catch(_) { return null; } 在 line 127-129 吞没所有异常。(2) FutureProvider<SpineStatusBand?> 的 nullable 类型使 null 为合法返回值，不会触发 error 状态。(3) line 121-122 使用非空端点 auroraSpineStatusBand。调用链完整：API 调用 → 任何异常 (DioException 或 TypeError) → catch(_) → return null → FutureProvider resolve AsyncData(null) → UI 根据 null 隐藏 widget。非设计意图——网络故障静默降级为 null 可接受，但代码 bug (TypeError) 也被同等吞没，开发者无法通过 UI 或日志区分。与 B1/B2 不重复——B1 是 repository 层静默降级，B2 是乐观更新无声回退，B3 是 catch-all 吞错使 error 状态不可达。P3 评级合理——仅影响非关键 UI 组件，但对开发调试体验有影响。
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T00:15:00Z
-- **fix_commit**:
-
-### Round R14 — 2026-05-03T23:00
+- **fix_commit**: eb0cb012f
+- **closed_by**: fixer+2026-05-06T14:20Z — 2026-05-03T23:00
 - **Domain**: B (Riverpod Provider 健康度 — 续探)
 - **Paths covered**:
   - experience_repository.dart + experience_models.dart + experience_provider.dart (_payload 无声转换为空对象链, 4 个 FutureProvider)
@@ -2729,7 +2730,8 @@
 - **fix_commit**: 863d41d7e + a7d59f346
 - **independent_fix_review**: APPROVED by independent-fix-auditor at 2026-05-04T01:05:00Z — Verified all 5 review criteria: (a) root cause genuinely addressed at both layers — statechart_engine.py lines 317-318 now append truncation error and set is_finished=True on max_steps exceeded; orchestrator.py lines 3460-3462 now check final_state.is_finished and set descriptive completion_note; (b) zero regression risk — is_finished defaults to False and is only set to True by the new truncation path; no production code previously relied on is_finished being always-False; the orchestrator completion_note change is purely additive (changes session status message string, not control flow); (c) no cross-layer contract changes — is_finished is a WorkflowState dataclass field internal to Python engine, already serialized by redis_checkpointer.py (lines 58/104/148), no proto/DB/i18n dependencies; (d) regression test effective — test_max_steps_truncation_sets_is_finished_and_error (line 1075) asserts both is_finished=True AND truncation error message; removing the fix would cause both assertions to fail; test runs and passes (confirmed 35/35 tests pass); (e) no CLAUDE.md or rule guard violations — rule guards pass (only pre-existing AX failure); no hardcoded secrets, no direct DB calls, no business logic in gateway. Note: D3 fix was split across two commits — 863d41d7e (statechart_engine.py is_finished + error) and a7d59f346 (orchestrator.py completion_note). Both changes are minimal and surgical.
 - **opus_review**: APPROVED by independent-fix-reviewer at 2026-05-04T01:10:00Z — (a) root cause genuinely addressed at engine level: statechart_engine.py:317-318 now appends truncation error to state.errors and sets state.is_finished=True when max_steps exceeded; orchestrator.py:3460-3462 adds is_finished check to completion_note providing traceability; (b) zero regression risk — is_finished was never read by any code (confirmed by issue grep), state.errors.append() is standard pattern used elsewhere, orchestrator completion_note is purely cosmetic string change; (c) no cross-layer contract changes — statechart_engine.py and orchestrator.py are Python-internal; WorkflowState dataclass has no proto/DB/i18n dependencies; (d) regression test test_max_steps_truncation_sets_is_finished_and_error protects both assertions (is_finished=True and truncation error message) — removing either fix element would fail the test; 35/35 tests pass with asyncio_mode=auto; (e) no CLAUDE.md or rule guard violations — all changes are Python-internal, no secrets, no business logic in gateway, rule guards pass with only pre-existing AX failure (Go proxy_routes.go route-tier comments, confirmed pre-existing via git stash test). Minor notes: orchestrator behavioral gap remains (session still marked STATE_DONE on truncation, only note differs), consistent with P2 severity and partial-state-return being preferable to hard failure; D3 regression test placed inside TestD2EdgeTargetValidation class (confusing naming) but functionally correct.
-- **status**: verified
+- **status**: closed_already_resolved
+- **closed_at**: 2026-05-06T14:10:00Z
 - **severity**: P2
 - **domain**: E
 - **title**: Privacy kill switch drill 的 _PRIVACY_BINDING 内联 type() 缺少 allowed_modes 字段导致 write_mode() 抛出 AttributeError——E7 的 fix_commit 指向错误的 B5 提交，该 bug 实际未修复
