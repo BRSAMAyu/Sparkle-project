@@ -1530,11 +1530,19 @@ class GroupTasksNotifier
   final String _groupId;
 
   Future<void> loadTasks() async {
-    state = const AsyncValue.loading();
+    final previous = state.valueOrNull;
+    if (previous == null) {
+      state = const AsyncValue.loading();
+    }
     try {
       final tasks = await _repository.getGroupTasks(_groupId);
       state = AsyncValue.data(tasks);
     } catch (e, st) {
+      if (previous != null) {
+        debugPrint('Group tasks refresh failed, keeping previous data: $e');
+        state = AsyncValue.data(previous);
+        return;
+      }
       state = AsyncValue.error(e, st);
     }
   }
@@ -2071,11 +2079,19 @@ class BlockedUsersNotifier
   final CommunityRepository _repository;
 
   Future<void> loadBlockedUsers() async {
-    state = const AsyncValue.loading();
+    final previous = state.valueOrNull;
+    if (previous == null) {
+      state = const AsyncValue.loading();
+    }
     try {
       final blockedUsers = await _repository.getBlockedUsers();
       state = AsyncValue.data(blockedUsers);
     } catch (e, st) {
+      if (previous != null) {
+        debugPrint('Blocked users refresh failed, keeping previous data: $e');
+        state = AsyncValue.data(previous);
+        return;
+      }
       state = AsyncValue.error(e, st);
     }
   }
