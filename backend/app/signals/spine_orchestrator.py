@@ -9,7 +9,8 @@ Spine Orchestrator — 编排完整的 Signal→State→Decision→Directive→A
 from __future__ import annotations
 
 import json
-from datetime import UTC
+import contextlib
+from datetime import UTC, datetime
 from typing import Any
 
 from loguru import logger
@@ -22,6 +23,10 @@ from app.aurora.runtime_v1.aurora_spine_confluence import (
 )
 from app.aurora.runtime_v1.correction_feedback import CorrectionFeedbackProcessor
 from app.aurora.runtime_v1.energy_controller import EnergyLevelDecider
+try:
+    from app.aurora.runtime_v1.l1_light_aurora import L1LightAurora
+except ImportError:
+    L1LightAurora = None  # optional until GAP-P1-1 lands
 from app.aurora.runtime_v1.l0_rules import L0RuleEngine
 from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
 from app.core.cost_controller import is_aurora_within_budget, record_aurora_cost
@@ -169,6 +174,7 @@ class SpineOrchestrator:
         # P1-10/11: Previously orphaned — now wired into pipeline
         self.learning_guard = LearningGuard(redis_client)
         self.l0_engine = L0RuleEngine(redis_client)
+        self.l1_engine = L1LightAurora(redis_client) if L1LightAurora else None
 
         # P1-16/17: Citation validation + low-yield guarding
         self.citation_validator = CitationValidator(redis_client)
@@ -1643,6 +1649,200 @@ class SpineOrchestrator:
             signal=signal,
             event_ids=["first_message_exam_rescue"],
         )
+
+    async def on_chat_turn(
+        self,
+        *,
+        user_id: str,
+        message: str,
+        session_id: str | None = None,
+        request_id: str | None = None,
+        context: dict[str, Any] | None = None,
+    ) -> CausalTrace | None:
+        """Every regular chat turn gets a trace; actionable turns enter the full Spine pipeline."""
+        event_id = f"chat_turn:{request_id or _uid('turn')}"
+        event_ids = [event_id]
+        if session_id:
+            event_ids.append(f"session:{session_id}")
+
+        await self._record_chat_turn_heartbeat(user_id=user_id, event_id=event_id)
+        l1_result = None
+        try:
+            if self.l1_engine is not None:
+                l1_result = await self.l1_engine.run_turn(
+                    user_id=user_id,
+                    message=message,
+                    context=context or {},
+                )
+                await self.redis.set(
+                    f"aurora:l1:{user_id}:latest",
+                    json.dumps(l1_result.to_dict(), ensure_ascii=False),
+                    ex=24 * 3600,
+                )
+        except Exception:
+            logger.warning("L1 Light Aurora failed for user={}", user_id, exc_info=True)
+
+        signal = self._detect_chat_turn_signal(
+            user_id=user_id,
+            message=message,
+            event_ids=event_ids,
+            context=context or {},
+        )
+        if signal is not None:
+            trace = await self._run_signal_pipeline(
+                user_id=user_id,
+                signal=signal,
+                event_ids=event_ids,
+            )
+            if trace is not None and l1_result is not None:
+                trace.aurora_energy_level = l1_result.energy_level
+                trace.aurora_upgrade_reason = l1_result.upgrade_reason
+                await self.trace_store._save_trace(trace)
+            return trace
+
+        trace = await self.trace_store.create_trace()
+        trace.raw_event_ids.extend(event_ids)
+        await self.trace_store.link_to_user(user_id, trace.trace_id)
+        trace.outcome_to_measure = ["chat_turn_no_actionable_signal"]
+        if l1_result is not None:
+            trace.aurora_energy_level = l1_result.energy_level
+            trace.aurora_upgrade_reason = l1_result.upgrade_reason
+        active_directive = await self.trace_store.get_active_directive(user_id)
+        if active_directive:
+            trace.directive_ids.append(str(getattr(active_directive, "directive_id", "") or "active_directive"))
+        await self.trace_store._save_trace(trace)
+        return trace
+
+    async def get_l1_turn_context(self, user_id: str) -> dict[str, Any] | None:
+        try:
+            raw = await self.redis.get(f"aurora:l1:{user_id}:latest")
+            if not raw:
+                return None
+            return json.loads(raw if isinstance(raw, str) else raw.decode())
+        except Exception:
+            return None
+
+    async def _record_chat_turn_heartbeat(self, *, user_id: str, event_id: str) -> None:
+        key = f"spine:last_chat_turn_at:{user_id}"
+        now = _utcnow_iso()
+        try:
+            raw_previous = await self.redis.get(key)
+            previous = raw_previous.decode() if isinstance(raw_previous, bytes) else raw_previous
+            if previous:
+                from datetime import datetime as _dt
+
+                with contextlib.suppress(ValueError, TypeError):
+                    previous_dt = _dt.fromisoformat(str(previous).replace("Z", "+00:00"))
+                    elapsed_min = (
+                        datetime.now(UTC).replace(tzinfo=None) - previous_dt.replace(tzinfo=None)
+                    ).total_seconds() / 60
+                    if elapsed_min >= 60:
+                        await self.on_user_return(
+                            user_id=user_id,
+                            time_context={
+                                "now": now,
+                                "elapsed_since_last_interaction_min": elapsed_min,
+                                "active_task_id": None,
+                                "source_event_id": event_id,
+                            },
+                        )
+            await self.redis.set(key, now, ex=90 * 24 * 3600)
+        except Exception:
+            logger.warning("chat_turn heartbeat failed for user={}", user_id, exc_info=True)
+
+    def _detect_chat_turn_signal(
+        self,
+        *,
+        user_id: str,
+        message: str,
+        event_ids: list[str],
+        context: dict[str, Any],
+    ) -> ActionableSignal | None:
+        text = str(message or "").strip().lower()
+        if not text:
+            return None
+
+        deadline_terms = ("考试", "deadline", "ddl", "截止", "明天", "后天", "今晚", "来不及", "补考")
+        if any(term in text for term in deadline_terms) and any(
+            term in text for term in ("救", "冲刺", "复习", "挂科", "过不了", "urgent", "紧急")
+        ):
+            return ActionableSignal(
+                signal_id=_uid("chat"),
+                source_event_ids=event_ids,
+                source_system="chat_turn",
+                state_key="goal_mode",
+                claim="exam_rescue_detected",
+                confidence=0.82,
+                scope="current_sprint",
+                ttl_hours=72,
+                evidence_summary="User chat turn indicates urgent exam/deadline rescue need.",
+                possible_effects=["activate_exam_sprint", "tighten_plan", "reduce_scope"],
+                priority="high",
+            )
+
+        if any(term in text for term in ("做不完", "太多", "太大", "超时", "撑不住", "任务太重", "overwhelmed")):
+            return ActionableSignal(
+                signal_id=_uid("chat"),
+                source_event_ids=event_ids,
+                source_system="chat_turn",
+                state_key="task_granularity_fit",
+                claim="recent_task_too_large",
+                confidence=0.76,
+                scope="current_sprint",
+                ttl_hours=48,
+                evidence_summary="User reports the current workload or task size is too large.",
+                possible_effects=["split_next_task", "reduce_task_density", "offer_one_next_step"],
+                priority="medium",
+            )
+
+        material_terms = ("资料", "课件", "讲义", "pdf", "上传", "source", "material")
+        utilization_terms = ("没用", "不用", "按", "根据", "从", "引用", "这份")
+        if any(term in text for term in material_terms) and any(term in text for term in utilization_terms):
+            return ActionableSignal(
+                signal_id=_uid("chat"),
+                source_event_ids=event_ids,
+                source_system="chat_turn",
+                state_key="material_utilization",
+                claim="material_underutilized",
+                confidence=0.74,
+                scope="session",
+                ttl_hours=24,
+                evidence_summary="User asks the assistant to use uploaded or referenced source material.",
+                possible_effects=["prefer_user_sources", "show_source_receipt", "tighten_retrieval_scope"],
+                priority="medium",
+            )
+
+        if any(term in text for term in ("卡住", "没动力", "拖延", "停滞", "不想学", "stuck")):
+            return ActionableSignal(
+                signal_id=_uid("chat"),
+                source_event_ids=event_ids,
+                source_system="chat_turn",
+                state_key="growth_momentum",
+                claim="momentum_stalled",
+                confidence=0.7,
+                scope="week",
+                ttl_hours=48,
+                evidence_summary="User reports stalled learning momentum.",
+                possible_effects=["lower_activation_energy", "offer_recovery_path", "avoid_overloading"],
+                priority="medium",
+            )
+
+        if any(term in text for term in ("连续", "坚持", "打卡", "完成了", "学完了", "streak")):
+            return ActionableSignal(
+                signal_id=_uid("chat"),
+                source_event_ids=event_ids,
+                source_system="chat_turn",
+                state_key="growth_momentum",
+                claim="momentum_high",
+                confidence=0.7,
+                scope="week",
+                ttl_hours=48,
+                evidence_summary="User reports sustained completion or streak progress.",
+                possible_effects=["reinforce_identity", "record_growth_moment", "offer_next_challenge"],
+                priority="low",
+            )
+
+        return None
 
     # ── P0-2 Integration: StaleStateGuard ──────────────────────────────
 
@@ -3426,6 +3626,11 @@ class SpineOrchestrator:
                     )
 
         session["regenerated_directives"] = regenerated
+        if user_id:
+            try:
+                await self.save_spine_snapshot(user_id=user_id, snapshot_type="session_end")
+            except Exception:
+                logger.warning("close_aurora_session: session_end snapshot failed", exc_info=True)
         return session
 
     async def build_recovery_card(

@@ -237,6 +237,53 @@ def orchestrator(fake_redis):
     return SpineOrchestrator(fake_redis)
 
 
+class TestRegularChatTurn:
+    @pytest.mark.asyncio
+    async def test_chat_turn_without_signal_creates_lightweight_trace(self, orchestrator):
+        trace = await orchestrator.on_chat_turn(
+            user_id="user-chat-1",
+            message="今天继续学习一点点",
+            session_id="session-1",
+            request_id="request-1",
+        )
+
+        assert trace is not None
+        assert trace.raw_event_ids == ["chat_turn:request-1", "session:session-1"]
+        assert trace.outcome_to_measure == ["chat_turn_no_actionable_signal"]
+
+    @pytest.mark.asyncio
+    async def test_chat_turn_actionable_message_runs_signal_pipeline(self, orchestrator):
+        expected_trace = await orchestrator.trace_store.create_trace()
+        orchestrator._run_signal_pipeline = AsyncMock(return_value=expected_trace)
+
+        trace = await orchestrator.on_chat_turn(
+            user_id="user-chat-2",
+            message="我明天考试，真的来不及复习了，救一下",
+            session_id="session-2",
+            request_id="request-2",
+        )
+
+        assert trace is expected_trace
+        call = orchestrator._run_signal_pipeline.await_args.kwargs
+        assert call["event_ids"] == ["chat_turn:request-2", "session:session-2"]
+        assert call["signal"].state_key == "goal_mode"
+        assert call["signal"].claim == "exam_rescue_detected"
+
+    @pytest.mark.asyncio
+    async def test_chat_turn_heartbeat_detects_user_return(self, orchestrator, fake_redis):
+        fake_redis._store["spine:last_chat_turn_at:user-chat-3"] = "2026-05-05T00:00:00"
+        orchestrator.on_user_return = AsyncMock(return_value=None)
+
+        await orchestrator.on_chat_turn(
+            user_id="user-chat-3",
+            message="我回来了",
+            request_id="request-3",
+        )
+
+        orchestrator.on_user_return.assert_awaited_once()
+        assert fake_redis._store["spine:last_chat_turn_at:user-chat-3"] != "2026-05-05T00:00:00"
+
+
 # ═══════════════════════════════════════════════════════════════
 # 1. Init wiring
 # ═══════════════════════════════════════════════════════════════
@@ -266,6 +313,8 @@ class TestInit:
         assert orchestrator.directive_quota is not None
         assert orchestrator.aurora_core is not None
         assert orchestrator.l3_engine is not None
+        assert orchestrator.l0_engine is not None
+        # l1_engine is optional until GAP-P1-1 lands
 
     def test_redis_shared(self, orchestrator, fake_redis):
         assert orchestrator.redis is fake_redis

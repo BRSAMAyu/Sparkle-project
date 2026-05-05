@@ -1941,6 +1941,12 @@ class ChatOrchestrator(
             group_ids.append(primary_group_id)
 
         mode = str(decision.get("retrieval_mode") or "selective")
+        spine_retrieval_directive = state.context_data.get("spine_retrieval_directive")
+        if isinstance(spine_retrieval_directive, dict) and str(
+            spine_retrieval_directive.get("retrieval_mode") or ""
+        ).strip().lower() in {"no_rag", "no_retrieval", "skip"}:
+            logger.info("Document context hydration skipped by RetrievalDirective no_rag")
+            return user_context_payload
         try:
             knowledge_service = KnowledgeService(active_db)
             retriever = GraphRAGRetriever(knowledge_service)
@@ -1963,6 +1969,9 @@ class ChatOrchestrator(
                     route_intent=route_intent,
                     include_group_documents=include_group_documents,
                     group_ids=group_ids,
+                    retrieval_directive=(
+                        spine_retrieval_directive if isinstance(spine_retrieval_directive, dict) else None
+                    ),
                 ),
                 timeout=max(6.0, float(getattr(settings, "GRAPHRAG_FASTPATH_TIMEOUT_SECONDS", 2.5) or 2.5) * 3),
             )
@@ -2352,6 +2361,19 @@ class ChatOrchestrator(
                                 message=user_message,
                             )
 
+                        _chat_trace = await _spine.on_chat_turn(
+                            user_id=user_id,
+                            message=user_message,
+                            session_id=session_id,
+                            request_id=request_id,
+                            context=request_extra_context if isinstance(request_extra_context, dict) else {},
+                        )
+                        if _chat_trace is not None:
+                            request_extra_context["spine_causal_trace_id"] = _chat_trace.trace_id
+                        _l1_context = await _spine.get_l1_turn_context(user_id)
+                        if _l1_context:
+                            request_extra_context["aurora_l1"] = _l1_context
+
                         # Stale-state guard on user return
                         _analytics = (user_context_payload or {}).get("analytics_summary") or {}
                         _last_active = _analytics.get("last_activity_time") or _analytics.get("last_login")
@@ -2503,7 +2525,8 @@ class ChatOrchestrator(
                 for _spine_key in ("spine_response_directive", "spine_chronicle_summary",
                                    "spine_fatigue_context", "spine_retrieval_directive",
                                    "spine_ux_directive", "spine_community_directive",
-                                   "spine_skill_directive"):
+                                   "spine_skill_directive", "spine_causal_trace_id",
+                                   "aurora_l1"):
                     _spine_val = (request_extra_context or {}).get(_spine_key)
                     if _spine_val:
                         state.context_data[_spine_key] = _spine_val
@@ -2598,6 +2621,28 @@ class ChatOrchestrator(
                         )
                     except Exception as _ux_err:
                         logger.debug(f"Spine UX directive emission skipped: {_ux_err}")
+
+                _spine_trace_id = (request_extra_context or {}).get("spine_causal_trace_id")
+                if _spine_trace_id and stream_callback:
+                    try:
+                        await stream_callback(
+                            agent_service_pb2.ChatResponse(
+                                metadata={"spine_causal_trace_id": str(_spine_trace_id)},
+                            )
+                        )
+                    except Exception:
+                        logger.debug("stream_callback failed for spine_causal_trace_id, stream may be closed")
+
+                _aurora_l1 = (request_extra_context or {}).get("aurora_l1")
+                if _aurora_l1 and stream_callback:
+                    try:
+                        await stream_callback(
+                            agent_service_pb2.ChatResponse(
+                                metadata={"aurora_l1": json.dumps(_aurora_l1, ensure_ascii=False)},
+                            )
+                        )
+                    except Exception:
+                        logger.debug("stream_callback failed for aurora_l1, stream may be closed")
 
                 # v2.11: Emit growth card metadata for Flutter (divine moment #1 看见坚持)
                 if stream_callback:
@@ -2902,30 +2947,45 @@ class ChatOrchestrator(
 
                 aurora_surface = self._resolve_aurora_runtime_surface(request_extra_context)
                 if aurora_surface is not None:
-                    await self._update_state(session_id, STATE_GENERATING, f"Aurora runtime v1 ({aurora_surface})")
-                    async for queued in self._drain_queue(queue):
-                        yield self._bind_response_session_id(queued, session_id, request_id=request_id)
-                    async for aurora_response in self._stream_aurora_runtime_v1(
-                        request=request,
-                        active_db=active_db,
-                        user_id=user_id,
-                        session_id=session_id,
-                        response_id=response_id,
-                        request_id=request_id,
-                        trace_id=trace_id,
-                        workflow_id=workflow_id,
-                        prompt_version=prompt_version,
-                        request_extra_context=request_extra_context,
-                        conversation_context=conversation_context,
-                        user_context_payload=user_context_payload,
-                    ):
-                        yield aurora_response
-                    await self._update_state(session_id, STATE_DONE, f"Aurora runtime v1 completed ({aurora_surface})")
-                    REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
-                    COLLABORATION_SUCCESS.labels(
-                        workflow_type=workflow_id, agents_used="aurora_runtime_v1", outcome="success"
-                    ).inc()
-                    return
+                    # L1 fast path: when L1 determines no escalation needed, skip the
+                    # expensive Aurora LLM decision loop and fall through to standard chat.
+                    _aurora_l1 = (request_extra_context or {}).get("aurora_l1")
+                    _l1_should_escalate = True
+                    if isinstance(_aurora_l1, dict):
+                        _l1_should_escalate = bool(_aurora_l1.get("should_escalate", True))
+                    if not _l1_should_escalate:
+                        logger.debug(
+                            "L1 fast path: skipping Aurora LLM for user={}, band={}",
+                            user_id,
+                            _aurora_l1.get("status_band_hint", "unknown"),
+                        )
+                        # Fall through to standard chat — the aurora_l1 metadata was
+                        # already forwarded to Flutter at the pre-processing stage.
+                    else:
+                        await self._update_state(session_id, STATE_GENERATING, f"Aurora runtime v1 ({aurora_surface})")
+                        async for queued in self._drain_queue(queue):
+                            yield self._bind_response_session_id(queued, session_id, request_id=request_id)
+                        async for aurora_response in self._stream_aurora_runtime_v1(
+                            request=request,
+                            active_db=active_db,
+                            user_id=user_id,
+                            session_id=session_id,
+                            response_id=response_id,
+                            request_id=request_id,
+                            trace_id=trace_id,
+                            workflow_id=workflow_id,
+                            prompt_version=prompt_version,
+                            request_extra_context=request_extra_context,
+                            conversation_context=conversation_context,
+                            user_context_payload=user_context_payload,
+                        ):
+                            yield aurora_response
+                        await self._update_state(session_id, STATE_DONE, f"Aurora runtime v1 completed ({aurora_surface})")
+                        REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
+                        COLLABORATION_SUCCESS.labels(
+                            workflow_type=workflow_id, agents_used="aurora_runtime_v1", outcome="success"
+                        ).inc()
+                        return
 
                 # Step 7: Notifications
                 await self._notify_pending_milestone_proposals(user_id, stream_callback)
