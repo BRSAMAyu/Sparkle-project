@@ -77,7 +77,7 @@
 | ID | Title | Level | Effort | Mode | Status | Claimed-By | Commit | Note |
 |----|-------|-------|--------|------|--------|-----------|--------|------|
 | GAP-P4-1 | Release Gate | L3 | L | spec→you | 📋 spec-done | — | 6f7596f06 | OBS-015, 部署阻断门禁 |
-| GAP-P4-2 | 成本预测框架 | L3 | L | spec→you | ⬜ pending | — | — | OBS-013, LLM/RAG/Aurora/P4 成本 |
+| GAP-P4-2 | 成本预测框架 | L3 | L | spec→you | 🔵 in-progress | claude-B | 2026-05-05T21:43:13Z | OBS-013, LLM/RAG/Aurora/P4 成本 |
 | GAP-P4-3 | 场景回归框架 SparkleGoalBench | L3 | L | spec→you | ⬜ pending | — | — | OBS-011, 目标场景回归测试 |
 | GAP-P4-4 | 社群 UI 目标价值渲染 | L2 | S | claude | ⬜ pending | — | — | COM-011, "这如何帮助我的目标" |
 | GAP-P4-5 | 混沌测试 MinIO 覆盖 | L2 | M | claude | ⬜ pending | — | — | OBS-020, 补充 MinIO 故障场景 |
