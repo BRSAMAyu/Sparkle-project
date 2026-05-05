@@ -39,6 +39,7 @@ from app.services.aurora_stage40_calendar_kill_switch_service import AuroraStage
 from app.services.aurora_dual_core_router_kill_switch_service import AuroraDualCoreRouterKillSwitchService
 from app.core.kill_switch import KillSwitchBinding, write_mode as _ks_write_mode
 from app.core.cache import cache_service as _cache
+from app.config import settings
 
 
 TRANSITIONS = ("off", "shadow", "live", "shadow", "off")
@@ -245,10 +246,9 @@ _PRIVACY_BINDING = KillSwitchBinding(
 
 
 async def _privacy_apply(mode: str) -> dict[str, str]:
-    redis_client = _cache.redis
-    await _ks_write_mode(
-        redis_client=redis_client, prefix="sparkle:", binding=_PRIVACY_BINDING, mode=mode,
-    )
+    # pii_redaction_mode() reads directly from settings (not Redis), so the drill
+    # must set the settings attribute to have any effect on actual behavior.
+    setattr(settings, _PRIVACY_BINDING.settings_attr, mode)
     return {"pii_redaction_mode": mode}
 
 
