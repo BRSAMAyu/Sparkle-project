@@ -68,7 +68,7 @@
 | GAP-P3-6 | GROW-002 连胜质量门槛 | L2 | S | claude | ✅ done | — | 47cbfc7ff | 09 号报告, fatigue/crisis/late-night 纳入 StreakQuality |
 | GAP-P3-7 | GROW-007 retract_if 填充 | L1 | S | claude | ✅ done | — | 731699b11 | retract_if populated in milestones + patterns, _should_retract check in get_confirmed_entries |
 
-**Phase 3 DOD**: ⬜ pending
+**Phase 3 DOD**: ✅ PASS — 7/7 items done (4 code + 3 specs). Security PASS, Correctness PASS. (AT001 on plan_version_service.py pre-existing, acknowledged in Phase 0/1 DOD.)
 
 ---
 
@@ -78,7 +78,7 @@
 |----|-------|-------|--------|------|--------|-----------|--------|------|
 | GAP-P4-1 | Release Gate | L3 | L | spec→you | 📋 spec-done | — | 6f7596f06 | OBS-015, 部署阻断门禁 |
 | GAP-P4-2 | 成本预测框架 | L3 | L | spec→you | 🔵 in-progress | claude-B | 2026-05-05T21:43:13Z | OBS-013, LLM/RAG/Aurora/P4 成本 |
-| GAP-P4-3 | 场景回归框架 SparkleGoalBench | L3 | L | spec→you | 🔵 in-progress | claude-session-1778017483 | 2026-05-06T11:51:23Z | OBS-011, 目标场景回归测试 |
+| GAP-P4-3 | 场景回归框架 SparkleGoalBench | L3 | L | spec→you | 📋 spec-done | — | — | OBS-011, 目标场景回归测试 |
 | GAP-P4-4 | 社群 UI 目标价值渲染 | L2 | S | claude | ⬜ pending | — | — | COM-011, "这如何帮助我的目标" |
 | GAP-P4-5 | 混沌测试 MinIO 覆盖 | L2 | M | claude | ⬜ pending | — | — | OBS-020, 补充 MinIO 故障场景 |
 | GAP-P4-6 | SLO + Prometheus 告警 | L2 | M | claude | ⬜ pending | — | — | STAB-018, 性能 SLO 指标 |
@@ -101,5 +101,5 @@
 | Phase 1 | 7 | 5 | 2 | 0 | 5-8 |
 | Phase 2 | 7 | 3 | 2 | 2 | 15-25 |
 | Phase 3 | 7 | 4 | 3 | 0 | 8-12 |
-| Phase 4 | 12 | 0 | 0 | 12 | 8-12 |
-| **Total** | **35** | **14** | **5** | **16** | **35-45** |
+| Phase 4 | 12 | 0 | 2 | 10 | 8-12 |
+| **Total** | **35** | **14** | **7** | **14** | **35-45** |
