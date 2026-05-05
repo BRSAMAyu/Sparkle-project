@@ -80,7 +80,7 @@
 | GAP-P4-2 | 成本预测框架 | L3 | L | spec→you | 📋 spec-done | — | 1c0391275 | OBS-013, LLM/RAG/Aurora/P4 成本 |
 | GAP-P4-3 | 场景回归框架 SparkleGoalBench | L3 | L | spec→you | 📋 spec-done | — | — | OBS-011, 目标场景回归测试 |
 | GAP-P4-4 | 社群 UI 目标价值渲染 | L2 | S | claude | 🔵 in-progress | claude-B | 2026-05-05T22:02:49Z | COM-011, "这如何帮助我的目标" |
-| GAP-P4-5 | 混沌测试 MinIO 覆盖 | L2 | M | claude | 🔵 in-progress | claude-session-1778018681 | 2026-05-06T12:04:41Z | OBS-020, 补充 MinIO 故障场景 |
+| GAP-P4-5 | 混沌测试 MinIO 覆盖 | L2 | M | claude | ✅ done | — | a3c62f4df | OBS-020, 18 MinIO resilience tests + drill scenarios (minio-down, minio-slow) |
 | GAP-P4-6 | SLO + Prometheus 告警 | L2 | M | claude | ⬜ pending | — | — | STAB-018, 性能 SLO 指标 |
 | GAP-P4-7 | MAGIC-002 "我改了 N 个任务" 展示 | L1 | S | claude | ⬜ pending | — | — | 02 号报告, 纠正后影响展示 |
 | GAP-P4-8 | MAGIC-003 向用户展示不用资料原因 | L1 | S | claude | ⬜ pending | — | — | 02 号报告, reason 面向用户 |
@@ -101,5 +101,5 @@
 | Phase 1 | 7 | 5 | 2 | 0 | 5-8 |
 | Phase 2 | 7 | 3 | 2 | 2 | 15-25 |
 | Phase 3 | 7 | 4 | 3 | 0 | 8-12 |
-| Phase 4 | 12 | 0 | 3 | 9 | 8-12 |
-| **Total** | **35** | **14** | **8** | **13** | **35-45** |
+| Phase 4 | 12 | 1 | 3 | 8 | 8-12 |
+| **Total** | **35** | **15** | **8** | **12** | **35-45** |
