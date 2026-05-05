@@ -2032,7 +2032,9 @@
 (e) Rule guards — PASS (relative to fix). `bash scripts/run_all_rule_guards.sh` completed: AX rule guard pre-existing failure in `proxy_routes.go` (untouched by this fix). No new violations introduced. No CLAUDE.md anti-patterns violated.
 
 ### ISSUE-20260504-0932-G6
-- **status**: verified
+- **status**: closed
+- **fixer_started_at**: 2026-05-06T12:25:00Z
+- **closed_at**: 2026-05-06T12:30:00Z
 - **severity**: P3
 - **domain**: G
 - **title**: Mock searchUsers 硬编码返回 [] 且 sendFriendRequest 为空 stub——demo 模式用户发现与添加好友链路完全不可用
@@ -2051,9 +2053,8 @@
 - **discovered_by**: explorer-loop
 - **verified_by**: opus-reviewer+2026-05-04T09:30
 - **reviewer_note**: APPROVED — 独立审阅确认全部 5 处 evidence 与代码一致。(1) mock_community_repository.dart:1242-1243 searchUsers 硬编码返回 `[]`，无视搜索关键词。(2) mock_community_repository.dart:1035-1038 sendFriendRequest 空实现 `async {}`。(3) user_search_screen.dart:32-37 _handleSearch() 调用 searchUsers → 返回 [] → UI 永远空结果。(4) user_search_screen.dart:66-73 sendFriendRequest try/catch 中 mock 返回 completed Future<void> 不抛异常 → success 分支触发。(5) community_repository.dart:178-186 sendFriendRequest 实际 POST 到 `/community/friends/request`，198-211 searchUsers GET `/community/users/search`。调用链：searchUsers → [] → "No users found"；sendFriendRequest → `async {}` → completed future → try 成功 → AppFeedback.success → 虚假成功 toast。两个断开点叠加使好友发现与添加全链路不可用。mock 第 59 行 _mockUsers 已有 6 个用户（alice/bob/charlie/diana/eva/me）可过滤使用；mock 已有 _mockPendingRequests 列表（respondToRequest 第 1042-1044 行使用）可记录请求。与 G1/G2/G5（硬编码空列表）和 G3/G4（空 stub）不重复——G6 是 searchUsers+sendFriendRequest 组合覆盖好友子系统，前序条目分别覆盖群组成员/动态/任务/管理/举报。非"设计如此"——资源已就绪（_mockUsers, _mockPendingRequests），仅未连线。
-- **fix_commit**: 65ea8325e7cd47b90bb7d3924e09b07e507007be
-
-### ISSUE-20260504-0945-E5
+- **fix_commit**: aba2c7cad
+- **closed_by**: fixer+2026-05-06T12:30Z
 - **status**: closed
 - **severity**: P2
 - **fixer_started_at**: 2026-05-03T10:00:00Z
