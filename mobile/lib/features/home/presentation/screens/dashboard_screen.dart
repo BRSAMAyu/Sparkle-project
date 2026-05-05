@@ -12,6 +12,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/aurora_correction_payload.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/achievement_progress_card.dart';
 import 'package:sparkle/features/aurora/data/services/aurora_telemetry_service.dart';
 import 'package:sparkle/features/aurora/presentation/widgets/aurora_calibration_strip.dart';
@@ -939,6 +940,48 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  /// Quiet end-of-list discovery affordance for the dashboard editor.
+  /// Long-press on any slot still opens the same sheet, but this footer
+  /// is the "I want to find the settings" path for users who don't
+  /// know about long-press.
+  Widget _buildCustomizeFooter() {
+    final zh = I18nService.instance.isChinese;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        DS.spacing16,
+        DS.spacing8,
+        DS.spacing16,
+        DS.spacing8,
+      ),
+      child: Center(
+        child: TextButton.icon(
+          onPressed: () {
+            unawaited(
+              SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen),
+            );
+            unawaited(
+              showSensoryModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => const DashboardEditSheet(),
+              ),
+            );
+          },
+          icon: Icon(
+            Icons.tune_rounded,
+            size: 18,
+            color: DS.textSecondary,
+          ),
+          label: Text(
+            zh ? '自定义驾驶舱' : 'Customize dashboard',
+            style: DS.bodySmall.copyWith(color: DS.textSecondary),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
@@ -1254,6 +1297,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           _staggeredSection(
             index: sectionIndex++,
             child: _buildEmptyDashboardCta(),
+          ),
+        );
+      } else {
+        // Quiet discovery affordance at the end of the visible scroll —
+        // gives users a way to find the edit sheet besides long-pressing
+        // a slot. Long-press is still the primary "I want to change
+        // this" gesture; this footer is the "I want to find the
+        // settings" path.
+        dashboardSections.add(
+          _staggeredSection(
+            index: sectionIndex++,
+            child: _buildCustomizeFooter(),
           ),
         );
       }

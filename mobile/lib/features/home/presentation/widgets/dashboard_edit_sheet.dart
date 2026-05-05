@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_slot_config_provider.dart';
 
@@ -39,7 +42,13 @@ class _DashboardEditSheetState extends ConsumerState<DashboardEditSheet> {
           children: [
             _TabSwitcher(
               current: _tab,
-              onChanged: (tab) => setState(() => _tab = tab),
+              onChanged: (tab) {
+                if (tab == _tab) return;
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
+                );
+                setState(() => _tab = tab);
+              },
               sectionsLabel: zh ? '页面分区' : 'Sections',
               workspaceLabel: zh ? '工作区卡片' : 'Workspace cards',
             ),
@@ -118,11 +127,21 @@ class _SlotEditor extends ConsumerWidget {
               ),
             ),
             TextButton(
-              onPressed: notifier.resetToLeanView,
+              onPressed: () {
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                );
+                notifier.resetToLeanView();
+              },
               child: Text(zh ? '回到精简' : 'Lean view'),
             ),
             TextButton(
-              onPressed: notifier.restoreDefaults,
+              onPressed: () {
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                );
+                notifier.restoreDefaults();
+              },
               child: Text(context.l10n.dashboardRestoreDefaults),
             ),
           ],
@@ -131,7 +150,12 @@ class _SlotEditor extends ConsumerWidget {
         Expanded(
           child: ReorderableListView.builder(
             itemCount: config.slotOrder.length,
-            onReorder: notifier.reorderSlots,
+            onReorder: (oldIndex, newIndex) {
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.dragDrop),
+              );
+              notifier.reorderSlots(oldIndex, newIndex);
+            },
             buildDefaultDragHandles: false,
             itemBuilder: (context, index) {
               final slotId = config.slotOrder[index];
@@ -143,8 +167,18 @@ class _SlotEditor extends ConsumerWidget {
                 isVisible: isVisible,
                 isCollapsed: isCollapsed,
                 index: index,
-                onToggleVisible: () => notifier.toggleSlotVisibility(slotId),
-                onToggleCollapsed: () => notifier.toggleSlotCollapsed(slotId),
+                onToggleVisible: () {
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.toggle),
+                  );
+                  notifier.toggleSlotVisibility(slotId);
+                },
+                onToggleCollapsed: () {
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.toggle),
+                  );
+                  notifier.toggleSlotCollapsed(slotId);
+                },
               );
             },
           ),
@@ -286,9 +320,17 @@ class _WorkspaceCardEditor extends ConsumerWidget {
                 label: context.l10n.dashboardLayoutSwipe,
                 selected:
                     config.layoutMode == DashboardCardLayoutMode.swipe,
-                onTap: () => notifier.setLayoutMode(
-                  DashboardCardLayoutMode.swipe,
-                ),
+                onTap: () {
+                  if (config.layoutMode == DashboardCardLayoutMode.swipe) {
+                    return;
+                  }
+                  unawaited(
+                    SensoryFeedbackService.emit(
+                      SensoryFeedbackEvent.selection,
+                    ),
+                  );
+                  notifier.setLayoutMode(DashboardCardLayoutMode.swipe);
+                },
               ),
             ),
             const SizedBox(width: DS.spacing8),
@@ -297,9 +339,17 @@ class _WorkspaceCardEditor extends ConsumerWidget {
                 label: context.l10n.dashboardLayoutGrid,
                 selected:
                     config.layoutMode == DashboardCardLayoutMode.grid,
-                onTap: () => notifier.setLayoutMode(
-                  DashboardCardLayoutMode.grid,
-                ),
+                onTap: () {
+                  if (config.layoutMode == DashboardCardLayoutMode.grid) {
+                    return;
+                  }
+                  unawaited(
+                    SensoryFeedbackService.emit(
+                      SensoryFeedbackEvent.selection,
+                    ),
+                  );
+                  notifier.setLayoutMode(DashboardCardLayoutMode.grid);
+                },
               ),
             ),
           ],
@@ -315,7 +365,12 @@ class _WorkspaceCardEditor extends ConsumerWidget {
             ),
             const Spacer(),
             TextButton(
-              onPressed: notifier.restoreDefaults,
+              onPressed: () {
+                unawaited(
+                  SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
+                );
+                notifier.restoreDefaults();
+              },
               child: Text(context.l10n.dashboardRestoreDefaults),
             ),
           ],
@@ -324,7 +379,12 @@ class _WorkspaceCardEditor extends ConsumerWidget {
         Expanded(
           child: ReorderableListView.builder(
             itemCount: config.cardOrder.length,
-            onReorder: notifier.reorderCards,
+            onReorder: (oldIndex, newIndex) {
+              unawaited(
+                SensoryFeedbackService.emit(SensoryFeedbackEvent.dragDrop),
+              );
+              notifier.reorderCards(oldIndex, newIndex);
+            },
             buildDefaultDragHandles: false,
             itemBuilder: (context, index) {
               final cardId = config.cardOrder[index];
@@ -333,7 +393,12 @@ class _WorkspaceCardEditor extends ConsumerWidget {
                 key: ValueKey(cardId),
                 cardId: cardId,
                 isVisible: isVisible,
-                onToggle: () => notifier.toggleCardVisibility(cardId),
+                onToggle: () {
+                  unawaited(
+                    SensoryFeedbackService.emit(SensoryFeedbackEvent.toggle),
+                  );
+                  notifier.toggleCardVisibility(cardId);
+                },
                 index: index,
               );
             },
