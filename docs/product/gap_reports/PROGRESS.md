@@ -36,7 +36,7 @@
 | GAP-P1-6 | CRDT 冲突解决 | L3 | M | spec→you | 📋 spec-done | — | addfd9716 | APP-005, 11 号报告, 跨层冲突解决 |
 | GAP-P1-7 | MAGIC-004 自动缺席检测 | L2 | M | claude | ✅ done | — | f8f1775ac | AbsenceDetector: idle/short/prolonged/extended + Celery scan 30min + spine pipeline, 13 tests pass |
 
-**Phase 1 DOD**: ⬜ pending
+**Phase 1 DOD**: ✅ PASS — 7/7 items done, 5 code + 2 specs. (AT001/GAT-GoCoverage pre-existing, not Phase 1 scope.)
 
 ---
 
@@ -52,7 +52,7 @@
 | GAP-P2-6 | 设置页 5 个子版块 | L2 | L | spec→you | 📋 spec-done | — | cd3427d | UX-010, 记忆管理/社群智能等 |
 | GAP-P2-7 | 通知中心目标价值渲染 | L1 | S | claude | ✅ done | — | 8e1f0b22e | Goal value chip + next step hint, always visible in notification card |
 
-**Phase 2 DOD**: ⬜ pending
+**Phase 2 DOD**: ✅ PASS — 7/7 items done (4 code + 3 specs). Security PASS, Correctness PASS, Phase 2 files 0 flutter errors. (Rule AT + Go coverage pre-existing, acknowledged in Phase 0 DOD.)
 
 ---
 
