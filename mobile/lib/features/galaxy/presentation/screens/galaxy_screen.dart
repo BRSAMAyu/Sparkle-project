@@ -27,6 +27,7 @@ import 'package:sparkle/features/galaxy/presentation/providers/galaxy_display_se
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_document_upload_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_draft_review_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
+import 'package:sparkle/features/galaxy/presentation/providers/goal_graph_overlay_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/screens/galaxy_draft_review_screen.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_camera.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/galaxy/galaxy_controls.dart';
@@ -44,6 +45,7 @@ import 'package:sparkle/features/galaxy/presentation/widgets/galaxy_contribution
 import 'package:sparkle/features/galaxy/presentation/widgets/goal_world_graph_mini_panel.dart';
 import 'package:sparkle/features/galaxy/presentation/widgets/node_detail_sheet.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 import 'package:sparkle/features/task/task_routes.dart';
 import 'package:sparkle/features/theater/presentation/providers/theater_provider.dart';
 import 'package:sparkle/shared/entities/galaxy_model.dart';
@@ -177,6 +179,8 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
   Set<String> _spotlightNodeIds = const <String>{};
   String? _spotlightAnchorId;
   Map<String, Offset> _microDriftOffsets = const <String, Offset>{};
+  bool _isGoalWorldMode = false;
+  Set<String> _goalWorldNodeIds = const <String>{};
   List<GalaxyEdgeParticle> _edgeParticles = const <GalaxyEdgeParticle>[];
   List<_CelebrationEntry> _celebrations = const <_CelebrationEntry>[];
   Duration _ambientElapsed = Duration.zero;
@@ -2773,6 +2777,17 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
         ref.watch(examSprintDashboardProvider).valueOrNull != null;
     final uploadState = ref.watch(galaxyDocumentUploadProvider);
     final uploadSession = uploadState.session;
+    final activeGoalId = ref.watch(activeGoalHeaderProvider);
+    final goalOverlayData = activeGoalId != null
+        ? ref.watch(goalGraphOverlayProvider(activeGoalId)).valueOrNull
+        : null;
+    if (goalOverlayData != null && goalOverlayData.nodes.isNotEmpty) {
+      _goalWorldNodeIds =
+          goalOverlayData.nodes.map((n) => n.id).toSet();
+    } else {
+      _goalWorldNodeIds = const <String>{};
+      if (_isGoalWorldMode) _isGoalWorldMode = false;
+    }
 
     final baseTheme = Theme.of(context);
     final galaxyTheme = baseTheme.copyWith(
@@ -2912,8 +2927,12 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                   nodeConnectionCounts: _nodeConnectionCounts,
                                   ambientPhase: _ambientPhase,
                                   isBuildAnimating: _isBuildAnimating,
-                                  spotlightNodeIds: _spotlightNodeIds,
-                                  spotlightAnchorId: _spotlightAnchorId,
+                                  spotlightNodeIds: _isGoalWorldMode
+                                      ? _goalWorldNodeIds
+                                      : _spotlightNodeIds,
+                                  spotlightAnchorId: _isGoalWorldMode
+                                      ? null
+                                      : _spotlightAnchorId,
                                   searchMatchedNodeIds: _searchMatchedNodeIds,
                                   driftOffsets: _microDriftOffsets,
                                   edgeParticles: _edgeParticles,
@@ -3045,7 +3064,18 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
                                   top: 112,
                                   right: 16,
                                   left: constraints.maxWidth < 560 ? 16 : null,
-                                  child: const GoalWorldGraphMiniPanel(),
+                                  child: GoalWorldGraphMiniPanel(
+                                    isGoalWorldMode: _isGoalWorldMode,
+                                    onViewModeToggle: () {
+                                      setState(() {
+                                        _isGoalWorldMode = !_isGoalWorldMode;
+                                        if (!_isGoalWorldMode) {
+                                          _spotlightNodeIds = const <String>{};
+                                          _spotlightAnchorId = null;
+                                        }
+                                      });
+                                    },
+                                  ),
                                 ),
                                 Positioned(
                                   top: 56,

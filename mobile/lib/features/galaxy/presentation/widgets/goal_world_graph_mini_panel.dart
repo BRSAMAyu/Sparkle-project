@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/goal_graph_overlay_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 
@@ -10,9 +11,13 @@ class GoalWorldGraphMiniPanel extends ConsumerStatefulWidget {
   const GoalWorldGraphMiniPanel({
     super.key,
     this.goalId,
+    this.isGoalWorldMode = false,
+    this.onViewModeToggle,
   });
 
   final String? goalId;
+  final bool isGoalWorldMode;
+  final VoidCallback? onViewModeToggle;
 
   @override
   ConsumerState<GoalWorldGraphMiniPanel> createState() =>
@@ -22,6 +27,14 @@ class GoalWorldGraphMiniPanel extends ConsumerStatefulWidget {
 class _GoalWorldGraphMiniPanelState
     extends ConsumerState<GoalWorldGraphMiniPanel> {
   bool _expanded = false;
+
+  @override
+  void didUpdateWidget(GoalWorldGraphMiniPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isGoalWorldMode && !_expanded) {
+      _expanded = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,11 +53,17 @@ class _GoalWorldGraphMiniPanelState
         decoration: BoxDecoration(
           color: scheme.surface.withValues(alpha: 0.92),
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: scheme.outlineVariant),
+          border: Border.all(
+            color: widget.isGoalWorldMode
+                ? scheme.primary.withValues(alpha: 0.6)
+                : scheme.outlineVariant,
+            width: widget.isGoalWorldMode ? 1.5 : 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: scheme.shadow.withValues(alpha: 0.24),
-              blurRadius: 18,
+              color: (widget.isGoalWorldMode ? scheme.primary : scheme.shadow)
+                  .withValues(alpha: widget.isGoalWorldMode ? 0.18 : 0.24),
+              blurRadius: widget.isGoalWorldMode ? 22 : 18,
               offset: const Offset(0, 8),
             ),
           ],
@@ -57,7 +76,9 @@ class _GoalWorldGraphMiniPanelState
               _Header(
                 expanded: _expanded,
                 hasGoal: goalId != null,
+                isGoalWorldMode: widget.isGoalWorldMode,
                 onToggle: () => setState(() => _expanded = !_expanded),
+                onViewModeToggle: widget.onViewModeToggle,
               ),
               AnimatedCrossFade(
                 firstChild: const SizedBox.shrink(),
@@ -81,12 +102,16 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.expanded,
     required this.hasGoal,
+    required this.isGoalWorldMode,
     required this.onToggle,
+    this.onViewModeToggle,
   });
 
   final bool expanded;
   final bool hasGoal;
+  final bool isGoalWorldMode;
   final VoidCallback onToggle;
+  final VoidCallback? onViewModeToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -97,16 +122,20 @@ class _Header extends StatelessWidget {
       child: InkWell(
         onTap: onToggle,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
                 Icons.account_tree_outlined,
-                color: hasGoal ? scheme.primary : scheme.onSurfaceVariant,
+                color: isGoalWorldMode
+                    ? scheme.primary
+                    : hasGoal
+                        ? scheme.onSurfaceVariant
+                        : scheme.onSurfaceVariant,
                 size: 18,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   context.l10n.goalGraphPanelTitle,
@@ -118,6 +147,58 @@ class _Header extends StatelessWidget {
                       ),
                 ),
               ),
+              if (onViewModeToggle != null)
+                Semantics(
+                  button: true,
+                  label: isGoalWorldMode ? 'Switch to Star Map' : 'Switch to Goal World',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: onViewModeToggle,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isGoalWorldMode
+                            ? scheme.primary.withValues(alpha: 0.18)
+                            : scheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: isGoalWorldMode
+                              ? scheme.primary.withValues(alpha: 0.48)
+                              : scheme.outlineVariant,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            isGoalWorldMode
+                                ? Icons.visibility_off_rounded
+                                : Icons.auto_awesome_rounded,
+                            size: 14,
+                            color: isGoalWorldMode
+                                ? scheme.primary
+                                : scheme.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            isGoalWorldMode ? 'Star Map' : 'Goal',
+                            style:
+                                Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: isGoalWorldMode
+                                          ? scheme.primary
+                                          : scheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 4),
               Icon(
                 expanded
                     ? Icons.expand_less_rounded
@@ -178,6 +259,13 @@ class _GraphBody extends ConsumerWidget {
           return const _EmptyGraphState();
         }
 
+        final bottleneckCount = data.bottleneckNodes.length;
+        final totalNodes = data.nodes.length;
+        final masteredCount = data.masteredNodes.length;
+        final masteryAverage = totalNodes > 0
+            ? (data.nodes.fold<double>(0, (s, n) => s + n.mastery) / totalNodes)
+            : 0.0;
+
         return ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.sizeOf(context).height * 0.44,
@@ -187,6 +275,13 @@ class _GraphBody extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                _GapAnalysisSummary(
+                  totalNodes: totalNodes,
+                  bottleneckCount: bottleneckCount,
+                  masteredCount: masteredCount,
+                  masteryAverage: masteryAverage,
+                ),
+                const SizedBox(height: 10),
                 _LegendRow(data: data),
                 const SizedBox(height: 10),
                 _NodeSection(
@@ -209,6 +304,117 @@ class _GraphBody extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+}
+
+class _GapAnalysisSummary extends StatelessWidget {
+  const _GapAnalysisSummary({
+    required this.totalNodes,
+    required this.bottleneckCount,
+    required this.masteredCount,
+    required this.masteryAverage,
+  });
+
+  final int totalNodes;
+  final int bottleneckCount;
+  final int masteredCount;
+  final double masteryAverage;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final coveragePercent = totalNodes > 0
+        ? ((masteredCount / totalNodes) * 100).round()
+        : 0;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: scheme.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            I18nService.instance.isChinese ? '差距分析' : 'Gap Analysis',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: scheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              _GapStat(
+                label: I18nService.instance.isChinese ? '覆盖率' : 'Coverage',
+                value: '$coveragePercent%',
+                color: coveragePercent >= 60
+                    ? scheme.primary
+                    : coveragePercent >= 30
+                        ? scheme.tertiary
+                        : scheme.error,
+              ),
+              const SizedBox(width: 16),
+              _GapStat(
+                label: context.l10n.goalGraphBottlenecks,
+                value: '$bottleneckCount',
+                color: bottleneckCount == 0 ? scheme.primary : scheme.error,
+              ),
+              const SizedBox(width: 16),
+              _GapStat(
+                label: context.l10n.goalGraphMastery,
+                value: '${(masteryAverage * 100).round()}%',
+                color: masteryAverage >= 0.6
+                    ? scheme.primary
+                    : masteryAverage >= 0.3
+                        ? scheme.tertiary
+                        : scheme.error,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GapStat extends StatelessWidget {
+  const _GapStat({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: color,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }
