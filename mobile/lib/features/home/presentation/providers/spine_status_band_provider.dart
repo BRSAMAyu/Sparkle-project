@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
@@ -124,7 +126,10 @@ final spineStatusBandProvider =
     final data = response.data;
     if (data == null) return null;
     return SpineStatusBand.fromJson(data);
-  } catch (_) {
+  } on DioException {
+    return null;
+  } catch (e, st) {
+    debugPrint('spineStatusBandProvider unexpected error: $e\n$st');
     return null;
   }
 });
