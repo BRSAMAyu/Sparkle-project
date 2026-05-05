@@ -711,6 +711,7 @@ class RecommendationFeedbackService:
                 deadline=group.deadline,
                 days_remaining=days_remaining,
                 focus_tags=group.focus_tags or [],
+                sprint_goal=group.sprint_goal,
                 is_public=group.is_public,
                 join_requires_approval=group.join_requires_approval,
                 my_role=None,

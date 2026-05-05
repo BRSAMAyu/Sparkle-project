@@ -7,6 +7,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/goal_value_chip.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
 
 /// Model for a user pursuing a similar goal.
@@ -108,17 +109,23 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
                 children: [
                   Icon(Icons.group_outlined, size: 16, color: DS.brandPrimary),
                   const SizedBox(width: 6),
-                  Text(
-                    isChinese
-                        ? '和你追同样目标的 ${pursuers.length} 位伙伴'
-                        : '${pursuers.length} people pursuing similar goals',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: DS.brandPrimary,
-                        ),
+                  Expanded(
+                    child: Text(
+                      isChinese
+                          ? '和你追同样目标的 ${pursuers.length} 位伙伴'
+                          : '${pursuers.length} people pursuing similar goals',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: DS.brandPrimary,
+                          ),
+                    ),
                   ),
                 ],
               ),
+              if (pursuers.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                GoalValueChip(text: pursuers.first.goalTitle),
+              ],
               const SizedBox(height: 10),
               // Avatar row
               SizedBox(

@@ -327,6 +327,7 @@ class GroupListItem(BaseModel):
     is_public: bool = Field(default=True, description="是否公开")
     join_requires_approval: bool = Field(default=False, description="加入是否需要审批")
     activity_score: float | None = Field(default=None, description="目录排序用活跃度得分")
+    sprint_goal: str | None = Field(default=None, description="冲刺目标")
     my_role: GroupRoleEnum | None = Field(default=None, description="我的角色")
 
     model_config = ConfigDict(from_attributes=True)

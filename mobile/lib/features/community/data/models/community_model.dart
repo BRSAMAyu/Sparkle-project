@@ -474,6 +474,7 @@ class GroupListItem {
     this.todayCheckinCount = 0,
     this.deadline,
     this.daysRemaining,
+    this.sprintGoal,
     this.isPublic = true,
     this.joinRequiresApproval = false,
     this.activityScore,
@@ -503,6 +504,8 @@ class GroupListItem {
   final bool joinRequiresApproval;
   @JsonKey(name: 'activity_score')
   final double? activityScore;
+  @JsonKey(name: 'sprint_goal')
+  final String? sprintGoal;
   @JsonKey(name: 'my_role')
   final GroupRole? myRole;
   Map<String, dynamic> toJson() => _$GroupListItemToJson(this);

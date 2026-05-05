@@ -560,6 +560,7 @@ GroupListItem _$GroupListItemFromJson(Map<String, dynamic> json) =>
       isPublic: json['is_public'] as bool? ?? true,
       joinRequiresApproval: json['join_requires_approval'] as bool? ?? false,
       activityScore: (json['activity_score'] as num?)?.toDouble(),
+      sprintGoal: json['sprint_goal'] as String?,
       myRole: $enumDecodeNullable(_$GroupRoleEnumMap, json['my_role']),
     );
 
@@ -578,6 +579,7 @@ Map<String, dynamic> _$GroupListItemToJson(GroupListItem instance) =>
       'is_public': instance.isPublic,
       'join_requires_approval': instance.joinRequiresApproval,
       'activity_score': instance.activityScore,
+      'sprint_goal': instance.sprintGoal,
       'my_role': _$GroupRoleEnumMap[instance.myRole],
     };
 

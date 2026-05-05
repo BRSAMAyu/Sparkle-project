@@ -545,6 +545,7 @@ class GroupService:
                     "focus_tags": group.focus_tags or [],
                     "is_public": group.is_public,
                     "join_requires_approval": group.join_requires_approval,
+                    "sprint_goal": group.sprint_goal,
                     "activity_score": float(score or 0.0),
                     "message_count_7d": int(message_count or 0),
                     "my_role": my_role,

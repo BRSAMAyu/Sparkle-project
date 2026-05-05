@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/theme/sparkle_context_extension.dart';
+import 'package:sparkle/core/design/widgets/goal_value_chip.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 
@@ -115,6 +116,14 @@ class GroupRecommendationCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: context.typo.bodyMedium
                     .copyWith(color: DS.textSecondary, height: 1.35),
+              ),
+            ],
+            if (group.sprintGoal != null && group.sprintGoal!.isNotEmpty) ...[
+              SizedBox(height: context.space.sm),
+              GoalValueChip(
+                text: isChinese
+                    ? '冲刺目标: ${group.sprintGoal}'
+                    : 'Sprint goal: ${group.sprintGoal}',
               ),
             ],
             SizedBox(height: context.space.md),
