@@ -89,12 +89,16 @@ message MessageNack {
   bool permanent = 5;            // If true, the message should not be retried
 }
 
-// Heartbeat ping/pong for connection health monitoring
+// DEPRECATED: Not used in production. Actual heartbeat uses two mechanisms:
+// 1. RFC 6455 WebSocket Ping/Pong control frames (Go: chat_orchestrator.go)
+// 2. JSON {"type":"ping"}/{"type":"pong"} text frames (Flutter → Go)
+// Retained for potential future unified heartbeat with RTT tracking.
 message HeartbeatPing {
   int64 timestamp = 1;           // Client timestamp when ping was sent
   string client_id = 2;          // Optional client identifier
 }
 
+// DEPRECATED: See HeartbeatPing comment above.
 message HeartbeatPong {
   int64 client_timestamp = 1;    // Echo of client's ping timestamp for RTT calculation
   int64 server_timestamp = 2;    // Server timestamp when pong was sent
