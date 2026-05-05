@@ -23,6 +23,7 @@ import 'package:sparkle/features/community/presentation/providers/accountability
 import 'package:sparkle/features/experience/presentation/providers/experience_provider.dart';
 import 'package:sparkle/features/experience/presentation/widgets/goal_detail_snapshot_card.dart';
 import 'package:sparkle/features/experience/presentation/widgets/growth_quality_card.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_slot_config_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
@@ -583,7 +584,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       case DashboardSlotIds.taskBoard:
         return const TaskBoardCard();
       case DashboardSlotIds.examSprint:
-        if (examSprintDashboard == null) return null;
+        if (examSprintDashboard == null) {
+          // Slot was opted-in but no sprint exists yet — render a small CTA
+          // instead of silently disappearing. Respectful of the user's
+          // explicit choice to keep this slot visible.
+          return _buildSlotEmptyCta(
+            icon: Icons.local_fire_department_outlined,
+            accent: DS.warning,
+            titleZh: '考试冲刺',
+            titleEn: 'Exam sprint',
+            bodyZh: '还没有进行中的冲刺。设置一个目标，看到每日节奏与剩余天数。',
+            bodyEn:
+                'No active sprint yet. Set a target to see daily cadence and days left.',
+            actionLabelZh: '创建冲刺',
+            actionLabelEn: 'Create sprint',
+            onAction: () => unawaited(context.push('/exam-sprint/setup')),
+          );
+        }
         return ExamSprintDashboardCard(
           data: examSprintDashboard,
           onRecordResult: () {
@@ -616,28 +633,50 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     return null;
   }
 
-  _SlotMeta _slotMeta(String slotId) {
+  _SlotMeta _slotMeta(
+    String slotId, {
+    required DashboardState dashboardState,
+    required HomeGrowthState? growthState,
+    required ExamSprintDashboardData? examSprintDashboard,
+    required int workspaceCardCount,
+  }) {
     final zh = I18nService.instance.isChinese;
     switch (slotId) {
       case DashboardSlotIds.dailyBriefing:
+        final actions = dashboardState.nextActions.length;
         return _SlotMeta(
           title: zh ? '今日简报' : 'Daily briefing',
           icon: Icons.wb_sunny_outlined,
-          summary: zh ? '当天的状态、节奏与重点' : 'Today\'s status, pace, focus',
+          summary: actions > 0
+              ? (zh
+                  ? '今天 $actions 件待办 · 已就绪'
+                  : '$actions next actions · ready to start')
+              : (zh ? '当天的状态与节奏' : 'Today\'s status & pace'),
           accent: DS.brandPrimary,
         );
       case DashboardSlotIds.metricsRow:
+        final streak = growthState?.streak ??
+            dashboardState.growthStatus?.streakDays ??
+            0;
         return _SlotMeta(
           title: zh ? '关键指标' : 'Key metrics',
           icon: Icons.insights_rounded,
-          summary: zh ? '进度、连续天数、动力' : 'Progress, streak, momentum',
+          summary: streak > 0
+              ? (zh ? '🔥 连续 $streak 天' : '🔥 $streak-day streak')
+              : (zh ? '进度、连续天数、动力' : 'Progress, streak, momentum'),
           accent: DS.info,
         );
       case DashboardSlotIds.commandCenter:
+        final nextLabel = growthState?.nextAction?.title ??
+            (dashboardState.nextActions.isNotEmpty
+                ? dashboardState.nextActions.first.title
+                : '');
         return _SlotMeta(
           title: zh ? '指挥中心' : 'Command center',
           icon: Icons.bolt_rounded,
-          summary: zh ? '下一步行动入口' : 'Pick up the next action',
+          summary: nextLabel.isNotEmpty
+              ? (zh ? '下一步：$nextLabel' : 'Next: $nextLabel')
+              : (zh ? '下一步行动入口' : 'Pick up the next action'),
           accent: DS.brandPrimary,
         );
       case DashboardSlotIds.understanding:
@@ -655,31 +694,58 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           accent: DS.warning,
         );
       case DashboardSlotIds.goalDetailSnapshot:
+        final goal = dashboardState.growth;
         return _SlotMeta(
           title: zh ? '目标详情' : 'Goal snapshot',
           icon: Icons.flag_outlined,
-          summary: zh ? '当前目标的近况' : 'Active goal snapshot',
+          summary: goal != null
+              ? (zh
+                  ? '${goal.name} · ${(goal.progress * 100).round()}%'
+                  : '${goal.name} · ${(goal.progress * 100).round()}%')
+              : (zh ? '当前目标的近况' : 'Active goal snapshot'),
           accent: DS.success,
         );
       case DashboardSlotIds.multiGoalDashboard:
+        final tasksTotal = growthState?.tasksTotal ?? 0;
+        final tasksDone = growthState?.tasksCompleted ?? 0;
         return _SlotMeta(
           title: zh ? '多目标看板' : 'Multi-goal board',
           icon: Icons.dashboard_customize_outlined,
-          summary: zh ? '所有目标的总览' : 'All goals at a glance',
+          summary: tasksTotal > 0
+              ? (zh
+                  ? '$tasksDone/$tasksTotal 件已完成'
+                  : '$tasksDone of $tasksTotal done')
+              : (zh ? '所有目标的总览' : 'All goals at a glance'),
           accent: DS.brandPrimary,
         );
       case DashboardSlotIds.taskBoard:
+        final total = growthState?.tasksTotal ?? 0;
+        final done = growthState?.tasksCompleted ?? 0;
         return _SlotMeta(
           title: zh ? '任务面板' : 'Task board',
           icon: Icons.checklist_rounded,
-          summary: zh ? '今日待办与进度' : 'Today\'s tasks & progress',
+          summary: total > 0
+              ? (zh
+                  ? '完成 $done/$total · ${done == total ? "今日达标" : "再 ${total - done} 件冲刺"}'
+                  : '$done/$total done · ${done == total ? 'today’s goal hit' : '${total - done} to go'}')
+              : (zh ? '今日待办与进度' : 'Today\'s tasks & progress'),
           accent: DS.success,
         );
       case DashboardSlotIds.examSprint:
+        if (examSprintDashboard != null) {
+          return _SlotMeta(
+            title: zh ? '考试冲刺' : 'Exam sprint',
+            icon: Icons.local_fire_department_outlined,
+            summary: zh
+                ? '${examSprintDashboard.subject} · ${examSprintDashboard.daysLeft} 天后'
+                : '${examSprintDashboard.subject} · ${examSprintDashboard.daysLeft}d left',
+            accent: DS.warning,
+          );
+        }
         return _SlotMeta(
           title: zh ? '考试冲刺' : 'Exam sprint',
           icon: Icons.local_fire_department_outlined,
-          summary: zh ? '剩余天数与节奏' : 'Days left & cadence',
+          summary: zh ? '尚未启动 · 点开创建' : 'Not started · tap to set up',
           accent: DS.warning,
         );
       case DashboardSlotIds.dashboardUpdates:
@@ -728,7 +794,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         return _SlotMeta(
           title: zh ? '工作区卡片' : 'Workspace cards',
           icon: Icons.view_module_outlined,
-          summary: zh ? '可滑动 / 网格的功能卡' : 'Swipe or grid feature cards',
+          summary: workspaceCardCount > 0
+              ? (zh
+                  ? '$workspaceCardCount 张已显示'
+                  : '$workspaceCardCount cards visible')
+              : (zh ? '尚未启用任何卡片' : 'No cards enabled'),
           accent: DS.brandPrimary,
         );
     }
@@ -800,6 +870,75 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
+  /// Inline empty-state surface for individual slots that the user kept
+  /// visible but have no underlying data yet. Coherent with the
+  /// dashboard-level `_buildEmptyDashboardCta` (same shell tone, same
+  /// button family) so the visual language stays consistent regardless
+  /// of whether the empty surface lives at slot or screen level.
+  Widget _buildSlotEmptyCta({
+    required IconData icon,
+    required Color accent,
+    required String titleZh,
+    required String titleEn,
+    required String bodyZh,
+    required String bodyEn,
+    required String actionLabelZh,
+    required String actionLabelEn,
+    required VoidCallback onAction,
+  }) {
+    final zh = I18nService.instance.isChinese;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
+      child: DashboardSectionShell(
+        tone: DashboardSurfaceTone.summary,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: accent.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: accent.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Icon(icon, size: 16, color: accent),
+                ),
+                const SizedBox(width: DS.spacing10),
+                Expanded(
+                  child: Text(
+                    zh ? titleZh : titleEn,
+                    style: DS.titleMedium.copyWith(
+                      color: DS.textPrimary,
+                      fontWeight: DS.fontWeightSemiBold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              zh ? bodyZh : bodyEn,
+              style: DS.bodySmall.copyWith(color: DS.textSecondary),
+            ),
+            const SizedBox(height: DS.spacing12),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: SparkleButton.ghost(
+                label: zh ? actionLabelZh : actionLabelEn,
+                onPressed: onAction,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(currentUserProvider);
@@ -850,6 +989,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final activeBottleneck = growthState?.activeBottleneck;
     final examSprintDashboard = examSprintDashboardAsync.valueOrNull;
     final slotConfig = ref.watch(dashboardSlotConfigProvider);
+    final workspaceCardCount = ref.watch(
+      dashboardCardConfigProvider.select((c) => c.visibleCardIds.length),
+    );
     var growthSectionIndex = 0;
     final showGrowthHeader = dashboardState.error == null;
     final growthSections = !showGrowthHeader
@@ -1083,7 +1225,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           activeBottleneck: activeBottleneck,
         );
         if (content == null) continue;
-        final meta = _slotMeta(slotId);
+        final meta = _slotMeta(
+          slotId,
+          dashboardState: dashboardState,
+          growthState: growthState,
+          examSprintDashboard: examSprintDashboard,
+          workspaceCardCount: workspaceCardCount,
+        );
         dashboardSections.add(
           _staggeredSection(
             index: sectionIndex++,

@@ -69,10 +69,18 @@ class DashboardSlotIds {
     learningHeatmap,
   ];
 
-  /// Curated lean default — only the 5 highest-signal slots are visible
-  /// out of the box. Everything else is opt-in via the edit sheet so the
-  /// page stops feeling cluttered on first run.
-  static const List<String> defaultVisible = [
+  /// First-run default: every registered slot is visible so existing
+  /// users (and brand-new ones) get the full surface. The clutter
+  /// problem is solved by *collapsing* low-glance slots out of the box
+  /// (see `defaultCollapsed`), not by hiding things they may not
+  /// realize exist yet.
+  static List<String> get defaultVisible => List<String>.unmodifiable(all);
+
+  /// "Lean view" — opt-in only, surfaced via the edit sheet's
+  /// `Lean view` button. Reduces the dashboard to its 5 highest-signal
+  /// slots; everything else stays in the user's order list and can be
+  /// re-enabled with one tap.
+  static const List<String> leanVisible = [
     dailyBriefing,
     commandCenter,
     multiGoalDashboard,
@@ -80,9 +88,26 @@ class DashboardSlotIds {
     workspaceCards,
   ];
 
-  /// Slots that ship in collapsed state (header-only, ~64px) so they're
-  /// reachable without dominating the scroll surface.
-  static const List<String> defaultCollapsed = [];
+  /// Default-collapsed set: high-volume / low-glanceable slots ship
+  /// collapsed (~64px header each) so the first-run scroll feels
+  /// intentional but every registered slot is still discoverable.
+  /// Together with `defaultVisible = all`, this means new users see
+  /// 5 expanded high-signal slots and 11 collapsed headers — far less
+  /// noisy than the previous "all expanded" default, but no slot is
+  /// silently hidden.
+  static const List<String> defaultCollapsed = [
+    metricsRow,
+    understanding,
+    returnCaseFile,
+    goalDetailSnapshot,
+    examSprint,
+    dashboardUpdates,
+    growthQuality,
+    weeklyNarrative,
+    community,
+    achievementProgress,
+    learningHeatmap,
+  ];
 }
 
 class DashboardSlotConfigState {
@@ -92,7 +117,7 @@ class DashboardSlotConfigState {
     required this.collapsedSlotIds,
   });
 
-  factory DashboardSlotConfigState.defaults() => const DashboardSlotConfigState(
+  factory DashboardSlotConfigState.defaults() => DashboardSlotConfigState(
         visibleSlotIds: DashboardSlotIds.defaultVisible,
         slotOrder: DashboardSlotIds.defaultOrder,
         collapsedSlotIds: DashboardSlotIds.defaultCollapsed,
@@ -254,11 +279,13 @@ class DashboardSlotConfigNotifier
     state = DashboardSlotConfigState.defaults();
   }
 
-  /// Hide every optional slot, surface only the lean defaults — useful as
-  /// a "calm view" reset that's softer than the full restoreDefaults().
+  /// Snap to the curated 5-slot lean view (opt-in only — surfaced via
+  /// the edit sheet's "Lean view" button). Preserves slotOrder and
+  /// collapsedSlotIds so users can flip back without losing their
+  /// arrangement.
   void resetToLeanView() {
     state = state.copyWith(
-      visibleSlotIds: DashboardSlotIds.defaultVisible,
+      visibleSlotIds: DashboardSlotIds.leanVisible,
     );
   }
 }
