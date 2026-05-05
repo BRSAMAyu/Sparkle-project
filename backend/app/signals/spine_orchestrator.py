@@ -76,6 +76,7 @@ from app.signals.citation_validator import CitationValidator
 from app.signals.low_yield_guard import LowYieldGuard
 from app.signals.source_tray_integration import SourceEffectivenessTracker
 from app.signals.spine_metrics import SpineMetricsCollector
+from app.signals.absence_detector import AbsenceDetector
 from app.signals.stale_state_guard import StaleStateGuard
 from app.signals.state_packet_builder import ActionableStatePacketBuilder
 from app.signals.state_register import StateRegister
@@ -132,6 +133,7 @@ class SpineOrchestrator:
         self.exam_rescue = ExamRescueDetector()
         self.non_exam_detector = NonExamFirstMinuteDetector()
         self.stale_guard = StaleStateGuard()
+        self.absence_detector = AbsenceDetector()
         self.state_packet_builder = ActionableStatePacketBuilder()
         self.self_model = SparkleSelfModelService(redis_client)
         self.community_detector = CommunitySignalDetector()
@@ -1914,6 +1916,39 @@ class SpineOrchestrator:
         except Exception:
             logger.warning("on_user_return: redis failed", exc_info=True)
 
+        return trace
+
+    # ── P1-7 MAGIC-004: Proactive Absence Detection ────────────────────
+
+    async def on_absence_detected(
+        self,
+        user_id: str,
+        snapshot: "AbsenceSnapshot",
+    ) -> CausalTrace | None:
+        """Process an absence signal from the periodic scanner.
+
+        Runs the signal through the full spine pipeline so policy
+        directives (nudge, plan adjustment, partner notification)
+        are generated automatically.
+        """
+        from app.signals.absence_detector import AbsenceSnapshot
+
+        signal = self.absence_detector.to_actionable_signal(snapshot)
+
+        trace = await self._run_signal_pipeline(
+            user_id=user_id,
+            signal=signal,
+            event_ids=[f"absence_scan_{snapshot.absence_level}"],
+        )
+
+        await self.absence_detector.mark_cooldown(
+            self.redis, user_id, snapshot.absence_level,
+        )
+
+        logger.info(
+            "Spine absence: user={} level={} elapsed={:.0f}min",
+            user_id, snapshot.absence_level, snapshot.elapsed_minutes,
+        )
         return trace
 
     # ── P0-3 Integration: ActionableStatePacket ────────────────────────

@@ -59,6 +59,7 @@ celery_app = Celery(
     include=[
         "app.core.celery_tasks",
         "app.tasks.accountability_tasks",
+        "app.tasks.absence_scan_task",
         "app.tasks.checkpoint_nudge_task",
         "app.tasks.policy_tasks",
         "workers.signals_learning_worker",
@@ -973,6 +974,12 @@ celery_app.conf.beat_schedule = {
     "checkpoint-due-wake-scan": {
         "task": "tasks.checkpoint_nudge.run_due_checkpoint_wakes",
         "schedule": 600.0,
+        "options": {"queue": "default"},
+    },
+    # MAGIC-004: scan for absent users every 30 min
+    "absence-scan": {
+        "task": "tasks.absence.scan_absent_users",
+        "schedule": 1800.0,
         "options": {"queue": "default"},
     },
     "intervention-outcomes-engaged": {
