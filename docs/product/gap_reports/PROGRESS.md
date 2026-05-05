@@ -32,7 +32,7 @@
 | GAP-P1-2 | Plan 版本化 + 回滚 | L3 | L | spec→you | 📋 spec-done | — | 7f12af33c | Spec: _specs/GAP-P1-2.md, 5 phases, 6.5-9.5 day est. |
 | GAP-P1-3 | 非考试首分钟检测器 | L2 | M | claude | ✅ done | — | 642a095a1 | NonExamFirstMinuteDetector: job_search/project/habit, 7 tests pass |
 | GAP-P1-4 | MAGIC-001 统一连胜 + 差异化策略 | L2 | M | claude | ✅ done | — | 5372936c0 | Graduated milestones 7/14/21/30 + Chinese narratives + GrowthCard emission |
-| GAP-P1-5 | ExperienceEnvelope 状态模型 | L3 | M | claude | 🔵 in-progress | claude-01 | — | APP-001, 11 号报告, 专用状态管理 |
+| GAP-P1-5 | ExperienceEnvelope 状态模型 | L3 | M | claude | ✅ done | — | be22b3bc3 | model + provider + chat stream wiring, 2 tests pass |
 | GAP-P1-6 | CRDT 冲突解决 | L3 | M | spec→you | ⬜ pending | — | — | APP-005, 11 号报告, 跨层冲突解决 |
 | GAP-P1-7 | MAGIC-004 自动缺席检测 | L2 | M | claude | ⬜ pending | — | — | 02 号报告, 后端无自动缺席 + 无 WebSocket idle 追踪 |
 
@@ -98,8 +98,8 @@
 | Phase | Total | ✅ done | 📋 spec | ⬜ pending | Est. Days |
 |-------|-------|---------|---------|-----------|-----------|
 | Phase 0 | 2 | 2 | 0 | 0 | 0.5-2 |
-| Phase 1 | 7 | 1 | 1 | 5 | 5-8 |
+| Phase 1 | 7 | 4 | 1 | 2 | 5-8 |
 | Phase 2 | 7 | 0 | 0 | 7 | 15-25 |
 | Phase 3 | 7 | 0 | 0 | 7 | 8-12 |
 | Phase 4 | 12 | 0 | 0 | 12 | 8-12 |
-| **Total** | **35** | **3** | **1** | **31** | **35-45** |
+| **Total** | **35** | **6** | **1** | **28** | **35-45** |
