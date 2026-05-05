@@ -34,7 +34,7 @@
 | GAP-P1-4 | MAGIC-001 统一连胜 + 差异化策略 | L2 | M | claude | ✅ done | — | 5372936c0 | Graduated milestones 7/14/21/30 + Chinese narratives + GrowthCard emission |
 | GAP-P1-5 | ExperienceEnvelope 状态模型 | L3 | M | claude | ✅ done | — | be22b3bc3 | model + provider + chat stream wiring, 2 tests pass |
 | GAP-P1-6 | CRDT 冲突解决 | L3 | M | spec→you | 🔵 in-progress | claude-B | 2026-05-06T20:00:00Z | APP-005, 11 号报告, 跨层冲突解决 |
-| GAP-P1-7 | MAGIC-004 自动缺席检测 | L2 | M | claude | ⬜ pending | — | — | 02 号报告, 后端无自动缺席 + 无 WebSocket idle 追踪 |
+| GAP-P1-7 | MAGIC-004 自动缺席检测 | L2 | M | claude | 🔵 in-progress | claude-01 | 2026-05-06T21:00:00Z | 02 号报告, 后端无自动缺席 + 无 WebSocket idle 追踪 |
 
 **Phase 1 DOD**: ⬜ pending
 
