@@ -155,7 +155,13 @@ class _ProgressHero extends StatelessWidget {
     final isUrgent = daysLeft <= 3;
     final color = isUrgent ? DS.error : DS.brandPrimary;
 
-    return Container(
+    return Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: zh
+          ? '$name：已完成 $percent%，还剩 $daysLeft 天'
+          : '$name: $percent% complete, $daysLeft days left',
+      child: Container(
       padding: const EdgeInsets.all(DS.spacing20),
       decoration: BoxDecoration(
         color: DS.surfaceHigh,
@@ -208,6 +214,7 @@ class _ProgressHero extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 }
@@ -271,7 +278,10 @@ class _StatChip extends StatelessWidget {
   final Color color;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => Semantics(
+        container: true,
+        label: '$label: $value',
+        child: Container(
         padding: const EdgeInsets.symmetric(
           vertical: DS.spacing12,
           horizontal: DS.spacing10,
@@ -297,6 +307,7 @@ class _StatChip extends StatelessWidget {
               style: DS.labelSmall.copyWith(color: DS.textSecondary),
             ),
           ],
+        ),
         ),
       );
 }
@@ -395,33 +406,37 @@ class _BottleneckCard extends ConsumerWidget {
         children: insights
             .map((i) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(i.icon, size: 18, color: i.color),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              i.title,
-                              style: DS.bodySmall.copyWith(
-                                color: DS.textPrimary,
-                                fontWeight: DS.fontWeightSemibold,
+                  child: Semantics(
+                    container: true,
+                    label: '${i.title}: ${i.detail}',
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(i.icon, size: 18, color: i.color),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                i.title,
+                                style: DS.bodySmall.copyWith(
+                                  color: DS.textPrimary,
+                                  fontWeight: DS.fontWeightSemibold,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              i.detail,
-                              style: DS.labelSmall.copyWith(
-                                color: DS.textSecondary,
+                              const SizedBox(height: 2),
+                              Text(
+                                i.detail,
+                                style: DS.labelSmall.copyWith(
+                                  color: DS.textSecondary,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ))
             .toList(),
@@ -477,7 +492,11 @@ class _ReviewNotesCardState extends State<_ReviewNotesCard> {
   Widget build(BuildContext context) {
     final zh = I18nService.instance.isChinese;
 
-    return Container(
+    return Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: zh ? '复盘笔记' : 'Review notes',
+      child: Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.surfaceHigh,
@@ -528,6 +547,7 @@ class _ReviewNotesCardState extends State<_ReviewNotesCard> {
           ),
         ],
       ),
+    ),
     );
   }
 
