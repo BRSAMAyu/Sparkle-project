@@ -88,7 +88,7 @@
 | QA-P2-27 | Migrate ~110 _t() usages to ARB | Flutter | L | ⬜ pending | — | — | ~15 files |
 | QA-P2-28 | DS tokens: Achievement colors (12) | Flutter | M | ⏭️ skip | — | — | Screen-specific dark theme colors, not shared across feature; tokenizing single-screen colors = premature abstraction |
 | QA-P2-29 | DS tokens: Home colors (7) | Flutter | M | ⏭️ skip | — | — | 5 colors single-file defaults; 2 shared across only 2 files each — not enough reuse to justify tokens |
-| QA-P2-30 | DS tokens: User colors (16) | Flutter | M | ⬜ pending | — | — | profile_screen.dart |
+| QA-P2-30 | DS tokens: User colors (16) | Flutter | M | 🔵 in-progress | claude-B | — | profile_screen.dart |
 | QA-P2-31 | DS tokens: Plan colors (20) | Flutter | M | ⬜ pending | — | — | learning_portfolio_screen.dart |
 | QA-P2-32 | DS tokens: BorderRadius (1,015 instances) | Flutter | L | ⬜ pending | — | — | → DS.borderRadius* |
 | QA-P2-33 | DS tokens: EdgeInsets (1,359 instances) | Flutter | L | ⬜ pending | — | — | → DS.spacing* |
