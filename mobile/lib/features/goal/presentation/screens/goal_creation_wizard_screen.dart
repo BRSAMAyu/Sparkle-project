@@ -55,28 +55,41 @@ class _GoalCreationWizardScreenState
       _t('拆解', 'Milestones'),
       _t('确认', 'Confirm'),
     ];
+    final currentStepLabel = titles[_step];
 
     return Scaffold(
       appBar: AppBar(
         title: Text(_t('创建目标', 'Create goal')),
       ),
       body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-          children: [
-            _WizardProgress(step: _step, titles: titles),
-            const SizedBox(height: 18),
-            if (_error != null) ...[
-              _ErrorBanner(
-                  message: _error!,
-                  onClose: () => setState(() => _error = null)),
-              const SizedBox(height: 14),
+        child: Semantics(
+          container: true,
+          explicitChildNodes: true,
+          label: _t(
+            '创建目标，第 ${_step + 1} 步，共 ${titles.length} 步：$currentStepLabel',
+            'Create goal, step ${_step + 1} of ${titles.length}: $currentStepLabel',
+          ),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+            children: [
+              _WizardProgress(step: _step, titles: titles),
+              const SizedBox(height: 18),
+              if (_error != null) ...[
+                _ErrorBanner(
+                    message: _error!,
+                    onClose: () => setState(() => _error = null)),
+                const SizedBox(height: 14),
+              ],
+              Semantics(
+                container: true,
+                label: currentStepLabel,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 180),
+                  child: _buildStep(context),
+                ),
+              ),
             ],
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              child: _buildStep(context),
-            ),
-          ],
+          ),
         ),
       ),
       bottomNavigationBar: SafeArea(
@@ -88,7 +101,8 @@ class _GoalCreationWizardScreenState
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: _creating ? null : () => setState(() => _step--),
-                    icon: const Icon(Icons.arrow_back_rounded),
+                    icon: const Icon(Icons.arrow_back_rounded,
+                        semanticLabel: 'Back'),
                     label: Text(_t('返回', 'Back')),
                   ),
                 ),
@@ -101,11 +115,16 @@ class _GoalCreationWizardScreenState
                       ? const SizedBox(
                           height: 16,
                           width: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2,
+                              semanticsLabel:
+                                  'Loading'),
                         )
                       : Icon(_step == 4
                           ? Icons.check_rounded
-                          : Icons.arrow_forward_rounded),
+                          : Icons.arrow_forward_rounded,
+                          semanticLabel: _step == 4
+                              ? _t('创建', 'Create')
+                              : _t('继续', 'Continue')),
                   label: Text(
                       _step == 4 ? _t('创建', 'Create') : _t('继续', 'Continue')),
                 ),
@@ -267,32 +286,39 @@ class _WizardProgress extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        for (var index = 0; index < titles.length; index++) ...[
-          Expanded(
-            child: Column(
-              children: [
-                Container(
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: index <= step ? DS.brandPrimary : DS.surfaceTertiary,
-                    borderRadius: BorderRadius.circular(999),
+    final zh = I18nService.instance.isChinese;
+    return Semantics(
+      container: true,
+      label: zh
+          ? '进度：第 ${step + 1} 步，共 ${titles.length} 步'
+          : 'Progress: step ${step + 1} of ${titles.length}',
+      child: Row(
+        children: [
+          for (var index = 0; index < titles.length; index++) ...[
+            Expanded(
+              child: Column(
+                children: [
+                  Container(
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: index <= step ? DS.brandPrimary : DS.surfaceTertiary,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                   ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  titles[index],
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelSmall,
-                ),
-              ],
+                  const SizedBox(height: 6),
+                  Text(
+                    titles[index],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelSmall,
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (index != titles.length - 1) const SizedBox(width: 5),
+            if (index != titles.length - 1) const SizedBox(width: 5),
+          ],
         ],
-      ],
+      ),
     );
   }
 }
