@@ -78,6 +78,13 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   @override
+  void dispose() {
+    _contentController.dispose();
+    _topicController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) => SparklePageScaffold(
         role: SparklePageRole.content,
         appBar: AppBar(

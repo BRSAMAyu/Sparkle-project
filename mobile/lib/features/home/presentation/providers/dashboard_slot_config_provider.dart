@@ -33,7 +33,6 @@ class DashboardSlotIds {
     dailyBriefing,
     metricsRow,
     commandCenter,
-    understanding,
     returnCaseFile,
     goalDetailSnapshot,
     multiGoalDashboard,
@@ -57,7 +56,6 @@ class DashboardSlotIds {
     taskBoard,
     workspaceCards,
     metricsRow,
-    understanding,
     returnCaseFile,
     goalDetailSnapshot,
     examSprint,
@@ -97,7 +95,6 @@ class DashboardSlotIds {
   /// silently hidden.
   static const List<String> defaultCollapsed = [
     metricsRow,
-    understanding,
     returnCaseFile,
     goalDetailSnapshot,
     examSprint,

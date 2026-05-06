@@ -536,6 +536,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             timeSpentSeconds: _currentQuestionTimeSpentSeconds(),
           );
 
+      if (!mounted) return;
+
       // 记录结果
       _reviewResults[error.id] = performance;
 
