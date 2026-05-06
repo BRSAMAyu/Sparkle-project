@@ -68,7 +68,7 @@
 | QA-P2-7 | Semantics: GoalCreationWizardScreen | Flutter | M | ✅ done | — | 29e95a3e7 | Multi-step form |
 | QA-P2-8 | Hardcoded 'Retry' → ARB | Flutter | S | ✅ done | — | 9735d444 | strategy_migration_wizard.dart → context.l10n.retry |
 | QA-P2-9 | Hardcoded 'Translation Demo' → ARB | Flutter | S | ✅ done | — | 9735d444 | translatable_text.dart → ARB keys + gen-l10n |
-| QA-P2-10 | _should_retract() enforcement logic | Python | M | ⬜ pending | — | — | Replace stub |
+| QA-P2-10 | _should_retract() enforcement logic | Python | M | 🔵 in-progress | claude-B | — | Replace stub |
 | QA-P2-11 | Build TaskRestoreDialog widget | Flutter | M | ⬜ pending | — | — | Extract to reusable widget |
 | QA-P2-12 | Build CommunityStrategyCard widget | Flutter | L | ⬜ pending | — | — | New widget |
 | QA-P2-13 | Build ExperienceEnvelopeIndicator | Flutter | L | ⬜ pending | — | — | New widget from provider |
@@ -119,6 +119,6 @@
 |----------|-------|---------|---------|-----------|----------------|
 | P0 | 6 | 6 | 0 | 0 | 0 |
 | P1 | 20 | 10 | 10 | 0 | 0 |
-| P2 | 35 | 6 | 3 | 25 | 0 |
+| P2 | 35 | 6 | 3 | 24 | 1 |
 | P3 | 5 | 0 | 0 | 5 | 0 |
-| **Total** | **66** | **22** | **12** | **31** | **0** |
+| **Total** | **66** | **22** | **12** | **30** | **1** |
