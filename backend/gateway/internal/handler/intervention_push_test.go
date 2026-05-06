@@ -9,15 +9,43 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestInterventionPushHandler_HandlePush_InvalidPayload(t *testing.T) {
+// TestInterventionPush_MissingUserID verifies that requests without user_id
+// are rejected with 400. The handler validates user_id is non-empty.
+func TestInterventionPush_MissingUserID(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 	handler := &InterventionPushHandler{orchestrator: nil}
 	router.POST("/push", handler.HandlePush)
 
-	req := httptest.NewRequest(http.MethodPost, "/push", bytes.NewBufferString(`not json`))
+	// Case 1: user_id field present but empty
+	body := `{"user_id":"","intervention":{"intervention_id":"id1","level":"gentle","content":{"rendered_message":"hi"}}}`
+	req := httptest.NewRequest(http.MethodPost, "/push", bytes.NewBufferString(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	assert.Contains(t, w.Body.String(), "user_id required")
+
+	// Case 2: user_id field absent entirely
+	body2 := `{"intervention":{"intervention_id":"id1","level":"gentle"}}`
+	req2 := httptest.NewRequest(http.MethodPost, "/push", bytes.NewBufferString(body2))
+	req2.Header.Set("Content-Type", "application/json")
+	w2 := httptest.NewRecorder()
+	router.ServeHTTP(w2, req2)
+	assert.Equal(t, http.StatusBadRequest, w2.Code)
+}
+
+// TestInterventionPush_InvalidJSON verifies malformed JSON is rejected.
+func TestInterventionPush_InvalidJSON(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	handler := &InterventionPushHandler{orchestrator: nil}
+	router.POST("/push", handler.HandlePush)
+
+	req := httptest.NewRequest(http.MethodPost, "/push", bytes.NewBufferString(`{invalid}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
@@ -26,91 +54,90 @@ func TestInterventionPushHandler_HandlePush_InvalidPayload(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "invalid payload")
 }
 
-func TestInterventionPushHandler_HandlePush_MissingUserID(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-	router := gin.New()
-	handler := &InterventionPushHandler{orchestrator: nil}
-	router.POST("/push", handler.HandlePush)
+// TestInterventionPush_PayloadParsing verifies that the full intervention
+// payload is correctly parsed from JSON into the Go struct, covering all
+// nested fields that get converted to protobuf.
+func TestInterventionPush_PayloadParsing(t *testing.T) {
+	raw := `{
+		"user_id": "user-abc-123",
+		"intervention": {
+			"intervention_id": "int-001",
+			"level": "gentle",
+			"content": {
+				"rendered_message": "You've been working for 2 hours. Take a break?",
+				"intent_type": "wellbeing_nudge",
+				"template_id": "break-reminder-v2",
+				"scaffolding_level": 3,
+				"context_variables": {"task_count": "5", "streak": "3"}
+			},
+			"actions": [
+				{"id": "accept", "label": "OK, I'll rest", "type": "dismiss"},
+				{"id": "snooze", "label": "15 more minutes", "type": "snooze"}
+			],
+			"expires_at": 1700000000
+		}
+	}`
 
-	body := `{"intervention":{"intervention_id":"id1","level":"gentle","content":{"rendered_message":"hi"}}}`
-	req := httptest.NewRequest(http.MethodPost, "/push", bytes.NewBufferString(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	var req interventionPushRequest
+	err := json.Unmarshal([]byte(raw), &req)
+	require.NoError(t, err)
 
-	assert.Equal(t, http.StatusBadRequest, w.Code)
-	assert.Contains(t, w.Body.String(), "user_id required")
+	// Verify top-level fields
+	assert.Equal(t, "user-abc-123", req.UserID)
+	assert.Equal(t, "int-001", req.Intervention.InterventionID)
+	assert.Equal(t, "gentle", req.Intervention.Level)
+
+	// Verify content mapping (these become pbws.InterventionContent fields)
+	assert.Equal(t, "You've been working for 2 hours. Take a break?", req.Intervention.Content.RenderedMessage)
+	assert.Equal(t, "wellbeing_nudge", req.Intervention.Content.IntentType)
+	assert.Equal(t, "break-reminder-v2", req.Intervention.Content.TemplateId)
+	assert.Equal(t, int32(3), req.Intervention.Content.ScaffoldingLevel)
+	assert.Equal(t, "5", req.Intervention.Content.ContextVariables["task_count"])
+
+	// Verify actions mapping (these become pbws.InterventionAction slice)
+	require.Len(t, req.Intervention.Actions, 2)
+	assert.Equal(t, "accept", req.Intervention.Actions[0].Id)
+	assert.Equal(t, "OK, I'll rest", req.Intervention.Actions[0].Label)
+	assert.Equal(t, "dismiss", req.Intervention.Actions[0].Type)
+	assert.Equal(t, "snooze", req.Intervention.Actions[1].Type)
+
+	// Verify expiry
+	assert.Equal(t, int64(1700000000), req.Intervention.ExpiresAt)
 }
 
-func TestInterventionPushRequest_JSONBinding(t *testing.T) {
-	tests := []struct {
-		name    string
-		json    string
-		wantErr bool
-	}{
-		{
-			name: "full valid payload",
-			json: `{
-				"user_id": "u-123",
-				"intervention": {
-					"intervention_id": "int-1",
-					"level": "gentle",
-					"content": {
-						"rendered_message": "Take a break?",
-						"intent_type": "nudge",
-						"template_id": "tpl-1",
-						"scaffolding_level": 2,
-						"context_variables": {"key": "val"}
-					},
-					"actions": [
-						{"id": "a1", "label": "OK", "type": "dismiss"}
-					],
-					"expires_at": 1700000000
-				}
-			}`,
-			wantErr: false,
-		},
-		{
-			name:    "empty json object",
-			json:    `{}`,
-			wantErr: false, // All fields have zero values, but binding doesn't require them
-		},
-	}
+// TestInterventionPush_EmptyActions verifies that empty actions array
+// is handled correctly (no panic on empty slice → proto conversion).
+func TestInterventionPush_EmptyActions(t *testing.T) {
+	raw := `{
+		"user_id": "u1",
+		"intervention": {
+			"intervention_id": "int-002",
+			"level": "firm",
+			"content": {"rendered_message": "Stop!"},
+			"actions": [],
+			"expires_at": 0
+		}
+	}`
+	var req interventionPushRequest
+	err := json.Unmarshal([]byte(raw), &req)
+	require.NoError(t, err)
+	assert.Empty(t, req.Intervention.Actions)
+	// Verify we can create the proto actions slice without panic
+	actions := make([]*interventionActionPayload, len(req.Intervention.Actions))
+	assert.Len(t, actions, 0)
+}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+// TestInterventionPush_LevelValues documents the expected level values.
+// The handler passes the level string directly to protobuf without validation.
+func TestInterventionPush_LevelValues(t *testing.T) {
+	levels := []string{"gentle", "firm", "urgent"}
+	for _, level := range levels {
+		t.Run(level, func(t *testing.T) {
+			raw := `{"user_id":"u1","intervention":{"intervention_id":"i","level":"` + level + `","content":{"rendered_message":"m"}}}`
 			var req interventionPushRequest
-			err := json.Unmarshal([]byte(tt.json), &req)
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-			}
+			err := json.Unmarshal([]byte(raw), &req)
+			require.NoError(t, err)
+			assert.Equal(t, level, req.Intervention.Level)
 		})
 	}
-}
-
-func TestInterventionActionPayload_SliceConversion(t *testing.T) {
-	// Verify actions slice converts correctly to proto format
-	actions := []interventionActionPayload{
-		{Id: "a1", Label: "OK", Type: "dismiss"},
-		{Id: "a2", Label: "Later", Type: "snooze"},
-	}
-
-	assert.Len(t, actions, 2)
-	assert.Equal(t, "a1", actions[0].Id)
-	assert.Equal(t, "snooze", actions[1].Type)
-}
-
-func TestInterventionContentPayload_Fields(t *testing.T) {
-	payload := interventionContentPayload{
-		RenderedMessage:  "Take a break?",
-		IntentType:       "nudge",
-		TemplateId:       "tpl-1",
-		ScaffoldingLevel: 2,
-		ContextVariables: map[string]string{"key": "val"},
-	}
-	assert.Equal(t, "Take a break?", payload.RenderedMessage)
-	assert.Equal(t, int32(2), payload.ScaffoldingLevel)
-	assert.Len(t, payload.ContextVariables, 1)
 }
