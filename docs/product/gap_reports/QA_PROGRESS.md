@@ -96,7 +96,7 @@
 | QA-P2-35 | Semantics: InkWell (30+ files) | Flutter | M | ⬜ pending | — | — | Wrap with Semantics |
 | QA-P2-36 | Semantics: GestureDetector (30+ files) | Flutter | M | ⬜ pending | — | — | Wrap with Semantics |
 | QA-P2-37 | Fix generic Semantics: CausalTimeline | Flutter | S | ✅ done | — | 7df6a4fd7 | Replaced 'control 1/2/3' with meaningful l10n labels |
-| QA-P2-38 | Fix hardcoded toggle: GoalWorldGraph | Flutter | S | ⬜ pending | — | — | Toggle strings → ARB |
+| QA-P2-38 | Fix hardcoded toggle: GoalWorldGraph | Flutter | S | ✅ done | — | 0635fe177 | Toggle strings + inline i18n → ARB, removed I18nService import |
 | QA-P2-39 | Semantics: notification chips | Flutter | S | ⬜ pending | — | — | Goal value + next step |
 | QA-P2-40 | Hardcoded 'Decision Timeline' → ARB | Flutter | S | ⬜ pending | — | — | ChatScreen |
 | QA-P2-41 | State handling: CommunityMainScreen | Flutter | M | ⬜ pending | — | — | loading/error/empty |
