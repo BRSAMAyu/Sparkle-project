@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/services/plan_description_codec.dart';
@@ -74,7 +75,7 @@ class SprintScreen extends ConsumerWidget {
     PlanModel? activeSprint,
   ) {
     if (state.isLoading && activeSprint == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const _SprintSkeleton();
     }
 
     if (activeSprint == null) {
@@ -616,4 +617,78 @@ class _SprintAchievementTile extends StatelessWidget {
         return DS.rarityLegendary;
     }
   }
+}
+
+class _SprintSkeleton extends StatelessWidget {
+  const _SprintSkeleton();
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+        padding: const EdgeInsets.all(DS.spacing16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(DS.spacing16),
+              decoration: BoxDecoration(
+                color: DS.surfaceSecondary,
+                borderRadius: DS.borderRadius16,
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SparkleSkeleton(width: 200, height: 20),
+                  SizedBox(height: DS.spacing12),
+                  SparkleSkeleton(width: double.infinity, height: 14),
+                  SizedBox(height: DS.spacing8),
+                  SparkleSkeleton(width: 260, height: 14),
+                  SizedBox(height: DS.spacing16),
+                  SparkleSkeleton(height: 8),
+                  SizedBox(height: DS.spacing8),
+                  Row(
+                    children: [
+                      SparkleSkeleton(width: 60, height: 24),
+                      SizedBox(width: DS.spacing8),
+                      SparkleSkeleton(width: 80, height: 24),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: DS.spacing16),
+            const Row(
+              children: [
+                SparkleSkeleton(width: 80, height: 80, borderRadius: 12),
+                SizedBox(width: DS.spacing8),
+                SparkleSkeleton(width: 80, height: 80, borderRadius: 12),
+                SizedBox(width: DS.spacing8),
+                SparkleSkeleton(width: 80, height: 80, borderRadius: 12),
+              ],
+            ),
+            const SizedBox(height: DS.spacing16),
+            ...List.generate(
+              4,
+              (_) => const Padding(
+                padding: EdgeInsets.only(bottom: DS.spacing8),
+                child: Row(
+                  children: [
+                    SparkleSkeleton(width: 24, height: 24, borderRadius: 4),
+                    SizedBox(width: DS.spacing12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SparkleSkeleton(height: 14),
+                          SizedBox(height: DS.spacing4),
+                          SparkleSkeleton(width: 120, height: 12),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 }

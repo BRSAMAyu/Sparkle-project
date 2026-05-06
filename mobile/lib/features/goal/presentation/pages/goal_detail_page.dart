@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/strategy_migration_wizard.dart';
 import 'package:sparkle/features/community/presentation/widgets/similar_goal_pursuers_card.dart';
@@ -119,7 +120,7 @@ class GoalDetailPage extends ConsumerWidget {
             ],
           ),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const _GoalDetailSkeleton(),
         error: (_, __) => _ErrorState(
           onRetry: () => ref.read(goalDetailProvider(goalId).notifier).load(),
         ),
@@ -676,4 +677,66 @@ class _ErrorState extends StatelessWidget {
       ),
     );
   }
+}
+
+class _GoalDetailSkeleton extends StatelessWidget {
+  const _GoalDetailSkeleton();
+
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+        padding: const EdgeInsets.all(DS.spacing16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header: circular progress + title area
+            Row(
+              children: [
+                const SparkleSkeleton(width: 76, height: 76, borderRadius: 999),
+                const SizedBox(width: DS.spacing16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SparkleSkeleton(width: 180, height: 20),
+                      const SizedBox(height: DS.spacing8),
+                      const SparkleSkeleton(width: 120, height: 14),
+                      const SizedBox(height: DS.spacing12),
+                      const Row(
+                        children: [
+                          SparkleSkeleton(width: 60, height: 24),
+                          SizedBox(width: DS.spacing8),
+                          SparkleSkeleton(width: 80, height: 24),
+                          SizedBox(width: DS.spacing8),
+                          SparkleSkeleton(width: 50, height: 24),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: DS.spacing20),
+            // Strategy card
+            const SparkleCardSkeleton(),
+            const SizedBox(height: DS.spacing14),
+            // Minimum criteria card
+            const SparkleCardSkeleton(),
+            const SizedBox(height: DS.spacing14),
+            // Metrics
+            ...List.generate(
+              3,
+              (_) => const Padding(
+                padding: EdgeInsets.only(bottom: DS.spacing12),
+                child: Row(
+                  children: [
+                    SparkleSkeleton(width: 80, height: 14),
+                    SizedBox(width: DS.spacing12),
+                    Expanded(child: SparkleSkeleton(height: 8)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
 }

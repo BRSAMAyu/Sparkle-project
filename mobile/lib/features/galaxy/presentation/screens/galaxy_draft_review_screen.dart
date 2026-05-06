@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_card.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/galaxy/data/models/galaxy_draft_review_models.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_draft_review_provider.dart';
@@ -83,7 +84,7 @@ class _GalaxyDraftReviewScreenState
           body: SafeArea(
             top: false,
             child: state.batches.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const _GalaxyDraftSkeleton(),
               error: (error, _) => _ReviewStatePanel(
                 title: l10n.galaxyDraftReviewEmptyTitle,
                 body: error.toString(),
@@ -899,6 +900,63 @@ class _MetaPill extends StatelessWidget {
                     color: DS.neutral0.withValues(alpha: 0.78),
                   ),
             ),
+          ],
+        ),
+      );
+}
+
+class _GalaxyDraftSkeleton extends StatelessWidget {
+  const _GalaxyDraftSkeleton();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing20, DS.spacing8, DS.spacing20, DS.spacing20,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SparkleSkeleton(width: 200, height: 20),
+            const SizedBox(height: DS.spacing12),
+            const SparkleSkeleton(width: double.infinity, height: 12),
+            const SizedBox(height: DS.spacing8),
+            const SparkleSkeleton(width: 280, height: 12),
+            const SizedBox(height: DS.spacing24),
+            const _SkeletonCard(),
+            const SizedBox(height: DS.spacing12),
+            const _SkeletonCard(),
+          ],
+        ),
+      );
+}
+
+class _SkeletonCard extends StatelessWidget {
+  const _SkeletonCard();
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.neutral0.withValues(alpha: 0.06),
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.neutral0.withValues(alpha: 0.1)),
+        ),
+        child: const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SparkleSkeleton(width: 60, height: 16),
+                SizedBox(width: DS.spacing8),
+                SparkleSkeleton(width: 40, height: 16),
+              ],
+            ),
+            SizedBox(height: DS.spacing12),
+            SparkleSkeleton(width: double.infinity, height: 14),
+            SizedBox(height: DS.spacing8),
+            SparkleSkeleton(width: 220, height: 14),
+            SizedBox(height: DS.spacing8),
+            SparkleSkeleton(width: 160, height: 14),
           ],
         ),
       );

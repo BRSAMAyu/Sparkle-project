@@ -3287,7 +3287,16 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
                 future: _historyFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return SparkleListSkeleton(
+                      itemCount: 5,
+                      itemBuilder: (_, i) => Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing16,
+                          vertical: DS.spacing6,
+                        ),
+                        child: const SparkleCardSkeleton(),
+                      ),
+                    );
                   }
 
                   if (snapshot.hasError) {
