@@ -7,13 +7,13 @@ class MinimumCriteriaCard extends StatelessWidget {
   const MinimumCriteriaCard({
     required this.criteria,
     required this.onConfirm,
-    required this.onModify,
+    this.onModify,
     super.key,
   });
 
   final MinimumAcceptanceCriteria criteria;
   final VoidCallback onConfirm;
-  final VoidCallback onModify;
+  final VoidCallback? onModify;
 
   @override
   Widget build(BuildContext context) {
@@ -100,11 +100,12 @@ class MinimumCriteriaCard extends StatelessWidget {
                       icon: const Icon(Icons.check_rounded),
                       label: Text(l10n.goalDetailConfirm),
                     ),
-                    OutlinedButton.icon(
-                      onPressed: onModify,
-                      icon: const Icon(Icons.edit_outlined),
-                      label: Text(l10n.goalDetailModify),
-                    ),
+                    if (onModify != null)
+                      OutlinedButton.icon(
+                        onPressed: onModify,
+                        icon: const Icon(Icons.edit_outlined),
+                        label: Text(l10n.goalDetailModify),
+                      ),
                   ],
                 ),
               ],
