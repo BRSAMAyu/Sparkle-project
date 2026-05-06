@@ -650,6 +650,113 @@ class TestPollutionGuardFilter:
         assert filtered == []
 
 
+class TestRetrievalDirectiveIntegration:
+    """Tests for QA-P0-5: end-to-end directive filtering with combined fields."""
+
+    def _build_results(self) -> list[dict]:
+        return [
+            {"id": "c-must-low", "file_id": "src-must", "similarity": 0.05},
+            {"id": "c-must-high", "file_id": "src-must", "similarity": 0.90},
+            {"id": "c-may-high", "file_id": "src-may", "similarity": 0.60},
+            {"id": "c-may-low", "file_id": "src-may", "similarity": 0.10},
+            {"id": "c-blocked", "file_id": "src-block", "similarity": 0.95},
+            {"id": "c-unlisted-high", "file_id": "src-other1", "similarity": 0.70},
+            {"id": "c-unlisted-mid", "file_id": "src-other2", "similarity": 0.25},
+            {"id": "c-unlisted-low", "file_id": "src-other3", "similarity": 0.10},
+        ]
+
+    def test_full_directive_strict(self):
+        """Combined must_load + may_load + do_not_load + strict pollution_guard."""
+        directive = {
+            "must_load": ["src-must"],
+            "may_load": ["src-may"],
+            "do_not_load": ["src-block"],
+            "pollution_guard": "strict",
+        }
+        filtered = _apply_retrieval_directive_filter(self._build_results(), directive)
+        ids = [r["id"] for r in filtered]
+
+        # must_load always in (even at similarity 0.05)
+        assert "c-must-low" in ids
+        assert "c-must-high" in ids
+
+        # may_load: high passes (>= 0.3), low excluded
+        assert "c-may-high" in ids
+        assert "c-may-low" not in ids
+
+        # do_not_load always excluded
+        assert "c-blocked" not in ids
+
+        # unlisted: strict guard filters < 0.3
+        assert "c-unlisted-high" in ids
+        assert "c-unlisted-mid" not in ids
+        assert "c-unlisted-low" not in ids
+
+    def test_full_directive_moderate(self):
+        """Combined fields with moderate pollution_guard."""
+        directive = {
+            "must_load": ["src-must"],
+            "do_not_load": ["src-block"],
+            "pollution_guard": "moderate",
+        }
+        filtered = _apply_retrieval_directive_filter(self._build_results(), directive)
+        ids = [r["id"] for r in filtered]
+
+        assert "c-must-low" in ids
+        assert "c-blocked" not in ids
+        # moderate threshold 0.15: 0.25 passes, 0.10 excluded
+        assert "c-unlisted-high" in ids
+        assert "c-unlisted-mid" in ids
+        assert "c-unlisted-low" not in ids
+
+    def test_full_directive_off(self):
+        """Combined fields with pollution_guard off."""
+        directive = {
+            "must_load": ["src-must"],
+            "do_not_load": ["src-block"],
+            "pollution_guard": "off",
+        }
+        filtered = _apply_retrieval_directive_filter(self._build_results(), directive)
+        ids = [r["id"] for r in filtered]
+
+        assert "c-must-low" in ids
+        assert "c-blocked" not in ids
+        # off: all unlisted pass through
+        assert "c-unlisted-high" in ids
+        assert "c-unlisted-mid" in ids
+        assert "c-unlisted-low" in ids
+
+    def test_directive_preserves_order(self):
+        """Filtered results maintain original order."""
+        directive = {"pollution_guard": "strict"}
+        results = [
+            {"id": "a", "file_id": "s1", "similarity": 0.5},
+            {"id": "b", "file_id": "s2", "similarity": 0.8},
+            {"id": "c", "file_id": "s3", "similarity": 0.6},
+        ]
+        filtered = _apply_retrieval_directive_filter(results, directive)
+        assert [r["id"] for r in filtered] == ["a", "b", "c"]
+
+    def test_empty_directive_passthrough(self):
+        """Empty dict returns all results unchanged."""
+        results = self._build_results()
+        filtered = _apply_retrieval_directive_filter(results, {})
+        assert filtered == results
+
+    def test_none_values_in_directive(self):
+        """Directive with None values treated as empty."""
+        directive = {
+            "must_load": None,
+            "may_load": None,
+            "do_not_load": None,
+            "pollution_guard": None,
+        }
+        results = self._build_results()
+        filtered = _apply_retrieval_directive_filter(results, directive)
+        # pollution_guard None → "off" → no threshold → all pass
+        assert len(filtered) == len(results)
+
+
 class TestGraphKnowledgeService:
     """测试增强的知识服务"""
 
