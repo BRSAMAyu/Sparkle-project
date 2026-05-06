@@ -49,7 +49,7 @@
 | QA-P1-15 | Integrate UnderstandingSnapshotCard | Flutter | M | ✅ done | — | ac972153 | Replaced _UnderstandingExpansionSlot in growthSections |
 | QA-P1-16 | Register AccountabilityHubScreen route | Flutter | S | ⏭️ skip | — | — | Already registered: community_routes.dart:377 |
 | QA-P1-17 | Persist SprintReviewScreen notes | Flutter | M | 🔵 in-progress | claude-B | — | Wire save API |
-| QA-P1-18 | Replace duplicate GoalValueChip | Flutter | S | ⬜ pending | — | — | Use shared widget in notifications |
+| QA-P1-18 | Replace duplicate GoalValueChip | Flutter | S | 🔵 in-progress | claude-A | — | Use shared widget in notifications |
 | QA-P1-19 | Unit tests: per-channel delivery | Python | M | ⬜ pending | — | — | silent/in_app/push resolution |
 | QA-P1-20 | Unit tests: fatigue + streak quality | Python | M | ⬜ pending | — | — | Fatigue penalty + Redis fallback |
 
