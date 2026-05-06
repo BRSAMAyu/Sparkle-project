@@ -10,6 +10,23 @@ import 'package:sparkle/features/plan/plan_routes.dart';
 import 'package:sparkle/features/plan/presentation/providers/learning_portfolio_provider.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 
+// Screen-specific nature-themed decorative colors for learning portfolio.
+const _portfolioMint = Color(0xFFE7F4EA);
+const _portfolioCream = Color(0xFFF7EFE3);
+const _portfolioLavender = Color(0xFFF7F8FC);
+const _portfolioSageBorder = Color(0xFFCED8CE);
+const _portfolioForest = Color(0xFF224434);
+const _portfolioPaleSage = Color(0xFFD7DFD7);
+const _portfolioMistGreen = Color(0xFFF3F5F1);
+const _portfolioPaleMist = Color(0xFFF1F5EF);
+const _portfolioMutedSage = Color(0xFFD8DED3);
+const _portfolioDeepGreen = Color(0xFF355543);
+const _portfolioWarmCream = Color(0xFFF7F4EC);
+const _portfolioBeige = Color(0xFFE2D8C4);
+const _portfolioBrown = Color(0xFF6A5740);
+const _portfolioSageBorderAlt = Color(0xFFD5DED1);
+const _portfolioSageGreen = Color(0xFF5A7563);
+
 class LearningPortfolioScreen extends ConsumerStatefulWidget {
   const LearningPortfolioScreen({super.key});
 
@@ -212,12 +229,12 @@ class _PortfolioSummaryCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: <Color>[
-            Color(0xFFE7F4EA),
-            Color(0xFFF7EFE3),
-            Color(0xFFF7F8FC),
+            _portfolioMint,
+            _portfolioCream,
+            _portfolioLavender,
           ],
         ),
-        border: Border.all(color: const Color(0xFFCED8CE)),
+        border: Border.all(color: _portfolioSageBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,7 +248,7 @@ class _PortfolioSummaryCard extends StatelessWidget {
             '${portfolio.totalMasteredNodes}',
             style: DS.displayLarge.copyWith(
               fontWeight: DS.fontWeightBold,
-              color: const Color(0xFF224434),
+              color: _portfolioForest,
             ),
           ),
           const SizedBox(height: DS.spacing12),
@@ -265,7 +282,7 @@ class _SummaryPill extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.78),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFD7DFD7)),
+        border: Border.all(color: _portfolioPaleSage),
       ),
       child: Text(
         label,
@@ -364,14 +381,14 @@ class _PortfolioEntryCard extends StatelessWidget {
               vertical: DS.spacing8,
             ),
             decoration: BoxDecoration(
-              color: const Color(0xFFF3F5F1),
+              color: _portfolioMistGreen,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFD8DED3)),
+              border: Border.all(color: _portfolioMutedSage),
             ),
             child: Text(
               context.l10n.planPortfolioMasteryPercent(entry.masteredNodesCount),
               style: DS.labelLarge.copyWith(
-                color: const Color(0xFF355543),
+                color: _portfolioDeepGreen,
                 fontWeight: DS.fontWeightSemibold,
               ),
             ),
@@ -462,14 +479,14 @@ class _DetailChip extends StatelessWidget {
         vertical: DS.spacing8,
       ),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F4EC),
+        color: _portfolioWarmCream,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE2D8C4)),
+        border: Border.all(color: _portfolioBeige),
       ),
       child: Text(
         label,
         style: DS.bodySmall.copyWith(
-          color: const Color(0xFF6A5740),
+          color: _portfolioBrown,
           fontWeight: DS.fontWeightSemibold,
         ),
       ),
@@ -525,14 +542,14 @@ class _PortfolioEmptyState extends StatelessWidget {
               width: 88,
               height: 88,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5EF),
+                color: _portfolioPaleMist,
                 shape: BoxShape.circle,
-                border: Border.all(color: const Color(0xFFD5DED1)),
+                border: Border.all(color: _portfolioSageBorderAlt),
               ),
               child: const Icon(
                 Icons.library_books_outlined,
                 size: 34,
-                color: Color(0xFF5A7563),
+                color: _portfolioSageGreen,
               ),
             ),
             const SizedBox(height: DS.spacing16),
