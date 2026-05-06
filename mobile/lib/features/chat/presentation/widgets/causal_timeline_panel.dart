@@ -240,7 +240,7 @@ class _Header extends StatelessWidget {
             const Spacer(),
             Semantics(
               button: true,
-              label: 'Chat causal timeline panel control 1',
+              label: context.l10n.chatCausalSemanticsRefresh,
               child: IconButton(
                 icon: Icon(Icons.refresh, size: 18, color: DS.textTertiary),
                 onPressed: onRefresh,
@@ -375,7 +375,7 @@ class _TimelineEntryCardState extends State<_TimelineEntryCard> {
           // Compact row
           Semantics(
             button: true,
-            label: 'Chat causal timeline panel control 2',
+            label: context.l10n.chatCausalSemanticsToggleEntry(headline),
             child: InkWell(
               borderRadius: BorderRadius.circular(14),
               onTap: () {
@@ -607,7 +607,7 @@ class _ActionChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Semantics(
         button: true,
-        label: 'Chat causal timeline panel control 3',
+        label: context.l10n.chatCausalSemanticsAction(label),
         child: GestureDetector(
           onTap: onTap,
           child: Container(
