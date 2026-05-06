@@ -278,16 +278,17 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
               decoration: BoxDecoration(
-                color: DS.error,
+                color: DS.semanticError,
                 borderRadius: BorderRadius.circular(8),
               ),
               constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
                 count > 99 ? '99+' : '$count',
-                style: TextStyle(
-                  color: DS.brandPrimaryConst,
+                style: const TextStyle(
+                  color: Colors.white,
                   fontSize: 10,
-                  fontWeight: DS.fontWeightBold,
+                  fontWeight: FontWeight.w600,
+                  fontFeatures: [FontFeature.tabularFigures()],
                 ),
                 textAlign: TextAlign.center,
               ),

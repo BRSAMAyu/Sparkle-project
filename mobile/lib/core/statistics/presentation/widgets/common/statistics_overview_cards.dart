@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 /// A single statistics metric card
@@ -100,6 +101,7 @@ class StatisticsMetricCard extends StatelessWidget {
                 color: valueColor ?? DS.neutral800,
                 fontSize: 28,
                 fontWeight: DS.fontWeightBold,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
             if (unit != null)
@@ -143,7 +145,7 @@ class StatisticsMetricCard extends StatelessWidget {
               ),
               const SizedBox(width: DS.xs),
               Text(
-                '较上期',
+                I18nService.instance.isChinese ? '较上期' : 'vs last',
                 style: DS.captionStyle.copyWith(
                   color: DS.neutral400,
                 ),
