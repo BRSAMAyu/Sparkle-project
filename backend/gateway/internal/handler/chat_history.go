@@ -45,6 +45,21 @@ func NewChatHistoryHandler(chatHistory *service.ChatHistoryService) *ChatHistory
 	return &ChatHistoryHandler{chatHistory: chatHistory}
 }
 
+func clampLimit(limit, maxVal, defaultVal int) int {
+	if limit <= 0 {
+		return defaultVal
+	}
+	if limit > maxVal {
+		return maxVal
+	}
+	return limit
+}
+
+func mustAtoi(s string) int {
+	v, _ := strconv.Atoi(s)
+	return v
+}
+
 func (h *ChatHistoryHandler) GetRecentSessions(c *gin.Context) {
 	userID := c.GetString("user_id")
 	if userID == "" {
@@ -52,7 +67,7 @@ func (h *ChatHistoryHandler) GetRecentSessions(c *gin.Context) {
 		return
 	}
 
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	limit := clampLimit(mustAtoi(c.DefaultQuery("limit", "20")), 200, 20)
 	sessions, err := h.chatHistory.GetRecentSessions(c.Request.Context(), userID, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch recent sessions"})
@@ -69,8 +84,8 @@ func (h *ChatHistoryHandler) GetConversationHistory(c *gin.Context) {
 		return
 	}
 
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
-	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
+	limit := clampLimit(mustAtoi(c.DefaultQuery("limit", "20")), 200, 20)
+	offset := clampLimit(mustAtoi(c.DefaultQuery("offset", "0")), 100000, 0)
 	sessionID := c.Param("conversation_id")
 
 	messages, err := h.chatHistory.GetMessages(c.Request.Context(), userID, sessionID, limit, offset)

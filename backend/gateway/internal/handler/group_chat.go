@@ -3,7 +3,6 @@ package handler
 import (
 	"context"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -56,10 +55,8 @@ func (h *GroupChatHandler) GetMessages(c *gin.Context) {
 		return
 	}
 
-	limitStr := c.DefaultQuery("limit", "50")
-	limit, _ := strconv.Atoi(limitStr)
-	offsetStr := c.DefaultQuery("offset", "0")
-	offset, _ := strconv.Atoi(offsetStr)
+	limit := clampLimit(mustAtoi(c.DefaultQuery("limit", "50")), 200, 50)
+	offset := clampLimit(mustAtoi(c.DefaultQuery("offset", "0")), 100000, 0)
 
 	messages, err := h.groupChat.GetGroupMessages(c.Request.Context(), groupID, int32(limit), int32(offset))
 	if err != nil {

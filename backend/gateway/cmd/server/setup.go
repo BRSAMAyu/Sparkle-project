@@ -598,7 +598,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		admin.GET("/cqrs/projections", func(c *gin.Context) {
 			projections, err := cqrs.projectionManager.GetAllProjections(c.Request.Context())
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 			c.JSON(http.StatusOK, projections)
@@ -608,7 +608,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 			name := c.Param("name")
 			info, err := cqrs.projectionManager.GetProjectionInfo(c.Request.Context(), name)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 			c.JSON(http.StatusOK, info)
@@ -617,7 +617,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		admin.POST("/cqrs/projections/:name/reset", func(c *gin.Context) {
 			name := c.Param("name")
 			if err := cqrs.projectionManager.ResetProjection(c.Request.Context(), name); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 			c.JSON(http.StatusOK, gin.H{"status": "resetting"})
@@ -626,7 +626,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		admin.POST("/cqrs/projections/:name/pause", func(c *gin.Context) {
 			name := c.Param("name")
 			if err := cqrs.projectionManager.PauseProjection(c.Request.Context(), name); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 			c.JSON(http.StatusOK, gin.H{"status": "paused"})
@@ -635,7 +635,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		admin.POST("/cqrs/projections/:name/resume", func(c *gin.Context) {
 			name := c.Param("name")
 			if err := cqrs.projectionManager.ResumeProjection(c.Request.Context(), name); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 			c.JSON(http.StatusOK, gin.H{"status": "resumed"})
@@ -645,7 +645,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 			name := c.Param("name")
 			count, err := cqrs.snapshotManager.GetSnapshotCount(c.Request.Context(), name)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 			c.JSON(http.StatusOK, gin.H{"count": count})
@@ -731,7 +731,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 			name := c.Param("name")
 			info, err := cqrs.projectionManager.GetProjectionInfo(c.Request.Context(), name)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 
@@ -743,7 +743,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 			}
 
 			if err := cqrs.projectionBuilder.CreateSnapshot(c.Request.Context(), name, snapshotData); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 
@@ -756,7 +756,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		admin.GET("/cqrs/dlq/stats", func(c *gin.Context) {
 			stats, err := cqrs.dlqHandler.GetStats(c.Request.Context())
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 			c.JSON(http.StatusOK, stats)
@@ -765,7 +765,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		admin.POST("/cqrs/dlq/cleanup", func(c *gin.Context) {
 			deleted, err := cqrs.dlqHandler.Cleanup(c.Request.Context())
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 			c.JSON(http.StatusOK, gin.H{
@@ -777,7 +777,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		admin.POST("/cqrs/dlq/retry/:message_id", func(c *gin.Context) {
 			messageID := c.Param("message_id")
 			if err := cqrs.dlqHandler.RetryEntry(c.Request.Context(), messageID); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 			c.JSON(http.StatusOK, gin.H{
@@ -789,7 +789,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		admin.DELETE("/cqrs/dlq/:message_id", func(c *gin.Context) {
 			messageID := c.Param("message_id")
 			if err := cqrs.dlqHandler.DeleteEntry(c.Request.Context(), messageID); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 			c.JSON(http.StatusOK, gin.H{
@@ -801,7 +801,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 		admin.GET("/cqrs/outbox/stats", func(c *gin.Context) {
 			pendingCount, err := cqrs.outboxRepo.GetPendingCount(c.Request.Context())
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 				return
 			}
 			c.JSON(http.StatusOK, gin.H{
