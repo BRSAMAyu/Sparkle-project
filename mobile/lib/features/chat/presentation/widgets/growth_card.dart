@@ -64,7 +64,10 @@ class _GrowthCardState extends State<GrowthCard>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
+    return Semantics(
+      container: true,
+      label: widget.title,
+      child: FadeTransition(
       opacity: _fadeAnim,
       child: SlideTransition(
         position: _slideAnim,
@@ -194,6 +197,7 @@ class _GrowthCardState extends State<GrowthCard>
             ],
           ),
         ),
+      ),
       ),
     );
   }

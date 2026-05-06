@@ -158,7 +158,18 @@ class _AchievementMilestoneBadgeState extends State<AchievementMilestoneBadge>
         colors.glow;
     const size = 22.0;
 
-    return SizedBox(
+    final label = switch (milestone) {
+      MilestoneLevel.bronze => 'Bronze milestone',
+      MilestoneLevel.silver => 'Silver milestone',
+      MilestoneLevel.gold => 'Gold milestone',
+      MilestoneLevel.platinum => 'Platinum milestone',
+      _ => 'Achievement milestone',
+    };
+
+    return Semantics(
+      container: true,
+      label: label,
+      child: SizedBox(
       width: size,
       height: size,
       child: Stack(
@@ -243,6 +254,7 @@ class _AchievementMilestoneBadgeState extends State<AchievementMilestoneBadge>
               color: colors.border,
             ),
         ],
+      ),
       ),
     );
   }

@@ -24,7 +24,10 @@ class RarityBadge extends StatelessWidget {
     final name = _getRarityName(context);
     final icon = _getRarityIcon();
 
-    return LayoutBuilder(
+    return Semantics(
+      container: true,
+      label: name,
+      child: LayoutBuilder(
       builder: (context, constraints) {
         final width = constraints.hasBoundedWidth
             ? constraints.maxWidth
@@ -79,6 +82,7 @@ class RarityBadge extends StatelessWidget {
           ),
         );
       },
+      ),
     );
   }
 
