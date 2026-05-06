@@ -460,6 +460,32 @@ def _apply_retrieval_directive_filter(
     return filtered
 
 
+def _enforce_token_budget(
+    vector_results: list[dict[str, Any]],
+    token_budget: int,
+) -> list[dict[str, Any]]:
+    """Truncate vector results to stay within token_budget."""
+    if token_budget <= 0 or not vector_results:
+        return vector_results
+
+    kept: list[dict[str, Any]] = []
+    total_est_tokens = 0
+    for item in vector_results:
+        content = str(
+            item.get("content")
+            or item.get("text")
+            or item.get("description")
+            or item.get("chunk_content")
+            or ""
+        )
+        est_tokens = max(1, len(content) // 4)
+        if total_est_tokens + est_tokens > token_budget:
+            break
+        total_est_tokens += est_tokens
+        kept.append(item)
+    return kept if kept else vector_results[:1]
+
+
 NO_RELEVANT_STUDY_MATERIALS_SENTINEL = (
     "[Study Materials — Referenced Documents]\n\n"
     "No relevant study materials found for this query. Do not claim that uploaded notes, PDFs, slides, or other "
@@ -2197,6 +2223,15 @@ Return ONLY a JSON array of entity names."""
                 logger.info(
                     f"RetrievalDirective filter: {pre_count} → {len(vector_results)} results"
                 )
+            # Apply token_budget enforcement
+            token_budget = retrieval_directive.get("token_budget")
+            if isinstance(token_budget, (int, float)) and token_budget > 0:
+                pre_budget = len(vector_results)
+                vector_results = _enforce_token_budget(vector_results, int(token_budget))
+                if len(vector_results) != pre_budget:
+                    logger.info(
+                        f"Token budget ({int(token_budget)}): {pre_budget} → {len(vector_results)} results"
+                    )
 
         if multi_hop_metadata:
             structured_context = format_graph_rag_document_context(
