@@ -18,6 +18,12 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
   final TextEditingController _controller = TextEditingController();
   bool _isSubmitting = false;
 
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   Future<void> _submit() async {
     final text = _controller.text.trim();
     if (text.isEmpty) return;

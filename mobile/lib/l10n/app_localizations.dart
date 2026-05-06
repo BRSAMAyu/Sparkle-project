@@ -37729,6 +37729,174 @@ abstract class AppLocalizations {
   /// **'推荐时间分配'**
   String get chatGoalTimeAllocation;
 
+  /// No description provided for @goalConflictTodaySchedule.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天的安排'**
+  String get goalConflictTodaySchedule;
+
+  /// No description provided for @goalConflictTimeAvailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'你今天大概只有 {minutes} 分钟。'**
+  String goalConflictTimeAvailable(int minutes);
+
+  /// No description provided for @goalConflictAgree.
+  ///
+  /// In zh, this message translates to:
+  /// **'同意'**
+  String get goalConflictAgree;
+
+  /// No description provided for @goalConflictNeedAdjust.
+  ///
+  /// In zh, this message translates to:
+  /// **'我需要调整'**
+  String get goalConflictNeedAdjust;
+
+  /// No description provided for @goalConflictMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{minutes} 分钟'**
+  String goalConflictMinutes(int minutes);
+
+  /// No description provided for @divineCorrectionImpactTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'收到，我记住了'**
+  String get divineCorrectionImpactTitle;
+
+  /// No description provided for @divineCorrectionImpactNarrative.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的纠正很重要，我正在重新调整接下来的任务安排。'**
+  String get divineCorrectionImpactNarrative;
+
+  /// No description provided for @divineCorrectionViewAdjusted.
+  ///
+  /// In zh, this message translates to:
+  /// **'看看调整后的安排'**
+  String get divineCorrectionViewAdjusted;
+
+  /// No description provided for @divineMomentContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续当前任务'**
+  String get divineMomentContinue;
+
+  /// No description provided for @divineMaterialNonUseTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你现在不需要这个'**
+  String get divineMaterialNonUseTitle;
+
+  /// No description provided for @divineMaterialSkipped.
+  ///
+  /// In zh, this message translates to:
+  /// **'已跳过：{material}'**
+  String divineMaterialSkipped(Object material);
+
+  /// No description provided for @divineMaterialAcknowledge.
+  ///
+  /// In zh, this message translates to:
+  /// **'好的，谢谢'**
+  String get divineMaterialAcknowledge;
+
+  /// No description provided for @divineAbsenceTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'欢迎回来'**
+  String get divineAbsenceTitle;
+
+  /// No description provided for @divineAbsenceIdle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你离开了一会儿。准备好继续吗？'**
+  String get divineAbsenceIdle;
+
+  /// No description provided for @divineAbsenceShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'已经过了几个小时。这里有个快速回顾帮你接上。'**
+  String get divineAbsenceShort;
+
+  /// No description provided for @divineAbsenceLong.
+  ///
+  /// In zh, this message translates to:
+  /// **'已经有一阵子了。我保存了你的进度——慢慢来。'**
+  String get divineAbsenceLong;
+
+  /// No description provided for @divineAbsenceResume.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续'**
+  String get divineAbsenceResume;
+
+  /// No description provided for @divineAbsenceRestart.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新开始'**
+  String get divineAbsenceRestart;
+
+  /// No description provided for @divineAbsenceMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{n}分钟'**
+  String divineAbsenceMinutes(int n);
+
+  /// No description provided for @divineLowYieldTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'也许可以跳过这个'**
+  String get divineLowYieldTitle;
+
+  /// No description provided for @divineLowYieldNarrative.
+  ///
+  /// In zh, this message translates to:
+  /// **'在截止日期压力下，{activity} 收益较低。试试 {alternative}。'**
+  String divineLowYieldNarrative(String activity, String alternative);
+
+  /// No description provided for @divineLowYieldBoost.
+  ///
+  /// In zh, this message translates to:
+  /// **'时间利用效率提升约 {pct}%'**
+  String divineLowYieldBoost(int pct);
+
+  /// No description provided for @divineLowYieldSwitch.
+  ///
+  /// In zh, this message translates to:
+  /// **'换成 {alternative}'**
+  String divineLowYieldSwitch(String alternative);
+
+  /// No description provided for @divineLowYieldIgnore.
+  ///
+  /// In zh, this message translates to:
+  /// **'我还是做这个'**
+  String get divineLowYieldIgnore;
+
+  /// No description provided for @divineCommunityTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'别人找到了更好的方法'**
+  String get divineCommunityTitle;
+
+  /// No description provided for @divineCommunityNarrative.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个类似情况的同学通过「{strategy}」取得了进步。想试试吗？'**
+  String divineCommunityNarrative(int count, String strategy);
+
+  /// No description provided for @divineCommunityTry.
+  ///
+  /// In zh, this message translates to:
+  /// **'试试 {strategy}'**
+  String divineCommunityTry(String strategy);
+
+  /// No description provided for @divineCommunityNotNow.
+  ///
+  /// In zh, this message translates to:
+  /// **'先不要'**
+  String get divineCommunityNotNow;
+
   /// No description provided for @chatGraphAffectedLater.
   ///
   /// In zh, this message translates to:
@@ -54660,6 +54828,354 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'今天适合{hint}'**
   String homeWeatherOnlyHint(Object hint);
+
+  /// No description provided for @goalIntentTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'告诉我你想达成什么'**
+  String get goalIntentTitle;
+
+  /// No description provided for @goalIntentHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'一句话就好，比如「7天后计网考试基本没学想先别挂」'**
+  String get goalIntentHint;
+
+  /// No description provided for @goalIntentTypeHere.
+  ///
+  /// In zh, this message translates to:
+  /// **'在这里输入'**
+  String get goalIntentTypeHere;
+
+  /// No description provided for @goalIntentUnderstanding.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在理解…'**
+  String get goalIntentUnderstanding;
+
+  /// No description provided for @goalIntentReadSituation.
+  ///
+  /// In zh, this message translates to:
+  /// **'让我先看看你的情况'**
+  String get goalIntentReadSituation;
+
+  /// No description provided for @goalIntentSuggestedAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'我建议先这样做'**
+  String get goalIntentSuggestedAction;
+
+  /// No description provided for @goalIntentOrWrong.
+  ///
+  /// In zh, this message translates to:
+  /// **'或者我猜错了——'**
+  String get goalIntentOrWrong;
+
+  /// No description provided for @goalIntentDaysLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩 {days} 天'**
+  String goalIntentDaysLeft(Object days);
+
+  /// No description provided for @goalIntentConfidence.
+  ///
+  /// In zh, this message translates to:
+  /// **'置信度 {percent}%'**
+  String goalIntentConfidence(Object percent);
+
+  /// No description provided for @goalIntentExamRescue.
+  ///
+  /// In zh, this message translates to:
+  /// **'考试抢救'**
+  String get goalIntentExamRescue;
+
+  /// No description provided for @goalIntentExamPrep.
+  ///
+  /// In zh, this message translates to:
+  /// **'考试备战'**
+  String get goalIntentExamPrep;
+
+  /// No description provided for @goalIntentJobSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'求职冲刺'**
+  String get goalIntentJobSprint;
+
+  /// No description provided for @goalIntentProject.
+  ///
+  /// In zh, this message translates to:
+  /// **'项目交付'**
+  String get goalIntentProject;
+
+  /// No description provided for @goalIntentHabit.
+  ///
+  /// In zh, this message translates to:
+  /// **'习惯养成'**
+  String get goalIntentHabit;
+
+  /// No description provided for @goalIntentKeepGoing.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续了解'**
+  String get goalIntentKeepGoing;
+
+  /// No description provided for @goalWizardType.
+  ///
+  /// In zh, this message translates to:
+  /// **'类型'**
+  String get goalWizardType;
+
+  /// No description provided for @goalWizardMotivation.
+  ///
+  /// In zh, this message translates to:
+  /// **'动机'**
+  String get goalWizardMotivation;
+
+  /// No description provided for @goalWizardTimeline.
+  ///
+  /// In zh, this message translates to:
+  /// **'时间'**
+  String get goalWizardTimeline;
+
+  /// No description provided for @goalWizardMilestones.
+  ///
+  /// In zh, this message translates to:
+  /// **'拆解'**
+  String get goalWizardMilestones;
+
+  /// No description provided for @goalWizardConfirm.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认'**
+  String get goalWizardConfirm;
+
+  /// No description provided for @goalWizardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建目标'**
+  String get goalWizardTitle;
+
+  /// No description provided for @goalWizardStepProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建目标，第 {current} 步，共 {total} 步：{label}'**
+  String goalWizardStepProgress(Object current, Object label, Object total);
+
+  /// No description provided for @goalWizardBack.
+  ///
+  /// In zh, this message translates to:
+  /// **'返回'**
+  String get goalWizardBack;
+
+  /// No description provided for @goalWizardCreate.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建'**
+  String get goalWizardCreate;
+
+  /// No description provided for @goalWizardContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续'**
+  String get goalWizardContinue;
+
+  /// No description provided for @goalWizardDecomposeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标拆解失败，请稍后再试'**
+  String get goalWizardDecomposeFailed;
+
+  /// No description provided for @goalWizardCreated.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标已创建'**
+  String get goalWizardCreated;
+
+  /// No description provided for @goalWizardCreateFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建失败，请检查目标内容'**
+  String get goalWizardCreateFailed;
+
+  /// No description provided for @goalWizardProgressSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度：第 {current} 步，共 {total} 步'**
+  String goalWizardProgressSemantics(Object current, Object total);
+
+  /// No description provided for @goalWizardTypeAcademic.
+  ///
+  /// In zh, this message translates to:
+  /// **'学术'**
+  String get goalWizardTypeAcademic;
+
+  /// No description provided for @goalWizardTypeSkill.
+  ///
+  /// In zh, this message translates to:
+  /// **'技能'**
+  String get goalWizardTypeSkill;
+
+  /// No description provided for @goalWizardTypeHabit.
+  ///
+  /// In zh, this message translates to:
+  /// **'习惯'**
+  String get goalWizardTypeHabit;
+
+  /// No description provided for @goalWizardTypeProject.
+  ///
+  /// In zh, this message translates to:
+  /// **'项目'**
+  String get goalWizardTypeProject;
+
+  /// No description provided for @goalWizardTypeOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他'**
+  String get goalWizardTypeOther;
+
+  /// No description provided for @goalWizardGoalTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标标题'**
+  String get goalWizardGoalTitle;
+
+  /// No description provided for @goalWizardWhyMatters.
+  ///
+  /// In zh, this message translates to:
+  /// **'为什么重要'**
+  String get goalWizardWhyMatters;
+
+  /// No description provided for @goalWizardDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'补充描述'**
+  String get goalWizardDescription;
+
+  /// No description provided for @goalWizardShortTerm.
+  ///
+  /// In zh, this message translates to:
+  /// **'短期 7-30 天'**
+  String get goalWizardShortTerm;
+
+  /// No description provided for @goalWizardMediumTerm.
+  ///
+  /// In zh, this message translates to:
+  /// **'中期 1-3 月'**
+  String get goalWizardMediumTerm;
+
+  /// No description provided for @goalWizardLongTerm.
+  ///
+  /// In zh, this message translates to:
+  /// **'长期 3 月+'**
+  String get goalWizardLongTerm;
+
+  /// No description provided for @goalWizardRegenerate.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新生成'**
+  String get goalWizardRegenerate;
+
+  /// No description provided for @goalWizardMilestoneN.
+  ///
+  /// In zh, this message translates to:
+  /// **'里程碑 {n}'**
+  String goalWizardMilestoneN(Object n);
+
+  /// No description provided for @goalWizardOutcome.
+  ///
+  /// In zh, this message translates to:
+  /// **'产出描述'**
+  String get goalWizardOutcome;
+
+  /// No description provided for @goalWizardConfirmMilestones.
+  ///
+  /// In zh, this message translates to:
+  /// **'里程碑'**
+  String get goalWizardConfirmMilestones;
+
+  /// No description provided for @chatFailureOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线了'**
+  String get chatFailureOffline;
+
+  /// No description provided for @chatFailureAuth.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要重新登录'**
+  String get chatFailureAuth;
+
+  /// No description provided for @chatFailureServer.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务暂时不稳'**
+  String get chatFailureServer;
+
+  /// No description provided for @chatFailureValidation.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要调整输入'**
+  String get chatFailureValidation;
+
+  /// No description provided for @chatFailureNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络不稳定'**
+  String get chatFailureNetwork;
+
+  /// No description provided for @chatFailureUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求遇到问题'**
+  String get chatFailureUnknown;
+
+  /// No description provided for @chatFailureActionSignIn.
+  ///
+  /// In zh, this message translates to:
+  /// **'去登录'**
+  String get chatFailureActionSignIn;
+
+  /// No description provided for @chatFailureActionEdit.
+  ///
+  /// In zh, this message translates to:
+  /// **'修改'**
+  String get chatFailureActionEdit;
+
+  /// No description provided for @chatFailureActionRetryOnline.
+  ///
+  /// In zh, this message translates to:
+  /// **'连网后重试'**
+  String get chatFailureActionRetryOnline;
+
+  /// No description provided for @envelopeIndicatorLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知调整指示器'**
+  String get envelopeIndicatorLabel;
+
+  /// No description provided for @envelopeAdapting.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 正在适应'**
+  String get envelopeAdapting;
+
+  /// No description provided for @envelopeValueNone.
+  ///
+  /// In zh, this message translates to:
+  /// **'无'**
+  String get envelopeValueNone;
+
+  /// No description provided for @envelopeValueYes.
+  ///
+  /// In zh, this message translates to:
+  /// **'是'**
+  String get envelopeValueYes;
+
+  /// No description provided for @envelopeValueNo.
+  ///
+  /// In zh, this message translates to:
+  /// **'否'**
+  String get envelopeValueNo;
 }
 
 class _AppLocalizationsDelegate

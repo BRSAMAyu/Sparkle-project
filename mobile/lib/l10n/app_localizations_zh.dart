@@ -20678,6 +20678,108 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatGoalTimeAllocation => '推荐时间分配';
 
   @override
+  String get goalConflictTodaySchedule => '今天的安排';
+
+  @override
+  String goalConflictTimeAvailable(int minutes) {
+    return '你今天大概只有 $minutes 分钟。';
+  }
+
+  @override
+  String get goalConflictAgree => '同意';
+
+  @override
+  String get goalConflictNeedAdjust => '我需要调整';
+
+  @override
+  String goalConflictMinutes(int minutes) {
+    return '$minutes 分钟';
+  }
+
+  @override
+  String get divineCorrectionImpactTitle => '收到，我记住了';
+
+  @override
+  String get divineCorrectionImpactNarrative => '你的纠正很重要，我正在重新调整接下来的任务安排。';
+
+  @override
+  String get divineCorrectionViewAdjusted => '看看调整后的安排';
+
+  @override
+  String get divineMomentContinue => '继续当前任务';
+
+  @override
+  String get divineMaterialNonUseTitle => '你现在不需要这个';
+
+  @override
+  String divineMaterialSkipped(Object material) {
+    return '已跳过：$material';
+  }
+
+  @override
+  String get divineMaterialAcknowledge => '好的，谢谢';
+
+  @override
+  String get divineAbsenceTitle => '欢迎回来';
+
+  @override
+  String get divineAbsenceIdle => '你离开了一会儿。准备好继续吗？';
+
+  @override
+  String get divineAbsenceShort => '已经过了几个小时。这里有个快速回顾帮你接上。';
+
+  @override
+  String get divineAbsenceLong => '已经有一阵子了。我保存了你的进度——慢慢来。';
+
+  @override
+  String get divineAbsenceResume => '继续';
+
+  @override
+  String get divineAbsenceRestart => '重新开始';
+
+  @override
+  String divineAbsenceMinutes(int n) {
+    return '$n分钟';
+  }
+
+  @override
+  String get divineLowYieldTitle => '也许可以跳过这个';
+
+  @override
+  String divineLowYieldNarrative(String activity, String alternative) {
+    return '在截止日期压力下，$activity 收益较低。试试 $alternative。';
+  }
+
+  @override
+  String divineLowYieldBoost(int pct) {
+    return '时间利用效率提升约 $pct%';
+  }
+
+  @override
+  String divineLowYieldSwitch(String alternative) {
+    return '换成 $alternative';
+  }
+
+  @override
+  String get divineLowYieldIgnore => '我还是做这个';
+
+  @override
+  String get divineCommunityTitle => '别人找到了更好的方法';
+
+  @override
+  String divineCommunityNarrative(int count, String strategy) {
+    return '$count 个类似情况的同学通过「$strategy」取得了进步。想试试吗？';
+  }
+
+  @override
+  String divineCommunityTry(String strategy) {
+    return '试试 $strategy';
+  }
+
+  @override
+  String get divineCommunityNotNow => '先不要';
+
+  @override
   String chatGraphAffectedLater(Object items) {
     return '受影响后续：$items';
   }
@@ -30069,4 +30171,188 @@ class AppLocalizationsZh extends AppLocalizations {
   String homeWeatherOnlyHint(Object hint) {
     return '今天适合$hint';
   }
+
+  @override
+  String get goalIntentTitle => '告诉我你想达成什么';
+
+  @override
+  String get goalIntentHint => '一句话就好，比如「7天后计网考试基本没学想先别挂」';
+
+  @override
+  String get goalIntentTypeHere => '在这里输入';
+
+  @override
+  String get goalIntentUnderstanding => '正在理解…';
+
+  @override
+  String get goalIntentReadSituation => '让我先看看你的情况';
+
+  @override
+  String get goalIntentSuggestedAction => '我建议先这样做';
+
+  @override
+  String get goalIntentOrWrong => '或者我猜错了——';
+
+  @override
+  String goalIntentDaysLeft(Object days) {
+    return '剩 $days 天';
+  }
+
+  @override
+  String goalIntentConfidence(Object percent) {
+    return '置信度 $percent%';
+  }
+
+  @override
+  String get goalIntentExamRescue => '考试抢救';
+
+  @override
+  String get goalIntentExamPrep => '考试备战';
+
+  @override
+  String get goalIntentJobSprint => '求职冲刺';
+
+  @override
+  String get goalIntentProject => '项目交付';
+
+  @override
+  String get goalIntentHabit => '习惯养成';
+
+  @override
+  String get goalIntentKeepGoing => '继续了解';
+
+  @override
+  String get goalWizardType => '类型';
+
+  @override
+  String get goalWizardMotivation => '动机';
+
+  @override
+  String get goalWizardTimeline => '时间';
+
+  @override
+  String get goalWizardMilestones => '拆解';
+
+  @override
+  String get goalWizardConfirm => '确认';
+
+  @override
+  String get goalWizardTitle => '创建目标';
+
+  @override
+  String goalWizardStepProgress(Object current, Object label, Object total) {
+    return '创建目标，第 $current 步，共 $total 步：$label';
+  }
+
+  @override
+  String get goalWizardBack => '返回';
+
+  @override
+  String get goalWizardCreate => '创建';
+
+  @override
+  String get goalWizardContinue => '继续';
+
+  @override
+  String get goalWizardDecomposeFailed => '目标拆解失败，请稍后再试';
+
+  @override
+  String get goalWizardCreated => '目标已创建';
+
+  @override
+  String get goalWizardCreateFailed => '创建失败，请检查目标内容';
+
+  @override
+  String goalWizardProgressSemantics(Object current, Object total) {
+    return '进度：第 $current 步，共 $total 步';
+  }
+
+  @override
+  String get goalWizardTypeAcademic => '学术';
+
+  @override
+  String get goalWizardTypeSkill => '技能';
+
+  @override
+  String get goalWizardTypeHabit => '习惯';
+
+  @override
+  String get goalWizardTypeProject => '项目';
+
+  @override
+  String get goalWizardTypeOther => '其他';
+
+  @override
+  String get goalWizardGoalTitle => '目标标题';
+
+  @override
+  String get goalWizardWhyMatters => '为什么重要';
+
+  @override
+  String get goalWizardDescription => '补充描述';
+
+  @override
+  String get goalWizardShortTerm => '短期 7-30 天';
+
+  @override
+  String get goalWizardMediumTerm => '中期 1-3 月';
+
+  @override
+  String get goalWizardLongTerm => '长期 3 月+';
+
+  @override
+  String get goalWizardRegenerate => '重新生成';
+
+  @override
+  String goalWizardMilestoneN(Object n) {
+    return '里程碑 $n';
+  }
+
+  @override
+  String get goalWizardOutcome => '产出描述';
+
+  @override
+  String get goalWizardConfirmMilestones => '里程碑';
+
+  @override
+  String get chatFailureOffline => '离线了';
+
+  @override
+  String get chatFailureAuth => '需要重新登录';
+
+  @override
+  String get chatFailureServer => '服务暂时不稳';
+
+  @override
+  String get chatFailureValidation => '需要调整输入';
+
+  @override
+  String get chatFailureNetwork => '网络不稳定';
+
+  @override
+  String get chatFailureUnknown => '请求遇到问题';
+
+  @override
+  String get chatFailureActionSignIn => '去登录';
+
+  @override
+  String get chatFailureActionEdit => '修改';
+
+  @override
+  String get chatFailureActionRetryOnline => '连网后重试';
+
+  @override
+  String get envelopeIndicatorLabel => '认知调整指示器';
+
+  @override
+  String get envelopeAdapting => 'Aurora 正在适应';
+
+  @override
+  String get envelopeValueNone => '无';
+
+  @override
+  String get envelopeValueYes => '是';
+
+  @override
+  String get envelopeValueNo => '否';
 }

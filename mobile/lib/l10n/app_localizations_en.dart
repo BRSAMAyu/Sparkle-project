@@ -21561,6 +21561,112 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatGoalTimeAllocation => 'Recommended time allocation';
 
   @override
+  String get goalConflictTodaySchedule => 'Today\'s schedule';
+
+  @override
+  String goalConflictTimeAvailable(int minutes) {
+    return 'You have about $minutes minutes today.';
+  }
+
+  @override
+  String get goalConflictAgree => 'Agree';
+
+  @override
+  String get goalConflictNeedAdjust => 'I need to adjust';
+
+  @override
+  String goalConflictMinutes(int minutes) {
+    return '$minutes min';
+  }
+
+  @override
+  String get divineCorrectionImpactTitle => 'Got it, I remember';
+
+  @override
+  String get divineCorrectionImpactNarrative =>
+      'Your correction matters. I\'m adjusting the upcoming task plan.';
+
+  @override
+  String get divineCorrectionViewAdjusted => 'View adjusted plan';
+
+  @override
+  String get divineMomentContinue => 'Continue with current task';
+
+  @override
+  String get divineMaterialNonUseTitle => 'You don\'t need this right now';
+
+  @override
+  String divineMaterialSkipped(Object material) {
+    return 'Skipped: $material';
+  }
+
+  @override
+  String get divineMaterialAcknowledge => 'OK, thanks';
+
+  @override
+  String get divineAbsenceTitle => 'Welcome back';
+
+  @override
+  String get divineAbsenceIdle =>
+      'You\'ve been away for a bit. Ready to pick up where you left off?';
+
+  @override
+  String get divineAbsenceShort =>
+      'It\'s been a few hours. Here\'s a quick recap to help you jump back in.';
+
+  @override
+  String get divineAbsenceLong =>
+      'It\'s been a while. I\'ve saved your spot — let\'s ease back in.';
+
+  @override
+  String get divineAbsenceResume => 'Resume';
+
+  @override
+  String get divineAbsenceRestart => 'Start fresh';
+
+  @override
+  String divineAbsenceMinutes(int n) {
+    return '$n min';
+  }
+
+  @override
+  String get divineLowYieldTitle => 'Maybe skip this one';
+
+  @override
+  String divineLowYieldNarrative(String activity, String alternative) {
+    return 'Under deadline pressure, $activity is low-yield. Try $alternative instead.';
+  }
+
+  @override
+  String divineLowYieldBoost(int pct) {
+    return '~$pct% better use of time';
+  }
+
+  @override
+  String divineLowYieldSwitch(String alternative) {
+    return 'Switch to $alternative';
+  }
+
+  @override
+  String get divineLowYieldIgnore => 'I\'ll stick with this';
+
+  @override
+  String get divineCommunityTitle => 'Others found a better way';
+
+  @override
+  String divineCommunityNarrative(int count, String strategy) {
+    return '$count peers in similar situations improved by $strategy. Want to try it?';
+  }
+
+  @override
+  String divineCommunityTry(String strategy) {
+    return 'Try $strategy';
+  }
+
+  @override
+  String get divineCommunityNotNow => 'Not now';
+
+  @override
   String chatGraphAffectedLater(Object items) {
     return 'Affected later: $items';
   }
@@ -31367,4 +31473,189 @@ class AppLocalizationsEn extends AppLocalizations {
   String homeWeatherOnlyHint(Object hint) {
     return 'Great for $hint';
   }
+
+  @override
+  String get goalIntentTitle => 'Tell me what you want to achieve';
+
+  @override
+  String get goalIntentHint =>
+      'One sentence works, e.g. \"Computer Networks final in 7 days, barely studied\"';
+
+  @override
+  String get goalIntentTypeHere => 'Type here';
+
+  @override
+  String get goalIntentUnderstanding => 'Understanding...';
+
+  @override
+  String get goalIntentReadSituation => 'Let me read your situation';
+
+  @override
+  String get goalIntentSuggestedAction => 'A low-cost first step';
+
+  @override
+  String get goalIntentOrWrong => 'Or I got it wrong —';
+
+  @override
+  String goalIntentDaysLeft(Object days) {
+    return '$days days left';
+  }
+
+  @override
+  String goalIntentConfidence(Object percent) {
+    return '$percent% confidence';
+  }
+
+  @override
+  String get goalIntentExamRescue => 'Exam rescue';
+
+  @override
+  String get goalIntentExamPrep => 'Exam prep';
+
+  @override
+  String get goalIntentJobSprint => 'Job sprint';
+
+  @override
+  String get goalIntentProject => 'Project';
+
+  @override
+  String get goalIntentHabit => 'Habit';
+
+  @override
+  String get goalIntentKeepGoing => 'Keep going';
+
+  @override
+  String get goalWizardType => 'Type';
+
+  @override
+  String get goalWizardMotivation => 'Motivation';
+
+  @override
+  String get goalWizardTimeline => 'Timeline';
+
+  @override
+  String get goalWizardMilestones => 'Milestones';
+
+  @override
+  String get goalWizardConfirm => 'Confirm';
+
+  @override
+  String get goalWizardTitle => 'Create goal';
+
+  @override
+  String goalWizardStepProgress(Object current, Object label, Object total) {
+    return 'Create goal, step $current of $total: $label';
+  }
+
+  @override
+  String get goalWizardBack => 'Back';
+
+  @override
+  String get goalWizardCreate => 'Create';
+
+  @override
+  String get goalWizardContinue => 'Continue';
+
+  @override
+  String get goalWizardDecomposeFailed => 'Could not decompose this goal yet';
+
+  @override
+  String get goalWizardCreated => 'Goal created';
+
+  @override
+  String get goalWizardCreateFailed => 'Could not create this goal';
+
+  @override
+  String goalWizardProgressSemantics(Object current, Object total) {
+    return 'Progress: step $current of $total';
+  }
+
+  @override
+  String get goalWizardTypeAcademic => 'Academic';
+
+  @override
+  String get goalWizardTypeSkill => 'Skill';
+
+  @override
+  String get goalWizardTypeHabit => 'Habit';
+
+  @override
+  String get goalWizardTypeProject => 'Project';
+
+  @override
+  String get goalWizardTypeOther => 'Other';
+
+  @override
+  String get goalWizardGoalTitle => 'Goal title';
+
+  @override
+  String get goalWizardWhyMatters => 'Why it matters';
+
+  @override
+  String get goalWizardDescription => 'Description';
+
+  @override
+  String get goalWizardShortTerm => 'Short 7-30d';
+
+  @override
+  String get goalWizardMediumTerm => 'Medium 1-3m';
+
+  @override
+  String get goalWizardLongTerm => 'Long 3m+';
+
+  @override
+  String get goalWizardRegenerate => 'Regenerate';
+
+  @override
+  String goalWizardMilestoneN(Object n) {
+    return 'Milestone $n';
+  }
+
+  @override
+  String get goalWizardOutcome => 'Outcome';
+
+  @override
+  String get goalWizardConfirmMilestones => 'Milestones';
+
+  @override
+  String get chatFailureOffline => 'Offline';
+
+  @override
+  String get chatFailureAuth => 'Sign-in needed';
+
+  @override
+  String get chatFailureServer => 'Service issue';
+
+  @override
+  String get chatFailureValidation => 'Check input';
+
+  @override
+  String get chatFailureNetwork => 'Connection issue';
+
+  @override
+  String get chatFailureUnknown => 'Request issue';
+
+  @override
+  String get chatFailureActionSignIn => 'Sign in';
+
+  @override
+  String get chatFailureActionEdit => 'Edit';
+
+  @override
+  String get chatFailureActionRetryOnline => 'Retry online';
+
+  @override
+  String get envelopeIndicatorLabel => 'Cognitive adjustment indicator';
+
+  @override
+  String get envelopeAdapting => 'Aurora adapting';
+
+  @override
+  String get envelopeValueNone => 'none';
+
+  @override
+  String get envelopeValueYes => 'yes';
+
+  @override
+  String get envelopeValueNo => 'no';
 }

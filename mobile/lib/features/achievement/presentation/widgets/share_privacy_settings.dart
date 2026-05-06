@@ -6,8 +6,8 @@ import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// Privacy settings panel for share card customization
-class SharePrivacySettings extends StatelessWidget {
-  SharePrivacySettings({
+class SharePrivacySettings extends StatefulWidget {
+  const SharePrivacySettings({
     required this.settings,
     required this.onSettingsChanged,
     this.defaultDisplayName,
@@ -18,14 +18,28 @@ class SharePrivacySettings extends StatelessWidget {
   final ValueChanged<ShareCardPrivacySettings> onSettingsChanged;
   final String? defaultDisplayName;
 
-  final TextEditingController _nameController = TextEditingController();
+  @override
+  State<SharePrivacySettings> createState() => _SharePrivacySettingsState();
+}
+
+class _SharePrivacySettingsState extends State<SharePrivacySettings> {
+  late final TextEditingController _nameController;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.settings.displayName ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-
-    // Initialize controller with current display name
-    _nameController.text = settings.displayName ?? '';
 
     return Container(
       padding: const EdgeInsets.all(DS.md),
@@ -76,7 +90,7 @@ class SharePrivacySettings extends StatelessWidget {
               title: l10n.sharePrivacyShowAvatar,
               subtitle: l10n.sharePrivacyShowAvatarDesc,
               icon: Icons.account_circle_outlined,
-              value: settings.showAvatar,
+              value: widget.settings.showAvatar,
               onChanged: (value) => _updateSettings(showAvatar: value),
             ),
           ),
@@ -89,7 +103,7 @@ class SharePrivacySettings extends StatelessWidget {
               title: l10n.sharePrivacyShowDate,
               subtitle: l10n.sharePrivacyShowDateDesc,
               icon: Icons.calendar_today_outlined,
-              value: settings.showUnlockDate,
+              value: widget.settings.showUnlockDate,
               onChanged: (value) => _updateSettings(showUnlockDate: value),
             ),
           ),
@@ -102,7 +116,7 @@ class SharePrivacySettings extends StatelessWidget {
               title: l10n.sharePrivacyShowStats,
               subtitle: l10n.sharePrivacyShowStatsDesc,
               icon: Icons.bar_chart_outlined,
-              value: settings.showProgressStats,
+              value: widget.settings.showProgressStats,
               onChanged: (value) => _updateSettings(showProgressStats: value),
             ),
           ),
@@ -115,7 +129,7 @@ class SharePrivacySettings extends StatelessWidget {
               title: l10n.sharePrivacyShowFirstBadge,
               subtitle: l10n.sharePrivacyShowFirstBadgeDesc,
               icon: Icons.emoji_events_outlined,
-              value: settings.showFirstUnlockerBadge,
+              value: widget.settings.showFirstUnlockerBadge,
               onChanged: (value) =>
                   _updateSettings(showFirstUnlockerBadge: value),
             ),
@@ -140,7 +154,7 @@ class SharePrivacySettings extends StatelessWidget {
         TextField(
           controller: _nameController,
           decoration: InputDecoration(
-            hintText: defaultDisplayName ?? l10n.sharePrivacyDisplayNameHint,
+            hintText: widget.defaultDisplayName ?? l10n.sharePrivacyDisplayNameHint,
             hintStyle: TextStyle(
               color: DS.textTertiary,
               fontSize: DS.fontSizeSm,
@@ -279,7 +293,7 @@ class SharePrivacySettings extends StatelessWidget {
     bool? showProgressStats,
     bool? showFirstUnlockerBadge,
   }) {
-    onSettingsChanged(settings.copyWith(
+    widget.onSettingsChanged(widget.settings.copyWith(
       displayName: displayName,
       showAvatar: showAvatar,
       showUnlockDate: showUnlockDate,

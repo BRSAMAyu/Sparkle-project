@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/providers/experience_envelope_provider.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 
 class _AdjustmentLabel {
   const _AdjustmentLabel(this.label, this.icon);
@@ -34,11 +34,11 @@ class ExperienceEnvelopeIndicator extends ConsumerWidget {
     if (!envelope.hasAdjustments) return const SizedBox.shrink();
 
     final adjustments = envelope.structuredCognitiveAdjustments;
-    final isChinese = I18nService.instance.isChinese;
+    final l10n = AppLocalizations.of(context)!;
 
     return Semantics(
       container: true,
-      label: isChinese ? '认知调整指示器' : 'Cognitive adjustment indicator',
+      label: l10n.envelopeIndicatorLabel,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: DS.spacing12, vertical: DS.spacing4),
         padding: const EdgeInsets.all(DS.spacing10),
@@ -60,7 +60,7 @@ class ExperienceEnvelopeIndicator extends ConsumerWidget {
                 ),
                 const SizedBox(width: DS.spacing6),
                 Text(
-                  isChinese ? 'Aurora 正在适应' : 'Aurora adapting',
+                  l10n.envelopeAdapting,
                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                         fontWeight: DS.fontWeightSemibold,
                         color: DS.brandPrimary,
@@ -81,7 +81,7 @@ class ExperienceEnvelopeIndicator extends ConsumerWidget {
                 final label = meta.label.isNotEmpty ? meta.label : dim;
 
                 return Semantics(
-                  label: '$label: ${_valueText(value, isChinese)} ($reason)',
+                  label: '$label: ${_valueText(value, l10n)} ($reason)',
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: DS.spacing8,
@@ -100,7 +100,7 @@ class ExperienceEnvelopeIndicator extends ConsumerWidget {
                         Icon(meta.icon, size: 12, color: DS.brandPrimary),
                         const SizedBox(width: DS.spacing4),
                         Text(
-                          '$label: ${_valueText(value, isChinese)}',
+                          '$label: ${_valueText(value, l10n)}',
                           style: Theme.of(context)
                               .textTheme
                               .labelSmall
@@ -123,12 +123,10 @@ class ExperienceEnvelopeIndicator extends ConsumerWidget {
   }
 }
 
-String _valueText(dynamic value, bool isChinese) {
-  if (value == null) return isChinese ? '无' : 'none';
+String _valueText(dynamic value, AppLocalizations l10n) {
+  if (value == null) return l10n.envelopeValueNone;
   if (value is bool) {
-    return value
-        ? (isChinese ? '是' : 'yes')
-        : (isChinese ? '否' : 'no');
+    return value ? l10n.envelopeValueYes : l10n.envelopeValueNo;
   }
   if (value is double) return value.toStringAsFixed(1);
   return value.toString();

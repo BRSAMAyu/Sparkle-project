@@ -107,30 +107,24 @@ IconData _chatFailureIcon(String? code) {
 }
 
 String _chatFailureTitle(BuildContext context, String? code) {
-  final zh = AppLocalizations.of(context)?.localeName.startsWith('zh') ?? true;
-  switch (FailureKindCode.fromCode(code)) {
-    case FailureKind.offline:
-      return zh ? '离线了' : 'Offline';
-    case FailureKind.auth:
-      return zh ? '需要重新登录' : 'Sign-in needed';
-    case FailureKind.server:
-      return zh ? '服务暂时不稳' : 'Service issue';
-    case FailureKind.validation:
-      return zh ? '需要调整输入' : 'Check input';
-    case FailureKind.network:
-      return zh ? '网络不稳定' : 'Connection issue';
-    case FailureKind.unknown:
-      return zh ? '请求遇到问题' : 'Request issue';
-  }
+  final l10n = AppLocalizations.of(context)!;
+  return switch (FailureKindCode.fromCode(code)) {
+    FailureKind.offline => l10n.chatFailureOffline,
+    FailureKind.auth => l10n.chatFailureAuth,
+    FailureKind.server => l10n.chatFailureServer,
+    FailureKind.validation => l10n.chatFailureValidation,
+    FailureKind.network => l10n.chatFailureNetwork,
+    FailureKind.unknown => l10n.chatFailureUnknown,
+  };
 }
 
 String _chatFailureActionLabel(BuildContext context, String? code) {
-  final zh = AppLocalizations.of(context)?.localeName.startsWith('zh') ?? true;
+  final l10n = AppLocalizations.of(context)!;
   return switch (FailureKindCode.fromCode(code)) {
-    FailureKind.auth => zh ? '去登录' : 'Sign in',
-    FailureKind.validation => zh ? '修改' : 'Edit',
-    FailureKind.offline => zh ? '连网后重试' : 'Retry online',
-    _ => context.l10n.retry,
+    FailureKind.auth => l10n.chatFailureActionSignIn,
+    FailureKind.validation => l10n.chatFailureActionEdit,
+    FailureKind.offline => l10n.chatFailureActionRetryOnline,
+    _ => l10n.retry,
   };
 }
 
