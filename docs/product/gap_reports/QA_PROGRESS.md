@@ -22,7 +22,7 @@
 | QA-P0-3 | pollution_guard strict 阈值执行 | Python | M | ✅ done | — | 3db67f00 | QA_P0_critical: strict 模式下过滤低质量结果 |
 | QA-P0-4 | token_budget 执行限制检索量 | Python | M | ✅ done | — | 3be7f7d21 | QA_P0_critical: 按 budget_tokens 截断检索结果 |
 | QA-P0-5 | RetrievalDirective 集成测试 | Python | M | ✅ done | — | 25e93fd1 | QA_P0_critical: 端到端测试 directive 过滤逻辑 |
-| QA-P0-6 | L1 fast-path 跳过 LLM decision loop | Python | S | 🔵 in-progress | claude-B | — | QA_P1_arch: orchestrator.py:568 should_escalate=False 时短路 |
+| QA-P0-6 | L1 fast-path 跳过 LLM decision loop | Python | S | ✅ done | — | 7818b0d96 | QA_P1_arch: orchestrator.py:568 should_escalate=False 时短路 |
 
 ## P1: High (20 items)
 
@@ -111,7 +111,7 @@
 
 | Priority | Total | ✅ done | ⬜ pending | 🔵 in-progress |
 |----------|-------|---------|-----------|----------------|
-| P0 | 6 | 5 | 1 | 0 |
+| P0 | 6 | 6 | 0 | 0 |
 | P1 | 20 | 0 | 20 | 0 |
 | P2 | 35 | 0 | 35 | 0 |
 | P3 | 5 | 0 | 5 | 0 |
