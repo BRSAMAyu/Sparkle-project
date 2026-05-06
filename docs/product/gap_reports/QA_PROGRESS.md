@@ -47,7 +47,7 @@
 | QA-P1-13 | SprintReviewScreen loading indicator | Flutter | S | ✅ done | — | 444af476 | Skeleton shimmer replaces empty data during load |
 | QA-P1-14 | PausedTaskBanner error handling | Flutter | M | ✅ done | — | f29e8b53a | Show error feedback on resume fail |
 | QA-P1-15 | Integrate UnderstandingSnapshotCard | Flutter | M | 🔵 in-progress | claude-A | — | Import into home dashboard |
-| QA-P1-16 | Register AccountabilityHubScreen route | Flutter | S | ⬜ pending | — | — | community_routes.dart |
+| QA-P1-16 | Register AccountabilityHubScreen route | Flutter | S | ⏭️ skip | — | — | Already registered: community_routes.dart:377 |
 | QA-P1-17 | Persist SprintReviewScreen notes | Flutter | M | ⬜ pending | — | — | Wire save API |
 | QA-P1-18 | Replace duplicate GoalValueChip | Flutter | S | ⬜ pending | — | — | Use shared widget in notifications |
 | QA-P1-19 | Unit tests: per-channel delivery | Python | M | ⬜ pending | — | — | silent/in_app/push resolution |
@@ -116,7 +116,7 @@
 | Priority | Total | ✅ done | ⏭️ skip | ⬜ pending | 🔵 in-progress |
 |----------|-------|---------|---------|-----------|----------------|
 | P0 | 6 | 6 | 0 | 0 | 0 |
-| P1 | 20 | 6 | 8 | 5 | 1 |
+| P1 | 20 | 6 | 9 | 4 | 1 |
 | P2 | 35 | 0 | 0 | 35 | 0 |
 | P3 | 5 | 0 | 0 | 5 | 0 |
-| **Total** | **66** | **12** | **8** | **45** | **1** |
+| **Total** | **66** | **12** | **9** | **44** | **1** |
