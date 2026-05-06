@@ -8907,6 +8907,7 @@
   "chatCausalSemanticsRefresh": "刷新时间线",
   "chatCausalSemanticsToggleEntry": "展开或收起：{headline}",
   "chatCausalSemanticsAction": "{label}操作",
+  "chatDecisionTimeline": "决策时间线",
   "chatCitationImprove": "已记录这条引用的改进反馈",
   "chatCitationPositive": "已收到这条引用的正向反馈",
   "chatCognitiveMode": "认知模式",

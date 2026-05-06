@@ -1281,7 +1281,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               child: Icon(Icons.timeline, color: DS.textSecondary),
             ),
             onPressed: () => _showCausalTimelineSheet(context),
-            semanticLabel: I18nService.instance.isChinese ? '决策时间线' : 'Decision Timeline',
+            semanticLabel: context.l10n.chatDecisionTimeline,
             variant: ButtonVariant.ghost,
           ),
           PopupMenuButton<_ChatShortcutAction>(
