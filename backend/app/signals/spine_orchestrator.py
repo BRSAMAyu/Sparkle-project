@@ -3127,15 +3127,24 @@ class SpineOrchestrator:
         except Exception:
             logger.warning("_enrich_pipeline_post_policy: redis failed", exc_info=True)
 
-        # 7. crisis mode check for exam users
+        # 7. crisis mode check (all goal types)
         try:
-            goal_mode_raw = await self.redis.get(f"spine:exam_sprint:{user_id}:goal_mode")
-            deadline_raw = await self.redis.get(f"spine:exam_sprint:{user_id}:deadline_days")
-            if goal_mode_raw and deadline_raw:
+            goal_type = "exam"
+            goal_type_raw = await self.redis.get(f"spine:goal_type:{user_id}")
+            if goal_type_raw:
+                goal_info = json.loads(goal_type_raw if isinstance(goal_type_raw, str) else goal_type_raw.decode())
+                goal_type = goal_info.get("goal_type", "exam")
+
+            deadline_key = f"spine:exam_sprint:{user_id}:deadline_days"
+            if goal_type != "exam":
+                deadline_key = f"spine:goal_deadline:{user_id}:days"
+            deadline_raw = await self.redis.get(deadline_key)
+            if deadline_raw:
                 crisis = await self.detect_crisis_mode(
                     user_id=user_id,
                     days_to_deadline=int(deadline_raw),
-                    baseline_mastery=0,  # unknown → triggers conservative
+                    baseline_mastery=0,
+                    goal_type=goal_type,
                 )
                 if crisis:
                     await self.redis.set(
@@ -3144,7 +3153,7 @@ class SpineOrchestrator:
                         ex=12 * 3600,
                     )
         except Exception:
-            logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
+            logger.warning("_enrich_pipeline_post_policy: crisis check failed", exc_info=True)
 
         # 8. P4 counterfactual evaluation: store policy decision for later analysis
         try:
@@ -4040,28 +4049,93 @@ class SpineOrchestrator:
         baseline_mastery: float,
         goal_type: str = "exam",
     ) -> dict[str, Any] | None:
-        """Detect if user is in crisis mode: zero-base + very short deadline."""
-        if goal_type != "exam" or days_to_deadline > 5:
+        """Detect if user is in crisis mode across all goal types."""
+        if days_to_deadline > 5 and goal_type == "exam":
             return None
-        if baseline_mastery >= 30:
+        if goal_type == "exam" and baseline_mastery >= 30:
             return None
+        if goal_type != "exam":
+            if days_to_deadline > 14:
+                return None
+            # Non-exam: only trigger when near-zero mastery AND deadline imminent
+            if baseline_mastery >= 10 or days_to_deadline > 3:
+                return None
 
+        if goal_type == "exam":
+            return {
+                "mode": "exam_crisis_zero_base",
+                "days_to_deadline": days_to_deadline,
+                "baseline_mastery": baseline_mastery,
+                "strategy_principles": [
+                    "不追求体系完整",
+                    "只追求最低可得分路径",
+                    "必须显式放弃部分内容",
+                    "每次任务 15-25 分钟",
+                    "每个任务只解决一个题型",
+                    "强制不平均复习",
+                ],
+                "task_constraints": {
+                    "max_task_duration_min": 25,
+                    "min_task_duration_min": 15,
+                    "avoid_new_chapter": days_to_deadline <= 2,
+                    "focus_high_yield_only": True,
+                },
+            }
+
+        _crisis_narratives = {
+            "project": {
+                "mode": "project_crisis_scope_cut",
+                "strategy_principles": [
+                    "冻结范围，只保留MVP核心交付",
+                    "砍掉非必要功能",
+                    "每次任务只推进一个交付物",
+                    "不做新需求分析",
+                ],
+            },
+            "job_search": {
+                "mode": "job_search_crisis_interview_sprint",
+                "strategy_principles": [
+                    "只练最高频面试题",
+                    "集中准备核心回答框架",
+                    "不投新公司，专注已约面试",
+                    "模拟练习优先于资料复习",
+                ],
+            },
+            "fitness": {
+                "mode": "fitness_crisis_recovery",
+                "strategy_principles": [
+                    "降低训练强度",
+                    "专注恢复和安全",
+                    "不做高强度动作",
+                    "保持最低活动量即可",
+                ],
+            },
+            "startup": {
+                "mode": "startup_crisis_mvp_only",
+                "strategy_principles": [
+                    "冻结范围，只验证核心假设",
+                    "砍到最小可验证版本",
+                    "不开启新方向",
+                    "每次任务只消除一个风险",
+                ],
+            },
+            "general": {
+                "mode": "general_crisis_minimum",
+                "strategy_principles": [
+                    "降到最小可行任务",
+                    "不追求完美，先完成",
+                    "每次只做一个最小动作",
+                ],
+            },
+        }
+        narrative = _crisis_narratives.get(goal_type, _crisis_narratives["general"])
         return {
-            "mode": "exam_crisis_zero_base",
+            "mode": narrative["mode"],
+            "goal_type": goal_type,
             "days_to_deadline": days_to_deadline,
-            "baseline_mastery": baseline_mastery,
-            "strategy_principles": [
-                "不追求体系完整",
-                "只追求最低可得分路径",
-                "必须显式放弃部分内容",
-                "每次任务 15-25 分钟",
-                "每个任务只解决一个题型",
-                "强制不平均复习",
-            ],
+            "strategy_principles": narrative["strategy_principles"],
             "task_constraints": {
-                "max_task_duration_min": 25,
-                "min_task_duration_min": 15,
-                "avoid_new_chapter": days_to_deadline <= 2,
+                "max_task_duration_min": 20,
                 "focus_high_yield_only": True,
             },
         }
