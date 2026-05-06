@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart' hide AnimatedSlide;
+import 'package:sparkle/core/design/widgets/pulse_scope.dart';
 
 class SparkleStaggerItem extends StatefulWidget {
   const SparkleStaggerItem({
@@ -63,7 +64,13 @@ class _SparkleStaggerItemState extends State<SparkleStaggerItem> {
         });
         return;
       }
-      final delay = widget.initialDelay + (widget.stepDelay * widget.index);
+      final rawDelay = widget.initialDelay.inMilliseconds +
+          (widget.stepDelay.inMilliseconds *
+                  math.pow(0.82, widget.index) *
+                  widget.index)
+              .round();
+      final delay =
+          Duration(milliseconds: rawDelay.clamp(0, 220));
       _timer = Timer(delay, () {
         if (!mounted) {
           return;
@@ -297,6 +304,8 @@ class _SparkleAttentionPulseState extends State<SparkleAttentionPulse>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   var _reduceMotion = false;
+  var _hasSlot = false;
+  PulseScope? _scope;
 
   @override
   void initState() {
@@ -311,6 +320,7 @@ class _SparkleAttentionPulseState extends State<SparkleAttentionPulse>
   void didChangeDependencies() {
     super.didChangeDependencies();
     _reduceMotion = context.reduceMotion;
+    _scope = PulseScope.maybeOf(context);
     _sync();
   }
 
@@ -328,16 +338,29 @@ class _SparkleAttentionPulseState extends State<SparkleAttentionPulse>
 
   void _sync() {
     if (!widget.active || _reduceMotion) {
+      _releaseSlotIfHeld();
       _controller
         ..stop()
         ..value = 0;
       return;
     }
+    if (_scope != null && !_hasSlot) {
+      _hasSlot = _scope!.requestSlot();
+      if (!_hasSlot) return; // degrade to static, no animation
+    }
     unawaited(_controller.repeat(reverse: true));
+  }
+
+  void _releaseSlotIfHeld() {
+    if (_hasSlot) {
+      _scope?.releaseSlot();
+      _hasSlot = false;
+    }
   }
 
   @override
   void dispose() {
+    _releaseSlotIfHeld();
     _controller.dispose();
     super.dispose();
   }

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/app/routes.dart';
 import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/pulse_scope.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/offline/offline_providers.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
@@ -99,12 +100,15 @@ class _SparkleAppState extends ConsumerState<SparkleApp> {
                 maxScaleFactor: 1.35,
               ),
             ),
-            child: EmotionResponsiveAppWrapper(
-              config: emotionConfig,
-              child: DefaultTextStyle.merge(
-                style: const TextStyle(fontFamilyFallback: sparkleFontFallback),
-                child: _ColdStartFade(
-                  child: child ?? const SizedBox.shrink(),
+            child: PulseScope(
+              child: EmotionResponsiveAppWrapper(
+                config: emotionConfig,
+                child: DefaultTextStyle.merge(
+                  style:
+                      const TextStyle(fontFamilyFallback: sparkleFontFallback),
+                  child: _ColdStartFade(
+                    child: child ?? const SizedBox.shrink(),
+                  ),
                 ),
               ),
             ),

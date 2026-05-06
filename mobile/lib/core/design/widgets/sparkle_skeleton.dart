@@ -56,26 +56,28 @@ class _SparkleSkeletonState extends State<SparkleSkeleton>
       return child;
     }
 
-    return AnimatedBuilder(
-      animation: _controller,
-      child: child,
-      builder: (context, skeletonChild) {
-        final slide = _controller.value * 2 - 0.5;
-        return ShaderMask(
-          shaderCallback: (bounds) => LinearGradient(
-            begin: Alignment(-1.2 + slide, 0),
-            end: Alignment(-0.2 + slide, 0),
-            colors: [
-              baseColor,
-              highlightColor,
-              baseColor,
-            ],
-            stops: const [0.1, 0.5, 0.9],
-          ).createShader(bounds),
-          blendMode: BlendMode.srcATop,
-          child: skeletonChild,
-        );
-      },
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        child: child,
+        builder: (context, skeletonChild) {
+          final t = _controller.value;
+          return ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              begin: Alignment(-1.5 + t * 2.5, -0.5),
+              end: Alignment(-0.5 + t * 2.5, 0.5),
+              colors: [
+                baseColor,
+                highlightColor,
+                baseColor,
+              ],
+              stops: const [0.1, 0.5, 0.9],
+            ).createShader(bounds),
+            blendMode: BlendMode.srcATop,
+            child: skeletonChild,
+          );
+        },
+      ),
     );
   }
 }
