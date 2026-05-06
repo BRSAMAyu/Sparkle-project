@@ -9,4 +9,5 @@ export 'presentation/providers/source_explanation_provider.dart';
 export 'presentation/screens/chat_screen.dart';
 export 'presentation/screens/group_chat_screen.dart';
 export 'presentation/screens/private_chat_screen.dart';
+export 'presentation/widgets/experience_envelope_indicator.dart';
 export 'presentation/widgets/source_explanation_card.dart';
