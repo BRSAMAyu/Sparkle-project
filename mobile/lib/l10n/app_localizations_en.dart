@@ -31266,4 +31266,105 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settDataManageMemory => 'Manage memory write rules';
+
+  @override
+  String get examSubjectComputerNetworks => 'Computer Networks';
+
+  @override
+  String get examSubjectOperatingSystems => 'Operating Systems';
+
+  @override
+  String get examSubjectDatabases => 'Databases';
+
+  @override
+  String get examSubjectCalculus => 'Calculus';
+
+  @override
+  String get examSubjectLinearAlgebra => 'Linear Algebra';
+
+  @override
+  String get examSubjectEnglish => 'English';
+
+  @override
+  String get examChaptersComputerNetworks =>
+      'Physical Layer|Data Link|Network Layer|Transport|Application';
+
+  @override
+  String get examChaptersOperatingSystems =>
+      'Processes & Threads|Sync & Mutex|Memory Mgmt|File System|Deadlock';
+
+  @override
+  String get examChaptersDatabases =>
+      'ER Model|SQL|Normal Forms|Transactions|Indexes';
+
+  @override
+  String get examChaptersCalculus =>
+      'Limits|Derivatives|Integrals|Series|Diff Equations';
+
+  @override
+  String get examChaptersLinearAlgebra =>
+      'Matrices|Determinants|Vectors|Eigenvalues|Quadratic Forms';
+
+  @override
+  String get examChaptersEnglish =>
+      'Vocabulary|Long Sentences|Reading|Translation|Writing';
+
+  @override
+  String get examChaptersGeneric =>
+      'Chapter 1|Chapter 2|Chapter 3|Chapter 4|Chapter 5';
+
+  @override
+  String get homeFailureServer => 'Service issue';
+
+  @override
+  String get homeFailureValidation => 'Check request';
+
+  @override
+  String get homeFailureNetwork => 'Connection issue';
+
+  @override
+  String get homeFailureOffline => 'Offline';
+
+  @override
+  String get homeFailureUnknown => 'Dashboard unavailable';
+
+  @override
+  String get homeFailureAuth => 'Sign in';
+
+  @override
+  String get homeFailureOfflineRetry => 'Retry online';
+
+  @override
+  String get homeCommandCenterTitle => 'Command Center';
+
+  @override
+  String get homeNoTasksToday => 'No tasks today';
+
+  @override
+  String get homeAskAurora => 'Ask Aurora';
+
+  @override
+  String get homeTodayMapped => 'Today is mapped out';
+
+  @override
+  String get homeCheckRhythm => 'Check today plan rhythm';
+
+  @override
+  String get homeSetGoal => 'Set a goal you can start today';
+
+  @override
+  String get homeAuroraCorrectionCancel => 'Cancel';
+
+  @override
+  String get homeAuroraCorrectionSubmit => 'Submit';
+
+  @override
+  String homeWeatherWithSummary(Object hint, Object summary) {
+    return 'Great for $hint, $summary';
+  }
+
+  @override
+  String homeWeatherOnlyHint(Object hint) {
+    return 'Great for $hint';
+  }
 }

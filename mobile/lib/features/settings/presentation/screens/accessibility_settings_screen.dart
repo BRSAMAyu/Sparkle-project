@@ -3,11 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/settings/presentation/providers/accessibility_provider.dart';
-
-String _a11yCopy({required String zh, required String en}) =>
-    I18nService.instance.isChinese ? zh : en;
 
 class AccessibilitySettingsScreen extends ConsumerWidget {
   const AccessibilitySettingsScreen({super.key});
@@ -30,16 +27,11 @@ class AccessibilitySettingsScreen extends ConsumerWidget {
             }
           },
         ),
-        title: Text(
-          _a11yCopy(
-            zh: '无障碍与低负荷',
-            en: 'Accessibility',
-          ),
-        ),
+        title: Text(context.l10n.settA11yTitle),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
-            semanticLabel: _a11yCopy(zh: '恢复默认', en: 'Reset'),
+            semanticLabel: context.l10n.settA11yReset,
             icon: const Icon(Icons.restart_alt_rounded),
             onPressed: settings.isSaving
                 ? null
@@ -55,17 +47,14 @@ class AccessibilitySettingsScreen extends ConsumerWidget {
             if (settings.lastError != null) ...[
               _StatusBanner(
                 icon: Icons.sync_problem_rounded,
-                text: _a11yCopy(
-                  zh: '保存失败，已保留上一次设置。',
-                  en: 'Save failed. Previous settings were restored.',
-                ),
+                text: context.l10n.settA11ySaveFailed,
                 isError: true,
               ),
               const SizedBox(height: DS.spacing12),
             ] else if (settings.isSaving) ...[
               _StatusBanner(
                 icon: Icons.sync_rounded,
-                text: _a11yCopy(zh: '正在同步到账号设置', en: 'Syncing settings'),
+                text: context.l10n.settA11ySyncing,
               ),
               const SizedBox(height: DS.spacing12),
             ],
@@ -133,10 +122,7 @@ class AccessibilitySettingsScreen extends ConsumerWidget {
   ) async {
     await notifier.reset();
     if (context.mounted) {
-      AppFeedback.success(
-        context,
-        _a11yCopy(zh: '已恢复默认无障碍设置', en: 'Accessibility settings reset'),
-      );
+      AppFeedback.success(context, context.l10n.settA11yResetDone);
     }
   }
 }
@@ -156,27 +142,14 @@ class _LowLoadSection extends StatelessWidget {
         children: [
           _SectionHeader(
             icon: Icons.bolt_rounded,
-            title: _a11yCopy(zh: '低负荷模式', en: 'Low-load mode'),
-            subtitle: _a11yCopy(
-              zh: '减少动效、放大触控区域，并优先使用更清晰的阅读节奏。',
-              en: 'Reduces motion, enlarges touch targets, and favors calmer reading.',
-            ),
+            title: context.l10n.settA11yLowLoadTitle,
+            subtitle: context.l10n.settA11yLowLoadDesc,
           ),
           const SizedBox(height: DS.spacing8),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(
-              _a11yCopy(
-                zh: '启用低负荷体验',
-                en: 'Enable low-load experience',
-              ),
-            ),
-            subtitle: Text(
-              _a11yCopy(
-                zh: '开启后会同步调整动画、屏幕阅读和触控默认值。',
-                en: 'Also adjusts motion, screen reader, and touch defaults.',
-              ),
-            ),
+            title: Text(context.l10n.settA11yLowLoadToggle),
+            subtitle: Text(context.l10n.settA11yLowLoadToggleDesc),
             value: settings.lowLoadMode,
             onChanged: onChanged,
             activeThumbColor: DS.primaryBase,
@@ -204,15 +177,12 @@ class _ReadingSection extends StatelessWidget {
         children: [
           _SectionHeader(
             icon: Icons.format_size_rounded,
-            title: _a11yCopy(zh: '阅读与颜色', en: 'Reading and color'),
-            subtitle: _a11yCopy(
-              zh: '集中管理字体缩放、对比度和色盲友好配色。',
-              en: 'Central controls for text scale, contrast, and color-safe palettes.',
-            ),
+            title: context.l10n.settA11yReadingTitle,
+            subtitle: context.l10n.settA11yReadingDesc,
           ),
           const SizedBox(height: DS.spacing12),
           _SliderRow(
-            title: _a11yCopy(zh: '字体缩放', en: 'Font scale'),
+            title: context.l10n.settA11yFontScale,
             valueLabel: '${(settings.fontScale * 100).round()}%',
             child: Slider(
               value: settings.fontScale,
@@ -226,26 +196,16 @@ class _ReadingSection extends StatelessWidget {
           const Divider(height: DS.spacing24),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(_a11yCopy(zh: '高对比度', en: 'High contrast')),
-            subtitle: Text(
-              _a11yCopy(
-                zh: '优先使用更明显的文字、边框和状态区分。',
-                en: 'Uses stronger text, borders, and state separation.',
-              ),
-            ),
+            title: Text(context.l10n.settA11yHighContrast),
+            subtitle: Text(context.l10n.settA11yHighContrastDesc),
             value: settings.highContrast,
             onChanged: onHighContrastChanged,
             activeThumbColor: DS.primaryBase,
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(_a11yCopy(zh: '色盲友好', en: 'Color-blind friendly')),
-            subtitle: Text(
-              _a11yCopy(
-                zh: '用形状、明暗和标签辅助颜色差异。',
-                en: 'Adds shape, tone, and labels where color carries meaning.',
-              ),
-            ),
+            title: Text(context.l10n.settA11yColorBlind),
+            subtitle: Text(context.l10n.settA11yColorBlindDesc),
             value: settings.colorBlindFriendly,
             onChanged: onColorBlindChanged,
             activeThumbColor: DS.primaryBase,
@@ -273,15 +233,12 @@ class _InteractionSection extends StatelessWidget {
         children: [
           _SectionHeader(
             icon: Icons.touch_app_rounded,
-            title: _a11yCopy(zh: '触控与动效', en: 'Touch and motion'),
-            subtitle: _a11yCopy(
-              zh: '统一触控目标、动画减弱和震动反馈默认值。',
-              en: 'Shared defaults for touch targets, reduced motion, and haptics.',
-            ),
+            title: context.l10n.settA11yTouchMotionTitle,
+            subtitle: context.l10n.settA11yTouchMotionDesc,
           ),
           const SizedBox(height: DS.spacing12),
           Text(
-            _a11yCopy(zh: '触控目标尺寸', en: 'Touch target size'),
+            context.l10n.settA11yTouchTargetSize,
             style: DS.labelSmall.copyWith(color: DS.textSecondary),
           ),
           const SizedBox(height: DS.spacing8),
@@ -291,7 +248,7 @@ class _InteractionSection extends StatelessWidget {
             children: TouchTargetSize.values
                 .map(
                   (size) => ChoiceChip(
-                    label: Text(_touchTargetLabel(size)),
+                    label: Text(_touchTargetLabel(context, size)),
                     selected: settings.touchTargetSize == size,
                     onSelected: (_) => onTouchTargetChanged(size),
                   ),
@@ -303,26 +260,16 @@ class _InteractionSection extends StatelessWidget {
           const Divider(height: DS.spacing24),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(_a11yCopy(zh: '减弱动画', en: 'Reduce motion')),
-            subtitle: Text(
-              _a11yCopy(
-                zh: '缩短或移除非必要转场、粒子和弹性动画。',
-                en: 'Shortens or removes nonessential transitions and effects.',
-              ),
-            ),
+            title: Text(context.l10n.settA11yReduceMotion),
+            subtitle: Text(context.l10n.settA11yReduceMotionDesc),
             value: settings.reduceMotion,
             onChanged: onReduceMotionChanged,
             activeThumbColor: DS.primaryBase,
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(_a11yCopy(zh: '震动反馈', en: 'Haptic feedback')),
-            subtitle: Text(
-              _a11yCopy(
-                zh: '控制选择、确认和错误提示的触觉反馈。',
-                en: 'Controls tactile feedback for selection, confirmation, and errors.',
-              ),
-            ),
+            title: Text(context.l10n.settA11yHaptic),
+            subtitle: Text(context.l10n.settA11yHapticDesc),
             value: settings.hapticFeedback,
             onChanged: onHapticChanged,
             activeThumbColor: DS.primaryBase,
@@ -348,36 +295,22 @@ class _AssistiveTechSection extends StatelessWidget {
         children: [
           _SectionHeader(
             icon: Icons.record_voice_over_rounded,
-            title: _a11yCopy(zh: '辅助技术', en: 'Assistive technology'),
-            subtitle: _a11yCopy(
-              zh: '屏幕阅读优化与 TTS 默认值会同步给可视化与学习场景。',
-              en: 'Screen reader and TTS defaults sync into visual and learning surfaces.',
-            ),
+            title: context.l10n.settA11yAssistiveTitle,
+            subtitle: context.l10n.settA11yAssistiveDesc,
           ),
           const SizedBox(height: DS.spacing8),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title:
-                Text(_a11yCopy(zh: '屏幕阅读优化', en: 'Screen reader optimization')),
-            subtitle: Text(
-              _a11yCopy(
-                zh: '为图谱、卡片和复杂控件提供更完整的语义顺序。',
-                en: 'Prioritizes semantic order for graphs, cards, and complex controls.',
-              ),
-            ),
+            title: Text(context.l10n.settA11yScreenReader),
+            subtitle: Text(context.l10n.settA11yScreenReaderDesc),
             value: settings.screenReaderOptimized,
             onChanged: onScreenReaderChanged,
             activeThumbColor: DS.primaryBase,
           ),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: Text(_a11yCopy(zh: 'TTS 朗读', en: 'TTS reading')),
-            subtitle: Text(
-              _a11yCopy(
-                zh: '允许学习摘要、步骤和复盘内容进入朗读模式。',
-                en: 'Allows summaries, steps, and reviews to enter read-aloud mode.',
-              ),
-            ),
+            title: Text(context.l10n.settA11yTtsReading),
+            subtitle: Text(context.l10n.settA11yTtsReadingDesc),
             value: settings.ttsEnabled,
             onChanged: onTtsChanged,
             activeThumbColor: DS.primaryBase,
@@ -395,37 +328,14 @@ class _WcagChecklistSection extends StatelessWidget {
         children: [
           _SectionHeader(
             icon: Icons.fact_check_rounded,
-            title: _a11yCopy(zh: 'WCAG AA 检查', en: 'WCAG AA checks'),
-            subtitle: _a11yCopy(
-              zh: '本页控件按可触达、可读和可理解的设置面板标准维护。',
-              en: 'This panel is maintained against operable, readable, and understandable checks.',
-            ),
+            title: context.l10n.settA11yWcagTitle,
+            subtitle: context.l10n.settA11yWcagDesc,
           ),
           const SizedBox(height: DS.spacing12),
-          _ChecklistRow(
-            text: _a11yCopy(
-              zh: '正文与控件文字支持 200% 以内缩放',
-              en: 'Text and controls support up to 200% user scaling',
-            ),
-          ),
-          _ChecklistRow(
-            text: _a11yCopy(
-              zh: '触控目标不低于 48dp，且可提升至 64dp',
-              en: 'Touch targets start at 48dp and can increase to 64dp',
-            ),
-          ),
-          _ChecklistRow(
-            text: _a11yCopy(
-              zh: '颜色设置不依赖单一色相表达状态',
-              en: 'Color options do not rely on hue alone for state',
-            ),
-          ),
-          _ChecklistRow(
-            text: _a11yCopy(
-              zh: '屏幕阅读、TTS、动效和震动均可独立控制',
-              en: 'Screen reader, TTS, motion, and haptics are independently controlled',
-            ),
-          ),
+          _ChecklistRow(text: context.l10n.settA11yWcagTextScale),
+          _ChecklistRow(text: context.l10n.settA11yWcagTouchTarget),
+          _ChecklistRow(text: context.l10n.settA11yWcagColorState),
+          _ChecklistRow(text: context.l10n.settA11yWcagIndependent),
         ],
       );
 }
@@ -534,10 +444,7 @@ class _TouchPreview extends StatelessWidget {
           const SizedBox(width: DS.spacing12),
           Expanded(
             child: Text(
-              _a11yCopy(
-                zh: '当前最小目标 ${size.round()}dp',
-                en: 'Current minimum target ${size.round()}dp',
-              ),
+              context.l10n.settA11yTouchPreview(size.round()),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
                   ),
@@ -601,9 +508,9 @@ class _StatusBanner extends StatelessWidget {
       );
 }
 
-String _touchTargetLabel(TouchTargetSize size) => switch (size) {
-      TouchTargetSize.comfortable =>
-        _a11yCopy(zh: '舒适 48dp', en: 'Comfort 48dp'),
-      TouchTargetSize.large => _a11yCopy(zh: '加大 56dp', en: 'Large 56dp'),
-      TouchTargetSize.extraLarge => _a11yCopy(zh: '特大 64dp', en: 'XL 64dp'),
+String _touchTargetLabel(BuildContext context, TouchTargetSize size) =>
+    switch (size) {
+      TouchTargetSize.comfortable => context.l10n.settA11yTouchComfort,
+      TouchTargetSize.large => context.l10n.settA11yTouchLarge,
+      TouchTargetSize.extraLarge => context.l10n.settA11yTouchXl,
     };

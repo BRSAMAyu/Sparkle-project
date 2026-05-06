@@ -194,16 +194,12 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
                           _buildInfoChip(
                             context,
                             icon: Icons.history_rounded,
-                            label: zh
-                                ? '共 ${_logs.length} 条记录'
-                                : '${_logs.length} records',
+                            label: l10n.secLogTotalRecords(_logs.length),
                           ),
                           _buildInfoChip(
                             context,
                             icon: Icons.warning_amber_rounded,
-                            label: zh
-                                ? '异常 ${_logs.where((item) => item.action == 'login_failed' || item.action == 'account_delete').length} 条'
-                                : '${_logs.where((item) => item.action == 'login_failed' || item.action == 'account_delete').length} anomalies',
+                            label: l10n.secLogAnomalies(_logs.where((item) => item.action == 'login_failed' || item.action == 'account_delete').length),
                           ),
                         ],
                       ),

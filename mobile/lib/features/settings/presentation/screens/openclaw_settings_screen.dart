@@ -10,7 +10,6 @@ import 'package:sparkle/features/settings/presentation/widgets/openclaw_executio
 import 'package:sparkle/features/task/presentation/execution_copy.dart';
 import 'package:sparkle/features/task/presentation/providers/task_provider.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class OpenClawSettingsScreen extends ConsumerStatefulWidget {
   const OpenClawSettingsScreen({super.key});
@@ -25,14 +24,14 @@ class _OpenClawSettingsScreenState
   bool _retryingQueue = false;
 
   Future<void> _retryQueuedRequests(OpenClawConnectionService service) async {
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     if (!service.isConnected) {
       _showSnackBar(
         service.hasExecutionPermissionIssue
-            ? (zh ? '当前网关可访问，但没有执行权限，暂时无法重试队列' : 'Gateway accessible but no execution permission')
+            ? l10n.settOpenclawGatewayNoPerm
             : service.hasExecutionEndpointIssue
-                ? (zh ? '当前网关可访问，但执行入口不可用，暂时无法重试队列' : 'Gateway accessible but execution endpoint unavailable')
-                : (zh ? '执行引擎尚未连接，暂时无法重试队列' : 'Execution engine not connected'),
+                ? l10n.settOpenclawEndpointUnavailable
+                : l10n.settOpenclawEngineNotConnected,
         isError: true,
       );
       return;
@@ -43,7 +42,9 @@ class _OpenClawSettingsScreenState
     if (!mounted) return;
     setState(() => _retryingQueue = false);
     _showSnackBar(
-      dispatched > 0 ? (zh ? '已重新提交 $dispatched 个排队任务' : 'Resubmitted $dispatched queued tasks') : (zh ? '当前没有可重试的排队任务' : 'No retryable tasks'),
+      dispatched > 0
+          ? l10n.settOpenclawResubmitted(dispatched)
+          : l10n.settOpenclawNoRetryableTasks,
     );
   }
 
@@ -64,6 +65,7 @@ class _OpenClawSettingsScreenState
   @override
   Widget build(BuildContext context) {
     final copy = ExecutionCopy.of(context);
+    final l10n = context.l10n;
     final service = ref.watch(openClawConnectionProvider);
     final queuedRequests = service.queuedRequests;
 
@@ -79,7 +81,7 @@ class _OpenClawSettingsScreenState
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                I18nService.instance.isChinese ? '这里统一管理 OpenClaw 的接入状态、执行可用性和等待队列，避免你在不同页面看到不同结论。' : 'Unified management of OpenClaw connection status, execution availability, and waiting queue.',
+                l10n.settOpenclawDesc,
                 style: DS.bodySmall.copyWith(
                   color: DS.textSecondary,
                   height: 1.5,
@@ -118,7 +120,7 @@ class _OpenClawSettingsScreenState
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
-                              '${queuedRequests.length} ${I18nService.instance.isChinese ? '个任务' : 'tasks'}',
+                              l10n.settOpenclawQueuedTasks(queuedRequests.length),
                               style: DS.bodySmall.copyWith(
                                 color: DS.warning,
                                 fontWeight: DS.fontWeightBold,
@@ -129,7 +131,7 @@ class _OpenClawSettingsScreenState
                       ),
                       const SizedBox(height: DS.spacing8),
                       Text(
-                        I18nService.instance.isChinese ? '当执行链路暂时不可用时，新的委派会先进入这里。等权限或连接恢复后，你可以一键重新提交。' : 'When execution path is unavailable, new delegations wait here. Retry when permissions or connection recover.',
+                        l10n.settOpenclawQueueDesc,
                         style: DS.bodySmall.copyWith(
                           color: DS.textSecondary,
                           height: 1.45,
@@ -153,7 +155,7 @@ class _OpenClawSettingsScreenState
                                     Text(
                                       (request.goal?.trim().isNotEmpty ?? false)
                                           ? request.goal!
-                                          : '${I18nService.instance.isChinese ? '任务' : 'Task'} ${request.taskId}',
+                                          : l10n.settOpenclawTaskLabel(request.taskId),
                                       style: DS.bodySmall.copyWith(
                                         color: DS.textPrimary,
                                         fontWeight: DS.fontWeightBold,
@@ -164,8 +166,8 @@ class _OpenClawSettingsScreenState
                                       [
                                         if ((request.templateId ?? '')
                                             .isNotEmpty)
-                                          '${I18nService.instance.isChinese ? '模板' : 'Template'} ${request.templateId}',
-                                          '${I18nService.instance.isChinese ? '来源' : 'Source'} ${request.source}',
+                                          l10n.settOpenclawTemplateLabel(request.templateId!),
+                                        l10n.settOpenclawSourceLabel(request.source),
                                       ].join(' · '),
                                       style: DS.bodySmall.copyWith(
                                         color: DS.textSecondary,
@@ -175,10 +177,10 @@ class _OpenClawSettingsScreenState
                                 ),
                               ),
                             ),
-                          ),
+                        ),
                       if (queuedRequests.length > 5)
                         Text(
-                          '${I18nService.instance.isChinese ? '还有' : 'Plus'} ${queuedRequests.length - 5} ${I18nService.instance.isChinese ? '个排队任务' : 'more queued tasks'}',
+                          l10n.settOpenclawMoreQueued(queuedRequests.length - 5),
                           style: DS.bodySmall.copyWith(
                             color: DS.textSecondary,
                           ),
@@ -209,7 +211,7 @@ class _OpenClawSettingsScreenState
                               onPressed: () =>
                                   unawaited(_clearQueuedRequests(service)),
                               child: Text(
-                                I18nService.instance.isChinese ? '清空队列' : 'Clear Queue',
+                                l10n.settOpenclawClearQueue,
                                 style: DS.bodyMedium.copyWith(
                                   color: DS.semanticError,
                                 ),

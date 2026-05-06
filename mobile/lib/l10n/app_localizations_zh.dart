@@ -29975,4 +29975,98 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get settDataManageMemory => '管理记忆写入规则';
+
+  @override
+  String get examSubjectComputerNetworks => '计算机网络';
+
+  @override
+  String get examSubjectOperatingSystems => '操作系统';
+
+  @override
+  String get examSubjectDatabases => '数据库';
+
+  @override
+  String get examSubjectCalculus => '高数';
+
+  @override
+  String get examSubjectLinearAlgebra => '线代';
+
+  @override
+  String get examSubjectEnglish => '英语';
+
+  @override
+  String get examChaptersComputerNetworks => '物理层|数据链路层|网络层|传输层|应用层';
+
+  @override
+  String get examChaptersOperatingSystems => '进程线程|同步互斥|内存管理|文件系统|死锁';
+
+  @override
+  String get examChaptersDatabases => 'ER 模型|SQL|范式|事务|索引';
+
+  @override
+  String get examChaptersCalculus => '极限连续|导数微分|积分|级数|微分方程';
+
+  @override
+  String get examChaptersLinearAlgebra => '矩阵|行列式|向量组|特征值|二次型';
+
+  @override
+  String get examChaptersEnglish => '词汇|长难句|阅读|翻译|写作';
+
+  @override
+  String get examChaptersGeneric => '第一章|第二章|第三章|第四章|第五章';
+
+  @override
+  String get homeFailureServer => '服务暂时不稳';
+
+  @override
+  String get homeFailureValidation => '需要调整请求';
+
+  @override
+  String get homeFailureNetwork => '网络不稳定';
+
+  @override
+  String get homeFailureOffline => '离线了';
+
+  @override
+  String get homeFailureUnknown => '首页暂时加载失败';
+
+  @override
+  String get homeFailureAuth => '去登录';
+
+  @override
+  String get homeFailureOfflineRetry => '连网后重试';
+
+  @override
+  String get homeCommandCenterTitle => '现在的指挥台';
+
+  @override
+  String get homeNoTasksToday => '今天未排任务';
+
+  @override
+  String get homeAskAurora => '问 Aurora';
+
+  @override
+  String get homeTodayMapped => '今天的任务已经清楚了';
+
+  @override
+  String get homeCheckRhythm => '先检查今天的计划节奏';
+
+  @override
+  String get homeSetGoal => '先定一个今天能开始的目标';
+
+  @override
+  String get homeAuroraCorrectionCancel => '取消';
+
+  @override
+  String get homeAuroraCorrectionSubmit => '发送';
+
+  @override
+  String homeWeatherWithSummary(Object hint, Object summary) {
+    return '今天适合$hint，$summary';
+  }
+
+  @override
+  String homeWeatherOnlyHint(Object hint) {
+    return '今天适合$hint';
+  }
 }

@@ -54480,6 +54480,186 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'管理记忆写入规则'**
   String get settDataManageMemory;
+
+  /// No description provided for @examSubjectComputerNetworks.
+  ///
+  /// In zh, this message translates to:
+  /// **'计算机网络'**
+  String get examSubjectComputerNetworks;
+
+  /// No description provided for @examSubjectOperatingSystems.
+  ///
+  /// In zh, this message translates to:
+  /// **'操作系统'**
+  String get examSubjectOperatingSystems;
+
+  /// No description provided for @examSubjectDatabases.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据库'**
+  String get examSubjectDatabases;
+
+  /// No description provided for @examSubjectCalculus.
+  ///
+  /// In zh, this message translates to:
+  /// **'高数'**
+  String get examSubjectCalculus;
+
+  /// No description provided for @examSubjectLinearAlgebra.
+  ///
+  /// In zh, this message translates to:
+  /// **'线代'**
+  String get examSubjectLinearAlgebra;
+
+  /// No description provided for @examSubjectEnglish.
+  ///
+  /// In zh, this message translates to:
+  /// **'英语'**
+  String get examSubjectEnglish;
+
+  /// No description provided for @examChaptersComputerNetworks.
+  ///
+  /// In zh, this message translates to:
+  /// **'物理层|数据链路层|网络层|传输层|应用层'**
+  String get examChaptersComputerNetworks;
+
+  /// No description provided for @examChaptersOperatingSystems.
+  ///
+  /// In zh, this message translates to:
+  /// **'进程线程|同步互斥|内存管理|文件系统|死锁'**
+  String get examChaptersOperatingSystems;
+
+  /// No description provided for @examChaptersDatabases.
+  ///
+  /// In zh, this message translates to:
+  /// **'ER 模型|SQL|范式|事务|索引'**
+  String get examChaptersDatabases;
+
+  /// No description provided for @examChaptersCalculus.
+  ///
+  /// In zh, this message translates to:
+  /// **'极限连续|导数微分|积分|级数|微分方程'**
+  String get examChaptersCalculus;
+
+  /// No description provided for @examChaptersLinearAlgebra.
+  ///
+  /// In zh, this message translates to:
+  /// **'矩阵|行列式|向量组|特征值|二次型'**
+  String get examChaptersLinearAlgebra;
+
+  /// No description provided for @examChaptersEnglish.
+  ///
+  /// In zh, this message translates to:
+  /// **'词汇|长难句|阅读|翻译|写作'**
+  String get examChaptersEnglish;
+
+  /// No description provided for @examChaptersGeneric.
+  ///
+  /// In zh, this message translates to:
+  /// **'第一章|第二章|第三章|第四章|第五章'**
+  String get examChaptersGeneric;
+
+  /// No description provided for @homeFailureServer.
+  ///
+  /// In zh, this message translates to:
+  /// **'服务暂时不稳'**
+  String get homeFailureServer;
+
+  /// No description provided for @homeFailureValidation.
+  ///
+  /// In zh, this message translates to:
+  /// **'需要调整请求'**
+  String get homeFailureValidation;
+
+  /// No description provided for @homeFailureNetwork.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络不稳定'**
+  String get homeFailureNetwork;
+
+  /// No description provided for @homeFailureOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'离线了'**
+  String get homeFailureOffline;
+
+  /// No description provided for @homeFailureUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'首页暂时加载失败'**
+  String get homeFailureUnknown;
+
+  /// No description provided for @homeFailureAuth.
+  ///
+  /// In zh, this message translates to:
+  /// **'去登录'**
+  String get homeFailureAuth;
+
+  /// No description provided for @homeFailureOfflineRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'连网后重试'**
+  String get homeFailureOfflineRetry;
+
+  /// No description provided for @homeCommandCenterTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'现在的指挥台'**
+  String get homeCommandCenterTitle;
+
+  /// No description provided for @homeNoTasksToday.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天未排任务'**
+  String get homeNoTasksToday;
+
+  /// No description provided for @homeAskAurora.
+  ///
+  /// In zh, this message translates to:
+  /// **'问 Aurora'**
+  String get homeAskAurora;
+
+  /// No description provided for @homeTodayMapped.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天的任务已经清楚了'**
+  String get homeTodayMapped;
+
+  /// No description provided for @homeCheckRhythm.
+  ///
+  /// In zh, this message translates to:
+  /// **'先检查今天的计划节奏'**
+  String get homeCheckRhythm;
+
+  /// No description provided for @homeSetGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'先定一个今天能开始的目标'**
+  String get homeSetGoal;
+
+  /// No description provided for @homeAuroraCorrectionCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get homeAuroraCorrectionCancel;
+
+  /// No description provided for @homeAuroraCorrectionSubmit.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送'**
+  String get homeAuroraCorrectionSubmit;
+
+  /// No description provided for @homeWeatherWithSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天适合{hint}，{summary}'**
+  String homeWeatherWithSummary(Object hint, Object summary);
+
+  /// No description provided for @homeWeatherOnlyHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'今天适合{hint}'**
+  String homeWeatherOnlyHint(Object hint);
 }
 
 class _AppLocalizationsDelegate

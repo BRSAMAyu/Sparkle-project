@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
@@ -16,9 +15,6 @@ enum TransparencyDisplayMode {
   bottomSheet,
   detailOnly,
 }
-
-String _settingsCopy({required String zh, required String en}) =>
-    I18nService.instance.isChinese ? zh : en;
 
 /// Transparency Settings Screen
 /// 透明模式设置屏幕
@@ -67,7 +63,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                 child: SwitchListTile(
                   title: Text(context.l10n.settingsPureMode),
                   subtitle: Text(
-                    '聊天中仅保留文字消息，隐藏消息下方的附加信息卡片、任务卡和反馈组件。',
+                    context.l10n.settTranspPureModeDesc,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   value: pureModeEnabled,
@@ -96,7 +92,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ListTile(
                         title: Text(context.l10n.transparencyDisplayOptions),
                         subtitle: Text(
-                          '选择主对话里的透明模式展示方式',
+                          context.l10n.settTranspDisplayDesc,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         trailing: DropdownButton<TransparencyDisplayMode>(
@@ -133,7 +129,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       SwitchListTile(
                         title: Text(context.l10n.settingsAutoCollapse),
                         subtitle: Text(
-                          '回答完成后，将透明模式收起成轻量摘要',
+                          context.l10n.settTranspAutoCollapseDesc,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         value: prefs.autoCollapseOnComplete,
@@ -152,7 +148,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       SwitchListTile(
                         title: Text(context.l10n.settingsAllowSingleClose),
                         subtitle: Text(
-                          '本轮生成时可手动关闭透明模式，不影响回答继续生成',
+                          context.l10n.settTranspAllowCloseDesc,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         value: prefs.allowPerTurnDismiss,
@@ -226,17 +222,9 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       const Divider(height: 1),
                       SwitchListTile(
-                        title: Text(
-                          _settingsCopy(
-                            zh: 'Aurora 体验回执',
-                            en: 'Aurora experience receipts',
-                          ),
-                        ),
+                        title: Text(context.l10n.settTranspAuroraReceiptTitle),
                         subtitle: Text(
-                          _settingsCopy(
-                            zh: '显示 Aurora 为什么改变语气、状态或深度校准入口。',
-                            en: 'Show why Aurora changed tone, state, or deep calibration entry.',
-                          ),
+                          context.l10n.settTranspAuroraReceiptDesc,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         value: prefs.showAuroraExperienceReceipts,
@@ -253,17 +241,9 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       const Divider(height: 1),
                       SwitchListTile(
-                        title: Text(
-                          _settingsCopy(
-                            zh: '记忆引用回执',
-                            en: 'Memory reference receipts',
-                          ),
-                        ),
+                        title: Text(context.l10n.settTranspMemoryReceiptTitle),
                         subtitle: Text(
-                          _settingsCopy(
-                            zh: '显示 Aurora 引用了哪些相关记忆，并允许纠正。',
-                            en: 'Show which memories Aurora used and allow corrections.',
-                          ),
+                          context.l10n.settTranspMemoryReceiptDesc,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         value: prefs.showMemoryReferenceReceipts,
@@ -280,17 +260,9 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       const Divider(height: 1),
                       SwitchListTile(
-                        title: Text(
-                          _settingsCopy(
-                            zh: '资料与工具回执',
-                            en: 'Source and tool receipts',
-                          ),
-                        ),
+                        title: Text(context.l10n.settTranspSourceReceiptTitle),
                         subtitle: Text(
-                          _settingsCopy(
-                            zh: '显示 Aurora 参考了哪些资料、工具或社群上下文。',
-                            en: 'Show which materials, tools, or social context Aurora used.',
-                          ),
+                          context.l10n.settTranspSourceReceiptDesc,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         value: prefs.showSourceContextReceipts,
@@ -307,17 +279,9 @@ class TransparencySettingsScreen extends ConsumerWidget {
                       ),
                       const Divider(height: 1),
                       SwitchListTile(
-                        title: Text(
-                          _settingsCopy(
-                            zh: '下一步变更回执',
-                            en: 'Next-action change receipts',
-                          ),
-                        ),
+                        title: Text(context.l10n.settTranspNextActionTitle),
                         subtitle: Text(
-                          _settingsCopy(
-                            zh: '显示计划或任务被 Aurora 调整的原因。',
-                            en: 'Show why Aurora changed a plan or task.',
-                          ),
+                          context.l10n.settTranspNextActionDesc,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         value: prefs.showNextActionChangedReceipts,
