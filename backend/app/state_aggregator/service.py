@@ -528,6 +528,12 @@ class StateAggregatorService:
         distribution: dict[str, int] = {}
         for s in rows:
             distribution[s] = distribution.get(s, 0) + 1
+
+        # Supplement with keyword-based sentiment from recent user chat messages
+        chat_sentiments = await self._classify_recent_chat_sentiment(user_id, last_24h)
+        for s, count in chat_sentiments.items():
+            distribution[s] = distribution.get(s, 0) + count
+
         dominant = max(distribution, key=distribution.get) if distribution else None
         emotional_block = dominant in {"anxious", "frustrated", "overwhelmed"} if dominant else False
         return StateFieldEnvelope(
@@ -540,6 +546,44 @@ class StateAggregatorService:
             source_snapshot_ids=(f"fragments:{user_id}",),
             freshness_seconds=0,
         )
+
+    async def _classify_recent_chat_sentiment(
+        self, user_id: UUID, since: datetime
+    ) -> dict[str, int]:
+        """Keyword-based sentiment classification of recent user chat messages."""
+        from app.models.chat import ChatMessage
+
+        _KEYWORD_MAP: dict[str, list[str]] = {
+            "frustrated": ["烦", "太难了", "做不到", "不想", "放弃", "好难", "崩溃", "烦死"],
+            "anxious": ["焦虑", "担心", "害怕", "紧张", "来不及", "急", "压力"],
+            "overwhelmed": ["太多了", " overwhelmed", "忙不过来", "撑不住", "太累", "累死"],
+            "happy": ["开心", "高兴", "太好了", "棒", "做到了", "完成了", "谢谢", "喜欢"],
+            "motivated": ["加油", "继续", "努力", "一定", "可以", "试试", "期待"],
+            "neutral": [],
+        }
+        stmt = (
+            select(ChatMessage.content)
+            .where(
+                ChatMessage.user_id == user_id,
+                ChatMessage.role == "user",
+                ChatMessage.created_at >= since,
+            )
+            .order_by(ChatMessage.created_at.desc())
+            .limit(30)
+        )
+        messages = (await self.db.execute(stmt)).scalars().all()
+        result: dict[str, int] = {}
+        for content in messages:
+            if not content:
+                continue
+            text = content.lower()
+            for sentiment, keywords in _KEYWORD_MAP.items():
+                if sentiment == "neutral":
+                    continue
+                if any(kw in text for kw in keywords):
+                    result[sentiment] = result.get(sentiment, 0) + 1
+                    break
+        return result
 
     async def _build_learning_state(
         self,
