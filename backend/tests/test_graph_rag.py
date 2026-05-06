@@ -14,6 +14,7 @@ from datetime import datetime
 from app.orchestration.graph_rag import (
     GraphRAGRetriever,
     GraphRAGResult,
+    _apply_retrieval_directive_filter,
     filter_graph_rag_result,
     filter_retrieved_chunks,
     format_filtered_study_materials_context,
@@ -475,6 +476,95 @@ class TestGraphRAGRetriever:
         assert result.metadata["hyde_used"] is False
         assert result.vector_results[0]["similarity"] < 0.72
         assert filtered.total_passed == 0
+
+
+class TestRetrievalDirectiveFilter:
+    """Tests for QA-P0-2: must_load/may_load/do_not_load filtering."""
+
+    def _make_results(self, count: int) -> list[dict]:
+        return [
+            {
+                "id": f"chunk-{i}",
+                "file_id": f"src-{i}",
+                "description": f"Content {i}",
+                "similarity": 0.5 + i * 0.1,
+            }
+            for i in range(count)
+        ]
+
+    def test_no_directive_returns_all(self):
+        results = self._make_results(3)
+        filtered = _apply_retrieval_directive_filter(results, {})
+        assert filtered == results
+
+    def test_empty_lists_returns_all(self):
+        results = self._make_results(3)
+        filtered = _apply_retrieval_directive_filter(
+            results,
+            {"must_load": [], "may_load": [], "do_not_load": []},
+        )
+        assert filtered == results
+
+    def test_do_not_load_excludes_matching(self):
+        results = self._make_results(3)
+        filtered = _apply_retrieval_directive_filter(
+            results,
+            {"do_not_load": ["src-1"]},
+        )
+        assert len(filtered) == 2
+        ids = [r["id"] for r in filtered]
+        assert "chunk-1" not in ids
+
+    def test_must_load_always_included(self):
+        results = self._make_results(3)
+        filtered = _apply_retrieval_directive_filter(
+            results,
+            {"must_load": ["src-0"], "do_not_load": []},
+        )
+        ids = [r["id"] for r in filtered]
+        assert "chunk-0" in ids
+
+    def test_may_load_below_threshold_excluded(self):
+        results = [
+            {"id": "chunk-low", "file_id": "src-may", "similarity": 0.2},
+            {"id": "chunk-high", "file_id": "src-may2", "similarity": 0.8},
+        ]
+        filtered = _apply_retrieval_directive_filter(
+            results,
+            {"may_load": ["src-may", "src-may2"]},
+        )
+        ids = [r["id"] for r in filtered]
+        assert "chunk-low" not in ids
+        assert "chunk-high" in ids
+
+    def test_do_not_load_takes_precedence_over_must_load(self):
+        results = self._make_results(3)
+        filtered = _apply_retrieval_directive_filter(
+            results,
+            {"must_load": ["src-1"], "do_not_load": ["src-1"]},
+        )
+        ids = [r["id"] for r in filtered]
+        assert "chunk-1" not in ids
+
+    def test_unlisted_sources_pass_through(self):
+        results = self._make_results(5)
+        filtered = _apply_retrieval_directive_filter(
+            results,
+            {"do_not_load": ["src-2"]},
+        )
+        assert len(filtered) == 4
+
+    def test_source_file_id_field_name_variants(self):
+        results = [
+            {"id": "a", "source_file_id": "src-x", "similarity": 0.9},
+            {"id": "b", "source_id": "src-y", "similarity": 0.9},
+        ]
+        filtered = _apply_retrieval_directive_filter(
+            results,
+            {"do_not_load": ["src-x"]},
+        )
+        assert len(filtered) == 1
+        assert filtered[0]["id"] == "b"
 
 
 class TestGraphKnowledgeService:

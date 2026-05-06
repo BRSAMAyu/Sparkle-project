@@ -408,6 +408,40 @@ def filter_graph_rag_result(
     )
 
 
+def _apply_retrieval_directive_filter(
+    vector_results: list[dict[str, Any]],
+    directive: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Filter vector results based on RetrievalDirective must_load/may_load/do_not_load lists."""
+    must_load = set(directive.get("must_load") or [])
+    may_load = set(directive.get("may_load") or [])
+    do_not_load = set(directive.get("do_not_load") or [])
+
+    if not must_load and not may_load and not do_not_load:
+        return vector_results
+
+    filtered: list[dict[str, Any]] = []
+    for item in vector_results:
+        source_id = str(
+            item.get("file_id")
+            or item.get("source_file_id")
+            or item.get("source_id")
+            or ""
+        )
+        if source_id in do_not_load:
+            continue
+        if source_id in must_load:
+            filtered.append(item)
+            continue
+        if may_load and source_id in may_load:
+            similarity = float(item.get("similarity") or item.get("score") or 0)
+            if similarity >= 0.3:
+                filtered.append(item)
+            continue
+        filtered.append(item)
+    return filtered
+
+
 NO_RELEVANT_STUDY_MATERIALS_SENTINEL = (
     "[Study Materials — Referenced Documents]\n\n"
     "No relevant study materials found for this query. Do not claim that uploaded notes, PDFs, slides, or other "
@@ -2134,6 +2168,17 @@ Return ONLY a JSON array of entity names."""
                 trace=trace,
             )
             multi_hop_metadata = None
+
+        # Apply RetrievalDirective filtering (must_load/may_load/do_not_load)
+        if retrieval_directive:
+            pre_count = len(vector_results)
+            vector_results = _apply_retrieval_directive_filter(
+                vector_results, retrieval_directive,
+            )
+            if len(vector_results) != pre_count:
+                logger.info(
+                    f"RetrievalDirective filter: {pre_count} → {len(vector_results)} results"
+                )
 
         if multi_hop_metadata:
             structured_context = format_graph_rag_document_context(
