@@ -16,8 +16,12 @@ class UnderstandingSnapshotCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final zh = I18nService.instance.isChinese;
     final snapshot = ref.watch(understandingSnapshotProvider);
-    return snapshot.when(
+    return Semantics(
+      container: true,
+      label: zh ? 'Sparkle 理解快照' : 'Sparkle understanding snapshot',
+      child: snapshot.when(
       data: (data) => _UnderstandingSnapshotSurface(
         snapshot: data,
         onOpenChat: onOpenChat,
@@ -25,6 +29,7 @@ class UnderstandingSnapshotCard extends ConsumerWidget {
       loading: () => const _ExperienceCardSkeleton(),
       error: (_, __) => CompactErrorCard(
         onRetry: () => ref.invalidate(understandingSnapshotProvider),
+      ),
       ),
     );
   }
@@ -52,123 +57,129 @@ class _UnderstandingSnapshotSurface extends StatelessWidget {
     final question =
         snapshot.openQuestions.isNotEmpty ? snapshot.openQuestions.first : null;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        DS.spacing16,
-        0,
-        DS.spacing16,
-        DS.spacing10,
-      ),
-      child: GraphiteCardSurface(
-        surfaceRole: SparkleSurfaceRole.card,
-        borderColor: accent.withValues(alpha: 0.18),
-        padding: const EdgeInsets.all(DS.spacing16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: accent.withValues(alpha: 0.12),
-                    borderRadius: DS.borderRadius16,
+    return Semantics(
+      container: true,
+      label: zh
+          ? 'Sparkle 对你的理解，可信度 ${(snapshot.confidence * 100).round()}%'
+          : 'What Sparkle understands, confidence ${(snapshot.confidence * 100).round()}%',
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          DS.spacing16,
+          0,
+          DS.spacing16,
+          DS.spacing10,
+        ),
+        child: GraphiteCardSurface(
+          surfaceRole: SparkleSurfaceRole.card,
+          borderColor: accent.withValues(alpha: 0.18),
+          padding: const EdgeInsets.all(DS.spacing16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.12),
+                      borderRadius: DS.borderRadius16,
+                    ),
+                    child: Icon(
+                      Icons.psychology_alt_rounded,
+                      color: accent,
+                      size: 22,
+                    ),
                   ),
-                  child: Icon(
-                    Icons.psychology_alt_rounded,
-                    color: accent,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: DS.spacing12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        zh ? 'Sparkle 对你的理解' : 'What Sparkle understands',
-                        style: TextStyle(
-                          color: DS.textSecondary,
-                          fontSize: DS.fontSizeXs,
-                          fontWeight: DS.fontWeightBold,
+                  const SizedBox(width: DS.spacing12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          zh ? 'Sparkle 对你的理解' : 'What Sparkle understands',
+                          style: TextStyle(
+                            color: DS.textSecondary,
+                            fontSize: DS.fontSizeXs,
+                            fontWeight: DS.fontWeightBold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: DS.spacing4),
-                      Text(
-                        snapshot.summary.isNotEmpty
-                            ? snapshot.summary
-                            : (zh
-                                ? '我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。'
-                                : 'I am using your goal, tasks, and recent corrections to guide today.'),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: DS.textPrimary,
-                          fontSize: DS.fontSizeBase,
-                          fontWeight: DS.fontWeightSemibold,
-                          height: 1.35,
+                        const SizedBox(height: DS.spacing4),
+                        Text(
+                          snapshot.summary.isNotEmpty
+                              ? snapshot.summary
+                              : (zh
+                                  ? '我正在结合你的目标、任务和最近纠正来调整今天的陪跑方式。'
+                                  : 'I am using your goal, tasks, and recent corrections to guide today.'),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: DS.textPrimary,
+                            fontSize: DS.fontSizeBase,
+                            fontWeight: DS.fontWeightSemibold,
+                            height: 1.35,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  _ConfidencePill(value: snapshot.confidence),
+                ],
+              ),
+              if (evidence.isNotEmpty) ...[
+                const SizedBox(height: DS.spacing12),
+                Wrap(
+                  spacing: DS.spacing8,
+                  runSpacing: DS.spacing8,
+                  children: evidence
+                      .take(3)
+                      .map((item) =>
+                          _TinyEvidenceChip(label: item, color: accent))
+                      .toList(growable: false),
                 ),
-                _ConfidencePill(value: snapshot.confidence),
               ],
-            ),
-            if (evidence.isNotEmpty) ...[
+              if (question != null) ...[
+                const SizedBox(height: DS.spacing12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(DS.spacing12),
+                  decoration: BoxDecoration(
+                    color: DS.warning.withValues(alpha: 0.08),
+                    borderRadius: DS.borderRadius12,
+                    border: Border.all(
+                      color: DS.warning.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Text(
+                    zh ? '我可能误读了：$question' : 'I may be wrong: $question',
+                    style: TextStyle(
+                      color: DS.textPrimary,
+                      fontSize: DS.fontSizeSm,
+                      height: 1.35,
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: DS.spacing12),
               Wrap(
                 spacing: DS.spacing8,
                 runSpacing: DS.spacing8,
-                children: evidence
-                    .take(3)
-                    .map(
-                        (item) => _TinyEvidenceChip(label: item, color: accent))
-                    .toList(growable: false),
+                children: [
+                  SparkleButton.primary(
+                    label: zh ? '纠正我的理解' : 'Correct this',
+                    icon: const Icon(Icons.edit_note_rounded),
+                    onPressed: onOpenChat ?? () {},
+                  ),
+                  if (snapshot.nextStepLabel != null)
+                    _TinyEvidenceChip(
+                      label: snapshot.nextStepLabel!,
+                      color: DS.success,
+                    ),
+                ],
               ),
             ],
-            if (question != null) ...[
-              const SizedBox(height: DS.spacing12),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(DS.spacing12),
-                decoration: BoxDecoration(
-                  color: DS.warning.withValues(alpha: 0.08),
-                  borderRadius: DS.borderRadius12,
-                  border: Border.all(
-                    color: DS.warning.withValues(alpha: 0.18),
-                  ),
-                ),
-                child: Text(
-                  zh ? '我可能误读了：$question' : 'I may be wrong: $question',
-                  style: TextStyle(
-                    color: DS.textPrimary,
-                    fontSize: DS.fontSizeSm,
-                    height: 1.35,
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: DS.spacing12),
-            Wrap(
-              spacing: DS.spacing8,
-              runSpacing: DS.spacing8,
-              children: [
-                SparkleButton.primary(
-                  label: zh ? '纠正我的理解' : 'Correct this',
-                  icon: const Icon(Icons.edit_note_rounded),
-                  onPressed: onOpenChat ?? () {},
-                ),
-                if (snapshot.nextStepLabel != null)
-                  _TinyEvidenceChip(
-                    label: snapshot.nextStepLabel!,
-                    color: DS.success,
-                  ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -190,13 +201,13 @@ class _ConfidencePill extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: DS.info.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: DS.borderRadiusFull,
       ),
       child: Text(
         '$percent%',
         style: TextStyle(
           color: DS.info,
-          fontSize: 11,
+          fontSize: DS.fontSizeXs,
           fontWeight: DS.fontWeightBold,
         ),
       ),
@@ -221,7 +232,7 @@ class _TinyEvidenceChip extends StatelessWidget {
         ),
         decoration: BoxDecoration(
           color: color.withValues(alpha: 0.09),
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: DS.borderRadiusFull,
           border: Border.all(color: color.withValues(alpha: 0.16)),
         ),
         child: Text(
@@ -230,7 +241,7 @@ class _TinyEvidenceChip extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
             color: DS.textPrimary,
-            fontSize: 11,
+            fontSize: DS.fontSizeXs,
             fontWeight: DS.fontWeightMedium,
           ),
         ),
