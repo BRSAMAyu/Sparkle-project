@@ -11,6 +11,8 @@ from sqlalchemy import select
 from app.core.cache import cache_service
 from app.core.event_bus import EventBus
 from app.db.session import AsyncSessionLocal
+from app.models.goal import Goal
+from app.models.plan import Plan
 from app.models.task import Task
 from app.orchestration.adaptive_replanner import AdaptiveReplanner
 from app.services.behavior_signal_collector import BehaviorSignalCollector
@@ -166,6 +168,36 @@ class TaskEventConsumer:
                         task_id=task_id,
                         completion_rate=completion_rate,
                     )
+
+                # Update Goal.progress based on task completion for the associated plan
+                try:
+                    plan_uuid = UUID(str(plan_id)) if plan_id else None
+                    if plan_uuid:
+                        result = await db.execute(
+                            select(Goal).where(Goal.plan_id == plan_uuid, Goal.user_id == user_id)
+                        )
+                        goal = result.scalar_one_or_none()
+                        if goal:
+                            from sqlalchemy import func as sa_func
+                            total = await db.scalar(
+                                select(sa_func.count(Task.id)).where(
+                                    Task.plan_id == plan_uuid,
+                                    Task.user_id == user_id,
+                                )
+                            )
+                            completed = await db.scalar(
+                                select(sa_func.count(Task.id)).where(
+                                    Task.plan_id == plan_uuid,
+                                    Task.user_id == user_id,
+                                    Task.status.in_(["completed", "abandoned"]),
+                                )
+                            )
+                            goal.progress = (completed / total) if total and total > 0 else 0.0
+                            db.add(goal)
+                            await db.commit()
+                            logger.debug("Updated Goal {} progress to {:.2f}", goal.id, goal.progress)
+                except Exception as goal_exc:
+                    logger.warning("Failed to update goal progress: {}", goal_exc)
 
         except Exception as e:
             logger.error(f"Failed to handle task.completed: {e}")
