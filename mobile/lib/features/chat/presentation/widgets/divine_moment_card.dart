@@ -127,7 +127,7 @@ class _DivineMomentCardState extends State<DivineMomentCard>
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: DS.surfaceHigh,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: DS.borderRadius16,
           border: Border.all(color: color.withValues(alpha: 0.35)),
           boxShadow: [
             BoxShadow(

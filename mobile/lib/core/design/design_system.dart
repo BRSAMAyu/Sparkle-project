@@ -496,7 +496,10 @@ enum SparklePageRole {
 
 enum SparkleMotionToken {
   micro,
+  quick,
+  responsive,
   standard,
+  deliberate,
   scene,
   hero,
 }
@@ -963,7 +966,8 @@ class DS {
   // Typography
   static const double _fontRatio = 1.25;
   static const double fontSizeXs = 12.0;
-  static const double fontSizeSm = 14.0;
+  @Deprecated('Use TypographySystem.bodyMedium() instead. fontSizeSm had a value conflict with TypographySystem.sizeSm.')
+  static const double fontSizeSm = TypographySystem.sizeSm; // 14.0 → 16.0
   static const double fontSizeBase = 16.0;
   static const double fontSizeMd = fontSizeBase;
   static const double fontSizeLg = fontSizeBase * _fontRatio;
@@ -998,8 +1002,14 @@ class DS {
     switch (token) {
       case SparkleMotionToken.micro:
         return AnimationSystem.micro;
+      case SparkleMotionToken.quick:
+        return AnimationSystem.quick;
+      case SparkleMotionToken.responsive:
+        return const Duration(milliseconds: 180);
       case SparkleMotionToken.standard:
         return AnimationSystem.standard;
+      case SparkleMotionToken.deliberate:
+        return const Duration(milliseconds: 300);
       case SparkleMotionToken.scene:
         return AnimationSystem.scene;
       case SparkleMotionToken.hero:
@@ -1010,6 +1020,10 @@ class DS {
   static Curve motionCurve(SparkleMotionToken token) {
     switch (token) {
       case SparkleMotionToken.micro:
+        return AnimationSystem.easeOut;
+      case SparkleMotionToken.quick:
+      case SparkleMotionToken.responsive:
+      case SparkleMotionToken.deliberate:
         return AnimationSystem.easeOut;
       case SparkleMotionToken.standard:
         return AnimationSystem.smooth;

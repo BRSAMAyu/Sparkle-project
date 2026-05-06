@@ -192,7 +192,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
     super.initState();
     _highlightController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: DS.motionDuration(SparkleMotionToken.hero), // was 2200ms
     );
 
     _iconScaleAnimation = Tween<double>(begin: 1.0, end: 1.08).animate(

@@ -75,7 +75,7 @@ class _GrowthCardState extends State<GrowthCard>
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           decoration: BoxDecoration(
             color: DS.surfaceHigh,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: DS.borderRadius16,
             border: Border.all(
               color:
                   DS.success.withValues(alpha: widget.isMilestone ? 0.5 : 0.3),
