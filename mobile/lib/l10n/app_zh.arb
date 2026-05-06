@@ -13183,5 +13183,17 @@
   "personaHintZeroToOne": "请输入 0.0 到 1.0 之间的数字",
   "personaHintStudyTime": "请输入学习时长（分钟）",
   "personaHintMinutesPositive": "请输入大于 0 的分钟数",
-  "personaThisGoal": "此目标"
+  "personaThisGoal": "此目标",
+  "schedFocusPeriodPref": "专注时段偏好",
+  "schedFocusPeriodDesc": "选择您精力最充沛的时段，系统会优先在这些时间安排高难度任务",
+  "schedTaskDurationPref": "任务时长偏好",
+  "schedTaskDurationDesc": "设置您偏好的单次专注时长和休息间隔",
+  "schedFocusDuration": "专注时长",
+  "schedMinutesUnit": "分钟",
+  "schedBreakInterval": "休息间隔",
+  "schedSmartCalendar": "日历智能排程",
+  "schedSmartCalendarDesc": "设置偏好后，日历将为您智能推荐最佳任务时间",
+  "schedMorning": "上午",
+  "schedAfternoon": "下午",
+  "schedEvening": "晚上"
 }

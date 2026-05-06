@@ -53046,6 +53046,78 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'此目标'**
   String get personaThisGoal;
+
+  /// No description provided for @schedFocusPeriodPref.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注时段偏好'**
+  String get schedFocusPeriodPref;
+
+  /// No description provided for @schedFocusPeriodDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择您精力最充沛的时段，系统会优先在这些时间安排高难度任务'**
+  String get schedFocusPeriodDesc;
+
+  /// No description provided for @schedTaskDurationPref.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务时长偏好'**
+  String get schedTaskDurationPref;
+
+  /// No description provided for @schedTaskDurationDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置您偏好的单次专注时长和休息间隔'**
+  String get schedTaskDurationDesc;
+
+  /// No description provided for @schedFocusDuration.
+  ///
+  /// In zh, this message translates to:
+  /// **'专注时长'**
+  String get schedFocusDuration;
+
+  /// No description provided for @schedMinutesUnit.
+  ///
+  /// In zh, this message translates to:
+  /// **'分钟'**
+  String get schedMinutesUnit;
+
+  /// No description provided for @schedBreakInterval.
+  ///
+  /// In zh, this message translates to:
+  /// **'休息间隔'**
+  String get schedBreakInterval;
+
+  /// No description provided for @schedSmartCalendar.
+  ///
+  /// In zh, this message translates to:
+  /// **'日历智能排程'**
+  String get schedSmartCalendar;
+
+  /// No description provided for @schedSmartCalendarDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'设置偏好后，日历将为您智能推荐最佳任务时间'**
+  String get schedSmartCalendarDesc;
+
+  /// No description provided for @schedMorning.
+  ///
+  /// In zh, this message translates to:
+  /// **'上午'**
+  String get schedMorning;
+
+  /// No description provided for @schedAfternoon.
+  ///
+  /// In zh, this message translates to:
+  /// **'下午'**
+  String get schedAfternoon;
+
+  /// No description provided for @schedEvening.
+  ///
+  /// In zh, this message translates to:
+  /// **'晚上'**
+  String get schedEvening;
 }
 
 class _AppLocalizationsDelegate

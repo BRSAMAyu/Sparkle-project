@@ -13162,5 +13162,17 @@
   "personaHintZeroToOne": "Enter a number between 0.0 and 1.0",
   "personaHintStudyTime": "Enter study time (minutes)",
   "personaHintMinutesPositive": "Enter minutes greater than 0",
-  "personaThisGoal": "this goal"
+  "personaThisGoal": "this goal",
+  "schedFocusPeriodPref": "Focus Period Preference",
+  "schedFocusPeriodDesc": "Select your peak energy hours for challenging tasks",
+  "schedTaskDurationPref": "Task Duration Preference",
+  "schedTaskDurationDesc": "Set your preferred focus duration and break intervals",
+  "schedFocusDuration": "Focus Duration",
+  "schedMinutesUnit": "min",
+  "schedBreakInterval": "Break Interval",
+  "schedSmartCalendar": "Smart Calendar Scheduling",
+  "schedSmartCalendarDesc": "After setting preferences, calendar will intelligently recommend optimal task times",
+  "schedMorning": "Morning",
+  "schedAfternoon": "Afternoon",
+  "schedEvening": "Evening"
 }
