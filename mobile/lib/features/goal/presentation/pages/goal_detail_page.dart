@@ -28,7 +28,6 @@ class GoalDetailPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(goalDetailProvider(goalId));
     final l10n = context.l10n;
-    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -53,7 +52,7 @@ class GoalDetailPage extends ConsumerWidget {
           ),
         ],
       ),
-      backgroundColor: colorScheme.surface,
+      backgroundColor: DS.surface,
       body: state.when(
         data: (data) => RefreshIndicator(
           onRefresh: () => ref.read(goalDetailProvider(goalId).notifier).load(),
@@ -104,15 +103,10 @@ class GoalDetailPage extends ConsumerWidget {
                     );
                   }
                 },
-                onModify: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.goalDetailModifySnack)),
-                  );
-                },
               ),
-              const SizedBox(height: 22),
+              const SizedBox(height: DS.spacing20),
               GoalBottleneckStrip(items: data.knowledgeBottlenecks),
-              const SizedBox(height: 22),
+              const SizedBox(height: DS.spacing20),
               _TodayStepCard(goalId: goalId, step: data.todaysMinimalNextStep),
               const SizedBox(height: 14),
               _PlanHealthBand(data: data),
@@ -163,7 +157,6 @@ class _GoalHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final progress = data.goal.progress;
 
@@ -171,11 +164,11 @@ class _GoalHeader extends StatelessWidget {
       container: true,
       label: data.goal.title,
       child: Container(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: colorScheme.outlineVariant),
+          color: DS.surfaceHigh,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.borderSubtle),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,19 +182,19 @@ class _GoalHeader extends StatelessWidget {
                   CircularProgressIndicator(
                     value: progress,
                     strokeWidth: 8,
-                    backgroundColor: colorScheme.surfaceContainerHighest,
+                    backgroundColor: DS.surfaceHigh,
                   ),
                   Text(
                     '${(progress * 100).round()}%',
                     style: textTheme.labelLarge?.copyWith(
-                      color: colorScheme.onSurface,
+                      color: DS.textPrimary,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: DS.spacing16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -209,7 +202,7 @@ class _GoalHeader extends StatelessWidget {
                   Text(
                     data.goal.title,
                     style: textTheme.titleLarge?.copyWith(
-                      color: colorScheme.onSurface,
+                      color: DS.textPrimary,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -266,17 +259,16 @@ class _TodayStepCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
-    final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     return Semantics(
       container: true,
       label: l10n.goalDetailTodayStep,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
-          color: colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(8),
+          color: DS.surfaceSecondary,
+          borderRadius: DS.borderRadius12,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -285,14 +277,14 @@ class _TodayStepCard extends ConsumerWidget {
               children: [
                 Icon(
                   Icons.playlist_add_check_rounded,
-                  color: colorScheme.onPrimaryContainer,
+                  color: DS.textPrimary,
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: DS.spacing8),
                 Expanded(
                   child: Text(
                     l10n.goalDetailTodayStep,
                     style: textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onPrimaryContainer,
+                      color: DS.textPrimary,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -304,14 +296,14 @@ class _TodayStepCard extends ConsumerWidget {
               Text(
                 l10n.goalDetailNoTodayStep,
                 style: textTheme.bodyMedium?.copyWith(
-                  color: colorScheme.onPrimaryContainer,
+                  color: DS.textPrimary,
                 ),
               )
             else ...[
               Text(
                 step.title!,
                 style: textTheme.titleSmall?.copyWith(
-                  color: colorScheme.onPrimaryContainer,
+                  color: DS.textPrimary,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -324,16 +316,16 @@ class _TodayStepCard extends ConsumerWidget {
                     _InfoChip(
                       icon: Icons.category_outlined,
                       label: step.type!,
-                      foreground: colorScheme.onPrimaryContainer,
-                      background: colorScheme.primary.withValues(alpha: 0.18),
+                      foreground: DS.textPrimary,
+                      background: DS.brandPrimary.withValues(alpha: 0.18),
                     ),
                   if (step.estimatedMinutes != null)
                     _InfoChip(
                       icon: Icons.timer_outlined,
                       label:
                           '${l10n.goalDetailEstimated} ${l10n.goalDetailMinutes(step.estimatedMinutes!)}',
-                      foreground: colorScheme.onPrimaryContainer,
-                      background: colorScheme.primary.withValues(alpha: 0.18),
+                      foreground: DS.textPrimary,
+                      background: DS.brandPrimary.withValues(alpha: 0.18),
                     ),
                 ],
               ),
@@ -507,7 +499,6 @@ class _RelatedSourcesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
     return _SectionCard(
@@ -518,7 +509,7 @@ class _RelatedSourcesCard extends StatelessWidget {
           Text(
             l10n.goalDetailNoSources,
             style: textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurfaceVariant,
+              color: DS.textPrimaryVariant,
             ),
           )
         else
@@ -526,7 +517,7 @@ class _RelatedSourcesCard extends StatelessWidget {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading:
-                  Icon(Icons.description_outlined, color: colorScheme.primary),
+                  Icon(Icons.description_outlined, color: DS.brandPrimary),
               title: Text(
                 source.title,
                 maxLines: 1,
@@ -556,27 +547,26 @@ class _SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colorScheme.outlineVariant),
+        color: DS.surfaceHigh,
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: colorScheme.primary),
-              const SizedBox(width: 10),
+              Icon(icon, color: DS.brandPrimary),
+              const SizedBox(width: DS.spacing8),
               Expanded(
                 child: Text(
                   title,
                   style: textTheme.titleMedium?.copyWith(
-                    color: colorScheme.onSurface,
+                    color: DS.textPrimary,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -603,7 +593,6 @@ class _MetricLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -616,7 +605,7 @@ class _MetricLine extends StatelessWidget {
                 child: Text(
                   label,
                   style: textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurface,
+                    color: DS.textPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -624,7 +613,7 @@ class _MetricLine extends StatelessWidget {
               Text(
                 '${(value * 100).round()}%',
                 style: textTheme.labelLarge?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
+                  color: DS.textSecondary,
                 ),
               ),
             ],
@@ -654,15 +643,14 @@ class _InfoChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final fg = foreground ?? colorScheme.onSurfaceVariant;
+    final fg = foreground ?? DS.textSecondary;
     return Semantics(
       label: semanticsLabel == null ? label : '$semanticsLabel: $label',
       child: Chip(
         avatar: Icon(icon, size: 18, color: fg),
         label: Text(label),
-        backgroundColor: background ?? colorScheme.surfaceContainerHighest,
-        side: BorderSide(color: colorScheme.outlineVariant),
+        backgroundColor: background ?? DS.surfaceHigh,
+        side: BorderSide(color: DS.borderSubtle),
         labelStyle:
             Theme.of(context).textTheme.labelMedium?.copyWith(color: fg),
       ),
@@ -678,7 +666,6 @@ class _ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -688,7 +675,7 @@ class _ErrorState extends StatelessWidget {
             Icon(
               Icons.error_outline_rounded,
               size: 44,
-              color: colorScheme.error,
+              color: DS.error,
             ),
             const SizedBox(height: 12),
             Text(l10n.goalDetailLoadFailed),
