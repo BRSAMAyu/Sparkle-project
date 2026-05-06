@@ -1370,10 +1370,28 @@ class ExecutionEngineMixin:
         }
 
         try:
-            llm_response = await llm_service.continue_with_tool_results(
-                conversation_history=conversation_history,
-                tool_results=[tool_result],
+            async with asyncio.timeout(30):
+                llm_response = await llm_service.continue_with_tool_results(
+                    conversation_history=conversation_history,
+                    tool_results=[tool_result],
+                )
+        except asyncio.TimeoutError:
+            logger.error("Tool result continuation timed out after 30s", extra={"tool_name": tr.tool_name})
+            yield agent_service_pb2.ChatResponse(
+                response_id=response_id,
+                created_at=int(datetime.now().timestamp()),
+                request_id=request_id,
+                trace_id=trace_id,
+                workflow_id=workflow_id,
+                prompt_version=prompt_version,
+                error=agent_service_pb2.Error(
+                    message="Tool processing timed out. Please try again.",
+                    retryable=True,
+                    error_code="timeout",
+                ),
+                finish_reason=agent_service_pb2.ERROR,
             )
+            return
         except Exception as exc:
             logger.error(f"Tool result continuation failed: {exc}", exc_info=True)
             safe_message, error_code, retryable = build_safe_chat_error(exc)
@@ -1842,7 +1860,12 @@ class ExecutionEngineMixin:
                         break
 
             if graph_task.done():
-                exc = graph_task.exception()
+                try:
+                    exc = graph_task.exception()
+                except asyncio.CancelledError:
+                    logger.warning("Graph task was cancelled unexpectedly; ending stream cleanly")
+                    result_holder["cancelled"] = True
+                    return
                 if exc:
                     raise exc
                 result_holder["final_state"] = graph_task.result()

@@ -6,6 +6,7 @@ Stage: <首次引入 Stage 号>
 
 from __future__ import annotations
 
+import asyncio
 import json
 from datetime import UTC, datetime
 from typing import Any
@@ -287,9 +288,10 @@ async def chat_with_task_context(
                 llm_conversation_history + [{"role": "user", "content": request.message}] + [llm_response_for_history]
             )
 
-            final_llm_response = await llm_service.continue_with_tool_results(
-                conversation_history=updated_history, tool_results=[tr.model_dump() for tr in tool_results]
-            )
+            async with asyncio.timeout(30):
+                final_llm_response = await llm_service.continue_with_tool_results(
+                    conversation_history=updated_history, tool_results=[tr.model_dump() for tr in tool_results]
+                )
             llm_text = final_llm_response.content
 
     # 5. Save Message (linked to task? Schema doesn't have task_id on ChatMessage yet,
@@ -537,9 +539,10 @@ async def chat(
                 + [llm_response_for_history]
             )
 
-            final_llm_response = await llm_service.continue_with_tool_results(
-                conversation_history=updated_conversation_history, tool_results=[tr.model_dump() for tr in tool_results]
-            )
+            async with asyncio.timeout(30):
+                final_llm_response = await llm_service.continue_with_tool_results(
+                    conversation_history=updated_conversation_history, tool_results=[tr.model_dump() for tr in tool_results]
+                )
             llm_text = final_llm_response.content
         else:
             llm_text = llm_response.content
@@ -688,9 +691,10 @@ async def chat_stream(
                 )
 
                 # Call LLM again to get final text
-                final_llm_response = await llm_service.continue_with_tool_results(
-                    conversation_history=message_history_for_llm_callback, tool_results=[result.model_dump()]
-                )
+                async with asyncio.timeout(30):
+                    final_llm_response = await llm_service.continue_with_tool_results(
+                        conversation_history=message_history_for_llm_callback, tool_results=[result.model_dump()]
+                    )
                 final_text = final_llm_response.content
                 yield f"data: {json.dumps({'type': 'text', 'content': final_text})}\\n\n"
                 collected_text_content += final_text

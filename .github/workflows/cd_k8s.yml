@@ -41,7 +41,7 @@ jobs:
       - name: Build and push Gateway
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: backend/gateway
           file: backend/gateway/Dockerfile
           push: true
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/sparkle-gateway:${{ github.sha }}
@@ -50,7 +50,7 @@ jobs:
       - name: Build and push Backend
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: backend
           file: backend/Dockerfile
           push: true
           tags: ${{ env.REGISTRY }}/${{ github.repository_owner }}/sparkle-backend:${{ github.sha }}
