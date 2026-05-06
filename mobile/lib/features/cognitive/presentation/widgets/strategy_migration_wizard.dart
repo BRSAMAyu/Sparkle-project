@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/cognitive/data/models/strategy_migration_models.dart';
 import 'package:sparkle/features/cognitive/data/repositories/strategy_migration_repository.dart';
@@ -435,7 +436,7 @@ class _ErrorLine extends StatelessWidget {
       key: const ValueKey('strategy-error-line'),
       children: [
         Expanded(child: Text(label)),
-        TextButton(onPressed: onRetry, child: const Text('Retry')),
+        TextButton(onPressed: onRetry, child: Text(context.l10n.retry)),
       ],
     );
   }
