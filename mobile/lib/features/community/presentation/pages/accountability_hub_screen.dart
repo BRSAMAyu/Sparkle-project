@@ -12,6 +12,8 @@ import 'package:sparkle/features/community/presentation/providers/accountability
 import 'package:sparkle/features/community/presentation/widgets/accountability_hub/commitment_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/accountability_hub/partner_observation_control.dart';
 import 'package:sparkle/features/community/presentation/widgets/community_strategy_card.dart';
+import 'package:sparkle/core/design/widgets/graphite_surfaces.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 
 class AccountabilityHubScreen extends ConsumerWidget {
   const AccountabilityHubScreen({super.key});
@@ -38,7 +40,7 @@ class AccountabilityHubScreen extends ConsumerWidget {
         ],
       ),
       child: state.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SparkleListSkeleton(),
         error: (_, __) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -228,10 +230,10 @@ class _PartnerProgressCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.all(14),
+      child: Row(
           children: [
             SizedBox(
               width: 58,
@@ -300,7 +302,6 @@ class _PartnerProgressCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -335,14 +336,14 @@ class _SharedGoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              item.title,
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            item.title,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -371,7 +372,6 @@ class _SharedGoalCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }
@@ -403,18 +403,18 @@ class _HelpSection extends StatelessWidget {
 
     return _Section(
       title: context.l10n.cahNeedsAttention,
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final item in items) ...[
-                _HelpRow(item: item),
-                if (item != items.last) const Divider(height: 18),
-              ],
-              const SizedBox(height: 8),
-              PartnerObservationControl(
+      child: GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (final item in items) ...[
+              _HelpRow(item: item),
+              if (item != items.last) const Divider(height: 18),
+            ],
+            const SizedBox(height: 8),
+            PartnerObservationControl(
                 onAccept: () => _showUndoable(
                   context,
                   context.l10n.cahReminderAccepted,
@@ -434,7 +434,6 @@ class _HelpSection extends StatelessWidget {
               ),
             ],
           ),
-        ),
       ),
     );
   }
@@ -452,14 +451,14 @@ class _HelpSection extends StatelessWidget {
 
 class _SecondaryEntrySection extends StatelessWidget {
   @override
-  Widget build(BuildContext context) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                context.l10n.cahFeedEntry,
+  Widget build(BuildContext context) => GraphiteCardSurface(
+        surfaceRole: SparkleSurfaceRole.card,
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.l10n.cahFeedEntry,
                 style: Theme.of(context).textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),
@@ -498,7 +497,6 @@ class _SecondaryEntrySection extends StatelessWidget {
               ),
             ],
           ),
-        ),
       );
 }
 
@@ -506,34 +504,52 @@ class _EmptyHubCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Icon(
-              Icons.diversity_1_outlined,
-              size: 48,
-              color: colorScheme.primary,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              context.l10n.cahEmptyTitle,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              context.l10n.cahEmptyBody,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ),
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Icon(
+            Icons.diversity_1_outlined,
+            size: 48,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            context.l10n.cahEmptyTitle,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            context.l10n.cahEmptyBody,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () =>
+                    unawaited(context.push(CommunityRoutes.friends)),
+                icon: const Icon(Icons.person_add_outlined),
+                label: Text(context.l10n.cahFindPartners),
+              ),
+              FilledButton.icon(
+                onPressed: () =>
+                    unawaited(context.push(CommunityRoutes.feed)),
+                icon: const Icon(Icons.flag_outlined),
+                label: Text(context.l10n.cahCreateCommitment),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -553,12 +569,12 @@ class _MetricTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          children: [
-            Icon(icon, color: colorScheme.primary),
+    return GraphiteCardSurface(
+      surfaceRole: SparkleSurfaceRole.card,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        children: [
+          Icon(icon, color: colorScheme.primary),
             const SizedBox(height: 6),
             Text(
               value,
@@ -578,7 +594,6 @@ class _MetricTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }

@@ -80,4 +80,8 @@ extension CommunityAccountabilityHubL10n on AppLocalizations {
       ? '你的团队中有需要关注的风险项，及时处理可以避免更大的问题。'
       : 'Your squad has risks that need attention — addressing them early prevents bigger issues.';
   String get cahStrategySquadRiskAction => _zh ? '查看详情' : 'View details';
+
+  // Empty state CTAs
+  String get cahFindPartners => _zh ? '寻找伙伴' : 'Find partners';
+  String get cahCreateCommitment => _zh ? '创建承诺' : 'Create commitment';
 }
