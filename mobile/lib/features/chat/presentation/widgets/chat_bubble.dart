@@ -842,6 +842,8 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         ? widget.message as ChatMessageModel
         : null;
     final isUser = _isUser;
+    final isMostRecentBubble =
+        _isFreshUserBubble || widget.isLatestAssistantMessage;
     final timeStr = DateFormat('HH:mm').format(_createdAt);
     final reduceMotion = context.reduceMotion;
     final orchestrationTrace = widget.message is ChatMessageModel
@@ -964,7 +966,21 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                       ? _getUserMessageMaterial()
                                       : _getAIMessageMaterial(context),
                                   shapeBorder: ContinuousRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
+                                    borderRadius: isMostRecentBubble
+                                        ? BorderRadius.only(
+                                            topLeft: const Radius.circular(24),
+                                            topRight:
+                                                const Radius.circular(24),
+                                            bottomLeft:
+                                                Radius.circular(
+                                                  isUser ? 24 : 6,
+                                                ),
+                                            bottomRight:
+                                                Radius.circular(
+                                                  isUser ? 6 : 24,
+                                                ),
+                                          )
+                                        : BorderRadius.circular(24),
                                   ),
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 10,

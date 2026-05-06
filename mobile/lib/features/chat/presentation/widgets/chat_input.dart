@@ -152,6 +152,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
   void initState() {
     super.initState();
     _controller.addListener(_handleTextChange);
+    _focusNode.addListener(() {
+      if (mounted) setState(() {});
+    });
   }
 
   void _handleTextChange() {
@@ -434,11 +437,20 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                     valueListenable: _textNotEmpty,
                     builder: (context, hasText, child) {
                       final canSend = widget.enabled && !_isSending && hasText;
-                      return DecoratedBox(
+                      final isFocused = _focusNode.hasFocus;
+                      return AnimatedContainer(
+                        duration:
+                            reduceMotion ? Duration.zero : DS.durationNormal,
+                        curve: Curves.easeOut,
                         decoration: BoxDecoration(
                           color: DS.surfaceTertiary,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: DS.surfaceTertiary),
+                          border: Border.all(
+                            color: isFocused
+                                ? DS.brandPrimary.withValues(alpha: 0.8)
+                                : DS.surfaceTertiary,
+                            width: isFocused ? 1.5 : 1.0,
+                          ),
                         ),
                         child: TextField(
                           controller: _controller,
