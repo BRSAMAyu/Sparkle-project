@@ -60,7 +60,7 @@
 | ID | Title | Scope | Effort | Status | Claimed-By | Commit | Note |
 |----|-------|-------|--------|--------|-----------|--------|------|
 | QA-P2-1 | Semantics: UnderstandingSnapshotCard | Flutter | S | ✅ done | — | b463da671 | Add root Semantics wrapper |
-| QA-P2-2 | Semantics: ContextReceiptBar | Flutter | S | ⬜ pending | — | — | Add Semantics label |
+| QA-P2-2 | Semantics: ContextReceiptBar | Flutter | S | 🔵 in-progress | claude-B | — | Add Semantics label |
 | QA-P2-3 | Semantics: SimilarGoalPursuersCard | Flutter | S | ⬜ pending | — | — | Add Semantics wrapper |
 | QA-P2-4 | Semantics: GoalValueChip | Flutter | S | ⬜ pending | — | — | Add semanticLabel |
 | QA-P2-5 | Semantics: TaskRestoreDialog | Flutter | S | ⬜ pending | — | — | Add semantic labels |
@@ -119,6 +119,6 @@
 |----------|-------|---------|---------|-----------|----------------|
 | P0 | 6 | 6 | 0 | 0 | 0 |
 | P1 | 20 | 10 | 10 | 0 | 0 |
-| P2 | 35 | 1 | 0 | 34 | 0 |
+| P2 | 35 | 1 | 0 | 33 | 1 |
 | P3 | 5 | 0 | 0 | 5 | 0 |
-| **Total** | **66** | **17** | **10** | **39** | **0** |
+| **Total** | **66** | **17** | **10** | **38** | **1** |
