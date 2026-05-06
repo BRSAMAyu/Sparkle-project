@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/features/insights/data/models/growth_dashboard.dart';
 import 'package:sparkle/features/insights/presentation/providers/growth_dashboard_provider.dart';
 import 'package:sparkle/features/insights/presentation/widgets/model_update_receipt.dart';
@@ -29,7 +30,7 @@ class GrowthChroniclePage extends ConsumerWidget {
       child: ContentConstraint(
         child: dashboardAsync.when(
           data: (dashboard) => _ChronicleContent(dashboard: dashboard),
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const SparkleListSkeleton(),
           error: (_, __) => _GrowthError(
             onRetry: () => ref.read(growthDashboardProvider.notifier).refresh(),
           ),
