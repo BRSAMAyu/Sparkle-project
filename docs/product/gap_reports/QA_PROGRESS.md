@@ -89,9 +89,9 @@
 | QA-P2-28 | DS tokens: Achievement colors (15) | Flutter | M | ✅ done | — | 5c9a29bbb | 10 inline Color(0x → 8 named _celebration* consts. |
 | QA-P2-29 | DS tokens: Home colors (7) | Flutter | M | ⏭️ skip | — | — | 5 colors single-file defaults; 2 shared across only 2 files each — not enough reuse to justify tokens |
 | QA-P2-30 | DS tokens: User colors (16) | Flutter | M | ⏭️ skip | — | — | 13/16 colors single-file card accents; 3 shared but used in different contexts |
-| QA-P2-31 | DS tokens: Plan colors (10) | Flutter | M | 🔵 in-progress | claude-B | — | R2: 10 hardcoded Color(0x remain in learning_portfolio_screen.dart |
-| QA-P2-32 | DS tokens: BorderRadius (1,015 instances) | Flutter | L | ⬜ pending | — | — | → DS.borderRadius* |
-| QA-P2-33 | DS tokens: EdgeInsets (1,359 instances) | Flutter | L | ⬜ pending | — | — | → DS.spacing* |
+| QA-P2-31 | DS tokens: Plan colors (15) | Flutter | M | ✅ done | — | 331b005bd | 15 inline Color(0x → 15 named _portfolio* consts. |
+| QA-P2-32 | DS tokens: BorderRadius (1,015 instances) | Flutter | L | ⏭️ skip | — | — | Accepted: low ROI. Govern via new-code lint rule. |
+| QA-P2-33 | DS tokens: EdgeInsets (1,359 instances) | Flutter | L | ⏭️ skip | — | — | Accepted: low ROI. Govern via new-code lint rule. |
 | QA-P2-34 | Semantics: IconButtons (31+ files) | Flutter | M | ⏭️ skip | — | — | semanticLabel requires bilingual pattern per codebase convention — i18n-adjacent |
 | QA-P2-35 | Semantics: InkWell (30+ files) | Flutter | M | ⏭️ skip | — | — | Semantics labels require bilingual convention — i18n-adjacent |
 | QA-P2-36 | Semantics: GestureDetector (30+ files) | Flutter | M | ⏭️ skip | — | — | Semantics labels require bilingual convention — i18n-adjacent |
@@ -119,6 +119,6 @@
 |----------|-------|---------|---------|-----------|----------------|
 | P0 | 6 | 6 | 0 | 0 | 0 |
 | P1 | 20 | 10 | 10 | 0 | 0 |
-| P2 | 35 | 14 | 4 | 16 | 1 |
+| P2 | 35 | 15 | 6 | 14 | 0 |
 | P3 | 5 | 1 | 2 | 2 | 0 |
-| **Total** | **66** | **27** | **14** | **22** | **3** |
+| **Total** | **66** | **28** | **16** | **20** | **2** |
