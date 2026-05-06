@@ -255,13 +255,46 @@ class GrowthChronicleService:
 
     def _should_retract(self, entry: ChronicleEntry, user_id: str) -> bool:
         """Check if a confirmed entry should be retracted based on its conditions."""
+        import re
+
         for condition in entry.retract_if:
             if condition.startswith("outcome_reverted:"):
-                pass  # Checked externally when outcome is marked ineffective
+                outcome_id = condition.split(":", 1)[1]
+                if outcome_id:
+                    key = f"spine:outcome:reverted:{outcome_id}"
+                    if self.redis and self.redis.exists(key):
+                        logger.info(
+                            "GrowthChronicle retracting entry {}: outcome {} reverted",
+                            entry.entry_id,
+                            outcome_id,
+                        )
+                        return True
             elif condition == "user_inactive:30d" or condition == "user_inactive:60d":
-                pass  # Checked via SpineOrchestrator.on_user_return()
+                days = 30 if condition == "user_inactive:30d" else 60
+                active_key = f"spine:user:{user_id}:last_active_ts"
+                if self.redis:
+                    last_active = self.redis.get(active_key)
+                    if last_active:
+                        try:
+                            last_active_ts = float(last_active)
+                            since = datetime.now(UTC).timestamp() - last_active_ts
+                            if since > days * 24 * 3600:
+                                return True
+                        except (TypeError, ValueError):
+                            pass
             elif condition.startswith("strategy_negative_streak:"):
-                pass  # Checked by OutcomeTracker when consecutive negatives detected
+                parsed = re.search(r"strategy_negative_streak:(?:.*:)?(\d+)", condition)
+                if parsed:
+                    threshold = int(parsed.group(1))
+                    streak_key = f"spine:strategy:{entry.entry_id}:negative_streak"
+                    if self.redis:
+                        streak_val = self.redis.get(streak_key)
+                        if streak_val:
+                            try:
+                                if int(streak_val) >= threshold:
+                                    return True
+                            except (TypeError, ValueError):
+                                pass
         return False
 
     async def build_return_case_file(self, user_id: str) -> dict[str, Any]:
