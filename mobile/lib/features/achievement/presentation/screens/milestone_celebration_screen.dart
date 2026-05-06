@@ -15,6 +15,16 @@ import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/achievement/achievement_routes.dart';
 import 'package:sparkle/features/home/home_routes.dart';
 
+// Screen-specific celebration gradient and accent colors.
+const _celebrationNavy = Color(0xFF13213C);
+const _celebrationMidBlue = Color(0xFF2F4F7A);
+const _celebrationGold = Color(0xFFF6C453);
+const _celebrationLightBlue = Color(0xFF7DD3FC);
+const _celebrationDarkNavy = Color(0xFF10203B);
+const _celebrationDeepBlue = Color(0xFF172B4D);
+const _celebrationSteelBlue = Color(0xFF2E4A75);
+const _celebrationWarmGold = Color(0xFFFFE29A);
+
 class MilestoneCelebrationPayload {
   const MilestoneCelebrationPayload({
     required this.milestoneId,
@@ -324,9 +334,9 @@ class _MilestoneBackdrop extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               DS.surfacePrimary,
-              const Color(0xFF13213C),
-              const Color(0xFF2F4F7A),
-              const Color(0xFFF6C453).withValues(alpha: 0.22),
+              _celebrationNavy,
+              _celebrationMidBlue,
+              _celebrationGold.withValues(alpha: 0.22),
             ],
           ),
         ),
@@ -337,7 +347,7 @@ class _MilestoneBackdrop extends StatelessWidget {
               right: -30,
               child: _GlowOrb(
                 size: 220,
-                color: const Color(0xFFF6C453).withValues(alpha: 0.24),
+                color: _celebrationGold.withValues(alpha: 0.24),
               ),
             ),
             Positioned(
@@ -345,7 +355,7 @@ class _MilestoneBackdrop extends StatelessWidget {
               left: -20,
               child: _GlowOrb(
                 size: 180,
-                color: const Color(0xFF7DD3FC).withValues(alpha: 0.18),
+                color: _celebrationLightBlue.withValues(alpha: 0.18),
               ),
             ),
           ],
@@ -381,9 +391,9 @@ class _MilestoneHeroCard extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            const Color(0xFF10203B).withValues(alpha: 0.96),
-            const Color(0xFF172B4D).withValues(alpha: 0.96),
-            const Color(0xFF2E4A75).withValues(alpha: 0.94),
+            _celebrationDarkNavy.withValues(alpha: 0.96),
+            _celebrationDeepBlue.withValues(alpha: 0.96),
+            _celebrationSteelBlue.withValues(alpha: 0.94),
           ],
         ),
         borderRadius: BorderRadius.circular(28),
@@ -411,7 +421,7 @@ class _MilestoneHeroCard extends StatelessWidget {
             child: Text(
               payload.badgeLabel,
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: const Color(0xFFFFE29A),
+                    color: _celebrationWarmGold,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.4,
                   ),
@@ -448,7 +458,7 @@ class _MilestoneHeroCard extends StatelessWidget {
                 child: Text(
                   payload.unitLabel,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: const Color(0xFFFFE29A),
+                        color: _celebrationWarmGold,
                         fontWeight: FontWeight.w700,
                       ),
                 ),
