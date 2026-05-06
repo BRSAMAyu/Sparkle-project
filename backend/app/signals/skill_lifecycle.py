@@ -19,10 +19,26 @@ from app.signals.types import SkillEntry
 
 _SKILL_TTL_SECONDS = 30 * 24 * 3600
 _STALE_DAYS = 30
-_SCOPE_RANK = {"personal": 0, "cohort": 1, "system": 2}
+# Phase-6: 8-stage lifecycle per vision SKILL-001..010.
+# Shadow stages compute but do NOT affect live strategy — they only record
+# "what would have happened" so the benchmark lab can measure counterfactuals.
+_SCOPE_RANK = {
+    "candidate": 0,
+    "personal_shadow": 1,
+    "personal_live": 2,
+    "cohort_candidate": 3,
+    "cohort_shadow": 4,
+    "cohort_live": 5,
+    "system": 6,
+}
+# Promotion rules: each transition requires minimum evidence.
 _PROMOTION_RULES = {
-    ("personal", "cohort"): {"effective_count": 10, "avg_confidence": 0.8},
-    ("cohort", "system"): {"effective_count": 50, "avg_confidence": 0.85},
+    ("candidate", "personal_shadow"): {"effective_count": 3, "avg_confidence": 0.6},
+    ("personal_shadow", "personal_live"): {"effective_count": 5, "avg_confidence": 0.7},
+    ("personal_live", "cohort_candidate"): {"effective_count": 10, "avg_confidence": 0.8},
+    ("cohort_candidate", "cohort_shadow"): {"effective_count": 20, "avg_confidence": 0.82},
+    ("cohort_shadow", "cohort_live"): {"effective_count": 30, "avg_confidence": 0.85},
+    ("cohort_live", "system"): {"effective_count": 50, "avg_confidence": 0.85},
 }
 
 

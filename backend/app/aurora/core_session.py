@@ -719,7 +719,12 @@ class AuroraCoreSessionService:
         return session
 
     async def close_session(self, *, user_id: str, session_id: str) -> AuroraCoreSession:
-        """Force-close a session (user-initiated exit)."""
+        """Force-close a session (user-initiated exit).
+
+        Phase-3: also produces a SessionClosure from the L3 engine and
+        propagates state patches + policy changes through the Spine so
+        the next task card actually changes.
+        """
         session = await self.store.load(session_id)
         if session is None:
             raise ValueError(f"Session {session_id} not found")
@@ -732,6 +737,24 @@ class AuroraCoreSessionService:
         self._finalize_session(session, abandoned=True)
         await self.store.save(session, previous_resume_token=previous_resume_token)
         AURORA_CORE_SESSION_EVENT_TOTAL.labels(event="closed", status=session.status).inc()
+
+        # Phase-3: bridge L3 closure → Spine. Fire-and-forget to avoid
+        # blocking the user-visible close response on Spine latency.
+        try:
+            from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
+            from app.services.fme_l3_closure_bridge import apply_l3_closure_to_spine
+
+            l3_engine = L3FullCoreEngine(self.redis)
+            session_dict = session.to_dict()
+            closure = l3_engine.produce_closure(session_dict)
+            if closure.state_patches or closure.policy_changes:
+                import asyncio
+                asyncio.create_task(
+                    apply_l3_closure_to_spine(user_id, closure)
+                )
+        except Exception:
+            logger.debug("L3 closure bridge skipped", exc_info=True)
+
         return session
 
     async def pause_session(

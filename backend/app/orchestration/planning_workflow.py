@@ -1103,6 +1103,27 @@ class PlanningWorkflowManager:
                     except Exception as _spine_exc:
                         logger.debug("Spine apply_directive skipped: {}", _spine_exc)
 
+                # Phase-5: inject applicable skills into the task spec.
+                # Uses the existing SpineOrchestrator.inject_skill_to_task which
+                # modifies task_type/strategy when a worked-example or similar
+                # skill matches the user's context.
+                try:
+                    from app.signals.spine_orchestrator import SpineOrchestrator as _Spine
+                    _skill_spine = _Spine(cache_service.redis)
+                    _skill_result = await _skill_spine.inject_skill_to_task(
+                        str(user_id), day_spec,
+                        {"goal_type": strategy.get("goal_type", ""), "sprint_policy": sprint_policy},
+                    )
+                    if _skill_result and _skill_result.get("_skill_injection"):
+                        day_spec = _skill_result
+                        logger.info(
+                            "Skill injection applied to day {} for user {}: {}",
+                            day_spec.get("day"), user_id,
+                            _skill_result.get("_skill_injection", {}).get("strategy_summary", ""),
+                        )
+                except Exception as _skill_exc:
+                    logger.debug("Skill injection skipped: {}", _skill_exc)
+
                 # MAGIC-006: inject community cohort mistakes into day_spec
                 if _cohort_hints:
                     _day_nodes = list(day_spec.get("sprint_pack_nodes") or [])

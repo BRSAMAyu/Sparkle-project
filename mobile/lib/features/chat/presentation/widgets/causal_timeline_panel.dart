@@ -540,6 +540,7 @@ class _CardTypeIcon extends StatelessWidget {
     final (icon, color) = switch (cardType) {
       'self_correction' => (Icons.auto_fix_high, DS.warning),
       'divine_moment' => (Icons.star_outline_rounded, DS.brandPrimary),
+      'task_strategy_change' => (Icons.swap_horiz_rounded, DS.success),
       _ => (Icons.account_tree_outlined, DS.info),
     };
     return Icon(icon, size: 16, color: color);
