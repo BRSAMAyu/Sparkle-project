@@ -70,7 +70,7 @@
 | QA-P2-9 | Hardcoded 'Translation Demo' → ARB | Flutter | S | ✅ done | — | 9735d444 | translatable_text.dart → ARB keys + gen-l10n |
 | QA-P2-10 | _should_retract() enforcement logic | Python | M | ✅ done | — | df1476019 | Replace stub |
 | QA-P2-11 | Build TaskRestoreDialog widget | Flutter | M | ✅ done | — | ab687c9c | Extracted to standalone TaskRestoreDialog widget |
-| QA-P2-12 | Build CommunityStrategyCard widget | Flutter | L | ⬜ pending | — | — | R2 FALSE CLAIM: file does not exist per find+grep. Must build from scratch. |
+| QA-P2-12 | Build CommunityStrategyCard widget | Flutter | L | 🔵 in-progress | claude-B | — | R2 FALSE CLAIM: file does not exist per find+grep. Must build from scratch. |
 | QA-P2-13 | Build ExperienceEnvelopeIndicator | Flutter | L | ⬜ pending | — | — | R2 FALSE CLAIM: file does not exist per find+grep. Must build from scratch. |
 | QA-P2-14 | Clean orphaned vocabulary providers | Flutter | S | ✅ done | — | f1dc08d49 | Removed 4 unused providers |
 | QA-P2-15 | Clean orphaned shop providers | Flutter | S | ✅ done | — | 06fcc0361 | Remove 7 unused |
