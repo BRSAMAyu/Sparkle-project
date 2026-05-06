@@ -24,6 +24,7 @@ import 'package:sparkle/features/community/presentation/providers/accountability
 import 'package:sparkle/features/experience/presentation/providers/experience_provider.dart';
 import 'package:sparkle/features/experience/presentation/widgets/goal_detail_snapshot_card.dart';
 import 'package:sparkle/features/experience/presentation/widgets/growth_quality_card.dart';
+import 'package:sparkle/features/experience/presentation/widgets/understanding_snapshot_card.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_slot_config_provider.dart';
@@ -656,9 +657,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           accent: DS.brandPrimary,
         );
       case DashboardSlotIds.metricsRow:
-        final streak = growthState?.streak ??
-            dashboardState.growthStatus?.streakDays ??
-            0;
+        final streak =
+            growthState?.streak ?? dashboardState.growthStatus?.streakDays ?? 0;
         return _SlotMeta(
           title: zh ? '关键指标' : 'Key metrics',
           icon: Icons.insights_rounded,
@@ -1053,13 +1053,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             _staggeredSection(
               index: growthSectionIndex++,
-              child: _UnderstandingExpansionSlot(
-                isExpanded: _isUnderstandingExpanded,
-                onToggle: () {
-                  setState(() {
-                    _isUnderstandingExpanded = !_isUnderstandingExpanded;
-                  });
-                },
+              child: ContentConstraint(
+                child: UnderstandingSnapshotCard(
+                  onOpenChat: () => unawaited(context.push(ChatRoutes.chat)),
+                ),
               ),
             ),
             _staggeredSection(
@@ -2462,7 +2459,8 @@ class _DailyBriefingCard extends StatelessWidget {
                             if (hasObservation) ...[
                               const SizedBox(height: DS.spacing12),
                               _BriefingBlock(
-                                eyebrow: context.l10n.dashboardSparkleObservation,
+                                eyebrow:
+                                    context.l10n.dashboardSparkleObservation,
                                 title: observationTitle ?? '',
                                 summary: observationSummary ?? '',
                               ),
@@ -2477,7 +2475,8 @@ class _DailyBriefingCard extends StatelessWidget {
                                   spacing: DS.spacing8,
                                   runSpacing: DS.spacing8,
                                   children: [
-                                    if (estimatedMinutes != null && estimatedMinutes > 0)
+                                    if (estimatedMinutes != null &&
+                                        estimatedMinutes > 0)
                                       _DashboardChip(
                                         icon: Icons.schedule_rounded,
                                         label: '$estimatedMinutes min',
@@ -2501,12 +2500,14 @@ class _DailyBriefingCard extends StatelessWidget {
                             ],
                             const SizedBox(height: DS.spacing12),
                             _BriefingActions(
-                              hasTaskAction: taskId != null && taskId.isNotEmpty,
+                              hasTaskAction:
+                                  taskId != null && taskId.isNotEmpty,
                               taskId: taskId,
                             ),
                             if (growthSignal != null)
                               Padding(
-                                padding: const EdgeInsets.only(top: DS.spacing12),
+                                padding:
+                                    const EdgeInsets.only(top: DS.spacing12),
                                 child: _BriefingDetailTile(
                                   icon: Icons.trending_up_rounded,
                                   iconColor: DS.success,
@@ -2520,7 +2521,8 @@ class _DailyBriefingCard extends StatelessWidget {
                               const SizedBox(height: DS.spacing10),
                             if (activePlan != null)
                               Padding(
-                                padding: const EdgeInsets.only(top: DS.spacing10),
+                                padding:
+                                    const EdgeInsets.only(top: DS.spacing10),
                                 child: _PlanProgressTile(
                                   plan: activePlan,
                                 ),
