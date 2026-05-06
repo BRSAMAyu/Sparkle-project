@@ -50,7 +50,7 @@
 | QA-P1-16 | Register AccountabilityHubScreen route | Flutter | S | ⏭️ skip | — | — | Already registered: community_routes.dart:377 |
 | QA-P1-17 | Persist SprintReviewScreen notes | Flutter | M | 🔵 in-progress | claude-B | — | Wire save API |
 | QA-P1-18 | Replace duplicate GoalValueChip | Flutter | S | ⏭️ skip | — | — | Already uses shared GoalValueChip: unified_notification_card.dart:597 |
-| QA-P1-19 | Unit tests: per-channel delivery | Python | M | ⬜ pending | — | — | silent/in_app/push resolution |
+| QA-P1-19 | Unit tests: per-channel delivery | Python | M | 🔵 in-progress | claude-A | — | silent/in_app/push resolution |
 | QA-P1-20 | Unit tests: fatigue + streak quality | Python | M | ⬜ pending | — | — | Fatigue penalty + Redis fallback |
 
 ## P2: Medium (35 items)
