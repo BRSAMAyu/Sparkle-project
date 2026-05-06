@@ -24,6 +24,10 @@
 | QA-P0-5 | RetrievalDirective 集成测试 | Python | M | ✅ done | — | 25e93fd1 | QA_P0_critical: 端到端测试 directive 过滤逻辑 |
 | QA-P0-6 | L1 fast-path 跳过 LLM decision loop | Python | S | ✅ done | — | 7818b0d96 | QA_P1_arch: orchestrator.py:568 should_escalate=False 时短路 |
 
+**P0 DOD**: ✅ PASS — 6/6 items done, security PASS, correctness PASS. (Rule AT/S26/S27 + Go coverage pre-existing, acknowledged in prior DODs.)
+
+---
+
 ## P1: High (20 items)
 
 | ID | Title | Scope | Effort | Status | Claimed-By | Commit | Note |
