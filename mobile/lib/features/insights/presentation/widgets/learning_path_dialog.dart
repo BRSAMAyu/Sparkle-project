@@ -254,6 +254,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                 final relationLabel = _relationLabel(context.l10n, node.relationType);
                 final sourceLabel = _sourceLabel(context.l10n, node.sourceType);
                 return FilterChip(
+                  key: ValueKey(node.id),
                   selected: selected,
                   label: Text(
                     sourceLabel == null

@@ -1406,6 +1406,7 @@ class _ComposerCard extends StatelessWidget {
                   return const SizedBox.shrink();
                 }
                 return ActionChip(
+                  key: ValueKey(topic),
                   avatar: const Icon(Icons.bolt_rounded, size: 16),
                   label: Text(topic),
                   onPressed: () => onSuggestionTap(topic),
@@ -1633,6 +1634,7 @@ class _TheaterSettingsDrawer extends StatelessWidget {
                         return const SizedBox.shrink();
                       }
                       return ActionChip(
+                        key: ValueKey(topic),
                         avatar: const Icon(Icons.bolt_rounded, size: 16),
                         label: Text(topic),
                         onPressed: () => onSuggestionTap(topic),
@@ -3240,6 +3242,7 @@ class _RouteListView extends StatelessWidget {
           final isSelected = route.id == selectedRouteId;
           final isRecommended = route.id == recommendedRouteId;
           return AnimatedContainer(
+            key: ValueKey(route.id),
             duration: DS.durationNormal,
             margin: const EdgeInsets.only(bottom: 12),
             padding: const EdgeInsets.all(14),

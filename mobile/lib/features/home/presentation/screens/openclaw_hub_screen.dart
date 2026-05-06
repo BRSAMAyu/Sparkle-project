@@ -896,6 +896,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                           final record =
                               taskState.taskExecutionRecords[task.id];
                           return Padding(
+                            key: ValueKey(task.id),
                             padding: const EdgeInsets.only(bottom: DS.spacing8),
                             child: _ActivityTimelineCard(
                               task: task,
@@ -913,6 +914,7 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
                           final record =
                               taskState.taskExecutionRecords[task.id];
                           return Padding(
+                            key: ValueKey(task.id),
                             padding:
                                 const EdgeInsets.only(bottom: DS.spacing10),
                             child: _ActivityTimelineCard(

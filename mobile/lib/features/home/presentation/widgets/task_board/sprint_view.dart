@@ -356,6 +356,7 @@ class _SprintFilterChips extends ConsumerWidget {
         final count = counts[filter] ?? 0;
 
         return GestureDetector(
+          key: ValueKey(filter),
           onTap: () =>
               ref.read(taskBoardProvider.notifier).setSprintFilter(filter),
           child: Container(
