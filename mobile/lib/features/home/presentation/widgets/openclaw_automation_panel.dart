@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -339,7 +340,7 @@ class _OpenClawAutomationPanelState
               ],
               const SizedBox(height: DS.spacing16),
               if (automation.isLoading && automation.schedules.isEmpty)
-                const Center(child: CircularProgressIndicator())
+                const SparkleListSkeleton()
               else if (automation.schedules.isEmpty)
                 Text(
                   context.l10n.openclawNoAutomationHint,

@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -91,7 +92,7 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
           ),
         ),
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const SparkleListSkeleton()
             : _error != null
                 ? Center(child: Text(_error!))
                 : ContentConstraint(

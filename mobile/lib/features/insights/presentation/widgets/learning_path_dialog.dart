@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -139,7 +140,7 @@ class _LearningPathDialogState extends ConsumerState<LearningPathDialog> {
                   ),
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const SparkleListSkeleton(),
               error: (err, stack) => _LearningPathLoadError(
                 message: context.l10n.lpLoadFailed(err.toString()),
                 onRetry: () =>

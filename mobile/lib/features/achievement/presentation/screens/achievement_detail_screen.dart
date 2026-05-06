@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -119,7 +120,7 @@ class _AchievementDetailScreenState
       return SparklePageScaffold(
         role: SparklePageRole.immersive,
         appBar: AppBar(),
-        child: const Center(child: CircularProgressIndicator()),
+        child: const SparkleListSkeleton(),
       );
     }
 

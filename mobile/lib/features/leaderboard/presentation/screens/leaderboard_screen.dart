@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -77,7 +78,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
         ],
       ),
       child: state.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const SparkleListSkeleton()
           : state.error != null
               ? _buildErrorView()
               : TabBarView(

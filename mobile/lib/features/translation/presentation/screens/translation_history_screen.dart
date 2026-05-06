@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -282,7 +283,7 @@ class _TranslationHistoryScreenState
             // Content
             Expanded(
               child: state.isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const SparkleListSkeleton()
                   : state.records.isEmpty
                       ? _buildEmptyState(state)
                       : ListView.builder(

@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -292,7 +293,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             Text(context.l10n.memoryVersionHistory, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: DS.sm),
             if (_loadingHistory)
-              const Center(child: CircularProgressIndicator())
+              const SparkleListSkeleton()
             else if (_historyError != null)
               Text(_historyError!,
                   style: Theme.of(context).textTheme.bodyMedium,)

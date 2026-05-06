@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -241,7 +242,7 @@ class _GroupMembersScreenState extends ConsumerState<GroupMembersScreen>
 
             // ── Tab 2: Leaderboard ───────────────────────────────────────
             membersState.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const SparkleListSkeleton(),
               error: (e, _) => Center(
                 child: Text(
                   context.l10n.gmLoadMembersFailed,

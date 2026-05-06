@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -87,7 +88,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           policiesAsync,
           profileLoadError: profileLoadError,
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SparkleListSkeleton(),
         error: (_, __) => _buildContent(
           context,
           ref,

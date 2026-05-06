@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -349,7 +350,7 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           ),
           title: Text(widget.isEditMode ? context.l10n.ebEditError : context.l10n.ebAddError),
         ),
-        child: const Center(child: CircularProgressIndicator()),
+        child: const SparkleListSkeleton(),
       );
 
   @override

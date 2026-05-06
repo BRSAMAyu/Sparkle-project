@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -436,7 +437,7 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           future: groupsFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState != ConnectionState.done) {
-              return const Center(child: CircularProgressIndicator());
+              return const SparkleListSkeleton();
             }
 
             if (snapshot.hasError) {

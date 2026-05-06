@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 // ignore_for_file: prefer_expression_function_bodies
 
 import 'package:flutter/material.dart';
@@ -108,7 +109,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
             ],
           ),
         ),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SparkleListSkeleton(),
         error: (_, __) => _buildOfflineFallback(context),
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -111,7 +112,7 @@ class _LearningForecastScreenState
           ],
         ),
         child: _isLoading
-            ? const Center(child: CircularProgressIndicator())
+            ? const SparkleListSkeleton()
             : (_dashboardData == null
                 ? ContentConstraint(
                     child: Center(

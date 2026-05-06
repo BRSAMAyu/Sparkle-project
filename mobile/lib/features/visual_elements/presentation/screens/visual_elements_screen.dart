@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -668,7 +669,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
     VisualElementsState state,
   ) {
     if (state.isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SparkleListSkeleton();
     }
 
     if (state.error != null) {
@@ -1064,7 +1065,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SparkleListSkeleton(),
         error: (err, _) => _buildErrorView(err.toString(), l10n),
       );
 

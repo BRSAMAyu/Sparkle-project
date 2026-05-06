@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -522,7 +523,7 @@ class _PosterPreviewCard extends StatelessWidget {
             child: ColoredBox(
               color: DS.surfacePrimary,
               child: isGenerating
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const SparkleListSkeleton()
                   : errorMessage != null
                       ? Center(
                           child: Padding(

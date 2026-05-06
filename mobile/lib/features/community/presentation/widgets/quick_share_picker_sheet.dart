@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -358,7 +359,7 @@ class _QuickSharePickerSheetState extends ConsumerState<QuickSharePickerSheet>
 
   Widget _buildItemList() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const SparkleListSkeleton();
     }
 
     if (_items.isEmpty) {

@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 import 'dart:convert';
 
@@ -136,7 +137,7 @@ class _SeedLibraryDetailScreenState
     SeedLibraryDetailState state,
   ) {
     if (state.isLoadingLibrary) {
-      return const Center(child: CircularProgressIndicator());
+      return const SparkleListSkeleton();
     }
 
     if (state.error != null && state.library == null) {
@@ -633,7 +634,7 @@ class _SeedLibraryDetailScreenState
           if (filteredItems.isEmpty)
             SliverFillRemaining(
               child: state.isLoadingItems
-                  ? const Center(child: CircularProgressIndicator())
+                  ? const SparkleListSkeleton()
                   : Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,

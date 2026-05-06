@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -49,7 +50,7 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
           future: _profileFuture,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const SparkleListSkeleton();
             }
             if (snapshot.hasError) {
               return _buildContent(

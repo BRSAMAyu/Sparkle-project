@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -101,7 +102,7 @@ class ErrorDetailScreen extends ConsumerWidget {
       ),
       child: errorAsync.when(
         data: (error) => _buildDetailContent(context, ref, error),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SparkleListSkeleton(),
         error: (error, stack) =>
             _buildErrorState(context, ref, error.toString()),
       ),

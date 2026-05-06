@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -394,7 +395,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SparkleListSkeleton(),
         error: (error, stack) => _buildErrorState(error.toString(), query),
       );
 

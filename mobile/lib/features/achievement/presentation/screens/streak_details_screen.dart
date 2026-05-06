@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -179,7 +180,7 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
     if (state.isLoading) {
       return _buildCalendarShell(
         l10n,
-        const Center(child: CircularProgressIndicator()),
+        const SparkleListSkeleton(),
       );
     }
 

@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -182,7 +183,7 @@ class _NotificationCenterScreenState
 
   Widget _buildContent(NotificationCenterState state) {
     if (state.isLoading && state.notifications.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const SparkleListSkeleton();
     }
 
     if (state.error != null) {

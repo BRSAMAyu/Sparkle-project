@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -189,7 +190,7 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const SparkleListSkeleton()
           : ListView(
               padding: const EdgeInsets.fromLTRB(
                 DS.spacing16,

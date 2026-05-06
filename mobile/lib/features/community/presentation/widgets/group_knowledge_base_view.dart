@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -628,7 +629,7 @@ class _GroupKnowledgeBaseViewState
             future: _filesFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const SparkleListSkeleton();
               }
               if (snapshot.hasError) {
                 return Center(

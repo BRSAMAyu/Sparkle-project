@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -350,7 +351,7 @@ class _MyGroupsSection extends StatelessWidget {
             ],
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const SparkleListSkeleton(),
         error: (error, _) => Text(
           context.l10n.communityMyGroupsLoadError(error.toString()),
           style: TextStyle(color: DS.textSecondary),

@@ -1,3 +1,4 @@
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -312,7 +313,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
       ),
       child: ContentConstraint(
         child: _isLoadingExistingTask
-            ? const Center(child: CircularProgressIndicator())
+            ? const SparkleListSkeleton()
             : Form(
                 key: _formKey,
                 child: ListView(
