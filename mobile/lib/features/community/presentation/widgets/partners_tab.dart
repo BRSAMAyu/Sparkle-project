@@ -60,7 +60,7 @@ class PartnersTab extends ConsumerWidget {
                   return _PartnershipsSection(partnerships: active);
                 },
                 loading: () => const _SectionLoading(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (_, __) => _SectionError(onRetry: () => ref.invalidate(myPartnershipsProvider)),
               ),
             ),
 
@@ -71,8 +71,8 @@ class PartnersTab extends ConsumerWidget {
                   if (hub.isEmpty) return const SizedBox.shrink();
                   return _HubSections(hub: hub);
                 },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                loading: () => const _SectionLoading(),
+                error: (_, __) => _SectionError(onRetry: () => ref.invalidate(accountabilityHubProvider)),
               ),
             ),
 
@@ -83,8 +83,8 @@ class PartnersTab extends ConsumerWidget {
                   if (friends.isEmpty) return const SizedBox.shrink();
                   return _FriendsSection(friends: friends);
                 },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                loading: () => const _SectionLoading(),
+                error: (_, __) => _SectionError(onRetry: () => ref.invalidate(friendsProvider)),
               ),
             ),
 
@@ -747,4 +747,35 @@ class _SectionLoading extends StatelessWidget {
         padding: EdgeInsets.all(DS.lg),
         child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
       );
+}
+
+class _SectionError extends StatelessWidget {
+  const _SectionError({required this.onRetry});
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
+    return Padding(
+      padding: const EdgeInsets.all(DS.lg),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_rounded, size: 32, color: DS.textTertiary),
+            const SizedBox(height: DS.spacing8),
+            Text(
+              zh ? '加载失败' : 'Failed to load',
+              style: TextStyle(color: DS.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: DS.spacing8),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(zh ? '重试' : 'Retry', style: const TextStyle(fontSize: 13)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
