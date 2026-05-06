@@ -231,7 +231,7 @@ class TranslationDemoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          title: const Text('Translation Demo'),
+          title: Text(context.l10n.translationDemoTitle),
         ),
         body: Padding(
           padding: const EdgeInsets.all(DS.spacing16),
@@ -239,7 +239,7 @@ class TranslationDemoScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Long-press any text below to translate:',
+                context.l10n.translationDemoHint,
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: DS.fontWeightSemibold,

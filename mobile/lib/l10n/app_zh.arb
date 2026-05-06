@@ -11790,5 +11790,7 @@
   "growthPlansTitle": "成长计划",
   "newPlanLabel": "新建计划",
   "sendMessageLabel": "发送消息",
-  "taskResumeFailed": "无法恢复任务，请重试"
+  "taskResumeFailed": "无法恢复任务，请重试",
+  "translationDemoTitle": "翻译演示",
+  "translationDemoHint": "长按下方文字即可翻译："
 }

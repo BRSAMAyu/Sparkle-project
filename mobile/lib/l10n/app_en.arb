@@ -11789,5 +11789,7 @@
   "growthPlansTitle": "Growth Plans",
   "newPlanLabel": "New Plan",
   "sendMessageLabel": "Send Message",
-  "taskResumeFailed": "Could not resume task, try again"
+  "taskResumeFailed": "Could not resume task, try again",
+  "translationDemoTitle": "Translation Demo",
+  "translationDemoHint": "Long-press any text below to translate:"
 }
