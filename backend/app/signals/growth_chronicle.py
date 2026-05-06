@@ -23,7 +23,7 @@ from sqlalchemy import select
 from app.signals.types import _uid
 
 _CHRONICLE_KEY = "spine:chronicle:{user_id}"
-_CHRONICLE_TTL_SECONDS = 90 * 24 * 3600
+_CHRONICLE_TTL_SECONDS = 730 * 24 * 3600  # 2 years; TODO: persist to PostgreSQL for durability
 _MAX_STORED_ENTRIES = 100
 _VALID_ENTRY_TYPES = {"milestone", "turning_point", "pattern_discovered", "user_reflection"}
 _VALID_USER_STATUSES = {"pending", "confirmed", "edited", "rejected", "hidden"}

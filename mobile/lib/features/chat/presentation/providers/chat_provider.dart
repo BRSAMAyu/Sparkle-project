@@ -224,12 +224,12 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
   @override
   void dispose() {
+    _streamDebouncer.cancel();
+    _chatRepository.dispose();
     _isDisposed = true;
     unawaited(_historyLoadOperation?.cancel());
     _historyLoadOperation = null;
     unawaited(_connectionStateSubscription?.cancel());
-    _streamDebouncer.cancel();
-    _chatRepository.dispose();
     super.dispose();
   }
 
@@ -1900,6 +1900,10 @@ class ChatNotifier extends StateNotifier<ChatState> {
         } else if (event is GoalArbitrationEvent) {
           // Spine: multi-goal conflict surface
           state = state.copyWith(pendingGoalArbitration: event);
+          flushPending();
+        } else if (event is DivineMomentEvent) {
+          // Spine: divine moment card (MAGIC-002 through MAGIC-006)
+          state = state.copyWith(pendingDivineMoment: event);
           flushPending();
         } else if (event is SpineDegradedEvent) {
           // STAB-012: Spine pipeline degraded — show subtle indicator
