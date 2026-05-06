@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/goal_value_chip.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/notification_center/data/models/unified_notification_model.dart';
 
@@ -100,7 +102,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                 child: Center(
                   child: Text(
                     notification.icon,
-                    style: const TextStyle(fontSize: 20),
+                    style: DS.titleMedium,
                   ),
                 ),
               ),
@@ -170,8 +172,7 @@ class UnifiedNotificationCard extends StatelessWidget {
                               Formatters.formatRelativeTime(
                                 notification.createdAt,
                               ),
-                              style: TextStyle(
-                                fontSize: 12,
+                              style: DS.labelSmall.copyWith(
                                 color: DS.textSecondary,
                               ),
                             ),
@@ -298,8 +299,7 @@ class UnifiedNotificationCard extends StatelessWidget {
       ),
       child: Text(
         badgeLabel,
-        style: TextStyle(
-          fontSize: 10,
+        style: DS.labelSmall.copyWith(
           color: badgeColor,
           fontWeight: DS.fontWeightMedium,
         ),
@@ -337,10 +337,14 @@ class UnifiedNotificationCard extends StatelessWidget {
           ),
           children: [
             if (_hasText(notification.valueReason))
-              _buildDetailRow(
-                context,
-                context.l10n.notificationRecallGoalValue,
-                notification.valueReason!,
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  context.l10n.notificationRecallGoalValue,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: DS.textSecondary,
+                      ),
+                ),
               ),
             if (_hasText(notification.recallReason)) ...[
               const SizedBox(height: DS.spacing8),
@@ -549,10 +553,7 @@ class UnifiedNotificationCard extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 Formatters.formatRelativeTime(notification.createdAt),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: DS.textSecondary,
-                ),
+                style: DS.labelSmall.copyWith(color: DS.textSecondary),
               ),
             ],
           ),
@@ -585,35 +586,25 @@ class UnifiedNotificationCard extends StatelessWidget {
   bool _hasText(String? value) => value != null && value.trim().isNotEmpty;
 
   Widget _buildGoalValueChip(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: DS.brandPrimary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
+    return Semantics(
+      container: true,
+      label: context.l10n.notificationGoalValueSemantics(
+        notification.valueReason ?? '',
       ),
-      child: Row(
-        children: [
-          Icon(Icons.flag_outlined, size: 14, color: DS.brandPrimary),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              notification.valueReason!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DS.brandPrimary,
-                    fontWeight: DS.fontWeightMedium,
-                  ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: GoalValueChip(text: notification.valueReason!),
       ),
     );
   }
 
   Widget _buildNextStepHint(BuildContext context) {
-    return Container(
+    return Semantics(
+      container: true,
+      label: context.l10n.notificationNextStepSemantics(
+        notification.suggestedStep ?? '',
+      ),
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: DS.success.withValues(alpha: 0.08),
@@ -637,6 +628,7 @@ class UnifiedNotificationCard extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
   }
 
