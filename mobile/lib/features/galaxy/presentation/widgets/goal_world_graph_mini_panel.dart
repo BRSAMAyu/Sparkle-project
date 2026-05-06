@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/goal_graph_overlay_provider.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 
@@ -150,7 +149,7 @@ class _Header extends StatelessWidget {
               if (onViewModeToggle != null)
                 Semantics(
                   button: true,
-                  label: isGoalWorldMode ? 'Switch to Star Map' : 'Switch to Goal World',
+                  label: isGoalWorldMode ? context.l10n.goalGraphToggleToStarMap : context.l10n.goalGraphToggleToGoalWorld,
                   child: InkWell(
                     borderRadius: BorderRadius.circular(6),
                     onTap: onViewModeToggle,
@@ -184,7 +183,7 @@ class _Header extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            isGoalWorldMode ? 'Star Map' : 'Goal',
+                            isGoalWorldMode ? context.l10n.goalGraphToggleStarMap : context.l10n.goalGraphToggleGoal,
                             style:
                                 Theme.of(context).textTheme.labelSmall?.copyWith(
                                       color: isGoalWorldMode
@@ -339,7 +338,7 @@ class _GapAnalysisSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            I18nService.instance.isChinese ? '差距分析' : 'Gap Analysis',
+            context.l10n.goalGraphGapAnalysis,
             style: Theme.of(context).textTheme.labelLarge?.copyWith(
                   color: scheme.onSurface,
                   fontWeight: FontWeight.w800,
@@ -349,7 +348,7 @@ class _GapAnalysisSummary extends StatelessWidget {
           Row(
             children: [
               _GapStat(
-                label: I18nService.instance.isChinese ? '覆盖率' : 'Coverage',
+                label: context.l10n.goalGraphCoverage,
                 value: '$coveragePercent%',
                 color: coveragePercent >= 60
                     ? scheme.primary
