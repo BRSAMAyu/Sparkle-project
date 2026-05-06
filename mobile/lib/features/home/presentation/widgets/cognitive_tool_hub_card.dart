@@ -112,12 +112,6 @@ class _CognitiveToolHubCardState extends ConsumerState<CognitiveToolHubCard> {
                     ),
                   ),
                   IconButton(
-                    constraints: const BoxConstraints.tightFor(
-                      width: 28,
-                      height: 28,
-                    ),
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
                     onPressed: () => context.push('/tools/library?tab=manage'),
                     icon: Icon(
                       Icons.tune_rounded,

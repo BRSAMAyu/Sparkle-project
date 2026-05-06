@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -400,7 +401,9 @@ class SparkleIconButton extends StatelessWidget {
       enabled: !disabled && onPressed != null,
       child: Material(
         color: _getBackgroundColor(theme.colors),
-        borderRadius: BorderRadius.circular(size / 2),
+        borderRadius: BorderRadius.circular(
+          math.max(size, DS.touchTargetMinSize) / 2,
+        ),
         child: InkWell(
           onTap: disabled
               ? null
@@ -410,10 +413,14 @@ class SparkleIconButton extends StatelessWidget {
                   );
                   onPressed?.call();
                 },
-          borderRadius: BorderRadius.circular(size / 2),
+          borderRadius: BorderRadius.circular(
+            math.max(size, DS.touchTargetMinSize) / 2,
+          ),
           child: Container(
-            width: size,
-            height: size,
+            constraints: const BoxConstraints(
+              minWidth: DS.touchTargetMinSize,
+              minHeight: DS.touchTargetMinSize,
+            ),
             alignment: Alignment.center,
             child: IconTheme(
               data: IconThemeData(

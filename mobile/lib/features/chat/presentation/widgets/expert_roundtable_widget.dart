@@ -300,12 +300,7 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
                 child: IconButton(
                   onPressed: onCollapse,
                   icon: const Icon(Icons.unfold_less_rounded, size: 18),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints.tightFor(
-                    width: 28,
-                    height: 28,
-                  ),
-                  splashRadius: 18,
+                  splashRadius: 24,
                   color: DS.textSecondary,
                   tooltip: I18nService.instance.isChinese ? '收起' : 'Collapse',
                 ),
