@@ -46,9 +46,9 @@
 | QA-P1-12 | Add route: CapsuleJobsScreen | Flutter | S | ⏭️ skip | — | — | Already registered: cognitive_routes.dart:53 |
 | QA-P1-13 | SprintReviewScreen loading indicator | Flutter | S | ✅ done | — | 444af476 | Skeleton shimmer replaces empty data during load |
 | QA-P1-14 | PausedTaskBanner error handling | Flutter | M | ✅ done | — | f29e8b53a | Show error feedback on resume fail |
-| QA-P1-15 | Integrate UnderstandingSnapshotCard | Flutter | M | 🔵 in-progress | claude-A | — | Import into home dashboard |
+| QA-P1-15 | Integrate UnderstandingSnapshotCard | Flutter | M | ✅ done | — | ac972153 | Replaced _UnderstandingExpansionSlot in growthSections |
 | QA-P1-16 | Register AccountabilityHubScreen route | Flutter | S | ⏭️ skip | — | — | Already registered: community_routes.dart:377 |
-| QA-P1-17 | Persist SprintReviewScreen notes | Flutter | M | ⬜ pending | — | — | Wire save API |
+| QA-P1-17 | Persist SprintReviewScreen notes | Flutter | M | 🔵 in-progress | claude-B | — | Wire save API |
 | QA-P1-18 | Replace duplicate GoalValueChip | Flutter | S | ⬜ pending | — | — | Use shared widget in notifications |
 | QA-P1-19 | Unit tests: per-channel delivery | Python | M | ⬜ pending | — | — | silent/in_app/push resolution |
 | QA-P1-20 | Unit tests: fatigue + streak quality | Python | M | ⬜ pending | — | — | Fatigue penalty + Redis fallback |
