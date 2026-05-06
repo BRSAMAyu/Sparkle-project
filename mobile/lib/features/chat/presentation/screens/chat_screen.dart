@@ -3681,16 +3681,25 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
   }
 
   @override
-  Widget build(BuildContext context) => RepaintBoundary(
-        child: FadeTransition(
-          opacity: _animation,
-          child: Container(
-            width: DS.spacing4 / 2,
-            height: DS.spacing16,
-            color: widget.color,
-          ),
-        ),
+  Widget build(BuildContext context) {
+    if (context.reduceMotion) {
+      return Container(
+        width: DS.spacing4 / 2,
+        height: DS.spacing16,
+        color: widget.color,
       );
+    }
+    return RepaintBoundary(
+      child: FadeTransition(
+        opacity: _animation,
+        child: Container(
+          width: DS.spacing4 / 2,
+          height: DS.spacing16,
+          color: widget.color,
+        ),
+      ),
+    );
+  }
 }
 
 class _TypingIndicatorState extends State<_TypingIndicator>
@@ -3717,6 +3726,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
   Widget build(BuildContext context) {
     final bubbleColor = DS.chatBubbleOther;
     final dotColor = DS.chatBubbleOtherText.withValues(alpha: 0.7);
+    final reduceMotion = context.reduceMotion;
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 8, end: 0),
       duration: const Duration(milliseconds: 180),
@@ -3745,34 +3755,49 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           mainAxisSize: MainAxisSize.min,
           children: List.generate(
             3,
-            (index) => AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                final delay = index * (1 / 3);
-                final progress =
-                    ((_controller.value - delay + 1) % 1.0).clamp(0.0, 1.0);
-                final opacity = 0.25 + (sin(progress * pi) * 0.75);
-                final scale = 0.72 + (sin(progress * pi) * 0.28);
-
-                return Opacity(
-                  opacity: opacity.clamp(0.2, 1.0),
-                  child: Transform.scale(
-                    scale: scale.clamp(0.72, 1.0),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: DS.spacing4 / 2,
-                      ),
-                      width: DS.spacing8,
-                      height: DS.spacing8,
-                      decoration: BoxDecoration(
-                        color: dotColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+            (index) {
+              if (reduceMotion) {
+                return Container(
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing4 / 2,
+                  ),
+                  width: DS.spacing8,
+                  height: DS.spacing8,
+                  decoration: BoxDecoration(
+                    color: dotColor,
+                    shape: BoxShape.circle,
                   ),
                 );
-              },
-            ),
+              }
+              return AnimatedBuilder(
+                animation: _controller,
+                builder: (context, child) {
+                  final delay = index * (1 / 3);
+                  final progress =
+                      ((_controller.value - delay + 1) % 1.0).clamp(0.0, 1.0);
+                  final opacity = 0.25 + (sin(progress * pi) * 0.75);
+                  final scale = 0.72 + (sin(progress * pi) * 0.28);
+
+                  return Opacity(
+                    opacity: opacity.clamp(0.2, 1.0),
+                    child: Transform.scale(
+                      scale: scale.clamp(0.72, 1.0),
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(
+                          horizontal: DS.spacing4 / 2,
+                        ),
+                        width: DS.spacing8,
+                        height: DS.spacing8,
+                        decoration: BoxDecoration(
+                          color: dotColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
           ),
         ),
       ),
