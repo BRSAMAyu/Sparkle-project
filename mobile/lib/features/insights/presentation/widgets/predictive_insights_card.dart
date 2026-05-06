@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 /// 预测洞察卡片 - 显示AI预测的学习建议
 ///
@@ -44,7 +43,7 @@ class PredictiveInsightsCard extends StatelessWidget {
       case 'risk':
         return _buildRiskCard(context);
       default:
-        return Text(I18nService.instance.isChinese ? '未知类型' : 'Unknown type');
+        return Text(context.l10n.insUnknownType);
     }
   }
 
@@ -77,14 +76,14 @@ class PredictiveInsightsCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    I18nService.instance.isChinese ? '活跃度预测' : 'Engagement Forecast',
+                    context.l10n.insEngagementForecast,
                     style: const TextStyle(
                       fontSize: DS.fontSizeBase,
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   Text(
-                    I18nService.instance.isChinese ? 'AI 基于学习习惯的预测' : 'AI prediction based on learning habits',
+                    context.l10n.insEngagementSubtitle,
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       color: DS.neutral500,
@@ -169,14 +168,14 @@ class PredictiveInsightsCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    I18nService.instance.isChinese ? '难度预测' : 'Difficulty Forecast',
+                    context.l10n.insDifficultyForecast,
                     style: const TextStyle(
                       fontSize: DS.fontSizeBase,
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   Text(
-                    I18nService.instance.isChinese ? 'AI 基于前置知识的评估' : 'AI assessment based on prerequisites',
+                    context.l10n.insDifficultySubtitle,
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       color: DS.neutral500,
@@ -185,7 +184,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                 ],
               ),
             ),
-            _buildDifficultyBadge(difficultyScore),
+            _buildDifficultyBadge(difficultyScore, context),
           ],
         ),
         const SizedBox(height: DS.lg),
@@ -198,11 +197,11 @@ class PredictiveInsightsCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  I18nService.instance.isChinese ? '预测难度' : 'Predicted Difficulty',
+                  context.l10n.insPredictedDifficulty,
                   style: const TextStyle(fontSize: DS.fontSizeXs),
                 ),
                 Text(
-                  _getDifficultyLabel(difficultyScore),
+                  _getDifficultyLabel(difficultyScore, context),
                   style: TextStyle(
                     fontSize: DS.fontSizeXs,
                     fontWeight: DS.fontWeightBold,
@@ -260,7 +259,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                 ),
                 const SizedBox(width: DS.spacing8),
                 Text(
-                  I18nService.instance.isChinese ? '建议先学习 $missingCount 个前置知识' : 'Complete $missingCount prerequisite(s) first',
+                  context.l10n.insPrerequisitesWarning(missingCount),
                   style: TextStyle(
                     fontSize: DS.fontSizeXs,
                     color: DS.textPrimary,
@@ -303,14 +302,14 @@ class PredictiveInsightsCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    I18nService.instance.isChinese ? '学习风险评估' : 'Learning Risk Assessment',
+                    context.l10n.insRiskAssessment,
                     style: const TextStyle(
                       fontSize: DS.fontSizeBase,
                       fontWeight: DS.fontWeightBold,
                     ),
                   ),
                   Text(
-                    I18nService.instance.isChinese ? 'AI 持续关注您的学习状态' : 'AI monitors your learning status',
+                    context.l10n.insRiskSubtitle,
                     style: TextStyle(
                       fontSize: DS.fontSizeXs,
                       color: DS.neutral500,
@@ -319,7 +318,7 @@ class PredictiveInsightsCard extends StatelessWidget {
                 ],
               ),
             ),
-            _buildRiskLevelBadge(riskLevel),
+            _buildRiskLevelBadge(riskLevel, context),
           ],
         ),
         const SizedBox(height: DS.lg),
@@ -348,7 +347,7 @@ class PredictiveInsightsCard extends StatelessWidget {
         // Suggestions
         if (suggestions.isNotEmpty) ...[
           Text(
-            I18nService.instance.isChinese ? 'AI 建议:' : 'AI Suggestions:',
+            context.l10n.insAiSuggestions,
             style: const TextStyle(
               fontSize: DS.fontSizeSm,
               fontWeight: DS.fontWeightBold,
@@ -417,14 +416,14 @@ class PredictiveInsightsCard extends StatelessWidget {
         ),
       );
 
-  Widget _buildDifficultyBadge(double score) => Container(
+  Widget _buildDifficultyBadge(double score, BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: _getDifficultyColor(score).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
-          _getDifficultyLabel(score),
+          _getDifficultyLabel(score, context),
           style: TextStyle(
             fontSize: 12,
             fontWeight: DS.fontWeightBold,
@@ -433,14 +432,14 @@ class PredictiveInsightsCard extends StatelessWidget {
         ),
       );
 
-  Widget _buildRiskLevelBadge(String level) => Container(
+  Widget _buildRiskLevelBadge(String level, BuildContext context) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
           color: _getRiskColor(level).withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
-          _getRiskLevelText(level),
+          _getRiskLevelText(level, context),
           style: TextStyle(
             fontSize: 12,
             fontWeight: DS.fontWeightBold,
@@ -460,7 +459,7 @@ class PredictiveInsightsCard extends StatelessWidget {
             Icon(_getRiskIcon(risk), color: _getRiskColor(risk), size: 16),
             const SizedBox(width: DS.sm),
             Text(
-              context.l10n.picChurnRisk(_getRiskLevelText(risk)),
+              context.l10n.picChurnRisk(_getRiskLevelText(risk, context)),
               style: TextStyle(fontSize: 12, color: _getRiskColor(risk)),
             ),
           ],
@@ -489,11 +488,10 @@ class PredictiveInsightsCard extends StatelessWidget {
     return DS.error.shade600;
   }
 
-  String _getDifficultyLabel(double score) {
-    final zh = I18nService.instance.isChinese;
-    if (score < 0.3) return zh ? '简单' : 'Easy';
-    if (score < 0.6) return zh ? '中等' : 'Medium';
-    return zh ? '困难' : 'Hard';
+  String _getDifficultyLabel(double score, BuildContext context) {
+    if (score < 0.3) return context.l10n.insDifficultyEasy;
+    if (score < 0.6) return context.l10n.insDifficultyMedium;
+    return context.l10n.insDifficultyHard;
   }
 
   Color _getRiskColor(String level) {
@@ -509,17 +507,16 @@ class PredictiveInsightsCard extends StatelessWidget {
     }
   }
 
-  String _getRiskLevelText(String level) {
-    final zh = I18nService.instance.isChinese;
+  String _getRiskLevelText(String level, BuildContext context) {
     switch (level) {
       case 'low':
-        return zh ? '低风险' : 'Low Risk';
+        return context.l10n.insRiskLow;
       case 'medium':
-        return zh ? '中等风险' : 'Medium Risk';
+        return context.l10n.insRiskMedium;
       case 'high':
-        return zh ? '高风险' : 'High Risk';
+        return context.l10n.insRiskHigh;
       default:
-        return zh ? '未知' : 'Unknown';
+        return context.l10n.insRiskUnknown;
     }
   }
 

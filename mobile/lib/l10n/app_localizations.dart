@@ -5054,6 +5054,18 @@ abstract class AppLocalizations {
   /// **'通知统计'**
   String get notificationAnalyticsTitle;
 
+  /// No description provided for @notificationGoalValueSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标价值：{reason}'**
+  String notificationGoalValueSemantics(String reason);
+
+  /// No description provided for @notificationNextStepSemantics.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步：{step}'**
+  String notificationNextStepSemantics(String step);
+
   /// No description provided for @notificationAnalyticsNoData.
   ///
   /// In zh, this message translates to:
@@ -37333,6 +37345,30 @@ abstract class AppLocalizations {
   /// **'为什么给我这些决策'**
   String get chatCausalWhyDecisions;
 
+  /// No description provided for @chatCausalSemanticsRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新时间线'**
+  String get chatCausalSemanticsRefresh;
+
+  /// No description provided for @chatCausalSemanticsToggleEntry.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开或收起：{headline}'**
+  String chatCausalSemanticsToggleEntry(Object headline);
+
+  /// No description provided for @chatCausalSemanticsAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'{label}操作'**
+  String chatCausalSemanticsAction(Object label);
+
+  /// No description provided for @chatDecisionTimeline.
+  ///
+  /// In zh, this message translates to:
+  /// **'决策时间线'**
+  String get chatDecisionTimeline;
+
   /// No description provided for @chatCitationImprove.
   ///
   /// In zh, this message translates to:
@@ -43104,6 +43140,162 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'重试'**
   String get insRetry;
+
+  /// No description provided for @insUnknownType.
+  ///
+  /// In zh, this message translates to:
+  /// **'未知类型'**
+  String get insUnknownType;
+
+  /// No description provided for @insEngagementForecast.
+  ///
+  /// In zh, this message translates to:
+  /// **'活跃度预测'**
+  String get insEngagementForecast;
+
+  /// No description provided for @insEngagementSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 基于学习习惯的预测'**
+  String get insEngagementSubtitle;
+
+  /// No description provided for @insDifficultyForecast.
+  ///
+  /// In zh, this message translates to:
+  /// **'难度预测'**
+  String get insDifficultyForecast;
+
+  /// No description provided for @insDifficultySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 基于前置知识的评估'**
+  String get insDifficultySubtitle;
+
+  /// No description provided for @insPredictedDifficulty.
+  ///
+  /// In zh, this message translates to:
+  /// **'预测难度'**
+  String get insPredictedDifficulty;
+
+  /// No description provided for @insPrerequisitesWarning.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议先学习 {count} 个前置知识'**
+  String insPrerequisitesWarning(int count);
+
+  /// No description provided for @insRiskAssessment.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习风险评估'**
+  String get insRiskAssessment;
+
+  /// No description provided for @insRiskSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 持续关注您的学习状态'**
+  String get insRiskSubtitle;
+
+  /// No description provided for @insAiSuggestions.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 建议：'**
+  String get insAiSuggestions;
+
+  /// No description provided for @insDifficultyEasy.
+  ///
+  /// In zh, this message translates to:
+  /// **'简单'**
+  String get insDifficultyEasy;
+
+  /// No description provided for @insDifficultyMedium.
+  ///
+  /// In zh, this message translates to:
+  /// **'中等'**
+  String get insDifficultyMedium;
+
+  /// No description provided for @insDifficultyHard.
+  ///
+  /// In zh, this message translates to:
+  /// **'困难'**
+  String get insDifficultyHard;
+
+  /// No description provided for @insRiskLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'低风险'**
+  String get insRiskLow;
+
+  /// No description provided for @insRiskMedium.
+  ///
+  /// In zh, this message translates to:
+  /// **'中等风险'**
+  String get insRiskMedium;
+
+  /// No description provided for @insRiskHigh.
+  ///
+  /// In zh, this message translates to:
+  /// **'高风险'**
+  String get insRiskHigh;
+
+  /// No description provided for @insRiskUnknown.
+  ///
+  /// In zh, this message translates to:
+  /// **'未知'**
+  String get insRiskUnknown;
+
+  /// No description provided for @rcfWelcomeBack.
+  ///
+  /// In zh, this message translates to:
+  /// **'欢迎回来 — 这是我对你的记忆'**
+  String get rcfWelcomeBack;
+
+  /// No description provided for @rcfClose.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭'**
+  String get rcfClose;
+
+  /// No description provided for @rcfConfirmedStrategies.
+  ///
+  /// In zh, this message translates to:
+  /// **'你确认过对你有效的策略：'**
+  String get rcfConfirmedStrategies;
+
+  /// No description provided for @rcfPendingInsights.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个洞察等你确认'**
+  String rcfPendingInsights(int count);
+
+  /// No description provided for @rcfRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新整理'**
+  String get rcfRefresh;
+
+  /// No description provided for @rcfContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续上次'**
+  String get rcfContinue;
+
+  /// No description provided for @rcfConfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已确认'**
+  String get rcfConfirmed;
+
+  /// No description provided for @rcfPending.
+  ///
+  /// In zh, this message translates to:
+  /// **'待审阅'**
+  String get rcfPending;
+
+  /// No description provided for @rcfTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'总条目'**
+  String get rcfTotal;
 
   /// No description provided for @calNoActivity.
   ///
@@ -52067,6 +52259,42 @@ abstract class AppLocalizations {
   /// **'{percent}%'**
   String goalGraphPercentValue(int percent);
 
+  /// No description provided for @goalGraphToggleToStarMap.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换到星图'**
+  String get goalGraphToggleToStarMap;
+
+  /// No description provided for @goalGraphToggleToGoalWorld.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换到目标世界'**
+  String get goalGraphToggleToGoalWorld;
+
+  /// No description provided for @goalGraphToggleStarMap.
+  ///
+  /// In zh, this message translates to:
+  /// **'星图'**
+  String get goalGraphToggleStarMap;
+
+  /// No description provided for @goalGraphToggleGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标'**
+  String get goalGraphToggleGoal;
+
+  /// No description provided for @goalGraphGapAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'差距分析'**
+  String get goalGraphGapAnalysis;
+
+  /// No description provided for @goalGraphCoverage.
+  ///
+  /// In zh, this message translates to:
+  /// **'覆盖率'**
+  String get goalGraphCoverage;
+
   /// No description provided for @taskPausedPanelTitle.
   ///
   /// In zh, this message translates to:
@@ -52721,6 +52949,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'无法恢复任务，请重试'**
   String get taskResumeFailed;
+
+  /// No description provided for @translationDemoTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'翻译演示'**
+  String get translationDemoTitle;
+
+  /// No description provided for @translationDemoHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'长按下方文字即可翻译：'**
+  String get translationDemoHint;
 }
 
 class _AppLocalizationsDelegate

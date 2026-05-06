@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/insights/data/models/return_case_file.dart';
 import 'package:sparkle/features/insights/presentation/providers/return_case_file_provider.dart';
 
@@ -21,9 +21,6 @@ class ReturnCaseFileCard extends ConsumerWidget {
 
   final VoidCallback? onContinue;
   final VoidCallback? onDismiss;
-
-  static String _t(String zh, String en) =>
-      I18nService.instance.isChinese ? zh : en;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -98,10 +95,7 @@ class _ReturnCaseBody extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  ReturnCaseFileCard._t(
-                    '欢迎回来 — 这是我对你的记忆',
-                    'Welcome back — here is what I remember about you',
-                  ),
+                  context.l10n.rcfWelcomeBack,
                   style: TextStyle(
                     color: DS.textPrimary,
                     fontSize: 15,
@@ -113,7 +107,7 @@ class _ReturnCaseBody extends StatelessWidget {
                 IconButton(
                   icon: Icon(Icons.close, color: DS.textTertiary, size: 18),
                   onPressed: onDismiss,
-                  tooltip: ReturnCaseFileCard._t('关闭', 'Close'),
+                  tooltip: context.l10n.rcfClose,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
                 ),
@@ -124,10 +118,7 @@ class _ReturnCaseBody extends StatelessWidget {
           if (topInsights.isNotEmpty) ...[
             const SizedBox(height: 12),
             Text(
-              ReturnCaseFileCard._t(
-                '你确认过对你有效的策略：',
-                'Strategies you confirmed work for you:',
-              ),
+              context.l10n.rcfConfirmedStrategies,
               style: TextStyle(
                 color: DS.textSecondary,
                 fontSize: 12,
@@ -140,10 +131,7 @@ class _ReturnCaseBody extends StatelessWidget {
           if (summary.pendingCount > 0) ...[
             const SizedBox(height: 8),
             Text(
-              ReturnCaseFileCard._t(
-                '${summary.pendingCount} 个洞察等你确认',
-                '${summary.pendingCount} insights waiting for your confirmation',
-              ),
+              context.l10n.rcfPendingInsights(summary.pendingCount),
               style: TextStyle(
                 color: DS.brandPrimary,
                 fontSize: 12,
@@ -161,7 +149,7 @@ class _ReturnCaseBody extends StatelessWidget {
                     foregroundColor: DS.textSecondary,
                   ),
                   child: Text(
-                    ReturnCaseFileCard._t('重新整理', 'Refresh'),
+                    context.l10n.rcfRefresh,
                     style: const TextStyle(fontSize: 13),
                   ),
                 ),
@@ -174,7 +162,7 @@ class _ReturnCaseBody extends StatelessWidget {
                     backgroundColor: DS.brandPrimary,
                   ),
                   child: Text(
-                    ReturnCaseFileCard._t('继续上次', 'Pick up where I left off'),
+                    context.l10n.rcfContinue,
                     style: const TextStyle(fontSize: 13),
                   ),
                 ),
@@ -201,19 +189,19 @@ class _SummaryRow extends StatelessWidget {
         child: Row(
           children: [
             _StatChip(
-              label: ReturnCaseFileCard._t('已确认', 'Confirmed'),
+              label: context.l10n.rcfConfirmed,
               value: summary.confirmedCount,
               color: DS.brandPrimary,
             ),
             const SizedBox(width: 12),
             _StatChip(
-              label: ReturnCaseFileCard._t('待审阅', 'Pending'),
+              label: context.l10n.rcfPending,
               value: summary.pendingCount,
               color: DS.semanticWarning,
             ),
             const SizedBox(width: 12),
             _StatChip(
-              label: ReturnCaseFileCard._t('总条目', 'Total'),
+              label: context.l10n.rcfTotal,
               value: summary.totalEntries,
               color: DS.textTertiary,
             ),

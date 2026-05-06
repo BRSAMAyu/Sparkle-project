@@ -2803,6 +2803,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationAnalyticsTitle => 'Notification Analytics';
 
   @override
+  String notificationGoalValueSemantics(String reason) {
+    return 'Goal value: $reason';
+  }
+
+  @override
+  String notificationNextStepSemantics(String step) {
+    return 'Next step: $step';
+  }
+
+  @override
   String get notificationAnalyticsNoData => 'No data';
 
   @override
@@ -21330,6 +21340,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatCausalWhyDecisions => 'Why these decisions for me';
 
   @override
+  String get chatCausalSemanticsRefresh => 'Refresh timeline';
+
+  @override
+  String chatCausalSemanticsToggleEntry(Object headline) {
+    return 'Toggle details for $headline';
+  }
+
+  @override
+  String chatCausalSemanticsAction(Object label) {
+    return '$label action';
+  }
+
+  @override
+  String get chatDecisionTimeline => 'Decision Timeline';
+
+  @override
   String get chatCitationImprove =>
       'Improvement feedback recorded for this citation';
 
@@ -24602,6 +24628,89 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get insRetry => 'Retry';
+
+  @override
+  String get insUnknownType => 'Unknown type';
+
+  @override
+  String get insEngagementForecast => 'Engagement Forecast';
+
+  @override
+  String get insEngagementSubtitle => 'AI prediction based on learning habits';
+
+  @override
+  String get insDifficultyForecast => 'Difficulty Forecast';
+
+  @override
+  String get insDifficultySubtitle => 'AI assessment based on prerequisites';
+
+  @override
+  String get insPredictedDifficulty => 'Predicted Difficulty';
+
+  @override
+  String insPrerequisitesWarning(int count) {
+    return 'Complete $count prerequisite(s) first';
+  }
+
+  @override
+  String get insRiskAssessment => 'Learning Risk Assessment';
+
+  @override
+  String get insRiskSubtitle => 'AI monitors your learning status';
+
+  @override
+  String get insAiSuggestions => 'AI Suggestions:';
+
+  @override
+  String get insDifficultyEasy => 'Easy';
+
+  @override
+  String get insDifficultyMedium => 'Medium';
+
+  @override
+  String get insDifficultyHard => 'Hard';
+
+  @override
+  String get insRiskLow => 'Low Risk';
+
+  @override
+  String get insRiskMedium => 'Medium Risk';
+
+  @override
+  String get insRiskHigh => 'High Risk';
+
+  @override
+  String get insRiskUnknown => 'Unknown';
+
+  @override
+  String get rcfWelcomeBack =>
+      'Welcome back — here is what I remember about you';
+
+  @override
+  String get rcfClose => 'Close';
+
+  @override
+  String get rcfConfirmedStrategies => 'Strategies you confirmed work for you:';
+
+  @override
+  String rcfPendingInsights(int count) {
+    return '$count insights waiting for your confirmation';
+  }
+
+  @override
+  String get rcfRefresh => 'Refresh';
+
+  @override
+  String get rcfContinue => 'Pick up where I left off';
+
+  @override
+  String get rcfConfirmed => 'Confirmed';
+
+  @override
+  String get rcfPending => 'Pending';
+
+  @override
+  String get rcfTotal => 'Total';
 
   @override
   String get calNoActivity => 'No activity';
@@ -29857,6 +29966,24 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get goalGraphToggleToStarMap => 'Switch to Star Map';
+
+  @override
+  String get goalGraphToggleToGoalWorld => 'Switch to Goal World';
+
+  @override
+  String get goalGraphToggleStarMap => 'Star Map';
+
+  @override
+  String get goalGraphToggleGoal => 'Goal';
+
+  @override
+  String get goalGraphGapAnalysis => 'Gap Analysis';
+
+  @override
+  String get goalGraphCoverage => 'Coverage';
+
+  @override
   String get taskPausedPanelTitle => 'Paused with context';
 
   @override
@@ -30233,4 +30360,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskResumeFailed => 'Could not resume task, try again';
+
+  @override
+  String get translationDemoTitle => 'Translation Demo';
+
+  @override
+  String get translationDemoHint => 'Long-press any text below to translate:';
 }

@@ -2669,6 +2669,16 @@ class AppLocalizationsZh extends AppLocalizations {
   String get notificationAnalyticsTitle => '通知统计';
 
   @override
+  String notificationGoalValueSemantics(String reason) {
+    return '目标价值：$reason';
+  }
+
+  @override
+  String notificationNextStepSemantics(String step) {
+    return '下一步：$step';
+  }
+
+  @override
   String get notificationAnalyticsNoData => '暂无数据';
 
   @override
@@ -20458,6 +20468,22 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatCausalWhyDecisions => '为什么给我这些决策';
 
   @override
+  String get chatCausalSemanticsRefresh => '刷新时间线';
+
+  @override
+  String chatCausalSemanticsToggleEntry(Object headline) {
+    return '展开或收起：$headline';
+  }
+
+  @override
+  String chatCausalSemanticsAction(Object label) {
+    return '$label操作';
+  }
+
+  @override
+  String get chatDecisionTimeline => '决策时间线';
+
+  @override
   String get chatCitationImprove => '已记录这条引用的改进反馈';
 
   @override
@@ -23583,6 +23609,88 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get insRetry => '重试';
+
+  @override
+  String get insUnknownType => '未知类型';
+
+  @override
+  String get insEngagementForecast => '活跃度预测';
+
+  @override
+  String get insEngagementSubtitle => 'AI 基于学习习惯的预测';
+
+  @override
+  String get insDifficultyForecast => '难度预测';
+
+  @override
+  String get insDifficultySubtitle => 'AI 基于前置知识的评估';
+
+  @override
+  String get insPredictedDifficulty => '预测难度';
+
+  @override
+  String insPrerequisitesWarning(int count) {
+    return '建议先学习 $count 个前置知识';
+  }
+
+  @override
+  String get insRiskAssessment => '学习风险评估';
+
+  @override
+  String get insRiskSubtitle => 'AI 持续关注您的学习状态';
+
+  @override
+  String get insAiSuggestions => 'AI 建议：';
+
+  @override
+  String get insDifficultyEasy => '简单';
+
+  @override
+  String get insDifficultyMedium => '中等';
+
+  @override
+  String get insDifficultyHard => '困难';
+
+  @override
+  String get insRiskLow => '低风险';
+
+  @override
+  String get insRiskMedium => '中等风险';
+
+  @override
+  String get insRiskHigh => '高风险';
+
+  @override
+  String get insRiskUnknown => '未知';
+
+  @override
+  String get rcfWelcomeBack => '欢迎回来 — 这是我对你的记忆';
+
+  @override
+  String get rcfClose => '关闭';
+
+  @override
+  String get rcfConfirmedStrategies => '你确认过对你有效的策略：';
+
+  @override
+  String rcfPendingInsights(int count) {
+    return '$count 个洞察等你确认';
+  }
+
+  @override
+  String get rcfRefresh => '重新整理';
+
+  @override
+  String get rcfContinue => '继续上次';
+
+  @override
+  String get rcfConfirmed => '已确认';
+
+  @override
+  String get rcfPending => '待审阅';
+
+  @override
+  String get rcfTotal => '总条目';
 
   @override
   String get calNoActivity => '无活动';
@@ -28631,6 +28739,24 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get goalGraphToggleToStarMap => '切换到星图';
+
+  @override
+  String get goalGraphToggleToGoalWorld => '切换到目标世界';
+
+  @override
+  String get goalGraphToggleStarMap => '星图';
+
+  @override
+  String get goalGraphToggleGoal => '目标';
+
+  @override
+  String get goalGraphGapAnalysis => '差距分析';
+
+  @override
+  String get goalGraphCoverage => '覆盖率';
+
+  @override
   String get taskPausedPanelTitle => '暂停上下文';
 
   @override
@@ -28993,4 +29119,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskResumeFailed => '无法恢复任务，请重试';
+
+  @override
+  String get translationDemoTitle => '翻译演示';
+
+  @override
+  String get translationDemoHint => '长按下方文字即可翻译：';
 }
