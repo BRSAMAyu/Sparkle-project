@@ -11,6 +11,7 @@ import 'package:sparkle/features/community/presentation/l10n/community_accountab
 import 'package:sparkle/features/community/presentation/providers/accountability_hub_provider.dart';
 import 'package:sparkle/features/community/presentation/widgets/accountability_hub/commitment_card.dart';
 import 'package:sparkle/features/community/presentation/widgets/accountability_hub/partner_observation_control.dart';
+import 'package:sparkle/features/community/presentation/widgets/community_strategy_card.dart';
 
 class AccountabilityHubScreen extends ConsumerWidget {
   const AccountabilityHubScreen({super.key});
@@ -87,6 +88,8 @@ class AccountabilityHubScreen extends ConsumerWidget {
                   const SizedBox(height: 22),
                   _HelpSection(hub: hub),
                 ],
+                const SizedBox(height: 22),
+                _StrategySection(hub: hub),
                 const SizedBox(height: 22),
                 _SecondaryEntrySection(),
               ],
@@ -666,5 +669,79 @@ class _HelpRow extends StatelessWidget {
         ),
       ],
     );
+  }
+}
+
+class _StrategySection extends StatelessWidget {
+  const _StrategySection({required this.hub});
+
+  final CommunityAccountabilityHub hub;
+
+  @override
+  Widget build(BuildContext context) {
+    final strategies = _deriveStrategies(context);
+    if (strategies.isEmpty) return const SizedBox.shrink();
+    return _Section(
+      title: context.l10n.cahStrategies,
+      child: Column(
+        children: [
+          for (final s in strategies) ...[
+            CommunityStrategyCard(strategy: s),
+            if (s != strategies.last) const SizedBox(height: 10),
+          ],
+        ],
+      ),
+    );
+  }
+
+  List<CommunityStrategy> _deriveStrategies(BuildContext context) {
+    final l10n = context.l10n;
+    final strategies = <CommunityStrategy>[];
+
+    if (hub.myCommitments.isEmpty) {
+      strategies.add(CommunityStrategy(
+        title: l10n.cahStrategyCreateTitle,
+        description: l10n.cahStrategyCreateDesc,
+        strategyType: 'create_commitment',
+        icon: Icons.assignment_outlined,
+        actionLabel: l10n.cahStrategyCreateAction,
+        onAction: () => unawaited(context.push(CommunityRoutes.feed)),
+      ));
+    }
+
+    if (hub.partnerProgress.isEmpty) {
+      strategies.add(CommunityStrategy(
+        title: l10n.cahStrategyPartnerTitle,
+        description: l10n.cahStrategyPartnerDesc,
+        strategyType: 'find_partner',
+        icon: Icons.person_search_outlined,
+        actionLabel: l10n.cahStrategyPartnerAction,
+        onAction: () => unawaited(context.push(CommunityRoutes.friends)),
+      ));
+    }
+
+    if (hub.sharedGoals.isEmpty) {
+      strategies.add(CommunityStrategy(
+        title: l10n.cahStrategySharedGoalTitle,
+        description: l10n.cahStrategySharedGoalDesc,
+        strategyType: 'shared_goal',
+        icon: Icons.groups_outlined,
+        actionLabel: l10n.cahStrategySharedGoalAction,
+        onAction: () => unawaited(context.push(CommunityRoutes.groups)),
+      ));
+    }
+
+    if (hub.squadRisks.isNotEmpty) {
+      strategies.add(CommunityStrategy(
+        title: l10n.cahStrategySquadRiskTitle,
+        description: l10n.cahStrategySquadRiskDesc,
+        strategyType: 'squad_risk',
+        icon: Icons.health_and_safety_outlined,
+        actionLabel: l10n.cahStrategySquadRiskAction,
+        onAction: () => unawaited(context.push(CommunityRoutes.friends)),
+      ));
+    }
+
+    return strategies;
   }
 }
