@@ -89,7 +89,7 @@ class SprintReviewScreen extends ConsumerWidget {
                   title: context.l10n.sprintReviewNotes,
                 ),
                 const SizedBox(height: 8),
-                _ReviewNotesCard(planId: planId, ref: ref),
+                _ReviewNotesCard(planId: planId),
                 const SizedBox(height: 32),
                 _ActionButtons(planId: planId),
               ],
@@ -444,17 +444,16 @@ class _Insight {
   final String detail;
 }
 
-class _ReviewNotesCard extends StatefulWidget {
-  const _ReviewNotesCard({required this.planId, required this.ref});
+class _ReviewNotesCard extends ConsumerStatefulWidget {
+  const _ReviewNotesCard({required this.planId});
 
   final String planId;
-  final WidgetRef ref;
 
   @override
-  State<_ReviewNotesCard> createState() => _ReviewNotesCardState();
+  ConsumerState<_ReviewNotesCard> createState() => _ReviewNotesCardState();
 }
 
-class _ReviewNotesCardState extends State<_ReviewNotesCard> {
+class _ReviewNotesCardState extends ConsumerState<_ReviewNotesCard> {
   final _controller = TextEditingController();
   bool _loading = true;
   bool _saving = false;
@@ -538,7 +537,7 @@ class _ReviewNotesCardState extends State<_ReviewNotesCard> {
     if (!mounted) return;
     var notes = prefs.getString('$_keyPrefix${widget.planId}') ?? '';
     if (notes.isEmpty) {
-      final planState = widget.ref.read(planListProvider);
+      final planState = ref.read(planListProvider);
       final plan = planState.activePlans
           .where((p) => p.id == widget.planId)
           .firstOrNull;
@@ -557,15 +556,19 @@ class _ReviewNotesCardState extends State<_ReviewNotesCard> {
     final notes = _controller.text.trim();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('$_keyPrefix${widget.planId}', notes);
-    unawaited(
-      widget.ref
-          .read(planRepositoryProvider)
-          .saveSprintReviewNotes(widget.planId, notes),
-    );
+    final success = await ref
+        .read(planRepositoryProvider)
+        .saveSprintReviewNotes(widget.planId, notes);
     if (!mounted) return;
     setState(() => _saving = false);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(context.l10n.sprintNotesSaved)),
+      SnackBar(
+        content: Text(
+          success
+              ? context.l10n.sprintNotesSaved
+              : context.l10n.submitFailed,
+        ),
+      ),
     );
   }
 }

@@ -153,15 +153,16 @@ class PlanRepository {
     }
   }
 
-  Future<void> saveSprintReviewNotes(String planId, String notes) async {
-    if (DemoDataService.isDemoMode) return;
+  Future<bool> saveSprintReviewNotes(String planId, String notes) async {
+    if (DemoDataService.isDemoMode) return true;
     try {
       await _apiClient.put<dynamic>(
         ApiEndpoints.plan(planId),
         data: {'sprint_review_notes': notes},
       );
+      return true;
     } on DioException {
-      // Fall back to local SharedPreferences persistence
+      return false;
     }
   }
 
