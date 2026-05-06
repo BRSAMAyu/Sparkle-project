@@ -89,7 +89,10 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
     final isChinese = I18nService.instance.isChinese;
     final pursuersAsync = ref.watch(similarGoalPursuersProvider(goalId));
 
-    return pursuersAsync.when(
+    return Semantics(
+      container: true,
+      label: isChinese ? '同目标伙伴' : 'Similar goal pursuers',
+      child: pursuersAsync.when(
       data: (pursuers) {
         if (pursuers.isEmpty) return const SizedBox.shrink();
 
@@ -167,6 +170,7 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
       },
       loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
+      ),
     );
   }
 
