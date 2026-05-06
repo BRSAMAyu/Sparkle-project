@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class ForesightCard extends StatelessWidget {
   const ForesightCard({required this.hint, super.key});
@@ -13,7 +12,6 @@ class ForesightCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final value = hint?.value;
     final confidenceItems =
         value?.attractorConfidences ?? const <ForesightConfidenceItem>[];
@@ -44,11 +42,9 @@ class ForesightCard extends StatelessWidget {
               Text(
                 [
                   if ((value?.deviationCount ?? 0) > 0)
-                    (zh
-                        ? '偏离 ${value!.deviationCount} 个'
-                        : '${value!.deviationCount} deviations'),
+                    context.l10n.foresightDeviations(value!.deviationCount),
                   if (value?.generatedAt != null)
-                    DateFormat(zh ? 'M月d日 HH:mm' : 'MMM d, HH:mm')
+                    DateFormat(context.l10n.foresightDateFormat)
                         .format(value!.generatedAt!),
                 ].join(' · '),
                 style: DS.bodySmall.copyWith(color: DS.textSecondary),
@@ -64,7 +60,7 @@ class ForesightCard extends StatelessWidget {
                     .map(
                       (item) => Chip(
                         label: Text(
-                          '${_labelForDim(item.dim)} ${item.confidence.toStringAsFixed(2)}',
+                          '${_labelForDim(item.dim, context)} ${item.confidence.toStringAsFixed(2)}',
                         ),
                       ),
                     )
@@ -77,14 +73,14 @@ class ForesightCard extends StatelessWidget {
     );
   }
 
-  String _labelForDim(String dim) {
+  String _labelForDim(String dim, BuildContext context) {
     switch (dim) {
       case 'execution_stability':
-        return S.userStabilityScore;
+        return context.l10n.foresightStability;
       case 'schedule_fit':
-        return S.userRhythmFit;
+        return context.l10n.foresightRhythmFit;
       case 'overload_risk':
-        return S.userOverloadRisk;
+        return context.l10n.foresightOverloadRisk;
       default:
         return dim;
     }

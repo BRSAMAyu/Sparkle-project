@@ -53328,6 +53328,258 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'隐藏条目 {count} 条，未进入透明面板。'**
   String profTransHiddenItems(Object count);
+
+  /// No description provided for @settGrowthChronicleSaving.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在保存成长编年史可见性...'**
+  String get settGrowthChronicleSaving;
+
+  /// No description provided for @settGrowthChronicleHidden.
+  ///
+  /// In zh, this message translates to:
+  /// **'成长编年史已隐藏。'**
+  String get settGrowthChronicleHidden;
+
+  /// No description provided for @settGrowthChronicleVisible.
+  ///
+  /// In zh, this message translates to:
+  /// **'成长编年史已恢复显示。'**
+  String get settGrowthChronicleVisible;
+
+  /// No description provided for @settDataControlsError.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存失败，请稍后重试。'**
+  String get settDataControlsError;
+
+  /// No description provided for @settMemorySaving.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在保存记忆可见性...'**
+  String get settMemorySaving;
+
+  /// No description provided for @settMemoryHidden.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆入口已默认隐藏。'**
+  String get settMemoryHidden;
+
+  /// No description provided for @settMemoryVisible.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆入口已恢复显示。'**
+  String get settMemoryVisible;
+
+  /// No description provided for @settAccessibilityTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'无障碍与低负荷'**
+  String get settAccessibilityTitle;
+
+  /// No description provided for @settAccessibilitySubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'字体、对比度、屏幕阅读、触控、动效、TTS 与震动反馈'**
+  String get settAccessibilitySubtitle;
+
+  /// No description provided for @settAuroraPrefTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 沟通偏好'**
+  String get settAuroraPrefTitle;
+
+  /// No description provided for @settAuroraPrefSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'控制 Aurora 如何与你互动'**
+  String get settAuroraPrefSubtitle;
+
+  /// No description provided for @settAuroraAnalysisDepth.
+  ///
+  /// In zh, this message translates to:
+  /// **'分析深度'**
+  String get settAuroraAnalysisDepth;
+
+  /// No description provided for @settAuroraAnalysisLight.
+  ///
+  /// In zh, this message translates to:
+  /// **'少分析我'**
+  String get settAuroraAnalysisLight;
+
+  /// No description provided for @settAuroraAnalysisDeep.
+  ///
+  /// In zh, this message translates to:
+  /// **'多分析我'**
+  String get settAuroraAnalysisDeep;
+
+  /// No description provided for @settAuroraDirectness.
+  ///
+  /// In zh, this message translates to:
+  /// **'沟通方式'**
+  String get settAuroraDirectness;
+
+  /// No description provided for @settAuroraDirect.
+  ///
+  /// In zh, this message translates to:
+  /// **'直接安排我'**
+  String get settAuroraDirect;
+
+  /// No description provided for @settAuroraGuided.
+  ///
+  /// In zh, this message translates to:
+  /// **'引导我'**
+  String get settAuroraGuided;
+
+  /// No description provided for @settAuroraExplanationLevel.
+  ///
+  /// In zh, this message translates to:
+  /// **'解释详细程度'**
+  String get settAuroraExplanationLevel;
+
+  /// No description provided for @settAuroraExplanationDetailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'多解释原因'**
+  String get settAuroraExplanationDetailed;
+
+  /// No description provided for @settAuroraExplanationBrief.
+  ///
+  /// In zh, this message translates to:
+  /// **'简洁'**
+  String get settAuroraExplanationBrief;
+
+  /// No description provided for @settAuroraPressureStyle.
+  ///
+  /// In zh, this message translates to:
+  /// **'压力提醒风格'**
+  String get settAuroraPressureStyle;
+
+  /// No description provided for @settAuroraPressureGentle.
+  ///
+  /// In zh, this message translates to:
+  /// **'不用压力提醒'**
+  String get settAuroraPressureGentle;
+
+  /// No description provided for @settAuroraPressureMotivating.
+  ///
+  /// In zh, this message translates to:
+  /// **'可用压力'**
+  String get settAuroraPressureMotivating;
+
+  /// No description provided for @settAuroraPrefLoadFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载偏好失败'**
+  String get settAuroraPrefLoadFailed;
+
+  /// No description provided for @settDeleteDataTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除我的数据'**
+  String get settDeleteDataTitle;
+
+  /// No description provided for @settDeleteDataBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'接下来会进入账号删除确认流程。继续前，你可以先导出数据；删除后个人资料、偏好和历史记录将不可恢复。'**
+  String get settDeleteDataBody;
+
+  /// No description provided for @settDeleteDataContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续'**
+  String get settDeleteDataContinue;
+
+  /// No description provided for @settEmotionAdaptiveTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'情绪适应模式'**
+  String get settEmotionAdaptiveTitle;
+
+  /// No description provided for @settEmotionAdaptiveSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'根据疲劳、压力和认知负荷调低刺激，或手动固定。'**
+  String get settEmotionAdaptiveSubtitle;
+
+  /// No description provided for @settEmotionAdaptiveAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动'**
+  String get settEmotionAdaptiveAuto;
+
+  /// No description provided for @settEmotionAdaptiveLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'低刺激'**
+  String get settEmotionAdaptiveLow;
+
+  /// No description provided for @settEmotionAdaptiveNormal.
+  ///
+  /// In zh, this message translates to:
+  /// **'标准'**
+  String get settEmotionAdaptiveNormal;
+
+  /// No description provided for @settEmotionCurrentLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前：低刺激界面'**
+  String get settEmotionCurrentLow;
+
+  /// No description provided for @settEmotionCurrentNormal.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前：标准界面'**
+  String get settEmotionCurrentNormal;
+
+  /// No description provided for @settEmotionDescLow.
+  ///
+  /// In zh, this message translates to:
+  /// **'字体略放大、动画减少、卡片层级更轻、挑战徽章会收起。'**
+  String get settEmotionDescLow;
+
+  /// No description provided for @settEmotionDescNormal.
+  ///
+  /// In zh, this message translates to:
+  /// **'界面保持常规动效、色温和信息密度。'**
+  String get settEmotionDescNormal;
+
+  /// No description provided for @foresightStability.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行稳定性'**
+  String get foresightStability;
+
+  /// No description provided for @foresightRhythmFit.
+  ///
+  /// In zh, this message translates to:
+  /// **'日程匹配度'**
+  String get foresightRhythmFit;
+
+  /// No description provided for @foresightOverloadRisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'过载风险'**
+  String get foresightOverloadRisk;
+
+  /// No description provided for @engageLastActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近 {date}'**
+  String engageLastActive(Object date);
+
+  /// No description provided for @foresightDateFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'MM/dd HH:mm'**
+  String get foresightDateFormat;
+
+  /// No description provided for @foresightDeviations.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 次偏离'**
+  String foresightDeviations(Object count);
 }
 
 class _AppLocalizationsDelegate
