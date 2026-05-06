@@ -550,8 +550,11 @@ class _TaskCardState extends ConsumerState<TaskCard> {
                                         const SizedBox(height: 10),
                                         PausedTaskStatusPanel(
                                           task: widget.task,
-                                          onResume:
-                                              widget.onResume ?? widget.onStart,
+                                          onResume: () async {
+                                            (widget.onResume ?? widget.onStart)
+                                                ?.call();
+                                            return true;
+                                          },
                                           onPause: widget.onPause,
                                         ),
                                       ],

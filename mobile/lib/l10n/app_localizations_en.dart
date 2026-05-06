@@ -30230,4 +30230,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sendMessageLabel => 'Send Message';
+
+  @override
+  String get taskResumeFailed => 'Could not resume task, try again';
 }

@@ -28990,4 +28990,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sendMessageLabel => '发送消息';
+
+  @override
+  String get taskResumeFailed => '无法恢复任务，请重试';
 }

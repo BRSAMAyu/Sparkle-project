@@ -52715,6 +52715,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'发送消息'**
   String get sendMessageLabel;
+
+  /// No description provided for @taskResumeFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'无法恢复任务，请重试'**
+  String get taskResumeFailed;
 }
 
 class _AppLocalizationsDelegate

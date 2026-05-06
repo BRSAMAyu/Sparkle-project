@@ -985,12 +985,15 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
                                 const SizedBox(height: DS.spacing12),
                                 PausedTaskBanner(
                                   task: activeTask,
-                                  onResume: () {
-                                    unawaited(
-                                      ref
+                                  onResume: () async {
+                                    try {
+                                      await ref
                                           .read(taskListProvider.notifier)
-                                          .resumeTask(activeTask.id),
-                                    );
+                                          .resumeTask(activeTask.id);
+                                      return true;
+                                    } catch (_) {
+                                      return false;
+                                    }
                                   },
                                 ),
                               ],

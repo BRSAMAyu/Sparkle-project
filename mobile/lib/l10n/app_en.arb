@@ -11788,5 +11788,6 @@
   "dataUsagePrivacyTitle": "Your Data & Privacy",
   "growthPlansTitle": "Growth Plans",
   "newPlanLabel": "New Plan",
-  "sendMessageLabel": "Send Message"
+  "sendMessageLabel": "Send Message",
+  "taskResumeFailed": "Could not resume task, try again"
 }

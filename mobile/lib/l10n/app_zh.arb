@@ -11789,5 +11789,6 @@
   "dataUsagePrivacyTitle": "你的数据与隐私",
   "growthPlansTitle": "成长计划",
   "newPlanLabel": "新建计划",
-  "sendMessageLabel": "发送消息"
+  "sendMessageLabel": "发送消息",
+  "taskResumeFailed": "无法恢复任务，请重试"
 }

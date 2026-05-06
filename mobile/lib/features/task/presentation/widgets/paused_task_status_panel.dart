@@ -19,7 +19,7 @@ class PausedTaskBanner extends StatelessWidget {
   });
 
   final TaskModel task;
-  final VoidCallback? onResume;
+  final Future<bool> Function()? onResume;
   final VoidCallback? onUndoResume;
   final bool showReasonAction;
 
@@ -129,19 +129,39 @@ class PausedTaskBanner extends StatelessWidget {
     );
   }
 
-  void _handleResume(BuildContext context) {
-    onResume?.call();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(context.l10n.taskResumeQueued),
-        action: onUndoResume == null
-            ? null
-            : SnackBarAction(
-                label: context.l10n.chatUndo,
-                onPressed: onUndoResume!,
-              ),
-      ),
-    );
+  Future<void> _handleResume(BuildContext context) async {
+    try {
+      final ok = await onResume?.call();
+      if ((ok ?? false) && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.taskResumeQueued),
+            action: onUndoResume == null
+                ? null
+                : SnackBarAction(
+                    label: context.l10n.chatUndo,
+                    onPressed: onUndoResume!,
+                  ),
+          ),
+        );
+      } else if (!(ok ?? false) && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.taskResumeFailed),
+            backgroundColor: DS.error,
+          ),
+        );
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(context.l10n.taskResumeFailed),
+            backgroundColor: DS.error,
+          ),
+        );
+      }
+    }
   }
 }
 
@@ -154,7 +174,7 @@ class PausedTaskStatusPanel extends StatelessWidget {
   });
 
   final TaskModel task;
-  final VoidCallback? onResume;
+  final Future<bool> Function()? onResume;
   final VoidCallback? onPause;
 
   @override
@@ -425,40 +445,48 @@ Future<bool?> showRestoreTaskDialog({
 
   return showDialog<bool>(
     context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text(l10n.taskRestoreDialogTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(l10n.taskRestoreDialogBody(task.title)),
-          const SizedBox(height: 12),
-          Text(
-            l10n.taskRestoreDialogNextStepLabel,
-            style: Theme.of(dialogContext).textTheme.titleSmall,
+    builder: (dialogContext) => Semantics(
+      container: true,
+      explicitChildNodes: true,
+      label: l10n.taskRestoreDialogTitle,
+      child: AlertDialog(
+        title: Text(l10n.taskRestoreDialogTitle),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.taskRestoreDialogBody(task.title)),
+            const SizedBox(height: 12),
+            Text(
+              l10n.taskRestoreDialogNextStepLabel,
+              style: Theme.of(dialogContext).textTheme.titleSmall,
+            ),
+            const SizedBox(height: 6),
+            Semantics(
+              label: '${l10n.taskRestoreDialogNextStepLabel}: $nextStep',
+              child: Text(nextStep),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(l10n.cancel),
           ),
-          const SizedBox(height: 6),
-          Text(nextStep),
+          FilledButton(
+            onPressed: onConfirm == null
+                ? null
+                : () {
+                    onConfirm();
+                    Navigator.of(dialogContext).pop(true);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.taskResumeQueued)),
+                    );
+                  },
+            child: Text(l10n.taskActionResume),
+          ),
         ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: Text(l10n.cancel),
-        ),
-        FilledButton(
-          onPressed: onConfirm == null
-              ? null
-              : () {
-                  onConfirm();
-                  Navigator.of(dialogContext).pop(true);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.taskResumeQueued)),
-                  );
-                },
-          child: Text(l10n.taskActionResume),
-        ),
-      ],
     ),
   );
 }
