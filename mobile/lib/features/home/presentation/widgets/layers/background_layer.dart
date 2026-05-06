@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/theme/performance_tier.dart';
+import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/shared/entities/visual_element_model.dart';
 
 /// 背景层 - 渲染用户选择的背景
@@ -89,6 +91,10 @@ class BackgroundLayer extends StatelessWidget {
     final neonColors = config['neon_colors'] as List<dynamic>?;
     final visibilityWeight = element.visibilityWeight;
 
+    final tier = PerformanceService.instance.currentTier.value;
+    final enableHeavyEffects = tier == PerformanceTier.ultra ||
+        tier == PerformanceTier.high;
+
     return Stack(
       children: [
         // 基础渐变背景
@@ -99,16 +105,22 @@ class BackgroundLayer extends StatelessWidget {
             ),
           ),
 
-        // 极光效果
-        if (auroraColors != null && auroraColors.isNotEmpty)
+        // 极光效果（仅ultra/high）
+        if (enableHeavyEffects &&
+            auroraColors != null &&
+            auroraColors.isNotEmpty)
           _buildAuroraEffect(auroraColors),
 
-        // 星云效果
-        if (nebulaColors != null && nebulaColors.isNotEmpty)
+        // 星云效果（仅ultra/high）
+        if (enableHeavyEffects &&
+            nebulaColors != null &&
+            nebulaColors.isNotEmpty)
           _buildNebulaEffect(nebulaColors),
 
-        // 霓虹效果
-        if (neonColors != null && neonColors.isNotEmpty)
+        // 霓虹效果（仅ultra/high）
+        if (enableHeavyEffects &&
+            neonColors != null &&
+            neonColors.isNotEmpty)
           _buildNeonEffect(neonColors),
 
         // 纹理叠加

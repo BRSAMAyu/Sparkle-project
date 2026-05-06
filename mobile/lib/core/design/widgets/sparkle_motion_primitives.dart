@@ -477,6 +477,8 @@ class _SparkleGalaxyArrivalOverlayState
     extends State<SparkleGalaxyArrivalOverlay>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  List<Offset>? _cachedTargets;
+  Size? _cachedSize;
 
   @override
   void initState() {
@@ -505,8 +507,13 @@ class _SparkleGalaxyArrivalOverlayState
         child: LayoutBuilder(
           builder: (context, constraints) {
             final size = Size(constraints.maxWidth, constraints.maxHeight);
+            // Cache targets across rebuilds when size is unchanged
+            if (_cachedSize != size) {
+              _cachedTargets = _buildTargets(size, widget.labels.length);
+              _cachedSize = size;
+            }
+            final targets = _cachedTargets!;
             final source = Offset(size.width / 2, size.height - 88);
-            final targets = _buildTargets(size, widget.labels.length);
             return AnimatedBuilder(
               animation: _controller,
               builder: (context, child) {
