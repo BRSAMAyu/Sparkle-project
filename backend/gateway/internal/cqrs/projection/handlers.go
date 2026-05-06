@@ -17,6 +17,25 @@ import (
 	"go.uber.org/zap"
 )
 
+// scanKeys uses SCAN instead of KEYS to avoid blocking the Redis event loop.
+func scanKeys(ctx context.Context, rdb *redis.Client, pattern string) ([]string, error) {
+	var keys []string
+	var cursor uint64
+	for {
+		var batch []string
+		var err error
+		batch, cursor, err = rdb.Scan(ctx, cursor, pattern, 100).Result()
+		if err != nil {
+			return nil, err
+		}
+		keys = append(keys, batch...)
+		if cursor == 0 {
+			break
+		}
+	}
+	return keys, nil
+}
+
 // CommunityProjectionHandler handles community events for projection rebuilding.
 type CommunityProjectionHandler struct {
 	redis   *redis.Client
@@ -66,7 +85,7 @@ func (h *CommunityProjectionHandler) HandleEvent(ctx context.Context, eventData 
 // Reset clears the projection state.
 func (h *CommunityProjectionHandler) Reset(ctx context.Context) error {
 	// Delete all community-related keys from Redis
-	keys, err := h.redis.Keys(ctx, "post:view:*").Result()
+	keys, err := scanKeys(ctx, h.redis, "post:view:*")
 	if err != nil {
 		return fmt.Errorf("get post keys: %w", err)
 	}
@@ -313,9 +332,9 @@ func (h *TaskProjectionHandler) Reset(ctx context.Context) error {
 	keysPattern := []string{"task:view:*", "user:tasks:*", "user:tasks:pending:*", "user:tasks:in_progress:*", "user:tasks:completed:*", "user:task:stats:*"}
 
 	for _, pattern := range keysPattern {
-		keys, err := h.redis.Keys(ctx, pattern).Result()
+		keys, err := scanKeys(ctx, h.redis, pattern)
 		if err != nil {
-			return fmt.Errorf("get keys for %s: %w", pattern, err)
+			return fmt.Errorf("scan keys for %s: %w", pattern, err)
 		}
 		if len(keys) > 0 {
 			if err := h.redis.Del(ctx, keys...).Err(); err != nil {
@@ -614,9 +633,9 @@ func (h *GalaxyProjectionHandler) Reset(ctx context.Context) error {
 	keysPattern := []string{"galaxy:node:*", "galaxy:nodes:*", "galaxy:subject:*", "galaxy:user:*", "galaxy:relation:*"}
 
 	for _, pattern := range keysPattern {
-		keys, err := h.redis.Keys(ctx, pattern).Result()
+		keys, err := scanKeys(ctx, h.redis, pattern)
 		if err != nil {
-			return fmt.Errorf("get keys for %s: %w", pattern, err)
+			return fmt.Errorf("scan keys for %s: %w", pattern, err)
 		}
 		if len(keys) > 0 {
 			if err := h.redis.Del(ctx, keys...).Err(); err != nil {

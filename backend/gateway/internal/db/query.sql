@@ -36,7 +36,8 @@ RETURNING id, created_at;
 SELECT * FROM chat_messages
 WHERE session_id = $1
 AND created_at > $2
-ORDER BY created_at ASC;
+ORDER BY created_at ASC
+LIMIT 500;
 
 -- name: GetMessageByID :one
 SELECT * FROM chat_messages
