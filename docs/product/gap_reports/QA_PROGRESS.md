@@ -86,7 +86,7 @@
 | QA-P2-25 | i18n → ARB: Memory feature (9 ternaries) | Flutter | M | ⬜ pending | — | — | memory/ inline isChinese |
 | QA-P2-26 | i18n → ARB: Task feature (11 ternaries) | Flutter | M | ⬜ pending | — | — | task/ inline isChinese |
 | QA-P2-27 | Migrate ~110 _t() usages to ARB | Flutter | L | ⬜ pending | — | — | ~15 files |
-| QA-P2-28 | DS tokens: Achievement colors (12) | Flutter | M | 🔵 in-progress | claude-B | — | milestone_celebration_screen.dart |
+| QA-P2-28 | DS tokens: Achievement colors (12) | Flutter | M | ⏭️ skip | — | — | Screen-specific dark theme colors, not shared across feature; tokenizing single-screen colors = premature abstraction |
 | QA-P2-29 | DS tokens: Home colors (7) | Flutter | M | ⬜ pending | — | — | background_layer.dart |
 | QA-P2-30 | DS tokens: User colors (16) | Flutter | M | ⬜ pending | — | — | profile_screen.dart |
 | QA-P2-31 | DS tokens: Plan colors (20) | Flutter | M | ⬜ pending | — | — | learning_portfolio_screen.dart |
