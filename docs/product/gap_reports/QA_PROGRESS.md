@@ -61,7 +61,7 @@
 |----|-------|-------|--------|--------|-----------|--------|------|
 | QA-P2-1 | Semantics: UnderstandingSnapshotCard | Flutter | S | ✅ done | — | b463da671 | Add root Semantics wrapper |
 | QA-P2-2 | Semantics: ContextReceiptBar | Flutter | S | ⏭️ skip | — | — | Already has Semantics wrapper: context_receipt_bar.dart:34-39 |
-| QA-P2-3 | Semantics: SimilarGoalPursuersCard | Flutter | S | ⬜ pending | — | — | Add Semantics wrapper |
+| QA-P2-3 | Semantics: SimilarGoalPursuersCard | Flutter | S | 🔵 in-progress | claude-B | — | Add Semantics wrapper |
 | QA-P2-4 | Semantics: GoalValueChip | Flutter | S | ⬜ pending | — | — | Add semanticLabel |
 | QA-P2-5 | Semantics: TaskRestoreDialog | Flutter | S | ⬜ pending | — | — | Add semantic labels |
 | QA-P2-6 | Semantics: SprintReviewScreen | Flutter | M | ⬜ pending | — | — | All interactive sections |
