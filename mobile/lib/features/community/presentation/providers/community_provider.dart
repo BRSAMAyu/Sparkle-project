@@ -1276,6 +1276,8 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 
   void setQuote(MessageInfo? message) {
     _quotedMessage = message;
+    // Re-emit current state so UI rebuilds with updated quote
+    state = AsyncValue.data(List.of(state.valueOrNull ?? []));
   }
 
   Future<void> sendMessage({

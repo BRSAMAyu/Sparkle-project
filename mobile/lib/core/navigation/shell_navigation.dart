@@ -266,32 +266,35 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   /// Builds a navigation icon with an unread count badge
   Widget _buildBadgedIcon(IconData icon, int count) {
     if (count == 0) return Icon(icon);
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Icon(icon),
-        Positioned(
-          right: -8,
-          top: -4,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-            decoration: BoxDecoration(
-              color: DS.error,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-            child: Text(
-              count > 99 ? '99+' : '$count',
-              style: TextStyle(
-                color: DS.brandPrimaryConst,
-                fontSize: 10,
-                fontWeight: DS.fontWeightBold,
+    return Semantics(
+      label: '$count unread notifications',
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(icon),
+          Positioned(
+            right: -8,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+              decoration: BoxDecoration(
+                color: DS.error,
+                borderRadius: BorderRadius.circular(8),
               ),
-              textAlign: TextAlign.center,
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              child: Text(
+                count > 99 ? '99+' : '$count',
+                style: TextStyle(
+                  color: DS.brandPrimaryConst,
+                  fontSize: 10,
+                  fontWeight: DS.fontWeightBold,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -325,7 +328,8 @@ class _ShellBranchTransition extends StatelessWidget {
       curve: Curves.easeOutCubic,
       child: child,
       builder: (context, value, child) {
-        final slide = (1 - value) * (entersChat ? 18 : -10);
+        final scale = MediaQuery.of(context).devicePixelRatio;
+        final slide = (1 - value) * (entersChat ? 18 : -10) / scale.clamp(1.0, 4.0);
         return Opacity(
           opacity: value,
           child: Transform.translate(
