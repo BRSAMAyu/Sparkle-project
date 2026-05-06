@@ -31664,4 +31664,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatSemanticsScreen => 'Chat screen';
+
+  @override
+  String get streakQualityRecoveryScore => 'Recovery';
+
+  @override
+  String get streakQualitySuggestedAction => 'Suggested action';
 }

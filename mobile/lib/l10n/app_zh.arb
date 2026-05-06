@@ -13572,5 +13572,7 @@
     "envelopeValueYes": "是",
     "envelopeValueNo": "否",
     "taskDetailSemanticsTitle": "任务详情",
-    "chatSemanticsScreen": "聊天界面"
+    "chatSemanticsScreen": "聊天界面",
+    "streakQualityRecoveryScore": "恢复力",
+    "streakQualitySuggestedAction": "建议行动"
 }

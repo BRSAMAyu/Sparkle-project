@@ -13551,5 +13551,7 @@
     "envelopeValueYes": "yes",
     "envelopeValueNo": "no",
     "taskDetailSemanticsTitle": "Task detail",
-    "chatSemanticsScreen": "Chat screen"
+    "chatSemanticsScreen": "Chat screen",
+    "streakQualityRecoveryScore": "Recovery",
+    "streakQualitySuggestedAction": "Suggested action"
 }

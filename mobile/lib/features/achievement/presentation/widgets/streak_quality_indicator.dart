@@ -308,6 +308,12 @@ class _BreakdownGrid extends StatelessWidget {
               label: l10n.streakQualityPlanConsistency,
               value: '${(quality.planConsistency * 100).round()}%',
             ),
+            _BreakdownTile(
+              width: itemWidth,
+              icon: Icons.healing_outlined,
+              label: l10n.streakQualityRecoveryScore,
+              value: '${(quality.recoveryScore * 100).round()}%',
+            ),
           ],
         );
       },
@@ -475,6 +481,25 @@ class _EvidenceCard extends StatelessWidget {
                   color: scheme.onTertiaryContainer,
                 ),
           ),
+          if (trigger.suggestedMessage.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.lightbulb_outline, size: 16, color: scheme.onTertiaryContainer),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    trigger.suggestedMessage,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: scheme.onTertiaryContainer,
+                          fontStyle: FontStyle.italic,
+                        ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

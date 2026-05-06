@@ -55188,6 +55188,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'聊天界面'**
   String get chatSemanticsScreen;
+
+  /// No description provided for @streakQualityRecoveryScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复力'**
+  String get streakQualityRecoveryScore;
+
+  /// No description provided for @streakQualitySuggestedAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议行动'**
+  String get streakQualitySuggestedAction;
 }
 
 class _AppLocalizationsDelegate

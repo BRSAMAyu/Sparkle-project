@@ -30361,4 +30361,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatSemanticsScreen => '聊天界面';
+
+  @override
+  String get streakQualityRecoveryScore => '恢复力';
+
+  @override
+  String get streakQualitySuggestedAction => '建议行动';
 }
