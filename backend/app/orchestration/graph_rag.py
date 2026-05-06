@@ -1994,6 +1994,7 @@ Return ONLY a JSON array of entity names."""
         route_intent: str | None = None,
         include_group_documents: bool = False,
         group_ids: list[str] | None = None,
+        retrieval_directive: dict[str, Any] | None = None,
     ) -> GraphRAGResult:
         """
         GraphRAG 主检索流程
@@ -2003,6 +2004,7 @@ Return ONLY a JSON array of entity names."""
             user_id: 用户ID
             depth: 图搜索深度
             enable_trace: 是否启用检索追踪（用于可视化）
+            retrieval_directive: Spine RetrievalDirective (must_load/may_load/do_not_load/pollution_guard/token_budget)
 
         Returns:
             GraphRAGResult
