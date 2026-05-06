@@ -75,7 +75,7 @@
 | QA-P2-14 | Clean orphaned vocabulary providers | Flutter | S | ✅ done | — | f1dc08d49 | Removed 4 unused providers |
 | QA-P2-15 | Clean orphaned shop providers | Flutter | S | ✅ done | — | 06fcc0361 | Remove 7 unused |
 | QA-P2-16 | i18n → ARB: Insights feature (36 ternaries) | Flutter | L | 🔵 in-progress | claude-A | — | insights/ inline isChinese |
-| QA-P2-17 | i18n → ARB: User feature (11 ternaries) | Flutter | M | 🔵 in-progress | claude-B | — | user/ inline isChinese |
+| QA-P2-17 | i18n → ARB: User feature (11 ternaries) | Flutter | M | ⬜ pending | — | — | user/ inline isChinese |
 | QA-P2-18 | i18n → ARB: Settings feature (15 ternaries) | Flutter | M | ⬜ pending | — | — | settings/ inline isChinese |
 | QA-P2-19 | i18n → ARB: Home feature (10 ternaries) | Flutter | M | ⬜ pending | — | — | home/ inline isChinese |
 | QA-P2-20 | i18n → ARB: Plan feature (8 ternaries) | Flutter | M | ⬜ pending | — | — | plan/ inline isChinese |
@@ -86,7 +86,7 @@
 | QA-P2-25 | i18n → ARB: Memory feature (9 ternaries) | Flutter | M | ⬜ pending | — | — | memory/ inline isChinese |
 | QA-P2-26 | i18n → ARB: Task feature (11 ternaries) | Flutter | M | ⬜ pending | — | — | task/ inline isChinese |
 | QA-P2-27 | Migrate ~110 _t() usages to ARB | Flutter | L | ⬜ pending | — | — | ~15 files |
-| QA-P2-28 | DS tokens: Achievement colors (12) | Flutter | M | ⬜ pending | — | — | milestone_celebration_screen.dart |
+| QA-P2-28 | DS tokens: Achievement colors (12) | Flutter | M | 🔵 in-progress | claude-B | — | milestone_celebration_screen.dart |
 | QA-P2-29 | DS tokens: Home colors (7) | Flutter | M | ⬜ pending | — | — | background_layer.dart |
 | QA-P2-30 | DS tokens: User colors (16) | Flutter | M | ⬜ pending | — | — | profile_screen.dart |
 | QA-P2-31 | DS tokens: Plan colors (20) | Flutter | M | ⬜ pending | — | — | learning_portfolio_screen.dart |
