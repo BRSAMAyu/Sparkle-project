@@ -111,7 +111,7 @@
 | QA-P3-2 | _a11yCopy helper → ARB | Flutter | M | ⬜ pending | — | — | accessibility settings |
 | QA-P3-3 | Strategy effectiveness: SprintReview | Flutter | L | ⬜ pending | — | — | Per-strategy outcome display — needs spec, feature addition not bug fix |
 | QA-P3-4 | Tap target padding for undersized icons | Flutter | M | ✅ done | — | e1e999cd7 | 48px hit area for 20-36px icons |
-| QA-P3-5 | Audit fontSize for text scaling | Flutter | L | ⬜ pending | — | — | 719 fontSize overrides |
+| QA-P3-5 | Audit fontSize for text scaling | Flutter | L | 🔵 in-progress | claude-B | — | 719 fontSize overrides |
 
 ## Summary
 
