@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
-import 'package:sparkle/features/goal/data/models/goal_creation_models.dart';
+import 'package:sparkle/features/goal/data/models/goal_intent_models.dart';
 
 /// Phase-1 Entry Wire — renders the server's intent analysis as a card the
 /// user can confirm, refine, or reject. Always includes a "都不对，我解释一下"
