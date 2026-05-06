@@ -24,7 +24,7 @@ var sanitizedErrorResponsesTotal = promauto.NewCounterVec(prometheus.CounterOpts
 // error text for local debugging.
 func isDevelopmentModeForErrors() bool {
 	env := strings.ToLower(os.Getenv("ENVIRONMENT"))
-	return env == "" || env == "dev" || env == "development"
+	return env == "dev" || env == "development"
 }
 
 func sanitizeErrorResponse(c *gin.Context, statusCode int, err error, internalMsg string) {

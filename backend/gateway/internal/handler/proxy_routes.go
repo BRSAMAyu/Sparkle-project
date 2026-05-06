@@ -689,15 +689,11 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 
 	// ==================== Client Telemetry Routes ====================
 	clientTelemetry := api.Group("/client-telemetry")
+	clientTelemetry.Use(authMiddleware)
 	{
 		clientTelemetry.POST("/events", h.proxyWithHeaders)
 		clientTelemetry.POST("/events/batch", h.proxyWithHeaders)
-	}
-
-	clientTelemetryProtected := api.Group("/client-telemetry")
-	clientTelemetryProtected.Use(authMiddleware)
-	{
-		clientTelemetryProtected.GET("/summary", h.proxyWithHeaders)
+		clientTelemetry.GET("/summary", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered client-telemetry proxy routes")
 

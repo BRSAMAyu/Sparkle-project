@@ -446,10 +446,12 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 			logger.Warn("Failed to set trusted proxies, using defaults", zap.Error(err))
 		}
 	} else if cfg.IsProduction() {
-		logger.Warn("TRUSTED_PROXIES not set in production — X-Forwarded-For spoofing possible. " +
+		logger.Fatal("TRUSTED_PROXIES not set in production. " +
 			"Set TRUSTED_PROXIES to your load balancer IP(s).")
 	}
-	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	if cfg.IsDevelopment() {
+		r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	}
 	r.Use(otelgin.Middleware("sparkle-gateway"))
 	r.Use(middleware.I18n())
 	r.Use(middleware.RequestContextMiddleware())
@@ -579,7 +581,9 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	resilienceCfg := middleware.DefaultNetworkResilienceConfig()
 	r.Use(middleware.NetworkResilienceMiddleware(resilienceCfg))
 
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	if cfg.IsDevelopment() {
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	// route-tier: internal
 	admin := r.Group("/admin", middleware.AdminAuthMiddleware(cfg), adminRateLimit)
