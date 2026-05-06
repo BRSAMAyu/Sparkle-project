@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/error_widget.dart';
@@ -180,7 +181,9 @@ class _TaskDetailView extends ConsumerWidget {
     );
   }
 
-  Widget _buildNoteSection(BuildContext context) => GraphiteCardSurface(
+  Widget _buildNoteSection(BuildContext context) => Semantics(
+        label: context.l10n.taskDetailNoteSection,
+        child: GraphiteCardSurface(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -206,6 +209,7 @@ class _TaskDetailView extends ConsumerWidget {
             ),
           ],
         ),
+      ),
       );
 
   Widget _buildSubtaskSection(BuildContext context, WidgetRef ref) {
@@ -215,43 +219,46 @@ class _TaskDetailView extends ConsumerWidget {
       return const SizedBox.shrink();
     }
 
-    return GraphiteCardSurface(
-      padding: EdgeInsets.zero,
-      child: ExpansionTile(
-        initiallyExpanded: true,
-        shape: const Border(),
-        tilePadding: const EdgeInsets.symmetric(
-          horizontal: DS.spacing16,
-          vertical: DS.spacing12,
-        ),
-        title: Row(
+    return Semantics(
+      label: context.l10n.taskDetailSubtasks(
+          subtaskState.completed, subtaskState.total),
+      child: GraphiteCardSurface(
+        padding: EdgeInsets.zero,
+        child: ExpansionTile(
+          initiallyExpanded: true,
+          shape: const Border(),
+          tilePadding: const EdgeInsets.symmetric(
+            horizontal: DS.spacing16,
+            vertical: DS.spacing12,
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: DS.surfaceSecondary,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: DS.borderSubtle),
+                ),
+                child: Icon(
+                  Icons.checklist_rounded,
+                  color: DS.primaryBase,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: DS.spacing12),
+              Expanded(
+                child: Text(
+                  context.l10n.taskDetailSubtasks(
+                      subtaskState.completed, subtaskState.total),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                      ),
+                ),
+              ),
+            ],
+          ),
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: DS.surfaceSecondary,
-                shape: BoxShape.circle,
-                border: Border.all(color: DS.borderSubtle),
-              ),
-              child: Icon(
-                Icons.checklist_rounded,
-                color: DS.primaryBase,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: DS.spacing12),
-            Expanded(
-              child: Text(
-                context.l10n.taskDetailSubtasks(
-                    subtaskState.completed, subtaskState.total),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: DS.fontWeightBold,
-                    ),
-              ),
-            ),
-          ],
-        ),
-        children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(
               DS.spacing16,
@@ -260,7 +267,10 @@ class _TaskDetailView extends ConsumerWidget {
               DS.spacing16,
             ),
             child: subtaskState.isLoading && subtaskState.total == 0
-                ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                ? const Padding(
+                    padding: EdgeInsets.all(DS.spacing16),
+                    child: SparkleSkeleton(height: 40, borderRadius: 8),
+                  )
                 : subtaskState.error != null && subtaskState.total == 0
                     ? Text(
                         context.l10n.taskDetailSubtaskLoadFailed(
@@ -277,6 +287,7 @@ class _TaskDetailView extends ConsumerWidget {
                       ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -551,9 +562,11 @@ class _TaskDetailView extends ConsumerWidget {
         ? null
         : ref.watch(planDetailProvider(task.planId!));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
+    return Semantics(
+      container: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
         if (planAsync != null) ...[
           _buildPlanContextCard(context, planAsync),
           const SizedBox(height: DS.spacing12),
@@ -598,6 +611,7 @@ class _TaskDetailView extends ConsumerWidget {
           ),
         ],
       ],
+      ),
     );
   }
 
@@ -662,7 +676,7 @@ class _TaskDetailView extends ConsumerWidget {
               const SizedBox(
                 width: 18,
                 height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: SparkleSkeleton(width: 18, height: 18, borderRadius: 4),
               ),
               const SizedBox(width: DS.spacing12),
               Text(
@@ -677,7 +691,9 @@ class _TaskDetailView extends ConsumerWidget {
         error: (_, __) => const CompactErrorCard(),
       );
 
-  Widget _buildGuideSection(BuildContext context) => Container(
+  Widget _buildGuideSection(BuildContext context) => Semantics(
+        label: context.l10n.taskGuideTitle,
+        child: Container(
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
           color: DS.surfaceSecondary,
@@ -692,6 +708,7 @@ class _TaskDetailView extends ConsumerWidget {
           linkColor: DS.primaryBase,
           contentRole: SparkleMarkdownRole.taskGuide,
         ),
+      ),
       );
 
   String _taskTypeLabel(BuildContext context, TaskType type) {
@@ -790,6 +807,7 @@ class _InfoTileCardState extends State<_InfoTileCard>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
+  bool _reduceMotion = false;
 
   @override
   void initState() {
@@ -804,79 +822,88 @@ class _InfoTileCardState extends State<_InfoTileCard>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _reduceMotion = context.reduceMotion;
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTapDown: (_) => _controller.forward(),
-        onTapUp: (_) => _controller.reverse(),
-        onTapCancel: () => _controller.reverse(),
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: MaterialStyler(
-            material: AppMaterials.ceramic(context).copyWith(
-              // Inject the gradient tint into the ceramic material
-              backgroundColor:
-                  widget.gradient.colors.first.withValues(alpha: 0.1),
-              borderColor: widget.gradient.colors.first.withValues(alpha: 0.3),
-            ),
-            borderRadius: DS.borderRadius12,
-            padding: const EdgeInsets.all(DS.spacing16),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(DS.spacing10),
-                  decoration: BoxDecoration(
-                    gradient: widget.gradient,
-                    borderRadius: DS.borderRadius8,
-                    boxShadow: [
-                      BoxShadow(
-                        color:
-                            widget.gradient.colors.first.withValues(alpha: 0.3),
-                        blurRadius: DS.spacing8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    widget.icon,
-                    color: DS.brandPrimaryConst,
-                    size: DS.iconSizeSm,
-                  ),
+  Widget build(BuildContext context) {
+    final content = MaterialStyler(
+      material: AppMaterials.ceramic(context).copyWith(
+        backgroundColor: widget.gradient.colors.first.withValues(alpha: 0.1),
+        borderColor: widget.gradient.colors.first.withValues(alpha: 0.3),
+      ),
+      borderRadius: DS.borderRadius12,
+      padding: const EdgeInsets.all(DS.spacing16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(DS.spacing10),
+            decoration: BoxDecoration(
+              gradient: widget.gradient,
+              borderRadius: DS.borderRadius8,
+              boxShadow: [
+                BoxShadow(
+                  color: widget.gradient.colors.first.withValues(alpha: 0.3),
+                  blurRadius: DS.spacing8,
+                  offset: const Offset(0, 2),
                 ),
-                const SizedBox(width: DS.spacing16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.title,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: DS.neutral600,
-                              fontWeight: DS.fontWeightMedium,
-                              letterSpacing: 0.5,
-                            ),
+              ],
+            ),
+            child: Icon(
+              widget.icon,
+              color: DS.brandPrimaryConst,
+              size: DS.iconSizeSm,
+            ),
+          ),
+          const SizedBox(width: DS.spacing16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.title,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: DS.neutral600,
+                        fontWeight: DS.fontWeightMedium,
+                        letterSpacing: 0.5,
                       ),
-                      const SizedBox(height: DS.spacing4),
-                      Text(
-                        widget.content,
-                        style:
-                            Theme.of(context).textTheme.titleMedium?.copyWith(
-                                  fontWeight: DS.fontWeightBold,
-                                  color: DS.neutral900,
-                                ),
+                ),
+                const SizedBox(height: DS.spacing4),
+                Text(
+                  widget.content,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: DS.fontWeightBold,
+                        color: DS.neutral900,
                       ),
-                    ],
-                  ),
                 ),
               ],
             ),
           ),
-        ),
-      );
+        ],
+      ),
+    );
+
+    return GestureDetector(
+      onTapDown: (_) {
+        if (!_reduceMotion) _controller.forward();
+      },
+      onTapUp: (_) {
+        if (!_reduceMotion) _controller.reverse();
+      },
+      onTapCancel: () {
+        if (!_reduceMotion) _controller.reverse();
+      },
+      child: _reduceMotion ? content : ScaleTransition(scale: _scaleAnimation, child: content),
+    );
+  }
 }
 
 class _BottomActionBar extends ConsumerWidget {
@@ -1267,7 +1294,7 @@ class _GenerateGuideButtonState extends ConsumerState<_GenerateGuideButton> {
       return const SizedBox(
         width: 20,
         height: 20,
-        child: CircularProgressIndicator(strokeWidth: 2),
+        child: SparkleSkeleton(width: 20, height: 20, borderRadius: 4),
       );
     }
     return SparkleButton(

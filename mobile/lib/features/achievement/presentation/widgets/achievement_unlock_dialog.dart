@@ -143,6 +143,15 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
     _initAnimations();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (context.reduceMotion) {
+      _glowController.stop();
+      _particleController.stop();
+    }
+  }
+
   void _initAnimations() {
     // 缩放动画
     _scaleController = AnimationController(

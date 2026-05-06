@@ -2800,10 +2800,13 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
       ),
     );
 
-    return Theme(
-      data: galaxyTheme,
-      child: Scaffold(
-        backgroundColor: backgroundColor,
+    return Semantics(
+      container: true,
+      label: context.l10n.galaxy,
+      child: Theme(
+        data: galaxyTheme,
+        child: Scaffold(
+          backgroundColor: backgroundColor,
         appBar: theaterOverlay == null
             ? null
             : AppBar(
@@ -3237,6 +3240,7 @@ class _GalaxyScreenState extends ConsumerState<GalaxyScreen>
             ],
           ),
         ),
+      ),
       ),
     );
   }

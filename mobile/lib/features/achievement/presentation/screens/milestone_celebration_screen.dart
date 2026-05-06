@@ -167,6 +167,14 @@ class _MilestoneCelebrationScreenState
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (context.reduceMotion && !_numberController.isCompleted) {
+      _numberController.value = 1.0;
+    }
+  }
+
+  @override
   void dispose() {
     _numberController.dispose();
     super.dispose();

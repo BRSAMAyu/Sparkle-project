@@ -7,8 +7,10 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/goal/data/models/goal_creation_models.dart';
 import 'package:sparkle/features/goal/data/models/goal_intent_models.dart';
+import 'package:sparkle/features/goal/data/models/scenario_pack_models.dart';
 import 'package:sparkle/features/goal/data/repositories/goal_repository.dart';
 import 'package:sparkle/features/goal/data/services/goal_intent_service.dart';
+import 'package:sparkle/features/goal/data/services/scenario_pack_service.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_intent_input.dart';
 import 'package:sparkle/features/goal/presentation/widgets/intent_confirmation_card.dart';
 
@@ -49,6 +51,9 @@ class _GoalCreationWizardScreenState
   // correction option (drop into the legacy 5-step flow).
   bool _analyzingIntent = false;
   GoalIntentAnalysis? _intentAnalysis;
+
+  // Matching scenario pack for the selected goal type.
+  ScenarioPackSummary? _matchedPack;
 
   String _t(String zh, String en) => I18nService.instance.isChinese ? zh : en;
 
@@ -196,7 +201,10 @@ class _GoalCreationWizardScreenState
         return _GoalTypeStep(
           key: const ValueKey('goal-type-step'),
           selected: _goalType,
-          onSelected: (value) => setState(() => _goalType = value),
+          onSelected: (value) {
+            setState(() => _goalType = value);
+            unawaited(_loadMatchedPack());
+          },
         );
       case 1:
         return _GoalMotivationStep(
@@ -229,6 +237,7 @@ class _GoalCreationWizardScreenState
           motivation: _motivationController.text.trim(),
           timeHorizon: _timeHorizon,
           milestones: _milestones,
+          matchedPack: _matchedPack,
         );
     }
   }
@@ -245,6 +254,20 @@ class _GoalCreationWizardScreenState
       return;
     }
     setState(() => _step++);
+  }
+
+  Future<void> _loadMatchedPack() async {
+    try {
+      final packs = await ref.read(scenarioPackServiceProvider).listPacks();
+      if (!mounted) return;
+      final backendType = ApiGoalRepository.resolveType(_goalType);
+      final match = packs.where((p) => p.goalType == backendType).toList();
+      setState(() {
+        _matchedPack = match.isNotEmpty ? match.first : null;
+      });
+    } catch (_) {
+      // Silently ignore — pack match is optional
+    }
   }
 
   // ── Phase-1 Entry Wire helpers ────────────────────────────────────
@@ -381,7 +404,11 @@ class _GoalCreationWizardScreenState
       }
       final router = GoRouter.maybeOf(context);
       if (router != null) {
-        router.go('/goals/${Uri.encodeComponent(created.id)}');
+        if (created.firstTaskId != null) {
+          router.go('/tasks/${Uri.encodeComponent(created.firstTaskId!)}/execute');
+        } else {
+          router.go('/goals/${Uri.encodeComponent(created.id)}');
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_t('目标已创建', 'Goal created'))),
@@ -684,6 +711,7 @@ class _GoalConfirmStep extends StatelessWidget {
     required this.motivation,
     required this.timeHorizon,
     required this.milestones,
+    this.matchedPack,
     super.key,
   });
 
@@ -692,6 +720,15 @@ class _GoalConfirmStep extends StatelessWidget {
   final String motivation;
   final String timeHorizon;
   final List<GoalMilestoneDraft> milestones;
+  final ScenarioPackSummary? matchedPack;
+
+  static const _typeLabels = <String, String>{
+    'academic': 'Academic',
+    'skill': 'Skill',
+    'habit': 'Habit',
+    'project': 'Project',
+    'other': 'Other',
+  };
 
   String _t(String zh, String en) => I18nService.instance.isChinese ? zh : en;
 
@@ -710,12 +747,55 @@ class _GoalConfirmStep extends StatelessWidget {
         Wrap(
           spacing: 8,
           children: [
-            Chip(label: Text(goalType)),
+            Chip(label: Text(_typeLabels[goalType] ?? goalType)),
             Chip(label: Text(timeHorizon)),
           ],
         ),
         const SizedBox(height: 12),
         Text(motivation),
+        if (matchedPack != null) ...[
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: DS.brandPrimary.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.map_outlined, size: 20, color: DS.brandPrimary),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _t('推荐方案', 'Suggested Plan'),
+                        style: DS.labelSmall.copyWith(color: DS.brandPrimary),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${matchedPack!.name} (${matchedPack!.horizonDays}${_t('天', 'd')})',
+                        style: DS.bodySmall.copyWith(
+                          color: DS.textPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (matchedPack!.description.isNotEmpty)
+                        Text(
+                          matchedPack!.description,
+                          style: DS.bodySmall.copyWith(color: DS.textSecondary),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         Text(
           _t('里程碑', 'Milestones'),

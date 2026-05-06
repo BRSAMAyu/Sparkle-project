@@ -170,7 +170,7 @@ class _ActiveSprintView extends ConsumerWidget {
             ),
         ],
       ),
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const _SprintSkeleton(),
       error: (err, stack) => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

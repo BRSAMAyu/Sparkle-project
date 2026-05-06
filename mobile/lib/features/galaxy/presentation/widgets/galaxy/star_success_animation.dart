@@ -41,6 +41,7 @@ class _StarSuccessAnimationState extends State<StarSuccessAnimation>
   late List<_ConnectionParticle> _connectionParticles;
   late List<_BurstParticle> _burstParticles;
   final Random _random = Random();
+  bool _completed = false;
 
   @override
   void initState() {
@@ -85,9 +86,22 @@ class _StarSuccessAnimationState extends State<StarSuccessAnimation>
     );
     unawaited(
       _controller.forward().then((_) {
-        widget.onComplete();
+        if (!_completed) {
+          _completed = true;
+          widget.onComplete();
+        }
       }),
     );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (context.reduceMotion && !_completed) {
+      _completed = true;
+      _controller.stop();
+      widget.onComplete();
+    }
   }
 
   @override
