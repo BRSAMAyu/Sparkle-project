@@ -26,7 +26,7 @@ class SparkleRefreshIndicator extends StatelessWidget {
           await onRefresh();
         },
         color: DS.brandPrimary,
-        backgroundColor: context.colors.surfaceSecondary,
+        backgroundColor: context.colors.surfaceCard,
         strokeWidth: 2.5,
         displacement: 50,
         child: child,

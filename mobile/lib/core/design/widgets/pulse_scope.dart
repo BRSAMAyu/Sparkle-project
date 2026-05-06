@@ -6,7 +6,7 @@ import 'package:flutter/material.dart';
 /// SparkleAttentionPulse will request a slot before animating; when all slots
 /// are taken, excess pulses degrade to static display.
 class PulseScope extends InheritedWidget {
-  const PulseScope({
+  PulseScope({
     required super.child,
     super.key,
   });
