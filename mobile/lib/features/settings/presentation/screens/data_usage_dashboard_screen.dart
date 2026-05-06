@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// GOV-015: Unified transparency dashboard showing all data Sparkle uses.
 class DataUsageDashboardScreen extends StatelessWidget {
@@ -9,7 +10,7 @@ class DataUsageDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Your Data & Privacy'),
+        title: Text(context.l10n.dataUsagePrivacyTitle),
         backgroundColor: DS.surfacePrimary,
       ),
       body: ListView(

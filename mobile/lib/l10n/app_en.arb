@@ -11784,5 +11784,6 @@
   "studyMaterialsStatusOrphaned": "Target ended",
   "sprintHistoryLoading": "Loading sprint history...",
   "sprintHistoryEmptyDesc": "Closed sprints will gather here with their rhythm, notes, and wins.",
-  "sprintHistoryStartSprint": "Start a sprint"
+  "sprintHistoryStartSprint": "Start a sprint",
+  "dataUsagePrivacyTitle": "Your Data & Privacy"
 }
