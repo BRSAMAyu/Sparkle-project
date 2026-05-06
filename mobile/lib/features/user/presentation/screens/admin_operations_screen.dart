@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
 
 class AdminOperationsScreen extends ConsumerStatefulWidget {
@@ -107,7 +106,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
               children: [7, 14, 30]
                   .map(
                     (days) => ChoiceChip(
-                      label: Text('$days ${I18nService.instance.isChinese ? '天' : 'days'}'),
+                      label: Text('$days ${context.l10n.adminDays}'),
                       selected: _days == days,
                       onSelected: (_) => setState(() => _days = days),
                     ),
@@ -208,18 +207,18 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           _ServiceDetailTile(
             title: 'PostgreSQL',
             lines: [
-              '${I18nService.instance.isChinese ? '探针延迟' : 'Probe latency'} ${((database['probe_latency_ms'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}ms',
-              '${I18nService.instance.isChinese ? '连接池' : 'Pool'} ${database['pool_size'] ?? '-'} / ${I18nService.instance.isChinese ? '溢出' : 'overflow'} ${database['max_overflow'] ?? '-'}',
-              '${I18nService.instance.isChinese ? '超时' : 'Timeout'} ${database['pool_timeout_seconds'] ?? '-'}s',
+              '${context.l10n.adminProbeLatency} ${((database['probe_latency_ms'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}ms',
+              '${context.l10n.adminPool} ${database['pool_size'] ?? '-'} / ${context.l10n.adminOverflow} ${database['max_overflow'] ?? '-'}',
+              '${context.l10n.adminTimeout} ${database['pool_timeout_seconds'] ?? '-'}s',
             ],
           ),
           const SizedBox(height: DS.spacing8),
           _ServiceDetailTile(
             title: 'Redis',
             lines: [
-              '${I18nService.instance.isChinese ? '状态' : 'Status'} ${redis['status'] ?? '-'}',
-              '${I18nService.instance.isChinese ? '内存' : 'Memory'} ${redis['used_memory_human'] ?? '-'} / ${I18nService.instance.isChinese ? '峰值' : 'Peak'} ${redis['used_memory_peak_human'] ?? '-'}',
-              '${I18nService.instance.isChinese ? '客户端' : 'Clients'} ${redis['connected_clients'] ?? '-'}',
+              '${context.l10n.adminStatus} ${redis['status'] ?? '-'}',
+              '${context.l10n.adminMemory} ${redis['used_memory_human'] ?? '-'} / ${context.l10n.adminPeak} ${redis['used_memory_peak_human'] ?? '-'}',
+              '${context.l10n.adminClients} ${redis['connected_clients'] ?? '-'}',
             ],
           ),
           const SizedBox(height: DS.spacing8),
@@ -233,9 +232,9 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           _ServiceDetailTile(
             title: 'Disk',
             lines: [
-              '${I18nService.instance.isChinese ? '已用' : 'Used'} ${disk['used_gb'] ?? '-'} GB / ${I18nService.instance.isChinese ? '空闲' : 'Free'} ${disk['free_gb'] ?? '-'} GB',
-              '${I18nService.instance.isChinese ? '总量' : 'Total'} ${disk['total_gb'] ?? '-'} GB',
-              '${I18nService.instance.isChinese ? '使用率' : 'Usage'} ${((disk['used_ratio_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
+              '${context.l10n.adminUsed} ${disk['used_gb'] ?? '-'} GB / ${context.l10n.adminFree} ${disk['free_gb'] ?? '-'} GB',
+              '${context.l10n.adminTotal} ${disk['total_gb'] ?? '-'} GB',
+              '${context.l10n.adminUsage} ${((disk['used_ratio_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)}%',
             ],
           ),
         ],
@@ -368,10 +367,10 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
                     child: _ServiceDetailTile(
                       title: item['event_type']?.toString() ?? 'unknown',
                       lines: [
-                        '${I18nService.instance.isChinese ? '总量' : 'Total'} ${item['count'] ?? 0}',
-                        '${I18nService.instance.isChinese ? '错误' : 'Errors'} ${item['error_count'] ?? 0} / ${I18nService.instance.isChinese ? '崩溃' : 'Crashes'} ${item['crash_count'] ?? 0}',
-                        '${I18nService.instance.isChinese ? '成功率' : 'Success rate'} ${item['success_rate_percent'] ?? 0}%',
-                        '${I18nService.instance.isChinese ? '平均耗时' : 'Avg duration'} ${item['avg_duration_ms'] ?? 0}ms',
+                        '${context.l10n.adminTotal} ${item['count'] ?? 0}',
+                        '${context.l10n.adminErrors} ${item['error_count'] ?? 0} / ${context.l10n.adminCrashes} ${item['crash_count'] ?? 0}',
+                        '${context.l10n.adminSuccessRate} ${item['success_rate_percent'] ?? 0}%',
+                        '${context.l10n.adminAvgDuration} ${item['avg_duration_ms'] ?? 0}ms',
                       ],
                     ),
                   ),
@@ -380,7 +379,7 @@ class _AdminOperationsScreenState extends ConsumerState<AdminOperationsScreen> {
           if (recentEvents.isNotEmpty) ...[
             const SizedBox(height: DS.spacing12),
             Text(
-              I18nService.instance.isChinese ? '最近事件' : 'Recent Events',
+              context.l10n.adminRecentEvents,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: DS.fontWeightBold,
                   ),
@@ -517,10 +516,10 @@ class _TelemetryTrendSummary extends StatelessWidget {
       spacing: DS.spacing8,
       runSpacing: DS.spacing8,
       children: [
-        _MetricChip(label: I18nService.instance.isChinese ? '窗口事件' : 'Window events', value: '$totalEvents'),
-        _MetricChip(label: I18nService.instance.isChinese ? '窗口错误' : 'Window errors', value: '$totalErrors'),
+        _MetricChip(label: context.l10n.adminWindowEvents, value: '$totalEvents'),
+        _MetricChip(label: context.l10n.adminWindowErrors, value: '$totalErrors'),
         _MetricChip(
-          label: I18nService.instance.isChinese ? '加权平均耗时' : 'Weighted avg duration',
+          label: context.l10n.adminWeightedAvgDuration,
           value: '${averageDuration.toStringAsFixed(0)}ms',
         ),
       ],

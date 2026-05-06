@@ -53118,6 +53118,132 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'晚上'**
   String get schedEvening;
+
+  /// No description provided for @adminDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'天'**
+  String get adminDays;
+
+  /// No description provided for @adminProbeLatency.
+  ///
+  /// In zh, this message translates to:
+  /// **'探针延迟'**
+  String get adminProbeLatency;
+
+  /// No description provided for @adminPool.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接池'**
+  String get adminPool;
+
+  /// No description provided for @adminOverflow.
+  ///
+  /// In zh, this message translates to:
+  /// **'溢出'**
+  String get adminOverflow;
+
+  /// No description provided for @adminTimeout.
+  ///
+  /// In zh, this message translates to:
+  /// **'超时'**
+  String get adminTimeout;
+
+  /// No description provided for @adminStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'状态'**
+  String get adminStatus;
+
+  /// No description provided for @adminMemory.
+  ///
+  /// In zh, this message translates to:
+  /// **'内存'**
+  String get adminMemory;
+
+  /// No description provided for @adminPeak.
+  ///
+  /// In zh, this message translates to:
+  /// **'峰值'**
+  String get adminPeak;
+
+  /// No description provided for @adminClients.
+  ///
+  /// In zh, this message translates to:
+  /// **'客户端'**
+  String get adminClients;
+
+  /// No description provided for @adminUsed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已用'**
+  String get adminUsed;
+
+  /// No description provided for @adminFree.
+  ///
+  /// In zh, this message translates to:
+  /// **'空闲'**
+  String get adminFree;
+
+  /// No description provided for @adminTotal.
+  ///
+  /// In zh, this message translates to:
+  /// **'总量'**
+  String get adminTotal;
+
+  /// No description provided for @adminUsage.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用率'**
+  String get adminUsage;
+
+  /// No description provided for @adminErrors.
+  ///
+  /// In zh, this message translates to:
+  /// **'错误'**
+  String get adminErrors;
+
+  /// No description provided for @adminCrashes.
+  ///
+  /// In zh, this message translates to:
+  /// **'崩溃'**
+  String get adminCrashes;
+
+  /// No description provided for @adminSuccessRate.
+  ///
+  /// In zh, this message translates to:
+  /// **'成功率'**
+  String get adminSuccessRate;
+
+  /// No description provided for @adminAvgDuration.
+  ///
+  /// In zh, this message translates to:
+  /// **'平均耗时'**
+  String get adminAvgDuration;
+
+  /// No description provided for @adminRecentEvents.
+  ///
+  /// In zh, this message translates to:
+  /// **'最近事件'**
+  String get adminRecentEvents;
+
+  /// No description provided for @adminWindowEvents.
+  ///
+  /// In zh, this message translates to:
+  /// **'窗口事件'**
+  String get adminWindowEvents;
+
+  /// No description provided for @adminWindowErrors.
+  ///
+  /// In zh, this message translates to:
+  /// **'窗口错误'**
+  String get adminWindowErrors;
+
+  /// No description provided for @adminWeightedAvgDuration.
+  ///
+  /// In zh, this message translates to:
+  /// **'加权平均耗时'**
+  String get adminWeightedAvgDuration;
 }
 
 class _AppLocalizationsDelegate
