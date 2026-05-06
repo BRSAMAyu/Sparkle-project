@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/navigation/route_resilience.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/data/models/chat_stream_events.dart';
@@ -345,7 +344,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, I18nService.instance.isChinese ? '建模对话暂时失败：$error' : 'Modeling chat temporarily unavailable: $error');
+      AppFeedback.error(context, context.l10n.modelChatTempFailed(error.toString()));
     }
   }
 
@@ -408,7 +407,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
     }
     _finalizeAssistantDraft(requestId);
     _cleanupRun(requestId, cancelSubscription: true);
-    AppFeedback.error(context, I18nService.instance.isChinese ? '建模对话暂时失败：$error' : 'Modeling chat temporarily unavailable: $error');
+    AppFeedback.error(context, context.l10n.modelChatTempFailed(error.toString()));
   }
 
   void _appendAssistantChunk(String requestId, String chunk) {
@@ -612,7 +611,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, I18nService.instance.isChinese ? '暂时无法跳过：$error' : 'Cannot skip at this time: $error');
+      AppFeedback.error(context, context.l10n.modelChatSkipFailed(error.toString()));
       setState(() => _skipInFlight = false);
     }
   }
@@ -760,7 +759,7 @@ class _ModelingChatScreenState extends ConsumerState<ModelingChatScreen> {
       setState(() {
         _planningInFlight = false;
         _planningStarted = false;
-        _planningErrorMessage = I18nService.instance.isChinese ? '计划生成遇到问题：$error' : 'Plan generation encountered an issue: $error';
+        _planningErrorMessage = context.l10n.modelChatPlanIssue(error.toString());
       });
     }
   }

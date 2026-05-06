@@ -53292,6 +53292,42 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'回顾近期系统更新和重要账号行为变化。'**
   String get acctSecRecentActivity;
+
+  /// No description provided for @profTransSuggestion.
+  ///
+  /// In zh, this message translates to:
+  /// **'建议：{summary}'**
+  String profTransSuggestion(Object summary);
+
+  /// No description provided for @modelChatTempFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'建模对话暂时失败：{error}'**
+  String modelChatTempFailed(Object error);
+
+  /// No description provided for @modelChatSkipFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法跳过：{error}'**
+  String modelChatSkipFailed(Object error);
+
+  /// No description provided for @modelChatPlanIssue.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划生成遇到问题：{error}'**
+  String modelChatPlanIssue(Object error);
+
+  /// No description provided for @profTransRecordedAdjustment.
+  ///
+  /// In zh, this message translates to:
+  /// **'已记录「{targetId}」的画像调整。'**
+  String profTransRecordedAdjustment(Object targetId);
+
+  /// No description provided for @profTransHiddenItems.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏条目 {count} 条，未进入透明面板。'**
+  String profTransHiddenItems(Object count);
 }
 
 class _AppLocalizationsDelegate

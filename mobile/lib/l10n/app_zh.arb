@@ -13224,5 +13224,11 @@
   "acctSecOverview": "把登录入口、设备状态和关键操作记录收在一起，方便你按风险等级快速查看。",
   "acctSecDeviceStatus": "查看当前设备、最近活跃时间和远程退出状态。",
   "acctSecSecurityTrail": "保留登录、解绑、密码修改等安全轨迹。",
-  "acctSecRecentActivity": "回顾近期系统更新和重要账号行为变化。"
+  "acctSecRecentActivity": "回顾近期系统更新和重要账号行为变化。",
+  "profTransSuggestion": "建议：{summary}",
+  "modelChatTempFailed": "建模对话暂时失败：{error}",
+  "modelChatSkipFailed": "暂时无法跳过：{error}",
+  "modelChatPlanIssue": "计划生成遇到问题：{error}",
+  "profTransRecordedAdjustment": "已记录「{targetId}」的画像调整。",
+  "profTransHiddenItems": "隐藏条目 {count} 条，未进入透明面板。"
 }
