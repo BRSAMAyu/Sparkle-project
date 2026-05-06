@@ -28,7 +28,7 @@
 
 | ID | Title | Scope | Effort | Status | Claimed-By | Commit | Note |
 |----|-------|-------|--------|--------|-----------|--------|------|
-| QA-P1-1 | Hardcoded 'Your Data & Privacy' → ARB | Flutter | S | ⬜ pending | — | — | data_usage_dashboard_screen.dart |
+| QA-P1-1 | Hardcoded 'Your Data & Privacy' → ARB | Flutter | S | 🔵 in-progress | claude-B | — | data_usage_dashboard_screen.dart |
 | QA-P1-2 | Hardcoded 'Growth Plans' → ARB | Flutter | S | ⬜ pending | — | — | growth_screen.dart |
 | QA-P1-3 | Hardcoded 'New Plan' → ARB | Flutter | S | ⬜ pending | — | — | growth_screen.dart |
 | QA-P1-4 | Hardcoded 'Send Message' → ARB | Flutter | S | ⬜ pending | — | — | user_search_screen.dart |
