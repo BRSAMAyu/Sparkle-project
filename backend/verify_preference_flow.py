@@ -13,10 +13,9 @@ async def verify():
     # 1. Setup
     user_id = uuid.UUID("006848e2-7961-4e46-a72c-375749013d0e")
     
-    # Use env vars from container
     import os
-    db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:password@sparkle_db:5432/sparkle")
-    redis_url = os.getenv("REDIS_URL", "redis://:devpassword@sparkle_redis:6379/0")
+    db_url = os.environ["DATABASE_URL"]
+    redis_url = os.environ["REDIS_URL"]
     
     engine = create_async_engine(db_url)
     async_session = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)

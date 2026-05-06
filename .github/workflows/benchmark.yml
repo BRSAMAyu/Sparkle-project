@@ -320,13 +320,12 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.lock
 
-      - name: Start services
-        run: |
-          cd backend
-          make dev-all &
-          sleep 30  # Wait for services to start
-
       - name: Run load tests
+        env:
+          POSTGRES_HOST: localhost
+          REDIS_HOST: localhost
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/sparkle_test
+          REDIS_URL: redis://localhost:6379/0
         run: |
           cd backend
           locust -f tests/load/locustfile.py \

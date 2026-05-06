@@ -850,7 +850,8 @@ class EventBus:
         if not self.redis:
             return
 
-        next_retry = retry_count + 1
+        original_retry_count = self._extract_retry_count(parsed_data)
+        next_retry = original_retry_count + 1
 
         retry_payload = dict(parsed_data)
         retry_payload["_retry_count"] = next_retry
@@ -1072,9 +1073,14 @@ class EventBus:
         # 2. Start Consumption Loop
         self._running = True
         task = asyncio.create_task(self._consume_loop(stream, group_name, consumer_name, callback))
-        task.add_done_callback(
-            lambda t: self._restart_consume_loop(t, stream, group_name, consumer_name, callback)
-        )
+
+        def _on_done(t: asyncio.Task) -> None:
+            # Remove completed task from list to prevent unbounded growth
+            with suppress(ValueError):
+                self._consumer_tasks.remove(t)
+            self._restart_consume_loop(t, stream, group_name, consumer_name, callback)
+
+        task.add_done_callback(_on_done)
         self._consumer_tasks.append(task)
 
     async def _get_idempotency_store(self):
@@ -1147,8 +1153,9 @@ class EventBus:
                 await idempotency.set(idempotency_key, {"status": "done"}, ttl=86400)
                 await self.redis.xack(stream, group_name, message_id)
             except Exception:
-                await idempotency.unlock(idempotency_key)
                 raise
+            finally:
+                await idempotency.unlock(idempotency_key)
         except Exception as exc:
             label = self._consumer_label(callback, consumer_name)
             EVENT_BUS_CONSUMER_FAILURE_TOTAL.labels(consumer=label).inc()
