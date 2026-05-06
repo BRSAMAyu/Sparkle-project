@@ -57,7 +57,7 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
-    command: redis-stack-server --requirepass ${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    command: redis-stack-server --requirepass ${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy volatile-lru
     volumes:
       - sparkle_redis_data:/data
     deploy:

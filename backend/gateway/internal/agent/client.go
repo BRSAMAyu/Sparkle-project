@@ -99,6 +99,7 @@ func buildDialOptions(cfg *config.Config) ([]grpc.DialOption, error) {
 	creds := insecure.NewCredentials()
 	if cfg.AgentTLSEnabled {
 		tlsCfg := &tls.Config{
+			MinVersion:         tls.VersionTLS12,
 			ServerName:         cfg.AgentTLSServerName,
 			InsecureSkipVerify: cfg.AgentTLSInsecure,
 		}
