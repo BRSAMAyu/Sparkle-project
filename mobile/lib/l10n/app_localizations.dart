@@ -53964,6 +53964,522 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'M月d日 HH:mm'**
   String get workMemDateFormat;
+
+  /// No description provided for @sprintProgressLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}：已完成 {percent}%，还剩 {daysLeft} 天'**
+  String sprintProgressLabel(Object daysLeft, Object name, Object percent);
+
+  /// No description provided for @sprintBottleneckLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'{name}：{reason}'**
+  String sprintBottleneckLabel(Object name, Object reason);
+
+  /// No description provided for @sprintAlertSignificantlyBehindDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务完成率显著低于预期。建议重新评估每日任务量或调整冲刺范围。'**
+  String get sprintAlertSignificantlyBehindDetail;
+
+  /// No description provided for @sprintAlertSlowerDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'虽然仍有进展，但速度不如预期。可能需要调整学习策略或时间分配。'**
+  String get sprintAlertSlowerDetail;
+
+  /// No description provided for @sprintAlertEndingDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺即将结束，但还有较多任务未完成。建议集中精力完成关键任务。'**
+  String get sprintAlertEndingDetail;
+
+  /// No description provided for @sprintAlertOnTrackDetail.
+  ///
+  /// In zh, this message translates to:
+  /// **'一切进展顺利！保持当前节奏，冲刺目标触手可及。'**
+  String get sprintAlertOnTrackDetail;
+
+  /// No description provided for @sprintReviewNotesHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'记录这次冲刺中做得好的和需要改进的...'**
+  String get sprintReviewNotesHint;
+
+  /// No description provided for @sprintDaysLeftShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'还剩 {days} 天'**
+  String sprintDaysLeftShort(Object days);
+
+  /// No description provided for @sprintOverdue.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺已到期'**
+  String get sprintOverdue;
+
+  /// No description provided for @sprintNoActiveHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建一个新的冲刺计划，聚焦短期目标。'**
+  String get sprintNoActiveHint;
+
+  /// No description provided for @settA11ySaveFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存失败，已保留上一次设置。'**
+  String get settA11ySaveFailed;
+
+  /// No description provided for @settA11ySyncing.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在同步到账号设置'**
+  String get settA11ySyncing;
+
+  /// No description provided for @settA11yResetDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复默认无障碍设置'**
+  String get settA11yResetDone;
+
+  /// No description provided for @settA11yLowLoadTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'低负荷模式'**
+  String get settA11yLowLoadTitle;
+
+  /// No description provided for @settA11yLowLoadDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'减少动效、放大触控区域，并优先使用更清晰的阅读节奏。'**
+  String get settA11yLowLoadDesc;
+
+  /// No description provided for @settA11yLowLoadToggle.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用低负荷体验'**
+  String get settA11yLowLoadToggle;
+
+  /// No description provided for @settA11yLowLoadToggleDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'开启后会同步调整动画、屏幕阅读和触控默认值。'**
+  String get settA11yLowLoadToggleDesc;
+
+  /// No description provided for @settA11yReadingTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'阅读与颜色'**
+  String get settA11yReadingTitle;
+
+  /// No description provided for @settA11yReadingDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'集中管理字体缩放、对比度和色盲友好配色。'**
+  String get settA11yReadingDesc;
+
+  /// No description provided for @settA11yFontScale.
+  ///
+  /// In zh, this message translates to:
+  /// **'字体缩放'**
+  String get settA11yFontScale;
+
+  /// No description provided for @settA11yHighContrast.
+  ///
+  /// In zh, this message translates to:
+  /// **'高对比度'**
+  String get settA11yHighContrast;
+
+  /// No description provided for @settA11yHighContrastDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'优先使用更明显的文字、边框和状态区分。'**
+  String get settA11yHighContrastDesc;
+
+  /// No description provided for @settA11yColorBlind.
+  ///
+  /// In zh, this message translates to:
+  /// **'色盲友好'**
+  String get settA11yColorBlind;
+
+  /// No description provided for @settA11yColorBlindDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'用形状、明暗和标签辅助颜色差异。'**
+  String get settA11yColorBlindDesc;
+
+  /// No description provided for @settA11yTouchMotionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'触控与动效'**
+  String get settA11yTouchMotionTitle;
+
+  /// No description provided for @settA11yTouchMotionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'统一触控目标、动画减弱和震动反馈默认值。'**
+  String get settA11yTouchMotionDesc;
+
+  /// No description provided for @settA11yTouchTargetSize.
+  ///
+  /// In zh, this message translates to:
+  /// **'触控目标尺寸'**
+  String get settA11yTouchTargetSize;
+
+  /// No description provided for @settA11yReduceMotion.
+  ///
+  /// In zh, this message translates to:
+  /// **'减弱动画'**
+  String get settA11yReduceMotion;
+
+  /// No description provided for @settA11yReduceMotionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'缩短或移除非必要转场、粒子和弹性动画。'**
+  String get settA11yReduceMotionDesc;
+
+  /// No description provided for @settA11yHaptic.
+  ///
+  /// In zh, this message translates to:
+  /// **'震动反馈'**
+  String get settA11yHaptic;
+
+  /// No description provided for @settA11yHapticDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'控制选择、确认和错误提示的触觉反馈。'**
+  String get settA11yHapticDesc;
+
+  /// No description provided for @settA11yAssistiveTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'辅助技术'**
+  String get settA11yAssistiveTitle;
+
+  /// No description provided for @settA11yAssistiveDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏幕阅读优化与 TTS 默认值会同步给可视化与学习场景。'**
+  String get settA11yAssistiveDesc;
+
+  /// No description provided for @settA11yScreenReader.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏幕阅读优化'**
+  String get settA11yScreenReader;
+
+  /// No description provided for @settA11yScreenReaderDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'为图谱、卡片和复杂控件提供更完整的语义顺序。'**
+  String get settA11yScreenReaderDesc;
+
+  /// No description provided for @settA11yTtsReading.
+  ///
+  /// In zh, this message translates to:
+  /// **'TTS 朗读'**
+  String get settA11yTtsReading;
+
+  /// No description provided for @settA11yTtsReadingDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'允许学习摘要、步骤和复盘内容进入朗读模式。'**
+  String get settA11yTtsReadingDesc;
+
+  /// No description provided for @settA11yWcagTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'WCAG AA 检查'**
+  String get settA11yWcagTitle;
+
+  /// No description provided for @settA11yWcagDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'本页控件按可触达、可读和可理解的设置面板标准维护。'**
+  String get settA11yWcagDesc;
+
+  /// No description provided for @settA11yWcagTextScale.
+  ///
+  /// In zh, this message translates to:
+  /// **'正文与控件文字支持 200% 以内缩放'**
+  String get settA11yWcagTextScale;
+
+  /// No description provided for @settA11yWcagTouchTarget.
+  ///
+  /// In zh, this message translates to:
+  /// **'触控目标不低于 48dp，且可提升至 64dp'**
+  String get settA11yWcagTouchTarget;
+
+  /// No description provided for @settA11yWcagColorState.
+  ///
+  /// In zh, this message translates to:
+  /// **'颜色设置不依赖单一色相表达状态'**
+  String get settA11yWcagColorState;
+
+  /// No description provided for @settA11yWcagIndependent.
+  ///
+  /// In zh, this message translates to:
+  /// **'屏幕阅读、TTS、动效和震动均可独立控制'**
+  String get settA11yWcagIndependent;
+
+  /// No description provided for @settA11yTouchPreview.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前最小目标 {size}dp'**
+  String settA11yTouchPreview(Object size);
+
+  /// No description provided for @settA11yTouchComfort.
+  ///
+  /// In zh, this message translates to:
+  /// **'舒适 48dp'**
+  String get settA11yTouchComfort;
+
+  /// No description provided for @settA11yTouchLarge.
+  ///
+  /// In zh, this message translates to:
+  /// **'加大 56dp'**
+  String get settA11yTouchLarge;
+
+  /// No description provided for @settA11yTouchXl.
+  ///
+  /// In zh, this message translates to:
+  /// **'特大 64dp'**
+  String get settA11yTouchXl;
+
+  /// No description provided for @settBehaviorAccessibility.
+  ///
+  /// In zh, this message translates to:
+  /// **'无障碍'**
+  String get settBehaviorAccessibility;
+
+  /// No description provided for @settBehaviorAccessibilityBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'当你开启高对比度、降低动效或放大字体时，Sparkle 会把这些偏好应用到主要学习界面、知识星图、对话和任务执行流程，优先保证可读、可触达和低负荷。'**
+  String get settBehaviorAccessibilityBody;
+
+  /// No description provided for @settBehaviorEmotion.
+  ///
+  /// In zh, this message translates to:
+  /// **'情绪自适应'**
+  String get settBehaviorEmotion;
+
+  /// No description provided for @settBehaviorEmotionBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'当 Sparkle 识别到疲劳、压力或认知负荷较高时，会使用更柔和的颜色、更大的文字、更少动画，并减少挑战感提示。手动固定后，自动适应会让位给你的选择。'**
+  String get settBehaviorEmotionBody;
+
+  /// No description provided for @settBehaviorReminder.
+  ///
+  /// In zh, this message translates to:
+  /// **'提醒频率'**
+  String get settBehaviorReminder;
+
+  /// No description provided for @settBehaviorMemory.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆控制'**
+  String get settBehaviorMemory;
+
+  /// No description provided for @settBehaviorMemoryBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle 会记住学习目标、偏好、承诺和你明确允许的经历线索，用来保持对话连续和任务跟进；不会把被屏蔽的来源或关闭的记忆类型写入长期记忆。'**
+  String get settBehaviorMemoryBody;
+
+  /// No description provided for @settBehaviorMaterials.
+  ///
+  /// In zh, this message translates to:
+  /// **'资料使用'**
+  String get settBehaviorMaterials;
+
+  /// No description provided for @settBehaviorMaterialsBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的学习资料会用于检索相关上下文、生成任务建议、解释知识点和构建知识星图；不会被用于公开社区内容或研究分析，除非你在对应设置里明确允许。'**
+  String get settBehaviorMaterialsBody;
+
+  /// No description provided for @settBehaviorResearch.
+  ///
+  /// In zh, this message translates to:
+  /// **'研究参与'**
+  String get settBehaviorResearch;
+
+  /// No description provided for @settBehaviorResearchBody.
+  ///
+  /// In zh, this message translates to:
+  /// **'加入研究意味着部分去标识化学习行为、错误模式和资源质量信号可被汇总分析，用来改进 Sparkle；原始私密对话、个人身份信息和被你隐藏的内容不会进入研究数据。'**
+  String get settBehaviorResearchBody;
+
+  /// No description provided for @settBehaviorTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle 如何使用这些设置'**
+  String get settBehaviorTitle;
+
+  /// No description provided for @settBehaviorSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开任一区域，查看你的选择会怎样影响 Sparkle 的行为。'**
+  String get settBehaviorSubtitle;
+
+  /// No description provided for @settBehaviorReminderNoCap.
+  ///
+  /// In zh, this message translates to:
+  /// **'不会发送智能提醒'**
+  String get settBehaviorReminderNoCap;
+
+  /// No description provided for @settBehaviorReminderCap.
+  ///
+  /// In zh, this message translates to:
+  /// **'每天最多 {count} 次智能提醒'**
+  String settBehaviorReminderCap(Object count);
+
+  /// No description provided for @settBehaviorReminderTaskOnNoTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务提醒已开启，但未设置具体提前量'**
+  String get settBehaviorReminderTaskOnNoTime;
+
+  /// No description provided for @settBehaviorReminderTaskOnWithTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务会在 {times} 前提醒'**
+  String settBehaviorReminderTaskOnWithTime(Object times);
+
+  /// No description provided for @settBehaviorReminderTaskOff.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务提醒已关闭'**
+  String get settBehaviorReminderTaskOff;
+
+  /// No description provided for @settBehaviorReminderBodyEn.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前设置下，Sparkle {cap}，通知详细度为{level}；{taskText}。安静时段和已关闭类型会优先拦截非紧急提醒。'**
+  String settBehaviorReminderBodyEn(Object cap, Object level, Object taskText);
+
+  /// No description provided for @settBehaviorDay.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 天'**
+  String settBehaviorDay(Object count);
+
+  /// No description provided for @settBehaviorDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 天'**
+  String settBehaviorDays(Object count);
+
+  /// No description provided for @settBehaviorHour.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 小时'**
+  String settBehaviorHour(Object count);
+
+  /// No description provided for @settBehaviorHours.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 小时'**
+  String settBehaviorHours(Object count);
+
+  /// No description provided for @settBehaviorMinute.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 分钟'**
+  String settBehaviorMinute(Object count);
+
+  /// No description provided for @settBehaviorMinutes.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 分钟'**
+  String settBehaviorMinutes(Object count);
+
+  /// No description provided for @settBehaviorReminderLevelMinimal.
+  ///
+  /// In zh, this message translates to:
+  /// **'简洁'**
+  String get settBehaviorReminderLevelMinimal;
+
+  /// No description provided for @settBehaviorReminderLevelVerbose.
+  ///
+  /// In zh, this message translates to:
+  /// **'详细'**
+  String get settBehaviorReminderLevelVerbose;
+
+  /// No description provided for @settBehaviorReminderLevelStandard.
+  ///
+  /// In zh, this message translates to:
+  /// **'标准'**
+  String get settBehaviorReminderLevelStandard;
+
+  /// No description provided for @settDataControlsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'数据控制'**
+  String get settDataControlsTitle;
+
+  /// No description provided for @settDataControlsDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出、删除和隐藏入口集中在这里，所有操作都会说明后果。'**
+  String get settDataControlsDesc;
+
+  /// No description provided for @settDataExport.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出我的数据'**
+  String get settDataExport;
+
+  /// No description provided for @settDataExportDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成包含账号资料、学习记录、设置和可导出记忆的压缩包。'**
+  String get settDataExportDesc;
+
+  /// No description provided for @settDataDelete.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除我的数据'**
+  String get settDataDelete;
+
+  /// No description provided for @settDataDeleteDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'进入确认流程。删除账号会移除个人资料、偏好和历史记录，且不可恢复。'**
+  String get settDataDeleteDesc;
+
+  /// No description provided for @settDataHideChronicle.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏我的成长编年史'**
+  String get settDataHideChronicle;
+
+  /// No description provided for @settDataHideChronicleDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏后，成长叙事入口默认不展示编年史内容；数据不会因此删除。'**
+  String get settDataHideChronicleDesc;
+
+  /// No description provided for @settDataHideMemory.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏我的记忆'**
+  String get settDataHideMemory;
+
+  /// No description provided for @settDataHideMemoryDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏后，记忆面板和可见记忆引用会默认收起；长期记忆写入规则请进入记忆设置调整。'**
+  String get settDataHideMemoryDesc;
+
+  /// No description provided for @settDataManageMemory.
+  ///
+  /// In zh, this message translates to:
+  /// **'管理记忆写入规则'**
+  String get settDataManageMemory;
 }
 
 class _AppLocalizationsDelegate

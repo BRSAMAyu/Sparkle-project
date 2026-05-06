@@ -3,7 +3,6 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class EngagementStateBadge extends StatelessWidget {
   const EngagementStateBadge({required this.state, super.key});
@@ -12,7 +11,6 @@ class EngagementStateBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final value = state?.value;
     return GraphiteCardSurface(
       child: Padding(
@@ -33,18 +31,12 @@ class EngagementStateBadge extends StatelessWidget {
               runSpacing: DS.spacing8,
               children: [
                 _StatusChip(
-                    label: zh
-                        ? '7日会话 ${value?.sessionCount7d ?? 0}'
-                        : '7d sessions ${value?.sessionCount7d ?? 0}'),
+                    label: context.l10n.engageSessions7d(value?.sessionCount7d ?? 0)),
                 _StatusChip(
-                    label: zh
-                        ? '连续 ${value?.streak ?? 0} 天'
-                        : '${value?.streak ?? 0} day streak'),
+                    label: context.l10n.engageDayStreak(value?.streak ?? 0)),
                 _StatusChip(
                   label: value?.lastActiveAt != null
-                      ? (zh
-                          ? '最近 ${DateFormat('M月d日').format(value!.lastActiveAt!)}'
-                          : 'Last ${DateFormat('MMM d').format(value!.lastActiveAt!)}')
+                      ? context.l10n.engageLastActive(DateFormat(context.l10n.engageDateFormat).format(value!.lastActiveAt!))
                       : context.l10n.userNoRecentActivity,
                 ),
               ],

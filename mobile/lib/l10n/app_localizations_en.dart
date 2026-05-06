@@ -30948,4 +30948,322 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get workMemDateFormat => 'MMM d, HH:mm';
+
+  @override
+  String sprintProgressLabel(Object daysLeft, Object name, Object percent) {
+    return '$name: $percent% complete, $daysLeft days left';
+  }
+
+  @override
+  String sprintBottleneckLabel(Object name, Object reason) {
+    return '$name: $reason';
+  }
+
+  @override
+  String get sprintAlertSignificantlyBehindDetail =>
+      'Task completion rate significantly below expectations. Consider re-evaluating daily workload or adjusting sprint scope.';
+
+  @override
+  String get sprintAlertSlowerDetail =>
+      'Progress is being made but slower than expected. Consider adjusting study strategies or time allocation.';
+
+  @override
+  String get sprintAlertEndingDetail =>
+      'Sprint is ending soon with many tasks remaining. Focus on completing critical tasks.';
+
+  @override
+  String get sprintAlertOnTrackDetail =>
+      'Everything is on track! Maintain the current pace to reach the sprint goal.';
+
+  @override
+  String get sprintReviewNotesHint => 'What went well? What could improve?';
+
+  @override
+  String sprintDaysLeftShort(Object days) {
+    return '$days days left';
+  }
+
+  @override
+  String get sprintOverdue => 'Sprint overdue';
+
+  @override
+  String get sprintNoActiveHint =>
+      'Create a new sprint plan to focus on a short-term goal.';
+
+  @override
+  String get settA11ySaveFailed =>
+      'Save failed. Previous settings were restored.';
+
+  @override
+  String get settA11ySyncing => 'Syncing settings';
+
+  @override
+  String get settA11yResetDone => 'Accessibility settings reset';
+
+  @override
+  String get settA11yLowLoadTitle => 'Low-load mode';
+
+  @override
+  String get settA11yLowLoadDesc =>
+      'Reduces motion, enlarges touch targets, and favors calmer reading.';
+
+  @override
+  String get settA11yLowLoadToggle => 'Enable low-load experience';
+
+  @override
+  String get settA11yLowLoadToggleDesc =>
+      'Also adjusts motion, screen reader, and touch defaults.';
+
+  @override
+  String get settA11yReadingTitle => 'Reading and color';
+
+  @override
+  String get settA11yReadingDesc =>
+      'Central controls for text scale, contrast, and color-safe palettes.';
+
+  @override
+  String get settA11yFontScale => 'Font scale';
+
+  @override
+  String get settA11yHighContrast => 'High contrast';
+
+  @override
+  String get settA11yHighContrastDesc =>
+      'Uses stronger text, borders, and state separation.';
+
+  @override
+  String get settA11yColorBlind => 'Color-blind friendly';
+
+  @override
+  String get settA11yColorBlindDesc =>
+      'Adds shape, tone, and labels where color carries meaning.';
+
+  @override
+  String get settA11yTouchMotionTitle => 'Touch and motion';
+
+  @override
+  String get settA11yTouchMotionDesc =>
+      'Shared defaults for touch targets, reduced motion, and haptics.';
+
+  @override
+  String get settA11yTouchTargetSize => 'Touch target size';
+
+  @override
+  String get settA11yReduceMotion => 'Reduce motion';
+
+  @override
+  String get settA11yReduceMotionDesc =>
+      'Shortens or removes nonessential transitions and effects.';
+
+  @override
+  String get settA11yHaptic => 'Haptic feedback';
+
+  @override
+  String get settA11yHapticDesc =>
+      'Controls tactile feedback for selection, confirmation, and errors.';
+
+  @override
+  String get settA11yAssistiveTitle => 'Assistive technology';
+
+  @override
+  String get settA11yAssistiveDesc =>
+      'Screen reader and TTS defaults sync into visual and learning surfaces.';
+
+  @override
+  String get settA11yScreenReader => 'Screen reader optimization';
+
+  @override
+  String get settA11yScreenReaderDesc =>
+      'Prioritizes semantic order for graphs, cards, and complex controls.';
+
+  @override
+  String get settA11yTtsReading => 'TTS reading';
+
+  @override
+  String get settA11yTtsReadingDesc =>
+      'Allows summaries, steps, and reviews to enter read-aloud mode.';
+
+  @override
+  String get settA11yWcagTitle => 'WCAG AA checks';
+
+  @override
+  String get settA11yWcagDesc =>
+      'This panel is maintained against operable, readable, and understandable checks.';
+
+  @override
+  String get settA11yWcagTextScale =>
+      'Text and controls support up to 200% user scaling';
+
+  @override
+  String get settA11yWcagTouchTarget =>
+      'Touch targets start at 48dp and can increase to 64dp';
+
+  @override
+  String get settA11yWcagColorState =>
+      'Color options do not rely on hue alone for state';
+
+  @override
+  String get settA11yWcagIndependent =>
+      'Screen reader, TTS, motion, and haptics are independently controlled';
+
+  @override
+  String settA11yTouchPreview(Object size) {
+    return 'Current minimum target ${size}dp';
+  }
+
+  @override
+  String get settA11yTouchComfort => 'Comfort 48dp';
+
+  @override
+  String get settA11yTouchLarge => 'Large 56dp';
+
+  @override
+  String get settA11yTouchXl => 'XL 64dp';
+
+  @override
+  String get settBehaviorAccessibility => 'Accessibility';
+
+  @override
+  String get settBehaviorAccessibilityBody =>
+      'When you enable high contrast, reduced motion, or larger text, Sparkle applies those preferences across core learning surfaces, Galaxy, chat, and task execution so the interface stays readable, reachable, and lower load.';
+
+  @override
+  String get settBehaviorEmotion => 'Emotion adaptive';
+
+  @override
+  String get settBehaviorEmotionBody =>
+      'When Sparkle detects fatigue, pressure, or high cognitive load, it softens colors, increases text comfort, reduces animation, and tones down challenge cues. Manual overrides take priority over automatic adaptation.';
+
+  @override
+  String get settBehaviorReminder => 'Reminder frequency';
+
+  @override
+  String get settBehaviorMemory => 'Memory controls';
+
+  @override
+  String get settBehaviorMemoryBody =>
+      'Sparkle remembers goals, preferences, commitments, and explicitly allowed episode signals to keep conversations continuous and follow-ups relevant. Blocked sources and disabled memory types are not written into long-term memory.';
+
+  @override
+  String get settBehaviorMaterials => 'Study materials';
+
+  @override
+  String get settBehaviorMaterialsBody =>
+      'Your study materials are used for retrieval, task suggestions, explanations, and Galaxy construction. They are not used for public community content or research analysis unless you explicitly allow that setting.';
+
+  @override
+  String get settBehaviorResearch => 'Research participation';
+
+  @override
+  String get settBehaviorResearchBody =>
+      'Joining research allows de-identified learning behavior, error patterns, and resource quality signals to be aggregated to improve Sparkle. Raw private chats, identity details, and hidden content are excluded.';
+
+  @override
+  String get settBehaviorTitle => 'How Sparkle Uses These Settings';
+
+  @override
+  String get settBehaviorSubtitle =>
+      'Expand any area to see how your choices affect Sparkle behavior.';
+
+  @override
+  String get settBehaviorReminderNoCap => 'will not send smart reminders';
+
+  @override
+  String settBehaviorReminderCap(Object count) {
+    return 'up to $count smart reminders per day';
+  }
+
+  @override
+  String get settBehaviorReminderTaskOnNoTime =>
+      'task reminders are on, with no lead times set';
+
+  @override
+  String settBehaviorReminderTaskOnWithTime(Object times) {
+    return 'tasks remind you $times before due time';
+  }
+
+  @override
+  String get settBehaviorReminderTaskOff => 'task reminders are off';
+
+  @override
+  String settBehaviorReminderBodyEn(Object cap, Object level, Object taskText) {
+    return 'With the current setup, Sparkle $cap at $level detail; $taskText. Quiet hours and disabled types suppress non-urgent reminders first.';
+  }
+
+  @override
+  String settBehaviorDay(Object count) {
+    return '$count day';
+  }
+
+  @override
+  String settBehaviorDays(Object count) {
+    return '$count days';
+  }
+
+  @override
+  String settBehaviorHour(Object count) {
+    return '$count hour';
+  }
+
+  @override
+  String settBehaviorHours(Object count) {
+    return '$count hours';
+  }
+
+  @override
+  String settBehaviorMinute(Object count) {
+    return '$count minute';
+  }
+
+  @override
+  String settBehaviorMinutes(Object count) {
+    return '$count minutes';
+  }
+
+  @override
+  String get settBehaviorReminderLevelMinimal => 'minimal';
+
+  @override
+  String get settBehaviorReminderLevelVerbose => 'detailed';
+
+  @override
+  String get settBehaviorReminderLevelStandard => 'standard';
+
+  @override
+  String get settDataControlsTitle => 'Data Controls';
+
+  @override
+  String get settDataControlsDesc =>
+      'Export, deletion, and hiding controls live here, with clear consequences for each action.';
+
+  @override
+  String get settDataExport => 'Export My Data';
+
+  @override
+  String get settDataExportDesc =>
+      'Create a ZIP archive with account profile, learning records, settings, and exportable memory data.';
+
+  @override
+  String get settDataDelete => 'Delete My Data';
+
+  @override
+  String get settDataDeleteDesc =>
+      'Open the confirmation flow. Account deletion removes personal data, preferences, and history, and cannot be undone.';
+
+  @override
+  String get settDataHideChronicle => 'Hide My Growth Chronicle';
+
+  @override
+  String get settDataHideChronicleDesc =>
+      'When hidden, growth narrative surfaces do not show chronicle content by default. This does not delete the data.';
+
+  @override
+  String get settDataHideMemory => 'Hide My Memory';
+
+  @override
+  String get settDataHideMemoryDesc =>
+      'When hidden, memory panels and visible memory references are collapsed by default. Use Memory Settings to change long-term memory write rules.';
+
+  @override
+  String get settDataManageMemory => 'Manage memory write rules';
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class MetacognitionPanelCard extends StatelessWidget {
   const MetacognitionPanelCard({
@@ -36,7 +35,6 @@ class MetacognitionPanelCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return GraphiteCardSurface(
       child: Padding(
@@ -82,7 +80,7 @@ class MetacognitionPanelCard extends StatelessWidget {
                         if ((profileDimensionCount ?? 0) > 0) ...[
                           const SizedBox(height: DS.spacing4),
                           Text(
-                            zh ? '已观察 ${profileDimensionCount!} 个元认知维度' : '${profileDimensionCount!} metacognitive dimensions observed',
+                            context.l10n.metacogDimensionsObserved(profileDimensionCount!),
                             style: DS.labelSmall.copyWith(
                               color: isDark
                                   ? DS.success
@@ -105,7 +103,7 @@ class MetacognitionPanelCard extends StatelessWidget {
               if (generatedAt != null && generatedAt!.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing8),
                 Text(
-                  zh ? '更新于 $generatedAt' : 'Updated $generatedAt',
+                  context.l10n.metacogUpdatedAt(generatedAt!),
                   style: DS.labelSmall.copyWith(color: DS.textTertiary),
                 ),
               ],
