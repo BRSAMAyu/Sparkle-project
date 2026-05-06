@@ -7,7 +7,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
@@ -23,7 +22,6 @@ class SprintReviewScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(dashboardProvider);
     final sprint = dashboard.sprint;
-    final zh = I18nService.instance.isChinese;
     final planState = ref.watch(planListProvider);
     final plan = planState.activePlans.where((p) => p.id == planId).firstOrNull;
     final isLoading = dashboard.isLoading || planState.isLoading;
@@ -31,7 +29,7 @@ class SprintReviewScreen extends ConsumerWidget {
 
     final progress = sprint?.progress ?? plan?.progress ?? 0.0;
     final daysLeft = sprint?.daysLeft ?? 0;
-    final sprintName = sprint?.name ?? plan?.name ?? (zh ? '冲刺' : 'Sprint');
+    final sprintName = sprint?.name ?? plan?.name ?? (context.l10n.sprintDefaultName);
 
     return Scaffold(
       backgroundColor: DS.surfacePrimary,
@@ -45,7 +43,7 @@ class SprintReviewScreen extends ConsumerWidget {
           variant: ButtonVariant.ghost,
         ),
         title: Text(
-          zh ? '冲刺复盘' : 'Sprint Review',
+          context.l10n.sprintReviewTitle,
           style: DS.bodyMedium.copyWith(
             color: DS.textPrimary,
             fontWeight: DS.fontWeightBold,
@@ -77,7 +75,7 @@ class SprintReviewScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 _SectionHeader(
                   icon: Icons.psychology_outlined,
-                  title: zh ? '瓶颈分析' : 'Bottleneck Analysis',
+                  title: context.l10n.sprintBottleneckAnalysis,
                 ),
                 const SizedBox(height: 8),
                 _BottleneckCard(
@@ -88,7 +86,7 @@ class SprintReviewScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 _SectionHeader(
                   icon: Icons.edit_note_rounded,
-                  title: zh ? '复盘笔记' : 'Review Notes',
+                  title: context.l10n.sprintReviewNotes,
                 ),
                 const SizedBox(height: 8),
                 _ReviewNotesCard(planId: planId, ref: ref),
@@ -150,7 +148,6 @@ class _ProgressHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final percent = (progress.clamp(0.0, 1.0) * 100).toInt();
     final isUrgent = daysLeft <= 3;
     final color = isUrgent ? DS.error : DS.brandPrimary;
@@ -158,9 +155,7 @@ class _ProgressHero extends StatelessWidget {
     return Semantics(
       container: true,
       explicitChildNodes: true,
-      label: zh
-          ? '$name：已完成 $percent%，还剩 $daysLeft 天'
-          : '$name: $percent% complete, $daysLeft days left',
+      label: context.l10n.sprintProgressLabel(name, '$percent', '$daysLeft'),
       child: Container(
       padding: const EdgeInsets.all(DS.spacing20),
       decoration: BoxDecoration(
@@ -205,9 +200,9 @@ class _ProgressHero extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            zh
-                ? (daysLeft > 0 ? '还剩 $daysLeft 天' : '冲刺已到期')
-                : (daysLeft > 0 ? '$daysLeft days left' : 'Sprint overdue'),
+            daysLeft > 0
+                ? context.l10n.sprintDaysLeftShort('$daysLeft')
+                : context.l10n.sprintOverdue,
             style: DS.labelSmall.copyWith(
               color: isUrgent ? DS.error : DS.textSecondary,
             ),
@@ -227,7 +222,6 @@ class _StatsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final completed = (progress * 10).round();
     final remaining = 10 - completed;
 
@@ -236,7 +230,7 @@ class _StatsRow extends StatelessWidget {
         Expanded(
           child: _StatChip(
             icon: Icons.check_circle_outline,
-            label: zh ? '已完成' : 'Done',
+            label: context.l10n.sprintDone,
             value: '$completed',
             color: DS.success,
           ),
@@ -245,7 +239,7 @@ class _StatsRow extends StatelessWidget {
         Expanded(
           child: _StatChip(
             icon: Icons.pending_outlined,
-            label: zh ? '待完成' : 'Left',
+            label: context.l10n.sprintLeft,
             value: '$remaining',
             color: DS.warning,
           ),
@@ -254,7 +248,7 @@ class _StatsRow extends StatelessWidget {
         Expanded(
           child: _StatChip(
             icon: Icons.timer_outlined,
-            label: zh ? '天数' : 'Days',
+            label: context.l10n.sprintDays,
             value: '$daysLeft',
             color: daysLeft <= 3 ? DS.error : DS.info,
           ),
@@ -347,7 +341,6 @@ class _BottleneckCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final zh = I18nService.instance.isChinese;
 
     // Derive bottleneck insights from available data
     final insights = <_Insight>[];
@@ -356,19 +349,15 @@ class _BottleneckCard extends ConsumerWidget {
       insights.add(_Insight(
         icon: Icons.warning_amber_rounded,
         color: DS.error,
-        title: zh ? '进度严重落后' : 'Significantly behind',
-        detail: zh
-            ? '冲刺进度不足 30%，且剩余时间不多。建议缩小范围，聚焦最高优先级任务。'
-            : 'Sprint is under 30% with little time left. Consider reducing scope to top-priority tasks.',
+        title: context.l10n.sprintAlertSignificantlyBehind,
+        detail: context.l10n.sprintAlertSignificantlyBehindDetail,
       ));
     } else if (progress < 0.5) {
       insights.add(_Insight(
         icon: Icons.info_outline,
         color: DS.warning,
-        title: zh ? '进度偏慢' : 'Progress slower than expected',
-        detail: zh
-            ? '完成度未过半。可以检查任务粒度是否合适，或考虑拆分大任务。'
-            : 'Less than halfway done. Check if tasks are too large or need splitting.',
+        title: context.l10n.sprintAlertSlower,
+        detail: context.l10n.sprintAlertSlowerDetail,
       ));
     }
 
@@ -376,10 +365,8 @@ class _BottleneckCard extends ConsumerWidget {
       insights.add(_Insight(
         icon: Icons.schedule_outlined,
         color: DS.warning,
-        title: zh ? '冲刺即将结束' : 'Sprint ending soon',
-        detail: zh
-            ? '考虑记录当前冲刺的经验教训，为下一个冲刺做准备。'
-            : 'Consider documenting lessons learned for the next sprint.',
+        title: context.l10n.sprintAlertEnding,
+        detail: context.l10n.sprintAlertEndingDetail,
       ));
     }
 
@@ -387,10 +374,8 @@ class _BottleneckCard extends ConsumerWidget {
       insights.add(_Insight(
         icon: Icons.trending_up_rounded,
         color: DS.success,
-        title: zh ? '进展顺利' : 'On track',
-        detail: zh
-            ? '冲刺进度正常，继续保持当前节奏。'
-            : 'Sprint progress is healthy. Keep up the current pace.',
+        title: context.l10n.sprintAlertOnTrack,
+        detail: context.l10n.sprintAlertOnTrackDetail,
       ));
     }
 
@@ -490,12 +475,11 @@ class _ReviewNotesCardState extends State<_ReviewNotesCard> {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
 
     return Semantics(
       container: true,
       explicitChildNodes: true,
-      label: zh ? '复盘笔记' : 'Review notes',
+      label: context.l10n.sprintReviewNotes,
       child: Container(
       padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
@@ -512,9 +496,7 @@ class _ReviewNotesCardState extends State<_ReviewNotesCard> {
             style: DS.bodySmall.copyWith(color: DS.textPrimary),
             maxLines: 4,
             decoration: InputDecoration(
-              hintText: zh
-                  ? '记录这次冲刺中做得好的和需要改进的...'
-                  : 'What went well? What could improve?',
+              hintText: context.l10n.sprintReviewNotesHint,
               hintStyle: DS.labelSmall.copyWith(color: DS.textTertiary),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -542,7 +524,7 @@ class _ReviewNotesCardState extends State<_ReviewNotesCard> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.save_outlined, size: 16),
-              label: Text(zh ? '保存笔记' : 'Save notes'),
+              label: Text(context.l10n.sprintSaveNotes),
             ),
           ),
         ],
@@ -582,9 +564,8 @@ class _ReviewNotesCardState extends State<_ReviewNotesCard> {
     );
     if (!mounted) return;
     setState(() => _saving = false);
-    final zh = I18nService.instance.isChinese;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(zh ? '复盘笔记已保存' : 'Review notes saved')),
+      SnackBar(content: Text(context.l10n.sprintNotesSaved)),
     );
   }
 }
@@ -600,10 +581,9 @@ class _ReviewStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     return Semantics(
       container: true,
-      label: zh ? '冲刺复盘加载异常：$message' : 'Sprint review load issue: $message',
+      label: context.l10n.sprintLoadIssue(message),
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -625,7 +605,7 @@ class _ReviewStatusBanner extends StatelessWidget {
             ),
             TextButton(
               onPressed: onRetry,
-              child: Text(zh ? '重试' : 'Retry'),
+              child: Text(context.l10n.sprintRetry),
             ),
           ],
         ),
@@ -641,7 +621,6 @@ class _ActionButtons extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final zh = I18nService.instance.isChinese;
 
     return Column(
       children: [
@@ -661,7 +640,7 @@ class _ActionButtons extends ConsumerWidget {
               ),
             ),
             child: Text(
-              zh ? '继续冲刺' : 'Continue Sprint',
+              context.l10n.sprintContinue,
               style: DS.bodySmall.copyWith(
                 fontWeight: DS.fontWeightBold,
                 color: DS.textOnPrimary,
@@ -686,7 +665,7 @@ class _ActionButtons extends ConsumerWidget {
               side: BorderSide(color: DS.borderSubtle),
             ),
             child: Text(
-              zh ? '调整计划' : 'Adjust Plan',
+              context.l10n.sprintAdjustPlan,
               style: DS.bodySmall.copyWith(
                 fontWeight: DS.fontWeightMedium,
                 color: DS.textSecondary,

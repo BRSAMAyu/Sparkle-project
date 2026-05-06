@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
@@ -22,17 +22,14 @@ class ExamSprintSetupScreen extends ConsumerStatefulWidget {
 }
 
 class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
-  static List<String> get _subjectSuggestions {
-    final zh = I18nService.instance.isChinese;
-    return <String>[
-      zh ? '计算机网络' : 'Computer Networks',
-      zh ? '操作系统' : 'Operating Systems',
-      zh ? '数据库' : 'Databases',
-      zh ? '高数' : 'Calculus',
-      zh ? '线代' : 'Linear Algebra',
-      zh ? '英语' : 'English',
-    ];
-  }
+  List<String> get _subjectSuggestions => <String>[
+        context.l10n.examSubjectComputerNetworks,
+        context.l10n.examSubjectOperatingSystems,
+        context.l10n.examSubjectDatabases,
+        context.l10n.examSubjectCalculus,
+        context.l10n.examSubjectLinearAlgebra,
+        context.l10n.examSubjectEnglish,
+      ];
 
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final TextEditingController _subjectController = TextEditingController();
@@ -175,7 +172,7 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
                 child: Wrap(
                   spacing: DS.spacing8,
                   runSpacing: DS.spacing8,
-                  children: _targetOptions
+                  children: targetOptions(context.l10n)
                       .map(
                         (option) => ChoiceChip(
                           label: Text(option.label),
@@ -702,26 +699,26 @@ class _ExamSprintSetupScreenState extends ConsumerState<ExamSprintSetupScreen> {
 
   List<String> _chapterSuggestionsFor(String subject) {
     final normalized = subject.toLowerCase();
-    final zh = I18nService.instance.isChinese;
+    final l10n = context.l10n;
     if (normalized.contains('计算机网络') || normalized.contains('计网') || normalized.contains('computer net')) {
-      return zh ? ['物理层', '数据链路层', '网络层', '传输层', '应用层'] : ['Physical Layer', 'Data Link', 'Network Layer', 'Transport', 'Application'];
+      return l10n.examChaptersComputerNetworks.split('|');
     }
     if (normalized.contains('操作系统') || normalized.contains('operating')) {
-      return zh ? ['进程线程', '同步互斥', '内存管理', '文件系统', '死锁'] : ['Processes & Threads', 'Sync & Mutex', 'Memory Mgmt', 'File System', 'Deadlock'];
+      return l10n.examChaptersOperatingSystems.split('|');
     }
     if (normalized.contains('数据库') || normalized.contains('database')) {
-      return zh ? ['ER 模型', 'SQL', '范式', '事务', '索引'] : ['ER Model', 'SQL', 'Normal Forms', 'Transactions', 'Indexes'];
+      return l10n.examChaptersDatabases.split('|');
     }
     if (normalized.contains('高数') || normalized.contains('calculus')) {
-      return zh ? ['极限连续', '导数微分', '积分', '级数', '微分方程'] : ['Limits', 'Derivatives', 'Integrals', 'Series', 'Diff Equations'];
+      return l10n.examChaptersCalculus.split('|');
     }
     if (normalized.contains('线代') || normalized.contains('linear')) {
-      return zh ? ['矩阵', '行列式', '向量组', '特征值', '二次型'] : ['Matrices', 'Determinants', 'Vectors', 'Eigenvalues', 'Quadratic Forms'];
+      return l10n.examChaptersLinearAlgebra.split('|');
     }
     if (normalized.contains('英语') || normalized.contains('english')) {
-      return zh ? ['词汇', '长难句', '阅读', '翻译', '写作'] : ['Vocabulary', 'Long Sentences', 'Reading', 'Translation', 'Writing'];
+      return l10n.examChaptersEnglish.split('|');
     }
-    return zh ? ['第一章', '第二章', '第三章', '第四章', '第五章'] : ['Chapter 1', 'Chapter 2', 'Chapter 3', 'Chapter 4', 'Chapter 5'];
+    return l10n.examChaptersGeneric.split('|');
   }
 }
 
@@ -735,8 +732,8 @@ class _TargetModeOption {
   final String label;
 }
 
-List<_TargetModeOption> _targetOptions = <_TargetModeOption>[
-  _TargetModeOption(value: 'pass', label: S.planSprintTargetPass),
-  _TargetModeOption(value: 'hold', label: S.planSprintTargetHold),
-  _TargetModeOption(value: 'high_score', label: S.planSprintTargetHighScore),
-];
+List<_TargetModeOption> targetOptions(AppLocalizations l10n) => <_TargetModeOption>[
+      _TargetModeOption(value: 'pass', label: l10n.planSprintTargetPass),
+      _TargetModeOption(value: 'hold', label: l10n.planSprintTargetHold),
+      _TargetModeOption(value: 'high_score', label: l10n.planSprintTargetHighScore),
+    ];
