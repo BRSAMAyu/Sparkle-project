@@ -71,9 +71,9 @@
 | QA-P2-10 | _should_retract() enforcement logic | Python | M | ✅ done | — | df1476019 | Replace stub |
 | QA-P2-11 | Build TaskRestoreDialog widget | Flutter | M | ✅ done | — | ab687c9c | Extracted to standalone TaskRestoreDialog widget |
 | QA-P2-12 | Build CommunityStrategyCard widget | Flutter | L | ⏭️ skip | — | — | Already exists: community_strategy_card.dart, fully implemented with i18n + Semantics |
-| QA-P2-13 | Build ExperienceEnvelopeIndicator | Flutter | L | 🔵 in-progress | claude-B | — | New widget from provider |
-| QA-P2-14 | Clean orphaned vocabulary providers | Flutter | S | ⬜ pending | — | — | Remove 4 unused |
-| QA-P2-15 | Clean orphaned shop providers | Flutter | S | ⬜ pending | — | — | Remove 7 unused |
+| QA-P2-13 | Build ExperienceEnvelopeIndicator | Flutter | L | ⏭️ skip | — | — | Already exists: experience_envelope_indicator.dart, ConsumerWidget with full i18n |
+| QA-P2-14 | Clean orphaned vocabulary providers | Flutter | S | ✅ done | — | f1dc08d49 | Removed 4 unused providers |
+| QA-P2-15 | Clean orphaned shop providers | Flutter | S | 🔵 in-progress | claude-B | — | Remove 7 unused |
 | QA-P2-16 | i18n → ARB: Insights feature (36 ternaries) | Flutter | L | ⬜ pending | — | — | insights/ inline isChinese |
 | QA-P2-17 | i18n → ARB: User feature (11 ternaries) | Flutter | M | ⬜ pending | — | — | user/ inline isChinese |
 | QA-P2-18 | i18n → ARB: Settings feature (15 ternaries) | Flutter | M | ⬜ pending | — | — | settings/ inline isChinese |
@@ -95,7 +95,7 @@
 | QA-P2-34 | Semantics: IconButtons (31+ files) | Flutter | M | ⬜ pending | — | — | Add tooltip/semanticLabel |
 | QA-P2-35 | Semantics: InkWell (30+ files) | Flutter | M | ⬜ pending | — | — | Wrap with Semantics |
 | QA-P2-36 | Semantics: GestureDetector (30+ files) | Flutter | M | ⬜ pending | — | — | Wrap with Semantics |
-| QA-P2-37 | Fix generic Semantics: CausalTimeline | Flutter | S | ⬜ pending | — | — | Replace 'control 1/2/3' |
+| QA-P2-37 | Fix generic Semantics: CausalTimeline | Flutter | S | ✅ done | — | 7df6a4fd7 | Replaced 'control 1/2/3' with meaningful l10n labels |
 | QA-P2-38 | Fix hardcoded toggle: GoalWorldGraph | Flutter | S | ⬜ pending | — | — | Toggle strings → ARB |
 | QA-P2-39 | Semantics: notification chips | Flutter | S | ⬜ pending | — | — | Goal value + next step |
 | QA-P2-40 | Hardcoded 'Decision Timeline' → ARB | Flutter | S | ⬜ pending | — | — | ChatScreen |
