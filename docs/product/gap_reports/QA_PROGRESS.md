@@ -57,7 +57,7 @@
 
 | ID | Title | Scope | Effort | Status | Claimed-By | Commit | Note |
 |----|-------|-------|--------|--------|-----------|--------|------|
-| QA-P2-1 | Semantics: UnderstandingSnapshotCard | Flutter | S | ⬜ pending | — | — | Add root Semantics wrapper |
+| QA-P2-1 | Semantics: UnderstandingSnapshotCard | Flutter | S | 🔵 in-progress | claude-B | — | Add root Semantics wrapper |
 | QA-P2-2 | Semantics: ContextReceiptBar | Flutter | S | ⬜ pending | — | — | Add Semantics label |
 | QA-P2-3 | Semantics: SimilarGoalPursuersCard | Flutter | S | ⬜ pending | — | — | Add Semantics wrapper |
 | QA-P2-4 | Semantics: GoalValueChip | Flutter | S | ⬜ pending | — | — | Add semanticLabel |
