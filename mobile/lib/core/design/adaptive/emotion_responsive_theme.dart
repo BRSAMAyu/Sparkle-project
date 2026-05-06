@@ -170,6 +170,22 @@ class EmotionResponsiveAppWrapper extends StatelessWidget {
   }
 }
 
+// Light mode: warm dimming (slightly more red/green, less blue)
+const _lightLowStimulusFilter = ColorFilter.matrix(<double>[
+  0.94, 0, 0, 0, 0, //
+  0, 0.96, 0, 0, 0, //
+  0, 0, 1.02, 0, 0, //
+  0, 0, 0, 1, 0, //
+]);
+
+// Dark mode: uniform brightness reduction, no color shift
+const _darkLowStimulusFilter = ColorFilter.matrix(<double>[
+  0.94, 0, 0, 0, 0, //
+  0, 0.94, 0, 0, 0, //
+  0, 0, 0.94, 0, 0, //
+  0, 0, 0, 1, 0, //
+]);
+
 class _EmotionColorTemperatureLayer extends StatelessWidget {
   const _EmotionColorTemperatureLayer({
     required this.enabled,
@@ -182,29 +198,10 @@ class _EmotionColorTemperatureLayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!enabled) return child;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ColorFiltered(
-      colorFilter: const ColorFilter.matrix(<double>[
-        0.94,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0.96,
-        0,
-        0,
-        0,
-        0,
-        0,
-        1.02,
-        0,
-        0,
-        0,
-        0,
-        0,
-        1,
-        0,
-      ]),
+      colorFilter:
+          isDark ? _darkLowStimulusFilter : _lightLowStimulusFilter,
       child: child,
     );
   }

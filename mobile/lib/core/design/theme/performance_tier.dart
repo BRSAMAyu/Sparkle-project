@@ -35,6 +35,11 @@ PerformanceTier defaultPerformanceTier() {
       return PerformanceTier.ultra;
     }
 
+    // Very constrained devices: low refresh + high DPR + small screen (e.g. iPhone SE 1st gen)
+    if (refreshRate <= 60 && dpr >= 3.5 && shortestSide < 375) {
+      return PerformanceTier.low;
+    }
+
     if (refreshRate <= 60 && (dpr >= 3.0 || shortestSide < 390)) {
       return PerformanceTier.medium;
     }

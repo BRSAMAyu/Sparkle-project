@@ -32,6 +32,8 @@ class SparkleNetworkImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     Widget child = CachedNetworkImage(
       imageUrl: imageUrl,
       fit: fit,
@@ -49,6 +51,19 @@ class SparkleNetworkImage extends StatelessWidget {
     if (imageBuilder == null && borderRadius != null) {
       child = ClipRRect(
         borderRadius: borderRadius!,
+        child: child,
+      );
+    }
+
+    // Suppress image brightness in dark mode to prevent harsh white blasts
+    if (isDark) {
+      child = ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          0.90, 0, 0, 0, 0, //
+          0, 0.90, 0, 0, 0, //
+          0, 0, 0.90, 0, 0, //
+          0, 0, 0, 1, 0, //
+        ]),
         child: child,
       );
     }
