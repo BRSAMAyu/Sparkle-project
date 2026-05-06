@@ -15,6 +15,7 @@ import 'package:sparkle/core/services/task_notification_scheduler.dart'
         taskReminderConfigProvider;
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/calendar/data/repositories/calendar_repository.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/calendar_provider.dart';
 import 'package:sparkle/features/calendar/presentation/providers/unified_calendar_provider.dart';
 import 'package:sparkle/features/galaxy/presentation/providers/galaxy_provider.dart';
@@ -112,10 +113,12 @@ class TaskListState {
 class TaskNotifier extends StateNotifier<TaskListState> {
   TaskNotifier(this._taskRepository, this._notificationScheduler, this._ref)
       : super(TaskListState()) {
-    // Load initial data
-    unawaited(loadTodayTasks());
-    unawaited(loadRecommendedTasks());
-    unawaited(loadTasks());
+    // Load initial data in parallel
+    unawaited(Future.wait([
+      loadTodayTasks(),
+      loadRecommendedTasks(),
+      loadTasks(),
+    ]).catchError((_) {}));
   }
   final TaskRepository _taskRepository;
   final TaskNotificationScheduler _notificationScheduler;
@@ -478,7 +481,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       _ref
         ..invalidate(learningPortfolioProvider)
         ..invalidate(achievementProvider)
-        ..invalidate(weeklyGrowthNarrativeProvider);
+        ..invalidate(weeklyGrowthNarrativeProvider)
+        ..invalidate(dashboardProvider);
 
       final linkedPrediction = await _ref
           .read(predictionAttributionServiceProvider)
@@ -578,7 +582,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       _ref
         ..invalidate(learningPortfolioProvider)
         ..invalidate(achievementProvider)
-        ..invalidate(weeklyGrowthNarrativeProvider);
+        ..invalidate(weeklyGrowthNarrativeProvider)
+        ..invalidate(dashboardProvider);
       final linkedPrediction = await _ref
           .read(predictionAttributionServiceProvider)
           .consumeForExecution(
@@ -638,7 +643,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
       _ref
         ..invalidate(learningPortfolioProvider)
         ..invalidate(achievementProvider)
-        ..invalidate(weeklyGrowthNarrativeProvider);
+        ..invalidate(weeklyGrowthNarrativeProvider)
+        ..invalidate(dashboardProvider);
     });
   }
 
@@ -669,7 +675,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     _ref
       ..invalidate(learningPortfolioProvider)
       ..invalidate(achievementProvider)
-      ..invalidate(weeklyGrowthNarrativeProvider);
+      ..invalidate(weeklyGrowthNarrativeProvider)
+      ..invalidate(dashboardProvider);
     return result;
   }
 
@@ -683,7 +690,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     _ref
       ..invalidate(learningPortfolioProvider)
       ..invalidate(achievementProvider)
-      ..invalidate(weeklyGrowthNarrativeProvider);
+      ..invalidate(weeklyGrowthNarrativeProvider)
+      ..invalidate(dashboardProvider);
     return result;
   }
 
@@ -713,7 +721,8 @@ class TaskNotifier extends StateNotifier<TaskListState> {
     _ref
       ..invalidate(learningPortfolioProvider)
       ..invalidate(achievementProvider)
-      ..invalidate(weeklyGrowthNarrativeProvider);
+      ..invalidate(weeklyGrowthNarrativeProvider)
+      ..invalidate(dashboardProvider);
     return result;
   }
 

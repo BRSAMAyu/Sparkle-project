@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/achievement/data/repositories/achievement_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
@@ -12,6 +13,9 @@ import 'package:sparkle/features/community/presentation/providers/community_prov
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 // ========== Achievement State ==========
+
+// Sentinel for clearing nullable fields via copyWith
+final _cleared = Object();
 
 class AchievementState {
   AchievementState({
@@ -98,7 +102,7 @@ class AchievementState {
     List<UserTitle>? titles,
     SparkContract? activeContract,
     bool? isLoading,
-    String? error,
+    Object? error = _cleared,
   }) =>
       AchievementState(
         achievements: achievements ?? this.achievements,
@@ -108,7 +112,7 @@ class AchievementState {
         titles: titles ?? this.titles,
         activeContract: activeContract ?? this.activeContract,
         isLoading: isLoading ?? this.isLoading,
-        error: error ?? this.error,
+        error: identical(error, _cleared) ? this.error : error as String?,
       );
 }
 
@@ -148,14 +152,14 @@ class AchievementMapState {
     List<Map<String, dynamic>>? connections,
     List<Map<String, dynamic>>? categories,
     bool? isLoading,
-    String? error,
+    Object? error = _cleared,
   }) =>
       AchievementMapState(
         nodes: nodes ?? this.nodes,
         connections: connections ?? this.connections,
         categories: categories ?? this.categories,
         isLoading: isLoading ?? this.isLoading,
-        error: error ?? this.error,
+        error: identical(error, _cleared) ? this.error : error as String?,
       );
 }
 
@@ -185,12 +189,12 @@ class StreakHistoryState {
   StreakHistoryState copyWith({
     List<StreakDayRecord>? days,
     bool? isLoading,
-    String? error,
+    Object? error = _cleared,
   }) =>
       StreakHistoryState(
         days: days ?? this.days,
         isLoading: isLoading ?? this.isLoading,
-        error: error ?? this.error,
+        error: identical(error, _cleared) ? this.error : error as String?,
       );
 }
 
@@ -255,6 +259,7 @@ final achievementEventConsumerProvider = Provider.autoDispose<void>((ref) {
     }
     ref.invalidate(achievementProvider);
     ref.invalidate(streakHistoryProvider);
+    ref.invalidate(dashboardProvider);
   });
 
   ref.onDispose(() {

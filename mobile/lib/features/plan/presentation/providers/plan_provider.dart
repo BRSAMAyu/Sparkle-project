@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 import 'package:sparkle/features/task/task.dart';
+import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 
 // 1. PlanListState Class
 class PlanListState {
@@ -123,6 +126,7 @@ class PlanNotifier extends StateNotifier<PlanListState> {
       _ref.read(taskListProvider.notifier).refreshTasks();
       // Invalidate the plan details to show the new tasks
       _ref.invalidate(planDetailProvider(planId));
+      _ref.invalidate(dashboardProvider);
     });
   }
 
@@ -147,6 +151,7 @@ class PlanNotifier extends StateNotifier<PlanListState> {
   Future<void> refresh() async {
     await loadPlans();
     await loadActivePlans();
+    _ref.invalidate(dashboardProvider);
   }
 }
 
@@ -160,6 +165,9 @@ final planListProvider = StateNotifierProvider<PlanNotifier, PlanListState>(
 
 final planDetailProvider =
     FutureProvider.autoDispose.family<PlanModel, String>((ref, id) async {
+  // Keep alive for 30s to avoid loading flash on tab switches
+  final link = ref.keepAlive();
+  Timer(const Duration(seconds: 30), link.close);
   final planRepo = ref.watch(planRepositoryProvider);
   return planRepo.getPlan(id);
 });

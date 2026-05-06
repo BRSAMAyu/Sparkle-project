@@ -68,6 +68,25 @@ final routerProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: true,
     observers: [navigationObserver],
     refreshListenable: routerRefreshNotifier,
+    errorBuilder: (context, state) => Scaffold(
+      appBar: AppBar(title: const Text('Page Not Found')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.explore_off, size: 64, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text('Page not found: ${state.error?.message ?? state.uri.path}',
+                style: Theme.of(context).textTheme.bodyLarge),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => context.go('/'),
+              child: const Text('Go Home'),
+            ),
+          ],
+        ),
+      ),
+    ),
     redirect: (context, state) {
       final authState = ref.read(authProvider);
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -275,9 +276,19 @@ class AuthNotifier extends StateNotifier<AuthState> {
       try {
         final user = await _authRepository.getCurrentUser();
         state = state.copyWith(user: user);
-      } catch (e) {
-        // Could fail if token expired and refresh failed, log out user
+      } on AuthFailure {
+        // Token expired and refresh failed — log out
         await logout();
+      } on SocketException {
+        // Network error — keep current state, don't log out
+        debugPrint('[Auth] refreshUser: network error, keeping current state');
+      } catch (e) {
+        // Only logout on auth failures, not transient errors
+        if (e.toString().contains('401') || e.toString().contains('unauthorized')) {
+          await logout();
+        } else {
+          debugPrint('[Auth] refreshUser: non-auth error, keeping state: $e');
+        }
       }
     }
   }

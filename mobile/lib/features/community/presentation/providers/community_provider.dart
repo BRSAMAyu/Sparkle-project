@@ -1057,7 +1057,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
         },
         onError: (Object error) {
           debugPrint('WS Stream Error: $error');
-          _handleConnectionError();
+          _handleConnectionError(error);
         },
         onDone: () {
           debugPrint('WS Stream Done');
@@ -1074,9 +1074,36 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
     }
   }
 
-  void _handleConnectionError() {
+  bool _disposed = false;
+  bool _isRefreshingToken = false;
+  int _error401Count = 0;
+  static const int _max401Retries = 1;
+
+  bool _is401Error(dynamic error) {
+    final errorStr = error.toString().toLowerCase();
+    return errorStr.contains('status code: 401') ||
+        errorStr.contains('http 401') ||
+        errorStr.contains(' 401 ') ||
+        errorStr.startsWith('401') ||
+        errorStr.contains('unauthorized') ||
+        errorStr.contains('invalid token') ||
+        errorStr.contains('token expired') ||
+        errorStr.contains('jwt expired') ||
+        errorStr.contains('authentication failed') ||
+        errorStr.contains('auth failed') ||
+        errorStr.contains('4401');
+  }
+
+  void _handleConnectionError([Object? error]) {
     _connectionState = WebSocketConnectionState.disconnected;
-    if (_retryCount < _maxRetries) {
+
+    if (error != null && _is401Error(error)) {
+      debugPrint('🔐 401 Authentication error detected');
+      unawaited(_handle401Error());
+      return;
+    }
+
+    if (_retryCount < _maxRetries && !_disposed) {
       _retryCount++;
       final delay = Duration(
         seconds: 1 << _retryCount,
@@ -1085,12 +1112,54 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
         'WS reconnecting in ${delay.inSeconds}s (attempt $_retryCount/$_maxRetries)',
       );
       Future.delayed(delay, () {
-        if (mounted) {
+        if (mounted && !_disposed) {
           _connectWebSocket(isRetry: true);
         }
       });
     } else {
       debugPrint('WS max retries reached, giving up');
+    }
+  }
+
+  Future<void> _handle401Error() async {
+    if (_isRefreshingToken || _disposed) return;
+
+    if (_error401Count >= _max401Retries) {
+      debugPrint('❌ Max 401 retry attempts exceeded, logging out...');
+      try {
+        await _authRepository.logout();
+      } catch (e) {
+        debugPrint('❌ Logout failed: $e');
+      }
+      _connectionState = WebSocketConnectionState.disconnected;
+      _retryCount = _maxRetries;
+      return;
+    }
+
+    _isRefreshingToken = true;
+    _error401Count++;
+
+    debugPrint(
+      '🔑 Refreshing token... ($_error401Count/$_max401Retries)',
+    );
+
+    try {
+      await _authRepository.refreshToken();
+      debugPrint('✅ Token refreshed successfully');
+      _error401Count = 0;
+      _retryCount = 0;
+      await _connectWebSocket(isRetry: false);
+    } catch (e) {
+      debugPrint('❌ Token refresh failed: $e');
+      try {
+        await _authRepository.logout();
+      } catch (logoutErr) {
+        debugPrint('❌ Logout failed: $logoutErr');
+      }
+      _connectionState = WebSocketConnectionState.disconnected;
+      _retryCount = _maxRetries;
+    } finally {
+      _isRefreshingToken = false;
     }
   }
 
@@ -1139,6 +1208,7 @@ class GroupChatNotifier extends StateNotifier<AsyncValue<List<MessageInfo>>> {
 
   @override
   void dispose() {
+    _disposed = true;
     _wsSubscription?.cancel();
     _wsService.disconnect();
     super.dispose();
