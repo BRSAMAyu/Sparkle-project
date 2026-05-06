@@ -51,9 +51,11 @@
 | QA-P1-17 | Persist SprintReviewScreen notes | Flutter | M | ✅ done | — | dc7f34cb5 | Wire save API |
 | QA-P1-18 | Replace duplicate GoalValueChip | Flutter | S | ⏭️ skip | — | — | Already uses shared GoalValueChip: unified_notification_card.dart:597 |
 | QA-P1-19 | Unit tests: per-channel delivery | Python | M | ✅ done | — | a362c8ef | 14 tests: _resolve_channel + handle_nudge_triggered |
-| QA-P1-20 | Unit tests: fatigue + streak quality | Python | M | 🔵 in-progress | claude-A | — | Fatigue penalty + Redis fallback |
+| QA-P1-20 | Unit tests: fatigue + streak quality | Python | M | ✅ done | — | 0b883ab1 | 13 tests: fatigue levels + crisis + Redis fallback + caching |
 
-## P2: Medium (35 items)
+**P1 DOD**: 20/20 items resolved (10 done + 10 skip). All P1 QA fixes complete.
+
+---
 
 | ID | Title | Scope | Effort | Status | Claimed-By | Commit | Note |
 |----|-------|-------|--------|--------|-----------|--------|------|
@@ -116,7 +118,7 @@
 | Priority | Total | ✅ done | ⏭️ skip | ⬜ pending | 🔵 in-progress |
 |----------|-------|---------|---------|-----------|----------------|
 | P0 | 6 | 6 | 0 | 0 | 0 |
-| P1 | 20 | 9 | 10 | 0 | 1 |
+| P1 | 20 | 10 | 10 | 0 | 0 |
 | P2 | 35 | 1 | 0 | 34 | 0 |
 | P3 | 5 | 0 | 0 | 5 | 0 |
-| **Total** | **66** | **16** | **10** | **39** | **1** |
+| **Total** | **66** | **17** | **10** | **39** | **0** |
