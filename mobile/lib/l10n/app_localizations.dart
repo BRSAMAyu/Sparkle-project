@@ -52961,6 +52961,91 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'长按下方文字即可翻译：'**
   String get translationDemoHint;
+
+  /// No description provided for @personaInferredPreferences.
+  ///
+  /// In zh, this message translates to:
+  /// **'推断偏好'**
+  String get personaInferredPreferences;
+
+  /// No description provided for @personaActivePolicies.
+  ///
+  /// In zh, this message translates to:
+  /// **'活跃策略'**
+  String get personaActivePolicies;
+
+  /// No description provided for @personaContextSnapshot.
+  ///
+  /// In zh, this message translates to:
+  /// **'上下文快照'**
+  String get personaContextSnapshot;
+
+  /// No description provided for @personaContextSnapshotSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'底层上下文快照，默认收起，必要时再展开'**
+  String get personaContextSnapshotSubtitle;
+
+  /// No description provided for @personaRollbackSuccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'已回滚到上一版本'**
+  String get personaRollbackSuccess;
+
+  /// No description provided for @personaConfirmGoalStatusChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认修改目标状态？'**
+  String get personaConfirmGoalStatusChange;
+
+  /// No description provided for @personaGoalStatusChangeContent.
+  ///
+  /// In zh, this message translates to:
+  /// **'将「{title}」的状态从「{status}」改为「{nextStatus}」。\\n\\n这会影响相关计划、任务和提醒，且不会自动撤销。'**
+  String personaGoalStatusChangeContent(
+      Object nextStatus, Object status, Object title);
+
+  /// No description provided for @personaConfirmChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认修改'**
+  String get personaConfirmChange;
+
+  /// No description provided for @personaAdjustmentFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整失败：{error}'**
+  String personaAdjustmentFailed(Object error);
+
+  /// No description provided for @personaRestoredSystemValue.
+  ///
+  /// In zh, this message translates to:
+  /// **'已恢复系统推断值'**
+  String get personaRestoredSystemValue;
+
+  /// No description provided for @personaHintZeroToOne.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入 0.0 到 1.0 之间的数字'**
+  String get personaHintZeroToOne;
+
+  /// No description provided for @personaHintStudyTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入学习时长（分钟）'**
+  String get personaHintStudyTime;
+
+  /// No description provided for @personaHintMinutesPositive.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入大于 0 的分钟数'**
+  String get personaHintMinutesPositive;
+
+  /// No description provided for @personaThisGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'此目标'**
+  String get personaThisGoal;
 }
 
 class _AppLocalizationsDelegate
