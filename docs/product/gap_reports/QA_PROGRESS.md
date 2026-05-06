@@ -35,7 +35,7 @@
 | QA-P1-1 | Hardcoded 'Your Data & Privacy' → ARB | Flutter | S | ✅ done | — | 85548b47 | data_usage_dashboard_screen.dart |
 | QA-P1-2 | Hardcoded 'Growth Plans' → ARB | Flutter | S | ✅ done | — | 101cc75b | growth_screen.dart |
 | QA-P1-3 | Hardcoded 'New Plan' → ARB | Flutter | S | ✅ done | — | 101cc75b | growth_screen.dart |
-| QA-P1-4 | Hardcoded 'Send Message' → ARB | Flutter | S | ⬜ pending | — | — | user_search_screen.dart |
+| QA-P1-4 | Hardcoded 'Send Message' → ARB | Flutter | S | 🔵 in-progress | claude-B | — | user_search_screen.dart |
 | QA-P1-5 | Add route: LeaderboardScreen | Flutter | S | ⬜ pending | — | — | QA_NAV P0-1: 4 orphaned screens |
 | QA-P1-6 | Add route: FocusStatisticsScreen | Flutter | S | ⬜ pending | — | — | QA_NAV P0-1 |
 | QA-P1-7 | Add route: ThemeSettingsScreen | Flutter | S | ⬜ pending | — | — | QA_NAV P0-1 |
