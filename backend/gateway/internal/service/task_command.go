@@ -486,6 +486,119 @@ func (s *TaskCommandService) ConfirmGeneratedTasks(ctx context.Context, userID u
 	})
 }
 
+
+
+
+// PauseTask pauses an in-progress task and publishes a TaskPaused event.
+func (s *TaskCommandService) PauseTask(ctx context.Context, userID, taskID uuid.UUID) error {
+	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
+		result, err := txCtx.Tx().Exec(ctx, `
+			UPDATE tasks
+			SET status = 'PAUSED', updated_at = NOW()
+			WHERE id = $1 AND user_id = $2 AND status = 'IN_PROGRESS' AND deleted_at IS NULL
+		`,
+			pgtype.UUID{Bytes: taskID, Valid: true},
+			pgtype.UUID{Bytes: userID, Valid: true},
+		)
+		if err != nil {
+			return fmt.Errorf("failed to pause task: %w", err)
+		}
+		if result.RowsAffected() == 0 {
+			return fmt.Errorf("task not found or not in progress")
+		}
+		domainEvent := event.NewDomainEvent(
+			event.EventTaskPaused,
+			event.AggregateTask,
+			taskID,
+			map[string]interface{}{
+				"task_id": taskID.String(),
+				"user_id": userID.String(),
+			},
+			event.EventMetadata{
+				UserID: userID,
+				Source: "task_command_service",
+			},
+		)
+		if err := txCtx.SaveEventToOutbox(ctx, &domainEvent); err != nil {
+			return fmt.Errorf("failed to save event to outbox: %w", err)
+		}
+		return nil
+	})
+}
+
+// ResumeTask resumes a paused task and publishes a TaskResumed event.
+func (s *TaskCommandService) ResumeTask(ctx context.Context, userID, taskID uuid.UUID) error {
+	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
+		result, err := txCtx.Tx().Exec(ctx, `
+			UPDATE tasks
+			SET status = 'IN_PROGRESS', updated_at = NOW()
+			WHERE id = $1 AND user_id = $2 AND status = 'PAUSED' AND deleted_at IS NULL
+		`,
+			pgtype.UUID{Bytes: taskID, Valid: true},
+			pgtype.UUID{Bytes: userID, Valid: true},
+		)
+		if err != nil {
+			return fmt.Errorf("failed to resume task: %w", err)
+		}
+		if result.RowsAffected() == 0 {
+			return fmt.Errorf("task not found or not paused")
+		}
+		domainEvent := event.NewDomainEvent(
+			event.EventTaskResumed,
+			event.AggregateTask,
+			taskID,
+			map[string]interface{}{
+				"task_id": taskID.String(),
+				"user_id": userID.String(),
+			},
+			event.EventMetadata{
+				UserID: userID,
+				Source: "task_command_service",
+			},
+		)
+		if err := txCtx.SaveEventToOutbox(ctx, &domainEvent); err != nil {
+			return fmt.Errorf("failed to save event to outbox: %w", err)
+		}
+		return nil
+	})
+}
+
+// MarkStuck marks a task as stuck and publishes a TaskStuck event.
+func (s *TaskCommandService) MarkStuck(ctx context.Context, userID, taskID uuid.UUID) error {
+	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
+		result, err := txCtx.Tx().Exec(ctx, `
+			UPDATE tasks
+			SET status = 'STUCK', updated_at = NOW()
+			WHERE id = $1 AND user_id = $2 AND status = 'IN_PROGRESS' AND deleted_at IS NULL
+		`,
+			pgtype.UUID{Bytes: taskID, Valid: true},
+			pgtype.UUID{Bytes: userID, Valid: true},
+		)
+		if err != nil {
+			return fmt.Errorf("failed to mark task stuck: %w", err)
+		}
+		if result.RowsAffected() == 0 {
+			return fmt.Errorf("task not found or not in progress")
+		}
+		domainEvent := event.NewDomainEvent(
+			event.EventTaskStuck,
+			event.AggregateTask,
+			taskID,
+			map[string]interface{}{
+				"task_id": taskID.String(),
+				"user_id": userID.String(),
+			},
+			event.EventMetadata{
+				UserID: userID,
+				Source: "task_command_service",
+			},
+		)
+		if err := txCtx.SaveEventToOutbox(ctx, &domainEvent); err != nil {
+			return fmt.Errorf("failed to save event to outbox: %w", err)
+		}
+		return nil
+	})
+}
 // Helper functions for nullable types
 func nilOrString(s *string) pgtype.Text {
 	if s == nil {

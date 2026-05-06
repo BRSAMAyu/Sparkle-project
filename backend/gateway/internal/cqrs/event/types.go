@@ -27,6 +27,9 @@ const (
 	EventTaskCompleted EventType = "task.completed"
 	EventTaskAbandoned EventType = "task.abandoned"
 	EventTaskDeleted   EventType = "task.deleted"
+	EventTaskPaused    EventType = "task.paused"
+	EventTaskResumed   EventType = "task.resumed"
+	EventTaskStuck     EventType = "task.stuck"
 
 	// Plan events
 	EventPlanCreated   EventType = "plan.created"
