@@ -166,11 +166,12 @@ class _UnderstandingSnapshotSurface extends StatelessWidget {
                 spacing: DS.spacing8,
                 runSpacing: DS.spacing8,
                 children: [
-                  SparkleButton.primary(
-                    label: zh ? '纠正我的理解' : 'Correct this',
-                    icon: const Icon(Icons.edit_note_rounded),
-                    onPressed: onOpenChat ?? () {},
-                  ),
+                  if (onOpenChat != null)
+                    SparkleButton.primary(
+                      label: zh ? '纠正我的理解' : 'Correct this',
+                      icon: const Icon(Icons.edit_note_rounded),
+                      onPressed: onOpenChat,
+                    ),
                   if (snapshot.nextStepLabel != null)
                     _TinyEvidenceChip(
                       label: snapshot.nextStepLabel!,

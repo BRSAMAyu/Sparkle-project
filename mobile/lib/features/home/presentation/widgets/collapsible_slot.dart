@@ -126,7 +126,7 @@ class _CollapsedHeader extends StatelessWidget {
         borderRadius: DS.borderRadius16,
         onTap: onTap,
         child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
+          behavior: HitTestBehavior.translucent,
           onLongPress: onLongPress,
           child: Row(
             children: [

@@ -116,7 +116,7 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
                     child: CustomButton.primary(
                       text: l10n.send,
                       icon: Icons.send_rounded,
-                      onPressed: _isSubmitting ? () {} : _submit,
+                      onPressed: _isSubmitting ? null : _submit,
                       isLoading: _isSubmitting,
                       size: CustomButtonSize.small,
                     ),
@@ -141,7 +141,7 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
                       CustomButton.primary(
                         text: l10n.send,
                         icon: Icons.send_rounded,
-                        onPressed: _isSubmitting ? () {} : _submit,
+                        onPressed: _isSubmitting ? null : _submit,
                         isLoading: _isSubmitting,
                         size: CustomButtonSize.small,
                       ),

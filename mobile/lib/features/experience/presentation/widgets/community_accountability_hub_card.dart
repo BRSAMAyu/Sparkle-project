@@ -109,16 +109,18 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
               spacing: DS.spacing8,
               runSpacing: DS.spacing8,
               children: [
-                SparkleButton.primary(
-                  label: zh ? '设定承诺' : 'Set commitment',
-                  icon: const Icon(Icons.flag_rounded),
-                  onPressed: onCreateCommitment ?? () {},
-                ),
-                SparkleButton.ghost(
-                  label: zh ? '找目标伙伴' : 'Find partners',
-                  icon: const Icon(Icons.group_add_rounded),
-                  onPressed: onFindPartners ?? () {},
-                ),
+                if (onCreateCommitment != null)
+                  SparkleButton.primary(
+                    label: zh ? '设定承诺' : 'Set commitment',
+                    icon: const Icon(Icons.flag_rounded),
+                    onPressed: onCreateCommitment,
+                  ),
+                if (onFindPartners != null)
+                  SparkleButton.ghost(
+                    label: zh ? '找目标伙伴' : 'Find partners',
+                    icon: const Icon(Icons.group_add_rounded),
+                    onPressed: onFindPartners,
+                  ),
               ],
             ),
           ],

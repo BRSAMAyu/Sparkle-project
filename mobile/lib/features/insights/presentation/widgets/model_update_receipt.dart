@@ -93,10 +93,6 @@ class ModelUpdateReceipt extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        action: SnackBarAction(
-          label: context.l10n.gdUndo,
-          onPressed: () {},
-        ),
       ),
     );
   }
