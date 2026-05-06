@@ -70,8 +70,8 @@
 | QA-P2-9 | Hardcoded 'Translation Demo' → ARB | Flutter | S | ✅ done | — | 9735d444 | translatable_text.dart → ARB keys + gen-l10n |
 | QA-P2-10 | _should_retract() enforcement logic | Python | M | ✅ done | — | df1476019 | Replace stub |
 | QA-P2-11 | Build TaskRestoreDialog widget | Flutter | M | ✅ done | — | ab687c9c | Extracted to standalone TaskRestoreDialog widget |
-| QA-P2-12 | Build CommunityStrategyCard widget | Flutter | L | 🔵 in-progress | claude-B | — | New widget |
-| QA-P2-13 | Build ExperienceEnvelopeIndicator | Flutter | L | ⬜ pending | — | — | New widget from provider |
+| QA-P2-12 | Build CommunityStrategyCard widget | Flutter | L | ⏭️ skip | — | — | Already exists: community_strategy_card.dart, fully implemented with i18n + Semantics |
+| QA-P2-13 | Build ExperienceEnvelopeIndicator | Flutter | L | 🔵 in-progress | claude-B | — | New widget from provider |
 | QA-P2-14 | Clean orphaned vocabulary providers | Flutter | S | ⬜ pending | — | — | Remove 4 unused |
 | QA-P2-15 | Clean orphaned shop providers | Flutter | S | ⬜ pending | — | — | Remove 7 unused |
 | QA-P2-16 | i18n → ARB: Insights feature (36 ternaries) | Flutter | L | ⬜ pending | — | — | insights/ inline isChinese |
@@ -119,6 +119,6 @@
 |----------|-------|---------|---------|-----------|----------------|
 | P0 | 6 | 6 | 0 | 0 | 0 |
 | P1 | 20 | 10 | 10 | 0 | 0 |
-| P2 | 35 | 9 | 3 | 20 | 2 |
+| P2 | 35 | 10 | 4 | 19 | 1 |
 | P3 | 5 | 0 | 0 | 5 | 0 |
 | **Total** | **66** | **25** | **12** | **26** | **2** |
