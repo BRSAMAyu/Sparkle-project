@@ -29,6 +29,26 @@ class ApiGoalRepository implements GoalRepository {
 
   final ApiClient _apiClient;
 
+  /// Flutter UI types → backend goal_type values.
+  /// Flutter shows user-facing labels (academic, skill, habit, project, other)
+  /// but the backend expects (exam, job_search, fitness, project, general).
+  static const _typeMap = <String, String>{
+    'academic': 'exam',
+    'skill': 'job_search',
+    'habit': 'fitness',
+    'project': 'project',
+    'other': 'general',
+    // Backend types pass through unchanged.
+    'exam': 'exam',
+    'job_search': 'job_search',
+    'fitness': 'fitness',
+    'general': 'general',
+    'startup': 'startup',
+  };
+
+  static String resolveType(String goalType) =>
+      _typeMap[goalType] ?? 'general';
+
   @override
   Future<GoalDecompositionPreview> decomposePreview({
     required String goalType,
@@ -39,7 +59,7 @@ class ApiGoalRepository implements GoalRepository {
     final response = await _apiClient.post<dynamic>(
       '/goals/decompose-preview',
       data: {
-        'goal_type': goalType,
+        'goal_type': resolveType(goalType),
         'title': title,
         'motivation': motivation,
         'time_horizon': timeHorizon,
@@ -60,7 +80,7 @@ class ApiGoalRepository implements GoalRepository {
     final response = await _apiClient.post<dynamic>(
       '/goals',
       data: {
-        'goal_type': goalType,
+        'goal_type': resolveType(goalType),
         'title': title,
         'motivation': motivation,
         'time_horizon': timeHorizon,

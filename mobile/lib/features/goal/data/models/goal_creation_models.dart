@@ -85,6 +85,7 @@ class CreatedGoal {
     required this.title,
     required this.goalType,
     required this.status,
+    this.firstTaskId,
   });
 
   factory CreatedGoal.fromJson(Map<String, dynamic> json) => CreatedGoal(
@@ -92,12 +93,14 @@ class CreatedGoal {
         title: _asString(json['title']),
         goalType: _asString(json['goal_type']),
         status: _asString(json['status'], fallback: 'active'),
+        firstTaskId: json['first_task_id'] as String?,
       );
 
   final String id;
   final String title;
   final String goalType;
   final String status;
+  final String? firstTaskId;
 }
 
 List<dynamic> _asList(dynamic value) => value is List ? value : const [];

@@ -12,6 +12,7 @@ import 'package:sparkle/features/goal/data/repositories/goal_repository.dart';
 import 'package:sparkle/features/goal/data/services/goal_intent_service.dart';
 import 'package:sparkle/features/goal/data/services/scenario_pack_service.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_intent_input.dart';
+import 'package:sparkle/features/goal/presentation/widgets/goal_created_dialog.dart';
 import 'package:sparkle/features/goal/presentation/widgets/intent_confirmation_card.dart';
 
 class GoalCreationWizardScreen extends ConsumerStatefulWidget {
@@ -402,13 +403,39 @@ class _GoalCreationWizardScreenState
         );
         return;
       }
+      setState(() => _creating = false);
       final router = GoRouter.maybeOf(context);
       if (router != null) {
-        if (created.firstTaskId != null) {
-          router.go('/tasks/${Uri.encodeComponent(created.firstTaskId!)}/execute');
-        } else {
-          router.go('/goals/${Uri.encodeComponent(created.id)}');
-        }
+        final firstMilestone = _milestones.isNotEmpty
+            ? _milestones.first.label
+            : _t('开始', 'Getting started');
+        final packDuration = _matchedPack != null
+            ? _t(
+                '${_matchedPack!.horizonDays} 天',
+                '${_matchedPack!.horizonDays} days',
+              )
+            : null;
+        unawaited(
+          SparkleGoalCreatedDialog.show(
+            context,
+            goalName: _titleController.text.trim(),
+            firstMilestone: firstMilestone,
+            packName: _matchedPack?.name,
+            packDurationLabel: packDuration,
+            onSeePlan: () {
+              router.go('/goals/${Uri.encodeComponent(created.id)}');
+            },
+            onStartFirstTask: () {
+              if (created.firstTaskId != null) {
+                router.go(
+                  '/tasks/${Uri.encodeComponent(created.firstTaskId!)}/execute',
+                );
+              } else {
+                router.go('/goals/${Uri.encodeComponent(created.id)}');
+              }
+            },
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(_t('目标已创建', 'Goal created'))),
