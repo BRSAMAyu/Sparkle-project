@@ -100,7 +100,7 @@
 | QA-P2-39 | Semantics: notification chips | Flutter | S | ✅ done | — | cc823bdad | Semantics + ARB for goal value chip + next step hint |
 | QA-P2-40 | Hardcoded 'Decision Timeline' → ARB | Flutter | S | ✅ done | — | 44ed609e2 | chat_screen.dart semanticLabel → context.l10n.chatDecisionTimeline |
 | QA-P2-41 | State handling: CommunityMainScreen | Flutter | M | ✅ done | — | 58b38eebd | PartnersTab: added _SectionError + loading indicators to 3 async.when() handlers |
-| QA-P2-42 | State handling: GroupListScreen | Flutter | M | ⬜ pending | — | — | loading/error/empty |
+| QA-P2-42 | State handling: GroupListScreen | Flutter | M | 🔵 in-progress | claude-B | — | loading/error/empty |
 | QA-P2-43 | State handling: LearningInsightsOverview | Flutter | M | ⬜ pending | — | — | loading/error states |
 
 ## P3: Low (5 items)
