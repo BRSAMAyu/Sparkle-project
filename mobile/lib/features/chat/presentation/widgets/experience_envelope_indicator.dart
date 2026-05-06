@@ -31,9 +31,10 @@ class ExperienceEnvelopeIndicator extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final envelope = ref.watch(experienceEnvelopeProvider);
-    if (!envelope.hasAdjustments) return const SizedBox.shrink();
+    if (envelope.isEmpty) return const SizedBox.shrink();
 
     final adjustments = envelope.structuredCognitiveAdjustments;
+    final engagement = _extractEngagement(envelope.userState);
     final l10n = AppLocalizations.of(context)!;
 
     return Semantics(
@@ -69,53 +70,58 @@ class ExperienceEnvelopeIndicator extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: DS.spacing6),
-            Wrap(
-              spacing: DS.spacing6,
-              runSpacing: DS.spacing6,
-              children: adjustments.map((adj) {
-                final dim = adj['dimension']?.toString() ?? '';
-                final value = adj['value'];
-                final reason = adj['reason']?.toString() ?? '';
-                final meta = _adjustmentMeta[dim] ??
-                    const _AdjustmentLabel('', Icons.tune_outlined);
-                final label = meta.label.isNotEmpty ? meta.label : dim;
+            if (adjustments.isNotEmpty)
+              Wrap(
+                spacing: DS.spacing6,
+                runSpacing: DS.spacing6,
+                children: adjustments.map((adj) {
+                  final dim = adj['dimension']?.toString() ?? '';
+                  final value = adj['value'];
+                  final reason = adj['reason']?.toString() ?? '';
+                  final meta = _adjustmentMeta[dim] ??
+                      const _AdjustmentLabel('', Icons.tune_outlined);
+                  final label = meta.label.isNotEmpty ? meta.label : dim;
 
-                return Semantics(
-                  label: '$label: ${_valueText(value, l10n)} ($reason)',
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: DS.spacing8,
-                      vertical: DS.spacing4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: DS.brandPrimary.withValues(alpha: 0.08),
-                      borderRadius: DS.borderRadius6,
-                      border: Border.all(
-                        color: DS.brandPrimary.withValues(alpha: 0.15),
+                  return Semantics(
+                    label: '$label: ${_valueText(value, l10n)} ($reason)',
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: DS.spacing8,
+                        vertical: DS.spacing4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: DS.brandPrimary.withValues(alpha: 0.08),
+                        borderRadius: DS.borderRadius6,
+                        border: Border.all(
+                          color: DS.brandPrimary.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(meta.icon, size: 12, color: DS.brandPrimary),
+                          const SizedBox(width: DS.spacing4),
+                          Text(
+                            '$label: ${_valueText(value, l10n)}',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(
+                                  color: DS.brandPrimary,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: DS.fontSizeXs,
+                                ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(meta.icon, size: 12, color: DS.brandPrimary),
-                        const SizedBox(width: DS.spacing4),
-                        Text(
-                          '$label: ${_valueText(value, l10n)}',
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelSmall
-                              ?.copyWith(
-                                color: DS.brandPrimary,
-                                fontWeight: FontWeight.w500,
-                                fontSize: DS.fontSizeXs,
-                              ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
+                  );
+                }).toList(),
+              ),
+            if (engagement != null) ...[
+              if (adjustments.isNotEmpty) const SizedBox(height: DS.spacing6),
+              _EngagementBar(engagement: engagement),
+            ],
           ],
         ),
       ),
@@ -130,4 +136,46 @@ String _valueText(dynamic value, AppLocalizations l10n) {
   }
   if (value is double) return value.toStringAsFixed(1);
   return value.toString();
+}
+
+_EngagementData? _extractEngagement(Map<String, dynamic> userState) {
+  final engagement = userState['engagementState'];
+  if (engagement is! Map) return null;
+  final streak = engagement['streak'];
+  final sessionCount = engagement['sessionCount7d'];
+  if (streak == null && sessionCount == null) return null;
+  return _EngagementData(
+    streak: streak is int ? streak : 0,
+    sessions7d: sessionCount is int ? sessionCount : 0,
+  );
+}
+
+class _EngagementData {
+  const _EngagementData({required this.streak, required this.sessions7d});
+  final int streak;
+  final int sessions7d;
+}
+
+class _EngagementBar extends StatelessWidget {
+  const _EngagementBar({required this.engagement});
+  final _EngagementData engagement;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.local_fire_department_outlined, size: 12, color: DS.brandPrimary),
+        const SizedBox(width: DS.spacing4),
+        Text(
+          l10n.envelopeEngagementSummary(engagement.streak, engagement.sessions7d),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: DS.brandPrimary.withValues(alpha: 0.7),
+                fontSize: DS.fontSizeXs,
+              ),
+        ),
+      ],
+    );
+  }
 }

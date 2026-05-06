@@ -31670,4 +31670,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get streakQualitySuggestedAction => 'Suggested action';
+
+  @override
+  String envelopeEngagementSummary(int streak, int sessions) {
+    return '${streak}d streak · $sessions sessions this week';
+  }
 }

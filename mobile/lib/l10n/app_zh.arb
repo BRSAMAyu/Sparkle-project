@@ -13574,5 +13574,12 @@
     "taskDetailSemanticsTitle": "任务详情",
     "chatSemanticsScreen": "聊天界面",
     "streakQualityRecoveryScore": "恢复力",
-    "streakQualitySuggestedAction": "建议行动"
+    "streakQualitySuggestedAction": "建议行动",
+    "envelopeEngagementSummary": "{streak}天连续 · 本周{sessions}次会话",
+    "@envelopeEngagementSummary": {
+        "placeholders": {
+            "streak": {"type": "int"},
+            "sessions": {"type": "int"}
+        }
+    }
 }

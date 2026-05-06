@@ -55200,6 +55200,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'建议行动'**
   String get streakQualitySuggestedAction;
+
+  /// No description provided for @envelopeEngagementSummary.
+  ///
+  /// In zh, this message translates to:
+  /// **'{streak}天连续 · 本周{sessions}次会话'**
+  String envelopeEngagementSummary(int streak, int sessions);
 }
 
 class _AppLocalizationsDelegate

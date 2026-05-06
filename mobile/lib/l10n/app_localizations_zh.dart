@@ -30367,4 +30367,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get streakQualitySuggestedAction => '建议行动';
+
+  @override
+  String envelopeEngagementSummary(int streak, int sessions) {
+    return '$streak天连续 · 本周$sessions次会话';
+  }
 }

@@ -13553,5 +13553,12 @@
     "taskDetailSemanticsTitle": "Task detail",
     "chatSemanticsScreen": "Chat screen",
     "streakQualityRecoveryScore": "Recovery",
-    "streakQualitySuggestedAction": "Suggested action"
+    "streakQualitySuggestedAction": "Suggested action",
+    "envelopeEngagementSummary": "{streak}d streak · {sessions} sessions this week",
+    "@envelopeEngagementSummary": {
+        "placeholders": {
+            "streak": {"type": "int"},
+            "sessions": {"type": "int"}
+        }
+    }
 }
