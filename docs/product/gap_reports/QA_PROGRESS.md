@@ -86,7 +86,7 @@
 | QA-P2-25 | i18n → ARB: Memory feature (9 ternaries) | Flutter | M | ⬜ pending | — | — | memory/ inline isChinese |
 | QA-P2-26 | i18n → ARB: Task feature (11 ternaries) | Flutter | M | ⬜ pending | — | — | task/ inline isChinese |
 | QA-P2-27 | Migrate ~110 _t() usages to ARB | Flutter | L | ⬜ pending | — | — | ~15 files |
-| QA-P2-28 | DS tokens: Achievement colors (15) | Flutter | M | ⬜ pending | — | — | R2: 15 hardcoded Color(0x remain in milestone_celebration_screen.dart. Skip rationale debatable. |
+| QA-P2-28 | DS tokens: Achievement colors (15) | Flutter | M | 🔵 in-progress | claude-B | — | R2: 15 hardcoded Color(0x remain in milestone_celebration_screen.dart. Skip rationale debatable. |
 | QA-P2-29 | DS tokens: Home colors (7) | Flutter | M | ⏭️ skip | — | — | 5 colors single-file defaults; 2 shared across only 2 files each — not enough reuse to justify tokens |
 | QA-P2-30 | DS tokens: User colors (16) | Flutter | M | ⏭️ skip | — | — | 13/16 colors single-file card accents; 3 shared but used in different contexts |
 | QA-P2-31 | DS tokens: Plan colors (10) | Flutter | M | ⬜ pending | — | — | R2: 10 hardcoded Color(0x remain in learning_portfolio_screen.dart |
