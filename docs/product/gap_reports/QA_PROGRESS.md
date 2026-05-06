@@ -37,13 +37,13 @@
 | QA-P1-3 | Hardcoded 'New Plan' → ARB | Flutter | S | ✅ done | — | 101cc75b | growth_screen.dart |
 | QA-P1-4 | Hardcoded 'Send Message' → ARB | Flutter | S | ✅ done | — | 3db93b0a | user_search_screen.dart |
 | QA-P1-5 | Add route: LeaderboardScreen | Flutter | S | ⏭️ skip | — | — | Already registered: routes.dart:319 + leaderboard_routes.dart |
-| QA-P1-6 | Add route: FocusStatisticsScreen | Flutter | S | ⬜ pending | — | — | QA_NAV P0-1 |
-| QA-P1-7 | Add route: ThemeSettingsScreen | Flutter | S | ⬜ pending | — | — | QA_NAV P0-1 |
-| QA-P1-8 | Add route: SchedulePreferencesScreen | Flutter | S | ⬜ pending | — | — | QA_NAV P0-1 |
-| QA-P1-9 | Add route: SmartPushSettingsScreen | Flutter | S | ⬜ pending | — | — | QA_NAV P0-1 |
-| QA-P1-10 | Add route: ProfileTransparentScreen | Flutter | S | ⬜ pending | — | — | QA_NAV P0-1 |
-| QA-P1-11 | Add route: DataUsageDashboardScreen | Flutter | S | ⬜ pending | — | — | QA_NAV P0-1 |
-| QA-P1-12 | Add route: CapsuleJobsScreen | Flutter | S | ⬜ pending | — | — | QA_NAV P0-1 |
+| QA-P1-6 | Add route: FocusStatisticsScreen | Flutter | S | ⏭️ skip | — | — | Already registered: focus_routes.dart:48 |
+| QA-P1-7 | Add route: ThemeSettingsScreen | Flutter | S | ⏭️ skip | — | — | Already registered: user_routes.dart:132 |
+| QA-P1-8 | Add route: SchedulePreferencesScreen | Flutter | S | ⏭️ skip | — | — | Already registered: user_routes.dart:158 |
+| QA-P1-9 | Add route: SmartPushSettingsScreen | Flutter | S | ⏭️ skip | — | — | Already registered: user_routes.dart:171 |
+| QA-P1-10 | Add route: ProfileTransparentScreen | Flutter | S | ⏭️ skip | — | — | Already registered: user_routes.dart:184 |
+| QA-P1-11 | Add route: DataUsageDashboardScreen | Flutter | S | ⏭️ skip | — | — | Already registered: user_routes.dart:145 |
+| QA-P1-12 | Add route: CapsuleJobsScreen | Flutter | S | ⏭️ skip | — | — | Already registered: cognitive_routes.dart:53 |
 | QA-P1-13 | SprintReviewScreen loading indicator | Flutter | S | ⬜ pending | — | — | Add skeleton shimmer |
 | QA-P1-14 | PausedTaskBanner error handling | Flutter | M | ⬜ pending | — | — | Show error feedback on resume fail |
 | QA-P1-15 | Integrate UnderstandingSnapshotCard | Flutter | M | ⬜ pending | — | — | Import into home dashboard |
@@ -113,10 +113,10 @@
 
 ## Summary
 
-| Priority | Total | ✅ done | ⬜ pending | 🔵 in-progress |
-|----------|-------|---------|-----------|----------------|
-| P0 | 6 | 6 | 0 | 0 |
-| P1 | 20 | 4 | 15 | 1 |
-| P2 | 35 | 0 | 35 | 0 |
-| P3 | 5 | 0 | 5 | 0 |
-| **Total** | **66** | **4** | **61** | **1** |
+| Priority | Total | ✅ done | ⏭️ skip | ⬜ pending | 🔵 in-progress |
+|----------|-------|---------|---------|-----------|----------------|
+| P0 | 6 | 6 | 0 | 0 | 0 |
+| P1 | 20 | 4 | 8 | 8 | 0 |
+| P2 | 35 | 0 | 0 | 35 | 0 |
+| P3 | 5 | 0 | 0 | 5 | 0 |
+| **Total** | **66** | **10** | **8** | **48** | **0** |
