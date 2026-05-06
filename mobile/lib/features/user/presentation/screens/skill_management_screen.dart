@@ -4,7 +4,6 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/models/skill_models.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/skill_api_service.dart';
 
 class SkillManagementScreen extends ConsumerStatefulWidget {
@@ -572,11 +571,8 @@ class _SkillDraftRequestDialog extends ConsumerStatefulWidget {
 
 class _SkillDraftRequestDialogState
     extends ConsumerState<_SkillDraftRequestDialog> {
-  final TextEditingController _consentController = TextEditingController(
-    text: I18nService.instance.isChinese
-        ? '以后这样做，记住这种方式'
-        : 'Do it this way from now on, remember this pattern',
-  );
+  late final TextEditingController _consentController =
+      TextEditingController(text: AppLocalizations.of(context)!.skillDraftConsentDefault);
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _assistantController = TextEditingController();
   bool _submitting = false;

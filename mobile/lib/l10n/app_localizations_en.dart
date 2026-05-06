@@ -30366,4 +30366,596 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get translationDemoHint => 'Long-press any text below to translate:';
+
+  @override
+  String get personaInferredPreferences => 'Inferred Preferences';
+
+  @override
+  String get personaActivePolicies => 'Active Policies';
+
+  @override
+  String get personaContextSnapshot => 'Context Snapshot';
+
+  @override
+  String get personaContextSnapshotSubtitle =>
+      'Low-level context snapshot, collapsed by default';
+
+  @override
+  String get personaRollbackSuccess => 'Rolled back to previous version';
+
+  @override
+  String get personaConfirmGoalStatusChange => 'Confirm goal status change?';
+
+  @override
+  String personaGoalStatusChangeContent(
+      Object nextStatus, Object status, Object title) {
+    return 'Change status of \"$title\" from \"$status\" to \"$nextStatus\".\\n\\nThis will affect related plans, tasks and reminders, and cannot be auto-reverted.';
+  }
+
+  @override
+  String get personaConfirmChange => 'Confirm change';
+
+  @override
+  String personaAdjustmentFailed(Object error) {
+    return 'Adjustment failed: $error';
+  }
+
+  @override
+  String get personaRestoredSystemValue => 'Restored system inferred value';
+
+  @override
+  String get personaHintZeroToOne => 'Enter a number between 0.0 and 1.0';
+
+  @override
+  String get personaHintStudyTime => 'Enter study time (minutes)';
+
+  @override
+  String get personaHintMinutesPositive => 'Enter minutes greater than 0';
+
+  @override
+  String get personaThisGoal => 'this goal';
+
+  @override
+  String get schedFocusPeriodPref => 'Focus Period Preference';
+
+  @override
+  String get schedFocusPeriodDesc =>
+      'Select your peak energy hours for challenging tasks';
+
+  @override
+  String get schedTaskDurationPref => 'Task Duration Preference';
+
+  @override
+  String get schedTaskDurationDesc =>
+      'Set your preferred focus duration and break intervals';
+
+  @override
+  String get schedFocusDuration => 'Focus Duration';
+
+  @override
+  String get schedMinutesUnit => 'min';
+
+  @override
+  String get schedBreakInterval => 'Break Interval';
+
+  @override
+  String get schedSmartCalendar => 'Smart Calendar Scheduling';
+
+  @override
+  String get schedSmartCalendarDesc =>
+      'After setting preferences, calendar will intelligently recommend optimal task times';
+
+  @override
+  String get schedMorning => 'Morning';
+
+  @override
+  String get schedAfternoon => 'Afternoon';
+
+  @override
+  String get schedEvening => 'Evening';
+
+  @override
+  String get adminDays => 'days';
+
+  @override
+  String get adminProbeLatency => 'Probe latency';
+
+  @override
+  String get adminPool => 'Pool';
+
+  @override
+  String get adminOverflow => 'overflow';
+
+  @override
+  String get adminTimeout => 'Timeout';
+
+  @override
+  String get adminStatus => 'Status';
+
+  @override
+  String get adminMemory => 'Memory';
+
+  @override
+  String get adminPeak => 'Peak';
+
+  @override
+  String get adminClients => 'Clients';
+
+  @override
+  String get adminUsed => 'Used';
+
+  @override
+  String get adminFree => 'Free';
+
+  @override
+  String get adminTotal => 'Total';
+
+  @override
+  String get adminUsage => 'Usage';
+
+  @override
+  String get adminErrors => 'Errors';
+
+  @override
+  String get adminCrashes => 'Crashes';
+
+  @override
+  String get adminSuccessRate => 'Success rate';
+
+  @override
+  String get adminAvgDuration => 'Avg duration';
+
+  @override
+  String get adminRecentEvents => 'Recent Events';
+
+  @override
+  String get adminWindowEvents => 'Window events';
+
+  @override
+  String get adminWindowErrors => 'Window errors';
+
+  @override
+  String get adminWeightedAvgDuration => 'Weighted avg duration';
+
+  @override
+  String socialAcctLinkedCount(Object count) {
+    return '$count linked';
+  }
+
+  @override
+  String get socialAcctUnifiedLogin => 'Unified login management';
+
+  @override
+  String get socialAcctConnected => 'Connected';
+
+  @override
+  String get socialAcctNotConnected => 'Not connected';
+
+  @override
+  String get acctSecOverview =>
+      'Login methods, device status, and security logs in one place, sorted by risk level.';
+
+  @override
+  String get acctSecDeviceStatus =>
+      'View current devices, recent activity, and remote sign-out status.';
+
+  @override
+  String get acctSecSecurityTrail =>
+      'Track logins, unlinking, password changes, and other security events.';
+
+  @override
+  String get acctSecRecentActivity =>
+      'Review recent system updates and important account activity changes.';
+
+  @override
+  String profTransSuggestion(Object summary) {
+    return 'Suggestion: $summary';
+  }
+
+  @override
+  String modelChatTempFailed(Object error) {
+    return 'Modeling chat temporarily unavailable: $error';
+  }
+
+  @override
+  String modelChatSkipFailed(Object error) {
+    return 'Cannot skip at this time: $error';
+  }
+
+  @override
+  String modelChatPlanIssue(Object error) {
+    return 'Plan generation encountered an issue: $error';
+  }
+
+  @override
+  String profTransRecordedAdjustment(Object targetId) {
+    return 'Recorded profile adjustment for \"$targetId\".';
+  }
+
+  @override
+  String profTransHiddenItems(Object count) {
+    return '$count hidden items, not shown on transparent profile.';
+  }
+
+  @override
+  String get settOpenclawGatewayNoPerm =>
+      'Gateway accessible but no execution permission';
+
+  @override
+  String get settOpenclawEndpointUnavailable =>
+      'Gateway accessible but execution endpoint unavailable';
+
+  @override
+  String get settOpenclawEngineNotConnected => 'Execution engine not connected';
+
+  @override
+  String settOpenclawResubmitted(Object count) {
+    return 'Resubmitted $count queued tasks';
+  }
+
+  @override
+  String get settOpenclawNoRetryableTasks => 'No retryable tasks';
+
+  @override
+  String get settOpenclawDesc =>
+      'Unified management of OpenClaw connection status, execution availability, and waiting queue.';
+
+  @override
+  String settOpenclawQueuedTasks(Object count) {
+    return '$count tasks';
+  }
+
+  @override
+  String get settOpenclawQueueDesc =>
+      'When execution path is unavailable, new delegations wait here. Retry when permissions or connection recover.';
+
+  @override
+  String settOpenclawTaskLabel(Object taskId) {
+    return 'Task $taskId';
+  }
+
+  @override
+  String settOpenclawTemplateLabel(Object templateId) {
+    return 'Template $templateId';
+  }
+
+  @override
+  String settOpenclawSourceLabel(Object source) {
+    return 'Source $source';
+  }
+
+  @override
+  String settOpenclawMoreQueued(Object count) {
+    return 'Plus $count more queued tasks';
+  }
+
+  @override
+  String get settOpenclawClearQueue => 'Clear Queue';
+
+  @override
+  String get settTranspPureModeDesc =>
+      'Keep only text messages in chat, hide extra info cards, task cards, and feedback widgets below messages.';
+
+  @override
+  String get settTranspDisplayDesc =>
+      'Choose how transparency mode is displayed in the main chat';
+
+  @override
+  String get settTranspAutoCollapseDesc =>
+      'After answering, collapse transparency mode into a lightweight summary';
+
+  @override
+  String get settTranspAllowCloseDesc =>
+      'Manually close transparency mode during current generation without interrupting the response';
+
+  @override
+  String get settTranspAuroraReceiptTitle => 'Aurora experience receipts';
+
+  @override
+  String get settTranspAuroraReceiptDesc =>
+      'Show why Aurora changed tone, state, or deep calibration entry.';
+
+  @override
+  String get settTranspMemoryReceiptTitle => 'Memory reference receipts';
+
+  @override
+  String get settTranspMemoryReceiptDesc =>
+      'Show which memories Aurora used and allow corrections.';
+
+  @override
+  String get settTranspSourceReceiptTitle => 'Source and tool receipts';
+
+  @override
+  String get settTranspSourceReceiptDesc =>
+      'Show which materials, tools, or social context Aurora used.';
+
+  @override
+  String get settTranspNextActionTitle => 'Next-action change receipts';
+
+  @override
+  String get settTranspNextActionDesc =>
+      'Show why Aurora changed a plan or task.';
+
+  @override
+  String get settA11yTitle => 'Accessibility';
+
+  @override
+  String get settA11yReset => 'Reset';
+
+  @override
+  String get settA11ySaveFailed =>
+      'Save failed. Previous settings were restored.';
+
+  @override
+  String get settA11ySyncing => 'Syncing settings';
+
+  @override
+  String get settA11yResetDone => 'Accessibility settings reset';
+
+  @override
+  String get settA11yLowLoadTitle => 'Low-load mode';
+
+  @override
+  String get settA11yLowLoadDesc =>
+      'Reduces motion, enlarges touch targets, and favors calmer reading.';
+
+  @override
+  String get settA11yLowLoadToggle => 'Enable low-load experience';
+
+  @override
+  String get settA11yLowLoadToggleDesc =>
+      'Also adjusts motion, screen reader, and touch defaults.';
+
+  @override
+  String get settA11yReadingTitle => 'Reading and color';
+
+  @override
+  String get settA11yReadingDesc =>
+      'Central controls for text scale, contrast, and color-safe palettes.';
+
+  @override
+  String get settA11yFontScale => 'Font scale';
+
+  @override
+  String get settA11yHighContrast => 'High contrast';
+
+  @override
+  String get settA11yHighContrastDesc =>
+      'Uses stronger text, borders, and state separation.';
+
+  @override
+  String get settA11yColorBlind => 'Color-blind friendly';
+
+  @override
+  String get settA11yColorBlindDesc =>
+      'Adds shape, tone, and labels where color carries meaning.';
+
+  @override
+  String get settA11yTouchMotionTitle => 'Touch and motion';
+
+  @override
+  String get settA11yTouchMotionDesc =>
+      'Shared defaults for touch targets, reduced motion, and haptics.';
+
+  @override
+  String get settA11yTouchTargetSize => 'Touch target size';
+
+  @override
+  String get settA11yTouchComfort => 'Comfort 48dp';
+
+  @override
+  String get settA11yTouchLarge => 'Large 56dp';
+
+  @override
+  String get settA11yTouchXl => 'XL 64dp';
+
+  @override
+  String settA11yTouchPreview(Object size) {
+    return 'Current minimum target ${size}dp';
+  }
+
+  @override
+  String get settA11yReduceMotion => 'Reduce motion';
+
+  @override
+  String get settA11yReduceMotionDesc =>
+      'Shortens or removes nonessential transitions and effects.';
+
+  @override
+  String get settA11yHaptic => 'Haptic feedback';
+
+  @override
+  String get settA11yHapticDesc =>
+      'Controls tactile feedback for selection, confirmation, and errors.';
+
+  @override
+  String get settA11yAssistiveTitle => 'Assistive technology';
+
+  @override
+  String get settA11yAssistiveDesc =>
+      'Screen reader and TTS defaults sync into visual and learning surfaces.';
+
+  @override
+  String get settA11yScreenReader => 'Screen reader optimization';
+
+  @override
+  String get settA11yScreenReaderDesc =>
+      'Prioritizes semantic order for graphs, cards, and complex controls.';
+
+  @override
+  String get settA11yTtsReading => 'TTS reading';
+
+  @override
+  String get settA11yTtsReadingDesc =>
+      'Allows summaries, steps, and reviews to enter read-aloud mode.';
+
+  @override
+  String get settA11yWcagTitle => 'WCAG AA checks';
+
+  @override
+  String get settA11yWcagDesc =>
+      'This panel is maintained against operable, readable, and understandable checks.';
+
+  @override
+  String get settA11yWcagTextScale =>
+      'Text and controls support up to 200% user scaling';
+
+  @override
+  String get settA11yWcagTouchTarget =>
+      'Touch targets start at 48dp and can increase to 64dp';
+
+  @override
+  String get settA11yWcagColorState =>
+      'Color options do not rely on hue alone for state';
+
+  @override
+  String get settA11yWcagIndependent =>
+      'Screen reader, TTS, motion, and haptics are independently controlled';
+
+  @override
+  String get settBehaviorTitle => 'How Sparkle Uses These Settings';
+
+  @override
+  String get settBehaviorSubtitle =>
+      'Expand any area to see how your choices affect Sparkle behavior.';
+
+  @override
+  String get settBehaviorAccessibility => 'Accessibility';
+
+  @override
+  String get settBehaviorAccessibilityBody =>
+      'When you enable high contrast, reduced motion, or larger text, Sparkle applies those preferences across core learning surfaces, Galaxy, chat, and task execution so the interface stays readable, reachable, and lower load.';
+
+  @override
+  String get settBehaviorEmotion => 'Emotion adaptive';
+
+  @override
+  String get settBehaviorEmotionBody =>
+      'When Sparkle detects fatigue, pressure, or high cognitive load, it softens colors, increases text comfort, reduces animation, and tones down challenge cues. Manual overrides take priority over automatic adaptation.';
+
+  @override
+  String get settBehaviorReminder => 'Reminder frequency';
+
+  @override
+  String get settBehaviorMemory => 'Memory controls';
+
+  @override
+  String get settBehaviorMemoryBody =>
+      'Sparkle remembers goals, preferences, commitments, and explicitly allowed episode signals to keep conversations continuous and follow-ups relevant. Blocked sources and disabled memory types are not written into long-term memory.';
+
+  @override
+  String get settBehaviorMaterials => 'Study materials';
+
+  @override
+  String get settBehaviorMaterialsBody =>
+      'Your study materials are used for retrieval, task suggestions, explanations, and Galaxy construction. They are not used for public community content or research analysis unless you explicitly allow that setting.';
+
+  @override
+  String get settBehaviorResearch => 'Research participation';
+
+  @override
+  String get settBehaviorResearchBody =>
+      'Joining research allows de-identified learning behavior, error patterns, and resource quality signals to be aggregated to improve Sparkle. Raw private chats, identity details, and hidden content are excluded.';
+
+  @override
+  String get settBehaviorReminderNoCap => 'will not send smart reminders';
+
+  @override
+  String settBehaviorReminderCap(Object count) {
+    return 'up to $count smart reminders per day';
+  }
+
+  @override
+  String get settBehaviorReminderTaskOnNoTime =>
+      'task reminders are on, with no lead times set';
+
+  @override
+  String settBehaviorReminderTaskOnWithTime(Object times) {
+    return 'tasks remind you $times before due time';
+  }
+
+  @override
+  String get settBehaviorReminderTaskOff => 'task reminders are off';
+
+  @override
+  String get settBehaviorReminderLevelMinimal => 'minimal';
+
+  @override
+  String get settBehaviorReminderLevelVerbose => 'detailed';
+
+  @override
+  String get settBehaviorReminderLevelStandard => 'standard';
+
+  @override
+  String settBehaviorReminderBodyEn(Object cap, Object level, Object taskText) {
+    return 'With the current setup, Sparkle $cap at $level detail; $taskText. Quiet hours and disabled types suppress non-urgent reminders first.';
+  }
+
+  @override
+  String settBehaviorDays(Object count) {
+    return '$count days';
+  }
+
+  @override
+  String settBehaviorDay(Object count) {
+    return '$count day';
+  }
+
+  @override
+  String settBehaviorHours(Object count) {
+    return '$count hours';
+  }
+
+  @override
+  String settBehaviorHour(Object count) {
+    return '$count hour';
+  }
+
+  @override
+  String settBehaviorMinutes(Object count) {
+    return '$count minutes';
+  }
+
+  @override
+  String settBehaviorMinute(Object count) {
+    return '$count minute';
+  }
+
+  @override
+  String get settDataControlsTitle => 'Data Controls';
+
+  @override
+  String get settDataControlsDesc =>
+      'Export, deletion, and hiding controls live here, with clear consequences for each action.';
+
+  @override
+  String get settDataExport => 'Export My Data';
+
+  @override
+  String get settDataExportDesc =>
+      'Create a ZIP archive with account profile, learning records, settings, and exportable memory data.';
+
+  @override
+  String get settDataDelete => 'Delete My Data';
+
+  @override
+  String get settDataDeleteDesc =>
+      'Open the confirmation flow. Account deletion removes personal data, preferences, and history, and cannot be undone.';
+
+  @override
+  String get settDataHideChronicle => 'Hide My Growth Chronicle';
+
+  @override
+  String get settDataHideChronicleDesc =>
+      'When hidden, growth narrative surfaces do not show chronicle content by default. This does not delete the data.';
+
+  @override
+  String get settDataHideMemory => 'Hide My Memory';
+
+  @override
+  String get settDataHideMemoryDesc =>
+      'When hidden, memory panels and visible memory references are collapsed by default. Use Memory Settings to change long-term memory write rules.';
+
+  @override
+  String get settDataManageMemory => 'Manage memory write rules';
 }

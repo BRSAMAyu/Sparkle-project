@@ -29125,4 +29125,555 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get translationDemoHint => '长按下方文字即可翻译：';
+
+  @override
+  String get personaInferredPreferences => '推断偏好';
+
+  @override
+  String get personaActivePolicies => '活跃策略';
+
+  @override
+  String get personaContextSnapshot => '上下文快照';
+
+  @override
+  String get personaContextSnapshotSubtitle => '底层上下文快照，默认收起，必要时再展开';
+
+  @override
+  String get personaRollbackSuccess => '已回滚到上一版本';
+
+  @override
+  String get personaConfirmGoalStatusChange => '确认修改目标状态？';
+
+  @override
+  String personaGoalStatusChangeContent(
+      Object nextStatus, Object status, Object title) {
+    return '将「$title」的状态从「$status」改为「$nextStatus」。\\n\\n这会影响相关计划、任务和提醒，且不会自动撤销。';
+  }
+
+  @override
+  String get personaConfirmChange => '确认修改';
+
+  @override
+  String personaAdjustmentFailed(Object error) {
+    return '调整失败：$error';
+  }
+
+  @override
+  String get personaRestoredSystemValue => '已恢复系统推断值';
+
+  @override
+  String get personaHintZeroToOne => '请输入 0.0 到 1.0 之间的数字';
+
+  @override
+  String get personaHintStudyTime => '请输入学习时长（分钟）';
+
+  @override
+  String get personaHintMinutesPositive => '请输入大于 0 的分钟数';
+
+  @override
+  String get personaThisGoal => '此目标';
+
+  @override
+  String get schedFocusPeriodPref => '专注时段偏好';
+
+  @override
+  String get schedFocusPeriodDesc => '选择您精力最充沛的时段，系统会优先在这些时间安排高难度任务';
+
+  @override
+  String get schedTaskDurationPref => '任务时长偏好';
+
+  @override
+  String get schedTaskDurationDesc => '设置您偏好的单次专注时长和休息间隔';
+
+  @override
+  String get schedFocusDuration => '专注时长';
+
+  @override
+  String get schedMinutesUnit => '分钟';
+
+  @override
+  String get schedBreakInterval => '休息间隔';
+
+  @override
+  String get schedSmartCalendar => '日历智能排程';
+
+  @override
+  String get schedSmartCalendarDesc => '设置偏好后，日历将为您智能推荐最佳任务时间';
+
+  @override
+  String get schedMorning => '上午';
+
+  @override
+  String get schedAfternoon => '下午';
+
+  @override
+  String get schedEvening => '晚上';
+
+  @override
+  String get adminDays => '天';
+
+  @override
+  String get adminProbeLatency => '探针延迟';
+
+  @override
+  String get adminPool => '连接池';
+
+  @override
+  String get adminOverflow => '溢出';
+
+  @override
+  String get adminTimeout => '超时';
+
+  @override
+  String get adminStatus => '状态';
+
+  @override
+  String get adminMemory => '内存';
+
+  @override
+  String get adminPeak => '峰值';
+
+  @override
+  String get adminClients => '客户端';
+
+  @override
+  String get adminUsed => '已用';
+
+  @override
+  String get adminFree => '空闲';
+
+  @override
+  String get adminTotal => '总量';
+
+  @override
+  String get adminUsage => '使用率';
+
+  @override
+  String get adminErrors => '错误';
+
+  @override
+  String get adminCrashes => '崩溃';
+
+  @override
+  String get adminSuccessRate => '成功率';
+
+  @override
+  String get adminAvgDuration => '平均耗时';
+
+  @override
+  String get adminRecentEvents => '最近事件';
+
+  @override
+  String get adminWindowEvents => '窗口事件';
+
+  @override
+  String get adminWindowErrors => '窗口错误';
+
+  @override
+  String get adminWeightedAvgDuration => '加权平均耗时';
+
+  @override
+  String socialAcctLinkedCount(Object count) {
+    return '已绑定 $count 项';
+  }
+
+  @override
+  String get socialAcctUnifiedLogin => '登录方式统一管理';
+
+  @override
+  String get socialAcctConnected => '已连接';
+
+  @override
+  String get socialAcctNotConnected => '未连接';
+
+  @override
+  String get acctSecOverview => '把登录入口、设备状态和关键操作记录收在一起，方便你按风险等级快速查看。';
+
+  @override
+  String get acctSecDeviceStatus => '查看当前设备、最近活跃时间和远程退出状态。';
+
+  @override
+  String get acctSecSecurityTrail => '保留登录、解绑、密码修改等安全轨迹。';
+
+  @override
+  String get acctSecRecentActivity => '回顾近期系统更新和重要账号行为变化。';
+
+  @override
+  String profTransSuggestion(Object summary) {
+    return '建议：$summary';
+  }
+
+  @override
+  String modelChatTempFailed(Object error) {
+    return '建模对话暂时失败：$error';
+  }
+
+  @override
+  String modelChatSkipFailed(Object error) {
+    return '暂时无法跳过：$error';
+  }
+
+  @override
+  String modelChatPlanIssue(Object error) {
+    return '计划生成遇到问题：$error';
+  }
+
+  @override
+  String profTransRecordedAdjustment(Object targetId) {
+    return '已记录「$targetId」的画像调整。';
+  }
+
+  @override
+  String profTransHiddenItems(Object count) {
+    return '隐藏条目 $count 条，未进入透明面板。';
+  }
+
+  @override
+  String get settOpenclawGatewayNoPerm => '当前网关可访问，但没有执行权限，暂时无法重试队列';
+
+  @override
+  String get settOpenclawEndpointUnavailable => '当前网关可访问，但执行入口不可用，暂时无法重试队列';
+
+  @override
+  String get settOpenclawEngineNotConnected => '执行引擎尚未连接，暂时无法重试队列';
+
+  @override
+  String settOpenclawResubmitted(Object count) {
+    return '已重新提交 $count 个排队任务';
+  }
+
+  @override
+  String get settOpenclawNoRetryableTasks => '当前没有可重试的排队任务';
+
+  @override
+  String get settOpenclawDesc =>
+      '这里统一管理 OpenClaw 的接入状态、执行可用性和等待队列，避免你在不同页面看到不同结论。';
+
+  @override
+  String settOpenclawQueuedTasks(Object count) {
+    return '$count 个任务';
+  }
+
+  @override
+  String get settOpenclawQueueDesc =>
+      '当执行链路暂时不可用时，新的委派会先进入这里。等权限或连接恢复后，你可以一键重新提交。';
+
+  @override
+  String settOpenclawTaskLabel(Object taskId) {
+    return '任务 $taskId';
+  }
+
+  @override
+  String settOpenclawTemplateLabel(Object templateId) {
+    return '模板 $templateId';
+  }
+
+  @override
+  String settOpenclawSourceLabel(Object source) {
+    return '来源 $source';
+  }
+
+  @override
+  String settOpenclawMoreQueued(Object count) {
+    return '还有 $count 个排队任务';
+  }
+
+  @override
+  String get settOpenclawClearQueue => '清空队列';
+
+  @override
+  String get settTranspPureModeDesc => '聊天中仅保留文字消息，隐藏消息下方的附加信息卡片、任务卡和反馈组件。';
+
+  @override
+  String get settTranspDisplayDesc => '选择主对话里的透明模式展示方式';
+
+  @override
+  String get settTranspAutoCollapseDesc => '回答完成后，将透明模式收起成轻量摘要';
+
+  @override
+  String get settTranspAllowCloseDesc => '本轮生成时可手动关闭透明模式，不影响回答继续生成';
+
+  @override
+  String get settTranspAuroraReceiptTitle => 'Aurora 体验回执';
+
+  @override
+  String get settTranspAuroraReceiptDesc => '显示 Aurora 为什么改变语气、状态或深度校准入口。';
+
+  @override
+  String get settTranspMemoryReceiptTitle => '记忆引用回执';
+
+  @override
+  String get settTranspMemoryReceiptDesc => '显示 Aurora 引用了哪些相关记忆，并允许纠正。';
+
+  @override
+  String get settTranspSourceReceiptTitle => '资料与工具回执';
+
+  @override
+  String get settTranspSourceReceiptDesc => '显示 Aurora 参考了哪些资料、工具或社群上下文。';
+
+  @override
+  String get settTranspNextActionTitle => '下一步变更回执';
+
+  @override
+  String get settTranspNextActionDesc => '显示计划或任务被 Aurora 调整的原因。';
+
+  @override
+  String get settA11yTitle => '无障碍与低负荷';
+
+  @override
+  String get settA11yReset => '恢复默认';
+
+  @override
+  String get settA11ySaveFailed => '保存失败，已保留上一次设置。';
+
+  @override
+  String get settA11ySyncing => '正在同步到账号设置';
+
+  @override
+  String get settA11yResetDone => '已恢复默认无障碍设置';
+
+  @override
+  String get settA11yLowLoadTitle => '低负荷模式';
+
+  @override
+  String get settA11yLowLoadDesc => '减少动效、放大触控区域，并优先使用更清晰的阅读节奏。';
+
+  @override
+  String get settA11yLowLoadToggle => '启用低负荷体验';
+
+  @override
+  String get settA11yLowLoadToggleDesc => '开启后会同步调整动画、屏幕阅读和触控默认值。';
+
+  @override
+  String get settA11yReadingTitle => '阅读与颜色';
+
+  @override
+  String get settA11yReadingDesc => '集中管理字体缩放、对比度和色盲友好配色。';
+
+  @override
+  String get settA11yFontScale => '字体缩放';
+
+  @override
+  String get settA11yHighContrast => '高对比度';
+
+  @override
+  String get settA11yHighContrastDesc => '优先使用更明显的文字、边框和状态区分。';
+
+  @override
+  String get settA11yColorBlind => '色盲友好';
+
+  @override
+  String get settA11yColorBlindDesc => '用形状、明暗和标签辅助颜色差异。';
+
+  @override
+  String get settA11yTouchMotionTitle => '触控与动效';
+
+  @override
+  String get settA11yTouchMotionDesc => '统一触控目标、动画减弱和震动反馈默认值。';
+
+  @override
+  String get settA11yTouchTargetSize => '触控目标尺寸';
+
+  @override
+  String get settA11yTouchComfort => '舒适 48dp';
+
+  @override
+  String get settA11yTouchLarge => '加大 56dp';
+
+  @override
+  String get settA11yTouchXl => '特大 64dp';
+
+  @override
+  String settA11yTouchPreview(Object size) {
+    return '当前最小目标 ${size}dp';
+  }
+
+  @override
+  String get settA11yReduceMotion => '减弱动画';
+
+  @override
+  String get settA11yReduceMotionDesc => '缩短或移除非必要转场、粒子和弹性动画。';
+
+  @override
+  String get settA11yHaptic => '震动反馈';
+
+  @override
+  String get settA11yHapticDesc => '控制选择、确认和错误提示的触觉反馈。';
+
+  @override
+  String get settA11yAssistiveTitle => '辅助技术';
+
+  @override
+  String get settA11yAssistiveDesc => '屏幕阅读优化与 TTS 默认值会同步给可视化与学习场景。';
+
+  @override
+  String get settA11yScreenReader => '屏幕阅读优化';
+
+  @override
+  String get settA11yScreenReaderDesc => '为图谱、卡片和复杂控件提供更完整的语义顺序。';
+
+  @override
+  String get settA11yTtsReading => 'TTS 朗读';
+
+  @override
+  String get settA11yTtsReadingDesc => '允许学习摘要、步骤和复盘内容进入朗读模式。';
+
+  @override
+  String get settA11yWcagTitle => 'WCAG AA 检查';
+
+  @override
+  String get settA11yWcagDesc => '本页控件按可触达、可读和可理解的设置面板标准维护。';
+
+  @override
+  String get settA11yWcagTextScale => '正文与控件文字支持 200% 以内缩放';
+
+  @override
+  String get settA11yWcagTouchTarget => '触控目标不低于 48dp，且可提升至 64dp';
+
+  @override
+  String get settA11yWcagColorState => '颜色设置不依赖单一色相表达状态';
+
+  @override
+  String get settA11yWcagIndependent => '屏幕阅读、TTS、动效和震动均可独立控制';
+
+  @override
+  String get settBehaviorTitle => 'Sparkle 如何使用这些设置';
+
+  @override
+  String get settBehaviorSubtitle => '展开任一区域，查看你的选择会怎样影响 Sparkle 的行为。';
+
+  @override
+  String get settBehaviorAccessibility => '无障碍';
+
+  @override
+  String get settBehaviorAccessibilityBody =>
+      '当你开启高对比度、降低动效或放大字体时，Sparkle 会把这些偏好应用到主要学习界面、知识星图、对话和任务执行流程，优先保证可读、可触达和低负荷。';
+
+  @override
+  String get settBehaviorEmotion => '情绪自适应';
+
+  @override
+  String get settBehaviorEmotionBody =>
+      '当 Sparkle 识别到疲劳、压力或认知负荷较高时，会使用更柔和的颜色、更大的文字、更少动画，并减少挑战感提示。手动固定后，自动适应会让位给你的选择。';
+
+  @override
+  String get settBehaviorReminder => '提醒频率';
+
+  @override
+  String get settBehaviorMemory => '记忆控制';
+
+  @override
+  String get settBehaviorMemoryBody =>
+      'Sparkle 会记住学习目标、偏好、承诺和你明确允许的经历线索，用来保持对话连续和任务跟进；不会把被屏蔽的来源或关闭的记忆类型写入长期记忆。';
+
+  @override
+  String get settBehaviorMaterials => '资料使用';
+
+  @override
+  String get settBehaviorMaterialsBody =>
+      '你的学习资料会用于检索相关上下文、生成任务建议、解释知识点和构建知识星图；不会被用于公开社区内容或研究分析，除非你在对应设置里明确允许。';
+
+  @override
+  String get settBehaviorResearch => '研究参与';
+
+  @override
+  String get settBehaviorResearchBody =>
+      '加入研究意味着部分去标识化学习行为、错误模式和资源质量信号可被汇总分析，用来改进 Sparkle；原始私密对话、个人身份信息和被你隐藏的内容不会进入研究数据。';
+
+  @override
+  String get settBehaviorReminderNoCap => '不会发送智能提醒';
+
+  @override
+  String settBehaviorReminderCap(Object count) {
+    return '每天最多 $count 次智能提醒';
+  }
+
+  @override
+  String get settBehaviorReminderTaskOnNoTime => '任务提醒已开启，但未设置具体提前量';
+
+  @override
+  String settBehaviorReminderTaskOnWithTime(Object times) {
+    return '任务会在 $times 前提醒';
+  }
+
+  @override
+  String get settBehaviorReminderTaskOff => '任务提醒已关闭';
+
+  @override
+  String get settBehaviorReminderLevelMinimal => '简洁';
+
+  @override
+  String get settBehaviorReminderLevelVerbose => '详细';
+
+  @override
+  String get settBehaviorReminderLevelStandard => '标准';
+
+  @override
+  String settBehaviorReminderBodyEn(Object cap, Object level, Object taskText) {
+    return '当前设置下，Sparkle $cap，通知详细度为$level；$taskText。安静时段和已关闭类型会优先拦截非紧急提醒。';
+  }
+
+  @override
+  String settBehaviorDays(Object count) {
+    return '$count 天';
+  }
+
+  @override
+  String settBehaviorDay(Object count) {
+    return '$count 天';
+  }
+
+  @override
+  String settBehaviorHours(Object count) {
+    return '$count 小时';
+  }
+
+  @override
+  String settBehaviorHour(Object count) {
+    return '$count 小时';
+  }
+
+  @override
+  String settBehaviorMinutes(Object count) {
+    return '$count 分钟';
+  }
+
+  @override
+  String settBehaviorMinute(Object count) {
+    return '$count 分钟';
+  }
+
+  @override
+  String get settDataControlsTitle => '数据控制';
+
+  @override
+  String get settDataControlsDesc => '导出、删除和隐藏入口集中在这里，所有操作都会说明后果。';
+
+  @override
+  String get settDataExport => '导出我的数据';
+
+  @override
+  String get settDataExportDesc => '生成包含账号资料、学习记录、设置和可导出记忆的压缩包。';
+
+  @override
+  String get settDataDelete => '删除我的数据';
+
+  @override
+  String get settDataDeleteDesc => '进入确认流程。删除账号会移除个人资料、偏好和历史记录，且不可恢复。';
+
+  @override
+  String get settDataHideChronicle => '隐藏我的成长编年史';
+
+  @override
+  String get settDataHideChronicleDesc => '隐藏后，成长叙事入口默认不展示编年史内容；数据不会因此删除。';
+
+  @override
+  String get settDataHideMemory => '隐藏我的记忆';
+
+  @override
+  String get settDataHideMemoryDesc =>
+      '隐藏后，记忆面板和可见记忆引用会默认收起；长期记忆写入规则请进入记忆设置调整。';
+
+  @override
+  String get settDataManageMemory => '管理记忆写入规则';
 }

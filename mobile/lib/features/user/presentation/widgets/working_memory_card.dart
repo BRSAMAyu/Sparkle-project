@@ -3,7 +3,6 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class WorkingMemoryCard extends StatelessWidget {
   const WorkingMemoryCard({required this.snapshot, super.key});
@@ -60,7 +59,7 @@ class WorkingMemoryCard extends StatelessWidget {
                             ),
                             const SizedBox(height: DS.spacing6),
                             Text(
-                              _buildMeta(item),
+                              _buildMeta(context, item),
                               style: DS.bodySmall.copyWith(
                                 color: DS.textSecondary,
                               ),
@@ -76,15 +75,14 @@ class WorkingMemoryCard extends StatelessWidget {
     );
   }
 
-  String _buildMeta(Stage35WorkingMemoryItem item) {
-    final zh = I18nService.instance.isChinese;
+  String _buildMeta(BuildContext context, Stage35WorkingMemoryItem item) {
     final parts = <String>[
       item.subjectType,
-      zh ? '提及 ${item.mentionCount} 次' : 'Mentioned ${item.mentionCount} times',
+      context.l10n.workMemMentioned(item.mentionCount),
       if (item.consolidated) S.userConsolidated else S.userStillInForeground,
     ];
     if (item.lastSeenAt != null) {
-      parts.add(DateFormat(zh ? 'M月d日 HH:mm' : 'MMM d, HH:mm')
+      parts.add(DateFormat(context.l10n.workMemDateFormat)
           .format(item.lastSeenAt!));
     }
     return parts.join(' · ');

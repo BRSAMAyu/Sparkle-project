@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 class AchievementSummaryCard extends StatelessWidget {
   const AchievementSummaryCard({required this.summary, super.key});
@@ -31,7 +30,7 @@ class AchievementSummaryCard extends StatelessWidget {
             ),
             const SizedBox(height: DS.spacing8),
             Text(
-              I18nService.instance.isChinese ? '总成就分 ${value?.totalAchievementScore.toStringAsFixed(1) ?? '0.0'}' : 'Total score ${value?.totalAchievementScore.toStringAsFixed(1) ?? '0.0'}',
+              context.l10n.achieveTotalScore(value?.totalAchievementScore.toStringAsFixed(1) ?? '0.0'),
               style: DS.bodyLarge.copyWith(
                 color: DS.textPrimary,
                 fontWeight: DS.fontWeightSemibold,

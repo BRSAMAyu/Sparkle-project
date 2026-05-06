@@ -7,7 +7,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 
 class ExportDataScreen extends ConsumerStatefulWidget {
@@ -207,7 +206,7 @@ class _ExportDataScreenState extends ConsumerState<ExportDataScreen> {
             ],
             const SizedBox(height: DS.xl),
             SparkleButton.primary(
-              label: _exporting ? (I18nService.instance.isChinese ? '导出中...' : 'Exporting...') : l10n.profileExportData,
+              label: _exporting ? (l10n.exportExporting) : l10n.profileExportData,
               onPressed: _exporting ? () {} : _startExport,
             ),
           ],

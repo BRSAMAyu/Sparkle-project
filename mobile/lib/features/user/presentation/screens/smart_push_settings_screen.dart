@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
@@ -172,7 +171,7 @@ class _SmartPushSettingsScreenState
                   _buildSectionTitle(l10n.smartPushPersonaSection),
                   const SizedBox(height: DS.spacing4),
                   Text(
-                    I18nService.instance.isChinese ? '调整提醒语气与频率，让推送更像陪伴而不是打扰。' : 'Adjust reminder tone and frequency so notifications feel like companionship, not interruption.',
+                    l10n.smartPushToneDesc,
                     style: DS.bodySmall.copyWith(color: DS.textSecondary),
                   ),
                   const SizedBox(height: DS.sm),
