@@ -13216,5 +13216,13 @@
   "adminRecentEvents": "最近事件",
   "adminWindowEvents": "窗口事件",
   "adminWindowErrors": "窗口错误",
-  "adminWeightedAvgDuration": "加权平均耗时"
+  "adminWeightedAvgDuration": "加权平均耗时",
+  "socialAcctLinkedCount": "已绑定 {count} 项",
+  "socialAcctUnifiedLogin": "登录方式统一管理",
+  "socialAcctConnected": "已连接",
+  "socialAcctNotConnected": "未连接",
+  "acctSecOverview": "把登录入口、设备状态和关键操作记录收在一起，方便你按风险等级快速查看。",
+  "acctSecDeviceStatus": "查看当前设备、最近活跃时间和远程退出状态。",
+  "acctSecSecurityTrail": "保留登录、解绑、密码修改等安全轨迹。",
+  "acctSecRecentActivity": "回顾近期系统更新和重要账号行为变化。"
 }

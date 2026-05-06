@@ -53244,6 +53244,54 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'加权平均耗时'**
   String get adminWeightedAvgDuration;
+
+  /// No description provided for @socialAcctLinkedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'已绑定 {count} 项'**
+  String socialAcctLinkedCount(Object count);
+
+  /// No description provided for @socialAcctUnifiedLogin.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录方式统一管理'**
+  String get socialAcctUnifiedLogin;
+
+  /// No description provided for @socialAcctConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'已连接'**
+  String get socialAcctConnected;
+
+  /// No description provided for @socialAcctNotConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'未连接'**
+  String get socialAcctNotConnected;
+
+  /// No description provided for @acctSecOverview.
+  ///
+  /// In zh, this message translates to:
+  /// **'把登录入口、设备状态和关键操作记录收在一起，方便你按风险等级快速查看。'**
+  String get acctSecOverview;
+
+  /// No description provided for @acctSecDeviceStatus.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看当前设备、最近活跃时间和远程退出状态。'**
+  String get acctSecDeviceStatus;
+
+  /// No description provided for @acctSecSecurityTrail.
+  ///
+  /// In zh, this message translates to:
+  /// **'保留登录、解绑、密码修改等安全轨迹。'**
+  String get acctSecSecurityTrail;
+
+  /// No description provided for @acctSecRecentActivity.
+  ///
+  /// In zh, this message translates to:
+  /// **'回顾近期系统更新和重要账号行为变化。'**
+  String get acctSecRecentActivity;
 }
 
 class _AppLocalizationsDelegate

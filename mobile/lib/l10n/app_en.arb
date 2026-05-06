@@ -13195,5 +13195,13 @@
   "adminRecentEvents": "Recent Events",
   "adminWindowEvents": "Window events",
   "adminWindowErrors": "Window errors",
-  "adminWeightedAvgDuration": "Weighted avg duration"
+  "adminWeightedAvgDuration": "Weighted avg duration",
+  "socialAcctLinkedCount": "{count} linked",
+  "socialAcctUnifiedLogin": "Unified login management",
+  "socialAcctConnected": "Connected",
+  "socialAcctNotConnected": "Not connected",
+  "acctSecOverview": "Login methods, device status, and security logs in one place, sorted by risk level.",
+  "acctSecDeviceStatus": "View current devices, recent activity, and remote sign-out status.",
+  "acctSecSecurityTrail": "Track logins, unlinking, password changes, and other security events.",
+  "acctSecRecentActivity": "Review recent system updates and important account activity changes."
 }

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/user/user_routes.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -78,7 +77,7 @@ class AccountSecurityScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: DS.spacing4),
                     Text(
-                      I18nService.instance.isChinese ? '把登录入口、设备状态和关键操作记录收在一起，方便你按风险等级快速查看。' : 'Login methods, device status, and security logs in one place, sorted by risk level.',
+                      context.l10n.acctSecOverview,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: DS.textSecondary,
                             height: 1.4,
@@ -98,7 +97,7 @@ class AccountSecurityScreen extends StatelessWidget {
                       context,
                       icon: Icons.devices_rounded,
                       title: l10n.profileSessionManagement,
-                      subtitle: I18nService.instance.isChinese ? '查看当前设备、最近活跃时间和远程退出状态。' : 'View current devices, recent activity, and remote sign-out status.',
+                      subtitle: context.l10n.acctSecDeviceStatus,
                       accentColor: const Color(0xFF5E8197),
                       onTap: () => context.push(UserRoutes.sessionManagement),
                     ),
@@ -107,7 +106,7 @@ class AccountSecurityScreen extends StatelessWidget {
                       context,
                       icon: Icons.shield_outlined,
                       title: l10n.profileSecurityLog,
-                      subtitle: I18nService.instance.isChinese ? '保留登录、解绑、密码修改等安全轨迹。' : 'Track logins, unlinking, password changes, and other security events.',
+                      subtitle: context.l10n.acctSecSecurityTrail,
                       accentColor: const Color(0xFF8A7AAE),
                       onTap: () => context.push(UserRoutes.securityLog),
                     ),
@@ -116,7 +115,7 @@ class AccountSecurityScreen extends StatelessWidget {
                       context,
                       icon: Icons.history_rounded,
                       title: l10n.systemActivity,
-                      subtitle: I18nService.instance.isChinese ? '回顾近期系统更新和重要账号行为变化。' : 'Review recent system updates and important account activity changes.',
+                      subtitle: context.l10n.acctSecRecentActivity,
                       accentColor: const Color(0xFF7B948E),
                       onTap: () => context.push(UserRoutes.systemUpdates),
                     ),
