@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/task/data/models/task_card_protocol.dart';
 import 'package:sparkle/features/task/data/repositories/task_card_protocol_repository.dart';
@@ -33,7 +34,9 @@ class TaskProtocolPanel extends ConsumerWidget {
 
     return asyncProtocol.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => CompactErrorCard(
+        onRetry: () => ref.invalidate(taskCardProtocolProvider(taskId)),
+      ),
       data: (protocol) {
         if (protocol == null) return const SizedBox.shrink();
         return _ProtocolBody(protocol: protocol);

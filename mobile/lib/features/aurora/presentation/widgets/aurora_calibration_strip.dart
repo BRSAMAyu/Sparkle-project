@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/features/aurora/data/models/aurora_calibration_card.dart';
 import 'package:sparkle/features/aurora/data/repositories/aurora_calibration_repository.dart';
 import 'package:sparkle/features/aurora/presentation/providers/aurora_calibration_provider.dart';
@@ -209,7 +210,9 @@ class _AuroraCalibrationStripState
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => CompactErrorCard(
+        onRetry: () => ref.invalidate(auroraCalibrationSurfaceProvider(widget.planId)),
+      ),
     );
   }
 }

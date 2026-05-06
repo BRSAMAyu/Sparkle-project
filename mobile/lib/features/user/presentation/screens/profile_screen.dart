@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/sparkle_avatar.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/models/user_state_models.dart';
@@ -67,7 +68,7 @@ class ProfileScreen extends ConsumerWidget {
                     data: (profileContext) =>
                         _buildTraitsSection(context, ref, profileContext),
                     loading: () => const SizedBox.shrink(),
-                    error: (_, __) => const SizedBox.shrink(),
+                    error: (_, __) => const CompactErrorCard(),
                   ),
                   const SizedBox(height: DS.spacing12),
                   if (profileContext != null)

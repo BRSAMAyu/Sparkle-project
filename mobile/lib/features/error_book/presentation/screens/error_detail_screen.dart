@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
@@ -284,7 +285,7 @@ class ErrorDetailScreen extends ConsumerWidget {
   ) =>
       summaryAsync.when(
         loading: () => const SizedBox.shrink(),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_, __) => const CompactErrorCard(),
         data: (summary) {
           final hasContent = (summary.rootCause?.isNotEmpty ?? false) ||
               summary.strategies.isNotEmpty ||

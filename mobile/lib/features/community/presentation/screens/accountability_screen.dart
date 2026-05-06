@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -332,7 +333,9 @@ class _StreakRow extends ConsumerWidget {
         : ref.watch(partnershipStatsProvider(partnership.id));
     return statsAsync.when(
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (_, __) => CompactErrorCard(
+        onRetry: () => ref.invalidate(partnershipStatsProvider(partnership.id)),
+      ),
       data: (stats) => Row(
         children: [
           Icon(

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart'
     hide ButtonVariant;
 import 'package:sparkle/core/design/widgets/error_widget.dart';
@@ -669,7 +670,7 @@ class _TaskDetailView extends ConsumerWidget {
             ],
           ),
         ),
-        error: (_, __) => const SizedBox.shrink(),
+        error: (_, __) => const CompactErrorCard(),
       );
 
   Widget _buildGuideSection(BuildContext context) => Container(
