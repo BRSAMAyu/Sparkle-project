@@ -567,6 +567,89 @@ class TestRetrievalDirectiveFilter:
         assert filtered[0]["id"] == "b"
 
 
+class TestPollutionGuardFilter:
+    """Tests for QA-P0-3: pollution_guard strict/moderate/off enforcement."""
+
+    def test_strict_filters_below_030(self):
+        results = [
+            {"id": "low", "file_id": "s1", "similarity": 0.25},
+            {"id": "mid", "file_id": "s2", "similarity": 0.30},
+            {"id": "high", "file_id": "s3", "similarity": 0.80},
+        ]
+        filtered = _apply_retrieval_directive_filter(
+            results, {"pollution_guard": "strict"},
+        )
+        ids = [r["id"] for r in filtered]
+        assert "low" not in ids
+        assert "mid" in ids
+        assert "high" in ids
+
+    def test_moderate_filters_below_015(self):
+        results = [
+            {"id": "very-low", "file_id": "s1", "similarity": 0.10},
+            {"id": "low", "file_id": "s2", "similarity": 0.15},
+            {"id": "ok", "file_id": "s3", "similarity": 0.50},
+        ]
+        filtered = _apply_retrieval_directive_filter(
+            results, {"pollution_guard": "moderate"},
+        )
+        ids = [r["id"] for r in filtered]
+        assert "very-low" not in ids
+        assert "low" in ids
+        assert "ok" in ids
+
+    def test_off_no_filter(self):
+        results = [
+            {"id": "tiny", "file_id": "s1", "similarity": 0.01},
+            {"id": "big", "file_id": "s2", "similarity": 0.99},
+        ]
+        filtered = _apply_retrieval_directive_filter(
+            results, {"pollution_guard": "off"},
+        )
+        assert len(filtered) == 2
+
+    def test_must_load_bypasses_strict_guard(self):
+        results = [
+            {"id": "forced", "file_id": "src-must", "similarity": 0.05},
+            {"id": "normal", "file_id": "src-other", "similarity": 0.20},
+        ]
+        filtered = _apply_retrieval_directive_filter(
+            results,
+            {"must_load": ["src-must"], "pollution_guard": "strict"},
+        )
+        ids = [r["id"] for r in filtered]
+        assert "forced" in ids
+        assert "normal" not in ids
+
+    def test_strict_combined_with_do_not_load(self):
+        results = [
+            {"id": "blocked", "file_id": "s1", "similarity": 0.90},
+            {"id": "low", "file_id": "s2", "similarity": 0.20},
+            {"id": "good", "file_id": "s3", "similarity": 0.60},
+        ]
+        filtered = _apply_retrieval_directive_filter(
+            results,
+            {"do_not_load": ["s1"], "pollution_guard": "strict"},
+        )
+        ids = [r["id"] for r in filtered]
+        assert "blocked" not in ids
+        assert "low" not in ids
+        assert "good" in ids
+
+    def test_missing_similarity_treated_as_zero(self):
+        results = [{"id": "no-sim", "file_id": "s1"}]
+        filtered = _apply_retrieval_directive_filter(
+            results, {"pollution_guard": "strict"},
+        )
+        assert len(filtered) == 0
+
+    def test_strict_with_empty_results(self):
+        filtered = _apply_retrieval_directive_filter(
+            [], {"pollution_guard": "strict"},
+        )
+        assert filtered == []
+
+
 class TestGraphKnowledgeService:
     """测试增强的知识服务"""
 

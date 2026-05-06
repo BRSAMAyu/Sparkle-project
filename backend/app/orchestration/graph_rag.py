@@ -408,16 +408,32 @@ def filter_graph_rag_result(
     )
 
 
+_POLLUTION_GUARD_THRESHOLDS: dict[str, float] = {
+    "strict": 0.3,
+    "moderate": 0.15,
+}
+
+
 def _apply_retrieval_directive_filter(
     vector_results: list[dict[str, Any]],
     directive: dict[str, Any],
 ) -> list[dict[str, Any]]:
-    """Filter vector results based on RetrievalDirective must_load/may_load/do_not_load lists."""
+    """Filter vector results based on RetrievalDirective fields.
+
+    Applies in order:
+    1. do_not_load exclusion
+    2. must_load unconditional inclusion (bypasses pollution_guard)
+    3. may_load conditional inclusion (similarity >= 0.3)
+    4. pollution_guard minimum relevance threshold on remaining items
+    """
     must_load = set(directive.get("must_load") or [])
     may_load = set(directive.get("may_load") or [])
     do_not_load = set(directive.get("do_not_load") or [])
+    pollution_guard = str(directive.get("pollution_guard") or "off")
 
-    if not must_load and not may_load and not do_not_load:
+    has_lists = must_load or may_load or do_not_load
+    pg_threshold = _POLLUTION_GUARD_THRESHOLDS.get(pollution_guard)
+    if not has_lists and pg_threshold is None:
         return vector_results
 
     filtered: list[dict[str, Any]] = []
@@ -433,10 +449,12 @@ def _apply_retrieval_directive_filter(
         if source_id in must_load:
             filtered.append(item)
             continue
+        similarity = float(item.get("similarity") or item.get("score") or 0)
         if may_load and source_id in may_load:
-            similarity = float(item.get("similarity") or item.get("score") or 0)
             if similarity >= 0.3:
                 filtered.append(item)
+            continue
+        if pg_threshold is not None and similarity < pg_threshold:
             continue
         filtered.append(item)
     return filtered
