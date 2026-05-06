@@ -89,10 +89,10 @@
 | QA-P2-28 | DS tokens: Achievement colors (12) | Flutter | M | ⏭️ skip | — | — | Screen-specific dark theme colors, not shared across feature; tokenizing single-screen colors = premature abstraction |
 | QA-P2-29 | DS tokens: Home colors (7) | Flutter | M | ⏭️ skip | — | — | 5 colors single-file defaults; 2 shared across only 2 files each — not enough reuse to justify tokens |
 | QA-P2-30 | DS tokens: User colors (16) | Flutter | M | ⏭️ skip | — | — | 13/16 colors single-file card accents; 3 shared but used in different contexts |
-| QA-P2-31 | DS tokens: Plan colors (20) | Flutter | M | ⬜ pending | — | — | learning_portfolio_screen.dart |
+| QA-P2-31 | DS tokens: Plan colors (20) | Flutter | M | ⏭️ skip | — | — | All 20 colors single-file — screen-specific card aesthetics |
 | QA-P2-32 | DS tokens: BorderRadius (1,015 instances) | Flutter | L | ⬜ pending | — | — | → DS.borderRadius* |
 | QA-P2-33 | DS tokens: EdgeInsets (1,359 instances) | Flutter | L | ⬜ pending | — | — | → DS.spacing* |
-| QA-P2-34 | Semantics: IconButtons (31+ files) | Flutter | M | ⬜ pending | — | — | Add tooltip/semanticLabel |
+| QA-P2-34 | Semantics: IconButtons (31+ files) | Flutter | M | 🔵 in-progress | claude-B | — | Add tooltip/semanticLabel |
 | QA-P2-35 | Semantics: InkWell (30+ files) | Flutter | M | ⬜ pending | — | — | Wrap with Semantics |
 | QA-P2-36 | Semantics: GestureDetector (30+ files) | Flutter | M | ⬜ pending | — | — | Wrap with Semantics |
 | QA-P2-37 | Fix generic Semantics: CausalTimeline | Flutter | S | ✅ done | — | 7df6a4fd7 | Replaced 'control 1/2/3' with meaningful l10n labels |
