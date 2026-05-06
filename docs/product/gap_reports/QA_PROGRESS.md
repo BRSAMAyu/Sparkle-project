@@ -97,7 +97,7 @@
 | QA-P2-36 | Semantics: GestureDetector (30+ files) | Flutter | M | ⬜ pending | — | — | Wrap with Semantics |
 | QA-P2-37 | Fix generic Semantics: CausalTimeline | Flutter | S | ✅ done | — | 7df6a4fd7 | Replaced 'control 1/2/3' with meaningful l10n labels |
 | QA-P2-38 | Fix hardcoded toggle: GoalWorldGraph | Flutter | S | ✅ done | — | 0635fe177 | Toggle strings + inline i18n → ARB, removed I18nService import |
-| QA-P2-39 | Semantics: notification chips | Flutter | S | ⬜ pending | — | — | Goal value + next step |
+| QA-P2-39 | Semantics: notification chips | Flutter | S | ✅ done | — | cc823bdad | Semantics + ARB for goal value chip + next step hint |
 | QA-P2-40 | Hardcoded 'Decision Timeline' → ARB | Flutter | S | ✅ done | — | 44ed609e2 | chat_screen.dart semanticLabel → context.l10n.chatDecisionTimeline |
 | QA-P2-41 | State handling: CommunityMainScreen | Flutter | M | ⬜ pending | — | — | loading/error/empty |
 | QA-P2-42 | State handling: GroupListScreen | Flutter | M | ⬜ pending | — | — | loading/error/empty |
