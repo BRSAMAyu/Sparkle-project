@@ -111,7 +111,7 @@
 | QA-P3-2 | _a11yCopy helper → ARB | Flutter | M | ⬜ pending | — | — | accessibility settings |
 | QA-P3-3 | Strategy effectiveness: SprintReview | Flutter | L | ⬜ pending | — | — | Per-strategy outcome display — needs spec, feature addition not bug fix |
 | QA-P3-4 | Tap target padding for undersized icons | Flutter | M | ✅ done | — | e1e999cd7 | 48px hit area for 20-36px icons |
-| QA-P3-5 | Audit fontSize for text scaling | Flutter | L | 🔵 in-progress | claude-B | — | 719 fontSize overrides |
+| QA-P3-5 | Audit fontSize for text scaling | Flutter | L | ⏭️ skip | — | — | Flutter framework auto-scales Text widgets; hardcoded fontSize ≠ broken scaling. Real issue: layout fragility at 150%+ scaling → needs separate CI/layout task. Spec: _specs/QA-P3-5.md |
 
 ## Summary
 
@@ -120,5 +120,5 @@
 | P0 | 6 | 6 | 0 | 0 | 0 |
 | P1 | 20 | 10 | 10 | 0 | 0 |
 | P2 | 35 | 11 | 4 | 19 | 1 |
-| P3 | 5 | 1 | 0 | 4 | 0 |
-| **Total** | **66** | **27** | **12** | **25** | **2** |
+| P3 | 5 | 1 | 1 | 3 | 0 |
+| **Total** | **66** | **27** | **13** | **23** | **3** |
