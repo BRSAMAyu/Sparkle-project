@@ -70,6 +70,13 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: DS.spacing16),
+                  _StreakInsightBanner(
+                    stats: streakStats,
+                    totalCheckins: historyState.days
+                        .where((d) => d.completed)
+                        .length,
+                  ),
+                  const SizedBox(height: DS.spacing16),
                   _AnimatedSection(
                     delay: const Duration(milliseconds: 100),
                     child: _buildStatsGrid(streakStats, historyState, l10n),
@@ -952,4 +959,46 @@ class _RiskHintCardState extends State<_RiskHintCard>
         ),
       ),
     );
+}
+
+class _StreakInsightBanner extends StatelessWidget {
+  const _StreakInsightBanner({
+    required this.stats,
+    required this.totalCheckins,
+  });
+
+  final StreakStats stats;
+  final int totalCheckins;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+
+    return Container(
+      padding: const EdgeInsets.all(DS.spacing12),
+      decoration: BoxDecoration(
+        color: DS.brandPrimary.withValues(alpha: 0.06),
+        borderRadius: DS.borderRadius12,
+        border: Border.all(color: DS.brandPrimary.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.lightbulb_outline, size: 18, color: DS.brandPrimary),
+          const SizedBox(width: DS.spacing8),
+          Expanded(
+            child: Text(
+              l10n.isChinese
+                  ? '过去7天你有$totalCheckins天完成了任务。当前连续打卡${stats.currentStreak}天。'
+                  : 'In the past 7 days you completed tasks on $totalCheckins days. Current streak: ${stats.currentStreak} days.',
+              style: TextStyle(
+                fontSize: DS.fontSizeSm,
+                color: DS.textPrimary,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

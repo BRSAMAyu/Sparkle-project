@@ -20,7 +20,29 @@ class JourneyProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!progress.hasPack) return const SizedBox.shrink();
+    if (!progress.hasPack) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: DS.surfaceHigh,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.auto_awesome, size: 18, color: DS.brandPrimary),
+            const SizedBox(width: DS.spacing8),
+            Expanded(
+              child: Text(
+                _t('AI 正在为你定制学习路径...', 'AI is personalizing your journey...'),
+                style: DS.bodySmall.copyWith(color: DS.textSecondary),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     final pct = (progress.progress * 100).round();
     final dayLabel = progress.horizonDays > 0
@@ -100,15 +122,21 @@ class JourneyProgressCard extends StatelessWidget {
             ),
             if (!progress.isOnBackbone) ...[
               const SizedBox(height: 6),
-              Row(
-                children: [
-                  Icon(Icons.explore_outlined, size: 14, color: DS.warning),
-                  const SizedBox(width: 4),
-                  Text(
-                    _t('偏离主线，自主探索中', 'Off backbone — exploring'),
-                    style: DS.labelSmall.copyWith(color: DS.warning),
-                  ),
-                ],
+              Tooltip(
+                message: _t(
+                  '主线是为你定制的学习路径。自由探索是被鼓励的，不影响进度。',
+                  'The backbone is your guided learning path. Free exploration is encouraged and won\'t affect your progress.',
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.explore_outlined, size: 14, color: DS.warning),
+                    const SizedBox(width: 4),
+                    Text(
+                      _t('偏离主线，自主探索中', 'Off backbone — exploring'),
+                      style: DS.labelSmall.copyWith(color: DS.warning),
+                    ),
+                  ],
+                ),
               ),
             ],
           ],
