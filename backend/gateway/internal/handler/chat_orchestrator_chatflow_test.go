@@ -69,7 +69,9 @@ func TestEnsureChatExtraContextInitializesNilMap(t *testing.T) {
 	input := &chatInput{}
 	ctx := ensureChatExtraContext(input)
 	require.NotNil(t, ctx, "ensureChatExtraContext must initialize nil ExtraContext")
-	assert.Same(t, input.ExtraContext, ctx, "must return the same map stored on input")
+	// Verify it's the same underlying map: mutating ctx must be visible via input.ExtraContext
+	ctx["probe"] = "value"
+	assert.Equal(t, "value", input.ExtraContext["probe"], "returned map must be the same instance stored on input")
 }
 
 func TestEnsureChatExtraContextPreservesExisting(t *testing.T) {
