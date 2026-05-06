@@ -110,7 +110,7 @@
 | QA-P3-1 | Hardcoded 'A'/'B' strings → ARB | Flutter | S | ⬜ pending | — | — | memory unresolved_conflicts |
 | QA-P3-2 | _a11yCopy helper → ARB | Flutter | M | ⬜ pending | — | — | accessibility settings |
 | QA-P3-3 | Strategy effectiveness: SprintReview | Flutter | L | ⬜ pending | — | — | Per-strategy outcome display — needs spec, feature addition not bug fix |
-| QA-P3-4 | Tap target padding for undersized icons | Flutter | M | 🔵 in-progress | claude-B | — | 48px hit area for 20-36px icons |
+| QA-P3-4 | Tap target padding for undersized icons | Flutter | M | ✅ done | — | e1e999cd7 | 48px hit area for 20-36px icons |
 | QA-P3-5 | Audit fontSize for text scaling | Flutter | L | ⬜ pending | — | — | 719 fontSize overrides |
 
 ## Summary
@@ -120,5 +120,5 @@
 | P0 | 6 | 6 | 0 | 0 | 0 |
 | P1 | 20 | 10 | 10 | 0 | 0 |
 | P2 | 35 | 11 | 4 | 19 | 1 |
-| P3 | 5 | 0 | 0 | 5 | 0 |
-| **Total** | **66** | **26** | **12** | **26** | **2** |
+| P3 | 5 | 1 | 0 | 4 | 0 |
+| **Total** | **66** | **27** | **12** | **25** | **2** |
