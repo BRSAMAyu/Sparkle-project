@@ -33,7 +33,7 @@ class GrowthScreen extends ConsumerWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: const Text('Growth Plans'),
+        title: Text(context.l10n.growthPlansTitle),
         actions: [
           Tooltip(
             message: context.l10n.planHistoryPlans,
@@ -50,7 +50,7 @@ class GrowthScreen extends ConsumerWidget {
           unawaited(context.push('/plans/new?type=growth'));
         },
         icon: const Icon(Icons.add),
-        label: const Text('New Plan'),
+        label: Text(context.l10n.newPlanLabel),
       ),
       child: ContentConstraint(
         child: RefreshIndicator(
