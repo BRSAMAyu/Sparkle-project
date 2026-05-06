@@ -53,6 +53,8 @@ import 'package:sparkle/features/chat/presentation/widgets/offline_queue_indicat
 import 'package:sparkle/features/chat/presentation/widgets/plan_review_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/community_insight_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/goal_arbitration_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/divine_moment_card.dart';
+import 'package:sparkle/features/chat/presentation/widgets/experience_envelope_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/growth_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/spine_receipt_card.dart';
 import 'package:sparkle/features/chat/presentation/widgets/stale_recovery_card.dart';
@@ -1540,6 +1542,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 final showCorrectionBar = isLatestAssistant &&
                                     message.role == MessageRole.assistant &&
                                     !chatState.hasActiveRun;
+                                final showEnvelopeIndicator = isLatestAssistant &&
+                                    message.role == MessageRole.assistant;
                                 final showNewMessagesDivider =
                                     message.id == _newMessageDividerBeforeId;
                                 return Column(
@@ -1937,6 +1941,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                           );
                                         },
                                       ),
+                                    if (showEnvelopeIndicator)
+                                      const ExperienceEnvelopeIndicator(),
                                   ],
                                 );
                               },
@@ -2215,6 +2221,19 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         onDismiss: () => ref
                             .read(chatProvider.notifier)
                             .dismissGoalArbitration(),
+                      ),
+                    // Spine: Divine Moment Card — MAGIC-002 through MAGIC-006
+                    if (chatState.pendingDivineMoment != null)
+                      DivineMomentCard(
+                        data: DivineMomentData.fromJson(
+                          chatState.pendingDivineMoment!.cardData,
+                        ),
+                        onAction: (action) {
+                          ref.read(chatProvider.notifier).dismissDivineMoment();
+                          if (action.isNotEmpty) {
+                            ref.read(chatProvider.notifier).sendMessage(action);
+                          }
+                        },
                       ),
                     SparkleExitTransition(
                       visible: chatState.pendingPlanReview != null,
