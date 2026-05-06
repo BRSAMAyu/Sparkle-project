@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
@@ -81,7 +82,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
             ),
             ListTile(
               leading: Icon(Icons.chat, color: DS.primaryBase),
-              title: const Text('Send Message'),
+              title: Text(context.l10n.sendMessageLabel),
               onTap: () {
                 Navigator.pop(context);
                 context.push(

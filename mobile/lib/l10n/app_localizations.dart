@@ -52691,6 +52691,30 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'开始冲刺'**
   String get sprintHistoryStartSprint;
+
+  /// No description provided for @dataUsagePrivacyTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的数据与隐私'**
+  String get dataUsagePrivacyTitle;
+
+  /// No description provided for @growthPlansTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'成长计划'**
+  String get growthPlansTitle;
+
+  /// No description provided for @newPlanLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建计划'**
+  String get newPlanLabel;
+
+  /// No description provided for @sendMessageLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送消息'**
+  String get sendMessageLabel;
 }
 
 class _AppLocalizationsDelegate

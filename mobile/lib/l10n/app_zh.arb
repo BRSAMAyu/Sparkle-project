@@ -11788,5 +11788,6 @@
   "sprintHistoryStartSprint": "开始冲刺",
   "dataUsagePrivacyTitle": "你的数据与隐私",
   "growthPlansTitle": "成长计划",
-  "newPlanLabel": "新建计划"
+  "newPlanLabel": "新建计划",
+  "sendMessageLabel": "发送消息"
 }

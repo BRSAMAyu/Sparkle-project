@@ -30218,4 +30218,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sprintHistoryStartSprint => 'Start a sprint';
+
+  @override
+  String get dataUsagePrivacyTitle => 'Your Data & Privacy';
+
+  @override
+  String get growthPlansTitle => 'Growth Plans';
+
+  @override
+  String get newPlanLabel => 'New Plan';
+
+  @override
+  String get sendMessageLabel => 'Send Message';
 }

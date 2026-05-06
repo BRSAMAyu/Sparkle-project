@@ -28978,4 +28978,16 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get sprintHistoryStartSprint => '开始冲刺';
+
+  @override
+  String get dataUsagePrivacyTitle => '你的数据与隐私';
+
+  @override
+  String get growthPlansTitle => '成长计划';
+
+  @override
+  String get newPlanLabel => '新建计划';
+
+  @override
+  String get sendMessageLabel => '发送消息';
 }

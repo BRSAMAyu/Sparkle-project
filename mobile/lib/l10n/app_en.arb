@@ -11787,5 +11787,6 @@
   "sprintHistoryStartSprint": "Start a sprint",
   "dataUsagePrivacyTitle": "Your Data & Privacy",
   "growthPlansTitle": "Growth Plans",
-  "newPlanLabel": "New Plan"
+  "newPlanLabel": "New Plan",
+  "sendMessageLabel": "Send Message"
 }
