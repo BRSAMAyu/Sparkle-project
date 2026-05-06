@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/widgets/streak_indicator.dart';
@@ -73,7 +74,7 @@ class _StreakDetailsScreenState extends ConsumerState<StreakDetailsScreen> {
                   _StreakInsightBanner(
                     stats: streakStats,
                     totalCheckins: historyState.days
-                        .where((d) => d.completed)
+                        .where((d) => d.status == StreakDayStatus.active)
                         .length,
                   ),
                   const SizedBox(height: DS.spacing16),
@@ -972,8 +973,6 @@ class _StreakInsightBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = context.l10n;
-
     return Container(
       padding: const EdgeInsets.all(DS.spacing12),
       decoration: BoxDecoration(
@@ -987,7 +986,7 @@ class _StreakInsightBanner extends StatelessWidget {
           const SizedBox(width: DS.spacing8),
           Expanded(
             child: Text(
-              l10n.isChinese
+              I18nService.instance.isChinese
                   ? '过去7天你有$totalCheckins天完成了任务。当前连续打卡${stats.currentStreak}天。'
                   : 'In the past 7 days you completed tasks on $totalCheckins days. Current streak: ${stats.currentStreak} days.',
               style: TextStyle(

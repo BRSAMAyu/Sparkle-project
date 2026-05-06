@@ -509,7 +509,7 @@ class _RelatedSourcesCard extends StatelessWidget {
           Text(
             l10n.goalDetailNoSources,
             style: textTheme.bodyMedium?.copyWith(
-              color: DS.textPrimaryVariant,
+              color: DS.textSecondary,
             ),
           )
         else

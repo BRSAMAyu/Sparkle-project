@@ -407,7 +407,7 @@ class _GoalCreationWizardScreenState
       final router = GoRouter.maybeOf(context);
       if (router != null) {
         final firstMilestone = _milestones.isNotEmpty
-            ? _milestones.first.label
+            ? _milestones.first.title
             : _t('开始', 'Getting started');
         final packDuration = _matchedPack != null
             ? _t(

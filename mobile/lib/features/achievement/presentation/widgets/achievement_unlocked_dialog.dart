@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/achievement/presentation/widgets/rarity_badge.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 class SparkleAchievementUnlockedDialog extends StatelessWidget {
@@ -78,9 +79,10 @@ class SparkleAchievementUnlockedDialog extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: DS.spacing8),
-            if (achievement.description.isNotEmpty)
+            if (achievement.description != null &&
+                achievement.description!.isNotEmpty)
               Text(
-                achievement.description,
+                achievement.description!,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,

@@ -56,17 +56,23 @@ Page<dynamic> buildSparkleTransitionPage({
       ? const Duration(milliseconds: 140)
       : switch (motionToken) {
           SparkleMotionToken.micro => const Duration(milliseconds: 150),
-          SparkleMotionToken.standard => const Duration(milliseconds: 180),
-          SparkleMotionToken.scene => const Duration(milliseconds: 210),
-          SparkleMotionToken.hero => const Duration(milliseconds: 240),
+          SparkleMotionToken.quick => const Duration(milliseconds: 160),
+          SparkleMotionToken.responsive => const Duration(milliseconds: 180),
+          SparkleMotionToken.standard => const Duration(milliseconds: 200),
+          SparkleMotionToken.deliberate => const Duration(milliseconds: 230),
+          SparkleMotionToken.scene => const Duration(milliseconds: 260),
+          SparkleMotionToken.hero => const Duration(milliseconds: 300),
         };
   final reverseDuration = reduceMotion
       ? const Duration(milliseconds: 120)
       : switch (motionToken) {
           SparkleMotionToken.micro => const Duration(milliseconds: 120),
-          SparkleMotionToken.standard => const Duration(milliseconds: 140),
-          SparkleMotionToken.scene => const Duration(milliseconds: 160),
-          SparkleMotionToken.hero => const Duration(milliseconds: 180),
+          SparkleMotionToken.quick => const Duration(milliseconds: 130),
+          SparkleMotionToken.responsive => const Duration(milliseconds: 140),
+          SparkleMotionToken.standard => const Duration(milliseconds: 150),
+          SparkleMotionToken.deliberate => const Duration(milliseconds: 170),
+          SparkleMotionToken.scene => const Duration(milliseconds: 180),
+          SparkleMotionToken.hero => const Duration(milliseconds: 200),
         };
 
   return CustomTransitionPage<void>(
@@ -93,9 +99,12 @@ Page<dynamic> buildSparkleTransitionPage({
           : DS.motionCurve(motionToken);
       final fadeBegin = switch (motionToken) {
         SparkleMotionToken.micro => 0.9,
-        SparkleMotionToken.standard => 0.84,
-        SparkleMotionToken.scene => 0.78,
-        SparkleMotionToken.hero => 0.72,
+        SparkleMotionToken.quick => 0.88,
+        SparkleMotionToken.responsive => 0.84,
+        SparkleMotionToken.standard => 0.82,
+        SparkleMotionToken.deliberate => 0.78,
+        SparkleMotionToken.scene => 0.74,
+        SparkleMotionToken.hero => 0.68,
       };
       return buildSharedAxisCompatibleTransition(
         animation: animation,
