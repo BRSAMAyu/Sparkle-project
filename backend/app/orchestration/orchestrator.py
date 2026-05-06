@@ -2667,21 +2667,32 @@ class ChatOrchestrator(
                     except Exception:
                         logger.debug("stream_callback failed for spine_growth_card, stream may be closed")
 
-                # MAGIC-002: Emit correction impact card metadata for Flutter
+                # MAGIC-002~006: Emit unified divine moment card metadata for Flutter
                 if stream_callback:
-                    try:
-                        _corr_raw = await self.redis.get(f"spine:card:correction_impact:{user_id}:latest")
-                        if _corr_raw:
-                            _corr_data = json.loads(_corr_raw if isinstance(_corr_raw, str) else _corr_raw.decode())
-                            await stream_callback(
-                                agent_service_pb2.ChatResponse(
-                                    metadata={
-                                        "spine_correction_impact_card": json.dumps(_corr_data, ensure_ascii=False),
-                                    },
-                                ),
+                    _divine_card_keys = [
+                        ("correction_impact", "spine:card:correction_impact:{user_id}:latest"),
+                        ("material_non_use", "spine:card:material_non_use:{user_id}:latest"),
+                        ("absence_notice", "spine:card:absence_notice:{user_id}:latest"),
+                        ("low_yield_block", "spine:card:low_yield_block:{user_id}:latest"),
+                        ("community_strategy", "spine:card:community_hint:{user_id}:latest"),
+                    ]
+                    for _dm_type, _key_template in _divine_card_keys:
+                        try:
+                            _raw = await self.redis.get(_key_template.format(user_id=user_id))
+                            if _raw:
+                                _data = json.loads(_raw if isinstance(_raw, str) else _raw.decode())
+                                _data["divine_moment_type"] = _dm_type
+                                await stream_callback(
+                                    agent_service_pb2.ChatResponse(
+                                        metadata={
+                                            "spine_divine_moment": json.dumps(_data, ensure_ascii=False),
+                                        },
+                                    ),
+                                )
+                        except Exception:
+                            logger.debug(
+                                "stream_callback failed for spine_divine_moment type=%s", _dm_type,
                             )
-                    except Exception:
-                        logger.debug("stream_callback failed for spine_correction_impact_card, stream may be closed")
 
                 # STAB-012: Emit spine degraded flag when Spine pipeline failed
                 if request_extra_context and request_extra_context.get("spine_degraded"):
@@ -2947,6 +2958,7 @@ class ChatOrchestrator(
                 if request.HasField("tool_result"):
                     async for queued in self._drain_queue(queue):
                         yield self._bind_response_session_id(queued, session_id, request_id=request_id)
+                    last_tool_response = None
                     async for continued_response in self._continue_after_tool_result(
                         request=request,
                         active_db=active_db,
@@ -2960,12 +2972,17 @@ class ChatOrchestrator(
                         user_context_payload=user_context_payload,
                         conversation_context=conversation_context,
                     ):
+                        last_tool_response = continued_response
                         yield continued_response
-                    await self._update_state(session_id, STATE_DONE, "Tool result continuation completed")
-                    REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
-                    COLLABORATION_SUCCESS.labels(
-                        workflow_type="standard_chat", agents_used="orchestrator", outcome="success"
-                    ).inc()
+                    if last_tool_response is not None and last_tool_response.HasField("error"):
+                        await self._update_state(session_id, STATE_FAILED, "Tool result continuation error")
+                        REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="error").inc()
+                    else:
+                        await self._update_state(session_id, STATE_DONE, "Tool result continuation completed")
+                        REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="success").inc()
+                        COLLABORATION_SUCCESS.labels(
+                            workflow_type="standard_chat", agents_used="orchestrator", outcome="success"
+                        ).inc()
                     return
 
                 aurora_surface = self._resolve_aurora_runtime_surface(request_extra_context)

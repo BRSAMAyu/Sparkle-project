@@ -63,7 +63,7 @@ func DefaultUpgrader() websocket.Upgrader {
 
 func isDevelopmentEnv() bool {
 	env := strings.ToLower(os.Getenv("ENVIRONMENT"))
-	return env == "" || env == "dev" || env == "development"
+	return env == "dev" || env == "development"
 }
 
 func selectWebSocketSubprotocol(r *http.Request) string {

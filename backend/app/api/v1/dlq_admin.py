@@ -1,7 +1,7 @@
 import json
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_active_superuser, get_db
@@ -11,6 +11,32 @@ from app.schemas.dlq import DlqEntry, DlqReplayRequest
 from app.services.analytics.cognitive_stream_worker import CognitiveStreamWorker
 
 router = APIRouter(prefix="/dlq", tags=["DLQ"])
+
+DLQ_SUFFIX = ":dlq"
+
+
+@router.get("/main-events", response_model=list[DlqEntry])
+@audit_admin_action(category="dlq_inspection", risk="medium", action="list_main_dlq_events")
+async def list_main_dlq_events(
+    stream: str = Query(default="sparkle_events", description="Base event stream name"),
+    limit: int = 50,
+    _admin=Depends(get_current_active_superuser),
+) -> list[DlqEntry]:
+    """List events in the main event bus DLQ (stream + ':dlq' suffix)."""
+    if not cache_service.redis:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Redis unavailable")
+
+    dlq_stream = f"{stream}{DLQ_SUFFIX}"
+    entries = await cache_service.redis.xrevrange(dlq_stream, count=limit)
+    results: list[DlqEntry] = []
+    for message_id, data in entries:
+        payload_raw = data.get("data")
+        try:
+            payload = json.loads(payload_raw) if payload_raw else {}
+        except json.JSONDecodeError:
+            payload = {"raw": payload_raw}
+        results.append(DlqEntry(message_id=message_id, payload=payload))
+    return results
 
 
 @router.get("/", response_model=list[DlqEntry])

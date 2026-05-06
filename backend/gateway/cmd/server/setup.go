@@ -501,13 +501,13 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 			"live":   "/live",
 		})
 	})
-	r.GET("/api/v1/health/cqrs", func(c *gin.Context) {
-		// route-tier: public
+	r.GET("/api/v1/health/cqrs", authMiddleware, func(c *gin.Context) {
+		// route-tier: authenticated — requires valid JWT; DB errors are sanitized
 		outboxPendingCount, err := cqrs.outboxRepo.GetPendingCount(context.Background())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"status": "error",
-				"error":  err.Error(),
+				"error":  "CQRS outbox component unhealthy",
 			})
 			return
 		}

@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import asyncio
+
+from loguru import logger
+
 from app.consumers.journey_consumer_base import JourneyEventConsumerBase, JourneyPayloadSecurityError
 from app.core.task_manager import task_manager
 from app.db.session import AsyncSessionLocal
@@ -16,7 +20,16 @@ class PlanTaskGenerationConsumer(JourneyEventConsumerBase):
     async def _process_event(self, event: dict, user_id) -> None:
         plan_id = event.get("plan_id")
         async with AsyncSessionLocal() as db:
-            plan = await db.get(Plan, plan_id)
+            plan = None
+            for attempt in range(3):
+                plan = await db.get(Plan, plan_id)
+                if plan is not None:
+                    break
+                logger.warning(
+                    "PlanTaskGenerationConsumer: plan not found, retrying (attempt={}/3, plan_id={})",
+                    attempt + 1, plan_id,
+                )
+                await asyncio.sleep(0.1 * (attempt + 1))
             if plan is None:
                 raise JourneyPayloadSecurityError("plan_not_found")
             if plan.user_id != user_id:

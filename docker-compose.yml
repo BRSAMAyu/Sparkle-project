@@ -54,9 +54,12 @@ services:
   redis:
     image: redis/redis-stack-server:7.4.0-v8
     container_name: sparkle_redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     command: redis-stack-server --requirepass ${REDIS_PASSWORD} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - sparkle_redis_data:/data
     deploy:
       resources:
         limits:
@@ -72,6 +75,7 @@ services:
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: sparkle_minio
+    restart: unless-stopped
     hostname: minio
     entrypoint: ["minio"]
     command: server /data --console-address ":9001"
@@ -102,6 +106,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: sparkle_api
+    restart: unless-stopped
     env_file:
       - .env
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
@@ -193,6 +198,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     container_name: sparkle_agent
+    restart: unless-stopped
     env_file:
       - .env
     command: python grpc_server.py
@@ -283,6 +289,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: unless-stopped
     env_file:
       - .env
     command: celery -A app.core.celery_app worker -l info -Q high_priority,default,low_priority --concurrency=4
@@ -327,6 +334,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    restart: unless-stopped
     env_file:
       - .env
     command: celery -A app.core.celery_app worker -l info -Q glm_batch --autoscale=6,2 --hostname=glm-batch@%h
@@ -372,6 +380,7 @@ services:
       context: ./backend/gateway
       dockerfile: Dockerfile
     container_name: sparkle_gateway
+    restart: unless-stopped
     env_file:
       - .env
     user: "${SPARKLE_APP_UID:-10001}:${SPARKLE_APP_GID:-10001}"
@@ -528,6 +537,7 @@ services:
           memory: 64M
 
 volumes:
+  sparkle_redis_data:
   sparkle_minio_data:
   sparkle_backend_logs:
   sparkle_backend_uploads:
