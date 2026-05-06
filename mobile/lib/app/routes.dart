@@ -84,8 +84,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       };
       final isOnAuth = publicAuthPaths.contains(state.uri.path);
       final isOnPersonaOnboarding =
-          state.uri.path == UserRoutes.personaOnboarding;
-      final isOnModelingChat = state.uri.path == UserRoutes.modelingChat;
+          state.uri.path == UserRoutes.personaOnboarding ||
+              state.uri.path.startsWith('${UserRoutes.personaOnboarding}/');
+      final isOnModelingChat =
+          state.uri.path == UserRoutes.modelingChat ||
+              state.uri.path.startsWith('${UserRoutes.modelingChat}/');
       final onboardingCompleted = ref.read(onboardingCompletedProvider);
       final isGuestUser = authState.user?.registrationSource == 'guest';
 
