@@ -44,7 +44,7 @@
 | QA-P1-10 | Add route: ProfileTransparentScreen | Flutter | S | ⏭️ skip | — | — | Already registered: user_routes.dart:184 |
 | QA-P1-11 | Add route: DataUsageDashboardScreen | Flutter | S | ⏭️ skip | — | — | Already registered: user_routes.dart:145 |
 | QA-P1-12 | Add route: CapsuleJobsScreen | Flutter | S | ⏭️ skip | — | — | Already registered: cognitive_routes.dart:53 |
-| QA-P1-13 | SprintReviewScreen loading indicator | Flutter | S | ⬜ pending | — | — | Add skeleton shimmer |
+| QA-P1-13 | SprintReviewScreen loading indicator | Flutter | S | 🔵 in-progress | claude-B | — | Add skeleton shimmer |
 | QA-P1-14 | PausedTaskBanner error handling | Flutter | M | ⬜ pending | — | — | Show error feedback on resume fail |
 | QA-P1-15 | Integrate UnderstandingSnapshotCard | Flutter | M | ⬜ pending | — | — | Import into home dashboard |
 | QA-P1-16 | Register AccountabilityHubScreen route | Flutter | S | ⬜ pending | — | — | community_routes.dart |
