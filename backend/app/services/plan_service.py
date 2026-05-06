@@ -137,8 +137,13 @@ class PlanService:
         db: AsyncSession, db_obj: Plan, obj_in: PlanUpdate
     ) -> Plan:
         update_data = obj_in.model_dump(exclude_unset=True)
+        sprint_notes = update_data.pop("sprint_review_notes", None)
         for field, value in update_data.items():
             setattr(db_obj, field, value)
+        if sprint_notes is not None:
+            meta = dict(db_obj.source_metadata or {})
+            meta["sprint_review_notes"] = sprint_notes
+            db_obj.source_metadata = meta
         db.add(db_obj)
         await db.commit()
         await db.refresh(db_obj)

@@ -10,6 +10,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+import 'package:sparkle/features/plan/data/repositories/plan_repository.dart';
 import 'package:sparkle/features/plan/presentation/providers/plan_provider.dart';
 
 /// Sprint Review Screen — structured checkpoint experience showing accumulated
@@ -90,7 +91,7 @@ class SprintReviewScreen extends ConsumerWidget {
                   title: zh ? '复盘笔记' : 'Review Notes',
                 ),
                 const SizedBox(height: 8),
-                _ReviewNotesCard(planId: planId),
+                _ReviewNotesCard(planId: planId, ref: ref),
                 const SizedBox(height: 32),
                 _ActionButtons(planId: planId),
               ],
@@ -444,9 +445,10 @@ class _Insight {
 }
 
 class _ReviewNotesCard extends StatefulWidget {
-  const _ReviewNotesCard({required this.planId});
+  const _ReviewNotesCard({required this.planId, required this.ref});
 
   final String planId;
+  final WidgetRef ref;
 
   @override
   State<_ReviewNotesCard> createState() => _ReviewNotesCardState();
@@ -532,16 +534,31 @@ class _ReviewNotesCardState extends State<_ReviewNotesCard> {
   Future<void> _loadNotes() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
-    _controller.text = prefs.getString('$_keyPrefix${widget.planId}') ?? '';
+    var notes = prefs.getString('$_keyPrefix${widget.planId}') ?? '';
+    if (notes.isEmpty) {
+      final planState = widget.ref.read(planListProvider);
+      final plan = planState.activePlans
+          .where((p) => p.id == widget.planId)
+          .firstOrNull;
+      final serverNotes = plan?.sourceMetadata?['sprint_review_notes'] as String?;
+      if (serverNotes != null && serverNotes.isNotEmpty) {
+        notes = serverNotes;
+        await prefs.setString('$_keyPrefix${widget.planId}', notes);
+      }
+    }
+    _controller.text = notes;
     setState(() => _loading = false);
   }
 
   Future<void> _save() async {
     setState(() => _saving = true);
+    final notes = _controller.text.trim();
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      '$_keyPrefix${widget.planId}',
-      _controller.text.trim(),
+    await prefs.setString('$_keyPrefix${widget.planId}', notes);
+    unawaited(
+      widget.ref
+          .read(planRepositoryProvider)
+          .saveSprintReviewNotes(widget.planId, notes),
     );
     if (!mounted) return;
     setState(() => _saving = false);

@@ -153,6 +153,18 @@ class PlanRepository {
     }
   }
 
+  Future<void> saveSprintReviewNotes(String planId, String notes) async {
+    if (DemoDataService.isDemoMode) return;
+    try {
+      await _apiClient.put<dynamic>(
+        ApiEndpoints.plan(planId),
+        data: {'sprint_review_notes': notes},
+      );
+    } on DioException {
+      // Fall back to local SharedPreferences persistence
+    }
+  }
+
   Future<void> deletePlan(String id) async {
     if (DemoDataService.isDemoMode) {
       DemoDataService().demoPlans.removeWhere((p) => p.id == id);

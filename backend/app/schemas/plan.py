@@ -39,6 +39,7 @@ class PlanUpdate(BaseModel):
     is_active: bool | None = Field(default=None, description="Is active")
     priority: PlanPriority | None = Field(default=None, description="Plan priority")
     plan_stage: PlanStage | None = Field(default=None, description="Plan stage")
+    sprint_review_notes: str | None = Field(default=None, description="Sprint review notes")
 
 
 class PlanActivate(BaseModel):
