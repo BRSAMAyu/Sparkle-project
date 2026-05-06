@@ -515,6 +515,7 @@ class _UnifiedOmniBarState extends ConsumerState<UnifiedOmniBar>
   Future<void> _toggleListening() async {
     if (_isListening) {
       await _recordingService.stopRecording();
+      if (!mounted) return;
       setState(() {
         _isListening = false;
       });

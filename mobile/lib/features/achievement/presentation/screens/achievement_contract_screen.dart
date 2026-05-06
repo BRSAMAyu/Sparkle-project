@@ -352,11 +352,12 @@ class _AchievementContractScreenState
               targetDays: days,
               photonStake: stake,
             );
+    if (!mounted) return;
     setState(() => _submitting = false);
 
-    if (contract == null && mounted) {
+    if (contract == null) {
       AppFeedback.error(context, l10n.contractCreateFailed);
-    } else if (mounted) {
+    } else {
       unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
       _showCelebration();
     }
@@ -367,14 +368,13 @@ class _AchievementContractScreenState
     setState(() => _submitting = true);
     final success =
         await ref.read(achievementProvider.notifier).cancelContract();
+    if (!mounted) return;
     setState(() => _submitting = false);
 
-    if (mounted) {
-      if (success) {
-        AppFeedback.success(context, l10n.contractCancelSuccess);
-      } else {
-        AppFeedback.error(context, l10n.contractCancelFailed);
-      }
+    if (success) {
+      AppFeedback.success(context, l10n.contractCancelSuccess);
+    } else {
+      AppFeedback.error(context, l10n.contractCancelFailed);
     }
   }
 

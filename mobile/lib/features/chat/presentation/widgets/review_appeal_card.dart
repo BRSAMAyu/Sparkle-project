@@ -722,6 +722,7 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
       _selectedIssues,
     );
 
+    if (!mounted) return;
     if (success ?? false) {
       _reasonController.clear();
       _selectedIssues.clear();

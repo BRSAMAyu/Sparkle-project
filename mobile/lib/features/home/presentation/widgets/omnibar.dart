@@ -391,6 +391,7 @@ class _OmniBarState extends ConsumerState<OmniBar>
     if (_isListening) {
       // Stop listening
       await _recordingService.stopRecording();
+      if (!mounted) return;
       setState(() {
         _isListening = false;
       });
