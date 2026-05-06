@@ -550,6 +550,13 @@ class ChatOrchestrator(
             activity_profile.update(planning_runtime_state.activity_profile.to_dict())
             activity_profile.update(self.aurora_runtime_v1._activity_payload(control_surface_reading.adjustable))
 
+            # L1 fast path: skip expensive Aurora LLM decision loop when
+            # L1LightAurora determines no escalation is needed.
+            _l1 = (request_extra_context or {}).get("aurora_l1")
+            if isinstance(_l1, dict) and not bool(_l1.get("should_escalate", True)):
+                logger.debug("L1 fast path: skipping Aurora planning sidecar for user={}", user_id)
+                return ""
+
             readout = self.aurora_runtime_v1.dashboard_builder.build(
                 surface=planning_runtime_state.surface,
                 user_id=user_id,
