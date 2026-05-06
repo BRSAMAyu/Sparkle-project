@@ -4,28 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/features/auth/auth.dart';
 
-Page<dynamic> _buildTransitionPage({
-  required GoRouterState state,
-  required Widget child,
-  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
-}) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          buildSharedAxisCompatibleTransition(
-        animation: animation,
-        type: type,
-        child: child,
-      ),
-    );
-
 class AuthRoutes {
   static List<RouteBase> get routes => [
         GoRoute(
           path: '/login',
           name: 'login',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const LoginScreen(),
             type: SharedAxisTransitionType.scaled,
@@ -34,7 +18,7 @@ class AuthRoutes {
         GoRoute(
           path: '/register',
           name: 'register',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const RegisterScreen(),
           ),
@@ -42,7 +26,7 @@ class AuthRoutes {
         GoRoute(
           path: '/forgot-password',
           name: 'forgotPassword',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const ForgotPasswordScreen(),
           ),
@@ -50,7 +34,7 @@ class AuthRoutes {
         GoRoute(
           path: '/reset-password',
           name: 'resetPassword',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: ResetPasswordScreen(
               initialToken: state.uri.queryParameters['token'],
@@ -60,7 +44,7 @@ class AuthRoutes {
         GoRoute(
           path: '/legal/terms',
           name: 'legalTerms',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const LegalDocumentScreen(documentType: 'terms'),
           ),
@@ -68,7 +52,7 @@ class AuthRoutes {
         GoRoute(
           path: '/legal/privacy',
           name: 'legalPrivacy',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const LegalDocumentScreen(documentType: 'privacy'),
           ),

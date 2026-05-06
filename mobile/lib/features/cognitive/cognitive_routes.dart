@@ -1,24 +1,7 @@
-import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/features/cognitive/cognitive.dart';
-
-Page<dynamic> _buildTransitionPage({
-  required GoRouterState state,
-  required Widget child,
-  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
-}) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          buildSharedAxisCompatibleTransition(
-        animation: animation,
-        type: type,
-        child: child,
-      ),
-    );
 
 class CognitiveRoutes {
   static List<RouteBase> get routes => [
@@ -27,7 +10,7 @@ class CognitiveRoutes {
           name: 'patternList',
           pageBuilder: (context, state) {
             final highlightId = state.uri.queryParameters['highlight'];
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
               child: PatternListScreen(highlightId: highlightId),
             );
@@ -38,7 +21,7 @@ class CognitiveRoutes {
           name: 'curiosityCapsule',
           pageBuilder: (context, state) {
             final highlightId = state.uri.queryParameters['highlight'];
-            return _buildTransitionPage(
+            return buildSparkleTransitionPage(
               state: state,
               child: CuriosityCapsuleScreen(highlightId: highlightId),
             );

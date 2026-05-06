@@ -4,28 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/navigation/sparkle_route_transition.dart';
 import 'package:sparkle/features/notification_center/notification_center.dart';
 
-Page<dynamic> _buildTransitionPage({
-  required GoRouterState state,
-  required Widget child,
-  SharedAxisTransitionType type = SharedAxisTransitionType.horizontal,
-}) =>
-    CustomTransitionPage<void>(
-      key: state.pageKey,
-      child: child,
-      transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-          buildSharedAxisCompatibleTransition(
-        animation: animation,
-        type: type,
-        child: child,
-      ),
-    );
-
 class NotificationCenterRoutes {
   static List<RouteBase> get routes => [
         GoRoute(
           path: '/notification-center',
           name: 'notificationCenter',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const NotificationCenterScreen(),
             type: SharedAxisTransitionType.scaled,
@@ -34,7 +18,7 @@ class NotificationCenterRoutes {
         GoRoute(
           path: '/notification-analytics',
           name: 'notificationAnalytics',
-          pageBuilder: (context, state) => _buildTransitionPage(
+          pageBuilder: (context, state) => buildSparkleTransitionPage(
             state: state,
             child: const NotificationAnalyticsScreen(),
             type: SharedAxisTransitionType.scaled,
