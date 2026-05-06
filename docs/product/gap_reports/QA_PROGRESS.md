@@ -75,7 +75,7 @@
 | QA-P2-14 | Clean orphaned vocabulary providers | Flutter | S | ✅ done | — | f1dc08d49 | Removed 4 unused providers |
 | QA-P2-15 | Clean orphaned shop providers | Flutter | S | ✅ done | — | 06fcc0361 | Remove 7 unused |
 | QA-P2-16 | i18n → ARB: Insights feature (36 ternaries) | Flutter | L | 🔵 in-progress | claude-A | — | insights/ inline isChinese |
-| QA-P2-17 | i18n → ARB: User feature (11 ternaries) | Flutter | M | ⬜ pending | — | — | user/ inline isChinese |
+| QA-P2-17 | i18n → ARB: User feature (11 ternaries) | Flutter | M | 🔵 in-progress | claude-A | — | user/ inline isChinese |
 | QA-P2-18 | i18n → ARB: Settings feature (15 ternaries) | Flutter | M | ⬜ pending | — | — | settings/ inline isChinese |
 | QA-P2-19 | i18n → ARB: Home feature (10 ternaries) | Flutter | M | ⬜ pending | — | — | home/ inline isChinese |
 | QA-P2-20 | i18n → ARB: Plan feature (8 ternaries) | Flutter | M | ⬜ pending | — | — | plan/ inline isChinese |
@@ -109,7 +109,7 @@
 |----|-------|-------|--------|--------|-----------|--------|------|
 | QA-P3-1 | Hardcoded 'A'/'B' strings → ARB | Flutter | S | ⬜ pending | — | — | memory unresolved_conflicts |
 | QA-P3-2 | _a11yCopy helper → ARB | Flutter | M | ⬜ pending | — | — | accessibility settings |
-| QA-P3-3 | Strategy effectiveness: SprintReview | Flutter | L | ⬜ pending | — | — | Per-strategy outcome display |
+| QA-P3-3 | Strategy effectiveness: SprintReview | Flutter | L | ⬜ pending | — | — | Per-strategy outcome display — needs spec, feature addition not bug fix |
 | QA-P3-4 | Tap target padding for undersized icons | Flutter | M | ⬜ pending | — | — | 48px hit area for 20-36px icons |
 | QA-P3-5 | Audit fontSize for text scaling | Flutter | L | ⬜ pending | — | — | 719 fontSize overrides |
 
