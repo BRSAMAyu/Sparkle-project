@@ -70,8 +70,8 @@
 | QA-P2-9 | Hardcoded 'Translation Demo' → ARB | Flutter | S | ✅ done | — | 9735d444 | translatable_text.dart → ARB keys + gen-l10n |
 | QA-P2-10 | _should_retract() enforcement logic | Python | M | ✅ done | — | df1476019 | Replace stub |
 | QA-P2-11 | Build TaskRestoreDialog widget | Flutter | M | ✅ done | — | ab687c9c | Extracted to standalone TaskRestoreDialog widget |
-| QA-P2-12 | Build CommunityStrategyCard widget | Flutter | L | ⏭️ skip | — | — | Already exists: community_strategy_card.dart, fully implemented with i18n + Semantics |
-| QA-P2-13 | Build ExperienceEnvelopeIndicator | Flutter | L | ⏭️ skip | — | — | Already exists: experience_envelope_indicator.dart, ConsumerWidget with full i18n |
+| QA-P2-12 | Build CommunityStrategyCard widget | Flutter | L | ⬜ pending | — | — | R2 FALSE CLAIM: file does not exist per find+grep. Must build from scratch. |
+| QA-P2-13 | Build ExperienceEnvelopeIndicator | Flutter | L | ⬜ pending | — | — | R2 FALSE CLAIM: file does not exist per find+grep. Must build from scratch. |
 | QA-P2-14 | Clean orphaned vocabulary providers | Flutter | S | ✅ done | — | f1dc08d49 | Removed 4 unused providers |
 | QA-P2-15 | Clean orphaned shop providers | Flutter | S | ✅ done | — | 06fcc0361 | Remove 7 unused |
 | QA-P2-16 | i18n → ARB: Insights feature (36 ternaries) | Flutter | L | 🔵 in-progress | claude-A | — | insights/ inline isChinese |
@@ -86,10 +86,10 @@
 | QA-P2-25 | i18n → ARB: Memory feature (9 ternaries) | Flutter | M | ⬜ pending | — | — | memory/ inline isChinese |
 | QA-P2-26 | i18n → ARB: Task feature (11 ternaries) | Flutter | M | ⬜ pending | — | — | task/ inline isChinese |
 | QA-P2-27 | Migrate ~110 _t() usages to ARB | Flutter | L | ⬜ pending | — | — | ~15 files |
-| QA-P2-28 | DS tokens: Achievement colors (12) | Flutter | M | ⏭️ skip | — | — | Screen-specific dark theme colors, not shared across feature; tokenizing single-screen colors = premature abstraction |
+| QA-P2-28 | DS tokens: Achievement colors (15) | Flutter | M | ⬜ pending | — | — | R2: 15 hardcoded Color(0x remain in milestone_celebration_screen.dart. Skip rationale debatable. |
 | QA-P2-29 | DS tokens: Home colors (7) | Flutter | M | ⏭️ skip | — | — | 5 colors single-file defaults; 2 shared across only 2 files each — not enough reuse to justify tokens |
 | QA-P2-30 | DS tokens: User colors (16) | Flutter | M | ⏭️ skip | — | — | 13/16 colors single-file card accents; 3 shared but used in different contexts |
-| QA-P2-31 | DS tokens: Plan colors (20) | Flutter | M | ⏭️ skip | — | — | All 20 colors single-file — screen-specific card aesthetics |
+| QA-P2-31 | DS tokens: Plan colors (10) | Flutter | M | ⬜ pending | — | — | R2: 10 hardcoded Color(0x remain in learning_portfolio_screen.dart |
 | QA-P2-32 | DS tokens: BorderRadius (1,015 instances) | Flutter | L | ⬜ pending | — | — | → DS.borderRadius* |
 | QA-P2-33 | DS tokens: EdgeInsets (1,359 instances) | Flutter | L | ⬜ pending | — | — | → DS.spacing* |
 | QA-P2-34 | Semantics: IconButtons (31+ files) | Flutter | M | ⏭️ skip | — | — | semanticLabel requires bilingual pattern per codebase convention — i18n-adjacent |
