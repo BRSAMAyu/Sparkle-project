@@ -66,8 +66,8 @@
 | QA-P2-5 | Semantics: TaskRestoreDialog | Flutter | S | ⏭️ skip | — | — | Already has Semantics: paused_task_status_panel.dart:448-451 + 465 |
 | QA-P2-6 | Semantics: SprintReviewScreen | Flutter | M | ✅ done | — | 2f9201ad | Semantics on ProgressHero/StatChip/BottleneckCard/NotesCard |
 | QA-P2-7 | Semantics: GoalCreationWizardScreen | Flutter | M | ✅ done | — | 29e95a3e7 | Multi-step form |
-| QA-P2-8 | Hardcoded 'Retry' → ARB | Flutter | S | 🔵 in-progress | claude-B | — | strategy_migration_wizard.dart |
-| QA-P2-9 | Hardcoded 'Translation Demo' → ARB | Flutter | S | ⬜ pending | — | — | translatable_text.dart |
+| QA-P2-8 | Hardcoded 'Retry' → ARB | Flutter | S | ✅ done | — | 9735d444 | strategy_migration_wizard.dart → context.l10n.retry |
+| QA-P2-9 | Hardcoded 'Translation Demo' → ARB | Flutter | S | ✅ done | — | 9735d444 | translatable_text.dart → ARB keys + gen-l10n |
 | QA-P2-10 | _should_retract() enforcement logic | Python | M | ⬜ pending | — | — | Replace stub |
 | QA-P2-11 | Build TaskRestoreDialog widget | Flutter | M | ⬜ pending | — | — | Extract to reusable widget |
 | QA-P2-12 | Build CommunityStrategyCard widget | Flutter | L | ⬜ pending | — | — | New widget |
@@ -119,6 +119,6 @@
 |----------|-------|---------|---------|-----------|----------------|
 | P0 | 6 | 6 | 0 | 0 | 0 |
 | P1 | 20 | 10 | 10 | 0 | 0 |
-| P2 | 35 | 4 | 3 | 27 | 1 |
+| P2 | 35 | 6 | 3 | 25 | 0 |
 | P3 | 5 | 0 | 0 | 5 | 0 |
-| **Total** | **66** | **20** | **12** | **33** | **1** |
+| **Total** | **66** | **22** | **12** | **31** | **0** |
