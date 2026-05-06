@@ -186,28 +186,6 @@ class EmptyState extends StatelessWidget {
     }
   }
 
-  Color _getIconColor() {
-    switch (type) {
-      case EmptyStateType.noErrors:
-        return DS.success;
-      case EmptyStateType.noResults:
-        return DS.warning;
-      default:
-        return DS.primaryBase;
-    }
-  }
-
-  LinearGradient _getIconGradient() {
-    switch (type) {
-      case EmptyStateType.noErrors:
-        return DS.successGradient;
-      case EmptyStateType.noResults:
-        return DS.warningGradient;
-      default:
-        return DS.primaryGradient;
-    }
-  }
-
   @override
   Widget build(BuildContext context) => Center(
         child: Padding(
@@ -224,18 +202,15 @@ class EmptyState extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (showIcon)
-                    SparkleAttentionPulse(
-                      active: !context.reduceMotion,
-                      scaleRange: 0.014,
-                      glowColor: _getIconColor(),
-                      child: _buildIcon(),
+                    Icon(
+                      icon ?? _getDefaultIcon(),
+                      size: 64,
+                      color: context.colors.textSecondary,
                     ),
                   if (showIcon) const SizedBox(height: DS.spacing24),
                   Text(
                     title ?? _getDefaultTitle(context),
-                    style: TextStyle(
-                      fontSize: DS.fontSize2xl,
-                      fontWeight: DS.fontWeightBold,
+                    style: context.sparkleTypography.titleLarge.copyWith(
                       color: context.colors.textPrimary,
                     ),
                     textAlign: TextAlign.center,
@@ -243,17 +218,16 @@ class EmptyState extends StatelessWidget {
                   const SizedBox(height: DS.spacing12),
                   Text(
                     description ?? _getDefaultDescription(context),
-                    style: TextStyle(
-                      fontSize: DS.fontSizeBase,
+                    style: context.sparkleTypography.bodyMedium.copyWith(
                       color: context.colors.textSecondary,
-                      height: DS.lineHeightNormal,
                     ),
+                    maxLines: 2,
                     textAlign: TextAlign.center,
                   ),
                   if (customAction != null ||
                       ((actionText ?? _getDefaultActionText(context)) != null &&
                           onAction != null)) ...[
-                    const SizedBox(height: DS.spacing32),
+                    const SizedBox(height: DS.spacing24),
                     customAction ??
                         CustomButton.primary(
                           text: actionText ?? _getDefaultActionText(context)!,
@@ -265,71 +239,6 @@ class EmptyState extends StatelessWidget {
               ),
             ),
           ),
-        ),
-      );
-
-  Widget _buildIcon() => SizedBox(
-        width: 128.0,
-        height: 128.0,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Positioned(
-              top: 8,
-              right: 10,
-              child: Container(
-                width: 18,
-                height: 18,
-                decoration: BoxDecoration(
-                  color: _getIconColor().withValues(alpha: 0.18),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 10,
-              left: 6,
-              child: Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: _getIconColor().withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Container(
-              width: 108,
-              height: 108,
-              decoration: BoxDecoration(
-                gradient: _getIconGradient(),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: _getIconColor().withValues(alpha: 0.2),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.22),
-                ),
-              ),
-              child: Icon(
-                icon ?? _getDefaultIcon(),
-                size: DS.iconSize3xl,
-                color: DS.brandPrimaryConst,
-              ),
-            ),
-          ],
         ),
       );
 

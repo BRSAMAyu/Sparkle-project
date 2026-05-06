@@ -131,10 +131,10 @@ class SparkleSnackBar {
   SparkleSnackBar._();
 
   /// Default durations by severity.
-  static const Duration errorDuration = Duration(seconds: 6);
-  static const Duration successDuration = Duration(seconds: 3);
+  static const Duration errorDuration = Duration(seconds: 4);
+  static const Duration successDuration = Duration(milliseconds: 2500);
   static const Duration infoDuration = Duration(seconds: 3);
-  static const Duration warningDuration = Duration(seconds: 5);
+  static const Duration warningDuration = Duration(seconds: 4);
 
   /// Creates a fully configured [SnackBar] for error messages.
   ///

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 const _sheetDuration = Duration(milliseconds: 220);
@@ -96,7 +97,13 @@ Future<T?> showSensoryModalBottomSheet<T>({
 
   return SparkleBottomSheet.show<T>(
     context: context,
-    builder: builder,
+    builder: (sheetContext) => Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _DragHandle(),
+        Flexible(child: builder(sheetContext)),
+      ],
+    ),
     backgroundColor: backgroundColor,
     shape: shape,
     isScrollControlled: isScrollControlled,
@@ -231,4 +238,21 @@ Future<T?> showSensoryGeneralDialog<T>({
     transitionDuration: transitionDuration,
     transitionBuilder: transitionBuilder,
   );
+}
+
+class _DragHandle extends StatelessWidget {
+  const _DragHandle();
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: DS.spacing8, bottom: DS.spacing4),
+        child: Container(
+          width: 32,
+          height: 4,
+          decoration: BoxDecoration(
+            color: context.colors.neutral400.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(999),
+          ),
+        ),
+      );
 }
