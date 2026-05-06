@@ -118,11 +118,6 @@ final shopItemsProvider =
   return ShopItemsNotifier(repository, ref);
 });
 
-// ========== Selected Shop Item Provider ==========
-
-final selectedShopItemProvider =
-    StateProvider.autoDispose<ShopItem?>((ref) => null);
-
 // ========== Purchase History State ==========
 
 class PurchaseHistoryState {
@@ -204,12 +199,6 @@ class PurchaseHistoryNotifier extends StateNotifier<PurchaseHistoryState> {
     await loadPurchaseHistory(refresh: true);
   }
 }
-
-final purchaseHistoryProvider =
-    StateNotifierProvider<PurchaseHistoryNotifier, PurchaseHistoryState>((ref) {
-  final repository = ref.watch(shopRepositoryProvider);
-  return PurchaseHistoryNotifier(repository);
-});
 
 // ========== Inventory State ==========
 
@@ -297,11 +286,4 @@ final inventoryProvider =
     StateNotifierProvider<InventoryNotifier, InventoryState>((ref) {
   final repository = ref.watch(shopRepositoryProvider);
   return InventoryNotifier(repository, ref);
-});
-
-// ========== Owned Items Provider ==========
-
-final ownedItemsProvider = FutureProvider.autoDispose<List<String>>((ref) {
-  final repository = ref.watch(shopRepositoryProvider);
-  return repository.getOwnedItems();
 });

@@ -181,14 +181,3 @@ final skinProvider =
   );
 });
 
-/// 当前装备的皮肤ID
-final equippedSkinIdProvider = Provider<String?>((ref) {
-  final skinState = ref.watch(skinProvider);
-  return skinState?['skin_id'] as String?;
-});
-
-/// 当前皮肤配置
-final skinConfigProvider = Provider<Map<String, dynamic>?>((ref) {
-  final skinState = ref.watch(skinProvider);
-  return skinState?['skin_config'] as Map<String, dynamic>?;
-});

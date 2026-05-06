@@ -228,14 +228,3 @@ final photonMultiplierProvider = Provider<double>((ref) {
       : 1.0;
 });
 
-/// 经验加成剩余时间Provider
-final expBoostTimeLeftProvider = Provider<Duration?>((ref) {
-  final effectState = ref.watch(consumableEffectProvider);
-  final endTime = effectState.expBoostEndTime;
-  if (endTime == null) return null;
-
-  final now = DateTime.now();
-  if (now.isAfter(endTime)) return null;
-
-  return endTime.difference(now);
-});

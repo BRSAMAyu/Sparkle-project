@@ -166,11 +166,6 @@ final titleProvider =
   );
 });
 
-/// 当前装备的称号ID
-final equippedTitleIdProvider = Provider<String?>((ref) {
-  final authState = ref.watch(authProvider);
-  return authState.user?.equippedTitle;
-});
 
 /// 当前称号显示文本
 final titleTextProvider = Provider<String?>((ref) {
