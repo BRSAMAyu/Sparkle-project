@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Phase-6 MultiGoal UI — conflict resolution dialog.
 ///
@@ -9,10 +10,9 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 /// surfaces the trade-off so the user can make an informed decision
 /// instead of silently losing goal progress.
 ///
-/// This is a standalone widget (not wired into any screen yet) because
-/// the backend MultiGoal arbitration API needs a REST endpoint first.
-/// Once the endpoint is available, call [showGoalConflictDialog] from the
-/// dashboard or task board when a conflict is detected.
+/// Call [showGoalConflictDialog] from the dashboard or task board when a
+/// multi-goal conflict is detected via the existing `goal_arbitration_card`
+/// WebSocket flow or future REST endpoint.
 class GoalConflictOption {
   const GoalConflictOption({
     required this.goalId,
@@ -57,26 +57,29 @@ class _ConflictDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('今天的安排'),
+      title: Text(context.l10n.goalConflictTodaySchedule),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '你今天大概只有 $totalMinutes 分钟。',
+            context.l10n.goalConflictTimeAvailable(totalMinutes),
             style: TextStyle(color: DS.textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 16),
-          ...options.map((opt) => _ConflictOptionTile(option: opt)),
+          ...options.map((opt) => _ConflictOptionTile(
+            option: opt,
+            minutesLabel: context.l10n.goalConflictMinutes(opt.suggestedMinutes),
+          )),
         ],
       ),
       actions: [
         SparkleButton.ghost(
-          label: '同意',
+          label: context.l10n.goalConflictAgree,
           onPressed: () => Navigator.pop(context, 0),
         ),
         SparkleButton.ghost(
-          label: '我需要调整',
+          label: context.l10n.goalConflictNeedAdjust,
           onPressed: () => Navigator.pop(context, -2),
         ),
       ],
@@ -85,9 +88,10 @@ class _ConflictDialog extends StatelessWidget {
 }
 
 class _ConflictOptionTile extends StatelessWidget {
-  const _ConflictOptionTile({required this.option});
+  const _ConflictOptionTile({required this.option, required this.minutesLabel});
 
   final GoalConflictOption option;
+  final String minutesLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -121,7 +125,7 @@ class _ConflictOptionTile extends StatelessWidget {
                     style: TextStyle(color: DS.textSecondary, fontSize: 12),
                   ),
                 Text(
-                  '${option.suggestedMinutes} 分钟',
+                  minutesLabel,
                   style: TextStyle(color: DS.textSecondary, fontSize: 11),
                 ),
               ],

@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/features/goal/presentation/widgets/goal_conflict_dialog.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/goal_switcher.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
@@ -119,6 +120,7 @@ class _MultiGoalDashboardContentState
                       _SuggestionCard(
                         suggestion: suggestion,
                         isSelected: suggestion.primaryGoalId == selectedGoalId,
+                        onResolveConflict: () => _showConflictResolution(context, overview),
                       ),
                     ],
                     const SizedBox(height: DS.spacing14),
@@ -174,10 +176,12 @@ class _SuggestionCard extends ConsumerWidget {
   const _SuggestionCard({
     required this.suggestion,
     required this.isSelected,
+    this.onResolveConflict,
   });
 
   final GoalArbitrationSuggestion suggestion;
   final bool isSelected;
+  final VoidCallback? onResolveConflict;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -224,26 +228,58 @@ class _SuggestionCard extends ConsumerWidget {
           ),
           if (!isSelected) ...[
             const SizedBox(height: DS.spacing10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: SparkleButton.ghost(
-                label: zh ? '采用建议' : 'Use suggestion',
-                icon: const Icon(Icons.check_rounded),
-                onPressed: () {
-                  unawaited(
-                    ref
-                        .read(activeGoalProvider.notifier)
-                        .selectGoal(suggestion.primaryGoalId),
-                  );
-                  ref.invalidate(multiGoalOverviewProvider);
-                },
-              ),
+            Row(
+              children: [
+                SparkleButton.ghost(
+                  label: zh ? '采用建议' : 'Use suggestion',
+                  icon: const Icon(Icons.check_rounded),
+                  onPressed: () {
+                    unawaited(
+                      ref
+                          .read(activeGoalProvider.notifier)
+                          .selectGoal(suggestion.primaryGoalId),
+                    );
+                    ref.invalidate(multiGoalOverviewProvider);
+                  },
+                ),
+                if (onResolveConflict != null) ...[
+                  const SizedBox(width: DS.spacing8),
+                  SparkleButton.ghost(
+                    label: zh ? '手动调整' : 'Adjust',
+                    icon: const Icon(Icons.tune_rounded),
+                    onPressed: onResolveConflict!,
+                  ),
+                ],
+              ],
             ),
           ],
         ],
       ),
     );
   }
+}
+
+Future<void> _showConflictResolution(BuildContext context, MultiGoalOverview overview) async {
+  final totalMinutes = overview.goals.fold<int>(
+    0,
+    (sum, g) => sum + (g.timeFraction != null ? (g.timeFraction! * 120).round() : 30),
+  );
+  final options = overview.goals.take(5).map((g) {
+    final isCritical = g.weeklyConflictCount > 2 || (g.healthScore < 0.5);
+    return GoalConflictOption(
+      goalId: g.id,
+      goalTitle: g.title,
+      suggestedMinutes: g.timeFraction != null ? (g.timeFraction! * 120).round() : 30,
+      reason: g.currentPhase ?? '',
+      urgency: isCritical ? 'critical' : '',
+    );
+  }).toList();
+
+  await showGoalConflictDialog(
+    context,
+    totalAvailableMinutes: totalMinutes,
+    options: options,
+  );
 }
 
 class _GoalRow extends StatelessWidget {
