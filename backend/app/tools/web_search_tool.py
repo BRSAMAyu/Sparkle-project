@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Any
 
@@ -13,6 +14,13 @@ from pydantic import BaseModel, Field
 from app.config import settings
 
 from .base import BaseTool, ToolCategory, ToolResult
+
+_MAX_SEARCH_RESULT_LENGTH = 2000
+_PROMPT_INJECTION_PATTERN = re.compile(
+    r"(ignore\s+(previous|above|all)\s+instructions|system\s*prompt|you\s+are\s+a|"
+    r"pretend\s+you\s+are|<\|.*?\||\[/?(INST|SYS|im_start|im_end)\])",
+    re.IGNORECASE,
+)
 
 # ============ Schema ============
 
@@ -40,6 +48,7 @@ class WebSearchProTool(BaseTool):
     """
     category = ToolCategory.QUERY
     parameters_schema = WebSearchProParams
+    timeout_seconds = 30.0  # External API call, should complete quickly
     requires_confirmation = False
 
     API_URL = "https://open.bigmodel.cn/api/paas/v4/web_search"
@@ -82,13 +91,18 @@ class WebSearchProTool(BaseTool):
                 response.raise_for_status()
                 data = response.json()
 
-            # 解析搜索结果
+            # 解析搜索结果 (sanitized)
             results = []
             if "search_result" in data:
                 for item in data["search_result"]:
+                    content = item.get("content", "")
+                    if len(content) > _MAX_SEARCH_RESULT_LENGTH:
+                        content = content[:_MAX_SEARCH_RESULT_LENGTH] + "..."
+                    content = _PROMPT_INJECTION_PATTERN.sub("[filtered]", content)
+                    title = _PROMPT_INJECTION_PATTERN.sub("[filtered]", item.get("title", ""))
                     results.append({
-                        "title": item.get("title", ""),
-                        "content": item.get("content", ""),
+                        "title": title,
+                        "content": content,
                         "link": item.get("link", ""),
                         "media": item.get("media", ""),
                         "refer": item.get("refer", ""),

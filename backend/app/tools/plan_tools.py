@@ -137,6 +137,7 @@ class GenerateTasksForPlanTool(BaseTool):
     category = ToolCategory.PLAN
     parameters_schema = GenerateTasksForPlanParams
     requires_confirmation = True  # 需要用户确认才能创建
+    timeout_seconds = 90.0  # LLM-powered generation, may take longer
 
     @staticmethod
     def _resolve_max_session_minutes(persona_constraints: Any | None) -> int:

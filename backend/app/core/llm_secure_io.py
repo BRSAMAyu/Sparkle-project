@@ -183,13 +183,20 @@ def sanitize_exception_message(message: str | None, *, fallback: str = "工具�
     return collapsed
 
 
+_MAX_DICT_KEYS = 50
+_MAX_LIST_ITEMS = 50
+
+
 def sanitize_tool_payload(payload: Any) -> Any:
     if not llm_safety_enabled():
         _record_bypass("tool_payload")
         return _redact_string_values(payload)
     if isinstance(payload, dict):
         sanitized = {}
-        for key, value in payload.items():
+        for i, (key, value) in enumerate(payload.items()):
+            if i >= _MAX_DICT_KEYS:
+                sanitized["_truncated_keys"] = f"...and {len(payload) - _MAX_DICT_KEYS} more keys"
+                break
             if key == "error_message" and isinstance(value, str):
                 sanitized[key] = sanitize_exception_message(value)
             elif key == "suggestion" and isinstance(value, str):
@@ -198,7 +205,11 @@ def sanitize_tool_payload(payload: Any) -> Any:
                 sanitized[key] = sanitize_tool_payload(value)
         return sanitized
     if isinstance(payload, list):
-        return [sanitize_tool_payload(item) for item in payload]
+        items = payload[:_MAX_LIST_ITEMS]
+        result = [sanitize_tool_payload(item) for item in items]
+        if len(payload) > _MAX_LIST_ITEMS:
+            result.append({"_truncated": f"...and {len(payload) - _MAX_LIST_ITEMS} more items"})
+        return result
     if isinstance(payload, str):
         safe = redact_secrets(payload)
         if len(safe) > 2000:

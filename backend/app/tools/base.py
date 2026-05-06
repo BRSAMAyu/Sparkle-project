@@ -64,6 +64,7 @@ class BaseTool(ABC):
     category: ToolCategory  # 工具分类
     parameters_schema: type[BaseModel]  # 参数 Schema（Pydantic Model）
     requires_confirmation: bool = False  # 是否需要用户确认（高风险操作）
+    timeout_seconds: float | None = None  # Override per-tool timeout (default 120s)
 
     @abstractmethod
     async def execute(

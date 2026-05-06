@@ -326,6 +326,13 @@ class SparkleSelfModelService:
                 await self._persist(user_id=user_id, state=pg_state)
                 return pg_state
             state = self._default_state(user_id)
+            # Seed from onboarding preferences if available
+            try:
+                onboarded = await self._read_onboarding_preferences(user_id)
+                if onboarded:
+                    state = self._seed_from_onboarding(state, onboarded)
+            except Exception as exc:
+                logger.debug("Onboarding preference seed skipped for {}: {}", user_id, exc)
             await self._persist(user_id=user_id, state=state)
             return state
 
@@ -501,6 +508,44 @@ class SparkleSelfModelService:
             await self.db_session.flush()
         except Exception as exc:
             logger.debug("Sparkle self model PG backup skipped for {}: {}", user_id, exc)
+
+    async def _read_onboarding_preferences(self, user_id: str) -> dict[str, Any] | None:
+        """Read onboarding preferences to seed initial self-model defaults."""
+        if self.redis is None:
+            return None
+        try:
+            raw = await self.redis.get(f"user:onboarding_prefs:{user_id}")
+            if raw:
+                prefs = json.loads(raw)
+                if isinstance(prefs, dict):
+                    return prefs
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def _seed_from_onboarding(state: dict[str, Any], prefs: dict[str, Any]) -> dict[str, Any]:
+        """Adjust default state based on onboarding preferences."""
+        study_style = prefs.get("learning_style") or prefs.get("study_style")
+        if study_style:
+            for assumption in state.get("known_assumptions", []):
+                if assumption.get("assumption_id") == _DIFFICULTY_ASSUMPTION:
+                    assumption["evidence"] = [{
+                        "source": "onboarding",
+                        "detail": f"learning_style={study_style}",
+                        "observed_at": _utcnow().isoformat(),
+                    }]
+        daily_minutes = prefs.get("daily_study_minutes") or prefs.get("daily_minutes")
+        if daily_minutes:
+            for assumption in state.get("known_assumptions", []):
+                if assumption.get("assumption_id") == _DAILY_TIME_ASSUMPTION:
+                    assumption["evidence"] = [{
+                        "source": "onboarding",
+                        "detail": f"daily_minutes={daily_minutes}",
+                        "observed_at": _utcnow().isoformat(),
+                    }]
+        state["onboarding_seeded"] = True
+        return state
 
     async def _restore_from_pg(self, user_id: str) -> dict[str, Any] | None:
         if self.db_session is None:

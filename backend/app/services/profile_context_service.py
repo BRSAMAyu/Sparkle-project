@@ -42,7 +42,7 @@ def _utcnow() -> datetime:
 
 
 class ProfileContextService:
-    CACHE_TTL_SECONDS = 300
+    CACHE_TTL_SECONDS = 120  # 2 min to reduce stale knowledge mastery
     INLINE_SNAPSHOT_CACHE_TTL_SECONDS = 120
     WEAK_SPOT_LIMIT = 5
     CHANGE_LIMIT = 5
