@@ -14,3 +14,4 @@ export 'presentation/screens/group_members_screen.dart';
 export 'presentation/screens/group_search_screen.dart';
 export 'presentation/screens/group_tasks_screen.dart';
 export 'presentation/screens/user_search_screen.dart';
+export 'presentation/widgets/community_strategy_card.dart';
