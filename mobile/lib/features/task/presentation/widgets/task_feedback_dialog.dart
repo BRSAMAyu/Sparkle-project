@@ -302,15 +302,6 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
     );
   }
 
-  String _copyForLocale(
-    BuildContext context, {
-    required String zh,
-    required String en,
-  }) {
-    final code = Localizations.localeOf(context).languageCode.toLowerCase();
-    return code.startsWith('zh') ? zh : en;
-  }
-
   String _formatDelta(double? delta) {
     if (delta == null) return '-';
     final sign = delta >= 0 ? '+' : '';
@@ -724,54 +715,26 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                                 const SizedBox(height: DS.spacing16),
 
                                 _ReflectionQuestionField(
-                                  label: _copyForLocale(
-                                    context,
-                                    zh: '这个任务中你卡在哪里了？',
-                                    en: 'Where did you get stuck in this task?',
-                                  ),
-                                  hint: _copyForLocale(
-                                    context,
-                                    zh: '例如：公式会背，但不知道什么时候套用',
-                                    en: 'Example: I knew the formula, but not when to use it.',
-                                  ),
+                                  label: context.l10n.taskFeedbackStuckLabel,
+                                  hint: context.l10n.taskFeedbackStuckHint,
                                   controller: _stuckController,
                                 ),
                                 const SizedBox(height: DS.spacing12),
                                 _ReflectionQuestionField(
-                                  label: _copyForLocale(
-                                    context,
-                                    zh: '哪个方法让你觉得有进展？',
-                                    en: 'What helped you feel some progress?',
-                                  ),
-                                  hint: _copyForLocale(
-                                    context,
-                                    zh: '例如：先画状态图，再列方程',
-                                    en: 'Example: sketching the state diagram before writing equations.',
-                                  ),
+                                  label: context.l10n.taskFeedbackProgressLabel,
+                                  hint: context.l10n.taskFeedbackProgressHint,
                                   controller: _methodController,
                                 ),
                                 const SizedBox(height: DS.spacing12),
                                 _ReflectionQuestionField(
-                                  label: _copyForLocale(
-                                    context,
-                                    zh: '下次会换什么做法？',
-                                    en: 'What would you change next time?',
-                                  ),
-                                  hint: _copyForLocale(
-                                    context,
-                                    zh: '例如：先做 1 道代表题，再进入整组练习',
-                                    en: 'Example: do one representative problem before the full set.',
-                                  ),
+                                  label: context.l10n.taskFeedbackChangeLabel,
+                                  hint: context.l10n.taskFeedbackChangeHint,
                                   controller: _adjustmentController,
                                 ),
                                 if (_aiReflectionResponse != null) ...[
                                   const SizedBox(height: DS.spacing16),
                                   _ReflectionResponseCard(
-                                    title: _copyForLocale(
-                                      context,
-                                      zh: 'AI 已记下这条反思',
-                                      en: 'AI saved this reflection',
-                                    ),
+                                    title: l10n.taskFeedbackAiSaved,
                                     response: _aiReflectionResponse!,
                                     linkedKnowledgeNodes: _linkedKnowledgeNodes,
                                   ),
@@ -825,11 +788,7 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                             Expanded(
                               child: SparkleButton(
                                 label: _reflectionSaved
-                                    ? _copyForLocale(
-                                        context,
-                                        zh: '关闭',
-                                        en: 'Close',
-                                      )
+                                    ? l10n.commonClose
                                     : l10n.taskFeedbackSkip,
                                 onPressed: widget.onClose,
                                 variant: ButtonVariant.ghost,
@@ -841,16 +800,8 @@ class _TaskFeedbackDialogState extends ConsumerState<TaskFeedbackDialog> {
                               flex: 2,
                               child: custom.CustomButton.primary(
                                 text: _reflectionSaved
-                                    ? _copyForLocale(
-                                        context,
-                                        zh: '完成',
-                                        en: 'Done',
-                                      )
-                                    : _copyForLocale(
-                                        context,
-                                        zh: '保存',
-                                        en: 'Save',
-                                      ),
+                                    ? l10n.commonDone
+                                    : l10n.commonSave,
                                 onPressed: _isSubmitting ? null : _handleSubmit,
                                 isLoading: _isSubmitting,
                               ),
