@@ -10,7 +10,6 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/task_notification_scheduler.dart'
@@ -248,9 +247,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     setState(() {
       _growthChronicleHidden = hidden;
       _dataControlsSaving = true;
-      _dataControlsStatus = I18nService.instance.isChinese
-          ? '正在保存成长编年史可见性...'
-          : 'Saving growth chronicle visibility...';
+      _dataControlsStatus = context.l10n.settGrowthChronicleSaving;
     });
     try {
       await ref.read(userRepositoryProvider).updateTransparentPreference(
@@ -262,11 +259,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       }
       setState(() {
         _dataControlsSaving = false;
-        _dataControlsStatus = I18nService.instance.isChinese
-            ? (hidden ? '成长编年史已隐藏。' : '成长编年史已恢复显示。')
-            : (hidden
-                ? 'Growth chronicle is hidden.'
-                : 'Growth chronicle is visible again.');
+        _dataControlsStatus = hidden
+            ? context.l10n.settGrowthChronicleHidden
+            : context.l10n.settGrowthChronicleVisible;
       });
     } catch (e) {
       if (!mounted) {
@@ -275,9 +270,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       setState(() {
         _growthChronicleHidden = !hidden;
         _dataControlsSaving = false;
-        _dataControlsStatus = I18nService.instance.isChinese
-            ? '保存失败，请稍后重试。'
-            : 'Save failed. Please try again.';
+        _dataControlsStatus = context.l10n.settDataControlsError;
       });
       AppFeedback.error(context, _dataControlsStatus!);
     }
@@ -287,9 +280,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
     setState(() {
       _memoryHidden = hidden;
       _dataControlsSaving = true;
-      _dataControlsStatus = I18nService.instance.isChinese
-          ? '正在保存记忆可见性...'
-          : 'Saving memory visibility...';
+      _dataControlsStatus = context.l10n.settMemorySaving;
     });
     try {
       await ref.read(userRepositoryProvider).updateTransparentPreference(
@@ -301,11 +292,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       }
       setState(() {
         _dataControlsSaving = false;
-        _dataControlsStatus = I18nService.instance.isChinese
-            ? (hidden ? '记忆入口已默认隐藏。' : '记忆入口已恢复显示。')
-            : (hidden
-                ? 'Memory surfaces are hidden by default.'
-                : 'Memory surfaces are visible again.');
+        _dataControlsStatus = hidden
+            ? context.l10n.settMemoryHidden
+            : context.l10n.settMemoryVisible;
       });
     } catch (e) {
       if (!mounted) {
@@ -314,9 +303,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       setState(() {
         _memoryHidden = !hidden;
         _dataControlsSaving = false;
-        _dataControlsStatus = I18nService.instance.isChinese
-            ? '保存失败，请稍后重试。'
-            : 'Save failed. Please try again.';
+        _dataControlsStatus = context.l10n.settDataControlsError;
       });
       AppFeedback.error(context, _dataControlsStatus!);
     }
@@ -693,14 +680,10 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.accessibility_new_rounded),
                   title: Text(
-                    I18nService.instance.isChinese
-                        ? '无障碍与低负荷'
-                        : 'Accessibility',
+                    context.l10n.settAccessibilityTitle,
                   ),
                   subtitle: Text(
-                    I18nService.instance.isChinese
-                        ? '字体、对比度、屏幕阅读、触控、动效、TTS 与震动反馈'
-                        : 'Font scale, contrast, screen reader, touch, motion, TTS, and haptics',
+                    context.l10n.settAccessibilitySubtitle,
                   ),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => Navigator.of(context).push(
@@ -1350,12 +1333,8 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                   children: [
                     _buildCollapsibleHeader(
                       icon: Icons.auto_awesome_outlined,
-                      title: I18nService.instance.isChinese
-                          ? 'Aurora 沟通偏好'
-                          : 'Aurora Preferences',
-                      subtitle: I18nService.instance.isChinese
-                          ? '控制 Aurora 如何与你互动'
-                          : 'Control how Aurora interacts with you',
+                      title: context.l10n.settAuroraPrefTitle,
+                      subtitle: context.l10n.settAuroraPrefSubtitle,
                       expanded: _auroraPrefsExpanded,
                       onToggle: () => setState(
                           () => _auroraPrefsExpanded = !_auroraPrefsExpanded),
@@ -1371,21 +1350,15 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _buildAuroraPrefSegmented(
-                                  label: I18nService.instance.isChinese
-                                      ? '分析深度'
-                                      : 'Analysis Depth',
+                                  label: context.l10n.settAuroraAnalysisDepth,
                                   options: [
                                     (
-                                      I18nService.instance.isChinese
-                                          ? '少分析我'
-                                          : 'Light',
+                                      context.l10n.settAuroraAnalysisLight,
                                       'light',
                                       Icons.insights_outlined,
                                     ),
                                     (
-                                      I18nService.instance.isChinese
-                                          ? '多分析我'
-                                          : 'Deep',
+                                      context.l10n.settAuroraAnalysisDeep,
                                       'deep',
                                       Icons.psychology_outlined,
                                     ),
@@ -1410,21 +1383,15 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 ),
                                 const Divider(height: DS.spacing24),
                                 _buildAuroraPrefSegmented(
-                                  label: I18nService.instance.isChinese
-                                      ? '沟通方式'
-                                      : 'Directness',
+                                  label: context.l10n.settAuroraDirectness,
                                   options: [
                                     (
-                                      I18nService.instance.isChinese
-                                          ? '直接安排我'
-                                          : 'Direct',
+                                      context.l10n.settAuroraDirect,
                                       'direct',
                                       Icons.fast_forward_outlined,
                                     ),
                                     (
-                                      I18nService.instance.isChinese
-                                          ? '引导我'
-                                          : 'Guided',
+                                      context.l10n.settAuroraGuided,
                                       'guided',
                                       Icons.tour_outlined,
                                     ),
@@ -1449,21 +1416,15 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 ),
                                 const Divider(height: DS.spacing24),
                                 _buildAuroraPrefSegmented(
-                                  label: I18nService.instance.isChinese
-                                      ? '解释详细程度'
-                                      : 'Explanation Level',
+                                  label: context.l10n.settAuroraExplanationLevel,
                                   options: [
                                     (
-                                      I18nService.instance.isChinese
-                                          ? '多解释原因'
-                                          : 'Detailed',
+                                      context.l10n.settAuroraExplanationDetailed,
                                       'detailed',
                                       Icons.article_outlined,
                                     ),
                                     (
-                                      I18nService.instance.isChinese
-                                          ? '简洁'
-                                          : 'Brief',
+                                      context.l10n.settAuroraExplanationBrief,
                                       'brief',
                                       Icons.short_text_outlined,
                                     ),
@@ -1488,21 +1449,15 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                                 ),
                                 const Divider(height: DS.spacing24),
                                 _buildAuroraPrefSegmented(
-                                  label: I18nService.instance.isChinese
-                                      ? '压力提醒风格'
-                                      : 'Pressure Style',
+                                  label: context.l10n.settAuroraPressureStyle,
                                   options: [
                                     (
-                                      I18nService.instance.isChinese
-                                          ? '不用压力提醒'
-                                          : 'Gentle',
+                                      context.l10n.settAuroraPressureGentle,
                                       'gentle',
                                       Icons.spa_outlined,
                                     ),
                                     (
-                                      I18nService.instance.isChinese
-                                          ? '可用压力'
-                                          : 'Motivating',
+                                      context.l10n.settAuroraPressureMotivating,
                                       'motivating',
                                       Icons.fitness_center_outlined,
                                     ),
@@ -1533,9 +1488,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                             error: (_, __) => Padding(
                               padding: const EdgeInsets.all(DS.spacing16),
                               child: Text(
-                                I18nService.instance.isChinese
-                                    ? '加载偏好失败'
-                                    : 'Failed to load preferences',
+                                context.l10n.settAuroraPrefLoadFailed,
                                 style: DS.bodySmall
                                     .copyWith(color: DS.textSecondary),
                               ),
@@ -2180,7 +2133,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
   }
 
   Future<void> _confirmOpenDeleteData(BuildContext context) async {
-    final zh = I18nService.instance.isChinese;
     final confirmed = await showSensoryDialog<bool>(
           context: context,
           builder: (dialogContext) => Dialog(
@@ -2188,7 +2140,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
             insetPadding:
                 const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
             child: GraphiteModalSurface(
-              title: zh ? '删除我的数据' : 'Delete My Data',
+              title: context.l10n.settDeleteDataTitle,
               showHandle: false,
               borderRadius: BorderRadius.circular(28),
               child: Column(
@@ -2196,9 +2148,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    zh
-                        ? '接下来会进入账号删除确认流程。继续前，你可以先导出数据；删除后个人资料、偏好和历史记录将不可恢复。'
-                        : 'Next you will enter the account deletion confirmation flow. Export your data first if needed; deletion permanently removes profile data, preferences, and history.',
+                    context.l10n.settDeleteDataBody,
                     style:
                         Theme.of(dialogContext).textTheme.bodyMedium?.copyWith(
                               color: DS.textSecondary,
@@ -2219,7 +2169,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
                       const SizedBox(width: DS.spacing12),
                       Expanded(
                         child: SparkleButton.destructive(
-                          label: zh ? '继续' : 'Continue',
+                          label: context.l10n.settDeleteDataContinue,
                           onPressed: () =>
                               Navigator.of(dialogContext).pop(true),
                           expand: true,
@@ -2612,7 +2562,6 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
       );
 
   Widget _buildEmotionAdaptiveModeControl(EmotionState state) {
-    final zh = I18nService.instance.isChinese;
     final mode = state.mode;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -2620,11 +2569,9 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.self_improvement_rounded),
-          title: Text(zh ? '情绪适应模式' : 'Emotion adaptive mode'),
+          title: Text(context.l10n.settEmotionAdaptiveTitle),
           subtitle: Text(
-            zh
-                ? '根据疲劳、压力和认知负荷调低刺激，或手动固定。'
-                : 'Lower visual stimulus from fatigue, stress, and load signals, or keep a manual override.',
+            context.l10n.settEmotionAdaptiveSubtitle,
           ),
         ),
         Wrap(
@@ -2632,7 +2579,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
           runSpacing: DS.spacing8,
           children: [
             ChoiceChip(
-              label: Text(zh ? '自动' : 'Auto'),
+              label: Text(context.l10n.settEmotionAdaptiveAuto),
               selected: mode == EmotionAdaptiveMode.auto,
               onSelected: (_) => unawaited(
                 ref
@@ -2641,7 +2588,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               ),
             ),
             ChoiceChip(
-              label: Text(zh ? '低刺激' : 'Low stimulus'),
+              label: Text(context.l10n.settEmotionAdaptiveLow),
               selected: mode == EmotionAdaptiveMode.alwaysLow,
               onSelected: (_) => unawaited(
                 ref
@@ -2650,7 +2597,7 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               ),
             ),
             ChoiceChip(
-              label: Text(zh ? '标准' : 'Normal'),
+              label: Text(context.l10n.settEmotionAdaptiveNormal),
               selected: mode == EmotionAdaptiveMode.alwaysNormal,
               onSelected: (_) => unawaited(
                 ref
@@ -2666,15 +2613,11 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               ? Icons.nightlight_round
               : Icons.wb_sunny_outlined,
           title: state.responsiveConfig.isLowStimulus
-              ? (zh ? '当前：低刺激界面' : 'Current: low-stimulus UI')
-              : (zh ? '当前：标准界面' : 'Current: normal UI'),
+              ? context.l10n.settEmotionCurrentLow
+              : context.l10n.settEmotionCurrentNormal,
           description: state.responsiveConfig.isLowStimulus
-              ? (zh
-                  ? '字体略放大、动画减少、卡片层级更轻、挑战徽章会收起。'
-                  : 'Text is slightly larger, motion is reduced, surfaces are calmer, and challenge badges are hidden.')
-              : (zh
-                  ? '界面保持常规动效、色温和信息密度。'
-                  : 'The interface keeps normal motion, color temperature, and density.'),
+              ? context.l10n.settEmotionDescLow
+              : context.l10n.settEmotionDescNormal,
         ),
       ],
     );

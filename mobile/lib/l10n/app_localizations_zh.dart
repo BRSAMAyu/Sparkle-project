@@ -29329,6 +29329,137 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String get settGrowthChronicleSaving => '正在保存成长编年史可见性...';
+
+  @override
+  String get settGrowthChronicleHidden => '成长编年史已隐藏。';
+
+  @override
+  String get settGrowthChronicleVisible => '成长编年史已恢复显示。';
+
+  @override
+  String get settDataControlsError => '保存失败，请稍后重试。';
+
+  @override
+  String get settMemorySaving => '正在保存记忆可见性...';
+
+  @override
+  String get settMemoryHidden => '记忆入口已默认隐藏。';
+
+  @override
+  String get settMemoryVisible => '记忆入口已恢复显示。';
+
+  @override
+  String get settAccessibilityTitle => '无障碍与低负荷';
+
+  @override
+  String get settAccessibilitySubtitle => '字体、对比度、屏幕阅读、触控、动效、TTS 与震动反馈';
+
+  @override
+  String get settAuroraPrefTitle => 'Aurora 沟通偏好';
+
+  @override
+  String get settAuroraPrefSubtitle => '控制 Aurora 如何与你互动';
+
+  @override
+  String get settAuroraAnalysisDepth => '分析深度';
+
+  @override
+  String get settAuroraAnalysisLight => '少分析我';
+
+  @override
+  String get settAuroraAnalysisDeep => '多分析我';
+
+  @override
+  String get settAuroraDirectness => '沟通方式';
+
+  @override
+  String get settAuroraDirect => '直接安排我';
+
+  @override
+  String get settAuroraGuided => '引导我';
+
+  @override
+  String get settAuroraExplanationLevel => '解释详细程度';
+
+  @override
+  String get settAuroraExplanationDetailed => '多解释原因';
+
+  @override
+  String get settAuroraExplanationBrief => '简洁';
+
+  @override
+  String get settAuroraPressureStyle => '压力提醒风格';
+
+  @override
+  String get settAuroraPressureGentle => '不用压力提醒';
+
+  @override
+  String get settAuroraPressureMotivating => '可用压力';
+
+  @override
+  String get settAuroraPrefLoadFailed => '加载偏好失败';
+
+  @override
+  String get settDeleteDataTitle => '删除我的数据';
+
+  @override
+  String get settDeleteDataBody =>
+      '接下来会进入账号删除确认流程。继续前，你可以先导出数据；删除后个人资料、偏好和历史记录将不可恢复。';
+
+  @override
+  String get settDeleteDataContinue => '继续';
+
+  @override
+  String get settEmotionAdaptiveTitle => '情绪适应模式';
+
+  @override
+  String get settEmotionAdaptiveSubtitle => '根据疲劳、压力和认知负荷调低刺激，或手动固定。';
+
+  @override
+  String get settEmotionAdaptiveAuto => '自动';
+
+  @override
+  String get settEmotionAdaptiveLow => '低刺激';
+
+  @override
+  String get settEmotionAdaptiveNormal => '标准';
+
+  @override
+  String get settEmotionCurrentLow => '当前：低刺激界面';
+
+  @override
+  String get settEmotionCurrentNormal => '当前：标准界面';
+
+  @override
+  String get settEmotionDescLow => '字体略放大、动画减少、卡片层级更轻、挑战徽章会收起。';
+
+  @override
+  String get settEmotionDescNormal => '界面保持常规动效、色温和信息密度。';
+
+  @override
+  String get foresightStability => '执行稳定性';
+
+  @override
+  String get foresightRhythmFit => '日程匹配度';
+
+  @override
+  String get foresightOverloadRisk => '过载风险';
+
+  @override
+  String engageLastActive(Object date) {
+    return '最近 $date';
+  }
+
+  @override
+  String get foresightDateFormat => 'M月d日 HH:mm';
+
+  @override
+  String foresightDeviations(Object count) {
+    return '$count 次偏离';
+  }
+
+  @override
   String get settOpenclawGatewayNoPerm => '当前网关可访问，但没有执行权限，暂时无法重试队列';
 
   @override
@@ -29418,262 +29549,139 @@ class AppLocalizationsZh extends AppLocalizations {
   String get settTranspNextActionDesc => '显示计划或任务被 Aurora 调整的原因。';
 
   @override
+  String secLogTotalRecords(Object count) {
+    return '共 $count 条记录';
+  }
+
+  @override
+  String secLogAnomalies(Object count) {
+    return '异常 $count 条';
+  }
+
+  @override
+  String engageSessions7d(Object count) {
+    return '7日会话 $count';
+  }
+
+  @override
+  String engageDayStreak(Object count) {
+    return '连续 $count 天';
+  }
+
+  @override
+  String get engageDateFormat => 'M月d日';
+
+  @override
+  String metacogDimensionsObserved(Object count) {
+    return '已观察 $count 个元认知维度';
+  }
+
+  @override
+  String metacogUpdatedAt(Object time) {
+    return '更新于 $time';
+  }
+
+  @override
   String get settA11yTitle => '无障碍与低负荷';
 
   @override
-  String get settA11yReset => '恢复默认';
+  String get settA11yReset => '重置无障碍设置';
 
   @override
-  String get settA11ySaveFailed => '保存失败，已保留上一次设置。';
+  String get sprintMySprint => '我的冲刺';
 
   @override
-  String get settA11ySyncing => '正在同步到账号设置';
+  String get sprintNoActive => '暂无活跃冲刺';
 
   @override
-  String get settA11yResetDone => '已恢复默认无障碍设置';
+  String get sprintTasks => '任务';
 
   @override
-  String get settA11yLowLoadTitle => '低负荷模式';
+  String get sprintNoTasks => '这个冲刺暂无任务。';
 
   @override
-  String get settA11yLowLoadDesc => '减少动效、放大触控区域，并优先使用更清晰的阅读节奏。';
+  String get sprintProgress => '进度';
 
   @override
-  String get settA11yLowLoadToggle => '启用低负荷体验';
-
-  @override
-  String get settA11yLowLoadToggleDesc => '开启后会同步调整动画、屏幕阅读和触控默认值。';
-
-  @override
-  String get settA11yReadingTitle => '阅读与颜色';
-
-  @override
-  String get settA11yReadingDesc => '集中管理字体缩放、对比度和色盲友好配色。';
-
-  @override
-  String get settA11yFontScale => '字体缩放';
-
-  @override
-  String get settA11yHighContrast => '高对比度';
-
-  @override
-  String get settA11yHighContrastDesc => '优先使用更明显的文字、边框和状态区分。';
-
-  @override
-  String get settA11yColorBlind => '色盲友好';
-
-  @override
-  String get settA11yColorBlindDesc => '用形状、明暗和标签辅助颜色差异。';
-
-  @override
-  String get settA11yTouchMotionTitle => '触控与动效';
-
-  @override
-  String get settA11yTouchMotionDesc => '统一触控目标、动画减弱和震动反馈默认值。';
-
-  @override
-  String get settA11yTouchTargetSize => '触控目标尺寸';
-
-  @override
-  String get settA11yTouchComfort => '舒适 48dp';
-
-  @override
-  String get settA11yTouchLarge => '加大 56dp';
-
-  @override
-  String get settA11yTouchXl => '特大 64dp';
-
-  @override
-  String settA11yTouchPreview(Object size) {
-    return '当前最小目标 ${size}dp';
+  String sprintDaysLeft(Object days) {
+    return '剩余 $days 天';
   }
 
   @override
-  String get settA11yReduceMotion => '减弱动画';
+  String get sprintEnded => '冲刺已结束';
 
   @override
-  String get settA11yReduceMotionDesc => '缩短或移除非必要转场、粒子和弹性动画。';
+  String get sprintReviewBtn => '冲刺复盘';
 
   @override
-  String get settA11yHaptic => '震动反馈';
+  String get sprintAchievements => '冲刺成就';
 
   @override
-  String get settA11yHapticDesc => '控制选择、确认和错误提示的触觉反馈。';
+  String get sextViewAll => '查看全部';
 
   @override
-  String get settA11yAssistiveTitle => '辅助技术';
+  String get sprintDefaultName => '冲刺';
 
   @override
-  String get settA11yAssistiveDesc => '屏幕阅读优化与 TTS 默认值会同步给可视化与学习场景。';
+  String get sprintReviewTitle => '冲刺复盘';
 
   @override
-  String get settA11yScreenReader => '屏幕阅读优化';
+  String get sprintBottleneckAnalysis => '瓶颈分析';
 
   @override
-  String get settA11yScreenReaderDesc => '为图谱、卡片和复杂控件提供更完整的语义顺序。';
+  String get sprintReviewNotes => '复盘笔记';
 
   @override
-  String get settA11yTtsReading => 'TTS 朗读';
+  String get sprintDone => '已完成';
 
   @override
-  String get settA11yTtsReadingDesc => '允许学习摘要、步骤和复盘内容进入朗读模式。';
+  String get sprintLeft => '待完成';
 
   @override
-  String get settA11yWcagTitle => 'WCAG AA 检查';
+  String get sprintDays => '天数';
 
   @override
-  String get settA11yWcagDesc => '本页控件按可触达、可读和可理解的设置面板标准维护。';
+  String get sprintAlertSignificantlyBehind => '进度严重落后';
 
   @override
-  String get settA11yWcagTextScale => '正文与控件文字支持 200% 以内缩放';
+  String get sprintAlertSlower => '进度偏慢';
 
   @override
-  String get settA11yWcagTouchTarget => '触控目标不低于 48dp，且可提升至 64dp';
+  String get sprintAlertEnding => '冲刺即将结束';
 
   @override
-  String get settA11yWcagColorState => '颜色设置不依赖单一色相表达状态';
+  String get sprintAlertOnTrack => '进展顺利';
 
   @override
-  String get settA11yWcagIndependent => '屏幕阅读、TTS、动效和震动均可独立控制';
+  String get sprintSaveNotes => '保存笔记';
 
   @override
-  String get settBehaviorTitle => 'Sparkle 如何使用这些设置';
+  String get sprintNotesSaved => '复盘笔记已保存';
 
   @override
-  String get settBehaviorSubtitle => '展开任一区域，查看你的选择会怎样影响 Sparkle 的行为。';
-
-  @override
-  String get settBehaviorAccessibility => '无障碍';
-
-  @override
-  String get settBehaviorAccessibilityBody =>
-      '当你开启高对比度、降低动效或放大字体时，Sparkle 会把这些偏好应用到主要学习界面、知识星图、对话和任务执行流程，优先保证可读、可触达和低负荷。';
-
-  @override
-  String get settBehaviorEmotion => '情绪自适应';
-
-  @override
-  String get settBehaviorEmotionBody =>
-      '当 Sparkle 识别到疲劳、压力或认知负荷较高时，会使用更柔和的颜色、更大的文字、更少动画，并减少挑战感提示。手动固定后，自动适应会让位给你的选择。';
-
-  @override
-  String get settBehaviorReminder => '提醒频率';
-
-  @override
-  String get settBehaviorMemory => '记忆控制';
-
-  @override
-  String get settBehaviorMemoryBody =>
-      'Sparkle 会记住学习目标、偏好、承诺和你明确允许的经历线索，用来保持对话连续和任务跟进；不会把被屏蔽的来源或关闭的记忆类型写入长期记忆。';
-
-  @override
-  String get settBehaviorMaterials => '资料使用';
-
-  @override
-  String get settBehaviorMaterialsBody =>
-      '你的学习资料会用于检索相关上下文、生成任务建议、解释知识点和构建知识星图；不会被用于公开社区内容或研究分析，除非你在对应设置里明确允许。';
-
-  @override
-  String get settBehaviorResearch => '研究参与';
-
-  @override
-  String get settBehaviorResearchBody =>
-      '加入研究意味着部分去标识化学习行为、错误模式和资源质量信号可被汇总分析，用来改进 Sparkle；原始私密对话、个人身份信息和被你隐藏的内容不会进入研究数据。';
-
-  @override
-  String get settBehaviorReminderNoCap => '不会发送智能提醒';
-
-  @override
-  String settBehaviorReminderCap(Object count) {
-    return '每天最多 $count 次智能提醒';
+  String sprintLoadIssue(Object message) {
+    return '冲刺复盘加载异常：$message';
   }
 
   @override
-  String get settBehaviorReminderTaskOnNoTime => '任务提醒已开启，但未设置具体提前量';
+  String get sprintRetry => '重试';
 
   @override
-  String settBehaviorReminderTaskOnWithTime(Object times) {
-    return '任务会在 $times 前提醒';
+  String get sprintContinue => '继续冲刺';
+
+  @override
+  String get sprintAdjustPlan => '调整计划';
+
+  @override
+  String achieveTotalScore(Object score) {
+    return '总成就分 $score';
   }
 
   @override
-  String get settBehaviorReminderTaskOff => '任务提醒已关闭';
-
-  @override
-  String get settBehaviorReminderLevelMinimal => '简洁';
-
-  @override
-  String get settBehaviorReminderLevelVerbose => '详细';
-
-  @override
-  String get settBehaviorReminderLevelStandard => '标准';
-
-  @override
-  String settBehaviorReminderBodyEn(Object cap, Object level, Object taskText) {
-    return '当前设置下，Sparkle $cap，通知详细度为$level；$taskText。安静时段和已关闭类型会优先拦截非紧急提醒。';
+  String workMemMentioned(Object count) {
+    return '提及 $count 次';
   }
 
   @override
-  String settBehaviorDays(Object count) {
-    return '$count 天';
-  }
-
-  @override
-  String settBehaviorDay(Object count) {
-    return '$count 天';
-  }
-
-  @override
-  String settBehaviorHours(Object count) {
-    return '$count 小时';
-  }
-
-  @override
-  String settBehaviorHour(Object count) {
-    return '$count 小时';
-  }
-
-  @override
-  String settBehaviorMinutes(Object count) {
-    return '$count 分钟';
-  }
-
-  @override
-  String settBehaviorMinute(Object count) {
-    return '$count 分钟';
-  }
-
-  @override
-  String get settDataControlsTitle => '数据控制';
-
-  @override
-  String get settDataControlsDesc => '导出、删除和隐藏入口集中在这里，所有操作都会说明后果。';
-
-  @override
-  String get settDataExport => '导出我的数据';
-
-  @override
-  String get settDataExportDesc => '生成包含账号资料、学习记录、设置和可导出记忆的压缩包。';
-
-  @override
-  String get settDataDelete => '删除我的数据';
-
-  @override
-  String get settDataDeleteDesc => '进入确认流程。删除账号会移除个人资料、偏好和历史记录，且不可恢复。';
-
-  @override
-  String get settDataHideChronicle => '隐藏我的成长编年史';
-
-  @override
-  String get settDataHideChronicleDesc => '隐藏后，成长叙事入口默认不展示编年史内容；数据不会因此删除。';
-
-  @override
-  String get settDataHideMemory => '隐藏我的记忆';
-
-  @override
-  String get settDataHideMemoryDesc =>
-      '隐藏后，记忆面板和可见记忆引用会默认收起；长期记忆写入规则请进入记忆设置调整。';
-
-  @override
-  String get settDataManageMemory => '管理记忆写入规则';
+  String get workMemDateFormat => 'M月d日 HH:mm';
 }

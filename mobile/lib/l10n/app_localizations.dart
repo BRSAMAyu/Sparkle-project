@@ -53572,7 +53572,7 @@ abstract class AppLocalizations {
   /// No description provided for @foresightDateFormat.
   ///
   /// In zh, this message translates to:
-  /// **'MM/dd HH:mm'**
+  /// **'M月d日 HH:mm'**
   String get foresightDateFormat;
 
   /// No description provided for @foresightDeviations.
@@ -53580,6 +53580,390 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{count} 次偏离'**
   String foresightDeviations(Object count);
+
+  /// No description provided for @settOpenclawGatewayNoPerm.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前网关可访问，但没有执行权限，暂时无法重试队列'**
+  String get settOpenclawGatewayNoPerm;
+
+  /// No description provided for @settOpenclawEndpointUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前网关可访问，但执行入口不可用，暂时无法重试队列'**
+  String get settOpenclawEndpointUnavailable;
+
+  /// No description provided for @settOpenclawEngineNotConnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行引擎尚未连接，暂时无法重试队列'**
+  String get settOpenclawEngineNotConnected;
+
+  /// No description provided for @settOpenclawResubmitted.
+  ///
+  /// In zh, this message translates to:
+  /// **'已重新提交 {count} 个排队任务'**
+  String settOpenclawResubmitted(Object count);
+
+  /// No description provided for @settOpenclawNoRetryableTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前没有可重试的排队任务'**
+  String get settOpenclawNoRetryableTasks;
+
+  /// No description provided for @settOpenclawDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'这里统一管理 OpenClaw 的接入状态、执行可用性和等待队列，避免你在不同页面看到不同结论。'**
+  String get settOpenclawDesc;
+
+  /// No description provided for @settOpenclawQueuedTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个任务'**
+  String settOpenclawQueuedTasks(Object count);
+
+  /// No description provided for @settOpenclawQueueDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'当执行链路暂时不可用时，新的委派会先进入这里。等权限或连接恢复后，你可以一键重新提交。'**
+  String get settOpenclawQueueDesc;
+
+  /// No description provided for @settOpenclawTaskLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务 {taskId}'**
+  String settOpenclawTaskLabel(Object taskId);
+
+  /// No description provided for @settOpenclawTemplateLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'模板 {templateId}'**
+  String settOpenclawTemplateLabel(Object templateId);
+
+  /// No description provided for @settOpenclawSourceLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源 {source}'**
+  String settOpenclawSourceLabel(Object source);
+
+  /// No description provided for @settOpenclawMoreQueued.
+  ///
+  /// In zh, this message translates to:
+  /// **'还有 {count} 个排队任务'**
+  String settOpenclawMoreQueued(Object count);
+
+  /// No description provided for @settOpenclawClearQueue.
+  ///
+  /// In zh, this message translates to:
+  /// **'清空队列'**
+  String get settOpenclawClearQueue;
+
+  /// No description provided for @settTranspPureModeDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊天中仅保留文字消息，隐藏消息下方的附加信息卡片、任务卡和反馈组件。'**
+  String get settTranspPureModeDesc;
+
+  /// No description provided for @settTranspDisplayDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择主对话里的透明模式展示方式'**
+  String get settTranspDisplayDesc;
+
+  /// No description provided for @settTranspAutoCollapseDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'回答完成后，将透明模式收起成轻量摘要'**
+  String get settTranspAutoCollapseDesc;
+
+  /// No description provided for @settTranspAllowCloseDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'本轮生成时可手动关闭透明模式，不影响回答继续生成'**
+  String get settTranspAllowCloseDesc;
+
+  /// No description provided for @settTranspAuroraReceiptTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 体验回执'**
+  String get settTranspAuroraReceiptTitle;
+
+  /// No description provided for @settTranspAuroraReceiptDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示 Aurora 为什么改变语气、状态或深度校准入口。'**
+  String get settTranspAuroraReceiptDesc;
+
+  /// No description provided for @settTranspMemoryReceiptTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆引用回执'**
+  String get settTranspMemoryReceiptTitle;
+
+  /// No description provided for @settTranspMemoryReceiptDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示 Aurora 引用了哪些相关记忆，并允许纠正。'**
+  String get settTranspMemoryReceiptDesc;
+
+  /// No description provided for @settTranspSourceReceiptTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'资料与工具回执'**
+  String get settTranspSourceReceiptTitle;
+
+  /// No description provided for @settTranspSourceReceiptDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示 Aurora 参考了哪些资料、工具或社群上下文。'**
+  String get settTranspSourceReceiptDesc;
+
+  /// No description provided for @settTranspNextActionTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'下一步变更回执'**
+  String get settTranspNextActionTitle;
+
+  /// No description provided for @settTranspNextActionDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示计划或任务被 Aurora 调整的原因。'**
+  String get settTranspNextActionDesc;
+
+  /// No description provided for @secLogTotalRecords.
+  ///
+  /// In zh, this message translates to:
+  /// **'共 {count} 条记录'**
+  String secLogTotalRecords(Object count);
+
+  /// No description provided for @secLogAnomalies.
+  ///
+  /// In zh, this message translates to:
+  /// **'异常 {count} 条'**
+  String secLogAnomalies(Object count);
+
+  /// No description provided for @engageSessions7d.
+  ///
+  /// In zh, this message translates to:
+  /// **'7日会话 {count}'**
+  String engageSessions7d(Object count);
+
+  /// No description provided for @engageDayStreak.
+  ///
+  /// In zh, this message translates to:
+  /// **'连续 {count} 天'**
+  String engageDayStreak(Object count);
+
+  /// No description provided for @engageDateFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'M月d日'**
+  String get engageDateFormat;
+
+  /// No description provided for @metacogDimensionsObserved.
+  ///
+  /// In zh, this message translates to:
+  /// **'已观察 {count} 个元认知维度'**
+  String metacogDimensionsObserved(Object count);
+
+  /// No description provided for @metacogUpdatedAt.
+  ///
+  /// In zh, this message translates to:
+  /// **'更新于 {time}'**
+  String metacogUpdatedAt(Object time);
+
+  /// No description provided for @settA11yTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'无障碍与低负荷'**
+  String get settA11yTitle;
+
+  /// No description provided for @settA11yReset.
+  ///
+  /// In zh, this message translates to:
+  /// **'重置无障碍设置'**
+  String get settA11yReset;
+
+  /// No description provided for @sprintMySprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的冲刺'**
+  String get sprintMySprint;
+
+  /// No description provided for @sprintNoActive.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无活跃冲刺'**
+  String get sprintNoActive;
+
+  /// No description provided for @sprintTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务'**
+  String get sprintTasks;
+
+  /// No description provided for @sprintNoTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个冲刺暂无任务。'**
+  String get sprintNoTasks;
+
+  /// No description provided for @sprintProgress.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度'**
+  String get sprintProgress;
+
+  /// No description provided for @sprintDaysLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'剩余 {days} 天'**
+  String sprintDaysLeft(Object days);
+
+  /// No description provided for @sprintEnded.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺已结束'**
+  String get sprintEnded;
+
+  /// No description provided for @sprintReviewBtn.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺复盘'**
+  String get sprintReviewBtn;
+
+  /// No description provided for @sprintAchievements.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺成就'**
+  String get sprintAchievements;
+
+  /// No description provided for @sextViewAll.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看全部'**
+  String get sextViewAll;
+
+  /// No description provided for @sprintDefaultName.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺'**
+  String get sprintDefaultName;
+
+  /// No description provided for @sprintReviewTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺复盘'**
+  String get sprintReviewTitle;
+
+  /// No description provided for @sprintBottleneckAnalysis.
+  ///
+  /// In zh, this message translates to:
+  /// **'瓶颈分析'**
+  String get sprintBottleneckAnalysis;
+
+  /// No description provided for @sprintReviewNotes.
+  ///
+  /// In zh, this message translates to:
+  /// **'复盘笔记'**
+  String get sprintReviewNotes;
+
+  /// No description provided for @sprintDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'已完成'**
+  String get sprintDone;
+
+  /// No description provided for @sprintLeft.
+  ///
+  /// In zh, this message translates to:
+  /// **'待完成'**
+  String get sprintLeft;
+
+  /// No description provided for @sprintDays.
+  ///
+  /// In zh, this message translates to:
+  /// **'天数'**
+  String get sprintDays;
+
+  /// No description provided for @sprintAlertSignificantlyBehind.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度严重落后'**
+  String get sprintAlertSignificantlyBehind;
+
+  /// No description provided for @sprintAlertSlower.
+  ///
+  /// In zh, this message translates to:
+  /// **'进度偏慢'**
+  String get sprintAlertSlower;
+
+  /// No description provided for @sprintAlertEnding.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺即将结束'**
+  String get sprintAlertEnding;
+
+  /// No description provided for @sprintAlertOnTrack.
+  ///
+  /// In zh, this message translates to:
+  /// **'进展顺利'**
+  String get sprintAlertOnTrack;
+
+  /// No description provided for @sprintSaveNotes.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存笔记'**
+  String get sprintSaveNotes;
+
+  /// No description provided for @sprintNotesSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'复盘笔记已保存'**
+  String get sprintNotesSaved;
+
+  /// No description provided for @sprintLoadIssue.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺复盘加载异常：{message}'**
+  String sprintLoadIssue(Object message);
+
+  /// No description provided for @sprintRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get sprintRetry;
+
+  /// No description provided for @sprintContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续冲刺'**
+  String get sprintContinue;
+
+  /// No description provided for @sprintAdjustPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整计划'**
+  String get sprintAdjustPlan;
+
+  /// No description provided for @achieveTotalScore.
+  ///
+  /// In zh, this message translates to:
+  /// **'总成就分 {score}'**
+  String achieveTotalScore(Object score);
+
+  /// No description provided for @workMemMentioned.
+  ///
+  /// In zh, this message translates to:
+  /// **'提及 {count} 次'**
+  String workMemMentioned(Object count);
+
+  /// No description provided for @workMemDateFormat.
+  ///
+  /// In zh, this message translates to:
+  /// **'M月d日 HH:mm'**
+  String get workMemDateFormat;
 }
 
 class _AppLocalizationsDelegate
