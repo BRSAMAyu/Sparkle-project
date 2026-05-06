@@ -63,7 +63,7 @@
 | QA-P2-2 | Semantics: ContextReceiptBar | Flutter | S | ⏭️ skip | — | — | Already has Semantics wrapper: context_receipt_bar.dart:34-39 |
 | QA-P2-3 | Semantics: SimilarGoalPursuersCard | Flutter | S | ✅ done | — | 0cea3de2f | Add Semantics wrapper |
 | QA-P2-4 | Semantics: GoalValueChip | Flutter | S | ⏭️ skip | — | — | Already has Semantics(container: true, label: text): goal_value_chip.dart:16-18 |
-| QA-P2-5 | Semantics: TaskRestoreDialog | Flutter | S | ⬜ pending | — | — | Add semantic labels |
+| QA-P2-5 | Semantics: TaskRestoreDialog | Flutter | S | 🔵 in-progress | claude-B | — | Add semantic labels |
 | QA-P2-6 | Semantics: SprintReviewScreen | Flutter | M | ⬜ pending | — | — | All interactive sections |
 | QA-P2-7 | Semantics: GoalCreationWizardScreen | Flutter | M | ⬜ pending | — | — | Multi-step form |
 | QA-P2-8 | Hardcoded 'Retry' → ARB | Flutter | S | ⬜ pending | — | — | strategy_migration_wizard.dart |
@@ -119,6 +119,6 @@
 |----------|-------|---------|---------|-----------|----------------|
 | P0 | 6 | 6 | 0 | 0 | 0 |
 | P1 | 20 | 10 | 10 | 0 | 0 |
-| P2 | 35 | 2 | 2 | 31 | 0 |
+| P2 | 35 | 2 | 2 | 30 | 1 |
 | P3 | 5 | 0 | 0 | 5 | 0 |
 | **Total** | **66** | **18** | **12** | **36** | **0** |
