@@ -33,6 +33,7 @@ class DashboardSlotIds {
     dailyBriefing,
     metricsRow,
     commandCenter,
+    understanding,
     returnCaseFile,
     goalDetailSnapshot,
     multiGoalDashboard,
@@ -47,24 +48,25 @@ class DashboardSlotIds {
     workspaceCards,
   ];
 
-  /// Default ordering — story (status/briefing) first, then plan, then
-  /// workspace, finally community/achievements at the bottom.
+  /// Default ordering — status bar first, then command center (what-to-do),
+  /// then goal context, then execution items, finally insights at the bottom.
   static const List<String> defaultOrder = [
     dailyBriefing,
     commandCenter,
     multiGoalDashboard,
+    examSprint,
     taskBoard,
+    dashboardUpdates,
     workspaceCards,
     metricsRow,
-    returnCaseFile,
-    goalDetailSnapshot,
-    examSprint,
-    dashboardUpdates,
     growthQuality,
     weeklyNarrative,
+    returnCaseFile,
+    goalDetailSnapshot,
     community,
     achievementProgress,
     learningHeatmap,
+    understanding,
   ];
 
   /// First-run default: every registered slot is visible so existing
@@ -82,6 +84,7 @@ class DashboardSlotIds {
     dailyBriefing,
     commandCenter,
     multiGoalDashboard,
+    examSprint,
     taskBoard,
     workspaceCards,
   ];
@@ -94,10 +97,10 @@ class DashboardSlotIds {
   /// noisy than the previous "all expanded" default, but no slot is
   /// silently hidden.
   static const List<String> defaultCollapsed = [
+    understanding,
     metricsRow,
     returnCaseFile,
     goalDetailSnapshot,
-    examSprint,
     dashboardUpdates,
     growthQuality,
     weeklyNarrative,
