@@ -33,8 +33,8 @@
 | ID | Title | Scope | Effort | Status | Claimed-By | Commit | Note |
 |----|-------|-------|--------|--------|-----------|--------|------|
 | QA-P1-1 | Hardcoded 'Your Data & Privacy' → ARB | Flutter | S | ✅ done | — | 85548b47 | data_usage_dashboard_screen.dart |
-| QA-P1-2 | Hardcoded 'Growth Plans' → ARB | Flutter | S | 🔵 in-progress | claude-A | — | growth_screen.dart |
-| QA-P1-3 | Hardcoded 'New Plan' → ARB | Flutter | S | ⬜ pending | — | — | growth_screen.dart |
+| QA-P1-2 | Hardcoded 'Growth Plans' → ARB | Flutter | S | ✅ done | — | 101cc75b | growth_screen.dart |
+| QA-P1-3 | Hardcoded 'New Plan' → ARB | Flutter | S | ✅ done | — | 101cc75b | growth_screen.dart |
 | QA-P1-4 | Hardcoded 'Send Message' → ARB | Flutter | S | ⬜ pending | — | — | user_search_screen.dart |
 | QA-P1-5 | Add route: LeaderboardScreen | Flutter | S | ⬜ pending | — | — | QA_NAV P0-1: 4 orphaned screens |
 | QA-P1-6 | Add route: FocusStatisticsScreen | Flutter | S | ⬜ pending | — | — | QA_NAV P0-1 |
@@ -116,7 +116,7 @@
 | Priority | Total | ✅ done | ⬜ pending | 🔵 in-progress |
 |----------|-------|---------|-----------|----------------|
 | P0 | 6 | 6 | 0 | 0 |
-| P1 | 20 | 1 | 19 | 0 |
+| P1 | 20 | 3 | 17 | 0 |
 | P2 | 35 | 0 | 35 | 0 |
 | P3 | 5 | 0 | 5 | 0 |
 | **Total** | **66** | **4** | **61** | **1** |
