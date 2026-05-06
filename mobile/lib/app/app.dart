@@ -62,12 +62,11 @@ class _SparkleAppState extends ConsumerState<SparkleApp> {
     final apiClient = ref.watch(apiClientProvider);
     final router = ref.watch(routerProvider);
     ClientObservabilityService.instance.attachDio(apiClient.dio);
-    // Watch the manager to rebuild when theme changes (colors, high contrast, etc.)
-    ref.watch(themeManagerProvider);
-    // Defer sync startup until auth has settled and the shell is visible.
-    ref.watch(deferredSyncBootstrapProvider);
-    // Initialize unified push service (FCM + JPush)
-    ref.watch(pushInitProvider);
+    // Watch providers that should stay alive and rebuild the app shell.
+    ref
+      ..watch(themeManagerProvider)
+      ..watch(deferredSyncBootstrapProvider)
+      ..watch(pushInitProvider);
     // Watch the mode specifically for MaterialApp.themeMode
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
@@ -89,13 +88,79 @@ class _SparkleAppState extends ConsumerState<SparkleApp> {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      builder: (context, child) => EmotionResponsiveAppWrapper(
-        config: emotionConfig,
-        child: DefaultTextStyle.merge(
-          style: const TextStyle(fontFamilyFallback: sparkleFontFallback),
-          child: _ColdStartFade(
-            child: child ?? const SizedBox.shrink(),
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        return _ThemeTransitionShell(
+          theme: Theme.of(context),
+          child: MediaQuery(
+            data: mediaQuery.copyWith(
+              textScaler: mediaQuery.textScaler.clamp(
+                minScaleFactor: 0.85,
+                maxScaleFactor: 1.35,
+              ),
+            ),
+            child: EmotionResponsiveAppWrapper(
+              config: emotionConfig,
+              child: DefaultTextStyle.merge(
+                style: const TextStyle(fontFamilyFallback: sparkleFontFallback),
+                child: _ColdStartFade(
+                  child: child ?? const SizedBox.shrink(),
+                ),
+              ),
+            ),
           ),
+        );
+      },
+    );
+  }
+}
+
+class _ThemeTransitionShell extends StatelessWidget {
+  const _ThemeTransitionShell({
+    required this.theme,
+    required this.child,
+  });
+
+  static const _duration = Duration(milliseconds: 280);
+
+  final ThemeData theme;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final transitionKey = ValueKey<Object>(
+      Object.hash(
+        theme.brightness,
+        theme.colorScheme.surface,
+        theme.colorScheme.primary,
+        theme.focusColor,
+      ),
+    );
+
+    return AnimatedTheme(
+      data: theme,
+      duration: _duration,
+      curve: Curves.easeInOut,
+      child: TweenAnimationBuilder<double>(
+        key: transitionKey,
+        tween: Tween<double>(begin: 0.06, end: 0),
+        duration: _duration,
+        curve: Curves.easeOutCubic,
+        child: child,
+        builder: (context, overlayOpacity, child) => Stack(
+          children: [
+            child ?? const SizedBox.shrink(),
+            if (overlayOpacity > 0)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: ColoredBox(
+                    color: theme.colorScheme.surface.withValues(
+                      alpha: overlayOpacity,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -122,7 +187,8 @@ class _ColdStartFadeState extends State<_ColdStartFade>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 320),
-    )..forward();
+    );
+    unawaited(_controller.forward());
     _opacity = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOutCubic,

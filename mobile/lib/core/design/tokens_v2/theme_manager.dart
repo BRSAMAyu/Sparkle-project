@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 
 /// 主题管理器 - 支持动态切换和持久化
@@ -83,8 +86,15 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
 
   /// 切换主题模式
   Future<void> setAppThemeMode(AppThemeMode mode) async {
+    if (_mode == mode) return;
     _mode = mode;
     await _saveToPrefs();
+    unawaited(
+      SensoryFeedbackService.emit(
+        SensoryFeedbackEvent.tap,
+        enableSound: false,
+      ),
+    );
     notifyListeners();
   }
 
@@ -378,6 +388,14 @@ class SparkleThemeData {
         animations: animations ?? this.animations,
         shadows: shadows ?? this.shadows,
       );
+
+  SparkleThemeData lerp(SparkleThemeData other, double t) => SparkleThemeData(
+        colors: colors.lerp(other.colors, t),
+        typography: t < 0.5 ? typography : other.typography,
+        spacing: t < 0.5 ? spacing : other.spacing,
+        animations: t < 0.5 ? animations : other.animations,
+        shadows: t < 0.5 ? shadows : other.shadows,
+      );
 }
 
 /// 颜色系统
@@ -475,11 +493,11 @@ class SparkleColors {
     }
     return const SparkleColors(
       brandPrimary: Color(0xFFA77D63),
-      brandSecondary: Color(0xFF7589A8),
+      brandSecondary: Color(0xFF7A8BA6),
       semanticSuccess: Color(0xFF7E9C87),
       semanticWarning: Color(0xFFC59A67),
       semanticError: Color(0xFFC17A70),
-      semanticInfo: Color(0xFF7893B2),
+      semanticInfo: Color(0xFF7590B0),
       surfacePrimary: Color(0xFFF8F4EF),
       surfaceSecondary: Color(0xFFF1EBE4),
       surfaceTertiary: Color(0xFFE7DED4),
@@ -508,7 +526,7 @@ class SparkleColors {
       neutral500: Color(0xFF958A80),
       neutral600: Color(0xFF6A6057),
       // Chat bubble colors
-      chatBubbleUser: Color(0xFF6C84A4),
+      chatBubbleUser: Color(0xFF6B82A0),
       chatBubbleUserText: Colors.white,
       chatBubbleOther: Color(0xFFF5F0E8),
       chatBubbleOtherText: Color(0xFF171717),
@@ -573,10 +591,10 @@ class SparkleColors {
       semanticError: Color(0xFFD37B72),
       semanticInfo: Color(0xFF8CA5C8),
       // Dark mode surface hierarchy (Material 3 elevation system)
-      surfacePrimary: Color(0xFF0F1217),
-      surfaceSecondary: Color(0xFF171B22),
-      surfaceTertiary: Color(0xFF222831),
-      surfaceAmbient: Color(0xFF0B0E12),
+      surfacePrimary: Color(0xFF0F1218),
+      surfaceSecondary: Color(0xFF181D26),
+      surfaceTertiary: Color(0xFF242C38),
+      surfaceAmbient: Color(0xFF090C10),
       rimLight: Color(0x33FFFFFF), // white 0.2
       glowPrimary: Color(0x42C97A43),
       noiseColor: Color(0x08FFFFFF), // white 0.03
@@ -595,8 +613,8 @@ class SparkleColors {
       statusOnline: Color(0xFF2ECC71),
       statusOffline: Color(0xFF95A5A6),
       statusInvisible: Color(0xFF34495E),
-      neutral200: Color(0xFF2B313A),
-      neutral300: Color(0xFF3D4550),
+      neutral200: Color(0xFF252C36),
+      neutral300: Color(0xFF3A4354),
       neutral400: Color(0xFF5E6874),
       neutral500: Color(0xFF808996),
       neutral600: Color(0xFFADB7C8),
@@ -664,6 +682,23 @@ class SparkleColors {
   final Color galaxyShadow;
 
   final Brightness brightness;
+
+  Color get ctaAccent => semanticWarning;
+  Color get textMuted => textSecondary.withValues(alpha: 0.7);
+  Color get borderDefault => neutral200;
+  Color get divider => borderDefault;
+
+  LinearGradient get brandGradient => LinearGradient(
+        colors: [brandSecondary, brandPrimary],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
+
+  LinearGradient get userChatBubbleGradient => LinearGradient(
+        colors: [brandSecondary, chatBubbleUser],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      );
 
   SparkleColors copyWith({
     Color? brandPrimary,
@@ -747,6 +782,52 @@ class SparkleColors {
         galaxyShadow: galaxyShadow ?? this.galaxyShadow,
       );
 
+  SparkleColors lerp(SparkleColors other, double t) => SparkleColors(
+        brandPrimary: Color.lerp(brandPrimary, other.brandPrimary, t)!,
+        brandSecondary: Color.lerp(brandSecondary, other.brandSecondary, t)!,
+        semanticSuccess: Color.lerp(semanticSuccess, other.semanticSuccess, t)!,
+        semanticWarning: Color.lerp(semanticWarning, other.semanticWarning, t)!,
+        semanticError: Color.lerp(semanticError, other.semanticError, t)!,
+        semanticInfo: Color.lerp(semanticInfo, other.semanticInfo, t)!,
+        surfacePrimary: Color.lerp(surfacePrimary, other.surfacePrimary, t)!,
+        surfaceSecondary:
+            Color.lerp(surfaceSecondary, other.surfaceSecondary, t)!,
+        surfaceTertiary: Color.lerp(surfaceTertiary, other.surfaceTertiary, t)!,
+        surfaceAmbient: Color.lerp(surfaceAmbient, other.surfaceAmbient, t)!,
+        rimLight: Color.lerp(rimLight, other.rimLight, t)!,
+        glowPrimary: Color.lerp(glowPrimary, other.glowPrimary, t)!,
+        noiseColor: Color.lerp(noiseColor, other.noiseColor, t)!,
+        textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
+        textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,
+        textDisabled: Color.lerp(textDisabled, other.textDisabled, t)!,
+        brightness: t < 0.5 ? brightness : other.brightness,
+        taskLearning: Color.lerp(taskLearning, other.taskLearning, t)!,
+        taskTraining: Color.lerp(taskTraining, other.taskTraining, t)!,
+        taskErrorFix: Color.lerp(taskErrorFix, other.taskErrorFix, t)!,
+        taskReflection: Color.lerp(taskReflection, other.taskReflection, t)!,
+        taskSocial: Color.lerp(taskSocial, other.taskSocial, t)!,
+        taskPlanning: Color.lerp(taskPlanning, other.taskPlanning, t)!,
+        planSprint: Color.lerp(planSprint, other.planSprint, t)!,
+        planGrowth: Color.lerp(planGrowth, other.planGrowth, t)!,
+        statusOnline: Color.lerp(statusOnline, other.statusOnline, t)!,
+        statusOffline: Color.lerp(statusOffline, other.statusOffline, t)!,
+        statusInvisible: Color.lerp(statusInvisible, other.statusInvisible, t)!,
+        neutral200: Color.lerp(neutral200, other.neutral200, t)!,
+        neutral300: Color.lerp(neutral300, other.neutral300, t)!,
+        neutral400: Color.lerp(neutral400, other.neutral400, t)!,
+        neutral500: Color.lerp(neutral500, other.neutral500, t)!,
+        neutral600: Color.lerp(neutral600, other.neutral600, t)!,
+        chatBubbleUser: Color.lerp(chatBubbleUser, other.chatBubbleUser, t)!,
+        chatBubbleUserText:
+            Color.lerp(chatBubbleUserText, other.chatBubbleUserText, t)!,
+        chatBubbleOther: Color.lerp(chatBubbleOther, other.chatBubbleOther, t)!,
+        chatBubbleOtherText:
+            Color.lerp(chatBubbleOtherText, other.chatBubbleOtherText, t)!,
+        galaxyBackground:
+            Color.lerp(galaxyBackground, other.galaxyBackground, t)!,
+        galaxyShadow: Color.lerp(galaxyShadow, other.galaxyShadow, t)!,
+      );
+
   SparkleColors toHighContrast(bool enabled) => brightness == Brightness.light
       ? SparkleColors.light(highContrast: enabled)
       : SparkleColors.dark(highContrast: enabled);
@@ -826,42 +907,42 @@ class SparkleTypography {
         displayLarge: TextStyle(
           fontSize: 46.0,
           fontWeight: FontWeight.w700,
-          height: 1.08,
+          height: 1.10,
           letterSpacing: -0.8,
           fontFamilyFallback: sparkleFontFallback,
         ),
         headingLarge: TextStyle(
           fontSize: 30.0,
           fontWeight: FontWeight.w700,
-          height: 1.12,
+          height: 1.15,
           letterSpacing: -0.4,
           fontFamilyFallback: sparkleFontFallback,
         ),
         headingMedium: TextStyle(
           fontSize: 24.0,
           fontWeight: FontWeight.w600,
-          height: 1.18,
+          height: 1.20,
           letterSpacing: -0.2,
           fontFamilyFallback: sparkleFontFallback,
         ),
         titleLarge: TextStyle(
           fontSize: 19.0,
-          fontWeight: FontWeight.w600,
-          height: 1.32,
+          fontWeight: FontWeight.w500,
+          height: 1.35,
           letterSpacing: -0.1,
           fontFamilyFallback: sparkleFontFallback,
         ),
         bodyLarge: TextStyle(
           fontSize: 16.0,
           fontWeight: FontWeight.w400,
-          height: 1.58,
+          height: 1.68,
           letterSpacing: 0.1,
           fontFamilyFallback: sparkleFontFallback,
         ),
         bodyMedium: TextStyle(
           fontSize: 14.0,
           fontWeight: FontWeight.w400,
-          height: 1.52,
+          height: 1.62,
           letterSpacing: 0.1,
           fontFamilyFallback: sparkleFontFallback,
         ),
@@ -893,7 +974,7 @@ class SparkleTypography {
   // body style while the design-token migration converges on the new scale.
   TextStyle get bodySmall => bodyMedium.copyWith(
         fontSize: 12.0,
-        height: 1.45,
+        height: 1.52,
       );
 }
 
@@ -903,11 +984,11 @@ class SparkleSpacing {
   const SparkleSpacing();
   final double xs = 4.0;
   final double sm = 8.0;
-  final double md = 12.0;
-  final double lg = 16.0;
-  final double xl = 24.0;
-  final double xxl = 32.0;
-  final double xxxl = 48.0;
+  final double md = 16.0;
+  final double lg = 24.0;
+  final double xl = 32.0;
+  final double xxl = 48.0;
+  final double xxxl = 64.0;
 
   EdgeInsets edge({double? all, double? horizontal, double? vertical}) {
     if (all != null) return EdgeInsets.all(all);
@@ -922,7 +1003,7 @@ class SparkleSpacing {
 @immutable
 class SparkleAnimations {
   const SparkleAnimations();
-  final Duration quick = const Duration(milliseconds: 120);
+  final Duration quick = const Duration(milliseconds: 150);
   final Duration normal = const Duration(milliseconds: 180);
   final Duration slow = const Duration(milliseconds: 260);
 }
