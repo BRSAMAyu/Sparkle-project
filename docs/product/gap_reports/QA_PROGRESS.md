@@ -76,7 +76,7 @@
 | QA-P2-15 | Clean orphaned shop providers | Flutter | S | ✅ done | — | 06fcc0361 | Remove 7 unused |
 | QA-P2-16 | i18n → ARB: Insights feature (36 ternaries) | Flutter | L | 🔵 in-progress | claude-A | — | insights/ inline isChinese |
 | QA-P2-17 | i18n → ARB: User feature (11 ternaries) | Flutter | M | 🔵 in-progress | claude-A | — | user/ inline isChinese |
-| QA-P2-18 | i18n → ARB: Settings feature (15 ternaries) | Flutter | M | ⬜ pending | — | — | settings/ inline isChinese |
+| QA-P2-18 | i18n → ARB: Settings feature (15 ternaries) | Flutter | M | 🔵 in-progress | claude-A | — | settings/ inline isChinese |
 | QA-P2-19 | i18n → ARB: Home feature (10 ternaries) | Flutter | M | ⬜ pending | — | — | home/ inline isChinese |
 | QA-P2-20 | i18n → ARB: Plan feature (8 ternaries) | Flutter | M | ⬜ pending | — | — | plan/ inline isChinese |
 | QA-P2-21 | i18n → ARB: Goal feature (8 ternaries) | Flutter | M | ⬜ pending | — | — | goal/ inline isChinese |
