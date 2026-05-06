@@ -373,6 +373,12 @@ class Settings(BaseSettings):
     # Aurora Stage 40
     AURORA_STAGE40_CALENDAR_MODE: str = "live"  # off | shadow | live
 
+    # FME Phase-1 — First-Minute Experience kill switches.
+    # Default to "off" so behavior is identical to legacy until ops promotes.
+    # See backend/app/services/fme_kill_switch_service.py
+    FME_GOAL_FIRST_MINUTE_MODE: str = "off"  # off | shadow | live
+    FME_TASK_CARD_PROTOCOL_MODE: str = "off"  # off | shadow | live
+
     # Email (SMTP)
     EMAIL_ENABLED: bool | None = None
     SMTP_HOST: str = ""

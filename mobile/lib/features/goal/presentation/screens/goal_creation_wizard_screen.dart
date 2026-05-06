@@ -6,7 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/goal/data/models/goal_creation_models.dart';
+import 'package:sparkle/features/goal/data/models/goal_intent_models.dart';
 import 'package:sparkle/features/goal/data/repositories/goal_repository.dart';
+import 'package:sparkle/features/goal/data/services/goal_intent_service.dart';
+import 'package:sparkle/features/goal/presentation/widgets/goal_intent_input.dart';
+import 'package:sparkle/features/goal/presentation/widgets/intent_confirmation_card.dart';
 
 class GoalCreationWizardScreen extends ConsumerStatefulWidget {
   const GoalCreationWizardScreen({
@@ -26,6 +30,9 @@ class _GoalCreationWizardScreenState
   final _titleController = TextEditingController();
   final _motivationController = TextEditingController();
   final _descriptionController = TextEditingController();
+  // Phase-1 Entry Wire — first-minute intent input owned by the wizard so the
+  // input's text persists if the user backs into intent step from later steps.
+  final _intentController = TextEditingController();
 
   int _step = 0;
   String _goalType = 'academic';
@@ -36,6 +43,13 @@ class _GoalCreationWizardScreenState
   GoalDecompositionPreview? _preview;
   List<GoalMilestoneDraft> _milestones = const [];
 
+  // Phase-1 Entry Wire state. When [_intentAnalysis] is non-null and not
+  // disabled the wizard renders the IntentConfirmationCard at step 0; the
+  // user can then choose a suggested action (skip ahead) or pick a
+  // correction option (drop into the legacy 5-step flow).
+  bool _analyzingIntent = false;
+  GoalIntentAnalysis? _intentAnalysis;
+
   String _t(String zh, String en) => I18nService.instance.isChinese ? zh : en;
 
   @override
@@ -43,6 +57,7 @@ class _GoalCreationWizardScreenState
     _titleController.dispose();
     _motivationController.dispose();
     _descriptionController.dispose();
+    _intentController.dispose();
     super.dispose();
   }
 
@@ -137,7 +152,15 @@ class _GoalCreationWizardScreenState
   }
 
   bool get _primaryActionEnabled {
-    if (_loadingPreview || _creating) return false;
+    if (_loadingPreview || _creating || _analyzingIntent) return false;
+    // Step 0 in Entry Wire mode disables the bottom button — the input
+    // widget owns its own submit button, and the confirmation card uses
+    // chips/action rows. We only re-enable the bottom Continue button once
+    // the user has fallen back to the legacy chooser.
+    if (_step == 0 && _intentAnalysis == null) return false;
+    if (_step == 0 && _intentAnalysis != null && _intentAnalysis!.isActionable) {
+      return false;
+    }
     if (_step == 1) {
       return _titleController.text.trim().isNotEmpty &&
           _motivationController.text.trim().isNotEmpty;
@@ -149,6 +172,27 @@ class _GoalCreationWizardScreenState
   Widget _buildStep(BuildContext context) {
     switch (_step) {
       case 0:
+        // Phase-1 Entry Wire: surface the intent input/card if the user
+        // hasn't yet picked a path. The legacy type chooser is preserved as
+        // the fallback when the user explicitly says "都不对，我解释一下"
+        // or when the kill switch is off (server returns mode="disabled").
+        if (_intentAnalysis == null) {
+          return GoalIntentInput(
+            key: const ValueKey('goal-intent-input-step'),
+            controller: _intentController,
+            analyzing: _analyzingIntent,
+            onSubmit: _runIntentAnalysis,
+          );
+        }
+        if (_intentAnalysis!.isActionable) {
+          return IntentConfirmationCard(
+            key: const ValueKey('goal-intent-confirm-step'),
+            analysis: _intentAnalysis!,
+            onCorrectionSelected: _onIntentCorrection,
+            onSuggestedActionTapped: _onIntentSuggestedAction,
+          );
+        }
+        // mode=disabled or non-actionable → fall back to legacy chooser.
         return _GoalTypeStep(
           key: const ValueKey('goal-type-step'),
           selected: _goalType,
@@ -201,6 +245,87 @@ class _GoalCreationWizardScreenState
       return;
     }
     setState(() => _step++);
+  }
+
+  // ── Phase-1 Entry Wire helpers ────────────────────────────────────
+
+  Future<void> _runIntentAnalysis() async {
+    final text = _intentController.text.trim();
+    if (text.isEmpty || _analyzingIntent) return;
+    setState(() {
+      _analyzingIntent = true;
+      _error = null;
+    });
+    final analysis =
+        await ref.read(goalIntentServiceProvider).analyze(text);
+    if (!mounted) return;
+    if (analysis.isDisabled || !analysis.isActionable) {
+      // Kill switch off, server didn't recognise the intent, or transport
+      // failed — fall back to legacy wizard. We seed the title/motivation
+      // from whatever the user typed so they don't have to re-enter it.
+      _seedLegacyFromIntentText(text);
+      setState(() {
+        _intentAnalysis = analysis; // memoise so we don't re-call on rebuild
+        _analyzingIntent = false;
+      });
+      return;
+    }
+    // Pre-fill the legacy fields from the analyzer so that if the user
+    // later clicks "Continue" through legacy steps, they don't restart
+    // from scratch.
+    _seedLegacyFromAnalysis(text, analysis);
+    setState(() {
+      _intentAnalysis = analysis;
+      _analyzingIntent = false;
+    });
+  }
+
+  void _seedLegacyFromIntentText(String text) {
+    if (_titleController.text.trim().isEmpty) {
+      _titleController.text = text.length > 80 ? text.substring(0, 80) : text;
+    }
+    if (_motivationController.text.trim().isEmpty) {
+      _motivationController.text = text;
+    }
+  }
+
+  void _seedLegacyFromAnalysis(String text, GoalIntentAnalysis analysis) {
+    _seedLegacyFromIntentText(text);
+    _goalType = analysis.inferredGoalType;
+    _timeHorizon = analysis.inferredTimeHorizon;
+  }
+
+  void _onIntentCorrection(GoalIntentCorrectionOption option) {
+    setState(() {
+      switch (option.key) {
+        case 'confirm':
+          // User confirmed the judgement → jump to motivation step where
+          // they can refine title/motivation. Title was pre-seeded above.
+          _step = 1;
+        case 'adjust_high_score':
+          _goalType = 'academic';
+          _timeHorizon = 'short';
+          _step = 1;
+        case 'not_exam':
+          _intentAnalysis = null; // back to legacy chooser
+          _goalType = 'skill';
+        case 'explain_self':
+        default:
+          _intentAnalysis = null;
+      }
+    });
+  }
+
+  void _onIntentSuggestedAction(GoalIntentSuggestedAction action) {
+    // For Phase-1 we keep this simple: tapping a suggested action confirms
+    // the analysis and skips ahead to milestones (step 3) so the user
+    // sees a concrete plan without having to re-fill the form.
+    // The actual "first task" creation is wired in Phase-2 once the
+    // backend `create_with_intent` orchestrator lands.
+    setState(() {
+      _step = 3;
+    });
+    unawaited(_loadPreview());
   }
 
   Future<void> _loadPreview({bool force = false}) async {

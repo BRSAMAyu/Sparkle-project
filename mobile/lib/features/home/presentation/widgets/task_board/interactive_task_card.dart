@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
+import 'package:sparkle/features/task/presentation/widgets/task_protocol_panel.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_quick_action_menu.dart';
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
@@ -187,6 +188,13 @@ class InteractiveTaskCard extends ConsumerWidget {
                     .toList(),
               ),
             ],
+            // Phase-2 Execution Wire — surface the structured TaskCardProtocol
+            // (why_this_task / materials / updates / fallback) the existing
+            // panel already supports. The widget no-ops gracefully when the
+            // backend has no protocol payload for this task, so unknown
+            // legacy tasks render exactly like before.
+            const SizedBox(height: DS.spacing4),
+            TaskProtocolPanel(taskId: task.id),
             const SizedBox(height: DS.spacing12),
             // Action buttons
             Row(

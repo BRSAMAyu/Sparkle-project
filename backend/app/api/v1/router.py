@@ -54,6 +54,7 @@ from app.api.v1 import (
     files,
     focus,
     galaxy,
+    goal_intent,
     goals,
     graph_monitor,
     graphrag_trace,
@@ -165,6 +166,8 @@ api_router.include_router(dlq_admin.router, tags=["DLQ"])
 api_router.include_router(event_bus_health.router, prefix="/admin", tags=["Event Bus Health"])
 api_router.include_router(galaxy.router, tags=["galaxy"])
 api_router.include_router(goals.router, prefix="/goals", tags=["goals"])
+# FME Phase-1 — first-minute intent analysis; same /goals prefix as CRUD.
+api_router.include_router(goal_intent.router, prefix="/goals", tags=["goals"])
 api_router.include_router(error_book.router)  # Prefix is defined in router itself (/errors)
 api_router.include_router(error_book.error_book_router)  # Prefix is defined in router itself (/error-book)
 api_router.include_router(learning_paths.router)  # Already has prefix /learning-paths
