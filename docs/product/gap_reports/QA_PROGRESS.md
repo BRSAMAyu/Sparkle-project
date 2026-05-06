@@ -20,7 +20,7 @@
 | QA-P0-1 | RetrievalDirective → RAG consume 参数传递 | Python | M | ✅ done | — | 9068ef3e | QA_P0_critical: graph_rag.py retrieve() 加 retrieval_directive 参数 |
 | QA-P0-2 | RAG must_load/may_load/do_not_load 过滤 | Python | L | ✅ done | — | 88bfa07c | QA_P0_critical: 检索结果按 directive 列表过滤 |
 | QA-P0-3 | pollution_guard strict 阈值执行 | Python | M | ✅ done | — | 3db67f00 | QA_P0_critical: strict 模式下过滤低质量结果 |
-| QA-P0-4 | token_budget 执行限制检索量 | Python | M | 🔵 in-progress | claude-B | — | QA_P0_critical: 按 budget_tokens 截断检索结果 |
+| QA-P0-4 | token_budget 执行限制检索量 | Python | M | ✅ done | — | 3be7f7d21 | QA_P0_critical: 按 budget_tokens 截断检索结果 |
 | QA-P0-5 | RetrievalDirective 集成测试 | Python | M | ✅ done | — | 25e93fd1 | QA_P0_critical: 端到端测试 directive 过滤逻辑 |
 | QA-P0-6 | L1 fast-path 跳过 LLM decision loop | Python | S | ⬜ pending | — | — | QA_P1_arch: orchestrator.py:568 should_escalate=False 时短路 |
 
@@ -111,7 +111,7 @@
 
 | Priority | Total | ✅ done | ⬜ pending | 🔵 in-progress |
 |----------|-------|---------|-----------|----------------|
-| P0 | 6 | 4 | 1 | 1 |
+| P0 | 6 | 5 | 1 | 0 |
 | P1 | 20 | 0 | 20 | 0 |
 | P2 | 35 | 0 | 35 | 0 |
 | P3 | 5 | 0 | 5 | 0 |
