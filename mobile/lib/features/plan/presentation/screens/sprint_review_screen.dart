@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -23,6 +25,8 @@ class SprintReviewScreen extends ConsumerWidget {
     final zh = I18nService.instance.isChinese;
     final planState = ref.watch(planListProvider);
     final plan = planState.activePlans.where((p) => p.id == planId).firstOrNull;
+    final isLoading = dashboard.isLoading || planState.isLoading;
+    final error = dashboard.error ?? planState.error;
 
     final progress = sprint?.progress ?? plan?.progress ?? 0.0;
     final daysLeft = sprint?.daysLeft ?? 0;
@@ -47,40 +51,89 @@ class SprintReviewScreen extends ConsumerWidget {
           ),
         ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-        children: [
-          _ProgressHero(
-            name: sprintName,
-            progress: progress,
-            daysLeft: daysLeft,
-          ),
-          const SizedBox(height: 20),
-          _StatsRow(progress: progress, daysLeft: daysLeft),
-          const SizedBox(height: 24),
-          _SectionHeader(
-            icon: Icons.psychology_outlined,
-            title: zh ? '瓶颈分析' : 'Bottleneck Analysis',
-          ),
-          const SizedBox(height: 8),
-          _BottleneckCard(
-            planId: planId,
-            progress: progress,
-            daysLeft: daysLeft,
-          ),
-          const SizedBox(height: 24),
-          _SectionHeader(
-            icon: Icons.edit_note_rounded,
-            title: zh ? '复盘笔记' : 'Review Notes',
-          ),
-          const SizedBox(height: 8),
-          _ReviewNotesCard(planId: planId),
-          const SizedBox(height: 32),
-          _ActionButtons(planId: planId),
-        ],
-      ),
+      body: isLoading
+          ? const _SprintReviewSkeleton()
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+              children: [
+                if (error != null) ...[
+                  _ReviewStatusBanner(
+                    message: error,
+                    onRetry: () {
+                      unawaited(ref.read(dashboardProvider.notifier).refresh());
+                      unawaited(ref.read(planListProvider.notifier).refresh());
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                _ProgressHero(
+                  name: sprintName,
+                  progress: progress,
+                  daysLeft: daysLeft,
+                ),
+                const SizedBox(height: 20),
+                _StatsRow(progress: progress, daysLeft: daysLeft),
+                const SizedBox(height: 24),
+                _SectionHeader(
+                  icon: Icons.psychology_outlined,
+                  title: zh ? '瓶颈分析' : 'Bottleneck Analysis',
+                ),
+                const SizedBox(height: 8),
+                _BottleneckCard(
+                  planId: planId,
+                  progress: progress,
+                  daysLeft: daysLeft,
+                ),
+                const SizedBox(height: 24),
+                _SectionHeader(
+                  icon: Icons.edit_note_rounded,
+                  title: zh ? '复盘笔记' : 'Review Notes',
+                ),
+                const SizedBox(height: 8),
+                _ReviewNotesCard(planId: planId),
+                const SizedBox(height: 32),
+                _ActionButtons(planId: planId),
+              ],
+            ),
     );
   }
+}
+
+class _SprintReviewSkeleton extends StatelessWidget {
+  const _SprintReviewSkeleton();
+
+  @override
+  Widget build(BuildContext context) => ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+        physics: const NeverScrollableScrollPhysics(),
+        children: [
+          const SparkleCardSkeleton(),
+          const SizedBox(height: 20),
+          Row(
+            children: List.generate(
+              3,
+              (_) => const Expanded(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 5),
+                  child: Column(
+                    children: [
+                      SparkleSkeleton(width: 20, height: 20, borderRadius: 10),
+                      SizedBox(height: 6),
+                      SparkleSkeleton(height: 16, borderRadius: 6),
+                      SizedBox(height: 4),
+                      SparkleSkeleton(width: 40, height: 12, borderRadius: 6),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const SparkleCardSkeleton(),
+          const SizedBox(height: 24),
+          const SparkleCardSkeleton(),
+        ],
+      );
 }
 
 class _ProgressHero extends StatelessWidget {
@@ -102,10 +155,10 @@ class _ProgressHero extends StatelessWidget {
     final color = isUrgent ? DS.error : DS.brandPrimary;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(DS.spacing20),
       decoration: BoxDecoration(
         color: DS.surfaceHigh,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: DS.borderRadius20,
         border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
@@ -218,10 +271,13 @@ class _StatChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        padding: const EdgeInsets.symmetric(
+          vertical: DS.spacing12,
+          horizontal: DS.spacing10,
+        ),
         decoration: BoxDecoration(
           color: DS.surfaceHigh,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: DS.borderRadius12,
           border: Border.all(color: DS.borderSubtle),
         ),
         child: Column(
@@ -327,10 +383,10 @@ class _BottleneckCard extends ConsumerWidget {
     }
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.surfaceHigh,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: DS.borderRadius12,
         border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
@@ -398,6 +454,16 @@ class _ReviewNotesCard extends StatefulWidget {
 
 class _ReviewNotesCardState extends State<_ReviewNotesCard> {
   final _controller = TextEditingController();
+  bool _loading = true;
+  bool _saving = false;
+
+  static const _keyPrefix = 'sprint_review_notes_';
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadNotes());
+  }
 
   @override
   void dispose() {
@@ -410,10 +476,10 @@ class _ReviewNotesCardState extends State<_ReviewNotesCard> {
     final zh = I18nService.instance.isChinese;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DS.spacing16),
       decoration: BoxDecoration(
         color: DS.surfaceHigh,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: DS.borderRadius12,
         border: Border.all(color: DS.borderSubtle),
       ),
       child: Column(
@@ -421,6 +487,7 @@ class _ReviewNotesCardState extends State<_ReviewNotesCard> {
         children: [
           TextField(
             controller: _controller,
+            enabled: !_loading && !_saving,
             style: DS.bodySmall.copyWith(color: DS.textPrimary),
             maxLines: 4,
             decoration: InputDecoration(
@@ -442,7 +509,89 @@ class _ReviewNotesCardState extends State<_ReviewNotesCard> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: _loading || _saving ? null : () => unawaited(_save()),
+              icon: _saving
+                  ? const SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.save_outlined, size: 16),
+              label: Text(zh ? '保存笔记' : 'Save notes'),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _loadNotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    _controller.text = prefs.getString('$_keyPrefix${widget.planId}') ?? '';
+    setState(() => _loading = false);
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+      '$_keyPrefix${widget.planId}',
+      _controller.text.trim(),
+    );
+    if (!mounted) return;
+    setState(() => _saving = false);
+    final zh = I18nService.instance.isChinese;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(zh ? '复盘笔记已保存' : 'Review notes saved')),
+    );
+  }
+}
+
+class _ReviewStatusBanner extends StatelessWidget {
+  const _ReviewStatusBanner({
+    required this.message,
+    required this.onRetry,
+  });
+
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
+    return Semantics(
+      container: true,
+      label: zh ? '冲刺复盘加载异常：$message' : 'Sprint review load issue: $message',
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: DS.warning.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: DS.warning.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: DS.warning, size: 18),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            TextButton(
+              onPressed: onRetry,
+              child: Text(zh ? '重试' : 'Retry'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -471,7 +620,7 @@ class _ActionButtons extends ConsumerWidget {
               foregroundColor: DS.textOnPrimary,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: DS.borderRadius12,
               ),
             ),
             child: Text(
@@ -495,7 +644,7 @@ class _ActionButtons extends ConsumerWidget {
               foregroundColor: DS.textSecondary,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: DS.borderRadius12,
               ),
               side: BorderSide(color: DS.borderSubtle),
             ),
