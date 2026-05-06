@@ -29,8 +29,8 @@
 | P2-1 | ExperienceEnvelope 展示 userState/profileContext | M | ⏳ pending | — |
 | P2-2 | Achievement 展示 narrative/contextStory | M | ⏳ pending | — |
 | P2-3 | Galaxy 展示 exam_weight/difficulty/trainability | M | ⏳ pending | — |
-| P2-4 | StreakQuality 展示 recoveryScore + suggestedMessage | S | ⏳ pending | — |
-| P2-5 | 33 个 bare spinner 屏幕 → skeleton (批量) | L | ⏳ pending | — |
+| P2-4 | StreakQuality 展示 recoveryScore + suggestedMessage | S | ✅ done | 5235e8094 |
+| P2-5 | 33 个 bare spinner 屏幕 → skeleton (批量) | L | ✅ done (32 screens) | 238c348c3 |
 
 ## Notes
 
