@@ -1,7 +1,7 @@
 # QA Round 4 Tracker
 
 > **Date**: 2026-05-06 | **Report**: QA_ROUND4_2026-05-06.md
-> **Status**: IN PROGRESS
+> **Status**: COMPLETE
 
 ## P0 — 必修 (用户可感知)
 
@@ -26,9 +26,9 @@
 
 | # | 问题 | 工期 | 状态 | Commit |
 |---|------|------|------|--------|
-| P2-1 | ExperienceEnvelope 展示 userState/profileContext | M | ⏳ pending | — |
-| P2-2 | Achievement 展示 narrative/contextStory | M | ⏳ pending | — |
-| P2-3 | Galaxy 展示 exam_weight/difficulty/trainability | M | ⏳ pending | — |
+| P2-1 | ExperienceEnvelope 展示 userState/profileContext | M | ✅ done | 739ccd23f |
+| P2-2 | Achievement 展示 narrative/contextStory | M | ✅ accepted (contextStory already displayed) | — |
+| P2-3 | Galaxy 展示 exam_weight/difficulty/trainability | M | ❌ blocked (backend API needed) | — |
 | P2-4 | StreakQuality 展示 recoveryScore + suggestedMessage | S | ✅ done | 5235e8094 |
 | P2-5 | 33 个 bare spinner 屏幕 → skeleton (批量) | L | ✅ done (32 screens) | 238c348c3 |
 
@@ -36,3 +36,7 @@
 
 - O2 agent PlanModel "13/21 未渲染" 结论不准确，亲自 grep 纠正为仅 isPrimary 未使用
 - 所有修复需 self-review → Opus audit → commit → tracker update
+
+## Summary
+
+12 commits. All fixable items resolved. 1 blocked (P2-3 needs backend API). 1 accepted (P2-2 already implemented).
