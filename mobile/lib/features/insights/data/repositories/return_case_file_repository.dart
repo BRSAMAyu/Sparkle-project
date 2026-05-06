@@ -42,7 +42,7 @@ class ReturnCaseFileRepository {
       }
       throw Exception(_extractDioMessage(e, 'Failed to load return case file'));
     } catch (_) {
-      return null;
+      throw Exception('Unexpected error fetching return case file');
     }
   }
 

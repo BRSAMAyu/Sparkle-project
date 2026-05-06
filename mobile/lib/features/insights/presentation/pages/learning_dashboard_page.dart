@@ -176,6 +176,7 @@ class _TimeDistributionChart extends StatelessWidget {
       children: items.map((item) {
         final value = maxHours == 0 ? 0.0 : item.hours / maxHours;
         return Padding(
+          key: ValueKey(item.category),
           padding: const EdgeInsets.only(bottom: DS.spacing10),
           child: Row(
             children: [
