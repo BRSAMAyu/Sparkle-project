@@ -48,7 +48,7 @@
 | QA-P1-14 | PausedTaskBanner error handling | Flutter | M | ✅ done | — | f29e8b53a | Show error feedback on resume fail |
 | QA-P1-15 | Integrate UnderstandingSnapshotCard | Flutter | M | ✅ done | — | ac972153 | Replaced _UnderstandingExpansionSlot in growthSections |
 | QA-P1-16 | Register AccountabilityHubScreen route | Flutter | S | ⏭️ skip | — | — | Already registered: community_routes.dart:377 |
-| QA-P1-17 | Persist SprintReviewScreen notes | Flutter | M | 🔵 in-progress | claude-B | — | Wire save API |
+| QA-P1-17 | Persist SprintReviewScreen notes | Flutter | M | ✅ done | — | dc7f34cb5 | Wire save API |
 | QA-P1-18 | Replace duplicate GoalValueChip | Flutter | S | ⏭️ skip | — | — | Already uses shared GoalValueChip: unified_notification_card.dart:597 |
 | QA-P1-19 | Unit tests: per-channel delivery | Python | M | ✅ done | — | a362c8ef | 14 tests: _resolve_channel + handle_nudge_triggered |
 | QA-P1-20 | Unit tests: fatigue + streak quality | Python | M | 🔵 in-progress | claude-A | — | Fatigue penalty + Redis fallback |
@@ -116,7 +116,7 @@
 | Priority | Total | ✅ done | ⏭️ skip | ⬜ pending | 🔵 in-progress |
 |----------|-------|---------|---------|-----------|----------------|
 | P0 | 6 | 6 | 0 | 0 | 0 |
-| P1 | 20 | 8 | 10 | 0 | 2 |
+| P1 | 20 | 9 | 10 | 0 | 1 |
 | P2 | 35 | 0 | 0 | 35 | 0 |
 | P3 | 5 | 0 | 0 | 5 | 0 |
-| **Total** | **66** | **13** | **9** | **43** | **2** |
+| **Total** | **66** | **15** | **10** | **40** | **1** |
