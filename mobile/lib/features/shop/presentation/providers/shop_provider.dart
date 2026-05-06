@@ -1,17 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
+import 'package:sparkle/features/shop/data/repositories/shop_repository_provider.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
-
-// ========== Repository Provider ==========
-
-final shopRepositoryProvider = Provider<ShopRepository>((ref) {
-  final apiClient = ref.watch(apiClientProvider);
-  return ShopRepository(apiClient);
-});
 
 // ========== Shop Items State ==========
 
@@ -117,88 +110,6 @@ final shopItemsProvider =
   final repository = ref.watch(shopRepositoryProvider);
   return ShopItemsNotifier(repository, ref);
 });
-
-// ========== Purchase History State ==========
-
-class PurchaseHistoryState {
-  PurchaseHistoryState({
-    this.purchases = const [],
-    this.isLoading = false,
-    this.error,
-    this.hasMore = true,
-    this.currentOffset = 0,
-  });
-  final List<ShopPurchase> purchases;
-  final bool isLoading;
-  final String? error;
-  final bool hasMore;
-  final int currentOffset;
-
-  PurchaseHistoryState copyWith({
-    List<ShopPurchase>? purchases,
-    bool? isLoading,
-    String? error,
-    bool? hasMore,
-    int? currentOffset,
-  }) =>
-      PurchaseHistoryState(
-        purchases: purchases ?? this.purchases,
-        isLoading: isLoading ?? this.isLoading,
-        error: error ?? this.error,
-        hasMore: hasMore ?? this.hasMore,
-        currentOffset: currentOffset ?? this.currentOffset,
-      );
-}
-
-// ========== Purchase History Provider ==========
-
-class PurchaseHistoryNotifier extends StateNotifier<PurchaseHistoryState> {
-  PurchaseHistoryNotifier(this._repository) : super(PurchaseHistoryState());
-
-  final ShopRepository _repository;
-  static const int _limit = 20;
-
-  Future<void> loadPurchaseHistory({bool refresh = false}) async {
-    if (refresh) {
-      state = state.copyWith(
-        purchases: [],
-        currentOffset: 0,
-        hasMore: true,
-      );
-    }
-
-    if (state.isLoading || !state.hasMore) return;
-
-    state = state.copyWith(isLoading: true);
-
-    try {
-      final purchases = await _repository.getPurchaseHistory(
-        offset: state.currentOffset,
-      );
-
-      final newPurchases = [
-        ...state.purchases,
-        ...purchases,
-      ];
-
-      state = state.copyWith(
-        purchases: newPurchases,
-        isLoading: false,
-        hasMore: purchases.length >= _limit,
-        currentOffset: state.currentOffset + purchases.length,
-      );
-    } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: e.toString().replaceAll('Exception: ', ''),
-      );
-    }
-  }
-
-  Future<void> refresh() async {
-    await loadPurchaseHistory(refresh: true);
-  }
-}
 
 // ========== Inventory State ==========
 
