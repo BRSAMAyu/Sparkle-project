@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:isar/isar.dart';
-import 'package:sparkle/core/offline/local_database.dart';
 import 'package:sparkle/features/vocabulary/data/repositories/local_vocabulary_repository.dart';
 
 /// Local vocabulary state
@@ -246,36 +245,4 @@ class LocalVocabularyNotifier extends StateNotifier<LocalVocabularyState> {
   }
 }
 
-/// Repository provider
-final localVocabularyRepositoryProvider =
-    Provider<LocalVocabularyRepository>((ref) {
-  final repository = LocalVocabularyRepository();
-  final db = ref.watch(localDatabaseProvider);
 
-  ref.onAddListener(() {
-    repository.init(db);
-  });
-
-  try {
-    repository.init(db);
-  } catch (e) {
-    debugPrint('localVocabularyRepositoryProvider.init failed: $e');
-  }
-
-  return repository;
-});
-
-/// State provider
-final localVocabularyProvider =
-    StateNotifierProvider<LocalVocabularyNotifier, LocalVocabularyState>(
-  (ref) =>
-      LocalVocabularyNotifier(ref.watch(localVocabularyRepositoryProvider)),
-);
-
-/// Due count provider (for badges)
-final localVocabularyDueCountProvider =
-    Provider<int>((ref) => ref.watch(localVocabularyProvider).dueCount);
-
-/// Total count provider
-final localVocabularyTotalCountProvider =
-    Provider<int>((ref) => ref.watch(localVocabularyProvider).totalCount);
