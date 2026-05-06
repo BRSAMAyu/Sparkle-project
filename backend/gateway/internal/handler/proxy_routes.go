@@ -935,6 +935,25 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered aurora proxy routes (catch-all)")
 
+		// ==================== Missing Proxy Routes ====================
+
+		for _, r := range []struct {
+			prefix string
+			name   string
+		}{
+			{"/analytics", "analytics"},
+			{"/error-book", "error-book"},
+			{"/safe-experiments", "safe-experiments"},
+			{"/skills", "skills"},
+			{"/scenario-packs", "scenario-packs"},
+			{"/subtasks", "subtasks"},
+		} {
+			rg := api.Group(r.prefix)
+			rg.Use(authMiddleware)
+			rg.Any("/*path", h.proxyWithHeaders)
+			h.logger.Info("Registered " + r.name + " proxy routes")
+		}
+
 	// Health routes are handled locally by the gateway (setup.go) — do not proxy
 }
 
