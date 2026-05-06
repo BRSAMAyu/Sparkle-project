@@ -906,6 +906,16 @@ class ContextBuilderMixin:
                     "seed_library": seed_library_context,
                     "learning_gaps_summary": learning_gaps_summary,
                 }
+                # Self-model: strategy confidence, failure streak, task completion rate
+                with contextlib.suppress(Exception):
+                    from app.aurora.runtime_v1.self_model import SparkleSelfModelService
+                    self_model_summary = await SparkleSelfModelService.get_readout_summary(
+                        user_id=user_id,
+                        request_extra_context={},
+                        user_context_payload=user_context_data or {},
+                    )
+                    if self_model_summary:
+                        payload["self_model"] = self_model_summary
                 aurora_presence = await self._build_aurora_everyday_presence_context(
                     user_id=user_id,
                     db_session=db_session,

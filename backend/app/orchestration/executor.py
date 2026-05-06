@@ -58,6 +58,10 @@ class PlanExecutionResult:
     abort_reason: str | None = None
 
 
+_MAX_TOOL_CALLS_PER_REQUEST = 20
+_DAG_LAYER_MAX_CONCURRENCY = 10
+
+
 class ToolExecutor:
     """
     工具执行器
@@ -155,8 +159,8 @@ class ToolExecutor:
             except Exception:
                 continue
 
-        logger.warning(f"Failed to parse tool call arguments as JSON: {text}")
-        return {"_raw": text}
+        logger.warning(f"Failed to parse tool call arguments as JSON: {text[:200]}")
+        return {"_parse_error": "arguments were not valid JSON", "_raw_preview": text[:500]}
 
     @staticmethod
     def _session_info_mapping(db_session: Any) -> dict[str, Any] | None:
@@ -314,6 +318,18 @@ class ToolExecutor:
             executed_tool = False
             compensation_spec = self._parse_compensation_call(compensation_call)
             timeout_seconds = self._tool_timeout_seconds(tool)
+
+            # Enforce requires_confirmation before execution
+            if getattr(tool, "requires_confirmation", False):
+                approved = (runtime_context or {}).get("user_approved", False)
+                if not approved:
+                    return ToolResult(
+                        success=False,
+                        tool_name=tool_name,
+                        tool_call_id=tool_call_id,
+                        error_message=f"Tool '{tool_name}' requires user confirmation before execution",
+                        error_type="ConfirmationRequired",
+                    )
 
             await self._publish_tool_event(
                 TOOL_EXECUTION_STARTED,
@@ -658,7 +674,12 @@ class ToolExecutor:
             List[ToolResult]: 执行结果列表
         """
         results = []
-        for call in tool_calls:
+        capped_calls = tool_calls[:_MAX_TOOL_CALLS_PER_REQUEST]
+        if len(tool_calls) > _MAX_TOOL_CALLS_PER_REQUEST:
+            logger.warning(
+                f"Tool calls capped from {len(tool_calls)} to {_MAX_TOOL_CALLS_PER_REQUEST}"
+            )
+        for call in capped_calls:
             arguments = self._coerce_arguments(call["function"].get("arguments"))
             result = await self.execute_tool_call(
                 tool_name=call["function"]["name"],
@@ -726,18 +747,21 @@ class ToolExecutor:
                 },
             )
 
-            # Execute steps within this layer concurrently
-            step_results = await asyncio.gather(
-                *(
-                    self._execute_step(
-                        tc,
+            # Execute steps within this layer concurrently (bounded)
+            semaphore = asyncio.Semaphore(_DAG_LAYER_MAX_CONCURRENCY)
+
+            async def _bounded_step(tc_item: Any) -> Any:
+                async with semaphore:
+                    return await self._execute_step(
+                        tc_item,
                         user_id,
                         db_session,
                         progress_callback,
                         runtime_context=runtime_context,
                     )
-                    for tc in resolved_layer
-                ),
+
+            step_results = await asyncio.gather(
+                *(_bounded_step(tc) for tc in resolved_layer),
                 return_exceptions=True,
             )
 

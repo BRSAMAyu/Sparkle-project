@@ -567,12 +567,13 @@ class LLMService:
 
                 try:
                     async with llm_concurrency.acquire(provider_name):
-                        response = await current_provider.chat(
-                            safe_messages,
-                            model=selection.config.model_name,
-                            temperature=selection.config.temperature,
-                            **request_kwargs
-                        )
+                        async with asyncio.timeout(120):
+                            response = await current_provider.chat(
+                                safe_messages,
+                                model=selection.config.model_name,
+                                temperature=selection.config.temperature,
+                                **request_kwargs
+                            )
                         return sanitize_llm_output(
                             response,
                             context={"user_id": user_id, "type": "chat"},
@@ -808,12 +809,13 @@ class LLMService:
                         for key, value in request_kwargs.items():
                             merged_kwargs.setdefault(key, value)
                         async with llm_concurrency.acquire(provider_name):
-                            return await current_provider.chat(
-                                safe_messages,
-                                model=current_selection.config.model_name,
-                                temperature=current_selection.config.temperature,
-                                **merged_kwargs,
-                            )
+                            async with asyncio.timeout(180):
+                                return await current_provider.chat(
+                                    safe_messages,
+                                    model=current_selection.config.model_name,
+                                    temperature=current_selection.config.temperature,
+                                    **merged_kwargs,
+                                )
 
                     response = await llm_fallback_manager.execute_with_fallback(
                         selection,
@@ -821,12 +823,13 @@ class LLMService:
                         operation_type="reason",
                     )
                 else:
-                    response = await self.provider.chat(
-                        safe_messages,
-                        model=resolved_model,
-                        temperature=temperature,
-                        **kwargs,
-                    )
+                    async with asyncio.timeout(180):
+                        response = await self.provider.chat(
+                            safe_messages,
+                            model=resolved_model,
+                            temperature=temperature,
+                            **kwargs,
+                        )
                 await circuit_breaker_service.record_success("primary_llm")
                 return sanitize_llm_output(
                     response,
