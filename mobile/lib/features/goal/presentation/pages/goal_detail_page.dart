@@ -3,13 +3,17 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/strategy_migration_wizard.dart';
 import 'package:sparkle/features/community/presentation/widgets/similar_goal_pursuers_card.dart';
+import 'package:sparkle/features/goal/data/models/scenario_pack_models.dart';
+import 'package:sparkle/features/goal/data/services/scenario_pack_service.dart';
 import 'package:sparkle/features/goal/presentation/providers/goal_detail_provider.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_bottleneck_strip.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_detail_l10n.dart';
+import 'package:sparkle/features/goal/presentation/widgets/journey_progress_card.dart';
 import 'package:sparkle/features/goal/presentation/widgets/minimum_criteria_card.dart';
 
 class GoalDetailPage extends ConsumerWidget {
@@ -57,6 +61,7 @@ class GoalDetailPage extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
             children: [
               _GoalHeader(data: data),
+              JourneyProgressFutureCard(goalId: goalId),
               if (data.strategyBelief != null) ...[
                 const SizedBox(height: 14),
                 StrategyMigrationWizard(
@@ -128,6 +133,27 @@ class GoalDetailPage extends ConsumerWidget {
     );
   }
 }
+
+/// Async wrapper that fetches journey progress and renders [JourneyProgressCard].
+class JourneyProgressFutureCard extends ConsumerWidget {
+  const JourneyProgressFutureCard({required this.goalId, super.key});
+
+  final String goalId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final progressAsync = ref.watch(_journeyProgressProvider(goalId));
+    return progressAsync.when(
+      data: (progress) => JourneyProgressCard(progress: progress),
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+}
+
+final _journeyProgressProvider = FutureProvider.family<JourneyProgress, String>(
+  (ref, goalId) => ref.read(scenarioPackServiceProvider).getProgress(goalId: goalId),
+);
 
 class _GoalHeader extends StatelessWidget {
   const _GoalHeader({required this.data});
@@ -684,7 +710,7 @@ class _GoalDetailSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => SingleChildScrollView(
-        padding: const EdgeInsets.all(DS.spacing16),
+        padding: EdgeInsets.all(DS.spacing16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -692,22 +718,22 @@ class _GoalDetailSkeleton extends StatelessWidget {
             Row(
               children: [
                 const SparkleSkeleton(width: 76, height: 76, borderRadius: 999),
-                const SizedBox(width: DS.spacing16),
+                SizedBox(width: DS.spacing16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SparkleSkeleton(width: 180, height: 20),
-                      const SizedBox(height: DS.spacing8),
+                      SizedBox(height: DS.spacing8),
                       const SparkleSkeleton(width: 120, height: 14),
-                      const SizedBox(height: DS.spacing12),
-                      const Row(
+                      SizedBox(height: DS.spacing12),
+                      Row(
                         children: [
-                          SparkleSkeleton(width: 60, height: 24),
+                          const SparkleSkeleton(width: 60, height: 24),
                           SizedBox(width: DS.spacing8),
-                          SparkleSkeleton(width: 80, height: 24),
+                          const SparkleSkeleton(width: 80, height: 24),
                           SizedBox(width: DS.spacing8),
-                          SparkleSkeleton(width: 50, height: 24),
+                          const SparkleSkeleton(width: 50, height: 24),
                         ],
                       ),
                     ],
@@ -715,23 +741,23 @@ class _GoalDetailSkeleton extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: DS.spacing20),
+            SizedBox(height: DS.spacing20),
             // Strategy card
             const SparkleCardSkeleton(),
-            const SizedBox(height: DS.spacing14),
+            SizedBox(height: DS.spacing14),
             // Minimum criteria card
             const SparkleCardSkeleton(),
-            const SizedBox(height: DS.spacing14),
+            SizedBox(height: DS.spacing14),
             // Metrics
             ...List.generate(
               3,
-              (_) => const Padding(
+              (_) => Padding(
                 padding: EdgeInsets.only(bottom: DS.spacing12),
                 child: Row(
                   children: [
-                    SparkleSkeleton(width: 80, height: 14),
+                    const SparkleSkeleton(width: 80, height: 14),
                     SizedBox(width: DS.spacing12),
-                    Expanded(child: SparkleSkeleton(height: 8)),
+                    const Expanded(child: SparkleSkeleton(height: 8)),
                   ],
                 ),
               ),

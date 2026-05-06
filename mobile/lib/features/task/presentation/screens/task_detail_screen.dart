@@ -71,19 +71,22 @@ class _TaskDetailView extends ConsumerWidget {
   final TaskModel task;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => Column(
-        children: [
-          Expanded(
-            child: CustomScrollView(
-              slivers: [
-                _buildSliverAppBar(context, ref),
-                SliverToBoxAdapter(
-                  child: ContentConstraint(
-                    child: Padding(
-                      padding: const EdgeInsets.all(DS.spacing16),
-                      child: SparkleStaggerList(
-                        gap: DS.spacing24,
-                        children: [
+  Widget build(BuildContext context, WidgetRef ref) => Semantics(
+        container: true,
+        label: '${context.l10n.taskDetailSemanticsTitle}: ${task.title}',
+        child: Column(
+          children: [
+            Expanded(
+              child: CustomScrollView(
+                slivers: [
+                  _buildSliverAppBar(context, ref),
+                  SliverToBoxAdapter(
+                    child: ContentConstraint(
+                      child: Padding(
+                        padding: const EdgeInsets.all(DS.spacing16),
+                        child: SparkleStaggerList(
+                          gap: DS.spacing24,
+                          children: [
                           if (task.status == TaskStatus.paused ||
                               task.status == TaskStatus.restore)
                             _buildPausedRecoveryCard(context, ref),
@@ -140,7 +143,8 @@ class _TaskDetailView extends ConsumerWidget {
           ),
           _BottomActionBar(task: task),
         ],
-      );
+      ),
+    );
 
   Widget _buildPausedRecoveryCard(BuildContext context, WidgetRef ref) {
     final pauseState = task.guideJson?['pause_state'];

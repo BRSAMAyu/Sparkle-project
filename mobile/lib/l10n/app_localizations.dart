@@ -55176,6 +55176,18 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'否'**
   String get envelopeValueNo;
+
+  /// No description provided for @taskDetailSemanticsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务详情'**
+  String get taskDetailSemanticsTitle;
+
+  /// No description provided for @chatSemanticsScreen.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊天界面'**
+  String get chatSemanticsScreen;
 }
 
 class _AppLocalizationsDelegate

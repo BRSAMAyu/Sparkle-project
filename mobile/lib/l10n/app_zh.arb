@@ -13570,5 +13570,7 @@
     "envelopeAdapting": "Aurora 正在适应",
     "envelopeValueNone": "无",
     "envelopeValueYes": "是",
-    "envelopeValueNo": "否"
+    "envelopeValueNo": "否",
+    "taskDetailSemanticsTitle": "任务详情",
+    "chatSemanticsScreen": "聊天界面"
 }

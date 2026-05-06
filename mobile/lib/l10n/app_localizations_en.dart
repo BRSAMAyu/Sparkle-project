@@ -31658,4 +31658,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get envelopeValueNo => 'no';
+
+  @override
+  String get taskDetailSemanticsTitle => 'Task detail';
+
+  @override
+  String get chatSemanticsScreen => 'Chat screen';
 }

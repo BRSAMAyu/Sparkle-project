@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -3287,16 +3288,7 @@ class _ChatHistorySheetState extends ConsumerState<_ChatHistorySheet> {
                 future: _historyFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return SparkleListSkeleton(
-                      itemCount: 5,
-                      itemBuilder: (_, i) => Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: DS.spacing16,
-                          vertical: DS.spacing6,
-                        ),
-                        child: const SparkleCardSkeleton(),
-                      ),
-                    );
+                    return const SparkleListSkeleton(count: 5);
                   }
 
                   if (snapshot.hasError) {

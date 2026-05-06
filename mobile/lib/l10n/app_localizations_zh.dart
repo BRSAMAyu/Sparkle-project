@@ -30355,4 +30355,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get envelopeValueNo => '否';
+
+  @override
+  String get taskDetailSemanticsTitle => '任务详情';
+
+  @override
+  String get chatSemanticsScreen => '聊天界面';
 }

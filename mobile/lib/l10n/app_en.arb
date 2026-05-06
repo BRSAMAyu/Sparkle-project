@@ -13549,5 +13549,7 @@
     "envelopeAdapting": "Aurora adapting",
     "envelopeValueNone": "none",
     "envelopeValueYes": "yes",
-    "envelopeValueNo": "no"
+    "envelopeValueNo": "no",
+    "taskDetailSemanticsTitle": "Task detail",
+    "chatSemanticsScreen": "Chat screen"
 }
