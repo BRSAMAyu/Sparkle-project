@@ -28,6 +28,7 @@ import 'package:sparkle/features/experience/presentation/widgets/understanding_s
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_slot_config_provider.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_goal_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/exam_sprint_dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/home_growth_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/intent_prediction_provider.dart';
@@ -477,6 +478,65 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       onPressed: () => context.push('/tasks'),
                     ),
                   ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+  Widget _buildOnboardingWelcome() => ContentConstraint(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            DS.spacing16,
+            DS.spacing12,
+            DS.spacing16,
+            DS.spacing16,
+          ),
+          child: DashboardSectionShell(
+            tone: DashboardSurfaceTone.hero,
+            padding: const EdgeInsets.all(DS.spacing24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                DashboardSectionHeader(
+                  icon: Icons.auto_awesome_rounded,
+                  iconSize: 44,
+                  accentColor: DS.brandPrimary,
+                  title: context.l10n.chatWelcomeTitle,
+                  summary: I18nService.instance.isChinese
+                      ? '我是你的AI成长伙伴。设定目标，我来帮你一步步达成。'
+                      : 'I\'m your AI growth companion. Set a goal and I\'ll help you achieve it step by step.',
+                ),
+                const SizedBox(height: DS.spacing20),
+                _OnboardingQuickCard(
+                  icon: Icons.flag_outlined,
+                  color: DS.brandPrimary,
+                  title: I18nService.instance.isChinese ? '设定目标' : 'Set a goal',
+                  subtitle: I18nService.instance.isChinese
+                      ? '告诉我你想达成什么，我来帮你制定计划'
+                      : 'Tell me what you want to achieve',
+                  onTap: () => context.go('/goals/new'),
+                ),
+                const SizedBox(height: DS.spacing8),
+                _OnboardingQuickCard(
+                  icon: Icons.chat_bubble_outline,
+                  color: DS.success,
+                  title: I18nService.instance.isChinese ? '跟Sparkle聊聊' : 'Chat with Sparkle',
+                  subtitle: I18nService.instance.isChinese
+                      ? '聊聊你的想法，获得个性化建议'
+                      : 'Share your thoughts, get personalized guidance',
+                  onTap: () => context.go('/chat'),
+                ),
+                const SizedBox(height: DS.spacing8),
+                _OnboardingQuickCard(
+                  icon: Icons.explore_outlined,
+                  color: DS.info,
+                  title: I18nService.instance.isChinese ? '探索知识星图' : 'Explore knowledge map',
+                  subtitle: I18nService.instance.isChinese
+                      ? '发现你的知识结构，找到提升方向'
+                      : 'Discover your knowledge structure and growth areas',
+                  onTap: () => context.go('/galaxy'),
                 ),
               ],
             ),
@@ -1032,6 +1092,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final activeBottleneck = growthState?.activeBottleneck;
     final examSprintDashboard = examSprintDashboardAsync.valueOrNull;
     final slotConfig = ref.watch(dashboardSlotConfigProvider);
+    final goalOverview = ref.watch(multiGoalOverviewProvider);
+    final hasNoGoals = goalOverview.maybeWhen(
+      data: (d) => d.goals.isEmpty,
+      orElse: () => false,
+    );
     final workspaceCardCount = ref.watch(
       dashboardCardConfigProvider.select((c) => c.visibleCardIds.length),
     );
@@ -1361,11 +1426,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     slivers: [
                       SliverList(
                         delegate: SliverChildListDelegate(
-                          [
-                            ...growthSections,
-                            ...dashboardSections,
-                            const AuroraCalibrationStrip(),
-                          ],
+                          hasNoGoals
+                              ? [
+                                  _buildOnboardingWelcome(),
+                                  ...dashboardSections,
+                                ]
+                              : [
+                                  ...growthSections,
+                                  ...dashboardSections,
+                                  const AuroraCalibrationStrip(),
+                                ],
                         ),
                       ),
                       SliverToBoxAdapter(
@@ -3112,4 +3182,81 @@ class _GoalChip extends StatelessWidget {
           ),
         ),
       );
+}
+
+class _OnboardingQuickCard extends StatelessWidget {
+  const _OnboardingQuickCard({
+    required this.icon,
+    required this.color,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final Color color;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: title,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: DS.borderRadius12,
+          child: Container(
+            padding: const EdgeInsets.all(DS.spacing14),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.06),
+              borderRadius: DS.borderRadius12,
+              border: Border.all(color: color.withValues(alpha: 0.15)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.12),
+                    borderRadius: DS.borderRadius8,
+                  ),
+                  child: Icon(icon, color: color, size: 22),
+                ),
+                const SizedBox(width: DS.spacing12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeBase,
+                          fontWeight: DS.fontWeightSemibold,
+                          color: DS.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: DS.fontSizeSm,
+                          color: DS.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: color.withValues(alpha: 0.4)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
