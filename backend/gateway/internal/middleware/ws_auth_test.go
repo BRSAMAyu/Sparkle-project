@@ -71,7 +71,7 @@ func TestWsAuthMiddleware_InvalidHeaderToken(t *testing.T) {
 	recorder := performWsAuthRequest(router, "/ws", "not-a-valid-jwt")
 
 	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
-	assert.Contains(t, recorder.Body.String(), "Invalid or expired token")
+	assert.Contains(t, recorder.Body.String(), "invalid_or_expired_token")
 }
 
 func TestWsAuthMiddleware_MissingToken(t *testing.T) {
@@ -81,7 +81,7 @@ func TestWsAuthMiddleware_MissingToken(t *testing.T) {
 	recorder := performWsAuthRequest(router, "/ws", "")
 
 	assert.Equal(t, http.StatusUnauthorized, recorder.Code)
-	assert.Contains(t, recorder.Body.String(), "Authorization token required")
+	assert.Contains(t, recorder.Body.String(), "authorization_token_required")
 }
 
 func TestWsAuthMiddleware_QueryTokenPolicy(t *testing.T) {
@@ -101,7 +101,7 @@ func TestWsAuthMiddleware_QueryTokenPolicy(t *testing.T) {
 	disallowedRouter := newWsAuthTestRouter(cfg, nil)
 	disallowed := performWsAuthRequest(disallowedRouter, "/ws?token="+token, "")
 	require.Equal(t, http.StatusUnauthorized, disallowed.Code)
-	assert.Contains(t, disallowed.Body.String(), "Authorization token required")
+	assert.Contains(t, disallowed.Body.String(), "authorization_token_required")
 
 	cfg.AllowWsQueryToken = true
 	allowedRouter := newWsAuthTestRouter(cfg, nil)
