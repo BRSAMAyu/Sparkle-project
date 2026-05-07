@@ -35905,6 +35905,24 @@ abstract class AppLocalizations {
   /// **'你已经成为 Sparkle 的核心用户。把这段成长分享出去，也把它认真留给现在的自己。'**
   String get achievementMilestoneCoreUserMessage;
 
+  /// No description provided for @achievementMilestoneBadgeGalaxy.
+  ///
+  /// In zh, this message translates to:
+  /// **'星河探索者'**
+  String get achievementMilestoneBadgeGalaxy;
+
+  /// No description provided for @achievementMilestoneBadgeSprint.
+  ///
+  /// In zh, this message translates to:
+  /// **'冲刺老将'**
+  String get achievementMilestoneBadgeSprint;
+
+  /// No description provided for @achievementMilestoneBadgeCore.
+  ///
+  /// In zh, this message translates to:
+  /// **'星火核心用户'**
+  String get achievementMilestoneBadgeCore;
+
   /// No description provided for @achievementListEmptyNoUnlock.
   ///
   /// In zh, this message translates to:
@@ -56160,6 +56178,42 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'这个判断准确吗？'**
   String get chatReceiptJudgmentAccurate;
+
+  /// No description provided for @communityCommentsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'评论'**
+  String get communityCommentsTitle;
+
+  /// No description provided for @communityCommentSendFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送失败'**
+  String get communityCommentSendFailed;
+
+  /// No description provided for @communityCommentDeleteFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'删除失败'**
+  String get communityCommentDeleteFailed;
+
+  /// No description provided for @communityCommentRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get communityCommentRetry;
+
+  /// No description provided for @communityCommentEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂无评论'**
+  String get communityCommentEmpty;
+
+  /// No description provided for @communityCommentHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'写评论...'**
+  String get communityCommentHint;
 }
 
 class _AppLocalizationsDelegate

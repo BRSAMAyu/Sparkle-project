@@ -20517,6 +20517,15 @@ class AppLocalizationsEn extends AppLocalizations {
       'You\'ve become a core Sparkle user. Share this growth, and save it for yourself.';
 
   @override
+  String get achievementMilestoneBadgeGalaxy => 'Galaxy Explorer';
+
+  @override
+  String get achievementMilestoneBadgeSprint => 'Sprint Veteran';
+
+  @override
+  String get achievementMilestoneBadgeCore => 'Core Sparkle User';
+
+  @override
   String get achievementListEmptyNoUnlock => 'No achievements unlocked yet';
 
   @override
@@ -32208,4 +32217,22 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chatReceiptJudgmentAccurate => 'Is this judgment accurate?';
+
+  @override
+  String get communityCommentsTitle => 'Comments';
+
+  @override
+  String get communityCommentSendFailed => 'Failed to send';
+
+  @override
+  String get communityCommentDeleteFailed => 'Failed to delete';
+
+  @override
+  String get communityCommentRetry => 'Retry';
+
+  @override
+  String get communityCommentEmpty => 'No comments yet';
+
+  @override
+  String get communityCommentHint => 'Write a comment...';
 }

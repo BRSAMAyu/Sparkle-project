@@ -13862,5 +13862,11 @@
   "chatReceiptActionChange": "行动调整",
   "chatReceiptExperienceChange": "Aurora 体验调整",
   "chatReceiptChangedThisTurn": "这轮改变",
-  "chatReceiptJudgmentAccurate": "这个判断准确吗？"
+  "chatReceiptJudgmentAccurate": "这个判断准确吗？",
+  "communityCommentsTitle": "评论",
+  "communityCommentSendFailed": "发送失败",
+  "communityCommentDeleteFailed": "删除失败",
+  "communityCommentRetry": "重试",
+  "communityCommentEmpty": "暂无评论",
+  "communityCommentHint": "写评论..."
 }

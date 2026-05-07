@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/response_parser.dart';
-import 'package:sparkle/core/providers/locale_provider.dart';
 
 /// Shows a bottom sheet with comments for a post and an input field.
 Future<void> showCommentSheet(
@@ -16,14 +16,12 @@ Future<void> showCommentSheet(
   String postId, {
   String? postContent,
 }) {
-  final isChinese = ref.read(localeProvider).languageCode == 'zh';
   return showSensoryModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     builder: (sheetContext) => _CommentSheetContent(
       postId: postId,
       postContent: postContent,
-      isChinese: isChinese,
     ),
   );
 }
@@ -32,12 +30,10 @@ class _CommentSheetContent extends ConsumerStatefulWidget {
   const _CommentSheetContent({
     required this.postId,
     required this.postContent,
-    required this.isChinese,
   });
 
   final String postId;
   final String? postContent;
-  final bool isChinese;
 
   @override
   ConsumerState<_CommentSheetContent> createState() =>
@@ -111,7 +107,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
       if (mounted) {
         AppFeedback.error(
           context,
-          widget.isChinese ? '发送失败' : 'Failed to send',
+          context.l10n.communityCommentSendFailed,
         );
       }
     } finally {
@@ -133,7 +129,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
       if (mounted) {
         AppFeedback.error(
           context,
-          widget.isChinese ? '删除失败' : 'Failed to delete',
+          context.l10n.communityCommentDeleteFailed,
         );
       }
     }
@@ -142,6 +138,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = context.l10n;
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
       maxChildSize: 0.9,
@@ -154,7 +151,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
             child: Row(
               children: [
                 Text(
-                  widget.isChinese ? '评论' : 'Comments',
+                  l10n.communityCommentsTitle,
                   style: theme.textTheme.titleMedium,
                 ),
                 const Spacer(),
@@ -185,13 +182,13 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
                     ? Center(
                         child: TextButton(
                           onPressed: _loadComments,
-                          child: Text(widget.isChinese ? '重试' : 'Retry'),
+                          child: Text(l10n.communityCommentRetry),
                         ),
                       )
                     : _comments.isEmpty
                         ? Center(
                             child: Text(
-                              widget.isChinese ? '暂无评论' : 'No comments yet',
+                              l10n.communityCommentEmpty,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -240,8 +237,7 @@ class _CommentSheetContentState extends ConsumerState<_CommentSheetContent> {
                     child: TextField(
                       controller: _inputController,
                       decoration: InputDecoration(
-                        hintText:
-                            widget.isChinese ? '写评论...' : 'Write a comment...',
+                        hintText: l10n.communityCommentHint,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),

@@ -13841,5 +13841,11 @@
   "chatReceiptActionChange": "Action change",
   "chatReceiptExperienceChange": "Aurora experience change",
   "chatReceiptChangedThisTurn": "Changed this turn",
-  "chatReceiptJudgmentAccurate": "Is this judgment accurate?"
+  "chatReceiptJudgmentAccurate": "Is this judgment accurate?",
+  "communityCommentsTitle": "Comments",
+  "communityCommentSendFailed": "Failed to send",
+  "communityCommentDeleteFailed": "Failed to delete",
+  "communityCommentRetry": "Retry",
+  "communityCommentEmpty": "No comments yet",
+  "communityCommentHint": "Write a comment..."
 }

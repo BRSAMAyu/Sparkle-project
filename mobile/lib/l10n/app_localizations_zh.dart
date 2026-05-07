@@ -19675,6 +19675,15 @@ class AppLocalizationsZh extends AppLocalizations {
       '你已经成为 Sparkle 的核心用户。把这段成长分享出去，也把它认真留给现在的自己。';
 
   @override
+  String get achievementMilestoneBadgeGalaxy => '星河探索者';
+
+  @override
+  String get achievementMilestoneBadgeSprint => '冲刺老将';
+
+  @override
+  String get achievementMilestoneBadgeCore => '星火核心用户';
+
+  @override
   String get achievementListEmptyNoUnlock => '还没有解锁任何成就';
 
   @override
@@ -30873,4 +30882,22 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get chatReceiptJudgmentAccurate => '这个判断准确吗？';
+
+  @override
+  String get communityCommentsTitle => '评论';
+
+  @override
+  String get communityCommentSendFailed => '发送失败';
+
+  @override
+  String get communityCommentDeleteFailed => '删除失败';
+
+  @override
+  String get communityCommentRetry => '重试';
+
+  @override
+  String get communityCommentEmpty => '暂无评论';
+
+  @override
+  String get communityCommentHint => '写评论...';
 }
