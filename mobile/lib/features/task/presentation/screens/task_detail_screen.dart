@@ -17,6 +17,7 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/services/notification_service.dart' show navigatorKey;
 import 'package:sparkle/core/services/share_poster_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
@@ -500,7 +501,10 @@ class _TaskDetailView extends ConsumerWidget {
         plans.addAll(await ref.read(planRepositoryProvider).getPlans());
       } catch (e) {
         if (!context.mounted) return;
-        AppFeedback.error(context, 'Failed to load plans: $e');
+        final loadZh =
+            Localizations.localeOf(context).languageCode == 'zh';
+        AppFeedback.error(
+            context, loadZh ? '加载计划失败: $e' : 'Failed to load plans: $e');
         return;
       }
     }
@@ -1044,6 +1048,28 @@ class _BottomActionBar extends ConsumerWidget {
                                         .deleteTask(task.id),
                                   );
                                   context.pop();
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    final navContext =
+                                        navigatorKey.currentContext;
+                                    if (navContext != null) {
+                                      final zh = Localizations.localeOf(
+                                              navContext)
+                                          .languageCode ==
+                                          'zh';
+                                      AppFeedback.undoable(
+                                        context: navContext,
+                                        message: zh
+                                            ? '任务已删除'
+                                            : 'Task deleted',
+                                        actionLabel:
+                                            zh ? '撤销' : 'Undo',
+                                        onAction: () => ref
+                                            .read(taskListProvider.notifier)
+                                            .restoreDeletedTask(),
+                                      );
+                                    }
+                                  });
                                 },
                                 customGradient: DS.errorGradient,
                                 size: CustomButtonSize.small,

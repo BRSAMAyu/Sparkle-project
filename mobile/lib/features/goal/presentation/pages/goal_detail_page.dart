@@ -734,6 +734,15 @@ class _GoalDetailSkeleton extends StatelessWidget {
             // Minimum criteria card
             const SparkleCardSkeleton(),
             SizedBox(height: DS.spacing14),
+            // Today step card
+            const SparkleCardSkeleton(),
+            SizedBox(height: DS.spacing14),
+            // Plan health band
+            const SparkleCardSkeleton(),
+            SizedBox(height: DS.spacing14),
+            // Accountability card
+            const SparkleCardSkeleton(),
+            SizedBox(height: DS.spacing14),
             // Metrics
             ...List.generate(
               3,

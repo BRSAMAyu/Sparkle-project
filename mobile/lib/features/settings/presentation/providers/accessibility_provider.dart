@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 
 const String kAccessibilitySettingsStorageKey =
@@ -230,6 +231,12 @@ class AccessibilitySettingsNotifier
       hapticFeedback: hapticFeedback,
       lowLoadMode: lowLoadMode,
     );
+    if (highContrast != null) {
+      final themeManager = _ref.read(themeManagerProvider);
+      if (themeManager.highContrast != highContrast) {
+        unawaited(themeManager.toggleHighContrast(highContrast));
+      }
+    }
     return update(next);
   }
 

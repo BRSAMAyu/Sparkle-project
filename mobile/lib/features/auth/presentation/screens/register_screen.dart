@@ -61,6 +61,18 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     }
   }
 
+  _PasswordStrength _passwordStrength(String password) {
+    var score = 0;
+    if (password.length >= 6) score++;
+    if (password.length >= 10) score++;
+    if (RegExp(r'[A-Z]').hasMatch(password)) score++;
+    if (RegExp(r'[0-9]').hasMatch(password)) score++;
+    if (RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(password)) score++;
+    if (score <= 1) return _PasswordStrength.weak;
+    if (score <= 3) return _PasswordStrength.fair;
+    return _PasswordStrength.strong;
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
@@ -184,7 +196,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               labelText: l10n.password,
                               border: const OutlineInputBorder(),
                               prefixIcon: const Icon(Icons.lock_outline),
-                              suffixIcon: SparkleIconButton(
+                              suffixIcon: IconButton(
                                 icon: Icon(
                                   _isPasswordVisible
                                       ? Icons.visibility_off
@@ -201,7 +213,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                         !_isPasswordVisible,
                                   );
                                 },
-                                variant: ButtonVariant.ghost,
                               ),
                             ),
                             validator: (value) {
@@ -211,6 +222,47 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                               return null;
                             },
                           ),
+                        ),
+                        ValueListenableBuilder<TextEditingValue>(
+                          valueListenable: _passwordController,
+                          builder: (context, value, _) {
+                            final password = value.text;
+                            if (password.isEmpty) return const SizedBox.shrink();
+                            final strength = _passwordStrength(password);
+                            final zh = I18nService.instance.isChinese;
+                            return Padding(
+                              padding:
+                                  const EdgeInsets.only(top: DS.spacing8),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: DS.borderRadius4,
+                                      child: LinearProgressIndicator(
+                                        value: strength.progress,
+                                        backgroundColor:
+                                            DS.neutral200,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                          strength.color,
+                                        ),
+                                        minHeight: 4,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: DS.spacing8),
+                                  Text(
+                                    strength.label(zh),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: strength.color,
+                                      fontWeight: DS.fontWeightMedium,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: DS.lg),
                         SparkleStaggerItem(
@@ -309,4 +361,28 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       ),
     );
   }
+}
+
+enum _PasswordStrength {
+  weak,
+  fair,
+  strong;
+
+  double get progress => switch (this) {
+        _PasswordStrength.weak => 0.33,
+        _PasswordStrength.fair => 0.66,
+        _PasswordStrength.strong => 1.0,
+      };
+
+  Color get color => switch (this) {
+        _PasswordStrength.weak => DS.error,
+        _PasswordStrength.fair => DS.warning,
+        _PasswordStrength.strong => DS.success,
+      };
+
+  String label(bool zh) => switch (this) {
+        _PasswordStrength.weak => (zh ? '弱' : 'Weak'),
+        _PasswordStrength.fair => (zh ? '中等' : 'Fair'),
+        _PasswordStrength.strong => (zh ? '强' : 'Strong'),
+      };
 }

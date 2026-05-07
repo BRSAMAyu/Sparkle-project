@@ -9,6 +9,7 @@ import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/bgm_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -23,6 +24,7 @@ import 'package:sparkle/features/cognitive/presentation/screens/capsule/capsule_
 import 'package:sparkle/features/cognitive/presentation/widgets/capsule/capsule_generation_preview.dart';
 import 'package:sparkle/features/documents/documents_routes.dart';
 import 'package:sparkle/features/settings/presentation/screens/accessibility_settings_screen.dart';
+import 'package:sparkle/features/settings/presentation/providers/accessibility_provider.dart';
 import 'package:sparkle/features/settings/presentation/widgets/settings_behavior_explanation.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
@@ -1964,6 +1966,15 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
               ),
               const SizedBox(height: DS.spacing64),
               Center(
+                child: SparkleButton.ghost(
+                  label: I18nService.instance.isChinese
+                      ? '重置所有设置'
+                      : 'Reset All Settings',
+                  onPressed: () => _resetAllSettings(context, ref),
+                ),
+              ),
+              const SizedBox(height: DS.spacing32),
+              Center(
                 child: GestureDetector(
                   onLongPress: () {
                     showSensoryDialog<void>(
@@ -2063,6 +2074,45 @@ class _UnifiedSettingsScreenState extends ConsumerState<UnifiedSettingsScreen> {
         setState(() => _isGenerating = false);
       }
     }
+  }
+
+  void _resetAllSettings(BuildContext context, WidgetRef ref) {
+    final zh = I18nService.instance.isChinese;
+    showSensoryDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(zh ? '重置所有设置' : 'Reset All Settings'),
+        content: Text(zh
+            ? '这将重置所有主题、辅助功能和偏好设置到默认值。确定继续吗？'
+            : 'This will reset all theme, accessibility, and preference settings to defaults. Continue?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(zh ? '取消' : 'Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              final themeManager = ref.read(themeManagerProvider);
+              unawaited(themeManager.reset());
+              final a11yNotifier =
+                  ref.read(accessibilitySettingsProvider.notifier);
+              unawaited(a11yNotifier.reset());
+              if (context.mounted) {
+                AppFeedback.success(
+                  context,
+                  zh ? '设置已重置' : 'Settings reset successfully',
+                );
+              }
+            },
+            child: Text(
+              zh ? '重置' : 'Reset',
+              style: TextStyle(color: DS.error),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showLanguageDialog(

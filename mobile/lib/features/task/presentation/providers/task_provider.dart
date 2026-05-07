@@ -55,6 +55,7 @@ class TaskListState {
     this.executionDecisionInFlight = const <String>{},
     this.currentFilter,
     this.error,
+    this.recentlyDeletedTask,
   });
   final bool isLoading;
   final List<TaskModel> tasks;
@@ -70,6 +71,7 @@ class TaskListState {
   final Set<String> executionDecisionInFlight;
   final TaskFilter? currentFilter;
   final String? error;
+  final TaskModel? recentlyDeletedTask;
 
   TaskListState copyWith({
     bool? isLoading,
@@ -87,6 +89,8 @@ class TaskListState {
     TaskFilter? currentFilter,
     String? error,
     bool clearError = false,
+    TaskModel? recentlyDeletedTask,
+    bool clearRecentlyDeleted = false,
   }) =>
       TaskListState(
         isLoading: isLoading ?? this.isLoading,
@@ -106,6 +110,9 @@ class TaskListState {
             executionDecisionInFlight ?? this.executionDecisionInFlight,
         currentFilter: currentFilter ?? this.currentFilter,
         error: clearError ? null : error ?? this.error,
+        recentlyDeletedTask: clearRecentlyDeleted
+            ? null
+            : recentlyDeletedTask ?? this.recentlyDeletedTask,
       );
 }
 
@@ -359,11 +366,36 @@ class TaskNotifier extends StateNotifier<TaskListState> {
 
       await _taskRepository.deleteTask(id);
       await _ref.read(calendarRepositoryProvider).removeTaskLinkedEvent(id);
+      if (existingTask != null) {
+        state = state.copyWith(recentlyDeletedTask: existingTask);
+      }
       if (existingTask?.dueDate != null) {
         await _refreshCalendarSurfacesForDate(existingTask!.dueDate!);
       } else {
         unawaited(_ref.read(calendarProvider.notifier).loadEvents());
       }
+      await refreshTasks();
+    });
+  }
+
+  Future<void> restoreDeletedTask() async {
+    final deleted = state.recentlyDeletedTask;
+    if (deleted == null) return;
+    state = state.copyWith(clearRecentlyDeleted: true);
+    await _runWithErrorHandling(() async {
+      final recreate = TaskCreate(
+        title: deleted.title,
+        type: deleted.type,
+        estimatedMinutes: deleted.estimatedMinutes,
+        difficulty: deleted.difficulty,
+        energyCost: deleted.energyCost,
+        planId: deleted.planId,
+        tags: deleted.tags,
+        dueDate: deleted.dueDate,
+        knowledgeNodeId: deleted.knowledgeNodeId,
+        guideContent: deleted.guideContent,
+      );
+      await _taskRepository.createTask(recreate);
       await refreshTasks();
     });
   }

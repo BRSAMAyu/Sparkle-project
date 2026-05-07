@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/features/settings/presentation/providers/accessibility_provider.dart';
 
 class ThemeSettingsScreen extends ConsumerWidget {
   const ThemeSettingsScreen({super.key});
@@ -52,7 +53,14 @@ class ThemeSettingsScreen extends ConsumerWidget {
               GraphiteCardSurface(
                 child: _HighContrastSection(
                   highContrast: highContrast,
-                  onToggled: themeManager.toggleHighContrast,
+                  onToggled: (value) {
+                    unawaited(themeManager.toggleHighContrast(value));
+                    unawaited(
+                      ref
+                          .read(accessibilitySettingsProvider.notifier)
+                          .patch(highContrast: value),
+                    );
+                  },
                 ),
               ),
               const SizedBox(height: DS.xl),
