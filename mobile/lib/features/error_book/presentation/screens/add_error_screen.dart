@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
 import 'package:sparkle/features/error_book/data/models/question_image_reference.dart';
@@ -42,6 +43,13 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
   final _imagePicker = ImagePicker();
 
   String _selectedSubject = 'math';
+
+  bool get _isDirty =>
+      _questionController.text.isNotEmpty ||
+      _userAnswerController.text.isNotEmpty ||
+      _correctAnswerController.text.isNotEmpty ||
+      _chapterController.text.isNotEmpty;
+
   bool _isSubmitting = false;
   bool _isUploadingImage = false;
   double _uploadProgress = 0;
@@ -395,15 +403,17 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
   Widget _buildForm(BuildContext context) {
     final theme = Theme.of(context);
 
-    return SparklePageScaffold(
-      role: SparklePageRole.content,
-      appBar: AppBar(
-        leading: SparkleIconButton(
-          variant: ButtonVariant.ghost,
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(widget.isEditMode ? context.l10n.ebEditError : context.l10n.ebAddError),
+    return UnsavedChangesGuard(
+      isDirty: _isDirty,
+      child: SparklePageScaffold(
+        role: SparklePageRole.content,
+        appBar: AppBar(
+          leading: SparkleIconButton(
+            variant: ButtonVariant.ghost,
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(widget.isEditMode ? context.l10n.ebEditError : context.l10n.ebAddError),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: DS.spacing8),
@@ -549,7 +559,8 @@ class _AddErrorScreenState extends ConsumerState<AddErrorScreen> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildInfoCard(BuildContext context) {

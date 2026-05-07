@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/seed_library/data/models/seed_library_model.dart';
 import 'package:sparkle/features/seed_library/data/repositories/seed_library_repository.dart';
@@ -24,6 +25,11 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _tagsController = TextEditingController();
+
+  bool get _isDirty =>
+      _nameController.text.isNotEmpty ||
+      _descriptionController.text.isNotEmpty ||
+      _tagsController.text.isNotEmpty;
 
   LibraryCategory _selectedCategory = LibraryCategory.custom;
   LibraryVisibility _selectedVisibility = LibraryVisibility.private;
@@ -106,10 +112,12 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => SparklePageScaffold(
-        role: SparklePageRole.content,
-        appBar: AppBar(
-          title: Text(context.l10n.seedCreateTitle),
+  Widget build(BuildContext context) => UnsavedChangesGuard(
+        isDirty: _isDirty,
+        child: SparklePageScaffold(
+          role: SparklePageRole.content,
+          appBar: AppBar(
+            title: Text(context.l10n.seedCreateTitle),
         ),
         bottomNavigationBar: SafeArea(
           child: Padding(
@@ -298,5 +306,7 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
 }

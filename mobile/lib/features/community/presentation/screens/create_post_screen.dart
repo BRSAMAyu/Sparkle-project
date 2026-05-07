@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/widgets/unsaved_changes_guard.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -25,6 +26,9 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   final _contentController = TextEditingController();
   final _topicController = TextEditingController();
   bool _isPosting = false;
+
+  bool get _isDirty =>
+      _contentController.text.isNotEmpty || _topicController.text.isNotEmpty;
   XFile? _selectedImage;
   String? _selectedLocation;
 
@@ -100,13 +104,15 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => SparklePageScaffold(
-        role: SparklePageRole.content,
-        appBar: AppBar(
-          leading: SparkleIconButton(
-            variant: ButtonVariant.ghost,
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
+  Widget build(BuildContext context) => UnsavedChangesGuard(
+        isDirty: _isDirty,
+        child: SparklePageScaffold(
+          role: SparklePageRole.content,
+          appBar: AppBar(
+            leading: SparkleIconButton(
+              variant: ButtonVariant.ghost,
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.pop(),
           ),
           title: Text(I18nService.instance.isChinese ? '发布动态' : 'New Post'),
           actions: [
@@ -193,5 +199,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
             ),
           ),
         ),
-      );
+      ),
+    );
+  }
 }
