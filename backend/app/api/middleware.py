@@ -7,6 +7,7 @@ import hashlib
 from uuid import uuid4
 
 from fastapi import Request, Response
+from loguru import logger
 from opentelemetry import trace
 from starlette.concurrency import iterate_in_threadpool
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -15,7 +16,9 @@ from app.core.idempotency import IdempotencyStore
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
-    """Inject request/trace identifiers into request state and response headers."""
+    """Inject request/trace identifiers into request state and response headers,
+    and bind them into the loguru logger context so every log line carries
+    request_id, trace_id, and (when available) user_id for cross-request correlation."""
 
     async def dispatch(self, request: Request, call_next):
         request_id = request.headers.get("X-Request-ID") or request.headers.get("x-request-id") or str(uuid4())
@@ -32,10 +35,12 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
         request.state.request_id = request_id
         request.state.trace_id = trace_id
 
-        response = await call_next(request)
-        response.headers["X-Request-ID"] = request_id
-        response.headers["X-Trace-ID"] = trace_id
-        return response
+        # Bind identifiers into loguru context for this request lifetime
+        with logger.contextualize(request_id=request_id, trace_id=trace_id):
+            response = await call_next(request)
+            response.headers["X-Request-ID"] = request_id
+            response.headers["X-Trace-ID"] = trace_id
+            return response
 
 
 class IdempotencyMiddleware(BaseHTTPMiddleware):

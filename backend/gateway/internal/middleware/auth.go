@@ -443,26 +443,29 @@ func isWebSocketRequest(c *gin.Context) bool {
 func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (string, bool, error) {
 	const jwtClockSkew = 30 * time.Second
 
-	// NOTE: JWT tokens are currently signed with HS256 (HMAC-SHA256), a
-	// symmetric algorithm that shares the same secret key between Go Gateway
-	// (auth.go) and Python Engine (security.py). This means both layers can
-	// issue and verify tokens using the same JWT_SECRET.
+	// RS256 (RSA asymmetric) is the primary signing algorithm. The Go Gateway
+	// verifies with the public key, while only the auth handler and Python
+	// Engine hold the private signing key — eliminating the shared-secret risk.
 	//
-	// SECURITY PLAN: Migrate to RS256 (RSA asymmetric) so that only the
-	// Python auth service holds the private signing key, and the Go Gateway
-	// uses a public key for verification only. This eliminates the shared-
-	// secret risk and follows the principle of least privilege.
-	//
-	// Migration path (future sprint):
-	//   1. Generate RSA key pair, store private key in Python (env / KMS).
-	//   2. Configure Go Gateway with only the public key.
-	//   3. Add key rotation support (JWKS endpoint or .well-known).
-	//   4. Phase out HS256 after all clients refresh tokens.
+	// HS256 fallback is accepted during migration and in development;
+	// it will be removed once all issued HS256 tokens have expired.
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
+		switch token.Method.Alg() {
+		case jwt.SigningMethodRS256.Alg():
+			pubKey, err := cfg.ParseJWTPublicKey()
+			if err != nil {
+				return nil, fmt.Errorf("jwt RS256 public key not available: %w", err)
+			}
+			return pubKey, nil
+		case jwt.SigningMethodHS256.Alg():
+			// HS256 fallback for backward compatibility during migration
+			if cfg.JWTSecret == "" {
+				return nil, fmt.Errorf("jwt HS256 secret not available")
+			}
+			return []byte(cfg.JWTSecret), nil
+		default:
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte(cfg.JWTSecret), nil
 	})
 	if err != nil || !token.Valid {
 		return "", false, fmt.Errorf("invalid token")

@@ -9,6 +9,10 @@ package config
 import (
 	"bufio"
 	"bytes"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"log"
 	"net"
 	neturl "net/url"
@@ -46,6 +50,9 @@ type Config struct {
 	JWTSecret                   string   `mapstructure:"JWT_SECRET"`
 	JWTIssuer                   string   `mapstructure:"JWT_ISSUER"`
 	JWTAudience                 string   `mapstructure:"JWT_AUDIENCE"`
+	JWTAlgorithm                string   `mapstructure:"JWT_ALGORITHM"`
+	JWTPrivateKeyPEM            string   `mapstructure:"JWT_PRIVATE_KEY"`
+	JWTPublicKeyPEM             string   `mapstructure:"JWT_PUBLIC_KEY"`
 	JWTAccessTokenExpireMinutes int      `mapstructure:"JWT_ACCESS_TOKEN_EXPIRE_MINUTES"`
 	JWTRefreshTokenExpireDays   int      `mapstructure:"JWT_REFRESH_TOKEN_EXPIRE_DAYS"`
 	AllowWsQueryToken           bool     `mapstructure:"ALLOW_WS_QUERY_TOKEN"`
@@ -248,6 +255,48 @@ func isInsecureSecret(value string) bool {
 	return found
 }
 
+// ParseJWTPrivateKey parses the PEM-encoded RSA private key for RS256 signing.
+func (c *Config) ParseJWTPrivateKey() (*rsa.PrivateKey, error) {
+	block, _ := pem.Decode([]byte(c.JWTPrivateKeyPEM))
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block from JWT_PRIVATE_KEY")
+	}
+	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		// Try PKCS1 as fallback
+		key, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse RSA private key: %w", err)
+		}
+	}
+	rsaKey, ok := key.(*rsa.PrivateKey)
+	if !ok {
+		return nil, fmt.Errorf("JWT_PRIVATE_KEY is not an RSA private key")
+	}
+	return rsaKey, nil
+}
+
+// ParseJWTPublicKey parses the PEM-encoded RSA public key for RS256 verification.
+func (c *Config) ParseJWTPublicKey() (*rsa.PublicKey, error) {
+	block, _ := pem.Decode([]byte(c.JWTPublicKeyPEM))
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode PEM block from JWT_PUBLIC_KEY")
+	}
+	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		// Try PKCS1 as fallback
+		key, err = x509.ParsePKCS1PublicKey(block.Bytes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse RSA public key: %w", err)
+		}
+	}
+	rsaKey, ok := key.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("JWT_PUBLIC_KEY is not an RSA public key")
+	}
+	return rsaKey, nil
+}
+
 func normalizeDatabaseURL(raw string) string {
 	if raw == "" {
 		return ""
@@ -398,6 +447,9 @@ func Load() *Config {
 		"JWT_SECRET",
 		"JWT_ISSUER",
 		"JWT_AUDIENCE",
+		"JWT_ALGORITHM",
+		"JWT_PRIVATE_KEY",
+		"JWT_PUBLIC_KEY",
 		"JWT_ACCESS_TOKEN_EXPIRE_MINUTES",
 		"JWT_REFRESH_TOKEN_EXPIRE_DAYS",
 		"ALLOW_WS_QUERY_TOKEN",
@@ -575,6 +627,15 @@ func Load() *Config {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// Set JWT algorithm default (RS256 for production, HS256 for dev backward compat)
+	if cfg.JWTAlgorithm == "" {
+		if cfg.IsDevelopment() {
+			cfg.JWTAlgorithm = "HS256"
+		} else {
+			cfg.JWTAlgorithm = "RS256"
+		}
+	}
+
 	// Fallback: if JWT_SECRET is not set, try SECRET_KEY (Python-compatible alias)
 	if cfg.JWTSecret == "" {
 		if fallback := viper.GetString("SECRET_KEY"); fallback != "" {
@@ -582,12 +643,40 @@ func Load() *Config {
 		}
 	}
 
-	// Validate JWT_SECRET is set in non-development environments
-	if !cfg.IsDevelopment() && cfg.JWTSecret == "" {
-		log.Fatal("JWT_SECRET must be set in non-development environments. Set via JWT_SECRET or SECRET_KEY environment variable or .env file.")
-	}
-	if !cfg.IsDevelopment() && isInsecureSecret(cfg.JWTSecret) {
-		log.Fatal("JWT_SECRET is using an insecure default. Set a high-entropy value via JWT_SECRET or SECRET_KEY.")
+	// Validate JWT configuration for non-development environments
+	if !cfg.IsDevelopment() {
+		if cfg.JWTAlgorithm == "RS256" {
+			if cfg.JWTPrivateKeyPEM == "" {
+				log.Fatal("JWT_PRIVATE_KEY must be set when JWT_ALGORITHM=RS256. Provide a PEM-encoded RSA private key.")
+			}
+			if cfg.JWTPublicKeyPEM == "" {
+				log.Fatal("JWT_PUBLIC_KEY must be set when JWT_ALGORITHM=RS256. Provide a PEM-encoded RSA public key.")
+			}
+			// Validate keys parse correctly
+			if _, err := cfg.ParseJWTPrivateKey(); err != nil {
+				log.Fatalf("JWT_PRIVATE_KEY is not a valid PEM-encoded RSA private key: %v", err)
+			}
+			if _, err := cfg.ParseJWTPublicKey(); err != nil {
+				log.Fatalf("JWT_PUBLIC_KEY is not a valid PEM-encoded RSA public key: %v", err)
+			}
+		} else {
+			if cfg.JWTSecret == "" {
+				log.Fatal("JWT_SECRET must be set in non-development environments. Set via JWT_SECRET or SECRET_KEY environment variable or .env file.")
+			}
+			if isInsecureSecret(cfg.JWTSecret) {
+				log.Fatal("JWT_SECRET is using an insecure default. Set a high-entropy value via JWT_SECRET or SECRET_KEY.")
+			}
+		}
+	} else {
+		// Development: validate HS256 fallback secret if no RSA keys provided
+		if cfg.JWTAlgorithm == "RS256" && cfg.JWTPrivateKeyPEM == "" {
+			log.Println("WARNING: JWT_ALGORITHM=RS256 but no JWT_PRIVATE_KEY set. Falling back to HS256 for development.")
+			cfg.JWTAlgorithm = "HS256"
+		}
+		if cfg.JWTAlgorithm == "HS256" && cfg.JWTSecret == "" {
+			log.Println("WARNING: JWT_SECRET not set. Using insecure development default.")
+			cfg.JWTSecret = "sparkle-dev-jwt-secret-change-in-production"
+		}
 	}
 
 	// Validate ADMIN_SECRET is set in non-development environments

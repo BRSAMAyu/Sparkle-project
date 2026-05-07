@@ -9,7 +9,9 @@ Features:
 """
 from __future__ import annotations
 
-import pickle
+import hashlib
+import hmac
+import json
 from typing import Any, TypedDict
 from uuid import UUID
 
@@ -18,6 +20,7 @@ from loguru import logger
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.core.cache import cache_service
 from app.models.galaxy import KnowledgeNode, NodeRelation, UserNodeStatus
 
@@ -45,13 +48,29 @@ class GraphReasoningService:
     """图推理服务，负责学习路径生成和图结构管理"""
 
     # Redis 缓存配置
-    CACHE_KEY = "galaxy:graph_structure:v3"
+    CACHE_KEY = "galaxy:graph_structure:v4"
     CACHE_TTL = 300  # 5分钟
+    HMAC_HASH_ALGO = "sha256"
     SUPPORT_RELATION_TYPES = {"related", "application", "evolution", "composition"}
 
     def __init__(self, db: AsyncSession):
         self.db = db
         self.G: nx.DiGraph | None = None
+
+    # ------------------------------------------------------------------
+    # HMAC helpers — protect cached graph data against tampering
+    # ------------------------------------------------------------------
+    def _hmac_key(self) -> bytes:
+        raw = settings.SECRET_KEY or "sparkle-graph-cache-fallback"
+        return hashlib.sha256(raw.encode()).digest()
+
+    def _hmac_sign(self, data: bytes) -> str:
+        mac = hmac.new(self._hmac_key(), data, self.HMAC_HASH_ALGO)
+        return mac.hexdigest()
+
+    def _hmac_verify(self, data: bytes, signature: str) -> bool:
+        expected = self._hmac_sign(data)
+        return hmac.compare_digest(expected, signature)
 
     async def _load_graph(self) -> None:
         """
@@ -65,16 +84,29 @@ class GraphReasoningService:
         if self.G is not None:
             return
 
-        # 1. 尝试从 Redis 获取序列化的图
+        # 1. 尝试从 Redis 获取 JSON + HMAC 序列化的图
         try:
-            cached = await cache_service.get(self.CACHE_KEY)
-            if cached:
-                # cache_service.get() 返回的是 JSON 反序列化后的对象
-                # 对于 pickle 序列化的 bytes，需要直接从 redis 获取
-                if cache_service.redis:
-                    raw_cached = await cache_service.redis.get(self.CACHE_KEY)
-                    if raw_cached:
-                        self.G = pickle.loads(raw_cached)
+            if cache_service.redis:
+                raw_cached = await cache_service.redis.get(self.CACHE_KEY)
+                if raw_cached:
+                    # Format: 64-char hex HMAC + JSON payload
+                    if len(raw_cached) < 64:
+                        raise ValueError("Cached graph too short for HMAC")
+                    stored_sig = raw_cached[:64].decode("ascii")
+                    json_payload = raw_cached[64:]
+
+                    if not self._hmac_verify(json_payload, stored_sig):
+                        logger.warning("Graph cache HMAC mismatch — discarding tampered cache")
+                        await cache_service.redis.delete(self.CACHE_KEY)
+                    else:
+                        graph_data = json.loads(json_payload)
+                        self.G = nx.node_link_graph(graph_data, edges="edges")
+                        # JSON round-trips UUIDs as strings; relabel back to UUID
+                        relabel = {
+                            n: UUID(n) for n in list(self.G.nodes()) if isinstance(n, str)
+                        }
+                        if relabel:
+                            nx.relabel_nodes(self.G, relabel, copy=False)
                         logger.info(
                             f"Graph loaded from Redis cache: {self.G.number_of_nodes()} nodes, "
                             f"{self.G.number_of_edges()} edges"
@@ -111,13 +143,15 @@ class GraphReasoningService:
             f"{self.G.number_of_edges()} edges"
         )
 
-        # 3. 缓存到 Redis
+        # 3. 缓存到 Redis (JSON + HMAC)
         try:
             if cache_service.redis:
-                serialized = pickle.dumps(self.G, protocol=5)
+                graph_data = nx.node_link_data(self.G, edges="edges")
+                json_payload = json.dumps(graph_data, default=str).encode("utf-8")
+                sig = self._hmac_sign(json_payload)
                 await cache_service.redis.set(
                     self.CACHE_KEY,
-                    serialized,
+                    sig.encode("ascii") + json_payload,
                     ex=self.CACHE_TTL
                 )
                 logger.debug(f"Graph cached to Redis with TTL={self.CACHE_TTL}s")

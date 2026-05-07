@@ -1008,6 +1008,84 @@ def run_l4_async_engine_sweep(self, limit: int = 500):
         raise self.retry(exc=exc, countdown=600) from exc
 
 
+@celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_l4_learning_pipeline_async")
+def run_l4_learning_pipeline_async(self, user_id: str = "", limit: int = 100):
+    """L4: Run the continuous learning pipeline asynchronously for queued outcomes.
+
+    Scans Redis for pending outcome records that haven't been processed by the
+    learning pipeline yet, and runs attribution→distillation→strategy storage
+    asynchronously so the main outcome recording path isn't blocked.
+
+    If user_id is provided, processes only that user's pending outcomes.
+    """
+
+    async def _run():
+        import json
+
+        from app.core.redis_client import get_redis
+        from app.learning.outcome_consumer import OutcomeConsumingService
+
+        redis = get_redis()
+        consumer = OutcomeConsumingService(redis)
+
+        if user_id:
+            # Process a specific user's pending outcomes
+            raw = await redis.lrange(f"spine:pending_learning:{user_id}", 0, limit - 1)
+            keys = [user_id]
+        else:
+            # Scan for users with pending learning outcomes
+            cursor, scan_keys = await redis.scan(
+                match="spine:pending_learning:*", count=limit,
+            )
+            keys = [
+                (k if isinstance(k, str) else k.decode()).split(":")[-1]
+                for k in scan_keys
+            ]
+
+        processed = 0
+        errors = 0
+
+        for uid in keys:
+            try:
+                if not user_id:
+                    raw = await redis.lrange(f"spine:pending_learning:{uid}", 0, limit - 1)
+                if not raw:
+                    continue
+                for item in raw:
+                    try:
+                        data = json.loads(item if isinstance(item, str) else item.decode())
+                        await consumer.consume_effective_outcome(
+                            user_id=data.get("user_id", uid),
+                            outcome_id=data.get("outcome_id", ""),
+                            intervention=data.get("intervention", ""),
+                            attribution=data.get("attribution", "effective"),
+                            confidence=data.get("confidence", 0.7),
+                            actual_outcome=data.get("actual_outcome", {}),
+                            trace_id=data.get("trace_id", ""),
+                        )
+                        processed += 1
+                    except Exception as exc:
+                        errors += 1
+                        logger.warning(
+                            "LearningPipeline async: outcome skipped user={}: {}", uid, exc,
+                        )
+                # Clean up processed outcomes
+                await redis.delete(f"spine:pending_learning:{uid}")
+            except Exception as exc:
+                errors += 1
+                logger.warning("LearningPipeline async: user={} failed: {}", uid, exc)
+
+        return {"users_scanned": len(keys), "outcomes_processed": processed, "errors": errors}
+
+    try:
+        result = _run_async(_run())
+        logger.info("L4 learning pipeline async finished: {}", result)
+        return result
+    except Exception as exc:
+        logger.error("L4 learning pipeline async failed: {}", exc)
+        raise self.retry(exc=exc, countdown=600) from exc
+
+
 @celery_app.task(bind=True, max_retries=2, name="app.core.celery_tasks.run_counterfactual_evaluations")
 def run_counterfactual_evaluations(self, limit_users: int = 500):
     """Daily production counterfactual evaluation over eligible InterventionEpisodes."""

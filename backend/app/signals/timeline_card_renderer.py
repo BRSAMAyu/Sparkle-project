@@ -118,6 +118,7 @@ class TimelineCardRenderer:
         directives: list[dict[str, Any]] | None = None,
         receipt_data: dict[str, Any] | None = None,
         outcome_data: dict[str, Any] | None = None,
+        audit_data: list[dict[str, Any]] | None = None,
         mode: str = "compact",
         timestamp: str = "",
     ) -> TimelineCard | None:
@@ -143,7 +144,7 @@ class TimelineCardRenderer:
 
         # Build evidence chain
         evidence_chain = self._build_evidence_chain(
-            signal_data, policy_data, directives, receipt_data, outcome_data,
+            signal_data, policy_data, directives, receipt_data, outcome_data, audit_data,
         )
 
         # Build user actions
@@ -243,6 +244,7 @@ class TimelineCardRenderer:
         directives: list[dict[str, Any]] | None,
         receipt_data: dict[str, Any] | None,
         outcome_data: dict[str, Any] | None,
+        audit_data: list[dict[str, Any]] | None = None,
     ) -> list[dict[str, Any]]:
         chain = []
 
@@ -267,6 +269,14 @@ class TimelineCardRenderer:
                     "step": "执行",
                     "label": f"指令: {d.get('target_module', d.get('directive_type', '?'))}",
                     "detail": d.get("user_visible_reason", ""),
+                })
+
+        if audit_data:
+            for a in audit_data[:3]:
+                chain.append({
+                    "step": "审计",
+                    "label": a.get("audit_type", a.get("action", "合规检查")),
+                    "detail": a.get("result", a.get("summary", "")),
                 })
 
         if receipt_data:

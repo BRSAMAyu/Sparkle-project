@@ -61,6 +61,7 @@ from app.signals.mistake_signal import MistakeSignalDetector
 from app.signals.multi_goal_arbitration import MultiGoalArbitrator
 from app.signals.outcome_recorder import OutcomeRecorder
 from app.signals.outcome_tracker import OutcomeTracker
+from app.learning.outcome_consumer import OutcomeConsumingService
 from app.signals.partner_commitment_loop import PartnerCommitmentLoop
 from app.signals.policy_analytics import PolicyAnalytics
 from app.signals.policy_engine import PolicyEngine
@@ -180,6 +181,9 @@ class SpineOrchestrator:
         self.learning_guard = LearningGuard(redis_client)
         self.l0_engine = L0RuleEngine(redis_client)
         self.l1_engine = L1LightAurora(redis_client) if L1LightAurora else None
+
+        # AUR-005: Outcome → ModelUpdate feedback loop
+        self.outcome_consumer = OutcomeConsumingService(redis_client)
 
         # P1-16/17: Citation validation + low-yield guarding
         self.citation_validator = CitationValidator(redis_client)
@@ -629,6 +633,18 @@ class SpineOrchestrator:
                     except Exception:
                         logger.warning("get_rendered_timeline: operation failed", exc_info=True)
 
+            # Load audit records (P2: previously skipped in timeline rendering)
+            audits: list[dict[str, Any]] = []
+            for aid in trace.audit_ids:
+                raw = await self.redis.get(f"spine:audit_by_id:{aid}")
+                if raw:
+                    try:
+                        audits.append(
+                            json.loads(raw if isinstance(raw, str) else raw.decode())
+                        )
+                    except Exception:
+                        logger.warning("get_rendered_timeline: audit load failed", exc_info=True)
+
             # Load receipt
             receipt_data = None
             if trace.receipt_ids:
@@ -661,6 +677,7 @@ class SpineOrchestrator:
                     directives=directives,
                     receipt_data=receipt_data,
                     outcome_data=None,
+                    audit_data=audits if audits else None,
                     mode="compact",
                     timestamp=trace.created_at,
                 )
@@ -676,6 +693,7 @@ class SpineOrchestrator:
                 "signal": signal_data,
                 "policy_decision": policy_data,
                 "directives": directives,
+                "audits": audits,
                 "receipt": receipt_data,
                 "card": card_data,
             })
@@ -1361,9 +1379,29 @@ class SpineOrchestrator:
             fallback=[],
         )
 
+        # P1: Load distilled strategies from prior learning to influence policy evaluation
+        outcome_consumer = getattr(self, "outcome_consumer", None)
+        distilled_strategies: list = []
+        if outcome_consumer is not None:
+            distilled_strategies = await resilient_redis_call(
+                "spine_pipeline",
+                outcome_consumer.get_distilled_strategies_for_user(user_id, limit=10),
+                fallback=[],
+            )
+
         pipeline_context = {
             "source": "pipeline",
             "aurora_decisions": aurora_decisions,
+            "distilled_strategies": [
+                {
+                    "id": str(s.id),
+                    "title": s.title,
+                    "description": s.description,
+                    "score": s.confidence_score,
+                    "scope": s.applicability_scope,
+                }
+                for s in distilled_strategies
+            ],
         }
         if l2_escalation:
             pipeline_context["l2_escalation"] = l2_escalation
@@ -2993,6 +3031,42 @@ class SpineOrchestrator:
         except Exception:
             logger.warning("record_outcome: operation failed", exc_info=True)
 
+        # AUR-005: Close the Outcome → ModelUpdate feedback loop
+        try:
+            if user_id and record.attribution in ("effective", "insufficient"):
+                await self.outcome_consumer.consume_effective_outcome(
+                    user_id=user_id,
+                    outcome_id=record.outcome_id,
+                    intervention=record.intervention,
+                    attribution=record.attribution,
+                    confidence=record.attribution_confidence,
+                    actual_outcome=record.actual_outcome,
+                    trace_id=record.causal_trace_id,
+                )
+        except Exception:
+            logger.debug(
+                "record_outcome: outcome_consumer skipped for outcome={}",
+                getattr(record, 'outcome_id', 'unknown'), exc_info=True,
+            )
+            # Queue for async Celery processing as fallback
+            try:
+                import json
+                await self.redis.lpush(
+                    f"spine:pending_learning:{user_id}",
+                    json.dumps({
+                        "user_id": user_id,
+                        "outcome_id": record.outcome_id,
+                        "intervention": record.intervention,
+                        "attribution": record.attribution,
+                        "confidence": record.attribution_confidence,
+                        "actual_outcome": record.actual_outcome,
+                        "trace_id": record.causal_trace_id,
+                    }, ensure_ascii=False),
+                )
+                await self.redis.ltrim(f"spine:pending_learning:{user_id}", 0, 99)
+            except Exception:
+                logger.debug("record_outcome: async queue fallback failed", exc_info=True)
+
         # v2.5: Consume Aurora decisions for outcome attribution
         try:
             if user_id:
@@ -3003,6 +3077,30 @@ class SpineOrchestrator:
         # v2.5: Counterfactual shadow evaluation (research-grade)
         if user_id and record.attribution in ("effective", "insufficient"):
             await self._run_counterfactual_shadow(user_id, record, actual_outcome)
+
+        # P1: Close the episode outcome loop for counterfactual analysis
+        try:
+            if user_id:
+                attribution_score = record.attribution_confidence if record.attribution == "effective" else (1.0 - record.attribution_confidence)
+                await episode_logger.log_decision(
+                    trace_id=trace.trace_id,
+                    user_id=user_id,
+                    signals=[record.intervention],
+                    candidates=[
+                        CandidatePolicy(
+                            policy_id=record.intervention,
+                            expected_outcome=0.5,
+                            was_selected=True,
+                            rationale=record.reason or "",
+                        )
+                    ],
+                    selection_reason=record.reason or "outcome_recorded",
+                    expected_outcome=0.5,
+                    tags=["outcome", record.attribution],
+                )
+                await episode_logger.record_outcome(trace.trace_id, attribution_score)
+        except Exception:
+            logger.debug("episode_logger: outcome recording failed for trace={}", trace.trace_id, exc_info=True)
 
         return record
 

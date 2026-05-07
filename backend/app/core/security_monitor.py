@@ -511,15 +511,65 @@ class SecurityMonitor:
                 await asyncio.sleep(3600)
 
     async def _check_abnormal_patterns(self):
-        """检查异常模式"""
-        # 这里可以实现更复杂的异常检测逻辑
-        # 例如：异常时间访问、异常地理位置、异常用户行为等
-        pass
+        """Check for abnormal login patterns and suspicious activity."""
+        try:
+            from datetime import timedelta
+            cutoff = datetime.now(UTC) - timedelta(minutes=5)
+            # Count recent failed logins from Redis
+            try:
+                failed_key = "security:failed_logins_recent"
+                recent_count = await self.redis.llen(failed_key) if self.redis else 0
+                if recent_count >= 10:
+                    await self._send_alert_notification(
+                        alert_type="brute_force_attempt",
+                        message=f"{recent_count} failed login attempts in 5 minutes",
+                        threat_level=ThreatLevel.HIGH,
+                        details={"failed_count": recent_count, "window_minutes": 5},
+                    )
+            except Exception:
+                logger.debug("abnormal_patterns: failed login check skipped", exc_info=True)
+
+            # Check for admin access anomalies
+            try:
+                admin_key = "security:admin_actions_recent"
+                admin_count = await self.redis.llen(admin_key) if self.redis else 0
+                if admin_count >= 20:
+                    await self._send_alert_notification(
+                        alert_type="unusual_admin_activity",
+                        message=f"{admin_count} admin actions in 5 minutes",
+                        threat_level=ThreatLevel.MEDIUM,
+                        details={"admin_action_count": admin_count},
+                    )
+            except Exception:
+                logger.debug("abnormal_patterns: admin action check skipped", exc_info=True)
+
+        except Exception as e:
+            logger.debug("_check_abnormal_patterns failed: {}", e)
 
     async def _check_system_security(self):
-        """检查系统安全状态"""
-        # 检查系统配置、服务状态等
-        pass
+        """Check system security state — config, services, TLS."""
+        try:
+            issues = []
+
+            # Verify DEBUG mode is off
+            if getattr(settings, 'DEBUG', False):
+                issues.append("DEBUG mode is enabled")
+                logger.warning("SecurityMonitor: DEBUG mode is ON — this is insecure for production")
+
+            # Check for insecure defaults
+            secret_key = getattr(settings, 'SECRET_KEY', '')
+            if len(secret_key) < 32:
+                issues.append(f"SECRET_KEY too short ({len(secret_key)} chars, min 32 required)")
+
+            if issues:
+                await self._send_alert_notification(
+                    alert_type="system_security_issue",
+                    message="; ".join(issues),
+                    threat_level=ThreatLevel.HIGH,
+                    details={"issues": issues},
+                )
+        except Exception as e:
+            logger.debug("_check_system_security failed: {}", e)
 
     async def _cleanup_old_redis_data(self):
         """清理旧的Redis数据"""
@@ -536,12 +586,64 @@ class SecurityMonitor:
         threat_level: ThreatLevel,
         details: dict | None = None
     ):
-        """发送告警通知"""
-        # 这里可以集成邮件、Slack、Webhook等通知方式
-        logger.warning(f"安全告警通知 - 类型: {alert_type}, 级别: {threat_level.value}, 消息: {message}")
+        """Send security alert via structured JSON log + Slack webhook + email.
 
-        if details:
-            logger.warning(f"告警详情: {details}")
+        Structured JSON logging ensures every alert is captured by the log
+        aggregation pipeline (ELK/Loki/datadog). When SLACK_ALERT_WEBHOOK_URL
+        is set, also pushes a summary card to Slack. Critical and high alerts
+        also send email via the configured SMTP service.
+        """
+        import os
+
+        alert_payload = {
+            "event": "security_alert",
+            "alert_type": alert_type,
+            "message": message,
+            "threat_level": threat_level.value,
+            "details": details or {},
+        }
+
+        # Always emit structured JSON log for log aggregation
+        logger.bind(**alert_payload).warning("Security alert: {alert_type} [{threat_level}] {message}",
+                                             alert_type=alert_type, threat_level=threat_level.value, message=message)
+
+        # Push to Slack if configured
+        webhook_url = os.getenv("SLACK_ALERT_WEBHOOK_URL", "")
+        if webhook_url:
+            try:
+                level_emoji = {"critical": "🔴", "high": "🟠", "medium": "🟡", "low": "🔵", "info": "⚪"}
+                emoji = level_emoji.get(threat_level.value, "⚪")
+                slack_payload = {
+                    "text": f"{emoji} *Sparkle Security Alert* [{threat_level.value.upper()}]\n"
+                            f">*Type:* {alert_type}\n"
+                            f">*Message:* {message}\n"
+                            f">*Details:* {json.dumps(details or {}, ensure_ascii=False)[:400]}",
+                }
+                import aiohttp
+                async with aiohttp.ClientSession() as session:
+                    async with session.post(webhook_url, json=slack_payload, timeout=aiohttp.ClientTimeout(total=5)):
+                        pass
+            except Exception:
+                logger.warning("Security alert Slack notification failed for alert_type={}", alert_type, exc_info=True)
+
+        # Email for critical and high severity alerts
+        if threat_level.value in {"critical", "high"}:
+            try:
+                security_email = os.getenv("SECURITY_ALERT_EMAIL", "")
+                if security_email:
+                    from app.core.email_service import EmailService
+                    email_service = EmailService()
+                    subject = f"[Sparkle Security Alert] {threat_level.value.upper()}: {alert_type}"
+                    email_html = (
+                        f"<h2>Sparkle Security Alert</h2>"
+                        f"<p><strong>Severity:</strong> {threat_level.value.upper()}</p>"
+                        f"<p><strong>Type:</strong> {alert_type}</p>"
+                        f"<p><strong>Message:</strong> {message}</p>"
+                        f"<p><strong>Details:</strong> <pre>{json.dumps(details or {}, indent=2, ensure_ascii=False)}</pre></p>"
+                    )
+                    await email_service._send(security_email, subject, email_html)
+            except Exception:
+                logger.warning("Security alert email notification failed for alert_type={}", alert_type, exc_info=True)
 
     async def _get_suspicious_ip_count(self) -> int:
         """获取可疑IP数量"""

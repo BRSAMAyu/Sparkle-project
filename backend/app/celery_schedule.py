@@ -4,6 +4,14 @@ from app.workers.cleanup_worker import cleanup_galaxy_outbox, cleanup_outbox_eve
 
 
 def setup_periodic_tasks(sender, **kwargs):
+    # GDPR: clean up login attempts older than 90 days — daily at 04:00
+    from app.tasks.login_attempt_cleanup import cleanup_old_login_attempts
+    sender.add_periodic_task(
+        crontab(hour=4, minute=0),
+        cleanup_old_login_attempts.s(),
+        name='cleanup-old-login-attempts-daily'
+    )
+
     # Execute daily at midnight
     sender.add_periodic_task(
         86400.0,

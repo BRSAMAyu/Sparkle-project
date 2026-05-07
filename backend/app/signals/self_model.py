@@ -5,13 +5,12 @@ Stage: Signal-to-Action Spine P1-5 SparkleSelfModel
 
 Sparkle 自我模型 — 系统建模自己的策略效果。
 
-核心原则：
-- 系统不只建模用户，也要建模自己
-- 每次策略调整都记录假设和结果
-- 结果回流更新自我认知
-- 不直接写长期人格，只写策略效果
+DEPRECATED (2026-05-07): This module is now a compatibility shim over
+app.aurora.runtime_v1.self_model.SparkleSelfModelService, which is the
+authoritative self-model implementation. All Spine claims, outcomes, and
+corrections are routed to the Aurora self-model's assumption framework.
 
-对象：SelfModelClaim — 关于策略效果的假设。
+Migration: New code should import from app.aurora.runtime_v1 directly.
 """
 
 from __future__ import annotations
@@ -27,16 +26,16 @@ from app.signals.types import _uid
 
 @dataclass
 class SelfModelClaim:
-    """Sparkle 关于自身策略的一个判断。"""
+    """Sparkle 关于自身策略的一个判断 (compat — mapped to Aurora assumptions)."""
     claim_id: str
-    claim: str                          # 判断内容
-    confidence: float                   # 置信度
-    scope: str                          # "current_sprint" | "strategy" | "user_pair"
-    evidence: list[str]                 # 支持证据
-    counter_evidence: list[str]         # 反证
-    policy_effects: list[str]           # 影响了哪些策略
-    outcome: str | None = None          # "effective" | "insufficient" | "backfired" | None
-    retract_conditions: list[str] = field(default_factory=list)  # 收回条件
+    claim: str
+    confidence: float
+    scope: str
+    evidence: list[str]
+    counter_evidence: list[str]
+    policy_effects: list[str]
+    outcome: str | None = None
+    retract_conditions: list[str] = field(default_factory=list)
     created_at: str = field(default_factory=lambda: "")
 
     def to_dict(self) -> dict[str, Any]:
@@ -55,13 +54,13 @@ class SelfModelClaim:
 
 @dataclass
 class StrategyOutcome:
-    """策略执行结果记录。"""
+    """策略执行结果记录 (compat — mapped to Aurora outcomes)."""
     outcome_id: str
-    directive_id: str                   # 关联的 directive
-    claim_id: str                       # 关联的 self-model claim
-    expected_outcome: str               # 预期效果
-    actual_outcome: dict[str, Any]      # 实际结果
-    attribution: dict[str, Any]         # 归因
+    directive_id: str
+    claim_id: str
+    expected_outcome: str
+    actual_outcome: dict[str, Any]
+    attribution: dict[str, Any]
     next_policy_suggestion: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -76,27 +75,31 @@ class StrategyOutcome:
         }
 
 
-# Redis key patterns
-_CLAIM_KEY = "spine:self_model:claim:{user_id}:{claim_id}"
-_USER_CLAIMS_KEY = "spine:self_model:claims:{user_id}"
-_OUTCOME_KEY = "spine:self_model:outcome:{user_id}:{outcome_id}"
-_MAX_CLAIMS = 50
-_CLAIM_TTL = 30 * 24 * 3600  # 30 days
-
-
 class SparkleSelfModelService:
     """
-    P1-5: Sparkle 自我模型服务。
+    P1-5: Sparkle 自我模型服务 (compatibility shim).
 
-    职责：
-    1. 记录策略假设（每次 directive 生成时）
-    2. 记录策略结果（outcome 回流时）
-    3. 更新自我模型置信度
-    4. 判断是否需要收回策略
+    Delegates all operations to the authoritative Aurora self-model
+    (app.aurora.runtime_v1.self_model.SparkleSelfModelService).
+
+    The original Spine claim/outcome API is preserved for backward
+    compatibility but internally maps to Aurora's assumption-based model.
     """
 
     def __init__(self, redis_client: Any):
         self.redis = redis_client
+        self._aurora = None
+
+    def _get_aurora(self):
+        """Lazy-import and cache the Aurora self-model instance."""
+        if self._aurora is None:
+            from app.aurora.runtime_v1.self_model import (
+                SparkleSelfModelService as AuroraSelfModelService,
+            )
+            self._aurora = AuroraSelfModelService(redis_client=self.redis)
+        return self._aurora
+
+    # ── Original Spine API (delegates to Aurora) ──
 
     async def record_claim(
         self,
@@ -110,8 +113,9 @@ class SparkleSelfModelService:
         policy_effects: list[str] | None = None,
         retract_conditions: list[str] | None = None,
     ) -> SelfModelClaim:
-        """记录一个新的自我模型判断。"""
+        """Record a self-model claim → routed to Aurora record_task_outcome."""
         from datetime import UTC, datetime
+
         claim_obj = SelfModelClaim(
             claim_id=_uid("smc"),
             claim=claim,
@@ -124,20 +128,23 @@ class SparkleSelfModelService:
             created_at=datetime.now(UTC).isoformat(),
         )
 
-        # 存储到 Redis
-        key = _CLAIM_KEY.format(user_id=user_id, claim_id=claim_obj.claim_id)
-        await self.redis.set(key, json.dumps(claim_obj.to_dict()), ex=_CLAIM_TTL)
-
-        # 添加到用户 claims 列表
-        claims_key = _USER_CLAIMS_KEY.format(user_id=user_id)
-        await self.redis.lpush(claims_key, claim_obj.claim_id)
-        await self.redis.ltrim(claims_key, 0, _MAX_CLAIMS - 1)
+        # Route to Aurora: claims are recorded as task outcomes with the claim
+        # content as the outcome description
+        try:
+            aurora = self._get_aurora()
+            await aurora.record_task_outcome(
+                user_id=user_id,
+                completed=confidence >= 0.5,
+                feedback=claim,
+                task_id=claim_obj.claim_id,
+            )
+        except Exception:
+            logger.debug("Aurora self-model delegation failed (non-fatal)", exc_info=True)
 
         logger.info(
-            "SelfModel claim: user={} claim_id={} scope={} conf={:.2f}",
+            "SelfModel claim (→Aurora): user={} claim_id={} scope={} conf={:.2f}",
             user_id, claim_obj.claim_id, scope, confidence,
         )
-
         return claim_obj
 
     async def record_outcome(
@@ -149,14 +156,8 @@ class SparkleSelfModelService:
         expected_outcome: str,
         actual_outcome: dict[str, Any],
     ) -> StrategyOutcome:
-        """记录策略执行结果，并更新关联的 self-model claim。"""
-        # 归因分析
-        attribution = self._attribute(
-            expected=expected_outcome,
-            actual=actual_outcome,
-        )
-
-        # 生成下一步建议
+        """Record a strategy outcome → routed to Aurora."""
+        attribution = self._attribute(expected=expected_outcome, actual=actual_outcome)
         next_suggestion = self._suggest_next(attribution)
 
         outcome = StrategyOutcome(
@@ -169,46 +170,49 @@ class SparkleSelfModelService:
             next_policy_suggestion=next_suggestion,
         )
 
-        # 存储结果
-        key = _OUTCOME_KEY.format(user_id=user_id, outcome_id=outcome.outcome_id)
-        await self.redis.set(key, json.dumps(outcome.to_dict()), ex=_CLAIM_TTL)
-
-        # 更新关联 claim 的 outcome 和置信度
-        await self._update_claim_outcome(user_id, claim_id, attribution)
+        try:
+            aurora = self._get_aurora()
+            await aurora.record_task_outcome(
+                user_id=user_id,
+                completed=actual_outcome.get("completed", False),
+                feedback=actual_outcome.get("user_feedback", ""),
+                task_id=directive_id,
+            )
+        except Exception:
+            logger.debug("Aurora outcome delegation failed (non-fatal)", exc_info=True)
 
         logger.info(
-            "SelfModel outcome: user={} claim={} effect={} suggestion={}",
+            "SelfModel outcome (→Aurora): user={} claim={} effect={} suggestion={}",
             user_id, claim_id, attribution.get("effect"), next_suggestion,
         )
-
         return outcome
 
-    async def get_active_claims(
-        self,
-        user_id: str,
-        limit: int = 10,
-    ) -> list[SelfModelClaim]:
-        """获取用户当前的活跃自我模型判断。"""
-        claims_key = _USER_CLAIMS_KEY.format(user_id=user_id)
-        claim_ids = await self.redis.lrange(claims_key, 0, limit - 1)
+    async def get_active_claims(self, user_id: str, limit: int = 10) -> list[SelfModelClaim]:
+        """Get active self-model claims → converted from Aurora readout."""
+        try:
+            aurora = self._get_aurora()
+            readout = await aurora.get_readout_summary(user_id=user_id)
+        except Exception:
+            logger.debug("Aurora readout failed, returning empty claims", exc_info=True)
+            return []
 
-        claims = []
-        for cid in claim_ids:
-            key = _CLAIM_KEY.format(user_id=user_id, claim_id=cid)
-            raw = await self.redis.get(key)
-            if raw:
-                d = json.loads(raw)
+        claims: list[SelfModelClaim] = []
+        assumptions = readout.get("known_assumptions", {})
+        for i, (assumption_id, assumption_data) in enumerate(assumptions.items()):
+            if i >= limit:
+                break
+            if isinstance(assumption_data, dict):
                 claims.append(SelfModelClaim(
-                    claim_id=d["claim_id"],
-                    claim=d["claim"],
-                    confidence=d["confidence"],
-                    scope=d["scope"],
-                    evidence=d.get("evidence", []),
-                    counter_evidence=d.get("counter_evidence", []),
-                    policy_effects=d.get("policy_effects", []),
-                    outcome=d.get("outcome"),
-                    retract_conditions=d.get("retract_conditions", []),
+                    claim_id=f"aurora:{assumption_id}",
+                    claim=str(assumption_data.get("statement", assumption_id)),
+                    confidence=float(assumption_data.get("confidence", 0.5)),
+                    scope="user_pair",
+                    evidence=assumption_data.get("evidence", []),
+                    counter_evidence=[],
+                    policy_effects=[],
+                    outcome=None,
                 ))
+
         return claims
 
     async def record_user_correction(
@@ -219,32 +223,38 @@ class SparkleSelfModelService:
         reason: str,
         source: str = "user_correction",
     ) -> SelfModelClaim:
-        """用户纠正了系统判断 → 记录到自我模型。"""
+        """Record a user correction → routed to Aurora."""
+        try:
+            aurora = self._get_aurora()
+            await aurora.record_user_correction(
+                user_id=user_id,
+                correction_text=reason,
+                source=source,
+            )
+        except Exception:
+            logger.debug("Aurora correction delegation failed (non-fatal)", exc_info=True)
+
         return await self.record_claim(
             user_id=user_id,
             claim=f"用户纠正了系统判断: {reason}",
-            confidence=0.90,  # 用户纠正置信度最高
+            confidence=0.90,
             scope="current_sprint",
             evidence=[f"source={source}", f"signal={signal_id}"],
             policy_effects=["retract_related_directive"],
         )
 
-    def _attribute(
-        self,
-        expected: str,
-        actual: dict[str, Any],
-    ) -> dict[str, Any]:
-        """归因分析 — 策略是否有效。"""
+    def _attribute(self, expected: str, actual: dict[str, Any]) -> dict[str, Any]:
+        """Attribution analysis — ported from original Spine implementation."""
         completed = actual.get("completed", False)
         feedback = actual.get("user_feedback", "")
 
         if completed and feedback in ("", "positive"):
             effect = "effective"
-            new_confidence = 0.15  # 增量
+            new_confidence = 0.15
         elif completed and feedback == "negative":
             effect = "completed_but_resented"
             new_confidence = -0.10
-        elif not completed and "不会做" in feedback or "看不懂" in feedback:
+        elif not completed and ("不会做" in feedback or "看不懂" in feedback):
             effect = "insufficient"
             new_confidence = -0.20
         else:
@@ -264,7 +274,7 @@ class SparkleSelfModelService:
         }
 
     def _suggest_next(self, attribution: dict[str, Any]) -> str | None:
-        """基于归因生成下一步建议。"""
+        """Generate next suggestion from attribution."""
         effect = attribution.get("effect")
         hypothesis = attribution.get("new_hypothesis")
 
@@ -275,29 +285,3 @@ class SparkleSelfModelService:
         if effect == "effective":
             return "maintain_current_strategy"
         return None
-
-    async def _update_claim_outcome(
-        self,
-        user_id: str,
-        claim_id: str,
-        attribution: dict[str, Any],
-    ) -> None:
-        """更新关联 claim 的 outcome。"""
-        key = _CLAIM_KEY.format(user_id=user_id, claim_id=claim_id)
-        raw = await self.redis.get(key)
-        if not raw:
-            return
-
-        d = json.loads(raw)
-        d["outcome"] = attribution.get("effect")
-        # 调整置信度
-        delta = attribution.get("confidence_delta", 0)
-        d["confidence"] = max(0.0, min(1.0, d.get("confidence", 0.5) + delta))
-
-        # 检查是否需要添加反证
-        if delta < 0:
-            d.setdefault("counter_evidence", []).append(
-                f"outcome={attribution.get('effect')}"
-            )
-
-        await self.redis.set(key, json.dumps(d), ex=_CLAIM_TTL)

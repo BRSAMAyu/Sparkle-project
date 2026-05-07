@@ -45,6 +45,32 @@ def get_password_hash(password: str) -> str:
         raise ValueError("Failed to hash password") from None
 
 
+def _jwt_signing_key():
+    """Return the appropriate key and algorithm for JWT signing."""
+    algorithm = settings.ALGORITHM
+    if algorithm == "RS256":
+        if not settings.JWT_PRIVATE_KEY:
+            raise ValueError("JWT_PRIVATE_KEY must be set when ALGORITHM=RS256")
+        return settings.JWT_PRIVATE_KEY, algorithm
+    return settings.SECRET_KEY, algorithm
+
+
+def _jwt_verify_keys():
+    """Return a list of (key, algorithm) tuples for JWT verification.
+
+    RS256 is tried first; HS256 is also accepted for backward compatibility
+    with tokens issued before the RS256 migration.
+    """
+    keys = []
+    if settings.ALGORITHM == "RS256" and settings.JWT_PUBLIC_KEY:
+        keys.append((settings.JWT_PUBLIC_KEY, "RS256"))
+    if settings.SECRET_KEY:
+        keys.append((settings.SECRET_KEY, "HS256"))
+    if not keys:
+        raise ValueError("No JWT verification keys configured")
+    return keys
+
+
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
     """
     创建 JWT access token
@@ -62,7 +88,8 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None) -> s
             "aud": getattr(settings, "JWT_AUDIENCE", "sparkle-app"),
         }
     )
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    key, algorithm = _jwt_signing_key()
+    encoded_jwt = jwt.encode(to_encode, key, algorithm=algorithm)
     return encoded_jwt
 
 
@@ -83,27 +110,38 @@ def create_refresh_token(data: dict) -> str:
             "aud": getattr(settings, "JWT_AUDIENCE", "sparkle-app"),
         }
     )
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    key, algorithm = _jwt_signing_key()
+    encoded_jwt = jwt.encode(to_encode, key, algorithm=algorithm)
     return encoded_jwt
 
 
 async def decode_token(token: str, expected_type: str | None = None) -> dict:
     """
-    解码 JWT token
+    解码 JWT token — tries RS256 first, falls back to HS256.
     """
-    try:
-        audience = settings.JWT_AUDIENCE or None
-        issuer = settings.JWT_ISSUER or None
-        payload = jwt.decode(
-            token,
-            settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM],
-            audience=audience,
-            issuer=issuer,
-            options={"verify_aud": bool(audience)},
-        )
-    except JWTError as exc:
-        raise exc
+    audience = settings.JWT_AUDIENCE or None
+    issuer = settings.JWT_ISSUER or None
+
+    verify_keys = _jwt_verify_keys()
+    last_error = None
+    for key, algorithm in verify_keys:
+        try:
+            payload = jwt.decode(
+                token,
+                key,
+                algorithms=[algorithm],
+                audience=audience,
+                issuer=issuer,
+                options={"verify_aud": bool(audience)},
+            )
+            last_error = None
+            break
+        except JWTError as exc:
+            last_error = exc
+            continue
+
+    if last_error is not None:
+        raise last_error
 
     if "exp" not in payload or "sub" not in payload:
         raise JWTError("Token missing required claims")

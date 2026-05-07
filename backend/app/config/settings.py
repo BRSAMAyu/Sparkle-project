@@ -215,7 +215,9 @@ class Settings(BaseSettings):
     # JWT Settings
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    ALGORITHM: str = "HS256"
+    ALGORITHM: str = "HS256"  # Set to "RS256" in production for asymmetric signing
+    JWT_PRIVATE_KEY: str = ""  # PEM-encoded RSA private key (required for RS256 signing)
+    JWT_PUBLIC_KEY: str = ""   # PEM-encoded RSA public key (required for RS256 verification)
     APPLE_CLIENT_ID: str = ""
     GOOGLE_CLIENT_ID: str = ""
     WS_ALLOW_QUERY_TOKEN: bool | None = None

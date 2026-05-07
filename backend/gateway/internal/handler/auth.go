@@ -168,8 +168,18 @@ func (h *AuthHandler) createAccessToken(userID pgtype.UUID, sessionID string) (s
 		claims["aud"] = h.cfg.JWTAudience
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(h.cfg.JWTSecret))
+	var signingMethod jwt.SigningMethod = jwt.SigningMethodHS256
+	var signingKey interface{} = []byte(h.cfg.JWTSecret)
+	if h.cfg.JWTAlgorithm == "RS256" {
+		var err error
+		signingKey, err = h.cfg.ParseJWTPrivateKey()
+		if err != nil {
+			return "", err
+		}
+		signingMethod = jwt.SigningMethodRS256
+	}
+	token := jwt.NewWithClaims(signingMethod, claims)
+	return token.SignedString(signingKey)
 }
 
 func (h *AuthHandler) createRefreshToken(userID pgtype.UUID, sessionID string) (string, string, error) {
@@ -197,8 +207,18 @@ func (h *AuthHandler) createRefreshToken(userID pgtype.UUID, sessionID string) (
 		claims["aud"] = h.cfg.JWTAudience
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	signed, err := token.SignedString([]byte(h.cfg.JWTSecret))
+	var signingMethod jwt.SigningMethod = jwt.SigningMethodHS256
+	var signingKey interface{} = []byte(h.cfg.JWTSecret)
+	if h.cfg.JWTAlgorithm == "RS256" {
+		var err error
+		signingKey, err = h.cfg.ParseJWTPrivateKey()
+		if err != nil {
+			return "", "", err
+		}
+		signingMethod = jwt.SigningMethodRS256
+	}
+	token := jwt.NewWithClaims(signingMethod, claims)
+	signed, err := token.SignedString(signingKey)
 	if err != nil {
 		return "", "", err
 	}

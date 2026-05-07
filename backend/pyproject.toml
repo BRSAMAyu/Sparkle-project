@@ -73,6 +73,7 @@ dependencies = [
     "networkx>=3.2.1",
 
     # Observability
+    "sentry-sdk>=2.0.0",
     "opentelemetry-api",
     "opentelemetry-sdk",
     "opentelemetry-exporter-otlp",

@@ -25,6 +25,7 @@ from app.core.account_lockout import account_lockout_service
 from app.core.auth_audit_service import auth_audit_service
 from app.core.cache import cache_service
 from app.core.event_bus import UserRegisteredEvent
+from app.core import logsafe
 from app.core.rate_limiting import limiter
 from app.core.security import (
     blacklist_token,
@@ -253,7 +254,7 @@ async def _verify_social_identity(data: SocialLoginRequest, request: Request | N
                     )
                     token_data = token_resp.json()
                     if "errcode" in token_data and token_data["errcode"] != 0:
-                        logger.error(f"WeChat code exchange failed: {token_data}")
+                        logger.error("WeChat code exchange failed: errcode={}", token_data.get("errcode", "unknown"))
                         raise HTTPException(status_code=401, detail="微信登录失败，请重试" if _zh(request) else "WeChat login failed. Please try again.")
 
                     social_id = token_data["openid"]
@@ -268,7 +269,7 @@ async def _verify_social_identity(data: SocialLoginRequest, request: Request | N
                     )
                     user_data = user_resp.json()
                     if "errcode" in user_data and user_data["errcode"] != 0:
-                        logger.error(f"WeChat user info failed: {user_data}")
+                        logger.error("WeChat user info failed: errcode={}", user_data.get("errcode", "unknown"))
                         raise HTTPException(status_code=401, detail="获取微信用户信息失败" if _zh(request) else "Failed to retrieve WeChat user info.")
                     user_info = {
                         "email": None,
@@ -318,7 +319,7 @@ async def register(
     Register a new user
     """
     _validate_terms_acceptance(data.accepted_tos, data.accepted_privacy)
-    logger.info(f"Registration attempt: username={data.username}")
+    logger.info("Registration attempt: username={}", logsafe.username_hash(data.username))
 
     # C1 Security Fix: 统一检查用户名和邮箱，返回通用错误消息（防止枚举攻击）
     existing_user = await db.execute(
@@ -354,7 +355,7 @@ async def register(
     await db.commit()
     await db.refresh(user)
 
-    logger.info(f"User registered successfully: {user.username} (ID: {user.id})")
+    logger.info("User registered successfully: user_id={}", logsafe.user_id_hash(str(user.id)))
 
     # M2 Security Fix: Send verification email via Celery queue (rate-limited)
     try:
@@ -411,7 +412,7 @@ async def login(
     """
     User login with username/email and password
     """
-    logger.info(f"Login attempt: identifier={data.username or data.email}")
+    logger.info("Login attempt: identifier={}", logsafe.email_mask(data.username or data.email or ""))
     login_id = data.username or data.email
     if not login_id:
         raise HTTPException(status_code=422, detail="用户名或邮箱不能为空")
@@ -423,7 +424,7 @@ async def login(
     user = result.scalars().first()
 
     if not user:
-        logger.warning(f"Login attempt for non-existent user: {login_id}")
+        logger.warning("Login attempt for non-existent user: identifier={}", logsafe.email_mask(login_id or ""))
         auth_audit_service.schedule_log(
             AuthAuditAction.LOGIN_FAILED,
             request=request,
@@ -443,7 +444,7 @@ async def login(
         )
 
     if not verify_password(data.password, user.hashed_password):
-        logger.warning(f"Login failed for user: {login_id}")
+        logger.warning("Login failed for user: identifier={}", logsafe.email_mask(login_id or ""))
         # Record failed attempt
         await account_lockout_service.record_failed_login(str(user.id))
         auth_audit_service.schedule_log(
@@ -459,7 +460,7 @@ async def login(
         )
 
     if not user.is_active:
-        logger.warning(f"Login attempt for inactive user: {user.username}")
+        logger.warning("Login attempt for inactive user: user_id={}", logsafe.user_id_hash(str(user.id)))
         raise HTTPException(status_code=400, detail="账号暂时无法使用，请联系客服")
 
     # Successful login - reset failed attempts
@@ -900,7 +901,7 @@ async def guest_login(
             if not user:
                 raise HTTPException(status_code=500, detail="访客账号异常，请稍后重试" if _zh(request) else "Guest account error. Please try again later.") from e
 
-    logger.info(f"Guest login: guest_id={guest_id}, user_id={user.id}, new={is_new_guest}")
+    logger.info("Guest login: user_id={}, new={}", logsafe.user_id_hash(str(user.id)), is_new_guest)
 
     return {
         **await _issue_auth_tokens(

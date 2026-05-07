@@ -75,7 +75,9 @@ class ProductionSettings(BaseSettings):
 
     # ==================== 安全配置 ====================
     SECRET_KEY: str = Field(..., env="SECRET_KEY")
-    JWT_ALGORITHM: str = Field(default="HS256", env="JWT_ALGORITHM")
+    JWT_ALGORITHM: str = Field(default="RS256", env="JWT_ALGORITHM")
+    JWT_PRIVATE_KEY: str = Field(default="", env="JWT_PRIVATE_KEY")
+    JWT_PUBLIC_KEY: str = Field(default="", env="JWT_PUBLIC_KEY")
     JWT_EXPIRE_MINUTES: int = Field(default=1440, env="JWT_EXPIRE_MINUTES")  # 24小时
 
     # 密码哈希强度

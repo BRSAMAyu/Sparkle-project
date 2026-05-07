@@ -62,7 +62,9 @@ class LegalDocumentScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: DS.spacing8),
                     Text(
-                      I18nService.instance.isChinese ? '这是当前移动端内置的合规说明占位稿，后续可以平滑替换为线上正式版本。' : 'This is a built-in placeholder for compliance. It can be smoothly replaced with the online version later.',
+                      I18nService.instance.isChinese
+                          ? '最后更新：2026年5月1日。本隐私政策说明了 Sparkle 如何收集、使用和保护你的个人信息。请仔细阅读。'
+                          : 'Last updated: May 1, 2026. This privacy policy explains how Sparkle collects, uses, and protects your personal information. Please read carefully.',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],

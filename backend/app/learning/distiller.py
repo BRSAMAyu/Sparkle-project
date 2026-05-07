@@ -18,7 +18,8 @@ def _utcnow() -> datetime:
 
 
 def distiller_enabled() -> bool:
-    return os.getenv("SPARKLE_WS7_DISTILLER_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+    """Learning pipeline is ON by default. Set to 'false' only for debugging."""
+    return os.getenv("SPARKLE_WS7_DISTILLER_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
 
 
 @dataclass(frozen=True)

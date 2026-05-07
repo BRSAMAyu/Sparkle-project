@@ -88,10 +88,17 @@ class User(BaseModel):
     is_superuser = Column(Boolean, default=False, nullable=False)
     status = Column(Enum(UserStatus), default=UserStatus.OFFLINE, nullable=False)
 
-    # 🆕 社交登录 ID
-    google_id = Column(String(255), unique=True, nullable=True, index=True)
-    apple_id = Column(String(255), unique=True, nullable=True, index=True)
-    wechat_unionid = Column(String(255), unique=True, nullable=True, index=True)
+    # 🆕 社交登录 ID (encrypted at rest via EncryptedString)
+    google_id = Column(String(512), unique=True, nullable=True, index=True)
+    google_id_hash = Column(String(64), nullable=True, index=True)
+    apple_id = Column(String(512), unique=True, nullable=True, index=True)
+    apple_id_hash = Column(String(64), nullable=True, index=True)
+    wechat_unionid = Column(String(512), unique=True, nullable=True, index=True)
+    wechat_unionid_hash = Column(String(64), nullable=True, index=True)
+
+    # Hash columns for deterministic lookup (P1-1: field-level encryption)
+    username_hash = Column(String(64), nullable=True, index=True)
+    email_hash = Column(String(64), nullable=True, index=True)
 
     # 🆕 注册来源 (analytics)
     registration_source = Column(String(50), default="email", nullable=False) # email, google, apple, wechat
@@ -357,8 +364,9 @@ class UserDevice(BaseModel):
     device_id = Column(String(255), nullable=False, index=True)  # 设备唯一标识
     platform = Column(String(50), nullable=False)  # ios, android, web
 
-    # 推送令牌
-    push_token = Column(String(500), nullable=False, index=True)  # FCM/APNs token
+    # 推送令牌 (encrypted at rest via EncryptedString)
+    push_token = Column(String(1024), nullable=False, index=True)  # FCM/APNs token
+    push_token_hash = Column(String(64), nullable=True, index=True)
     token_type = Column(String(50), nullable=False)  # fcm, apns, huawei
 
     # 设备信息

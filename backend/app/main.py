@@ -150,6 +150,12 @@ async def lifespan(app: FastAPI):
 
     loop.set_exception_handler(_global_task_exception_handler)
 
+    # Activate PII field-level encryption listeners (SQLAlchemy events)
+    try:
+        import app.models.pii_encryption_listeners  # noqa: F401 — side-effect import
+    except Exception:
+        logger.warning("PII encryption listeners failed to activate", exc_info=True)
+
     # Initialize Sentry crash reporting
     if settings.SENTRY_DSN:
         from app.core.sentry import init_sentry
@@ -344,6 +350,16 @@ async def lifespan(app: FastAPI):
             redis_client=cache_service.redis,
         )
         app.state.plan_task_generation_consumer_task = asyncio.create_task(plan_task_generation_consumer.start())
+
+        # AUR-005: Wire EpisodeLogger to Redis persistence (production sink)
+        try:
+            from app.causal.episode_logger import episode_logger
+            from app.causal.redis_episode_sink import RedisEpisodeSink
+            redis_sink = RedisEpisodeSink(cache_service.redis)
+            episode_logger.attach_sink(redis_sink)
+            logger.info("EpisodeLogger connected to RedisEpisodeSink — production persistence active")
+        except Exception:
+            logger.warning("EpisodeLogger Redis sink wiring failed — falling back to in-memory", exc_info=True)
 
     intervention_outcome_verifier_task = None
     if event_bus is not None and ENABLE_IN_PROCESS_INTERVENTION_OUTCOME_VERIFIER:
