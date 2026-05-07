@@ -368,7 +368,7 @@ class _PlanReviewCardState extends State<PlanReviewCard>
       ),
       child: Semantics(
         container: true,
-        label: I18nService.instance.isChinese ? '计划审核卡片' : 'Plan review card',
+        label: S.chatSemanticsPlanReviewCard,
         child: GestureDetector(
           onTapDown: showActions ? (_) => _pressController.forward() : null,
           onTapUp: showActions ? (_) => _pressController.reverse() : null,
@@ -1256,9 +1256,7 @@ extension on _PlanReviewCardState {
                         final isSelected = selected == option.value;
                         return Semantics(
                           button: true,
-                          label: I18nService.instance.isChinese
-                              ? '计划审核反馈选项'
-                              : 'Plan review feedback option',
+                          label: S.chatSemanticsPlanReviewOption,
                           child: InkWell(
                             onTap: () => setSheetState(() {
                               selected = option.value;

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 
 /// Collapsible card used by the deep Aurora status layer.
 class AuroraStatusLayerCard extends StatefulWidget {
@@ -69,11 +69,9 @@ class _AuroraStatusLayerCardState extends State<AuroraStatusLayerCard> {
             children: [
               Semantics(
                 button: true,
-                label: I18nService.instance.isChinese
-                    ? (_expanded ? '收起${widget.title}' : '展开${widget.title}')
-                    : (_expanded
-                        ? 'Collapse ${widget.title}'
-                        : 'Expand ${widget.title}'),
+                label: _expanded
+                    ? context.l10n.chatSemanticsCollapseTitle(widget.title)
+                    : context.l10n.chatSemanticsExpandTitle(widget.title),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(DS.radius8),
                   onTap: () => setState(() => _expanded = !_expanded),

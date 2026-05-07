@@ -1081,12 +1081,9 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                     .contains(messageKey);
                                             final collapsedHeight =
                                                 min(maxHeight, 280.0);
-                                            final toggleLabel = I18nService
-                                                    .instance.isChinese
-                                                ? (isExpanded ? '收起' : '展开全文')
-                                                : (isExpanded
-                                                    ? 'Collapse'
-                                                    : 'Read more');
+                                            final toggleLabel = isExpanded
+                                                    ? S.chatBubbleCollapse
+                                                    : S.chatBubbleReadMore;
 
                                             final animatedContent =
                                                 AnimatedSize(
@@ -2427,16 +2424,15 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
   }
 
   String _deliveryCopy(String key) {
-    final zh = I18nService.instance.isChinese;
     switch (key) {
       case 'queued':
-        return zh ? '等待发送' : 'Queued';
+        return S.chatDeliveryQueued;
       case 'sending':
-        return zh ? '正在发送' : 'Sending';
+        return S.chatDeliverySending;
       case 'failed':
-        return zh ? '发送失败' : 'Send failed';
+        return S.chatDeliveryFailed;
       case 'retry':
-        return zh ? '重试' : 'Retry';
+        return S.chatDeliveryRetry;
       default:
         return '';
     }

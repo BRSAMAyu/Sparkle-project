@@ -659,15 +659,15 @@ class _SourceTrayPill extends StatelessWidget {
         ),
       DocumentContextMode.userSelected => (
           Icons.playlist_add_check_rounded,
-          I18nService.instance.isChinese ? '我的资料' : 'My Sources',
+          S.chatLabelMySources,
         ),
       DocumentContextMode.taskScope => (
           Icons.task_alt_rounded,
-          I18nService.instance.isChinese ? '任务范围' : 'Task Scope',
+          S.chatLabelTaskScope,
         ),
       DocumentContextMode.goalScope => (
           Icons.flag_rounded,
-          I18nService.instance.isChinese ? '目标范围' : 'Goal Scope',
+          S.chatLabelGoalScope,
         ),
       DocumentContextMode.off => (
           Icons.menu_book_outlined,

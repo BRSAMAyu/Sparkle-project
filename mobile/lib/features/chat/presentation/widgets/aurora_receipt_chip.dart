@@ -164,7 +164,7 @@ class _AuroraReceiptChipState extends State<AuroraReceiptChip> {
                   ],
                   Semantics(
                     button: true,
-                    label: _copy(zh: '关闭收据', en: 'Dismiss receipt'),
+                    label: S.chatReceiptDismiss,
                     child: GestureDetector(
                       onTap: () {
                         unawaited(SensoryFeedbackService.emit(
@@ -285,10 +285,7 @@ String _summary(
   if (reason != null && reason.isNotEmpty) return reason;
   if (isMemory) {
     final count = memories.length;
-    return _copy(
-      zh: '引用了 $count 条相关记忆',
-      en: 'Used $count related memories',
-    );
+    return S.chatMemoryUsedCount(count);
   }
   if (isSocialSource) return context.l10n.chatSocialContextUsed;
   if (isSource) {
@@ -298,15 +295,9 @@ String _summary(
     );
   }
   if (isNextAction) {
-    return _copy(
-      zh: 'Aurora 调整了下一步',
-      en: 'Aurora changed the next action',
-    );
+    return S.chatReceiptAuroraChangedNext;
   }
-  return _copy(
-    zh: 'Aurora 调整了体验',
-    en: 'Aurora adjusted the experience',
-  );
+  return S.chatReceiptAuroraAdjustedExperience;
 }
 
 String _title(
@@ -323,9 +314,9 @@ String _title(
   if (isSocialSource) return context.l10n.chatSocialContextDetail;
   if (isSource) return context.l10n.chatContextDetail;
   if (isNextAction) {
-    return _copy(zh: '行动调整', en: 'Action change');
+    return S.chatReceiptActionChange;
   }
-  return _copy(zh: 'Aurora 体验调整', en: 'Aurora experience change');
+  return S.chatReceiptExperienceChange;
 }
 
 IconData _iconFor(
@@ -448,7 +439,7 @@ class _AuroraReceiptDetailSheet extends StatelessWidget {
               const SizedBox(height: 14),
               _SectionHeader(
                 icon: Icons.auto_fix_high_outlined,
-                label: _copy(zh: '这轮改变', en: 'Changed this turn'),
+                label: S.chatReceiptChangedThisTurn,
                 color: DS.brandPrimary,
               ),
               const SizedBox(height: 6),
@@ -528,7 +519,7 @@ class _AuroraReceiptDetailSheet extends StatelessWidget {
             if (_isNextAction && receipt['correctable'] == true) ...[
               const SizedBox(height: 8),
               Text(
-                _copy(zh: '这个判断准确吗？', en: 'Is this judgment accurate?'),
+                S.chatReceiptJudgmentAccurate,
                 style: DS.labelSmall.copyWith(color: DS.textTertiary),
               ),
             ],
@@ -596,7 +587,6 @@ class _ReceiptActionChips extends StatelessWidget {
           .toList(growable: false);
     }
 
-    final s = I18nService.instance;
     if (receiptType == kNextActionReceiptType) {
       final options = receipt['correction_options'];
       if (options is List) {
@@ -607,9 +597,7 @@ class _ReceiptActionChips extends StatelessWidget {
               (option) => _ReceiptAction(
                 icon: Icons.tune_rounded,
                 label: option,
-                prompt: s.isChinese
-                    ? '$option。请重新判断这次行动调整。'
-                    : '$option. Please reassess this action change.',
+                prompt: S.chatAuroraReassessAction(option),
               ),
             )
             .toList(growable: false);
@@ -617,11 +605,8 @@ class _ReceiptActionChips extends StatelessWidget {
       return [
         _ReceiptAction(
           icon: Icons.report_outlined,
-          label: _copy(zh: '这个调整不合理', en: 'This change is not right'),
-          prompt: _copy(
-            zh: '这个行动调整不合理，请按我当前的真实情况重新判断。',
-            en: 'This action change is not right. Please reassess from my current situation.',
-          ),
+          label: S.chatAuroraChangeNotRight,
+          prompt: S.chatAuroraChangeNotRightPrompt,
         ),
       ];
     }
@@ -630,11 +615,8 @@ class _ReceiptActionChips extends StatelessWidget {
       return [
         _ReceiptAction(
           icon: Icons.tune_rounded,
-          label: _copy(zh: '重新校准', en: 'Recalibrate'),
-          prompt: _copy(
-            zh: '这个 Aurora 判断不太对，请基于我刚才的反馈重新校准。',
-            en: 'This Aurora judgment is not quite right. Please recalibrate from my feedback.',
-          ),
+          label: S.chatAuroraRecalibrate,
+          prompt: S.chatAuroraRecalibratePrompt,
         ),
       ];
     }
@@ -652,28 +634,20 @@ class _ReceiptActionChips extends StatelessWidget {
     return [
       _ReceiptAction(
         icon: Icons.menu_book_outlined,
-        label: s.isChinese ? '按课件重讲' : 'Reteach from slides',
-        prompt: s.isChinese
-            ? '请按我已上传/选中的课件重新讲一遍，优先引用刚才使用的资料。'
-            : 'Please reteach based on my uploaded/selected materials, prioritizing the ones just used.',
+        label: S.chatAuroraReteachFromSlides,
+        prompt: S.chatAuroraReteachPrompt,
       ),
       _ReceiptAction(
         icon: Icons.block_outlined,
-        label: s.isChinese ? '排除此资料' : 'Exclude this source',
+        label: S.chatAuroraExcludeSource,
         prompt: usedNames.isEmpty
-            ? (s.isChinese
-                ? '请暂时排除刚才使用的资料，换一种解释。'
-                : 'Please exclude the source just used and explain differently.')
-            : (s.isChinese
-                ? '请暂时排除这些资料：${usedNames.join('、')}，换一种解释。'
-                : 'Please exclude these sources: ${usedNames.join(', ')}, and explain differently.'),
+            ? S.chatAuroraExcludeSourcePrompt
+            : S.chatAuroraExcludeSourcesPrompt(usedNames.join(I18nService.instance.isChinese ? '、' : ', ')),
       ),
       _ReceiptAction(
         icon: Icons.history_edu_outlined,
-        label: s.isChinese ? '换成历年真题' : 'Use past exams',
-        prompt: s.isChinese
-            ? '请换成历年真题/典型题视角来讲，并说明为什么这样选资料。'
-            : 'Please switch to a past-exam / classic-problem perspective and explain why these sources were chosen.',
+        label: S.chatAuroraUsePastExams,
+        prompt: S.chatAuroraUsePastExamsPrompt,
       ),
     ];
   }
@@ -709,10 +683,7 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
     final type = widget.memory['type']?.toString().trim();
     final content = widget.memory['content']?.toString().trim() ?? '';
     final memoryType = type != null && type.isNotEmpty ? type : 'episodic';
-    final prompt = _copy(
-      zh: '这条记忆不对：$content。请降低置信度，以后不要直接引用。',
-      en: 'This memory is not right: $content. Please lower confidence and avoid directly using it later.',
-    );
+    final prompt = S.chatMemoryNotRightPrompt(content);
 
     setState(() => _submitting = true);
     try {
@@ -732,7 +703,7 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
       if (mounted) {
         AppFeedback.error(
           context,
-          _copy(zh: '记忆纠正失败', en: 'Memory correction failed'),
+          S.chatMemoryCorrectionFailed,
         );
       }
     } finally {
@@ -752,9 +723,9 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
       if (source.isNotEmpty) source,
       if (confidence.isNotEmpty) confidence,
       if (confirmed)
-        _copy(zh: '已确认', en: 'confirmed')
+        S.chatMemoryConfirmed
       else
-        _copy(zh: '待确认', en: 'needs confirmation'),
+        S.chatMemoryNeedsConfirmation,
     ].join(' · ');
 
     return Container(
@@ -778,7 +749,7 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
             alignment: Alignment.centerRight,
             child: Semantics(
               button: true,
-              label: _copy(zh: '这条记忆不对', en: 'This memory is not right'),
+              label: S.chatMemoryNotRight,
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
@@ -799,7 +770,7 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
                         ),
                       )
                     : const Icon(Icons.flag_outlined, size: 14),
-                label: Text(_copy(zh: '不对', en: 'Not right')),
+                label: Text(S.chatMemoryNotRightShort),
               ),
             ),
           ),
@@ -811,10 +782,7 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
   String _confidenceLabel(Object? raw) {
     final value = raw is num ? raw.toDouble() : double.tryParse('$raw');
     if (value == null) return '';
-    return _copy(
-      zh: '置信度 ${(value * 100).round()}%',
-      en: 'confidence ${(value * 100).round()}%',
-    );
+    return S.chatMemoryConfidencePercent((value * 100).round());
   }
 }
 
@@ -1071,6 +1039,3 @@ String normalizeAuroraReceiptType(Map<String, dynamic> receipt) {
   }
   return kAuroraExperienceReceiptType;
 }
-
-String _copy({required String zh, required String en}) =>
-    I18nService.instance.isChinese ? zh : en;

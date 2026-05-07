@@ -20641,7 +20641,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatExpertSearch => '搜索专家';
 
   @override
-  String get chatExpertStudyBuddy => '学习伙伴';
+  String get chatExpertStudyBuddy => '学伴';
 
   @override
   String get chatExpertTimeCoach => '时间导师';
@@ -30539,4 +30539,338 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get taskFeedbackAiSaved => 'AI 已记下这条反思';
+
+  @override
+  String get chatLabelTask => '任务';
+
+  @override
+  String get chatLabelPlan => '计划';
+
+  @override
+  String get chatLabelAchievement => '成就';
+
+  @override
+  String get chatLabelError => '错题';
+
+  @override
+  String get chatLabelCancel => '取消';
+
+  @override
+  String get chatLabelClose => '关闭';
+
+  @override
+  String get chatLabelSave => '保存';
+
+  @override
+  String get chatLabelCreate => '创建';
+
+  @override
+  String get chatLabelSubmit => '提交';
+
+  @override
+  String get chatLabelOpen => '打开';
+
+  @override
+  String get chatLabelShare => '分享';
+
+  @override
+  String get chatLabelContinue => '继续';
+
+  @override
+  String get chatLabelIgnore => '忽略';
+
+  @override
+  String get chatLabelRetry => '重试';
+
+  @override
+  String get chatLabelRefresh => '刷新';
+
+  @override
+  String get chatLabelCollapse => '收起';
+
+  @override
+  String get chatLabelExpand => '展开';
+
+  @override
+  String get chatLabelAuto => '自动';
+
+  @override
+  String get chatLabelModel => '模型';
+
+  @override
+  String get chatLabelTier => '档位';
+
+  @override
+  String get chatLabelFast => '敏捷';
+
+  @override
+  String get chatLabelBalanced => '均衡';
+
+  @override
+  String get chatLabelDeep => '深思';
+
+  @override
+  String get chatLabelBio => '简介';
+
+  @override
+  String get chatLabelDescription => '说明';
+
+  @override
+  String get chatLabelAddExpert => '添加专家';
+
+  @override
+  String get chatLabelMySources => '我的资料';
+
+  @override
+  String get chatLabelTaskScope => '任务范围';
+
+  @override
+  String get chatLabelGoalScope => '目标范围';
+
+  @override
+  String get chatLabelSource => '来源';
+
+  @override
+  String chatLabelSourcesCount(int count) {
+    return '$count 个来源';
+  }
+
+  @override
+  String get chatMetaTime => '耗时';
+
+  @override
+  String get chatMetaCache => '缓存';
+
+  @override
+  String get chatMetaCacheHit => '命中';
+
+  @override
+  String get chatSemanticsCollapseMemory => '收起 AI 记忆';
+
+  @override
+  String get chatSemanticsExpandMemory => '展开 AI 记忆';
+
+  @override
+  String chatSemanticsCollapseTitle(String title) {
+    return '收起$title';
+  }
+
+  @override
+  String chatSemanticsExpandTitle(String title) {
+    return '展开$title';
+  }
+
+  @override
+  String get chatSemanticsPlanReviewCard => '计划审核卡片';
+
+  @override
+  String get chatSemanticsPlanReviewOption => '计划审核反馈选项';
+
+  @override
+  String get chatGroupReportHarassment => '骚扰';
+
+  @override
+  String get chatGroupReportViolence => '暴力';
+
+  @override
+  String get chatGroupReportInappropriate => '不当内容';
+
+  @override
+  String get chatGroupReportOther => '其他';
+
+  @override
+  String get chatErrorMissingTypeField => '消息格式错误：缺少 type 字段';
+
+  @override
+  String get chatErrorQueueOverflow => '有未发送消息因队列已满被丢弃。';
+
+  @override
+  String get chatErrorParseFailed => '消息解析失败';
+
+  @override
+  String get chatErrorConnectionFailed => '网络连接失败';
+
+  @override
+  String get chatErrorConnectionClosedGenerating => '生成响应时连接中断';
+
+  @override
+  String chatErrorMaxRetriesExceeded(int count) {
+    return '重连 $count 次后仍无法连接';
+  }
+
+  @override
+  String get chatAgendaConfirmCorrectionFeedback => '确认聊天纠错反馈';
+
+  @override
+  String get chatAgendaAdjustReplyStrategy => '调整后续回复策略';
+
+  @override
+  String get chatAgendaConfirmStatusBarJudgment => '确认顶部提醒里的判断';
+
+  @override
+  String get chatAgendaDecideAdjustNextSteps => '决定下一步是否调整';
+
+  @override
+  String get chatAgendaConfirmTaskBlockCause => '确认卡点更像时间、难度还是启动问题';
+
+  @override
+  String get chatAgendaAdjustNextTaskEasier => '把下一张任务卡调成更容易开始的版本';
+
+  @override
+  String get chatAgendaConfirmStatusBarJudgmentShort => '确认状态带里的判断';
+
+  @override
+  String get chatAgendaDecideAdjustPlan => '决定下一步是否调整计划';
+
+  @override
+  String get chatAgendaConfirmTaskBlockMain => '确认任务卡点的主要原因';
+
+  @override
+  String get chatAgendaMakeNextTaskSmaller => '把下一张任务卡调小一点';
+
+  @override
+  String get chatAgendaConfirmCheckpointGap => '确认 checkpoint 进度差异';
+
+  @override
+  String get chatAgendaCalibratePlanPace => '校准接下来的计划节奏';
+
+  @override
+  String get chatSemanticsCollapseRegeneration => '收起重新生成选项';
+
+  @override
+  String get chatSemanticsExpandRegeneration => '展开重新生成选项';
+
+  @override
+  String get chatAuroraReteachFromSlides => '按课件重讲';
+
+  @override
+  String get chatAuroraReteachPrompt => '请按我已上传/选中的课件重新讲一遍，优先引用刚才使用的资料。';
+
+  @override
+  String get chatAuroraExcludeSource => '排除此资料';
+
+  @override
+  String get chatAuroraExcludeSourcePrompt => '请暂时排除刚才使用的资料，换一种解释。';
+
+  @override
+  String chatAuroraExcludeSourcesPrompt(String names) {
+    return '请暂时排除这些资料：$names，换一种解释。';
+  }
+
+  @override
+  String get chatAuroraUsePastExams => '换成历年真题';
+
+  @override
+  String get chatAuroraUsePastExamsPrompt => '请换成历年真题/典型题视角来讲，并说明为什么这样选资料。';
+
+  @override
+  String get chatAuroraChangeNotRight => '这个调整不合理';
+
+  @override
+  String get chatAuroraChangeNotRightPrompt => '这个行动调整不合理，请按我当前的真实情况重新判断。';
+
+  @override
+  String chatAuroraReassessAction(String option) {
+    return '$option。请重新判断这次行动调整。';
+  }
+
+  @override
+  String get chatAuroraRecalibrate => '重新校准';
+
+  @override
+  String get chatAuroraRecalibratePrompt => '这个 Aurora 判断不太对，请基于我刚才的反馈重新校准。';
+
+  @override
+  String chatExpertCollabCount(int count) {
+    return '专家协作 $count位';
+  }
+
+  @override
+  String get chatActionTaskLabel => '任务';
+
+  @override
+  String get chatActionContinue => '接着聊';
+
+  @override
+  String get chatBubbleCollapse => '收起';
+
+  @override
+  String get chatBubbleReadMore => '展开全文';
+
+  @override
+  String get chatDeliveryQueued => '等待发送';
+
+  @override
+  String get chatDeliverySending => '正在发送';
+
+  @override
+  String get chatDeliveryFailed => '发送失败';
+
+  @override
+  String get chatDeliveryRetry => '重试';
+
+  @override
+  String get chatStudyLabelAuto => '自动';
+
+  @override
+  String get chatStudyLabelTask => '任务';
+
+  @override
+  String chatMemoryUsedCount(int count) {
+    return '引用了 $count 条相关记忆';
+  }
+
+  @override
+  String chatMemoryAuroraUsedCount(int count) {
+    return 'Aurora 引用了 $count 条相关记忆';
+  }
+
+  @override
+  String get chatMemoryRelatedMemories => '相关记忆';
+
+  @override
+  String get chatMemoryNotRight => '这条记忆不对';
+
+  @override
+  String get chatMemoryNotRightShort => '不对';
+
+  @override
+  String get chatMemoryCorrectionFailed => '记忆纠正失败';
+
+  @override
+  String get chatMemoryConfirmed => '已确认';
+
+  @override
+  String get chatMemoryNeedsConfirmation => '待确认';
+
+  @override
+  String chatMemoryNotRightPrompt(String content) {
+    return '这条记忆不对：$content。请降低置信度，以后不要直接引用。';
+  }
+
+  @override
+  String chatMemoryConfidencePercent(int percent) {
+    return '置信度 $percent%';
+  }
+
+  @override
+  String get chatReceiptDismiss => '关闭收据';
+
+  @override
+  String get chatReceiptAuroraChangedNext => 'Aurora 调整了下一步';
+
+  @override
+  String get chatReceiptAuroraAdjustedExperience => 'Aurora 调整了体验';
+
+  @override
+  String get chatReceiptActionChange => '行动调整';
+
+  @override
+  String get chatReceiptExperienceChange => 'Aurora 体验调整';
+
+  @override
+  String get chatReceiptChangedThisTurn => '这轮改变';
+
+  @override
+  String get chatReceiptJudgmentAccurate => '这个判断准确吗？';
 }

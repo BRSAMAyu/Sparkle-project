@@ -71,17 +71,13 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                       icon: const Icon(Icons.person_add_alt_1_outlined),
                       onPressed: () => _showCreateExpertDialog(context),
                       variant: ButtonVariant.ghost,
-                      semanticLabel: I18nService.instance.isChinese
-                          ? '添加专家'
-                          : 'Add expert',
+                      semanticLabel: S.chatLabelAddExpert,
                     ),
                     SparkleIconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.pop(context),
                       variant: ButtonVariant.ghost,
-                      semanticLabel: I18nService.instance.isChinese
-                          ? '关闭'
-                          : 'Close',
+                      semanticLabel: S.chatLabelClose,
                     ),
                   ],
                 ),
@@ -538,7 +534,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 TextField(
                   controller: descriptionController,
                   decoration: InputDecoration(
-                    labelText: I18nService.instance.isChinese ? '简介' : 'Bio',
+                    labelText: S.chatLabelBio,
                   ),
                 ),
                 DropdownButtonFormField<String>(
@@ -559,7 +555,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 DropdownButtonFormField<String>(
                   initialValue: selectedModelKey,
                   decoration: InputDecoration(
-                    labelText: I18nService.instance.isChinese ? '模型' : 'Model',
+                    labelText: S.chatLabelModel,
                   ),
                   items: modelOptions
                       .map(
@@ -575,23 +571,23 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 DropdownButtonFormField<String>(
                   initialValue: selectedReasoningMode,
                   decoration: InputDecoration(
-                    labelText: I18nService.instance.isChinese ? '档位' : 'Tier',
+                    labelText: S.chatLabelTier,
                   ),
                   items: [
                     DropdownMenuItem(
                       value: 'fast',
                       child:
-                          Text(I18nService.instance.isChinese ? '敏捷' : 'Fast'),
+                          Text(S.chatLabelFast),
                     ),
                     DropdownMenuItem(
                       value: 'balanced',
                       child: Text(
-                          I18nService.instance.isChinese ? '均衡' : 'Balanced'),
+                          S.chatLabelBalanced),
                     ),
                     DropdownMenuItem(
                       value: 'deep',
                       child:
-                          Text(I18nService.instance.isChinese ? '深思' : 'Deep'),
+                          Text(S.chatLabelDeep),
                     ),
                   ],
                   onChanged: (value) => setLocalState(
@@ -613,7 +609,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: Text(I18nService.instance.isChinese ? '取消' : 'Cancel'),
+              child: Text(S.chatLabelCancel),
             ),
             FilledButton(
               onPressed: () async {
@@ -628,7 +624,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                 if (!dialogContext.mounted) return;
                 Navigator.pop(dialogContext, expert);
               },
-              child: Text(I18nService.instance.isChinese ? '创建' : 'Create'),
+              child: Text(S.chatLabelCreate),
             ),
           ],
         ),
@@ -664,7 +660,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
               controller: descriptionController,
               decoration: InputDecoration(
                 labelText:
-                    I18nService.instance.isChinese ? '说明' : 'Description',
+                    S.chatLabelDescription,
               ),
             ),
           ],
@@ -672,7 +668,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(I18nService.instance.isChinese ? '取消' : 'Cancel'),
+            child: Text(S.chatLabelCancel),
           ),
           FilledButton(
             onPressed: () async {
@@ -686,7 +682,7 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
               if (!dialogContext.mounted) return;
               Navigator.pop(dialogContext, true);
             },
-            child: Text(I18nService.instance.isChinese ? '保存' : 'Save'),
+            child: Text(S.chatLabelSave),
           ),
         ],
       ),

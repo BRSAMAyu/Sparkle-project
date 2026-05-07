@@ -600,7 +600,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                       },
                     ),
                     _PreviewActionButton(
-                      label: I18nService.instance.isChinese ? '取消' : 'Cancel',
+                      label: S.chatLabelCancel,
                       onTap: () => Navigator.of(sheetContext).pop(),
                     ),
                   ],
@@ -611,7 +611,7 @@ class _PrivateChatScreenState extends ConsumerState<PrivateChatScreen> {
                   runSpacing: DS.spacing8,
                   children: [
                     _PreviewActionButton(
-                      label: I18nService.instance.isChinese ? '取消' : 'Cancel',
+                      label: S.chatLabelCancel,
                       onTap: () => Navigator.of(sheetContext).pop(),
                     ),
                     _PreviewActionButton(

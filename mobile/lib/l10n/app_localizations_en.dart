@@ -31856,4 +31856,356 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get taskFeedbackAiSaved => 'AI saved this reflection';
+
+  @override
+  String get chatLabelTask => 'Task';
+
+  @override
+  String get chatLabelPlan => 'Plan';
+
+  @override
+  String get chatLabelAchievement => 'Achievement';
+
+  @override
+  String get chatLabelError => 'Error';
+
+  @override
+  String get chatLabelCancel => 'Cancel';
+
+  @override
+  String get chatLabelClose => 'Close';
+
+  @override
+  String get chatLabelSave => 'Save';
+
+  @override
+  String get chatLabelCreate => 'Create';
+
+  @override
+  String get chatLabelSubmit => 'Submit';
+
+  @override
+  String get chatLabelOpen => 'Open';
+
+  @override
+  String get chatLabelShare => 'Share';
+
+  @override
+  String get chatLabelContinue => 'Continue';
+
+  @override
+  String get chatLabelIgnore => 'Ignore';
+
+  @override
+  String get chatLabelRetry => 'Retry';
+
+  @override
+  String get chatLabelRefresh => 'Refresh';
+
+  @override
+  String get chatLabelCollapse => 'Collapse';
+
+  @override
+  String get chatLabelExpand => 'Expand';
+
+  @override
+  String get chatLabelAuto => 'Auto';
+
+  @override
+  String get chatLabelModel => 'Model';
+
+  @override
+  String get chatLabelTier => 'Tier';
+
+  @override
+  String get chatLabelFast => 'Fast';
+
+  @override
+  String get chatLabelBalanced => 'Balanced';
+
+  @override
+  String get chatLabelDeep => 'Deep';
+
+  @override
+  String get chatLabelBio => 'Bio';
+
+  @override
+  String get chatLabelDescription => 'Description';
+
+  @override
+  String get chatLabelAddExpert => 'Add expert';
+
+  @override
+  String get chatLabelMySources => 'My Sources';
+
+  @override
+  String get chatLabelTaskScope => 'Task Scope';
+
+  @override
+  String get chatLabelGoalScope => 'Goal Scope';
+
+  @override
+  String get chatLabelSource => 'Source';
+
+  @override
+  String chatLabelSourcesCount(int count) {
+    return '$count sources';
+  }
+
+  @override
+  String get chatMetaTime => 'Time';
+
+  @override
+  String get chatMetaCache => 'Cache';
+
+  @override
+  String get chatMetaCacheHit => 'Hit';
+
+  @override
+  String get chatSemanticsCollapseMemory => 'Collapse AI memory';
+
+  @override
+  String get chatSemanticsExpandMemory => 'Expand AI memory';
+
+  @override
+  String chatSemanticsCollapseTitle(String title) {
+    return 'Collapse $title';
+  }
+
+  @override
+  String chatSemanticsExpandTitle(String title) {
+    return 'Expand $title';
+  }
+
+  @override
+  String get chatSemanticsPlanReviewCard => 'Plan review card';
+
+  @override
+  String get chatSemanticsPlanReviewOption => 'Plan review feedback option';
+
+  @override
+  String get chatGroupReportHarassment => 'Harassment';
+
+  @override
+  String get chatGroupReportViolence => 'Violence';
+
+  @override
+  String get chatGroupReportInappropriate => 'Inappropriate';
+
+  @override
+  String get chatGroupReportOther => 'Other';
+
+  @override
+  String get chatErrorMissingTypeField => 'Missing \"type\" field';
+
+  @override
+  String get chatErrorQueueOverflow =>
+      'A pending message was dropped because the queue is full.';
+
+  @override
+  String get chatErrorParseFailed => 'Failed to parse incoming message';
+
+  @override
+  String get chatErrorConnectionFailed => 'Network connection failed';
+
+  @override
+  String get chatErrorConnectionClosedGenerating =>
+      'Connection closed while generating response';
+
+  @override
+  String chatErrorMaxRetriesExceeded(int count) {
+    return 'Unable to connect after $count attempts';
+  }
+
+  @override
+  String get chatAgendaConfirmCorrectionFeedback =>
+      'Confirm chat correction feedback';
+
+  @override
+  String get chatAgendaAdjustReplyStrategy =>
+      'Adjust subsequent reply strategy';
+
+  @override
+  String get chatAgendaConfirmStatusBarJudgment =>
+      'Confirm status bar judgment';
+
+  @override
+  String get chatAgendaDecideAdjustNextSteps =>
+      'Decide whether to adjust next steps';
+
+  @override
+  String get chatAgendaConfirmTaskBlockCause =>
+      'Identify if the block is time, difficulty, or getting started';
+
+  @override
+  String get chatAgendaAdjustNextTaskEasier =>
+      'Adjust the next task card to be easier to start';
+
+  @override
+  String get chatAgendaConfirmStatusBarJudgmentShort =>
+      'Confirm status bar judgment';
+
+  @override
+  String get chatAgendaDecideAdjustPlan => 'Decide whether to adjust the plan';
+
+  @override
+  String get chatAgendaConfirmTaskBlockMain =>
+      'Identify the main cause of the task block';
+
+  @override
+  String get chatAgendaMakeNextTaskSmaller => 'Make the next task card smaller';
+
+  @override
+  String get chatAgendaConfirmCheckpointGap =>
+      'Confirm checkpoint progress gap';
+
+  @override
+  String get chatAgendaCalibratePlanPace => 'Calibrate upcoming plan pace';
+
+  @override
+  String get chatSemanticsCollapseRegeneration =>
+      'Collapse regeneration options';
+
+  @override
+  String get chatSemanticsExpandRegeneration => 'Expand regeneration options';
+
+  @override
+  String get chatAuroraReteachFromSlides => 'Reteach from slides';
+
+  @override
+  String get chatAuroraReteachPrompt =>
+      'Please reteach based on my uploaded/selected materials, prioritizing the ones just used.';
+
+  @override
+  String get chatAuroraExcludeSource => 'Exclude this source';
+
+  @override
+  String get chatAuroraExcludeSourcePrompt =>
+      'Please exclude the source just used and explain differently.';
+
+  @override
+  String chatAuroraExcludeSourcesPrompt(String names) {
+    return 'Please exclude these sources: $names, and explain differently.';
+  }
+
+  @override
+  String get chatAuroraUsePastExams => 'Use past exams';
+
+  @override
+  String get chatAuroraUsePastExamsPrompt =>
+      'Please switch to a past-exam / classic-problem perspective and explain why these sources were chosen.';
+
+  @override
+  String get chatAuroraChangeNotRight => 'This change is not right';
+
+  @override
+  String get chatAuroraChangeNotRightPrompt =>
+      'This action change is not right. Please reassess from my current situation.';
+
+  @override
+  String chatAuroraReassessAction(String option) {
+    return '$option. Please reassess this action change.';
+  }
+
+  @override
+  String get chatAuroraRecalibrate => 'Recalibrate';
+
+  @override
+  String get chatAuroraRecalibratePrompt =>
+      'This Aurora judgment is not quite right. Please recalibrate from my feedback.';
+
+  @override
+  String chatExpertCollabCount(int count) {
+    return 'Expert collab $count';
+  }
+
+  @override
+  String get chatActionTaskLabel => 'Task';
+
+  @override
+  String get chatActionContinue => 'Continue';
+
+  @override
+  String get chatBubbleCollapse => 'Collapse';
+
+  @override
+  String get chatBubbleReadMore => 'Read more';
+
+  @override
+  String get chatDeliveryQueued => 'Queued';
+
+  @override
+  String get chatDeliverySending => 'Sending';
+
+  @override
+  String get chatDeliveryFailed => 'Send failed';
+
+  @override
+  String get chatDeliveryRetry => 'Retry';
+
+  @override
+  String get chatStudyLabelAuto => 'Auto';
+
+  @override
+  String get chatStudyLabelTask => 'Task';
+
+  @override
+  String chatMemoryUsedCount(int count) {
+    return 'Used $count related memories';
+  }
+
+  @override
+  String chatMemoryAuroraUsedCount(int count) {
+    return 'Aurora used $count related memories';
+  }
+
+  @override
+  String get chatMemoryRelatedMemories => 'Related memories';
+
+  @override
+  String get chatMemoryNotRight => 'This memory is not right';
+
+  @override
+  String get chatMemoryNotRightShort => 'Not right';
+
+  @override
+  String get chatMemoryCorrectionFailed => 'Memory correction failed';
+
+  @override
+  String get chatMemoryConfirmed => 'confirmed';
+
+  @override
+  String get chatMemoryNeedsConfirmation => 'needs confirmation';
+
+  @override
+  String chatMemoryNotRightPrompt(String content) {
+    return 'This memory is not right: $content. Please lower confidence and avoid directly using it later.';
+  }
+
+  @override
+  String chatMemoryConfidencePercent(int percent) {
+    return 'confidence $percent%';
+  }
+
+  @override
+  String get chatReceiptDismiss => 'Dismiss receipt';
+
+  @override
+  String get chatReceiptAuroraChangedNext => 'Aurora changed the next action';
+
+  @override
+  String get chatReceiptAuroraAdjustedExperience =>
+      'Aurora adjusted the experience';
+
+  @override
+  String get chatReceiptActionChange => 'Action change';
+
+  @override
+  String get chatReceiptExperienceChange => 'Aurora experience change';
+
+  @override
+  String get chatReceiptChangedThisTurn => 'Changed this turn';
+
+  @override
+  String get chatReceiptJudgmentAccurate => 'Is this judgment accurate?';
 }

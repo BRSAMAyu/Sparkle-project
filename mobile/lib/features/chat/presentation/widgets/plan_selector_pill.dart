@@ -323,9 +323,7 @@ class _PlanSelectorSheet extends StatelessWidget {
                     icon: const Icon(Icons.close),
                     onPressed: () => Navigator.pop(context),
                     variant: ButtonVariant.ghost,
-                    semanticLabel: I18nService.instance.isChinese
-                        ? '关闭'
-                        : 'Close',
+                    semanticLabel: S.chatLabelClose,
                   ),
                 ],
               ),

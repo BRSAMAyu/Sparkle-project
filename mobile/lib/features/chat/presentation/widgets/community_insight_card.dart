@@ -194,7 +194,7 @@ class _CommunityInsightCardState extends State<CommunityInsightCard>
                             border: Border.all(color: DS.borderSubtle),
                           ),
                           child: Text(
-                            I18nService.instance.isChinese ? '忽略' : 'Ignore',
+                            S.chatLabelIgnore,
                             style: DS.labelSmall.copyWith(
                               color: DS.textTertiary,
                             ),

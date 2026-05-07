@@ -37666,7 +37666,7 @@ abstract class AppLocalizations {
   /// No description provided for @chatExpertStudyBuddy.
   ///
   /// In zh, this message translates to:
-  /// **'学习伙伴'**
+  /// **'学伴'**
   String get chatExpertStudyBuddy;
 
   /// No description provided for @chatExpertTimeCoach.
@@ -55536,6 +55536,630 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'AI 已记下这条反思'**
   String get taskFeedbackAiSaved;
+
+  /// No description provided for @chatLabelTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务'**
+  String get chatLabelTask;
+
+  /// No description provided for @chatLabelPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划'**
+  String get chatLabelPlan;
+
+  /// No description provided for @chatLabelAchievement.
+  ///
+  /// In zh, this message translates to:
+  /// **'成就'**
+  String get chatLabelAchievement;
+
+  /// No description provided for @chatLabelError.
+  ///
+  /// In zh, this message translates to:
+  /// **'错题'**
+  String get chatLabelError;
+
+  /// No description provided for @chatLabelCancel.
+  ///
+  /// In zh, this message translates to:
+  /// **'取消'**
+  String get chatLabelCancel;
+
+  /// No description provided for @chatLabelClose.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭'**
+  String get chatLabelClose;
+
+  /// No description provided for @chatLabelSave.
+  ///
+  /// In zh, this message translates to:
+  /// **'保存'**
+  String get chatLabelSave;
+
+  /// No description provided for @chatLabelCreate.
+  ///
+  /// In zh, this message translates to:
+  /// **'创建'**
+  String get chatLabelCreate;
+
+  /// No description provided for @chatLabelSubmit.
+  ///
+  /// In zh, this message translates to:
+  /// **'提交'**
+  String get chatLabelSubmit;
+
+  /// No description provided for @chatLabelOpen.
+  ///
+  /// In zh, this message translates to:
+  /// **'打开'**
+  String get chatLabelOpen;
+
+  /// No description provided for @chatLabelShare.
+  ///
+  /// In zh, this message translates to:
+  /// **'分享'**
+  String get chatLabelShare;
+
+  /// No description provided for @chatLabelContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续'**
+  String get chatLabelContinue;
+
+  /// No description provided for @chatLabelIgnore.
+  ///
+  /// In zh, this message translates to:
+  /// **'忽略'**
+  String get chatLabelIgnore;
+
+  /// No description provided for @chatLabelRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get chatLabelRetry;
+
+  /// No description provided for @chatLabelRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新'**
+  String get chatLabelRefresh;
+
+  /// No description provided for @chatLabelCollapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起'**
+  String get chatLabelCollapse;
+
+  /// No description provided for @chatLabelExpand.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开'**
+  String get chatLabelExpand;
+
+  /// No description provided for @chatLabelAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动'**
+  String get chatLabelAuto;
+
+  /// No description provided for @chatLabelModel.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型'**
+  String get chatLabelModel;
+
+  /// No description provided for @chatLabelTier.
+  ///
+  /// In zh, this message translates to:
+  /// **'档位'**
+  String get chatLabelTier;
+
+  /// No description provided for @chatLabelFast.
+  ///
+  /// In zh, this message translates to:
+  /// **'敏捷'**
+  String get chatLabelFast;
+
+  /// No description provided for @chatLabelBalanced.
+  ///
+  /// In zh, this message translates to:
+  /// **'均衡'**
+  String get chatLabelBalanced;
+
+  /// No description provided for @chatLabelDeep.
+  ///
+  /// In zh, this message translates to:
+  /// **'深思'**
+  String get chatLabelDeep;
+
+  /// No description provided for @chatLabelBio.
+  ///
+  /// In zh, this message translates to:
+  /// **'简介'**
+  String get chatLabelBio;
+
+  /// No description provided for @chatLabelDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'说明'**
+  String get chatLabelDescription;
+
+  /// No description provided for @chatLabelAddExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加专家'**
+  String get chatLabelAddExpert;
+
+  /// No description provided for @chatLabelMySources.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的资料'**
+  String get chatLabelMySources;
+
+  /// No description provided for @chatLabelTaskScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务范围'**
+  String get chatLabelTaskScope;
+
+  /// No description provided for @chatLabelGoalScope.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标范围'**
+  String get chatLabelGoalScope;
+
+  /// No description provided for @chatLabelSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'来源'**
+  String get chatLabelSource;
+
+  /// No description provided for @chatLabelSourcesCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 个来源'**
+  String chatLabelSourcesCount(int count);
+
+  /// No description provided for @chatMetaTime.
+  ///
+  /// In zh, this message translates to:
+  /// **'耗时'**
+  String get chatMetaTime;
+
+  /// No description provided for @chatMetaCache.
+  ///
+  /// In zh, this message translates to:
+  /// **'缓存'**
+  String get chatMetaCache;
+
+  /// No description provided for @chatMetaCacheHit.
+  ///
+  /// In zh, this message translates to:
+  /// **'命中'**
+  String get chatMetaCacheHit;
+
+  /// No description provided for @chatSemanticsCollapseMemory.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起 AI 记忆'**
+  String get chatSemanticsCollapseMemory;
+
+  /// No description provided for @chatSemanticsExpandMemory.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开 AI 记忆'**
+  String get chatSemanticsExpandMemory;
+
+  /// No description provided for @chatSemanticsCollapseTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起{title}'**
+  String chatSemanticsCollapseTitle(String title);
+
+  /// No description provided for @chatSemanticsExpandTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开{title}'**
+  String chatSemanticsExpandTitle(String title);
+
+  /// No description provided for @chatSemanticsPlanReviewCard.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划审核卡片'**
+  String get chatSemanticsPlanReviewCard;
+
+  /// No description provided for @chatSemanticsPlanReviewOption.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划审核反馈选项'**
+  String get chatSemanticsPlanReviewOption;
+
+  /// No description provided for @chatGroupReportHarassment.
+  ///
+  /// In zh, this message translates to:
+  /// **'骚扰'**
+  String get chatGroupReportHarassment;
+
+  /// No description provided for @chatGroupReportViolence.
+  ///
+  /// In zh, this message translates to:
+  /// **'暴力'**
+  String get chatGroupReportViolence;
+
+  /// No description provided for @chatGroupReportInappropriate.
+  ///
+  /// In zh, this message translates to:
+  /// **'不当内容'**
+  String get chatGroupReportInappropriate;
+
+  /// No description provided for @chatGroupReportOther.
+  ///
+  /// In zh, this message translates to:
+  /// **'其他'**
+  String get chatGroupReportOther;
+
+  /// No description provided for @chatErrorMissingTypeField.
+  ///
+  /// In zh, this message translates to:
+  /// **'消息格式错误：缺少 type 字段'**
+  String get chatErrorMissingTypeField;
+
+  /// No description provided for @chatErrorQueueOverflow.
+  ///
+  /// In zh, this message translates to:
+  /// **'有未发送消息因队列已满被丢弃。'**
+  String get chatErrorQueueOverflow;
+
+  /// No description provided for @chatErrorParseFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'消息解析失败'**
+  String get chatErrorParseFailed;
+
+  /// No description provided for @chatErrorConnectionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'网络连接失败'**
+  String get chatErrorConnectionFailed;
+
+  /// No description provided for @chatErrorConnectionClosedGenerating.
+  ///
+  /// In zh, this message translates to:
+  /// **'生成响应时连接中断'**
+  String get chatErrorConnectionClosedGenerating;
+
+  /// No description provided for @chatErrorMaxRetriesExceeded.
+  ///
+  /// In zh, this message translates to:
+  /// **'重连 {count} 次后仍无法连接'**
+  String chatErrorMaxRetriesExceeded(int count);
+
+  /// No description provided for @chatAgendaConfirmCorrectionFeedback.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认聊天纠错反馈'**
+  String get chatAgendaConfirmCorrectionFeedback;
+
+  /// No description provided for @chatAgendaAdjustReplyStrategy.
+  ///
+  /// In zh, this message translates to:
+  /// **'调整后续回复策略'**
+  String get chatAgendaAdjustReplyStrategy;
+
+  /// No description provided for @chatAgendaConfirmStatusBarJudgment.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认顶部提醒里的判断'**
+  String get chatAgendaConfirmStatusBarJudgment;
+
+  /// No description provided for @chatAgendaDecideAdjustNextSteps.
+  ///
+  /// In zh, this message translates to:
+  /// **'决定下一步是否调整'**
+  String get chatAgendaDecideAdjustNextSteps;
+
+  /// No description provided for @chatAgendaConfirmTaskBlockCause.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认卡点更像时间、难度还是启动问题'**
+  String get chatAgendaConfirmTaskBlockCause;
+
+  /// No description provided for @chatAgendaAdjustNextTaskEasier.
+  ///
+  /// In zh, this message translates to:
+  /// **'把下一张任务卡调成更容易开始的版本'**
+  String get chatAgendaAdjustNextTaskEasier;
+
+  /// No description provided for @chatAgendaConfirmStatusBarJudgmentShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认状态带里的判断'**
+  String get chatAgendaConfirmStatusBarJudgmentShort;
+
+  /// No description provided for @chatAgendaDecideAdjustPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'决定下一步是否调整计划'**
+  String get chatAgendaDecideAdjustPlan;
+
+  /// No description provided for @chatAgendaConfirmTaskBlockMain.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认任务卡点的主要原因'**
+  String get chatAgendaConfirmTaskBlockMain;
+
+  /// No description provided for @chatAgendaMakeNextTaskSmaller.
+  ///
+  /// In zh, this message translates to:
+  /// **'把下一张任务卡调小一点'**
+  String get chatAgendaMakeNextTaskSmaller;
+
+  /// No description provided for @chatAgendaConfirmCheckpointGap.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认 checkpoint 进度差异'**
+  String get chatAgendaConfirmCheckpointGap;
+
+  /// No description provided for @chatAgendaCalibratePlanPace.
+  ///
+  /// In zh, this message translates to:
+  /// **'校准接下来的计划节奏'**
+  String get chatAgendaCalibratePlanPace;
+
+  /// No description provided for @chatSemanticsCollapseRegeneration.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起重新生成选项'**
+  String get chatSemanticsCollapseRegeneration;
+
+  /// No description provided for @chatSemanticsExpandRegeneration.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开重新生成选项'**
+  String get chatSemanticsExpandRegeneration;
+
+  /// No description provided for @chatAuroraReteachFromSlides.
+  ///
+  /// In zh, this message translates to:
+  /// **'按课件重讲'**
+  String get chatAuroraReteachFromSlides;
+
+  /// No description provided for @chatAuroraReteachPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'请按我已上传/选中的课件重新讲一遍，优先引用刚才使用的资料。'**
+  String get chatAuroraReteachPrompt;
+
+  /// No description provided for @chatAuroraExcludeSource.
+  ///
+  /// In zh, this message translates to:
+  /// **'排除此资料'**
+  String get chatAuroraExcludeSource;
+
+  /// No description provided for @chatAuroraExcludeSourcePrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'请暂时排除刚才使用的资料，换一种解释。'**
+  String get chatAuroraExcludeSourcePrompt;
+
+  /// No description provided for @chatAuroraExcludeSourcesPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'请暂时排除这些资料：{names}，换一种解释。'**
+  String chatAuroraExcludeSourcesPrompt(String names);
+
+  /// No description provided for @chatAuroraUsePastExams.
+  ///
+  /// In zh, this message translates to:
+  /// **'换成历年真题'**
+  String get chatAuroraUsePastExams;
+
+  /// No description provided for @chatAuroraUsePastExamsPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'请换成历年真题/典型题视角来讲，并说明为什么这样选资料。'**
+  String get chatAuroraUsePastExamsPrompt;
+
+  /// No description provided for @chatAuroraChangeNotRight.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个调整不合理'**
+  String get chatAuroraChangeNotRight;
+
+  /// No description provided for @chatAuroraChangeNotRightPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个行动调整不合理，请按我当前的真实情况重新判断。'**
+  String get chatAuroraChangeNotRightPrompt;
+
+  /// No description provided for @chatAuroraReassessAction.
+  ///
+  /// In zh, this message translates to:
+  /// **'{option}。请重新判断这次行动调整。'**
+  String chatAuroraReassessAction(String option);
+
+  /// No description provided for @chatAuroraRecalibrate.
+  ///
+  /// In zh, this message translates to:
+  /// **'重新校准'**
+  String get chatAuroraRecalibrate;
+
+  /// No description provided for @chatAuroraRecalibratePrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个 Aurora 判断不太对，请基于我刚才的反馈重新校准。'**
+  String get chatAuroraRecalibratePrompt;
+
+  /// No description provided for @chatExpertCollabCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'专家协作 {count}位'**
+  String chatExpertCollabCount(int count);
+
+  /// No description provided for @chatActionTaskLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务'**
+  String get chatActionTaskLabel;
+
+  /// No description provided for @chatActionContinue.
+  ///
+  /// In zh, this message translates to:
+  /// **'接着聊'**
+  String get chatActionContinue;
+
+  /// No description provided for @chatBubbleCollapse.
+  ///
+  /// In zh, this message translates to:
+  /// **'收起'**
+  String get chatBubbleCollapse;
+
+  /// No description provided for @chatBubbleReadMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'展开全文'**
+  String get chatBubbleReadMore;
+
+  /// No description provided for @chatDeliveryQueued.
+  ///
+  /// In zh, this message translates to:
+  /// **'等待发送'**
+  String get chatDeliveryQueued;
+
+  /// No description provided for @chatDeliverySending.
+  ///
+  /// In zh, this message translates to:
+  /// **'正在发送'**
+  String get chatDeliverySending;
+
+  /// No description provided for @chatDeliveryFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送失败'**
+  String get chatDeliveryFailed;
+
+  /// No description provided for @chatDeliveryRetry.
+  ///
+  /// In zh, this message translates to:
+  /// **'重试'**
+  String get chatDeliveryRetry;
+
+  /// No description provided for @chatStudyLabelAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动'**
+  String get chatStudyLabelAuto;
+
+  /// No description provided for @chatStudyLabelTask.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务'**
+  String get chatStudyLabelTask;
+
+  /// No description provided for @chatMemoryUsedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'引用了 {count} 条相关记忆'**
+  String chatMemoryUsedCount(int count);
+
+  /// No description provided for @chatMemoryAuroraUsedCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 引用了 {count} 条相关记忆'**
+  String chatMemoryAuroraUsedCount(int count);
+
+  /// No description provided for @chatMemoryRelatedMemories.
+  ///
+  /// In zh, this message translates to:
+  /// **'相关记忆'**
+  String get chatMemoryRelatedMemories;
+
+  /// No description provided for @chatMemoryNotRight.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条记忆不对'**
+  String get chatMemoryNotRight;
+
+  /// No description provided for @chatMemoryNotRightShort.
+  ///
+  /// In zh, this message translates to:
+  /// **'不对'**
+  String get chatMemoryNotRightShort;
+
+  /// No description provided for @chatMemoryCorrectionFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆纠正失败'**
+  String get chatMemoryCorrectionFailed;
+
+  /// No description provided for @chatMemoryConfirmed.
+  ///
+  /// In zh, this message translates to:
+  /// **'已确认'**
+  String get chatMemoryConfirmed;
+
+  /// No description provided for @chatMemoryNeedsConfirmation.
+  ///
+  /// In zh, this message translates to:
+  /// **'待确认'**
+  String get chatMemoryNeedsConfirmation;
+
+  /// No description provided for @chatMemoryNotRightPrompt.
+  ///
+  /// In zh, this message translates to:
+  /// **'这条记忆不对：{content}。请降低置信度，以后不要直接引用。'**
+  String chatMemoryNotRightPrompt(String content);
+
+  /// No description provided for @chatMemoryConfidencePercent.
+  ///
+  /// In zh, this message translates to:
+  /// **'置信度 {percent}%'**
+  String chatMemoryConfidencePercent(int percent);
+
+  /// No description provided for @chatReceiptDismiss.
+  ///
+  /// In zh, this message translates to:
+  /// **'关闭收据'**
+  String get chatReceiptDismiss;
+
+  /// No description provided for @chatReceiptAuroraChangedNext.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 调整了下一步'**
+  String get chatReceiptAuroraChangedNext;
+
+  /// No description provided for @chatReceiptAuroraAdjustedExperience.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 调整了体验'**
+  String get chatReceiptAuroraAdjustedExperience;
+
+  /// No description provided for @chatReceiptActionChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'行动调整'**
+  String get chatReceiptActionChange;
+
+  /// No description provided for @chatReceiptExperienceChange.
+  ///
+  /// In zh, this message translates to:
+  /// **'Aurora 体验调整'**
+  String get chatReceiptExperienceChange;
+
+  /// No description provided for @chatReceiptChangedThisTurn.
+  ///
+  /// In zh, this message translates to:
+  /// **'这轮改变'**
+  String get chatReceiptChangedThisTurn;
+
+  /// No description provided for @chatReceiptJudgmentAccurate.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个判断准确吗？'**
+  String get chatReceiptJudgmentAccurate;
 }
 
 class _AppLocalizationsDelegate

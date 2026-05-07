@@ -13656,5 +13656,187 @@
   "taskFeedbackProgressHint": "Example: sketching the state diagram before writing equations.",
   "taskFeedbackChangeLabel": "What would you change next time?",
   "taskFeedbackChangeHint": "Example: do one representative problem before the full set.",
-  "taskFeedbackAiSaved": "AI saved this reflection"
+  "taskFeedbackAiSaved": "AI saved this reflection",
+  "chatLabelTask": "Task",
+  "chatLabelPlan": "Plan",
+  "chatLabelAchievement": "Achievement",
+  "chatLabelError": "Error",
+  "chatLabelCancel": "Cancel",
+  "chatLabelClose": "Close",
+  "chatLabelSave": "Save",
+  "chatLabelCreate": "Create",
+  "chatLabelSubmit": "Submit",
+  "chatLabelOpen": "Open",
+  "chatLabelShare": "Share",
+  "chatLabelContinue": "Continue",
+  "chatLabelIgnore": "Ignore",
+  "chatLabelRetry": "Retry",
+  "chatLabelRefresh": "Refresh",
+  "chatLabelCollapse": "Collapse",
+  "chatLabelExpand": "Expand",
+  "chatLabelAuto": "Auto",
+  "chatLabelModel": "Model",
+  "chatLabelTier": "Tier",
+  "chatLabelFast": "Fast",
+  "chatLabelBalanced": "Balanced",
+  "chatLabelDeep": "Deep",
+  "chatLabelBio": "Bio",
+  "chatLabelDescription": "Description",
+  "chatLabelAddExpert": "Add expert",
+  "chatLabelMySources": "My Sources",
+  "chatLabelTaskScope": "Task Scope",
+  "chatLabelGoalScope": "Goal Scope",
+  "chatLabelSource": "Source",
+  "chatLabelSourcesCount": "{count} sources",
+  "@chatLabelSourcesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatMetaTime": "Time",
+  "chatMetaCache": "Cache",
+  "chatMetaCacheHit": "Hit",
+  "chatSemanticsCollapseMemory": "Collapse AI memory",
+  "chatSemanticsExpandMemory": "Expand AI memory",
+  "chatSemanticsCollapseTitle": "Collapse {title}",
+  "@chatSemanticsCollapseTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "chatSemanticsExpandTitle": "Expand {title}",
+  "@chatSemanticsExpandTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "chatSemanticsPlanReviewCard": "Plan review card",
+  "chatSemanticsPlanReviewOption": "Plan review feedback option",
+  "chatGroupReportHarassment": "Harassment",
+  "chatGroupReportViolence": "Violence",
+  "chatGroupReportInappropriate": "Inappropriate",
+  "chatGroupReportOther": "Other",
+  "chatErrorMissingTypeField": "Missing \"type\" field",
+  "chatErrorQueueOverflow": "A pending message was dropped because the queue is full.",
+  "chatErrorParseFailed": "Failed to parse incoming message",
+  "chatErrorConnectionFailed": "Network connection failed",
+  "chatErrorConnectionClosedGenerating": "Connection closed while generating response",
+  "chatErrorMaxRetriesExceeded": "Unable to connect after {count} attempts",
+  "@chatErrorMaxRetriesExceeded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatAgendaConfirmCorrectionFeedback": "Confirm chat correction feedback",
+  "chatAgendaAdjustReplyStrategy": "Adjust subsequent reply strategy",
+  "chatAgendaConfirmStatusBarJudgment": "Confirm status bar judgment",
+  "chatAgendaDecideAdjustNextSteps": "Decide whether to adjust next steps",
+  "chatAgendaConfirmTaskBlockCause": "Identify if the block is time, difficulty, or getting started",
+  "chatAgendaAdjustNextTaskEasier": "Adjust the next task card to be easier to start",
+  "chatAgendaConfirmStatusBarJudgmentShort": "Confirm status bar judgment",
+  "chatAgendaDecideAdjustPlan": "Decide whether to adjust the plan",
+  "chatAgendaConfirmTaskBlockMain": "Identify the main cause of the task block",
+  "chatAgendaMakeNextTaskSmaller": "Make the next task card smaller",
+  "chatAgendaConfirmCheckpointGap": "Confirm checkpoint progress gap",
+  "chatAgendaCalibratePlanPace": "Calibrate upcoming plan pace",
+  "chatSemanticsCollapseRegeneration": "Collapse regeneration options",
+  "chatSemanticsExpandRegeneration": "Expand regeneration options",
+  "chatAuroraReteachFromSlides": "Reteach from slides",
+  "chatAuroraReteachPrompt": "Please reteach based on my uploaded/selected materials, prioritizing the ones just used.",
+  "chatAuroraExcludeSource": "Exclude this source",
+  "chatAuroraExcludeSourcePrompt": "Please exclude the source just used and explain differently.",
+  "chatAuroraExcludeSourcesPrompt": "Please exclude these sources: {names}, and explain differently.",
+  "@chatAuroraExcludeSourcesPrompt": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "chatAuroraUsePastExams": "Use past exams",
+  "chatAuroraUsePastExamsPrompt": "Please switch to a past-exam / classic-problem perspective and explain why these sources were chosen.",
+  "chatAuroraChangeNotRight": "This change is not right",
+  "chatAuroraChangeNotRightPrompt": "This action change is not right. Please reassess from my current situation.",
+  "chatAuroraReassessAction": "{option}. Please reassess this action change.",
+  "@chatAuroraReassessAction": {
+    "placeholders": {
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "chatAuroraRecalibrate": "Recalibrate",
+  "chatAuroraRecalibratePrompt": "This Aurora judgment is not quite right. Please recalibrate from my feedback.",
+  "chatExpertCollabCount": "Expert collab {count}",
+  "@chatExpertCollabCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatExpertStudyBuddy": "Study Buddy",
+  "chatActionTaskLabel": "Task",
+  "chatActionContinue": "Continue",
+  "chatBubbleCollapse": "Collapse",
+  "chatBubbleReadMore": "Read more",
+  "chatDeliveryQueued": "Queued",
+  "chatDeliverySending": "Sending",
+  "chatDeliveryFailed": "Send failed",
+  "chatDeliveryRetry": "Retry",
+  "chatStudyLabelAuto": "Auto",
+  "chatStudyLabelTask": "Task",
+  "chatMemoryUsedCount": "Used {count} related memories",
+  "@chatMemoryUsedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatMemoryAuroraUsedCount": "Aurora used {count} related memories",
+  "@chatMemoryAuroraUsedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatMemoryRelatedMemories": "Related memories",
+  "chatMemoryNotRight": "This memory is not right",
+  "chatMemoryNotRightShort": "Not right",
+  "chatMemoryCorrectionFailed": "Memory correction failed",
+  "chatMemoryConfirmed": "confirmed",
+  "chatMemoryNeedsConfirmation": "needs confirmation",
+  "chatMemoryNotRightPrompt": "This memory is not right: {content}. Please lower confidence and avoid directly using it later.",
+  "@chatMemoryNotRightPrompt": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "chatMemoryConfidencePercent": "confidence {percent}%",
+  "@chatMemoryConfidencePercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReceiptDismiss": "Dismiss receipt",
+  "chatReceiptAuroraChangedNext": "Aurora changed the next action",
+  "chatReceiptAuroraAdjustedExperience": "Aurora adjusted the experience",
+  "chatReceiptActionChange": "Action change",
+  "chatReceiptExperienceChange": "Aurora experience change",
+  "chatReceiptChangedThisTurn": "Changed this turn",
+  "chatReceiptJudgmentAccurate": "Is this judgment accurate?"
 }

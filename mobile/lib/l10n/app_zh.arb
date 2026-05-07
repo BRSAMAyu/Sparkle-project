@@ -13677,5 +13677,187 @@
   "taskFeedbackProgressHint": "例如：先画状态图，再列方程",
   "taskFeedbackChangeLabel": "下次会换什么做法？",
   "taskFeedbackChangeHint": "例如：先做 1 道代表题，再进入整组练习",
-  "taskFeedbackAiSaved": "AI 已记下这条反思"
+  "taskFeedbackAiSaved": "AI 已记下这条反思",
+  "chatLabelTask": "任务",
+  "chatLabelPlan": "计划",
+  "chatLabelAchievement": "成就",
+  "chatLabelError": "错题",
+  "chatLabelCancel": "取消",
+  "chatLabelClose": "关闭",
+  "chatLabelSave": "保存",
+  "chatLabelCreate": "创建",
+  "chatLabelSubmit": "提交",
+  "chatLabelOpen": "打开",
+  "chatLabelShare": "分享",
+  "chatLabelContinue": "继续",
+  "chatLabelIgnore": "忽略",
+  "chatLabelRetry": "重试",
+  "chatLabelRefresh": "刷新",
+  "chatLabelCollapse": "收起",
+  "chatLabelExpand": "展开",
+  "chatLabelAuto": "自动",
+  "chatLabelModel": "模型",
+  "chatLabelTier": "档位",
+  "chatLabelFast": "敏捷",
+  "chatLabelBalanced": "均衡",
+  "chatLabelDeep": "深思",
+  "chatLabelBio": "简介",
+  "chatLabelDescription": "说明",
+  "chatLabelAddExpert": "添加专家",
+  "chatLabelMySources": "我的资料",
+  "chatLabelTaskScope": "任务范围",
+  "chatLabelGoalScope": "目标范围",
+  "chatLabelSource": "来源",
+  "chatLabelSourcesCount": "{count} 个来源",
+  "@chatLabelSourcesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatMetaTime": "耗时",
+  "chatMetaCache": "缓存",
+  "chatMetaCacheHit": "命中",
+  "chatSemanticsCollapseMemory": "收起 AI 记忆",
+  "chatSemanticsExpandMemory": "展开 AI 记忆",
+  "chatSemanticsCollapseTitle": "收起{title}",
+  "@chatSemanticsCollapseTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "chatSemanticsExpandTitle": "展开{title}",
+  "@chatSemanticsExpandTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "chatSemanticsPlanReviewCard": "计划审核卡片",
+  "chatSemanticsPlanReviewOption": "计划审核反馈选项",
+  "chatGroupReportHarassment": "骚扰",
+  "chatGroupReportViolence": "暴力",
+  "chatGroupReportInappropriate": "不当内容",
+  "chatGroupReportOther": "其他",
+  "chatErrorMissingTypeField": "消息格式错误：缺少 type 字段",
+  "chatErrorQueueOverflow": "有未发送消息因队列已满被丢弃。",
+  "chatErrorParseFailed": "消息解析失败",
+  "chatErrorConnectionFailed": "网络连接失败",
+  "chatErrorConnectionClosedGenerating": "生成响应时连接中断",
+  "chatErrorMaxRetriesExceeded": "重连 {count} 次后仍无法连接",
+  "@chatErrorMaxRetriesExceeded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatAgendaConfirmCorrectionFeedback": "确认聊天纠错反馈",
+  "chatAgendaAdjustReplyStrategy": "调整后续回复策略",
+  "chatAgendaConfirmStatusBarJudgment": "确认顶部提醒里的判断",
+  "chatAgendaDecideAdjustNextSteps": "决定下一步是否调整",
+  "chatAgendaConfirmTaskBlockCause": "确认卡点更像时间、难度还是启动问题",
+  "chatAgendaAdjustNextTaskEasier": "把下一张任务卡调成更容易开始的版本",
+  "chatAgendaConfirmStatusBarJudgmentShort": "确认状态带里的判断",
+  "chatAgendaDecideAdjustPlan": "决定下一步是否调整计划",
+  "chatAgendaConfirmTaskBlockMain": "确认任务卡点的主要原因",
+  "chatAgendaMakeNextTaskSmaller": "把下一张任务卡调小一点",
+  "chatAgendaConfirmCheckpointGap": "确认 checkpoint 进度差异",
+  "chatAgendaCalibratePlanPace": "校准接下来的计划节奏",
+  "chatSemanticsCollapseRegeneration": "收起重新生成选项",
+  "chatSemanticsExpandRegeneration": "展开重新生成选项",
+  "chatAuroraReteachFromSlides": "按课件重讲",
+  "chatAuroraReteachPrompt": "请按我已上传/选中的课件重新讲一遍，优先引用刚才使用的资料。",
+  "chatAuroraExcludeSource": "排除此资料",
+  "chatAuroraExcludeSourcePrompt": "请暂时排除刚才使用的资料，换一种解释。",
+  "chatAuroraExcludeSourcesPrompt": "请暂时排除这些资料：{names}，换一种解释。",
+  "@chatAuroraExcludeSourcesPrompt": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "chatAuroraUsePastExams": "换成历年真题",
+  "chatAuroraUsePastExamsPrompt": "请换成历年真题/典型题视角来讲，并说明为什么这样选资料。",
+  "chatAuroraChangeNotRight": "这个调整不合理",
+  "chatAuroraChangeNotRightPrompt": "这个行动调整不合理，请按我当前的真实情况重新判断。",
+  "chatAuroraReassessAction": "{option}。请重新判断这次行动调整。",
+  "@chatAuroraReassessAction": {
+    "placeholders": {
+      "option": {
+        "type": "String"
+      }
+    }
+  },
+  "chatAuroraRecalibrate": "重新校准",
+  "chatAuroraRecalibratePrompt": "这个 Aurora 判断不太对，请基于我刚才的反馈重新校准。",
+  "chatExpertCollabCount": "专家协作 {count}位",
+  "@chatExpertCollabCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatExpertStudyBuddy": "学伴",
+  "chatActionTaskLabel": "任务",
+  "chatActionContinue": "接着聊",
+  "chatBubbleCollapse": "收起",
+  "chatBubbleReadMore": "展开全文",
+  "chatDeliveryQueued": "等待发送",
+  "chatDeliverySending": "正在发送",
+  "chatDeliveryFailed": "发送失败",
+  "chatDeliveryRetry": "重试",
+  "chatStudyLabelAuto": "自动",
+  "chatStudyLabelTask": "任务",
+  "chatMemoryUsedCount": "引用了 {count} 条相关记忆",
+  "@chatMemoryUsedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatMemoryAuroraUsedCount": "Aurora 引用了 {count} 条相关记忆",
+  "@chatMemoryAuroraUsedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatMemoryRelatedMemories": "相关记忆",
+  "chatMemoryNotRight": "这条记忆不对",
+  "chatMemoryNotRightShort": "不对",
+  "chatMemoryCorrectionFailed": "记忆纠正失败",
+  "chatMemoryConfirmed": "已确认",
+  "chatMemoryNeedsConfirmation": "待确认",
+  "chatMemoryNotRightPrompt": "这条记忆不对：{content}。请降低置信度，以后不要直接引用。",
+  "@chatMemoryNotRightPrompt": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "chatMemoryConfidencePercent": "置信度 {percent}%",
+  "@chatMemoryConfidencePercent": {
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "chatReceiptDismiss": "关闭收据",
+  "chatReceiptAuroraChangedNext": "Aurora 调整了下一步",
+  "chatReceiptAuroraAdjustedExperience": "Aurora 调整了体验",
+  "chatReceiptActionChange": "行动调整",
+  "chatReceiptExperienceChange": "Aurora 体验调整",
+  "chatReceiptChangedThisTurn": "这轮改变",
+  "chatReceiptJudgmentAccurate": "这个判断准确吗？"
 }

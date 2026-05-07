@@ -8,7 +8,6 @@ import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/ai_status_indicator.dart';
 import 'package:sparkle/features/chat/presentation/widgets/community_chat_input.dart';
@@ -210,12 +209,12 @@ class _GroupChatScreenState extends ConsumerState<GroupChatScreen> {
                       children: [
                         ...[
                           (ReportReason.spam, context.l10n.chatGroupReportSpam),
-                          (ReportReason.harassment, I18nService.instance.isChinese ? '骚扰' : 'Harassment'),
-                          (ReportReason.violence, I18nService.instance.isChinese ? '暴力' : 'Violence'),
+                          (ReportReason.harassment, context.l10n.chatGroupReportHarassment),
+                          (ReportReason.violence, context.l10n.chatGroupReportViolence),
                           (ReportReason.hateSpeech, context.l10n.chatGroupReportHate),
-                          (ReportReason.inappropriate, I18nService.instance.isChinese ? '不当内容' : 'Inappropriate'),
+                          (ReportReason.inappropriate, context.l10n.chatGroupReportInappropriate),
                           (ReportReason.misinformation, context.l10n.chatGroupReportMisinfo),
-                          (ReportReason.other, I18nService.instance.isChinese ? '其他' : 'Other'),
+                          (ReportReason.other, context.l10n.chatGroupReportOther),
                         ].map(
                           (entry) => RadioListTile<ReportReason>(
                             title: Text(entry.$2),

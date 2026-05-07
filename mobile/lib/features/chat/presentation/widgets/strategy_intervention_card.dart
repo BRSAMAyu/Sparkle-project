@@ -233,7 +233,7 @@ class _Header extends StatelessWidget {
               onPressed: onDismiss,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              tooltip: I18nService.instance.isChinese ? '关闭' : 'Close',
+              tooltip: S.chatLabelClose,
             ),
           ],
         ),

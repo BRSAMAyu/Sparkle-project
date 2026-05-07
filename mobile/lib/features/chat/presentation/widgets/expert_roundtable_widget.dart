@@ -196,9 +196,7 @@ class _CollapsedExpertRoundtable extends StatelessWidget {
           icon: Icons.forum_rounded,
           label: experts.isEmpty
               ? context.l10n.chatRoundtableExpertCollab
-              : (I18nService.instance.isChinese
-                  ? '专家协作 ${experts.length}位'
-                  : 'Expert collab ${experts.length}'),
+              : S.chatExpertCollabCount(experts.length),
           emphasize: true,
           onTap: onExpand,
           trailing: Icon(
@@ -302,7 +300,7 @@ class _ExpandedExpertRoundtable extends StatelessWidget {
                   icon: const Icon(Icons.unfold_less_rounded, size: 18),
                   splashRadius: 24,
                   color: DS.textSecondary,
-                  tooltip: I18nService.instance.isChinese ? '收起' : 'Collapse',
+                  tooltip: S.chatLabelCollapse,
                 ),
               ),
             ],
@@ -446,7 +444,7 @@ String _labelForAgent(BuildContext context, String raw) {
     case 'error_analyst':
       return context.l10n.chatRoundtableErrorSpecialist;
     case 'study_buddy':
-      return I18nService.instance.isChinese ? '学伴' : 'Study Buddy';
+      return S.chatExpertStudyBuddy;
     case 'math_agent':
       return context.l10n.chatExpertMath;
     case 'code_agent':

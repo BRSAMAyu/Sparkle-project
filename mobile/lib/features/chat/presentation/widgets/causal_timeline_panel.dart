@@ -244,7 +244,7 @@ class _Header extends StatelessWidget {
               child: IconButton(
                 icon: Icon(Icons.refresh, size: 18, color: DS.textTertiary),
                 onPressed: onRefresh,
-                tooltip: I18nService.instance.isChinese ? '刷新' : 'Refresh',
+                tooltip: S.chatLabelRefresh,
                 padding: const EdgeInsets.all(8),
                 constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               ),
@@ -282,7 +282,7 @@ class _ErrorState extends StatelessWidget {
               style: DS.bodySmall.copyWith(color: DS.textSecondary),
             ),
             const SizedBox(height: 12),
-            TextButton(onPressed: onRetry, child: Text(I18nService.instance.isChinese ? '重试' : 'Retry')),
+            TextButton(onPressed: onRetry, child: Text(S.chatLabelRetry)),
           ],
         ),
       );
@@ -514,11 +514,11 @@ class _TimelineEntryCardState extends State<_TimelineEntryCard> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(I18nService.instance.isChinese ? '取消' : 'Cancel'),
+            child: Text(S.chatLabelCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(I18nService.instance.isChinese ? '提交' : 'Submit'),
+            child: Text(S.chatLabelSubmit),
           ),
         ],
       ),

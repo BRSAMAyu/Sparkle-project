@@ -28,10 +28,7 @@ class MemoryReferenceReceipt extends ConsumerWidget {
 
     return Semantics(
       button: true,
-      label: _copy(
-        zh: 'Aurora 引用了 ${memories.length} 条相关记忆',
-        en: 'Aurora used ${memories.length} related memories',
-      ),
+      label: S.chatMemoryAuroraUsedCount(memories.length),
       child: Semantics(
         button: true,
         label: 'Chat memory reference receipt control 1',
@@ -69,10 +66,7 @@ class MemoryReferenceReceipt extends ConsumerWidget {
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    _copy(
-                      zh: '引用了 ${memories.length} 条相关记忆',
-                      en: 'Used ${memories.length} related memories',
-                    ),
+                    S.chatMemoryUsedCount(memories.length),
                     style: DS.labelSmall.copyWith(color: DS.textSecondary),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -163,7 +157,7 @@ class _MemoryReceiptSheet extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _copy(zh: '相关记忆', en: 'Related memories'),
+                  S.chatMemoryRelatedMemories,
                   style: DS.bodySmall.copyWith(
                     color: DS.textPrimary,
                     fontWeight: FontWeight.w600,
@@ -227,10 +221,7 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
     final id = widget.memory['id']?.toString().trim() ?? '';
     final type = widget.memory['type']?.toString().trim();
     final content = widget.memory['content']?.toString().trim() ?? '';
-    final prompt = _copy(
-      zh: '这条记忆不对：$content。请降低置信度，以后不要直接引用。',
-      en: 'This memory is not right: $content. Please lower confidence and avoid directly using it later.',
-    );
+    final prompt = S.chatMemoryNotRightPrompt(content);
     final memoryType = type != null && type.isNotEmpty ? type : 'episodic';
 
     setState(() => _submitting = true);
@@ -251,7 +242,7 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
       if (mounted) {
         AppFeedback.error(
           context,
-          _copy(zh: '记忆纠正失败', en: 'Memory correction failed'),
+          S.chatMemoryCorrectionFailed,
         );
       }
     } finally {
@@ -271,9 +262,9 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
       if (source.isNotEmpty) source,
       if (confidence.isNotEmpty) confidence,
       if (confirmed)
-        _copy(zh: '已确认', en: 'confirmed')
+        S.chatMemoryConfirmed
       else
-        _copy(zh: '待确认', en: 'needs confirmation'),
+        S.chatMemoryNeedsConfirmation,
     ].join(' · ');
 
     return Container(
@@ -303,7 +294,7 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
             alignment: Alignment.centerRight,
             child: Semantics(
               button: true,
-              label: _copy(zh: '这条记忆不对', en: 'This memory is not right'),
+              label: S.chatMemoryNotRight,
               child: OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   visualDensity: VisualDensity.compact,
@@ -324,7 +315,7 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
                         ),
                       )
                     : const Icon(Icons.flag_outlined, size: 14),
-                label: Text(_copy(zh: '不对', en: 'Not right')),
+                label: Text(S.chatMemoryNotRightShort),
               ),
             ),
           ),
@@ -336,10 +327,7 @@ class _MemoryReceiptRowState extends ConsumerState<_MemoryReceiptRow> {
   String _confidenceLabel(Object? raw) {
     final value = raw is num ? raw.toDouble() : double.tryParse('$raw');
     if (value == null) return '';
-    return _copy(
-      zh: '置信度 ${(value * 100).round()}%',
-      en: 'confidence ${(value * 100).round()}%',
-    );
+    return S.chatMemoryConfidencePercent((value * 100).round());
   }
 }
 
@@ -362,5 +350,3 @@ class _CountBadge extends StatelessWidget {
       );
 }
 
-String _copy({required String zh, required String en}) =>
-    I18nService.instance.isChinese ? zh : en;

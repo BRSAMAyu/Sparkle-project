@@ -377,7 +377,7 @@ class _ClaimTile extends StatelessWidget {
                 final payload = Map<String, dynamic>.from(action);
                 return CustomButton.secondary(
                   text: action['label']?.toString() ??
-                      (I18nService.instance.isChinese ? '继续' : 'Continue'),
+                      (S.chatLabelContinue),
                   onPressed: () => unawaited(onAction!(actionType, payload)),
                   size: CustomButtonSize.small,
                 );

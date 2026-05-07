@@ -1277,7 +1277,7 @@ class _ActionCardState extends ConsumerState<ActionCard>
                 ? context.l10n.chatActionAiExecutionSuggestion
                 : l10n.chatActionTitleExecutionSummary);
       case 'create_task':
-        return I18nService.instance.isChinese ? '任务' : 'Task';
+        return S.chatActionTaskLabel;
       case 'create_plan':
       case 'plan_card':
         return context.l10n.chatActionStudyPlan;
@@ -1459,7 +1459,7 @@ class _ActionCardState extends ConsumerState<ActionCard>
     final nextTask = _asString(renderAction['next_task_title']) ??
         _asString(action.data['next_task_title']);
     final ctaLabel = _asString(renderAction['cta_label']) ??
-        (I18nService.instance.isChinese ? '接着聊' : 'Continue');
+        (S.chatActionContinue);
     final wakeId =
         _asString(renderAction['wake_id']) ?? _asString(action.data['wake_id']);
     final conversationId = _asString(renderAction['conversation_id']) ??
@@ -1602,7 +1602,7 @@ class _ActionCardState extends ConsumerState<ActionCard>
                   children: [
                     Expanded(
                       child: SparkleButton(
-                        label: I18nService.instance.isChinese ? '打开' : 'Open',
+                        label: S.chatLabelOpen,
                         variant: ButtonVariant.ghost,
                         icon: const Icon(Icons.open_in_new_rounded),
                         onPressed: canOpenTask
@@ -1614,7 +1614,7 @@ class _ActionCardState extends ConsumerState<ActionCard>
                     const SizedBox(width: DS.spacing8),
                     Expanded(
                       child: SparkleButton(
-                        label: I18nService.instance.isChinese ? '分享' : 'Share',
+                        label: S.chatLabelShare,
                         variant: ButtonVariant.ghost,
                         icon: const Icon(Icons.share_outlined),
                         onPressed: canShareTask

@@ -146,20 +146,14 @@ class _OfflineQueueIndicatorCopy {
   final OfflineQueueIndicatorStatus status;
   final int count;
 
-  bool get _zh => I18nService.instance.isChinese;
-
   String get label {
     switch (status) {
       case OfflineQueueIndicatorStatus.queued:
-        return _zh
-            ? '$count 条消息等待发送'
-            : '$count ${count == 1 ? 'message' : 'messages'} waiting to send';
+        return S.chatOfflineQueuePending(count);
       case OfflineQueueIndicatorStatus.sending:
-        return _zh
-            ? '正在发送 $count 条消息...'
-            : 'Sending $count ${count == 1 ? 'message' : 'messages'}...';
+        return S.chatOfflineQueueSending(count);
       case OfflineQueueIndicatorStatus.complete:
-        return _zh ? '已全部发送' : 'All sent';
+        return S.chatOfflineQueueComplete;
       case OfflineQueueIndicatorStatus.hidden:
         return '';
     }
@@ -168,15 +162,11 @@ class _OfflineQueueIndicatorCopy {
   String get semanticLabel {
     switch (status) {
       case OfflineQueueIndicatorStatus.queued:
-        return _zh
-            ? '离线队列中有 $count 条消息等待发送'
-            : 'Offline queue has $count ${count == 1 ? 'message' : 'messages'} waiting to send';
+        return S.chatOfflineQueuePendingSemantic(count);
       case OfflineQueueIndicatorStatus.sending:
-        return _zh
-            ? '网络已恢复，正在发送 $count 条排队消息'
-            : 'Connection restored, sending $count queued ${count == 1 ? 'message' : 'messages'}';
+        return S.chatOfflineQueueSendingSemantic(count);
       case OfflineQueueIndicatorStatus.complete:
-        return _zh ? '排队消息已全部发送' : 'All queued messages have been sent';
+        return S.chatOfflineQueueCompleteSemantic;
       case OfflineQueueIndicatorStatus.hidden:
         return '';
     }

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_message_model.dart';
 import 'package:sparkle/features/chat/presentation/widgets/chat_accessory_pill.dart';
 
@@ -104,7 +103,7 @@ class _AssistantMessageMetadataTrayState
       badges.add(
         _MetadataBadge(
           icon: Icons.timer_outlined,
-          label: I18nService.instance.isChinese ? '耗时' : 'Time',
+          label: context.l10n.chatMetaTime,
           selected: _expandedKey == 'timing',
           onTap: () => _toggle('timing'),
           iconOnlyWhenCollapsed: true,
@@ -306,12 +305,12 @@ class _TimingContent extends StatelessWidget {
       if (meta.modelTier?.isNotEmpty ?? false)
         MapEntry(context.l10n.chatMetaModelTier, meta.modelTier!),
       if (meta.reasoningMode?.isNotEmpty ?? false)
-        MapEntry(I18nService.instance.isChinese ? '档位' : 'Tier', meta.reasoningMode!),
+        MapEntry(context.l10n.chatLabelTier, meta.reasoningMode!),
       if (meta.isCacheHit != null)
         MapEntry(
-            I18nService.instance.isChinese ? '缓存' : 'Cache',
+            context.l10n.chatMetaCache,
             meta.isCacheHit!
-                ? (I18nService.instance.isChinese ? '命中' : 'Hit')
+                ? context.l10n.chatMetaCacheHit
                 : context.l10n.chatMetaCacheMiss),
     ];
 
@@ -431,7 +430,6 @@ class _SourceSummaryContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final zh = I18nService.instance.isChinese;
     final headline = data['headline']?.toString().trim() ?? '';
     final citations = (data['citations'] as List<dynamic>? ?? const [])
         .whereType<Map<Object?, Object?>>()
@@ -461,7 +459,7 @@ class _SourceSummaryContent extends StatelessWidget {
                 final title = citation['title']?.toString().trim() ?? '';
                 final name = title.isNotEmpty
                     ? title
-                    : (citation['content']?.toString().trim() ?? (zh ? '来源' : 'Source'));
+                    : (citation['content']?.toString().trim() ?? context.l10n.chatLabelSource);
                 final confidence = (citation['score'] as num?)?.toDouble() ?? 0.7;
                 final dotColor = confidence >= 0.7
                     ? DS.semanticSuccess
@@ -515,7 +513,7 @@ class _SourceSummaryContent extends StatelessWidget {
           ),
           const SizedBox(height: DS.spacing6),
           Text(
-            zh ? '${citations.length} 个来源' : '${citations.length} sources',
+            context.l10n.chatLabelSourcesCount(citations.length),
             style: DS.labelSmall.copyWith(color: DS.textSecondary),
           ),
         ],

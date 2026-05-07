@@ -107,7 +107,7 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
               icon: const Icon(Icons.close),
               onPressed: () => Navigator.of(context).pop(false),
               variant: ButtonVariant.ghost,
-              semanticLabel: I18nService.instance.isChinese ? '关闭' : 'Close',
+              semanticLabel: S.chatLabelClose,
             ),
           ],
         ),

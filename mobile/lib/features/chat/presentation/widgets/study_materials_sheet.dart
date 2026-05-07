@@ -262,7 +262,7 @@ class _ModeSelector extends StatelessWidget {
       child: Row(
         children: [
           _ModeChip(
-            label: I18nService.instance.isChinese ? '自动' : 'Auto',
+            label: S.chatStudyLabelAuto,
             selected: currentMode == DocumentContextMode.auto,
             onTap: () => onModeChanged(DocumentContextMode.auto),
           ),
@@ -272,7 +272,7 @@ class _ModeSelector extends StatelessWidget {
             onTap: () => onModeChanged(DocumentContextMode.userSelected),
           ),
           _ModeChip(
-            label: I18nService.instance.isChinese ? '任务' : 'Task',
+            label: S.chatStudyLabelTask,
             selected: currentMode == DocumentContextMode.taskScope,
             onTap: () => onModeChanged(DocumentContextMode.taskScope),
           ),
