@@ -30,10 +30,10 @@ const wsDefaultMaxMessageBytes int64 = 256 * 1024 // 256 KB
 
 // Reconnect rate-limit constants
 const (
-	reconnectMaxAttempts = 10  // max reconnect attempts per window
-	reconnectWindowSec   = 60  // sliding window in seconds
-	reconnectBlockSec    = 300 // block duration after exceeding limit
-	reconnectCleanupSec  = 300 // cleanup interval for expired trackers
+	reconnectMaxAttemptsDefault = 10  // default max reconnect attempts per window
+	reconnectWindowSecDefault   = 30  // default sliding window in seconds (configurable via WSReconnectWindowSeconds)
+	reconnectBlockSecDefault    = 300 // default block duration after exceeding limit
+	reconnectCleanupSec         = 300 // cleanup interval for expired trackers
 )
 
 type reconnectTracker struct {
@@ -666,12 +666,20 @@ func (p *WebSocketProxy) checkReconnectAllowed(userID string) bool {
 	if time.Now().Before(tracker.blockedUntil) {
 		return false
 	}
-	window := time.Duration(reconnectWindowSec) * time.Second
+	windowSec := reconnectWindowSecDefault
+	if p.config != nil && p.config.WSReconnectWindowSeconds > 0 {
+		windowSec = p.config.WSReconnectWindowSeconds
+	}
+	window := time.Duration(windowSec) * time.Second
 	if time.Since(tracker.lastAttempt) > window {
 		tracker.attemptCount = 0
 		return true
 	}
-	return tracker.attemptCount < reconnectMaxAttempts
+	maxAttempts := reconnectMaxAttemptsDefault
+	if p.config != nil && p.config.WSReconnectMaxAttempts > 0 {
+		maxAttempts = p.config.WSReconnectMaxAttempts
+	}
+	return tracker.attemptCount < maxAttempts
 }
 
 func (p *WebSocketProxy) recordReconnectAttempt(userID string) {
@@ -686,8 +694,17 @@ func (p *WebSocketProxy) recordReconnectAttempt(userID string) {
 	tracker.attemptCount++
 	tracker.lastAttempt = time.Now()
 
-	if tracker.attemptCount >= reconnectMaxAttempts {
-		tracker.blockedUntil = time.Now().Add(time.Duration(reconnectBlockSec) * time.Second)
+	maxAttempts := reconnectMaxAttemptsDefault
+	if p.config != nil && p.config.WSReconnectMaxAttempts > 0 {
+		maxAttempts = p.config.WSReconnectMaxAttempts
+	}
+	blockSec := reconnectBlockSecDefault
+	if p.config != nil && p.config.WSReconnectBlockSeconds > 0 {
+		blockSec = p.config.WSReconnectBlockSeconds
+	}
+
+	if tracker.attemptCount >= maxAttempts {
+		tracker.blockedUntil = time.Now().Add(time.Duration(blockSec) * time.Second)
 	}
 }
 
@@ -723,7 +740,11 @@ func (p *WebSocketProxy) cleanupExpiredReconnectTrackers() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 
-	cutoff := time.Now().Add(-time.Duration(reconnectWindowSec) * time.Second)
+	windowSec := reconnectWindowSecDefault
+	if p.config != nil && p.config.WSReconnectWindowSeconds > 0 {
+		windowSec = p.config.WSReconnectWindowSeconds
+	}
+	cutoff := time.Now().Add(-time.Duration(windowSec) * time.Second)
 	for userID, tracker := range p.reconnectTrackers {
 		if tracker.lastAttempt.Before(cutoff) && time.Now().After(tracker.blockedUntil) {
 			delete(p.reconnectTrackers, userID)

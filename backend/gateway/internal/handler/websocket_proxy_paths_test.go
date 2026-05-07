@@ -57,7 +57,7 @@ func TestWebSocketProxyReconnectTrackerLifecycle(t *testing.T) {
 	userID := "user-reconnect"
 
 	require.True(t, proxy.checkReconnectAllowed(userID))
-	for i := 0; i < reconnectMaxAttempts; i++ {
+	for i := 0; i < reconnectMaxAttemptsDefault; i++ {
 		proxy.recordReconnectAttempt(userID)
 	}
 
@@ -65,7 +65,7 @@ func TestWebSocketProxyReconnectTrackerLifecycle(t *testing.T) {
 	require.Greater(t, proxy.reconnectBlockRemaining(userID), 0)
 
 	proxy.mu.Lock()
-	proxy.reconnectTrackers[userID].lastAttempt = time.Now().Add(-2 * time.Duration(reconnectWindowSec) * time.Second)
+	proxy.reconnectTrackers[userID].lastAttempt = time.Now().Add(-2 * time.Duration(reconnectWindowSecDefault) * time.Second)
 	proxy.reconnectTrackers[userID].blockedUntil = time.Now().Add(-time.Second)
 	proxy.mu.Unlock()
 
@@ -122,7 +122,7 @@ func TestWebSocketProxyHTTPGuards(t *testing.T) {
 
 	userID := "blocked-user"
 	proxy.reconnectTrackers[userID] = &reconnectTracker{
-		attemptCount: reconnectMaxAttempts,
+		attemptCount: reconnectMaxAttemptsDefault,
 		lastAttempt:  time.Now(),
 		blockedUntil: time.Now().Add(time.Minute),
 	}

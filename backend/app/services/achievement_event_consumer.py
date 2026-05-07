@@ -36,11 +36,11 @@ class AchievementEventConsumer:
     GROUP_NAME = "achievement_event_consumer"
     SIGNAL_WINDOW_DAYS = 30
     MIN_SIGNAL_SAMPLE = 3
-    MILESTONE_ACHIEVEMENT_IDS = {
-        "30_day_learner",
-        "knowledge_explorer_50",
-        "sprint_veteran",
-    }
+
+    # Achievements with rarity >= RARE (or importance_level >= 4) get the
+    # rich milestone notification format.  This replaces the old hardcoded
+    # MILESTONE_ACHIEVEMENT_IDS set which missed most achievements.
+    _RICH_NOTIFICATION_RARITIES = {"rare", "epic", "legendary"}
 
     @staticmethod
     def _parse_event_datetime(value) -> datetime | None:
@@ -321,11 +321,60 @@ class AchievementEventConsumer:
                     )
                 except Exception as spine_err:
                     logger.debug(f"Spine on_achievement_event skipped: {spine_err}")
+
+                # Persist chronicle event to PostgreSQL for durability beyond Redis TTL
+                try:
+                    await self._persist_chronicle_event(db, str(user_id), {
+                        "event_type": "achievement_unlocked",
+                        "achievement_id": str(achievement_id),
+                        "achievement_title": event.get("achievement_name") or event.get("title") or str(achievement_id),
+                        "rarity": event.get("rarity", "common"),
+                        "streak_count": int(event.get("streak_count", 0)),
+                        "timestamp": _utcnow().isoformat(),
+                    })
+                except Exception as persist_err:
+                    logger.warning(f"Chronicle persistence failed, Redis-only fallback: {persist_err}")
         except Exception as e:
             logger.warning(f"Failed to record cognitive fragment for achievement: {e}")
 
     def stop(self):
         self._running = False
+
+    async def _persist_chronicle_event(self, db, user_id: str, event: dict) -> None:
+        """Persist a chronicle event to PostgreSQL growth_chronicle table for durability."""
+        try:
+            from app.aurora.runtime_v1.models import GrowthChronicleSnapshot
+            from sqlalchemy import select as sa_select
+
+            result = await db.execute(
+                sa_select(GrowthChronicleSnapshot).where(
+                    GrowthChronicleSnapshot.user_id == user_id,
+                    GrowthChronicleSnapshot.deleted_at.is_(None),
+                )
+            )
+            record = result.scalar_one_or_none()
+            existing_payload = list(record.payload) if record and isinstance(record.payload, list) else []
+            # Prepend the new event to the snapshot payload
+            existing_payload.insert(0, event)
+            # Keep last 100 entries
+            existing_payload = existing_payload[:100]
+
+            if record is None:
+                record = GrowthChronicleSnapshot(user_id=user_id)
+            record.payload = existing_payload
+            record.entry_count = len(existing_payload)
+            record.last_saved_at = _utcnow()
+            record.runtime_metadata = {
+                "source": "achievement_event_consumer",
+                "user_visible": True,
+                "editable": True,
+            }
+            db.add(record)
+            await db.commit()
+            logger.debug(f"Persisted chronicle event for user {user_id}: {event.get('event_type')}")
+        except Exception:
+            logger.warning(f"Chronicle PostgreSQL persist failed for user {user_id}", exc_info=True)
+            await db.rollback()
 
     async def _handle_achievement_progress(self, event: dict):
         user_id = event.get("user_id")
@@ -395,7 +444,25 @@ class AchievementEventConsumer:
 
     async def _maybe_create_milestone_notification(self, *, db, user_id: UUID, event: dict):
         achievement_id = str(event.get("achievement_id") or "").strip()
-        if achievement_id not in self.MILESTONE_ACHIEVEMENT_IDS:
+
+        # Dynamic check: rich notification for any achievement with rarity >= rare
+        # or importance_level >= 4 (queried from DB as source of truth).
+        rarity_raw = str(event.get("rarity") or "").strip().lower()
+        importance_level = int(event.get("importance_level") or 0)
+
+        is_rich_eligible = rarity_raw in self._RICH_NOTIFICATION_RARITIES or importance_level >= 4
+
+        # Fallback: if event payload lacks rarity, query the achievement definition.
+        if not is_rich_eligible and not rarity_raw:
+            try:
+                ach = await db.get(Achievement, achievement_id)
+                if ach is not None:
+                    ach_rarity = str(ach.rarity.value if hasattr(ach.rarity, "value") else ach.rarity or "").lower()
+                    is_rich_eligible = ach_rarity in self._RICH_NOTIFICATION_RARITIES
+            except Exception:
+                pass
+
+        if not is_rich_eligible:
             return None
         if await self._has_recent_milestone_notification(db, user_id, achievement_id):
             logger.info(f"Skipped duplicate milestone notification for achievement {achievement_id} and user {user_id}")
@@ -521,19 +588,54 @@ class AchievementEventConsumer:
             f"掌握了 {stats['mastered_nodes']} 个知识节点，"
             f"记录了 {stats['error_count']} 道错题。"
         )
-        if achievement_id == "30_day_learner":
-            return (
+        milestone_copy = {
+            "30_day_learner": (
                 "你已经坚持学习 30 天了",
                 f"{common_tail} 现在打开 App，就去领取你的 30 天庆祝时刻吧。",
-            )
-        if achievement_id == "knowledge_explorer_50":
-            return (
+            ),
+            "knowledge_explorer_50": (
                 "你已经点亮 50 个知识节点了",
                 f"{common_tail} 你的知识星图正在变得越来越亮。",
-            )
-        return (
-            "你已经完成 2 次冲刺备考了",
-            f"{common_tail} 这一段冲刺节奏，已经被 Sparkle 认真记住。",
+            ),
+            "sprint_veteran": (
+                "你已经完成 2 次冲刺备考了",
+                f"{common_tail} 这一段冲刺节奏，已经被 Sparkle 认真记住。",
+            ),
+            "first_task": (
+                "你完成了第一个任务",
+                "迈出第一步是最重要的。你的成长旅程已经开始了。",
+            ),
+            "week_streak_7": (
+                "你已经坚持 7 天连续学习",
+                f"{common_tail} 一周的坚持是一个很好的开始。",
+            ),
+            "galaxy_explorer": (
+                "你已经开始探索知识星图",
+                f"{common_tail} 继续探索，你会发现更多有趣的知识。",
+            ),
+            "focus_master": (
+                "你完成了一次深度专注",
+                "专注是高效学习的基石。继续保持。",
+            ),
+            "reflection_starter": (
+                "你开始了第一次反思",
+                "反思让你从经验中提炼智慧。Sparkle 会帮你记住这些洞察。",
+            ),
+            "plan_creator": (
+                "你创建了第一个学习计划",
+                "有计划的学习比盲目刷题效率高很多。你的计划已经被认真记录。",
+            ),
+            "community_joined": (
+                "你加入了学习社区",
+                "和伙伴一起学习，你会走得更远。你的社区之旅已经开始了。",
+            ),
+        }
+        return milestone_copy.get(
+            achievement_id,
+            (
+                "你达成了一个新的里程碑",
+                f"{common_tail} Sparkle 记住了你的每一个重要时刻。",
+            ),
         )
 
     def _build_milestone_route(self, achievement_id: str, stats: dict[str, int]) -> str:
@@ -564,11 +666,19 @@ class AchievementEventConsumer:
 
     @staticmethod
     def _celebration_value_for(achievement_id: str, stats: dict[str, int]) -> int:
-        if achievement_id == "30_day_learner":
-            return 30
-        if achievement_id == "knowledge_explorer_50":
-            return max(50, int(stats["mastered_nodes"]))
-        return max(2, int(stats["completed_sprints"]))
+        celebration_map = {
+            "30_day_learner": 30,
+            "knowledge_explorer_50": max(50, int(stats["mastered_nodes"])),
+            "sprint_veteran": max(2, int(stats["completed_sprints"])),
+            "first_task": 1,
+            "week_streak_7": 7,
+            "galaxy_explorer": max(1, int(stats["mastered_nodes"])),
+            "focus_master": 1,
+            "reflection_starter": 1,
+            "plan_creator": 1,
+            "community_joined": 1,
+        }
+        return celebration_map.get(achievement_id, max(1, int(stats["study_days"])))
 
     async def _refresh_achievement_profile_signals(self, db, user_id: UUID) -> None:
         from app.core.cache import cache_service

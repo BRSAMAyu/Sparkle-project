@@ -9,6 +9,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 _EXTENSION_AVAILABILITY_CACHE: dict[str, bool] = {}
 _MISSING_EXTENSION_LOGGED: set[str] = set()
 
+_ALLOWED_EXTENSIONS = frozenset({
+    "vector",
+    "age",
+    "pg_stat_statements",
+    "pg_trgm",
+    "btree_gin",
+    "uuid-ossp",
+})
+
 
 async def ensure_database_extensions(
     session: AsyncSession,
@@ -48,6 +57,11 @@ async def is_vector_extension_available(session: AsyncSession, *, refresh: bool 
 
 
 async def _ensure_database_extension(session: AsyncSession, extension: str) -> bool:
+    if extension not in _ALLOWED_EXTENSIONS:
+        raise ValueError(
+            f"Unknown database extension '{extension}'. "
+            f"Allowed extensions: {sorted(_ALLOWED_EXTENSIONS)}"
+        )
     if await _extension_installed(session, extension):
         return True
 

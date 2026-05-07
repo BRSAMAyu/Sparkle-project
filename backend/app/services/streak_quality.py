@@ -202,7 +202,7 @@ class StreakQualityService:
             evidence = f"You logged {today_quality.effective_minutes} effective learning minutes today."
             reason = "effective_learning_time"
 
-        return {
+        celebration_data = {
             "reason": reason,
             "evidence": evidence,
             "suggested_message": (
@@ -210,6 +210,65 @@ class StreakQualityService:
                 "This streak is counting real progress, not just opening the app."
             ),
         }
+
+        # Push celebration notification to user (R2A7-P1-4)
+        await self._push_celebration_notification(
+            user_id, quality_streak, celebration_data, today_quality
+        )
+
+        return celebration_data
+
+    async def _push_celebration_notification(
+        self,
+        user_id: UUID | str,
+        quality_streak: int,
+        celebration_data: dict[str, str],
+        today_quality: StreakQuality,
+    ) -> None:
+        """Create and push a celebration notification. Failures are caught so
+        they never affect the quality computation path."""
+        try:
+            from app.schemas.notification import NotificationCreate
+            from app.services.notification_service import NotificationService
+
+            notification_type = (
+                "streak_milestone" if quality_streak > 1 and quality_streak % 7 == 0
+                else "celebration"
+            )
+            title = (
+                f"Streak milestone: {quality_streak} quality days!"
+                if notification_type == "streak_milestone"
+                else "Quality day achieved!"
+            )
+            await NotificationService.create(
+                self.db,
+                user_id=UUID(str(user_id)),
+                obj_in=NotificationCreate(
+                    title=title,
+                    content=celebration_data["suggested_message"],
+                    type=notification_type,
+                    data={
+                        "category": "celebration",
+                        "reason": celebration_data["reason"],
+                        "evidence": celebration_data["evidence"],
+                        "quality_streak": quality_streak,
+                        "quality_score": round(today_quality.quality_score, 3),
+                        "effective_minutes": today_quality.effective_minutes,
+                        "core_tasks_completed": today_quality.core_tasks_completed,
+                        "difficult_breakthroughs": today_quality.difficult_breakthroughs,
+                    },
+                ),
+                push_via_websocket=True,
+            )
+            logger.info(
+                "Pushed celebration notification to user %s: streak=%d type=%s",
+                user_id, quality_streak, notification_type,
+            )
+        except Exception:
+            logger.warning(
+                "Failed to push celebration notification for user %s",
+                user_id, exc_info=True,
+            )
 
     async def build_payload(self, user_id: UUID | str) -> dict[str, Any]:
         today_quality = await self.compute_quality(user_id)

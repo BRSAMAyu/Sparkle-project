@@ -158,36 +158,16 @@ class GalaxyService:
         connection = await self.db.connection()
         return await connection.run_sync(lambda sync_conn: inspect(sync_conn).has_table(table_name))
 
-    async def handle_error_created(self, event_data: dict):
-        """
-        [DEPRECATED] Do NOT call — mastery is owned by ErrorBookMasterySyncService.
-        Calling this will cause double mastery deductions.
-        """
-        logger.warning(
-            "Blocked deprecated GalaxyService.handle_error_created call; "
-            "mastery updates are owned by ErrorBookMasterySyncService"
-        )
-        return None
-
-    async def update_mastery_from_error(
-        self,
-        db: AsyncSession | None = None,
-        *,
-        user_id: str,
-        knowledge_node_id: str | None,
-        knowledge_node_name: str | None,
-        error_type: str,
-        error_count: int,
-    ) -> dict | None:
-        """
-        [DEPRECATED] Do NOT call — mastery is owned by ErrorBookMasterySyncService.
-        Calling this will cause double mastery deductions.
-        """
-        logger.warning(
-            "Blocked deprecated GalaxyService.update_mastery_from_error call; "
-            "mastery updates are owned by ErrorBookMasterySyncService"
-        )
-        return None
+    # --- REMOVED: handle_error_created / update_mastery_from_error ---
+    # These methods were deprecated because mastery updates are now owned by
+    # ErrorBookMasterySyncService.  Keeping stubs would risk accidental
+    # double-deduction; callers that still reference them should migrate to
+    # GraphEvolutionService.handle_error_created() (graph-structure only,
+    # no mastery mutation) or ErrorBookMasterySyncService (mastery writes).
+    #
+    # If you see an AttributeError from one of these, the fix is:
+    #   - Production: use ErrorBookMasterySyncService or GraphEvolutionService
+    #   - Tests: update the test to use the new service or remove the test
 
     @staticmethod
     def _coerce_uuid(value: object) -> object:

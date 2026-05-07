@@ -44,6 +44,30 @@ def _is_mock_session(db: AsyncSession) -> bool:
     return db.__class__.__module__.startswith("unittest.mock")
 
 
+# ── FSM Transition Map (R1A4-P2-2) ──────────────────────────────────
+_VALID_TRANSITIONS: dict[TaskStatus, frozenset[TaskStatus]] = {
+    TaskStatus.PENDING: frozenset({TaskStatus.IN_PROGRESS, TaskStatus.ABANDONED}),
+    TaskStatus.IN_PROGRESS: frozenset({
+        TaskStatus.COMPLETED, TaskStatus.PAUSED, TaskStatus.STUCK, TaskStatus.ABANDONED,
+    }),
+    TaskStatus.PAUSED: frozenset({TaskStatus.IN_PROGRESS, TaskStatus.ABANDONED}),
+    TaskStatus.STUCK: frozenset({TaskStatus.IN_PROGRESS, TaskStatus.ABANDONED}),
+    TaskStatus.COMPLETED: frozenset(),
+    TaskStatus.ABANDONED: frozenset(),
+}
+
+
+def _validate_transition(current: TaskStatus, target: TaskStatus) -> None:
+    """Raise ValueError if *current* -> *target* is not in the transition map."""
+    allowed = _VALID_TRANSITIONS.get(current)
+    if allowed is None:
+        raise ValueError(f"Unknown current status: {current!r}")
+    if target not in allowed:
+        raise ValueError(
+            f"Invalid state transition: {current.value} -> {target.value}"
+        )
+
+
 async def _sync_task_card_projection(db: AsyncSession, task: Task) -> None:
     task_id = str(task.id)
     if db.bind is None:
@@ -242,6 +266,7 @@ class TaskService:
     @staticmethod
     async def start(db: AsyncSession, db_obj: Task) -> Task:
         """Start task"""
+        _validate_transition(db_obj.status, TaskStatus.IN_PROGRESS)
         old_status = db_obj.status
         db_obj.status = TaskStatus.IN_PROGRESS
         db_obj.started_at = db_obj.started_at or _utcnow()
@@ -293,8 +318,7 @@ class TaskService:
     @staticmethod
     async def pause(db: AsyncSession, db_obj: Task, reason: str | None = None) -> Task:
         """Pause a task without marking it as a success or failure."""
-        if db_obj.status in (TaskStatus.COMPLETED, TaskStatus.ABANDONED):
-            raise ValueError("Completed or abandoned tasks cannot be paused")
+        _validate_transition(db_obj.status, TaskStatus.PAUSED)
 
         old_status = db_obj.status
         paused_at = _utcnow()
@@ -385,8 +409,7 @@ class TaskService:
     @staticmethod
     async def resume(db: AsyncSession, db_obj: Task) -> Task:
         """Resume a paused or stuck task."""
-        if db_obj.status not in (TaskStatus.PAUSED, TaskStatus.STUCK):
-            raise ValueError("Only paused or stuck tasks can be resumed")
+        _validate_transition(db_obj.status, TaskStatus.IN_PROGRESS)
 
         old_status = db_obj.status
         resumed_at = _utcnow()
@@ -551,6 +574,7 @@ class TaskService:
     @staticmethod
     async def complete(db: AsyncSession, db_obj: Task, actual_minutes: int, note: str | None = None) -> Task:
         """Complete task and update plan progress if task belongs to a plan"""
+        _validate_transition(db_obj.status, TaskStatus.COMPLETED)
         db_obj.status = TaskStatus.COMPLETED
         db_obj.completed_at = _utcnow()
         db_obj.actual_minutes = actual_minutes
@@ -811,8 +835,7 @@ class TaskService:
         trigger: str | None = None,
     ) -> tuple[Task, dict[str, Any]]:
         """Mark an active task as stuck and ask Aurora for current-state help."""
-        if db_obj.status in {TaskStatus.COMPLETED, TaskStatus.ABANDONED}:
-            raise ValueError("Completed or abandoned tasks cannot be marked stuck")
+        _validate_transition(db_obj.status, TaskStatus.STUCK)
 
         old_status = db_obj.status
         db_obj.status = TaskStatus.STUCK
@@ -985,6 +1008,7 @@ class TaskService:
     @staticmethod
     async def abandon(db: AsyncSession, db_obj: Task, reason: str | None = None) -> Task:
         """Abandon task"""
+        _validate_transition(db_obj.status, TaskStatus.ABANDONED)
         db_obj.status = TaskStatus.ABANDONED
         db_obj.completed_at = _utcnow()  # using completed_at for end time
         if reason:

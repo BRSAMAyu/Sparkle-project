@@ -1490,6 +1490,7 @@ class AchievementEngine:
         await cache_service.delete_pattern(f"{settings.APP_NAME}:achievement:{user_id}:*")
         await self._broadcast_unlock_signals(user_id, unlock_payload)
         await self._record_progress_narrative_unlock(user_id, unlock_payload)
+        await self._record_chronicle_unlock(user_id, unlock_payload)
 
     async def _record_progress_narrative_unlock(self, user_id: str, unlock_payload: dict[str, Any]) -> None:
         try:
@@ -1506,6 +1507,38 @@ class AchievementEngine:
             )
         except Exception as exc:
             logger.warning(f"Failed to record achievement progress narrative signal: {exc}")
+
+    async def _record_chronicle_unlock(self, user_id: str, unlock_payload: dict[str, Any]) -> None:
+        """Record an achievement unlock as a Growth Chronicle entry."""
+        try:
+            from app.signals.growth_chronicle import ChronicleEntry, GrowthChronicleService
+            from app.signals.types import _uid
+
+            achievement_name = str(unlock_payload.get("name") or "")
+            rarity = unlock_payload.get("rarity")
+            rarity_value = str(rarity.value if hasattr(rarity, "value") else rarity or "")
+            story = str(unlock_payload.get("context_story") or "").strip()
+            is_first = bool(unlock_payload.get("is_first", False))
+
+            entry = ChronicleEntry(
+                entry_id=_uid("chron"),
+                user_id=str(user_id),
+                entry_type="milestone",
+                timestamp=unlock_payload.get("unlocked_at", _utcnow()).isoformat()
+                if isinstance(unlock_payload.get("unlocked_at"), datetime)
+                else str(unlock_payload.get("unlocked_at") or _utcnow().isoformat()),
+                title=f"里程碑：解锁成就「{achievement_name}」",
+                narrative=story or f"你解锁了「{achievement_name}」成就（{rarity_value}），这是你持续进步的证明。",
+                evidence_refs=[str(unlock_payload.get("achievement_id", ""))],
+                user_editable=True,
+                claim=f"用户达成了 {achievement_name} 成就",
+                confidence=0.9,
+            )
+
+            chronicle = GrowthChronicleService(cache_service.redis, db_session=self.db)
+            await chronicle.add_entry(user_id=str(user_id), entry=entry)
+        except Exception as exc:
+            logger.warning(f"Failed to record chronicle entry for achievement unlock: {exc}")
 
     async def _publish_achievement_progress(
         self,

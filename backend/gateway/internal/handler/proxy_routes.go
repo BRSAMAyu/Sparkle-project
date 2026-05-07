@@ -295,6 +295,14 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered recommendations proxy routes")
 
+	// ==================== Reflections Routes ====================
+	reflections := api.Group("/reflections")
+	reflections.Use(authMiddleware)
+	{
+		reflections.GET("/summary", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered reflections proxy routes")
+
 	// ==================== Suggestions Routes ====================
 	suggestions := api.Group("/suggestions")
 	suggestions.Use(authMiddleware)
@@ -977,7 +985,38 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 			h.logger.Info("Registered " + r.name + " proxy routes")
 		}
 
-	// Health routes are handled locally by the gateway (setup.go) — do not proxy
+		// ==================== CQRS / DLQ Health Routes ====================
+		cqrs := api.Group("/cqrs")
+		cqrs.Use(authMiddleware)
+		{
+			cqrs.GET("/dlq/stats", h.proxyWithHeaders)
+		}
+		h.logger.Info("Registered CQRS DLQ proxy routes")
+
+		// ==================== Admin Event-Bus Health Routes ====================
+		adminEventBus := api.Group("/admin/event-bus")
+		adminEventBus.Use(authMiddleware)
+		{
+			adminEventBus.GET("/health", h.proxyWithHeaders)
+			adminEventBus.GET("/dlq", h.proxyWithHeaders)
+			adminEventBus.GET("/dlq/entries", h.proxyWithHeaders)
+			adminEventBus.POST("/dlq/replay", h.proxyWithHeaders)
+			adminEventBus.DELETE("/dlq/:message_id", h.proxyWithHeaders)
+			adminEventBus.GET("/lag", h.proxyWithHeaders)
+		}
+		h.logger.Info("Registered admin event-bus proxy routes")
+
+		// ==================== DLQ Admin Routes ====================
+		dlq := api.Group("/dlq")
+		dlq.Use(authMiddleware)
+		{
+			dlq.GET("/", h.proxyWithHeaders)
+			dlq.GET("/main-events", h.proxyWithHeaders)
+			dlq.POST("/replay", h.proxyWithHeaders)
+		}
+		h.logger.Info("Registered DLQ admin proxy routes")
+
+		// Health routes are handled locally by the gateway (setup.go) — do not proxy
 }
 
 // proxyWithHeaders proxies request to Python Backend with user context headers

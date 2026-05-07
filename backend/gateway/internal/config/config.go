@@ -107,10 +107,13 @@ type Config struct {
 	ShutdownTimeoutSeconds int `mapstructure:"SHUTDOWN_TIMEOUT_SECONDS"` // default 15
 
 	// WebSocket lifecycle
-	WSPongWaitSeconds     int `mapstructure:"WS_PONG_WAIT_SECONDS"`     // default 90
-	WSPingIntervalSeconds int `mapstructure:"WS_PING_INTERVAL_SECONDS"` // default 30
-	WSWriteWaitSeconds    int `mapstructure:"WS_WRITE_WAIT_SECONDS"`    // default 10
-	WSIdleTimeoutSeconds  int `mapstructure:"WS_IDLE_TIMEOUT_SECONDS"`  // default 300
+	WSPongWaitSeconds          int `mapstructure:"WS_PONG_WAIT_SECONDS"`          // default 90
+	WSPingIntervalSeconds      int `mapstructure:"WS_PING_INTERVAL_SECONDS"`      // default 30
+	WSWriteWaitSeconds         int `mapstructure:"WS_WRITE_WAIT_SECONDS"`         // default 10
+	WSIdleTimeoutSeconds       int `mapstructure:"WS_IDLE_TIMEOUT_SECONDS"`       // default 300
+	WSReconnectWindowSeconds   int `mapstructure:"WS_RECONNECT_WINDOW_SECONDS"`   // default 30
+	WSReconnectMaxAttempts     int `mapstructure:"WS_RECONNECT_MAX_ATTEMPTS"`     // default 10
+	WSReconnectBlockSeconds    int `mapstructure:"WS_RECONNECT_BLOCK_SECONDS"`    // default 300
 
 	// Request timeout
 	RequestTimeoutSeconds int `mapstructure:"REQUEST_TIMEOUT_SECONDS"` // default 30
@@ -425,6 +428,9 @@ func Load() *Config {
 		"WS_PING_INTERVAL_SECONDS",
 		"WS_WRITE_WAIT_SECONDS",
 		"WS_IDLE_TIMEOUT_SECONDS",
+		"WS_RECONNECT_WINDOW_SECONDS",
+		"WS_RECONNECT_MAX_ATTEMPTS",
+		"WS_RECONNECT_BLOCK_SECONDS",
 		"REQUEST_TIMEOUT_SECONDS",
 		"MINIO_ENDPOINT",
 		"MINIO_PUBLIC_ENDPOINT",
@@ -528,6 +534,9 @@ func Load() *Config {
 	viper.SetDefault("WS_PING_INTERVAL_SECONDS", 30)
 	viper.SetDefault("WS_WRITE_WAIT_SECONDS", 10)
 	viper.SetDefault("WS_IDLE_TIMEOUT_SECONDS", 300)
+	viper.SetDefault("WS_RECONNECT_WINDOW_SECONDS", 30)
+	viper.SetDefault("WS_RECONNECT_MAX_ATTEMPTS", 10)
+	viper.SetDefault("WS_RECONNECT_BLOCK_SECONDS", 300)
 
 	// Request timeout
 	viper.SetDefault("REQUEST_TIMEOUT_SECONDS", 30)

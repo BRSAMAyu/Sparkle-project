@@ -81,7 +81,10 @@ func (h *CommunityHandler) GetFeed(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 
-	posts, err := h.queryService.GetGlobalFeed(c.Request.Context(), page, limit)
+	// Extract user ID from auth context for isLikedByMe enrichment
+	userID := c.GetString("user_id")
+
+	posts, err := h.queryService.GetGlobalFeed(c.Request.Context(), userID, page, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
