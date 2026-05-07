@@ -159,21 +159,27 @@ class KnowledgeDetailScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Sector tag
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: DS.brandPrimary24,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Text(
-                            sectorStyle.name,
-                            style: TextStyle(
-                              color: DS.textPrimary,
-                              fontSize: 12,
-                              fontWeight: DS.fontWeightBold,
+                        Hero(
+                          tag: 'knowledge-$nodeId',
+                          child: Material(
+                            type: MaterialType.transparency,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: DS.brandPrimary24,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Text(
+                                sectorStyle.name,
+                                style: TextStyle(
+                                  color: DS.textPrimary,
+                                  fontSize: 12,
+                                  fontWeight: DS.fontWeightBold,
+                                ),
+                              ),
                             ),
                           ),
                         ),

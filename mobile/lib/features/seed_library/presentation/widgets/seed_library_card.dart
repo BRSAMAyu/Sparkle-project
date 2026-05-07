@@ -34,16 +34,19 @@ class SeedLibraryCard extends StatelessWidget {
                 Row(
                   children: [
                     // Icon based on category
-                    Container(
-                      padding: const EdgeInsets.all(DS.spacing8),
-                      decoration: BoxDecoration(
-                        color: _getCategoryColor().withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(DS.radius8),
-                      ),
-                      child: Icon(
-                        _getCategoryIcon(),
-                        color: _getCategoryColor(),
-                        size: DS.iconSizeBase,
+                    Hero(
+                      tag: 'seed-${library.id}',
+                      child: Container(
+                        padding: const EdgeInsets.all(DS.spacing8),
+                        decoration: BoxDecoration(
+                          color: _getCategoryColor().withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(DS.radius8),
+                        ),
+                        child: Icon(
+                          _getCategoryIcon(),
+                          color: _getCategoryColor(),
+                          size: DS.iconSizeBase,
+                        ),
                       ),
                     ),
                     const SizedBox(width: DS.spacing12),

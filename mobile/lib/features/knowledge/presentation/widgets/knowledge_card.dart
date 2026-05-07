@@ -51,9 +51,12 @@ class KnowledgeCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(
-                    Icons.lightbulb_outline,
-                    color: context.sparkle.colors.brandPrimary,
+                  Hero(
+                    tag: 'knowledge-${nodeId ?? ''}',
+                    child: Icon(
+                      Icons.lightbulb_outline,
+                      color: context.sparkle.colors.brandPrimary,
+                    ),
                   ),
                   SizedBox(width: context.space.sm),
                   Expanded(

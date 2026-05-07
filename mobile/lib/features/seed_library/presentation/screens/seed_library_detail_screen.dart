@@ -206,11 +206,18 @@ class _SeedLibraryDetailScreenState
                       Wrap(
                         spacing: DS.spacing8,
                         children: [
-                          Chip(
+                          Hero(
+                        tag: 'seed-${widget.libraryId}',
+                        child: Material(
+                          type: MaterialType.transparency,
+                          child: Chip(
                             label: Text(library.categoryLabel(context.l10n)),
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primaryContainer,
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .primaryContainer,
                           ),
+                        ),
+                      ),
                           Chip(
                             label: Text(library.visibility.label(context.l10n)),
                             backgroundColor:

@@ -171,7 +171,13 @@ class ErrorDetailScreen extends ConsumerWidget {
           // 科目徽章
           Row(
             children: [
-              SubjectChip(subjectCode: error.subject),
+              Hero(
+                tag: 'error-$errorId',
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: SubjectChip(subjectCode: error.subject),
+                ),
+              ),
               if (error.chapter != null) ...[
                 const SizedBox(width: DS.spacing8),
                 Container(

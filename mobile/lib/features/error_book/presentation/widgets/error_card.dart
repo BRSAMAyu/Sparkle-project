@@ -92,7 +92,10 @@ class ErrorCard extends StatelessWidget {
                 // Header: subject tag and status tag.
                 Row(
                   children: [
-                    SubjectChip(subjectCode: error.subject, compact: true),
+                    Hero(
+                      tag: 'error-${error.id}',
+                      child: SubjectChip(subjectCode: error.subject, compact: true),
+                    ),
                     const SizedBox(width: DS.spacing8),
                     if (error.chapter != null && error.chapter!.isNotEmpty)
                       Expanded(

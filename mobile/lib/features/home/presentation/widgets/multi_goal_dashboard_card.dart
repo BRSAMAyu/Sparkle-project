@@ -342,12 +342,15 @@ class _GoalRow extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Icon(
-                    isSelected
-                        ? Icons.radio_button_checked_rounded
-                        : Icons.radio_button_unchecked_rounded,
-                    size: 18,
-                    color: accent,
+                  Hero(
+                    tag: 'goal-${goal.id}',
+                    child: Icon(
+                      isSelected
+                          ? Icons.radio_button_checked_rounded
+                          : Icons.radio_button_unchecked_rounded,
+                      size: 18,
+                      color: accent,
+                    ),
                   ),
                   const SizedBox(width: DS.spacing8),
                   Expanded(

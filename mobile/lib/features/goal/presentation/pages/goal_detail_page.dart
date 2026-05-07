@@ -183,26 +183,32 @@ class _GoalHeader extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              height: 76,
-              width: 76,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    value: progress,
-                    strokeWidth: 8,
-                    backgroundColor: DS.surfaceHigh,
-                  ),
-                  Text(
-                    '${(progress * 100).round()}%',
-                    style: textTheme.labelLarge?.copyWith(
-                      color: DS.textPrimary,
-                      fontWeight: FontWeight.w800,
+            Hero(
+              tag: 'goal-$goalId',
+              child: Material(
+                type: MaterialType.transparency,
+                child: SizedBox(
+                  height: 76,
+                  width: 76,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        value: progress,
+                        strokeWidth: 8,
+                        backgroundColor: DS.surfaceHigh,
+                      ),
+                      Text(
+                        '${(progress * 100).round()}%',
+                        style: textTheme.labelLarge?.copyWith(
+                          color: DS.textPrimary,
+                          fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
               ),
+            ),
+            ),
             ),
             const SizedBox(width: DS.spacing16),
             Expanded(
