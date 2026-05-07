@@ -2021,9 +2021,55 @@ class AchievementEngine:
         stats.last_activity_date = today
         await self.db.flush()
 
-        # 触发连胜里程碑检查
-        if stats.current_streak in [7, 14, 30, 60, 100, 365]:
-            await self.process_event(user_id, AchievementEvent.STREAK_MILESTONE, streak_days=stats.current_streak)
+        # Wire quality-weighted streak into milestone checks
+        try:
+            from app.services.streak_quality import StreakQualityService
+
+            quality_svc = StreakQualityService(db=self.db)
+            quality = await quality_svc.compute_quality(user_id, today)
+            quality_score = float(quality.quality_score) if quality else None
+            if quality_score is not None:
+                # Cache quality score for downstream consumers (StateAggregator, celebration triggers)
+                await cache_service.set(
+                    f"spine:streak_quality:{user_id}:{today.isoformat()}",
+                    f"{quality_score:.4f}",
+                    ttl=86400 * 7,
+                )
+                if quality_score < 0.3:
+                    logger.info(
+                        "Low quality streak day for user {}: quality_score={:.3f}",
+                        user_id,
+                        quality_score,
+                    )
+                # Mark streak day with quality status for downstream consumers
+                is_quality = quality.is_quality_day if quality else (quality_score is not None and quality_score >= 0.4)
+                await self._upsert_streak_day(
+                    user_id,
+                    today,
+                    StreakDayStatus.ACTIVE if is_quality else StreakDayStatus.WEAK,
+                    source_event=event_type,
+                )
+            # Use quality-gated streak for milestone triggering
+            quality_streak = await quality_svc.quality_streak(user_id, today)
+            if quality_streak in [7, 14, 30, 60, 100, 365]:
+                await self.process_event(
+                    user_id,
+                    AchievementEvent.STREAK_MILESTONE,
+                    streak_days=quality_streak,
+                )
+        except Exception:
+            logger.debug(
+                "Quality streak calculation skipped for user={}",
+                user_id,
+                exc_info=True,
+            )
+            # Fallback: use raw streak counter when quality calculation fails
+            if stats.current_streak in [7, 14, 30, 60, 100, 365]:
+                await self.process_event(
+                    user_id,
+                    AchievementEvent.STREAK_MILESTONE,
+                    streak_days=stats.current_streak,
+                )
 
     async def _get_or_create_streak_stats(self, user_id: str) -> UserStreakStats:
         """获取或创建连胜统计"""

@@ -1137,6 +1137,19 @@ celery_app.conf.beat_schedule = {
         "schedule": crontab(hour=21, minute=0),
         "options": {"queue": "default"},
     },
+    # ========== 群组打卡提醒 ==========
+    # 每天早上10点发送群组打卡提醒
+    "community-checkin-reminders-morning": {
+        "task": "tasks.community.send_checkin_reminders",
+        "schedule": crontab(hour=10, minute=0),
+        "options": {"queue": "default"},
+    },
+    # 每天晚上8点再次发送群组打卡提醒
+    "community-checkin-reminders-evening": {
+        "task": "tasks.community.send_checkin_reminders",
+        "schedule": crontab(hour=20, minute=0),
+        "options": {"queue": "default"},
+    },
     # 每天晚上11:59检查进度
     "accountability-progress-check": {
         "task": "tasks.accountability.check_partner_progress",

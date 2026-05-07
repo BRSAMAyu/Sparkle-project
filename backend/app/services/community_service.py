@@ -821,6 +821,48 @@ class GroupService:
             context="group",
             timestamp=member.joined_at,
         )
+
+        # Notify group owner/admins about the new member
+        try:
+            from app.schemas.notification import NotificationCreate
+            from app.services.notification_service import NotificationService
+
+            admin_result = await db.execute(
+                select(GroupMember.user_id).where(
+                    GroupMember.group_id == group_id,
+                    GroupMember.role.in_([GroupRole.OWNER, GroupRole.ADMIN]),
+                    GroupMember.user_id != user_id,
+                    GroupMember.not_deleted_filter(),
+                )
+            )
+            admin_ids = [row[0] for row in admin_result.all()]
+
+            joiner = await db.get(User, user_id)
+            joiner_name = (
+                (joiner.nickname or joiner.full_name or joiner.username or "新成员")
+                if joiner
+                else "新成员"
+            )
+            group_obj = await Group.get_by_id(db, group_id)
+            group_name = group_obj.name if group_obj else "群组"
+
+            for admin_id in admin_ids:
+                await NotificationService.create(
+                    db,
+                    admin_id,
+                    NotificationCreate(
+                        title="新成员加入群组",
+                        content=f"{joiner_name} 加入了「{group_name}」",
+                        type="community_group_join",
+                        data={
+                            "group_id": str(group_id),
+                            "new_member_user_id": str(user_id),
+                        },
+                    ),
+                )
+        except Exception:
+            logger.opt(exception=True).debug("Failed to send community_group_join notification")
+
         return member
 
     @staticmethod
@@ -1603,6 +1645,39 @@ class GroupMessageService:
             timestamp=message.created_at,
         )
 
+        # Push notification to the replied-to message author
+        if message.reply_to_id and data.reply_to_id:
+            replied_msg = await db.get(GroupMessage, data.reply_to_id)
+            if replied_msg and replied_msg.sender_id and str(replied_msg.sender_id) != str(sender_id):
+                try:
+                    from app.schemas.notification import NotificationCreate
+                    from app.services.notification_service import NotificationService
+
+                    sender = await db.get(User, sender_id)
+                    sender_name = (
+                        (sender.nickname or sender.full_name or sender.username or "someone")
+                        if sender
+                        else "someone"
+                    )
+                    reply_preview = (data.content or "")[:50]
+                    await NotificationService.create(
+                        db,
+                        replied_msg.sender_id,
+                        NotificationCreate(
+                            title="收到新的评论",
+                            content=f"{sender_name} 评论了你的消息" + (f"「{reply_preview}...」" if reply_preview else ""),
+                            type="community_comment",
+                            data={
+                                "group_id": str(group_id),
+                                "message_id": str(message.id),
+                                "reply_to_id": str(data.reply_to_id),
+                                "commenter_user_id": str(sender_id),
+                            },
+                        ),
+                    )
+                except Exception:
+                    logger.opt(exception=True).debug("Failed to send community_comment notification")
+
         # Re-fetch with relationships to ensure reply_to is loaded
         stmt = select(GroupMessage).options(
             selectinload(GroupMessage.sender),
@@ -1765,6 +1840,37 @@ class GroupMessageService:
                 context="group",
                 timestamp=msg.updated_at or _utcnow(),
             )
+
+            # Push notification to message author when someone likes their message
+            if msg.sender_id and str(msg.sender_id) != str(user_id):
+                try:
+                    from app.schemas.notification import NotificationCreate
+                    from app.services.notification_service import NotificationService
+
+                    reactor = await db.get(User, user_id)
+                    reactor_name = (
+                        (reactor.nickname or reactor.full_name or reactor.username or "someone")
+                        if reactor
+                        else "someone"
+                    )
+                    content_preview = (msg.content or "")[:50]
+                    await NotificationService.create(
+                        db,
+                        msg.sender_id,
+                        NotificationCreate(
+                            title="收到新的赞",
+                            content=f"{reactor_name} 赞了你的消息" + (f"「{content_preview}...」" if content_preview else ""),
+                            type="community_like",
+                            data={
+                                "group_id": str(group_id),
+                                "message_id": str(message_id),
+                                "reactor_user_id": str(user_id),
+                                "emoji": emoji,
+                            },
+                        ),
+                    )
+                except Exception:
+                    logger.opt(exception=True).debug("Failed to send community_like notification")
 
         stmt = select(GroupMessage).options(
             selectinload(GroupMessage.sender),

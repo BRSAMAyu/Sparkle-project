@@ -67,6 +67,7 @@ class StreakDayStatus(StrEnum):
     """连胜日历状态"""
 
     ACTIVE = "active"
+    WEAK = "weak"  # Activity day but below quality threshold
     FROZEN = "frozen"
     MISSED = "missed"
 

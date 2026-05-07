@@ -39,6 +39,21 @@ PER_TYPE_NOTIFICATION_ALIASES: dict[str, set[str]] = {
     "milestone_notification": {"milestone", "milestone_notification"},
     "achievement": {"milestone", "achievement"},
     "achievement_progress": {"milestone", "achievement_progress"},
+    "community": {
+        "community",
+        "community_like",
+        "community_comment",
+        "community_group_join",
+        "community_checkin_reminder",
+        "community_friend_request",
+        "friend_request",
+    },
+    "community_like": {"community", "community_like"},
+    "community_comment": {"community", "community_comment"},
+    "community_group_join": {"community", "community_group_join"},
+    "community_checkin_reminder": {"community", "community_checkin_reminder", "reminder"},
+    "community_friend_request": {"community", "community_friend_request", "friend_request"},
+    "friend_request": {"community", "community_friend_request", "friend_request"},
 }
 
 
@@ -298,8 +313,14 @@ class NotificationService:
 
         ws_manager = get_ws_manager()
 
+        # Use the notification type as top-level "type" for known client-handled
+        # message types (e.g. "achievement_unlock") so Flutter WS handlers can
+        # route them correctly. Fall back to generic "notification" for others.
+        _CLIENT_ROUTED_TYPES = {"achievement_unlock", "streak_milestone", "level_up"}
+        top_level_type = notification.type if notification.type in _CLIENT_ROUTED_TYPES else "notification"
+
         message = {
-            "type": "notification",
+            "type": top_level_type,
             "notification_type": NotificationService.source_type_for_notification(notification.type),
             "notification": {
                 "id": str(notification.id),
@@ -315,6 +336,18 @@ class NotificationService:
             },
             "response_id": str(uuid4()),
         }
+
+        # For achievement_unlock, add the achievement_data payload that Flutter expects
+        if notification.type == "achievement_unlock" and isinstance(notification.data, dict):
+            message["achievement_data"] = {
+                "achievement_id": notification.data.get("achievement_id"),
+                "title": notification.title,
+                "description": notification.data.get("description", notification.content),
+                "rarity": notification.data.get("rarity", "common"),
+                "icon_url": notification.data.get("icon_url"),
+                "combo_count": notification.data.get("combo_count", 1),
+                **{k: v for k, v in notification.data.items() if k.startswith(("xp_", "reward_", "badge_"))},
+            }
 
         try:
             await ws_manager.send_personal_message(message, str(user_id))
