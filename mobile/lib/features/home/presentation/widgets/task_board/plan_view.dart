@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/home/presentation/providers/plan_name_provider.dart';
@@ -419,7 +420,7 @@ class _ActivePlanSlot extends ConsumerWidget {
         AppFeedback.success(context, context.l10n.planViewDeactivated(plan.name));
       } catch (e) {
         if (!context.mounted) return;
-        AppFeedback.error(context, e.toString());
+        AppFeedback.error(context, UserFacingError.from(e));
       }
     }
 
@@ -430,7 +431,7 @@ class _ActivePlanSlot extends ConsumerWidget {
         AppFeedback.success(context, context.l10n.planViewSetPrimary(plan.name));
       } catch (e) {
         if (!context.mounted) return;
-        AppFeedback.error(context, e.toString());
+        AppFeedback.error(context, UserFacingError.from(e));
       }
     }
 
@@ -724,7 +725,7 @@ class _InactivePlanRow extends ConsumerWidget {
                         AppFeedback.success(context, context.l10n.planViewRestored(plan.name));
                       } catch (e) {
                         if (!context.mounted) return;
-                        AppFeedback.error(context, e.toString());
+                        AppFeedback.error(context, UserFacingError.from(e));
                       }
                     }
                   : null,

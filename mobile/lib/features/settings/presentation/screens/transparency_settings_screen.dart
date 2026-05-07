@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:sparkle/features/user/presentation/providers/settings_provider.dart';
@@ -346,7 +347,7 @@ class TransparencySettingsScreen extends ConsumerWidget {
               ),
               const SizedBox(height: DS.sm),
               Text(
-                error.toString(),
+                UserFacingError.from(error),
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),

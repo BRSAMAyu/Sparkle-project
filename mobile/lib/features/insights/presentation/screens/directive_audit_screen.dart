@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/features/insights/data/models/directive_audit_entry.dart';
 import 'package:sparkle/features/insights/presentation/providers/directive_audit_provider.dart';
 
@@ -71,7 +72,7 @@ class _DirectiveAuditScreenState extends ConsumerState<DirectiveAuditScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   ),
                   error: (error, _) => _DirectiveAuditError(
-                    message: error.toString(),
+                    message: UserFacingError.from(error),
                     onRetry: () =>
                         ref.invalidate(directiveAuditProvider(filter)),
                   ),
