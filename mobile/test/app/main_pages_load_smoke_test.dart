@@ -233,7 +233,7 @@ class _FakeLoggedOutAuthNotifier extends AuthNotifier {
 }
 
 class _EmptyDashboardNotifier extends DashboardNotifier {
-  _EmptyDashboardNotifier() : super(_UnusedDashboardRepository()) {
+  _EmptyDashboardNotifier() : super(_UnusedDashboardRepository(), _UnusedRef()) {
     state = DashboardState(
       weather: WeatherData(type: 'sunny', condition: 'clear'),
       flame: FlameData(level: 1, brightness: 0.0, todayFocusMinutes: 0),

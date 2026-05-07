@@ -3527,6 +3527,10 @@ class ChatOrchestrator(
                     workflow_type="standard_chat", agents_used="orchestrator", outcome="success"
                 ).inc()
 
+            except asyncio.CancelledError:
+                REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="cancelled").inc()
+                logger.warning("Orchestration cancelled for session {}", session_id)
+                raise
             except Exception as e:
                 REQUEST_COUNT.labels(module="orchestration", method="process_stream", status="error").inc()
                 COLLABORATION_SUCCESS.labels(

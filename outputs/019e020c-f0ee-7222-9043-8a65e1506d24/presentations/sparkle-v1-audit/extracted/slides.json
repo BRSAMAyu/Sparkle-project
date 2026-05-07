@@ -1,0 +1,3030 @@
+[
+  {
+    "slide": 1,
+    "text_boxes": [
+      "2026年04月07日",
+      "Sparkle",
+      "真正理解用户的 AI-native 学习成长系统",
+      "不是 AI 不够强，而是大多数人还不会高质量使用 AI",
+      "汇报人：邓博仁",
+      "深度用户洞察",
+      "智能任务拆解",
+      "规划闭环",
+      "持续自适应",
+      "可信执行协同"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId9",
+        "type": "tags",
+        "target": "../tags/tag63.xml"
+      },
+      {
+        "id": "rId8",
+        "type": "tags",
+        "target": "../tags/tag62.xml"
+      },
+      {
+        "id": "rId7",
+        "type": "tags",
+        "target": "../tags/tag61.xml"
+      },
+      {
+        "id": "rId6",
+        "type": "tags",
+        "target": "../tags/tag60.xml"
+      },
+      {
+        "id": "rId5",
+        "type": "tags",
+        "target": "../tags/tag59.xml"
+      },
+      {
+        "id": "rId4",
+        "type": "tags",
+        "target": "../tags/tag58.xml"
+      },
+      {
+        "id": "rId3",
+        "type": "tags",
+        "target": "../tags/tag57.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag56.xml"
+      },
+      {
+        "id": "rId16",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId15",
+        "type": "tags",
+        "target": "../tags/tag69.xml"
+      },
+      {
+        "id": "rId14",
+        "type": "tags",
+        "target": "../tags/tag68.xml"
+      },
+      {
+        "id": "rId13",
+        "type": "tags",
+        "target": "../tags/tag67.xml"
+      },
+      {
+        "id": "rId12",
+        "type": "tags",
+        "target": "../tags/tag66.xml"
+      },
+      {
+        "id": "rId11",
+        "type": "tags",
+        "target": "../tags/tag65.xml"
+      },
+      {
+        "id": "rId10",
+        "type": "tags",
+        "target": "../tags/tag64.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag55.xml"
+      }
+    ]
+  },
+  {
+    "slide": 2,
+    "text_boxes": [
+      "目录",
+      "01",
+      "问题洞察与竞争格局",
+      "02",
+      "解决方案与核心壁垒",
+      "03",
+      "技术架构与工程进展",
+      "04",
+      "社会价值与商业模式"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId9",
+        "type": "tags",
+        "target": "../tags/tag76.xml"
+      },
+      {
+        "id": "rId8",
+        "type": "tags",
+        "target": "../tags/tag75.xml"
+      },
+      {
+        "id": "rId7",
+        "type": "tags",
+        "target": "../tags/tag74.xml"
+      },
+      {
+        "id": "rId6",
+        "type": "tags",
+        "target": "../tags/tag73.xml"
+      },
+      {
+        "id": "rId5",
+        "type": "image",
+        "target": "../media/image2.png"
+      },
+      {
+        "id": "rId4",
+        "type": "tags",
+        "target": "../tags/tag72.xml"
+      },
+      {
+        "id": "rId3",
+        "type": "image",
+        "target": "../media/image1.png"
+      },
+      {
+        "id": "rId28",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId27",
+        "type": "tags",
+        "target": "../tags/tag94.xml"
+      },
+      {
+        "id": "rId26",
+        "type": "tags",
+        "target": "../tags/tag93.xml"
+      },
+      {
+        "id": "rId25",
+        "type": "tags",
+        "target": "../tags/tag92.xml"
+      },
+      {
+        "id": "rId24",
+        "type": "tags",
+        "target": "../tags/tag91.xml"
+      },
+      {
+        "id": "rId23",
+        "type": "tags",
+        "target": "../tags/tag90.xml"
+      },
+      {
+        "id": "rId22",
+        "type": "tags",
+        "target": "../tags/tag89.xml"
+      },
+      {
+        "id": "rId21",
+        "type": "tags",
+        "target": "../tags/tag88.xml"
+      },
+      {
+        "id": "rId20",
+        "type": "tags",
+        "target": "../tags/tag87.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag71.xml"
+      },
+      {
+        "id": "rId19",
+        "type": "tags",
+        "target": "../tags/tag86.xml"
+      },
+      {
+        "id": "rId18",
+        "type": "tags",
+        "target": "../tags/tag85.xml"
+      },
+      {
+        "id": "rId17",
+        "type": "tags",
+        "target": "../tags/tag84.xml"
+      },
+      {
+        "id": "rId16",
+        "type": "tags",
+        "target": "../tags/tag83.xml"
+      },
+      {
+        "id": "rId15",
+        "type": "tags",
+        "target": "../tags/tag82.xml"
+      },
+      {
+        "id": "rId14",
+        "type": "tags",
+        "target": "../tags/tag81.xml"
+      },
+      {
+        "id": "rId13",
+        "type": "tags",
+        "target": "../tags/tag80.xml"
+      },
+      {
+        "id": "rId12",
+        "type": "tags",
+        "target": "../tags/tag79.xml"
+      },
+      {
+        "id": "rId11",
+        "type": "tags",
+        "target": "../tags/tag78.xml"
+      },
+      {
+        "id": "rId10",
+        "type": "tags",
+        "target": "../tags/tag77.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag70.xml"
+      }
+    ]
+  },
+  {
+    "slide": 3,
+    "text_boxes": [
+      "01",
+      "问题洞察与竞争格局"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId3",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag96.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag95.xml"
+      }
+    ]
+  },
+  {
+    "slide": 4,
+    "text_boxes": [
+      "不会把目标变成高效可执行的路径，才是普通用户真正的难题",
+      "场景一：学生7天备考",
+      "Scenario 01",
+      "时间紧迫: 7天倒计时",
+      "资料繁杂: 多源信息过载",
+      "经验缺失: 首次备考无方向",
+      "路径模糊: 缺乏拆解能力",
+      "场景二：导师指导入门",
+      "Scenario 02",
+      "人力瓶颈: 师生比失衡",
+      "重复劳动: 基础问题循环",
+      "个性化难: 千人一面教学",
+      "效能受限: 高价值工作被占",
+      "共同痛点：\"明确需求 + 任务拆解 + 路径规划\" 能力的稀缺",
+      "Sparkle 将这种依赖专家的经验，沉淀为可复用的系统能力，让每个人都能获得专家级的路径规划",
+      "面对海量资料",
+      "教材、真题、笔记堆积，信息过载不知从何开始",
+      "无法识别关键考点",
+      "缺乏经验，难以区分高频考点与冷门知识",
+      "时间分配混乱",
+      "7天周期内盲目刷题，没有科学的优先级排序",
+      "提分效率低下",
+      "付出大量时间精力，成绩提升效果不明显",
+      "接收新生入门",
+      "学生基础水平参差不齐，个性化需求各异",
+      "重复基础辅导",
+      "80%时间用于解答基础概念，严重挤占高阶指导",
+      "个性化指导不足",
+      "精力分散，无法针对每个学生制定专属学习路径",
+      "科研进度受阻",
+      "导师核心研究工作被基础教学事务严重挤占"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId99",
+        "type": "tags",
+        "target": "../tags/tag177.xml"
+      },
+      {
+        "id": "rId98",
+        "type": "tags",
+        "target": "../tags/tag176.xml"
+      },
+      {
+        "id": "rId97",
+        "type": "tags",
+        "target": "../tags/tag175.xml"
+      },
+      {
+        "id": "rId96",
+        "type": "tags",
+        "target": "../tags/tag174.xml"
+      },
+      {
+        "id": "rId95",
+        "type": "tags",
+        "target": "../tags/tag173.xml"
+      },
+      {
+        "id": "rId94",
+        "type": "tags",
+        "target": "../tags/tag172.xml"
+      },
+      {
+        "id": "rId93",
+        "type": "image",
+        "target": "../media/image20.png"
+      },
+      {
+        "id": "rId92",
+        "type": "tags",
+        "target": "../tags/tag171.xml"
+      },
+      {
+        "id": "rId91",
+        "type": "tags",
+        "target": "../tags/tag170.xml"
+      },
+      {
+        "id": "rId90",
+        "type": "tags",
+        "target": "../tags/tag169.xml"
+      },
+      {
+        "id": "rId9",
+        "type": "tags",
+        "target": "../tags/tag104.xml"
+      },
+      {
+        "id": "rId89",
+        "type": "tags",
+        "target": "../tags/tag168.xml"
+      },
+      {
+        "id": "rId88",
+        "type": "tags",
+        "target": "../tags/tag167.xml"
+      },
+      {
+        "id": "rId87",
+        "type": "tags",
+        "target": "../tags/tag166.xml"
+      },
+      {
+        "id": "rId86",
+        "type": "image",
+        "target": "../media/image19.png"
+      },
+      {
+        "id": "rId85",
+        "type": "tags",
+        "target": "../tags/tag165.xml"
+      },
+      {
+        "id": "rId84",
+        "type": "tags",
+        "target": "../tags/tag164.xml"
+      },
+      {
+        "id": "rId83",
+        "type": "tags",
+        "target": "../tags/tag163.xml"
+      },
+      {
+        "id": "rId82",
+        "type": "tags",
+        "target": "../tags/tag162.xml"
+      },
+      {
+        "id": "rId81",
+        "type": "tags",
+        "target": "../tags/tag161.xml"
+      },
+      {
+        "id": "rId80",
+        "type": "tags",
+        "target": "../tags/tag160.xml"
+      },
+      {
+        "id": "rId8",
+        "type": "image",
+        "target": "../media/image3.png"
+      },
+      {
+        "id": "rId79",
+        "type": "image",
+        "target": "../media/image18.png"
+      },
+      {
+        "id": "rId78",
+        "type": "tags",
+        "target": "../tags/tag159.xml"
+      },
+      {
+        "id": "rId77",
+        "type": "tags",
+        "target": "../tags/tag158.xml"
+      },
+      {
+        "id": "rId76",
+        "type": "tags",
+        "target": "../tags/tag157.xml"
+      },
+      {
+        "id": "rId75",
+        "type": "tags",
+        "target": "../tags/tag156.xml"
+      },
+      {
+        "id": "rId74",
+        "type": "tags",
+        "target": "../tags/tag155.xml"
+      },
+      {
+        "id": "rId73",
+        "type": "tags",
+        "target": "../tags/tag154.xml"
+      },
+      {
+        "id": "rId72",
+        "type": "image",
+        "target": "../media/image17.png"
+      },
+      {
+        "id": "rId71",
+        "type": "tags",
+        "target": "../tags/tag153.xml"
+      },
+      {
+        "id": "rId70",
+        "type": "tags",
+        "target": "../tags/tag152.xml"
+      },
+      {
+        "id": "rId7",
+        "type": "tags",
+        "target": "../tags/tag103.xml"
+      },
+      {
+        "id": "rId69",
+        "type": "tags",
+        "target": "../tags/tag151.xml"
+      },
+      {
+        "id": "rId68",
+        "type": "tags",
+        "target": "../tags/tag150.xml"
+      },
+      {
+        "id": "rId67",
+        "type": "tags",
+        "target": "../tags/tag149.xml"
+      },
+      {
+        "id": "rId66",
+        "type": "tags",
+        "target": "../tags/tag148.xml"
+      },
+      {
+        "id": "rId65",
+        "type": "image",
+        "target": "../media/image16.png"
+      },
+      {
+        "id": "rId64",
+        "type": "tags",
+        "target": "../tags/tag147.xml"
+      },
+      {
+        "id": "rId63",
+        "type": "tags",
+        "target": "../tags/tag146.xml"
+      },
+      {
+        "id": "rId62",
+        "type": "tags",
+        "target": "../tags/tag145.xml"
+      },
+      {
+        "id": "rId61",
+        "type": "tags",
+        "target": "../tags/tag144.xml"
+      },
+      {
+        "id": "rId60",
+        "type": "tags",
+        "target": "../tags/tag143.xml"
+      },
+      {
+        "id": "rId6",
+        "type": "tags",
+        "target": "../tags/tag102.xml"
+      },
+      {
+        "id": "rId59",
+        "type": "tags",
+        "target": "../tags/tag142.xml"
+      },
+      {
+        "id": "rId58",
+        "type": "image",
+        "target": "../media/image15.png"
+      },
+      {
+        "id": "rId57",
+        "type": "tags",
+        "target": "../tags/tag141.xml"
+      },
+      {
+        "id": "rId56",
+        "type": "tags",
+        "target": "../tags/tag140.xml"
+      },
+      {
+        "id": "rId55",
+        "type": "tags",
+        "target": "../tags/tag139.xml"
+      },
+      {
+        "id": "rId54",
+        "type": "tags",
+        "target": "../tags/tag138.xml"
+      },
+      {
+        "id": "rId53",
+        "type": "tags",
+        "target": "../tags/tag137.xml"
+      },
+      {
+        "id": "rId52",
+        "type": "image",
+        "target": "../media/image14.png"
+      },
+      {
+        "id": "rId51",
+        "type": "tags",
+        "target": "../tags/tag136.xml"
+      },
+      {
+        "id": "rId50",
+        "type": "tags",
+        "target": "../tags/tag135.xml"
+      },
+      {
+        "id": "rId5",
+        "type": "tags",
+        "target": "../tags/tag101.xml"
+      },
+      {
+        "id": "rId49",
+        "type": "image",
+        "target": "../media/image13.png"
+      },
+      {
+        "id": "rId48",
+        "type": "tags",
+        "target": "../tags/tag134.xml"
+      },
+      {
+        "id": "rId47",
+        "type": "tags",
+        "target": "../tags/tag133.xml"
+      },
+      {
+        "id": "rId46",
+        "type": "tags",
+        "target": "../tags/tag132.xml"
+      },
+      {
+        "id": "rId45",
+        "type": "tags",
+        "target": "../tags/tag131.xml"
+      },
+      {
+        "id": "rId44",
+        "type": "image",
+        "target": "../media/image12.png"
+      },
+      {
+        "id": "rId43",
+        "type": "tags",
+        "target": "../tags/tag130.xml"
+      },
+      {
+        "id": "rId42",
+        "type": "tags",
+        "target": "../tags/tag129.xml"
+      },
+      {
+        "id": "rId41",
+        "type": "image",
+        "target": "../media/image11.png"
+      },
+      {
+        "id": "rId40",
+        "type": "tags",
+        "target": "../tags/tag128.xml"
+      },
+      {
+        "id": "rId4",
+        "type": "tags",
+        "target": "../tags/tag100.xml"
+      },
+      {
+        "id": "rId39",
+        "type": "tags",
+        "target": "../tags/tag127.xml"
+      },
+      {
+        "id": "rId38",
+        "type": "image",
+        "target": "../media/image10.png"
+      },
+      {
+        "id": "rId37",
+        "type": "tags",
+        "target": "../tags/tag126.xml"
+      },
+      {
+        "id": "rId36",
+        "type": "tags",
+        "target": "../tags/tag125.xml"
+      },
+      {
+        "id": "rId35",
+        "type": "image",
+        "target": "../media/image9.png"
+      },
+      {
+        "id": "rId34",
+        "type": "tags",
+        "target": "../tags/tag124.xml"
+      },
+      {
+        "id": "rId33",
+        "type": "tags",
+        "target": "../tags/tag123.xml"
+      },
+      {
+        "id": "rId32",
+        "type": "tags",
+        "target": "../tags/tag122.xml"
+      },
+      {
+        "id": "rId31",
+        "type": "tags",
+        "target": "../tags/tag121.xml"
+      },
+      {
+        "id": "rId30",
+        "type": "image",
+        "target": "../media/image8.png"
+      },
+      {
+        "id": "rId3",
+        "type": "tags",
+        "target": "../tags/tag99.xml"
+      },
+      {
+        "id": "rId29",
+        "type": "tags",
+        "target": "../tags/tag120.xml"
+      },
+      {
+        "id": "rId28",
+        "type": "tags",
+        "target": "../tags/tag119.xml"
+      },
+      {
+        "id": "rId27",
+        "type": "tags",
+        "target": "../tags/tag118.xml"
+      },
+      {
+        "id": "rId26",
+        "type": "tags",
+        "target": "../tags/tag117.xml"
+      },
+      {
+        "id": "rId25",
+        "type": "tags",
+        "target": "../tags/tag116.xml"
+      },
+      {
+        "id": "rId24",
+        "type": "tags",
+        "target": "../tags/tag115.xml"
+      },
+      {
+        "id": "rId23",
+        "type": "tags",
+        "target": "../tags/tag114.xml"
+      },
+      {
+        "id": "rId22",
+        "type": "image",
+        "target": "../media/image7.png"
+      },
+      {
+        "id": "rId21",
+        "type": "tags",
+        "target": "../tags/tag113.xml"
+      },
+      {
+        "id": "rId20",
+        "type": "tags",
+        "target": "../tags/tag112.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag98.xml"
+      },
+      {
+        "id": "rId19",
+        "type": "image",
+        "target": "../media/image6.png"
+      },
+      {
+        "id": "rId18",
+        "type": "tags",
+        "target": "../tags/tag111.xml"
+      },
+      {
+        "id": "rId17",
+        "type": "tags",
+        "target": "../tags/tag110.xml"
+      },
+      {
+        "id": "rId16",
+        "type": "image",
+        "target": "../media/image5.png"
+      },
+      {
+        "id": "rId15",
+        "type": "tags",
+        "target": "../tags/tag109.xml"
+      },
+      {
+        "id": "rId14",
+        "type": "tags",
+        "target": "../tags/tag108.xml"
+      },
+      {
+        "id": "rId13",
+        "type": "image",
+        "target": "../media/image4.png"
+      },
+      {
+        "id": "rId12",
+        "type": "tags",
+        "target": "../tags/tag107.xml"
+      },
+      {
+        "id": "rId112",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId111",
+        "type": "tags",
+        "target": "../tags/tag187.xml"
+      },
+      {
+        "id": "rId110",
+        "type": "tags",
+        "target": "../tags/tag186.xml"
+      },
+      {
+        "id": "rId11",
+        "type": "tags",
+        "target": "../tags/tag106.xml"
+      },
+      {
+        "id": "rId109",
+        "type": "tags",
+        "target": "../tags/tag185.xml"
+      },
+      {
+        "id": "rId108",
+        "type": "tags",
+        "target": "../tags/tag184.xml"
+      },
+      {
+        "id": "rId107",
+        "type": "image",
+        "target": "../media/image22.png"
+      },
+      {
+        "id": "rId106",
+        "type": "tags",
+        "target": "../tags/tag183.xml"
+      },
+      {
+        "id": "rId105",
+        "type": "tags",
+        "target": "../tags/tag182.xml"
+      },
+      {
+        "id": "rId104",
+        "type": "tags",
+        "target": "../tags/tag181.xml"
+      },
+      {
+        "id": "rId103",
+        "type": "tags",
+        "target": "../tags/tag180.xml"
+      },
+      {
+        "id": "rId102",
+        "type": "tags",
+        "target": "../tags/tag179.xml"
+      },
+      {
+        "id": "rId101",
+        "type": "tags",
+        "target": "../tags/tag178.xml"
+      },
+      {
+        "id": "rId100",
+        "type": "image",
+        "target": "../media/image21.png"
+      },
+      {
+        "id": "rId10",
+        "type": "tags",
+        "target": "../tags/tag105.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag97.xml"
+      }
+    ]
+  },
+  {
+    "slide": 5,
+    "text_boxes": [
+      "现有产品很强，但大多只能解决目标实现链路中的一个局部",
+      "通用对话 AI",
+      "ChatGPT、Claude 等，擅长开放对话，但缺乏长期目标深度追踪与系统支持",
+      "执行型 Agent",
+      "Manus、OpenClaw 等，专注任务执行，但缺个性化路径规划与持续反馈",
+      "解题AI",
+      "作业帮、夸克、码上等，聚焦知识传授，但难建跨学科脚手架与习惯养成",
+      "效率工具",
+      "Notion、Todoist 等，提供任务管理，但缺智能决策与目标闭环反馈",
+      "缺少深度长期用户理解",
+      "缺少系统脚手架",
+      "缺少跨时间反馈闭环",
+      "Sparkle 解决的是整个目标实现系统，而非单一环节"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId9",
+        "type": "tags",
+        "target": "../tags/tag195.xml"
+      },
+      {
+        "id": "rId8",
+        "type": "tags",
+        "target": "../tags/tag194.xml"
+      },
+      {
+        "id": "rId7",
+        "type": "image",
+        "target": "../media/image23.png"
+      },
+      {
+        "id": "rId6",
+        "type": "tags",
+        "target": "../tags/tag193.xml"
+      },
+      {
+        "id": "rId5",
+        "type": "tags",
+        "target": "../tags/tag192.xml"
+      },
+      {
+        "id": "rId45",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId44",
+        "type": "tags",
+        "target": "../tags/tag223.xml"
+      },
+      {
+        "id": "rId43",
+        "type": "image",
+        "target": "../media/image30.png"
+      },
+      {
+        "id": "rId42",
+        "type": "tags",
+        "target": "../tags/tag222.xml"
+      },
+      {
+        "id": "rId41",
+        "type": "tags",
+        "target": "../tags/tag221.xml"
+      },
+      {
+        "id": "rId40",
+        "type": "tags",
+        "target": "../tags/tag220.xml"
+      },
+      {
+        "id": "rId4",
+        "type": "tags",
+        "target": "../tags/tag191.xml"
+      },
+      {
+        "id": "rId39",
+        "type": "image",
+        "target": "../media/image29.png"
+      },
+      {
+        "id": "rId38",
+        "type": "tags",
+        "target": "../tags/tag219.xml"
+      },
+      {
+        "id": "rId37",
+        "type": "tags",
+        "target": "../tags/tag218.xml"
+      },
+      {
+        "id": "rId36",
+        "type": "image",
+        "target": "../media/image28.png"
+      },
+      {
+        "id": "rId35",
+        "type": "tags",
+        "target": "../tags/tag217.xml"
+      },
+      {
+        "id": "rId34",
+        "type": "tags",
+        "target": "../tags/tag216.xml"
+      },
+      {
+        "id": "rId33",
+        "type": "image",
+        "target": "../media/image27.png"
+      },
+      {
+        "id": "rId32",
+        "type": "tags",
+        "target": "../tags/tag215.xml"
+      },
+      {
+        "id": "rId31",
+        "type": "tags",
+        "target": "../tags/tag214.xml"
+      },
+      {
+        "id": "rId30",
+        "type": "tags",
+        "target": "../tags/tag213.xml"
+      },
+      {
+        "id": "rId3",
+        "type": "tags",
+        "target": "../tags/tag190.xml"
+      },
+      {
+        "id": "rId29",
+        "type": "tags",
+        "target": "../tags/tag212.xml"
+      },
+      {
+        "id": "rId28",
+        "type": "image",
+        "target": "../media/image26.png"
+      },
+      {
+        "id": "rId27",
+        "type": "tags",
+        "target": "../tags/tag211.xml"
+      },
+      {
+        "id": "rId26",
+        "type": "tags",
+        "target": "../tags/tag210.xml"
+      },
+      {
+        "id": "rId25",
+        "type": "tags",
+        "target": "../tags/tag209.xml"
+      },
+      {
+        "id": "rId24",
+        "type": "tags",
+        "target": "../tags/tag208.xml"
+      },
+      {
+        "id": "rId23",
+        "type": "tags",
+        "target": "../tags/tag207.xml"
+      },
+      {
+        "id": "rId22",
+        "type": "tags",
+        "target": "../tags/tag206.xml"
+      },
+      {
+        "id": "rId21",
+        "type": "image",
+        "target": "../media/image25.png"
+      },
+      {
+        "id": "rId20",
+        "type": "tags",
+        "target": "../tags/tag205.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag189.xml"
+      },
+      {
+        "id": "rId19",
+        "type": "tags",
+        "target": "../tags/tag204.xml"
+      },
+      {
+        "id": "rId18",
+        "type": "tags",
+        "target": "../tags/tag203.xml"
+      },
+      {
+        "id": "rId17",
+        "type": "tags",
+        "target": "../tags/tag202.xml"
+      },
+      {
+        "id": "rId16",
+        "type": "tags",
+        "target": "../tags/tag201.xml"
+      },
+      {
+        "id": "rId15",
+        "type": "tags",
+        "target": "../tags/tag200.xml"
+      },
+      {
+        "id": "rId14",
+        "type": "image",
+        "target": "../media/image24.png"
+      },
+      {
+        "id": "rId13",
+        "type": "tags",
+        "target": "../tags/tag199.xml"
+      },
+      {
+        "id": "rId12",
+        "type": "tags",
+        "target": "../tags/tag198.xml"
+      },
+      {
+        "id": "rId11",
+        "type": "tags",
+        "target": "../tags/tag197.xml"
+      },
+      {
+        "id": "rId10",
+        "type": "tags",
+        "target": "../tags/tag196.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag188.xml"
+      }
+    ]
+  },
+  {
+    "slide": 6,
+    "text_boxes": [
+      "02",
+      "解决方案与核心壁垒"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId3",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag225.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag224.xml"
+      }
+    ]
+  },
+  {
+    "slide": 7,
+    "text_boxes": [
+      "Sparkle 的核心不是\"给答案\"，而是把目标实现做成一个持续进化的闭环",
+      "核心理念",
+      "Sparkle 不追求一次性给出完美答案，而是构建一个持续进化的七步闭环系统。从目标识别到持续成长，每一步的输出成为下一步的输入，形成自我强化的成长飞轮，让目标实现从被动任务转变为自动加速的进程。",
+      "七步进化闭环",
+      "七大环节环环相扣，系统负责认知与规划，用户专注行动与决策。",
+      "Goal 识别目标",
+      "Understand 洞察状态",
+      "Plan 拆解路径",
+      "Act 执行落地",
+      "Feedback 收集反馈",
+      "Adapt 修正策略",
+      "让系统承担理解、规划和适应，让用户把精力放在真正行动上。",
+      "行动",
+      "反馈",
+      "Goal",
+      "识别目标",
+      "Understand",
+      "洞察状态",
+      "Plan",
+      "拆解路径",
+      "Act",
+      "执行落地",
+      "Feedback",
+      "收集反馈",
+      "Adapt",
+      "修正策略",
+      "Grow",
+      "持续成长",
+      "持续进化\n闭环系统"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId92",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId91",
+        "type": "tags",
+        "target": "../tags/tag298.xml"
+      },
+      {
+        "id": "rId90",
+        "type": "image",
+        "target": "../media/image48.png"
+      },
+      {
+        "id": "rId9",
+        "type": "tags",
+        "target": "../tags/tag233.xml"
+      },
+      {
+        "id": "rId89",
+        "type": "tags",
+        "target": "../tags/tag297.xml"
+      },
+      {
+        "id": "rId88",
+        "type": "tags",
+        "target": "../tags/tag296.xml"
+      },
+      {
+        "id": "rId87",
+        "type": "tags",
+        "target": "../tags/tag295.xml"
+      },
+      {
+        "id": "rId86",
+        "type": "tags",
+        "target": "../tags/tag294.xml"
+      },
+      {
+        "id": "rId85",
+        "type": "image",
+        "target": "../media/image47.png"
+      },
+      {
+        "id": "rId84",
+        "type": "tags",
+        "target": "../tags/tag293.xml"
+      },
+      {
+        "id": "rId83",
+        "type": "tags",
+        "target": "../tags/tag292.xml"
+      },
+      {
+        "id": "rId82",
+        "type": "tags",
+        "target": "../tags/tag291.xml"
+      },
+      {
+        "id": "rId81",
+        "type": "tags",
+        "target": "../tags/tag290.xml"
+      },
+      {
+        "id": "rId80",
+        "type": "image",
+        "target": "../media/image46.png"
+      },
+      {
+        "id": "rId8",
+        "type": "tags",
+        "target": "../tags/tag232.xml"
+      },
+      {
+        "id": "rId79",
+        "type": "tags",
+        "target": "../tags/tag289.xml"
+      },
+      {
+        "id": "rId78",
+        "type": "tags",
+        "target": "../tags/tag288.xml"
+      },
+      {
+        "id": "rId77",
+        "type": "tags",
+        "target": "../tags/tag287.xml"
+      },
+      {
+        "id": "rId76",
+        "type": "tags",
+        "target": "../tags/tag286.xml"
+      },
+      {
+        "id": "rId75",
+        "type": "image",
+        "target": "../media/image45.png"
+      },
+      {
+        "id": "rId74",
+        "type": "tags",
+        "target": "../tags/tag285.xml"
+      },
+      {
+        "id": "rId73",
+        "type": "tags",
+        "target": "../tags/tag284.xml"
+      },
+      {
+        "id": "rId72",
+        "type": "tags",
+        "target": "../tags/tag283.xml"
+      },
+      {
+        "id": "rId71",
+        "type": "tags",
+        "target": "../tags/tag282.xml"
+      },
+      {
+        "id": "rId70",
+        "type": "image",
+        "target": "../media/image44.png"
+      },
+      {
+        "id": "rId7",
+        "type": "tags",
+        "target": "../tags/tag231.xml"
+      },
+      {
+        "id": "rId69",
+        "type": "tags",
+        "target": "../tags/tag281.xml"
+      },
+      {
+        "id": "rId68",
+        "type": "tags",
+        "target": "../tags/tag280.xml"
+      },
+      {
+        "id": "rId67",
+        "type": "tags",
+        "target": "../tags/tag279.xml"
+      },
+      {
+        "id": "rId66",
+        "type": "tags",
+        "target": "../tags/tag278.xml"
+      },
+      {
+        "id": "rId65",
+        "type": "image",
+        "target": "../media/image43.png"
+      },
+      {
+        "id": "rId64",
+        "type": "tags",
+        "target": "../tags/tag277.xml"
+      },
+      {
+        "id": "rId63",
+        "type": "tags",
+        "target": "../tags/tag276.xml"
+      },
+      {
+        "id": "rId62",
+        "type": "tags",
+        "target": "../tags/tag275.xml"
+      },
+      {
+        "id": "rId61",
+        "type": "tags",
+        "target": "../tags/tag274.xml"
+      },
+      {
+        "id": "rId60",
+        "type": "image",
+        "target": "../media/image42.png"
+      },
+      {
+        "id": "rId6",
+        "type": "image",
+        "target": "../media/image31.png"
+      },
+      {
+        "id": "rId59",
+        "type": "tags",
+        "target": "../tags/tag273.xml"
+      },
+      {
+        "id": "rId58",
+        "type": "tags",
+        "target": "../tags/tag272.xml"
+      },
+      {
+        "id": "rId57",
+        "type": "tags",
+        "target": "../tags/tag271.xml"
+      },
+      {
+        "id": "rId56",
+        "type": "tags",
+        "target": "../tags/tag270.xml"
+      },
+      {
+        "id": "rId55",
+        "type": "image",
+        "target": "../media/image41.png"
+      },
+      {
+        "id": "rId54",
+        "type": "tags",
+        "target": "../tags/tag269.xml"
+      },
+      {
+        "id": "rId53",
+        "type": "tags",
+        "target": "../tags/tag268.xml"
+      },
+      {
+        "id": "rId52",
+        "type": "tags",
+        "target": "../tags/tag267.xml"
+      },
+      {
+        "id": "rId51",
+        "type": "tags",
+        "target": "../tags/tag266.xml"
+      },
+      {
+        "id": "rId50",
+        "type": "tags",
+        "target": "../tags/tag265.xml"
+      },
+      {
+        "id": "rId5",
+        "type": "tags",
+        "target": "../tags/tag230.xml"
+      },
+      {
+        "id": "rId49",
+        "type": "tags",
+        "target": "../tags/tag264.xml"
+      },
+      {
+        "id": "rId48",
+        "type": "tags",
+        "target": "../tags/tag263.xml"
+      },
+      {
+        "id": "rId47",
+        "type": "tags",
+        "target": "../tags/tag262.xml"
+      },
+      {
+        "id": "rId46",
+        "type": "image",
+        "target": "../media/image40.png"
+      },
+      {
+        "id": "rId45",
+        "type": "tags",
+        "target": "../tags/tag261.xml"
+      },
+      {
+        "id": "rId44",
+        "type": "tags",
+        "target": "../tags/tag260.xml"
+      },
+      {
+        "id": "rId43",
+        "type": "tags",
+        "target": "../tags/tag259.xml"
+      },
+      {
+        "id": "rId42",
+        "type": "image",
+        "target": "../media/image39.png"
+      },
+      {
+        "id": "rId41",
+        "type": "tags",
+        "target": "../tags/tag258.xml"
+      },
+      {
+        "id": "rId40",
+        "type": "tags",
+        "target": "../tags/tag257.xml"
+      },
+      {
+        "id": "rId4",
+        "type": "tags",
+        "target": "../tags/tag229.xml"
+      },
+      {
+        "id": "rId39",
+        "type": "tags",
+        "target": "../tags/tag256.xml"
+      },
+      {
+        "id": "rId38",
+        "type": "tags",
+        "target": "../tags/tag255.xml"
+      },
+      {
+        "id": "rId37",
+        "type": "image",
+        "target": "../media/image38.png"
+      },
+      {
+        "id": "rId36",
+        "type": "tags",
+        "target": "../tags/tag254.xml"
+      },
+      {
+        "id": "rId35",
+        "type": "tags",
+        "target": "../tags/tag253.xml"
+      },
+      {
+        "id": "rId34",
+        "type": "tags",
+        "target": "../tags/tag252.xml"
+      },
+      {
+        "id": "rId33",
+        "type": "image",
+        "target": "../media/image37.png"
+      },
+      {
+        "id": "rId32",
+        "type": "tags",
+        "target": "../tags/tag251.xml"
+      },
+      {
+        "id": "rId31",
+        "type": "tags",
+        "target": "../tags/tag250.xml"
+      },
+      {
+        "id": "rId30",
+        "type": "tags",
+        "target": "../tags/tag249.xml"
+      },
+      {
+        "id": "rId3",
+        "type": "tags",
+        "target": "../tags/tag228.xml"
+      },
+      {
+        "id": "rId29",
+        "type": "image",
+        "target": "../media/image36.png"
+      },
+      {
+        "id": "rId28",
+        "type": "tags",
+        "target": "../tags/tag248.xml"
+      },
+      {
+        "id": "rId27",
+        "type": "tags",
+        "target": "../tags/tag247.xml"
+      },
+      {
+        "id": "rId26",
+        "type": "tags",
+        "target": "../tags/tag246.xml"
+      },
+      {
+        "id": "rId25",
+        "type": "image",
+        "target": "../media/image35.png"
+      },
+      {
+        "id": "rId24",
+        "type": "tags",
+        "target": "../tags/tag245.xml"
+      },
+      {
+        "id": "rId23",
+        "type": "tags",
+        "target": "../tags/tag244.xml"
+      },
+      {
+        "id": "rId22",
+        "type": "tags",
+        "target": "../tags/tag243.xml"
+      },
+      {
+        "id": "rId21",
+        "type": "image",
+        "target": "../media/image34.png"
+      },
+      {
+        "id": "rId20",
+        "type": "tags",
+        "target": "../tags/tag242.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag227.xml"
+      },
+      {
+        "id": "rId19",
+        "type": "tags",
+        "target": "../tags/tag241.xml"
+      },
+      {
+        "id": "rId18",
+        "type": "tags",
+        "target": "../tags/tag240.xml"
+      },
+      {
+        "id": "rId17",
+        "type": "image",
+        "target": "../media/image33.png"
+      },
+      {
+        "id": "rId16",
+        "type": "tags",
+        "target": "../tags/tag239.xml"
+      },
+      {
+        "id": "rId15",
+        "type": "tags",
+        "target": "../tags/tag238.xml"
+      },
+      {
+        "id": "rId14",
+        "type": "tags",
+        "target": "../tags/tag237.xml"
+      },
+      {
+        "id": "rId13",
+        "type": "tags",
+        "target": "../tags/tag236.xml"
+      },
+      {
+        "id": "rId12",
+        "type": "image",
+        "target": "../media/image32.png"
+      },
+      {
+        "id": "rId11",
+        "type": "tags",
+        "target": "../tags/tag235.xml"
+      },
+      {
+        "id": "rId10",
+        "type": "tags",
+        "target": "../tags/tag234.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag226.xml"
+      }
+    ]
+  },
+  {
+    "slide": 8,
+    "text_boxes": [
+      "我们的壁垒不是单点功能，而是三大引擎与一条可信闭环",
+      "从洞察，到规划，到成长，Sparkle 的壁垒在完整系统，而不是单一模块",
+      "01",
+      "Insight Engine",
+      "Understanding\nEngine",
+      "深层语义理解\n多维度用户画像构建\n精准需求洞察",
+      "02",
+      "Strategy Core",
+      "Planning\nEngine",
+      "智能任务拆解\n动态路径规划优化\n策略自动编排",
+      "03",
+      "Evolution Loop",
+      "Growth\nEngine",
+      "实时反馈学习\n自适应能力进化\n持续性能提升",
+      "04",
+      "Trust Layer",
+      "可信AI\n闭环",
+      "全链路可追溯\n证据驱动决策\n安全透明可解释"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId9",
+        "type": "tags",
+        "target": "../tags/tag307.xml"
+      },
+      {
+        "id": "rId8",
+        "type": "tags",
+        "target": "../tags/tag306.xml"
+      },
+      {
+        "id": "rId7",
+        "type": "tags",
+        "target": "../tags/tag305.xml"
+      },
+      {
+        "id": "rId6",
+        "type": "tags",
+        "target": "../tags/tag304.xml"
+      },
+      {
+        "id": "rId58",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId57",
+        "type": "tags",
+        "target": "../tags/tag351.xml"
+      },
+      {
+        "id": "rId56",
+        "type": "tags",
+        "target": "../tags/tag350.xml"
+      },
+      {
+        "id": "rId55",
+        "type": "tags",
+        "target": "../tags/tag349.xml"
+      },
+      {
+        "id": "rId54",
+        "type": "tags",
+        "target": "../tags/tag348.xml"
+      },
+      {
+        "id": "rId53",
+        "type": "image",
+        "target": "../media/image52.png"
+      },
+      {
+        "id": "rId52",
+        "type": "tags",
+        "target": "../tags/tag347.xml"
+      },
+      {
+        "id": "rId51",
+        "type": "tags",
+        "target": "../tags/tag346.xml"
+      },
+      {
+        "id": "rId50",
+        "type": "tags",
+        "target": "../tags/tag345.xml"
+      },
+      {
+        "id": "rId5",
+        "type": "tags",
+        "target": "../tags/tag303.xml"
+      },
+      {
+        "id": "rId49",
+        "type": "tags",
+        "target": "../tags/tag344.xml"
+      },
+      {
+        "id": "rId48",
+        "type": "tags",
+        "target": "../tags/tag343.xml"
+      },
+      {
+        "id": "rId47",
+        "type": "tags",
+        "target": "../tags/tag342.xml"
+      },
+      {
+        "id": "rId46",
+        "type": "tags",
+        "target": "../tags/tag341.xml"
+      },
+      {
+        "id": "rId45",
+        "type": "tags",
+        "target": "../tags/tag340.xml"
+      },
+      {
+        "id": "rId44",
+        "type": "tags",
+        "target": "../tags/tag339.xml"
+      },
+      {
+        "id": "rId43",
+        "type": "tags",
+        "target": "../tags/tag338.xml"
+      },
+      {
+        "id": "rId42",
+        "type": "tags",
+        "target": "../tags/tag337.xml"
+      },
+      {
+        "id": "rId41",
+        "type": "tags",
+        "target": "../tags/tag336.xml"
+      },
+      {
+        "id": "rId40",
+        "type": "image",
+        "target": "../media/image51.png"
+      },
+      {
+        "id": "rId4",
+        "type": "tags",
+        "target": "../tags/tag302.xml"
+      },
+      {
+        "id": "rId39",
+        "type": "tags",
+        "target": "../tags/tag335.xml"
+      },
+      {
+        "id": "rId38",
+        "type": "tags",
+        "target": "../tags/tag334.xml"
+      },
+      {
+        "id": "rId37",
+        "type": "tags",
+        "target": "../tags/tag333.xml"
+      },
+      {
+        "id": "rId36",
+        "type": "tags",
+        "target": "../tags/tag332.xml"
+      },
+      {
+        "id": "rId35",
+        "type": "tags",
+        "target": "../tags/tag331.xml"
+      },
+      {
+        "id": "rId34",
+        "type": "tags",
+        "target": "../tags/tag330.xml"
+      },
+      {
+        "id": "rId33",
+        "type": "tags",
+        "target": "../tags/tag329.xml"
+      },
+      {
+        "id": "rId32",
+        "type": "tags",
+        "target": "../tags/tag328.xml"
+      },
+      {
+        "id": "rId31",
+        "type": "tags",
+        "target": "../tags/tag327.xml"
+      },
+      {
+        "id": "rId30",
+        "type": "tags",
+        "target": "../tags/tag326.xml"
+      },
+      {
+        "id": "rId3",
+        "type": "tags",
+        "target": "../tags/tag301.xml"
+      },
+      {
+        "id": "rId29",
+        "type": "tags",
+        "target": "../tags/tag325.xml"
+      },
+      {
+        "id": "rId28",
+        "type": "tags",
+        "target": "../tags/tag324.xml"
+      },
+      {
+        "id": "rId27",
+        "type": "image",
+        "target": "../media/image50.png"
+      },
+      {
+        "id": "rId26",
+        "type": "tags",
+        "target": "../tags/tag323.xml"
+      },
+      {
+        "id": "rId25",
+        "type": "tags",
+        "target": "../tags/tag322.xml"
+      },
+      {
+        "id": "rId24",
+        "type": "tags",
+        "target": "../tags/tag321.xml"
+      },
+      {
+        "id": "rId23",
+        "type": "tags",
+        "target": "../tags/tag320.xml"
+      },
+      {
+        "id": "rId22",
+        "type": "tags",
+        "target": "../tags/tag319.xml"
+      },
+      {
+        "id": "rId21",
+        "type": "tags",
+        "target": "../tags/tag318.xml"
+      },
+      {
+        "id": "rId20",
+        "type": "tags",
+        "target": "../tags/tag317.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag300.xml"
+      },
+      {
+        "id": "rId19",
+        "type": "tags",
+        "target": "../tags/tag316.xml"
+      },
+      {
+        "id": "rId18",
+        "type": "tags",
+        "target": "../tags/tag315.xml"
+      },
+      {
+        "id": "rId17",
+        "type": "tags",
+        "target": "../tags/tag314.xml"
+      },
+      {
+        "id": "rId16",
+        "type": "tags",
+        "target": "../tags/tag313.xml"
+      },
+      {
+        "id": "rId15",
+        "type": "tags",
+        "target": "../tags/tag312.xml"
+      },
+      {
+        "id": "rId14",
+        "type": "image",
+        "target": "../media/image49.png"
+      },
+      {
+        "id": "rId13",
+        "type": "tags",
+        "target": "../tags/tag311.xml"
+      },
+      {
+        "id": "rId12",
+        "type": "tags",
+        "target": "../tags/tag310.xml"
+      },
+      {
+        "id": "rId11",
+        "type": "tags",
+        "target": "../tags/tag309.xml"
+      },
+      {
+        "id": "rId10",
+        "type": "tags",
+        "target": "../tags/tag308.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag299.xml"
+      }
+    ]
+  },
+  {
+    "slide": 9,
+    "text_boxes": [
+      ""
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId2",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "image",
+        "target": "../media/image53.png"
+      }
+    ]
+  },
+  {
+    "slide": 10,
+    "text_boxes": [
+      "03",
+      "技术架构与工程进展"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId3",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag353.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag352.xml"
+      }
+    ]
+  },
+  {
+    "slide": 11,
+    "text_boxes": [
+      ""
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId2",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "image",
+        "target": "../media/image54.png"
+      }
+    ]
+  },
+  {
+    "slide": 12,
+    "text_boxes": [
+      "Sparkle 已经不是概念原型，而是一个可运行、可验证、接近上线的系统工程",
+      "业务代码规模",
+      "729,000 +",
+      "行核心系统代码已实现",
+      "测试代码规模",
+      "130,000 +",
+      "行测试代码保障质量",
+      "核心测试基线",
+      "已建立",
+      "后端/网关/移动端全覆盖",
+      "本地真机联调",
+      "90%",
+      "关键路径已跑通验证",
+      "系统就绪状态清单",
+      "系统工程成熟度指标"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId9",
+        "type": "tags",
+        "target": "../tags/tag362.xml"
+      },
+      {
+        "id": "rId8",
+        "type": "tags",
+        "target": "../tags/tag361.xml"
+      },
+      {
+        "id": "rId7",
+        "type": "tags",
+        "target": "../tags/tag360.xml"
+      },
+      {
+        "id": "rId6",
+        "type": "tags",
+        "target": "../tags/tag359.xml"
+      },
+      {
+        "id": "rId5",
+        "type": "tags",
+        "target": "../tags/tag358.xml"
+      },
+      {
+        "id": "rId4",
+        "type": "tags",
+        "target": "../tags/tag357.xml"
+      },
+      {
+        "id": "rId33",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId32",
+        "type": "image",
+        "target": "../media/image57.png"
+      },
+      {
+        "id": "rId31",
+        "type": "tags",
+        "target": "../tags/tag382.xml"
+      },
+      {
+        "id": "rId30",
+        "type": "tags",
+        "target": "../tags/tag381.xml"
+      },
+      {
+        "id": "rId3",
+        "type": "tags",
+        "target": "../tags/tag356.xml"
+      },
+      {
+        "id": "rId29",
+        "type": "image",
+        "target": "../media/image56.png"
+      },
+      {
+        "id": "rId28",
+        "type": "tags",
+        "target": "../tags/tag380.xml"
+      },
+      {
+        "id": "rId27",
+        "type": "tags",
+        "target": "../tags/tag379.xml"
+      },
+      {
+        "id": "rId26",
+        "type": "tags",
+        "target": "../tags/tag378.xml"
+      },
+      {
+        "id": "rId25",
+        "type": "tags",
+        "target": "../tags/tag377.xml"
+      },
+      {
+        "id": "rId24",
+        "type": "image",
+        "target": "../media/image55.png"
+      },
+      {
+        "id": "rId23",
+        "type": "tags",
+        "target": "../tags/tag376.xml"
+      },
+      {
+        "id": "rId22",
+        "type": "tags",
+        "target": "../tags/tag375.xml"
+      },
+      {
+        "id": "rId21",
+        "type": "tags",
+        "target": "../tags/tag374.xml"
+      },
+      {
+        "id": "rId20",
+        "type": "tags",
+        "target": "../tags/tag373.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag355.xml"
+      },
+      {
+        "id": "rId19",
+        "type": "tags",
+        "target": "../tags/tag372.xml"
+      },
+      {
+        "id": "rId18",
+        "type": "tags",
+        "target": "../tags/tag371.xml"
+      },
+      {
+        "id": "rId17",
+        "type": "tags",
+        "target": "../tags/tag370.xml"
+      },
+      {
+        "id": "rId16",
+        "type": "tags",
+        "target": "../tags/tag369.xml"
+      },
+      {
+        "id": "rId15",
+        "type": "tags",
+        "target": "../tags/tag368.xml"
+      },
+      {
+        "id": "rId14",
+        "type": "tags",
+        "target": "../tags/tag367.xml"
+      },
+      {
+        "id": "rId13",
+        "type": "tags",
+        "target": "../tags/tag366.xml"
+      },
+      {
+        "id": "rId12",
+        "type": "tags",
+        "target": "../tags/tag365.xml"
+      },
+      {
+        "id": "rId11",
+        "type": "tags",
+        "target": "../tags/tag364.xml"
+      },
+      {
+        "id": "rId10",
+        "type": "tags",
+        "target": "../tags/tag363.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag354.xml"
+      }
+    ]
+  },
+  {
+    "slide": 13,
+    "text_boxes": [
+      ""
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId2",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "image",
+        "target": "../media/image58.png"
+      }
+    ]
+  },
+  {
+    "slide": 14,
+    "text_boxes": [
+      "04",
+      "社会价值与商业模式"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId3",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag384.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag383.xml"
+      }
+    ]
+  },
+  {
+    "slide": 15,
+    "text_boxes": [
+      "Sparkle 解决的不是\"AI 不够强\"，而是\"普通人不会高质量使用 AI\"",
+      "商业价值",
+      "面向沉默的大多数，切入高频刚需场景",
+      "Sparkle 不追逐技术极客，而是聚焦占人口90%的普通用户，解决日常高频刚需场景，促进用户自我实现。通过零门槛交互设计，将AI能力转化为大众可消费的数字服务，开辟亿级规模的普惠AI市场，创造可持续的订阅与增值收益模式。",
+      "目标市场覆盖：极高 · 潜在用户规模 10亿+",
+      "社会价值",
+      "降低AI门槛，打破知识壁垒",
+      "降低 AI 学习和使用门槛，让更多普通人真正获得 AI 红利，推动“统一教学”走向“个性化指导”和“持续成长支持”，有助于缓解教育资源不均和优质辅导稀缺的问题，帮助全社会提升数字素养和自主学习能力，促进生产力的解放",
+      "普惠程度：高 · 降低使用门槛 80%",
+      "政策契合",
+      "契合\"人工智能+\"行动与教育数字化战略",
+      "深度响应国家\"人工智能+\"行动计划，落实教育数字化战略行动要求。通过AI技术赋能民生服务、基础教育与终身学习，助力构建全民数字素养与技能提升体系，符合新质生产力发展方向，具备政策红利与政府采购潜力。",
+      "政策匹配度：极高 · 战略契合度 95%"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId9",
+        "type": "tags",
+        "target": "../tags/tag392.xml"
+      },
+      {
+        "id": "rId8",
+        "type": "tags",
+        "target": "../tags/tag391.xml"
+      },
+      {
+        "id": "rId7",
+        "type": "image",
+        "target": "../media/image59.png"
+      },
+      {
+        "id": "rId6",
+        "type": "tags",
+        "target": "../tags/tag390.xml"
+      },
+      {
+        "id": "rId5",
+        "type": "tags",
+        "target": "../tags/tag389.xml"
+      },
+      {
+        "id": "rId45",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId44",
+        "type": "tags",
+        "target": "../tags/tag425.xml"
+      },
+      {
+        "id": "rId43",
+        "type": "tags",
+        "target": "../tags/tag424.xml"
+      },
+      {
+        "id": "rId42",
+        "type": "tags",
+        "target": "../tags/tag423.xml"
+      },
+      {
+        "id": "rId41",
+        "type": "tags",
+        "target": "../tags/tag422.xml"
+      },
+      {
+        "id": "rId40",
+        "type": "tags",
+        "target": "../tags/tag421.xml"
+      },
+      {
+        "id": "rId4",
+        "type": "tags",
+        "target": "../tags/tag388.xml"
+      },
+      {
+        "id": "rId39",
+        "type": "tags",
+        "target": "../tags/tag420.xml"
+      },
+      {
+        "id": "rId38",
+        "type": "tags",
+        "target": "../tags/tag419.xml"
+      },
+      {
+        "id": "rId37",
+        "type": "tags",
+        "target": "../tags/tag418.xml"
+      },
+      {
+        "id": "rId36",
+        "type": "tags",
+        "target": "../tags/tag417.xml"
+      },
+      {
+        "id": "rId35",
+        "type": "image",
+        "target": "../media/image61.png"
+      },
+      {
+        "id": "rId34",
+        "type": "tags",
+        "target": "../tags/tag416.xml"
+      },
+      {
+        "id": "rId33",
+        "type": "tags",
+        "target": "../tags/tag415.xml"
+      },
+      {
+        "id": "rId32",
+        "type": "tags",
+        "target": "../tags/tag414.xml"
+      },
+      {
+        "id": "rId31",
+        "type": "tags",
+        "target": "../tags/tag413.xml"
+      },
+      {
+        "id": "rId30",
+        "type": "tags",
+        "target": "../tags/tag412.xml"
+      },
+      {
+        "id": "rId3",
+        "type": "tags",
+        "target": "../tags/tag387.xml"
+      },
+      {
+        "id": "rId29",
+        "type": "tags",
+        "target": "../tags/tag411.xml"
+      },
+      {
+        "id": "rId28",
+        "type": "tags",
+        "target": "../tags/tag410.xml"
+      },
+      {
+        "id": "rId27",
+        "type": "tags",
+        "target": "../tags/tag409.xml"
+      },
+      {
+        "id": "rId26",
+        "type": "tags",
+        "target": "../tags/tag408.xml"
+      },
+      {
+        "id": "rId25",
+        "type": "tags",
+        "target": "../tags/tag407.xml"
+      },
+      {
+        "id": "rId24",
+        "type": "tags",
+        "target": "../tags/tag406.xml"
+      },
+      {
+        "id": "rId23",
+        "type": "tags",
+        "target": "../tags/tag405.xml"
+      },
+      {
+        "id": "rId22",
+        "type": "tags",
+        "target": "../tags/tag404.xml"
+      },
+      {
+        "id": "rId21",
+        "type": "image",
+        "target": "../media/image60.png"
+      },
+      {
+        "id": "rId20",
+        "type": "tags",
+        "target": "../tags/tag403.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag386.xml"
+      },
+      {
+        "id": "rId19",
+        "type": "tags",
+        "target": "../tags/tag402.xml"
+      },
+      {
+        "id": "rId18",
+        "type": "tags",
+        "target": "../tags/tag401.xml"
+      },
+      {
+        "id": "rId17",
+        "type": "tags",
+        "target": "../tags/tag400.xml"
+      },
+      {
+        "id": "rId16",
+        "type": "tags",
+        "target": "../tags/tag399.xml"
+      },
+      {
+        "id": "rId15",
+        "type": "tags",
+        "target": "../tags/tag398.xml"
+      },
+      {
+        "id": "rId14",
+        "type": "tags",
+        "target": "../tags/tag397.xml"
+      },
+      {
+        "id": "rId13",
+        "type": "tags",
+        "target": "../tags/tag396.xml"
+      },
+      {
+        "id": "rId12",
+        "type": "tags",
+        "target": "../tags/tag395.xml"
+      },
+      {
+        "id": "rId11",
+        "type": "tags",
+        "target": "../tags/tag394.xml"
+      },
+      {
+        "id": "rId10",
+        "type": "tags",
+        "target": "../tags/tag393.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag385.xml"
+      }
+    ]
+  },
+  {
+    "slide": 16,
+    "text_boxes": [
+      "我们不是一开始做大而全平台，而是先用一个刚需场景打透，再逐步扩张",
+      "01",
+      "切入场景与验证",
+      "起步策略 · 单点突破",
+      "核心策略",
+      "场景聚焦：专注学习场景，解决刚需痛点，拒绝功能堆砌",
+      "用户定位：服务普通用户，降低使用门槛，确保产品易用性",
+      "种子试点：北邮等高校学生率先试用，验证产品价值假设",
+      "快速迭代：基于真实用户反馈，小步快跑持续优化体验",
+      "关键目标",
+      "场景验证",
+      "PMF确认",
+      "用户留存",
+      "02",
+      "扩张路径",
+      "四阶段 · 稳步扩张",
+      "发展阶段",
+      "1",
+      "高校试点：北邮等核心高校深度验证",
+      "2",
+      "区域渗透：重点城市多高校扩展",
+      "3",
+      "全国覆盖：跨地域规模化复制",
+      "4",
+      "领域延伸：拓展至广泛成长领域",
+      "扩张原则",
+      "稳扎稳打",
+      "健康增长",
+      "拒绝烧钱",
+      "03",
+      "商业模式",
+      "多元变现 · 生态协同",
+      "收入来源",
+      "C端订阅：个人用户付费会员服务，提供增值功能",
+      "D端合作：与教育机构、企业开展B2B深度合作",
+      "生态协同：构建平台生态，实现多方价值共享共赢",
+      "务实策略：盈利优先，确保商业模式可持续健康发展",
+      "商业目标",
+      "收入多元",
+      "可持续盈利",
+      "生态共建"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId9",
+        "type": "tags",
+        "target": "../tags/tag433.xml"
+      },
+      {
+        "id": "rId8",
+        "type": "tags",
+        "target": "../tags/tag432.xml"
+      },
+      {
+        "id": "rId7",
+        "type": "image",
+        "target": "../media/image62.png"
+      },
+      {
+        "id": "rId68",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId67",
+        "type": "tags",
+        "target": "../tags/tag489.xml"
+      },
+      {
+        "id": "rId66",
+        "type": "tags",
+        "target": "../tags/tag488.xml"
+      },
+      {
+        "id": "rId65",
+        "type": "tags",
+        "target": "../tags/tag487.xml"
+      },
+      {
+        "id": "rId64",
+        "type": "tags",
+        "target": "../tags/tag486.xml"
+      },
+      {
+        "id": "rId63",
+        "type": "tags",
+        "target": "../tags/tag485.xml"
+      },
+      {
+        "id": "rId62",
+        "type": "tags",
+        "target": "../tags/tag484.xml"
+      },
+      {
+        "id": "rId61",
+        "type": "tags",
+        "target": "../tags/tag483.xml"
+      },
+      {
+        "id": "rId60",
+        "type": "tags",
+        "target": "../tags/tag482.xml"
+      },
+      {
+        "id": "rId6",
+        "type": "tags",
+        "target": "../tags/tag431.xml"
+      },
+      {
+        "id": "rId59",
+        "type": "tags",
+        "target": "../tags/tag481.xml"
+      },
+      {
+        "id": "rId58",
+        "type": "tags",
+        "target": "../tags/tag480.xml"
+      },
+      {
+        "id": "rId57",
+        "type": "tags",
+        "target": "../tags/tag479.xml"
+      },
+      {
+        "id": "rId56",
+        "type": "tags",
+        "target": "../tags/tag478.xml"
+      },
+      {
+        "id": "rId55",
+        "type": "tags",
+        "target": "../tags/tag477.xml"
+      },
+      {
+        "id": "rId54",
+        "type": "tags",
+        "target": "../tags/tag476.xml"
+      },
+      {
+        "id": "rId53",
+        "type": "image",
+        "target": "../media/image64.png"
+      },
+      {
+        "id": "rId52",
+        "type": "tags",
+        "target": "../tags/tag475.xml"
+      },
+      {
+        "id": "rId51",
+        "type": "tags",
+        "target": "../tags/tag474.xml"
+      },
+      {
+        "id": "rId50",
+        "type": "tags",
+        "target": "../tags/tag473.xml"
+      },
+      {
+        "id": "rId5",
+        "type": "tags",
+        "target": "../tags/tag430.xml"
+      },
+      {
+        "id": "rId49",
+        "type": "tags",
+        "target": "../tags/tag472.xml"
+      },
+      {
+        "id": "rId48",
+        "type": "tags",
+        "target": "../tags/tag471.xml"
+      },
+      {
+        "id": "rId47",
+        "type": "tags",
+        "target": "../tags/tag470.xml"
+      },
+      {
+        "id": "rId46",
+        "type": "tags",
+        "target": "../tags/tag469.xml"
+      },
+      {
+        "id": "rId45",
+        "type": "tags",
+        "target": "../tags/tag468.xml"
+      },
+      {
+        "id": "rId44",
+        "type": "tags",
+        "target": "../tags/tag467.xml"
+      },
+      {
+        "id": "rId43",
+        "type": "tags",
+        "target": "../tags/tag466.xml"
+      },
+      {
+        "id": "rId42",
+        "type": "tags",
+        "target": "../tags/tag465.xml"
+      },
+      {
+        "id": "rId41",
+        "type": "tags",
+        "target": "../tags/tag464.xml"
+      },
+      {
+        "id": "rId40",
+        "type": "tags",
+        "target": "../tags/tag463.xml"
+      },
+      {
+        "id": "rId4",
+        "type": "tags",
+        "target": "../tags/tag429.xml"
+      },
+      {
+        "id": "rId39",
+        "type": "tags",
+        "target": "../tags/tag462.xml"
+      },
+      {
+        "id": "rId38",
+        "type": "tags",
+        "target": "../tags/tag461.xml"
+      },
+      {
+        "id": "rId37",
+        "type": "tags",
+        "target": "../tags/tag460.xml"
+      },
+      {
+        "id": "rId36",
+        "type": "tags",
+        "target": "../tags/tag459.xml"
+      },
+      {
+        "id": "rId35",
+        "type": "tags",
+        "target": "../tags/tag458.xml"
+      },
+      {
+        "id": "rId34",
+        "type": "tags",
+        "target": "../tags/tag457.xml"
+      },
+      {
+        "id": "rId33",
+        "type": "tags",
+        "target": "../tags/tag456.xml"
+      },
+      {
+        "id": "rId32",
+        "type": "tags",
+        "target": "../tags/tag455.xml"
+      },
+      {
+        "id": "rId31",
+        "type": "tags",
+        "target": "../tags/tag454.xml"
+      },
+      {
+        "id": "rId30",
+        "type": "tags",
+        "target": "../tags/tag453.xml"
+      },
+      {
+        "id": "rId3",
+        "type": "tags",
+        "target": "../tags/tag428.xml"
+      },
+      {
+        "id": "rId29",
+        "type": "tags",
+        "target": "../tags/tag452.xml"
+      },
+      {
+        "id": "rId28",
+        "type": "tags",
+        "target": "../tags/tag451.xml"
+      },
+      {
+        "id": "rId27",
+        "type": "tags",
+        "target": "../tags/tag450.xml"
+      },
+      {
+        "id": "rId26",
+        "type": "image",
+        "target": "../media/image63.png"
+      },
+      {
+        "id": "rId25",
+        "type": "tags",
+        "target": "../tags/tag449.xml"
+      },
+      {
+        "id": "rId24",
+        "type": "tags",
+        "target": "../tags/tag448.xml"
+      },
+      {
+        "id": "rId23",
+        "type": "tags",
+        "target": "../tags/tag447.xml"
+      },
+      {
+        "id": "rId22",
+        "type": "tags",
+        "target": "../tags/tag446.xml"
+      },
+      {
+        "id": "rId21",
+        "type": "tags",
+        "target": "../tags/tag445.xml"
+      },
+      {
+        "id": "rId20",
+        "type": "tags",
+        "target": "../tags/tag444.xml"
+      },
+      {
+        "id": "rId2",
+        "type": "tags",
+        "target": "../tags/tag427.xml"
+      },
+      {
+        "id": "rId19",
+        "type": "tags",
+        "target": "../tags/tag443.xml"
+      },
+      {
+        "id": "rId18",
+        "type": "tags",
+        "target": "../tags/tag442.xml"
+      },
+      {
+        "id": "rId17",
+        "type": "tags",
+        "target": "../tags/tag441.xml"
+      },
+      {
+        "id": "rId16",
+        "type": "tags",
+        "target": "../tags/tag440.xml"
+      },
+      {
+        "id": "rId15",
+        "type": "tags",
+        "target": "../tags/tag439.xml"
+      },
+      {
+        "id": "rId14",
+        "type": "tags",
+        "target": "../tags/tag438.xml"
+      },
+      {
+        "id": "rId13",
+        "type": "tags",
+        "target": "../tags/tag437.xml"
+      },
+      {
+        "id": "rId12",
+        "type": "tags",
+        "target": "../tags/tag436.xml"
+      },
+      {
+        "id": "rId11",
+        "type": "tags",
+        "target": "../tags/tag435.xml"
+      },
+      {
+        "id": "rId10",
+        "type": "tags",
+        "target": "../tags/tag434.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag426.xml"
+      }
+    ]
+  },
+  {
+    "slide": 17,
+    "text_boxes": [
+      "成员和导师介绍"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId1",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      }
+    ]
+  },
+  {
+    "slide": 18,
+    "text_boxes": [
+      ""
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId5",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId4",
+        "type": "image",
+        "target": "../media/image68.png"
+      },
+      {
+        "id": "rId3",
+        "type": "image",
+        "target": "../media/image67.png"
+      },
+      {
+        "id": "rId2",
+        "type": "image",
+        "target": "../media/image66.png"
+      },
+      {
+        "id": "rId1",
+        "type": "image",
+        "target": "../media/image65.png"
+      }
+    ]
+  },
+  {
+    "slide": 19,
+    "text_boxes": [
+      ""
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId5",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId4",
+        "type": "image",
+        "target": "../media/image72.png"
+      },
+      {
+        "id": "rId3",
+        "type": "image",
+        "target": "../media/image71.png"
+      },
+      {
+        "id": "rId2",
+        "type": "image",
+        "target": "../media/image70.png"
+      },
+      {
+        "id": "rId1",
+        "type": "image",
+        "target": "../media/image69.png"
+      }
+    ]
+  },
+  {
+    "slide": 20,
+    "text_boxes": [
+      ""
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId5",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId4",
+        "type": "image",
+        "target": "../media/image76.png"
+      },
+      {
+        "id": "rId3",
+        "type": "image",
+        "target": "../media/image75.png"
+      },
+      {
+        "id": "rId2",
+        "type": "image",
+        "target": "../media/image74.png"
+      },
+      {
+        "id": "rId1",
+        "type": "image",
+        "target": "../media/image73.png"
+      }
+    ]
+  },
+  {
+    "slide": 21,
+    "text_boxes": [
+      "谢谢观看！"
+    ],
+    "notes": [],
+    "rels": [
+      {
+        "id": "rId2",
+        "type": "slideLayout",
+        "target": "../slideLayouts/slideLayout17.xml"
+      },
+      {
+        "id": "rId1",
+        "type": "tags",
+        "target": "../tags/tag490.xml"
+      }
+    ]
+  }
+]

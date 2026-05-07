@@ -64,6 +64,12 @@ class _PersonaOnboardingScreenState
         role: SparklePageRole.settings,
         appBar: AppBar(
           title: Text(l10n.personaGuide),
+          actions: [
+            SparkleButton.ghost(
+              label: l10n.onboardingSkip,
+              onPressed: _handleSkip,
+            ),
+          ],
         ),
         child: ContentConstraint(
           child: GraphiteCardSurface(
@@ -266,6 +272,17 @@ class _PersonaOnboardingScreenState
     if (_currentStep == 0) return;
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     setState(() => _currentStep -= 1);
+  }
+
+  void _handleSkip() {
+    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+    ref.invalidate(transparentProfileProvider);
+    ref.invalidate(profileContextProvider);
+    ref.invalidate(inferredPreferencesProvider);
+    ref.invalidate(activePoliciesProvider);
+    if (mounted) {
+      context.go(UserRoutes.modelingChat);
+    }
   }
 
   void _schedulePreview() {

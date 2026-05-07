@@ -262,7 +262,7 @@ def _task_type_for_day_spec(day_spec: dict[str, Any]) -> str:
     task_kind = _strip(day_spec.get("task_kind")).lower()
     if task_kind in {"retrieval_repair", "error_review", "error_fix"}:
         return "error_fix"
-    if task_kind in {"mock_review", "stage_mock", "short_mock", "training"}:
+    if task_kind in {"mock_review", "stage_mock", "short_mock", "training", "worked_example_then_drill"}:
         return "training"
     return "learning"
 

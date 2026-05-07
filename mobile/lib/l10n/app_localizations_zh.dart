@@ -3511,6 +3511,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get smartPushPersonaSection => '角色设定 (Persona)';
 
   @override
+  String get smartPushToneDesc => '选择推送通知的语气和风格。';
+
+  @override
   String get smartPushFrequencySection => '频控设置 (每日上限)';
 
   @override
@@ -8139,6 +8142,18 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deleteAccountWeChatUnavailable => '微信暂不可用';
 
   @override
+  String get delAcctCannotUndo => '此操作不可撤回。';
+
+  @override
+  String get delAcctHighRisk => '高风险';
+
+  @override
+  String get delAcctIrreversible => '不可逆';
+
+  @override
+  String get delAcctConfirmHint => '输入 \"DELETE\" 确认注销账户';
+
+  @override
   String get editProfileEmailUnverified => '未验证';
 
   @override
@@ -9939,6 +9954,11 @@ class AppLocalizationsZh extends AppLocalizations {
   String get sessionManagementCurrentHint => '这是您当前正在使用的设备';
 
   @override
+  String sessionDeviceCount(int count) {
+    return '$count 台设备';
+  }
+
+  @override
   String get personaAdjustInferredPreference => '调整推断偏好';
 
   @override
@@ -10641,6 +10661,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get profileExportData => '导出我的数据';
+
+  @override
+  String get exportExporting => '导出中…';
 
   @override
   String get profileExportPreparing => '正在准备数据，请稍候…';
@@ -20652,6 +20675,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get chatFileSaving => '保存中...';
 
   @override
+  String get chatFileView => '查看';
+
+  @override
   String chatFocusOnGoal(Object title) {
     return '我想先专注在「$title」这个目标上。';
   }
@@ -29211,6 +29237,99 @@ class AppLocalizationsZh extends AppLocalizations {
   String get dataUsagePrivacyTitle => '你的数据与隐私';
 
   @override
+  String get dataUsageKnowsTitle => 'Sparkle对你的了解';
+
+  @override
+  String get dataUsageProfileCardTitle => '个人资料与目标';
+
+  @override
+  String get dataUsageProfileCardDesc => '你的姓名、目标、计划和任务历史用于个性化学习路径。';
+
+  @override
+  String get dataUsageAiCardTitle => 'AI理解';
+
+  @override
+  String get dataUsageAiCardDesc => '认知模式、学习风格和掌握度评估帮助Sparkle适应你的需求。';
+
+  @override
+  String get dataUsageMemoryCardTitle => '记忆与历史';
+
+  @override
+  String get dataUsageMemoryCardDesc => '聊天记录和成长编年史条目被存储以保持对话连续性。';
+
+  @override
+  String get dataUsageSharedTitle => '共享的内容';
+
+  @override
+  String get dataUsageCommunityCardTitle => '社区';
+
+  @override
+  String get dataUsageCommunityCardDesc => '匿名错误模式和资源质量评分被共享以帮助同伴学习。';
+
+  @override
+  String get dataUsageControlsTitle => '你的控制权';
+
+  @override
+  String get dataUsageHideChronicle => '隐藏编年史条目';
+
+  @override
+  String get dataUsageHideChronicleDesc => '隐藏的条目对AI不可见，但永远不会被删除';
+
+  @override
+  String get dataUsageDeleteData => '请求删除数据';
+
+  @override
+  String get dataUsageDeleteDataDesc => '你的所有数据可以应要求永久删除';
+
+  @override
+  String get dataUsageExportData => '导出你的数据';
+
+  @override
+  String get dataUsageExportDataDesc => '下载Sparkle存储的所有内容的完整副本';
+
+  @override
+  String get dataUsageFooter => 'Sparkle绝不出售你的数据。所有个性化仅为你的利益服务。';
+
+  @override
+  String get dataUsageTagGoals => '目标';
+
+  @override
+  String get dataUsageTagPlans => '计划';
+
+  @override
+  String get dataUsageTagTasks => '任务';
+
+  @override
+  String get dataUsageTagAchievements => '成就';
+
+  @override
+  String get dataUsageTagCognitivePatterns => '认知模式';
+
+  @override
+  String get dataUsageTagMasteryEstimates => '掌握度评估';
+
+  @override
+  String get dataUsageTagLearningStyle => '学习风格';
+
+  @override
+  String get dataUsageTagErrorPatterns => '错误模式';
+
+  @override
+  String get dataUsageTagChatMessages => '聊天记录';
+
+  @override
+  String get dataUsageTagGrowthChronicle => '成长编年史';
+
+  @override
+  String get dataUsageTagSpineTraces => '学习轨迹';
+
+  @override
+  String get dataUsageTagAnonErrors => '匿名错误模式';
+
+  @override
+  String get dataUsageTagResourceRatings => '资源评分';
+
+  @override
   String get growthPlansTitle => '成长计划';
 
   @override
@@ -30372,4 +30491,25 @@ class AppLocalizationsZh extends AppLocalizations {
   String envelopeEngagementSummary(int streak, int sessions) {
     return '$streak天连续 · 本周$sessions次会话';
   }
+
+  @override
+  String get taskFeedbackStuckLabel => '这个任务中你卡在哪里了？';
+
+  @override
+  String get taskFeedbackStuckHint => '例如：公式会背，但不知道什么时候套用';
+
+  @override
+  String get taskFeedbackProgressLabel => '哪个方法让你觉得有进展？';
+
+  @override
+  String get taskFeedbackProgressHint => '例如：先画状态图，再列方程';
+
+  @override
+  String get taskFeedbackChangeLabel => '下次会换什么做法？';
+
+  @override
+  String get taskFeedbackChangeHint => '例如：先做 1 道代表题，再进入整组练习';
+
+  @override
+  String get taskFeedbackAiSaved => 'AI 已记下这条反思';
 }

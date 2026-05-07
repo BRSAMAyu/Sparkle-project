@@ -12,7 +12,7 @@ class GoalDetailSnapshotCard extends ConsumerWidget {
     this.onOpenGoal,
   });
 
-  final VoidCallback? onOpenGoal;
+  final ValueChanged<String?>? onOpenGoal;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -40,7 +40,7 @@ class _GoalDetailSnapshotSurface extends StatelessWidget {
   });
 
   final GoalDetailSnapshot snapshot;
-  final VoidCallback? onOpenGoal;
+  final ValueChanged<String?>? onOpenGoal;
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +171,7 @@ class _GoalDetailSnapshotSurface extends StatelessWidget {
                     SparkleButton.ghost(
                       label: zh ? '打开目标详情' : 'Open goal',
                       icon: const Icon(Icons.arrow_forward_rounded),
-                      onPressed: onOpenGoal!,
+                      onPressed: () => onOpenGoal!(snapshot.goalId),
                     ),
                 ],
               ),

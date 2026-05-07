@@ -74,11 +74,14 @@ class _OpenClawNodeManagementPanelState
         ok ? SensoryFeedbackEvent.success : SensoryFeedbackEvent.warning,
       ),
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      ok
-          ? SparkleSnackBar.success(context.l10n.openclawDeviceAffinitySaved)
-          : SparkleSnackBar.error(service.error ?? context.l10n.openclawSaveDeviceAffinityFailed),
-    );
+    if (ok) {
+      AppFeedback.success(context, context.l10n.openclawDeviceAffinitySaved);
+    } else {
+      AppFeedback.error(
+        context,
+        service.error ?? context.l10n.openclawSaveDeviceAffinityFailed,
+      );
+    }
   }
 
   @override
@@ -283,7 +286,9 @@ class _OpenClawNodeCard extends StatelessWidget {
                   icon: node.connected
                       ? Icons.check_circle_rounded
                       : Icons.cloud_off_rounded,
-                  label: node.connected ? context.l10n.openclawNodeOnline : context.l10n.openclawNodeOffline,
+                  label: node.connected
+                      ? context.l10n.openclawNodeOnline
+                      : context.l10n.openclawNodeOffline,
                   tone: node.connected
                       ? OpenClawVisualTone.connected
                       : OpenClawVisualTone.offline,
@@ -321,9 +326,11 @@ class _OpenClawNodeCard extends StatelessWidget {
               Text(
                 [
                   if (node.caps.isNotEmpty)
-                    context.l10n.openclawCapsLabel(node.caps.take(4).join(' / ')),
+                    context.l10n
+                        .openclawCapsLabel(node.caps.take(4).join(' / ')),
                   if (node.commands.isNotEmpty)
-                    context.l10n.openclawCommandsLabel(node.commands.take(3).join(' / ')),
+                    context.l10n.openclawCommandsLabel(
+                        node.commands.take(3).join(' / ')),
                 ].join(' · '),
                 style: DS.bodySmall.copyWith(
                   color: DS.textSecondary,

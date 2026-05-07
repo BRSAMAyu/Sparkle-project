@@ -575,12 +575,19 @@ func Load() *Config {
 		log.Fatalf("Failed to load config: %v", err)
 	}
 
+	// Fallback: if JWT_SECRET is not set, try SECRET_KEY (Python-compatible alias)
+	if cfg.JWTSecret == "" {
+		if fallback := viper.GetString("SECRET_KEY"); fallback != "" {
+			cfg.JWTSecret = fallback
+		}
+	}
+
 	// Validate JWT_SECRET is set in non-development environments
 	if !cfg.IsDevelopment() && cfg.JWTSecret == "" {
-		log.Fatal("JWT_SECRET must be set in non-development environments. Set via JWT_SECRET environment variable or .env file.")
+		log.Fatal("JWT_SECRET must be set in non-development environments. Set via JWT_SECRET or SECRET_KEY environment variable or .env file.")
 	}
 	if !cfg.IsDevelopment() && isInsecureSecret(cfg.JWTSecret) {
-		log.Fatal("JWT_SECRET is using an insecure default. Set a high-entropy value via JWT_SECRET.")
+		log.Fatal("JWT_SECRET is using an insecure default. Set a high-entropy value via JWT_SECRET or SECRET_KEY.")
 	}
 
 	// Validate ADMIN_SECRET is set in non-development environments
@@ -606,6 +613,9 @@ func Load() *Config {
 		}
 		if strings.TrimSpace(cfg.MinioAccessKey) == "minioadmin" || strings.TrimSpace(cfg.MinioSecretKey) == "minioadmin" {
 			log.Fatal("Refusing to start with default MinIO credentials in non-development environments.")
+		}
+		if !cfg.MinioUseSSL {
+			log.Fatal("MINIO_USE_SSL must be true in non-development environments.")
 		}
 	}
 

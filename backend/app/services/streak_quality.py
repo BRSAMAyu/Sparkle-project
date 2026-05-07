@@ -63,7 +63,7 @@ class StreakQualityService:
     async def compute_quality(self, user_id: UUID | str, target_date: date | None = None) -> StreakQuality:
         day = target_date or _utcnow().date()
 
-        # ── Cache check (TTL 300s) ──
+        # ── Cache check (TTL 86400s / 24h) ──
         cache_key = f"streak_quality:{user_id}:{day.isoformat()}"
         try:
             from app.core.cache import cache_service
@@ -130,11 +130,11 @@ class StreakQualityService:
             is_quality_day=is_quality_day,
         )
 
-        # ── Cache write (TTL 300s) ──
+        # ── Cache write (TTL 86400s / 24h) ──
         try:
             from app.core.cache import cache_service
 
-            await cache_service.set(cache_key, result.to_dict(), ttl=300)
+            await cache_service.set(cache_key, result.to_dict(), ttl=86400)
         except Exception:
             logger.warning("Streak quality cache write failed for %s", cache_key, exc_info=True)
 

@@ -43,8 +43,10 @@ func NewAuthHandler(cfg *config.Config, appleTokenVerifier appleTokenVerifier, a
 }
 
 type SocialLoginRequest struct {
-	Provider string `json:"provider" binding:"required"`
-	Token    string `json:"token" binding:"required"`
+	Provider       string `json:"provider" binding:"required"`
+	Token          string `json:"token" binding:"required"`
+	AcceptedTOS    bool   `json:"accepted_tos"`
+	AcceptedPrivacy bool  `json:"accepted_privacy"`
 }
 
 func (h *AuthHandler) AppleLogin(c *gin.Context) {
@@ -56,6 +58,11 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 
 	if req.Provider != "apple" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(c.Request.Context(), "auth.unsupported_provider")})
+		return
+	}
+
+	if !req.AcceptedTOS || !req.AcceptedPrivacy {
+		c.JSON(http.StatusBadRequest, gin.H{"error": i18n.T(c.Request.Context(), "auth.terms_not_accepted")})
 		return
 	}
 
@@ -131,7 +138,9 @@ func (h *AuthHandler) AppleLogin(c *gin.Context) {
 
 func (h *AuthHandler) randomString(n int) string {
 	b := make([]byte, n/2)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		panic("crypto/rand.Read failed: " + err.Error())
+	}
 	return hex.EncodeToString(b)
 }
 

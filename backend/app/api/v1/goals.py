@@ -5,14 +5,16 @@ from __future__ import annotations
 import json
 from datetime import date, datetime, timezone
 from typing import Any
+from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Body, Depends, Path
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.core.cache import cache_service
+from app.core.exceptions import NotFoundError
 from app.models.user import User
 from app.schemas.task import TaskCreate, coerce_task_type
 from app.services.goal_decomposition_service import goal_decomposition_service
@@ -54,6 +56,12 @@ class GoalCreateRequest(BaseModel):
     description: str | None = None
     target_date: date | None = None
     milestones: list[GoalMilestonePayload] = Field(default_factory=list)
+
+
+class GoalUpdateRequest(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    description: str | None = None
+    target_date: date | None = None
 
 
 class GoalResponse(BaseModel):
@@ -174,12 +182,35 @@ async def create_goal(
     normalized_type = _normalize_goal_type(payload.goal_type)
     _auto_assign_scenario_pack(goal, normalized_type, str(current_user.id))
 
-    # Plan B: create the first task from the first milestone so the wizard
-    # can navigate directly to /tasks/{id}/execute after creation.
+    # Auto-create a Plan from milestones so the Goal has a real plan
+    # entity (not just milestones stored in metadata).
+    from app.models.plan import Plan as PlanModel, PlanType, PlanStage
+
+    plan_type = PlanType.SPRINT if payload.goal_type in ("exam", "academic") else PlanType.GROWTH
+    plan = PlanModel(
+        user_id=current_user.id,
+        goal_id=goal.id,
+        name=payload.title.strip(),
+        type=plan_type,
+        description=goal.description,
+        target_date=payload.target_date,
+        plan_stage=PlanStage.SPRINT if plan_type == PlanType.SPRINT else PlanStage.DAILY,
+        daily_available_minutes=60,
+    )
+    db.add(plan)
+    await db.flush()
+
+    # Link goal to plan
+    goal.plan_id = plan.id
+    db.add(goal)
+    await db.flush()
+
+    # Create a task for each milestone linked to the plan.
+    # The first task is exposed so the wizard can navigate to it.
     first_task_id: str | None = None
     if milestones:
-        first = milestones[0]
         try:
+            first = milestones[0]
             task = await TaskService.create(
                 db,
                 TaskCreate(
@@ -189,6 +220,7 @@ async def create_goal(
                     energy_cost=2,
                     tags=["goal_first_step"],
                     guide_content=first.get("description"),
+                    plan_id=plan.id,
                 ),
                 user_id=current_user.id,
             )
@@ -197,6 +229,25 @@ async def create_goal(
             first_task_id = str(task.id)
         except Exception:
             first_task_id = None
+
+        # Create tasks for remaining milestones
+        for i, milestone in enumerate(milestones[1:], start=2):
+            try:
+                await TaskService.create(
+                    db,
+                    TaskCreate(
+                        title=milestone.get("title", f"{payload.title} — 第{i}步"),
+                        type=coerce_task_type("learning"),
+                        estimated_minutes=25,
+                        energy_cost=2,
+                        tags=["goal_milestone"],
+                        guide_content=milestone.get("description"),
+                        plan_id=plan.id,
+                    ),
+                    user_id=current_user.id,
+                )
+            except Exception:
+                pass  # non-blocking; task creation failures should not block goal creation
 
     await db.commit()
     return GoalResponse(
@@ -211,6 +262,85 @@ async def create_goal(
         first_task_id=first_task_id,
         warning=warning,
     )
+
+
+# route-tier: authed
+@router.put("/{goal_id}", response_model=GoalResponse)
+async def update_goal(
+    goal_id: UUID = Path(..., description="Goal ID"),
+    payload: GoalUpdateRequest = Body(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> GoalResponse:
+    """Update goal title, description, and/or deadline."""
+    from app.models.goal import Goal as GoalModel
+
+    goal = await db.get(GoalModel, goal_id)
+    if not goal or goal.user_id != current_user.id or goal.deleted_at:
+        raise NotFoundError(message="Goal not found")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        if value is not None:
+            setattr(goal, field, value)
+
+    await db.commit()
+    await db.refresh(goal)
+    return GoalResponse(
+        id=str(goal.id),
+        title=goal.title,
+        goal_type=goal.goal_type,
+        description=goal.description,
+        status=goal.status,
+        target_date=goal.target_date,
+        metadata=goal.metadata_payload,
+        minimum_acceptance_criteria=goal.minimum_acceptance_criteria,
+    )
+
+
+# route-tier: authed
+@router.delete("/{goal_id}")
+async def delete_goal(
+    goal_id: UUID = Path(..., description="Goal ID"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Soft-delete a goal and its associated plan."""
+    from app.models.goal import Goal as GoalModel
+    from app.models.plan import Plan as PlanModel
+    from app.models.task import Task as TaskModel
+
+    goal = await db.get(GoalModel, goal_id)
+    if not goal or goal.user_id != current_user.id or goal.deleted_at:
+        raise NotFoundError(message="Goal not found")
+
+    # Soft-delete the associated plan if present
+    if goal.plan_id:
+        plan = await db.get(PlanModel, goal.plan_id)
+        if plan:
+            plan.soft_delete()
+            db.add(plan)
+            # Cascade soft-delete to all active tasks under this plan
+            from sqlalchemy import select as sa_select, update as sa_update
+            task_result = await db.execute(
+                sa_update(TaskModel)
+                .where(
+                    TaskModel.plan_id == goal.plan_id,
+                    TaskModel.deleted_at.is_(None),
+                )
+                .values(deleted_at=datetime.now(timezone.utc))
+            )
+            logger.info(
+                "Soft-deleted %d tasks for goal %s (plan %s)",
+                task_result.rowcount,
+                str(goal_id),
+                str(goal.plan_id),
+            )
+
+    goal.soft_delete()
+    db.add(goal)
+    await db.commit()
+    return {"success": True}
 
 
 # ── Multi-Goal Arbitration ────────────────────────────────────────────────────

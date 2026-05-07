@@ -106,10 +106,6 @@ class TestProtoModuleHealth:
         assert hasattr(m, "UpdateNodeMasteryRequest")
         assert hasattr(m, "CollaborativeGalaxyUpdate")
 
-    def test_community_service_pb2_importable(self):
-        from app.gen import community_service_pb2 as m
-        assert hasattr(m, "DESCRIPTOR")
-
     def test_error_book_pb2_importable(self):
         from app.gen import error_book_pb2 as m
         assert hasattr(m, "DESCRIPTOR")

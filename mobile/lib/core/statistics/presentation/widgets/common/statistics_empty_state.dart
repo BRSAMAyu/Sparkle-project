@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
 /// Empty state widget for when no statistics data is available
@@ -89,7 +90,7 @@ class StatisticsEmptyState extends StatelessWidget {
   }
 
   Widget _buildMessage() {
-    const defaultMessage = '暂无统计数据';
+    final defaultMessage = I18nService.instance.isChinese ? '暂无统计数据' : 'No statistics data yet';
     return Text(
       message ?? defaultMessage,
       style: DS.headlineStyle.copyWith(
@@ -150,28 +151,30 @@ class StatisticsEmptyStateForType extends StatelessWidget {
       );
 
   String _getMessage() {
+    final zh = I18nService.instance.isChinese;
     switch (type) {
       case StatisticsType.focus:
-        return '暂无专注记录';
+        return zh ? '暂无专注记录' : 'No focus records';
       case StatisticsType.agent:
-        return '暂无智能体使用记录';
+        return zh ? '暂无智能体使用记录' : 'No agent usage records';
       case StatisticsType.capsule:
-        return '暂无好奇心胶囊';
+        return zh ? '暂无好奇心胶囊' : 'No curiosity capsules';
       case StatisticsType.learning:
-        return '暂无学习数据';
+        return zh ? '暂无学习数据' : 'No learning data';
     }
   }
 
   String? _getSubtitle() {
+    final zh = I18nService.instance.isChinese;
     switch (type) {
       case StatisticsType.focus:
-        return '开始专注后会在这里看到统计数据';
+        return zh ? '开始专注后会在这里看到统计数据' : 'Statistics will appear after you start focusing';
       case StatisticsType.agent:
-        return '使用智能体后会在这里看到统计数据';
+        return zh ? '使用智能体后会在这里看到统计数据' : 'Statistics will appear after using the agent';
       case StatisticsType.capsule:
-        return '探索胶囊后会在这里看到统计数据';
+        return zh ? '探索胶囊后会在这里看到统计数据' : 'Statistics will appear after exploring capsules';
       case StatisticsType.learning:
-        return '学习后会在这里看到统计数据';
+        return zh ? '学习后会在这里看到统计数据' : 'Statistics will appear after learning';
     }
   }
 
@@ -228,7 +231,7 @@ class StatisticsErrorState extends StatelessWidget {
               ),
               const SizedBox(height: DS.lg),
               Text(
-                message ?? '加载失败',
+                message ?? (I18nService.instance.isChinese ? '加载失败' : 'Failed to load'),
                 style: DS.headlineStyle.copyWith(
                   color: DS.neutral600,
                   fontSize: 18,
@@ -238,7 +241,7 @@ class StatisticsErrorState extends StatelessWidget {
               if (onRetry != null) ...[
                 const SizedBox(height: DS.xl),
                 SparkleButton.outline(
-                  label: '重试',
+                  label: I18nService.instance.isChinese ? '重试' : 'Retry',
                   onPressed: onRetry!,
                   icon: const Icon(Icons.refresh),
                 ),

@@ -568,4 +568,23 @@ class CommunitySignalBridge:
             except Exception as e:
                 logger.warning(f"Failed to publish achievement to Redis channel: {e}")
 
+        # Send push notification for achievement unlock
+        try:
+            from app.schemas.notification import NotificationCreate
+            from app.services.notification_service import NotificationService
+
+            await NotificationService.create(
+                self.db if hasattr(self, "db") and self.db else None,
+                user_id,
+                NotificationCreate(
+                    title=f"🏆 {achievement_title}",
+                    content=f"Congratulations! You unlocked: {achievement_title}",
+                    type="achievement_unlock",
+                    data={"achievement_id": achievement_id, "rarity": rarity},
+                ),
+                push_via_websocket=True,
+            )
+        except Exception as e:
+            logger.warning(f"Failed to send achievement push notification: {e}")
+
         logger.info(f"Broadcast achievement unlock: user={user_id} achievement={achievement_id} rarity={rarity}")

@@ -1,3 +1,4 @@
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/statistics/domain/entities/statistics_data_point.dart';
 import 'package:sparkle/core/statistics/domain/entities/statistics_entity.dart';
 import 'package:sparkle/core/statistics/domain/entities/statistics_period.dart';
@@ -194,13 +195,14 @@ enum StatisticsTrend {
 /// Extension for StatisticsTrend
 extension StatisticsTrendExt on StatisticsTrend {
   String get label {
+    final zh = I18nService.instance.isChinese;
     switch (this) {
       case StatisticsTrend.up:
-        return '上升';
+        return zh ? '上升' : 'Up';
       case StatisticsTrend.down:
-        return '下降';
+        return zh ? '下降' : 'Down';
       case StatisticsTrend.stable:
-        return '持平';
+        return zh ? '持平' : 'Stable';
     }
   }
 

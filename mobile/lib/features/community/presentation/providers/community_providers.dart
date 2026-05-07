@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/auth/auth.dart';
 import 'package:sparkle/features/community/data/models/community_models.dart';
@@ -15,6 +16,13 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
   final String? _currentUserId;
 
   String? _scope;
+  int _currentPage = 1;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+  static const int _pageSize = 20;
+
+  bool get hasMore => _hasMore;
+  bool get isLoadingMore => _isLoadingMore;
 
   Future<void> refresh({String? scope, bool clearScope = false}) async {
     if (clearScope) {
@@ -24,10 +32,41 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     }
     try {
       state = const AsyncValue.loading();
-      final posts = await _repository.getFeed(scope: _scope);
+      _currentPage = 1;
+      _hasMore = true;
+      final posts = await _repository.getFeed(page: 1, scope: _scope);
+      _hasMore = posts.length >= _pageSize;
       state = AsyncValue.data(posts);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+    }
+  }
+
+  Future<void> loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    final currentPosts = state.value ?? [];
+    if (currentPosts.isEmpty) return;
+
+    _isLoadingMore = true;
+    final nextPage = _currentPage + 1;
+    try {
+      final morePosts = await _repository.getFeed(
+        page: nextPage,
+        scope: _scope,
+      );
+      if (morePosts.isEmpty) {
+        _hasMore = false;
+      } else {
+        _currentPage = nextPage;
+        _hasMore = morePosts.length >= _pageSize;
+        state = AsyncValue.data([...currentPosts, ...morePosts]);
+      }
+    } catch (e) {
+      // Silently fail on load-more to avoid disrupting the existing list
+      debugPrint('FeedNotifier.loadMore failed: $e');
+    } finally {
+      _isLoadingMore = false;
     }
   }
 
@@ -37,13 +76,14 @@ class FeedNotifier extends StateNotifier<AsyncValue<List<Post>>> {
     if (idx == -1) return;
 
     final post = currentList[idx];
-    final newCount = post.likeCount + 1;
+    final bool wasLiked = post.isLiked;
+    final int newCount = wasLiked ? post.likeCount - 1 : post.likeCount + 1;
 
     // Optimistic update
     state = AsyncValue.data([
       for (int i = 0; i < currentList.length; i++)
         if (i == idx)
-          post.copyWith(likeCount: newCount)
+          post.copyWith(likeCount: newCount, isLiked: !wasLiked)
         else
           currentList[i],
     ]);

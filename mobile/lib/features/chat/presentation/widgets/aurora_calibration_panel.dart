@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
@@ -299,9 +300,8 @@ Future<void> showAuroraCalibration({
   ValueChanged<String>? onConfirm,
   ValueChanged<String>? onCustomResponse,
 }) {
-  return showModalBottomSheet<void>(
+  return showSensoryModalBottomSheet<void>(
     context: context,
-    backgroundColor: Colors.transparent,
     isScrollControlled: true,
     builder: (context) => Padding(
       padding: EdgeInsets.only(

@@ -109,12 +109,11 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
       if (!mounted) {
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SparkleSnackBar.info(
-          imported.isEmpty
-              ? context.l10n.bgmLibraryNoImport
-              : context.l10n.bgmLibraryImportedCount(imported.length),
-        ),
+      AppFeedback.info(
+        context,
+        imported.isEmpty
+            ? context.l10n.bgmLibraryNoImport
+            : context.l10n.bgmLibraryImportedCount(imported.length),
       );
       await _loadData();
     } finally {
@@ -135,8 +134,9 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SparkleSnackBar.info(context.l10n.bgmLibraryPlayingSwitched(entry.title)),
+    AppFeedback.info(
+      context,
+      context.l10n.bgmLibraryPlayingSwitched(entry.title),
     );
     await _loadData();
   }
@@ -146,8 +146,9 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SparkleSnackBar.success(context.l10n.bgmLibraryRemoved(entry.title)),
+    AppFeedback.success(
+      context,
+      context.l10n.bgmLibraryRemoved(entry.title),
     );
     await _loadData();
   }
@@ -198,23 +199,34 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
                 DS.spacing16,
                 DS.spacing32,
               ),
-              itemCount: 12 + (_filteredEntries.isEmpty
-                  ? 1
-                  : _filteredEntries.length),
+              itemCount:
+                  12 + (_filteredEntries.isEmpty ? 1 : _filteredEntries.length),
               itemBuilder: (context, index) {
                 switch (index) {
-                  case 0: return _buildNowPlayingCard();
-                  case 1: return const SizedBox(height: DS.spacing12);
-                  case 2: return _buildPlayerModeCard();
-                  case 3: return const SizedBox(height: DS.spacing12);
-                  case 4: return _buildQuickStrategyCard();
-                  case 5: return const SizedBox(height: DS.spacing12);
-                  case 6: return _buildLibraryStatsCard(snapshot);
-                  case 7: return const SizedBox(height: DS.spacing12);
-                  case 8: return _buildImportCard();
-                  case 9: return const SizedBox(height: DS.spacing12);
-                  case 10: return _buildFilterBar();
-                  case 11: return const SizedBox(height: DS.spacing12);
+                  case 0:
+                    return _buildNowPlayingCard();
+                  case 1:
+                    return const SizedBox(height: DS.spacing12);
+                  case 2:
+                    return _buildPlayerModeCard();
+                  case 3:
+                    return const SizedBox(height: DS.spacing12);
+                  case 4:
+                    return _buildQuickStrategyCard();
+                  case 5:
+                    return const SizedBox(height: DS.spacing12);
+                  case 6:
+                    return _buildLibraryStatsCard(snapshot);
+                  case 7:
+                    return const SizedBox(height: DS.spacing12);
+                  case 8:
+                    return _buildImportCard();
+                  case 9:
+                    return const SizedBox(height: DS.spacing12);
+                  case 10:
+                    return _buildFilterBar();
+                  case 11:
+                    return const SizedBox(height: DS.spacing12);
                   default:
                     if (_filteredEntries.isEmpty) {
                       return GraphiteCardSurface(
@@ -237,9 +249,14 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
 
   Widget _buildNowPlayingCard() {
     final snapshot = _playbackSnapshot;
-    final title = snapshot?.trackTitle ?? snapshot?.trackId ?? context.l10n.bgmLibraryNotPlaying;
-    final subtitle = snapshot?.album ?? snapshot?.sourceLabel ?? context.l10n.bgmLibraryWaitingPlay;
-    final reason = snapshot?.selectionReason ?? context.l10n.bgmLibraryBrowseHint;
+    final title = snapshot?.trackTitle ??
+        snapshot?.trackId ??
+        context.l10n.bgmLibraryNotPlaying;
+    final subtitle = snapshot?.album ??
+        snapshot?.sourceLabel ??
+        context.l10n.bgmLibraryWaitingPlay;
+    final reason =
+        snapshot?.selectionReason ?? context.l10n.bgmLibraryBrowseHint;
     return GraphiteCardSurface(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,10 +391,14 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
             spacing: DS.spacing10,
             runSpacing: DS.spacing10,
             children: [
-              _buildStatChip(context.l10n.bgmLibraryTotalTracks, '${snapshot.totalCount}'),
-              _buildStatChip(context.l10n.bgmLibraryCurated, '${snapshot.curatedCount}'),
-              _buildStatChip(context.l10n.bgmLibraryImportedLabel, '${snapshot.importedCount}'),
-              _buildStatChip(context.l10n.bgmLibraryBundled, '${snapshot.bundledCount}'),
+              _buildStatChip(
+                  context.l10n.bgmLibraryTotalTracks, '${snapshot.totalCount}'),
+              _buildStatChip(
+                  context.l10n.bgmLibraryCurated, '${snapshot.curatedCount}'),
+              _buildStatChip(context.l10n.bgmLibraryImportedLabel,
+                  '${snapshot.importedCount}'),
+              _buildStatChip(
+                  context.l10n.bgmLibraryBundled, '${snapshot.bundledCount}'),
             ],
           ),
           const SizedBox(height: DS.spacing12),
@@ -523,10 +544,14 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
               spacing: DS.spacing8,
               runSpacing: DS.spacing8,
               children: [
-                _buildStatChip(context.l10n.bgmLibraryTags, entry.sceneTags.take(3).join(' / ')),
-                _buildStatChip(context.l10n.bgmLibraryStyle, entry.paletteTags.take(3).join(' / ')),
-                _buildStatChip(context.l10n.bgmLibraryEnergy, entry.energy.toStringAsFixed(2)),
-                _buildStatChip(context.l10n.bgmLibraryDensity, entry.density.toStringAsFixed(2)),
+                _buildStatChip(context.l10n.bgmLibraryTags,
+                    entry.sceneTags.take(3).join(' / ')),
+                _buildStatChip(context.l10n.bgmLibraryStyle,
+                    entry.paletteTags.take(3).join(' / ')),
+                _buildStatChip(context.l10n.bgmLibraryEnergy,
+                    entry.energy.toStringAsFixed(2)),
+                _buildStatChip(context.l10n.bgmLibraryDensity,
+                    entry.density.toStringAsFixed(2)),
               ],
             ),
           ],

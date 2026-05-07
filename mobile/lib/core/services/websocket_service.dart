@@ -49,6 +49,17 @@ class WebSocketService {
   void _connectInternal() {
     if (_url == null) return;
 
+    // Close any existing channel before overwriting to avoid resource leaks.
+    if (_channel != null) {
+      try {
+        _channel!.sink.close(status.goingAway);
+      } catch (_) {
+        // Channel may already be dead; this is best-effort cleanup.
+      }
+      _channel = null;
+    }
+    _isConnected = false;
+
     try {
       final uri = Uri.parse(_url!);
       debugPrint(

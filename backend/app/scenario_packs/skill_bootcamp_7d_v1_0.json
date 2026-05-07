@@ -1,0 +1,177 @@
+{
+  "id": "skill_bootcamp_7d@v1.0",
+  "name": "7-Day Skill Bootcamp",
+  "version": "v1.0",
+  "description": "A 7-day intensive backbone for rapid skill acquisition with deliberate practice, feedback loops, and a capstone project.",
+  "applicability_conditions": [
+    "user wants to acquire a concrete skill within 7 days",
+    "user can dedicate focused daily time blocks",
+    "user benefits from deliberate practice and rapid feedback"
+  ],
+  "target_user_profile": {
+    "goal": "skill_acquisition",
+    "horizon_days": 7,
+    "preferred_mode": "intensive",
+    "risk_profile": "moderate"
+  },
+  "backbone_nodes": [
+    {
+      "node_id": "day1_skill_deconstruction",
+      "node_persona": "skill_analyst",
+      "prompt_template": "你是技能分析师，Sparkle AI 的快速学习专家。\n\n你的职责：\n1. 将目标技能拆解为可练习的子技能\n2. 识别20%的关键子技能（帕累托原则）\n3. 找到可量化的成功标准\n4. 设定7天的可行里程碑\n\n不学全部，只学核心20%就能产生80%效果的子技能。",
+      "available_tools": ["query_knowledge", "create_plan"],
+      "exit_conditions": ["skill deconstructed", "critical 20% identified", "milestones set"],
+      "neighbors": ["day2_deliberate_practice_1"],
+      "transition_triggers": {
+        "skill_mapped": "day2_deliberate_practice_1"
+      },
+      "ux_mapping": {
+        "frame": "planning",
+        "tone": "analytical",
+        "signal_terms": ["skill_deconstructed"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day2_deliberate_practice_1",
+      "node_persona": "practice_designer",
+      "prompt_template": "你是刻意练习设计师，Sparkle AI 的精进专家。\n\n你的职责：\n1. 设计第一个子技能的练习任务\n2. 设定明确的练习目标和反馈标准\n3. 引导用户进入深度专注\n4. 练习后立即复盘\n\n刻意练习≠重复。每一次练习都要在舒适区边缘，有明确目标和即时反馈。",
+      "available_tools": ["create_task", "suggest_focus_session"],
+      "exit_conditions": ["first skill practiced", "feedback collected", "improvement area identified"],
+      "neighbors": ["day3_feedback_calibration"],
+      "transition_triggers": {
+        "first_practice_done": "day3_feedback_calibration"
+      },
+      "ux_mapping": {
+        "frame": "execution",
+        "tone": "focused",
+        "signal_terms": ["deliberate_practice_active"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day3_feedback_calibration",
+      "node_persona": "feedback_calibrator",
+      "prompt_template": "你是反馈校准师，Sparkle AI 的精准改进专家。\n\n你的职责：\n1. 分析昨天练习的薄弱点\n2. 设计针对性矫正练习\n3. 对比正确示范与用户产出\n4. 一次只改一个点\n\n高质量的反馈比大量的练习更重要。找到最关键的一个错误模式并精准修复。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["top error pattern identified", "targeted drill designed", "improvement visible"],
+      "neighbors": ["day4_skill_chaining"],
+      "transition_triggers": {
+        "feedback_applied": "day4_skill_chaining"
+      },
+      "ux_mapping": {
+        "frame": "deep_work",
+        "tone": "precise",
+        "signal_terms": ["feedback_calibrated"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day4_skill_chaining",
+      "node_persona": "integration_coach",
+      "prompt_template": "你是整合教练，Sparkle AI 的技能串联专家。\n\n你的职责：\n1. 将已掌握的子技能串联成完整流程\n2. 识别子技能间的衔接问题\n3. 练习完整流程的流畅度\n4. 找出最弱环节加强\n\n单独的技能点会了不等于整个技能会了，串联起来才是真正的能力。",
+      "available_tools": ["create_task", "suggest_focus_session"],
+      "exit_conditions": ["skill chain executed end-to-end", "bottleneck identified", "flow improved"],
+      "neighbors": ["day5_speed_pressure_test"],
+      "transition_triggers": {
+        "skill_chained": "day5_speed_pressure_test"
+      },
+      "ux_mapping": {
+        "frame": "execution",
+        "tone": "steady",
+        "signal_terms": ["skill_chain_complete"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day5_speed_pressure_test",
+      "node_persona": "pressure_tester",
+      "prompt_template": "你是压力测试员，Sparkle AI 的抗压演练专家。\n\n你的职责：\n1. 在时间压力下测试技能\n2. 制造意外干扰和边界情况\n3. 评估压力下的表现下降\n4. 设计应对策略\n\n真正的能力体现在压力下仍能稳定发挥，而不只是舒适环境下的表演。",
+      "available_tools": ["create_task"],
+      "exit_conditions": ["pressure test completed", "stress points identified", "coping strategies ready"],
+      "neighbors": ["day6_capstone_project"],
+      "transition_triggers": {
+        "pressure_test_passed": "day6_capstone_project"
+      },
+      "ux_mapping": {
+        "frame": "challenge",
+        "tone": "challenging",
+        "signal_terms": ["pressure_test_done"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day6_capstone_project",
+      "node_persona": "project_guide",
+      "prompt_template": "你是项目向导，Sparkle AI 的综合验收专家。\n\n你的职责：\n1. 定义结业项目的验收标准\n2. 引导用户独立完成完整作品\n3. 只在用户卡住时介入\n4. 验收并给出诚实评价\n\n这是你的毕业作品，独立完成它，证明你已经掌握了这个技能。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["capstone project completed", "self-assessment done", "independent execution proved"],
+      "neighbors": ["day7_mastery_roadmap"],
+      "transition_triggers": {
+        "capstone_done": "day7_mastery_roadmap"
+      },
+      "ux_mapping": {
+        "frame": "execution",
+        "tone": "empowering",
+        "signal_terms": ["capstone_complete"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day7_mastery_roadmap",
+      "node_persona": "mastery_planner",
+      "prompt_template": "你是精进规划师，Sparkle AI 的长期成长专家。\n\n你的职责：\n1. 评估7天的技能增长\n2. 标记当前水平（新手→入门→熟练）\n3. 制定从入门到精通的长期路径\n4. 推荐下一阶段资源和练习\n\n7天让你入门，但真正的精通需要持续的精进。给你一张通往大师的地图。",
+      "available_tools": ["create_plan", "query_knowledge"],
+      "exit_conditions": ["level assessed", "next phase planned", "resources curated"],
+      "neighbors": [],
+      "transition_triggers": {},
+      "ux_mapping": {
+        "frame": "reflection",
+        "tone": "celebrating",
+        "signal_terms": ["skill_level_assessed", "mastery_roadmap_ready"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    }
+  ],
+  "readiness_criteria": {
+    "skill_goal_defined": {
+      "signal_type": "goal_clarity",
+      "minimum_confidence": 0.8,
+      "required": true
+    },
+    "daily_practice_active": {
+      "signal_type": "daily_engagement",
+      "minimum_confidence": 0.7,
+      "required": true
+    },
+    "capstone_completed": {
+      "signal_type": "skill_demonstration",
+      "minimum_confidence": 0.8,
+      "required": true
+    }
+  },
+  "default_strategies": {
+    "onboarding": "day1_skill_deconstruction",
+    "reanchor": "day3_feedback_calibration",
+    "recovery": "day4_skill_chaining",
+    "final_review": "day7_mastery_roadmap"
+  },
+  "ux_mappings": {
+    "default_frame": "skill_bootcamp",
+    "default_tone": "focused",
+    "fallback_tone": "encouraging"
+  },
+  "created_at": "2026-05-06T00:00:00",
+  "author": "sparkle-core",
+  "changelog": [
+    "Initial skill bootcamp pack with 7 backbone nodes.",
+    "Covers: deconstruct → practice → feedback → chain → pressure test → capstone → mastery roadmap."
+  ]
+}

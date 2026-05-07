@@ -21,8 +21,8 @@ from typing import Any
 from loguru import logger
 
 from app.services.review_history_service import (
+    ContentReviewFeedbackType,
     FeedbackEntry,
-    FeedbackType,
     ReviewHistoryEntry,
     ReviewHistoryService,
 )
@@ -268,7 +268,7 @@ class FeedbackLearningService:
                 continue
 
             # 假阴性：审查未通过但用户满意
-            if review.decision != "passed" and feedback.feedback_type == FeedbackType.SATISFIED:
+            if review.decision != "passed" and feedback.feedback_type == ContentReviewFeedbackType.SATISFIED:
                 misclassified.append({
                     "review_id": review.review_id,
                     "type": "false_negative",
@@ -279,7 +279,7 @@ class FeedbackLearningService:
                 })
 
             # 假阳性：审查通过但用户不满意
-            elif review.decision == "passed" and feedback.feedback_type == FeedbackType.UNSATISFIED:
+            elif review.decision == "passed" and feedback.feedback_type == ContentReviewFeedbackType.UNSATISFIED:
                 misclassified.append({
                     "review_id": review.review_id,
                     "type": "false_positive",
@@ -328,7 +328,7 @@ class FeedbackLearningService:
             false_negative_scores = []
             for dp in data_points:
                 feedback = feedback_by_review.get(dp["review_id"])
-                if feedback and feedback.feedback_type == FeedbackType.SATISFIED:
+                if feedback and feedback.feedback_type == ContentReviewFeedbackType.SATISFIED:
                     if not dp["passed"]:  # 指标未通过但用户满意
                         false_negative_scores.append(dp["score"])
 
@@ -365,7 +365,7 @@ class FeedbackLearningService:
 
         for review in reviews:
             feedback = feedback_by_review.get(review.review_id)
-            if feedback and feedback.feedback_type == FeedbackType.UNSATISFIED:
+            if feedback and feedback.feedback_type == ContentReviewFeedbackType.UNSATISFIED:
                 # 用户不满意，统计哪些指标未通过
                 for metric in review.metrics:
                     if not metric.get("passed", True):
@@ -433,7 +433,7 @@ class FeedbackLearningService:
         if not feedbacks:
             return 0.0
 
-        satisfied = sum(1 for f in feedbacks if f.feedback_type == FeedbackType.SATISFIED)
+        satisfied = sum(1 for f in feedbacks if f.feedback_type == ContentReviewFeedbackType.SATISFIED)
         return satisfied / len(feedbacks)
 
     def _create_empty_report(
@@ -528,7 +528,7 @@ class FeedbackLearningService:
         false_positives = []
         for review in reviews:
             feedback = feedback_by_review.get(review.review_id)
-            if feedback and review.decision == "passed" and feedback.feedback_type == FeedbackType.UNSATISFIED:
+            if feedback and review.decision == "passed" and feedback.feedback_type == ContentReviewFeedbackType.UNSATISFIED:
                 false_positives.append({
                     "review_id": review.review_id,
                     "score": review.overall_score,
@@ -560,7 +560,7 @@ class FeedbackLearningService:
         false_negatives = []
         for review in reviews:
             feedback = feedback_by_review.get(review.review_id)
-            if feedback and review.decision != "passed" and feedback.feedback_type == FeedbackType.SATISFIED:
+            if feedback and review.decision != "passed" and feedback.feedback_type == ContentReviewFeedbackType.SATISFIED:
                 false_negatives.append({
                     "review_id": review.review_id,
                     "score": review.overall_score,

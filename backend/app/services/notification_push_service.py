@@ -80,6 +80,7 @@ class NotificationPushService:
         )
         if should_push:
             await self._push_via_websocket(user_id, notification, priority)
+            await self._push_via_device_channels(user_id, notification)
         elif suppression_reason:
             logger.info(
                 f"Skipped websocket push for notification {notification.id} to user {user_id}: {suppression_reason}"
@@ -118,6 +119,62 @@ class NotificationPushService:
         except Exception as e:
             # WebSocket 推送失败不应影响通知创建
             logger.warning(f"Failed to push notification via WebSocket: {e}")
+
+    async def _push_via_device_channels(
+        self,
+        user_id: UUID,
+        notification: Notification,
+    ) -> None:
+        """Push notification via FCM/JPush for offline/bg users. Best-effort."""
+        try:
+            from app.services.device_service import DeviceService
+            from app.services.push_sender_service import PushSenderService
+            from app.services.jpush_sender_service import JPushSenderService
+
+            device_svc = DeviceService()
+            devices = await device_svc.get_user_devices(
+                self.db, str(user_id), active_only=True
+            )
+
+            for device in devices:
+                if not device.push_token:
+                    continue
+                try:
+                    if device.token_type == "fcm":
+                        push_svc = PushSenderService(self.db)
+                        await push_svc.send_to_user(
+                            user_id,
+                            title=notification.title,
+                            body=notification.content,
+                            data={
+                                "notification_id": str(notification.id),
+                                "type": notification.type,
+                            },
+                        )
+                    elif device.token_type == "jpush":
+                        jpush_svc = JPushSenderService(self.db)
+                        await jpush_svc.send_to_registration(
+                            registration_id=device.push_token,
+                            title=notification.title,
+                            body=notification.content,
+                            data={
+                                "notification_id": str(notification.id),
+                                "type": notification.type,
+                            },
+                        )
+                except Exception:
+                    logger.debug(
+                        "Device push failed for user={} device={}",
+                        user_id,
+                        device.device_id,
+                        exc_info=True,
+                    )
+        except Exception:
+            logger.debug(
+                "Device push skipped for user={}",
+                user_id,
+                exc_info=True,
+            )
 
     async def push_intervention_notification(
         self,

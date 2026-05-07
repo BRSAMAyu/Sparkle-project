@@ -47,7 +47,7 @@ void main() {
         home: Scaffold(
           body: PausedTaskBanner(
             task: _pausedTask(pausedReason: 'manual'),
-            onResume: () => resumeCount += 1,
+            onResume: () async { resumeCount += 1; return true; },
           ),
         ),
       ),

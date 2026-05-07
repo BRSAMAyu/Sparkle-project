@@ -29,7 +29,7 @@ func TestWriteGRPCError_InvalidArgument(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 	var resp map[string]interface{}
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
-	assert.Equal(t, "bad request", resp["error"])
+	assert.Equal(t, "bad_request", resp["error_code"])
 }
 
 func TestWriteGRPCError_NotFound(t *testing.T) {

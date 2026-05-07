@@ -77,6 +77,7 @@ class ApiEndpoints {
   static String taskFeedback(String id) => '/tasks/$id/feedback';
   static String taskFeedbackReflection(String feedbackId) =>
       '/tasks/feedback/$feedbackId/reflection';
+  static const String reflectionSummary = '/reflections/summary';
   static String nextActionSelection(String id) =>
       '/tasks/$id/next-action-selection';
   static const String taskSuggestions = '/tasks/suggestions';
@@ -326,6 +327,11 @@ class ApiEndpoints {
   static const String communityFeed = '/community/feed';
   static const String communityPosts = '/community/posts';
   static String communityPostLike(String id) => '/community/posts/$id/like';
+  static String communityPostDelete(String id) => '/community/posts/$id';
+  static String communityPostComments(String postId) =>
+      '/community/posts/$postId/comments';
+  static String communityPostComment(String postId, String commentId) =>
+      '/community/posts/$postId/comments/$commentId';
   static const String friends = '/community/friends';
   static const String friendRequest = '/community/friends/request';
   static const String friendRespond = '/community/friends/respond';

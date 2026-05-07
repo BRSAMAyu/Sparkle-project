@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from loguru import logger
 
+from app.core import logsafe
 from app.core.cache import cache_service
 
 
@@ -72,10 +73,10 @@ class TokenRevocationService:
             # Blacklist the refresh token
             success = await self.blacklist_token(refresh_token_jti)
             if success:
-                logger.info(f"Refresh token revoked for user {user_id}: {refresh_token_jti}")
+                logger.info(f"Refresh token revoked for user {logsafe.user_id_hash(user_id)}: {refresh_token_jti}")
             return success
         except Exception as e:
-            logger.error(f"Failed to revoke refresh token for user {user_id}: {e}")
+            logger.error(f"Failed to revoke refresh token for user {logsafe.user_id_hash(user_id)}: {e}")
             return False
 
     async def revoke_all_user_tokens(self, user_id: str) -> int:
@@ -92,10 +93,10 @@ class TokenRevocationService:
             # In production, you'd use Redis SCAN or similar to find all tokens for user
             # For now, we'll use a simple approach with known patterns
             # This would be enhanced in production with proper indexing
-            logger.info(f"Revoking all tokens for user {user_id}")
+            logger.info(f"Revoking all tokens for user {logsafe.user_id_hash(user_id)}")
             return 0
         except Exception as e:
-            logger.error(f"Failed to revoke all tokens for user {user_id}: {e}")
+            logger.error(f"Failed to revoke all tokens for user {logsafe.user_id_hash(user_id)}: {e}")
             return 0
 
 

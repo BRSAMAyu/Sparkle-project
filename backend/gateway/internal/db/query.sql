@@ -7,9 +7,10 @@ SELECT * FROM users WHERE apple_id = $1 LIMIT 1;
 -- name: CreateSocialUser :one
 INSERT INTO users (
     id, username, email, hashed_password, nickname,
-    registration_source, is_active, apple_id, updated_at, created_at
+    registration_source, is_active, apple_id, password_login_enabled,
+    updated_at, created_at
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, NOW(), NOW())
 RETURNING *;
 
 -- name: UpdateUserLastLogin :exec

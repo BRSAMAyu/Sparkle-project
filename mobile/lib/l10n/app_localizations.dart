@@ -6566,6 +6566,12 @@ abstract class AppLocalizations {
   /// **'角色设定 (Persona)'**
   String get smartPushPersonaSection;
 
+  /// No description provided for @smartPushToneDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'选择推送通知的语气和风格。'**
+  String get smartPushToneDesc;
+
   /// No description provided for @smartPushFrequencySection.
   ///
   /// In zh, this message translates to:
@@ -15068,6 +15074,30 @@ abstract class AppLocalizations {
   /// **'微信暂不可用'**
   String get deleteAccountWeChatUnavailable;
 
+  /// No description provided for @delAcctCannotUndo.
+  ///
+  /// In zh, this message translates to:
+  /// **'此操作不可撤回。'**
+  String get delAcctCannotUndo;
+
+  /// No description provided for @delAcctHighRisk.
+  ///
+  /// In zh, this message translates to:
+  /// **'高风险'**
+  String get delAcctHighRisk;
+
+  /// No description provided for @delAcctIrreversible.
+  ///
+  /// In zh, this message translates to:
+  /// **'不可逆'**
+  String get delAcctIrreversible;
+
+  /// No description provided for @delAcctConfirmHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'输入 \"DELETE\" 确认注销账户'**
+  String get delAcctConfirmHint;
+
   /// No description provided for @editProfileEmailUnverified.
   ///
   /// In zh, this message translates to:
@@ -18351,6 +18381,12 @@ abstract class AppLocalizations {
   /// **'这是您当前正在使用的设备'**
   String get sessionManagementCurrentHint;
 
+  /// No description provided for @sessionDeviceCount.
+  ///
+  /// In zh, this message translates to:
+  /// **'{count} 台设备'**
+  String sessionDeviceCount(int count);
+
   /// No description provided for @personaAdjustInferredPreference.
   ///
   /// In zh, this message translates to:
@@ -19653,6 +19689,12 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'导出我的数据'**
   String get profileExportData;
+
+  /// No description provided for @exportExporting.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出中…'**
+  String get exportExporting;
 
   /// No description provided for @profileExportPreparing.
   ///
@@ -37681,6 +37723,12 @@ abstract class AppLocalizations {
   /// **'保存中...'**
   String get chatFileSaving;
 
+  /// No description provided for @chatFileView.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看'**
+  String get chatFileView;
+
   /// No description provided for @chatFocusOnGoal.
   ///
   /// In zh, this message translates to:
@@ -53094,6 +53142,192 @@ abstract class AppLocalizations {
   /// **'你的数据与隐私'**
   String get dataUsagePrivacyTitle;
 
+  /// No description provided for @dataUsageKnowsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle对你的了解'**
+  String get dataUsageKnowsTitle;
+
+  /// No description provided for @dataUsageProfileCardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'个人资料与目标'**
+  String get dataUsageProfileCardTitle;
+
+  /// No description provided for @dataUsageProfileCardDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的姓名、目标、计划和任务历史用于个性化学习路径。'**
+  String get dataUsageProfileCardDesc;
+
+  /// No description provided for @dataUsageAiCardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI理解'**
+  String get dataUsageAiCardTitle;
+
+  /// No description provided for @dataUsageAiCardDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知模式、学习风格和掌握度评估帮助Sparkle适应你的需求。'**
+  String get dataUsageAiCardDesc;
+
+  /// No description provided for @dataUsageMemoryCardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'记忆与历史'**
+  String get dataUsageMemoryCardTitle;
+
+  /// No description provided for @dataUsageMemoryCardDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊天记录和成长编年史条目被存储以保持对话连续性。'**
+  String get dataUsageMemoryCardDesc;
+
+  /// No description provided for @dataUsageSharedTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'共享的内容'**
+  String get dataUsageSharedTitle;
+
+  /// No description provided for @dataUsageCommunityCardTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'社区'**
+  String get dataUsageCommunityCardTitle;
+
+  /// No description provided for @dataUsageCommunityCardDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'匿名错误模式和资源质量评分被共享以帮助同伴学习。'**
+  String get dataUsageCommunityCardDesc;
+
+  /// No description provided for @dataUsageControlsTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的控制权'**
+  String get dataUsageControlsTitle;
+
+  /// No description provided for @dataUsageHideChronicle.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏编年史条目'**
+  String get dataUsageHideChronicle;
+
+  /// No description provided for @dataUsageHideChronicleDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏的条目对AI不可见，但永远不会被删除'**
+  String get dataUsageHideChronicleDesc;
+
+  /// No description provided for @dataUsageDeleteData.
+  ///
+  /// In zh, this message translates to:
+  /// **'请求删除数据'**
+  String get dataUsageDeleteData;
+
+  /// No description provided for @dataUsageDeleteDataDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'你的所有数据可以应要求永久删除'**
+  String get dataUsageDeleteDataDesc;
+
+  /// No description provided for @dataUsageExportData.
+  ///
+  /// In zh, this message translates to:
+  /// **'导出你的数据'**
+  String get dataUsageExportData;
+
+  /// No description provided for @dataUsageExportDataDesc.
+  ///
+  /// In zh, this message translates to:
+  /// **'下载Sparkle存储的所有内容的完整副本'**
+  String get dataUsageExportDataDesc;
+
+  /// No description provided for @dataUsageFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'Sparkle绝不出售你的数据。所有个性化仅为你的利益服务。'**
+  String get dataUsageFooter;
+
+  /// No description provided for @dataUsageTagGoals.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标'**
+  String get dataUsageTagGoals;
+
+  /// No description provided for @dataUsageTagPlans.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划'**
+  String get dataUsageTagPlans;
+
+  /// No description provided for @dataUsageTagTasks.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务'**
+  String get dataUsageTagTasks;
+
+  /// No description provided for @dataUsageTagAchievements.
+  ///
+  /// In zh, this message translates to:
+  /// **'成就'**
+  String get dataUsageTagAchievements;
+
+  /// No description provided for @dataUsageTagCognitivePatterns.
+  ///
+  /// In zh, this message translates to:
+  /// **'认知模式'**
+  String get dataUsageTagCognitivePatterns;
+
+  /// No description provided for @dataUsageTagMasteryEstimates.
+  ///
+  /// In zh, this message translates to:
+  /// **'掌握度评估'**
+  String get dataUsageTagMasteryEstimates;
+
+  /// No description provided for @dataUsageTagLearningStyle.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习风格'**
+  String get dataUsageTagLearningStyle;
+
+  /// No description provided for @dataUsageTagErrorPatterns.
+  ///
+  /// In zh, this message translates to:
+  /// **'错误模式'**
+  String get dataUsageTagErrorPatterns;
+
+  /// No description provided for @dataUsageTagChatMessages.
+  ///
+  /// In zh, this message translates to:
+  /// **'聊天记录'**
+  String get dataUsageTagChatMessages;
+
+  /// No description provided for @dataUsageTagGrowthChronicle.
+  ///
+  /// In zh, this message translates to:
+  /// **'成长编年史'**
+  String get dataUsageTagGrowthChronicle;
+
+  /// No description provided for @dataUsageTagSpineTraces.
+  ///
+  /// In zh, this message translates to:
+  /// **'学习轨迹'**
+  String get dataUsageTagSpineTraces;
+
+  /// No description provided for @dataUsageTagAnonErrors.
+  ///
+  /// In zh, this message translates to:
+  /// **'匿名错误模式'**
+  String get dataUsageTagAnonErrors;
+
+  /// No description provided for @dataUsageTagResourceRatings.
+  ///
+  /// In zh, this message translates to:
+  /// **'资源评分'**
+  String get dataUsageTagResourceRatings;
+
   /// No description provided for @growthPlansTitle.
   ///
   /// In zh, this message translates to:
@@ -55206,6 +55440,48 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'{streak}天连续 · 本周{sessions}次会话'**
   String envelopeEngagementSummary(int streak, int sessions);
+
+  /// No description provided for @taskFeedbackStuckLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个任务中你卡在哪里了？'**
+  String get taskFeedbackStuckLabel;
+
+  /// No description provided for @taskFeedbackStuckHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：公式会背，但不知道什么时候套用'**
+  String get taskFeedbackStuckHint;
+
+  /// No description provided for @taskFeedbackProgressLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'哪个方法让你觉得有进展？'**
+  String get taskFeedbackProgressLabel;
+
+  /// No description provided for @taskFeedbackProgressHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：先画状态图，再列方程'**
+  String get taskFeedbackProgressHint;
+
+  /// No description provided for @taskFeedbackChangeLabel.
+  ///
+  /// In zh, this message translates to:
+  /// **'下次会换什么做法？'**
+  String get taskFeedbackChangeLabel;
+
+  /// No description provided for @taskFeedbackChangeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'例如：先做 1 道代表题，再进入整组练习'**
+  String get taskFeedbackChangeHint;
+
+  /// No description provided for @taskFeedbackAiSaved.
+  ///
+  /// In zh, this message translates to:
+  /// **'AI 已记下这条反思'**
+  String get taskFeedbackAiSaved;
 }
 
 class _AppLocalizationsDelegate

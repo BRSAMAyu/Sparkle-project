@@ -167,18 +167,21 @@ class AppMaterials {
     final theme = context.sparkleTheme;
     final colors = theme.colors;
     final isDark = colors.brightness == Brightness.dark;
+    final rimColor = isDark
+        ? colors.brandPrimary.withValues(alpha: 0.15)
+        : Colors.white.withValues(alpha: 0.60);
 
     if (!isDark) {
       // Fallback for light mode if obsidian is requested (usually mapped to ceramic or high contrast)
       return neoGlass(context).copyWith(
         backgroundColor: colors.brandPrimary.withValues(alpha: 0.1),
-        rimLightColor: colors.brandPrimary.withValues(alpha: 0.5),
+        rimLightColor: rimColor,
       );
     }
 
     return SparkleMaterial(
       backgroundColor: DS.neutral900.withValues(alpha: 0.6),
-      rimLightColor: colors.brandPrimary.withValues(alpha: 0.4),
+      rimLightColor: rimColor,
       glowColor: colors.brandPrimary.withValues(alpha: 0.1),
       shadows: theme.shadows.large,
       borderWidth: 1.0,

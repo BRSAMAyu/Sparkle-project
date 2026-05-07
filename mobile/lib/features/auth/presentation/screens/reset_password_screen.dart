@@ -117,8 +117,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                       labelText: context.l10n.authNewPassword,
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: SparkleIconButton(
-                        variant: ButtonVariant.ghost,
+                      suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
                               ? Icons.visibility_off_outlined
@@ -152,8 +151,7 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
                       labelText: context.l10n.authConfirmNewPassword,
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock_person_outlined),
-                      suffixIcon: SparkleIconButton(
-                        variant: ButtonVariant.ghost,
+                      suffixIcon: IconButton(
                         icon: Icon(
                           _obscureConfirmPassword
                               ? Icons.visibility_off_outlined

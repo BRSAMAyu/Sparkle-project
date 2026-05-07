@@ -19,6 +19,8 @@ class GrowthDashboardNotifier extends AsyncNotifier<GrowthDashboard> {
       return;
     }
     state = AsyncData(current.updateEntryStatus(entryId, status));
+    // Persist to backend (fire-and-forget; refresh on next load if it fails)
+    ref.read(growthDashboardRepositoryProvider).updateChronicleEntryStatus(entryId, status);
   }
 
   Future<void> refresh() async {

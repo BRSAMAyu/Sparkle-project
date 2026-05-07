@@ -601,33 +601,25 @@ class AchievementEventConsumer:
                 "你已经完成 2 次冲刺备考了",
                 f"{common_tail} 这一段冲刺节奏，已经被 Sparkle 认真记住。",
             ),
-            "first_task": (
+            "tasks_1": (
                 "你完成了第一个任务",
                 "迈出第一步是最重要的。你的成长旅程已经开始了。",
             ),
-            "week_streak_7": (
+            "streak_7": (
                 "你已经坚持 7 天连续学习",
                 f"{common_tail} 一周的坚持是一个很好的开始。",
             ),
-            "galaxy_explorer": (
-                "你已经开始探索知识星图",
-                f"{common_tail} 继续探索，你会发现更多有趣的知识。",
+            "nodes_100": (
+                "你已经解锁 100 个知识节点了",
+                f"{common_tail} 你的知识星图正在快速扩展。继续探索，更多发现等着你。",
             ),
-            "focus_master": (
-                "你完成了一次深度专注",
-                "专注是高效学习的基石。继续保持。",
-            ),
-            "reflection_starter": (
-                "你开始了第一次反思",
-                "反思让你从经验中提炼智慧。Sparkle 会帮你记住这些洞察。",
-            ),
-            "plan_creator": (
+            "plan_first": (
                 "你创建了第一个学习计划",
                 "有计划的学习比盲目刷题效率高很多。你的计划已经被认真记录。",
             ),
-            "community_joined": (
-                "你加入了学习社区",
-                "和伙伴一起学习，你会走得更远。你的社区之旅已经开始了。",
+            "community_first_share": (
+                "你第一次把成果分享给了社区",
+                "分享让知识流动起来。你的火花已经开始照亮别人了。",
             ),
         }
         return milestone_copy.get(
@@ -670,13 +662,11 @@ class AchievementEventConsumer:
             "30_day_learner": 30,
             "knowledge_explorer_50": max(50, int(stats["mastered_nodes"])),
             "sprint_veteran": max(2, int(stats["completed_sprints"])),
-            "first_task": 1,
-            "week_streak_7": 7,
-            "galaxy_explorer": max(1, int(stats["mastered_nodes"])),
-            "focus_master": 1,
-            "reflection_starter": 1,
-            "plan_creator": 1,
-            "community_joined": 1,
+            "tasks_1": 1,
+            "streak_7": 7,
+            "nodes_100": 100,
+            "plan_first": 1,
+            "community_first_share": 1,
         }
         return celebration_map.get(achievement_id, max(1, int(stats["study_days"])))
 

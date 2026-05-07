@@ -147,6 +147,7 @@ class GoalDetailSnapshot {
     required this.progress,
     required this.criteria,
     required this.graphNodes,
+    this.goalId,
     this.nextTaskTitle,
     this.whyThisMatters,
   });
@@ -159,6 +160,13 @@ class GoalDetailSnapshot {
     final graph = _map(json['goal_graph']);
     return GoalDetailSnapshot(
       active: _bool(json['active']),
+      goalId: _nullableString(
+        goal?['id'] ??
+            goal?['goal_id'] ??
+            goal?['uuid'] ??
+            json['goal_id'] ??
+            json['id'],
+      ),
       title: _string(
         goal?['title'] ?? plan?['name'],
         fallback: 'Current goal',
@@ -179,6 +187,7 @@ class GoalDetailSnapshot {
   }
 
   final bool active;
+  final String? goalId;
   final String title;
   final double progress;
   final List<String> criteria;

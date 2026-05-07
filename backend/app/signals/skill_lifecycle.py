@@ -180,7 +180,7 @@ class SkillLifecycleManager:
             issues.append("sample_size_below_effective_count")
         if self._avg_confidence(skill) < 0.7:
             issues.append("low_confidence")
-        if skill.scope != "personal" and not self._is_shareable(skill):
+        if not skill.scope.startswith("personal_") and not self._is_shareable(skill):
             issues.append("non_shareable_non_personal_skill")
 
         return {"valid": not issues, "issues": issues}

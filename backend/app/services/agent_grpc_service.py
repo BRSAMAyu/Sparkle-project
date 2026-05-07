@@ -929,7 +929,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
 
             # Import review history service (Phase 2c)
             try:
-                from app.services.review_history_service import FeedbackType, get_review_history_service
+                from app.services.review_history_service import ContentReviewFeedbackType, get_review_history_service
             except ImportError:
                 logger.warning("[AgentService] Review history service not available")
                 # Return success even if service is unavailable (don't block user)
@@ -945,7 +945,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
                 feedback_entry = await history_service.record_user_feedback(
                     review_id=request.review_id,
                     user_id=user_id,
-                    feedback_type=FeedbackType(feedback_type_str),
+                    feedback_type=ContentReviewFeedbackType(feedback_type_str),
                     rating=request.rating if request.rating > 0 else None,
                     comment=request.comment if request.comment else None,
                     issues_reported=list(request.issues_reported) if request.issues_reported else None,

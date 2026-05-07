@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:sparkle/core/services/i18n_service.dart';
+
 // ---------------------------------------------------------------------------
 // Event taxonomy
 // ---------------------------------------------------------------------------
@@ -114,14 +116,17 @@ enum AmbientScene {
 }
 
 extension AmbientSceneLabel on AmbientScene {
-  String get label => switch (this) {
-        AmbientScene.none => '无背景音',
-        AmbientScene.rain => '雨声',
-        AmbientScene.ocean => '海浪',
-        AmbientScene.whiteNoise => '白噪音',
-        AmbientScene.cafe => '咖啡馆',
-        AmbientScene.piano => '轻钢琴',
-      };
+  String get label {
+    final zh = I18nService.instance.isChinese;
+    return switch (this) {
+      AmbientScene.none => zh ? '无背景音' : 'No Background',
+      AmbientScene.rain => zh ? '雨声' : 'Rain',
+      AmbientScene.ocean => zh ? '海浪' : 'Ocean Waves',
+      AmbientScene.whiteNoise => zh ? '白噪音' : 'White Noise',
+      AmbientScene.cafe => zh ? '咖啡馆' : 'Cafe',
+      AmbientScene.piano => zh ? '轻钢琴' : 'Soft Piano',
+    };
+  }
 
   String? get assetPath => switch (this) {
         AmbientScene.none => null,

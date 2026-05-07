@@ -140,18 +140,18 @@ def _current_session_id(request: Request) -> str | None:
     return str(session_id) if session_id else None
 
 
-async def _require_social_reauth(current_user: User, provider: str, provider_token: str) -> None:
+async def _require_social_reauth(current_user: User, provider: str, provider_token: str, request: Request | None = None) -> None:
     from app.api.v1.auth import _verify_social_identity
     from app.schemas.user import SocialLoginRequest
 
-    social_id, _ = await _verify_social_identity(SocialLoginRequest(provider=provider, token=provider_token))
+    social_id, _ = await _verify_social_identity(SocialLoginRequest(provider=provider, token=provider_token), request)
     expected = {
         "google": current_user.google_id,
         "apple": current_user.apple_id,
         "wechat": current_user.wechat_unionid,
     }.get(provider)
     if not expected or expected != social_id:
-        raise HTTPException(status_code=403, detail="社交账号验证失败")
+        raise HTTPException(status_code=403, detail="社交账号验证失败" if _zh(request) else "Social account verification failed.")
 
 
 @router.get("/me", response_model=UserProfile)
@@ -363,6 +363,7 @@ async def link_social(
 
     social_id, user_info = await _verify_social_identity(
         SocialLoginRequest(provider=payload.provider, token=payload.token, openid=payload.openid),
+        request,
     )
 
     if payload.provider == "google":
@@ -554,7 +555,7 @@ async def delete_account(
         if not verify_password(payload.password, current_user.hashed_password):
             raise HTTPException(status_code=403, detail="密码错误" if _zh(request) else "Incorrect password.")
     elif payload.provider and payload.provider_token:
-        await _require_social_reauth(current_user, payload.provider, payload.provider_token)
+        await _require_social_reauth(current_user, payload.provider, payload.provider_token, request)
     else:
         raise HTTPException(status_code=400, detail="请使用密码或社交账号重新验证身份" if _zh(request) else "Please re-authenticate with your password or social account.")
 

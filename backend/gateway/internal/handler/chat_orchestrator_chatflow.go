@@ -765,13 +765,13 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			if err := r.SendChatResponse(resp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
 				respSpan.End()
-				return true
+				return false
 			}
 		case *protobufResponder:
 			if err := r.SendChatResponse(resp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
 				respSpan.End()
-				return true
+				return false
 			}
 		case *wsSafeWriter:
 			// Convert protobuf response to JSON-friendly map
@@ -780,7 +780,7 @@ func (h *ChatOrchestrator) handleChatMessage(ctx context.Context, responder inte
 			if err := writeLegacyJSON(r, jsonResp); err != nil {
 				log.Printf("Failed to write to WebSocket: %v", err)
 				respSpan.End()
-				return true
+				return false
 			}
 		}
 		respSpan.End()

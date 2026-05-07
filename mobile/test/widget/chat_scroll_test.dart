@@ -43,10 +43,15 @@ class _QuietDashboardRepository extends DashboardRepository {
 }
 
 class _QuietDashboardNotifier extends DashboardNotifier {
-  _QuietDashboardNotifier() : super(_QuietDashboardRepository());
+  _QuietDashboardNotifier() : super(_QuietDashboardRepository(), _FakeRef());
 
   @override
   Future<void> refresh() async {}
+}
+
+class _FakeRef implements Ref {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _QuietPlanRepository extends PlanRepository {

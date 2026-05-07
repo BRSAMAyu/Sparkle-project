@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/openclaw_automation_service.dart';
 import 'package:sparkle/core/services/openclaw_connection_service.dart';
@@ -182,18 +183,17 @@ class _OpenClawHubScreenState extends ConsumerState<OpenClawHubScreen> {
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      isError
-          ? SparkleSnackBar.error(message)
-          : SparkleSnackBar.success(message),
-    );
+    if (isError) {
+      AppFeedback.error(context, message);
+    } else {
+      AppFeedback.success(context, message);
+    }
   }
 
   Future<void> _openDiagnostics(OpenClawConnectionService service) async {
-    await showModalBottomSheet<void>(
+    await showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (_) => OpenClawConnectionDiagnosticsSheet(service: service),
     );
   }

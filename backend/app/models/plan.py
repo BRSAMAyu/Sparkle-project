@@ -77,6 +77,7 @@ class Plan(BaseModel):
 
     # 关联关系
     user_id = Column(GUID(), ForeignKey("users.id"), nullable=False, index=True)
+    goal_id = Column(GUID(), ForeignKey("goals.id"), nullable=True, index=True)
 
     # 计划基本信息
     name = Column(String(255), nullable=False)
@@ -121,6 +122,7 @@ class Plan(BaseModel):
 
     # 关系定义
     user = relationship("User", back_populates="plans")
+    goal = relationship("Goal", foreign_keys=[goal_id])
     tasks = relationship("Task", back_populates="plan", cascade="all, delete-orphan", lazy="dynamic")
 
     def __repr__(self):
@@ -137,3 +139,4 @@ Index("idx_plans_is_primary", Plan.is_primary)
 Index("idx_plans_stage", Plan.plan_stage)
 # 复合索引：用户活跃计划查询优化
 Index("idx_plans_user_active", Plan.user_id, Plan.is_active)
+Index("idx_plans_goal_id", Plan.goal_id)

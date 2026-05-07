@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/cognitive/presentation/widgets/strategy_migration_wizard.dart';
@@ -42,6 +43,19 @@ class GoalDetailPage extends ConsumerWidget {
         ),
         title: Text(l10n.goalDetailTitle),
         actions: [
+          Semantics(
+            button: true,
+            label: l10n.goalDetailEdit,
+            child: IconButton(
+              icon: const Icon(Icons.edit_rounded),
+              onPressed: () {
+                final data = state.valueOrNull;
+                if (data == null) return;
+                _showEditDialog(
+                    context, ref, goalId, data.goal.title, data.goal.goalType);
+              },
+            ),
+          ),
           Semantics(
             button: true,
             label: l10n.goalDetailRefresh,
@@ -220,12 +234,7 @@ class _GoalHeader extends StatelessWidget {
                         ),
                         semanticsLabel: l10n.goalDetailMastery,
                       ),
-                      _InfoChip(
-                        icon: Icons.event_outlined,
-                        label:
-                            data.goal.targetDate ?? l10n.goalDetailNoTargetDate,
-                        semanticsLabel: l10n.goalDetailTargetDate,
-                      ),
+                      _buildTargetDateChip(context, data.goal.targetDate, l10n),
                       _InfoChip(
                         icon: Icons.priority_high_rounded,
                         label: data.goal.priority,
@@ -238,6 +247,50 @@ class _GoalHeader extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  static Widget _buildTargetDateChip(
+    BuildContext context,
+    String? targetDate,
+    dynamic l10n,
+  ) {
+    final isZh = Localizations.localeOf(context).languageCode == 'zh';
+    if (targetDate == null) {
+      return _InfoChip(
+        icon: Icons.event_outlined,
+        label: l10n.goalDetailNoTargetDate as String,
+        semanticsLabel: l10n.goalDetailTargetDate as String,
+      );
+    }
+
+    final parsed = DateTime.tryParse(targetDate);
+    final isOverdue =
+        parsed != null && parsed.isBefore(DateTime.now().add(const Duration(days: 1)).copyWith(hour: 0, minute: 0, second: 0));
+
+    if (!isOverdue) {
+      return _InfoChip(
+        icon: Icons.event_outlined,
+        label: targetDate,
+        semanticsLabel: l10n.goalDetailTargetDate as String,
+      );
+    }
+
+    // Overdue: show warning chip
+    final overdueLabel = isZh ? '已过期' : 'Overdue';
+    final amber = const Color(0xFFE6A817);
+    return Semantics(
+      label: '${l10n.goalDetailTargetDate}: $targetDate, $overdueLabel',
+      child: Chip(
+        avatar: Icon(Icons.warning_amber_rounded, size: 18, color: amber),
+        label: Text('$targetDate · $overdueLabel'),
+        backgroundColor: amber.withValues(alpha: 0.12),
+        side: BorderSide(color: amber.withValues(alpha: 0.5)),
+        labelStyle: Theme.of(context)
+            .textTheme
+            .labelMedium
+            ?.copyWith(color: amber, fontWeight: FontWeight.w700),
       ),
     );
   }
@@ -760,4 +813,103 @@ class _GoalDetailSkeleton extends StatelessWidget {
           ],
         ),
       );
+}
+
+Future<void> _showEditDialog(
+  BuildContext context,
+  WidgetRef ref,
+  String goalId,
+  String currentTitle,
+  String currentDescription, // reserved type string for future use
+) async {
+  final l10n = context.l10n;
+  final titleController = TextEditingController(text: currentTitle);
+  final descriptionController = TextEditingController(text: currentDescription);
+
+  final result = await showModalBottomSheet<Map<String, String>>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        top: 20,
+        bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: DS.textSecondary.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            l10n.goalDetailEdit,
+            style: Theme.of(ctx)
+                .textTheme
+                .titleLarge
+                ?.copyWith(fontWeight: FontWeight.w700, color: DS.textPrimary),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: titleController,
+            decoration: InputDecoration(
+              labelText: l10n.goalDetailEditTitle,
+              hintText: l10n.goalDetailEditHintTitle,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: descriptionController,
+            decoration: InputDecoration(
+              labelText: l10n.goalDetailEditDescription,
+              hintText: l10n.goalDetailEditHintDescription,
+            ),
+            maxLines: 3,
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () => Navigator.of(ctx).pop({
+                'title': titleController.text.trim(),
+                'description': descriptionController.text.trim(),
+              }),
+              child: Text(l10n.goalDetailEditSave),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (result == null || !context.mounted) return;
+
+  final newTitle = result['title'] ?? '';
+  final newDescription = result['description'] ?? '';
+  if (newTitle.isEmpty) return;
+
+  try {
+    await ref.read(goalDetailProvider(goalId).notifier).updateGoal(
+          title: newTitle,
+          description: newDescription.isNotEmpty ? newDescription : null,
+        );
+    if (!context.mounted) return;
+    AppFeedback.success(context, l10n.goalDetailEditSuccess);
+  } catch (e) {
+    if (!context.mounted) return;
+    AppFeedback.error(context, l10n.goalDetailEditFailed);
+  }
 }

@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/breakpoints.dart';
 
-/// 间距系统 - 基于8pt网格和黄金比例
+/// Legacy spacing system.
+///
+/// Prefer [DS] and [SparkleSpacing] for new code. The canonical quick scale is:
+/// xs=4, sm=8, md=16, lg=24, xl=32, xxl=48, xxxl=64.
+/// When a 12pt gap is needed, compose `DS.sm + DS.xs`.
+@Deprecated('Use DS/SparkleSpacing. 12pt should be composed from sm + xs.')
 @immutable
 class SpacingSystem {
   const SpacingSystem._();
@@ -9,15 +14,15 @@ class SpacingSystem {
   // 基础网格 (8pt)
   static const double grid = 8.0;
 
-  // 标准间距 (8pt网格)
+  // 标准间距 (8pt网格，aligned with DS)
   static const double xs = grid * 0.5; // 4pt
   static const double sm = grid * 1; // 8pt
-  static const double md = grid * 1.5; // 12pt
-  static const double lg = grid * 2; // 16pt
-  static const double xl = grid * 3; // 24pt
-  static const double xxl = grid * 4; // 32pt
-  static const double xxxl = grid * 6; // 48pt
-  static const double huge = grid * 8; // 64pt
+  static const double md = grid * 2; // 16pt
+  static const double lg = grid * 3; // 24pt
+  static const double xl = grid * 4; // 32pt
+  static const double xxl = grid * 6; // 48pt
+  static const double xxxl = grid * 8; // 64pt
+  static const double huge = grid * 10; // 80pt
 
   // 边距
   static const EdgeInsets edgeXs = EdgeInsets.all(xs);

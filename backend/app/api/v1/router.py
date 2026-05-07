@@ -87,10 +87,12 @@ from app.api.v1 import (
     profile_transparency,
     push_interaction,
     recommendations,
+    reflections,
     release_approvals,
     research,
     research_consent,
     safe_experiments,
+    scenario_packs,
     seed_libraries,
     shop,
     signals,
@@ -228,6 +230,7 @@ api_router.include_router(multi_intent.router, prefix="/multi-intent", tags=["mu
 api_router.include_router(prediction.router, prefix="/prediction", tags=["prediction"])
 api_router.include_router(predictive_analytics.router, prefix="/predictive", tags=["predictive"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
+api_router.include_router(reflections.router, prefix="/reflections", tags=["reflections"])
 api_router.include_router(release_approvals.router)
 api_router.include_router(leaderboards.router, prefix="/leaderboards", tags=["leaderboards"])
 api_router.include_router(profile_transparency.router)
@@ -251,6 +254,7 @@ api_router.include_router(decay_timemachine.router, tags=["Decay TimeMachine"])
 api_router.include_router(multi_agent.router, tags=["Multi-Agent"])
 # Calendar Events
 api_router.include_router(calendar.router, prefix="/calendar", tags=["calendar"])
+api_router.include_router(scenario_packs.router, tags=["scenario-packs"])
 api_router.include_router(accountability.router, prefix="/accountability", tags=["accountability"])
 api_router.include_router(admin_dashboard.router)
 api_router.include_router(aurora_status.router)

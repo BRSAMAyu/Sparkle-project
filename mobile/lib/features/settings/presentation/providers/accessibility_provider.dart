@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/user/data/repositories/user_repository.dart';
 
 const String kAccessibilitySettingsStorageKey =
@@ -236,6 +237,15 @@ class AccessibilitySettingsNotifier
       if (themeManager.highContrast != highContrast) {
         unawaited(themeManager.toggleHighContrast(highContrast));
       }
+    }
+    if (colorBlindFriendly != null) {
+      final themeManager = _ref.read(themeManagerProvider);
+      if (themeManager.colorBlindFriendly != colorBlindFriendly) {
+        unawaited(themeManager.setColorBlindMode(colorBlindFriendly));
+      }
+    }
+    if (hapticFeedback != null) {
+      unawaited(SensoryFeedbackService.setHapticEnabled(hapticFeedback));
     }
     return update(next);
   }

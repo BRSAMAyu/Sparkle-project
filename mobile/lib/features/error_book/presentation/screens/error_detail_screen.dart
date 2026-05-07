@@ -370,8 +370,8 @@ class ErrorDetailScreen extends ConsumerWidget {
       ),
       child: Text(
         title,
-        style:
-            theme.textTheme.titleMedium?.copyWith(fontWeight: DS.fontWeightBold),
+        style: theme.textTheme.titleMedium
+            ?.copyWith(fontWeight: DS.fontWeightBold),
       ),
     );
   }
@@ -933,12 +933,7 @@ class ErrorDetailScreen extends ConsumerWidget {
     ErrorRecord error,
   ) async {
     unawaited(ref.read(errorOperationsProvider.notifier).reAnalyze(error.id));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SparkleSnackBar.info(
-        context.l10n.errorBookReanalyzing,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    AppFeedback.info(context, context.l10n.errorBookReanalyzing);
   }
 
   Future<void> _confirmDelete(
@@ -973,16 +968,13 @@ class ErrorDetailScreen extends ConsumerWidget {
 
         if (context.mounted) {
           Navigator.of(context).pop(true); // 返回列表页
-          ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.success(context.l10n.errorBookDeleteSuccess),
-          );
+          AppFeedback.success(context, context.l10n.errorBookDeleteSuccess);
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.error(
-              context.l10n.errorBookDeleteFailedMessage(e.toString()),
-            ),
+          AppFeedback.error(
+            context,
+            context.l10n.errorBookDeleteFailedMessage(e.toString()),
           );
         }
       }

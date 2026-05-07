@@ -4,6 +4,8 @@ version: v2
 modules:
   - path: proto
     name: buf.build/sparkle/agent
+    excludes:
+      - community_service.proto
 deps:
   - buf.build/googleapis/googleapis
 lint:

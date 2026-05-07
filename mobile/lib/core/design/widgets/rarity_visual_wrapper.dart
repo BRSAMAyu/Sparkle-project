@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/animation_lifecycle_mixin.dart';
 import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
@@ -328,6 +329,7 @@ class _RarityVisualWrapperState extends State<RarityVisualWrapper>
 
   @override
   Widget build(BuildContext context) {
+    if (context.emotionLowStimulus) return widget.child;
     if (_reduceMotion) {
       return _buildStaticVersion(context);
     }

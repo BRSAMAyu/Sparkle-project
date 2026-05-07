@@ -225,7 +225,7 @@ class _FileMessageBubbleWithThumbnailState
             children: [
               Expanded(
                 child: _ActionPill(
-                  label: I18nService.instance.isChinese ? '查看' : 'View',
+                  label: context.l10n.chatFileView,
                   icon: Icons.open_in_new_rounded,
                   onTap: _openFile,
                   accentColor: accentColor,

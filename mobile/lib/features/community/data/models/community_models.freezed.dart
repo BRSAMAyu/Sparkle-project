@@ -216,6 +216,8 @@ mixin _$Post {
   String? get topic => throw _privateConstructorUsedError;
   @JsonKey(name: 'like_count')
   int get likeCount => throw _privateConstructorUsedError;
+  @JsonKey(name: 'is_liked')
+  bool get isLiked => throw _privateConstructorUsedError;
   bool get isOptimistic => throw _privateConstructorUsedError;
 
   Map<String, dynamic> toJson() => throw _privateConstructorUsedError;
@@ -237,6 +239,7 @@ abstract class $PostCopyWith<$Res> {
       @JsonKey(name: 'image_urls') List<String>? imageUrls,
       String? topic,
       @JsonKey(name: 'like_count') int likeCount,
+      @JsonKey(name: 'is_liked') bool isLiked,
       bool isOptimistic});
 
   $PostUserCopyWith<$Res> get user;
@@ -263,6 +266,7 @@ class _$PostCopyWithImpl<$Res, $Val extends Post>
     Object? imageUrls = freezed,
     Object? topic = freezed,
     Object? likeCount = null,
+    Object? isLiked = null,
     Object? isOptimistic = null,
   }) {
     return _then(_value.copyWith(
@@ -298,6 +302,10 @@ class _$PostCopyWithImpl<$Res, $Val extends Post>
           ? _value.likeCount
           : likeCount // ignore: cast_nullable_to_non_nullable
               as int,
+      isLiked: null == isLiked
+          ? _value.isLiked
+          : isLiked // ignore: cast_nullable_to_non_nullable
+              as bool,
       isOptimistic: null == isOptimistic
           ? _value.isOptimistic
           : isOptimistic // ignore: cast_nullable_to_non_nullable
@@ -330,6 +338,7 @@ abstract class _$$PostImplCopyWith<$Res> implements $PostCopyWith<$Res> {
       @JsonKey(name: 'image_urls') List<String>? imageUrls,
       String? topic,
       @JsonKey(name: 'like_count') int likeCount,
+      @JsonKey(name: 'is_liked') bool isLiked,
       bool isOptimistic});
 
   @override
@@ -354,6 +363,7 @@ class __$$PostImplCopyWithImpl<$Res>
     Object? imageUrls = freezed,
     Object? topic = freezed,
     Object? likeCount = null,
+    Object? isLiked = null,
     Object? isOptimistic = null,
   }) {
     return _then(_$PostImpl(
@@ -389,6 +399,10 @@ class __$$PostImplCopyWithImpl<$Res>
           ? _value.likeCount
           : likeCount // ignore: cast_nullable_to_non_nullable
               as int,
+      isLiked: null == isLiked
+          ? _value.isLiked
+          : isLiked // ignore: cast_nullable_to_non_nullable
+              as bool,
       isOptimistic: null == isOptimistic
           ? _value.isOptimistic
           : isOptimistic // ignore: cast_nullable_to_non_nullable
@@ -409,6 +423,7 @@ class _$PostImpl implements _Post {
       @JsonKey(name: 'image_urls') final List<String>? imageUrls,
       this.topic,
       @JsonKey(name: 'like_count') this.likeCount = 0,
+      @JsonKey(name: 'is_liked') this.isLiked = false,
       this.isOptimistic = false})
       : _imageUrls = imageUrls;
 
@@ -444,12 +459,15 @@ class _$PostImpl implements _Post {
   @JsonKey(name: 'like_count')
   final int likeCount;
   @override
+  @JsonKey(name: 'is_liked')
+  final bool isLiked;
+  @override
   @JsonKey()
   final bool isOptimistic;
 
   @override
   String toString() {
-    return 'Post(id: $id, userId: $userId, content: $content, createdAt: $createdAt, user: $user, imageUrls: $imageUrls, topic: $topic, likeCount: $likeCount, isOptimistic: $isOptimistic)';
+    return 'Post(id: $id, userId: $userId, content: $content, createdAt: $createdAt, user: $user, imageUrls: $imageUrls, topic: $topic, likeCount: $likeCount, isLiked: $isLiked, isOptimistic: $isOptimistic)';
   }
 
   @override
@@ -468,6 +486,7 @@ class _$PostImpl implements _Post {
             (identical(other.topic, topic) || other.topic == topic) &&
             (identical(other.likeCount, likeCount) ||
                 other.likeCount == likeCount) &&
+            (identical(other.isLiked, isLiked) || other.isLiked == isLiked) &&
             (identical(other.isOptimistic, isOptimistic) ||
                 other.isOptimistic == isOptimistic));
   }
@@ -484,6 +503,7 @@ class _$PostImpl implements _Post {
       const DeepCollectionEquality().hash(_imageUrls),
       topic,
       likeCount,
+      isLiked,
       isOptimistic);
 
   @JsonKey(ignore: true)
@@ -510,6 +530,7 @@ abstract class _Post implements Post {
       @JsonKey(name: 'image_urls') final List<String>? imageUrls,
       final String? topic,
       @JsonKey(name: 'like_count') final int likeCount,
+      @JsonKey(name: 'is_liked') final bool isLiked,
       final bool isOptimistic}) = _$PostImpl;
 
   factory _Post.fromJson(Map<String, dynamic> json) = _$PostImpl.fromJson;
@@ -534,6 +555,9 @@ abstract class _Post implements Post {
   @override
   @JsonKey(name: 'like_count')
   int get likeCount;
+  @override
+  @JsonKey(name: 'is_liked')
+  bool get isLiked;
   @override
   bool get isOptimistic;
   @override

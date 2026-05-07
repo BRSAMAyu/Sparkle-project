@@ -1,14 +1,18 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
+import 'package:sparkle/features/file/data/services/file_upload_service.dart';
 
 class CreatePostScreen extends ConsumerStatefulWidget {
   const CreatePostScreen({super.key});
@@ -55,9 +59,20 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     setState(() => _isPosting = true);
 
     try {
+      // Upload image first if selected, so the post receives a proper URL
+      String? imageUrl;
+      if (_selectedImage != null) {
+        final storedFile = await ref.read(fileUploadServiceProvider).uploadFile(
+          File(_selectedImage!.path),
+          visibility: 'public',
+        );
+        imageUrl = '${ApiConstants.baseUrl}${ApiConstants.apiBasePath}'
+            '${ApiEndpoints.fileDownload(storedFile.id)}';
+      }
+
       await ref.read(feedProvider.notifier).addPostOptimistically(
             content,
-            _selectedImage != null ? [_selectedImage!.path] : [],
+            imageUrl != null ? [imageUrl] : [],
             _topicController.text.trim(),
           );
       // Feature: Save location data separately if provided

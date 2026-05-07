@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
@@ -188,11 +189,8 @@ class ReviewPerformanceBottomSheet extends StatelessWidget {
   final ValueChanged<String> onPerformanceSelected;
 
   static Future<String?> show(BuildContext context) =>
-      showModalBottomSheet<String>(
+      showSensoryModalBottomSheet<String>(
         context: context,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
         builder: (context) => ReviewPerformanceBottomSheet(
           onPerformanceSelected: (performance) {
             Navigator.of(context).pop(performance);

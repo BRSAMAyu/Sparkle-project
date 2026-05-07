@@ -23,6 +23,7 @@ from typing import Any
 from loguru import logger
 
 from app.core.cache import cache_service
+from app.services.fme_strategy_change_emitter import emit_strategy_change_card
 from app.signals.aurora_core_session import SessionClosure
 from app.signals.spine_orchestrator import SpineOrchestrator
 
@@ -61,11 +62,26 @@ async def apply_l3_closure_to_spine(
             user_summary=closure.user_visible_summary,
         )
         if result and result.get("regenerated_directives"):
+            directives = result["regenerated_directives"]
             logger.info(
                 "L3 closure bridge: session={} → {} directives regenerated for user={}",
                 closure.session_id,
-                len(result["regenerated_directives"]),
+                len(directives),
                 user_id,
+            )
+            old_strategy = (
+                (change_dicts[0].get("previous_strategy") if change_dicts else None)
+                or "unknown"
+            )
+            new_strategy = (
+                directives[0].get("strategy") if directives else None
+            ) or str(directives[0]) if directives else "unknown"
+            reason = closure.user_visible_summary or ""
+            await emit_strategy_change_card(
+                user_id,
+                old_strategy=old_strategy,
+                new_strategy=new_strategy,
+                reason=reason,
             )
         return result
     except Exception:

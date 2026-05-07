@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 
 class CardPickerOption {
   const CardPickerOption({
@@ -40,10 +41,9 @@ class CardPickerSheet extends StatefulWidget {
     bool allowEmptySelection = false,
     String emptySelectionLabel = 'Unassigned',
   }) =>
-      showModalBottomSheet<String?>(
+      showSensoryModalBottomSheet<String?>(
         context: context,
         isScrollControlled: true,
-        showDragHandle: true,
         builder: (_) => CardPickerSheet(
           title: title,
           options: options,
@@ -109,7 +109,8 @@ class _CardPickerSheetState extends State<CardPickerSheet> {
               child: filtered.isEmpty && normalized.isNotEmpty
                   ? Center(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
+                        padding:
+                            const EdgeInsets.symmetric(vertical: DS.spacing24),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -121,7 +122,10 @@ class _CardPickerSheetState extends State<CardPickerSheet> {
                             const SizedBox(height: DS.spacing12),
                             Text(
                               'No results for "$_query"',
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
                                     color: DS.textSecondary,
                                   ),
                             ),
@@ -147,7 +151,10 @@ class _CardPickerSheetState extends State<CardPickerSheet> {
                             ),
                             child: Text(
                               entry.key,
-                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(
                                     color: DS.textSecondary,
                                     fontWeight: DS.fontWeightSemiBold,
                                   ),

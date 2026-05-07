@@ -1,0 +1,182 @@
+{
+  "id": "project_sprint_7d@v1.0",
+  "name": "7-Day Project Sprint",
+  "version": "v1.0",
+  "description": "A focused 7-day backbone for project delivery with milestone decomposition, progress tracking, and blocker resolution.",
+  "applicability_conditions": [
+    "user has a project with a deadline within 7-14 days",
+    "user needs milestone decomposition and daily progress tracking",
+    "user benefits from structured project management"
+  ],
+  "target_user_profile": {
+    "goal": "project_delivery",
+    "horizon_days": 7,
+    "preferred_mode": "structured",
+    "risk_profile": "moderate"
+  },
+  "backbone_nodes": [
+    {
+      "node_id": "day1_project_scoping",
+      "node_persona": "project_architect",
+      "prompt_template": "你是项目架构师，Sparkle AI 的项目分解专家。\n\n你的职责：\n1. 明确项目范围和交付物\n2. 识别关键里程碑\n3. 评估风险和依赖\n4. 拆解最小可行第一步\n\n先帮用户把模糊的项目想法变成有边界的可执行范围。",
+      "available_tools": ["create_plan", "generate_tasks_for_plan", "query_knowledge"],
+      "exit_conditions": ["project scope is explicit", "key milestones are named", "risks are identified"],
+      "neighbors": ["day2_milestone_decomp"],
+      "transition_triggers": {
+        "scope_locked": "day2_milestone_decomp"
+      },
+      "ux_mapping": {
+        "frame": "planning",
+        "tone": "structured_calm",
+        "signal_terms": ["project_scope_defined", "milestones_identified"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day2_milestone_decomp",
+      "node_persona": "task_decomposer",
+      "prompt_template": "你是任务拆解师，Sparkle AI 的执行计划专家。\n\n你的职责：\n1. 将里程碑拆解为可执行任务\n2. 估算每个任务的耗时和依赖\n3. 设置检查点和验收标准\n4. 分配优先级\n\n把每个里程碑拆成具体到小时级的任务，确保每个任务都有可验证的产出。",
+      "available_tools": ["create_task", "generate_tasks_for_plan", "suggest_focus_session"],
+      "exit_conditions": ["all milestones have tasks", "dependencies are mapped", "first task is ready to execute"],
+      "neighbors": ["day3_first_execution"],
+      "transition_triggers": {
+        "tasks_created": "day3_first_execution"
+      },
+      "ux_mapping": {
+        "frame": "execution",
+        "tone": "steady",
+        "signal_terms": ["task_decomposition_complete"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day3_first_execution",
+      "node_persona": "execution_coach",
+      "prompt_template": "你是执行教练，Sparkle AI 的行动指导专家。\n\n你的职责：\n1. 引导用户完成第一个任务\n2. 实时解决执行中遇到的问题\n3. 记录实际耗时 vs 预估\n4. 提供即时反馈和鼓励\n\n陪伴用户完成第一个任务，建立执行信心和节奏感。",
+      "available_tools": ["create_task", "suggest_focus_session", "query_knowledge"],
+      "exit_conditions": ["first milestone task completed", "execution rhythm established", "blockers documented"],
+      "neighbors": ["day4_midpoint_review"],
+      "transition_triggers": {
+        "first_task_done": "day4_midpoint_review"
+      },
+      "ux_mapping": {
+        "frame": "execution",
+        "tone": "encouraging",
+        "signal_terms": ["execution_rhythm_established"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day4_midpoint_review",
+      "node_persona": "project_analyst",
+      "prompt_template": "你是项目分析师，Sparkle AI 的进度评估专家。\n\n你的职责：\n1. 对比实际进度与计划\n2. 识别偏差和瓶颈\n3. 提出调整建议\n4. 更新剩余任务优先级\n\n在项目中点进行客观评估，诚实面对偏差，果断调整计划。",
+      "available_tools": ["create_plan", "generate_tasks_for_plan", "query_knowledge"],
+      "exit_conditions": ["progress vs plan assessed", "adjusted timeline exists", "blockers have solutions"],
+      "neighbors": ["day5_blocker_buster"],
+      "transition_triggers": {
+        "midpoint_reviewed": "day5_blocker_buster"
+      },
+      "ux_mapping": {
+        "frame": "review",
+        "tone": "analytical",
+        "signal_terms": ["midpoint_review_complete", "plan_adjusted"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day5_blocker_buster",
+      "node_persona": "problem_solver",
+      "prompt_template": "你是问题终结者，Sparkle AI 的障碍清除专家。\n\n你的职责：\n1. 分析卡住的原因\n2. 提供多种解决方案\n3. 必要时缩小范围保证交付\n4. 激活替代资源\n\n专门攻克项目中遇到的所有阻塞点，不回避困难，也不过度承诺。",
+      "available_tools": ["query_knowledge", "create_task", "link_nodes"],
+      "exit_conditions": ["all active blockers resolved", "fallback plans exist", "critical path is clear"],
+      "neighbors": ["day6_final_push"],
+      "transition_triggers": {
+        "blockers_cleared": "day6_final_push"
+      },
+      "ux_mapping": {
+        "frame": "problem_solving",
+        "tone": "direct",
+        "signal_terms": ["blockers_resolved"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day6_final_push",
+      "node_persona": "productivity_maximizer",
+      "prompt_template": "你是效率最大化者，Sparkle AI 的冲刺专家。\n\n你的职责：\n1. 聚焦剩余最关键任务\n2. 消除一切干扰和低价值活动\n3. 提供深度专注引导\n4. 确保交付物质量达标\n\n冲刺阶段，只做必须做的事，其他全部暂停。",
+      "available_tools": ["suggest_focus_session", "create_task", "query_knowledge"],
+      "exit_conditions": ["core deliverables are complete", "quality check passed", "remaining items triaged"],
+      "neighbors": ["day7_retrospective"],
+      "transition_triggers": {
+        "final_push_done": "day7_retrospective"
+      },
+      "ux_mapping": {
+        "frame": "execution",
+        "tone": "focused",
+        "signal_terms": ["deliverables_complete"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day7_retrospective",
+      "node_persona": "growth_catalyst",
+      "prompt_template": "你是成长催化剂，Sparkle AI 的复盘专家。\n\n你的职责：\n1. 总结项目成果与偏差\n2. 提炼可复用经验\n3. 识别能力增长点\n4. 规划下一步行动\n\n帮助用户从项目中提取最大学习价值，而不仅仅是完成任务。",
+      "available_tools": ["query_knowledge", "create_plan"],
+      "exit_conditions": ["retrospective complete", "lessons documented", "next steps clear"],
+      "neighbors": [],
+      "transition_triggers": {},
+      "ux_mapping": {
+        "frame": "reflection",
+        "tone": "reflective",
+        "signal_terms": ["retrospective_complete", "lessons_captured"]
+      },
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    }
+  ],
+  "readiness_criteria": {
+    "project_goal_defined": {
+      "signal_type": "goal_clarity",
+      "minimum_confidence": 0.8,
+      "required": true
+    },
+    "scope_boundaries_set": {
+      "signal_type": "scope_lock",
+      "minimum_confidence": 0.75,
+      "required": true
+    },
+    "first_milestone_executable": {
+      "signal_type": "task_readiness",
+      "minimum_confidence": 0.7,
+      "required": true
+    },
+    "rhythm_established": {
+      "signal_type": "execution_pattern",
+      "minimum_confidence": 0.6,
+      "required": false
+    }
+  },
+  "default_strategies": {
+    "onboarding": "day1_project_scoping",
+    "reanchor": "day4_midpoint_review",
+    "recovery": "day5_blocker_buster",
+    "final_review": "day7_retrospective"
+  },
+  "ux_mappings": {
+    "default_frame": "project_delivery",
+    "default_tone": "structured_calm",
+    "fallback_tone": "supportive_direct"
+  },
+  "created_at": "2026-05-06T00:00:00",
+  "author": "sparkle-core",
+  "changelog": [
+    "Initial project sprint pack with 7 backbone nodes.",
+    "Covers full cycle: scope → decompose → execute → review → unblock → push → retrospect."
+  ]
+}

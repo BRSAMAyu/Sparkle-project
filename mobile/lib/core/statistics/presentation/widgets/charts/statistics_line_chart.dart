@@ -1,4 +1,5 @@
 import 'package:fl_chart/fl_chart.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
@@ -203,7 +204,7 @@ class StatisticsLineChart extends StatelessWidget {
             ),
             const SizedBox(height: DS.md),
             Text(
-              '暂无数据',
+              I18nService.instance.isChinese ? '暂无数据' : 'No data',
               style: DS.bodyStyle.copyWith(
                 color: DS.neutral400,
               ),

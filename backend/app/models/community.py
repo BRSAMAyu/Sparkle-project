@@ -801,6 +801,24 @@ class PostLike(BaseModel):
     )
 
 
+class PostComment(BaseModel):
+    """动态评论表 — flat (no nesting) for MVP."""
+
+    __tablename__ = "post_comments"
+
+    user_id = Column(GUID(), ForeignKey("users.id"), nullable=False)
+    post_id = Column(GUID(), ForeignKey("posts.id"), nullable=False)
+    content = Column(Text, nullable=False)
+
+    user = relationship("User")
+    post = relationship("Post")
+
+    __table_args__ = (
+        Index("idx_post_comment_post", "post_id"),
+        Index("idx_post_comment_user", "user_id"),
+    )
+
+
 # ============ 用户拉黑系统 ============
 
 class UserBlock(BaseModel):

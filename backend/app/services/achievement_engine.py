@@ -2082,8 +2082,11 @@ class AchievementEngine:
                     StreakDayStatus.ACTIVE if is_quality else StreakDayStatus.WEAK,
                     source_event=event_type,
                 )
-            # Use quality-gated streak for milestone triggering
+            # Compute quality-gated streak for milestone checks without
+            # overwriting the binary streak counter. The binary counter
+            # tracks every active day; quality streak is a derived metric.
             quality_streak = await quality_svc.quality_streak(user_id, today)
+
             if quality_streak in [7, 14, 30, 60, 100, 365]:
                 await self.process_event(
                     user_id,
@@ -2614,6 +2617,32 @@ class AchievementEngine:
         # 只在连击>=2时返回信息
         if combo >= 2:
             bonus_photons = combo * 10 if combo >= 3 else 0
+            # P1-A1: Actually grant combo bonus photons via PhotonService
+            if bonus_photons > 0:
+                try:
+                    from app.services.photon_service import PhotonService, PhotonTransactionType
+
+                    photon_service = PhotonService(self.db)
+                    await photon_service.grant_photons(
+                        user_id=user_id,
+                        amount=bonus_photons,
+                        source=f"achievement_combo:{combo}",
+                        transaction_type=PhotonTransactionType.GRANT_BONUS,
+                        extra_data={
+                            "combo": combo,
+                            "unlock_count": unlock_count,
+                            "type": "achievement_combo",
+                        },
+                    )
+                    logger.info(
+                        "Granted %d combo bonus photons to user %s (combo=%d)",
+                        bonus_photons, user_id, combo,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to grant combo bonus photons to user %s: %s",
+                        user_id, exc,
+                    )
             return {
                 "combo": combo,
                 "message": f"🔥 {combo}连击解锁！",
@@ -2660,13 +2689,31 @@ class AchievementEngine:
         # 获取连胜统计
         stats = await self._get_or_create_streak_stats(user_id)
 
+        # Grant the actual rewards, not just return them in the dict
+        try:
+            from app.services.photon_service import PhotonService, PhotonTransactionType
+            photon_service = PhotonService(db)
+            await photon_service.grant_photons(
+                user_id=user_id,
+                amount=30,
+                source="daily_first",
+                transaction_type=PhotonTransactionType.GRANT_DAILY_FIRST,
+            )
+            if stats.current_streak >= 3:
+                stats.freeze_charges = (stats.freeze_charges or 0) + 1
+                db.add(stats)
+                await db.commit()
+                await db.refresh(stats)
+        except Exception as e:
+            logger.error(f"Failed to grant daily first rewards to user {user_id}: {e}")
+
         return {
             "type": "daily_first",
             "reward": {
                 "photon": 30,
                 "freeze_charges": 1 if stats.current_streak >= 3 else 0,
             },
-            "message": "🔥 今日首胜！获得30光子" + (" + 1张连胜保护卡" if stats.current_streak >= 3 else ""),
+            "message": "今日首胜！获得30光子" + (" + 1张连胜保护卡" if stats.current_streak >= 3 else ""),
             "streak": stats.current_streak,
             "date": today.isoformat(),
         }
@@ -2844,7 +2891,7 @@ class ContractService:
         await engine.process_event(
             user_id=str(user_id),
             event_type=event_type,
-            contract_id=str(contract.user_id),
+            contract_id=str(contract.id),
             target_days=int(contract.target_days or 0),
             current_days=int(contract.current_days or 0),
             target_study_minutes=int(contract.target_study_minutes or 0),

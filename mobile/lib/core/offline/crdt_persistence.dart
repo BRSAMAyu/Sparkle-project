@@ -10,13 +10,23 @@ class FlutterCRDTPersistence {
   final WebSocketService _wsService;
 
   Future<void> saveLocalUpdate(String galaxyId, List<int> update) async {
-    // 1. 保存到本地数据库 (Save to local DB)
+    // 1. Upsert into local DB — reuse existing row to avoid duplicates.
     await _localDb.isar.writeTxn(() async {
+      final existing = await _localDb.isar.localCRDTSnapshots
+          .filter()
+          .galaxyIdEqualTo(galaxyId)
+          .findFirst();
+
       final snapshot = LocalCRDTSnapshot()
         ..galaxyId = galaxyId
         ..updateData = update
         ..timestamp = DateTime.now()
         ..synced = false;
+
+      // Reuse the existing IsarId so put() becomes an update, not an insert.
+      if (existing != null) {
+        snapshot.isarId = existing.isarId;
+      }
 
       await _localDb.isar.localCRDTSnapshots.put(snapshot);
     });

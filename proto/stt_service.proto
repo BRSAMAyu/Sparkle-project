@@ -225,43 +225,5 @@ message EnhanceResponse {
   int64 processing_time_ms = 4;
 }
 
-// ============================================================================
-// Common Types
-// ============================================================================
-
-// AudioFormat enumerates supported audio formats.
-enum AudioFormat {
-  AUDIO_FORMAT_UNSPECIFIED = 0;
-  AUDIO_FORMAT_PCM = 1;
-  AUDIO_FORMAT_WAV = 2;
-  AUDIO_FORMAT_MP3 = 3;
-  AUDIO_FORMAT_M4A = 4;
-  AUDIO_FORMAT_OGG = 5;
-  AUDIO_FORMAT_WEBM = 6;
-  AUDIO_FORMAT_OPUS = 7;
-}
-
-// LanguageCode enumerates supported languages.
-enum LanguageCode {
-  LANGUAGE_CODE_UNSPECIFIED = 0;
-  LANGUAGE_CODE_ZH_CN = 1;  // Mandarin Chinese
-  LANGUAGE_CODE_ZH_TW = 2;  // Traditional Chinese
-  LANGUAGE_CODE_EN_US = 3;  // American English
-  LANGUAGE_CODE_EN_GB = 4;  // British English
-  LANGUAGE_CODE_JA_JP = 5;  // Japanese
-  LANGUAGE_CODE_KO_KR = 6;  // Korean
-}
-
-// STTErrorCode enumerates possible error codes.
-enum STTErrorCode {
-  STT_ERROR_CODE_UNSPECIFIED = 0;
-  STT_ERROR_CODE_AUDIO_TOO_LARGE = 1;
-  STT_ERROR_CODE_UNSUPPORTED_FORMAT = 2;
-  STT_ERROR_CODE_INVALID_SAMPLE_RATE = 3;
-  STT_ERROR_CODE_NO_SPEECH_DETECTED = 4;
-  STT_ERROR_CODE_RECOGNITION_FAILED = 5;
-  STT_ERROR_CODE_PROVIDER_UNAVAILABLE = 6;
-  STT_ERROR_CODE_RATE_LIMITED = 7;
-  STT_ERROR_CODE_UNAUTHORIZED = 8;
-  STT_ERROR_CODE_INTERNAL_ERROR = 9;
-}
+// Note: format, language, and error codes are carried as strings in message
+// fields rather than enum types, for forward compatibility with provider-specific values.

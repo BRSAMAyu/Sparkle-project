@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/rarity_visual_wrapper.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -106,21 +107,23 @@ class _AnimatedAchievementCardState extends State<AnimatedAchievementCard>
   }
 
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) => Transform.translate(
-          offset: _slideAnimation.value,
-          child: Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Opacity(
-              opacity: _fadeAnimation.value,
-              child: child,
-            ),
+  Widget build(BuildContext context) {
+    if (context.emotionLowStimulus) return widget.child;
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) => Transform.translate(
+        offset: _slideAnimation.value,
+        child: Transform.scale(
+          scale: _scaleAnimation.value,
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: child,
           ),
         ),
-        child: widget.child,
-      );
-}
+      ),
+      child: widget.child,
+    );
+  }
 
 // ---------------------------------------------------------------------------
 // _AnimatedProgressBar  (fills from 0 -> target on first build)

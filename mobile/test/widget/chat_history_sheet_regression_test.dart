@@ -85,7 +85,7 @@ class _FakeAuroraNotifier extends AuroraStatusNotifier {
 /// Quiet DashboardNotifier that does not trigger network requests.
 /// Prevents the real DashboardRepository from creating timers/network calls.
 class _QuietDashboardNotifier extends DashboardNotifier {
-  _QuietDashboardNotifier() : super(_QuietDashboardRepository());
+  _QuietDashboardNotifier() : super(_QuietDashboardRepository(), _HistoryFakeRef());
 
   @override
   Future<void> fetchData() async {

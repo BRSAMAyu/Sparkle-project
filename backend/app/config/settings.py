@@ -241,6 +241,11 @@ class Settings(BaseSettings):
     OPENCLAW_TRUST_AUTO_PROMOTE_SUCCESS_RATE: float = 0.85
     TOOL_EXECUTION_TIMEOUT_SECONDS: float = 120.0
 
+    # Global Aurora default mode — when set to "shadow", all individual AURORA_*_MODE
+    # switches that are still at their factory default ("live") use this value instead.
+    # Use for development shadow testing: set AURORA_DEFAULT_MODE=shadow in .env
+    AURORA_DEFAULT_MODE: str = "live"  # off | shadow | live
+
     # Aurora Stage 18
     AURORA_STAGE18_AGGREGATOR_MODE: str = "live"  # off | shadow | live
     AURORA_STAGE18_PUSH_POLICY_MODE: str = "live"  # off | shadow | live
@@ -374,10 +379,11 @@ class Settings(BaseSettings):
     AURORA_STAGE40_CALENDAR_MODE: str = "live"  # off | shadow | live
 
     # FME Phase-1 — First-Minute Experience kill switches.
-    # Default to "off" so behavior is identical to legacy until ops promotes.
+    # Shadow: analyze + log but return disabled so behavior stays identical.
+    # Promote to "live" after validating intent analysis quality on real data.
     # See backend/app/services/fme_kill_switch_service.py
-    FME_GOAL_FIRST_MINUTE_MODE: str = "off"  # off | shadow | live
-    FME_TASK_CARD_PROTOCOL_MODE: str = "off"  # off | shadow | live
+    FME_GOAL_FIRST_MINUTE_MODE: str = "shadow"  # off | shadow | live
+    FME_TASK_CARD_PROTOCOL_MODE: str = "shadow"  # off | shadow | live
 
     # Email (SMTP)
     EMAIL_ENABLED: bool | None = None

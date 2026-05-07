@@ -1774,6 +1774,12 @@ class MockCommunityRepository implements CommunityRepository {
   }
 
   @override
+  Future<void> deletePost(String postId) async {
+    // Mock implementation - do nothing
+    return;
+  }
+
+  @override
   Future<List<GroupRecommendationItem>> getGroupRecommendations({
     int limit = 20,
     int cursor = 0,

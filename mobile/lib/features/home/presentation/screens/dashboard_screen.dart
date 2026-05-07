@@ -25,6 +25,7 @@ import 'package:sparkle/features/experience/presentation/providers/experience_pr
 import 'package:sparkle/features/experience/presentation/widgets/goal_detail_snapshot_card.dart';
 import 'package:sparkle/features/experience/presentation/widgets/growth_quality_card.dart';
 import 'package:sparkle/features/experience/presentation/widgets/understanding_snapshot_card.dart';
+import 'package:sparkle/features/goal/goal_routes.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_card_config_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_slot_config_provider.dart';
@@ -62,6 +63,14 @@ import 'package:sparkle/features/reviews/presentation/widgets/nightly_review_pan
 import 'package:sparkle/features/task/task.dart';
 import 'package:sparkle/features/user/presentation/providers/persona_view_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
+
+String _goalDetailLocation(String? goalId) {
+  final normalized = goalId?.trim();
+  if (normalized == null || normalized.isEmpty) {
+    return '/plans';
+  }
+  return GoalRoutes.detailLocation(Uri.encodeComponent(normalized));
+}
 
 /// Shows a text input dialog for freeform Aurora correction.
 /// Returns trimmed text only when the user submits; cancel returns null.
@@ -643,7 +652,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         return const ReturnCaseFileCard();
       case DashboardSlotIds.goalDetailSnapshot:
         return GoalDetailSnapshotCard(
-          onOpenGoal: () => unawaited(context.push('/goals/current')),
+          onOpenGoal: (goalId) => unawaited(
+            context.push(_goalDetailLocation(goalId)),
+          ),
         );
       case DashboardSlotIds.multiGoalDashboard:
         return const MultiGoalDashboardCard();
@@ -1168,7 +1179,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             _staggeredSection(
               index: growthSectionIndex++,
               child: GoalDetailSnapshotCard(
-                onOpenGoal: () => unawaited(context.push('/goals/current')),
+                onOpenGoal: (goalId) => unawaited(
+                  context.push(_goalDetailLocation(goalId)),
+                ),
               ),
             ),
             _staggeredSection(

@@ -162,6 +162,11 @@ class SocialLoginRequest(BaseModel):
     email: EmailStr | None = Field(default=None, description="Email (if available)")
     nickname: str | None = Field(default=None, description="Nickname (if available)")
     avatar_url: str | None = Field(default=None, description="Avatar URL (if available)")
+    accepted_tos: bool = Field(default=False)
+    accepted_privacy: bool = Field(default=False)
+    tos_version: str | None = Field(default=None)
+    privacy_version: str | None = Field(default=None)
+    agreed_locale: str | None = Field(default=None)
 
 # ========== Response Schemas ==========
 

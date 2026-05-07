@@ -260,8 +260,9 @@ Caching improves performance by reducing the number of expensive operations, suc
                   height: 1.6,
                 ),
                 onSaveToKnowledge: (selectedText, translation) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SparkleSnackBar.success(context.l10n.transSavedToWordCard),
+                  AppFeedback.success(
+                    context,
+                    context.l10n.transSavedToWordCard,
                   );
                 },
               ),

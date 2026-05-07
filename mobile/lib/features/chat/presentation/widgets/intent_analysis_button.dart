@@ -185,9 +185,9 @@ class _IntentAnalysisChipState extends ConsumerState<IntentAnalysisChip> {
     } catch (e) {
       if (mounted) {
         setState(() => _isAnalyzing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SparkleSnackBar.error(
-              context.l10n.intentAnalysisFailed(e.toString())),
+        AppFeedback.error(
+          context,
+          context.l10n.intentAnalysisFailed(e.toString()),
         );
       }
     }

@@ -9,6 +9,8 @@ extension GoalDetailLocalizations on AppLocalizations {
   String get goalDetailTargetDate => _isZh ? '目标日期' : 'Target date';
   String get goalDetailPriority => _isZh ? '优先级' : 'Priority';
   String get goalDetailNoTargetDate => _isZh ? '未设置日期' : 'No date set';
+  String get goalDetailOverdue => _isZh ? '已过期' : 'Overdue';
+  String get goalDetailDue => _isZh ? '截止日期' : 'Due';
   String get goalDetailMinimumLine => _isZh ? '最低达标线' : 'Minimum bar';
   String get goalDetailSuggestedMinimum => _isZh
       ? '这是 Sparkle 为你建议的最低标准'
@@ -67,6 +69,18 @@ extension GoalDetailLocalizations on AppLocalizations {
   String get goalDetailLoadFailed =>
       _isZh ? '目标详情加载失败' : 'Goal detail failed to load';
   String get goalDetailRetry => _isZh ? '重试' : 'Retry';
+  String get goalDetailEdit => _isZh ? '编辑目标' : 'Edit goal';
+  String get goalDetailEditTitle => _isZh ? '标题' : 'Title';
+  String get goalDetailEditDescription => _isZh ? '描述' : 'Description';
+  String get goalDetailEditSave => _isZh ? '保存' : 'Save';
+  String get goalDetailEditHintTitle =>
+      _isZh ? '输入目标标题...' : 'Enter goal title...';
+  String get goalDetailEditHintDescription =>
+      _isZh ? '输入目标描述（可选）...' : 'Enter goal description (optional)...';
+  String get goalDetailEditSuccess =>
+      _isZh ? '目标已更新' : 'Goal updated';
+  String get goalDetailEditFailed =>
+      _isZh ? '目标更新失败' : 'Failed to update goal';
   String get goalDetailBack => _isZh ? '返回' : 'Back';
   String get goalDetailStatus => _isZh ? '状态' : 'Status';
   String get goalDetailEstimated => _isZh ? '预计' : 'Estimated';

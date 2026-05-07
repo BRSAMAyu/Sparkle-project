@@ -1,0 +1,106 @@
+{
+  "id": "public_speaking_7d@v1.0",
+  "name": "7-Day Public Speaking Prep",
+  "version": "v1.0",
+  "description": "A 7-day backbone for preparing and delivering a high-impact presentation, talk, or speech.",
+  "applicability_conditions": [
+    "user has an upcoming presentation or public speaking event within 7 days",
+    "user needs to structure content, design slides, and practice delivery",
+    "user benefits from anxiety management and stage presence coaching"
+  ],
+  "target_user_profile": {
+    "goal": "public_speaking",
+    "horizon_days": 7,
+    "preferred_mode": "structured",
+    "risk_profile": "moderate"
+  },
+  "backbone_nodes": [
+    {
+      "node_id": "day1_message_clarity",
+      "node_persona": "speech_architect",
+      "prompt_template": "你是演讲架构师，Sparkle AI 的表达设计专家。\n\n你的职责：\n1. 帮用户提炼一句话核心信息\n2. 设计开场钩子和结尾金句\n3. 确定叙事弧线\n4. 分析听众画像和期待\n\n演讲的唯一目的是传递一个信息让人记住，其他都是辅助。",
+      "available_tools": ["query_knowledge", "create_plan"],
+      "exit_conditions": ["one-liner message defined", "narrative arc mapped", "audience analyzed"],
+      "neighbors": ["day2_slide_design"],
+      "transition_triggers": {"message_crystalized": "day2_slide_design"},
+      "ux_mapping": {"frame": "planning", "tone": "focused", "signal_terms": ["message_clear"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day2_slide_design",
+      "node_persona": "visual_communicator",
+      "prompt_template": "你是视觉传达师，Sparkle AI 的幻灯片设计专家。\n\n你的职责：\n1. 审核每张幻灯片的必要性\n2. 精简文字（一张幻灯片一个观点）\n3. 建议可视化呈现方式\n4. 确保幻灯片是辅助而非主角\n\n幻灯片是为你服务的，不是让你念的。少即是多。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["slide deck streamlined", "visual aids planned", "notes added"],
+      "neighbors": ["day4_first_run_through"],
+      "transition_triggers": {"slides_ready": "day4_first_run_through"},
+      "ux_mapping": {"frame": "execution", "tone": "practical", "signal_terms": ["slide_deck_ready"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day4_first_run_through",
+      "node_persona": "rehearsal_coach",
+      "prompt_template": "你是排练教练，Sparkle AI 的演讲训练专家。\n\n你的职责：\n1. 引导用户完成第一次完整排练\n2. 计时并标记超时部分\n3. 记录口头禅和不流畅的地方\n4. 给出第一次排练的诚实反馈\n\n第一次排练一定会不完美，找到最大的3个改进点就够了。",
+      "available_tools": ["create_task"],
+      "exit_conditions": ["first rehearsal done", "timing issues identified", "top 3 improvements noted"],
+      "neighbors": ["day5_delivery_polish"],
+      "transition_triggers": {"first_rehearsal_done": "day5_delivery_polish"},
+      "ux_mapping": {"frame": "practice", "tone": "honest", "signal_terms": ["first_run_complete"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day5_delivery_polish",
+      "node_persona": "stage_coach",
+      "prompt_template": "你是舞台教练，Sparkle AI 的表达魅力专家。\n\n你的职责：\n1. 优化语速、停顿、重音\n2. 增加手势和肢体语言\n3. 改善眼神接触和舞台移动\n4. 练习应对忘词和意外\n\n内容好是基础，讲得好才是关键。用身体和声音让内容更有感染力。",
+      "available_tools": ["create_task"],
+      "exit_conditions": ["vocal variety improved", "gestures planned", "recovery strategies ready"],
+      "neighbors": ["day6_dress_rehearsal"],
+      "transition_triggers": {"delivery_polished": "day6_dress_rehearsal"},
+      "ux_mapping": {"frame": "practice", "tone": "energetic", "signal_terms": ["delivery_improved"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day6_dress_rehearsal",
+      "node_persona": "simulation_director",
+      "prompt_template": "你是模拟导演，Sparkle AI 的实战演练专家。\n\n你的职责：\n1. 全真模拟演讲场景\n2. 加入干扰和即兴问答\n3. 压力测试情感韧性\n4. 最后一次微调\n\n像正式上场一样排练，但允许最后一次犯错和改进。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["dress rehearsal done", "Q&A prepared", "final adjustments made"],
+      "neighbors": ["day7_showtime"],
+      "transition_triggers": {"dress_rehearsal_done": "day7_showtime"},
+      "ux_mapping": {"frame": "challenge", "tone": "intense", "signal_terms": ["dress_rehearsal_complete"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day7_showtime",
+      "node_persona": "pre_game_coach",
+      "prompt_template": "你是赛前教练，Sparkle AI 的状态管理专家。\n\n你的职责：\n1. 上场前心态调整和呼吸练习\n2. 最后检查技术和环境\n3. 设定成功的最小定义\n4. 准备演讲后的复盘框架\n\n你已经准备好了，上场享受与听众的连接。",
+      "available_tools": ["suggest_focus_session"],
+      "exit_conditions": ["mindset ready", "environment checked", "post-talk plan exists"],
+      "neighbors": [],
+      "transition_triggers": {},
+      "ux_mapping": {"frame": "reflection", "tone": "calm", "signal_terms": ["showtime_ready"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    }
+  ],
+  "readiness_criteria": {
+    "speech_goal_defined": {"signal_type": "goal_clarity", "minimum_confidence": 0.8, "required": true},
+    "content_ready": {"signal_type": "content_readiness", "minimum_confidence": 0.75, "required": true},
+    "delivery_practiced": {"signal_type": "rehearsal_complete", "minimum_confidence": 0.7, "required": true}
+  },
+  "default_strategies": {
+    "onboarding": "day1_message_clarity",
+    "reanchor": "day5_delivery_polish",
+    "recovery": "day4_first_run_through",
+    "final_review": "day7_showtime"
+  },
+  "ux_mappings": {"default_frame": "public_speaking", "default_tone": "confident", "fallback_tone": "supportive"},
+  "created_at": "2026-05-06T00:00:00",
+  "author": "sparkle-core",
+  "changelog": ["Initial public speaking pack with 6 backbone nodes."]
+}

@@ -27,6 +27,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _tagsController = TextEditingController();
+  final _userNoteController = TextEditingController();
 
   TaskType _selectedType = TaskType.learning;
   int _estimatedMinutes = 25;
@@ -105,6 +106,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
       _energyCost = task.energyCost;
       _dueDate = task.dueDate;
       _tagsController.text = task.tags.join(', ');
+      if (task.userNote != null && task.userNote!.isNotEmpty) {
+        _userNoteController.text = task.userNote!;
+      }
       setState(() {});
     } catch (e) {
       if (mounted) {
@@ -132,6 +136,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
       ..removeListener(_onTitleChanged)
       ..dispose();
     _tagsController.dispose();
+    _userNoteController.dispose();
     super.dispose();
   }
 
@@ -210,6 +215,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
           .toList();
 
       if (_isEditMode && _editingTaskId != null) {
+        final note = _userNoteController.text.trim();
         await ref.read(taskListProvider.notifier).updateTask(
               _editingTaskId!,
               TaskUpdate(
@@ -220,6 +226,7 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                 energyCost: _energyCost,
                 tags: tags,
                 dueDate: _dueDate,
+                userNote: note.isNotEmpty ? note : null,
               ),
             );
         if (mounted) {
@@ -676,6 +683,23 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
                     ),
                     const SizedBox(height: DS.lg),
 
+                    if (_isEditMode) ...[
+                      TextFormField(
+                        controller: _userNoteController,
+                        decoration: InputDecoration(
+                          labelText:
+                              _isZhText(context, '备注', 'Note'),
+                          hintText: _isZhText(
+                              context, '添加备注（可选）...', 'Add a note (optional)...'),
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.notes_rounded),
+                        ),
+                        maxLines: 3,
+                        minLines: 1,
+                      ),
+                      const SizedBox(height: DS.lg),
+                    ],
+
                     if (!_isEditMode)
                       SwitchListTile(
                         title: Text(l10n.taskGenerateGuideTitle),
@@ -883,6 +907,9 @@ class _TaskCreateScreenState extends ConsumerState<TaskCreateScreen> {
         return Icons.document_scanner_outlined;
     }
   }
+
+  String _isZhText(BuildContext context, String zh, String en) =>
+      Localizations.localeOf(context).languageCode == 'zh' ? zh : en;
 
   String getTypeLabel(AppLocalizations l10n, TaskType type) {
     switch (type) {

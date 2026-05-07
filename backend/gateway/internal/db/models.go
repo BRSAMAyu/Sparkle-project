@@ -2430,6 +2430,7 @@ type ChatMessage struct {
 	Role          Messagerole      `json:"role"`
 	Content       string           `json:"content"`
 	Actions       []byte           `json:"actions"`
+	Metadata      []byte           `json:"metadata"`
 	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
 	TokensUsed    pgtype.Int4      `json:"tokens_used"`
 	ModelName     pgtype.Text      `json:"model_name"`

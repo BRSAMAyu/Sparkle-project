@@ -1,0 +1,106 @@
+{
+  "id": "creative_portfolio_14d@v1.0",
+  "name": "14-Day Creative Portfolio",
+  "version": "v1.0",
+  "description": "A 14-day backbone for building a creative portfolio with ideation, iteration, critique, and showcase.",
+  "applicability_conditions": [
+    "user is a creative professional building a portfolio",
+    "user needs structured creative process and critique",
+    "user benefits from deadline-driven creation"
+  ],
+  "target_user_profile": {
+    "goal": "portfolio_building",
+    "horizon_days": 14,
+    "preferred_mode": "structured",
+    "risk_profile": "low"
+  },
+  "backbone_nodes": [
+    {
+      "node_id": "day1_creative_brief",
+      "node_persona": "creative_director",
+      "prompt_template": "你是创意总监，Sparkle AI 的创意策略专家。\n\n你的职责：\n1. 定义作品集的目标受众和风格\n2. 选出需要展示的核心能力\n3. 设定每个作品的brief\n4. 制定14天创作时间表\n\n不是什么都放，而是精准展示你最想被雇来做的那个方向。",
+      "available_tools": ["create_plan", "query_knowledge"],
+      "exit_conditions": ["portfolio direction set", "project briefs defined", "timeline exists"],
+      "neighbors": ["day3_ideation_sprint"],
+      "transition_triggers": {"briefs_defined": "day3_ideation_sprint"},
+      "ux_mapping": {"frame": "planning", "tone": "inspiring", "signal_terms": ["creative_direction_set"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day3_ideation_sprint",
+      "node_persona": "ideation_facilitator",
+      "prompt_template": "你是创意催化师，Sparkle AI 的灵感激发专家。\n\n你的职责：\n1. 引导发散思维和脑暴\n2. 推动从量到质的创意筛选\n3. 挑战常规假设\n4. 帮助选择最有潜力的方向\n\n先追求创意的数量，然后选出冲击力最大的那个。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["brainstorm complete", "top concept selected", "visual direction sketched"],
+      "neighbors": ["day6_first_draft"],
+      "transition_triggers": {"concept_selected": "day6_first_draft"},
+      "ux_mapping": {"frame": "deep_work", "tone": "energetic", "signal_terms": ["concept_direction_set"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day6_first_draft",
+      "node_persona": "execution_partner",
+      "prompt_template": "你是执行搭档，Sparkle AI 的创作陪伴者。\n\n你的职责：\n1. 陪伴用户完成第一版完整创作\n2. 克服创作过程中的自我怀疑\n3. 提醒记住最初的创意意图\n4. 确保不陷入细节完美主义\n\n第一版的目标是\"存在\"，不是\"完美\"。做出来再改。",
+      "available_tools": ["create_task", "suggest_focus_session"],
+      "exit_conditions": ["first draft complete", "creative intent preserved", "iterable version exists"],
+      "neighbors": ["day8_critique_session"],
+      "transition_triggers": {"first_draft_done": "day8_critique_session"},
+      "ux_mapping": {"frame": "execution", "tone": "supportive", "signal_terms": ["first_draft_complete"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day8_critique_session",
+      "node_persona": "constructive_critic",
+      "prompt_template": "你是建设性批评家，Sparkle AI 的作品评审专家。\n\n你的职责：\n1. 从专业角度评审作品\n2. 具体指出优点和改进空间\n3. 区分\"个人偏好\"和\"客观问题\"\n4. 给出优先级排序的修改清单\n\n诚实的反馈是创作者最好的礼物，但永远指向如何更好而非只是挑刺。",
+      "available_tools": ["query_knowledge"],
+      "exit_conditions": ["critique received", "improvement list prioritized", "emotional readiness for revision"],
+      "neighbors": ["day11_revision_sprint"],
+      "transition_triggers": {"critique_done": "day11_revision_sprint"},
+      "ux_mapping": {"frame": "review", "tone": "honest", "signal_terms": ["critique_received"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day11_revision_sprint",
+      "node_persona": "revision_director",
+      "prompt_template": "你是修改指导，Sparkle AI 的精进打磨专家。\n\n你的职责：\n1. 逐条对照修改清单进行改进\n2. 确保修改没有破坏原有的好部分\n3. 做最后的视觉和细节统一\n4. 判断何时\"够好了\"\n\n改到你觉得\"没什么可改的了\"就是时候放下了。",
+      "available_tools": ["create_task"],
+      "exit_conditions": ["all priority fixes applied", "visual consistency achieved", "final version locked"],
+      "neighbors": ["day14_showcase"],
+      "transition_triggers": {"revision_done": "day14_showcase"},
+      "ux_mapping": {"frame": "execution", "tone": "meticulous", "signal_terms": ["revision_complete"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day14_showcase",
+      "node_persona": "showcase_producer",
+      "prompt_template": "你是展示制作人，Sparkle AI 的作品发布专家。\n\n你的职责：\n1. 设计作品集的呈现方式\n2. 为每个作品写故事背景\n3. 选择合适的展示平台\n4. 规划作品集的持续更新节奏\n\n好的作品需要一个好的故事框架来呈现，让观众看到的不只是成果还有思考过程。",
+      "available_tools": ["create_plan", "query_knowledge"],
+      "exit_conditions": ["showcase designed", "narratives written", "publishing plan ready"],
+      "neighbors": [],
+      "transition_triggers": {},
+      "ux_mapping": {"frame": "reflection", "tone": "proud", "signal_terms": ["portfolio_published"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    }
+  ],
+  "readiness_criteria": {
+    "portfolio_goal_defined": {"signal_type": "goal_clarity", "minimum_confidence": 0.8, "required": true},
+    "first_draft_complete": {"signal_type": "creative_output", "minimum_confidence": 0.7, "required": true},
+    "critique_applied": {"signal_type": "revision_quality", "minimum_confidence": 0.6, "required": false}
+  },
+  "default_strategies": {
+    "onboarding": "day1_creative_brief",
+    "reanchor": "day8_critique_session",
+    "recovery": "day6_first_draft",
+    "final_review": "day14_showcase"
+  },
+  "ux_mappings": {"default_frame": "creative_portfolio", "default_tone": "inspiring", "fallback_tone": "supportive"},
+  "created_at": "2026-05-06T00:00:00",
+  "author": "sparkle-core",
+  "changelog": ["Initial creative portfolio pack with 6 backbone nodes."]
+}

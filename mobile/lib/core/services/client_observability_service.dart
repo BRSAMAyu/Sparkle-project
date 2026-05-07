@@ -29,6 +29,12 @@ class ClientObservabilityService {
     _scheduleFlush();
   }
 
+  void dispose() {
+    _periodicFlushTimer?.cancel();
+    _periodicFlushTimer = null;
+    _dio = null;
+  }
+
   Future<void> recordEvent({
     required String eventType,
     required String category,

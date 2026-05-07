@@ -8,9 +8,10 @@ class DataUsageDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = context.l10n;
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.l10n.dataUsagePrivacyTitle),
+        title: Text(l.dataUsagePrivacyTitle),
         backgroundColor: DS.surfacePrimary,
       ),
       body: ListView(
@@ -18,65 +19,82 @@ class DataUsageDashboardScreen extends StatelessWidget {
         children: [
           _SectionHeader(
             icon: Icons.psychology_outlined,
-            title: 'What Sparkle Knows About You',
+            title: l.dataUsageKnowsTitle,
           ),
           const SizedBox(height: DS.spacing12),
           _DataCard(
             icon: Icons.person_outline,
-            title: 'Profile & Goals',
-            description: 'Your name, goals, plans, and task history are used to personalize learning paths.',
-            dataTypes: ['Goals', 'Plans', 'Tasks', 'Achievements'],
+            title: l.dataUsageProfileCardTitle,
+            description: l.dataUsageProfileCardDesc,
+            dataTypes: [
+              l.dataUsageTagGoals,
+              l.dataUsageTagPlans,
+              l.dataUsageTagTasks,
+              l.dataUsageTagAchievements,
+            ],
           ),
           const SizedBox(height: DS.spacing12),
           _DataCard(
             icon: Icons.auto_awesome_outlined,
-            title: 'AI Understanding',
-            description: 'Cognitive patterns, learning style, and mastery estimates help Sparkle adapt to you.',
-            dataTypes: ['Cognitive patterns', 'Mastery estimates', 'Learning style', 'Error patterns'],
+            title: l.dataUsageAiCardTitle,
+            description: l.dataUsageAiCardDesc,
+            dataTypes: [
+              l.dataUsageTagCognitivePatterns,
+              l.dataUsageTagMasteryEstimates,
+              l.dataUsageTagLearningStyle,
+              l.dataUsageTagErrorPatterns,
+            ],
           ),
           const SizedBox(height: DS.spacing12),
           _DataCard(
             icon: Icons.history_rounded,
-            title: 'Memory & History',
-            description: 'Chat history and growth chronicle entries are stored to maintain conversation continuity.',
-            dataTypes: ['Chat messages', 'Growth chronicle', 'Spine traces'],
+            title: l.dataUsageMemoryCardTitle,
+            description: l.dataUsageMemoryCardDesc,
+            dataTypes: [
+              l.dataUsageTagChatMessages,
+              l.dataUsageTagGrowthChronicle,
+              l.dataUsageTagSpineTraces,
+            ],
           ),
           const SizedBox(height: DS.spacing24),
           _SectionHeader(
             icon: Icons.share_outlined,
-            title: 'What Is Shared',
+            title: l.dataUsageSharedTitle,
           ),
           const SizedBox(height: DS.spacing12),
           _DataCard(
             icon: Icons.group_outlined,
-            title: 'Community',
-            description: 'Anonymous error patterns and resource quality ratings are shared to help peers learn.',
-            dataTypes: ['Anonymous error patterns', 'Resource ratings'],
+            title: l.dataUsageCommunityCardTitle,
+            description: l.dataUsageCommunityCardDesc,
+            dataTypes: [
+              l.dataUsageTagAnonErrors,
+              l.dataUsageTagResourceRatings,
+            ],
           ),
           const SizedBox(height: DS.spacing24),
           _SectionHeader(
             icon: Icons.security_outlined,
-            title: 'Your Controls',
+            title: l.dataUsageControlsTitle,
           ),
           const SizedBox(height: DS.spacing12),
           _ControlTile(
             icon: Icons.visibility_off_outlined,
-            title: 'Hide chronicle entries',
-            subtitle: 'Hidden entries are invisible to AI but never deleted',
+            title: l.dataUsageHideChronicle,
+            subtitle: l.dataUsageHideChronicleDesc,
           ),
           _ControlTile(
             icon: Icons.delete_outline,
-            title: 'Request data deletion',
-            subtitle: 'All your data can be permanently removed on request',
+            title: l.dataUsageDeleteData,
+            subtitle: l.dataUsageDeleteDataDesc,
           ),
           _ControlTile(
             icon: Icons.download_outlined,
-            title: 'Export your data',
-            subtitle: 'Download a complete copy of everything Sparkle stores',
+            title: l.dataUsageExportData,
+            subtitle: l.dataUsageExportDataDesc,
           ),
           const SizedBox(height: DS.spacing32),
           Text(
-            'Sparkle never sells your data. All personalization is for your benefit only.',
+            l.dataUsageFooter,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: DS.textTertiary),
           ),

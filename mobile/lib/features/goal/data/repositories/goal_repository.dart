@@ -22,6 +22,12 @@ abstract class GoalRepository {
     required List<GoalMilestoneDraft> milestones,
     String? description,
   });
+
+  Future<void> updateGoal({
+    required String goalId,
+    String? title,
+    String? description,
+  });
 }
 
 class ApiGoalRepository implements GoalRepository {
@@ -89,6 +95,23 @@ class ApiGoalRepository implements GoalRepository {
       },
     );
     return CreatedGoal.fromJson(_asMap(response.data));
+  }
+
+  @override
+  Future<void> updateGoal({
+    required String goalId,
+    String? title,
+    String? description,
+    String? targetDate,
+  }) async {
+    final data = <String, dynamic>{};
+    if (title != null) data['title'] = title;
+    if (description != null) data['description'] = description;
+    if (targetDate != null) data['target_date'] = targetDate;
+    await _apiClient.put<dynamic>(
+      '/goals/$goalId',
+      data: data,
+    );
   }
 }
 

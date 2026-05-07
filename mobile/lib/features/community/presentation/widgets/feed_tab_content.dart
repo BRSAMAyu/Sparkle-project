@@ -12,6 +12,7 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/presentation/providers/community_providers.dart';
+import 'package:sparkle/features/community/presentation/widgets/comment_bottom_sheet.dart';
 import 'package:sparkle/features/community/presentation/widgets/feed_post_card.dart';
 
 /// Feed filter index (0 = Global, 1 = My Squad, 2 = Goal Mates, 3 = Following)
@@ -19,13 +20,40 @@ final communityFeedFilterProvider = StateProvider<int>((ref) => 0);
 
 /// Extracted feed body content — used both standalone (CommunityScreen) and
 /// embedded in the CommunityMainScreen 3-tab shell.
-class FeedTabContent extends ConsumerWidget {
+class FeedTabContent extends ConsumerStatefulWidget {
   const FeedTabContent({super.key, this.onCreatePost});
 
   final VoidCallback? onCreatePost;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FeedTabContent> createState() => _FeedTabContentState();
+}
+
+class _FeedTabContentState extends ConsumerState<FeedTabContent> {
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      ref.read(feedProvider.notifier).loadMore();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final feedState = ref.watch(feedProvider);
 
     return ContentConstraint(
@@ -38,6 +66,7 @@ class FeedTabContent extends ConsumerWidget {
             }
             return ScrollEdgeHaptics(
               child: ListView.builder(
+                controller: _scrollController,
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.only(bottom: 80),
                 itemCount: posts.length + 1,
@@ -52,6 +81,12 @@ class FeedTabContent extends ConsumerWidget {
                       post: post,
                       onLike: () =>
                           ref.read(feedProvider.notifier).toggleLike(post.id),
+                      onComment: () => showCommentSheet(
+                        context,
+                        ref,
+                        post.id,
+                        postContent: post.content,
+                      ),
                     ),
                   );
                 },
@@ -166,8 +201,8 @@ class FeedTabContent extends ConsumerWidget {
                 unawaited(
                   SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm),
                 );
-                if (onCreatePost != null) {
-                  onCreatePost!();
+                if (widget.onCreatePost != null) {
+                  widget.onCreatePost!();
                 } else {
                   unawaited(context.push(CommunityRoutes.postsCreate));
                 }

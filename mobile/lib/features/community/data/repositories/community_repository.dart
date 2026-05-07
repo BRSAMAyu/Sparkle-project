@@ -66,6 +66,12 @@ class CommunityRepository {
     );
   }
 
+  Future<void> deletePost(String postId) async {
+    await _apiClient.delete<dynamic>(
+      ApiEndpoints.communityPostDelete(postId),
+    );
+  }
+
   Future<List<FriendshipInfo>> getFriends({
     int limit = 50,
     int offset = 0,

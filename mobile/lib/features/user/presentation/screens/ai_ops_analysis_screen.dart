@@ -12,7 +12,8 @@ class AiOpsAnalysisScreen extends ConsumerStatefulWidget {
   const AiOpsAnalysisScreen({super.key});
 
   @override
-  ConsumerState<AiOpsAnalysisScreen> createState() => _AiOpsAnalysisScreenState();
+  ConsumerState<AiOpsAnalysisScreen> createState() =>
+      _AiOpsAnalysisScreenState();
 }
 
 class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
@@ -48,29 +49,29 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
               SparkleStaggerItem(
                 index: 1,
                 child: exportAsync.when(
-                data: (payload) => _buildOpsContent(context, payload),
-                loading: () => const GraphiteCardSurface(
-                  child: LinearProgressIndicator(minHeight: 3),
+                  data: (payload) => _buildOpsContent(context, payload),
+                  loading: () => const GraphiteCardSurface(
+                    child: LinearProgressIndicator(minHeight: 3),
+                  ),
+                  error: (error, _) => _buildErrorCard(
+                    context.l10n.userAiOpsLoadFailed,
+                    '$error',
+                  ),
                 ),
-                error: (error, _) => _buildErrorCard(
-                  context.l10n.userAiOpsLoadFailed,
-                  '$error',
-                ),
-              ),
               ),
               const SizedBox(height: DS.spacing16),
               SparkleStaggerItem(
                 index: 2,
                 child: predictionAsync.when(
-                data: (payload) => _buildPredictionContent(context, payload),
-                loading: () => const GraphiteCardSurface(
-                  child: LinearProgressIndicator(minHeight: 3),
+                  data: (payload) => _buildPredictionContent(context, payload),
+                  loading: () => const GraphiteCardSurface(
+                    child: LinearProgressIndicator(minHeight: 3),
+                  ),
+                  error: (error, _) => _buildErrorCard(
+                    context.l10n.userAiOpsPredictFailed,
+                    '$error',
+                  ),
                 ),
-                error: (error, _) => _buildErrorCard(
-                  context.l10n.userAiOpsPredictFailed,
-                  '$error',
-                ),
-              ),
               ),
             ],
           ),
@@ -115,8 +116,8 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
       );
 
   Widget _buildOpsContent(BuildContext context, Map<String, dynamic> payload) {
-    final overview =
-        (payload['overview'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    final overview = (payload['overview'] as Map<String, dynamic>?) ??
+        const <String, dynamic>{};
     final items = (payload['items'] as List<dynamic>? ?? const <dynamic>[])
         .whereType<Map<String, dynamic>>()
         .toList();
@@ -198,11 +199,11 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
         const SizedBox(height: DS.spacing16),
         if (trendSeries.isNotEmpty)
           ...trendSeries.take(4).map(
-            (series) => Padding(
-              padding: const EdgeInsets.only(bottom: DS.spacing12),
-              child: _TrendSeriesCard(series: series),
-            ),
-          ),
+                (series) => Padding(
+                  padding: const EdgeInsets.only(bottom: DS.spacing12),
+                  child: _TrendSeriesCard(series: series),
+                ),
+              ),
         if (items.isNotEmpty)
           GraphiteCardSurface(
             child: Column(
@@ -232,13 +233,14 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
     BuildContext context,
     Map<String, dynamic> payload,
   ) {
-    final funnel =
-        (payload['funnel'] as Map<String, dynamic>?) ?? const <String, dynamic>{};
+    final funnel = (payload['funnel'] as Map<String, dynamic>?) ??
+        const <String, dynamic>{};
     final bySurface = (payload['by_surface'] as Map<String, dynamic>?) ??
         const <String, dynamic>{};
-    final topActions = (payload['top_actions'] as List<dynamic>? ?? const <dynamic>[])
-        .whereType<Map<String, dynamic>>()
-        .toList();
+    final topActions =
+        (payload['top_actions'] as List<dynamic>? ?? const <dynamic>[])
+            .whereType<Map<String, dynamic>>()
+            .toList();
 
     return GraphiteCardSurface(
       child: Column(
@@ -255,9 +257,15 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: [
-              _MetricChip(label: context.l10n.userAiOpsExposures, value: '${funnel['impressions'] ?? 0}'),
-              _MetricChip(label: context.l10n.userAiOpsAccepts, value: '${funnel['accepts'] ?? 0}'),
-              _MetricChip(label: context.l10n.userAiOpsExecutions, value: '${funnel['executions'] ?? 0}'),
+              _MetricChip(
+                  label: context.l10n.userAiOpsExposures,
+                  value: '${funnel['impressions'] ?? 0}'),
+              _MetricChip(
+                  label: context.l10n.userAiOpsAccepts,
+                  value: '${funnel['accepts'] ?? 0}'),
+              _MetricChip(
+                  label: context.l10n.userAiOpsExecutions,
+                  value: '${funnel['executions'] ?? 0}'),
               _MetricChip(
                 label: 'CTR',
                 value:
@@ -285,7 +293,13 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Text(
-                  context.l10n.aiopsSurfaceRow(_surfaceLabel(entry.key), ((item['ctr_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), ((item['execution_rate_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1)),
+                  context.l10n.aiopsSurfaceRow(
+                      _surfaceLabel(entry.key),
+                      ((item['ctr_percent'] as num?)?.toDouble() ?? 0)
+                          .toStringAsFixed(1),
+                      ((item['execution_rate_percent'] as num?)?.toDouble() ??
+                              0)
+                          .toStringAsFixed(1)),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               );
@@ -308,7 +322,8 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
               return Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Text(
-                  context.l10n.aiopsActionRow(actionType, executions as int, rate.toStringAsFixed(1)),
+                  context.l10n.aiopsActionRow(
+                      actionType, executions as int, rate.toStringAsFixed(1)),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               );
@@ -339,13 +354,10 @@ class _AiOpsAnalysisScreenState extends ConsumerState<AiOpsAnalysisScreen> {
     BuildContext context,
     Map<String, dynamic> payload,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
     final pretty = const JsonEncoder.withIndent('  ').convert(payload);
     await Clipboard.setData(ClipboardData(text: pretty));
-    if (!mounted) return;
-    messenger.showSnackBar(
-      SparkleSnackBar.success(context.l10n.userAiOpsExportCopied),
-    );
+    if (!context.mounted) return;
+    AppFeedback.success(context, context.l10n.userAiOpsExportCopied);
   }
 
   String _surfaceLabel(String surface) {
@@ -538,9 +550,10 @@ class _TrendBarRow extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           _shortDate(points[index]['date']?.toString() ?? ''),
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: DS.textSecondary,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: DS.textSecondary,
+                                  ),
                         ),
                       ],
                     ),
@@ -575,8 +588,7 @@ class _ModeBreakdownRow extends StatelessWidget {
         (item['fallback_rate_percent'] as num?)?.toDouble() ?? 0.0;
     final cost = (item['total_cost_usd'] as num?)?.toDouble() ?? 0.0;
     final avgFirst = (item['avg_first_token_ms'] as num?)?.toDouble() ?? 0.0;
-    final avgTotal =
-        (item['avg_total_duration_ms'] as num?)?.toDouble() ?? 0.0;
+    final avgTotal = (item['avg_total_duration_ms'] as num?)?.toDouble() ?? 0.0;
     final executionRate =
         (item['execution_conversion_rate_percent'] as num?)?.toDouble() ?? 0.0;
 
@@ -598,19 +610,30 @@ class _ModeBreakdownRow extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            context.l10n.aiopsFirstPacket(avgFirst.toStringAsFixed(0), avgTotal.toStringAsFixed(0), successRate.toStringAsFixed(1)),
+            context.l10n.aiopsFirstPacket(avgFirst.toStringAsFixed(0),
+                avgTotal.toStringAsFixed(0), successRate.toStringAsFixed(1)),
             style: Theme.of(context).textTheme.bodySmall,
           ),
           const SizedBox(height: 2),
           Text(
-            context.l10n.aiopsFallbackCost(fallbackRate.toStringAsFixed(1), cost.toStringAsFixed(4), executionRate.toStringAsFixed(1)),
+            context.l10n.aiopsFallbackCost(fallbackRate.toStringAsFixed(1),
+                cost.toStringAsFixed(4), executionRate.toStringAsFixed(1)),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),
           ),
           const SizedBox(height: 2),
           Text(
-            context.l10n.aiopsPromptHit(((item['avg_prompt_utilization_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), ((item['avg_inference_utilization_percent'] as num?)?.toDouble() ?? 0).toStringAsFixed(1), (item['prompt_utilization_known_count'] ?? 0) as int, (item['inference_utilization_known_count'] ?? 0) as int),
+            context.l10n.aiopsPromptHit(
+                ((item['avg_prompt_utilization_percent'] as num?)?.toDouble() ??
+                        0)
+                    .toStringAsFixed(1),
+                ((item['avg_inference_utilization_percent'] as num?)
+                            ?.toDouble() ??
+                        0)
+                    .toStringAsFixed(1),
+                (item['prompt_utilization_known_count'] ?? 0) as int,
+                (item['inference_utilization_known_count'] ?? 0) as int),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: DS.textSecondary,
                 ),

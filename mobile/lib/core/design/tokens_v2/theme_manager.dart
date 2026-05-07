@@ -21,6 +21,9 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
   bool _highContrast = false;
   bool get highContrast => _highContrast;
 
+  bool _colorBlindFriendly = false;
+  bool get colorBlindFriendly => _colorBlindFriendly;
+
   // 🆕 商城皮肤支持
   String? _equippedSkinId; // 装备的皮肤ID（如 "skin_galaxy_nova_001"）
   String? get equippedSkinId => _equippedSkinId;
@@ -42,8 +45,14 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
   /// 按指定亮度解析主题，避免 MaterialApp.light/darkTheme 误用当前系统亮度。
   SparkleThemeData themeForBrightness(Brightness brightness) {
     final baseTheme = brightness == Brightness.light
-        ? SparkleThemeData.light(highContrast: _highContrast)
-        : SparkleThemeData.dark(highContrast: _highContrast);
+        ? SparkleThemeData.light(
+            highContrast: _highContrast,
+            colorBlindFriendly: _colorBlindFriendly,
+          )
+        : SparkleThemeData.dark(
+            highContrast: _highContrast,
+            colorBlindFriendly: _colorBlindFriendly,
+          );
 
     if (_equippedSkinId != null && _skinConfig != null) {
       return _applyShopSkin(baseTheme);
@@ -64,6 +73,7 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
     _brandPreset = BrandPreset
         .values[prefs.getInt('brand_preset') ?? BrandPreset.sparkle.index];
     _highContrast = prefs.getBool('high_contrast') ?? false;
+    _colorBlindFriendly = prefs.getBool('color_blind_friendly') ?? false;
 
     // 🆕 加载商城皮肤配置
     _equippedSkinId = prefs.getString('equipped_skin_id');
@@ -112,6 +122,13 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
     notifyListeners();
   }
 
+  /// 切换色盲友好模式
+  Future<void> setColorBlindMode(bool enabled) async {
+    _colorBlindFriendly = enabled;
+    await _saveToPrefs();
+    notifyListeners();
+  }
+
   /// 切换深色/浅色模式
   Future<void> toggleDarkMode() async {
     final newMode =
@@ -124,6 +141,7 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
     _mode = AppThemeMode.system;
     _brandPreset = BrandPreset.sparkle;
     _highContrast = false;
+    _colorBlindFriendly = false;
     _equippedSkinId = null;
     _skinConfig = null;
     await _saveToPrefs();
@@ -254,6 +272,7 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
     await prefs.setInt('theme_mode', _mode.index);
     await prefs.setInt('brand_preset', _brandPreset.index);
     await prefs.setBool('high_contrast', _highContrast);
+    await prefs.setBool('color_blind_friendly', _colorBlindFriendly);
 
     // 🆕 保存商城皮肤配置
     if (_equippedSkinId != null) {
@@ -347,8 +366,8 @@ class SparkleThemeData {
     required this.shadows,
   });
 
-  factory SparkleThemeData.light({bool highContrast = false}) {
-    final colors = SparkleColors.light(highContrast: highContrast);
+  factory SparkleThemeData.light({bool highContrast = false, bool colorBlindFriendly = false}) {
+    final colors = SparkleColors.light(highContrast: highContrast, colorBlindFriendly: colorBlindFriendly);
     return SparkleThemeData(
       colors: colors,
       typography: SparkleTypography.standard(),
@@ -358,8 +377,8 @@ class SparkleThemeData {
     );
   }
 
-  factory SparkleThemeData.dark({bool highContrast = false}) {
-    final colors = SparkleColors.dark(highContrast: highContrast);
+  factory SparkleThemeData.dark({bool highContrast = false, bool colorBlindFriendly = false}) {
+    final colors = SparkleColors.dark(highContrast: highContrast, colorBlindFriendly: colorBlindFriendly);
     return SparkleThemeData(
       colors: colors,
       typography: SparkleTypography.standard(),
@@ -445,7 +464,51 @@ class SparkleColors {
     required this.galaxyShadow,
   });
 
-  factory SparkleColors.light({bool highContrast = false}) {
+  factory SparkleColors.light({bool highContrast = false, bool colorBlindFriendly = false}) {
+    if (colorBlindFriendly) {
+      // Wong 2011 CB-safe palette: distinguishable under deuteranopia/protanopia/tritanopia
+      return const SparkleColors(
+        brandPrimary: Color(0xFF0072B2),        // Blue
+        brandSecondary: Color(0xFF56B4E9),      // Sky Blue
+        semanticSuccess: Color(0xFF009E73),     // Bluish Green
+        semanticWarning: Color(0xFFE69F00),     // Orange
+        semanticError: Color(0xFFD55E00),       // Vermillion
+        semanticInfo: Color(0xFF0072B2),        // Blue
+        surfacePrimary: Color(0xFFF8F5F0),
+        surfaceSecondary: Color(0xFFF0ECE5),
+        surfaceTertiary: Color(0xFFE5DFD5),
+        surfaceAmbient: Color(0xFFFCFAF5),
+        rimLight: Color(0x99FFFFFF),
+        glowPrimary: Color(0x240072B2),
+        noiseColor: Color(0x0D000000),
+        textPrimary: Color(0xFF171717),
+        textSecondary: Color(0xFF555555),
+        textDisabled: Color(0xFF999999),
+        brightness: Brightness.light,
+        taskLearning: Color(0xFF0072B2),        // Blue
+        taskTraining: Color(0xFFE69F00),        // Orange
+        taskErrorFix: Color(0xFFD55E00),        // Vermillion
+        taskReflection: Color(0xFFCC79A7),      // Reddish Purple
+        taskSocial: Color(0xFF009E73),          // Bluish Green
+        taskPlanning: Color(0xFF56B4E9),        // Sky Blue
+        planSprint: Color(0xFFD55E00),          // Vermillion
+        planGrowth: Color(0xFF009E73),          // Bluish Green
+        statusOnline: Color(0xFF009E73),
+        statusOffline: Color(0xFF999999),
+        statusInvisible: Color(0xFF555555),
+        neutral200: Color(0xFFF0ECE5),
+        neutral300: Color(0xFFD8D0C5),
+        neutral400: Color(0xFFB1A89C),
+        neutral500: Color(0xFF857B6D),
+        neutral600: Color(0xFF5A5148),
+        chatBubbleUser: Color(0xFF0072B2),
+        chatBubbleUserText: Colors.white,
+        chatBubbleOther: Color(0xFFF0ECE5),
+        chatBubbleOtherText: Color(0xFF171717),
+        galaxyBackground: Color(0xFFECE8E0),
+        galaxyShadow: Color(0xFFD9D0C2),
+      );
+    }
     if (highContrast) {
       return const SparkleColors(
         brandPrimary: Color(0xFF7A5430),
@@ -536,7 +599,51 @@ class SparkleColors {
     );
   }
 
-  factory SparkleColors.dark({bool highContrast = false}) {
+  factory SparkleColors.dark({bool highContrast = false, bool colorBlindFriendly = false}) {
+    if (colorBlindFriendly) {
+      // Wong 2011 CB-safe palette — lighter/more saturated for dark backgrounds
+      return const SparkleColors(
+        brandPrimary: Color(0xFF56B4E9),        // Sky Blue
+        brandSecondary: Color(0xFF009E73),      // Bluish Green
+        semanticSuccess: Color(0xFF009E73),     // Bluish Green
+        semanticWarning: Color(0xFFF0E442),     // Yellow
+        semanticError: Color(0xFFD55E00),       // Vermillion
+        semanticInfo: Color(0xFF56B4E9),        // Sky Blue
+        surfacePrimary: Color(0xFF0F1218),
+        surfaceSecondary: Color(0xFF181D26),
+        surfaceTertiary: Color(0xFF242C38),
+        surfaceAmbient: Color(0xFF090C10),
+        rimLight: Color(0x33FFFFFF),
+        glowPrimary: Color(0x4256B4E9),
+        noiseColor: Color(0x08FFFFFF),
+        textPrimary: Color(0xFFF4F1EB),
+        textSecondary: Color(0xFFB8B1A6),
+        textDisabled: Color(0xFF6B737E),
+        brightness: Brightness.dark,
+        taskLearning: Color(0xFF56B4E9),        // Sky Blue
+        taskTraining: Color(0xFFF0E442),        // Yellow
+        taskErrorFix: Color(0xFFD55E00),        // Vermillion
+        taskReflection: Color(0xFFCC79A7),      // Reddish Purple
+        taskSocial: Color(0xFF009E73),          // Bluish Green
+        taskPlanning: Color(0xFF0072B2),        // Blue
+        planSprint: Color(0xFFD55E00),          // Vermillion
+        planGrowth: Color(0xFF009E73),          // Bluish Green
+        statusOnline: Color(0xFF009E73),
+        statusOffline: Color(0xFF6B737E),
+        statusInvisible: Color(0xFF555555),
+        neutral200: Color(0xFF252C36),
+        neutral300: Color(0xFF3A4354),
+        neutral400: Color(0xFF5E6874),
+        neutral500: Color(0xFF808996),
+        neutral600: Color(0xFFADB7C8),
+        chatBubbleUser: Color(0xFF0072B2),
+        chatBubbleUserText: Colors.white,
+        chatBubbleOther: Color(0xFF20262D),
+        chatBubbleOtherText: Color(0xFFF4F1EB),
+        galaxyBackground: Color(0xFF070B12),
+        galaxyShadow: Color(0xFF04070C),
+      );
+    }
     if (highContrast) {
       return const SparkleColors(
         brandPrimary: Color(0xFFE0B172),

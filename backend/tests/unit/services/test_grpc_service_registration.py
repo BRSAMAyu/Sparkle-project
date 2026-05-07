@@ -17,7 +17,7 @@ for path in (GEN_ROOT, GEN_ROOT / "stt" / "v1"):
 
 from sparkle.inference.v1 import inference_pb2_grpc
 
-from app.gen import community_service_pb2, stt_service_pb2, stt_service_pb2_grpc
+from app.gen import stt_service_pb2, stt_service_pb2_grpc
 from app.gen.sparkle.inference.v1 import inference_pb2
 from grpc_server import DEPRECATED_PROTO_SERVICE_NAMES, register_grpc_services, registered_grpc_service_names
 
@@ -126,7 +126,6 @@ async def test_registered_inference_service_serves_run_inference(grpc_channel):
 
 
 def test_community_proto_is_explicitly_deprecated_rest_only():
-    service = community_service_pb2.DESCRIPTOR.services_by_name["CommunityService"]
-
-    assert service.GetOptions().deprecated is True
+    # P2-5: community_service.proto generated code removed.
+    # Deprecated service name retained in DEPRECATED_PROTO_SERVICE_NAMES for documentation.
     assert "sparkle.community.CommunityService" in DEPRECATED_PROTO_SERVICE_NAMES

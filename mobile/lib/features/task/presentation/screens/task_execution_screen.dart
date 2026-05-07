@@ -181,13 +181,12 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               (Object error, StackTrace stackTrace) {
                 debugPrint('Error starting task: $error');
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SparkleSnackBar.error(
-                      context.l10n.taskExecutionStartFailed(
-                        error is DioException
-                            ? (error.message ?? error.toString())
-                            : error.toString(),
-                      ),
+                  AppFeedback.error(
+                    context,
+                    context.l10n.taskExecutionStartFailed(
+                      error is DioException
+                          ? (error.message ?? error.toString())
+                          : error.toString(),
                     ),
                   );
                 }
@@ -448,18 +447,12 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
       // Work phase completed
       _pomodoroCycle = 1;
       _currentTimerDuration = 5 * 60; // Short break
-      ScaffoldMessenger.of(context).showSnackBar(
-        SparkleSnackBar.info(context.l10n.pomodoroWorkFinished,
-            duration: const Duration(seconds: 3)),
-      );
+      AppFeedback.info(context, context.l10n.pomodoroWorkFinished);
     } else if (_pomodoroCycle == 1) {
       // Short break completed
       _pomodoroCycle = 0;
       _currentTimerDuration = 25 * 60; // Next work phase
-      ScaffoldMessenger.of(context).showSnackBar(
-        SparkleSnackBar.info(context.l10n.pomodoroBreakFinished,
-            duration: const Duration(seconds: 3)),
-      );
+      AppFeedback.info(context, context.l10n.pomodoroBreakFinished);
     }
     // Extend for long breaks if desired
     setState(() {}); // Trigger rebuild for TimerWidget to update
@@ -492,17 +485,15 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
         sheetTask = result.task;
       } catch (error) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SparkleSnackBar.error(
-            context.l10n.taskExecutionAuroraDiagnosticUnavailable('$error'),
-          ),
+        AppFeedback.error(
+          context,
+          context.l10n.taskExecutionAuroraDiagnosticUnavailable('$error'),
         );
       }
     }
     if (!mounted) return;
-    await showModalBottomSheet<void>(
+    await showSensoryModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) => StuckHelpSheet(
         task: sheetTask,
@@ -557,9 +548,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
   void _openStuckChat(TaskModel task) {
     final prompt = _buildStuckChatPrompt(task);
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
-        backgroundColor: Colors.transparent,
         isScrollControlled: true,
         builder: (context) => DraggableScrollableSheet(
           initialChildSize: 0.82,
@@ -596,9 +586,7 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
               extraContext: _buildTaskHelpChatContext(task, trigger),
             ),
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SparkleSnackBar.success(context.l10n.taskExecutionSentToAurora),
-      );
+      AppFeedback.success(context, context.l10n.taskExecutionSentToAurora);
       return;
     }
 
@@ -735,9 +723,8 @@ class _TaskExecutionScreenState extends ConsumerState<TaskExecutionScreen> {
 
   Future<void> _openFocusCoach(TaskModel task) {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.confirm));
-    return showModalBottomSheet<void>(
+    return showSensoryModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) => DraggableScrollableSheet(
         initialChildSize: 0.85,
@@ -1442,9 +1429,8 @@ class _ExecutionAssistPanel extends ConsumerWidget {
 
   Future<void> _showRejectReasonSheet(
       BuildContext context, WidgetRef ref) async {
-    final selectedReason = await showModalBottomSheet<String>(
+    final selectedReason = await showSensoryModalBottomSheet<String>(
       context: context,
-      backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (context) => const _RejectReasonSheet(),
     );

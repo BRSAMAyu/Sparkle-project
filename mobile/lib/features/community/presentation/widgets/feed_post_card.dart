@@ -1,7 +1,9 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -9,11 +11,22 @@ import 'package:sparkle/features/community/data/models/community_models.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class FeedPostCard extends StatelessWidget {
-  const FeedPostCard(
-      {required this.post, super.key, this.onLike, this.onComment});
+  const FeedPostCard({
+    required this.post,
+    super.key,
+    this.onLike,
+    this.onComment,
+    this.onDelete,
+    this.currentUserId,
+  });
   final Post post;
   final VoidCallback? onLike;
   final VoidCallback? onComment;
+  final VoidCallback? onDelete;
+  final String? currentUserId;
+
+  bool get _isOwner =>
+      currentUserId != null && post.userId == currentUserId;
 
   @override
   Widget build(BuildContext context) {
@@ -160,13 +173,12 @@ class FeedPostCard extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 _ActionButton(
-                  icon: Icons.favorite_border,
-                  activeIcon: Icons.favorite,
+                  icon: post.isLiked ? Icons.favorite : Icons.favorite_border,
                   label: '${post.likeCount}',
                   semanticLabel: context.l10n.communityLikesCount(
                     post.likeCount,
                   ),
-                  color: post.likeCount > 0 ? DS.error : null,
+                  color: post.isLiked ? DS.error : null,
                   onTap: onLike,
                 ),
                 _ActionButton(
@@ -181,6 +193,30 @@ class FeedPostCard extends StatelessWidget {
                         );
                       },
                 ),
+                _ActionButton(
+                  icon: Icons.share_outlined,
+                  label: zh ? '分享' : 'Share',
+                  semanticLabel: zh ? '分享' : 'Share',
+                  onTap: () {
+                    final buffer = StringBuffer(post.content);
+                    if (post.topic != null && post.topic!.isNotEmpty) {
+                      buffer.write(' #${post.topic}');
+                    }
+                    Clipboard.setData(ClipboardData(text: buffer.toString()));
+                    AppFeedback.success(
+                      context,
+                      zh ? '已复制到剪贴板' : 'Copied to clipboard',
+                    );
+                  },
+                ),
+                if (_isOwner && onDelete != null)
+                  _ActionButton(
+                    icon: Icons.delete_outline,
+                    label: zh ? '删除' : 'Delete',
+                    semanticLabel: zh ? '删除动态' : 'Delete post',
+                    color: DS.error,
+                    onTap: onDelete,
+                  ),
                 if (post.topic != null)
                   Semantics(
                     label: '#${post.topic}',

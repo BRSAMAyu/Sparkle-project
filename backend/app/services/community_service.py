@@ -849,16 +849,14 @@ class GroupService:
             push_svc = NotificationPushService(db)
             for admin_id in admin_ids:
                 await push_svc.create_and_push(
-                    recipient_user_id=admin_id,
-                    notification=NotificationCreate(
-                        title="新成员加入群组",
-                        content=f"{joiner_name} 加入了「{group_name}」",
-                        type="community_group_join",
-                        data={
-                            "group_id": str(group_id),
-                            "new_member_user_id": str(user_id),
-                        },
-                    ),
+                    user_id=admin_id,
+                    title="新成员加入群组",
+                    content=f"{joiner_name} 加入了「{group_name}」",
+                    notification_type="community_group_join",
+                    data={
+                        "group_id": str(group_id),
+                        "new_member_user_id": str(user_id),
+                    },
                 )
         except Exception:
             logger.opt(exception=True).debug("Failed to send community_group_join notification")
@@ -2760,7 +2758,7 @@ class PrivateMessageService:
             and_(
                 PrivateMessage.receiver_id == user_id,
                 PrivateMessage.sender_id == sender_id,
-                not PrivateMessage.is_read
+                PrivateMessage.is_read == False
             )
         ).values(
             is_read=True,

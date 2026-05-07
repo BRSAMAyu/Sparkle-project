@@ -59,6 +59,7 @@ from app.models.community import (
     GroupRole,
     GroupType,
     Post,
+    PostComment,
     PostLike,
     PrivateMessage,
     SharedResource,
@@ -220,13 +221,19 @@ def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
-def _post_to_response(post: Post) -> dict:
+def _post_to_response(post: Post, current_user_id=None, liked_post_ids=None) -> dict:
     """Convert Post ORM object to Flutter-compatible response dict."""
     user_data = {
         "id": str(post.user.id) if post.user else str(post.user_id),
         "username": post.user.username if post.user else "unknown",
         "avatar_url": post.user.avatar_url if post.user else None,
     }
+    if liked_post_ids is not None:
+        is_liked = str(post.id) in liked_post_ids
+    elif current_user_id is not None:
+        is_liked = any(str(like.user_id) == str(current_user_id) for like in (post.likes or []))
+    else:
+        is_liked = False
     return {
         "id": str(post.id),
         "user_id": str(post.user_id),
@@ -236,6 +243,7 @@ def _post_to_response(post: Post) -> dict:
         "image_urls": post.image_urls or [],
         "topic": post.topic,
         "like_count": post.like_count or 0,
+        "is_liked": is_liked,
     }
 
 
@@ -385,11 +393,24 @@ async def get_feed(
     )
     observe_product_loop_items("community_feed", metric_surface, post_count)
     observe_product_loop_latency("community_feed", metric_surface, "loaded", time.perf_counter() - start_time)
-    return [_post_to_response(p) for p in posts]
+
+    liked_post_ids = set()
+    if posts and current_user:
+        post_ids = [p.id for p in posts]
+        likes_result = await db.execute(
+            select(PostLike.post_id).where(
+                PostLike.user_id == current_user.id,
+                PostLike.post_id.in_(post_ids),
+            )
+        )
+        liked_post_ids = {str(pid) for pid in likes_result.scalars().all()}
+
+    return [_post_to_response(p, liked_post_ids=liked_post_ids) for p in posts]
 
 
 # route-tier: authed
 @router.post("/posts", summary="发布社区动态", status_code=201)
+@limiter.limit("5/minute")
 async def create_post(
     request: Request,
     current_user: User = Depends(get_current_user),
@@ -409,7 +430,7 @@ async def create_post(
     db.add(post)
     await db.commit()
     await db.refresh(post, attribute_names=["user"])
-    return _post_to_response(post)
+    return _post_to_response(post, current_user_id=str(current_user.id))
 
 
 # route-tier: authed
@@ -443,7 +464,166 @@ async def toggle_like_post(
         liked = True
 
     await db.commit()
+
+    # Notify post author when someone likes their post (not self-like)
+    if liked and str(post.user_id) != str(current_user.id):
+        try:
+            from app.services.notification_push_service import NotificationPushService
+
+            push_svc = NotificationPushService(db)
+            await push_svc.create_and_push(
+                user_id=post.user_id,
+                title="Someone liked your post",
+                content=f"{current_user.username} liked your post",
+                notification_type="social",
+                data={"post_id": str(post_id), "liker_id": str(current_user.id)},
+            )
+        except Exception:
+            logger.debug("Failed to push like notification for post={}", post_id, exc_info=True)
+
     return {"liked": liked, "like_count": post.like_count}
+
+
+# ============ 评论系统 ============
+
+@router.get("/posts/{post_id}/comments", summary="获取评论列表")
+async def list_post_comments(
+    post_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get comments for a post, newest first."""
+    comments = (
+        await db.execute(
+            select(PostComment)
+            .where(PostComment.post_id == post_id)
+            .order_by(desc(PostComment.created_at))
+        )
+    ).scalars().all()
+    return [
+        {
+            "id": str(c.id),
+            "post_id": str(c.post_id),
+            "user_id": str(c.user_id),
+            "content": c.content,
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+        }
+        for c in comments
+    ]
+
+
+@router.post("/posts/{post_id}/comments", summary="发表评论", status_code=201)
+async def create_post_comment(
+    post_id: UUID,
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Add a comment to a post."""
+    post = (
+        await db.execute(select(Post).where(Post.id == post_id))
+    ).scalar_one_or_none()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    body = await request.json()
+    content = (body.get("content") or "").strip()
+    if not content:
+        raise HTTPException(status_code=422, detail="Content required")
+
+    comment = PostComment(
+        user_id=current_user.id,
+        post_id=post_id,
+        content=content,
+    )
+    db.add(comment)
+    post.comment_count = (post.comment_count or 0) + 1
+    await db.commit()
+    await db.refresh(comment)
+
+    # Notify post author when someone comments (not self-comment)
+    if str(post.user_id) != str(current_user.id):
+        try:
+            from app.services.notification_push_service import NotificationPushService
+
+            push_svc = NotificationPushService(db)
+            preview = content[:80] + ("..." if len(content) > 80 else "")
+            await push_svc.create_and_push(
+                user_id=post.user_id,
+                title="New comment on your post",
+                content=f"{current_user.username}: {preview}",
+                notification_type="social",
+                data={"post_id": str(post_id), "comment_id": str(comment.id)},
+            )
+        except Exception:
+            logger.debug(
+                "Failed to push comment notification for post={}", post_id, exc_info=True
+            )
+
+    return {
+        "id": str(comment.id),
+        "post_id": str(comment.post_id),
+        "user_id": str(comment.user_id),
+        "content": comment.content,
+        "created_at": comment.created_at.isoformat() if comment.created_at else None,
+    }
+
+
+# route-tier: authed
+@router.delete("/posts/{post_id}", summary="删除动态")
+async def delete_post(
+    post_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Soft-delete a post. Only the post owner can delete it."""
+    post = (
+        await db.execute(
+            select(Post).where(
+                Post.id == post_id,
+                Post.deleted_at.is_(None),
+            )
+        )
+    ).scalar_one_or_none()
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if str(post.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not your post")
+
+    post.soft_delete()
+    await db.commit()
+    return {"deleted": True}
+
+
+@router.delete("/posts/{post_id}/comments/{comment_id}", summary="删除评论")
+async def delete_post_comment(
+    post_id: UUID,
+    comment_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete own comment."""
+    comment = (
+        await db.execute(
+            select(PostComment).where(
+                PostComment.id == comment_id,
+                PostComment.post_id == post_id,
+            )
+        )
+    ).scalar_one_or_none()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    if str(comment.user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Not your comment")
+
+    post = (
+        await db.execute(select(Post).where(Post.id == post_id))
+    ).scalar_one_or_none()
+    if post:
+        post.comment_count = max(0, (post.comment_count or 1) - 1)
+
+    await db.delete(comment)
+    await db.commit()
+    return {"deleted": True}
 
 
 def _build_message_info(msg: GroupMessage) -> MessageInfo:
@@ -1011,24 +1191,21 @@ async def send_friend_request(
         await db.commit()
 
         if friendship.status == FriendshipStatus.PENDING and str(friendship.initiated_by) == str(current_user.id):
-            from app.schemas.notification import NotificationCreate
-            from app.services.notification_service import NotificationService
+            from app.services.notification_push_service import NotificationPushService
 
             sender_name = current_user.nickname or current_user.full_name or current_user.username or "新朋友"
             try:
-                await NotificationService.create(
-                    db,
-                    data.target_user_id,
-                    NotificationCreate(
-                        title="新的好友请求",
-                        content=f"{sender_name} 向你发来了好友请求",
-                        type="friend_request",
-                        data={
-                            "friendship_id": str(friendship.id),
-                            "from_user_id": str(current_user.id),
-                            "message": data.message,
-                        },
-                    ),
+                push_svc = NotificationPushService(db)
+                await push_svc.create_and_push(
+                    user_id=data.target_user_id,
+                    title="新的好友请求",
+                    content=f"{sender_name} 向你发来了好友请求",
+                    notification_type="friend_request",
+                    data={
+                        "friendship_id": str(friendship.id),
+                        "from_user_id": str(current_user.id),
+                        "message": data.message,
+                    },
                 )
             except Exception as exc:
                 logger.warning(f"Failed to send friend request notification for friendship {friendship.id}: {exc}")
@@ -1045,8 +1222,25 @@ async def respond_to_friend_request(
 ):
     """接受或拒绝好友请求"""
     try:
-        await FriendshipService.respond_to_request(db, current_user.id, data.friendship_id, data.accept)
+        friendship = await FriendshipService.respond_to_request(db, current_user.id, data.friendship_id, data.accept)
         await db.commit()
+
+        # Notify the original requester of the response
+        if friendship and data.accept:
+            try:
+                from app.services.notification_push_service import NotificationPushService
+                push_svc = NotificationPushService(db)
+                responder_name = current_user.nickname or current_user.full_name or current_user.username or "用户"
+                await push_svc.create_and_push(
+                    user_id=friendship.initiated_by,
+                    title="好友请求已接受",
+                    content=f"{responder_name} 已接受你的好友请求",
+                    notification_type="friend_request_accepted",
+                    data={"friendship_id": str(data.friendship_id)},
+                )
+            except Exception as exc:
+                logger.warning(f"Failed to send friend acceptance notification: {exc}")
+
         return {"success": True}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
@@ -2250,25 +2444,22 @@ async def copy_group_file_to_library(
         await db.commit()
 
         if result.notify_owner_id:
-            from app.schemas.notification import NotificationCreate
-            from app.services.notification_service import NotificationService
+            from app.services.notification_push_service import NotificationPushService
 
+            push_svc = NotificationPushService(db)
             copier_name = current_user.nickname or current_user.full_name or current_user.username or "群成员"
-            await NotificationService.create(
-                db,
-                result.notify_owner_id,
-                NotificationCreate(
-                    title="你的文档被保存了",
-                    content=f"{copier_name} 已将你的文档复制到个人资料库",
-                    type="document_copied",
-                    data={
-                        "source": "group_file",
-                        "group_id": str(group_id),
-                        "source_file_id": str(file_id),
-                        "copied_file_id": str(result.stored_file.id),
-                        "copied_by_user_id": str(current_user.id),
-                    },
-                ),
+            await push_svc.create_and_push(
+                user_id=result.notify_owner_id,
+                title="你的文档被保存了",
+                content=f"{copier_name} 已将你的文档复制到个人资料库",
+                notification_type="social",
+                data={
+                    "source": "group_file",
+                    "group_id": str(group_id),
+                    "source_file_id": str(file_id),
+                    "copied_file_id": str(result.stored_file.id),
+                    "copied_by_user_id": str(current_user.id),
+                },
             )
 
         return _build_file_copy_response(

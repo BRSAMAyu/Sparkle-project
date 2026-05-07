@@ -149,7 +149,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       labelText: l10n.password,
                       border: const OutlineInputBorder(),
                       prefixIcon: const Icon(Icons.lock_outline),
-                      suffixIcon: SparkleIconButton(
+                      suffixIcon: IconButton(
                         icon: Icon(
                           _isPasswordVisible
                               ? Icons.visibility_off

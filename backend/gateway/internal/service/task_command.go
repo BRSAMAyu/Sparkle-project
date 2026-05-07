@@ -36,11 +36,16 @@ type UpdateTaskRequest struct {
 	TaskID           uuid.UUID
 	UserID           uuid.UUID
 	Title            *string
+	Type             *db.Tasktype
+	Tags             *[]string
 	EstimatedMinutes *int32
 	Difficulty       *int32
+	EnergyCost       *int32
+	Status           *db.Taskstatus
 	Priority         *int32
 	DueDate          *time.Time
 	GuideContent     *string
+	UserNote         *string
 }
 
 // TaskCommandService handles write operations for the task module.
@@ -229,6 +234,45 @@ func (s *TaskCommandService) StartTask(ctx context.Context, userID, taskID uuid.
 	})
 }
 
+// ReopenTask reopens a completed or abandoned task back to in-progress.
+func (s *TaskCommandService) ReopenTask(ctx context.Context, userID, taskID uuid.UUID) error {
+	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
+		result, err := txCtx.Tx().Exec(ctx, `
+				UPDATE tasks
+				SET status = 'IN_PROGRESS', completed_at = NULL, updated_at = NOW()
+				WHERE id = $1 AND user_id = $2 AND status IN ('COMPLETED', 'ABANDONED') AND deleted_at IS NULL
+			`, pgtype.UUID{Bytes: taskID, Valid: true}, pgtype.UUID{Bytes: userID, Valid: true})
+
+		if err != nil {
+			return fmt.Errorf("failed to reopen task: %w", err)
+		}
+
+		if result.RowsAffected() == 0 {
+			return fmt.Errorf("task not found or not in completed/abandoned status")
+		}
+
+		domainEvent := event.NewDomainEvent(
+			event.EventTaskReopened,
+			event.AggregateTask,
+			taskID,
+			map[string]interface{}{
+				"task_id": taskID.String(),
+				"user_id": userID.String(),
+			},
+			event.EventMetadata{
+				UserID: userID,
+				Source: "task_command_service",
+			},
+		)
+
+		if err := txCtx.SaveEventToOutbox(ctx, &domainEvent); err != nil {
+			return fmt.Errorf("failed to save event to outbox: %w", err)
+		}
+
+		return nil
+	})
+}
+
 // CompleteTask completes a task and publishes a TaskCompleted event atomically.
 func (s *TaskCommandService) CompleteTask(ctx context.Context, userID, taskID uuid.UUID, actualMinutes int32, userNote string) error {
 	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
@@ -236,7 +280,7 @@ func (s *TaskCommandService) CompleteTask(ctx context.Context, userID, taskID uu
 			UPDATE tasks
 			SET status = 'COMPLETED', completed_at = NOW(), updated_at = NOW(),
 			    actual_minutes = $3, user_note = $4
-			WHERE id = $1 AND user_id = $2 AND status = 'IN_PROGRESS' AND deleted_at IS NULL
+			WHERE id = $1 AND user_id = $2 AND status IN ('IN_PROGRESS', 'PAUSED', 'STUCK') AND deleted_at IS NULL
 		`,
 			pgtype.UUID{Bytes: taskID, Valid: true},
 			pgtype.UUID{Bytes: userID, Valid: true},
@@ -282,7 +326,7 @@ func (s *TaskCommandService) AbandonTask(ctx context.Context, userID, taskID uui
 			UPDATE tasks
 			SET status = 'ABANDONED', completed_at = NOW(), updated_at = NOW(),
 			    user_note = $3
-			WHERE id = $1 AND user_id = $2 AND status IN ('PENDING', 'IN_PROGRESS') AND deleted_at IS NULL
+			WHERE id = $1 AND user_id = $2 AND status IN ('PENDING', 'IN_PROGRESS', 'PAUSED', 'STUCK') AND deleted_at IS NULL
 		`,
 			pgtype.UUID{Bytes: taskID, Valid: true},
 			pgtype.UUID{Bytes: userID, Valid: true},
@@ -367,11 +411,24 @@ func (s *TaskCommandService) UpdateTask(ctx context.Context, req UpdateTaskReque
 		if req.Title != nil {
 			updates["title"] = *req.Title
 		}
+		if req.Type != nil {
+			updates["type"] = string(*req.Type)
+		}
+		if req.Tags != nil {
+			data, _ := json.Marshal(*req.Tags)
+			updates["tags"] = string(data)
+		}
 		if req.EstimatedMinutes != nil {
 			updates["estimated_minutes"] = *req.EstimatedMinutes
 		}
 		if req.Difficulty != nil {
 			updates["difficulty"] = *req.Difficulty
+		}
+		if req.EnergyCost != nil {
+			updates["energy_cost"] = *req.EnergyCost
+		}
+		if req.Status != nil {
+			updates["status"] = string(*req.Status)
 		}
 		if req.Priority != nil {
 			updates["priority"] = *req.Priority
@@ -382,6 +439,9 @@ func (s *TaskCommandService) UpdateTask(ctx context.Context, req UpdateTaskReque
 		if req.DueDate != nil {
 			updates["due_date"] = *req.DueDate
 		}
+		if req.UserNote != nil {
+			updates["user_note"] = *req.UserNote
+		}
 
 		if len(updates) == 0 {
 			return nil // Nothing to update
@@ -391,22 +451,32 @@ func (s *TaskCommandService) UpdateTask(ctx context.Context, req UpdateTaskReque
 		result, err := txCtx.Tx().Exec(ctx, `
 			UPDATE tasks
 			SET title = COALESCE($3, title),
-			    estimated_minutes = COALESCE($4, estimated_minutes),
-			    difficulty = COALESCE($5, difficulty),
-			    priority = COALESCE($6, priority),
-			    guide_content = COALESCE($7, guide_content),
-			    due_date = COALESCE($8, due_date),
+			    type = COALESCE($4, type),
+			    tags = COALESCE($5::jsonb, tags),
+			    estimated_minutes = COALESCE($6, estimated_minutes),
+			    difficulty = COALESCE($7, difficulty),
+			    energy_cost = COALESCE($8, energy_cost),
+			    status = COALESCE($9, status),
+			    priority = COALESCE($10, priority),
+			    guide_content = COALESCE($11, guide_content),
+			    due_date = COALESCE($12, due_date),
+			    user_note = COALESCE($13, user_note),
 			    updated_at = NOW()
 			WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL
 		`,
 			pgtype.UUID{Bytes: req.TaskID, Valid: true},
 			pgtype.UUID{Bytes: req.UserID, Valid: true},
 			nilOrString(req.Title),
+			nilOrTaskType(req.Type),
+			nilOrTagsJSON(req.Tags),
 			nilOrInt32(req.EstimatedMinutes),
 			nilOrInt32(req.Difficulty),
+			nilOrInt32(req.EnergyCost),
+			nilOrTaskStatus(req.Status),
 			nilOrInt32(req.Priority),
 			nilOrString(req.GuideContent),
 			nilOrTime(req.DueDate),
+			nilOrString(req.UserNote),
 		)
 
 		if err != nil {
@@ -526,13 +596,13 @@ func (s *TaskCommandService) PauseTask(ctx context.Context, userID, taskID uuid.
 	})
 }
 
-// ResumeTask resumes a paused task and publishes a TaskResumed event.
+// ResumeTask resumes a paused or restore task and publishes a TaskResumed event.
 func (s *TaskCommandService) ResumeTask(ctx context.Context, userID, taskID uuid.UUID) error {
 	return s.unitOfWork.ExecuteInTransaction(ctx, func(txCtx *outbox.TransactionContext) error {
 		result, err := txCtx.Tx().Exec(ctx, `
 			UPDATE tasks
 			SET status = 'IN_PROGRESS', updated_at = NOW()
-			WHERE id = $1 AND user_id = $2 AND status = 'PAUSED' AND deleted_at IS NULL
+			WHERE id = $1 AND user_id = $2 AND status IN ('PAUSED', 'RESTORE') AND deleted_at IS NULL
 		`,
 			pgtype.UUID{Bytes: taskID, Valid: true},
 			pgtype.UUID{Bytes: userID, Valid: true},
@@ -541,7 +611,7 @@ func (s *TaskCommandService) ResumeTask(ctx context.Context, userID, taskID uuid
 			return fmt.Errorf("failed to resume task: %w", err)
 		}
 		if result.RowsAffected() == 0 {
-			return fmt.Errorf("task not found or not paused")
+			return fmt.Errorf("task not found or not paused/restore")
 		}
 		domainEvent := event.NewDomainEvent(
 			event.EventTaskResumed,
@@ -619,4 +689,26 @@ func nilOrTime(t *time.Time) pgtype.Date {
 		return pgtype.Date{}
 	}
 	return pgtype.Date{Time: *t, Valid: true}
+}
+
+func nilOrTagsJSON(tags *[]string) pgtype.Text {
+	if tags == nil {
+		return pgtype.Text{}
+	}
+	data, _ := json.Marshal(*tags)
+	return pgtype.Text{String: string(data), Valid: true}
+}
+
+func nilOrTaskType(t *db.Tasktype) pgtype.Text {
+	if t == nil {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: string(*t), Valid: true}
+}
+
+func nilOrTaskStatus(s *db.Taskstatus) pgtype.Text {
+	if s == nil {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: string(*s), Valid: true}
 }

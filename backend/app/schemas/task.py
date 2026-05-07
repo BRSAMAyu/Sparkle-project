@@ -33,6 +33,7 @@ TASK_TYPE_ALIAS_MAP = {
     "practice": "TRAINING",
     "homework": "PLANNING",
     "exam": "REFLECTION",
+    "worked_example_then_drill": "TRAINING",
     "other": "LEARNING",
 }
 

@@ -237,9 +237,6 @@ proto-gen-legacy:
 	       --go_out=backend/gateway/gen/stt/v1 --go_opt=paths=source_relative \
 	       --go-grpc_out=backend/gateway/gen/stt/v1 --go-grpc_opt=paths=source_relative \
 	       proto/stt_service.proto
-	protoc --proto_path=proto \
-	       --go_out=backend/gateway/gen/userstate/v1 --go_opt=paths=source_relative \
-	       proto/user_state.proto
 	@echo "  → WebSocket..."
 	mkdir -p backend/gateway/gen/ws
 	protoc --proto_path=proto \

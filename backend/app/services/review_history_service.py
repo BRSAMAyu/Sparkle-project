@@ -45,13 +45,17 @@ from app.models.review_system import (
 def _utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
-class FeedbackType(StrEnum):
-    """用户反馈类型"""
+class ContentReviewFeedbackType(StrEnum):
+    """用户反馈类型 — 对应 proto agent_service.proto ContentReviewFeedbackType"""
     SATISFIED = "satisfied"           # 用户满意（接受内容）
     UNSATISFIED = "unsatisfied"       # 用户不满意（拒绝内容）
     MODIFIED = "modified"             # 用户修改后接受
     REPORTED_ERROR = "reported_error" # 用户报告错误
     SKIPPED = "skipped"               # 用户跳过审查
+
+
+# 向后兼容别名，逐步迁移
+FeedbackType = ContentReviewFeedbackType
 
 
 @dataclass
@@ -272,7 +276,7 @@ class ReviewHistoryService:
         try:
             feedback_type = FeedbackType(model.feedback_type)
         except ValueError:
-            feedback_type = FeedbackType.SKIPPED
+            feedback_type = ContentReviewFeedbackType.SKIPPED
         return FeedbackEntry(
             feedback_id=model.feedback_id,
             review_id=model.review_id,
@@ -653,7 +657,7 @@ class ReviewHistoryService:
 
         satisfaction_rate = 0.0
         if feedbacks:
-            satisfied = sum(1 for f in feedbacks if f.feedback_type == FeedbackType.SATISFIED)
+            satisfied = sum(1 for f in feedbacks if f.feedback_type == ContentReviewFeedbackType.SATISFIED)
             satisfaction_rate = satisfied / len(feedbacks)
 
         # 常见问题统计
@@ -821,7 +825,7 @@ class ReviewHistoryService:
         for model in review_result.scalars().all():
             entry = self._to_review_entry(model)
             # 检查是否有用户反馈
-            if entry.user_feedback == FeedbackType.SATISFIED.value and not entry.user_satisfied:
+            if entry.user_feedback == ContentReviewFeedbackType.SATISFIED.value and not entry.user_satisfied:
                 # 审查未通过但用户满意 -> 可能误判
                 misclassified.append({
                     "review_id": entry.review_id,

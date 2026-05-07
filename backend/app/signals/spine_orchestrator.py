@@ -31,6 +31,7 @@ from app.aurora.runtime_v1.l0_rules import L0RuleEngine
 from app.aurora.runtime_v1.l3_full_core import L3FullCoreEngine
 from app.core.cost_controller import is_aurora_within_budget, record_aurora_cost
 from app.core.error_taxonomy import ErrorCategory, ErrorSeverity, classify_error
+from app.causal.episode_logger import CandidatePolicy, episode_logger
 from app.signals.achievement_reinforcement import AchievementReinforcementConsumer
 from app.signals.aurora_core_session import AuroraCoreSessionService, PolicyChange, SessionClosure, StatePatch
 from app.signals.aurora_wake import AuroraWakeJudge
@@ -1443,6 +1444,13 @@ class SpineOrchestrator:
                         task_type, alt, user_id,
                     )
                     trace.raw_event_ids.append(f"low_yield_block:{task_type}")
+                    await self._emit_low_yield_card(
+                        user_id=user_id,
+                        activity=str(task_type),
+                        alternative=alt,
+                        yield_score=yield_result.yield_score,
+                        alt_yield=self.low_yield_guard._get_alt_yield(alt),
+                    )
                     if hasattr(directive, "task_type"):
                         directive.task_type = alt
         except Exception:
@@ -1946,6 +1954,33 @@ class SpineOrchestrator:
         await self.absence_detector.mark_cooldown(
             self.redis, user_id, snapshot.absence_level,
         )
+
+        # MAGIC-004: emit absence notice divine moment card
+        try:
+            import json as _json
+            card_data = {
+                "divine_moment_type": "absence_notice",
+                "title": "好久不见",
+                "narrative": (
+                    f"你已经离开了一段时间，我帮你准备好了继续的入口。"
+                ),
+                "metadata": {
+                    "absence_level": snapshot.absence_level,
+                    "elapsed_minutes": snapshot.elapsed_minutes,
+                },
+                "actions": ["继续上次的进度", "重新开始"],
+            }
+            await self.redis.set(
+                f"spine:card:absence_notice:{user_id}:latest",
+                _json.dumps(card_data, ensure_ascii=False),
+                ex=24 * 3600,
+            )
+            logger.debug(
+                "MAGIC-004 absence card emitted: user={} level={}",
+                user_id, snapshot.absence_level,
+            )
+        except Exception:
+            logger.warning("MAGIC-004 absence card emission failed", exc_info=True)
 
         logger.info(
             "Spine absence: user={} level={} elapsed={:.0f}min",
@@ -2820,6 +2855,7 @@ class SpineOrchestrator:
         skill = applicable[0]
         patch = self.skill_lifecycle_manager.build_worked_example_repair(skill, context)
         modified = dict(task_spec)
+        modified["task_kind"] = patch["task_type_override"]
         modified["task_type"] = patch["task_type_override"]
         modified["strategy_summary"] = patch["strategy_summary"]
         modified["applies_to_nodes"] = patch["applies_to_nodes"]
@@ -3174,6 +3210,22 @@ class SpineOrchestrator:
         except Exception:
             logger.warning("_enrich_pipeline_post_policy: operation failed", exc_info=True)
 
+        # 9. MAGIC-003: material utilization check — detect when uploaded materials go unused
+        try:
+            receipt_raw = await self.redis.get(f"spine:card:context_receipt:{user_id}:latest")
+            receipt = json.loads(receipt_raw) if receipt_raw else None
+            material_signal = await self.material_signal_detector.on_turn_completed(
+                user_id=user_id,
+                context_receipt=receipt,
+            )
+            if material_signal:
+                await self._emit_material_non_use_card(
+                    user_id=user_id,
+                    filenames=material_signal.evidence_summary,
+                )
+        except Exception:
+            logger.warning("_enrich_pipeline_post_policy: material_signal check failed", exc_info=True)
+
         # 9. P4 quality guard: signal quality + directive compliance checks
         try:
             from app.signals.spine_quality_guard import SpineQualityGuard
@@ -3481,6 +3533,72 @@ class SpineOrchestrator:
             )
         except Exception:
             logger.warning("_emit_correction_impact_card failed", exc_info=True)
+
+    async def _emit_material_non_use_card(
+        self,
+        *,
+        user_id: str,
+        filenames: str = "",
+    ) -> None:
+        """MAGIC-003: Emit a divine moment card when Aurora skips unneeded materials."""
+        try:
+            import json as _json
+            card_data = {
+                "divine_moment_type": "material_non_use",
+                "title": "我已帮你筛选了资料",
+                "narrative": filenames or "我查看了你上传的资料，跳过了一些不适合当前阶段的内容，专注更有价值的部分。",
+                "metadata": {"material": filenames},
+                "actions": ["知道了"],
+            }
+            await self.redis.set(
+                f"spine:card:material_non_use:{user_id}:latest",
+                _json.dumps(card_data, ensure_ascii=False),
+                ex=72 * 3600,
+            )
+            logger.debug(
+                "MAGIC-003 material non-use card emitted: user={}", user_id,
+            )
+        except Exception:
+            logger.warning("_emit_material_non_use_card failed", exc_info=True)
+
+    async def _emit_low_yield_card(
+        self,
+        *,
+        user_id: str,
+        activity: str,
+        alternative: str,
+        yield_score: float,
+        alt_yield: float,
+    ) -> None:
+        """MAGIC-005: Emit a divine moment card when a low-yield activity is blocked."""
+        try:
+            import json as _json
+            improvement_pct = int((alt_yield - yield_score) / max(yield_score, 0.01) * 100) if yield_score > 0 else 0
+            card_data = {
+                "divine_moment_type": "low_yield_block",
+                "title": "这个动作性价比不高",
+                "narrative": f"检测到「{activity.replace('_', ' ')}」当前收益较低，已切换到更高效的「{alternative.replace('_', ' ')}」。",
+                "metadata": {
+                    "activity": activity,
+                    "alternative": alternative,
+                    "yield_improvement_pct": improvement_pct,
+                },
+                "actions": [
+                    f"切换到 {alternative.replace('_', ' ')}",
+                    "还是做原来的",
+                ],
+            }
+            await self.redis.set(
+                f"spine:card:low_yield_block:{user_id}:latest",
+                _json.dumps(card_data, ensure_ascii=False),
+                ex=2 * 3600,
+            )
+            logger.debug(
+                "MAGIC-005 low yield card emitted: user={} activity={} -> {}",
+                user_id, activity, alternative,
+            )
+        except Exception:
+            logger.warning("_emit_low_yield_card failed", exc_info=True)
 
     async def on_achievement_unlocked(
         self,
@@ -3839,6 +3957,27 @@ class SpineOrchestrator:
                 await self.save_spine_snapshot(user_id=user_id, snapshot_type="session_end")
             except Exception:
                 logger.warning("close_aurora_session: session_end snapshot failed", exc_info=True)
+            # Phase-0: log a decision episode for every regenerated directive
+            for regen in regenerated:
+                try:
+                    await episode_logger.log_decision(
+                        trace_id=session_id,
+                        user_id=user_id,
+                        signals=patches,
+                        candidates=[
+                            CandidatePolicy(
+                                policy_id=regen.get("state_key", ""),
+                                expected_outcome=0.5,
+                                was_selected=True,
+                                rationale=regen.get("strategy", ""),
+                            )
+                        ],
+                        selection_reason=f"Aurora calibration: {user_summary}" if user_summary else "Aurora session closure",
+                        expected_outcome=0.5,
+                        tags=["aurora_session_end"],
+                    )
+                except Exception:
+                    logger.debug("Episode log skipped for session={}", session_id, exc_info=True)
         return session
 
     async def build_recovery_card(
@@ -3949,10 +4088,25 @@ class SpineOrchestrator:
             if corr_raw:
                 envelope["cards"].append(json.loads(corr_raw if isinstance(corr_raw, str) else corr_raw.decode()))
 
-            # Community hint card
+            # Community hint card (MAGIC-006)
             comm_raw = await self.redis.get(f"spine:card:community_hint:{user_id}:latest")
             if comm_raw:
                 envelope["cards"].append(json.loads(comm_raw if isinstance(comm_raw, str) else comm_raw.decode()))
+
+            # Material non-use card (MAGIC-003)
+            mat_raw = await self.redis.get(f"spine:card:material_non_use:{user_id}:latest")
+            if mat_raw:
+                envelope["cards"].append(json.loads(mat_raw if isinstance(mat_raw, str) else mat_raw.decode()))
+
+            # Absence notice card (MAGIC-004)
+            abs_raw = await self.redis.get(f"spine:card:absence_notice:{user_id}:latest")
+            if abs_raw:
+                envelope["cards"].append(json.loads(abs_raw if isinstance(abs_raw, str) else abs_raw.decode()))
+
+            # Low yield block card (MAGIC-005)
+            ly_raw = await self.redis.get(f"spine:card:low_yield_block:{user_id}:latest")
+            if ly_raw:
+                envelope["cards"].append(json.loads(ly_raw if isinstance(ly_raw, str) else ly_raw.decode()))
 
             # Timeline updates: rendered TimelineCards from recent CausalTraces
             # P11 Demo Experience Point #11: 混合时间轴记录完整 causal trace

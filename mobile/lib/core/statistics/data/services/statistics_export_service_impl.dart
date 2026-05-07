@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
 
 /// Default implementation of the statistics export service
@@ -69,11 +70,12 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     final date = DateTime.now();
 
     final buffer = StringBuffer();
-    buffer.writeln('📊 我的$type数据');
-    buffer.writeln('📅 统计周期: $period');
-    buffer.writeln('🕐 导出时间: ${_formatDateTime(date)}');
+    final zh = I18nService.instance.isChinese;
+    buffer.writeln(zh ? '📊 我的$type数据' : '📊 My $type Data');
+    buffer.writeln(zh ? '📅 统计周期: $period' : '📅 Period: $period');
+    buffer.writeln(zh ? '🕐 导出时间: ${_formatDateTime(date)}' : '🕐 Exported: ${_formatDateTime(date)}');
     buffer.writeln();
-    buffer.writeln('📈 数据来自 星火AI学习助手');
+    buffer.writeln(zh ? '📈 数据来自 星火AI学习助手' : '📈 Data from Sparkle AI');
 
     return buffer.toString();
   }
@@ -127,7 +129,9 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
       // Draw preview text
       final textPainter = TextPainter(
         text: TextSpan(
-          text: '预览\n${statistics.type.displayName}',
+          text: I18nService.instance.isChinese
+              ? '预览\n${statistics.type.displayName}'
+              : 'Preview\n${statistics.type.displayName}',
           style: TextStyle(
             color: DS.textPrimary,
             fontSize: 20,
@@ -255,7 +259,9 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     );
     final titlePainter = TextPainter(
       text: TextSpan(
-        text: '${statistics.type.displayName}统计',
+        text: I18nService.instance.isChinese
+            ? '${statistics.type.displayName}统计'
+            : '${statistics.type.displayName} Statistics',
         style: titleStyle,
       ),
       textDirection: TextDirection.ltr,
@@ -324,7 +330,9 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     );
     final footerPainter = TextPainter(
       text: TextSpan(
-        text: '星火AI学习助手 · $appVersion',
+        text: I18nService.instance.isChinese
+            ? '星火AI学习助手 · $appVersion'
+            : 'Sparkle AI · $appVersion',
         style: footerStyle,
       ),
       textDirection: TextDirection.ltr,
@@ -394,7 +402,9 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
     // Default: draw a placeholder message
     final msgPainter = TextPainter(
       text: TextSpan(
-        text: '数据图表区域\n(子类需实现具体绘制)',
+        text: I18nService.instance.isChinese
+            ? '数据图表区域\n(子类需实现具体绘制)'
+            : 'Data chart area\n(Subclass should implement)',
         style: TextStyle(
           fontSize: 28 * config.pngScale,
           color: DS.onBrandPrimary.withValues(alpha: 0.8),
@@ -419,9 +429,15 @@ class StatisticsExportServiceImpl<T extends StatisticsEntity>
   // ============================================
 
   /// Format datetime for display
-  String _formatDateTime(DateTime dt) => '${dt.year}年${dt.month}月${dt.day}日 '
-      '${dt.hour.toString().padLeft(2, '0')}:'
-      '${dt.minute.toString().padLeft(2, '0')}';
+  String _formatDateTime(DateTime dt) {
+    final zh = I18nService.instance.isChinese;
+    final datePart = zh
+        ? '${dt.year}年${dt.month}月${dt.day}日'
+        : '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
+    return '$datePart '
+        '${dt.hour.toString().padLeft(2, '0')}:'
+        '${dt.minute.toString().padLeft(2, '0')}';
+  }
 }
 
 /// Provider for statistics export service

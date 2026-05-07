@@ -250,6 +250,24 @@ class GrowthChronicleService:
                 return True
         return False
 
+    async def update_entry_status(self, user_id: str, entry_id: str, status: str) -> bool:
+        """Update the user_status of a chronicle entry (confirmed / edited / rejected)."""
+        if status not in _VALID_USER_STATUSES:
+            raise ValueError(f"invalid status: {status}")
+        entries = await self._load_entries(user_id)
+        for entry in entries:
+            if entry.entry_id == entry_id:
+                entry.user_status = status
+                if status == "rejected":
+                    entry.user_hidden = True
+                await self._save_entries(user_id, entries)
+                logger.info(
+                    "GrowthChronicle entry status updated: user={} entry={} status={}",
+                    user_id, entry_id, status,
+                )
+                return True
+        return False
+
     async def get_confirmed_entries(self, user_id: str) -> list[ChronicleEntry]:
         """P3-4: Get only confirmed entries that pass retraction checks."""
         entries = await self._load_entries(user_id)

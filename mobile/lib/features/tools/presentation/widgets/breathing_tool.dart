@@ -3,13 +3,13 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_tts/flutter_tts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/services/tts_service.dart';
 import 'package:sparkle/features/tools/data/repositories/tool_history_repository.dart';
 import 'package:sparkle/features/tools/models/tool_definition.dart';
 import 'package:sparkle/features/tools/presentation/widgets/tool_context_effect_feedback.dart';
@@ -119,7 +119,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
   static const int _completionNotificationId = 94200;
 
   late final AnimationController _controller;
-  late final FlutterTts _tts;
+  late final TtsService _tts;
   Timer? _ticker;
 
   int _selectedDurationIndex = 1;
@@ -168,14 +168,13 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _tts = FlutterTts();
+    _tts = ref.read(ttsServiceProvider);
     _controller = AnimationController(
       vsync: this,
       duration: Duration.zero,
       value: 0.0,
     );
     _updateTotalRounds();
-    unawaited(_configureTts());
     unawaited(_restoreState());
   }
 
@@ -319,17 +318,6 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
       }
     } catch (_) {
       await prefs.remove(_prefsSessionKey);
-    }
-  }
-
-  Future<void> _configureTts() async {
-    try {
-      await _tts.setLanguage('zh-CN');
-      await _tts.setSpeechRate(0.42);
-      await _tts.setPitch(1.0);
-      await _tts.awaitSpeakCompletion(false);
-    } catch (_) {
-      // TTS is optional enhancement. Fail silently on unsupported devices.
     }
   }
 
@@ -481,6 +469,7 @@ class _BreathingToolState extends ConsumerState<BreathingTool>
   }
 
   Future<void> _announceInstruction(String instruction) async {
+    if (!_tts.enabled) return;
     try {
       await _tts.stop();
       await _tts.speak(instruction);

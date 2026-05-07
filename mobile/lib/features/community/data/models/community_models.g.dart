@@ -31,6 +31,7 @@ _$PostImpl _$$PostImplFromJson(Map<String, dynamic> json) => _$PostImpl(
           .toList(),
       topic: json['topic'] as String?,
       likeCount: (json['like_count'] as num?)?.toInt() ?? 0,
+      isLiked: json['is_liked'] as bool? ?? false,
       isOptimistic: json['isOptimistic'] as bool? ?? false,
     );
 
@@ -44,6 +45,7 @@ Map<String, dynamic> _$$PostImplToJson(_$PostImpl instance) =>
       'image_urls': instance.imageUrls,
       'topic': instance.topic,
       'like_count': instance.likeCount,
+      'is_liked': instance.isLiked,
       'isOptimistic': instance.isOptimistic,
     };
 

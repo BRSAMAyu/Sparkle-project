@@ -13,6 +13,7 @@ import 'package:sparkle/core/providers/locale_provider.dart';
 import 'package:sparkle/core/providers/theme_provider.dart';
 import 'package:sparkle/core/services/app_link_router_service.dart';
 import 'package:sparkle/core/services/client_observability_service.dart';
+import 'package:sparkle/core/services/tts_service.dart';
 import 'package:sparkle/core/services/unified_push_service.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/features/aurora/presentation/providers/emotion_state_provider.dart';
@@ -68,7 +69,8 @@ class _SparkleAppState extends ConsumerState<SparkleApp> {
     ref
       ..watch(themeManagerProvider)
       ..watch(deferredSyncBootstrapProvider)
-      ..watch(pushInitProvider);
+      ..watch(pushInitProvider)
+      ..watch(ttsServiceProvider);
     // Watch the mode specifically for MaterialApp.themeMode
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(localeProvider);
@@ -93,6 +95,9 @@ class _SparkleAppState extends ConsumerState<SparkleApp> {
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         final accessibility = ref.watch(accessibilitySettingsProvider);
+        if (accessibility.isLoaded) {
+          _syncAccessibilityToTheme(accessibility);
+        }
         return _ThemeTransitionShell(
           theme: Theme.of(context),
           child: MediaQuery(
@@ -103,6 +108,10 @@ class _SparkleAppState extends ConsumerState<SparkleApp> {
                       minScaleFactor: 0.85,
                       maxScaleFactor: 1.35,
                     ),
+              disableAnimations:
+                  accessibility.isLoaded ? accessibility.reduceMotion : mediaQuery.disableAnimations,
+              accessibleNavigation:
+                  accessibility.isLoaded ? accessibility.screenReaderOptimized : mediaQuery.accessibleNavigation,
             ),
             child: PulseScope(
               child: EmotionResponsiveAppWrapper(
@@ -214,4 +223,16 @@ class _ColdStartFadeState extends State<_ColdStartFade>
         opacity: _opacity,
         child: widget.child,
       );
+}
+
+/// Sync accessibility settings to ThemeManager (high contrast, color blind mode).
+/// Called from MaterialApp builder when accessibility state changes.
+void _syncAccessibilityToTheme(AccessibilitySettings settings) {
+  final tm = ThemeManager();
+  if (tm.highContrast != settings.highContrast) {
+    unawaited(tm.toggleHighContrast(settings.highContrast));
+  }
+  if (tm.colorBlindFriendly != settings.colorBlindFriendly) {
+    unawaited(tm.setColorBlindMode(settings.colorBlindFriendly));
+  }
 }

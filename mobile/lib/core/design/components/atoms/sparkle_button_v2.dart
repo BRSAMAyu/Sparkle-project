@@ -2,9 +2,11 @@ import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
+import 'package:sparkle/features/settings/presentation/providers/accessibility_provider.dart';
 
 /// Sparkle Button V2 - 原子组件
 ///
@@ -191,7 +193,7 @@ class SparkleButton extends StatelessWidget {
     }
 
     if (icon != null || loading) {
-      children.add(const SizedBox(width: SpacingSystem.sm));
+      children.add(const SizedBox(width: DS.sm));
     }
 
     children.add(
@@ -263,20 +265,19 @@ class SparkleButton extends StatelessWidget {
   }
 
   BorderRadius _getBorderRadius(BreakpointInfo info) {
-    const base = SpacingSystem.sm;
+    const base = DS.sm;
     return BorderRadius.circular(base);
   }
 
   EdgeInsets _getPadding(BreakpointInfo info) {
-    final vertical = SpacingSystem.scale(info.context, base: SpacingSystem.sm);
-    final horizontal =
-        SpacingSystem.scale(info.context, base: SpacingSystem.lg);
+    final vertical = ResponsiveSystem.scale(info.context, DS.sm);
+    final horizontal = ResponsiveSystem.scale(info.context, DS.lg);
 
     switch (size) {
       case ButtonSize.small:
         return const EdgeInsets.symmetric(
-          horizontal: SpacingSystem.md,
-          vertical: SpacingSystem.xs,
+          horizontal: DS.md,
+          vertical: DS.xs,
         );
       case ButtonSize.medium:
         return EdgeInsets.symmetric(
@@ -285,8 +286,8 @@ class SparkleButton extends StatelessWidget {
         );
       case ButtonSize.large:
         return const EdgeInsets.symmetric(
-          horizontal: SpacingSystem.xl,
-          vertical: SpacingSystem.md,
+          horizontal: DS.xl,
+          vertical: DS.md,
         );
     }
   }
@@ -374,7 +375,7 @@ class SparkleButtonGroup extends StatelessWidget {
 }
 
 /// 图标按钮
-class SparkleIconButton extends StatelessWidget {
+class SparkleIconButton extends ConsumerWidget {
   const SparkleIconButton({
     required this.icon,
     super.key,
@@ -392,8 +393,12 @@ class SparkleIconButton extends StatelessWidget {
   final String? semanticLabel;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = context.sparkleTheme;
+    final accessibility = ref.watch(accessibilitySettingsProvider);
+    final minTouchTarget = accessibility.isLoaded
+        ? accessibility.minimumTouchTargetSize
+        : DS.touchTargetMinSize;
 
     return Semantics(
       label: semanticLabel,
@@ -402,7 +407,7 @@ class SparkleIconButton extends StatelessWidget {
       child: Material(
         color: _getBackgroundColor(theme.colors),
         borderRadius: BorderRadius.circular(
-          math.max(size, DS.touchTargetMinSize) / 2,
+          math.max(size, minTouchTarget) / 2,
         ),
         child: InkWell(
           onTap: disabled
@@ -414,12 +419,12 @@ class SparkleIconButton extends StatelessWidget {
                   onPressed?.call();
                 },
           borderRadius: BorderRadius.circular(
-            math.max(size, DS.touchTargetMinSize) / 2,
+            math.max(size, minTouchTarget) / 2,
           ),
           child: Container(
-            constraints: const BoxConstraints(
-              minWidth: DS.touchTargetMinSize,
-              minHeight: DS.touchTargetMinSize,
+            constraints: BoxConstraints(
+              minWidth: minTouchTarget,
+              minHeight: minTouchTarget,
             ),
             alignment: Alignment.center,
             child: IconTheme(

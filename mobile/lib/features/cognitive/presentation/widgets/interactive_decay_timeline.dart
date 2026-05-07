@@ -80,11 +80,7 @@ class _InteractiveDecayTimelineState extends State<InteractiveDecayTimeline>
 
   void _onSimulateReview() {
     if (widget.selectedNodeIds.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SparkleSnackBar.warning(
-          context.l10n.cognitiveSelectGalaxyNodes,
-        ),
-      );
+      AppFeedback.warning(context, context.l10n.cognitiveSelectGalaxyNodes);
       return;
     }
 

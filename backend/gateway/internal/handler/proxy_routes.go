@@ -106,6 +106,9 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		tasks.POST("/:id/resources", h.proxyWithHeaders)
 		tasks.DELETE("/:id/resources/:resourceId", h.proxyWithHeaders)
 		// route-tier: authed
+		tasks.GET("/:id/documents", h.proxyWithHeaders)
+		tasks.POST("/:id/documents", h.proxyWithHeaders)
+		tasks.DELETE("/:id/documents", h.proxyWithHeaders)
 		tasks.GET("/:id/card-protocol", h.proxyWithHeaders)
 		tasks.GET("/:id/priority-reasoning", h.proxyWithHeaders)
 		// route-tier: authed
@@ -125,6 +128,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		tasks.POST("/:id/abandon", h.proxyWithHeaders)
 		tasks.POST("/:id/pause", h.proxyWithHeaders)
 		tasks.POST("/:id/resume", h.proxyWithHeaders)
+		tasks.POST("/:id/reopen", h.proxyWithHeaders)
 		tasks.POST("/:id/stuck", h.proxyWithHeaders)
 		tasks.GET("/:id/guidance", h.proxyWithHeaders)
 		tasks.POST("/:id/guidance", h.proxyWithHeaders)
@@ -354,6 +358,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		goals.POST("/decompose-preview", h.proxyWithHeaders)
 		goals.GET("/:id", h.proxyWithHeaders)
 		goals.PUT("/:id", h.proxyWithHeaders)
+		goals.PATCH("/:id", h.proxyWithHeaders)
 		goals.DELETE("/:id", h.proxyWithHeaders)
 	}
 
@@ -917,18 +922,6 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered executions proxy routes")
 
-	// ==================== Admin Executions / OpenClaw Routes ====================
-	// route-tier: internal
-	adminExecutions := api.Group("/admin/executions")
-	adminExecutions.Use(authMiddleware, middleware.RequireAdmin)
-	{
-		// route-tier: authed
-		h.registerREST(adminExecutions, "")
-		// route-tier: authed
-		h.registerREST(adminExecutions, "/*path")
-	}
-	h.logger.Info("Registered admin executions proxy routes")
-
 	// ==================== Learning Reports Routes ====================
 	learningReports := api.Group("/learning-reports")
 	learningReports.Use(authMiddleware)
@@ -998,15 +991,6 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		h.registerREST(rg, "/*path")
 		h.logger.Info("Registered " + r.name + " proxy routes")
 	}
-
-	// ==================== Admin Catch-All Routes ====================
-	admin := api.Group("/admin")
-	admin.Use(authMiddleware, middleware.RequireAdmin)
-	{
-		h.registerREST(admin, "/*path")
-	}
-	h.logger.Info("Registered admin proxy routes (catch-all)")
-
 	// ==================== CQRS / DLQ Health Routes ====================
 	cqrs := api.Group("/cqrs")
 	cqrs.Use(authMiddleware)
@@ -1014,19 +998,6 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		cqrs.GET("/dlq/stats", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered CQRS DLQ proxy routes")
-
-	// ==================== Admin Event-Bus Health Routes ====================
-	adminEventBus := api.Group("/admin/event-bus")
-	adminEventBus.Use(authMiddleware, middleware.RequireAdmin)
-	{
-		adminEventBus.GET("/health", h.proxyWithHeaders)
-		adminEventBus.GET("/dlq", h.proxyWithHeaders)
-		adminEventBus.GET("/dlq/entries", h.proxyWithHeaders)
-		adminEventBus.POST("/dlq/replay", h.proxyWithHeaders)
-		adminEventBus.DELETE("/dlq/:message_id", h.proxyWithHeaders)
-		adminEventBus.GET("/lag", h.proxyWithHeaders)
-	}
-	h.logger.Info("Registered admin event-bus proxy routes")
 
 	// ==================== DLQ Admin Routes ====================
 	dlq := api.Group("/dlq")
@@ -1037,6 +1008,15 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		dlq.POST("/replay", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered DLQ admin proxy routes")
+
+
+	// ==================== Admin Catch-All Routes ====================
+	admin := api.Group("/admin")
+	admin.Use(authMiddleware, middleware.RequireAdmin)
+	{
+		h.registerREST(admin, "/*path")
+	}
+	h.logger.Info("Registered admin proxy routes (catch-all)")
 
 	// Health routes are handled locally by the gateway (setup.go) — do not proxy
 }

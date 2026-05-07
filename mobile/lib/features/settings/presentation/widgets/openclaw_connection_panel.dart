@@ -207,7 +207,8 @@ class _OpenClawConnectionPanelState
     _showSnackBar(
       ok
           ? (successLabel ?? context.l10n.openclawPairImportedSaved)
-          : (service.info.errorMessage ?? context.l10n.openclawPairImportedVerifyFailed),
+          : (service.info.errorMessage ??
+              context.l10n.openclawPairImportedVerifyFailed),
       isError: !ok,
     );
   }
@@ -253,8 +254,7 @@ class _OpenClawConnectionPanelState
             autofocus: true,
             decoration: InputDecoration(
               labelText: context.l10n.openclawPairingOrQrLabel,
-              hintText:
-                  context.l10n.openclawPairingPasteHint,
+              hintText: context.l10n.openclawPairingPasteHint,
             ),
           ),
         ),
@@ -427,7 +427,8 @@ class _OpenClawConnectionPanelState
     if (minutes <= 0) {
       return context.l10n.openclawPairingExpiresSeconds(seconds);
     }
-    return context.l10n.openclawPairingExpiresMinutes(minutes, seconds.toString().padLeft(2, '0'));
+    return context.l10n.openclawPairingExpiresMinutes(
+        minutes, seconds.toString().padLeft(2, '0'));
   }
 
   OpenClawConnectionConfig? _buildConfig() {
@@ -600,11 +601,11 @@ class _OpenClawConnectionPanelState
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      isError
-          ? SparkleSnackBar.error(message)
-          : SparkleSnackBar.success(message),
-    );
+    if (isError) {
+      AppFeedback.error(context, message);
+    } else {
+      AppFeedback.success(context, message);
+    }
   }
 
   bool _hasExecutionPermissionIssue(String? message) {
@@ -690,20 +691,25 @@ class _OpenClawConnectionPanelState
       OpenClawConnectionStatus.disconnected => OpenClawVisualTone.offline,
     };
     final statusTitle = switch (service.info.status) {
-      OpenClawConnectionStatus.connected => context.l10n.openclawStatusReadyForTasks,
-      OpenClawConnectionStatus.connecting => context.l10n.openclawStatusConfirmingConnection,
-      OpenClawConnectionStatus.error when hasPermissionIssue => context.l10n.openclawStatusOnlineNoPermission,
+      OpenClawConnectionStatus.connected =>
+        context.l10n.openclawStatusReadyForTasks,
+      OpenClawConnectionStatus.connecting =>
+        context.l10n.openclawStatusConfirmingConnection,
+      OpenClawConnectionStatus.error when hasPermissionIssue =>
+        context.l10n.openclawStatusOnlineNoPermission,
       OpenClawConnectionStatus.error => context.l10n.openclawStatusNotConnected,
-      OpenClawConnectionStatus.disconnected => context.l10n.openclawStatusNotConfigured,
+      OpenClawConnectionStatus.disconnected =>
+        context.l10n.openclawStatusNotConfigured,
     };
     final statusSubtitle = switch (service.info.status) {
       OpenClawConnectionStatus.connected =>
         context.l10n.openclawStatusConnectedSubtitle,
-      OpenClawConnectionStatus.connecting => context.l10n.openclawStatusConnectingSubtitle,
+      OpenClawConnectionStatus.connecting =>
+        context.l10n.openclawStatusConnectingSubtitle,
       OpenClawConnectionStatus.error when hasPermissionIssue =>
         context.l10n.openclawStatusNoPermissionSubtitle,
-      OpenClawConnectionStatus.error =>
-        service.info.errorMessage ?? context.l10n.openclawStatusErrorSubtitleFallback,
+      OpenClawConnectionStatus.error => service.info.errorMessage ??
+          context.l10n.openclawStatusErrorSubtitleFallback,
       OpenClawConnectionStatus.disconnected =>
         context.l10n.openclawStatusDisconnectedSubtitle,
     };
@@ -736,7 +742,9 @@ class _OpenClawConnectionPanelState
                 icon: _authMode == 'device'
                     ? Icons.devices_rounded
                     : Icons.key_rounded,
-                label: _authMode == 'device' ? context.l10n.openclawDevicePairing : context.l10n.openclawTokenAuth,
+                label: _authMode == 'device'
+                    ? context.l10n.openclawDevicePairing
+                    : context.l10n.openclawTokenAuth,
                 tone: _authMode == 'device'
                     ? OpenClawVisualTone.attention
                     : OpenClawVisualTone.active,
@@ -750,7 +758,8 @@ class _OpenClawConnectionPanelState
               if (service.queuedRequests.isNotEmpty)
                 OpenClawMetricPill(
                   icon: Icons.schedule_rounded,
-                  label: context.l10n.openclawQueuedRequestCount(service.queuedRequestCount),
+                  label: context.l10n
+                      .openclawQueuedRequestCount(service.queuedRequestCount),
                   tone: OpenClawVisualTone.offline,
                   emphasized: true,
                 ),
@@ -824,8 +833,7 @@ class _OpenClawConnectionPanelState
                     title: context.l10n.openclawTailscaleRemoteNode,
                     labelText: context.l10n.openclawTailscaleIpOrDomain,
                     hintText: context.l10n.openclawTailscaleHint,
-                    helperText:
-                        context.l10n.openclawTailscaleHelperText,
+                    helperText: context.l10n.openclawTailscaleHelperText,
                     buildUrl: (raw) {
                       if (raw.startsWith('http://') ||
                           raw.startsWith('https://') ||
@@ -846,8 +854,7 @@ class _OpenClawConnectionPanelState
                     title: context.l10n.openclawCloudflareTunnel,
                     labelText: context.l10n.openclawTunnelDomain,
                     hintText: context.l10n.openclawCloudflareHint,
-                    helperText:
-                        context.l10n.openclawCloudflareHelperText,
+                    helperText: context.l10n.openclawCloudflareHelperText,
                     buildUrl: (raw) {
                       if (raw.startsWith('http://') ||
                           raw.startsWith('https://')) {
@@ -1002,7 +1009,8 @@ class _OpenClawConnectionPanelState
                                 ClipboardData(text: pairingSession.code),
                               );
                               if (!mounted) return;
-                              _showSnackBar(context.l10n.openclawPairingCodeCopied);
+                              _showSnackBar(
+                                  context.l10n.openclawPairingCodeCopied);
                             },
                             icon: const Icon(Icons.copy_rounded),
                           ),

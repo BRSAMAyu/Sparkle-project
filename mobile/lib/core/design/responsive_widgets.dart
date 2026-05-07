@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/tokens_v2/responsive_system.dart';
-import 'package:sparkle/core/design/tokens_v2/spacing_token.dart';
 
 /// Responsive scaffold that adapts navigation patterns across device categories.
 ///
@@ -96,7 +95,7 @@ class ResponsiveScaffold extends StatelessWidget {
                 onDestinationSelected: onDestinationSelected,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(SpacingSystem.xl),
+                    padding: const EdgeInsets.all(32),
                     child: Row(
                       children: [
                         Icon(
@@ -104,7 +103,7 @@ class ResponsiveScaffold extends StatelessWidget {
                           color: Theme.of(context).colorScheme.primary,
                           size: 32,
                         ),
-                        const SizedBox(width: SpacingSystem.md),
+                        const SizedBox(width: 16),
                         Text(
                           title ?? 'Sparkle',
                           style: Theme.of(context).textTheme.headlineSmall,
@@ -153,14 +152,15 @@ class ContentConstraint extends StatelessWidget {
     if (!enabled) return child;
 
     final maxWidth = ContentConstraintSystem.maxWidth(context);
-    final horizontalPadding = ContentConstraintSystem.horizontalPadding(context);
+    final horizontalPadding =
+        ContentConstraintSystem.horizontalPadding(context);
 
     return Center(
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: Padding(
-          padding: padding ??
-              EdgeInsets.symmetric(horizontal: horizontalPadding),
+          padding:
+              padding ?? EdgeInsets.symmetric(horizontal: horizontalPadding),
           child: child,
         ),
       ),
@@ -261,7 +261,7 @@ class ResponsiveTwoColumn extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(child: main),
-        const SizedBox(width: SpacingSystem.lg),
+        const SizedBox(width: 24),
         SizedBox(
           width: sidebarWidth,
           child: sidebar,

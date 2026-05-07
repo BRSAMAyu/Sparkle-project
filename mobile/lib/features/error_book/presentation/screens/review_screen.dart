@@ -25,18 +25,18 @@ enum ReviewMode {
   final String code;
 
   String label(AppLocalizations l10n) => switch (this) {
-    ReviewMode.today => l10n.ebReviewModeToday,
-    ReviewMode.bySubject => l10n.ebReviewModeSubject,
-    ReviewMode.weakest => l10n.ebReviewModeWeak,
-    ReviewMode.random => l10n.ebReviewModeRandom,
-  };
+        ReviewMode.today => l10n.ebReviewModeToday,
+        ReviewMode.bySubject => l10n.ebReviewModeSubject,
+        ReviewMode.weakest => l10n.ebReviewModeWeak,
+        ReviewMode.random => l10n.ebReviewModeRandom,
+      };
 
   String description(AppLocalizations l10n) => switch (this) {
-    ReviewMode.today => l10n.ebReviewModeTodayDesc,
-    ReviewMode.bySubject => l10n.ebReviewModeSubjectDesc,
-    ReviewMode.weakest => l10n.ebReviewModeWeakDesc,
-    ReviewMode.random => l10n.ebReviewModeRandomDesc,
-  };
+        ReviewMode.today => l10n.ebReviewModeTodayDesc,
+        ReviewMode.bySubject => l10n.ebReviewModeSubjectDesc,
+        ReviewMode.weakest => l10n.ebReviewModeWeakDesc,
+        ReviewMode.random => l10n.ebReviewModeRandomDesc,
+      };
 }
 
 /// 复习页面
@@ -124,7 +124,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           final filteredErrors = _filterErrors(errors);
 
           if (filteredErrors.isEmpty) {
-            return _buildEmptyState(context, customMessage: context.l10n.ebNoMatchingErrors);
+            return _buildEmptyState(context,
+                customMessage: context.l10n.ebNoMatchingErrors);
           }
 
           // 复习完成
@@ -557,9 +558,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
       });
 
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SparkleSnackBar.error(context.l10n.ebReviewFailed),
-      );
+      AppFeedback.error(context, context.l10n.ebReviewFailed);
     }
   }
 
@@ -781,7 +780,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     );
   }
 
-  String _getEncouragementText(AppLocalizations l10n, int remembered, int total) {
+  String _getEncouragementText(
+      AppLocalizations l10n, int remembered, int total) {
     if (total == 0) return l10n.ebEncourageKeepGoing;
 
     final ratio = remembered / total;

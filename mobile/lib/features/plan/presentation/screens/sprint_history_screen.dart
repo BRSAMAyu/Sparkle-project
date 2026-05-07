@@ -8,7 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/plan/presentation/providers/sprint_history_provider.dart';
 import 'package:sparkle/features/plan/presentation/widgets/sprint_history_detail.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -91,7 +91,7 @@ class SprintHistoryScreen extends ConsumerWidget {
         description: l10n.sprintHistoryEmptyDesc,
         icon: Icons.history,
         actionText: l10n.sprintHistoryStartSprint,
-        onAction: () => context.push('/plans/sprint'),
+        onAction: () => context.push('/sprint'),
       );
 
   Widget _buildErrorState(
@@ -275,13 +275,11 @@ class _SprintHistoryCard extends StatelessWidget {
 
   void _showDetail(BuildContext context) {
     unawaited(
-      SensoryFeedbackService.emit(SensoryFeedbackEvent.selection),
-    );
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: DS.surfacePrimary.withValues(alpha: 0),
-      builder: (context) => SprintHistoryDetailSheet(item: item),
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => SprintHistoryDetailSheet(item: item),
+      ),
     );
   }
 

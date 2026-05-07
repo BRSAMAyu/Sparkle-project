@@ -282,19 +282,22 @@ class GraphiteSectionTitle extends StatelessWidget {
   final Widget? trailing;
 
   @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          Text(
-            title,
-            style: DS.titleLarge.copyWith(
-              color: DS.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
+  Widget build(BuildContext context) {
+    final lowStimulus = EmotionResponsiveTheme.maybeOf(context).isLowStimulus;
+    return Row(
+      children: [
+        Text(
+          title,
+          style: DS.titleLarge.copyWith(
+            color: DS.textPrimary,
+            fontWeight: lowStimulus ? FontWeight.w500 : FontWeight.w600,
           ),
-          const Spacer(),
-          if (trailing != null) trailing!,
-        ],
-      );
+        ),
+        const Spacer(),
+        if (trailing != null) trailing!,
+      ],
+    );
+  }
 }
 
 class SparklePageScaffold extends StatelessWidget {

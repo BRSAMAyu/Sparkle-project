@@ -17,21 +17,23 @@ DART_GEN_DIR = REPO_ROOT / "mobile/lib/gen"
 
 PROTO_FILES = sorted(PROTO_DIR.glob("*.proto"))
 
-# Mapping: proto basename → expected generated file patterns per language
-# Each value is a list of glob patterns relative to the gen directory.
+# Protos intentionally excluded from all code generation.
+# community_service.proto: deprecated 2026-05-01, REST/CQRS only (P2-5).
+DEPRECATED_PROTOS: set[str] = {"community_service.proto"}
+
+# Mapping: proto basename → expected generated file patterns per language.
+# Protos not in a mapping are intentionally excluded from that language.
 PROTO_TO_GO: dict[str, list[str]] = {
     "agent_service.proto": ["agent/v1/agent_service.pb.go", "agent/v1/agent_service_grpc.pb.go"],
-    "community_service.proto": ["community/community_service.pb.go", "community/community_service_grpc.pb.go"],
     "error_book.proto": ["proto/error_book/error_book.pb.go", "proto/error_book/error_book_grpc.pb.go"],
     "galaxy_service.proto": ["galaxy/v1/galaxy_service.pb.go", "galaxy/v1/galaxy_service_grpc.pb.go"],
     "stt_service.proto": ["stt/v1/stt_service.pb.go", "stt/v1/stt_service_grpc.pb.go"],
-    "user_state.proto": ["userstate/v1/user_state.pb.go"],
+    # user_state.proto: Go code removed (P2-1) — unused in Go
     "websocket.proto": ["ws/websocket.pb.go"],
 }
 
 PROTO_TO_PY: dict[str, list[str]] = {
     "agent_service.proto": ["agent_service_pb2.py", "agent_service_pb2_grpc.py"],
-    "community_service.proto": ["community_service_pb2.py", "community_service_pb2_grpc.py"],
     "error_book.proto": ["error_book_pb2.py", "error_book_pb2_grpc.py"],
     "galaxy_service.proto": ["galaxy_service_pb2.py", "galaxy_service_pb2_grpc.py"],
     "stt_service.proto": ["stt_service_pb2.py", "stt_service_pb2_grpc.py"],
@@ -41,7 +43,6 @@ PROTO_TO_PY: dict[str, list[str]] = {
 
 PROTO_TO_DART: dict[str, list[str]] = {
     "agent_service.proto": ["agent_service.pb.dart", "agent_service.pbenum.dart"],
-    "community_service.proto": ["community_service.pb.dart", "community_service.pbenum.dart"],
     "error_book.proto": ["error_book.pb.dart", "error_book.pbenum.dart"],
     "galaxy_service.proto": ["galaxy_service.pb.dart", "galaxy_service.pbenum.dart"],
     "stt_service.proto": ["stt_service.pb.dart", "stt_service.pbenum.dart"],
@@ -88,16 +89,24 @@ def main() -> int:
 
     for proto_path in PROTO_FILES:
         proto_name = proto_path.name
-        if proto_name not in PROTO_TO_GO:
-            violations.append(f"BG004 unmapped proto file: {proto_name}")
-            continue
 
-        violations.extend(check_generated_files(proto_name, GO_GEN_DIR, PROTO_TO_GO[proto_name], "Go"))
-        violations.extend(check_generated_files(proto_name, PY_GEN_DIR, PROTO_TO_PY[proto_name], "Python"))
-        violations.extend(check_generated_files(proto_name, DART_GEN_DIR, PROTO_TO_DART[proto_name], "Dart"))
-        warnings.extend(check_staleness(proto_path, GO_GEN_DIR, PROTO_TO_GO[proto_name], "Go"))
-        warnings.extend(check_staleness(proto_path, PY_GEN_DIR, PROTO_TO_PY[proto_name], "Python"))
-        warnings.extend(check_staleness(proto_path, DART_GEN_DIR, PROTO_TO_DART[proto_name], "Dart"))
+        if proto_name in DEPRECATED_PROTOS:
+            continue  # Intentionally excluded from all code generation
+
+        proto_mapped = False
+        for lang, mapping, gen_dir in [
+            ("Go", PROTO_TO_GO, GO_GEN_DIR),
+            ("Python", PROTO_TO_PY, PY_GEN_DIR),
+            ("Dart", PROTO_TO_DART, DART_GEN_DIR),
+        ]:
+            if proto_name not in mapping:
+                continue
+            proto_mapped = True
+            violations.extend(check_generated_files(proto_name, gen_dir, mapping[proto_name], lang))
+            warnings.extend(check_staleness(proto_path, gen_dir, mapping[proto_name], lang))
+
+        if not proto_mapped:
+            violations.append(f"BG004 unmapped proto file (no language): {proto_name}")
 
     for w in warnings:
         print(f"[Rule BG] WARN {w}")

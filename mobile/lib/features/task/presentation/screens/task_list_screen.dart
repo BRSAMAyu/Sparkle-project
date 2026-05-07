@@ -15,7 +15,7 @@ import 'package:sparkle/features/task/presentation/widgets/task_card.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_offline_indicator.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
-enum TaskFilterOptions { all, pending, inProgress, paused, completed }
+enum TaskFilterOptions { all, pending, inProgress, paused, completed, abandoned }
 
 enum TaskPriorityFilterOptions { all, high, medium, low }
 
@@ -575,6 +575,8 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
             .toList();
       case TaskFilterOptions.completed:
         return tasks.where((t) => t.status == TaskStatus.completed).toList();
+      case TaskFilterOptions.abandoned:
+        return tasks.where((t) => t.status == TaskStatus.abandoned).toList();
       case TaskFilterOptions.all:
         return tasks;
     }

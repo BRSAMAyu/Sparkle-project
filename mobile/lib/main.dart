@@ -9,6 +9,7 @@ import 'package:sparkle/app/app.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart' as custom;
 import 'package:sparkle/core/offline/local_database.dart';
+import 'package:sparkle/core/utils/error_messages.dart';
 import 'package:sparkle/core/services/client_observability_service.dart';
 import 'package:sparkle/core/services/demo_data_service.dart';
 import 'package:sparkle/core/services/performance_monitor.dart';
@@ -43,7 +44,8 @@ void main() async {
           child: custom.CustomErrorWidget(
             type: custom.ErrorType.page,
             severity: custom.ErrorSeverity.error,
-            message: details.exceptionAsString(),
+            message: ErrorMessages.getUserFriendlyMessage(
+              'UNKNOWN', details.exceptionAsString()),
           ),
         );
     PlatformDispatcher.instance.onError = (error, stack) {

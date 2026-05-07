@@ -40,7 +40,7 @@ func TestEnvelopeResponderWritesAllPayloadShapes(t *testing.T) {
 	require.Contains(t, readTextEnvelope(t, clientConn)["payload"], "ack")
 
 	responder.SendError("invalid_argument", "bad payload", true)
-	require.Contains(t, readTextEnvelope(t, clientConn)["payload"], "error")
+	require.Contains(t, readTextEnvelope(t, clientConn)["payload"], "message_nack")
 
 	responder.SendActionStatus("action-1", "confirmed", map[string]interface{}{"widget_type": "plan_card"})
 	require.Contains(t, readTextEnvelope(t, clientConn)["payload"], "action_status")
@@ -101,7 +101,7 @@ func TestProtobufResponderWritesAllPayloadShapes(t *testing.T) {
 	readProto("ack")
 
 	responder.SendError("timeout", "slow", false)
-	readProto("error")
+	readProto("message_nack")
 
 	responder.SendActionStatus("action-1", "confirmed", nil)
 	readProto("action_status")

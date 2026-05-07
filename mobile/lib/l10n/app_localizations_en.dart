@@ -3656,6 +3656,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get smartPushPersonaSection => 'Persona Settings';
 
   @override
+  String get smartPushToneDesc =>
+      'Choose the tone and style for push notifications.';
+
+  @override
   String get smartPushFrequencySection => 'Frequency Settings (Daily Cap)';
 
   @override
@@ -8456,6 +8460,19 @@ class AppLocalizationsEn extends AppLocalizations {
       'WeChat is currently unavailable';
 
   @override
+  String get delAcctCannotUndo => 'This action cannot be undone.';
+
+  @override
+  String get delAcctHighRisk => 'High Risk';
+
+  @override
+  String get delAcctIrreversible => 'Irreversible';
+
+  @override
+  String get delAcctConfirmHint =>
+      'Type \"DELETE\" to confirm account deletion';
+
+  @override
   String get editProfileEmailUnverified => 'Unverified';
 
   @override
@@ -10317,6 +10334,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionManagementCurrentHint => 'This is your current device';
 
   @override
+  String sessionDeviceCount(int count) {
+    return '$count devices';
+  }
+
+  @override
   String get personaAdjustInferredPreference => 'Adjust inferred preference';
 
   @override
@@ -11088,6 +11110,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileExportData => 'Export My Data';
+
+  @override
+  String get exportExporting => 'Exporting...';
 
   @override
   String get profileExportPreparing => 'Preparing data, please wait...';
@@ -21535,6 +21560,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chatFileSaving => 'Saving...';
 
   @override
+  String get chatFileView => 'View';
+
+  @override
   String chatFocusOnGoal(Object title) {
     return 'I want to focus on the goal \"$title\" first.';
   }
@@ -30456,6 +30484,107 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dataUsagePrivacyTitle => 'Your Data & Privacy';
 
   @override
+  String get dataUsageKnowsTitle => 'What Sparkle Knows About You';
+
+  @override
+  String get dataUsageProfileCardTitle => 'Profile & Goals';
+
+  @override
+  String get dataUsageProfileCardDesc =>
+      'Your name, goals, plans, and task history are used to personalize learning paths.';
+
+  @override
+  String get dataUsageAiCardTitle => 'AI Understanding';
+
+  @override
+  String get dataUsageAiCardDesc =>
+      'Cognitive patterns, learning style, and mastery estimates help Sparkle adapt to you.';
+
+  @override
+  String get dataUsageMemoryCardTitle => 'Memory & History';
+
+  @override
+  String get dataUsageMemoryCardDesc =>
+      'Chat history and growth chronicle entries are stored to maintain conversation continuity.';
+
+  @override
+  String get dataUsageSharedTitle => 'What Is Shared';
+
+  @override
+  String get dataUsageCommunityCardTitle => 'Community';
+
+  @override
+  String get dataUsageCommunityCardDesc =>
+      'Anonymous error patterns and resource quality ratings are shared to help peers learn.';
+
+  @override
+  String get dataUsageControlsTitle => 'Your Controls';
+
+  @override
+  String get dataUsageHideChronicle => 'Hide chronicle entries';
+
+  @override
+  String get dataUsageHideChronicleDesc =>
+      'Hidden entries are invisible to AI but never deleted';
+
+  @override
+  String get dataUsageDeleteData => 'Request data deletion';
+
+  @override
+  String get dataUsageDeleteDataDesc =>
+      'All your data can be permanently removed on request';
+
+  @override
+  String get dataUsageExportData => 'Export your data';
+
+  @override
+  String get dataUsageExportDataDesc =>
+      'Download a complete copy of everything Sparkle stores';
+
+  @override
+  String get dataUsageFooter =>
+      'Sparkle never sells your data. All personalization is for your benefit only.';
+
+  @override
+  String get dataUsageTagGoals => 'Goals';
+
+  @override
+  String get dataUsageTagPlans => 'Plans';
+
+  @override
+  String get dataUsageTagTasks => 'Tasks';
+
+  @override
+  String get dataUsageTagAchievements => 'Achievements';
+
+  @override
+  String get dataUsageTagCognitivePatterns => 'Cognitive patterns';
+
+  @override
+  String get dataUsageTagMasteryEstimates => 'Mastery estimates';
+
+  @override
+  String get dataUsageTagLearningStyle => 'Learning style';
+
+  @override
+  String get dataUsageTagErrorPatterns => 'Error patterns';
+
+  @override
+  String get dataUsageTagChatMessages => 'Chat messages';
+
+  @override
+  String get dataUsageTagGrowthChronicle => 'Growth chronicle';
+
+  @override
+  String get dataUsageTagSpineTraces => 'Spine traces';
+
+  @override
+  String get dataUsageTagAnonErrors => 'Anonymous error patterns';
+
+  @override
+  String get dataUsageTagResourceRatings => 'Resource ratings';
+
+  @override
   String get growthPlansTitle => 'Growth Plans';
 
   @override
@@ -31675,4 +31804,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String envelopeEngagementSummary(int streak, int sessions) {
     return '${streak}d streak · $sessions sessions this week';
   }
+
+  @override
+  String get taskFeedbackStuckLabel => 'Where did you get stuck in this task?';
+
+  @override
+  String get taskFeedbackStuckHint =>
+      'Example: I knew the formula, but not when to use it.';
+
+  @override
+  String get taskFeedbackProgressLabel => 'What helped you feel some progress?';
+
+  @override
+  String get taskFeedbackProgressHint =>
+      'Example: sketching the state diagram before writing equations.';
+
+  @override
+  String get taskFeedbackChangeLabel => 'What would you change next time?';
+
+  @override
+  String get taskFeedbackChangeHint =>
+      'Example: do one representative problem before the full set.';
+
+  @override
+  String get taskFeedbackAiSaved => 'AI saved this reflection';
 }

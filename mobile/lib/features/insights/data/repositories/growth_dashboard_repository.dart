@@ -37,6 +37,20 @@ class GrowthDashboardRepository {
     }
   }
 
+  Future<void> updateChronicleEntryStatus(String entryId, String status) async {
+    try {
+      await _apiClient.patch<dynamic>(
+        '/experience/growth-dashboard/chronicle/$entryId',
+        queryParameters: {'status': status},
+      );
+    } on DioException catch (error) {
+      throw Exception(
+          _extractDioMessage(error, 'Failed to update chronicle entry status'));
+    } catch (_) {
+      throw Exception('An unexpected error occurred');
+    }
+  }
+
   String _extractDioMessage(DioException error, String fallbackMessage) {
     final data = error.response?.data;
     if (data is Map<String, dynamic>) {

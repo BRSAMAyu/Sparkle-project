@@ -73,3 +73,57 @@ func (c *Client) UpdateNodeMastery(ctx context.Context, userID, nodeID string, m
 
 	return c.api.UpdateNodeMastery(ctx, req)
 }
+
+func (c *Client) GetUserGalaxy(ctx context.Context, userID string) (*galaxyv1.GetUserGalaxyResponse, error) {
+	req := &galaxyv1.GetUserGalaxyRequest{UserId: userID}
+	return c.api.GetUserGalaxy(ctx, req)
+}
+
+func (c *Client) RecordNodeInteraction(ctx context.Context, userID, nodeID, interactionType string, metadata map[string]string) (*galaxyv1.RecordNodeInteractionResponse, error) {
+	req := &galaxyv1.RecordNodeInteractionRequest{
+		UserId:          userID,
+		NodeId:          nodeID,
+		InteractionType: interactionType,
+		Metadata:        metadata,
+	}
+	return c.api.RecordNodeInteraction(ctx, req)
+}
+
+func (c *Client) GetNodeDetail(ctx context.Context, userID, nodeID string) (*galaxyv1.GetNodeDetailResponse, error) {
+	req := &galaxyv1.GetNodeDetailRequest{UserId: userID, NodeId: nodeID}
+	return c.api.GetNodeDetail(ctx, req)
+}
+
+func (c *Client) SearchNodes(ctx context.Context, userID, query string, limit int32) (*galaxyv1.SearchNodesResponse, error) {
+	req := &galaxyv1.SearchNodesRequest{UserId: userID, Query: query, Limit: limit}
+	return c.api.SearchNodes(ctx, req)
+}
+
+func (c *Client) GetLearningPath(ctx context.Context, userID, fromNodeID, toNodeID string) (*galaxyv1.GetLearningPathResponse, error) {
+	req := &galaxyv1.GetLearningPathRequest{UserId: userID, FromNodeId: fromNodeID, ToNodeId: toNodeID}
+	return c.api.GetLearningPath(ctx, req)
+}
+
+func (c *Client) GetNodeDependencies(ctx context.Context, userID, nodeID string) (*galaxyv1.GetNodeDependenciesResponse, error) {
+	req := &galaxyv1.GetNodeDependenciesRequest{UserId: userID, NodeId: nodeID}
+	return c.api.GetNodeDependencies(ctx, req)
+}
+
+func (c *Client) GetGalaxyStats(ctx context.Context, userID string) (*galaxyv1.GetGalaxyStatsResponse, error) {
+	req := &galaxyv1.GetGalaxyStatsRequest{UserId: userID}
+	return c.api.GetGalaxyStats(ctx, req)
+}
+
+func (c *Client) GetRecommendedNodes(ctx context.Context, userID string, limit int32) (*galaxyv1.GetRecommendedNodesResponse, error) {
+	req := &galaxyv1.GetRecommendedNodesRequest{UserId: userID, Limit: limit}
+	return c.api.GetRecommendedNodes(ctx, req)
+}
+
+func (c *Client) SyncCollaborativeGalaxy(ctx context.Context, galaxyID string, partialUpdate []byte, userID string) (*galaxyv1.SyncCollaborativeGalaxyResponse, error) {
+	req := &galaxyv1.SyncCollaborativeGalaxyRequest{
+		GalaxyId:       galaxyID,
+		PartialUpdate:  partialUpdate,
+		UserId:         userID,
+	}
+	return c.api.SyncCollaborativeGalaxy(ctx, req)
+}

@@ -80,6 +80,7 @@ class CardStore:
         receipt: dict[str, Any] = {
             "type": "context_receipt",
             "used": used_sources or [],
+            "used_count": len(used_sources or []),
             "excluded": excluded_sources or [],
             "reason": reason,
             "retrieval_mode": retrieval_mode,

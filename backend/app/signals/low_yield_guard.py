@@ -208,3 +208,8 @@ class LowYieldGuard:
             if time_cost == "low" or available_time_minutes >= 20:
                 return alt
         return alternatives[0] if alternatives else "practice_problems"
+
+    def _get_alt_yield(self, activity_type: str) -> float:
+        """Return the base yield score for an activity type."""
+        profile = _ACTIVITY_YIELD_PROFILE.get(activity_type, {})
+        return float(profile.get("yield_score", 0.7))

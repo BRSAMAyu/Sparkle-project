@@ -15,6 +15,7 @@ from passlib.context import CryptContext
 from sqlalchemy import select
 
 from app.config import settings
+from app.core import logsafe
 from app.core.cache import cache_service
 from app.services.auth_session_service import auth_session_service
 
@@ -183,7 +184,7 @@ async def get_user_revoked_before(user_id: str) -> int | None:
         if value is not None:
             return int(value)
     except Exception as exc:
-        logger.warning("Revocation timestamp cache lookup failed for user {}: {}", user_id, exc)
+        logger.warning("Revocation timestamp cache lookup failed for user {}: {}", logsafe.user_id_hash(user_id), exc)
 
     try:
         from app.db.session import AsyncSessionLocal
@@ -197,7 +198,7 @@ async def get_user_revoked_before(user_id: str) -> int | None:
             await set_user_revoked_before(user_id, user.token_revoked_before)
             return revoked_before_ts
     except Exception as exc:
-        logger.warning("Revocation timestamp DB fallback failed for user {}: {}", user_id, exc)
+        logger.warning("Revocation timestamp DB fallback failed for user {}: {}", logsafe.user_id_hash(user_id), exc)
         return None
 
     return None
@@ -244,14 +245,14 @@ async def set_user_revoked_before(user_id: str, revoked_before: datetime) -> Non
     try:
         ts = int(revoked_before.timestamp())
     except Exception as exc:
-        logger.warning("Invalid revoked_before timestamp for user {}: {}", user_id, exc)
+        logger.warning("Invalid revoked_before timestamp for user {}: {}", logsafe.user_id_hash(user_id), exc)
         return
     ttl = int(settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60)
     key = f"{USER_REVOKED_BEFORE_PREFIX}{user_id}"
     try:
         await cache_service.set(key, ts, ttl=ttl)
     except Exception as exc:
-        logger.warning("Failed to cache revoked_before timestamp for user {}: {}", user_id, exc)
+        logger.warning("Failed to cache revoked_before timestamp for user {}: {}", logsafe.user_id_hash(user_id), exc)
         return
 
 
@@ -273,7 +274,7 @@ async def blacklist_token(jti: str, exp: int | float | datetime | None) -> None:
     now_ts = int(datetime.now(UTC).timestamp())
     ttl = exp_ts - now_ts
     if ttl <= 0:
-        return True  # Already expired, no need to blacklist
+        return
 
     key = f"{TOKEN_BLACKLIST_PREFIX}{jti}"
 
@@ -282,7 +283,7 @@ async def blacklist_token(jti: str, exp: int | float | datetime | None) -> None:
     for attempt in range(max_retries):
         try:
             await cache_service.set(key, "revoked", ttl=ttl)
-            return True
+            return
         except Exception as e:
             if attempt == max_retries - 1:
                 # Log failure on final attempt
@@ -293,10 +294,6 @@ async def blacklist_token(jti: str, exp: int | float | datetime | None) -> None:
                     error_type=type(e).__name__,
                     attempts=max_retries,
                 )
-                return False
+                return
             # Exponential backoff: 100ms, 200ms, 300ms
-            import asyncio
-
             await asyncio.sleep(0.1 * (attempt + 1))
-
-    return True

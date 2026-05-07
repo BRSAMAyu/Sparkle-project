@@ -51,10 +51,7 @@ class _BlockingInterceptorDialogState
   Future<void> _submit() async {
     final content = _selectedReason ?? _controller.text.trim();
     if (content.isEmpty) {
-      unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.warning));
-      ScaffoldMessenger.of(context).showSnackBar(
-        SparkleSnackBar.warning(context.l10n.blockingSelectReason),
-      );
+      AppFeedback.warning(context, context.l10n.blockingSelectReason);
       return;
     }
 
@@ -81,9 +78,7 @@ class _BlockingInterceptorDialogState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SparkleSnackBar.error(context.l10n.submitFailedWithError(e)),
-        );
+        AppFeedback.error(context, context.l10n.submitFailedWithError(e));
         setState(() => _isSubmitting = false);
       }
     }
@@ -107,107 +102,107 @@ class _BlockingInterceptorDialogState
             index: 0,
             offset: 0.04,
             child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(DS.sm),
-                    decoration: BoxDecoration(
-                      color: DS.warning.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.block, color: DS.warning),
-                  ),
-                  const SizedBox(width: DS.spacing12),
-                  Expanded(
-                    child: Text(
-                      l10n.blockingTitle,
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: DS.fontWeightBold,
-                          ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: DS.spacing16),
-              Text(
-                l10n.blockingDescription,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: DS.neutral600,
-                    ),
-              ),
-              const SizedBox(height: DS.spacing20),
-              RadioGroup<String>(
-                groupValue: selectedReason,
-                onChanged: (value) {
-                  unawaited(
-                    SensoryFeedbackService.emit(
-                      SensoryFeedbackEvent.selection,
-                      enableSound: false,
-                    ),
-                  );
-                  setState(() => _selectedReason = value);
-                },
-                child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    // Preset Options
-                    ...reasons.map(
-                      (reason) => RadioListTile<String>(
-                        title: Text(reason),
-                        value: reason,
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: DS.primaryBase,
+                    Container(
+                      padding: const EdgeInsets.all(DS.sm),
+                      decoration: BoxDecoration(
+                        color: DS.warning.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
                       ),
+                      child: Icon(Icons.block, color: DS.warning),
                     ),
-
-                    // Other/Custom Input
-                    RadioListTile<String>(
-                      title: Text(l10n.blockingOtherReason),
-                      value: 'other',
-                      contentPadding: EdgeInsets.zero,
-                      activeColor: DS.primaryBase,
+                    const SizedBox(width: DS.spacing12),
+                    Expanded(
+                      child: Text(
+                        l10n.blockingTitle,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: DS.fontWeightBold,
+                            ),
+                      ),
                     ),
                   ],
                 ),
-              ),
-              if (_selectedReason == 'other')
-                TextField(
-                  controller: _controller,
-                  decoration: InputDecoration(
-                    hintText: l10n.blockingReasonHint,
-                    isDense: true,
+                const SizedBox(height: DS.spacing16),
+                Text(
+                  l10n.blockingDescription,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: DS.neutral600,
+                      ),
+                ),
+                const SizedBox(height: DS.spacing20),
+                RadioGroup<String>(
+                  groupValue: selectedReason,
+                  onChanged: (value) {
+                    unawaited(
+                      SensoryFeedbackService.emit(
+                        SensoryFeedbackEvent.selection,
+                        enableSound: false,
+                      ),
+                    );
+                    setState(() => _selectedReason = value);
+                  },
+                  child: Column(
+                    children: [
+                      // Preset Options
+                      ...reasons.map(
+                        (reason) => RadioListTile<String>(
+                          title: Text(reason),
+                          value: reason,
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: DS.primaryBase,
+                        ),
+                      ),
+
+                      // Other/Custom Input
+                      RadioListTile<String>(
+                        title: Text(l10n.blockingOtherReason),
+                        value: 'other',
+                        contentPadding: EdgeInsets.zero,
+                        activeColor: DS.primaryBase,
+                      ),
+                    ],
                   ),
                 ),
-              const SizedBox(height: DS.spacing24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  SparkleButton.ghost(
-                    label: l10n.cancel,
-                    onPressed: () {
-                      unawaited(
-                        SensoryFeedbackService.emit(
-                          SensoryFeedbackEvent.tap,
-                          enableSound: false,
-                        ),
-                      );
-                      Navigator.of(context).pop();
-                    },
+                if (_selectedReason == 'other')
+                  TextField(
+                    controller: _controller,
+                    decoration: InputDecoration(
+                      hintText: l10n.blockingReasonHint,
+                      isDense: true,
+                    ),
                   ),
-                  const SizedBox(width: DS.spacing12),
-                  CustomButton.primary(
-                    text: l10n.blockingConfirmAbandon,
-                    icon: Icons.check,
-                    onPressed: _isSubmitting ? () {} : _submit,
-                    isLoading: _isSubmitting,
-                    size: CustomButtonSize.small,
-                    customGradient: DS.warningGradient, // Orange/Red warning
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: DS.spacing24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    SparkleButton.ghost(
+                      label: l10n.cancel,
+                      onPressed: () {
+                        unawaited(
+                          SensoryFeedbackService.emit(
+                            SensoryFeedbackEvent.tap,
+                            enableSound: false,
+                          ),
+                        );
+                        Navigator.of(context).pop();
+                      },
+                    ),
+                    const SizedBox(width: DS.spacing12),
+                    CustomButton.primary(
+                      text: l10n.blockingConfirmAbandon,
+                      icon: Icons.check,
+                      onPressed: _isSubmitting ? () {} : _submit,
+                      isLoading: _isSubmitting,
+                      size: CustomButtonSize.small,
+                      customGradient: DS.warningGradient, // Orange/Red warning
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),

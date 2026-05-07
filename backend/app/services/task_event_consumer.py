@@ -189,7 +189,7 @@ class TaskEventConsumer:
                                 select(sa_func.count(Task.id)).where(
                                     Task.plan_id == plan_uuid,
                                     Task.user_id == user_id,
-                                    Task.status.in_(["completed", "abandoned"]),
+                                    Task.status == "completed",
                                 )
                             )
                             goal.progress = (completed / total) if total and total > 0 else 0.0
@@ -208,9 +208,60 @@ class TaskEventConsumer:
         try:
             user_id = event.get("user_id")
             task_id = event.get("task_id")
+            plan_id_raw = event.get("plan_id")
             async with AsyncSessionLocal() as db:
                 collector = BehaviorSignalCollector(db, cache_service.redis, self.event_bus)
                 await collector.handle_task_abandoned_event(event)
+
+                # Update Goal.progress when a task is abandoned
+                plan_uuid = None
+                if plan_id_raw and str(plan_id_raw) != "None":
+                    plan_uuid = UUID(str(plan_id_raw))
+                elif task_id and user_id:
+                    result = await db.execute(
+                        select(Task.plan_id).where(
+                            Task.id == UUID(str(task_id)),
+                            Task.user_id == UUID(str(user_id)),
+                        )
+                    )
+                    plan_id_fetched = result.scalar_one_or_none()
+                    if plan_id_fetched:
+                        plan_uuid = UUID(str(plan_id_fetched))
+
+                if plan_uuid and user_id:
+                    try:
+                        from sqlalchemy import func as sa_func
+                        result = await db.execute(
+                            select(Goal).where(
+                                Goal.plan_id == plan_uuid,
+                                Goal.user_id == UUID(str(user_id)),
+                            )
+                        )
+                        goal = result.scalar_one_or_none()
+                        if goal:
+                            total = await db.scalar(
+                                select(sa_func.count(Task.id)).where(
+                                    Task.plan_id == plan_uuid,
+                                    Task.user_id == UUID(str(user_id)),
+                                )
+                            )
+                            completed = await db.scalar(
+                                select(sa_func.count(Task.id)).where(
+                                    Task.plan_id == plan_uuid,
+                                    Task.user_id == UUID(str(user_id)),
+                                    Task.status == "completed",
+                                )
+                            )
+                            goal.progress = (completed / total) if total and total > 0 else 0.0
+                            db.add(goal)
+                            await db.commit()
+                            logger.debug(
+                                "Updated Goal {} progress to {:.2f} after task abandoned",
+                                goal.id,
+                                goal.progress,
+                            )
+                    except Exception as goal_exc:
+                        logger.warning("Failed to update goal progress on abandon: {}", goal_exc)
 
             # C-01-FIX: Record actual outcome (abandoned) for pending Spine directives
             if user_id:

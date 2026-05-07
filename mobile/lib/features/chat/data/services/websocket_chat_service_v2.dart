@@ -1407,7 +1407,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
   late final OfflineMessageQueueService _offlineQueue;
 
   // 401错误处理和Token刷新
-  bool _isRefreshingToken = false;
+  Completer<String>? _refreshCompleter;
   int _error401Count = 0;
   static const int _max401Retries = 1;
 
@@ -2062,9 +2062,15 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     final l10n = I18nService.instance.l10n;
     if (_disposed) return;
 
-    // 防止并发刷新
-    if (_isRefreshingToken) {
-      _log('⏳ Token refresh already in progress, skipping...');
+    // 并发调用者等待正在进行的刷新完成
+    if (_refreshCompleter != null) {
+      _log('⏳ Token refresh already in progress, awaiting...');
+      try {
+        await _refreshCompleter!.future;
+        _log('✅ Concurrent caller: token refreshed successfully');
+      } catch (e) {
+        _log('❌ Concurrent caller: token refresh failed: $e');
+      }
       return;
     }
 
@@ -2110,7 +2116,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       return;
     }
 
-    _isRefreshingToken = true;
+    _refreshCompleter = Completer<String>();
     _error401Count++;
 
     _log(
@@ -2133,10 +2139,14 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
 
       _log('✅ Token refreshed successfully');
 
+      _refreshCompleter!.complete(newTokenResponse.accessToken);
+
       // ✅ Fix H1: Restore connection state after successful token refresh
       _onTokenRefreshSuccess(newTokenResponse.accessToken);
     } catch (e) {
       _log('❌ Token refresh failed: $e');
+
+      _refreshCompleter!.completeError(e);
 
       // Token刷新失败，发送友好错误并登出
       _broadcastErrorToActiveRequests(
@@ -2174,7 +2184,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         );
       }
     } finally {
-      _isRefreshingToken = false;
+      _refreshCompleter = null;
     }
   }
 
@@ -2185,7 +2195,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _enableReconnectLocal = true;
     _reconnectAttempts = 0;
     _error401Count = 0;
-    _isRefreshingToken = false;
+    _refreshCompleter = null;
   }
 
   /// ✅ Fix H1: Handle successful token refresh and restore connection state
@@ -2440,10 +2450,8 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       if (payload['type'] is String) {
         span.setAttribute('ws.type', payload['type'] as String);
       }
-      // 🔧 诊断：记录完整 payload 以验证 chat_mode 是否被发送
-      _log('📤 Full payload: ${json.encode(payload)}');
       _channel?.sink.add(json.encode(payload));
-      _log('📤 Sent: ${payload['message']}');
+      _log('📤 Sent: type=${payload['type']}, id=${payload['id']}');
 
       // Mark as sent in offline DB (R3 O-01)
       final reqId = payload['request_id']?.toString();
@@ -2455,7 +2463,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     } catch (e) {
       _log('❌ Send failed: $e');
       _enqueuePendingMessage(payload);
-      _handleConnectionError(e);
+      // Don't broadcast to all streams — single send failure is not a connection error
     }
   }
 

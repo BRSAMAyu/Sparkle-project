@@ -59,6 +59,7 @@ from app.models.document_chunks import DocumentChunk  # noqa: F401
 from app.models.document_feedback import DocumentRetrievalFeedback  # noqa: F401
 from app.models.file_storage import StoredFile  # noqa: F401
 from app.models.task_feedback import TaskFeedback  # noqa: F401
+from app.models.task_resources import TaskResourceLink  # noqa: F401
 from app.models.session_completion import SessionCompletion  # noqa: F401
 from app.models.srl_phase_state import SRLPhaseStateRecord  # noqa: F401
 from app.models.north_star_metrics import NorthStarMetricEvent  # noqa: F401
@@ -103,6 +104,8 @@ from app.models.shop import (  # noqa: F401
 )
 from app.models.simulation_run import SimulationRun  # noqa: F401
 from app.models.strategy_belief import StrategyBeliefSnapshot  # noqa: F401
+from app.models.theater_candidate_bundle import TheaterCandidateBundle  # noqa: F401
+from app.models.theater_prediction import TheaterPrediction  # noqa: F401
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 

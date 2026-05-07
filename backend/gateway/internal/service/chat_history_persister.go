@@ -216,12 +216,15 @@ func (p *ChatHistoryPersister) writeBatchToDB(ctx context.Context, batch []ChatH
 			role = "user"
 		}
 
+		// Serialize rich metadata (widgets, tool results, reasoning, UX envelope, agent collaboration)
+		metadataJSON := buildMessageMetadata(msg)
+
 		// Insert message with UPSERT (ON CONFLICT DO NOTHING for idempotency)
 		_, err := tx.Exec(ctx, `
-			INSERT INTO chat_messages (id, session_id, user_id, role, content, created_at)
-			VALUES ($1, $2, $3, $4, $5, to_timestamp($6::bigint / 1000.0))
+			INSERT INTO chat_messages (id, session_id, user_id, role, content, metadata, created_at)
+			VALUES ($1, $2, $3, $4, $5, $6, to_timestamp($7::bigint / 1000.0))
 			ON CONFLICT (id) DO NOTHING
-		`, messageID, sessionID, userID, role, msg.Content, msg.Timestamp)
+		`, messageID, sessionID, userID, role, msg.Content, metadataJSON, msg.Timestamp)
 
 		if err != nil {
 			log.Printf("[ChatHistoryPersister] Failed to insert message: %v", err)
@@ -247,6 +250,59 @@ func (p *ChatHistoryPersister) writeBatchToDB(ctx context.Context, batch []ChatH
 	}
 
 	return tx.Commit(ctx)
+}
+
+// buildMessageMetadata serializes rich chat message fields into a JSONB value for DB storage.
+// Preserves widgets, tool results, reasoning steps, UX envelope data, agent collaboration,
+// and other extended attributes that would otherwise be lost on reload.
+func buildMessageMetadata(msg ChatHistoryMessage) []byte {
+	meta := make(map[string]interface{})
+
+	if len(msg.Widgets) > 0 {
+		meta["widgets"] = msg.Widgets
+	}
+	if len(msg.ToolResults) > 0 {
+		meta["tool_results"] = msg.ToolResults
+	}
+	if len(msg.ReasoningSteps) > 0 {
+		meta["reasoning_steps"] = msg.ReasoningSteps
+	}
+	if msg.ReasoningSummary != "" {
+		meta["reasoning_summary"] = msg.ReasoningSummary
+	}
+	if msg.IsReasoningComplete {
+		meta["is_reasoning_complete"] = true
+	}
+	if msg.HasErrors {
+		meta["has_errors"] = true
+	}
+	if len(msg.Errors) > 0 {
+		meta["errors"] = msg.Errors
+	}
+	if msg.RequiresConfirmation {
+		meta["requires_confirmation"] = true
+	}
+	if len(msg.ConfirmationData) > 0 {
+		meta["confirmation_data"] = msg.ConfirmationData
+	}
+	if len(msg.Meta) > 0 {
+		for k, v := range msg.Meta {
+			meta[k] = v
+		}
+	}
+	if len(msg.AgentCollaboration) > 0 {
+		meta["agent_collaboration"] = msg.AgentCollaboration
+	}
+
+	if len(meta) == 0 {
+		return nil
+	}
+	data, err := json.Marshal(meta)
+	if err != nil {
+		log.Printf("[ChatHistoryPersister] Failed to marshal message metadata: %v", err)
+		return nil
+	}
+	return data
 }
 
 // requeueMessages pushes failed messages back to Redis queue

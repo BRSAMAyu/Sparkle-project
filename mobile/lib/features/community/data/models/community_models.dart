@@ -26,6 +26,7 @@ class Post with _$Post {
     @JsonKey(name: 'image_urls') List<String>? imageUrls,
     String? topic,
     @JsonKey(name: 'like_count') @Default(0) int likeCount,
+    @JsonKey(name: 'is_liked') @Default(false) bool isLiked,
     @Default(false) bool isOptimistic, // For optimistic UI
   }) = _Post;
 

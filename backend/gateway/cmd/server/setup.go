@@ -271,7 +271,7 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 
 	appleAuthService, err := service.NewAppleAuthService(cfg)
 	if err != nil {
-		log.Printf("Warning: Apple Auth Service init failed: %v", err)
+		log.Fatalf("Apple Auth Service init failed: %v", err)
 	}
 	authHandler := handler.NewAuthHandler(cfg, appleAuthService, services.appleAccount)
 
@@ -837,7 +837,8 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 					return
 				}
 			}
-			proxy.proxy.ServeHTTP(c.Writer, c.Request)
+			handler.SetProxyUserContextHeaders(c)
+				proxy.proxy.ServeHTTP(c.Writer, c.Request)
 
 			// 记录代理结果
 			zap.L().Debug("NoRoute: auth path proxy completed",

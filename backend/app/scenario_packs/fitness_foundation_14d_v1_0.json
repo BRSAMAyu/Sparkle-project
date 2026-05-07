@@ -1,0 +1,106 @@
+{
+  "id": "fitness_foundation_14d@v1.0",
+  "name": "14-Day Fitness Foundation",
+  "version": "v1.0",
+  "description": "A 14-day backbone for establishing a fitness baseline with progressive overload, nutrition awareness, and recovery discipline.",
+  "applicability_conditions": [
+    "user wants to start or restart a fitness routine",
+    "user can commit to daily movement of some kind",
+    "user benefits from progressive overload and habit stacking"
+  ],
+  "target_user_profile": {
+    "goal": "fitness_building",
+    "horizon_days": 14,
+    "preferred_mode": "structured",
+    "risk_profile": "low"
+  },
+  "backbone_nodes": [
+    {
+      "node_id": "day1_baseline_measurement",
+      "node_persona": "fitness_assessor",
+      "prompt_template": "你是体能评估师，Sparkle AI 的运动科学专家。\n\n你的职责：\n1. 评估当前体能基线\n2. 了解运动史和伤病情况\n3. 设定14天可达目标\n4. 选择最合适的运动类型\n\n不追求极限，先建立一个可持续的起点。目标是坚持14天不受伤。",
+      "available_tools": ["create_plan", "query_knowledge"],
+      "exit_conditions": ["baseline measured", "injury risk assessed", "14-day goal set"],
+      "neighbors": ["day3_first_workout"],
+      "transition_triggers": {"baseline_set": "day3_first_workout"},
+      "ux_mapping": {"frame": "orientation", "tone": "gentle", "signal_terms": ["fitness_baseline_done"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day3_first_workout",
+      "node_persona": "movement_coach",
+      "prompt_template": "你是动作教练，Sparkle AI 的正确姿势专家。\n\n你的职责：\n1. 指导第一个训练动作的标准姿势\n2. 关注动作质量而非数量\n3. 设定合适的起始强度\n4. 识别并纠正动作代偿\n\n完美的动作质量 > 大量的错误动作。宁可做得少做得对，不要做得多伤了身。",
+      "available_tools": ["create_task", "suggest_focus_session"],
+      "exit_conditions": ["first workout done safely", "form checked", "appropriate intensity found"],
+      "neighbors": ["day6_progressive_overload"],
+      "transition_triggers": {"first_workout_done": "day6_progressive_overload"},
+      "ux_mapping": {"frame": "execution", "tone": "attentive", "signal_terms": ["first_workout_complete"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day6_progressive_overload",
+      "node_persona": "progression_coach",
+      "prompt_template": "你是渐进式教练，Sparkle AI 的训练进阶专家。\n\n你的职责：\n1. 回顾前几次训练数据\n2. 适当增加重量/组数/时长\n3. 判断是否准备好进阶\n4. 调整休息时间\n\n每次只加一点点，身体适应了再加。急就是伤。",
+      "available_tools": ["create_task"],
+      "exit_conditions": ["progression applied safely", "body response assessed", "next increment planned"],
+      "neighbors": ["day9_nutrition_baseline"],
+      "transition_triggers": {"progression_on_track": "day9_nutrition_baseline"},
+      "ux_mapping": {"frame": "execution", "tone": "steady", "signal_terms": ["progressive_overload_active"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "active_adjustment"
+    },
+    {
+      "node_id": "day9_nutrition_baseline",
+      "node_persona": "nutrition_guide",
+      "prompt_template": "你是营养向导，Sparkle AI 的饮食优化专家。\n\n你的职责：\n1. 分析当前饮食习惯\n2. 提供简单可执行的改进建议\n3. 关注蛋白质和水分摄入\n4. 不极端节食\n\n运动是刺激，营养是材料。没有合适的营养，练再多也白搭。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["nutrition baseline assessed", "one improvement habit started", "hydration target set"],
+      "neighbors": ["day12_recovery_mastery"],
+      "transition_triggers": {"nutrition_improved": "day12_recovery_mastery"},
+      "ux_mapping": {"frame": "planning", "tone": "educational", "signal_terms": ["nutrition_awareness_raised"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day12_recovery_mastery",
+      "node_persona": "recovery_specialist",
+      "prompt_template": "你是恢复专家，Sparkle AI 的身体管理专家。\n\n你的职责：\n1. 评估睡眠质量和恢复状况\n2. 教授主动恢复技巧\n3. 识别过度训练信号\n4. 建立训练-恢复平衡\n\n恢复不是偷懒，是训练的一部分。身体在休息时变强，不是训练时。",
+      "available_tools": ["create_task", "query_knowledge"],
+      "exit_conditions": ["sleep quality assessed", "recovery routine started", "overtraining signs known"],
+      "neighbors": ["day14_next_level"],
+      "transition_triggers": {"recovery_understood": "day14_next_level"},
+      "ux_mapping": {"frame": "deep_work", "tone": "educational", "signal_terms": ["recovery_awareness_raised"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    },
+    {
+      "node_id": "day14_next_level",
+      "node_persona": "fitness_integrator",
+      "prompt_template": "你是健康整合师，Sparkle AI 的长期体能规划师。\n\n你的职责：\n1. 总结14天身体变化\n2. 设定下一阶段目标\n3. 选择专项方向\n4. 建立终身运动习惯框架\n\n14天只是地基，现在可以往你想要的方向盖楼了。",
+      "available_tools": ["create_plan", "create_task"],
+      "exit_conditions": ["progress reviewed", "next goal set", "lifetime system drafted"],
+      "neighbors": [],
+      "transition_triggers": {},
+      "ux_mapping": {"frame": "reflection", "tone": "celebrating", "signal_terms": ["fitness_system_established"]},
+      "default_interaction_model": "task_execution",
+      "default_ux_intent": "routine"
+    }
+  ],
+  "readiness_criteria": {
+    "fitness_goal_defined": {"signal_type": "goal_clarity", "minimum_confidence": 0.8, "required": true},
+    "workout_habit_started": {"signal_type": "daily_engagement", "minimum_confidence": 0.7, "required": true},
+    "form_checked": {"signal_type": "safety_verified", "minimum_confidence": 0.6, "required": false}
+  },
+  "default_strategies": {
+    "onboarding": "day1_baseline_measurement",
+    "reanchor": "day6_progressive_overload",
+    "recovery": "day3_first_workout",
+    "final_review": "day14_next_level"
+  },
+  "ux_mappings": {"default_frame": "fitness_building", "default_tone": "encouraging", "fallback_tone": "gentle_supportive"},
+  "created_at": "2026-05-06T00:00:00",
+  "author": "sparkle-core",
+  "changelog": ["Initial fitness foundation pack with 6 backbone nodes."]
+}

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/global_particle_counter.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -127,6 +128,10 @@ class _SparkleConfettiState extends State<SparkleConfetti> {
 
   @override
   Widget build(BuildContext context) {
+    if (context.hideChallengeBadges || context.emotionLowStimulus) {
+      return widget.child ?? const SizedBox.shrink();
+    }
+
     final evidence = widget.evidenceText?.trim();
     final message = widget.messageText?.trim();
     final hasFeedback = (evidence != null && evidence.isNotEmpty) ||

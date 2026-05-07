@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/adaptive/emotion_responsive_theme.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 class SparkleTappable extends StatefulWidget {
@@ -68,7 +69,11 @@ class _SparkleTappableState extends State<SparkleTappable> {
           onTap: widget.onTap != null ? _handleTap : null,
           onLongPress: widget.onLongPress != null ? _handleLongPress : null,
           child: AnimatedScale(
-            scale: _pressed ? widget.pressScale : 1,
+            scale: _pressed
+                ? (context.emotionLowStimulus
+                    ? (widget.pressScale + (1 - widget.pressScale) * 0.4)
+                    : widget.pressScale)
+                : 1,
             duration: widget.pressDuration,
             curve: Curves.easeOut,
             child: widget.child,

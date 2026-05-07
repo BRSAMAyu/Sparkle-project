@@ -131,12 +131,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                       ),
                     );
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SparkleSnackBar.info(
-                        l10n.communityCopiedToClipboard,
-                        duration: const Duration(seconds: 1),
-                      ),
-                    );
+                    AppFeedback.info(context, l10n.communityCopiedToClipboard);
                   },
                 ),
                 if (widget.onThread != null)
@@ -432,7 +427,8 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                         errorWidget: Center(
                           child: Text(
                             '?',
-                            style: TextStyle(fontSize: 11, color: DS.neutral500),
+                            style:
+                                TextStyle(fontSize: 11, color: DS.neutral500),
                           ),
                         ),
                       ),

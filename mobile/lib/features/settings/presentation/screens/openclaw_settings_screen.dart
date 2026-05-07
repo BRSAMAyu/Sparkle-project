@@ -55,11 +55,11 @@ class _OpenClawSettingsScreenState
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      isError
-          ? SparkleSnackBar.error(message)
-          : SparkleSnackBar.success(message),
-    );
+    if (isError) {
+      AppFeedback.error(context, message);
+    } else {
+      AppFeedback.success(context, message);
+    }
   }
 
   @override
@@ -120,7 +120,8 @@ class _OpenClawSettingsScreenState
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
-                              l10n.settOpenclawQueuedTasks(queuedRequests.length),
+                              l10n.settOpenclawQueuedTasks(
+                                  queuedRequests.length),
                               style: DS.bodySmall.copyWith(
                                 color: DS.warning,
                                 fontWeight: DS.fontWeightBold,
@@ -155,7 +156,8 @@ class _OpenClawSettingsScreenState
                                     Text(
                                       (request.goal?.trim().isNotEmpty ?? false)
                                           ? request.goal!
-                                          : l10n.settOpenclawTaskLabel(request.taskId),
+                                          : l10n.settOpenclawTaskLabel(
+                                              request.taskId),
                                       style: DS.bodySmall.copyWith(
                                         color: DS.textPrimary,
                                         fontWeight: DS.fontWeightBold,
@@ -166,8 +168,10 @@ class _OpenClawSettingsScreenState
                                       [
                                         if ((request.templateId ?? '')
                                             .isNotEmpty)
-                                          l10n.settOpenclawTemplateLabel(request.templateId!),
-                                        l10n.settOpenclawSourceLabel(request.source),
+                                          l10n.settOpenclawTemplateLabel(
+                                              request.templateId!),
+                                        l10n.settOpenclawSourceLabel(
+                                            request.source),
                                       ].join(' · '),
                                       style: DS.bodySmall.copyWith(
                                         color: DS.textSecondary,
@@ -177,10 +181,11 @@ class _OpenClawSettingsScreenState
                                 ),
                               ),
                             ),
-                        ),
+                          ),
                       if (queuedRequests.length > 5)
                         Text(
-                          l10n.settOpenclawMoreQueued(queuedRequests.length - 5),
+                          l10n.settOpenclawMoreQueued(
+                              queuedRequests.length - 5),
                           style: DS.bodySmall.copyWith(
                             color: DS.textSecondary,
                           ),

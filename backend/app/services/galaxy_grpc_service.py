@@ -175,3 +175,318 @@ class GalaxyGrpcServiceImpl:
                 context.set_code(grpc.StatusCode.INTERNAL)
                 context.set_details(str(e))
                 return galaxy_service_pb2.SyncCollaborativeGalaxyResponse(success=False)
+
+    async def GetUserGalaxy(self, request, context):
+        """gRPC implementation of GetUserGalaxy — returns core graph data."""
+        async with self.db_session_factory() as db:
+            galaxy_service = GalaxyService(db)
+            try:
+                graph = await galaxy_service.get_galaxy_graph(
+                    user_id=UUID(request.user_id),
+                )
+
+                nodes = [
+                    galaxy_service_pb2.GalaxyNode(
+                        node_id=str(node.node_id if hasattr(node, 'node_id') else node.id),
+                        label=node.label if hasattr(node, 'label') else node.name,
+                        node_type=node.node_type if hasattr(node, 'node_type') else "unknown",
+                        mastery=int(node.mastery * 100) if isinstance(getattr(node, 'mastery', 0), float) else getattr(node, 'mastery', 0),
+                        tags=getattr(node, 'tags', []) or [],
+                    )
+                    for node in (graph.nodes or [])
+                ]
+
+                edges = [
+                    galaxy_service_pb2.GalaxyEdge(
+                        source_id=str(edge.source_node_id),
+                        target_id=str(edge.target_node_id),
+                        relation=edge.relation_type or "related",
+                    )
+                    for edge in (graph.edges or graph.relations or [])
+                ]
+
+                return galaxy_service_pb2.GetUserGalaxyResponse(
+                    user_id=str(graph.user_id) if hasattr(graph, 'user_id') else request.user_id,
+                    nodes=nodes,
+                    edges=edges,
+                    total_nodes=graph.user_stats.total_nodes if graph.user_stats else len(nodes),
+                )
+            except Exception as e:
+                logger.error(f"gRPC GetUserGalaxy failed: {e}")
+                context.set_code(grpc.StatusCode.INTERNAL)
+                context.set_details(str(e))
+                return galaxy_service_pb2.GetUserGalaxyResponse()
+
+    async def RecordNodeInteraction(self, request, context):
+        """gRPC implementation of RecordNodeInteraction — spark a node."""
+        async with self.db_session_factory() as db:
+            galaxy_service = GalaxyService(db)
+            try:
+                study_minutes = int(request.metadata.get("study_minutes", 0)) if request.metadata else 0
+                task_id_str = request.metadata.get("task_id") if request.metadata else None
+                task_id = UUID(task_id_str) if task_id_str else None
+
+                result = await galaxy_service.spark_node(
+                    user_id=UUID(request.user_id),
+                    node_id=UUID(request.node_id),
+                    study_minutes=study_minutes,
+                    task_id=task_id,
+                )
+
+                return galaxy_service_pb2.RecordNodeInteractionResponse(
+                    success=result is not None,
+                )
+            except Exception as e:
+                logger.error(f"gRPC RecordNodeInteraction failed: {e}")
+                context.set_code(grpc.StatusCode.INTERNAL)
+                context.set_details(str(e))
+                return galaxy_service_pb2.RecordNodeInteractionResponse(success=False)
+
+    async def GetNodeDetail(self, request, context):
+        """gRPC implementation of GetNodeDetail — returns detailed node info."""
+        async with self.db_session_factory() as db:
+            galaxy_service = GalaxyService(db)
+            try:
+                node_id = UUID(request.node_id)
+                user_id = UUID(request.user_id)
+
+                # Get knowledge stats (mastery, study time, etc.)
+                stats = await galaxy_service.get_node_knowledge_stats(user_id, node_id)
+
+                # Get source documents
+                docs = await galaxy_service.get_node_source_documents(user_id, node_id)
+
+                # Build metadata from source documents
+                doc_meta: dict[str, str] = {}
+                if docs:
+                    for i, doc in enumerate(docs[:5]):
+                        doc_meta[f"doc_{i}"] = doc.file_name or ""
+
+                # Get node from DB for label, description, type, tags
+                from sqlalchemy import select
+                from app.models.galaxy import KnowledgeNode
+                stmt = select(KnowledgeNode).where(KnowledgeNode.id == node_id)
+                result = await db.execute(stmt)
+                node = result.scalar_one_or_none()
+
+                return galaxy_service_pb2.GetNodeDetailResponse(
+                    node_id=str(node_id),
+                    label=node.name if node else "",
+                    node_type=node.source_type if node else "unknown",
+                    mastery=int(stats.mastery_score * 100) if stats and hasattr(stats, 'mastery_score') else 0,
+                    description=node.description or "" if node else "",
+                    tags=node.tags or [] if node else [],
+                    parent_ids=[str(node.parent_id)] if node and node.parent_id else [],
+                    child_ids=[],
+                    metadata=doc_meta,
+                )
+            except Exception as e:
+                logger.error(f"gRPC GetNodeDetail failed: {e}")
+                context.set_code(grpc.StatusCode.INTERNAL)
+                context.set_details(str(e))
+                return galaxy_service_pb2.GetNodeDetailResponse()
+
+    async def SearchNodes(self, request, context):
+        """gRPC implementation of SearchNodes — semantic vector search (aligned with REST)."""
+        async with self.db_session_factory() as db:
+            galaxy_service = GalaxyService(db)
+            try:
+                limit = request.limit if request.limit > 0 else 20
+                results = await galaxy_service.semantic_search(
+                    user_id=UUID(request.user_id),
+                    query=request.query,
+                    subject_id=None,
+                    limit=limit,
+                )
+
+                result = [
+                    galaxy_service_pb2.GalaxyNode(
+                        node_id=str(r.node.id),
+                        label=r.node.name,
+                        node_type=r.node.source_type or "unknown",
+                        mastery=0,
+                        tags=r.node.tags or [],
+                    )
+                    for r in results
+                ]
+                return galaxy_service_pb2.SearchNodesResponse(
+                    nodes=result,
+                    total_found=len(result),
+                )
+            except Exception as e:
+                logger.error(f"gRPC SearchNodes failed: {e}")
+                context.set_code(grpc.StatusCode.INTERNAL)
+                context.set_details(str(e))
+                return galaxy_service_pb2.SearchNodesResponse()
+
+    async def GetLearningPath(self, request, context):
+        """gRPC implementation of GetLearningPath — BFS shortest path between two nodes."""
+        async with self.db_session_factory() as db:
+            try:
+                from uuid import UUID as _UUID
+                from sqlalchemy import select
+                from app.models.galaxy import KnowledgeNode, NodeRelation
+
+                from_id = _UUID(request.from_node_id)
+                to_id = _UUID(request.to_node_id)
+
+                # Simple BFS through NodeRelation edges
+                visited: set[str] = set()
+                queue: list[tuple[str, list[str]]] = [(str(from_id), [str(from_id)])]
+                path_found = False
+                path_node_ids: list[str] = []
+                path_edges: list[dict] = []
+
+                while queue:
+                    current, path = queue.pop(0)
+                    if current == str(to_id):
+                        path_node_ids = path
+                        path_found = True
+                        break
+                    if current in visited:
+                        continue
+                    visited.add(current)
+
+                    # Query outgoing edges
+                    stmt = select(NodeRelation).where(
+                        NodeRelation.source_node_id == _UUID(current)
+                    ).limit(100)
+                    result = await db.execute(stmt)
+                    edges = result.scalars().all()
+
+                    for edge in edges:
+                        next_id = str(edge.target_node_id)
+                        if next_id not in visited:
+                            queue.append((next_id, path + [next_id]))
+                            path_edges.append({
+                                "source_id": str(edge.source_node_id),
+                                "target_id": str(edge.target_node_id),
+                                "relation": edge.relation_type or "related",
+                            })
+
+                edges_pb = [
+                    galaxy_service_pb2.GalaxyEdge(
+                        source_id=e["source_id"],
+                        target_id=e["target_id"],
+                        relation=e["relation"],
+                    )
+                    for e in path_edges
+                ]
+
+                return galaxy_service_pb2.GetLearningPathResponse(
+                    node_ids=path_node_ids,
+                    edges=edges_pb,
+                    path_found=path_found,
+                )
+            except Exception as e:
+                logger.error(f"gRPC GetLearningPath failed: {e}")
+                context.set_code(grpc.StatusCode.INTERNAL)
+                context.set_details(str(e))
+                return galaxy_service_pb2.GetLearningPathResponse()
+
+    async def GetNodeDependencies(self, request, context):
+        """gRPC implementation of GetNodeDependencies — pre-requisites and dependents."""
+        async with self.db_session_factory() as db:
+            try:
+                from uuid import UUID as _UUID
+                from sqlalchemy import select
+                from app.models.galaxy import NodeRelation
+
+                node_id = _UUID(request.node_id)
+
+                # Prerequisites: nodes that this node depends on (source -> this node)
+                prereq_stmt = select(NodeRelation).where(
+                    NodeRelation.target_node_id == node_id,
+                    NodeRelation.relation_type == "prerequisite",
+                ).limit(100)
+                prereq_result = await db.execute(prereq_stmt)
+                prereqs = prereq_result.scalars().all()
+
+                # Dependents: nodes that depend on this node (this node -> target)
+                dep_stmt = select(NodeRelation).where(
+                    NodeRelation.source_node_id == node_id,
+                    NodeRelation.relation_type == "prerequisite",
+                ).limit(100)
+                dep_result = await db.execute(dep_stmt)
+                dependents = dep_result.scalars().all()
+
+                return galaxy_service_pb2.GetNodeDependenciesResponse(
+                    prerequisite_ids=[str(p.source_node_id) for p in prereqs],
+                    dependent_ids=[str(d.target_node_id) for d in dependents],
+                )
+            except Exception as e:
+                logger.error(f"gRPC GetNodeDependencies failed: {e}")
+                context.set_code(grpc.StatusCode.INTERNAL)
+                context.set_details(str(e))
+                return galaxy_service_pb2.GetNodeDependenciesResponse()
+
+    async def GetGalaxyStats(self, request, context):
+        """gRPC implementation of GetGalaxyStats — aggregate statistics for a user."""
+        async with self.db_session_factory() as db:
+            galaxy_service = GalaxyService(db)
+            try:
+                # Use built-in GalaxyStatsService through GalaxyService
+                stats = await galaxy_service.stats.calculate_user_stats(
+                    user_id=UUID(request.user_id),
+                )
+
+                # Map GalaxyUserStats fields to proto response
+                in_progress = max(0, stats.unlocked_count - stats.mastered_count)
+                not_started = max(0, stats.total_nodes - stats.unlocked_count)
+                avg_mastery = (stats.mastered_count / stats.total_nodes * 100.0) if stats.total_nodes > 0 else 0.0
+
+                # Convert sector distribution (SectorCode -> int) to string keys
+                nodes_by_type: dict[str, int] = {
+                    str(k) if not isinstance(k, str) else k: v
+                    for k, v in (stats.sector_distribution or {}).items()
+                }
+
+                return galaxy_service_pb2.GetGalaxyStatsResponse(
+                    total_nodes=stats.total_nodes,
+                    mastered_nodes=stats.mastered_count,
+                    in_progress_nodes=in_progress,
+                    not_started_nodes=not_started,
+                    average_mastery=round(avg_mastery, 2),
+                    nodes_by_type=nodes_by_type,
+                )
+            except Exception as e:
+                logger.error(f"gRPC GetGalaxyStats failed: {e}")
+                context.set_code(grpc.StatusCode.INTERNAL)
+                context.set_details(str(e))
+                return galaxy_service_pb2.GetGalaxyStatsResponse()
+
+    async def GetRecommendedNodes(self, request, context):
+        """gRPC implementation of GetRecommendedNodes — next-best nodes to study."""
+        async with self.db_session_factory() as db:
+            galaxy_service = GalaxyService(db)
+            try:
+                limit = request.limit if request.limit > 0 else 5
+                result_nodes: list = []
+                reasons_list: list[str] = []
+
+                # Use predict_next_node as primary recommendation
+                predicted = await galaxy_service.predict_next_node(
+                    user_id=UUID(request.user_id),
+                )
+                if predicted:
+                    mastery = int(predicted.user_status.mastery_score) if predicted.user_status else 0
+                    result_nodes.append(
+                        galaxy_service_pb2.GalaxyNode(
+                            node_id=str(predicted.id),
+                            label=predicted.name,
+                            node_type=getattr(predicted, 'source_type', 'unknown') or 'unknown',
+                            mastery=mastery,
+                            tags=getattr(predicted, 'tags', []) or [],
+                        )
+                    )
+                    reasons_list.append("Predicted best next step based on your learning pattern")
+
+                return galaxy_service_pb2.GetRecommendedNodesResponse(
+                    nodes=result_nodes,
+                    reasons=reasons_list,
+                )
+            except Exception as e:
+                logger.error(f"gRPC GetRecommendedNodes failed: {e}")
+                context.set_code(grpc.StatusCode.INTERNAL)
+                context.set_details(str(e))
+                return galaxy_service_pb2.GetRecommendedNodesResponse()

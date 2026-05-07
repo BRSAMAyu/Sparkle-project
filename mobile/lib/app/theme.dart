@@ -123,7 +123,6 @@ class AppThemes {
           onError: DS.neutral100,
         ),
 
-
         // Extensions
         extensions: <ThemeExtension<dynamic>>[
           AppThemeExtension(
@@ -133,7 +132,7 @@ class AppThemes {
             cardShadow: DS.shadowMd,
             elevatedShadow: DS.shadowLg,
           ),
-          SparkleColors.light,
+          SparkleTaskColors.light,
           SparkleThemeExtension.light(), // 🔧 修复：注册 SparkleThemeExtension
         ],
 
@@ -361,7 +360,7 @@ class AppThemes {
             cardShadow: DS.shadowMd,
             elevatedShadow: DS.shadowLg,
           ),
-          SparkleColors.dark,
+          SparkleTaskColors.dark,
           SparkleThemeExtension.dark(), // 🔧 修复：注册 SparkleThemeExtension
         ],
 
@@ -562,10 +561,14 @@ extension ThemeExtensionHelper on ThemeData {
   AppThemeExtension? get appExtension => extension<AppThemeExtension>();
 }
 
-/// Sparkle 应用专用颜色扩展 - 支持深色/浅色模式
+/// Sparkle task/status color extension kept for legacy app theme consumers.
+///
+/// Canonical UI color tokens live in tokens_v2/theme_manager.dart as
+/// SparkleColors and are exposed through `context.colors`.
 @immutable
-class SparkleColors extends ThemeExtension<SparkleColors> {
-  const SparkleColors({
+@Deprecated('Use context.colors from SparkleThemeExtension instead.')
+class SparkleTaskColors extends ThemeExtension<SparkleTaskColors> {
+  const SparkleTaskColors({
     required this.taskLearning,
     required this.taskTraining,
     required this.taskErrorFix,
@@ -612,7 +615,7 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
   final Color divider;
 
   /// 浅色主题配色
-  static SparkleColors get light => SparkleColors(
+  static SparkleTaskColors get light => SparkleTaskColors(
         // 任务类型 - 使用饱和度适中的颜色
         taskLearning: const Color(0xFF64B5F6),
         taskTraining: const Color(0xFFFF9800),
@@ -638,7 +641,7 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
       );
 
   /// 深色主题配色
-  static SparkleColors get dark => SparkleColors(
+  static SparkleTaskColors get dark => SparkleTaskColors(
         // 任务类型 - 使用更亮的颜色以提高对比度
         taskLearning: const Color(0xFF64B5F6),
         taskTraining: const Color(0xFFFFB74D),
@@ -664,7 +667,7 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
       );
 
   @override
-  SparkleColors copyWith({
+  SparkleTaskColors copyWith({
     Color? taskLearning,
     Color? taskTraining,
     Color? taskErrorFix,
@@ -683,7 +686,7 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
     Color? border,
     Color? divider,
   }) =>
-      SparkleColors(
+      SparkleTaskColors(
         taskLearning: taskLearning ?? this.taskLearning,
         taskTraining: taskTraining ?? this.taskTraining,
         taskErrorFix: taskErrorFix ?? this.taskErrorFix,
@@ -704,9 +707,9 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
       );
 
   @override
-  SparkleColors lerp(ThemeExtension<SparkleColors>? other, double t) {
-    if (other is! SparkleColors) return this;
-    return SparkleColors(
+  SparkleTaskColors lerp(ThemeExtension<SparkleTaskColors>? other, double t) {
+    if (other is! SparkleTaskColors) return this;
+    return SparkleTaskColors(
       taskLearning: Color.lerp(taskLearning, other.taskLearning, t)!,
       taskTraining: Color.lerp(taskTraining, other.taskTraining, t)!,
       taskErrorFix: Color.lerp(taskErrorFix, other.taskErrorFix, t)!,
@@ -770,8 +773,11 @@ class SparkleColors extends ThemeExtension<SparkleColors> {
   }
 }
 
-/// 便捷访问扩展
-extension SparkleColorsExtension on BuildContext {
-  SparkleColors get colors =>
-      Theme.of(this).extension<SparkleColors>() ?? SparkleColors.light;
+/// Legacy task color access.
+@Deprecated(
+  'Use context.colors from core/design/theme/sparkle_context_extension.dart.',
+)
+extension SparkleTaskColorsExtension on BuildContext {
+  SparkleTaskColors get taskColors =>
+      Theme.of(this).extension<SparkleTaskColors>() ?? SparkleTaskColors.light;
 }

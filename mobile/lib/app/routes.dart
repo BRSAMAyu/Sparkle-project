@@ -27,6 +27,7 @@ import 'package:sparkle/features/notification_center/notification_center.dart';
 import 'package:sparkle/features/openclaw/openclaw.dart';
 import 'package:sparkle/features/photon/photon_routes.dart';
 import 'package:sparkle/features/plan/plan.dart';
+import 'package:sparkle/features/reflection/reflection.dart';
 import 'package:sparkle/features/report/report_routes.dart';
 import 'package:sparkle/features/reviews/reviews.dart';
 import 'package:sparkle/features/seed_library/seed_library_routes.dart';
@@ -341,6 +342,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ...AchievementRoutes.routes,
       ...NotificationCenterRoutes.routes,
       ...PhotonRoutes.routes,
+      ...ReflectionRoutes.routes,
       ...TranslationRoutes.routes,
       ...SeedLibraryRoutes.routes,
       ...ToolsRoutes.routes,

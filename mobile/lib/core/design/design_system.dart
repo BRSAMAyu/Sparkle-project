@@ -22,7 +22,7 @@
 /// // 3. 在UI中使用设计令牌
 /// Container(
 ///   color: DS.brandPrimaryConst,
-///   padding: SpacingSystem.edgeLg,
+///   padding: const EdgeInsets.all(DS.lg),
 ///   child: SparkleButton.primary(
 ///     label: '点击',
 ///     onPressed: () {},
@@ -51,13 +51,13 @@ export 'responsive_widgets.dart';
 export 'tokens_v2/animation_token.dart';
 export 'tokens_v2/color_token.dart';
 export 'tokens_v2/responsive_system.dart';
-export 'tokens_v2/spacing_token.dart';
 export 'tokens_v2/theme_manager.dart';
 export 'tokens_v2/typography_token.dart';
 export 'validation/design_validator.dart';
 export 'widgets/app_feedback.dart';
 export 'widgets/graphite_surfaces.dart';
 export 'widgets/sparkle_motion_primitives.dart';
+export 'widgets/sparkle_refresh_indicator.dart';
 
 /// MaterialApp 主题配置
 class AppThemes {
@@ -75,14 +75,21 @@ class AppThemes {
     SparkleThemeData theme,
     Brightness brightness,
   ) {
-    // 🔧 根据亮度选择正确的 SparkleThemeExtension
-    final sparkleExtension = brightness == Brightness.light
-        ? SparkleThemeExtension.light()
-        : SparkleThemeExtension.dark();
-
     final colors = theme.colors;
     final isDark = brightness == Brightness.dark;
-    final textTheme = _buildTextTheme(theme);
+    final isHighContrast = ThemeManager().highContrast;
+    final textTheme = _buildTextTheme(theme, highContrast: isHighContrast);
+    final sparkleExtension = brightness == Brightness.light
+        ? SparkleThemeExtension.light(
+            colors: colors,
+            typography: theme.typography,
+            spacing: theme.spacing,
+          )
+        : SparkleThemeExtension.dark(
+            colors: colors,
+            typography: theme.typography,
+            spacing: theme.spacing,
+          );
 
     return ThemeData(
       useMaterial3: true,
@@ -135,9 +142,19 @@ class AppThemes {
       highlightColor: Colors.transparent,
       hoverColor: colors.brandPrimary.withValues(alpha: 0.04),
       splashColor: colors.brandPrimary.withValues(alpha: 0.08),
+      focusColor: colors.brandPrimary.withValues(
+        alpha: isHighContrast ? 0.9 : 0.18,
+      ),
       cardTheme: _buildCardTheme(theme),
       buttonTheme: _buildButtonTheme(theme),
-      inputDecorationTheme: _buildInputTheme(theme),
+      outlinedButtonTheme: _buildOutlinedButtonTheme(
+        theme,
+        highContrast: isHighContrast,
+      ),
+      inputDecorationTheme: _buildInputTheme(
+        theme,
+        highContrast: isHighContrast,
+      ),
       listTileTheme: ListTileThemeData(
         iconColor: colors.textSecondary,
         textColor: colors.textPrimary,
@@ -232,7 +249,10 @@ class AppThemes {
           }
           return Colors.transparent;
         }),
-        side: BorderSide(color: colors.surfaceTertiary),
+        side: BorderSide(
+          color: isHighContrast ? colors.brandPrimary : colors.surfaceTertiary,
+          width: isHighContrast ? 2 : 1,
+        ),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
         ),
@@ -312,13 +332,19 @@ class AppThemes {
     );
   }
 
-  static TextTheme _buildTextTheme(SparkleThemeData theme) => TextTheme(
+  static TextTheme _buildTextTheme(
+    SparkleThemeData theme, {
+    required bool highContrast,
+  }) =>
+      TextTheme(
         displayLarge: theme.typography.displayLarge,
         headlineLarge: theme.typography.headingLarge,
         headlineMedium: theme.typography.headingMedium,
         titleLarge: theme.typography.titleLarge,
         bodyLarge: theme.typography.bodyLarge,
-        bodyMedium: theme.typography.bodyMedium,
+        bodyMedium: theme.typography.bodyMedium.copyWith(
+          fontWeight: highContrast ? FontWeight.w500 : FontWeight.w400,
+        ),
         labelLarge: theme.typography.labelLarge,
         labelSmall: theme.typography.labelSmall,
       );
@@ -347,36 +373,78 @@ class AppThemes {
         ),
       );
 
-  static InputDecorationTheme _buildInputTheme(SparkleThemeData theme) =>
-      InputDecorationTheme(
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: theme.colors.surfaceTertiary),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: theme.colors.surfaceTertiary),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: theme.colors.brandPrimary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: theme.colors.semanticError, width: 1.5),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: BorderSide(color: theme.colors.semanticError, width: 2),
-        ),
-        filled: true,
-        fillColor: theme.colors.surfaceSecondary,
-        hintStyle: TextStyle(color: theme.colors.textSecondary),
-        contentPadding: EdgeInsets.symmetric(
-          horizontal: theme.spacing.lg,
-          vertical: theme.spacing.lg,
+  static OutlinedButtonThemeData _buildOutlinedButtonTheme(
+    SparkleThemeData theme, {
+    required bool highContrast,
+  }) =>
+      OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: theme.colors.brandPrimary,
+          side: BorderSide(
+            color: theme.colors.brandPrimary,
+            width: highContrast ? 3 : 1.5,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          textStyle: theme.typography.labelLarge.copyWith(
+            fontWeight: highContrast ? FontWeight.w600 : FontWeight.w500,
+          ),
         ),
       );
+
+  static InputDecorationTheme _buildInputTheme(
+    SparkleThemeData theme, {
+    required bool highContrast,
+  }) {
+    final borderWidth = highContrast ? 2.0 : 1.0;
+    final focusedBorderWidth = highContrast ? 3.0 : 2.0;
+
+    return InputDecorationTheme(
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: theme.colors.surfaceTertiary,
+          width: borderWidth,
+        ),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: theme.colors.surfaceTertiary,
+          width: borderWidth,
+        ),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: theme.colors.brandPrimary,
+          width: focusedBorderWidth,
+        ),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: theme.colors.semanticError,
+          width: highContrast ? 2.5 : 1.5,
+        ),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(18),
+        borderSide: BorderSide(
+          color: theme.colors.semanticError,
+          width: focusedBorderWidth,
+        ),
+      ),
+      filled: true,
+      fillColor: theme.colors.surfaceSecondary,
+      hintStyle: TextStyle(color: theme.colors.textSecondary),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: theme.spacing.lg,
+        vertical: theme.spacing.lg,
+      ),
+    );
+  }
 }
 
 /// 主题扩展 - 用于访问自定义主题属性
@@ -395,7 +463,7 @@ class _SparkleThemeExtension extends ThemeExtension<_SparkleThemeExtension> {
     double t,
   ) {
     if (other is! _SparkleThemeExtension) return this;
-    return _SparkleThemeExtension(sparkle);
+    return _SparkleThemeExtension(sparkle.lerp(other.sparkle, t));
   }
 }
 
@@ -877,11 +945,11 @@ class DS {
     final duration = switch (role) {
       SparkleFeedbackRole.loading => const Duration(milliseconds: 1400),
       SparkleFeedbackRole.undoable => const Duration(seconds: 4),
-      SparkleFeedbackRole.error => const Duration(seconds: 6),
-      SparkleFeedbackRole.warning => const Duration(seconds: 5),
+      SparkleFeedbackRole.error => const Duration(seconds: 4),
+      SparkleFeedbackRole.warning => const Duration(seconds: 4),
       SparkleFeedbackRole.info ||
       SparkleFeedbackRole.success =>
-        const Duration(seconds: 3),
+        const Duration(milliseconds: 2500),
     };
 
     return SparkleFeedbackStyle(
@@ -893,6 +961,10 @@ class DS {
   }
 
   // 间距 (常量版本用于const构造函数)
+  //
+  // Canonical 8pt scale:
+  // xs=4, sm=8, md=16, lg=24, xl=32, xxl=48, xxxl=64.
+  // Use `DS.sm + DS.xs` for the occasional 12pt gap.
   static const double xs = 4.0;
   static const double sm = 8.0;
   static const double md = 16.0;
@@ -966,7 +1038,9 @@ class DS {
   // Typography
   static const double _fontRatio = 1.25;
   static const double fontSizeXs = 12.0;
-  @Deprecated('Use TypographySystem.bodyMedium() instead. fontSizeSm had a value conflict with TypographySystem.sizeSm.')
+  @Deprecated(
+    'Use TypographySystem.bodyMedium() instead. fontSizeSm had a value conflict with TypographySystem.sizeSm.',
+  )
   static const double fontSizeSm = TypographySystem.sizeSm; // 14.0 → 16.0
   static const double fontSizeBase = 16.0;
   static const double fontSizeMd = fontSizeBase;

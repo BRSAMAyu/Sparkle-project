@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/photon/presentation/providers/photon_provider.dart';
@@ -325,7 +326,7 @@ class _PhotonTransferScreenState extends ConsumerState<PhotonTransferScreen> {
   void _showAmountSelector(int currentBalance) {
     final quickAmounts = [100, 500, 1000, 2000, 5000];
 
-    showModalBottomSheet<void>(
+    showSensoryModalBottomSheet<void>(
       context: context,
       builder: (context) => Container(
         padding: const EdgeInsets.all(DS.lg),

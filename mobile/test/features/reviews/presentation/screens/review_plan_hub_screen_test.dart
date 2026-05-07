@@ -83,7 +83,7 @@ Future<void> _pumpHub(
 }
 
 class _StaticDashboardNotifier extends DashboardNotifier {
-  _StaticDashboardNotifier() : super(_UnusedDashboardRepository()) {
+  _StaticDashboardNotifier() : super(_UnusedDashboardRepository(), _UnusedRef()) {
     state = DashboardState(
       weather: WeatherData(type: 'sunny', condition: 'clear'),
       flame: FlameData(level: 1, brightness: 0.5, todayFocusMinutes: 0),

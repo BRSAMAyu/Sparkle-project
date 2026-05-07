@@ -291,7 +291,7 @@ async def _todays_next_task(db: AsyncSession, *, user_id: UUID, plan_id: UUID | 
             Task.deleted_at.is_(None),
         )
         .order_by(
-            Task.status == TaskStatus.IN_PROGRESS,
+            (Task.status == TaskStatus.IN_PROGRESS).desc(),
             Task.due_date.asc().nulls_last(),
             Task.priority.desc(),
             Task.order_index.asc(),

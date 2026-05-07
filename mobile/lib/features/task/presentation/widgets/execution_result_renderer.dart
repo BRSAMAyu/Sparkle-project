@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
@@ -498,10 +499,8 @@ class _ArtifactTile extends StatelessWidget {
             );
             return;
           }
-          showModalBottomSheet<void>(
+          showSensoryModalBottomSheet<void>(
             context: context,
-            showDragHandle: true,
-            backgroundColor: DS.surfacePrimary,
             builder: (_) => _ArtifactPreviewSheet(
               artifact: artifact,
               title: name,

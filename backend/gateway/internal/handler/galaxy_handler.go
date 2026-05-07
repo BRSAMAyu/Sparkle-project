@@ -88,18 +88,21 @@ func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
 		galaxy.GET("/contribution-stats", h.ProxyToBackend)
 		galaxy.GET("/nodes", h.ProxyToBackend)
 		galaxy.POST("/nodes", h.ProxyToBackend)
-		galaxy.GET("/node/:id", h.ProxyToBackend)
+		galaxy.GET("/node/:id", h.GetNodeDetailGPRC)
 		galaxy.GET("/node/:id/history", h.ProxyToBackend)
-		galaxy.GET("/nodes/:id", h.ProxyToBackend)
+		galaxy.GET("/nodes/:id", h.GetNodeDetailGPRC)
 		galaxy.GET("/nodes/:id/history", h.ProxyToBackend)
-		galaxy.GET("/search", h.ProxyToBackend)
-		galaxy.POST("/search", h.ProxyToBackend)
+		galaxy.GET("/search", h.SearchNodesGPRC)
+		galaxy.POST("/search", h.SearchNodesGPRC)
 		galaxy.POST("/expansion/feedback", h.ProxyToBackend)
 		galaxy.GET("/review/suggestions", h.ProxyToBackend)
-		galaxy.GET("/stats", h.ProxyToBackend)
+		galaxy.GET("/stats", h.GetGalaxyStatsGPRC)
 		galaxy.GET("/heatmap", h.ProxyToBackend)
-		galaxy.GET("/predict", h.ProxyToBackend)
+		galaxy.GET("/predict", h.GetRecommendedGPRC)
 		galaxy.POST("/predict-next", h.ProxyToBackend)
+		galaxy.GET("/learning-path", h.GetLearningPath)
+		galaxy.GET("/node/:id/dependencies", h.GetNodeDependencies)
+		galaxy.GET("/nodes/:id/dependencies", h.GetNodeDependencies)
 		galaxy.POST("/node/:id/expansion/candidates", h.ProxyToBackend)
 		galaxy.POST("/nodes/:id/expansion/candidates", h.ProxyToBackend)
 		galaxy.POST("/node/:id/expansion/apply", h.ProxyToBackend)
@@ -131,11 +134,11 @@ func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
 		galaxy.GET("/node/:id/chunks", h.ProxyToBackend)
 		if rateLimit != nil {
 			galaxy.GET("/events", rateLimit, h.ProxyToBackend) // SSE stream for real-time galaxy updates
-			galaxy.POST("/sync", rateLimit, h.ProxyToBackend)
+			galaxy.POST("/sync", rateLimit, h.SyncGalaxy)
 			galaxy.POST("/sync/mastery", rateLimit, h.ProxyToBackend)
 		} else {
 			galaxy.GET("/events", h.ProxyToBackend) // SSE stream for real-time galaxy updates
-			galaxy.POST("/sync", h.ProxyToBackend)
+			galaxy.POST("/sync", h.SyncGalaxy)
 			galaxy.POST("/sync/mastery", h.ProxyToBackend)
 		}
 	}
@@ -374,6 +377,142 @@ func (h *GalaxyHandler) invalidateGalaxyGraphCache(ctx context.Context, userID s
 	}
 }
 
+// GetNodeDetailGPRC handles GET /galaxy/node/:id via gRPC with REST fallback.
+func (h *GalaxyHandler) GetNodeDetailGPRC(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	nodeID := c.Param("id")
+	if nodeID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "node_id required"})
+		return
+	}
+	if h.galaxyClient != nil {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
+		resp, err := h.galaxyClient.GetNodeDetail(ctx, userID, nodeID)
+		if err == nil && resp != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"node_id":     resp.NodeId,
+				"label":       resp.Label,
+				"node_type":   resp.NodeType,
+				"mastery":     resp.Mastery,
+				"description": resp.Description,
+				"tags":        resp.Tags,
+				"parent_ids":  resp.ParentIds,
+				"child_ids":   resp.ChildIds,
+				"metadata":    resp.Metadata,
+				"via":         "grpc",
+			})
+			return
+		}
+		log.Printf("Galaxy GetNodeDetail gRPC failed, falling back to REST: %v", err)
+	}
+	h.ProxyToBackend(c)
+}
+
+// SearchNodesGPRC handles GET/POST /galaxy/search via gRPC with REST fallback.
+func (h *GalaxyHandler) SearchNodesGPRC(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	if h.galaxyClient == nil {
+		h.ProxyToBackend(c)
+		return
+	}
+
+	query := c.Query("q")
+	if query == "" {
+		// Try JSON body
+		var body struct {
+			Query string `json:"query"`
+			Limit int32  `json:"limit"`
+		}
+		rawBody, _ := io.ReadAll(c.Request.Body)
+		c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
+		if len(rawBody) > 0 {
+			json.Unmarshal(rawBody, &body)
+			query = body.Query
+		}
+	}
+	if query == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "query required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+	resp, err := h.galaxyClient.SearchNodes(ctx, userID, query, 20)
+	if err == nil && resp != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"nodes":       resp.Nodes,
+			"total_found": resp.TotalFound,
+			"via":         "grpc",
+		})
+		return
+	}
+	log.Printf("Galaxy SearchNodes gRPC failed, falling back to REST: %v", err)
+
+	h.ProxyToBackend(c)
+}
+
+// GetGalaxyStatsGPRC handles GET /galaxy/stats via gRPC with REST fallback.
+func (h *GalaxyHandler) GetGalaxyStatsGPRC(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	if h.galaxyClient != nil {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
+		resp, err := h.galaxyClient.GetGalaxyStats(ctx, userID)
+		if err == nil && resp != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"total_nodes":      resp.TotalNodes,
+				"mastered_nodes":   resp.MasteredNodes,
+				"in_progress_nodes": resp.InProgressNodes,
+				"not_started_nodes": resp.NotStartedNodes,
+				"average_mastery":  resp.AverageMastery,
+				"nodes_by_type":    resp.NodesByType,
+				"via":              "grpc",
+			})
+			return
+		}
+		log.Printf("Galaxy GetGalaxyStats gRPC failed, falling back to REST: %v", err)
+	}
+	h.ProxyToBackend(c)
+}
+
+// GetRecommendedGPRC handles GET /galaxy/predict via gRPC with REST fallback.
+func (h *GalaxyHandler) GetRecommendedGPRC(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+	if h.galaxyClient != nil {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
+		resp, err := h.galaxyClient.GetRecommendedNodes(ctx, userID, 10)
+		if err == nil && resp != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"nodes":   resp.Nodes,
+				"reasons": resp.Reasons,
+				"via":     "grpc",
+			})
+			return
+		}
+		log.Printf("Galaxy GetRecommendedNodes gRPC failed, falling back to REST: %v", err)
+	}
+	h.ProxyToBackend(c)
+}
+
 // GetGraph handles GET /galaxy/graph via gRPC with REST fallback.
 func (h *GalaxyHandler) GetGraph(c *gin.Context) {
 	userID := c.GetString("user_id")
@@ -398,6 +537,132 @@ func (h *GalaxyHandler) GetGraph(c *gin.Context) {
 		}
 		log.Printf("Galaxy GetGraph gRPC failed, falling back to REST: %v", err)
 	}
+
+	h.ProxyToBackend(c)
+}
+
+// SyncGalaxy handles POST /galaxy/sync
+// Direct gRPC call for collaborative CRDT galaxy sync.
+func (h *GalaxyHandler) SyncGalaxy(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	var req struct {
+		GalaxyID      string          `json:"galaxy_id"`
+		PartialUpdate json.RawMessage `json:"partial_update"`
+	}
+	rawBody, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to read request body"})
+		return
+	}
+	c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
+	if len(bytes.TrimSpace(rawBody)) > 0 {
+		if err := json.Unmarshal(rawBody, &req); err != nil {
+			sanitizeErrorResponse(c, http.StatusBadRequest, err, "galaxy.sync.unmarshal")
+			return
+		}
+	}
+
+	if h.galaxyClient == nil {
+		c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
+		h.ProxyToBackend(c)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	resp, err := h.galaxyClient.SyncCollaborativeGalaxy(ctx, req.GalaxyID, req.PartialUpdate, userID)
+	if err != nil {
+		log.Printf("Failed to sync galaxy via gRPC, falling back to proxy: %v", err)
+		c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
+		h.ProxyToBackend(c)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":       resp.Success,
+		"server_update": resp.ServerUpdate,
+		"via":           "grpc",
+	})
+}
+
+// GetLearningPath handles GET /galaxy/learning-path
+// Returns the recommended learning path between two nodes via gRPC.
+func (h *GalaxyHandler) GetLearningPath(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	if h.galaxyClient == nil {
+		h.ProxyToBackend(c)
+		return
+	}
+
+	fromNodeID := c.Query("from")
+	toNodeID := c.Query("to")
+	if fromNodeID == "" || toNodeID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "from and to query params required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	resp, err := h.galaxyClient.GetLearningPath(ctx, userID, fromNodeID, toNodeID)
+	if err == nil && resp != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"node_ids":   resp.NodeIds,
+			"edges":      resp.Edges,
+			"path_found": resp.PathFound,
+			"via":        "grpc",
+		})
+		return
+	}
+	log.Printf("Galaxy GetLearningPath gRPC failed, falling back to REST: %v", err)
+
+	h.ProxyToBackend(c)
+}
+
+// GetNodeDependencies handles GET /galaxy/node/:id/dependencies
+// Returns node prerequisites and dependents via gRPC.
+func (h *GalaxyHandler) GetNodeDependencies(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	if h.galaxyClient == nil {
+		h.ProxyToBackend(c)
+		return
+	}
+
+	nodeID := c.Param("id")
+	if nodeID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "node_id required"})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+	defer cancel()
+
+	resp, err := h.galaxyClient.GetNodeDependencies(ctx, userID, nodeID)
+	if err == nil && resp != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"prerequisite_ids": resp.PrerequisiteIds,
+			"dependent_ids":    resp.DependentIds,
+			"via":              "grpc",
+		})
+		return
+	}
+	log.Printf("Galaxy GetNodeDependencies gRPC failed, falling back to REST: %v", err)
 
 	h.ProxyToBackend(c)
 }

@@ -190,11 +190,13 @@ class _ChatInputState extends ConsumerState<ChatInput> {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.messageSend));
 
     if (widget.onSend != null) {
+      setState(() => _isSending = true);
       widget.onSend!(text, replyToId: widget.quotedMessage?.id);
       _controller.clear();
       widget.onCancelQuote?.call();
 
       _restoreFocus();
+      if (mounted) setState(() => _isSending = false);
       return;
     }
 
@@ -467,6 +469,9 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                         child: TextField(
                           controller: _controller,
                           focusNode: _focusNode,
+                          maxLength: 4000,
+                          maxLengthEnforcement:
+                              MaxLengthEnforcement.enforced,
                           maxLines: 4,
                           minLines: 1,
                           enabled: widget.enabled && !_isSending,

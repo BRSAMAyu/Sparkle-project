@@ -443,6 +443,21 @@ func isWebSocketRequest(c *gin.Context) bool {
 func validateJWT(cfg *config.Config, rdb *redis.Client, tokenString string) (string, bool, error) {
 	const jwtClockSkew = 30 * time.Second
 
+	// NOTE: JWT tokens are currently signed with HS256 (HMAC-SHA256), a
+	// symmetric algorithm that shares the same secret key between Go Gateway
+	// (auth.go) and Python Engine (security.py). This means both layers can
+	// issue and verify tokens using the same JWT_SECRET.
+	//
+	// SECURITY PLAN: Migrate to RS256 (RSA asymmetric) so that only the
+	// Python auth service holds the private signing key, and the Go Gateway
+	// uses a public key for verification only. This eliminates the shared-
+	// secret risk and follows the principle of least privilege.
+	//
+	// Migration path (future sprint):
+	//   1. Generate RSA key pair, store private key in Python (env / KMS).
+	//   2. Configure Go Gateway with only the public key.
+	//   3. Add key rotation support (JWKS endpoint or .well-known).
+	//   4. Phase out HS256 after all clients refresh tokens.
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if token.Method.Alg() != jwt.SigningMethodHS256.Alg() {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])

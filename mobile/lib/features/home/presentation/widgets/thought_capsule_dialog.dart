@@ -37,15 +37,11 @@ class _ThoughtCapsuleDialogState extends ConsumerState<ThoughtCapsuleDialog> {
           );
       if (mounted) {
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SparkleSnackBar.success(context.l10n.thoughtCapsuleCaptured),
-        );
+        AppFeedback.success(context, context.l10n.thoughtCapsuleCaptured);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SparkleSnackBar.error(context.l10n.thoughtCapsuleCaptureFailed(e)),
-        );
+        AppFeedback.error(context, context.l10n.thoughtCapsuleCaptureFailed(e));
         setState(() => _isSubmitting = false);
       }
     }

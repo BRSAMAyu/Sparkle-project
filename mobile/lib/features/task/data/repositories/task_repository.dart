@@ -326,7 +326,7 @@ class TaskRepository {
   Future<PaginatedResponse<TaskModel>> getTasks({
     Map<String, dynamic>? filters,
     int page = 1,
-    int pageSize = 10,
+    int pageSize = 50,
   }) async {
     if (DemoDataService.isDemoMode) {
       final tasks = DemoDataService().demoTasks;

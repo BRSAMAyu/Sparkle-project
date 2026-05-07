@@ -5,6 +5,7 @@ import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/auth/data/repositories/auth_repository.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
+import 'package:sparkle/features/shop/data/repositories/shop_repository_provider.dart';
 import 'package:sparkle/features/shop/presentation/providers/shop_provider.dart';
 import 'package:sparkle/shared/entities/shop_model.dart';
 import 'package:sparkle/shared/entities/user_brief.dart';

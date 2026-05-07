@@ -30,6 +30,7 @@ const (
 	EventTaskPaused    EventType = "task.paused"
 	EventTaskResumed   EventType = "task.resumed"
 	EventTaskStuck     EventType = "task.stuck"
+	EventTaskReopened  EventType = "task.reopened"
 
 	// Plan events
 	EventPlanCreated   EventType = "plan.created"

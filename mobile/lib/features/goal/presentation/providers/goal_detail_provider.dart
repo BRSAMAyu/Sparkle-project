@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/cognitive/data/models/strategy_migration_models.dart';
+import 'package:sparkle/features/goal/data/repositories/goal_repository.dart';
 
 final goalDetailProvider = StateNotifierProvider.family<GoalDetailNotifier,
     AsyncValue<GoalDetailData>, String>(
@@ -102,6 +103,18 @@ class GoalDetailNotifier extends StateNotifier<AsyncValue<GoalDetailData>> {
             .copyWith(status: 'pending_confirmation'),
       ),
     );
+  }
+
+  Future<void> updateGoal({
+    String? title,
+    String? description,
+  }) async {
+    await _ref.read(goalRepositoryProvider).updateGoal(
+      goalId: _goalId,
+      title: title,
+      description: description,
+    );
+    await load();
   }
 }
 

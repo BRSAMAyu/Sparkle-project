@@ -412,12 +412,14 @@ class _OpenClawAutomationPanelState
       executionStrategy: _batchStrategy,
     );
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      ok
-          ? SparkleSnackBar.success(context.l10n.openclawBatchSubmitted)
-          : SparkleSnackBar.error(
-              service.error ?? context.l10n.openclawBatchFailed),
-    );
+    if (ok) {
+      AppFeedback.success(context, context.l10n.openclawBatchSubmitted);
+    } else {
+      AppFeedback.error(
+        context,
+        service.error ?? context.l10n.openclawBatchFailed,
+      );
+    }
   }
 
   Future<void> _createSchedule(OpenClawAutomationService service) async {

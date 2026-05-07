@@ -1,9 +1,11 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/theme/performance_tier.dart';
-import 'package:sparkle/core/design/tokens/color_tokens_v2.dart';
+import 'package:sparkle/core/design/tokens/task_colors.dart';
 import 'package:sparkle/core/design/tokens_v2/theme_manager.dart'
-    show SparkleSpacing, SparkleTypography;
+    show SparkleColors, SparkleSpacing, SparkleTypography, ThemeManager;
 
 /// Theme extension for semantic design tokens.
 ///
@@ -17,28 +19,41 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
     required this.radius,
     required this.motion,
     required this.performanceTier,
+    required this.taskColors,
   });
 
-  factory SparkleThemeExtension.light(
-          {PerformanceTier tier = PerformanceTier.high,}) =>
+  factory SparkleThemeExtension.light({
+    PerformanceTier tier = PerformanceTier.high,
+    SparkleColors? colors,
+    SparkleTypography? typography,
+    SparkleSpacing? spacing,
+  }) =>
       SparkleThemeExtension(
-        colors: const SparkleColors(brightness: Brightness.light),
-        typography: SparkleTypography.standard(),
-        spacing: const SparkleSpacing(),
+        colors: colors ??
+            ThemeManager().themeForBrightness(Brightness.light).colors,
+        typography: typography ?? SparkleTypography.standard(),
+        spacing: spacing ?? const SparkleSpacing(),
         radius: const SparkleRadius(),
         motion: const SparkleMotionTokens(),
         performanceTier: tier,
+        taskColors: const TaskColors(brightness: Brightness.light),
       );
 
-  factory SparkleThemeExtension.dark(
-          {PerformanceTier tier = PerformanceTier.high,}) =>
+  factory SparkleThemeExtension.dark({
+    PerformanceTier tier = PerformanceTier.high,
+    SparkleColors? colors,
+    SparkleTypography? typography,
+    SparkleSpacing? spacing,
+  }) =>
       SparkleThemeExtension(
-        colors: const SparkleColors(brightness: Brightness.dark),
-        typography: SparkleTypography.standard(),
-        spacing: const SparkleSpacing(),
+        colors:
+            colors ?? ThemeManager().themeForBrightness(Brightness.dark).colors,
+        typography: typography ?? SparkleTypography.standard(),
+        spacing: spacing ?? const SparkleSpacing(),
         radius: const SparkleRadius(),
         motion: const SparkleMotionTokens(),
         performanceTier: tier,
+        taskColors: const TaskColors(brightness: Brightness.dark),
       );
 
   final SparkleColors colors;
@@ -47,6 +62,7 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
   final SparkleRadius radius;
   final SparkleMotionTokens motion;
   final PerformanceTier performanceTier;
+  final TaskColors taskColors;
 
   bool get enableBlur => performanceTier == PerformanceTier.high;
   bool get enableGlow => performanceTier == PerformanceTier.high;
@@ -60,6 +76,7 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
     SparkleRadius? radius,
     SparkleMotionTokens? motion,
     PerformanceTier? performanceTier,
+    TaskColors? taskColors,
   }) =>
       SparkleThemeExtension(
         colors: colors ?? this.colors,
@@ -68,14 +85,24 @@ class SparkleThemeExtension extends ThemeExtension<SparkleThemeExtension> {
         radius: radius ?? this.radius,
         motion: motion ?? this.motion,
         performanceTier: performanceTier ?? this.performanceTier,
+        taskColors: taskColors ?? this.taskColors,
       );
 
   @override
   SparkleThemeExtension lerp(
-      ThemeExtension<SparkleThemeExtension>? other, double t,) {
+    ThemeExtension<SparkleThemeExtension>? other,
+    double t,
+  ) {
     if (other is! SparkleThemeExtension) return this;
-    // Tokens are discrete; switch at midpoint.
-    return t < 0.5 ? this : other;
+    return SparkleThemeExtension(
+      colors: colors.lerp(other.colors, t),
+      typography: t < 0.5 ? typography : other.typography,
+      spacing: t < 0.5 ? spacing : other.spacing,
+      radius: radius.lerp(other.radius, t),
+      motion: t < 0.5 ? motion : other.motion,
+      performanceTier: t < 0.5 ? performanceTier : other.performanceTier,
+      taskColors: t < 0.5 ? taskColors : other.taskColors,
+    );
   }
 }
 
@@ -106,6 +133,15 @@ class SparkleRadius {
   BorderRadius get lgRadius => BorderRadius.circular(lg);
   BorderRadius get xlRadius => BorderRadius.circular(xl);
   BorderRadius get fullRadius => BorderRadius.circular(full);
+
+  SparkleRadius lerp(SparkleRadius other, double t) => SparkleRadius(
+        xs: lerpDouble(xs, other.xs, t)!,
+        sm: lerpDouble(sm, other.sm, t)!,
+        md: lerpDouble(md, other.md, t)!,
+        lg: lerpDouble(lg, other.lg, t)!,
+        xl: lerpDouble(xl, other.xl, t)!,
+        full: t < 0.5 ? full : other.full,
+      );
 }
 
 /// Minimal motion tokens backed by SparkleMotion.

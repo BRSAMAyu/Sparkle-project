@@ -90,9 +90,7 @@ class _OpenClawExecutionPreferencesCardState
           ),
           const SizedBox(height: DS.spacing8),
           Text(
-            draft.summary.isNotEmpty
-                ? draft.summary
-                : l.execPrefDescription,
+            draft.summary.isNotEmpty ? draft.summary : l.execPrefDescription,
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
               height: 1.52,
@@ -233,9 +231,12 @@ class _OpenClawExecutionPreferencesCardState
               border: OutlineInputBorder(),
             ),
             items: [
-              DropdownMenuItem(value: 'all', child: Text(l.settingsAllNotifications)),
-              DropdownMenuItem(value: 'essential', child: Text(l.settingsCriticalOnly)),
-              DropdownMenuItem(value: 'silent', child: Text(l.settingsQuietMode)),
+              DropdownMenuItem(
+                  value: 'all', child: Text(l.settingsAllNotifications)),
+              DropdownMenuItem(
+                  value: 'essential', child: Text(l.settingsCriticalOnly)),
+              DropdownMenuItem(
+                  value: 'silent', child: Text(l.settingsQuietMode)),
             ],
             onChanged: (value) {
               if (value == null) {
@@ -302,7 +303,8 @@ class _OpenClawExecutionPreferencesCardState
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
                     labelText: l.settingsMonthlyLimit,
-                    helperText: l.execPrefTokensUsed(draft.executionBudget.monthlyUsed),
+                    helperText:
+                        l.execPrefTokensUsed(draft.executionBudget.monthlyUsed),
                   ),
                   onChanged: (value) {
                     setState(() {
@@ -357,7 +359,6 @@ class _OpenClawExecutionPreferencesCardState
               onPressed: (!_dirty || service.isSaving)
                   ? null
                   : () async {
-                      final messenger = ScaffoldMessenger.of(context);
                       final ok = await ref
                           .read(openClawExecutionPreferencesProvider)
                           .savePreferences(_draft ?? draft);
@@ -368,12 +369,12 @@ class _OpenClawExecutionPreferencesCardState
                         setState(() {
                           _dirty = false;
                         });
-                        messenger.showSnackBar(
-                          SparkleSnackBar.success(l.settingsPreferencesSaved),
-                        );
+                        AppFeedback.success(
+                            context, l.settingsPreferencesSaved);
                       }
                     },
-              child: Text(_dirty ? l.settingsSavePreferences : l.execPrefSynced),
+              child:
+                  Text(_dirty ? l.settingsSavePreferences : l.execPrefSynced),
             ),
           ),
         ],

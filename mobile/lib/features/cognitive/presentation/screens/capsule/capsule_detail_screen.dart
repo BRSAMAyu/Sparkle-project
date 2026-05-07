@@ -7,6 +7,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/design/widgets/universal_share_bottom_sheet.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -249,16 +250,11 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
   }
 
   void _showFeedbackSheet(CuriosityCapsuleModel capsule) {
-    unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
         useRootNavigator: true,
-        shape: const RoundedRectangleBorder(
-          borderRadius:
-              BorderRadius.vertical(top: Radius.circular(DS.radius20)),
-        ),
         builder: (ctx) => _FeedbackBottomSheet(
           capsule: capsule,
           localizePattern: _localizePatternName,
@@ -273,11 +269,13 @@ class _CapsuleDetailScreenState extends ConsumerState<CapsuleDetailScreen> {
                     comment: comment,
                   );
               if (mounted) {
-                AppFeedback.success(context, context.l10n.capsuleFeedbackThanks);
+                AppFeedback.success(
+                    context, context.l10n.capsuleFeedbackThanks);
               }
             } catch (_) {
               if (mounted) {
-                AppFeedback.error(context, context.l10n.capsuleSubmitFailed(''));
+                AppFeedback.error(
+                    context, context.l10n.capsuleSubmitFailed(''));
               }
             }
           },

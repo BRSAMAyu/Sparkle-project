@@ -1592,6 +1592,7 @@ CREATE TABLE chat_messages (
     role messagerole NOT NULL,
     content text NOT NULL,
     actions json,
+    metadata jsonb,
     parse_degraded boolean,
     tokens_used integer,
     model_name character varying(100),

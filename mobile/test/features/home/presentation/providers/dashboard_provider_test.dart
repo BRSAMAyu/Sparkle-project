@@ -1,8 +1,14 @@
 import 'package:dio/dio.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/features/home/data/repositories/dashboard_repository.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
+
+class _FakeRef implements Ref {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 class _FakeDashboardRepository extends DashboardRepository {
   _FakeDashboardRepository(
@@ -121,6 +127,7 @@ void main() {
             },
           },
         ),
+        _FakeRef(),
       );
       addTearDown(notifier.dispose);
 
@@ -148,6 +155,7 @@ void main() {
         _FakeDashboardRepository(() async {
           throw Exception('dashboard unavailable');
         }),
+        _FakeRef(),
       );
       addTearDown(notifier.dispose);
 

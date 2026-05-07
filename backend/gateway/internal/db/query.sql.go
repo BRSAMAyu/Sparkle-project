@@ -124,9 +124,10 @@ func (q *Queries) CreatePostLike(ctx context.Context, arg CreatePostLikeParams) 
 const createSocialUser = `-- name: CreateSocialUser :one
 INSERT INTO users (
     id, username, email, hashed_password, nickname,
-    registration_source, is_active, apple_id, updated_at, created_at
+    registration_source, is_active, apple_id, password_login_enabled,
+    updated_at, created_at
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, false, NOW(), NOW())
 RETURNING username, email, hashed_password, full_name, nickname, avatar_url, avatar_status, pending_avatar_url, flame_level, flame_brightness, depth_preference, curiosity_preference, schedule_preferences, weather_preferences, is_active, is_superuser, status, google_id, apple_id, wechat_unionid, registration_source, last_login_at, is_minor, age_verified, age_verification_source, age_verified_at, photon_balance, photon_updated_at, equipped_skin, equipped_title, id, created_at, updated_at, deleted_at, equipped_skin_source, equipped_title_source, email_verified, token_revoked_before, password_login_enabled, agreed_to_tos_at, agreed_to_privacy_at, tos_version, privacy_version, agreed_locale, searchable_by
 `
 
@@ -357,10 +358,11 @@ func (q *Queries) GetAllProjectionMetadata(ctx context.Context) ([]ProjectionMet
 }
 
 const getChatHistory = `-- name: GetChatHistory :many
-SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, updated_at, deleted_at FROM chat_messages
+SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, metadata, parse_degraded, tokens_used, model_name, updated_at, deleted_at FROM chat_messages
 WHERE session_id = $1
 AND created_at > $2
 ORDER BY created_at ASC
+LIMIT 500
 `
 
 type GetChatHistoryParams struct {
@@ -387,6 +389,7 @@ func (q *Queries) GetChatHistory(ctx context.Context, arg GetChatHistoryParams) 
 			&i.Role,
 			&i.Content,
 			&i.Actions,
+			&i.Metadata,
 			&i.ParseDegraded,
 			&i.TokensUsed,
 			&i.ModelName,
@@ -696,7 +699,7 @@ func (q *Queries) GetLatestSnapshot(ctx context.Context, arg GetLatestSnapshotPa
 }
 
 const getMessageByID = `-- name: GetMessageByID :one
-SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, updated_at, deleted_at FROM chat_messages
+SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, metadata, parse_degraded, tokens_used, model_name, updated_at, deleted_at FROM chat_messages
 WHERE id = $1 AND session_id = $2
 LIMIT 1
 `
@@ -719,6 +722,7 @@ func (q *Queries) GetMessageByID(ctx context.Context, arg GetMessageByIDParams) 
 		&i.Role,
 		&i.Content,
 		&i.Actions,
+		&i.Metadata,
 		&i.ParseDegraded,
 		&i.TokensUsed,
 		&i.ModelName,
@@ -869,7 +873,7 @@ func (q *Queries) GetRecentSessionsFromDB(ctx context.Context, arg GetRecentSess
 }
 
 const getSessionMessagesFromDB = `-- name: GetSessionMessagesFromDB :many
-SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, parse_degraded, tokens_used, model_name, updated_at, deleted_at FROM chat_messages
+SELECT id, created_at, user_id, task_id, session_id, message_id, role, content, actions, metadata, parse_degraded, tokens_used, model_name, updated_at, deleted_at FROM chat_messages
 WHERE session_id = $1 AND user_id = $2
 ORDER BY created_at ASC
 LIMIT $3 OFFSET $4
@@ -906,6 +910,7 @@ func (q *Queries) GetSessionMessagesFromDB(ctx context.Context, arg GetSessionMe
 			&i.Role,
 			&i.Content,
 			&i.Actions,
+			&i.Metadata,
 			&i.ParseDegraded,
 			&i.TokensUsed,
 			&i.ModelName,

@@ -164,7 +164,7 @@ class AuthInterceptor extends Interceptor {
         }
 
         // Check if there's already a refresh in progress
-        if (_refreshCompleter != null && !_refreshCompleter!.isCompleted) {
+        if (_refreshCompleter != null) {
           try {
             // Wait for the existing refresh to complete
             final newToken = await _refreshCompleter!.future;
@@ -201,10 +201,8 @@ class AuthInterceptor extends Interceptor {
           );
           return super.onError(err, handler);
         } finally {
-          // Clear the completer after a short delay to allow any waiting requests to complete
-          Future.delayed(const Duration(milliseconds: 100), () {
-            _refreshCompleter = null;
-          });
+          // Clear immediately so concurrent 401s after a failed refresh start a new cycle
+          _refreshCompleter = null;
         }
       } on StateError {
         return super.onError(err, handler);

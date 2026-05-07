@@ -255,7 +255,8 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
               children: [
                 MemoryEvidenceBadge(status: _evidenceStatus),
                 const SizedBox(width: DS.sm),
-                Text(context.l10n.memoryCurrentVersion, style: Theme.of(context).textTheme.bodyMedium),
+                Text(context.l10n.memoryCurrentVersion,
+                    style: Theme.of(context).textTheme.bodyMedium),
               ],
             ),
             const SizedBox(height: DS.md),
@@ -290,17 +291,22 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
               _buildWhyMemorySection(),
             ],
             const SizedBox(height: DS.lg),
-            Text(context.l10n.memoryVersionHistory, style: Theme.of(context).textTheme.titleMedium),
+            Text(context.l10n.memoryVersionHistory,
+                style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: DS.sm),
             if (_loadingHistory)
               const SparkleListSkeleton()
             else if (_historyError != null)
-              Text(_historyError!,
-                  style: Theme.of(context).textTheme.bodyMedium,)
+              Text(
+                _historyError!,
+                style: Theme.of(context).textTheme.bodyMedium,
+              )
             else if (AppFeatureFlags.enableMemoryPanelV2)
-              ...List.generate(_history.length, (index) => _buildTimelineCard(context, index))
+              ...List.generate(_history.length,
+                  (index) => _buildTimelineCard(context, index))
             else
-              ...List.generate(_history.length, (index) => _buildHistoryTile(context, _history[index])),
+              ...List.generate(_history.length,
+                  (index) => _buildHistoryTile(context, _history[index])),
           ],
         ),
       );
@@ -313,12 +319,16 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         MemoryEvidenceBadge(status: _evidenceStatus),
         const SizedBox(height: DS.md),
         _buildKeyValue(context.l10n.memoryStatus, goal?.status ?? '-'),
-        _buildKeyValue(context.l10n.memoryGoalDate, _formatDate(goal?.targetDate)),
-        _buildKeyValue(context.l10n.memoryDeadline, _formatDate(goal?.expiresAt)),
-        _buildKeyValue(context.l10n.memoryLastUpdated, _formatDate(goal?.updatedAt)),
+        _buildKeyValue(
+            context.l10n.memoryGoalDate, _formatDate(goal?.targetDate)),
+        _buildKeyValue(
+            context.l10n.memoryDeadline, _formatDate(goal?.expiresAt)),
+        _buildKeyValue(
+            context.l10n.memoryLastUpdated, _formatDate(goal?.updatedAt)),
         _buildKeyValue('Evidence', _evidenceScore?.toStringAsFixed(2) ?? '-'),
         _buildKeyValue('Corrections', _correctionCount.toString()),
-        _buildKeyValue(context.l10n.memoryRetractedAt, _formatDate(_retractedAt)),
+        _buildKeyValue(
+            context.l10n.memoryRetractedAt, _formatDate(_retractedAt)),
         if (AppFeatureFlags.enableMemoryCorrection) ...[
           const SizedBox(height: DS.md),
           _buildCorrectionActions(context),
@@ -341,17 +351,26 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         const SizedBox(height: DS.md),
         _buildKeyValue(context.l10n.memorySource, episodic?.sourceType ?? '-'),
         if ((episodic?.declarationLabel ?? '').isNotEmpty)
-          _buildKeyValue(context.l10n.memoryDeclaration, episodic?.declarationLabel ?? '-'),
-        _buildKeyValue(context.l10n.memoryOccurredAt, _formatDate(episodic?.occurredAt)),
+          _buildKeyValue(context.l10n.memoryDeclaration,
+              episodic?.declarationLabel ?? '-'),
         _buildKeyValue(
-            context.l10n.memoryImportanceScore, episodic?.importanceScore?.toStringAsFixed(2) ?? '-',),
-        _buildKeyValue(context.l10n.memoryConfidence, episodic?.confidence?.toStringAsFixed(2) ?? '-'),
-        _buildKeyValue(context.l10n.memoryEvidenceToken, episodic?.evidenceToken ?? '-'),
-        _buildKeyValue(context.l10n.memoryDecayPolicy, episodic?.decayPolicy ?? '-'),
+            context.l10n.memoryOccurredAt, _formatDate(episodic?.occurredAt)),
+        _buildKeyValue(
+          context.l10n.memoryImportanceScore,
+          episodic?.importanceScore?.toStringAsFixed(2) ?? '-',
+        ),
+        _buildKeyValue(context.l10n.memoryConfidence,
+            episodic?.confidence?.toStringAsFixed(2) ?? '-'),
+        _buildKeyValue(
+            context.l10n.memoryEvidenceToken, episodic?.evidenceToken ?? '-'),
+        _buildKeyValue(
+            context.l10n.memoryDecayPolicy, episodic?.decayPolicy ?? '-'),
         _buildKeyValue('Evidence', _evidenceScore?.toStringAsFixed(2) ?? '-'),
         _buildKeyValue('Corrections', _correctionCount.toString()),
-        _buildKeyValue(context.l10n.memoryLastUpdated, _formatDate(episodic?.updatedAt)),
-        _buildKeyValue(context.l10n.memoryRetractedAt, _formatDate(_retractedAt)),
+        _buildKeyValue(
+            context.l10n.memoryLastUpdated, _formatDate(episodic?.updatedAt)),
+        _buildKeyValue(
+            context.l10n.memoryRetractedAt, _formatDate(_retractedAt)),
         if (AppFeatureFlags.enableMemoryCorrection) ...[
           const SizedBox(height: DS.md),
           _buildCorrectionActions(context),
@@ -458,10 +477,12 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
             ),
             const SizedBox(height: DS.sm),
             Text(context.l10n.memoryUpdateValue(_formatDate(item.updatedAt))),
-            Text(context.l10n.memoryConfidenceValue(item.confidence?.toStringAsFixed(2) ?? '-')),
+            Text(context.l10n.memoryConfidenceValue(
+                item.confidence?.toStringAsFixed(2) ?? '-')),
             if (diff.isNotEmpty) ...[
               const SizedBox(height: DS.sm),
-              Text(context.l10n.memoryDiff, style: Theme.of(context).textTheme.bodySmall),
+              Text(context.l10n.memoryDiff,
+                  style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: 4),
               Text(diff, style: Theme.of(context).textTheme.bodySmall),
             ],
@@ -532,9 +553,7 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
   }
 
   void _showRevertInfo(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SparkleSnackBar.info(context.l10n.memoryRevertNotEnabled),
-    );
+    AppFeedback.info(context, context.l10n.memoryRevertNotEnabled);
   }
 
   MemoryPreferenceItem _preferenceFromHistory(
@@ -627,8 +646,10 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
     if (_memorySettings!.allowEpisodic) {
       allowed.add(context.l10n.memoryTypeEpisodic);
     }
-    final typesLabel = allowed.isEmpty ? context.l10n.memoryTypeNone : allowed.join(' / ');
-    return context.l10n.memoryAllowedCaptureSummary(typesLabel, '${_memorySettings!.captureLevel}');
+    final typesLabel =
+        allowed.isEmpty ? context.l10n.memoryTypeNone : allowed.join(' / ');
+    return context.l10n.memoryAllowedCaptureSummary(
+        typesLabel, '${_memorySettings!.captureLevel}');
   }
 
   String? _buildSettingsHint() {
@@ -727,17 +748,24 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
   Widget _buildCorrectionActions(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(context.l10n.memoryCorrectionActions, style: Theme.of(context).textTheme.titleMedium),
+          Text(context.l10n.memoryCorrectionActions,
+              style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: DS.sm),
           Wrap(
             spacing: DS.sm,
             runSpacing: DS.sm,
             children: [
-              _buildCorrectionButton(context.l10n.memoryCorrectionReject, 'reject'),
               _buildCorrectionButton(
-                  context.l10n.memoryCorrectionNoLongerApplies, 'no_longer_applicable',),
-              _buildCorrectionButton(context.l10n.memoryCorrectionLowerConfidence, 'lower_confidence'),
-              _buildCorrectionButton(context.l10n.memoryCorrectionMerge, 'merge'),
+                  context.l10n.memoryCorrectionReject, 'reject'),
+              _buildCorrectionButton(
+                context.l10n.memoryCorrectionNoLongerApplies,
+                'no_longer_applicable',
+              ),
+              _buildCorrectionButton(
+                  context.l10n.memoryCorrectionLowerConfidence,
+                  'lower_confidence'),
+              _buildCorrectionButton(
+                  context.l10n.memoryCorrectionMerge, 'merge'),
             ],
           ),
         ],
@@ -788,12 +816,14 @@ class _MemoryDetailScreenState extends ConsumerState<MemoryDetailScreen> {
         _confidence = result.confidence ?? _confidence;
         _retractedAt = result.retractedAt ?? _retractedAt;
       });
-      AppFeedback.success(context, context.l10n.memoryCorrectionSubmittedWithAction(action));
+      AppFeedback.success(
+          context, context.l10n.memoryCorrectionSubmittedWithAction(action));
     } catch (e) {
       if (!mounted) {
         return;
       }
-      AppFeedback.error(context, context.l10n.memoryCorrectionFailedWithDetail('$e'));
+      AppFeedback.error(
+          context, context.l10n.memoryCorrectionFailedWithDetail('$e'));
     }
   }
 }

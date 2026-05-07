@@ -562,7 +562,7 @@ func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sess
 	}
 
 	rows, err := s.pool.Query(ctx, `
-		SELECT id, session_id, user_id, role, content, created_at
+		SELECT id, session_id, user_id, role, content, created_at, metadata
 		FROM chat_messages
 		WHERE session_id = $1 AND user_id = $2
 		ORDER BY created_at DESC
@@ -582,18 +582,24 @@ func (s *ChatHistoryService) getMessagesFromDB(ctx context.Context, userID, sess
 			role      string
 			content   string
 			createdAt pgtype.Timestamptz
+			metadata  []byte
 		)
-		if err := rows.Scan(&id, &dbSession, &dbUser, &role, &content, &createdAt); err != nil {
+		if err := rows.Scan(&id, &dbSession, &dbUser, &role, &content, &createdAt, &metadata); err != nil {
 			return nil, err
 		}
-		messages = append(messages, ChatHistoryMessage{
+		msg := ChatHistoryMessage{
 			ID:        id.String(),
 			SessionID: dbSession.String(),
 			UserID:    dbUser.String(),
 			Role:      role,
 			Content:   content,
 			Timestamp: fmt.Sprintf("%d", createdAt.Time.Unix()),
-		})
+		}
+		// Reconstruct rich metadata fields from JSONB
+		if len(metadata) > 0 {
+			populateMessageMetadata(&msg, metadata)
+		}
+		messages = append(messages, msg)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -901,6 +907,92 @@ func normalizeDocumentFilter(values []string) []string {
 		filter = append(filter, trimmed)
 	}
 	return filter
+}
+
+// populateMessageMetadata reconstructs rich message fields from a JSONB metadata payload
+// read from the database. The JSON is expected to follow the same shape produced by
+// buildMessageMetadata in chat_history_persister.go.
+func populateMessageMetadata(msg *ChatHistoryMessage, raw []byte) {
+	if raw == nil || len(raw) == 0 {
+		return
+	}
+	var meta map[string]interface{}
+	if err := json.Unmarshal(raw, &meta); err != nil {
+		zap.L().Warn("Failed to unmarshal chat message metadata",
+			zap.Error(err),
+		)
+		return
+	}
+
+	if widgets, ok := meta["widgets"].([]interface{}); ok {
+		widgetList := make([]map[string]interface{}, 0, len(widgets))
+		for _, w := range widgets {
+			if m, ok := w.(map[string]interface{}); ok {
+				widgetList = append(widgetList, m)
+			}
+		}
+		msg.Widgets = widgetList
+	}
+	if toolResults, ok := meta["tool_results"].([]interface{}); ok {
+		trList := make([]map[string]interface{}, 0, len(toolResults))
+		for _, tr := range toolResults {
+			if m, ok := tr.(map[string]interface{}); ok {
+				trList = append(trList, m)
+			}
+		}
+		msg.ToolResults = trList
+	}
+	if reasoningSteps, ok := meta["reasoning_steps"].([]interface{}); ok {
+		rsList := make([]map[string]interface{}, 0, len(reasoningSteps))
+		for _, rs := range reasoningSteps {
+			if m, ok := rs.(map[string]interface{}); ok {
+				rsList = append(rsList, m)
+			}
+		}
+		msg.ReasoningSteps = rsList
+	}
+	if v, ok := meta["reasoning_summary"].(string); ok {
+		msg.ReasoningSummary = v
+	}
+	if v, ok := meta["is_reasoning_complete"].(bool); ok {
+		msg.IsReasoningComplete = v
+	}
+	if v, ok := meta["has_errors"].(bool); ok {
+		msg.HasErrors = v
+	}
+	if errors, ok := meta["errors"].([]interface{}); ok {
+		errList := make([]map[string]interface{}, 0, len(errors))
+		for _, e := range errors {
+			if m, ok := e.(map[string]interface{}); ok {
+				errList = append(errList, m)
+			}
+		}
+		msg.Errors = errList
+	}
+	if v, ok := meta["requires_confirmation"].(bool); ok {
+		msg.RequiresConfirmation = v
+	}
+	if confirmationData, ok := meta["confirmation_data"].(map[string]interface{}); ok {
+		msg.ConfirmationData = confirmationData
+	}
+	if agentCollab, ok := meta["agent_collaboration"].(map[string]interface{}); ok {
+		msg.AgentCollaboration = agentCollab
+	}
+	if msg.Meta == nil {
+		msg.Meta = make(map[string]interface{})
+	}
+	// Merge any additional keys not handled above (e.g. UX envelope fields)
+	knownKeys := map[string]bool{
+		"widgets": true, "tool_results": true, "reasoning_steps": true,
+		"reasoning_summary": true, "is_reasoning_complete": true,
+		"has_errors": true, "errors": true, "requires_confirmation": true,
+		"confirmation_data": true, "agent_collaboration": true,
+	}
+	for k, v := range meta {
+		if !knownKeys[k] {
+			msg.Meta[k] = v
+		}
+	}
 }
 
 func buildSessionTitle(ctx context.Context, role, content string) string {
