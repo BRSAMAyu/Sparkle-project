@@ -17,7 +17,8 @@ tracer_provider = TracerProvider(resource=resource)
 
 # Configure OTLP Exporter (connects to Jaeger/Tempo via OTEL Collector)
 otlp_endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
-otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=True)
+otlp_insecure = os.getenv("OTLP_INSECURE", "false").lower() == "true"
+otlp_exporter = OTLPSpanExporter(endpoint=otlp_endpoint, insecure=otlp_insecure)
 
 tracer_provider.add_span_processor(
     BatchSpanProcessor(otlp_exporter)

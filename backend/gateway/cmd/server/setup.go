@@ -357,11 +357,6 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 		logger.Error("Failed to register galaxy projection handler", zap.Error(err))
 	}
 
-	commCmdService := service.NewCommunityCommandService(dbh.pool)
-	commQueryService := service.NewCommunityQueryService(rdb, dbh.pool)
-	_ = commCmdService
-	_ = commQueryService
-
 	commSyncWorker := worker.NewCommunitySyncWorker(rdb, dbh.pool, cqrsMetrics, logger)
 	taskSyncWorker := worker.NewTaskSyncWorker(rdb, dbh.pool, cqrsMetrics, logger)
 	galaxySyncWorker := worker.NewGalaxySyncWorker(rdb, dbh.pool, cqrsMetrics, logger)

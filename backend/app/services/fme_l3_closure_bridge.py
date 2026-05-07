@@ -23,9 +23,18 @@ from typing import Any
 from loguru import logger
 
 from app.core.cache import cache_service
+from app.core.kill_switch import KillSwitchBinding, is_enabled_mode, read_mode
 from app.services.fme_strategy_change_emitter import emit_strategy_change_card
 from app.signals.aurora_core_session import SessionClosure
 from app.signals.spine_orchestrator import SpineOrchestrator, get_spine_orchestrator
+
+_FME_L3_CLOSURE_BINDING = KillSwitchBinding(
+    stage="fme",
+    feature="l3_closure",
+    redis_key="fme:l3_closure",
+    settings_attr="AURORA_FME_L3_CLOSURE_MODE",
+    fallback_mode="live",
+)
 
 
 async def apply_l3_closure_to_spine(
@@ -37,6 +46,16 @@ async def apply_l3_closure_to_spine(
     Returns the close_aurora_session result (contains regenerated_directives)
     or None if the spine was unavailable.
     """
+    # Kill switch gate
+    mode = await read_mode(
+        redis_client=cache_service.redis,
+        prefix="aurora:",
+        binding=_FME_L3_CLOSURE_BINDING,
+    )
+    if not is_enabled_mode(mode):
+        logger.info("FME L3 closure bridge disabled by kill switch (mode={})", mode)
+        return None
+
     if not closure.state_patches and not closure.policy_changes:
         logger.debug(
             "L3 closure bridge: nothing to apply (session={})",

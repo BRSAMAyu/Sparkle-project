@@ -93,7 +93,7 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 		return
 	}
 
-	h.logger.Info("STT WebSocket connected", zap.String("user_id", userID))
+	h.logger.Info("STT WebSocket connected", zap.String("user_id_hash", hashUserIDForLog(userID)))
 
 	// 2. Connect to Python STT service with Bearer token from Authorization header or query param
 	pythonHeaders := make(map[string][]string)
@@ -114,7 +114,7 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 	defer pythonConn.Close()
 
 	h.logger.Info("Connected to Python STT service",
-		zap.String("user_id", userID),
+		zap.String("user_id_hash", hashUserIDForLog(userID)),
 		zap.String("python_url", h.pythonSTTUrl))
 
 	// 3. Bidirectional forwarding using channels
@@ -200,14 +200,14 @@ func (h *STTHandler) HandleWebSocket(c *gin.Context) {
 	err = <-errChan
 	if err != nil {
 		h.logger.Error("STT WebSocket proxy error",
-			zap.String("user_id", userID),
+			zap.String("user_id_hash", hashUserIDForLog(userID)),
 			zap.Error(err))
 	}
 
 	// Send STOP signal to Python before closing
 	_ = writePython(websocket.TextMessage, []byte("STOP"))
 
-	h.logger.Info("STT WebSocket disconnected", zap.String("user_id", userID))
+	h.logger.Info("STT WebSocket disconnected", zap.String("user_id_hash", hashUserIDForLog(userID)))
 }
 
 // STTMessage represents a message sent over the STT WebSocket
