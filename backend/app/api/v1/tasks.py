@@ -1024,7 +1024,7 @@ async def mark_task_too_hard(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    req: Request,  # injected by FastAPI for locale detection
+    req: Request = None,  # injected by FastAPI for locale detection
 ):
     """Break a task into smaller subtasks when the current card feels too hard."""
     task = await _get_user_task_or_404(db, task_id, current_user.id)
