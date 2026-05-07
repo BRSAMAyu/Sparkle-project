@@ -166,9 +166,7 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
     if (!data.containsKey('type')) {
       return ErrorEvent(
         code: 'INVALID_FORMAT',
-        message: I18nService.instance.isChinese
-            ? '消息格式错误：缺少 type 字段'
-            : 'Missing "type" field',
+        message: S.chatErrorMissingTypeField,
         retryable: false,
       );
     }
@@ -1698,8 +1696,11 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       if (wsTicket != null && wsTicket.isNotEmpty) {
         queryParameters['ticket'] = wsTicket;
       } else if (effectiveToken != null && effectiveToken.isNotEmpty) {
-        // Fallback for environments where ws ticket exchange is unavailable.
+        // SECURITY: Prefer ticket-based auth. Direct token in URL leaks to
+        // server logs / proxy logs / browser history. Only use as last resort
+        // when ticket exchange is unavailable, and log a warning.
         queryParameters['token'] = effectiveToken;
+        _log('⚠️ WS ticket unavailable, falling back to token-in-URL (less secure)');
       }
 
       final wsUri = Uri.parse(
@@ -1913,9 +1914,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
         droppedPayload,
         ErrorEvent(
           code: 'PENDING_QUEUE_OVERFLOW',
-          message: I18nService.instance.isChinese
-              ? '有未发送消息因队列已满被丢弃。'
-              : 'A pending message was dropped because the queue is full.',
+          message: S.chatErrorQueueOverflow,
           retryable: false,
         ),
       );
@@ -1985,9 +1984,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _log('❌ Incoming message queue error: $error');
       _broadcastErrorToActiveRequests(ErrorEvent(
         code: 'MESSAGE_PARSE_ERROR',
-        message: I18nService.instance.isChinese
-            ? '消息解析失败'
-            : 'Failed to parse incoming message',
+        message: S.chatErrorParseFailed,
         retryable: false,
       ));
     });
@@ -2234,9 +2231,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _broadcastErrorToActiveRequests(
       ErrorEvent(
         code: 'CONNECTION_ERROR',
-        message: I18nService.instance.isChinese
-            ? '网络连接失败'
-            : 'Network connection failed',
+        message: S.chatErrorConnectionFailed,
         retryable: true,
       ),
     );
@@ -2253,9 +2248,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _broadcastErrorToActiveRequests(
         ErrorEvent(
           code: 'CONNECTION_CLOSED',
-          message: I18nService.instance.isChinese
-              ? '生成响应时连接中断'
-              : 'Connection closed while generating response',
+          message: S.chatErrorConnectionClosedGenerating,
           retryable: true,
         ),
       );
@@ -2298,9 +2291,7 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _broadcastErrorToActiveRequests(
         ErrorEvent(
           code: 'MAX_RETRIES_EXCEEDED',
-          message: I18nService.instance.isChinese
-              ? '重连 $_maxReconnectAttempts 次后仍无法连接'
-              : 'Unable to connect after $_maxReconnectAttempts attempts',
+          message: S.chatErrorMaxRetriesExceeded(_maxReconnectAttempts),
           retryable: false,
         ),
       );

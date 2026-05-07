@@ -223,7 +223,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except (SQLAlchemyError, ValueError, TypeError) as e:
             logger.error("Admin authorization lookup failed for user_id={}: {}", user_id, e, exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return None
 
         return user_id
@@ -484,7 +484,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except Exception as e:
             logger.error(f"SubmitResponseFeedback error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.ResponseFeedbackResponse(
                 success=False,
                 message="Internal error",
@@ -607,7 +607,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except Exception as e:
             logger.error(f"RetrieveMemory error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error retrieving memory")
             return agent_service_pb2.MemoryResult(items=[], total_found=0)
 
     async def GetUserProfile(
@@ -663,7 +663,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except Exception as e:
             logger.error(f"GetUserProfile error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error retrieving user profile")
             return agent_service_pb2.UserProfile()
 
     async def GetWeeklyReport(
@@ -704,7 +704,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except Exception as e:
             logger.error(f"GetWeeklyReport error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error generating weekly report")
             return agent_service_pb2.WeeklyReport()
 
     async def SubmitPlanReview(
@@ -862,7 +862,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except Exception as e:
             logger.error(f"SubmitPlanReview error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.PlanReviewResponse(
                 success=False,
                 message="Internal error processing review",
@@ -993,7 +993,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except Exception as e:
             logger.error(f"SubmitContentReviewFeedback error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.ContentReviewFeedbackResponse(
                 success=False,
                 message="Internal error processing feedback",
@@ -1062,15 +1062,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except ValueError as e:
             logger.error(f"SubmitReviewOverride error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.ReviewOverrideResponse(
                 success=False,
-                message=str(e),
+                message="Internal error processing request",
             )
         except Exception as e:
             logger.error(f"SubmitReviewOverride error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.ReviewOverrideResponse(
                 success=False,
                 message="Internal error processing override",
@@ -1148,15 +1148,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except ValueError as e:
             logger.error(f"SubmitReviewAppeal error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.ReviewAppealResponse(
                 success=False,
-                message=str(e),
+                message="Internal error processing request",
             )
         except Exception as e:
             logger.error(f"SubmitReviewAppeal error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.ReviewAppealResponse(
                 success=False,
                 message="Internal error processing appeal",
@@ -1207,7 +1207,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except Exception as e:
             logger.error(f"GetAppealStatus error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.AppealStatusResponse()
 
     # ========================================================================
@@ -1290,15 +1290,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except ValueError as e:
             logger.error(f"SubmitReviewFeedback error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.ReviewFeedbackResponse(
                 success=False,
-                message=str(e),
+                message="Internal error processing request",
             )
         except Exception as e:
             logger.error(f"SubmitReviewFeedback error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.ReviewFeedbackResponse(
                 success=False,
                 message="Internal error processing feedback",
@@ -1389,15 +1389,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except ValueError as e:
             logger.error(f"RequestRegeneration error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.RegenerationResponse(
                 success=False,
-                message=str(e),
+                message="Internal error processing request",
             )
         except Exception as e:
             logger.error(f"RequestRegeneration error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.RegenerationResponse(
                 success=False,
                 message="Internal error processing regeneration",
@@ -1446,7 +1446,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except Exception as e:
             logger.error(f"GetFeedbackStatistics error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.FeedbackStatisticsResponse()
 
     # ========================================================================
@@ -1534,7 +1534,7 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except Exception as e:
             logger.error(f"GetArbitrationQueue error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.GetArbitrationQueueResponse()
 
     async def AssignArbitrationCase(
@@ -1609,15 +1609,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except ValueError as e:
             logger.error(f"AssignArbitrationCase error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.AssignArbitrationCaseResponse(
                 success=False,
-                message=str(e),
+                message="Internal error processing request",
             )
         except Exception as e:
             logger.error(f"AssignArbitrationCase error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.AssignArbitrationCaseResponse(
                 success=False,
                 message="Internal error assigning case",
@@ -1724,15 +1724,15 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except ValueError as e:
             logger.error(f"SubmitArbitrationDecision error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INVALID_ARGUMENT)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.SubmitArbitrationDecisionResponse(
                 success=False,
-                message=str(e),
+                message="Internal error processing request",
             )
         except Exception as e:
             logger.error(f"SubmitArbitrationDecision error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.SubmitArbitrationDecisionResponse(
                 success=False,
                 message="Internal error submitting decision",
@@ -1779,5 +1779,5 @@ class AgentServiceImpl(agent_service_pb2_grpc.AgentServiceServicer):
         except Exception as e:
             logger.error(f"GetArbitrationQueueStats error: {e}", exc_info=True)
             context.set_code(grpc.StatusCode.INTERNAL)
-            context.set_details(str(e))
+            context.set_details("Internal error")
             return agent_service_pb2.GetArbitrationQueueStatsResponse()

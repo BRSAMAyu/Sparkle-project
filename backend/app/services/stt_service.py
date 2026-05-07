@@ -147,7 +147,7 @@ class STTService:
         if settings.DEMO_MODE:
             return {"text": "这是演示模式下的模拟语音转写结果。实际调用失败，请检查 API 配置。", "error": False}
 
-        return {"text": f"Transcription Error: {last_error or 'Unknown STT error'}", "error": True}
+        return {"text": "Transcription failed. Please try again later.", "error": True}
 
     async def enhance_transcript(self, text: str) -> str:
         """
