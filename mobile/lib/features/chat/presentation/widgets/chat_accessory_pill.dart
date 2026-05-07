@@ -95,7 +95,8 @@ class ChatAccessoryPill extends StatelessWidget {
       color: Colors.transparent,
       child: Semantics(
         button: true,
-        label: 'Chat chat accessory pill control 1',
+        enabled: enabled && onTap != null,
+        label: label,
         child: InkWell(
           onTap: enabled ? onTap : null,
           borderRadius: DS.borderRadiusFull,

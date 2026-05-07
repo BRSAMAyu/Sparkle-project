@@ -205,16 +205,18 @@ class _GraphRAGVisualizerState extends State<GraphRAGVisualizer>
     // 显示最多5个节点
     final nodesToShow = trace.nodesRetrieved.take(5).toList();
 
-    return CustomPaint(
-      painter: _NodeGraphPainter(
-        nodes: nodesToShow,
-        nodeSources: trace.nodeSources,
-        repaint: Listenable.merge([_pulseController, _revealController]),
-        pulseAnimation: _pulseController,
-        getColor: _getNodeColor,
-        revealProgress: _revealController.value,
+    return RepaintBoundary(
+      child: CustomPaint(
+        painter: _NodeGraphPainter(
+          nodes: nodesToShow,
+          nodeSources: trace.nodeSources,
+          repaint: Listenable.merge([_pulseController, _revealController]),
+          pulseAnimation: _pulseController,
+          getColor: _getNodeColor,
+          revealProgress: _revealController.value,
+        ),
+        child: const SizedBox.expand(),
       ),
-      child: const SizedBox.expand(),
     );
   }
 

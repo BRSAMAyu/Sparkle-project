@@ -1256,7 +1256,9 @@ extension on _PlanReviewCardState {
                         final isSelected = selected == option.value;
                         return Semantics(
                           button: true,
-                          label: 'Chat plan review card control 2',
+                          label: I18nService.instance.isChinese
+                              ? '计划审核反馈选项'
+                              : 'Plan review feedback option',
                           child: InkWell(
                             onTap: () => setSheetState(() {
                               selected = option.value;

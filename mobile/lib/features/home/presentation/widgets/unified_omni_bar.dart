@@ -698,7 +698,12 @@ class _IntentChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => InkWell(
-        onTap: prediction.action,
+        onTap: () {
+          unawaited(
+            SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
+          );
+          prediction.action();
+        },
         borderRadius: DS.borderRadiusFull,
         child: Container(
           padding: const EdgeInsets.symmetric(

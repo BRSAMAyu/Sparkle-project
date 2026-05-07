@@ -129,7 +129,7 @@ class _AttachmentOption extends StatelessWidget {
         color: Colors.transparent,
         child: Semantics(
           button: true,
-          label: 'Chat attachment picker sheet control 1',
+          label: '$title. $subtitle',
           child: InkWell(
             onTap: onTap,
             borderRadius: BorderRadius.circular(20),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/plan/data/models/plan_model.dart';
 import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
@@ -105,7 +106,7 @@ class _UnselectedPill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
         child: Semantics(
           button: true,
-          label: 'Chat plan selector pill control 1',
+          label: context.l10n.chatPlanSelect,
           child: GestureDetector(
             onTap: onTap,
             child: MaterialStyler(
@@ -164,7 +165,7 @@ class _SelectedPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: DS.spacing16),
       child: Semantics(
         button: true,
-        label: 'Chat plan selector pill control 2',
+        label: '${plan.name}. $progressLabel',
         child: GestureDetector(
           onTap: onTap,
           child: MaterialStyler(
@@ -318,14 +319,13 @@ class _PlanSelectorSheet extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  Semantics(
-                    button: true,
-                    label: 'Chat plan selector pill control 3',
-                    child: SparkleIconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                      variant: ButtonVariant.ghost,
-                    ),
+                  SparkleIconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                    variant: ButtonVariant.ghost,
+                    semanticLabel: I18nService.instance.isChinese
+                        ? '关闭'
+                        : 'Close',
                   ),
                 ],
               ),
@@ -363,7 +363,7 @@ class _ClearOptionTile extends ConsumerWidget {
 
     return Semantics(
       button: true,
-      label: 'Chat plan selector pill control 4',
+      label: context.l10n.chatPlanContextClear,
       child: InkWell(
         onTap: () {
           ref.read(activePlanProvider.notifier).clearSelection();
@@ -429,7 +429,7 @@ class _PlanListTile extends ConsumerWidget {
 
     return Semantics(
       button: true,
-      label: 'Chat plan selector pill control 5',
+      label: plan.name,
       child: InkWell(
         onTap: () {
           ref.read(activePlanProvider.notifier).selectPlan(plan.id);

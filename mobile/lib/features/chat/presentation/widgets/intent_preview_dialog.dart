@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/intent/data/models/intent_data.dart';
 import 'package:sparkle/features/intent/data/repositories/intent_repository.dart';
@@ -102,14 +103,11 @@ class _IntentPreviewDialogState extends ConsumerState<IntentPreviewDialog> {
                 ),
               ),
             ),
-            Semantics(
-              button: true,
-              label: 'Chat intent preview dialog control 1',
-              child: SparkleIconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.of(context).pop(false),
-                variant: ButtonVariant.ghost,
-              ),
+            SparkleIconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () => Navigator.of(context).pop(false),
+              variant: ButtonVariant.ghost,
+              semanticLabel: I18nService.instance.isChinese ? '关闭' : 'Close',
             ),
           ],
         ),

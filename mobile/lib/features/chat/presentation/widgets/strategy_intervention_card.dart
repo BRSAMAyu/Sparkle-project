@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Strategy Intervention Card — divine moment #5 "阻止低收益"
 ///
@@ -122,7 +123,7 @@ class _StrategyInterventionCardState extends State<StrategyInterventionCard>
                     Expanded(
                       child: Semantics(
                         button: true,
-                        label: 'Chat strategy intervention card control 1',
+                        label: widget.suggestedAction,
                         child: GestureDetector(
                           onTap: () {
                             SensoryFeedbackService.emit(
@@ -155,7 +156,7 @@ class _StrategyInterventionCardState extends State<StrategyInterventionCard>
                     const SizedBox(width: 8),
                     Semantics(
                       button: true,
-                      label: 'Chat strategy intervention card control 2',
+                      label: context.l10n.chatInterventionIgnore,
                       child: GestureDetector(
                         onTap: () {
                           SensoryFeedbackService.emit(SensoryFeedbackEvent.tap);
@@ -227,15 +228,12 @@ class _Header extends StatelessWidget {
                 ),
               ),
             ),
-            Semantics(
-              button: true,
-              label: 'Chat strategy intervention card control 3',
-              child: IconButton(
-                icon: Icon(Icons.close, size: 15, color: DS.textTertiary),
-                onPressed: onDismiss,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-              ),
+            IconButton(
+              icon: Icon(Icons.close, size: 15, color: DS.textTertiary),
+              onPressed: onDismiss,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              tooltip: I18nService.instance.isChinese ? '关闭' : 'Close',
             ),
           ],
         ),

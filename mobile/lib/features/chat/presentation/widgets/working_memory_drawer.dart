@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/constants/app_constants.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/models/memory_models.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/working_memory_badge.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -142,7 +143,9 @@ class _ChatWorkingMemoryPanelState
         children: [
           Semantics(
             button: true,
-            label: 'Chat working memory drawer control 1',
+            label: I18nService.instance.isChinese
+                ? (_expanded ? '收起 AI 记忆' : '展开 AI 记忆')
+                : (_expanded ? 'Collapse AI memory' : 'Expand AI memory'),
             child: InkWell(
               borderRadius: DS.borderRadius16,
               onTap: () => setState(() => _expanded = !_expanded),

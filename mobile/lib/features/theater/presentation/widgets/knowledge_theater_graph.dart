@@ -171,13 +171,14 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
           final viewportSize = Size(constraints.maxWidth, constraints.maxHeight);
           final canvasSize = _resolveCanvasSize(viewportSize);
           _syncViewport(canvasSize: canvasSize, viewportSize: viewportSize);
-          final stage = AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) => SizedBox(
-              width: canvasSize.width,
-              height: canvasSize.height,
-              child: CustomPaint(
-                painter: _KnowledgeTheaterPainter(
+          final stage = RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: _pulseController,
+              builder: (context, child) => SizedBox(
+                width: canvasSize.width,
+                height: canvasSize.height,
+                child: CustomPaint(
+                  painter: _KnowledgeTheaterPainter(
                   nodes: widget.nodes,
                   edges: widget.edges,
                   positions: _positions,
@@ -205,6 +206,7 @@ class _KnowledgeTheaterGraphState extends State<KnowledgeTheaterGraph>
                 ),
               ),
             ),
+          ),
           );
           return ClipRRect(
             borderRadius: BorderRadius.circular(24),

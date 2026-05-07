@@ -231,6 +231,7 @@ class _MetricCell extends StatelessWidget {
                             .copyWith(
                           color: DS.textPrimary,
                           fontWeight: DS.fontWeightBold,
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                     ),

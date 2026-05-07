@@ -67,23 +67,21 @@ class _AgentTeamSheetState extends ConsumerState<AgentTeamSheet> {
                       ),
                     ),
                     const Spacer(),
-                    Semantics(
-                      button: true,
-                      label: 'Chat agent team sheet control 1',
-                      child: SparkleIconButton(
-                        icon: const Icon(Icons.person_add_alt_1_outlined),
-                        onPressed: () => _showCreateExpertDialog(context),
-                        variant: ButtonVariant.ghost,
-                      ),
+                    SparkleIconButton(
+                      icon: const Icon(Icons.person_add_alt_1_outlined),
+                      onPressed: () => _showCreateExpertDialog(context),
+                      variant: ButtonVariant.ghost,
+                      semanticLabel: I18nService.instance.isChinese
+                          ? '添加专家'
+                          : 'Add expert',
                     ),
-                    Semantics(
-                      button: true,
-                      label: 'Chat agent team sheet control 2',
-                      child: SparkleIconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.pop(context),
-                        variant: ButtonVariant.ghost,
-                      ),
+                    SparkleIconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                      variant: ButtonVariant.ghost,
+                      semanticLabel: I18nService.instance.isChinese
+                          ? '关闭'
+                          : 'Close',
                     ),
                   ],
                 ),

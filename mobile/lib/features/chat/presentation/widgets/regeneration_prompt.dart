@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Regeneration type options
 enum RegenerationType {
@@ -231,7 +232,12 @@ class _RegenerationPromptState extends State<RegenerationPrompt>
 
   Widget _buildHeader(ThemeData theme) => Semantics(
         button: true,
-        label: 'Chat regeneration prompt control 1',
+        enabled: widget.status == RegenerationStatus.idle,
+        label: I18nService.instance.isChinese
+            ? (_isExpanded ? '收起重新生成选项' : '展开重新生成选项')
+            : (_isExpanded
+                ? 'Collapse regeneration options'
+                : 'Expand regeneration options'),
         child: InkWell(
           onTap: widget.status == RegenerationStatus.idle
               ? () {
