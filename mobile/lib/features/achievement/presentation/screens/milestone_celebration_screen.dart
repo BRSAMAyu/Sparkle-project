@@ -112,9 +112,9 @@ class MilestoneCelebrationPayload {
       };
 
   String get badgeLabel => switch (milestoneId) {
-        'knowledge_explorer_50' => 'Galaxy Explorer',
-        'sprint_veteran' => 'Sprint Veteran',
-        _ => 'Core Sparkle User',
+        'knowledge_explorer_50' => S.achievementMilestoneBadgeGalaxy,
+        'sprint_veteran' => S.achievementMilestoneBadgeSprint,
+        _ => S.achievementMilestoneBadgeCore,
       };
 
   static int _defaultCelebrationValue(String milestoneId) =>
