@@ -3,14 +3,14 @@ from __future__ import annotations
 import json
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from loguru import logger
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user_id
+from app.api.deps import _zh, get_current_user_id
 from app.db.session import get_db
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.services.simulation.scenario_templates import normalize_scenario_key
@@ -151,6 +151,7 @@ async def run_learning_simulation(
 @router.post("/run/stream")
 async def stream_learning_simulation(
     request: SimulationRunRequest,
+    req: Request,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -181,7 +182,8 @@ async def stream_learning_simulation(
             yield "data: {\"status\":\"completed\"}\n\n"
         except Exception as exc:
             yield "event: error\n"
-            yield f"data: {json.dumps({'message': '仿真过程出现错误，请稍后重试'}, ensure_ascii=False)}\n\n"
+            _msg = "仿真过程出现错误，请稍后重试" if _zh(req) else "An error occurred during simulation. Please try again later."
+            yield f"data: {json.dumps({'message': _msg}, ensure_ascii=False)}\n\n"
             logger.error(f"Simulation stream error: {exc}", exc_info=True)
 
     return StreamingResponse(
@@ -233,6 +235,7 @@ async def get_learning_simulation_session(
 async def continue_learning_simulation_stream(
     session_id: str,
     request: SimulationContinueRequest,
+    req: Request,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -255,7 +258,8 @@ async def continue_learning_simulation_stream(
             yield f"data: {json.dumps({'message': str(exc), 'status_code': 404}, ensure_ascii=False)}\n\n"
         except Exception as exc:
             yield "event: error\n"
-            yield f"data: {json.dumps({'message': '仿真过程出现错误，请稍后重试'}, ensure_ascii=False)}\n\n"
+            _msg = "仿真过程出现错误，请稍后重试" if _zh(req) else "An error occurred during simulation. Please try again later."
+            yield f"data: {json.dumps({'message': _msg}, ensure_ascii=False)}\n\n"
             logger.error(f"Simulation continue stream error: {exc}", exc_info=True)
 
     return StreamingResponse(

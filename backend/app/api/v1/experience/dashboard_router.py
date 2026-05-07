@@ -4,7 +4,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,6 +34,32 @@ async def get_growth_experience_dashboard(
     """Return the closeout Growth Chronicle + Learning Dashboard aggregate."""
     service = _GrowthExperienceDashboardBuilder(db)
     return await service.build(current_user.id, user=current_user)
+
+
+# route-tier: authed
+@router.patch("/growth-dashboard/chronicle/{entry_id}")
+async def update_chronicle_entry_status(
+    entry_id: str,
+    status: str = Query(..., description="New status: confirmed, edited, or rejected"),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, Any]:
+    """Persist a chronicle entry's user_status (confirmed / edited / rejected)."""
+    from app.core.cache import cache_service
+
+    redis = getattr(cache_service, "redis", None)
+    if redis is None:
+        raise HTTPException(status_code=503, detail="Cache unavailable")
+    chronicle = GrowthChronicleService(redis, db_session=db)
+    try:
+        found = await chronicle.update_entry_status(
+            str(current_user.id), entry_id, status
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    if not found:
+        raise HTTPException(status_code=404, detail="Chronicle entry not found")
+    return {"entry_id": entry_id, "user_status": status}
 
 
 class _GrowthExperienceDashboardBuilder:

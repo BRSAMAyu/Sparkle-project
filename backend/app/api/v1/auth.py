@@ -19,7 +19,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import _zh, get_current_user
 from app.config import settings
 from app.core.account_lockout import account_lockout_service
 from app.core.auth_audit_service import auth_audit_service
@@ -508,7 +508,8 @@ async def social_login(
     user = result.scalars().first()
 
     if not user:
-        # Create new user
+        # Create new user — terms acceptance required
+        _validate_terms_acceptance(data.accepted_tos, data.accepted_privacy)
         import uuid
         random_suffix = str(uuid.uuid4())[:8]
         username = f"{data.provider}_{random_suffix}"
@@ -531,6 +532,13 @@ async def social_login(
             user.apple_id = social_id
         elif data.provider == 'wechat':
             user.wechat_unionid = social_id
+
+        _apply_terms_acceptance(
+            user,
+            tos_version=data.tos_version,
+            privacy_version=data.privacy_version,
+            agreed_locale=data.agreed_locale,
+        )
 
         db.add(user)
         await db.commit()
@@ -586,6 +594,10 @@ async def refresh_token(
 
         # Rotate refresh token: revoke old refresh token jti
         await blacklist_token(payload.get("jti"), payload.get("exp"))
+        # R1A1-P0-3: Also revoke the old session so existing access tokens are invalidated
+        if session_id:
+            from app.services.auth_session_service import auth_session_service
+            await auth_session_service.revoke_session(str(session_id))
         auth_audit_service.schedule_log(
             AuthAuditAction.TOKEN_REFRESH,
             user_id=str(user.id),
@@ -814,7 +826,7 @@ async def guest_login(
         # 生成一个6字符的简短guest ID
         import random
         import string
-        guest_id = 'guest_' + ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+        guest_id = 'guest_' + uuid.uuid4().hex[:8]
 
     # 检查是否已存在guest用户（用于保持会话连续性）
     existing_user = await db.execute(
@@ -830,7 +842,7 @@ async def guest_login(
             email=f"{guest_id}@guest.local",  # 临时邮箱
             hashed_password=get_password_hash(str(uuid.uuid4())), # 随机密码
             password_login_enabled=False,
-            nickname=f"访客{guest_id[-4:]}",
+            nickname=f"访客{guest_id[-4:]}" if _zh(request) else f"Guest{guest_id[-4:]}",
             registration_source="guest",
             is_active=True,
         )
@@ -843,7 +855,7 @@ async def guest_login(
             result = await db.execute(select(User).where(User.username == guest_id))
             user = result.scalars().first()
             if not user:
-                raise HTTPException(status_code=500, detail="访客账号创建失败，请稍后重试") from None
+                raise HTTPException(status_code=500, detail="访客账号创建失败，请稍后重试" if _zh(request) else "Failed to create guest account. Please try again later.") from None
             is_new_guest = False
 
         # 为新游客播种演示数据，确保完整体验
@@ -886,7 +898,7 @@ async def guest_login(
             result = await db.execute(select(User).where(User.username == guest_id))
             user = result.scalars().first()
             if not user:
-                raise HTTPException(status_code=500, detail="访客账号异常，请稍后重试") from e
+                raise HTTPException(status_code=500, detail="访客账号异常，请稍后重试" if _zh(request) else "Guest account error. Please try again later.") from e
 
     logger.info(f"Guest login: guest_id={guest_id}, user_id={user.id}, new={is_new_guest}")
 
@@ -942,7 +954,11 @@ async def upgrade_guest(
         agreed_locale=data.agreed_locale,
     )
     db.add(current_user)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="用户名或邮箱已被占用，请更换后重试")
 
     try:
         verify_token = uuid.uuid4().hex
@@ -1026,6 +1042,11 @@ async def upgrade_guest_social(
         agreed_locale=data.agreed_locale,
     )
     db.add(current_user)
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="该社交账号已绑定其他用户")
 
     auth_audit_service.schedule_log(
         AuthAuditAction.GUEST_UPGRADE,

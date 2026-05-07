@@ -145,5 +145,21 @@ async def get_current_active_superuser(
     return current_user
 
 
+# ---------------------------------------------------------------------------
+# i18n helper – bilingual message support
+# ---------------------------------------------------------------------------
+
+def _zh(request: Request | None = None) -> bool:
+    """Return True when the client prefers Chinese (zh) locale.
+
+    Defaults to True for backward compatibility when no request is available.
+    """
+    if request is not None:
+        accept = request.headers.get("Accept-Language", "")
+        if accept:
+            return "zh" in accept.lower()
+    return True  # default to Chinese for backward compatibility
+
+
 # Database session dependency is already defined in app.db.session.get_db
 # You can import it like: from app.api.deps import get_db

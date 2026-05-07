@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, Upl
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import _zh, get_current_user
 from app.config import settings
 from app.core.auth_audit_service import auth_audit_service
 from app.core.cache import cache_service
@@ -288,6 +288,14 @@ async def change_password(
 
     db.add(current_user)
     await db.commit()
+    await db.refresh(current_user)
+
+    # Invalidate all existing sessions after password change
+    from app.services.auth_session_service import auth_session_service
+    await auth_session_service.revoke_all_sessions_for_user(str(current_user.id))
+    from app.core.security import set_user_revoked_before
+    await set_user_revoked_before(str(current_user.id), current_user.password_changed_at)
+
     auth_audit_service.schedule_log(
         AuthAuditAction.PASSWORD_CHANGE,
         user_id=str(current_user.id),
@@ -348,7 +356,7 @@ async def link_social(
     db: AsyncSession = Depends(get_db),
 ):
     if not current_user.email_verified:
-        raise HTTPException(status_code=403, detail="请先验证邮箱后再绑定社交账号")
+        raise HTTPException(status_code=403, detail="请先验证邮箱后再绑定社交账号" if _zh(request) else "Please verify your email before linking a social account.")
 
     from app.api.v1.auth import _verify_social_identity
     from app.schemas.user import SocialLoginRequest
@@ -370,10 +378,10 @@ async def link_social(
     elif payload.provider == "wechat":
         existing = await db.execute(select(User).where(User.wechat_unionid == social_id, User.id != current_user.id))
         if existing.scalars().first():
-            raise HTTPException(status_code=409, detail="该微信账号已绑定其他用户")
+            raise HTTPException(status_code=409, detail="该微信账号已绑定其他用户" if _zh(request) else "This WeChat account is already linked to another user.")
         current_user.wechat_unionid = social_id
     else:
-        raise HTTPException(status_code=400, detail="暂不支持这种登录方式")
+        raise HTTPException(status_code=400, detail="暂不支持这种登录方式" if _zh(request) else "This login method is not supported.")
 
     if payload.provider in {"google", "apple"}:
         current_user.email_verified = True
@@ -388,7 +396,7 @@ async def link_social(
         request=request,
         metadata={"provider": payload.provider},
     )
-    return {"detail": f"{payload.provider} 绑定成功"}
+    return {"detail": f"{payload.provider} 绑定成功" if _zh(request) else f"{payload.provider} linked successfully"}
 
 
 @router.post("/me/unlink-social")
@@ -400,11 +408,11 @@ async def unlink_social(
 ):
     linked = _linked_providers(current_user)
     if payload.provider not in linked:
-        raise HTTPException(status_code=400, detail="该社交账号未绑定")
+        raise HTTPException(status_code=400, detail="该社交账号未绑定" if _zh(request) else "This social account is not linked.")
 
     remaining_social = [provider for provider in linked if provider != payload.provider]
     if not current_user.password_login_enabled and not remaining_social:
-        raise HTTPException(status_code=400, detail="无法解绑最后一个登录方式，请先设置密码或绑定其他账号")
+        raise HTTPException(status_code=400, detail="无法解绑最后一个登录方式，请先设置密码或绑定其他账号" if _zh(request) else "Cannot unlink the last login method. Please set a password or link another account first.")
 
     if payload.provider == "google":
         current_user.google_id = None
@@ -413,7 +421,7 @@ async def unlink_social(
     elif payload.provider == "wechat":
         current_user.wechat_unionid = None
     else:
-        raise HTTPException(status_code=400, detail="暂不支持这种登录方式")
+        raise HTTPException(status_code=400, detail="暂不支持这种登录方式" if _zh(request) else "This login method is not supported.")
 
     db.add(current_user)
     await db.commit()
@@ -423,7 +431,7 @@ async def unlink_social(
         request=request,
         metadata={"provider": payload.provider},
     )
-    return {"detail": f"{payload.provider} 已解绑"}
+    return {"detail": f"{payload.provider} 已解绑" if _zh(request) else f"{payload.provider} unlinked"}
 
 
 @router.get("/me/sessions", response_model=list[UserSessionInfo])
@@ -460,7 +468,7 @@ async def revoke_session(
 ):
     current_sid = _current_session_id(request)
     if session_id == current_sid:
-        raise HTTPException(status_code=400, detail="请使用注销功能退出当前设备")
+        raise HTTPException(status_code=400, detail="请使用注销功能退出当前设备" if _zh(request) else "Please use logout to sign out of the current device.")
 
     session = await auth_session_service.revoke_session_by_id(
         db,
@@ -469,7 +477,7 @@ async def revoke_session(
         ttl_seconds=SESSION_TTL_SECONDS,
     )
     if session is None:
-        raise HTTPException(status_code=404, detail="会话不存在")
+        raise HTTPException(status_code=404, detail="会话不存在" if _zh(request) else "Session not found.")
 
     auth_audit_service.schedule_log(
         AuthAuditAction.LOGOUT,
@@ -477,7 +485,7 @@ async def revoke_session(
         request=request,
         metadata={"session_id": session_id, "mode": "remote_revoke"},
     )
-    return {"detail": "该设备已下线"}
+    return {"detail": "该设备已下线" if _zh(request) else "Device signed out."}
 
 
 @router.delete("/me/sessions")
@@ -498,7 +506,7 @@ async def revoke_other_sessions(
         request=request,
         metadata={"mode": "revoke_others", "revoked": revoked},
     )
-    return {"detail": f"已下线 {revoked} 个其他设备"}
+    return {"detail": f"已下线 {revoked} 个其他设备" if _zh(request) else f"Signed out {revoked} other device(s)."}
 
 
 @router.get("/me/security-log", response_model=list[AuthAuditLogInfo])
@@ -536,19 +544,19 @@ async def delete_account(
     db: AsyncSession = Depends(get_db),
 ):
     if payload.confirmation.strip().upper() != "DELETE":
-        raise HTTPException(status_code=400, detail="请输入 DELETE 以确认注销")
+        raise HTTPException(status_code=400, detail="请输入 DELETE 以确认注销" if _zh(request) else "Please type DELETE to confirm account deletion.")
 
     if current_user.registration_source == "guest":
         pass
     elif payload.password:
         if not current_user.password_login_enabled:
-            raise HTTPException(status_code=400, detail="当前账号未启用密码登录，请使用社交验证")
+            raise HTTPException(status_code=400, detail="当前账号未启用密码登录，请使用社交验证" if _zh(request) else "Password login is not enabled for this account. Please use social verification.")
         if not verify_password(payload.password, current_user.hashed_password):
-            raise HTTPException(status_code=403, detail="密码错误")
+            raise HTTPException(status_code=403, detail="密码错误" if _zh(request) else "Incorrect password.")
     elif payload.provider and payload.provider_token:
         await _require_social_reauth(current_user, payload.provider, payload.provider_token)
     else:
-        raise HTTPException(status_code=400, detail="请使用密码或社交账号重新验证身份")
+        raise HTTPException(status_code=400, detail="请使用密码或社交账号重新验证身份" if _zh(request) else "Please re-authenticate with your password or social account.")
 
     deleted_marker = uuid4().hex
     auth_audit_service.schedule_log(
@@ -594,7 +602,7 @@ async def delete_account(
     except Exception as purge_exc:
         logger.warning("Failed to schedule 30-day purge for user %s: %s", str(current_user.id), purge_exc)
 
-    return {"detail": "账号已注销，个人数据已匿名化。30天后将永久删除全部数据，期间如需恢复请联系客服。"}
+    return {"detail": "账号已注销，个人数据已匿名化。30天后将永久删除全部数据，期间如需恢复请联系客服。" if _zh(request) else "Account deleted. Personal data has been anonymized. All data will be permanently deleted after 30 days. Contact support if you need to recover."}
 
 
 @router.put("/me/preferences", response_model=UserProfile)

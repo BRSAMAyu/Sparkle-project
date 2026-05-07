@@ -13,13 +13,13 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Path, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Path, Query, Request
 from fastapi.responses import JSONResponse
 from loguru import logger
 from sqlalchemy import desc, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user
+from app.api.deps import _zh, get_current_user
 from app.core.cache import cache_service
 from app.core.exceptions import NotFoundError
 from app.core.metrics import observe_product_loop_latency, record_product_loop_event
@@ -968,16 +968,7 @@ async def snooze_task(
     await db.commit()
     await db.refresh(task)
 
-    next_task = await _find_today_focus_task(
-        db,
-        user_id=current_user.id,
-        exclude_task_id=task.id,
-    )
-    if next_task:
-        message = f"已推迟到明天，你现在多一点时间给「{next_task.title}」。"
-    else:
-        message = "已推迟到明天，今天先把节奏放轻一点。"
-    return _action_response(action="snooze", message=message, task=task)
+    return _action_response(action="snooze", message="", task=task)
 
 
 # route-tier: authed
@@ -1028,6 +1019,7 @@ async def mark_task_too_hard(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    req: Request = None,  # injected by FastAPI for locale detection
 ):
     """Break a task into smaller subtasks when the current card feels too hard."""
     task = await _get_user_task_or_404(db, task_id, current_user.id)
@@ -1045,9 +1037,17 @@ async def mark_task_too_hard(
         await db.refresh(subtask)
 
     if subtasks:
-        message = f"我把它拆成 {len(subtasks)} 小步了，先做「{subtasks[0].title}」。"
+        message = (
+            f"我把它拆成 {len(subtasks)} 小步了，先做「{subtasks[0].title}」。"
+            if _zh(req)
+            else f"I broke it into {len(subtasks)} smaller steps. Start with「{subtasks[0].title}」."
+        )
     else:
-        message = "我知道这张有点硬，先别硬扛；可以直接找 AI 一起拆卡点。"
+        message = (
+            "我知道这张有点硬，先别硬扛；可以直接找 AI 一起拆卡点。"
+            if _zh(req)
+            else "This one is tough. Don't push through alone — let AI help you break it down."
+        )
     return _action_response(
         action="too_hard",
         message=message,
@@ -1072,14 +1072,13 @@ async def skip_task(
         user_id=current_user.id,
         reason=reason,
     )
-    task.user_note = "Skipped from quick action"
-    task.completed_at = task.completed_at or _utcnow()
-    db.add(task)
-    await db.commit()
-    await db.refresh(task)
+    # Note: abandon_task already commits internally. The user_note is set via
+    # the reason parameter, avoiding a second commit that would double-transact.
+    if task:
+        task.user_note = task.user_note or "Skipped from quick action"
     return _action_response(
         action="skip",
-        message="已跳过，这张卡不会再挤在今天了。",
+        message="",
         task=task,
     )
 
