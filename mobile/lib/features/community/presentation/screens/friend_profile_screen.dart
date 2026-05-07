@@ -270,7 +270,9 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
     final goalController = TextEditingController();
     var checkInDays = 1;
 
-    final confirmed = await showSensoryDialog<bool>(
+    bool? confirmed;
+    try {
+      confirmed = await showSensoryDialog<bool>(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) => AlertDialog(
@@ -325,6 +327,9 @@ class _FriendProfileScreenState extends ConsumerState<FriendProfileScreen> {
         ),
       ),
     );
+    } finally {
+      goalController.dispose();
+    }
 
     if (confirmed != true) return;
     final goal = goalController.text.trim();

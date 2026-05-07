@@ -89,7 +89,8 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       if (mounted) context.pop();
     } catch (e) {
       if (mounted) {
-        AppFeedback.error(context, I18nService.instance.isChinese ? '发布失败：$e' : 'Post failed: $e');
+        debugPrint('Post failed: $e');
+        AppFeedback.error(context, I18nService.instance.isChinese ? '发布失败，请稍后重试' : 'Post failed, please try again later');
       }
     } finally {
       if (mounted) setState(() => _isPosting = false);
@@ -174,9 +175,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           variant: ButtonVariant.ghost,
                           icon: Icon(
                             Icons.image_outlined,
-                            color: _selectedImage != null
-                                ? DS.brandPrimary
-                                : DS.brandPrimary,
+                            color: DS.brandPrimary,
                           ),
                           onPressed: _pickImage,
                         ),
@@ -184,9 +183,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                           variant: ButtonVariant.ghost,
                           icon: Icon(
                             Icons.location_on_outlined,
-                            color: _selectedLocation != null
-                                ? DS.brandPrimary
-                                : DS.brandPrimary,
+                            color: DS.brandPrimary,
                           ),
                           onPressed: _pickLocation,
                         ),

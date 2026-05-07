@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
@@ -44,7 +46,15 @@ class CollapsibleWidgetWrapper extends StatefulWidget {
 class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
     with SingleTickerProviderStateMixin {
   static const _animationDuration = Duration(milliseconds: 200);
-  static final Map<String, bool> _persistedState = {};
+  static final LinkedHashMap<String, bool> _persistedState = LinkedHashMap();
+  static const int _maxEntries = 100;
+
+  static void _putState(String key, bool value) {
+    if (_persistedState.length >= _maxEntries && !_persistedState.containsKey(key)) {
+      _persistedState.remove(_persistedState.keys.first);
+    }
+    _persistedState[key] = value;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -198,7 +208,7 @@ class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
   void _setExpanded(bool value) {
     setState(() => _expanded = value);
     if (_effectivePersistId != null) {
-      _persistedState[_effectivePersistId!] = value;
+      _putState(_effectivePersistId!, value);
     }
   }
 }

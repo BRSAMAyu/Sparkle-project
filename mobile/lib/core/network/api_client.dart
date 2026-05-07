@@ -7,6 +7,7 @@ import 'package:sparkle/core/constants/api_constants.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/network/api_interceptor.dart';
 import 'package:sparkle/core/network/http_client_pinning.dart';
+import 'package:sparkle/core/network/idempotency_interceptor.dart';
 
 final apiClientProvider = Provider<ApiClient>(ApiClient.new);
 
@@ -23,6 +24,7 @@ class ApiClient {
     _dio.interceptors.add(_ref.read(authInterceptorProvider));
     _dio.interceptors.add(_ref.read(retryInterceptorProvider(_dio)));
     _dio.interceptors.add(_ref.read(loggingInterceptorProvider));
+    _dio.interceptors.add(IdempotencyInterceptor());
   }
   final Ref _ref;
   late final Dio _dio;

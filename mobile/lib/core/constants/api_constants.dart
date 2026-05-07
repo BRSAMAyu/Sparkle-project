@@ -22,29 +22,39 @@ class ApiConstants {
   static String get baseUrl {
     if (_baseUrlOverride.isNotEmpty) {
       if (kReleaseMode && _baseUrlOverride.startsWith('http:')) {
-        debugPrint(
-            '⚠️ WARNING: Using insecure HTTP API in RELEASE mode. Consider using HTTPS.',);
+        if (kDebugMode) {
+          debugPrint(
+              '⚠️ WARNING: Using insecure HTTP API in RELEASE mode. Consider using HTTPS.',);
+        }
       }
-      debugPrint('🔧 API Base URL (override): $_baseUrlOverride');
+      if (kDebugMode) {
+        debugPrint('🔧 API Base URL (override): $_baseUrlOverride');
+      }
       return _baseUrlOverride;
     }
 
     // Default fallback logic
     if (kIsWeb) {
       if (kReleaseMode) {
-        debugPrint(
-            '⚠️ WARNING: Flutter Web in release mode may require HTTPS for many features.',);
+        if (kDebugMode) {
+          debugPrint(
+              '⚠️ WARNING: Flutter Web in release mode may require HTTPS for many features.',);
+        }
       }
       return 'http://localhost:8080';
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
       final url = _androidBaseUrl();
-      debugPrint('🔧 API Base URL (Android): $url');
+      if (kDebugMode) {
+        debugPrint('🔧 API Base URL (Android): $url');
+      }
       return url;
     }
     if (defaultTargetPlatform == TargetPlatform.iOS) {
       final url = _iosBaseUrl();
-      debugPrint('🔧 API Base URL (iOS): $url');
+      if (kDebugMode) {
+        debugPrint('🔧 API Base URL (iOS): $url');
+      }
       return url;
     }
     return 'http://localhost:8080';

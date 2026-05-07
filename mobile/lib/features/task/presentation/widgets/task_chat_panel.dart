@@ -40,6 +40,12 @@ class _TaskChatPanelState extends ConsumerState<TaskChatPanel> {
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   void didUpdateWidget(covariant TaskChatPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.taskId != widget.taskId) {

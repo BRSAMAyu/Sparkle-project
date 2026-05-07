@@ -3,7 +3,7 @@ class AppConstants {
   // App Info
   static const String appName = 'Sparkle';
   static const String appNameChinese = '星火';
-  static const String appVersion = '0.1.0';
+  static const String appVersion = '1.0.0';
 
   // Storage Keys
   static const String keyAccessToken = 'access_token';

@@ -2531,31 +2531,36 @@ class _PlanPhaseSection extends ConsumerWidget {
   ) async {
     final l10n = context.l10n;
     final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.planDetailCreatePhaseTitle),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(
-            labelText: l10n.planDetailPhaseNameLabel,
-            hintText: l10n.planDetailPhaseNameHint,
+    String? name;
+    try {
+      name = await showDialog<String>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(l10n.planDetailCreatePhaseTitle),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: l10n.planDetailPhaseNameLabel,
+              hintText: l10n.planDetailPhaseNameHint,
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop(controller.text.trim()),
+              child: Text(l10n.planCreateAction),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(dialogContext).pop(controller.text.trim()),
-            child: Text(l10n.planCreateAction),
-          ),
-        ],
-      ),
-    );
+      );
+    } finally {
+      controller.dispose();
+    }
     if (!context.mounted || name == null || name.isEmpty) return;
 
     try {
@@ -2633,7 +2638,9 @@ class _PlanPhaseSection extends ConsumerWidget {
     final reflectionController = TextEditingController();
 
     final l10n = context.l10n;
-    final confirmed = await showDialog<bool>(
+    bool? confirmed;
+    try {
+      confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (dialogContext, setState) => AlertDialog(
@@ -2702,6 +2709,9 @@ class _PlanPhaseSection extends ConsumerWidget {
         ),
       ),
     );
+    } finally {
+      reflectionController.dispose();
+    }
 
     if (!context.mounted || confirmed != true) return;
 
