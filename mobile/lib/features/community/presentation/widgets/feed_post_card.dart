@@ -70,20 +70,24 @@ class FeedPostCard extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 20,
-                        backgroundColor: DS.avatarFallbackBackground,
-                        backgroundImage: post.user.avatarUrl != null
-                            ? CachedNetworkImageProvider(post.user.avatarUrl!)
-                            : null,
-                        child: post.user.avatarUrl == null
-                            ? Text(
-                                post.user.username[0].toUpperCase(),
-                                style: TextStyle(
-                                  color: DS.avatarFallbackForeground,
-                                ),
-                              )
-                            : null,
+                      Semantics(
+                        image: true,
+                        label: '${post.user.username} avatar',
+                        child: CircleAvatar(
+                          radius: 20,
+                          backgroundColor: DS.avatarFallbackBackground,
+                          backgroundImage: post.user.avatarUrl != null
+                              ? CachedNetworkImageProvider(post.user.avatarUrl!)
+                              : null,
+                          child: post.user.avatarUrl == null
+                              ? Text(
+                                  post.user.username[0].toUpperCase(),
+                                  style: TextStyle(
+                                    color: DS.avatarFallbackForeground,
+                                  ),
+                                )
+                              : null,
+                        ),
                       ),
                       const SizedBox(width: DS.md),
                       Expanded(

@@ -287,7 +287,7 @@ class _SummaryPill extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.78),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: DS.borderRadiusFull,
         border: Border.all(color: _portfolioPaleSage),
       ),
       child: Text(
@@ -388,7 +388,7 @@ class _PortfolioEntryCard extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: _portfolioMistGreen,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: DS.borderRadius16,
               border: Border.all(color: _portfolioMutedSage),
             ),
             child: Text(
@@ -491,7 +491,7 @@ class _DetailChip extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: _portfolioWarmCream,
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: DS.borderRadiusFull,
         border: Border.all(color: _portfolioBeige),
       ),
       child: Text(

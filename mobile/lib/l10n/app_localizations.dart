@@ -55417,6 +55417,54 @@ abstract class AppLocalizations {
   /// **'否'**
   String get envelopeValueNo;
 
+  /// No description provided for @envelopeDimTone.
+  ///
+  /// In zh, this message translates to:
+  /// **'语气'**
+  String get envelopeDimTone;
+
+  /// No description provided for @envelopeDimVerbosity.
+  ///
+  /// In zh, this message translates to:
+  /// **'详细度'**
+  String get envelopeDimVerbosity;
+
+  /// No description provided for @envelopeDimChallenge.
+  ///
+  /// In zh, this message translates to:
+  /// **'难度'**
+  String get envelopeDimChallenge;
+
+  /// No description provided for @envelopeDimDepth.
+  ///
+  /// In zh, this message translates to:
+  /// **'深度'**
+  String get envelopeDimDepth;
+
+  /// No description provided for @envelopeDimPace.
+  ///
+  /// In zh, this message translates to:
+  /// **'节奏'**
+  String get envelopeDimPace;
+
+  /// No description provided for @envelopeDimFocus.
+  ///
+  /// In zh, this message translates to:
+  /// **'焦点'**
+  String get envelopeDimFocus;
+
+  /// No description provided for @envelopeDimSupport.
+  ///
+  /// In zh, this message translates to:
+  /// **'支持度'**
+  String get envelopeDimSupport;
+
+  /// No description provided for @envelopeDimComplexity.
+  ///
+  /// In zh, this message translates to:
+  /// **'复杂度'**
+  String get envelopeDimComplexity;
+
   /// No description provided for @taskDetailSemanticsTitle.
   ///
   /// In zh, this message translates to:

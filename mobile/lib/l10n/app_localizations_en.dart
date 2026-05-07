@@ -2495,7 +2495,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonOnline => 'Online';
 
   @override
-  String get offlineBannerMessage => 'You\'re offline. Some features may be unavailable.';
+  String get offlineBannerMessage =>
+      'You\'re offline. Some features may be unavailable.';
 
   @override
   String get commonOperationWarning => 'Operation may not have succeeded';
@@ -31790,6 +31791,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get envelopeValueNo => 'no';
+
+  @override
+  String get envelopeDimTone => 'Tone';
+
+  @override
+  String get envelopeDimVerbosity => 'Verbosity';
+
+  @override
+  String get envelopeDimChallenge => 'Challenge';
+
+  @override
+  String get envelopeDimDepth => 'Depth';
+
+  @override
+  String get envelopeDimPace => 'Pace';
+
+  @override
+  String get envelopeDimFocus => 'Focus';
+
+  @override
+  String get envelopeDimSupport => 'Support';
+
+  @override
+  String get envelopeDimComplexity => 'Complexity';
 
   @override
   String get taskDetailSemanticsTitle => 'Task detail';

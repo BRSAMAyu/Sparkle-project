@@ -424,7 +424,7 @@ class _MilestoneHeroCard extends StatelessWidget {
             ),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(999),
+              borderRadius: DS.borderRadiusFull,
             ),
             child: Text(
               payload.badgeLabel,
@@ -506,7 +506,7 @@ class _MilestoneHeroCard extends StatelessWidget {
             padding: const EdgeInsets.all(DS.spacing16),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: DS.borderRadius20,
               border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
             ),
             child: Text(
@@ -539,7 +539,7 @@ class _StatChip extends StatelessWidget {
         padding: const EdgeInsets.all(DS.spacing16),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: DS.borderRadius20,
           border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Column(

@@ -23,6 +23,8 @@ class DesignSystemLinter {
     await _checkHardcodedSpacing();
     await _checkHardcodedGradientsAndShadows();
     await _checkMaterialButtonUsage();
+    await _checkHardcodedFontSize();
+    await _checkHardcodedBorderRadius();
 
     return _violations;
   }
@@ -99,6 +101,64 @@ class DesignSystemLinter {
         }
       }
     }
+  }
+
+  /// 检查硬编码 fontSize
+  Future<void> _checkHardcodedFontSize() async {
+    final dartFiles = await _findDartFiles();
+
+    for (final file in dartFiles) {
+      final content = await File(file).readAsString();
+      final lines = content.split('\n');
+
+      for (var i = 0; i < lines.length; i++) {
+        final line = lines[i];
+        if (_containsHardcodedFontSize(line)) {
+          _violations.add('$file:${i + 1}: 硬编码字号 - $line');
+        }
+      }
+    }
+  }
+
+  /// 检查硬编码 BorderRadius
+  Future<void> _checkHardcodedBorderRadius() async {
+    final dartFiles = await _findDartFiles();
+
+    for (final file in dartFiles) {
+      final content = await File(file).readAsString();
+      final lines = content.split('\n');
+
+      for (var i = 0; i < lines.length; i++) {
+        final line = lines[i];
+        if (_containsHardcodedBorderRadius(line)) {
+          _violations.add('$file:${i + 1}: 硬编码圆角 - $line');
+        }
+      }
+    }
+  }
+
+  bool _containsHardcodedFontSize(String line) {
+    if (line.trim().startsWith('//')) return false;
+    final pattern = RegExp(r'fontSize:\s*\d+');
+    if (!pattern.hasMatch(line)) return false;
+    if (line.contains('DS.') ||
+        line.contains('AppDesignTokens') ||
+        line.contains('design_system_linter.dart')) {
+      return false;
+    }
+    return true;
+  }
+
+  bool _containsHardcodedBorderRadius(String line) {
+    if (line.trim().startsWith('//')) return false;
+    final pattern = RegExp(r'BorderRadius\.circular\(\d+');
+    if (!pattern.hasMatch(line)) return false;
+    if (line.contains('DS.') ||
+        line.contains('AppDesignTokens') ||
+        line.contains('design_system_linter.dart')) {
+      return false;
+    }
+    return true;
   }
 
   /// 查找所有Dart文件
@@ -270,6 +330,10 @@ class DesignSystemLinter {
           violations.where((v) => v.contains('硬编码渐变/阴影')).toList();
       final buttonViolations =
           violations.where((v) => v.contains('使用Material按钮')).toList();
+      final fontSizeViolations =
+          violations.where((v) => v.contains('硬编码字号')).toList();
+      final borderRadiusViolations =
+          violations.where((v) => v.contains('硬编码圆角')).toList();
 
       if (colorViolations.isNotEmpty) {
         buffer.writeln('🔴 硬编码颜色违规 (${colorViolations.length}处):');
@@ -315,12 +379,36 @@ class DesignSystemLinter {
         buffer.writeln();
       }
 
+      if (fontSizeViolations.isNotEmpty) {
+        buffer.writeln('🟠 硬编码字号 (${fontSizeViolations.length}处):');
+        for (final violation in fontSizeViolations.take(10)) {
+          buffer.writeln('  • $violation');
+        }
+        if (fontSizeViolations.length > 10) {
+          buffer.writeln('  • ... 还有${fontSizeViolations.length - 10}处');
+        }
+        buffer.writeln();
+      }
+
+      if (borderRadiusViolations.isNotEmpty) {
+        buffer.writeln('🟢 硬编码圆角 (${borderRadiusViolations.length}处):');
+        for (final violation in borderRadiusViolations.take(10)) {
+          buffer.writeln('  • $violation');
+        }
+        if (borderRadiusViolations.length > 10) {
+          buffer.writeln('  • ... 还有${borderRadiusViolations.length - 10}处');
+        }
+        buffer.writeln();
+      }
+
       buffer
         ..writeln('💡 修复建议：')
         ..writeln('  1. 硬编码颜色 → 使用 DS.brandPrimary, DS.success 等')
         ..writeln('  2. 硬编码间距 → 使用 DS.lg, DS.xl 等')
         ..writeln('  3. 硬编码渐变/阴影 → 使用 DS.*Gradient / DS.shadow* / Graphite 容器')
-        ..writeln('  4. Material按钮 → 使用 SparkleButton.primary() 等');
+        ..writeln('  4. Material按钮 → 使用 SparkleButton.primary() 等')
+        ..writeln('  5. 硬编码字号 → 使用 DS.fontSizeSm, DS.fontSizeBase, DS.fontSizeLg 等')
+        ..writeln('  6. 硬编码圆角 → 使用 DS.radiusSm, DS.radiusMd, DS.radiusLg 等');
     }
 
     buffer.writeln('=' * 80);

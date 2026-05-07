@@ -330,23 +330,27 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
         ),
       );
 
-  Widget _buildAvatar(UserBrief user) => DecoratedBox(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: DS.brandPrimaryConst, width: 2),
-          boxShadow: DS.shadowSm,
-        ),
-        child: CircleAvatar(
-          radius: 16,
-          backgroundImage:
-              user.avatarUrl != null ? CachedNetworkImageProvider(user.avatarUrl!) : null,
-          backgroundColor: DS.neutral200,
-          child: user.avatarUrl == null
-              ? Text(
-                  user.displayName.substring(0, 1).toUpperCase(),
-                  style: TextStyle(fontSize: 12, color: DS.neutral600),
-                )
-              : null,
+  Widget _buildAvatar(UserBrief user) => Semantics(
+        image: true,
+        label: '${user.displayName} avatar',
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: DS.brandPrimaryConst, width: 2),
+            boxShadow: DS.shadowSm,
+          ),
+          child: CircleAvatar(
+            radius: 16,
+            backgroundImage:
+                user.avatarUrl != null ? CachedNetworkImageProvider(user.avatarUrl!) : null,
+            backgroundColor: DS.neutral200,
+            child: user.avatarUrl == null
+                ? Text(
+                    user.displayName.substring(0, 1).toUpperCase(),
+                    style: TextStyle(fontSize: 12, color: DS.neutral600),
+                  )
+                : null,
+          ),
         ),
       );
 }

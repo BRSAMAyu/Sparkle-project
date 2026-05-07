@@ -308,5 +308,4 @@ class _CreateLibraryScreenState extends ConsumerState<CreateLibraryScreen> {
         ),
       ),
     );
-  }
 }

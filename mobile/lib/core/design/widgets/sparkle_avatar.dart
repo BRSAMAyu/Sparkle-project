@@ -19,12 +19,14 @@ class SparkleAvatar extends StatelessWidget {
     this.fallbackText,
     this.backgroundColor,
     this.status = AvatarStatus.approved,
+    this.semanticLabel,
   });
   final String? url;
   final double radius;
   final String? fallbackText;
   final Color? backgroundColor;
   final AvatarStatus status;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +76,7 @@ class SparkleAvatar extends StatelessWidget {
     }
 
     if (status == AvatarStatus.pending) {
-      return Stack(
+      avatar = Stack(
         alignment: Alignment.center,
         children: [
           avatar,
@@ -117,7 +119,8 @@ class SparkleAvatar extends StatelessWidget {
       );
     }
 
-    return avatar;
+    final label = semanticLabel ?? '${fallbackText ?? "User"} avatar';
+    return Semantics(image: true, label: label, child: avatar);
   }
 
   Widget _buildFallback(Color bgColor) => CircleAvatar(

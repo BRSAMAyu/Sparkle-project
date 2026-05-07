@@ -723,6 +723,8 @@ class _FilterChips extends ConsumerWidget {
         return l10n.taskStatusPaused;
       case TaskFilterOptions.completed:
         return l10n.taskStatusCompleted;
+      case TaskFilterOptions.abandoned:
+        return l10n.taskStatusPaused; // reuse paused label as fallback
     }
   }
 }

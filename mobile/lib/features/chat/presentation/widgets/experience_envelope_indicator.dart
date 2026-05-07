@@ -10,15 +10,15 @@ class _AdjustmentLabel {
   final IconData icon;
 }
 
-final _adjustmentMeta = <String, _AdjustmentLabel>{
-  'tone': const _AdjustmentLabel('Tone', Icons.record_voice_over_outlined),
-  'verbosity': const _AdjustmentLabel('Verbosity', Icons.short_text_outlined),
-  'challenge_level': const _AdjustmentLabel('Challenge', Icons.trending_up_outlined),
-  'explanation_depth': const _AdjustmentLabel('Depth', Icons.layers_outlined),
-  'pace': const _AdjustmentLabel('Pace', Icons.speed_outlined),
-  'focus': const _AdjustmentLabel('Focus', Icons.center_focus_strong_outlined),
-  'support_level': const _AdjustmentLabel('Support', Icons.support_outlined),
-  'complexity': const _AdjustmentLabel('Complexity', Icons.account_tree_outlined),
+Map<String, _AdjustmentLabel> _buildAdjustmentMeta(AppLocalizations l10n) => {
+  'tone': _AdjustmentLabel(l10n.envelopeDimTone, Icons.record_voice_over_outlined),
+  'verbosity': _AdjustmentLabel(l10n.envelopeDimVerbosity, Icons.short_text_outlined),
+  'challenge_level': _AdjustmentLabel(l10n.envelopeDimChallenge, Icons.trending_up_outlined),
+  'explanation_depth': _AdjustmentLabel(l10n.envelopeDimDepth, Icons.layers_outlined),
+  'pace': _AdjustmentLabel(l10n.envelopeDimPace, Icons.speed_outlined),
+  'focus': _AdjustmentLabel(l10n.envelopeDimFocus, Icons.center_focus_strong_outlined),
+  'support_level': _AdjustmentLabel(l10n.envelopeDimSupport, Icons.support_outlined),
+  'complexity': _AdjustmentLabel(l10n.envelopeDimComplexity, Icons.account_tree_outlined),
 };
 
 /// Indicator showing real-time cognitive adjustments Aurora is making.
@@ -78,8 +78,8 @@ class ExperienceEnvelopeIndicator extends ConsumerWidget {
                   final dim = adj['dimension']?.toString() ?? '';
                   final value = adj['value'];
                   final reason = adj['reason']?.toString() ?? '';
-                  final meta = _adjustmentMeta[dim] ??
-                      const _AdjustmentLabel('', Icons.tune_outlined);
+                  final meta = _buildAdjustmentMeta(l10n)[dim] ??
+                      _AdjustmentLabel('', Icons.tune_outlined);
                   final label = meta.label.isNotEmpty ? meta.label : dim;
 
                   return Semantics(
@@ -118,8 +118,22 @@ class ExperienceEnvelopeIndicator extends ConsumerWidget {
                   );
                 }).toList(),
               ),
+            if (envelope.hasPresentationMeta || envelope.hasSocialContext) ...[
+              if (adjustments.isNotEmpty || engagement != null)
+                const SizedBox(height: DS.spacing6),
+              _PresentationMetaRow(
+                style: envelope.presentationStyle,
+                tone: envelope.toneVariant,
+                socialContext: envelope.hasSocialContext
+                    ? envelope.socialContextPresentation
+                    : null,
+              ),
+            ],
             if (engagement != null) ...[
-              if (adjustments.isNotEmpty) const SizedBox(height: DS.spacing6),
+              if (adjustments.isNotEmpty ||
+                  envelope.hasPresentationMeta ||
+                  envelope.hasSocialContext)
+                const SizedBox(height: DS.spacing6),
               _EngagementBar(engagement: engagement),
             ],
           ],
@@ -174,6 +188,49 @@ class _EngagementBar extends StatelessWidget {
                 color: DS.brandPrimary.withValues(alpha: 0.7),
                 fontSize: DS.fontSizeXs,
               ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PresentationMetaRow extends StatelessWidget {
+  const _PresentationMetaRow({
+    this.style,
+    this.tone,
+    this.socialContext,
+  });
+  final String? style;
+  final String? tone;
+  final Map<String, dynamic>? socialContext;
+
+  @override
+  Widget build(BuildContext context) {
+    final parts = <String>[];
+    if (style != null && style!.isNotEmpty) parts.add(style!);
+    if (tone != null && tone!.isNotEmpty) parts.add(tone!);
+    if (socialContext != null && socialContext!.isNotEmpty) {
+      final partner = socialContext!['partner_label']?.toString();
+      if (partner != null && partner.isNotEmpty) parts.add(partner);
+    }
+    if (parts.isEmpty) return const SizedBox.shrink();
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.auto_awesome_outlined,
+            size: 12, color: DS.brandPrimary.withValues(alpha: 0.7)),
+        const SizedBox(width: DS.spacing4),
+        Flexible(
+          child: Text(
+            parts.join(' · '),
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: DS.brandPrimary.withValues(alpha: 0.6),
+                  fontSize: DS.fontSizeXs,
+                ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );

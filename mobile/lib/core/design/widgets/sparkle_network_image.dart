@@ -16,6 +16,7 @@ class SparkleNetworkImage extends StatelessWidget {
     this.imageBuilder,
     this.errorWidget,
     this.placeholder,
+    this.semanticLabel,
   });
 
   final String imageUrl;
@@ -29,6 +30,7 @@ class SparkleNetworkImage extends StatelessWidget {
       imageBuilder;
   final Widget? errorWidget;
   final Widget? placeholder;
+  final String? semanticLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +70,10 @@ class SparkleNetworkImage extends StatelessWidget {
       );
     }
 
+    final label = semanticLabel;
+    if (label != null) {
+      child = Semantics(image: true, label: label, child: child);
+    }
     return child;
   }
 

@@ -30479,6 +30479,30 @@ class AppLocalizationsZh extends AppLocalizations {
   String get envelopeValueNo => '否';
 
   @override
+  String get envelopeDimTone => '语气';
+
+  @override
+  String get envelopeDimVerbosity => '详细度';
+
+  @override
+  String get envelopeDimChallenge => '难度';
+
+  @override
+  String get envelopeDimDepth => '深度';
+
+  @override
+  String get envelopeDimPace => '节奏';
+
+  @override
+  String get envelopeDimFocus => '焦点';
+
+  @override
+  String get envelopeDimSupport => '支持度';
+
+  @override
+  String get envelopeDimComplexity => '复杂度';
+
+  @override
   String get taskDetailSemanticsTitle => '任务详情';
 
   @override

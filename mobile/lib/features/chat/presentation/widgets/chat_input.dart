@@ -470,8 +470,6 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                           controller: _controller,
                           focusNode: _focusNode,
                           maxLength: 4000,
-                          maxLengthEnforcement:
-                              MaxLengthEnforcement.enforced,
                           maxLines: 4,
                           minLines: 1,
                           enabled: widget.enabled && !_isSending,
