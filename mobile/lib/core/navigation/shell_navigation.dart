@@ -18,6 +18,10 @@ import 'package:sparkle/features/community/presentation/providers/community_prov
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/shared/providers/visual_element_provider.dart';
 
+/// Signal incremented when the active tab is re-tapped, triggering
+/// [TapToTopListener] to scroll the tab's primary scroll view to top.
+final scrollToTopSignalProvider = StateProvider<int>((ref) => 0);
+
 /// Main navigation shell for StatefulShellRoute
 ///
 /// This widget wraps the tab navigation system with:
@@ -42,9 +46,18 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   bool _isShowingAchievementDialog = false;
   bool _visualRefreshScheduled = false;
   StreamSubscription<dynamic>? _communityEventsSub;
+  final ScrollController _shellScrollController = ScrollController();
 
   void _handleDestinationSelected(int index) {
     if (index == widget.navigationShell.currentIndex) {
+      // Scroll current tab content to top
+      if (_shellScrollController.hasClients) {
+        _shellScrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
       return;
     }
     unawaited(
@@ -248,9 +261,12 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
         InAppNotificationOverlay(
           child: ResponsiveScaffold(
             title: 'Sparkle',
-            body: _ShellBranchTransition(
-              currentIndex: widget.navigationShell.currentIndex,
-              child: widget.navigationShell,
+            body: PrimaryScrollController(
+              controller: _shellScrollController,
+              child: _ShellBranchTransition(
+                currentIndex: widget.navigationShell.currentIndex,
+                child: widget.navigationShell,
+              ),
             ),
             destinations: destinations,
             currentIndex: widget.navigationShell.currentIndex,
@@ -302,6 +318,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
   @override
   void dispose() {
     unawaited(_communityEventsSub?.cancel());
+    _shellScrollController.dispose();
     super.dispose();
   }
 }
