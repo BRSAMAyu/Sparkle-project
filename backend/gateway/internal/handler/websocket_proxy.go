@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -370,6 +371,10 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 				sendErr(err)
 				return
 			}
+			var closeErr *websocket.CloseError
+			if errors.As(err, &closeErr) {
+				closeConnections(closeErr.Code, closeErr.Text)
+			}
 			// Reject oversized messages
 			if len(data) > int(readLimit) {
 				p.logger.Warn("Dropping oversized client message",
@@ -431,6 +436,10 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 				}
 				sendErr(err)
 				return
+			}
+			var closeErr *websocket.CloseError
+			if errors.As(err, &closeErr) {
+				closeConnections(closeErr.Code, closeErr.Text)
 			}
 			// G-04: Validate backend message size before forwarding to client
 			if len(data) > int(readLimit) {
