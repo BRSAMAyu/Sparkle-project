@@ -71,64 +71,93 @@ class _CommunityMainScreenState extends ConsumerState<CommunityMainScreen>
             )
           : null,
       child: SafeArea(
-        child: Column(
-          children: [
-            // Title + TabBar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(DS.lg, DS.lg, DS.lg, 0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    zh ? '社群' : 'Community',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: DS.fontWeightBold,
-                      color: DS.textPrimary,
-                      letterSpacing: 1.2,
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(DS.lg, DS.lg, DS.lg, DS.sm),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      zh ? '社群' : 'Community',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: DS.fontWeightBold,
+                        color: DS.textPrimary,
+                        letterSpacing: 1.2,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: DS.sm),
-                  Text(
-                    zh ? '和伙伴一起成长' : 'Grow together with partners',
-                    style: TextStyle(fontSize: 14, color: DS.textSecondary),
-                  ),
-                  const SizedBox(height: DS.md),
-                  TabBar(
-                    controller: _tabController,
-                    isScrollable: false,
-                    labelColor: DS.textPrimary,
-                    unselectedLabelColor: DS.textSecondary,
-                    indicatorColor: DS.brandPrimary,
-                    indicatorSize: TabBarIndicatorSize.label,
-                    indicatorWeight: 2,
-                    labelStyle: TextStyle(
-                      fontSize: DS.fontSizeSm,
-                      fontWeight: DS.fontWeightSemibold,
+                    const SizedBox(height: DS.sm),
+                    Text(
+                      zh ? '和伙伴一起成长' : 'Grow together with partners',
+                      style: TextStyle(fontSize: 14, color: DS.textSecondary),
                     ),
-                    unselectedLabelStyle: TextStyle(
-                      fontSize: DS.fontSizeSm,
-                      fontWeight: FontWeight.normal,
-                    ),
-                    tabs: tabLabels.map((label) => Tab(text: label)).toList(),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-            // Tab content
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: const [
-                  PartnersTab(),
-                  FeedTabContent(),
-                  GroupsTab(),
-                ], // ignore: prefer_if_elements_to_conditional_expressions
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _TabBarDelegate(
+                TabBar(
+                  controller: _tabController,
+                  isScrollable: false,
+                  labelColor: DS.textPrimary,
+                  unselectedLabelColor: DS.textSecondary,
+                  indicatorColor: DS.brandPrimary,
+                  indicatorSize: TabBarIndicatorSize.label,
+                  indicatorWeight: 2,
+                  labelStyle: TextStyle(
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+                  unselectedLabelStyle: TextStyle(
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: FontWeight.normal,
+                  ),
+                  tabs: tabLabels.map((label) => Tab(text: label)).toList(),
+                ),
               ),
             ),
           ],
+          body: TabBarView(
+            controller: _tabController,
+            children: const [
+              PartnersTab(),
+              FeedTabContent(),
+              GroupsTab(),
+            ],
+          ),
         ),
       ),
     );
   }
+}
+
+class _TabBarDelegate extends SliverPersistentHeaderDelegate {
+  const _TabBarDelegate(this.tabBar);
+
+  final TabBar tabBar;
+
+  @override
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) =>
+      Container(
+        color: Theme.of(context).colorScheme.surface,
+        child: tabBar,
+      );
+
+  @override
+  double get maxExtent => tabBar.preferredSize.height;
+
+  @override
+  double get minExtent => tabBar.preferredSize.height;
+
+  @override
+  bool shouldRebuild(_TabBarDelegate oldDelegate) =>
+      tabBar != oldDelegate.tabBar;
 }
