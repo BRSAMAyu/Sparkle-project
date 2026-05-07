@@ -136,6 +136,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		tasks.POST("/:id/too_hard", h.proxyWithHeaders)
 		// route-tier: authed
 		tasks.POST("/:id/skip", h.proxyWithHeaders)
+		tasks.POST("/confirm-batch/:toolResultId", h.proxyWithHeaders)
 		tasks.POST("/:id/feedback", h.proxyWithHeaders)
 		// route-tier: authed
 		tasks.GET("/:id/feedback", h.proxyWithHeaders)
@@ -175,13 +176,13 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 		plans.PATCH("/:id/priority", h.proxyWithHeaders)
 		// route-tier: authed
 		plans.GET("/:id/learning-path-progress", h.proxyWithHeaders)
-			// Plan Phases
-			// route-tier: authed
-			plans.GET("/:id/phases", h.proxyWithHeaders)
-			// route-tier: authed
-			plans.POST("/:id/phases/reorder", h.proxyWithHeaders)
-			// route-tier: authed
-			plans.POST("/phases/:phaseCardId/activate", h.proxyWithHeaders)
+		// Plan Phases
+		// route-tier: authed
+		plans.GET("/:id/phases", h.proxyWithHeaders)
+		// route-tier: authed
+		plans.POST("/:id/phases/reorder", h.proxyWithHeaders)
+		// route-tier: authed
+		plans.POST("/phases/:phaseCardId/activate", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered plans proxy routes")
 
@@ -720,10 +721,10 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 
 	// ==================== Client Telemetry Routes ====================
 	clientTelemetry := api.Group("/client-telemetry")
-	clientTelemetry.Use(authMiddleware)
 	{
 		clientTelemetry.POST("/events", h.proxyWithHeaders)
 		clientTelemetry.POST("/events/batch", h.proxyWithHeaders)
+		clientTelemetry.Use(authMiddleware)
 		clientTelemetry.GET("/summary", h.proxyWithHeaders)
 	}
 	h.logger.Info("Registered client-telemetry proxy routes")
@@ -966,57 +967,78 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 	}
 	h.logger.Info("Registered aurora proxy routes (catch-all)")
 
-		// ==================== Missing Proxy Routes ====================
+	// ==================== Galaxy Routes ====================
+	galaxy := api.Group("/galaxy")
+	galaxy.Use(authMiddleware)
+	{
+		h.registerREST(galaxy, "/*path")
+	}
+	h.logger.Info("Registered galaxy proxy routes")
 
-		for _, r := range []struct {
-			prefix string
-			name   string
-		}{
-			{"/analytics", "analytics"},
-			{"/error-book", "error-book"},
-			{"/safe-experiments", "safe-experiments"},
-			{"/skills", "skills"},
-			{"/scenario-packs", "scenario-packs"},
-			{"/subtasks", "subtasks"},
-		} {
-			rg := api.Group(r.prefix)
-			rg.Use(authMiddleware)
-			h.registerREST(rg, "/*path")
-			h.logger.Info("Registered " + r.name + " proxy routes")
-		}
+	// ==================== Missing Proxy Routes ====================
 
-		// ==================== CQRS / DLQ Health Routes ====================
-		cqrs := api.Group("/cqrs")
-		cqrs.Use(authMiddleware)
-		{
-			cqrs.GET("/dlq/stats", h.proxyWithHeaders)
-		}
-		h.logger.Info("Registered CQRS DLQ proxy routes")
+	for _, r := range []struct {
+		prefix string
+		name   string
+	}{
+		{"/analytics", "analytics"},
+		{"/audit", "audit"},
+		{"/counterfactual", "counterfactual"},
+		{"/error-book", "error-book"},
+		{"/event-bus", "event-bus"},
+		{"/release-approvals", "release-approvals"},
+		{"/research", "research"},
+		{"/safe-experiments", "safe-experiments"},
+		{"/scenario-packs", "scenario-packs"},
+		{"/skills", "skills"},
+		{"/subtasks", "subtasks"},
+	} {
+		rg := api.Group(r.prefix)
+		rg.Use(authMiddleware)
+		h.registerREST(rg, "/*path")
+		h.logger.Info("Registered " + r.name + " proxy routes")
+	}
 
-		// ==================== Admin Event-Bus Health Routes ====================
-		adminEventBus := api.Group("/admin/event-bus")
-		adminEventBus.Use(authMiddleware, middleware.RequireAdmin)
-		{
-			adminEventBus.GET("/health", h.proxyWithHeaders)
-			adminEventBus.GET("/dlq", h.proxyWithHeaders)
-			adminEventBus.GET("/dlq/entries", h.proxyWithHeaders)
-			adminEventBus.POST("/dlq/replay", h.proxyWithHeaders)
-			adminEventBus.DELETE("/dlq/:message_id", h.proxyWithHeaders)
-			adminEventBus.GET("/lag", h.proxyWithHeaders)
-		}
-		h.logger.Info("Registered admin event-bus proxy routes")
+	// ==================== Admin Catch-All Routes ====================
+	admin := api.Group("/admin")
+	admin.Use(authMiddleware, middleware.RequireAdmin)
+	{
+		h.registerREST(admin, "/*path")
+	}
+	h.logger.Info("Registered admin proxy routes (catch-all)")
 
-		// ==================== DLQ Admin Routes ====================
-		dlq := api.Group("/dlq")
-		dlq.Use(authMiddleware, middleware.RequireAdmin)
-		{
-			dlq.GET("/", h.proxyWithHeaders)
-			dlq.GET("/main-events", h.proxyWithHeaders)
-			dlq.POST("/replay", h.proxyWithHeaders)
-		}
-		h.logger.Info("Registered DLQ admin proxy routes")
+	// ==================== CQRS / DLQ Health Routes ====================
+	cqrs := api.Group("/cqrs")
+	cqrs.Use(authMiddleware)
+	{
+		cqrs.GET("/dlq/stats", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered CQRS DLQ proxy routes")
 
-		// Health routes are handled locally by the gateway (setup.go) — do not proxy
+	// ==================== Admin Event-Bus Health Routes ====================
+	adminEventBus := api.Group("/admin/event-bus")
+	adminEventBus.Use(authMiddleware, middleware.RequireAdmin)
+	{
+		adminEventBus.GET("/health", h.proxyWithHeaders)
+		adminEventBus.GET("/dlq", h.proxyWithHeaders)
+		adminEventBus.GET("/dlq/entries", h.proxyWithHeaders)
+		adminEventBus.POST("/dlq/replay", h.proxyWithHeaders)
+		adminEventBus.DELETE("/dlq/:message_id", h.proxyWithHeaders)
+		adminEventBus.GET("/lag", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered admin event-bus proxy routes")
+
+	// ==================== DLQ Admin Routes ====================
+	dlq := api.Group("/dlq")
+	dlq.Use(authMiddleware, middleware.RequireAdmin)
+	{
+		dlq.GET("/", h.proxyWithHeaders)
+		dlq.GET("/main-events", h.proxyWithHeaders)
+		dlq.POST("/replay", h.proxyWithHeaders)
+	}
+	h.logger.Info("Registered DLQ admin proxy routes")
+
+	// Health routes are handled locally by the gateway (setup.go) — do not proxy
 }
 
 // proxyWithHeaders proxies request to Python Backend with user context headers

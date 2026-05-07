@@ -825,7 +825,7 @@ class GroupService:
         # Notify group owner/admins about the new member
         try:
             from app.schemas.notification import NotificationCreate
-            from app.services.notification_service import NotificationService
+            from app.services.notification_push_service import NotificationPushService
 
             admin_result = await db.execute(
                 select(GroupMember.user_id).where(
@@ -846,11 +846,11 @@ class GroupService:
             group_obj = await Group.get_by_id(db, group_id)
             group_name = group_obj.name if group_obj else "群组"
 
+            push_svc = NotificationPushService(db)
             for admin_id in admin_ids:
-                await NotificationService.create(
-                    db,
-                    admin_id,
-                    NotificationCreate(
+                await push_svc.create_and_push(
+                    recipient_user_id=admin_id,
+                    notification=NotificationCreate(
                         title="新成员加入群组",
                         content=f"{joiner_name} 加入了「{group_name}」",
                         type="community_group_join",
