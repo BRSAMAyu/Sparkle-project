@@ -3,7 +3,6 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Widget for displaying a plan progress share card preview
 ///
@@ -89,9 +88,7 @@ class PlanShareCard extends StatelessWidget {
                     ),
                     if (progress != null)
                       Text(
-                        I18nService.instance.isChinese
-                            ? '进度 ${(_progressPercent!)}%'
-                            : 'Progress ${(_progressPercent!)}%',
+                        context.l10n.communityShareProgress(_progressPercent!),
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: DS.textTertiary,
@@ -249,7 +246,7 @@ class PlanShareCard extends StatelessWidget {
                             if (deadline != null) ...[
                               _buildStat(
                                 context.l10n.communityShareDeadline,
-                                _formatDeadline(deadline!),
+                                _formatDeadline(context, deadline!),
                                 Icons.calendar_today,
                               ),
                             ],
@@ -326,18 +323,16 @@ class PlanShareCard extends StatelessWidget {
         ],
       );
 
-  String _formatDeadline(DateTime date) {
+  String _formatDeadline(BuildContext context, DateTime date) {
     final now = DateTime.now();
     final diff = date.difference(now);
 
     if (diff.inDays < 0) {
-      return S.communityShareExpired;
+      return context.l10n.communityShareExpired;
     } else if (diff.inDays == 0) {
-      return S.communityShareToday;
+      return context.l10n.communityShareToday;
     } else if (diff.inDays < 7) {
-      return I18nService.instance.isChinese
-          ? '${diff.inDays}天后'
-          : 'in ${diff.inDays} days';
+      return context.l10n.communityShareDaysLater(diff.inDays);
     } else {
       return '${date.month}/${date.day}';
     }

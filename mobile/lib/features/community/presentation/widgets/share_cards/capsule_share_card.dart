@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 
 /// Purple color constant for capsule cards
@@ -208,13 +207,11 @@ class CapsuleShareCard extends StatelessWidget {
                     // Stats row
                     Row(
                       children: [
-                        if (depth != null) _buildDepthIndicator(depth!),
+                        if (depth != null) _buildDepthIndicator(context, depth!),
                         if (wordCount != null) ...[
                           const SizedBox(width: DS.md),
                           _buildStat(
-                            I18nService.instance.isChinese
-                                ? '${wordCount}字'
-                                : '$wordCount words',
+                            context.l10n.communityShareWordCount(wordCount!),
                             Icons.edit_note,
                           ),
                         ],
@@ -274,7 +271,7 @@ class CapsuleShareCard extends StatelessWidget {
         _ => Icons.hourglass_empty,
       };
 
-  Widget _buildDepthIndicator(int depth) => Container(
+  Widget _buildDepthIndicator(BuildContext context, int depth) => Container(
         padding: const EdgeInsets.symmetric(
           horizontal: DS.sm,
           vertical: DS.xs,
@@ -293,9 +290,7 @@ class CapsuleShareCard extends StatelessWidget {
             ),
             const SizedBox(width: DS.xs),
             Text(
-              I18nService.instance.isChinese
-                  ? '深度 Lv.$depth'
-                  : 'Depth Lv.$depth',
+              context.l10n.communityShareDepthLevel(depth),
               style: TextStyle(
                 fontSize: DS.fontSizeXs,
                 fontWeight: DS.fontWeightBold,

@@ -231,7 +231,7 @@ Map<String, dynamic> _$PendingPoliciesSummaryInfoToJson(
 RecentReflectionsSummaryInfo _$RecentReflectionsSummaryInfoFromJson(
         Map<String, dynamic> json) =>
     RecentReflectionsSummaryInfo(
-      count: (json['count'] as num?)?.toInt() ?? 0,
+      count: (json['count'] as num).toInt(),
       lastCategory: json['last_category'] as String?,
       lastAt: json['last_at'] == null
           ? null
@@ -249,8 +249,8 @@ Map<String, dynamic> _$RecentReflectionsSummaryInfoToJson(
 ForesightConfidenceInfo _$ForesightConfidenceInfoFromJson(
         Map<String, dynamic> json) =>
     ForesightConfidenceInfo(
-      dim: json['dim'] as String? ?? '',
-      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      dim: json['dim'] as String,
+      confidence: (json['confidence'] as num).toDouble(),
     );
 
 Map<String, dynamic> _$ForesightConfidenceInfoToJson(
@@ -263,11 +263,11 @@ Map<String, dynamic> _$ForesightConfidenceInfoToJson(
 ForesightHintSummaryInfo _$ForesightHintSummaryInfoFromJson(
         Map<String, dynamic> json) =>
     ForesightHintSummaryInfo(
+      deviationCount: (json['deviation_count'] as num).toInt(),
       hintText: json['hint_text'] as String?,
       generatedAt: json['generated_at'] == null
           ? null
           : DateTime.parse(json['generated_at'] as String),
-      deviationCount: (json['deviation_count'] as num?)?.toInt() ?? 0,
       attractorConfidences: (json['attractor_confidences'] as List<dynamic>?)
               ?.map((e) =>
                   ForesightConfidenceInfo.fromJson(e as Map<String, dynamic>))

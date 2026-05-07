@@ -3,7 +3,6 @@ import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 
 /// Widget for displaying a task share card preview
 ///
@@ -89,9 +88,7 @@ class TaskShareCard extends StatelessWidget {
                     ),
                     if (duration != null)
                       Text(
-                        I18nService.instance.isChinese
-                            ? '完成 · ${duration}分钟'
-                            : 'Completed · ${duration} min',
+                        context.l10n.chatTaskCompletedDoneMinutes(duration!),
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: DS.textTertiary,
@@ -218,27 +215,19 @@ class TaskShareCard extends StatelessWidget {
                           children: [
                             if (duration != null)
                               _buildStat(
-                                I18nService.instance.isChinese
-                                    ? '时长'
-                                    : 'Duration',
+                                context.l10n.communityShareDuration,
                                 '${duration}m',
                               ),
                             if (points != null) ...[
                               _buildStat(
-                                I18nService.instance.isChinese
-                                    ? '积分'
-                                    : 'Points',
+                                context.l10n.communitySharePoints,
                                 '+$points',
                               ),
                             ],
                             if (streak != null && streak! > 0) ...[
                               _buildStat(
-                                I18nService.instance.isChinese
-                                    ? '连胜'
-                                    : 'Streak',
-                                I18nService.instance.isChinese
-                                    ? '$streak 天'
-                                    : '$streak days',
+                                context.l10n.communityShareStreak,
+                                context.l10n.communityShareStreakDays(streak!),
                               ),
                             ],
                           ],
@@ -247,7 +236,7 @@ class TaskShareCard extends StatelessWidget {
                         if (completedAt != null) ...[
                           const SizedBox(height: DS.sm),
                           Text(
-                            _formatTime(completedAt!),
+                            _formatTime(context, completedAt!),
                             style: TextStyle(
                               fontSize: DS.fontSizeXs,
                               color: DS.textTertiary,
@@ -303,20 +292,16 @@ class TaskShareCard extends StatelessWidget {
         ],
       );
 
-  String _formatTime(DateTime time) {
+  String _formatTime(BuildContext context, DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
 
     if (diff.inMinutes < 1) {
-      return S.communityShareJustNow;
+      return context.l10n.communityShareJustNow;
     } else if (diff.inHours < 1) {
-      return I18nService.instance.isChinese
-          ? '${diff.inMinutes}分钟前'
-          : '${diff.inMinutes}m ago';
+      return context.l10n.communityShareMinutesAgo(diff.inMinutes);
     } else if (diff.inDays < 1) {
-      return I18nService.instance.isChinese
-          ? '${diff.inHours}小时前'
-          : '${diff.inHours}h ago';
+      return context.l10n.communityShareHoursAgo(diff.inHours);
     } else {
       return '${time.month}/${time.day}';
     }

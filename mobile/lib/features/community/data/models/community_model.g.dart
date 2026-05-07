@@ -557,10 +557,10 @@ GroupListItem _$GroupListItemFromJson(Map<String, dynamic> json) =>
           ? null
           : DateTime.parse(json['deadline'] as String),
       daysRemaining: (json['days_remaining'] as num?)?.toInt(),
+      sprintGoal: json['sprint_goal'] as String?,
       isPublic: json['is_public'] as bool? ?? true,
       joinRequiresApproval: json['join_requires_approval'] as bool? ?? false,
       activityScore: (json['activity_score'] as num?)?.toDouble(),
-      sprintGoal: json['sprint_goal'] as String?,
       myRole: $enumDecodeNullable(_$GroupRoleEnumMap, json['my_role']),
     );
 

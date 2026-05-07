@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -81,8 +82,7 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
     if (skinConfigJson != null) {
       try {
         _skinConfig = Map<String, dynamic>.from(
-          // 简单的JSON解析（实际项目中应该用dart:convert）
-          _parseSimpleJson(skinConfigJson),
+          jsonDecode(skinConfigJson) as Map,
         );
       } catch (e) {
         // 解析失败，忽略皮肤配置
@@ -277,62 +277,11 @@ class ThemeManager extends ChangeNotifier with WidgetsBindingObserver {
     // 🆕 保存商城皮肤配置
     if (_equippedSkinId != null) {
       await prefs.setString('equipped_skin_id', _equippedSkinId!);
-      await prefs.setString('skin_config', _stringifySimpleJson(_skinConfig));
+      await prefs.setString('skin_config', jsonEncode(_skinConfig));
     } else {
       await prefs.remove('equipped_skin_id');
       await prefs.remove('skin_config');
     }
-  }
-
-  /// 简单的JSON字符串解析（用于皮肤配置）
-  Map<String, dynamic> _parseSimpleJson(String jsonStr) {
-    // 简化版解析，实际应该用 dart:convert
-    final result = <String, dynamic>{};
-    final cleanStr = jsonStr.replaceAll('{', '').replaceAll('}', '').trim();
-    if (cleanStr.isEmpty) return result;
-
-    final pairs = cleanStr.split(',');
-    for (final pair in pairs) {
-      final parts = pair.split(':');
-      if (parts.length == 2) {
-        final key = parts[0].trim().replaceAll('"', '').replaceAll("'", '');
-        final value = parts[1].trim();
-        if (value.startsWith('[') && value.endsWith(']')) {
-          // 数组
-          final arrayStr = value.substring(1, value.length - 1);
-          result[key] = arrayStr.isEmpty
-              ? <String>[]
-              : arrayStr
-                  .split(',')
-                  .map((e) => e.trim().replaceAll('"', '').replaceAll("'", ''))
-                  .toList();
-        } else {
-          result[key] = value.replaceAll('"', '').replaceAll("'", '');
-        }
-      }
-    }
-    return result;
-  }
-
-  /// 简单的JSON字符串化（用于皮肤配置）
-  String _stringifySimpleJson(Map<String, dynamic>? map) {
-    if (map == null) return '{}';
-    final buffer = StringBuffer()..write('{');
-    var first = true;
-    map.forEach((key, value) {
-      if (!first) buffer.write(', ');
-      first = false;
-      buffer.write('"$key": ');
-      if (value is List) {
-        buffer.write('[${value.map((e) => '"$e"').join(', ')}]');
-      } else if (value is String) {
-        buffer.write('"$value"');
-      } else {
-        buffer.write('$value');
-      }
-    });
-    buffer.write('}');
-    return buffer.toString();
   }
 
   @override

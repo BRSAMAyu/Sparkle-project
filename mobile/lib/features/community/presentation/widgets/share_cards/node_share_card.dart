@@ -87,7 +87,7 @@ class NodeShareCard extends StatelessWidget {
                     ),
                     if (masteryLevel != null)
                       Text(
-                        '掌握度 ${(_masteryPercent!)}%',
+                        context.l10n.communityShareMastery(_masteryPercent!),
                         style: TextStyle(
                           fontSize: DS.fontSizeXs,
                           color: DS.textTertiary,
@@ -285,14 +285,14 @@ class NodeShareCard extends StatelessWidget {
                         if (learningTime != null)
                           _buildStat(
                             context.l10n.communityShareLearning,
-                            '${learningTime}分钟',
+                            context.l10n.communityShareLearningMinutes(learningTime!),
                             Icons.timer_outlined,
                           ),
                         if (connections != null && connections! > 0) ...[
                           const SizedBox(width: DS.md),
                           _buildStat(
                             context.l10n.communityShareConnections,
-                            '$connections个',
+                            context.l10n.communityShareConnectionsCount(connections!),
                             Icons.hub,
                           ),
                         ],
