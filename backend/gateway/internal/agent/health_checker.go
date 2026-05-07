@@ -27,6 +27,12 @@ var (
 		Name: "sparkle_grpc_circuit_breaker_transitions_total",
 		Help: "Total circuit breaker state transitions",
 	}, []string{"from", "to"})
+
+	grpcCallDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Name:    "sparkle_grpc_call_duration_seconds",
+		Help:    "gRPC call latency in seconds, labelled by method and status",
+		Buckets: []float64{.01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 30},
+	}, []string{"method", "status"})
 )
 
 // CircuitState represents the state of a circuit breaker

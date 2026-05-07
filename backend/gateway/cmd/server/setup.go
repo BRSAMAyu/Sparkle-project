@@ -276,7 +276,11 @@ func initHandlers(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client,
 	authHandler := handler.NewAuthHandler(cfg, appleAuthService, services.appleAccount)
 
 	// Galaxy handler for knowledge graph endpoints
-	galaxyHandler := handler.NewGalaxyHandler(galaxyClient, rdb, cfg.BackendURL)
+	var galaxyCommandService *service.GalaxyCommandService
+	if dbh.pool != nil {
+		galaxyCommandService = service.NewGalaxyCommandService(dbh.pool)
+	}
+	galaxyHandler := handler.NewGalaxyHandler(galaxyClient, galaxyCommandService, rdb, cfg.BackendURL)
 
 	return &handlerBundle{
 		wsFactory:               wsFactory,

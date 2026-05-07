@@ -158,7 +158,12 @@ def _build_service(db: AsyncSession, node_statuses: dict[UUID, UserNodeStatus]):
     """
     redis_mock = MagicMock()
 
-    with patch("app.services.error_book_mastery_sync_service.GalaxyStatsService"):
+    with patch("app.services.error_book_mastery_sync_service.GalaxyStatsService") as MockStatsCls:
+        mock_stats_instance = MagicMock()
+        mock_stats_instance._calculate_next_review = MagicMock(
+            return_value=datetime.now(timezone.utc) + timedelta(days=3)
+        )
+        MockStatsCls.return_value = mock_stats_instance
         service = ErrorBookMasterySyncService(db, redis_mock)
 
     # Stub the GalaxyService write path to operate on our in-memory statuses.
@@ -870,9 +875,17 @@ async def test_diagnosis_increments_study_count(
 
     service = _build_service(db_session, {node.id: status})
     await service.apply_error_diagnosis(seeded_user.id, error)
+    await db_session.commit()
 
-    await db_session.refresh(status)
-    assert status.study_count == initial_study_count + 1
+    # Re-query to get the latest state from DB
+    result = await db_session.execute(
+        select(UserNodeStatus).where(
+            UserNodeStatus.user_id == seeded_user.id,
+            UserNodeStatus.node_id == node.id,
+        )
+    )
+    refreshed = result.scalar_one()
+    assert refreshed.study_count == initial_study_count + 1
 
 
 # ===========================================================================

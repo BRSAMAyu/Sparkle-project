@@ -347,41 +347,56 @@ func (c *Client) injectMetadata(ctx context.Context, userID string) context.Cont
 }
 
 func (c *Client) StreamChat(ctx context.Context, req *agentv1.ChatRequest) (agentv1.AgentService_StreamChatClient, error) {
+	start := time.Now()
 	outCtx := c.injectMetadata(ctx, req.UserId)
 	stream, err := c.currentAPI().StreamChat(outCtx, req)
 	if !shouldReconnect(err) {
+		grpcCallDuration.WithLabelValues("StreamChat", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return stream, err
 	}
 	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		grpcCallDuration.WithLabelValues("StreamChat", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return nil, err
 	}
 	// Use fresh context with fresh timeout after reconnection
 	retryCtx := c.injectMetadata(ctx, req.UserId)
-	return c.currentAPI().StreamChat(retryCtx, req)
+	stream, retryErr := c.currentAPI().StreamChat(retryCtx, req)
+	grpcCallDuration.WithLabelValues("StreamChat", statusCodeLabel(retryErr)).Observe(time.Since(start).Seconds())
+	return stream, retryErr
 }
 
 func (c *Client) SubmitResponseFeedback(ctx context.Context, req *agentv1.ResponseFeedbackRequest) (*agentv1.ResponseFeedbackResponse, error) {
+	start := time.Now()
 	outCtx := c.injectMetadata(ctx, req.UserId)
 	resp, err := c.currentAPI().SubmitResponseFeedback(outCtx, req)
 	if !shouldReconnect(err) {
+		grpcCallDuration.WithLabelValues("SubmitResponseFeedback", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return resp, err
 	}
 	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		grpcCallDuration.WithLabelValues("SubmitResponseFeedback", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return nil, err
 	}
-	return c.currentAPI().SubmitResponseFeedback(outCtx, req)
+	resp, retryErr := c.currentAPI().SubmitResponseFeedback(outCtx, req)
+	grpcCallDuration.WithLabelValues("SubmitResponseFeedback", statusCodeLabel(retryErr)).Observe(time.Since(start).Seconds())
+	return resp, retryErr
 }
 
 func (c *Client) SubmitPlanReview(ctx context.Context, req *agentv1.PlanReviewRequest) (*agentv1.PlanReviewResponse, error) {
+	start := time.Now()
 	outCtx := c.injectMetadata(ctx, req.UserId)
 	resp, err := c.currentAPI().SubmitPlanReview(outCtx, req)
 	if !shouldReconnect(err) {
+		grpcCallDuration.WithLabelValues("SubmitPlanReview", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return resp, err
 	}
 	if reconnectErr := c.reconnect(ctx); reconnectErr != nil {
+		grpcCallDuration.WithLabelValues("SubmitPlanReview", statusCodeLabel(err)).Observe(time.Since(start).Seconds())
 		return nil, err
 	}
-	return c.currentAPI().SubmitPlanReview(outCtx, req)
+	resp, retryErr := c.currentAPI().SubmitPlanReview(outCtx, req)
+	grpcCallDuration.WithLabelValues("SubmitPlanReview", statusCodeLabel(retryErr)).Observe(time.Since(start).Seconds())
+	return resp, retryErr
 }
 
 // ── Missing RPC wrappers (P0-4) ──────────────────────────────────────
@@ -552,4 +567,15 @@ func (c *Client) GetArbitrationQueueStats(ctx context.Context, req *agentv1.GetA
 		return nil, err
 	}
 	return c.currentAPI().GetArbitrationQueueStats(outCtx, req)
+}
+
+// statusCodeLabel returns a short string label for the grpc status code for metrics.
+func statusCodeLabel(err error) string {
+	if err == nil {
+		return "ok"
+	}
+	if st, ok := status.FromError(err); ok {
+		return st.Code().String()
+	}
+	return "unknown"
 }

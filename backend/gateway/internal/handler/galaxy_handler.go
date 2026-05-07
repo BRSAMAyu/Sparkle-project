@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -12,8 +13,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	redisv9 "github.com/redis/go-redis/v9"
 	"github.com/sparkle/gateway/internal/galaxy"
+	"github.com/sparkle/gateway/internal/service"
 )
 
 // GalaxyHandler handles HTTP requests for the Galaxy service.
@@ -21,15 +24,17 @@ import (
 // High-frequency endpoints (spark, mastery) use gRPC direct calls.
 // Other endpoints proxy to Python backend.
 type GalaxyHandler struct {
-	galaxyClient *galaxy.Client
-	cache        *redisv9.Client
-	backendURL   string
-	proxy        *httputil.ReverseProxy
+	galaxyClient  *galaxy.Client
+	galaxyCommand *service.GalaxyCommandService
+	cache         *redisv9.Client
+	backendURL    string
+	proxy         *httputil.ReverseProxy
 }
 
 // NewGalaxyHandler creates a new GalaxyHandler.
 func NewGalaxyHandler(
 	galaxyClient *galaxy.Client,
+	galaxyCommand *service.GalaxyCommandService,
 	cache *redisv9.Client,
 	backendURL string,
 ) *GalaxyHandler {
@@ -47,10 +52,11 @@ func NewGalaxyHandler(
 	}
 
 	return &GalaxyHandler{
-		galaxyClient: galaxyClient,
-		cache:        cache,
-		backendURL:   backendURL,
-		proxy:        proxy,
+		galaxyClient:  galaxyClient,
+		galaxyCommand: galaxyCommand,
+		cache:         cache,
+		backendURL:    backendURL,
+		proxy:         proxy,
 	}
 }
 
@@ -71,11 +77,14 @@ func (h *GalaxyHandler) RegisterRoutes(r *gin.RouterGroup, authMiddleware gin.Ha
 		galaxy.POST("/node/:id/update-mastery", h.UpdateMastery)
 		// route-tier: authed
 		galaxy.POST("/nodes/:id/update-mastery", h.UpdateMastery)
+		// route-tier: authed — record study session via Go CQRS
+		galaxy.POST("/node/:id/study", h.RecordStudy)
+		galaxy.POST("/nodes/:id/study", h.RecordStudy)
 
 		// Read-heavy graph endpoints are used by page rendering and AI context hydration.
 		// Do not put them behind the tight shared rate limiter, or normal navigation can
 		// sporadically fail with 429 and break the knowledge graph experience.
-		galaxy.GET("/graph", h.ProxyToBackend)
+		galaxy.GET("/graph", h.GetGraph)
 		galaxy.GET("/contribution-stats", h.ProxyToBackend)
 		galaxy.GET("/nodes", h.ProxyToBackend)
 		galaxy.POST("/nodes", h.ProxyToBackend)
@@ -167,9 +176,32 @@ func (h *GalaxyHandler) SparkNode(c *gin.Context) {
 		req.StudyMinutes = 1
 	}
 
-	// Keep spark on the REST path until gRPC has a dedicated study_minutes field/RPC.
-	// UpdateNodeMastery expects an absolute mastery score, so sending study_minutes there
-	// would overwrite progress with corrupted values.
+	// Try gRPC RecordNodeInteraction with study_minutes / task_id in metadata.
+	metadata := map[string]string{
+		"study_minutes": fmt.Sprintf("%d", req.StudyMinutes),
+	}
+	if req.TaskID != "" {
+		metadata["task_id"] = req.TaskID
+	}
+
+	if h.galaxyClient != nil {
+		resp, grpcErr := h.galaxyClient.RecordNodeInteraction(
+			context.Background(), userID, nodeID, "study", metadata,
+		)
+		if grpcErr == nil && resp != nil && resp.Success {
+			c.JSON(http.StatusOK, gin.H{
+				"success":       true,
+				"node_id":       nodeID,
+				"study_minutes": req.StudyMinutes,
+				"task_id":       req.TaskID,
+				"via":           "grpc",
+			})
+			return
+		}
+		log.Printf("Galaxy SparkNode gRPC failed, falling back to REST: %v", grpcErr)
+	}
+
+	// Fallback to REST proxy
 	c.Request.Body = io.NopCloser(bytes.NewReader(rawBody))
 	h.ProxyToBackend(c)
 }
@@ -250,6 +282,71 @@ func (h *GalaxyHandler) UpdateMastery(c *gin.Context) {
 	})
 }
 
+// RecordStudy handles POST /galaxy/nodes/:id/study
+// Records a study session for a knowledge node via Go CQRS command service.
+func (h *GalaxyHandler) RecordStudy(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	nodeID := c.Param("id")
+	if nodeID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "node_id required"})
+		return
+	}
+
+	var req struct {
+		Minutes          int     `json:"minutes"`
+		PerformanceScore float64 `json:"performance_score"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+	if req.Minutes <= 0 {
+		req.Minutes = 1
+	}
+	if req.PerformanceScore <= 0 {
+		req.PerformanceScore = 0.5
+	}
+
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid user_id"})
+		return
+	}
+	parsedNodeID, err := uuid.Parse(nodeID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid node_id"})
+		return
+	}
+
+	if h.galaxyCommand == nil {
+		h.ProxyToBackend(c)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	if err := h.galaxyCommand.RecordStudy(ctx, parsedUserID, parsedNodeID, int32(req.Minutes), req.PerformanceScore); err != nil {
+		log.Printf("RecordStudy CQRS failed for node %s user %s: %v", nodeID, hashUserIDForLog(userID), err)
+		h.ProxyToBackend(c)
+		return
+	}
+
+	h.invalidateGalaxyGraphCache(ctx, userID)
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"node_id": nodeID,
+		"minutes": req.Minutes,
+		"via":     "cqs",
+	})
+}
+
 func (h *GalaxyHandler) invalidateGalaxyGraphCache(ctx context.Context, userID string) {
 	if h.cache == nil || userID == "" {
 		return
@@ -275,6 +372,34 @@ func (h *GalaxyHandler) invalidateGalaxyGraphCache(ctx context.Context, userID s
 	if err := h.cache.Del(ctx, keys...).Err(); err != nil {
 		log.Printf("Failed to delete galaxy cache pattern for user %s: %v", hashUserIDForLog(userID), err)
 	}
+}
+
+// GetGraph handles GET /galaxy/graph via gRPC with REST fallback.
+func (h *GalaxyHandler) GetGraph(c *gin.Context) {
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
+		return
+	}
+
+	if h.galaxyClient != nil {
+		ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
+		defer cancel()
+
+		resp, err := h.galaxyClient.GetUserGalaxy(ctx, userID)
+		if err == nil && resp != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"nodes":       resp.Nodes,
+				"edges":       resp.Edges,
+				"total_nodes": resp.TotalNodes,
+				"via":         "grpc",
+			})
+			return
+		}
+		log.Printf("Galaxy GetGraph gRPC failed, falling back to REST: %v", err)
+	}
+
+	h.ProxyToBackend(c)
 }
 
 // ProxyToBackend proxies requests to the Python backend.
