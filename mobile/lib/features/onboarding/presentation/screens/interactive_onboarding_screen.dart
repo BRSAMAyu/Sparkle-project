@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/experience/experience_profile.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -12,6 +13,8 @@ import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/widgets/scene_audio_scope.dart';
 import 'package:sparkle/features/home/presentation/widgets/understanding_panel.dart';
 import 'package:sparkle/features/onboarding/presentation/widgets/architecture_animation.dart';
+
+const _kOnboardingPageKey = 'onboarding_current_page';
 
 /// 交互式引导流程 - Week 7
 ///
@@ -48,12 +51,27 @@ class _InteractiveOnboardingScreenState
   void initState() {
     super.initState();
     unawaited(_loadPermissionStatuses());
+    unawaited(_restorePage());
   }
 
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  Future<void> _restorePage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getInt(_kOnboardingPageKey);
+    if (saved != null && saved > 0 && saved < _totalPages && mounted) {
+      _currentPage = saved;
+      _pageController.jumpToPage(saved);
+    }
+  }
+
+  Future<void> _persistPage() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_kOnboardingPageKey, _currentPage);
   }
 
   Future<void> _loadPermissionStatuses() async {
@@ -111,13 +129,20 @@ class _InteractiveOnboardingScreenState
         ),
       );
     } else {
+      unawaited(_clearSavedPage());
       widget.onComplete();
     }
   }
 
   void _skipAll() {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
+    unawaited(_clearSavedPage());
     widget.onComplete();
+  }
+
+  Future<void> _clearSavedPage() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_kOnboardingPageKey);
   }
 
   @override
@@ -146,6 +171,7 @@ class _InteractiveOnboardingScreenState
                     controller: _pageController,
                     onPageChanged: (index) {
                       setState(() => _currentPage = index);
+                      unawaited(_persistPage());
                       unawaited(
                         SensoryFeedbackService.emit(
                           SensoryFeedbackEvent.navigation,

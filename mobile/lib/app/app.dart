@@ -17,6 +17,7 @@ import 'package:sparkle/core/services/unified_push_service.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/features/aurora/presentation/providers/emotion_state_provider.dart';
 import 'package:sparkle/features/auth/presentation/providers/auth_provider.dart';
+import 'package:sparkle/features/settings/presentation/providers/accessibility_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 
 /// Provider for initializing push service once
@@ -91,14 +92,17 @@ class _SparkleAppState extends ConsumerState<SparkleApp> {
       supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
+        final accessibility = ref.watch(accessibilitySettingsProvider);
         return _ThemeTransitionShell(
           theme: Theme.of(context),
           child: MediaQuery(
             data: mediaQuery.copyWith(
-              textScaler: mediaQuery.textScaler.clamp(
-                minScaleFactor: 0.85,
-                maxScaleFactor: 1.35,
-              ),
+              textScaler: accessibility.isLoaded
+                  ? TextScaler.linear(accessibility.fontScale)
+                  : mediaQuery.textScaler.clamp(
+                      minScaleFactor: 0.85,
+                      maxScaleFactor: 1.35,
+                    ),
             ),
             child: PulseScope(
               child: EmotionResponsiveAppWrapper(

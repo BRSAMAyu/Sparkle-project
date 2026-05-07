@@ -353,7 +353,7 @@ func initCQRS(ctx context.Context, cfg *config.Config, dbh *databaseHandles, rdb
 	}
 
 	commCmdService := service.NewCommunityCommandService(dbh.pool)
-	commQueryService := service.NewCommunityQueryService(rdb)
+	commQueryService := service.NewCommunityQueryService(rdb, dbh.pool)
 	_ = commCmdService
 	_ = commQueryService
 

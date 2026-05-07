@@ -112,11 +112,12 @@ class _MyFriendsTab extends ConsumerWidget {
   const _MyFriendsTab();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) => const FriendsHubView(
-        padding: EdgeInsets.fromLTRB(16, 16, 16, 24),
+  Widget build(BuildContext context, WidgetRef ref) => FriendsHubView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        onFriendLongPress: (friend) =>
+            _showFriendContextMenu(context, ref, friend),
       );
 
-  // ignore: unused_element
   void _showFriendContextMenu(
     BuildContext context,
     WidgetRef ref,

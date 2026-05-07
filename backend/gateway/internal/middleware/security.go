@@ -8,16 +8,11 @@ import (
 // SecurityHeadersMiddleware adds security-related headers to every response
 func SecurityHeadersMiddleware(cfg ...*config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Content-Security-Policy: 更严格的策略
-		// 注意: 移除了 script-src 的 'unsafe-inline' 和 'unsafe-eval'
-		// 如果前端需要内联脚本，需要使用 nonce 或 hash 机制
-		// style-src keeps 'unsafe-inline' for framework/runtime-injected styles.
-		// Inline scripts stay blocked above; migrate styles to nonce/hash when the
-		// Flutter web/admin surfaces no longer require dynamic style attributes.
+		// Content-Security-Policy: strict CSP without unsafe-inline
 		c.Header("Content-Security-Policy",
 			"default-src 'self'; "+
 				"script-src 'self'; "+
-				"style-src 'self' 'unsafe-inline'; "+
+				"style-src 'self'; "+
 				"img-src 'self' data: https:; "+
 				"connect-src 'self' wss: https:; "+
 				"font-src 'self'; "+

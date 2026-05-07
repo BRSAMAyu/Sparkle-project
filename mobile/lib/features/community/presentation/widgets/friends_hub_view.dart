@@ -17,10 +17,12 @@ import 'package:sparkle/features/community/presentation/providers/community_prov
 class FriendsHubView extends ConsumerWidget {
   const FriendsHubView({
     this.padding = const EdgeInsets.fromLTRB(12, 12, 12, 24),
+    this.onFriendLongPress,
     super.key,
   });
 
   final EdgeInsets padding;
+  final void Function(FriendshipInfo friend)? onFriendLongPress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -98,6 +100,9 @@ class FriendsHubView extends ConsumerWidget {
             child: _FriendCard(
               friendship: friends[friendIndex],
               overview: overview,
+              onLongPress: onFriendLongPress != null
+                  ? () => onFriendLongPress!(friends[friendIndex])
+                  : null,
             ),
           );
         },
@@ -455,10 +460,12 @@ class _FriendCard extends StatelessWidget {
   const _FriendCard({
     required this.friendship,
     required this.overview,
+    this.onLongPress,
   });
 
   final FriendshipInfo friendship;
   final AccountabilityOverviewInfo? overview;
+  final VoidCallback? onLongPress;
 
   @override
   Widget build(BuildContext context) {
@@ -489,6 +496,7 @@ class _FriendCard extends StatelessWidget {
             : null,
       ),
       child: GraphiteCardSurface(
+        onLongPress: onLongPress,
         onTap: () {
           if (accountability?.isPending == true) {
             unawaited(context.pushNamed('friendRequests'));

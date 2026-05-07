@@ -13,6 +13,30 @@ service GalaxyService {
 
   // SyncCollaborativeGalaxy syncs CRDT updates for a collaborative galaxy.
   rpc SyncCollaborativeGalaxy(SyncCollaborativeGalaxyRequest) returns (SyncCollaborativeGalaxyResponse);
+
+  // Get a user's knowledge graph overview
+  rpc GetUserGalaxy(GetUserGalaxyRequest) returns (GetUserGalaxyResponse);
+
+  // Get detailed node information
+  rpc GetNodeDetail(GetNodeDetailRequest) returns (GetNodeDetailResponse);
+
+  // Search nodes by keyword
+  rpc SearchNodes(SearchNodesRequest) returns (SearchNodesResponse);
+
+  // Get learning path between two nodes
+  rpc GetLearningPath(GetLearningPathRequest) returns (GetLearningPathResponse);
+
+  // Get node prerequisites and dependencies
+  rpc GetNodeDependencies(GetNodeDependenciesRequest) returns (GetNodeDependenciesResponse);
+
+  // Record a learning interaction with a node
+  rpc RecordNodeInteraction(RecordNodeInteractionRequest) returns (RecordNodeInteractionResponse);
+
+  // Get galaxy statistics for a user
+  rpc GetGalaxyStats(GetGalaxyStatsRequest) returns (GetGalaxyStatsResponse);
+
+  // Get recommended next nodes to study
+  rpc GetRecommendedNodes(GetRecommendedNodesRequest) returns (GetRecommendedNodesResponse);
 }
 
 message CollaborativeGalaxyUpdate {
@@ -53,4 +77,117 @@ message UpdateNodeMasteryResponse {
   string reason = 4;
   string request_id = 5;
   int64 current_revision = 6; // The latest revision on server
+}
+
+// ============================================================================
+// Galaxy Overview & Navigation
+// ============================================================================
+
+message GetUserGalaxyRequest {
+  string user_id = 1;
+}
+
+message GetUserGalaxyResponse {
+  string user_id = 1;
+  repeated GalaxyNode nodes = 2;
+  repeated GalaxyEdge edges = 3;
+  int32 total_nodes = 4;
+}
+
+message GalaxyNode {
+  string node_id = 1;
+  string label = 2;
+  string node_type = 3; // e.g. "concept", "skill", "topic"
+  int32 mastery = 4;
+  repeated string tags = 5;
+}
+
+message GalaxyEdge {
+  string source_id = 1;
+  string target_id = 2;
+  string relation = 3; // e.g. "prerequisite", "related", "parent"
+}
+
+message GetNodeDetailRequest {
+  string user_id = 1;
+  string node_id = 2;
+}
+
+message GetNodeDetailResponse {
+  string node_id = 1;
+  string label = 2;
+  string node_type = 3;
+  int32 mastery = 4;
+  string description = 5;
+  repeated string tags = 6;
+  repeated string parent_ids = 7;
+  repeated string child_ids = 8;
+  map<string, string> metadata = 9;
+}
+
+message SearchNodesRequest {
+  string user_id = 1;
+  string query = 2;
+  int32 limit = 3;
+}
+
+message SearchNodesResponse {
+  repeated GalaxyNode nodes = 1;
+  int32 total_found = 2;
+}
+
+message GetLearningPathRequest {
+  string user_id = 1;
+  string from_node_id = 2;
+  string to_node_id = 3;
+}
+
+message GetLearningPathResponse {
+  repeated string node_ids = 1;
+  repeated GalaxyEdge edges = 2;
+  bool path_found = 3;
+}
+
+message GetNodeDependenciesRequest {
+  string user_id = 1;
+  string node_id = 2;
+}
+
+message GetNodeDependenciesResponse {
+  repeated string prerequisite_ids = 1;
+  repeated string dependent_ids = 2;
+}
+
+message RecordNodeInteractionRequest {
+  string user_id = 1;
+  string node_id = 2;
+  string interaction_type = 3; // e.g. "view", "study", "quiz", "review"
+  map<string, string> metadata = 4;
+}
+
+message RecordNodeInteractionResponse {
+  bool success = 1;
+}
+
+message GetGalaxyStatsRequest {
+  string user_id = 1;
+}
+
+message GetGalaxyStatsResponse {
+  int32 total_nodes = 1;
+  int32 mastered_nodes = 2;
+  int32 in_progress_nodes = 3;
+  int32 not_started_nodes = 4;
+  double average_mastery = 5;
+  map<string, int32> nodes_by_type = 6;
+}
+
+message GetRecommendedNodesRequest {
+  string user_id = 1;
+  int32 limit = 2;
+}
+
+message GetRecommendedNodesResponse {
+  repeated GalaxyNode nodes = 1;
+  repeated string reasons = 2;
 }

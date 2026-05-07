@@ -136,6 +136,7 @@ class GraphiteCardSurface extends StatelessWidget {
     this.padding = const EdgeInsets.all(20),
     this.margin,
     this.onTap,
+    this.onLongPress,
     this.borderColor,
     this.backgroundColor,
     this.surfaceRole,
@@ -146,6 +147,7 @@ class GraphiteCardSurface extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final EdgeInsetsGeometry? margin;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final Color? borderColor;
   final Color? backgroundColor;
   final SparkleSurfaceRole? surfaceRole;
@@ -177,9 +179,10 @@ class GraphiteCardSurface extends StatelessWidget {
       child: child,
     );
 
-    if (onTap == null) return content;
+    if (onTap == null && onLongPress == null) return content;
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       borderRadius: BorderRadius.circular(24),
       child: content,
     );
