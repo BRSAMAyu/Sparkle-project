@@ -51,7 +51,10 @@ from app.models import (
 from app.models.shop import PhotonTransactionHistory, PhotonTransactionType
 
 DEMO_USERNAME = os.getenv("LOCAL_SMOKE_USERNAME", "chat_test")
-DEMO_PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", "Chat123456")
+_SMOKE_DEFAULT = "Chat123456"  # local dev only
+DEMO_PASSWORD = os.getenv("LOCAL_SMOKE_PASSWORD", _SMOKE_DEFAULT)
+if os.getenv("ENVIRONMENT", "development") == "production" and DEMO_PASSWORD == _SMOKE_DEFAULT:
+    raise ValueError("LOCAL_SMOKE_PASSWORD must be set explicitly in production")
 DEMO_EMAIL = "chat_test@sparkle.demo"
 LEGACY_DEMO_ACHIEVEMENT_IDS = {
     "study_100h",

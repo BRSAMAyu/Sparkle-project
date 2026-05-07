@@ -1,7 +1,11 @@
+import 'package:sparkle/core/services/i18n_service.dart';
+
 /// Strips internal error details and returns a user-safe error message.
 ///
 /// Use this instead of `e.toString()` in catch blocks to prevent
 /// stack traces, class names, and internal details from reaching the UI.
+///
+/// All user-facing messages are localized via ARB keys (error*).
 class UserFacingError {
   UserFacingError._();
 
@@ -18,7 +22,7 @@ class UserFacingError {
       'Network',
       'CLIENT_CLOSED',
     ])) {
-      return 'Network error, please check your connection';
+      return S.errorNetworkDetail;
     }
 
     // Auth patterns
@@ -30,36 +34,36 @@ class UserFacingError {
       'token',
       'Token expired',
     ])) {
-      return 'Session expired, please sign in again';
+      return S.errorAuthDetail;
     }
 
     // Timeout patterns
     if (_containsAny(message, ['TimeoutException', 'timed out', 'timeout'])) {
-      return 'Request timed out, please try again';
+      return S.errorTimeoutDetail;
     }
 
     // Server errors
     if (_containsAny(message, ['500', '502', '503', '504', 'Internal Server'])) {
-      return 'Server error, please try again later';
+      return S.errorServerDetail;
     }
 
     // Not found
     if (_containsAny(message, ['404', 'Not Found', 'not found'])) {
-      return 'Resource not found';
+      return S.errorNotFoundDetail;
     }
 
     // Rate limiting
     if (_containsAny(message, ['429', 'rate limit', 'Rate limit', 'too many'])) {
-      return 'Too many requests, please wait a moment';
+      return S.errorRateLimitDetail;
     }
 
     // Format/validation errors
     if (_containsAny(message, ['FormatException', 'invalid', 'Invalid'])) {
-      return 'Invalid data format';
+      return S.errorUnknownDetail;
     }
 
     // Default: return a generic message
-    return 'Something went wrong, please try again';
+    return S.errorDefaultTitle;
   }
 
   static bool _containsAny(String source, List<String> patterns) {
