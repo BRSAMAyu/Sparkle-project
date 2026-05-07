@@ -94,35 +94,17 @@ async def test_error_to_galaxy_loop_flow():
         
         print("\n[SUCCESS] Step 1: Error Created Event Published")
         
-        
-    # --- Step 2: Deprecated Galaxy event consumer no longer owns mastery writes ---
-    galaxy_service = GalaxyService(mock_db)
-    
-    # Mock update_node_mastery
-    galaxy_service.update_node_mastery = AsyncMock()
-    
-    # Mock DB for fetching current mastery
-    # Needs to return a Result object that returns the scalar
-    mock_result_mastery = MagicMock()
-    mock_result_mastery.scalar_one_or_none.return_value = 80 # Current mastery
-    mock_db.execute.return_value = mock_result_mastery
-    
-    # Call handler
-    event_data = {
-        "user_id": str(user_id),
-        "error_id": str(error_id),
-        "linked_node_ids": [str(node_id_1)]
-    }
-    
-    with patch('app.core.event_bus.event_bus.publish') as mock_publish_galaxy:
-        await galaxy_service.handle_error_created(event_data)
 
-        # Mastery updates are now owned by ErrorBookMasterySyncService, so this
-        # deprecated consumer must not apply a second penalty.
-        galaxy_service.update_node_mastery.assert_not_called()
-        mock_publish_galaxy.assert_not_called()
 
-        print("[SUCCESS] Step 2: Deprecated Galaxy mastery consumer stayed blocked")
+    # --- Step 2: Deprecated Galaxy event consumer removed ---
+    # handle_error_created / update_mastery_from_error have been removed
+    # from GalaxyService. Mastery writes are owned by ErrorBookMasterySyncService.
+    assert not hasattr(GalaxyService, "handle_error_created"), \
+        "handle_error_created should be removed from GalaxyService"
+    assert not hasattr(GalaxyService, "update_mastery_from_error"), \
+        "update_mastery_from_error should be removed from GalaxyService"
+
+    print("[SUCCESS] Step 2: Deprecated Galaxy mastery methods confirmed removed")
 
 
 def test_error_review_cards_cluster_real_mistakes_into_actionable_cards():

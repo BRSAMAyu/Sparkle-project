@@ -995,7 +995,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 
 		// ==================== Admin Event-Bus Health Routes ====================
 		adminEventBus := api.Group("/admin/event-bus")
-		adminEventBus.Use(authMiddleware)
+		adminEventBus.Use(authMiddleware, middleware.RequireAdmin)
 		{
 			adminEventBus.GET("/health", h.proxyWithHeaders)
 			adminEventBus.GET("/dlq", h.proxyWithHeaders)
@@ -1008,7 +1008,7 @@ func (h *ProxyRoutesHandler) RegisterProxyRoutes(
 
 		// ==================== DLQ Admin Routes ====================
 		dlq := api.Group("/dlq")
-		dlq.Use(authMiddleware)
+		dlq.Use(authMiddleware, middleware.RequireAdmin)
 		{
 			dlq.GET("/", h.proxyWithHeaders)
 			dlq.GET("/main-events", h.proxyWithHeaders)

@@ -343,7 +343,7 @@ func (h *GalaxyHandler) RecordStudy(c *gin.Context) {
 		"success": true,
 		"node_id": nodeID,
 		"minutes": req.Minutes,
-		"via":     "cqs",
+		"via":     "cqrs",
 	})
 }
 
