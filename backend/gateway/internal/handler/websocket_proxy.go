@@ -363,17 +363,16 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 		for {
 			messageType, data, err := clientConn.ReadMessage()
 			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				var closeErr *websocket.CloseError
+				if errors.As(err, &closeErr) {
+					closeConnections(closeErr.Code, closeErr.Text)
+				} else if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					p.logger.Warn("Client read error",
 						zap.String("user_id_hash", hashUserIDForLog(userID)),
 						zap.Error(err))
 				}
 				sendErr(err)
 				return
-			}
-			var closeErr *websocket.CloseError
-			if errors.As(err, &closeErr) {
-				closeConnections(closeErr.Code, closeErr.Text)
 			}
 			// Reject oversized messages
 			if len(data) > int(readLimit) {
@@ -429,17 +428,16 @@ func (p *WebSocketProxy) proxyWebSocket(w http.ResponseWriter, r *http.Request, 
 		for {
 			messageType, data, err := backendConn.ReadMessage()
 			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				var closeErr *websocket.CloseError
+				if errors.As(err, &closeErr) {
+					closeConnections(closeErr.Code, closeErr.Text)
+				} else if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					p.logger.Warn("Backend read error",
 						zap.String("user_id_hash", hashUserIDForLog(userID)),
 						zap.Error(err))
 				}
 				sendErr(err)
 				return
-			}
-			var closeErr *websocket.CloseError
-			if errors.As(err, &closeErr) {
-				closeConnections(closeErr.Code, closeErr.Text)
 			}
 			// G-04: Validate backend message size before forwarding to client
 			if len(data) > int(readLimit) {

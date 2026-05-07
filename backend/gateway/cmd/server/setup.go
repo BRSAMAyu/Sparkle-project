@@ -221,6 +221,7 @@ func initClients(cfg *config.Config) (*agent.Client, *galaxy.Client, *error_book
 	galaxyClient, err := galaxy.NewClient(cfg)
 	if err != nil {
 		log.Printf("Warning: Unable to connect to galaxy service: %v", err)
+		galaxyClient = nil // explicit nil; downstream handlers check for nil
 	}
 
 	errorBookClient, err := error_book.NewClient(cfg)
@@ -509,7 +510,7 @@ func setupRouter(cfg *config.Config, dbh *databaseHandles, rdb *redisv9.Client, 
 	})
 	r.GET("/api/v1/health/cqrs", authMiddleware, func(c *gin.Context) {
 		// route-tier: authenticated — requires valid JWT; DB errors are sanitized
-		outboxPendingCount, err := cqrs.outboxRepo.GetPendingCount(context.Background())
+		outboxPendingCount, err := cqrs.outboxRepo.GetPendingCount(c.Request.Context())
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"status": "error",

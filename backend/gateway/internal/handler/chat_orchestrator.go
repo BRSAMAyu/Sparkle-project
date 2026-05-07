@@ -303,7 +303,6 @@ func (h *ChatOrchestrator) HandleWebSocket(c *gin.Context) {
 		return
 	}
 	authToken := c.GetString("auth_token")
-	_ = authToken
 
 	log.Printf("WebSocket connected for user: %s", hashUserIDForLog(userID))
 	// P0-1: Log reconnect context if session_id provided via query param

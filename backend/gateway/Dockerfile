@@ -6,7 +6,8 @@ WORKDIR /app
 RUN apk add --no-cache git
 
 # Configure Go module proxy for better connectivity in China
-ENV GOPROXY=https://goproxy.cn,direct
+ARG GOPROXY=https://goproxy.cn,direct
+ENV GOPROXY=${GOPROXY}
 ENV GO111MODULE=on
 
 COPY go.mod go.sum ./
