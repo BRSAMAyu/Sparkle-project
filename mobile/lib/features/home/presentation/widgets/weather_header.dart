@@ -186,20 +186,22 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
   }
 
   Widget _buildAnimatedStarField(WeatherPresentationData presentation) {
-    return AnimatedBuilder(
-      animation: _mainAnimationController,
-      builder: (context, child) => CustomPaint(
-        size: Size.infinite,
-        painter: _AnimatedStarPainter(
-          stars: _stars,
-          animationValue: _mainAnimationController.value,
-          color: Color.lerp(
-                presentation.accent,
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _mainAnimationController,
+        builder: (context, child) => CustomPaint(
+          size: Size.infinite,
+          painter: _AnimatedStarPainter(
+            stars: _stars,
+            animationValue: _mainAnimationController.value,
+            color: Color.lerp(
+                  presentation.accent,
+                  presentation.highlight,
+                  0.55,
+                ) ??
                 presentation.highlight,
-                0.55,
-              ) ??
-              presentation.highlight,
-          intensity: presentation.starIntensity,
+            intensity: presentation.starIntensity,
+          ),
         ),
       ),
     );
@@ -309,14 +311,16 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
             ),
           ),
           // Sun rays (expanding rings)
-          AnimatedBuilder(
-            animation: _mainAnimationController,
-            builder: (context, child) => CustomPaint(
-              size: Size.infinite,
-              painter: _SunRayPainter(
-                particles: _particles,
-                animationValue: _mainAnimationController.value,
-                accentColor: accentColor,
+          RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: _mainAnimationController,
+              builder: (context, child) => CustomPaint(
+                size: Size.infinite,
+                painter: _SunRayPainter(
+                  particles: _particles,
+                  animationValue: _mainAnimationController.value,
+                  accentColor: accentColor,
+                ),
               ),
             ),
           ),
@@ -324,15 +328,17 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
       );
 
   /// Cloudy: Drifting clouds with breathing opacity
-  Widget _buildCloudyEffects(Color accentColor) => AnimatedBuilder(
-        animation: _particleController,
-        builder: (context, child) => CustomPaint(
-          size: Size.infinite,
-          painter: _CloudPainter(
-            clouds: _clouds,
-            animationValue: _particleController.value,
-            accentColor: accentColor,
-            breathingValue: _mainAnimationController.value,
+  Widget _buildCloudyEffects(Color accentColor) => RepaintBoundary(
+        child: AnimatedBuilder(
+          animation: _particleController,
+          builder: (context, child) => CustomPaint(
+            size: Size.infinite,
+            painter: _CloudPainter(
+              clouds: _clouds,
+              animationValue: _particleController.value,
+              accentColor: accentColor,
+              breathingValue: _mainAnimationController.value,
+            ),
           ),
         ),
       );
@@ -356,14 +362,16 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
             ),
           ),
           // Rain drops
-          AnimatedBuilder(
-            animation: _particleController,
-            builder: (context, child) => CustomPaint(
-              size: Size.infinite,
-              painter: _RainPainter(
-                rainDrops: _rainDrops,
-                animationValue: _particleController.value,
-                accentColor: accentColor,
+          RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: _particleController,
+              builder: (context, child) => CustomPaint(
+                size: Size.infinite,
+                painter: _RainPainter(
+                  rainDrops: _rainDrops,
+                  animationValue: _particleController.value,
+                  accentColor: accentColor,
+                ),
               ),
             ),
           ),
@@ -374,25 +382,29 @@ class _WeatherHeaderState extends ConsumerState<WeatherHeader>
   Widget _buildMeteorEffects(Color accentColor) => Stack(
         children: [
           // Energy particles floating
-          AnimatedBuilder(
-            animation: _mainAnimationController,
-            builder: (context, child) => CustomPaint(
-              size: Size.infinite,
-              painter: _EnergyParticlePainter(
-                animationValue: _mainAnimationController.value,
-                accentColor: accentColor,
+          RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: _mainAnimationController,
+              builder: (context, child) => CustomPaint(
+                size: Size.infinite,
+                painter: _EnergyParticlePainter(
+                  animationValue: _mainAnimationController.value,
+                  accentColor: accentColor,
+                ),
               ),
             ),
           ),
           // Shooting meteors
-          AnimatedBuilder(
-            animation: _particleController,
-            builder: (context, child) => CustomPaint(
-              size: Size.infinite,
-              painter: _MeteorPainter(
-                meteors: _meteors,
-                animationValue: _particleController.value,
-                accentColor: accentColor,
+          RepaintBoundary(
+            child: AnimatedBuilder(
+              animation: _particleController,
+              builder: (context, child) => CustomPaint(
+                size: Size.infinite,
+                painter: _MeteorPainter(
+                  meteors: _meteors,
+                  animationValue: _particleController.value,
+                  accentColor: accentColor,
+                ),
               ),
             ),
           ),

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_provider.dart';
 import 'package:sparkle/features/home/presentation/providers/task_board_provider.dart';
 import 'package:sparkle/features/task/presentation/widgets/task_protocol_panel.dart';
@@ -327,33 +328,41 @@ class InteractiveTaskCard extends ConsumerWidget {
       }
     }
 
-    return GestureDetector(
-      onTap: () => context.push('/calendar?date=${dueDate.toIso8601String()}'),
-      child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: 2),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.15),
-          borderRadius: DS.borderRadius8,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.calendar_today_rounded,
-              size: 10,
-              color: color,
-            ),
-            const SizedBox(width: DS.spacing4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: DS.fontWeightMedium,
+    return Semantics(
+      button: true,
+      label: label,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () {
+          unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
+          context.push('/calendar?date=${dueDate.toIso8601String()}');
+        },
+        child: Container(
+          padding:
+              const EdgeInsets.symmetric(horizontal: DS.spacing8, vertical: 2),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: DS.borderRadius8,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.calendar_today_rounded,
+                size: 10,
                 color: color,
               ),
-            ),
-          ],
+              const SizedBox(width: DS.spacing4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: DS.fontWeightMedium,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

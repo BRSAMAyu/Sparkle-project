@@ -231,6 +231,7 @@ class _StatChip extends StatelessWidget {
               color: color,
               fontSize: 18,
               fontWeight: FontWeight.w700,
+              fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
           Text(

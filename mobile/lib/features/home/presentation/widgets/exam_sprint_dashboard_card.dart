@@ -533,32 +533,37 @@ class _PassProbabilityArcState extends State<_PassProbabilityArc>
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            SizedBox(
-              width: 108,
-              height: 108,
-              child: CustomPaint(
-                painter: _PassProbabilityRingPainter(
-                  progress: value,
-                  color: ringColor,
-                ),
-                child: Center(
-                  child: isNull
-                      ? Text(
-                          '--',
-                          style:
-                              context.sparkleTypography.headingLarge.copyWith(
-                            color: DS.textSecondary,
-                            fontWeight: DS.fontWeightBold,
+            RepaintBoundary(
+              child: SizedBox(
+                width: 108,
+                height: 108,
+                child: CustomPaint(
+                  painter: _PassProbabilityRingPainter(
+                    progress: value,
+                    color: ringColor,
+                  ),
+                  child: Center(
+                    child: isNull
+                        ? Text(
+                            '--',
+                            style: context.sparkleTypography.headingLarge
+                                .copyWith(
+                              color: DS.textSecondary,
+                              fontWeight: DS.fontWeightBold,
+                            ),
+                          )
+                        : Text(
+                            _formatPercent(value),
+                            style: context.sparkleTypography.headingLarge
+                                .copyWith(
+                              color: DS.textPrimary,
+                              fontWeight: DS.fontWeightBold,
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
+                            ),
                           ),
-                        )
-                      : Text(
-                          _formatPercent(value),
-                          style:
-                              context.sparkleTypography.headingLarge.copyWith(
-                            color: DS.textPrimary,
-                            fontWeight: DS.fontWeightBold,
-                          ),
-                        ),
+                  ),
                 ),
               ),
             ),

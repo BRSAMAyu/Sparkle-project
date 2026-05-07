@@ -222,14 +222,16 @@ class _GloryOverlayLayer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => IgnorePointer(
-        child: AnimatedBuilder(
-          animation: animation,
-          builder: (context, child) => CustomPaint(
-            size: Size.infinite,
-            painter: _GloryOverlayPainter(
-              accent: accent,
-              intensity: intensity,
-              animationValue: animation.value,
+        child: RepaintBoundary(
+          child: AnimatedBuilder(
+            animation: animation,
+            builder: (context, child) => CustomPaint(
+              size: Size.infinite,
+              painter: _GloryOverlayPainter(
+                accent: accent,
+                intensity: intensity,
+                animationValue: animation.value,
+              ),
             ),
           ),
         ),

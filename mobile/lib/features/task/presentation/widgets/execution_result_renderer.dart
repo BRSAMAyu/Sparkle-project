@@ -1,9 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:flutter/services.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
+import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/utils/text_rendering.dart';
 
 enum ResultContentType {
@@ -545,20 +546,11 @@ class _ArtifactTile extends StatelessWidget {
               ),
               if (_isImage(type) && url.isNotEmpty) ...[
                 const SizedBox(height: DS.spacing10),
-                ClipRRect(
+                SparkleNetworkImage(
+                  imageUrl: url,
+                  height: 120,
+                  width: double.infinity,
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.network(
-                    url,
-                    height: 120,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      height: 120,
-                      color: DS.surfaceTertiary,
-                      alignment: Alignment.center,
-                      child: const Icon(Icons.broken_image_outlined),
-                    ),
-                  ),
                 ),
               ],
             ],
@@ -616,16 +608,9 @@ class _ImageArtifactPreviewDialog extends StatelessWidget {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(12),
               child: InteractiveViewer(
-                child: Image.network(
-                  imageUrl,
+                child: SparkleNetworkImage(
+                  imageUrl: imageUrl,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 240,
-                    width: 320,
-                    color: DS.surfaceTertiary,
-                    alignment: Alignment.center,
-                    child: const Icon(Icons.broken_image_outlined),
-                  ),
                 ),
               ),
             ),

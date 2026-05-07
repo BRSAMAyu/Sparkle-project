@@ -68,46 +68,50 @@ class SprintCard extends ConsumerWidget {
                   constraints.maxWidth.clamp(0, 56).toDouble(),
                   constraints.maxHeight.clamp(0, 56).toDouble(),
                 );
-                return TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0, end: progress),
-                  duration: DS.durationSlow,
-                  curve: Curves.easeOutCubic,
-                  builder: (context, animatedProgress, child) => SizedBox(
-                    width: ringSize,
-                    height: ringSize,
-                    child: Stack(
-                      alignment: Alignment.center,
+                return RepaintBoundary(
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween<double>(begin: 0, end: progress),
+                    duration: DS.durationSlow,
+                    curve: Curves.easeOutCubic,
+                    builder: (context, animatedProgress, child) => SizedBox(
+                      width: ringSize,
+                      height: ringSize,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CustomPaint(
+                            size: Size(ringSize, ringSize),
+                            painter: _CircularProgressPainter(
+                              progress: animatedProgress,
+                              isUrgent: isUrgent,
+                            ),
+                          ),
+                          child!,
+                        ],
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        CustomPaint(
-                          size: Size(ringSize, ringSize),
-                          painter: _CircularProgressPainter(
-                            progress: animatedProgress,
-                            isUrgent: isUrgent,
+                        Text(
+                          '$daysLeft',
+                          style:
+                              context.sparkleTypography.headingMedium.copyWith(
+                            fontSize: ringSize * 0.3,
+                            fontWeight: DS.fontWeightBold,
+                            color: isUrgent ? DS.error : DS.brandPrimary,
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
-                        child!,
+                        Text(
+                          zh ? '天' : 'd',
+                          style: context.sparkleTypography.labelSmall.copyWith(
+                            fontSize: ringSize * 0.17,
+                            color: DS.textSecondary,
+                          ),
+                        ),
                       ],
                     ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '$daysLeft',
-                        style: context.sparkleTypography.headingMedium.copyWith(
-                          fontSize: ringSize * 0.3,
-                          fontWeight: DS.fontWeightBold,
-                          color: isUrgent ? DS.error : DS.brandPrimary,
-                        ),
-                      ),
-                      Text(
-                        zh ? '天' : 'd',
-                        style: context.sparkleTypography.labelSmall.copyWith(
-                          fontSize: ringSize * 0.17,
-                          color: DS.textSecondary,
-                        ),
-                      ),
-                    ],
                   ),
                 );
               },

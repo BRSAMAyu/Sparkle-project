@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
+import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/goal/presentation/widgets/goal_conflict_dialog.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_section.dart';
 import 'package:sparkle/features/home/presentation/widgets/goal_switcher.dart';
@@ -98,7 +99,16 @@ class _MultiGoalDashboardContentState
                           ? '展开或收起卡片'
                           : 'Expand or collapse card',
                       child: GestureDetector(
-                        onTap: () => setState(() => _expanded = !_expanded),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.tap,
+                              enableSound: false,
+                            ),
+                          );
+                          setState(() => _expanded = !_expanded);
+                        },
                         child: Padding(
                           padding: const EdgeInsets.all(DS.spacing4),
                           child: AnimatedRotation(

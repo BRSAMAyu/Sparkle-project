@@ -6,6 +6,7 @@ import 'package:sparkle/core/design/motion.dart';
 import 'package:sparkle/core/design/widgets/custom_button.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
 /// Plan review decision types
@@ -366,8 +367,8 @@ class _PlanReviewCardState extends State<PlanReviewCard>
         ),
       ),
       child: Semantics(
-        button: true,
-        label: 'Chat plan review card control 1',
+        container: true,
+        label: I18nService.instance.isChinese ? '计划审核卡片' : 'Plan review card',
         child: GestureDetector(
           onTapDown: showActions ? (_) => _pressController.forward() : null,
           onTapUp: showActions ? (_) => _pressController.reverse() : null,
