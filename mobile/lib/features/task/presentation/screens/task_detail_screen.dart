@@ -512,18 +512,22 @@ class _TaskDetailView extends ConsumerWidget {
       deduped[plan.id] = plan;
     }
 
+    final zh = Localizations.localeOf(context).languageCode == 'zh';
+
     final selectedPlanId = await CardPickerSheet.show(
       context,
-      title: 'Move task to plan',
+      title: zh ? '移动任务到计划' : 'Move task to plan',
       allowEmptySelection: true,
-      emptySelectionLabel: 'Detach from current plan',
+      emptySelectionLabel: zh ? '从当前计划分离' : 'Detach from current plan',
       options: deduped.values
           .map(
             (plan) => CardPickerOption(
               id: plan.id,
               title: plan.name,
               subtitle: plan.description ?? plan.subject ?? '',
-              group: plan.isActive ? 'Active plans' : 'Archived plans',
+              group: plan.isActive
+                  ? (zh ? '进行中的计划' : 'Active plans')
+                  : (zh ? '已归档的计划' : 'Archived plans'),
               icon: plan.type == PlanType.growth
                   ? Icons.alt_route_rounded
                   : Icons.flag_outlined,
@@ -548,12 +552,12 @@ class _TaskDetailView extends ConsumerWidget {
       AppFeedback.success(
         context,
         selectedPlanId == null
-            ? 'Task detached from plan'
-            : 'Task moved successfully',
+            ? (zh ? '已从计划分离' : 'Task detached from plan')
+            : (zh ? '移动成功' : 'Task moved successfully'),
       );
     } catch (e) {
       if (!context.mounted) return;
-      AppFeedback.error(context, 'Move failed: $e');
+      AppFeedback.error(context, zh ? '移动失败: $e' : 'Move failed: $e');
     }
   }
 
@@ -941,8 +945,9 @@ class _BottomActionBar extends ConsumerWidget {
                       unawaited(
                         SensoryFeedbackService.emit(SensoryFeedbackEvent.tap),
                       );
-                      // TRACKED(TD-002): 需要创建任务编辑页面，暂时导航到创建页面
-                      unawaited(context.push('/tasks/new'));
+                      unawaited(
+                        context.push('/tasks/new?editFrom=${task.id}'),
+                      );
                     },
                   ),
                 ),
@@ -1228,6 +1233,8 @@ class _GuideInfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final separator =
+        Localizations.localeOf(context).languageCode == 'zh' ? '：' : ': ';
     return Padding(
       padding: const EdgeInsets.only(bottom: DS.spacing8),
       child: Row(
@@ -1244,7 +1251,7 @@ class _GuideInfoRow extends StatelessWidget {
                     ),
                 children: [
                   TextSpan(
-                    text: '$label：',
+                    text: '$label$separator',
                     style: const TextStyle(fontWeight: DS.fontWeightBold),
                   ),
                   TextSpan(text: value),

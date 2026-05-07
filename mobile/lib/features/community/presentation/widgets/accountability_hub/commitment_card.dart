@@ -33,8 +33,8 @@ class _CommitmentCardState extends State<CommitmentCard> {
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: () => setState(() => _expanded = !_expanded),
-          child: SizedBox(
-            width: 304,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400, minWidth: 260),
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Column(

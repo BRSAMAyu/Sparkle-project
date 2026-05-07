@@ -15,6 +15,7 @@ import 'package:sparkle/features/goal/presentation/widgets/goal_bottleneck_strip
 import 'package:sparkle/features/goal/presentation/widgets/goal_detail_l10n.dart';
 import 'package:sparkle/features/goal/presentation/widgets/journey_progress_card.dart';
 import 'package:sparkle/features/goal/presentation/widgets/minimum_criteria_card.dart';
+import 'package:sparkle/features/plan/presentation/providers/active_plan_provider.dart';
 
 class GoalDetailPage extends ConsumerWidget {
   const GoalDetailPage({
@@ -54,7 +55,7 @@ class GoalDetailPage extends ConsumerWidget {
       ),
       backgroundColor: DS.surface,
       body: state.when(
-        data: (data) => RefreshIndicator(
+        data: (data) => SparkleRefreshIndicator(
           onRefresh: () => ref.read(goalDetailProvider(goalId).notifier).load(),
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
@@ -79,28 +80,22 @@ class GoalDetailPage extends ConsumerWidget {
                         .read(goalDetailProvider(goalId).notifier)
                         .confirmMinimumCriteria();
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.goalDetailConfirmedSnack),
-                        action: SnackBarAction(
-                          label: l10n.goalDetailUndo,
-                          onPressed: () async {
-                            try {
-                              await ref
-                                  .read(goalDetailProvider(goalId).notifier)
-                                  .undoConfirmMinimumCriteria();
-                            } catch (_) {}
-                          },
-                        ),
-                      ),
+                    AppFeedback.undoable(
+                      context: context,
+                      message: l10n.goalDetailConfirmedSnack,
+                      actionLabel: l10n.goalDetailUndo,
+                      onAction: () {
+                        unawaited(
+                          ref
+                              .read(goalDetailProvider(goalId).notifier)
+                              .undoConfirmMinimumCriteria()
+                              .catchError((Object _) {}),
+                        );
+                      },
                     );
                   } catch (e) {
                     if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.goalDetailLoadFailed),
-                      ),
-                    );
+                    AppFeedback.error(context, l10n.goalDetailLoadFailed);
                   }
                 },
               ),
@@ -109,7 +104,7 @@ class GoalDetailPage extends ConsumerWidget {
               const SizedBox(height: DS.spacing20),
               _TodayStepCard(goalId: goalId, step: data.todaysMinimalNextStep),
               const SizedBox(height: 14),
-              _PlanHealthBand(data: data),
+              _PlanHealthBand(goalId: goalId, data: data),
               const SizedBox(height: 14),
               _AccountabilityCard(summary: data.accountabilityStatus),
               const SizedBox(height: 14),
@@ -146,7 +141,8 @@ class JourneyProgressFutureCard extends ConsumerWidget {
 }
 
 final _journeyProgressProvider = FutureProvider.family<JourneyProgress, String>(
-  (ref, goalId) => ref.read(scenarioPackServiceProvider).getProgress(goalId: goalId),
+  (ref, goalId) =>
+      ref.read(scenarioPackServiceProvider).getProgress(goalId: goalId),
 );
 
 class _GoalHeader extends StatelessWidget {
@@ -341,27 +337,21 @@ class _TodayStepCard extends ConsumerWidget {
                             .read(goalDetailProvider(goalId).notifier)
                             .startNextStep();
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.goalDetailStartedSnack),
-                            action: SnackBarAction(
-                              label: l10n.goalDetailUndo,
-                              onPressed: () => unawaited(
-                                ref
-                                    .read(goalDetailProvider(goalId).notifier)
-                                    .undoStartNextStep(),
-                              ),
-                            ),
+                        AppFeedback.undoable(
+                          context: context,
+                          message: l10n.goalDetailStartedSnack,
+                          actionLabel: l10n.goalDetailUndo,
+                          onAction: () => unawaited(
+                            ref
+                                .read(goalDetailProvider(goalId).notifier)
+                                .undoStartNextStep(),
                           ),
                         );
                       } catch (e) {
                         if (!context.mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '${l10n.goalDetailStart}: $e',
-                            ),
-                          ),
+                        AppFeedback.error(
+                          context,
+                          '${l10n.goalDetailStart}: $e',
                         );
                       }
                     },
@@ -394,12 +384,9 @@ class _TodayStepCard extends ConsumerWidget {
                               .completeNextStep();
                         } catch (e) {
                           if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '${l10n.goalDetailComplete}: $e',
-                              ),
-                            ),
+                          AppFeedback.error(
+                            context,
+                            '${l10n.goalDetailComplete}: $e',
                           );
                         }
                       }
@@ -417,17 +404,30 @@ class _TodayStepCard extends ConsumerWidget {
   }
 }
 
-class _PlanHealthBand extends StatelessWidget {
-  const _PlanHealthBand({required this.data});
+class _PlanHealthBand extends ConsumerWidget {
+  const _PlanHealthBand({required this.goalId, required this.data});
 
+  final String goalId;
   final GoalDetailData data;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final activePlanId = ref.watch(activePlanProvider);
     return _SectionCard(
       icon: Icons.monitor_heart_outlined,
       title: l10n.goalDetailPlanHealth,
+      trailing: activePlanId != null
+          ? TextButton.icon(
+              onPressed: () => context.push('/plans/$activePlanId'),
+              icon: const Icon(Icons.arrow_forward_rounded, size: 18),
+              label: Text(
+                Localizations.localeOf(context).languageCode == 'zh'
+                    ? '查看计划'
+                    : 'View Plan',
+              ),
+            )
+          : null,
       children: [
         _MetricLine(
           label: l10n.goalDetailProgress,
@@ -516,8 +516,7 @@ class _RelatedSourcesCard extends StatelessWidget {
           for (final source in sources)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading:
-                  Icon(Icons.description_outlined, color: DS.brandPrimary),
+              leading: Icon(Icons.description_outlined, color: DS.brandPrimary),
               title: Text(
                 source.title,
                 maxLines: 1,

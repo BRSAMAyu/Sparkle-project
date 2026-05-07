@@ -6,6 +6,11 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sparkle_network_image.dart';
 import 'package:sparkle/shared/entities/user_model.dart';
 
+String _avatarPendingLabel(BuildContext context) {
+  final zh = Localizations.localeOf(context).languageCode == 'zh';
+  return zh ? '审核中' : 'Under Review';
+}
+
 class SparkleAvatar extends StatelessWidget {
   const SparkleAvatar({
     super.key,
@@ -96,7 +101,7 @@ class SparkleAvatar extends StatelessWidget {
                   if (radius > 25) ...[
                     const SizedBox(height: DS.xs),
                     Text(
-                      '审核中',
+                      _avatarPendingLabel(context),
                       style: TextStyle(
                         color: DS.brandPrimaryConst,
                         fontSize: radius * 0.3,

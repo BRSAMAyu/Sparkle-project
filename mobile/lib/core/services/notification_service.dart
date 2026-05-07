@@ -72,12 +72,13 @@ class NotificationService {
 
   Future<void> _initialize() async {
     tz_data.initializeTimeZones();
-    // Assuming Asia/Shanghai for default, but should ideally get from device
-    // tz.setLocalLocation(tz.getLocation('Asia/Shanghai'));
+
+    final zh =
+        PlatformDispatcher.instance.locale.languageCode == 'zh';
 
     const initializationSettingsAndroid = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
-    ); // Verify icon name
+    );
 
     final initializationSettingsDarwin = DarwinInitializationSettings(
       notificationCategories: <DarwinNotificationCategory>[
@@ -86,18 +87,18 @@ class NotificationService {
           actions: <DarwinNotificationAction>[
             DarwinNotificationAction.plain(
               'START_NOW',
-              '⚡ 开始',
+              zh ? '⚡ 开始' : '⚡ Start Now',
               options: <DarwinNotificationActionOption>{
                 DarwinNotificationActionOption.foreground,
               },
             ),
             DarwinNotificationAction.plain(
               'SNOOZE',
-              '💤 稍后',
+              zh ? '💤 稍后' : '💤 Snooze',
             ),
             DarwinNotificationAction.plain(
               'DISMISS',
-              '🔕 勿扰',
+              zh ? '🔕 勿扰' : '🔕 Dismiss',
               options: <DarwinNotificationActionOption>{
                 DarwinNotificationActionOption.destructive,
               },
@@ -423,7 +424,10 @@ class NotificationService {
     required String body,
     required Map<String, dynamic> payload,
   }) async {
-    const androidDetails = AndroidNotificationDetails(
+    final zh =
+        PlatformDispatcher.instance.locale.languageCode == 'zh';
+
+    final androidDetails = AndroidNotificationDetails(
       'sparkle_smart_push',
       'Smart Push Notifications',
       channelDescription: 'Notifications for Sparkle Smart Push',
@@ -433,16 +437,16 @@ class NotificationService {
       actions: <AndroidNotificationAction>[
         AndroidNotificationAction(
           'START_NOW',
-          '⚡ 开始',
+          zh ? '⚡ 开始' : '⚡ Start Now',
           showsUserInterface: true,
         ),
         AndroidNotificationAction(
           'SNOOZE',
-          '💤 稍后',
+          zh ? '💤 稍后' : '💤 Snooze',
         ),
         AndroidNotificationAction(
           'DISMISS',
-          '🔕 勿扰',
+          zh ? '🔕 勿扰' : '🔕 Dismiss',
         ),
       ],
     );
@@ -454,7 +458,7 @@ class NotificationService {
       presentSound: true,
     );
 
-    const notificationDetails = NotificationDetails(
+    final notificationDetails = NotificationDetails(
       android: androidDetails,
       iOS: darwinDetails,
       macOS: darwinDetails,

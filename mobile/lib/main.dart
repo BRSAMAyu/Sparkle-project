@@ -15,6 +15,7 @@ import 'package:sparkle/core/services/performance_service.dart';
 import 'package:sparkle/core/services/user_preferences_service.dart';
 import 'package:sparkle/core/services/view_storage_service.dart';
 import 'package:sparkle/core/tracing/tracing_service.dart';
+import 'package:sparkle/core/design/widgets/error_widget.dart' as custom;
 import 'package:sparkle/core/utils/text_rendering.dart';
 import 'package:sparkle/features/auth/presentation/providers/guest_provider.dart';
 import 'package:sparkle/features/chat/chat.dart';
@@ -35,6 +36,16 @@ void main() async {
         context: 'flutter_error',
       );
     };
+
+    // Override default red error screen with branded recovery UI
+    ErrorWidget.builder = (details) => Material(
+          color: DS.surfacePrimary,
+          child: custom.CustomErrorWidget(
+            type: custom.ErrorType.page,
+            severity: custom.ErrorSeverity.error,
+            message: details.exceptionAsString(),
+          ),
+        );
     PlatformDispatcher.instance.onError = (error, stack) {
       PerformanceMonitor().reportCrash(
         error,
