@@ -4496,6 +4496,12 @@ abstract class AppLocalizations {
   /// **'在线'**
   String get commonOnline;
 
+  /// No description provided for @offlineBannerMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'你已离线，部分功能可能不可用。'**
+  String get offlineBannerMessage;
+
   /// No description provided for @commonOperationWarning.
   ///
   /// In zh, this message translates to:

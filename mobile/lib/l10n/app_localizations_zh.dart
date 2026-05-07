@@ -2378,6 +2378,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get commonOnline => '在线';
 
   @override
+  String get offlineBannerMessage => '你已离线，部分功能可能不可用。';
+
+  @override
   String get commonOperationWarning => '操作可能未成功';
 
   @override

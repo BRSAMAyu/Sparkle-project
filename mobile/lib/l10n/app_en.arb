@@ -788,6 +788,7 @@
   "commonSynced": "Synced",
   "commonOffline": "Offline",
   "commonOnline": "Online",
+  "offlineBannerMessage": "You're offline. Some features may be unavailable.",
   "commonOperationWarning": "Operation may not have succeeded",
   "emptyStateNoTasksTitle": "No tasks yet",
   "emptyStateNoTasksDescription": "Create your first learning task and get started.",

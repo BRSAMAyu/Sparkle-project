@@ -788,6 +788,7 @@
   "commonSynced": "已同步",
   "commonOffline": "离线",
   "commonOnline": "在线",
+  "offlineBannerMessage": "你已离线，部分功能可能不可用。",
   "commonOperationWarning": "操作可能未成功",
   "emptyStateNoTasksTitle": "还没有任务",
   "emptyStateNoTasksDescription": "创建你的第一个学习任务，马上开始。",

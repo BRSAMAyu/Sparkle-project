@@ -2495,6 +2495,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get commonOnline => 'Online';
 
   @override
+  String get offlineBannerMessage => 'You\'re offline. Some features may be unavailable.';
+
+  @override
   String get commonOperationWarning => 'Operation may not have succeeded';
 
   @override

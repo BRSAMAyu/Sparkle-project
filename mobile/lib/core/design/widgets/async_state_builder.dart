@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
@@ -58,16 +59,13 @@ class SparkleAsyncBuilder<T> extends StatelessWidget {
   final VoidCallback? onRetry;
 
   @override
-  Widget build(BuildContext context) {
-    return state.when(
-      data: (data) => dataBuilder(context, data),
-      loading: () => _buildSkeleton(),
-      error: (error, _) => _buildError(context, error),
-    );
-  }
+  Widget build(BuildContext context) => state.when(
+        data: (T data) => dataBuilder(context, data),
+        loading: _buildSkeleton,
+        error: (Object error, StackTrace? _) => _buildError(context, error),
+      );
 
-  Widget _buildSkeleton() {
-    return switch (skeletonVariant) {
+  Widget _buildSkeleton() => switch (skeletonVariant) {
       SkeletonVariant.listItem => SparkleListSkeleton(count: skeletonCount),
       SkeletonVariant.card => Column(
           children: List.generate(
@@ -88,25 +86,20 @@ class SparkleAsyncBuilder<T> extends StatelessWidget {
           ),
         ),
     };
-  }
 
-  Widget _buildError(BuildContext context, Object error) {
-    return CustomErrorWidget(
-      message: UserFacingError.from(error),
-      type: ErrorType.inline,
-      onRetry: onRetry,
-      l10n: AppLocalizations.of(context),
-    );
-  }
+  Widget _buildError(BuildContext context, Object error) => CustomErrorWidget(
+        message: UserFacingError.from(error),
+        onRetry: onRetry,
+        l10n: AppLocalizations.of(context),
+      );
 }
 
 /// Extension of [SparkleAsyncBuilder] for list data that automatically shows
 /// [EmptyState] when the list is empty.
-class SparkleAsyncListBuilder<T>
-    extends SparkleAsyncBuilder<List<T>> {
-  SparkleAsyncListBuilder({
+class SparkleAsyncListBuilder<T> extends SparkleAsyncBuilder<List<T>> {
+  const SparkleAsyncListBuilder({
     required super.state,
-    required Widget Function(BuildContext, List<T>) super.dataBuilder,
+    required super.dataBuilder,
     super.key,
     super.skeletonVariant,
     super.skeletonCount,
@@ -120,25 +113,21 @@ class SparkleAsyncListBuilder<T>
   });
 
   @override
-  Widget build(BuildContext context) {
-    return state.when(
-      data: (data) {
-        if (data.isEmpty) return _buildEmpty(context);
-        return dataBuilder(context, data);
-      },
-      loading: () => _buildSkeleton(),
-      error: (error, _) => _buildError(context, error),
-    );
-  }
+  Widget build(BuildContext context) => state.when(
+        data: (List<T> data) {
+          if (data.isEmpty) return _buildEmpty(context);
+          return dataBuilder(context, data);
+        },
+        loading: _buildSkeleton,
+        error: (Object error, StackTrace? _) => _buildError(context, error),
+      );
 
-  Widget _buildEmpty(BuildContext context) {
-    return EmptyState(
-      type: emptyStateType,
-      title: emptyTitle,
-      description: emptyDescription,
-      icon: emptyIcon,
-      actionText: emptyActionText,
-      onAction: onEmptyAction,
-    );
-  }
+  Widget _buildEmpty(BuildContext context) => EmptyState(
+        type: emptyStateType,
+        title: emptyTitle,
+        description: emptyDescription,
+        icon: emptyIcon,
+        actionText: emptyActionText,
+        onAction: onEmptyAction,
+      );
 }
