@@ -953,6 +953,7 @@ async def snooze_task(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    req: Request = None,  # injected by FastAPI for locale detection
 ):
     """Push one task to a later date without changing the plan structure."""
     task = await _get_user_task_or_404(db, task_id, current_user.id)
@@ -968,7 +969,11 @@ async def snooze_task(
     await db.commit()
     await db.refresh(task)
 
-    return _action_response(action="snooze", message="", task=task)
+    return _action_response(
+        action="snooze",
+        message="已推迟到明天，今天先把节奏放轻一点。" if _zh(req) else "Snoozed till tomorrow. Take it easy today.",
+        task=task,
+    )
 
 
 # route-tier: authed
@@ -1019,7 +1024,7 @@ async def mark_task_too_hard(
     task_id: UUID = Path(..., description="Task ID"),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    req: Request = None,  # injected by FastAPI for locale detection
+    req: Request,  # injected by FastAPI for locale detection
 ):
     """Break a task into smaller subtasks when the current card feels too hard."""
     task = await _get_user_task_or_404(db, task_id, current_user.id)
@@ -1078,7 +1083,7 @@ async def skip_task(
         task.user_note = task.user_note or "Skipped from quick action"
     return _action_response(
         action="skip",
-        message="",
+        message="已跳过，这张卡不会再挤在今天了。" if _zh(req) else "Skipped — this card won't crowd today anymore.",
         task=task,
     )
 

@@ -191,7 +191,7 @@ async def _verify_apple_identity_token(token: str) -> tuple[str, dict[str, Any]]
     return str(claims.get("sub") or ""), claims
 
 
-async def _verify_social_identity(data: SocialLoginRequest) -> tuple[str, dict[str, Any]]:
+async def _verify_social_identity(data: SocialLoginRequest, request: Request | None = None) -> tuple[str, dict[str, Any]]:
     social_id = None
     user_info: dict[str, Any] = {}
 
@@ -206,15 +206,15 @@ async def _verify_social_identity(data: SocialLoginRequest) -> tuple[str, dict[s
                     params={"id_token": data.token},
                 )
                 if response.status_code != 200:
-                    raise HTTPException(status_code=401, detail="Google 令牌验证失败，请重试")
+                    raise HTTPException(status_code=401, detail="Google 令牌验证失败，请重试" if _zh(request) else "Google token verification failed. Please try again.")
 
                 token_info = response.json()
                 if token_info.get("iss") not in ["https://accounts.google.com", "accounts.google.com"]:
-                    raise HTTPException(status_code=401, detail="Google 令牌验证失败，请重试")
+                    raise HTTPException(status_code=401, detail="Google 令牌验证失败，请重试" if _zh(request) else "Google token verification failed. Please try again.")
                 if settings.GOOGLE_CLIENT_ID and token_info.get("aud") != settings.GOOGLE_CLIENT_ID:
-                    raise HTTPException(status_code=401, detail="Google 令牌验证失败，请重试")
+                    raise HTTPException(status_code=401, detail="Google 令牌验证失败，请重试" if _zh(request) else "Google token verification failed. Please try again.")
                 if token_info.get("email_verified") not in (True, "true", "True", "1"):
-                    raise HTTPException(status_code=401, detail="Google 令牌验证失败，请重试")
+                    raise HTTPException(status_code=401, detail="Google 令牌验证失败，请重试" if _zh(request) else "Google token verification failed. Please try again.")
 
                 social_id = token_info.get("sub")
                 user_info = {
@@ -240,7 +240,7 @@ async def _verify_social_identity(data: SocialLoginRequest) -> tuple[str, dict[s
             async with httpx.AsyncClient(timeout=timeout) as client:
                 if not data.openid:
                     if not settings.WECHAT_APP_ID or not settings.WECHAT_APP_SECRET:
-                        raise HTTPException(status_code=500, detail="服务器未配置微信登录")
+                        raise HTTPException(status_code=500, detail="服务器未配置微信登录" if _zh(request) else "WeChat login is not configured on the server.")
 
                     token_resp = await client.get(
                         "https://api.weixin.qq.com/sns/oauth2/access_token",
@@ -254,7 +254,7 @@ async def _verify_social_identity(data: SocialLoginRequest) -> tuple[str, dict[s
                     token_data = token_resp.json()
                     if "errcode" in token_data and token_data["errcode"] != 0:
                         logger.error(f"WeChat code exchange failed: {token_data}")
-                        raise HTTPException(status_code=401, detail="微信登录失败，请重试")
+                        raise HTTPException(status_code=401, detail="微信登录失败，请重试" if _zh(request) else "WeChat login failed. Please try again.")
 
                     social_id = token_data["openid"]
                     access_token = token_data["access_token"]
@@ -269,7 +269,7 @@ async def _verify_social_identity(data: SocialLoginRequest) -> tuple[str, dict[s
                     user_data = user_resp.json()
                     if "errcode" in user_data and user_data["errcode"] != 0:
                         logger.error(f"WeChat user info failed: {user_data}")
-                        raise HTTPException(status_code=401, detail="获取微信用户信息失败")
+                        raise HTTPException(status_code=401, detail="获取微信用户信息失败" if _zh(request) else "Failed to retrieve WeChat user info.")
                     user_info = {
                         "email": None,
                         "name": user_data.get("nickname"),
@@ -282,11 +282,11 @@ async def _verify_social_identity(data: SocialLoginRequest) -> tuple[str, dict[s
                         params={"access_token": data.token, "openid": data.openid},
                     )
                     if response.status_code != 200:
-                        raise HTTPException(status_code=401, detail="微信令牌验证失败，请重试")
+                        raise HTTPException(status_code=401, detail="微信令牌验证失败，请重试" if _zh(request) else "WeChat token verification failed. Please try again.")
 
                     result = response.json()
                     if result.get("errcode") != 0:
-                        raise HTTPException(status_code=401, detail="微信令牌验证失败，请重试")
+                        raise HTTPException(status_code=401, detail="微信令牌验证失败，请重试" if _zh(request) else "WeChat token verification failed. Please try again.")
 
                     social_id = data.openid
                     user_info = {
@@ -296,15 +296,15 @@ async def _verify_social_identity(data: SocialLoginRequest) -> tuple[str, dict[s
                         "email_verified": False,
                     }
         else:
-            raise HTTPException(status_code=400, detail="暂不支持这种登录方式")
+            raise HTTPException(status_code=400, detail="暂不支持这种登录方式" if _zh(request) else "This login method is not supported.")
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Social login verification failed for {data.provider}: {e}")
-        raise HTTPException(status_code=401, detail="社交登录验证失败") from e
+        raise HTTPException(status_code=401, detail="社交登录验证失败" if _zh(request) else "Social login verification failed.") from e
 
     if not social_id:
-        raise HTTPException(status_code=401, detail="无法验证登录令牌")
+        raise HTTPException(status_code=401, detail="无法验证登录令牌" if _zh(request) else "Unable to verify login token.")
     return social_id, user_info
 
 @router.post("/register", response_model=Any)
@@ -489,9 +489,9 @@ async def social_login(
     This endpoint remains for Google and WeChat.
     """
     if data.provider not in ["google", "apple", "wechat"]:
-        raise HTTPException(status_code=400, detail="暂不支持这种登录方式")
+        raise HTTPException(status_code=400, detail="暂不支持这种登录方式" if _zh(request) else "This login method is not supported.")
 
-    social_id, user_info = await _verify_social_identity(data)
+    social_id, user_info = await _verify_social_identity(data, request)
 
     # Determine which field to check
     query = select(User)
@@ -929,7 +929,7 @@ async def upgrade_guest(
     Upgrade a guest account to a full email/password account.
     """
     if current_user.registration_source != "guest":
-        raise HTTPException(status_code=400, detail="当前账号不是游客账号")
+        raise HTTPException(status_code=400, detail="当前账号不是游客账号" if _zh(request) else "Current account is not a guest account.")
 
     _validate_terms_acceptance(data.accepted_tos, data.accepted_privacy)
 
@@ -958,7 +958,7 @@ async def upgrade_guest(
         await db.flush()
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=409, detail="用户名或邮箱已被占用，请更换后重试")
+        raise HTTPException(status_code=409, detail="用户名或邮箱已被占用，请更换后重试" if _zh(request) else "Username or email already taken. Please try a different one.")
 
     try:
         verify_token = uuid.uuid4().hex
@@ -996,11 +996,11 @@ async def upgrade_guest_social(
     Upgrade a guest account by linking a social provider.
     """
     if current_user.registration_source != "guest":
-        raise HTTPException(status_code=400, detail="当前账号不是游客账号")
+        raise HTTPException(status_code=400, detail="当前账号不是游客账号" if _zh(request) else "Current account is not a guest account.")
 
     _validate_terms_acceptance(data.accepted_tos, data.accepted_privacy)
     social_data = SocialLoginRequest(provider=data.provider, token=data.token, openid=data.openid)
-    social_id, user_info = await _verify_social_identity(social_data)
+    social_id, user_info = await _verify_social_identity(social_data, request)
 
     if data.provider == "google":
         stmt = select(User).where(User.google_id == social_id, User.id != current_user.id)
@@ -1009,11 +1009,11 @@ async def upgrade_guest_social(
     elif data.provider == "wechat":
         stmt = select(User).where(User.wechat_unionid == social_id, User.id != current_user.id)
     else:
-        raise HTTPException(status_code=400, detail="暂不支持这种登录方式")
+        raise HTTPException(status_code=400, detail="暂不支持这种登录方式" if _zh(request) else "This login method is not supported.")
 
     existing = await db.execute(stmt)
     if existing.scalars().first():
-        raise HTTPException(status_code=409, detail="该社交账号已绑定其他用户")
+        raise HTTPException(status_code=409, detail="该社交账号已绑定其他用户" if _zh(request) else "This social account is already linked to another user.")
 
     social_email = user_info.get("email")
     if social_email:
@@ -1021,7 +1021,7 @@ async def upgrade_guest_social(
             select(User).where(User.email == social_email, User.id != current_user.id),
         )
         if existing_email.scalars().first():
-            raise HTTPException(status_code=409, detail="该邮箱已被其他账号使用")
+            raise HTTPException(status_code=409, detail="该邮箱已被其他账号使用" if _zh(request) else "This email is already used by another account.")
 
     current_user.registration_source = data.provider
     current_user.password_login_enabled = False
@@ -1046,7 +1046,7 @@ async def upgrade_guest_social(
         await db.flush()
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=409, detail="该社交账号已绑定其他用户")
+        raise HTTPException(status_code=409, detail="该社交账号已绑定其他用户" if _zh(request) else "This social account is already linked to another user.")
 
     auth_audit_service.schedule_log(
         AuthAuditAction.GUEST_UPGRADE,
