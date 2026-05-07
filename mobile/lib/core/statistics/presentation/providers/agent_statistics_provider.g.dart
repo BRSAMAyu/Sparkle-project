@@ -25,7 +25,7 @@ final agentStatsRepositoryProvider =
 );
 
 typedef AgentStatsRepositoryRef = AutoDisposeProviderRef<AgentStatsRepository>;
-String _$agentStatisticsHash() => r'8952973f753a9939d5ce2abd70ba029b16e2e228';
+String _$agentStatisticsHash() => r'6e63b2b6ea6ce8ccce49ffb463d9f04e2f744011';
 
 /// Provider for agent statistics state
 ///

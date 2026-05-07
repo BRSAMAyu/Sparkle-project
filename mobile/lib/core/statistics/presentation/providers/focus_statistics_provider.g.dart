@@ -25,7 +25,7 @@ final focusStatsRepositoryProvider =
 );
 
 typedef FocusStatsRepositoryRef = AutoDisposeProviderRef<FocusStatsRepository>;
-String _$focusStatisticsHash() => r'7a5c5a2dca2e0f637b65c3d3e6a741dee21d725c';
+String _$focusStatisticsHash() => r'73ef3d83eb03a8c2cefa50039774c87e5d0dbdec';
 
 /// Provider for focus statistics state
 ///

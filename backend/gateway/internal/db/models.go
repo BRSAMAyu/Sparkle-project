@@ -1256,10 +1256,10 @@ const (
 	ReportreasonSPAM           Reportreason = "SPAM"
 	ReportreasonHARASSMENT     Reportreason = "HARASSMENT"
 	ReportreasonVIOLENCE       Reportreason = "VIOLENCE"
-	ReportreasonHATESPEECH     Reportreason = "HATE_SPEECH"
 	ReportreasonMISINFORMATION Reportreason = "MISINFORMATION"
 	ReportreasonINAPPROPRIATE  Reportreason = "INAPPROPRIATE"
 	ReportreasonOTHER          Reportreason = "OTHER"
+	ReportreasonHATESPEECH     Reportreason = "HATE_SPEECH"
 )
 
 func (e *Reportreason) Scan(src interface{}) error {
@@ -2430,7 +2430,6 @@ type ChatMessage struct {
 	Role          Messagerole      `json:"role"`
 	Content       string           `json:"content"`
 	Actions       []byte           `json:"actions"`
-	Metadata      []byte           `json:"metadata"`
 	ParseDegraded pgtype.Bool      `json:"parse_degraded"`
 	TokensUsed    pgtype.Int4      `json:"tokens_used"`
 	ModelName     pgtype.Text      `json:"model_name"`
@@ -4144,6 +4143,7 @@ type Plan struct {
 	DeletedAt             pgtype.Timestamp `json:"deleted_at"`
 	Source                pgtype.Text      `json:"source"`
 	SourceMetadata        []byte           `json:"source_metadata"`
+	GoalID                pgtype.UUID      `json:"goal_id"`
 }
 
 type PlanExecutionRecord struct {
@@ -5411,7 +5411,12 @@ type User struct {
 	PrivacyVersion        pgtype.Text      `json:"privacy_version"`
 	AgreedLocale          pgtype.Text      `json:"agreed_locale"`
 	// 用户搜索隐私设置
-	SearchableBy Searchvisibility `json:"searchable_by"`
+	SearchableBy      Searchvisibility `json:"searchable_by"`
+	UsernameHash      pgtype.Text      `json:"username_hash"`
+	EmailHash         pgtype.Text      `json:"email_hash"`
+	GoogleIDHash      pgtype.Text      `json:"google_id_hash"`
+	AppleIDHash       pgtype.Text      `json:"apple_id_hash"`
+	WechatUnionidHash pgtype.Text      `json:"wechat_unionid_hash"`
 }
 
 type UserAchievement struct {

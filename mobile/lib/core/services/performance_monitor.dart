@@ -12,10 +12,13 @@ library;
 
 import 'dart:async';
 import 'dart:developer' as developer;
+import 'dart:isolate';
+import 'dart:ui' show FrameTiming;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:sparkle/core/services/client_observability_service.dart';
 
@@ -117,17 +120,30 @@ class PerformanceMonitor {
     WidgetsBinding.instance.addObserver(_LifecycleObserver(this));
 
     developer.log('性能监控已启动', name: 'PerformanceMonitor');
+
+    // 注册帧回调以获取真实FPS
+    WidgetsBinding.instance.addTimingsCallback(_onFrameTimings);
+  }
+
+  /// 帧回调，计算真实FPS
+  void _onFrameTimings(List<FrameTiming> timings) {
+    if (timings.isEmpty) return;
+    final avgFrameMicros =
+        timings.map((t) => t.totalSpan.inMicroseconds).reduce((a, b) => a + b) /
+            timings.length;
+    if (avgFrameMicros > 0) {
+      _currentFPS = 1000000 / avgFrameMicros;
+    }
   }
 
   /// 收集性能指标
   Future<void> _collectMetrics() async {
     try {
-      // 收集FPS (通过WidgetsBinding)
-      final fps = WidgetsBinding
-          .instance.platformDispatcher.views.first.devicePixelRatio;
-      _currentFPS = fps;
+      // 收集FPS (基于FrameTiming回调, 如果不可用则标记-1)
+      // 真实FPS通过addTimingsCallback计算, 此处仅记录上次计算值
+      // _currentFPS 由 _onFrameTimings 回调更新
 
-      // 收集内存使用 (模拟)
+      // 收集内存使用 (dart:developer API)
       _memoryUsageMB = _estimateMemoryUsage();
 
       // 记录指标
@@ -336,8 +352,8 @@ class PerformanceMonitor {
 
   /// 检查性能异常
   void _checkPerformanceAnomalies(PerformanceMetric metric) {
-    // FPS过低警告
-    if (metric.fps < 30) {
+    // FPS过低警告 (仅当有真实数据时)
+    if (metric.fps > 0 && metric.fps < 30) {
       Sentry.addBreadcrumb(
         Breadcrumb(
           message: '低FPS警告: ${metric.fps}fps',
@@ -418,11 +434,16 @@ class PerformanceMonitor {
     }
   }
 
-  /// 估算内存使用
+  /// 估算内存使用 (通过dart:developer API)
   int _estimateMemoryUsage() {
-    // 这是一个简化的估算，实际项目中应该使用更精确的方法
-    // 例如使用dart:developer的MemoryUsage或平台特定API
-    return 100 + (DateTime.now().millisecond % 400); // 模拟100-500MB
+    try {
+      final info = developer.Service.getIsolateID(Isolate.current);
+      // dart:developer 不直接暴露 heap size, 返回 -1 表示不可用
+      // 真实内存需通过 platform channel 获取
+      return -1;
+    } catch (_) {
+      return -1;
+    }
   }
 
   /// 获取网络连接状态

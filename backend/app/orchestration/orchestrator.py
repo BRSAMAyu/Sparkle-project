@@ -27,6 +27,8 @@ import time
 import uuid
 from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
+
+from app.core.time_utils import utcnow as _utcnow
 from typing import Any
 
 from google.protobuf.json_format import MessageToDict
@@ -52,7 +54,7 @@ from app.core.safe_error_messages import build_safe_chat_error
 from app.core.unified_intent_router import UnifiedIntentRouter
 from app.gen.agent.v1 import agent_service_pb2
 from app.models.plan import Plan
-from app.models.task import Task
+from app.models.task import Task, TaskStatus as ModelTaskStatus
 from app.orchestration.agent_activity import emit_agent_activity, emit_routing_preview
 from app.orchestration.capability_selection_policy import CapabilitySelectionPolicy
 
@@ -80,6 +82,7 @@ from app.orchestration.context_focus import (
     infer_route_intent_from_chat_mode,
 )
 from app.orchestration.context_pruner import ContextPruner
+from app.orchestration.dual_core_router import dual_core_router
 from app.orchestration.dynamic_tool_registry import dynamic_tool_registry
 from app.orchestration.execution_engine import ExecutionEngineMixin
 from app.orchestration.executor import ToolExecutor
@@ -149,6 +152,7 @@ from app.orchestration.session_state_mixin import SessionStateMixin
 from app.orchestration.soul_compiler import attach_shadow_soul_runtime
 from app.orchestration.state_manager import SessionStateManager
 from app.orchestration.state_snapshot import StateSnapshotManager
+from app.orchestration.multi_agent_adapter import MultiAgentWorkflowAdapter
 from app.orchestration.statechart_engine import WorkflowState
 
 # Phase 4: Sufficiency Checking
@@ -189,10 +193,6 @@ SESSION_FEEDBACK_KEY_PREFIX = "session:feedback:"
 # ---------------------------------------------------------------------------
 # Standalone helpers (exported for backward compatibility)
 # ---------------------------------------------------------------------------
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC)
 
 
 def get_agent_type_for_tool(tool_name: str) -> int:
@@ -2356,12 +2356,18 @@ class ChatOrchestrator(
                                 request_extra_context = {"spine_signals": _spine_context}
 
                         # v2.9: Fetch structured directives for prompt/RAG modulation
-                        _spine_resp_dir = await _spine.get_response_directive(user_id)
-                        if _spine_resp_dir:
-                            request_extra_context["spine_response_directive"] = _spine_resp_dir.to_dict()
-                        _spine_ret_dir = await _spine.get_retrieval_directive(user_id)
-                        if _spine_ret_dir:
-                            request_extra_context["spine_retrieval_directive"] = _spine_ret_dir.to_dict()
+                        try:
+                            _spine_resp_dir = await _spine.get_response_directive(user_id)
+                            if _spine_resp_dir:
+                                request_extra_context["spine_response_directive"] = _spine_resp_dir.to_dict()
+                        except Exception:
+                            logger.warning("Redis/spine get_response_directive failed for user=%s", user_id, exc_info=True)
+                        try:
+                            _spine_ret_dir = await _spine.get_retrieval_directive(user_id)
+                            if _spine_ret_dir:
+                                request_extra_context["spine_retrieval_directive"] = _spine_ret_dir.to_dict()
+                        except Exception:
+                            logger.warning("Redis/spine get_retrieval_directive failed for user=%s", user_id, exc_info=True)
                         try:
                             from app.signals.growth_chronicle import GrowthChronicleService
                             _chronicle_svc = GrowthChronicleService(self.redis)
@@ -2391,15 +2397,24 @@ class ChatOrchestrator(
                             logger.warning(
                                 "Spine fatigue check failed for user=%s", user_id, exc_info=True,
                             )
-                        _spine_ux = await _spine.get_ux_directive(user_id)
-                        if _spine_ux:
-                            request_extra_context["spine_ux_directive"] = _spine_ux.to_dict()
-                        _spine_comm = await _spine.get_community_directive(user_id)
-                        if _spine_comm:
-                            request_extra_context["spine_community_directive"] = _spine_comm.to_dict()
-                        _spine_skill = await _spine.get_skill_directive(user_id)
-                        if _spine_skill:
-                            request_extra_context["spine_skill_directive"] = _spine_skill.to_dict()
+                        try:
+                            _spine_ux = await _spine.get_ux_directive(user_id)
+                            if _spine_ux:
+                                request_extra_context["spine_ux_directive"] = _spine_ux.to_dict()
+                        except Exception:
+                            logger.warning("Redis/spine get_ux_directive failed for user=%s", user_id, exc_info=True)
+                        try:
+                            _spine_comm = await _spine.get_community_directive(user_id)
+                            if _spine_comm:
+                                request_extra_context["spine_community_directive"] = _spine_comm.to_dict()
+                        except Exception:
+                            logger.warning("Redis/spine get_community_directive failed for user=%s", user_id, exc_info=True)
+                        try:
+                            _spine_skill = await _spine.get_skill_directive(user_id)
+                            if _spine_skill:
+                                request_extra_context["spine_skill_directive"] = _spine_skill.to_dict()
+                        except Exception:
+                            logger.warning("Redis/spine get_skill_directive failed for user=%s", user_id, exc_info=True)
                     except Exception as _spine_err:
                         from app.core.business_metrics import record_spine_degradation
 

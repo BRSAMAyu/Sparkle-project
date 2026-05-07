@@ -483,10 +483,10 @@ CREATE TYPE reportreason AS ENUM (
     'SPAM',
     'HARASSMENT',
     'VIOLENCE',
-    'HATE_SPEECH',
     'MISINFORMATION',
     'INAPPROPRIATE',
-    'OTHER'
+    'OTHER',
+    'HATE_SPEECH'
 );
 
 
@@ -1592,7 +1592,6 @@ CREATE TABLE chat_messages (
     role messagerole NOT NULL,
     content text NOT NULL,
     actions json,
-    metadata jsonb,
     parse_degraded boolean,
     tokens_used integer,
     model_name character varying(100),
@@ -4193,7 +4192,8 @@ CREATE TABLE plans (
     updated_at timestamp without time zone NOT NULL,
     deleted_at timestamp without time zone,
     source character varying(32),
-    source_metadata jsonb
+    source_metadata jsonb,
+    goal_id uuid
 );
 
 
@@ -6643,7 +6643,12 @@ CREATE TABLE users (
     tos_version character varying(50),
     privacy_version character varying(50),
     agreed_locale character varying(20),
-    searchable_by searchvisibility DEFAULT 'everyone'::searchvisibility NOT NULL
+    searchable_by searchvisibility DEFAULT 'everyone'::searchvisibility NOT NULL,
+    username_hash character varying(64),
+    email_hash character varying(64),
+    google_id_hash character varying(64),
+    apple_id_hash character varying(64),
+    wechat_unionid_hash character varying(64)
 );
 
 
@@ -10891,6 +10896,13 @@ CREATE INDEX idx_plan_states_updated_at ON plan_states USING btree (updated_at);
 --
 
 CREATE INDEX idx_plan_states_user_status ON plan_states USING btree (user_id, status);
+
+
+--
+-- Name: idx_plans_goal_id; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX idx_plans_goal_id ON plans USING btree (goal_id);
 
 
 --
@@ -17068,10 +17080,24 @@ CREATE UNIQUE INDEX ix_users_apple_id ON users USING btree (apple_id);
 
 
 --
+-- Name: ix_users_apple_id_hash; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_users_apple_id_hash ON users USING btree (apple_id_hash);
+
+
+--
 -- Name: ix_users_deleted_at; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE INDEX ix_users_deleted_at ON users USING btree (deleted_at);
+
+
+--
+-- Name: ix_users_email_hash; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_users_email_hash ON users USING btree (email_hash);
 
 
 --
@@ -17110,10 +17136,31 @@ CREATE UNIQUE INDEX ix_users_google_id ON users USING btree (google_id);
 
 
 --
+-- Name: ix_users_google_id_hash; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_users_google_id_hash ON users USING btree (google_id_hash);
+
+
+--
+-- Name: ix_users_username_hash; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_users_username_hash ON users USING btree (username_hash);
+
+
+--
 -- Name: ix_users_wechat_unionid; Type: INDEX; Schema: public; Owner: postgres
 --
 
 CREATE UNIQUE INDEX ix_users_wechat_unionid ON users USING btree (wechat_unionid);
+
+
+--
+-- Name: ix_users_wechat_unionid_hash; Type: INDEX; Schema: public; Owner: postgres
+--
+
+CREATE INDEX ix_users_wechat_unionid_hash ON users USING btree (wechat_unionid_hash);
 
 
 --
@@ -18011,6 +18058,14 @@ ALTER TABLE ONLY ab_experiments
 
 ALTER TABLE ONLY collaborative_galaxies
     ADD CONSTRAINT fk_collaborative_galaxies_group_id FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE;
+
+
+--
+-- Name: plans fk_plans_goal_id_goals; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY plans
+    ADD CONSTRAINT fk_plans_goal_id_goals FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE SET NULL;
 
 
 --
