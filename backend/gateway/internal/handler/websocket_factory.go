@@ -3,7 +3,6 @@ package handler
 import (
 	"log"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/gorilla/websocket"
@@ -62,8 +61,10 @@ func DefaultUpgrader() websocket.Upgrader {
 }
 
 func isDevelopmentEnv() bool {
-	env := strings.ToLower(os.Getenv("ENVIRONMENT"))
-	return env == "dev" || env == "development"
+	if cfg := handlerConfig.Load(); cfg != nil {
+		return cfg.IsDevelopment()
+	}
+	return false
 }
 
 func selectWebSocketSubprotocol(r *http.Request) string {

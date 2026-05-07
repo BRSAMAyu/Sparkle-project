@@ -18,6 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"github.com/sparkle/gateway/internal/config"
+	"github.com/sparkle/gateway/internal/logsafe"
 	"github.com/sparkle/gateway/internal/metrics"
 	"github.com/sparkle/gateway/internal/service"
 	"go.uber.org/zap"
@@ -595,8 +596,7 @@ func buildBackendWebSocketHeaders(r *http.Request, authToken string) http.Header
 }
 
 func hashUserIDForLog(userID string) string {
-	sum := sha256.Sum256([]byte(userID))
-	return hex.EncodeToString(sum[:])[:12]
+	return logsafe.UserIDHash(userID)
 }
 
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)

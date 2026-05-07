@@ -3,17 +3,29 @@ package handler
 import (
 	"context"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/sparkle/gateway/internal/config"
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/logsafe"
 	"go.uber.org/zap"
 )
+
+// handlerConfig holds the application config for config-based environment
+// checks, replacing direct os.Getenv calls. Set once at startup via
+// InitHandlerConfig.
+var handlerConfig atomic.Pointer[config.Config]
+
+// InitHandlerConfig sets the package-level config used by isDevelopmentMode*
+// functions. Must be called once during application startup.
+func InitHandlerConfig(cfg *config.Config) {
+	handlerConfig.Store(cfg)
+}
 
 var sanitizedErrorResponsesTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Name: "sparkle_gateway_sanitized_error_responses_total",
@@ -21,10 +33,13 @@ var sanitizedErrorResponsesTotal = promauto.NewCounterVec(prometheus.CounterOpts
 }, []string{"status_code", "handler", "category"})
 
 // isDevelopmentModeForErrors checks if client error responses should keep raw
-// error text for local debugging.
+// error text for local debugging. Uses config when available, falls back to
+// environment variable for backwards compatibility.
 func isDevelopmentModeForErrors() bool {
-	env := strings.ToLower(os.Getenv("ENVIRONMENT"))
-	return env == "dev" || env == "development"
+	if cfg := handlerConfig.Load(); cfg != nil {
+		return cfg.IsDevelopment()
+	}
+	return false
 }
 
 func sanitizeErrorResponse(c *gin.Context, statusCode int, err error, internalMsg string) {
