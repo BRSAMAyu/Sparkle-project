@@ -82,7 +82,7 @@ class UniversalShareBottomSheet extends ConsumerStatefulWidget {
     required this.payload,
     this.onGenerateCard,
     this.onCommunityShare,
-    this.templates = DefaultShareTemplates.all,
+    this.templates,
     super.key,
   });
 
@@ -97,7 +97,10 @@ class UniversalShareBottomSheet extends ConsumerStatefulWidget {
   final VoidCallback? onCommunityShare;
 
   /// Available templates
-  final List<ShareTemplate> templates;
+  final List<ShareTemplate>? templates;
+
+  List<ShareTemplate> get _effectiveTemplates =>
+      templates ?? DefaultShareTemplates.all;
 
   @override
   ConsumerState<UniversalShareBottomSheet> createState() =>
@@ -107,6 +110,7 @@ class UniversalShareBottomSheet extends ConsumerStatefulWidget {
 class _UniversalShareBottomSheetState
     extends ConsumerState<UniversalShareBottomSheet> {
   final UniversalShareService _shareService = UniversalShareService();
+  late final bool _zh = I18nService.instance.isChinese;
 
   File? _shareCardFile;
   bool _isLoading = true;
@@ -265,7 +269,6 @@ class _UniversalShareBottomSheetState
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final zh = I18nService.instance.isChinese;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -304,7 +307,7 @@ class _UniversalShareBottomSheetState
                 const SizedBox(height: DS.md),
 
                 // Template Selector
-                if (widget.templates.isNotEmpty) ...[
+                if (widget._effectiveTemplates.isNotEmpty) ...[
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -394,10 +397,10 @@ class _UniversalShareBottomSheetState
         height: 80,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
-          itemCount: widget.templates.length,
+          itemCount: widget._effectiveTemplates.length,
           separatorBuilder: (_, __) => const SizedBox(width: DS.sm),
           itemBuilder: (context, index) {
-            final template = widget.templates[index];
+            final template = widget._effectiveTemplates[index];
             final isSelected = template.id == _selectedTemplateId;
 
             return GestureDetector(
@@ -465,8 +468,8 @@ class _UniversalShareBottomSheetState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildPrivacyToggle(
-              title: zh ? '显示头像' : 'Show avatar',
-              subtitle: zh ? '在卡片上显示头像' : 'Show avatar on card',
+              title: _zh ? '显示头像' : 'Show avatar',
+              subtitle: _zh ? '在卡片上显示头像' : 'Show avatar on card',
               icon: Icons.account_circle_outlined,
               value: _privacySettings.showUserAvatar,
               onChanged: (v) => _onPrivacySettingsChanged(
@@ -475,8 +478,8 @@ class _UniversalShareBottomSheetState
             ),
             const SizedBox(height: DS.sm),
             _buildPrivacyToggle(
-              title: zh ? '显示统计' : 'Show stats',
-              subtitle: zh ? '显示详细统计数据' : 'Show detailed statistics',
+              title: _zh ? '显示统计' : 'Show stats',
+              subtitle: _zh ? '显示详细统计数据' : 'Show detailed statistics',
               icon: Icons.bar_chart_outlined,
               value: _privacySettings.showDetailedStats,
               onChanged: (v) => _onPrivacySettingsChanged(
@@ -485,8 +488,8 @@ class _UniversalShareBottomSheetState
             ),
             const SizedBox(height: DS.sm),
             _buildPrivacyToggle(
-              title: zh ? '显示进度' : 'Show progress',
-              subtitle: zh ? '显示完成百分比' : 'Show completion percentage',
+              title: _zh ? '显示进度' : 'Show progress',
+              subtitle: _zh ? '显示完成百分比' : 'Show completion percentage',
               icon: Icons.show_chart,
               value: _privacySettings.showProgressPercentage,
               onChanged: (v) => _onPrivacySettingsChanged(
@@ -733,7 +736,7 @@ class _UniversalShareBottomSheetState
           _buildShareOption(
             actionKey: 'copy_caption',
             icon: Icons.content_copy_rounded,
-            label: zh ? '复制分享文案' : 'Copy share text',
+            label: _zh ? '复制分享文案' : 'Copy share text',
             color: const Color(0xFF8B6CEB),
             onTap: _copySelectedCaption,
           ),
@@ -781,7 +784,7 @@ class _UniversalShareBottomSheetState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            zh ? '分享文案' : 'Share text',
+            _zh ? '分享文案' : 'Share text',
             style: TextStyle(
               fontSize: DS.fontSizeSm,
               fontWeight: DS.fontWeightBold,
@@ -790,7 +793,7 @@ class _UniversalShareBottomSheetState
           ),
           const SizedBox(height: DS.spacing4),
           Text(
-            zh
+            _zh
                 ? '除了海报，也给你准备好了适合发朋友圈、群聊和私聊的文案。'
                 : 'Besides the poster, here is some text ready for sharing in chats and moments.',
             style: TextStyle(
@@ -951,7 +954,7 @@ class _UniversalShareBottomSheetState
       await _shareService
           .copyText(_captionOptions[_selectedCaptionIndex].caption);
       if (mounted) {
-        AppFeedback.success(context, zh ? '分享文案已复制' : 'Share text copied');
+        AppFeedback.success(context, _zh ? '分享文案已复制' : 'Share text copied');
       }
     });
   }
@@ -1050,7 +1053,7 @@ Future<void> showUniversalShareSheet(
   required UniversalSharePayload payload,
   Future<File?> Function(UniversalSharePayload payload)? onGenerateCard,
   VoidCallback? onCommunityShare,
-  List<ShareTemplate> templates = DefaultShareTemplates.all,
+  List<ShareTemplate>? templates,
 }) async {
   await showSensoryModalBottomSheet<void>(
     context: context,
