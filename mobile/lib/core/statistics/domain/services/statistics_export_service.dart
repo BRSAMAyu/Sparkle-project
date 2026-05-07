@@ -29,9 +29,9 @@ extension ExportFormatExt on ExportFormat {
       case ExportFormat.csv:
         return 'CSV';
       case ExportFormat.pngReport:
-        return l10n?.statisticsExportImageReport ?? '图片报告';
+        return l10n?.statisticsExportImageReport ?? 'Image Report';
       case ExportFormat.pdfReport:
-        return l10n?.statisticsExportPDFReport ?? 'PDF报告';
+        return l10n?.statisticsExportPDFReport ?? 'PDF Report';
     }
   }
 

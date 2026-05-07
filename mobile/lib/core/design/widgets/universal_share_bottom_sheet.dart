@@ -8,6 +8,7 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_permission_dialog.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/community/presentation/widgets/share_resource_sheet.dart';
@@ -31,36 +32,39 @@ class ShareTemplate {
 
 /// Default share templates
 class DefaultShareTemplates {
-  static const List<ShareTemplate> all = [
-    ShareTemplate(
-      id: 'cosmic',
-      name: '星空',
-      description: '星空主题',
-      icon: Icons.auto_awesome,
-      color: Color(0xFF6366F1),
-    ),
-    ShareTemplate(
-      id: 'minimal',
-      name: '简约',
-      description: '简约风格',
-      icon: Icons.minimize,
-      color: Color(0xFF64748B),
-    ),
-    ShareTemplate(
-      id: 'neon',
-      name: '霓虹',
-      description: '霓虹风格',
-      icon: Icons.light_mode,
-      color: Color(0xFF22D3EE),
-    ),
-    ShareTemplate(
-      id: 'elegant',
-      name: '典雅',
-      description: '典雅风格',
-      icon: Icons.star_outline,
-      color: Color(0xFFD4AF37),
-    ),
-  ];
+  static List<ShareTemplate> get all {
+    final zh = I18nService.instance.isChinese;
+    return [
+      ShareTemplate(
+        id: 'cosmic',
+        name: zh ? '星空' : 'Cosmic',
+        description: zh ? '星空主题' : 'Cosmic theme',
+        icon: Icons.auto_awesome,
+        color: const Color(0xFF6366F1),
+      ),
+      ShareTemplate(
+        id: 'minimal',
+        name: zh ? '简约' : 'Minimal',
+        description: zh ? '简约风格' : 'Minimal style',
+        icon: Icons.minimize,
+        color: const Color(0xFF64748B),
+      ),
+      ShareTemplate(
+        id: 'neon',
+        name: zh ? '霓虹' : 'Neon',
+        description: zh ? '霓虹风格' : 'Neon style',
+        icon: Icons.light_mode,
+        color: const Color(0xFF22D3EE),
+      ),
+      ShareTemplate(
+        id: 'elegant',
+        name: zh ? '典雅' : 'Elegant',
+        description: zh ? '典雅风格' : 'Elegant style',
+        icon: Icons.star_outline,
+        color: const Color(0xFFD4AF37),
+      ),
+    ];
+  }
 }
 
 /// Universal share bottom sheet with multi-channel options
@@ -261,6 +265,7 @@ class _UniversalShareBottomSheetState
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    final zh = I18nService.instance.isChinese;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -460,8 +465,8 @@ class _UniversalShareBottomSheetState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildPrivacyToggle(
-              title: '显示头像',
-              subtitle: '在卡片上显示头像',
+              title: zh ? '显示头像' : 'Show avatar',
+              subtitle: zh ? '在卡片上显示头像' : 'Show avatar on card',
               icon: Icons.account_circle_outlined,
               value: _privacySettings.showUserAvatar,
               onChanged: (v) => _onPrivacySettingsChanged(
@@ -470,8 +475,8 @@ class _UniversalShareBottomSheetState
             ),
             const SizedBox(height: DS.sm),
             _buildPrivacyToggle(
-              title: '显示统计',
-              subtitle: '显示详细统计数据',
+              title: zh ? '显示统计' : 'Show stats',
+              subtitle: zh ? '显示详细统计数据' : 'Show detailed statistics',
               icon: Icons.bar_chart_outlined,
               value: _privacySettings.showDetailedStats,
               onChanged: (v) => _onPrivacySettingsChanged(
@@ -480,8 +485,8 @@ class _UniversalShareBottomSheetState
             ),
             const SizedBox(height: DS.sm),
             _buildPrivacyToggle(
-              title: '显示进度',
-              subtitle: '显示完成百分比',
+              title: zh ? '显示进度' : 'Show progress',
+              subtitle: zh ? '显示完成百分比' : 'Show completion percentage',
               icon: Icons.show_chart,
               value: _privacySettings.showProgressPercentage,
               onChanged: (v) => _onPrivacySettingsChanged(
@@ -728,7 +733,7 @@ class _UniversalShareBottomSheetState
           _buildShareOption(
             actionKey: 'copy_caption',
             icon: Icons.content_copy_rounded,
-            label: '复制分享文案',
+            label: zh ? '复制分享文案' : 'Copy share text',
             color: const Color(0xFF8B6CEB),
             onTap: _copySelectedCaption,
           ),
@@ -776,7 +781,7 @@ class _UniversalShareBottomSheetState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '分享文案',
+            zh ? '分享文案' : 'Share text',
             style: TextStyle(
               fontSize: DS.fontSizeSm,
               fontWeight: DS.fontWeightBold,
@@ -785,7 +790,9 @@ class _UniversalShareBottomSheetState
           ),
           const SizedBox(height: DS.spacing4),
           Text(
-            '除了海报，也给你准备好了适合发朋友圈、群聊和私聊的文案。',
+            zh
+                ? '除了海报，也给你准备好了适合发朋友圈、群聊和私聊的文案。'
+                : 'Besides the poster, here is some text ready for sharing in chats and moments.',
             style: TextStyle(
               fontSize: DS.fontSizeXs,
               color: DS.textSecondary,
@@ -944,7 +951,7 @@ class _UniversalShareBottomSheetState
       await _shareService
           .copyText(_captionOptions[_selectedCaptionIndex].caption);
       if (mounted) {
-        AppFeedback.success(context, '分享文案已复制');
+        AppFeedback.success(context, zh ? '分享文案已复制' : 'Share text copied');
       }
     });
   }

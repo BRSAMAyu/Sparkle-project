@@ -39,7 +39,7 @@ class ProductionSettings(BaseSettings):
     GATEWAY_URL: str = Field(default="http://localhost:8080", env="GATEWAY_URL")
 
     BACKEND_CORS_ORIGINS: list[str] = Field(
-        default=["*"],
+        default=[],
         env="BACKEND_CORS_ORIGINS"
     )
 
@@ -200,6 +200,12 @@ class ProductionSettings(BaseSettings):
         # 检查生产环境关键配置
         if not self.DEBUG and self.SECRET_KEY == "CHANGE_ME_IN_PRODUCTION":
             errors.append("SECRET_KEY must be changed in production")
+
+        # CORS wildcard check
+        if "*" in self.BACKEND_CORS_ORIGINS:
+            errors.append(
+                "BACKEND_CORS_ORIGINS cannot include '*' in production"
+            )
 
         # 检查性能配置合理性
         if self.MAX_CONCURRENT_SESSIONS > 1000:

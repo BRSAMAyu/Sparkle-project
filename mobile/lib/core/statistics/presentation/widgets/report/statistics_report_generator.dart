@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
@@ -16,7 +17,7 @@ class ReportConfig {
     this.primaryColor,
     this.secondaryColor,
     this.includeWatermark = true,
-    this.watermarkText = '星火AI学习助手',
+    this.watermarkText = 'Sparkle AI',
   });
 
   /// Size of the report
@@ -304,7 +305,7 @@ class StatisticsReportGenerator {
     if (l10n != null) {
       return l10n.statisticsDateFormat(date.year.toString(), date.month.toString(), date.day.toString());
     }
-    return '${date.year}年${date.month}月${date.day}日';
+    return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 }
 

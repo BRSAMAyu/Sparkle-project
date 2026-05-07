@@ -640,9 +640,21 @@ func sanitizeCommunityWSJSONValue(value interface{}) interface{} {
 	}
 }
 
-// Close closes the WebSocket proxy (currently a no-op but kept for interface compatibility)
+// Close gracefully shuts down the WebSocket proxy by draining connections
+// and waiting for in-flight goroutines to finish (up to 5 seconds).
 func (p *WebSocketProxy) Close() error {
-	return nil
+	p.StartDraining()
+	done := make(chan struct{})
+	go func() {
+		p.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return nil
+	case <-time.After(5 * time.Second):
+		return nil
+	}
 }
 
 func (p *WebSocketProxy) StartDraining() {

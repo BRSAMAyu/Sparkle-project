@@ -154,16 +154,16 @@ class OfflineDictionaryService {
     );
     final bytes = response.data;
     if (bytes == null || bytes.isEmpty) {
-      throw Exception('下载的词典包为空');
+      throw Exception('Downloaded dictionary package is empty');
     }
 
     final decoded = json.decode(utf8.decode(gzip.decode(bytes)));
     if (decoded is! Map<String, dynamic>) {
-      throw Exception('离线词典包格式无效');
+      throw Exception('Invalid offline dictionary package format');
     }
     final entries = decoded['entries'];
     if (entries is! Map<String, dynamic>) {
-      throw Exception('离线词典包缺少 entries');
+      throw Exception('Offline dictionary package missing entries');
     }
 
     final dir = await _packageDirectory();

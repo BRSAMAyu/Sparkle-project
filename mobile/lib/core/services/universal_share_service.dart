@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart' as share_plus;
 
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/share_service.dart';
 import 'package:sparkle/core/services/wechat_share_service.dart';
 
@@ -31,10 +32,10 @@ enum ShareCaptionStyle {
 
 extension ShareCaptionStyleExtension on ShareCaptionStyle {
   String get label => switch (this) {
-        ShareCaptionStyle.flex => '高光炫耀',
-        ShareCaptionStyle.cinematic => '氛围感',
-        ShareCaptionStyle.humble => '低调分享',
-        ShareCaptionStyle.invite => '邀请同行',
+        ShareCaptionStyle.flex => I18nService.instance.isChinese ? '高光炫耀' : 'Flex',
+        ShareCaptionStyle.cinematic => I18nService.instance.isChinese ? '氛围感' : 'Cinematic',
+        ShareCaptionStyle.humble => I18nService.instance.isChinese ? '低调分享' : 'Low-key',
+        ShareCaptionStyle.invite => I18nService.instance.isChinese ? '邀请同行' : 'Invite',
       };
 }
 
@@ -63,13 +64,13 @@ extension ShareableContentTypeExtension on ShareableContentType {
       };
 
   String get defaultTitle => switch (this) {
-        ShareableContentType.achievement => '成就分享',
-        ShareableContentType.taskCompletion => '任务完成',
-        ShareableContentType.planProgress => '学习计划',
-        ShareableContentType.capsule => '时光胶囊',
-        ShareableContentType.knowledgeNode => '知识节点',
-        ShareableContentType.learningReport => '学习报告',
-        ShareableContentType.cognitivePrism => '认知棱镜',
+        ShareableContentType.achievement => I18nService.instance.isChinese ? '成就分享' : 'Achievement',
+        ShareableContentType.taskCompletion => I18nService.instance.isChinese ? '任务完成' : 'Task Done',
+        ShareableContentType.planProgress => I18nService.instance.isChinese ? '学习计划' : 'Study Plan',
+        ShareableContentType.capsule => I18nService.instance.isChinese ? '时光胶囊' : 'Time Capsule',
+        ShareableContentType.knowledgeNode => I18nService.instance.isChinese ? '知识节点' : 'Knowledge Node',
+        ShareableContentType.learningReport => I18nService.instance.isChinese ? '学习报告' : 'Learning Report',
+        ShareableContentType.cognitivePrism => I18nService.instance.isChinese ? '认知棱镜' : 'Cognitive Prism',
       };
 }
 
@@ -218,19 +219,35 @@ class UniversalShareService {
 
     String compactSummary() => switch (payload.contentType) {
         ShareableContentType.achievement =>
-          '已解锁 ${metadata['unlocked_count'] ?? '--'} 个成就，当前 ${metadata['equipped_title'] ?? '持续成长中'}',
+          I18nService.instance.isChinese
+            ? '已解锁 ${metadata['unlocked_count'] ?? '--'} 个成就，当前 ${metadata['equipped_title'] ?? '持续成长中'}'
+            : 'Unlocked ${metadata['unlocked_count'] ?? '--'} achievements, currently ${metadata['equipped_title'] ?? 'growing'}',
         ShareableContentType.taskCompletion =>
-          '完成了一个关键任务，继续推进今天的节奏',
+          I18nService.instance.isChinese
+            ? '完成了一个关键任务，继续推进今天的节奏'
+            : 'Completed a key task, keeping the momentum going',
         ShareableContentType.planProgress =>
-          '当前计划进度 ${(metadata['progress'] is num) ? (((metadata['progress'] as num) * 100).round()) : 0}%，稳步推进中',
+          I18nService.instance.isChinese
+            ? '当前计划进度 ${(metadata['progress'] is num) ? (((metadata['progress'] as num) * 100).round()) : 0}%，稳步推进中'
+            : 'Plan progress ${(metadata['progress'] is num) ? (((metadata['progress'] as num) * 100).round()) : 0}%, steadily advancing',
         ShareableContentType.capsule =>
-          subtitle?.isNotEmpty == true ? subtitle! : '记录下一个值得回看的想法',
+          subtitle?.isNotEmpty == true
+            ? subtitle!
+            : I18nService.instance.isChinese
+              ? '记录下一个值得回看的想法'
+              : 'Captured a thought worth revisiting',
         ShareableContentType.knowledgeNode =>
-          '知识星图又点亮了一颗节点',
+          I18nService.instance.isChinese
+            ? '知识星图又点亮了一颗节点'
+            : 'Lit up another node in the knowledge galaxy',
         ShareableContentType.learningReport =>
-          '本周活跃计划 ${metadata['active_plans'] ?? '--'} 个，成长亮度 ${metadata['flame_brightness'] ?? '--'}',
+          I18nService.instance.isChinese
+            ? '本周活跃计划 ${metadata['active_plans'] ?? '--'} 个，成长亮度 ${metadata['flame_brightness'] ?? '--'}'
+            : '${metadata['active_plans'] ?? '--'} active plans this week, growth brightness ${metadata['flame_brightness'] ?? '--'}',
         ShareableContentType.cognitivePrism =>
-          '把最近的思考模式整理成了一张认知切片',
+          I18nService.instance.isChinese
+            ? '把最近的思考模式整理成了一张认知切片'
+            : 'Turned recent thought patterns into a cognitive snapshot',
       };
 
     final summary = compactSummary();
@@ -239,27 +256,27 @@ class UniversalShareService {
     return [
       ShareCaptionOption(
         style: ShareCaptionStyle.flex,
-        title: '高光炫耀',
+        title: I18nService.instance.isChinese ? '高光炫耀' : 'Flex',
         icon: '✨',
-        caption: '$title\n$summary\n这次真的有点满意，先晒一下。$deepLink',
+        caption: '$title\n$summary\n${I18nService.instance.isChinese ? '这次真的有点满意，先晒一下。' : 'Honestly pretty proud of this one. Sharing it.'}$deepLink',
       ),
       ShareCaptionOption(
         style: ShareCaptionStyle.cinematic,
-        title: '氛围感',
+        title: I18nService.instance.isChinese ? '氛围感' : 'Cinematic',
         icon: '🌌',
-        caption: '$title\n$summary\n把一段成长留成了一张图，也留给未来的自己。$deepLink',
+        caption: '$title\n$summary\n${I18nService.instance.isChinese ? '把一段成长留成了一张图，也留给未来的自己。' : 'Turned a chapter of growth into an image, for future me too.'}$deepLink',
       ),
       ShareCaptionOption(
         style: ShareCaptionStyle.humble,
-        title: '低调分享',
+        title: I18nService.instance.isChinese ? '低调分享' : 'Low-key',
         icon: '🙂',
-        caption: '$title\n$summary\n最近在慢慢推进，记录一下。$deepLink',
+        caption: '$title\n$summary\n${I18nService.instance.isChinese ? '最近在慢慢推进，记录一下。' : 'Making steady progress lately, just logging it.'}$deepLink',
       ),
       ShareCaptionOption(
         style: ShareCaptionStyle.invite,
-        title: '邀请同行',
+        title: I18nService.instance.isChinese ? '邀请同行' : 'Invite',
         icon: '🚀',
-        caption: '$title\n$summary\n如果你也在做类似的事，欢迎一起交流。$deepLink',
+        caption: '$title\n$summary\n${I18nService.instance.isChinese ? '如果你也在做类似的事，欢迎一起交流。' : 'If you\'re working on something similar, let\'s connect.'}$deepLink',
       ),
     ];
   }

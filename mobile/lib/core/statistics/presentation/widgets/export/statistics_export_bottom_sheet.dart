@@ -630,7 +630,7 @@ class CommonShareOptions {
   }) =>
       ShareOption(
         id: 'wechat',
-        label: l10n?.statisticsShareWechat ?? '微信',
+        label: l10n?.statisticsShareWechat ?? 'WeChat',
         icon: Icons.chat,
         color: DS.success,
         action: action,
@@ -643,7 +643,7 @@ class CommonShareOptions {
   }) =>
       ShareOption(
         id: 'wechat_moments',
-        label: l10n?.statisticsShareMoments ?? '朋友圈',
+        label: l10n?.statisticsShareMoments ?? 'Moments',
         icon: Icons.photo_camera,
         color: DS.success,
         action: action,
@@ -656,7 +656,7 @@ class CommonShareOptions {
   }) =>
       ShareOption(
         id: 'save',
-        label: l10n?.statisticsShareSaveImage ?? '保存图片',
+        label: l10n?.statisticsShareSaveImage ?? 'Save Image',
         icon: Icons.download,
         color: DS.brandPrimary,
         action: action,
@@ -669,7 +669,7 @@ class CommonShareOptions {
   }) =>
       ShareOption(
         id: 'copy_link',
-        label: l10n?.statisticsShareCopyLink ?? '复制链接',
+        label: l10n?.statisticsShareCopyLink ?? 'Copy Link',
         icon: Icons.link,
         color: DS.neutral500,
         action: action,
@@ -682,7 +682,7 @@ class CommonShareOptions {
   }) =>
       ShareOption(
         id: 'more',
-        label: l10n?.statisticsShareMore ?? '更多',
+        label: l10n?.statisticsShareMore ?? 'More',
         icon: Icons.more_horiz,
         color: DS.neutral500,
         action: action,

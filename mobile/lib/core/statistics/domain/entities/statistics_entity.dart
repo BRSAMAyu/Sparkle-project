@@ -85,13 +85,13 @@ extension StatisticsTypeExt on StatisticsType {
   String localizedDisplayName(AppLocalizations? l10n) {
     switch (this) {
       case StatisticsType.focus:
-        return l10n?.statisticsTypeFocus ?? '专注';
+        return l10n?.statisticsTypeFocus ?? 'Focus';
       case StatisticsType.agent:
-        return l10n?.statisticsTypeAgent ?? '智能体';
+        return l10n?.statisticsTypeAgent ?? 'Agent';
       case StatisticsType.capsule:
-        return l10n?.statisticsTypeCapsule ?? '胶囊';
+        return l10n?.statisticsTypeCapsule ?? 'Capsule';
       case StatisticsType.learning:
-        return l10n?.statisticsTypeLearning ?? '学习';
+        return l10n?.statisticsTypeLearning ?? 'Learning';
     }
   }
 

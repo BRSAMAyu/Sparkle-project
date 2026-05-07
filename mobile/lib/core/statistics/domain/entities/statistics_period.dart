@@ -27,15 +27,15 @@ extension StatisticsPeriodExt on StatisticsPeriod {
   String localizedLabel(AppLocalizations? l10n) {
     switch (this) {
       case StatisticsPeriod.today:
-        return l10n?.statisticsPeriodToday ?? '今日';
+        return l10n?.statisticsPeriodToday ?? 'Today';
       case StatisticsPeriod.week:
-        return l10n?.statisticsPeriodWeek ?? '本周';
+        return l10n?.statisticsPeriodWeek ?? 'This Week';
       case StatisticsPeriod.month:
-        return l10n?.statisticsPeriodMonth ?? '本月';
+        return l10n?.statisticsPeriodMonth ?? 'This Month';
       case StatisticsPeriod.year:
-        return l10n?.statisticsPeriodYear ?? '今年';
+        return l10n?.statisticsPeriodYear ?? 'This Year';
       case StatisticsPeriod.custom:
-        return l10n?.statisticsPeriodCustom ?? '自定义';
+        return l10n?.statisticsPeriodCustom ?? 'Custom';
     }
   }
 

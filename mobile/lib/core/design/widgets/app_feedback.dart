@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/notification_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/core/utils/theme_utils.dart';
@@ -144,20 +145,23 @@ class SparkleSnackBar {
     String message, {
     Key? key,
     VoidCallback? onRetry,
-    String retryLabel = '重试',
-  }) =>
-      create(
-        key: key,
-        message: message,
-        accentColor: DS.semanticError,
-        backgroundColor: DS.surfaceRoleColor(SparkleSurfaceRole.modal),
-        foregroundColor: DS.textPrimary,
-        icon: Icons.error_outline,
-        duration: errorDuration,
-        showCloseIcon: true,
-        actionLabel: onRetry != null ? retryLabel : null,
-        onAction: onRetry,
-      );
+    String? retryLabel,
+  }) {
+    final resolvedLabel = retryLabel ??
+        (I18nService.instance.isChinese ? '重试' : 'Retry');
+    return create(
+      key: key,
+      message: message,
+      accentColor: DS.semanticError,
+      backgroundColor: DS.surfaceRoleColor(SparkleSurfaceRole.modal),
+      foregroundColor: DS.textPrimary,
+      icon: Icons.error_outline,
+      duration: errorDuration,
+      showCloseIcon: true,
+      actionLabel: onRetry != null ? resolvedLabel : null,
+      onAction: onRetry,
+    );
+  }
 
   /// Creates a fully configured [SnackBar] for success messages.
   static SnackBar success(
