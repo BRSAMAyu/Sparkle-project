@@ -6,6 +6,7 @@ Guest User Cleanup Tasks
 """
 from datetime import UTC, datetime, timedelta
 
+from app.core.time_utils import utcnow as _utcnow
 from celery import shared_task
 from celery.schedules import crontab
 from loguru import logger
@@ -15,11 +16,14 @@ from app.db.session import get_db_context
 from app.models.user import User
 
 
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
-@shared_task(name="tasks.cleanup_expired_guests")
+@shared_task(
+    name="tasks.cleanup_expired_guests",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def cleanup_expired_guests():
     """
     清理长期未活跃的游客用户（每周执行）
@@ -45,7 +49,14 @@ def cleanup_expired_guests():
         return {"status": "error", "message": str(e)}
 
 
-@shared_task(name="tasks.cleanup_guest_sessions")
+@shared_task(
+    name="tasks.cleanup_guest_sessions",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def cleanup_guest_sessions():
     """
     清理游客用户的过期会话数据（每日执行）
@@ -95,7 +106,11 @@ async def _cleanup_expired_guests(db) -> int:
 
     logger.info(f"Found {len(user_ids_to_delete)} expired guest users to delete")
 
-    # 执行删除
+    # Execute delete — SQLAlchemy CASCADE on the User model's relationships
+    # should automatically clean up owned data (tasks, plans, goals, achievements,
+    # error_records, etc.). If the User model lacks proper cascade config, child
+    # rows will be orphaned. Verify via: SELECT conname, confdeltype FROM
+    # pg_constraint WHERE conrelid = 'users'::regclass;
     delete_query = delete(User).where(
         User.id.in_(user_ids_to_delete),
         User.registration_source == "guest",

@@ -12,7 +12,14 @@ from app.services.checkpoint_nudge_service import (
 )
 
 
-@shared_task(name="tasks.checkpoint_nudge.scan_daily_checkpoints")
+@shared_task(
+    name="tasks.checkpoint_nudge.scan_daily_checkpoints",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def scan_daily_checkpoints() -> dict[str, int]:
     async def _run() -> dict[str, int]:
         if cache_service.redis is None:
@@ -26,7 +33,14 @@ def scan_daily_checkpoints() -> dict[str, int]:
     return asyncio.run(_run())
 
 
-@shared_task(name="tasks.checkpoint_nudge.run_due_checkpoint_wakes")
+@shared_task(
+    name="tasks.checkpoint_nudge.run_due_checkpoint_wakes",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def run_due_checkpoint_wakes() -> dict[str, int]:
     async def _run() -> dict[str, int]:
         if cache_service.redis is None:

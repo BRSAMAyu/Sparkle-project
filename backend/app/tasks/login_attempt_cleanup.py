@@ -5,6 +5,7 @@ GDPR storage limitation principle.
 """
 from datetime import UTC, datetime, timedelta
 
+from app.core.time_utils import utcnow as _utcnow
 from celery import shared_task
 from celery.schedules import crontab
 from loguru import logger
@@ -14,11 +15,14 @@ from app.db.session import get_db_context
 from app.models.user import LoginAttempt
 
 
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
-@shared_task(name="tasks.cleanup_old_login_attempts")
+@shared_task(
+    name="tasks.cleanup_old_login_attempts",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def cleanup_old_login_attempts():
     """
     Remove login attempt records older than 90 days (GDPR storage limitation).

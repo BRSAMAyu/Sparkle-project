@@ -271,6 +271,7 @@ class LLMService:
         self._explicit_model_override = False
         if not kwargs.get("api_key"):
             self.demo_mode = True
+            logger.warning("LLM API key not configured, activating demo mode. Set LLM_API_KEY in environment for production.")
 
         logger.info(
             f"[LLMRouter] {self.agent_role.value} → {kwargs['model']} "
@@ -317,6 +318,7 @@ class LLMService:
             return
         if not api_key:
             self.demo_mode = True
+            logger.warning("LLM API key not configured, activating demo mode. Set LLM_API_KEY in environment for production.")
 
         logger.info(f"[Legacy] LLMService initialized with provider={provider_type}")
 

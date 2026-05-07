@@ -10,6 +10,7 @@ from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.cache import cache_service
+from app.core.time_utils import utcnow as _utcnow
 from app.models.cognitive import BehaviorPattern, CognitiveFragment
 from app.models.plan import Plan, PlanType
 from app.models.task import Task, TaskStatus
@@ -20,10 +21,6 @@ from app.services.insight_copy import (
     present_pattern_name,
     present_pattern_solution,
 )
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class DashboardService:
@@ -43,7 +40,7 @@ class DashboardService:
         This report is used as an operational heartbeat, so it should stay fast
         and deterministic even when no user-facing dashboard context is present.
         """
-        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
         active_users_result = await self.db.execute(
             select(func.count(User.id)).where(User.is_active.is_(True))
@@ -172,7 +169,7 @@ class DashboardService:
         plan = result.scalar_one_or_none()
 
         if plan:
-            days_left = (plan.target_date - datetime.now().date()).days if plan.target_date else 0
+            days_left = (plan.target_date - _utcnow().date()).days if plan.target_date else 0
             return {
                 "id": str(plan.id),
                 "name": plan.name,
@@ -208,7 +205,7 @@ class DashboardService:
 
     async def _get_today_focus_minutes(self, user_id: UUID) -> int:
         """Calculate today's focus time from completed tasks"""
-        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
         query = select(func.coalesce(func.sum(Task.actual_minutes), 0)).where(
             and_(
@@ -221,7 +218,7 @@ class DashboardService:
         return result.scalar() or 0
 
     async def _get_today_completed_tasks(self, user_id: UUID) -> int:
-        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = _utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
         query = select(func.count(Task.id)).where(
             and_(
                 Task.user_id == user_id,

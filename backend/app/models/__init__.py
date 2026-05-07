@@ -227,10 +227,12 @@ except ImportError:
     TaskHistory = None
 from app.models.theater_prediction import TheaterPrediction
 from app.models.tool_history import UserToolHistory
-from app.models.user import User
+from app.models.user import PushPreference, User
 from app.models.user_preferences import UserPreferencesCenter
 from app.models.user_settings import UserSettings
+from app.models.user_state import UserStateSnapshot
 from app.models.visual_element import VisualElement
+from app.models.vocabulary import DictionaryEntry, WordBook
 try:
     from app.models.workflow_conversation import (
         ContentReview,
@@ -548,11 +550,16 @@ __all__ = [
     # Tool History
     "UserToolHistory",
     # User
+    "PushPreference",
     "User",
     "UserPreferencesCenter",
     "UserSettings",
+    "UserStateSnapshot",
     # Visual
     "VisualElement",
+    # Vocabulary
+    "DictionaryEntry",
+    "WordBook",
     # Workflow
     "ContentReview",
     "ContentReviewFeedback",

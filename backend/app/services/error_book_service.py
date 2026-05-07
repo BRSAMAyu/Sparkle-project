@@ -24,6 +24,7 @@ from sqlalchemy.orm.attributes import set_committed_value
 
 from app.config import settings
 from app.core.event_bus import ErrorCreated, event_bus
+from app.core.time_utils import utcnow as _utcnow
 from app.core.i18n import I18n
 from app.core.llm_client import llm_client
 from app.models.achievement import UserStreakStats
@@ -45,10 +46,6 @@ from app.services.embedding_service import embedding_service
 from app.services.memory_service import MemoryService
 from app.services.ocr_service import ocr_service
 from app.services.semantic_memory_service import SemanticMemoryService
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 SPARKLE_FILE_REFERENCE_PREFIX = "sparkle-file://"
@@ -704,19 +701,6 @@ class ErrorBookService:
             I18n.t("error_book.fallback_recommended_discrimination", locale="zh"),
         ]
         study_suggestion = I18n.t("error_book.fallback_study_suggestion", locale="zh")
-        correct_approach = (
-            f"先用自己的话复述题目核心概念，再明确区分“{correct_text or '正确答案中的关键定义'}”"
-            "与常见混淆点，最后用一个最小例子重新验证。"
-        )
-        similar_traps = [
-            "把符号本身和它表示的对象混为一谈",
-            "没有先确认概念定义就直接代入理解",
-        ]
-        recommended_knowledge = related_concepts or ["核心概念定义", "易混点辨析"]
-        study_suggestion = (
-            "先把这道题压缩成一张两列表：左边写错误理解，右边写正确解释；"
-            "随后再做一道同类型变式题，确认自己能稳定说清差异。"
-        )
         return {
             "error_type": error_type,
             "error_type_label": error_type_label,

@@ -8,14 +8,12 @@ from loguru import logger
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time_utils import utcnow as _utcnow
 from app.models.notification import Notification
 from app.models.notification_interaction import NotificationInteraction, NotificationPreferences
 from app.models.user import PushPreference
 from app.schemas.notification import NotificationCreate
 
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 PER_TYPE_NOTIFICATION_ALIASES: dict[str, set[str]] = {
@@ -198,8 +196,8 @@ class NotificationService:
                         int(timedelta(hours=6 + (consecutive_ignores - 3) * 12).total_seconds()),
                         "1",
                     )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Consecutive ignore backoff check failed for user {user_id}: {e}")
 
         # NUDGE-005: Fatigue protection — suppress non-critical notifications under stress
         try:
@@ -215,8 +213,8 @@ class NotificationService:
                         return False, "fatigue_protection_critical"
                     if fatigue_level == "high" and cls.source_type_for_notification(notification_type) == "system":
                         return False, "fatigue_protection_high"
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Fatigue protection check failed for user {user_id}: {e}")
 
         # Quiet hours check
         if not prefs or not prefs.quiet_hours_enabled:

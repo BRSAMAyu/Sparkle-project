@@ -86,7 +86,14 @@ async def _send_group_checkin_reminders(db: AsyncSession, *, now: datetime | Non
     }
 
 
-@shared_task(name="tasks.community.send_checkin_reminders")
+@shared_task(
+    name="tasks.community.send_checkin_reminders",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def send_checkin_reminders():
     """
     Send group check-in reminder notifications.

@@ -15,7 +15,14 @@ from loguru import logger
 from app.core.cache import cache_service
 
 
-@shared_task(name="tasks.absence.scan_absent_users")
+@shared_task(
+    name="tasks.absence.scan_absent_users",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def scan_absent_users() -> dict[str, int]:
     """Periodic task: scan for absent users and run signal pipeline."""
 

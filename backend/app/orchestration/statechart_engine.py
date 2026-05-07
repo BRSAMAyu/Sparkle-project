@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import copy
 import inspect
 import json
 import uuid
@@ -60,12 +61,12 @@ class WorkflowState:
         self.messages.append(msg)
 
     def clone(self) -> WorkflowState:
-        """Create a shallow copy of the state for parallel execution."""
+        """Create a deep copy of the state for parallel execution."""
         new_state = WorkflowState(
-            messages=list(self.messages),
-            context_data=dict(self.context_data),
+            messages=copy.deepcopy(self.messages),
+            context_data=copy.deepcopy(self.context_data),
             next_step=self.next_step,
-            errors=list(self.errors),
+            errors=copy.deepcopy(self.errors),
             is_finished=self.is_finished,
             trace_id=self.trace_id,
         )

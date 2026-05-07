@@ -20,6 +20,7 @@ from prometheus_client import Counter
 from sqlalchemy import select
 
 from app.core.metrics import get_or_create_metric
+from app.core.time_utils import utcnow as _utcnow
 
 if TYPE_CHECKING:
     from app.services.plan_matching_service import PlanMatchingService
@@ -66,10 +67,6 @@ class FSMState:
     @classmethod
     def from_json(cls, data: str) -> FSMState:
         return cls(**json.loads(data))
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class SessionStateManager:

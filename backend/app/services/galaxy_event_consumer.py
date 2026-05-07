@@ -10,6 +10,7 @@ from loguru import logger
 from sqlalchemy import func, select
 
 from app.core.event_bus import EventBus, reliable_consumer
+from app.core.time_utils import utcnow as _utcnow
 from app.db.session import AsyncSessionLocal
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.plan import Plan
@@ -24,10 +25,6 @@ from app.services.galaxy_service import GalaxyService
 from app.services.plan_state_service import PlanStateService
 from app.services.simulation.seed_extractor import SeedExtractor
 from app.services.system_update_service import SystemUpdateService, build_system_update
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class GalaxyEventConsumer:

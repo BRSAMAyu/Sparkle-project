@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.aurora.runtime_v1 import AuroraRuntimePlanningAdapter, AuroraRuntimePlanningState
 from app.core.cache import cache_service
+from app.core.time_utils import utcnow as _utcnow
 from app.models.error_book import ErrorRecord
 from app.models.galaxy import KnowledgeNode
 from app.models.plan import Plan, PlanPriority, PlanStage, PlanType
@@ -148,10 +149,6 @@ _SPRINT_PACK_LAYER_LABELS = {
     "security": "网络安全",
     "security_performance": "安全与性能",
 }
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 def _as_dict(value: Any) -> dict[str, Any]:

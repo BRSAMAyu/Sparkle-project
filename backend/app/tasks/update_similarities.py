@@ -15,6 +15,7 @@ from loguru import logger
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.time_utils import utcnow as _utcnow
 from app.db.session import get_db_context
 from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.recommendation import UserItemInteraction, UserLearningProfile, UserSimilarity
@@ -23,11 +24,14 @@ from app.models.user import User
 SIMILARITY_BATCH_FLUSH_SIZE = 100
 
 
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
-@shared_task(name="tasks.update_all_user_similarities")
+@shared_task(
+    name="tasks.update_all_user_similarities",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def update_all_user_similarities():
     """
     更新所有用户的相似度（每日定时任务）
@@ -51,7 +55,14 @@ def update_all_user_similarities():
         return {"status": "error", "message": str(e)}
 
 
-@shared_task(name="tasks.update_user_learning_profiles")
+@shared_task(
+    name="tasks.update_user_learning_profiles",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def update_user_learning_profiles():
     """
     更新用户学习画像（每日定时任务）
@@ -73,7 +84,14 @@ def update_user_learning_profiles():
         return {"status": "error", "message": str(e)}
 
 
-@shared_task(name="tasks.update_item_similarities")
+@shared_task(
+    name="tasks.update_item_similarities",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def update_item_similarities():
     """
     更新物品相似度（每日定时任务）
@@ -95,7 +113,14 @@ def update_item_similarities():
         return {"status": "error", "message": str(e)}
 
 
-@shared_task(name="tasks.expire_old_recommendation_cache")
+@shared_task(
+    name="tasks.expire_old_recommendation_cache",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def expire_old_recommendation_cache():
     """
     清理过期的推荐缓存

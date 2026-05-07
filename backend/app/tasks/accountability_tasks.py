@@ -237,7 +237,14 @@ async def _already_sent_reminder_today(
 # 任务定义
 # ============================================================================
 
-@shared_task(name="tasks.accountability.send_daily_reminders")
+@shared_task(
+    name="tasks.accountability.send_daily_reminders",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def send_daily_reminders():
     """
     发送每日打卡提醒
@@ -260,7 +267,14 @@ def send_daily_reminders():
         return {"status": "error", "message": str(e)}
 
 
-@shared_task(name="tasks.accountability.check_partner_progress")
+@shared_task(
+    name="tasks.accountability.check_partner_progress",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def check_partner_progress():
     """
     检查伙伴进度，触发成就评估
@@ -286,7 +300,14 @@ def check_partner_progress():
         return {"status": "error", "message": str(e)}
 
 
-@shared_task(name="tasks.accountability.evaluate_achievements")
+@shared_task(
+    name="tasks.accountability.evaluate_achievements",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def evaluate_achievements():
     """
     评估并发放成就奖励
@@ -312,7 +333,14 @@ def evaluate_achievements():
         return {"status": "error", "message": str(e)}
 
 
-@shared_task(name="tasks.accountability.send_milestone_notification")
+@shared_task(
+    name="tasks.accountability.send_milestone_notification",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def send_milestone_notification(partnership_id: str, user_id: str, milestone_type: str, milestone_data: dict):
     """
     发送里程碑庆祝通知
@@ -340,7 +368,14 @@ def send_milestone_notification(partnership_id: str, user_id: str, milestone_typ
         return {"status": "error", "message": str(e)}
 
 
-@shared_task(name="tasks.accountability.notify_partner_checkin")
+@shared_task(
+    name="tasks.accountability.notify_partner_checkin",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def notify_partner_checkin(checkin_id: str, partnership_id: str, checker_id: str):
     """
     通知伙伴已打卡

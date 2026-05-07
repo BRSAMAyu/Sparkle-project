@@ -8,6 +8,7 @@ from loguru import logger
 
 from app.core import logsafe
 from app.core.cache import cache_service
+from app.core.security import set_user_revoked_before
 
 
 class TokenRevocationService:
@@ -90,11 +91,11 @@ class TokenRevocationService:
             int: Number of tokens revoked
         """
         try:
-            # In production, you'd use Redis SCAN or similar to find all tokens for user
-            # For now, we'll use a simple approach with known patterns
-            # This would be enhanced in production with proper indexing
-            logger.info(f"Revoking all tokens for user {logsafe.user_id_hash(user_id)}")
-            return 0
+            from datetime import UTC, datetime
+
+            await set_user_revoked_before(user_id, datetime.now(UTC))
+            logger.info(f"Revoked all tokens for user {logsafe.user_id_hash(user_id)}")
+            return 1
         except Exception as e:
             logger.error(f"Failed to revoke all tokens for user {logsafe.user_id_hash(user_id)}: {e}")
             return 0

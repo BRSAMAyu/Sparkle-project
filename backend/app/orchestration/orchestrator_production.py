@@ -29,6 +29,8 @@ from collections.abc import AsyncGenerator
 from datetime import UTC, datetime
 from typing import Any
 
+from app.core.time_utils import utcnow as _utcnow
+
 from loguru import logger
 from opentelemetry import trace
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -107,10 +109,6 @@ if PROMETHEUS_AVAILABLE:
     )
 
 
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
-
-
 def _as_dict(value: Any) -> dict[str, Any]:
     return dict(value) if isinstance(value, dict) else {}
 
@@ -142,7 +140,7 @@ class CircuitBreaker:
 
             if self.failure_count >= self.failure_threshold:
                 self.state = "OPEN"
-                logger.warning(f"Circuit breaker OPENED after {self.failure_count} failures")
+                logger.warning("Circuit breaker OPENED after {} failures", self.failure_count)
                 if PROMETHEUS_AVAILABLE:
                     CIRCUIT_BREAKER_STATE.set(1)
 
@@ -209,11 +207,11 @@ class MessageTracker:
             now = time.time()
             expired = self._cleanup_expired(now)
             if expired:
-                logger.debug(f"Message tracker TTL cleanup: removed {expired} expired messages")
+                logger.debug("Message tracker TTL cleanup: removed {} expired messages", expired)
 
             overflow = self._cleanup_overflow()
             if overflow:
-                logger.warning(f"Message tracker cleanup: removed {overflow} old messages")
+                logger.warning("Message tracker cleanup: removed {} old messages", overflow)
 
             self.processed_messages[message_id] = now
 
@@ -224,6 +222,8 @@ class MessageTracker:
 
 
 class ProductionChatOrchestrator:
+    """DEPRECATED: Use ChatOrchestrator directly. This class will be removed in a future release."""
+
     """
     Legacy production orchestrator.
 
@@ -323,9 +323,9 @@ class ProductionChatOrchestrator:
         try:
             registered = dynamic_tool_registry.ensure_package_registered("app.tools")
             if registered > 0:
-                logger.info(f"Auto-registered {len(dynamic_tool_registry.get_all_tools())} tools")
+                logger.info("Auto-registered {} tools", len(dynamic_tool_registry.get_all_tools()))
         except Exception as e:
-            logger.error(f"Tool registration failed: {e}")
+            logger.error("Tool registration failed: {}", e)
             self._healthy = False
 
     async def _track_session(self, session_id: str, add: bool = True):
@@ -333,7 +333,7 @@ class ProductionChatOrchestrator:
         async with self.session_lock:
             if add:
                 if len(self.active_sessions) >= self.max_concurrent_sessions:
-                    logger.warning(f"Max concurrent sessions reached: {self.max_concurrent_sessions}")
+                    logger.warning("Max concurrent sessions reached: {}", self.max_concurrent_sessions)
                     return False
                 self.active_sessions.add(session_id)
                 if self.enable_metrics:
@@ -356,9 +356,9 @@ class ProductionChatOrchestrator:
                     request_id=None,
                     user_id=None
                 )
-            logger.info(f"Session {session_id} State: {state} ({details})")
+            logger.info("Session {} State: {} ({})", session_id, state, details)
         except Exception as e:
-            logger.warning(f"Failed to update state: {e}")
+            logger.warning("Failed to update state: {}", e)
 
     async def _check_idempotency(self, session_id: str, request_id: str) -> dict[str, Any] | None:
         """检查幂等性（带降级）"""
@@ -368,7 +368,7 @@ class ProductionChatOrchestrator:
         try:
             return await self.state_manager.get_cached_response(session_id, request_id)
         except Exception as e:
-            logger.warning(f"Idempotency check failed: {e}")
+            logger.warning("Idempotency check failed: {}", e)
             return None
 
     async def _acquire_session_lock(self, session_id: str, request_id: str) -> bool:
@@ -384,7 +384,7 @@ class ProductionChatOrchestrator:
                 return acquired
             except Exception as e:
                 span.record_exception(e)
-                logger.warning(f"Lock acquisition failed: {e}, proceeding without lock")
+                logger.warning("Lock acquisition failed: {}, proceeding without lock", e)
                 return True
 
     async def _release_session_lock(self, session_id: str, request_id: str):
@@ -395,7 +395,7 @@ class ProductionChatOrchestrator:
         try:
             await self.state_manager.release_lock(session_id, request_id)
         except Exception as e:
-            logger.warning(f"Lock release failed: {e}")
+            logger.warning("Lock release failed: {}", e)
 
     async def _cache_response(self, session_id: str, request_id: str, response_data: dict[str, Any]):
         """缓存响应（带降级）"""
@@ -405,7 +405,7 @@ class ProductionChatOrchestrator:
         try:
             await self.state_manager.cache_response(session_id, request_id, response_data)
         except Exception as e:
-            logger.warning(f"Response caching failed: {e}")
+            logger.warning("Response caching failed: {}", e)
 
     async def _build_user_context(self, user_id: str, db_session: AsyncSession) -> dict[str, Any]:
         """构建用户上下文（带错误处理和降级）"""
@@ -433,7 +433,7 @@ class ProductionChatOrchestrator:
                     "tone": llm_profile.tone,
                 }
             except Exception as e:
-                logger.warning(f"Failed to build LLM profile: {e}")
+                logger.warning("Failed to build LLM profile: {}", e)
 
             if user_context:
                 profile_payload = self._build_profile_payload(
@@ -454,7 +454,7 @@ class ProductionChatOrchestrator:
                     "profile": profile_payload,
                 }
             else:
-                logger.warning(f"User {user_id} not found, using fallback")
+                logger.warning("User {} not found, using fallback", user_id)
                 fallback = self._get_fallback_context()
                 fallback["preference_version"] = preference_version
                 fallback["llm_profile"] = llm_profile_data
@@ -467,7 +467,7 @@ class ProductionChatOrchestrator:
                 return fallback
 
         except Exception as e:
-            logger.error(f"Failed to build user context: {e}")
+            logger.error("Failed to build user context: {}", e)
             return self._get_fallback_context()
 
     def _build_profile_payload(
@@ -539,7 +539,7 @@ class ProductionChatOrchestrator:
 
             return result
         except Exception as e:
-            logger.error(f"Failed to prune conversation: {e}")
+            logger.error("Failed to prune conversation: {}", e)
             return {"messages": [], "summary": None}
 
     async def _get_tools_schema(self) -> list[dict[str, Any]]:
@@ -547,7 +547,7 @@ class ProductionChatOrchestrator:
         try:
             return dynamic_tool_registry.get_openai_tools_schema()
         except Exception as e:
-            logger.error(f"Failed to get tools schema: {e}")
+            logger.error("Failed to get tools schema: {}", e)
             return []
 
     async def _record_token_usage(
@@ -579,7 +579,7 @@ class ProductionChatOrchestrator:
                 TOKEN_USAGE.labels(model=model, type="completion").inc(completion_tokens)
 
         except Exception as e:
-            logger.warning(f"Failed to record token usage: {e}")
+            logger.warning("Failed to record token usage: {}", e)
 
     def _log_request(
         self,
@@ -602,9 +602,9 @@ class ProductionChatOrchestrator:
         }
 
         if status == "success":
-            logger.info(f"Request processed: {json.dumps(log_data)}")
+            logger.info("Request processed: {}", json.dumps(log_data))
         else:
-            logger.error(f"Request failed: {json.dumps(log_data)}")
+            logger.error("Request failed: {}", json.dumps(log_data))
 
     async def process_stream(
         self,
@@ -636,7 +636,7 @@ class ProductionChatOrchestrator:
 
         # 消息去重检查
         if await self.message_tracker.is_processed(request_id):
-            logger.warning(f"Duplicate request detected: {request_id}")
+            logger.warning("Duplicate request detected: {}", request_id)
             yield agent_service_pb2.ChatResponse(
                 response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
@@ -653,7 +653,7 @@ class ProductionChatOrchestrator:
         # 熔断器检查
         if self.circuit_breaker and not await self.circuit_breaker.can_execute():
             state = self.circuit_breaker.get_state()
-            logger.error(f"Circuit breaker is {state}, rejecting request")
+            logger.error("Circuit breaker is {}, rejecting request", state)
             yield agent_service_pb2.ChatResponse(
                 response_id=response_id,
                 created_at=int(datetime.now().timestamp()),
@@ -700,7 +700,7 @@ class ProductionChatOrchestrator:
             with TRACER.start_as_current_span("request.idempotency_check"):
                 cached_response = await self._check_idempotency(session_id, request_id)
             if cached_response:
-                logger.info(f"Cache hit for {session_id}/{request_id}")
+                logger.info("Cache hit for {}/{}", session_id, request_id)
                 cached_metadata = cached_response.get("metadata") if isinstance(cached_response, dict) else None
                 metadata_map = {}
                 if isinstance(cached_metadata, dict):
@@ -750,13 +750,13 @@ class ProductionChatOrchestrator:
                                 plan_builder = PlanContextBuilder(active_db, self.redis)
                                 plan_context = await plan_builder.build_enriched(uuid.UUID(user_id), plan_id)
                                 if plan_context:
-                                    logger.info(f"Built plan_context for plan_id={plan_id}")
+                                    logger.info("Built plan_context for plan_id={}", plan_id)
                             except (ValueError, AttributeError) as e:
-                                logger.warning(f"Invalid plan_id in extra_context: {e}")
+                                logger.warning("Invalid plan_id in extra_context: {}", e)
                             except Exception as e:
-                                logger.warning(f"Failed to build plan context: {e}")
+                                logger.warning("Failed to build plan context: {}", e)
                 except Exception as e:
-                    logger.debug(f"Could not extract plan_context from request: {e}")
+                    logger.debug("Could not extract plan_context from request: {}", e)
 
                 # P4: Tool Preference Routing
                 preferred_tools_hint = ""
@@ -768,9 +768,9 @@ class ProductionChatOrchestrator:
                         preferred_tools = await router.get_preferred_tools(limit=3)
                         if preferred_tools:
                             preferred_tools_hint = f"\n\n## 工具偏好\n根据历史习惯，用户倾向于使用以下工具: {', '.join(preferred_tools)}"
-                            logger.info(f"Injected tool preferences for user {user_id}: {preferred_tools}")
+                            logger.info("Injected tool preferences for user {}: {}", user_id, preferred_tools)
                 except Exception as e:
-                    logger.warning(f"Failed to get tool preferences: {e}")
+                    logger.warning("Failed to get tool preferences: {}", e)
 
                 # GraphRAG 检索（增强版，带降级）
                 knowledge_context = ""
@@ -814,7 +814,7 @@ class ProductionChatOrchestrator:
                         if PROMETHEUS_AVAILABLE:
                             REQUEST_COUNTER.labels(status="graphrag_success", session_id=session_id).inc()
                 except Exception as e:
-                    logger.warning(f"GraphRAG retrieval failed: {e}, falling back to vector search")
+                    logger.warning("GraphRAG retrieval failed: {}, falling back to vector search", e)
                     # 降级到普通向量检索
                     try:
                         if active_db and user_id:
@@ -827,7 +827,7 @@ class ProductionChatOrchestrator:
                             if PROMETHEUS_AVAILABLE:
                                 REQUEST_COUNTER.labels(status="vector_success", session_id=session_id).inc()
                     except Exception as e2:
-                        logger.error(f"Fallback knowledge retrieval also failed: {e2}")
+                        logger.error("Fallback knowledge retrieval also failed: {}", e2)
                         if PROMETHEUS_AVAILABLE:
                             REQUEST_COUNTER.labels(status="rag_failed", session_id=session_id).inc()
                         # 降级到关键词检索（避免向量服务依赖）
@@ -851,7 +851,7 @@ class ProductionChatOrchestrator:
                                     if PROMETHEUS_AVAILABLE:
                                         REQUEST_COUNTER.labels(status="keyword_success", session_id=session_id).inc()
                         except Exception as e3:
-                            logger.error(f"Keyword fallback failed: {e3}")
+                            logger.error("Keyword fallback failed: {}", e3)
 
             # 构建 Prompt
             if isinstance(user_context_data, dict):
@@ -902,7 +902,7 @@ class ProductionChatOrchestrator:
                         ),
                     }
                 except Exception as exc:
-                    logger.warning(f"Failed to hydrate companion runtime context: {exc}")
+                    logger.warning("Failed to hydrate companion runtime context: {}", exc)
             if isinstance(user_context_data, dict):
                 user_context_data.update(companion_state_payload)
             runtime_context_data = dict(context_data or {})
@@ -936,7 +936,7 @@ class ProductionChatOrchestrator:
                         if last_feedback_binding:
                             user_context_data["last_feedback_binding"] = last_feedback_binding
                 except Exception as exc:
-                    logger.warning(f"Failed to hydrate active intervention state: {exc}")
+                    logger.warning("Failed to hydrate active intervention state: {}", exc)
             if active_db and user_id and isinstance(user_context_data, dict):
                 try:
                     strategy_service = UserStrategyStateService(active_db, self.redis)
@@ -957,7 +957,7 @@ class ProductionChatOrchestrator:
                     runtime_context_data["user_strategy_state"] = user_strategy_state
                     runtime_context_data["user_strategy_history"] = user_strategy_history
                 except Exception as exc:
-                    logger.warning(f"Failed to hydrate user strategy state: {exc}")
+                    logger.warning("Failed to hydrate user strategy state: {}", exc)
             if isinstance(user_context_data, dict):
                 try:
                     situation_brief = (await SituationBriefBuilder().build(
@@ -982,7 +982,7 @@ class ProductionChatOrchestrator:
                         user_context_data["residual_decision_context"] = decision_context
                         runtime_context_data["residual_decision_context"] = decision_context
                 except Exception as exc:
-                    logger.warning(f"Failed to build production situation brief: {exc}")
+                    logger.warning("Failed to build production situation brief: {}", exc)
             if active_db and user_id and isinstance(user_context_data, dict):
                 try:
                     request_message = request.message if request.WhichOneof("input") == "message" else ""
@@ -997,7 +997,7 @@ class ProductionChatOrchestrator:
                         context_targets=[runtime_context_data],
                     )
                 except Exception as exc:
-                    logger.warning(f"Failed to apply phase 4 experience actions in production runtime: {exc}")
+                    logger.warning("Failed to apply phase 4 experience actions in production runtime: {}", exc)
             try:
                 await attach_shadow_soul_runtime(
                     target_context=runtime_context_data,
@@ -1010,7 +1010,7 @@ class ProductionChatOrchestrator:
                     recent_revisions=runtime_context_data.get("companion_state_recent_revisions"),
                 )
             except Exception as exc:
-                logger.warning(f"Shadow soul runtime attach failed (non-fatal): {exc}")
+                logger.warning("Shadow soul runtime attach failed (non-fatal): {}", exc)
             if isinstance(user_context_data, dict):
                 for key in ("soul_runtime_context", "soul_runtime_debug"):
                     if runtime_context_data.get(key) is not None:
@@ -1293,12 +1293,12 @@ class ProductionChatOrchestrator:
                         try:
                             llm_profile_meta = json.loads(llm_profile)
                         except (json.JSONDecodeError, TypeError):
-                            logger.warning(f"Failed to parse llm_profile JSON string: {llm_profile[:100] if llm_profile else 'None'}")
+                            logger.warning("Failed to parse llm_profile JSON string: {}", llm_profile[:100] if llm_profile else 'None')
                             llm_profile_meta = {}
                     elif isinstance(llm_profile, dict):
                         llm_profile_meta = llm_profile
                     else:
-                        logger.warning(f"Unexpected llm_profile type: {type(llm_profile)}")
+                        logger.warning("Unexpected llm_profile type: {}", type(llm_profile))
                         llm_profile_meta = {}
             response_metadata = {
                 "response_id": response_id,
@@ -1334,7 +1334,7 @@ class ProductionChatOrchestrator:
                         outcome=f"Generated response with {len(full_response)} chars",
                     )
             except Exception as e:
-                logger.warning(f"Failed to record decision: {e}")
+                logger.warning("Failed to record decision: {}", e)
 
             # 缓存响应
             await self._cache_response(session_id, request_id, final_response_data)
@@ -1367,7 +1367,7 @@ class ProductionChatOrchestrator:
 
         except Exception as e:
             duration = time.time() - start_time
-            logger.error(f"Orchestration error: {e}", exc_info=True)
+            logger.error("Orchestration error: {}", e, exc_info=True)
 
             # 记录失败
             if self.circuit_breaker:
@@ -1398,7 +1398,7 @@ class ProductionChatOrchestrator:
                 try:
                     await self.state_manager.stop_lock_renewal(lock_renewal_task, lock_renewal_stop)
                 except Exception as e:
-                    logger.warning(f"Failed to stop lock renewal: {e}")
+                    logger.warning("Failed to stop lock renewal: {}", e)
             # 清理会话 - only release lock if it was acquired
             if lock_acquired:
                 await self._release_session_lock(session_id, request_id)

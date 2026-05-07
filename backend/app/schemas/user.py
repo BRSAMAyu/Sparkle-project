@@ -45,7 +45,7 @@ class UserRegister(BaseModel):
     """User registration"""
     username: str = Field(min_length=3, max_length=50, description="Username")
     email: EmailStr = Field(description="Email")
-    password: str = Field(min_length=6, max_length=100, description="Password")
+    password: str = Field(min_length=8, max_length=100, description="Password")
     nickname: str | None = Field(default=None, max_length=100, description="Nickname")
     accepted_tos: bool = Field(default=False, description="Accepted terms of service")
     accepted_privacy: bool = Field(default=False, description="Accepted privacy policy")
@@ -82,11 +82,11 @@ class UserUpdate(BaseModel):
 class PasswordChange(BaseModel):
     """Password change"""
     old_password: str = Field(description="Old password")
-    new_password: str = Field(min_length=6, max_length=100, description="New password")
+    new_password: str = Field(min_length=8, max_length=100, description="New password")
 
 class SetPasswordRequest(BaseModel):
     """Set password (no old password)"""
-    new_password: str = Field(min_length=6, max_length=100, description="New password")
+    new_password: str = Field(min_length=8, max_length=100, description="New password")
 
 
 class DeleteAccountRequest(BaseModel):
@@ -111,7 +111,7 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     """Reset password request"""
     token: str = Field(description="Reset token")
-    new_password: str = Field(min_length=6, max_length=100, description="New password")
+    new_password: str = Field(min_length=8, max_length=100, description="New password")
 
 class VerifyEmailRequest(BaseModel):
     """Verify email request"""
@@ -134,7 +134,7 @@ class UpgradeGuestRequest(BaseModel):
     """Upgrade guest to full email account."""
     username: str = Field(min_length=3, max_length=50, description="Username")
     email: EmailStr = Field(description="Email")
-    password: str = Field(min_length=6, max_length=100, description="Password")
+    password: str = Field(min_length=8, max_length=100, description="Password")
     nickname: str | None = Field(default=None, max_length=100, description="Nickname")
     accepted_tos: bool = Field(default=False, description="Accepted terms of service")
     accepted_privacy: bool = Field(default=False, description="Accepted privacy policy")

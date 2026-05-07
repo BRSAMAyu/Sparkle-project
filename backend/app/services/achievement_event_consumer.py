@@ -12,6 +12,7 @@ from loguru import logger
 from sqlalchemy import and_, func, select
 
 from app.core.event_bus import EventBus
+from app.core.time_utils import utcnow as _utcnow
 from app.core.event_types import EXECUTION_RESULT_INGESTED
 from app.db.session import AsyncSessionLocal
 from app.models.achievement import Achievement, AchievementRarity, UserAchievement, UserStreakStats
@@ -25,10 +26,6 @@ from app.models.task import Task
 from app.schemas.notification import NotificationCreate
 from app.services.achievement_engine import AchievementEngine, AchievementEvent
 from app.services.notification_service import NotificationService
-
-
-def _utcnow() -> datetime:
-    return datetime.now(UTC).replace(tzinfo=None)
 
 
 class AchievementEventConsumer:
@@ -66,7 +63,7 @@ class AchievementEventConsumer:
                 await self.event_bus.subscribe(
                     stream=self.STREAM_NAME,
                     group_name=self.GROUP_NAME,
-                    consumer_name=f"achievement-{_utcnow().timestamp()}",
+                    consumer_name="sparkle_achievement_consumer",
                     callback=self.handle_event,
                 )
                 break

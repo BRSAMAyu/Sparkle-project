@@ -6,7 +6,14 @@ from app.db.session import get_db_context
 from app.services.policy_scheduler_service import PolicySchedulerService
 
 
-@shared_task(name="tasks.policy.process_due_policies")
+@shared_task(
+    name="tasks.policy.process_due_policies",
+    max_retries=3,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    retry_backoff_max=300,
+    acks_late=True,
+)
 def process_due_policies() -> dict[str, int]:
     import asyncio
 

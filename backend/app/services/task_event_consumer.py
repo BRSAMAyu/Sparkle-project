@@ -92,8 +92,13 @@ class TaskEventConsumer:
     async def _handle_task_completed(self, event: dict):
         """处理任务完成。"""
         try:
-            user_id = UUID(event["user_id"])
-            task_id = UUID(event["task_id"])
+            user_id_raw = event.get("user_id")
+            task_id_raw = event.get("task_id")
+            if not user_id_raw or not task_id_raw:
+                logger.warning(f"Task completed event missing user_id or task_id: {event}")
+                return
+            user_id = UUID(str(user_id_raw))
+            task_id = UUID(str(task_id_raw))
 
             async with AsyncSessionLocal() as db:
                 collector = BehaviorSignalCollector(db, cache_service.redis, self.event_bus)
