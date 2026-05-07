@@ -659,12 +659,25 @@ class SpineOrchestrator:
                     except Exception:
                         logger.warning("get_rendered_timeline: operation failed", exc_info=True)
 
+            # Load outcome record
+            outcome_data = None
+            try:
+                outcome_record = await self.outcome_recorder.get_outcome_for_trace(trace.trace_id)
+                if outcome_record:
+                    outcome_data = outcome_record.to_dict()
+            except Exception:
+                logger.warning("get_rendered_timeline: outcome load failed", exc_info=True)
+
             # Build human-readable event summary
             event_parts = []
             if signal_data:
                 event_parts.append(f"信号: {signal_data.get('claim', '?')}")
             if policy_data:
                 event_parts.append(f"策略: {policy_data.get('primary_strategy', '?')}")
+            if outcome_data:
+                attribution = outcome_data.get("attribution", "")
+                if attribution:
+                    event_parts.append(f"结果: {attribution}")
             event_summary = " → ".join(event_parts) if event_parts else "系统事件"
 
             # Render TimelineCard
@@ -676,7 +689,7 @@ class SpineOrchestrator:
                     policy_data=policy_data,
                     directives=directives,
                     receipt_data=receipt_data,
-                    outcome_data=None,
+                    outcome_data=outcome_data,
                     audit_data=audits if audits else None,
                     mode="compact",
                     timestamp=trace.created_at,
@@ -694,6 +707,7 @@ class SpineOrchestrator:
                 "policy_decision": policy_data,
                 "directives": directives,
                 "audits": audits,
+                "outcome": outcome_data,
                 "receipt": receipt_data,
                 "card": card_data,
             })
@@ -1342,6 +1356,7 @@ class SpineOrchestrator:
         )
 
         # P1-11: L0 deterministic rule evaluation — inject deadline_pressure + quiet_hours signals
+        l0_signals: list = []
         try:
             l0_signals = await self.l0_engine.evaluate_all(user_id)
             for l0_signal in l0_signals:
@@ -1351,7 +1366,20 @@ class SpineOrchestrator:
                 )
                 logger.debug("L0 signal injected: {} for user={}", l0_signal.state_key, user_id)
         except Exception:
-            logger.debug("L0 rule evaluation failed for user={}", user_id, exc_info=True)
+            logger.warning("L0 rule evaluation failed for user={}", user_id, exc_info=True)
+
+        # P0-1: SignalRanker — rank primary + L0 signals together, resolve conflicts
+        _ranking_context: dict[str, Any] = {}
+        if l0_signals:
+            all_signals = [signal] + l0_signals
+            ranking_result = self.signal_ranker.rank(all_signals)
+            _ranking_context = ranking_result.to_dict()
+            trace.raw_event_ids.append(f"ranked:{len(ranking_result.ranked)}/{len(ranking_result.suppressed)}")
+            for suppressed in ranking_result.suppressed:
+                logger.debug(
+                    "SignalRanker suppressed: {} (tier={}) for user={}",
+                    suppressed.signal.state_key, suppressed.tier, user_id,
+                )
 
         # L2 Mid Aurora: Check for escalation patterns and trigger interventions
         l2_escalation = await resilient_redis_call(
@@ -1392,6 +1420,7 @@ class SpineOrchestrator:
         pipeline_context = {
             "source": "pipeline",
             "aurora_decisions": aurora_decisions,
+            "signal_ranking": _ranking_context,
             "distilled_strategies": [
                 {
                     "id": str(s.id),
@@ -1492,7 +1521,7 @@ class SpineOrchestrator:
                     if hasattr(directive, "task_type"):
                         directive.task_type = alt
         except Exception:
-            logger.debug("LowYieldGuard check failed for user={}", user_id, exc_info=True)
+            logger.warning("LowYieldGuard check failed for user={}", user_id, exc_info=True)
 
         await self.trace_store.set_active_directive(user_id, directive)
         await self._link_directive_to_active_session(user_id, directive.directive_id)
@@ -1520,7 +1549,7 @@ class SpineOrchestrator:
                     logger.warning("FabricationGuard: flagged {} pattern(s) in response for user={}", len(flagged), user_id)
                     trace.raw_event_ids.append(f"fabrication:{len(flagged)}")
             except Exception:
-                logger.debug("Fabrication scan failed for user={}", user_id, exc_info=True)
+                logger.warning("Fabrication scan failed for user={}", user_id, exc_info=True)
 
             # P1-16: Citation validation — verify citations against retrieved sources
             try:
@@ -1535,7 +1564,7 @@ class SpineOrchestrator:
                         logger.warning("CitationValidator: {} for user={}", note, user_id)
                         trace.raw_event_ids.append(f"citation_warning:{len(citation_result.unverifiable)}")
             except Exception:
-                logger.debug("Citation validation failed for user={}", user_id, exc_info=True)
+                logger.warning("Citation validation failed for user={}", user_id, exc_info=True)
 
         # Build and store NotificationDirective
         notif_dir = self.policy_engine.build_notification_directive(decision, signal)
@@ -1608,7 +1637,7 @@ class SpineOrchestrator:
                         )
                         receipt_message = filtered.get("message", receipt_message)
             except Exception:
-                logger.debug("Research isolation filter failed for user={}", user_id, exc_info=True)
+                logger.warning("Research isolation filter failed for user={}", user_id, exc_info=True)
 
             receipt = UserVisibleReceipt(
                 receipt_id=_uid("rcpt"),
@@ -2977,7 +3006,7 @@ class SpineOrchestrator:
                     beliefs.append(new_belief)
                 await self._persist_strategy_beliefs(user_id, beliefs)
             except Exception:
-                logger.debug("Auto strategy learning failed for user={}", user_id, exc_info=True)
+                logger.warning("Auto strategy learning failed for user={}", user_id, exc_info=True)
 
         # v2.4: Record experiment trial with real outcome
         try:
@@ -3065,7 +3094,7 @@ class SpineOrchestrator:
                 )
                 await self.redis.ltrim(f"spine:pending_learning:{user_id}", 0, 99)
             except Exception:
-                logger.debug("record_outcome: async queue fallback failed", exc_info=True)
+                logger.warning("record_outcome: async queue fallback failed", exc_info=True)
 
         # v2.5: Consume Aurora decisions for outcome attribution
         try:
@@ -4845,3 +4874,23 @@ class SpineOrchestrator:
                 directive.hard_constraints["goal_type_task_bias"] = mapping.get("task_type", "")
                 directive.hard_constraints["goal_type_label"] = mapping.get("node_label", "")
         return directive
+
+
+# ── Module-level singleton ─────────────────────────────────────────────
+
+_spine_orchestrator: SpineOrchestrator | None = None
+
+
+def get_spine_orchestrator(redis_client=None) -> SpineOrchestrator:
+    global _spine_orchestrator
+    if _spine_orchestrator is None:
+        if redis_client is None:
+            from app.core.cache import cache_service
+            redis_client = cache_service.redis
+        _spine_orchestrator = SpineOrchestrator(redis_client=redis_client)
+    return _spine_orchestrator
+
+
+def reset_spine_orchestrator() -> None:
+    global _spine_orchestrator
+    _spine_orchestrator = None

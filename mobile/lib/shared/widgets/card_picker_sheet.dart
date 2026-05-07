@@ -129,6 +129,12 @@ class _CardPickerSheetState extends State<CardPickerSheet> {
                                     color: DS.textSecondary,
                                   ),
                             ),
+                            const SizedBox(height: DS.spacing12),
+                            TextButton.icon(
+                              onPressed: () => setState(() => _query = ''),
+                              icon: const Icon(Icons.clear_rounded, size: DS.iconSizeXs),
+                              label: const Text('Clear search'),
+                            ),
                           ],
                         ),
                       ),

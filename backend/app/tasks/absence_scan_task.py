@@ -21,14 +21,14 @@ def scan_absent_users() -> dict[str, int]:
 
     async def _run() -> dict[str, int]:
         from app.signals.absence_detector import AbsenceDetector
-        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.signals.spine_orchestrator import get_spine_orchestrator
 
         if cache_service.redis is None:
             await cache_service.init_redis()
 
         redis = cache_service.redis
         detector = AbsenceDetector()
-        spine = SpineOrchestrator(redis)
+        spine = get_spine_orchestrator(redis)
 
         snapshots = await detector.scan_absent_users(redis, min_level="short")
         counts: dict[str, int] = {"short": 0, "prolonged": 0, "extended": 0, "errors": 0}

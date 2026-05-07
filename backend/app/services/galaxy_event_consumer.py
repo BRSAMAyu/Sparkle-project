@@ -7,11 +7,11 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from loguru import logger
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from app.core.event_bus import EventBus, reliable_consumer
 from app.db.session import AsyncSessionLocal
-from app.models.galaxy import UserNodeStatus
+from app.models.galaxy import KnowledgeNode, UserNodeStatus
 from app.models.plan import Plan
 from app.models.task import Task, TaskStatus
 from app.models.task_resources import TaskKnowledgeLink
@@ -211,8 +211,8 @@ class GalaxyEventConsumer:
         # This call only generates control signals (transfer_failure) for task strategy.
         try:
             from app.core.cache import cache_service
-            from app.signals.spine_orchestrator import SpineOrchestrator
-            spine = SpineOrchestrator(cache_service.redis)
+            from app.signals.spine_orchestrator import get_spine_orchestrator
+            spine = get_spine_orchestrator(cache_service.redis)
             await spine.on_mistake_event(
                 user_id=str(user_id),
                 error_id=str(error_id) if error_id else "",
@@ -234,15 +234,47 @@ class GalaxyEventConsumer:
         ).strip()
         if not label:
             return None
+        if len(label) < 2 or len(label) > 80:
+            return None
+        lowered = label.lower()
+        if lowered in {"null", "none", "n/a", "unknown", "undefined", "error", "mistake", "bug"}:
+            return None
+
+        node_name = f"Error gap: {label}"[:255]
+
+        # Deduplicate: check if an error-gap node with matching label already exists for this user
+        existing = await db.execute(
+            select(KnowledgeNode)
+            .join(UserNodeStatus, (UserNodeStatus.node_id == KnowledgeNode.id) & (UserNodeStatus.user_id == user_id))
+            .where(KnowledgeNode.name == node_name)
+            .limit(1)
+        )
+        if existing.scalar_one_or_none() is not None:
+            return None
+
+        # Rate-limit: no more than 3 error-gap nodes per user per day
+        from datetime import timedelta
+        cutoff = _utcnow() - timedelta(hours=24)
+        recent_count = await db.execute(
+            select(func.count())
+            .select_from(KnowledgeNode)
+            .join(UserNodeStatus, (UserNodeStatus.node_id == KnowledgeNode.id) & (UserNodeStatus.user_id == user_id))
+            .where(
+                KnowledgeNode.source_type == "error_book",
+                KnowledgeNode.created_at >= cutoff,
+            )
+        )
+        if recent_count.scalar() >= 3:
+            return None
 
         description = str(event.get("analysis") or event.get("question_text") or "").strip()
         expansion = ExpansionService(db)
         node, _ = await expansion.upsert_node_from_candidate(
             user_id=user_id,
             candidate={
-                "name": f"Error gap: {label}"[:255],
+                "name": node_name,
                 "description": description[:800] or f"Knowledge gap inferred from an error in {label}.",
-                "importance_level": 3,
+                "importance_level": 2,
                 "keywords": [
                     "error_book",
                     "signal:weak_at",
@@ -256,6 +288,7 @@ class GalaxyEventConsumer:
             commit=False,
             invalidate_caches=False,
             allow_existing_match=True,
+            node_updates={"status": "draft"},
         )
         return node
 

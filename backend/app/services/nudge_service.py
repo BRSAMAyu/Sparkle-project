@@ -60,8 +60,8 @@ class NudgeService:
             from app.core.cache import cache_service
             if not cache_service.redis:
                 return "push"
-            from app.signals.spine_orchestrator import SpineOrchestrator
-            spine = SpineOrchestrator(cache_service.redis)
+            from app.signals.spine_orchestrator import get_spine_orchestrator
+            spine = get_spine_orchestrator(cache_service.redis)
             directive = await spine.get_notification_directive(user_id)
             if directive and directive.channel in ("push", "in_app", "silent"):
                 return directive.channel
@@ -113,8 +113,8 @@ class NudgeService:
             try:
                 from app.core.cache import cache_service
                 if cache_service.redis:
-                    from app.signals.spine_orchestrator import SpineOrchestrator
-                    spine = SpineOrchestrator(cache_service.redis)
+                    from app.signals.spine_orchestrator import get_spine_orchestrator
+                    spine = get_spine_orchestrator(cache_service.redis)
                     spine_directive = await spine.get_notification_directive(user_id)
             except Exception:
                 logger.debug("Spine directive fetch for push failed (non-fatal)", exc_info=True)

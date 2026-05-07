@@ -14,6 +14,7 @@ class CollapsibleWidgetWrapper extends StatefulWidget {
     super.key,
     this.accentColor,
     this.defaultExpanded = false,
+    this.persistId,
   });
 
   /// Short label shown on the collapsed chip, e.g. "任务", "计划", context.l10n.chatWidgetCognitiveAnalysis.
@@ -31,6 +32,10 @@ class CollapsibleWidgetWrapper extends StatefulWidget {
   /// Whether the widget starts expanded. Defaults to collapsed.
   final bool defaultExpanded;
 
+  /// Optional stable identifier so expanded state is remembered across
+  /// parent rebuilds within the same session, even when the widget key changes.
+  final String? persistId;
+
   @override
   State<CollapsibleWidgetWrapper> createState() =>
       _CollapsibleWidgetWrapperState();
@@ -39,6 +44,7 @@ class CollapsibleWidgetWrapper extends StatefulWidget {
 class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
     with SingleTickerProviderStateMixin {
   static const _animationDuration = Duration(milliseconds: 200);
+  static final Map<String, bool> _persistedState = {};
 
   @override
   Widget build(BuildContext context) {
@@ -60,9 +66,7 @@ class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
               button: true,
               label: 'Chat collapsible widget wrapper control 1',
               child: InkWell(
-                onTap: () => setState(() {
-                  _expanded = !_expanded;
-                }),
+                onTap: () => _setExpanded(!_expanded),
                 borderRadius: BorderRadius.circular(999),
                 child: AnimatedContainer(
                   duration: _animationDuration,
@@ -141,9 +145,7 @@ class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
                       button: true,
                       label: 'Chat collapsible widget wrapper control 2',
                       child: InkWell(
-                        onTap: () => setState(() {
-                          _expanded = false;
-                        }),
+                        onTap: () => _setExpanded(false),
                         borderRadius: BorderRadius.circular(999),
                         child: Container(
                           padding: const EdgeInsets.all(DS.spacing4),
@@ -170,10 +172,33 @@ class _CollapsibleWidgetWrapperState extends State<CollapsibleWidgetWrapper>
   }
 
   bool _expanded = false;
+  String? _effectivePersistId;
 
   @override
   void initState() {
     super.initState();
-    _expanded = widget.defaultExpanded;
+    _resolvePersistState();
+  }
+
+  @override
+  void didUpdateWidget(covariant CollapsibleWidgetWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.persistId != widget.persistId ||
+        oldWidget.label != widget.label) {
+      _resolvePersistState();
+    }
+  }
+
+  void _resolvePersistState() {
+    final id = widget.persistId ?? '${widget.label}_${widget.icon.codePoint}';
+    _effectivePersistId = id;
+    _expanded = _persistedState[id] ?? widget.defaultExpanded;
+  }
+
+  void _setExpanded(bool value) {
+    setState(() => _expanded = value);
+    if (_effectivePersistId != null) {
+      _persistedState[_effectivePersistId!] = value;
+    }
   }
 }

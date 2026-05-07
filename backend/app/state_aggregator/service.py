@@ -554,11 +554,21 @@ class StateAggregatorService:
         from app.models.chat import ChatMessage
 
         _KEYWORD_MAP: dict[str, list[str]] = {
-            "frustrated": ["烦", "太难了", "做不到", "不想", "放弃", "好难", "崩溃", "烦死"],
-            "anxious": ["焦虑", "担心", "害怕", "紧张", "来不及", "急", "压力"],
-            "overwhelmed": ["太多了", " overwhelmed", "忙不过来", "撑不住", "太累", "累死"],
-            "happy": ["开心", "高兴", "太好了", "棒", "做到了", "完成了", "谢谢", "喜欢"],
-            "motivated": ["加油", "继续", "努力", "一定", "可以", "试试", "期待"],
+            "frustrated": ["烦", "太难了", "做不到", "不想", "放弃", "好难", "崩溃", "烦死",
+                "frustrated", "frustrating", "stuck", "can't do", "cannot do",
+                "giving up", "too hard", "hopeless", "impossible"],
+            "anxious": ["焦虑", "担心", "害怕", "紧张", "来不及", "急", "压力",
+                "anxious", "anxiety", "worried", "scared", "nervous",
+                "stressed", "stress", "panic", "running out of time"],
+            "overwhelmed": ["太多了", " overwhelmed", "忙不过来", "撑不住", "太累", "累死",
+                "overwhelming", "too much", "drowning", "exhausted",
+                "can't handle", "burnt out", "burnout"],
+            "happy": ["开心", "高兴", "太好了", "棒", "做到了", "完成了", "谢谢", "喜欢",
+                "happy", "great", "awesome", "wonderful", "did it",
+                "completed", "thank you", "love", "excellent", "amazing"],
+            "motivated": ["加油", "继续", "努力", "一定", "可以", "试试", "期待",
+                "motivated", "let's go", "keep going", "I can", "I will",
+                "try my best", "looking forward", "determined", "focused"],
             "neutral": [],
         }
         stmt = (

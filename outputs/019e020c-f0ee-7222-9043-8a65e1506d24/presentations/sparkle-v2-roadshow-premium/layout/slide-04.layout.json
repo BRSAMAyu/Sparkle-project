@@ -1,0 +1,1380 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/sg2gid",
+    "id": "sg2gid",
+    "slide": 4,
+    "layoutId": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "PingFang SC"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ytsvu9kn",
+      "id": "1",
+      "bbox": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "geometry": "rect",
+      "fillColor": "#F7F4EC",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5kb6xkf6",
+      "id": "2",
+      "bbox": [
+        64,
+        46,
+        420,
+        24
+      ],
+      "geometry": "rect",
+      "text": "North Star / 1",
+      "textPreview": "North Star / 1",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "North Star / 1"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "North Star / 1",
+          "runs": [
+            {
+              "index": 1,
+              "text": "North Star / 1",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/czed8v6p",
+      "id": "3",
+      "bbox": [
+        64,
+        76,
+        1060,
+        104
+      ],
+      "geometry": "rect",
+      "text": "7 天救急·上：诊断 + 主动放弃",
+      "textPreview": "7 天救急·上：诊断 + 主动放弃",
+      "resolvedFontSize": 37,
+      "resolvedTextStyle": {
+        "fontSize": 37,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "7 天救急·上：诊断 + 主动放弃"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "7 天救急·上：诊断 + 主动放弃",
+          "runs": [
+            {
+              "index": 1,
+              "text": "7 天救急·上：诊断 + 主动放弃",
+              "fontSize": 37,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nqxs72x4",
+      "id": "4",
+      "bbox": [
+        66,
+        188,
+        1000,
+        46
+      ],
+      "geometry": "rect",
+      "text": "最难的不是把知识讲全，而是在时间不足时判断什么该做、什么不该做。",
+      "textPreview": "最难的不是把知识讲全，而是在时间不足时判断什么该做、什么不该做。",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "最难的不是把知识讲全，而是在时间不足时判断什么该做、什么不该做。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "最难的不是把知识讲全，而是在时间不足时判断什么该做、什么不该做。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "最难的不是把知识讲全，而是在时间不足时判断什么该做、什么不该做。",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u54zidon",
+      "id": "5",
+      "bbox": [
+        78,
+        250,
+        500,
+        310
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#DED6C9",
+      "lineWidth": 1
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5sneloj2",
+      "id": "6",
+      "bbox": [
+        110,
+        282,
+        220,
+        30
+      ],
+      "geometry": "rect",
+      "text": "12 分钟诊断",
+      "textPreview": "12 分钟诊断",
+      "resolvedFontSize": 28,
+      "resolvedTextStyle": {
+        "fontSize": 28,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "12 分钟诊断"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "12 分钟诊断",
+          "runs": [
+            {
+              "index": 1,
+              "text": "12 分钟诊断",
+              "fontSize": 28,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cbulwval",
+      "id": "7",
+      "bbox": [
+        112,
+        330,
+        410,
+        34
+      ],
+      "geometry": "rect",
+      "text": "Sparkle 不让学生先“开始复习”，而是先测三类高收益能力：",
+      "textPreview": "Sparkle 不让学生先“开始复习”，而是先测三类高收益能力：",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Sparkle"
+          },
+          {
+            "index": 2,
+            "text": "不让学生先“开始复习”，而是先测三类高收益能力"
+          },
+          {
+            "index": 3,
+            "text": "："
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Sparkle 不让学生先“开始复习”，而是先测三类高收益能力：",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sparkle 不让学生先“开始复习”，而是先测三类高收益能力：",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nuxc3ylc",
+      "id": "8",
+      "bbox": [
+        112,
+        392,
+        400,
+        36
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#E7EBDD",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 1
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/y90je9cv",
+      "id": "9",
+      "bbox": [
+        132,
+        400,
+        180,
+        16
+      ],
+      "geometry": "rect",
+      "text": "TCP 可靠传输",
+      "textPreview": "TCP 可靠传输",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "TCP 可靠传输"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "TCP 可靠传输",
+          "runs": [
+            {
+              "index": 1,
+              "text": "TCP 可靠传输",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/oza1gvy9",
+      "id": "10",
+      "bbox": [
+        340,
+        400,
+        140,
+        16
+      ],
+      "geometry": "rect",
+      "text": "高频考点",
+      "textPreview": "高频考点",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "fontSize": 14,
+        "typeface": "PingFang SC",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "高频考点"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "高频考点",
+          "runs": [
+            {
+              "index": 1,
+              "text": "高频考点",
+              "fontSize": 14,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/hk3q5o7q",
+      "id": "11",
+      "bbox": [
+        112,
+        442,
+        400,
+        36
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F2D8C9",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 1
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/6xkf6dcb",
+      "id": "12",
+      "bbox": [
+        132,
+        450,
+        180,
+        16
+      ],
+      "geometry": "rect",
+      "text": "子网划分",
+      "textPreview": "子网划分",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "子网划分"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "子网划分",
+          "runs": [
+            {
+              "index": 1,
+              "text": "子网划分",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zed8v6ps",
+      "id": "13",
+      "bbox": [
+        340,
+        450,
+        140,
+        16
+      ],
+      "geometry": "rect",
+      "text": "短板暴露",
+      "textPreview": "短板暴露",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "fontSize": 14,
+        "typeface": "PingFang SC",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "短板暴露"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "短板暴露",
+          "runs": [
+            {
+              "index": 1,
+              "text": "短板暴露",
+              "fontSize": 14,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/obm58z25",
+      "id": "14",
+      "bbox": [
+        112,
+        492,
+        400,
+        36
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#E7EBDD",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 1
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/hwfyxobm",
+      "id": "15",
+      "bbox": [
+        132,
+        500,
+        180,
+        16
+      ],
+      "geometry": "rect",
+      "text": "差错检测",
+      "textPreview": "差错检测",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "差错检测"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "差错检测",
+          "runs": [
+            {
+              "index": 1,
+              "text": "差错检测",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/65wjudg7",
+      "id": "16",
+      "bbox": [
+        340,
+        500,
+        140,
+        16
+      ],
+      "geometry": "rect",
+      "text": "可快速补齐",
+      "textPreview": "可快速补齐",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "fontSize": 14,
+        "typeface": "PingFang SC",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "可快速补齐"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "可快速补齐",
+          "runs": [
+            {
+              "index": 1,
+              "text": "可快速补齐",
+              "fontSize": 14,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zqtcj6to",
+      "id": "17",
+      "bbox": [
+        650,
+        250,
+        500,
+        310
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F9FAF4",
+      "lineColor": "#7D8B6F",
+      "lineWidth": 1
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/sfil0rqd",
+      "id": "18",
+      "bbox": [
+        684,
+        282,
+        260,
+        30
+      ],
+      "geometry": "rect",
+      "text": "主动放弃第 8 章",
+      "textPreview": "主动放弃第 8 章",
+      "resolvedFontSize": 28,
+      "resolvedTextStyle": {
+        "fontSize": 28,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "主动放弃第 8 章"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "主动放弃第 8 章",
+          "runs": [
+            {
+              "index": 1,
+              "text": "主动放弃第 8 章",
+              "fontSize": 28,
+              "typeface": "PingFang SC",
+              "color": "#557A62",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/h0fepkzu",
+      "id": "19",
+      "bbox": [
+        686,
+        330,
+        400,
+        42
+      ],
+      "geometry": "rect",
+      "text": "不是因为它不重要，而是因为在 7 天约束下投入产出比最低。",
+      "textPreview": "不是因为它不重要，而是因为在 7 天约束下投入产出比最低。",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "不是因为它不重要，而是因为在 7"
+          },
+          {
+            "index": 2,
+            "text": "天约束下投入产出比最低。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "不是因为它不重要，而是因为在 7 天约束下投入产出比最低。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "不是因为它不重要，而是因为在 7 天约束下投入产出比最低。",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 20,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/54zidony",
+      "id": "20",
+      "bbox": [
+        688,
+        400,
+        82,
+        18
+      ],
+      "geometry": "rect",
+      "text": "Day 1-2",
+      "textPreview": "Day 1-2",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "fontSize": 14,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Day 1-2"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Day 1-2",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Day 1-2",
+              "fontSize": 14,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 21,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cj6tovah",
+      "id": "21",
+      "bbox": [
+        782,
+        400,
+        260,
+        18
+      ],
+      "geometry": "rect",
+      "text": "救 TCP / 子网 / 差错检测",
+      "textPreview": "救 TCP / 子网 / 差错检测",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "fontSize": 17,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "救 TCP / 子网 / 差错检测"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "救 TCP / 子网 / 差错检测",
+          "runs": [
+            {
+              "index": 1,
+              "text": "救 TCP / 子网 / 差错检测",
+              "fontSize": 17,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 22,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nyd0z610",
+      "id": "22",
+      "bbox": [
+        688,
+        442,
+        82,
+        18
+      ],
+      "geometry": "rect",
+      "text": "Day 3-5",
+      "textPreview": "Day 3-5",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "fontSize": 14,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Day 3-5"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Day 3-5",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Day 3-5",
+              "fontSize": 14,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 23,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/udg7adsj",
+      "id": "23",
+      "bbox": [
+        782,
+        442,
+        260,
+        18
+      ],
+      "geometry": "rect",
+      "text": "真题驱动补理论",
+      "textPreview": "真题驱动补理论",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "fontSize": 17,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "真题驱动补理论"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "真题驱动补理论",
+          "runs": [
+            {
+              "index": 1,
+              "text": "真题驱动补理论",
+              "fontSize": 17,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 24,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5gbq1ory",
+      "id": "24",
+      "bbox": [
+        688,
+        484,
+        82,
+        18
+      ],
+      "geometry": "rect",
+      "text": "Day 6",
+      "textPreview": "Day 6",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "fontSize": 14,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Day 6"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Day 6",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Day 6",
+              "fontSize": 14,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 25,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cvixczed",
+      "id": "25",
+      "bbox": [
+        782,
+        484,
+        260,
+        18
+      ],
+      "geometry": "rect",
+      "text": "错因回收",
+      "textPreview": "错因回收",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "fontSize": 17,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "错因回收"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "错因回收",
+          "runs": [
+            {
+              "index": 1,
+              "text": "错因回收",
+              "fontSize": 17,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 26,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nap4r65w",
+      "id": "26",
+      "bbox": [
+        688,
+        526,
+        82,
+        18
+      ],
+      "geometry": "rect",
+      "text": "Day 7",
+      "textPreview": "Day 7",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "fontSize": 14,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Day 7"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Day 7",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Day 7",
+              "fontSize": 14,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 27,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/upwb2hwf",
+      "id": "27",
+      "bbox": [
+        782,
+        526,
+        260,
+        18
+      ],
+      "geometry": "rect",
+      "text": "保底题型演练",
+      "textPreview": "保底题型演练",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "fontSize": 17,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "保底题型演练"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "保底题型演练",
+          "runs": [
+            {
+              "index": 1,
+              "text": "保底题型演练",
+              "fontSize": 17,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 28,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1orytsvu",
+      "id": "28",
+      "bbox": [
+        280,
+        602,
+        720,
+        28
+      ],
+      "geometry": "rect",
+      "text": "一句话：救急不是完整学习，是最小通过路径。",
+      "textPreview": "一句话：救急不是完整学习，是最小通过路径。",
+      "resolvedFontSize": 25,
+      "resolvedTextStyle": {
+        "fontSize": 25,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "一句话：救急不是完整学习，是最小通过路径。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "一句话：救急不是完整学习，是最小通过路径。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "一句话：救急不是完整学习，是最小通过路径。",
+              "fontSize": 25,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 29,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/c7u54zid",
+      "id": "29",
+      "bbox": [
+        64,
+        680,
+        360,
+        18
+      ],
+      "geometry": "rect",
+      "text": "Sparkle V2 Roadshow",
+      "textPreview": "Sparkle V2 Roadshow",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Sparkle V2 Roadshow"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Sparkle V2 Roadshow",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sparkle V2 Roadshow",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 30,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/qxs72x4n",
+      "id": "30",
+      "bbox": [
+        1182,
+        680,
+        34,
+        18
+      ],
+      "geometry": "rect",
+      "text": "04",
+      "textPreview": "04",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "04"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "04",
+          "runs": [
+            {
+              "index": 1,
+              "text": "04",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

@@ -1372,9 +1372,9 @@ class ResponseBuilderMixin:
         # Spine: inject UserVisibleReceipt and StaleStateGuard card for Flutter UI
         if getattr(self, "redis", None) is not None:
             try:
-                from app.signals.spine_orchestrator import SpineOrchestrator
+                from app.signals.spine_orchestrator import get_spine_orchestrator
 
-                _spine = SpineOrchestrator(self.redis)
+                _spine = get_spine_orchestrator(self.redis)
                 _latest_receipt = await _spine.get_latest_receipt(user_id)
                 if _latest_receipt:
                     _receipt_actions = list(_latest_receipt.actions or [])

@@ -1,0 +1,1609 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/i96e7c",
+    "id": "i96e7c",
+    "slide": 5,
+    "layoutId": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "PingFang SC"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/p4r65wju",
+      "id": "1",
+      "bbox": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "geometry": "rect",
+      "fillColor": "#F4EFE6",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ed8v6psf",
+      "id": "2",
+      "bbox": [
+        64,
+        46,
+        420,
+        24
+      ],
+      "geometry": "rect",
+      "text": "North Star / 2",
+      "textPreview": "North Star / 2",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "North Star / 2"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "North Star / 2",
+          "runs": [
+            {
+              "index": 1,
+              "text": "North Star / 2",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7y1kre1w",
+      "id": "3",
+      "bbox": [
+        64,
+        76,
+        1060,
+        104
+      ],
+      "geometry": "rect",
+      "text": "7 天救急·下：任务卡 + 失败重规划",
+      "textPreview": "7 天救急·下：任务卡 + 失败重规划",
+      "resolvedFontSize": 37,
+      "resolvedTextStyle": {
+        "fontSize": 37,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "7 天救急·下：任务卡 + 失败重规划"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "7 天救急·下：任务卡 + 失败重规划",
+          "runs": [
+            {
+              "index": 1,
+              "text": "7 天救急·下：任务卡 + 失败重规划",
+              "fontSize": 37,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0bi9s36h",
+      "id": "4",
+      "bbox": [
+        66,
+        188,
+        1000,
+        46
+      ],
+      "geometry": "rect",
+      "text": "失败不是计划结束，而是系统更新对用户的判断。",
+      "textPreview": "失败不是计划结束，而是系统更新对用户的判断。",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "失败不是计划结束，而是系统更新对用户的判断。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "失败不是计划结束，而是系统更新对用户的判断。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "失败不是计划结束，而是系统更新对用户的判断。",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/pwb2hwfy",
+      "id": "5",
+      "bbox": [
+        78,
+        238,
+        406,
+        360
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/i5sneloj",
+      "id": "6",
+      "bbox": [
+        112,
+        270,
+        180,
+        28
+      ],
+      "geometry": "rect",
+      "text": "今日任务卡",
+      "textPreview": "今日任务卡",
+      "resolvedFontSize": 26,
+      "resolvedTextStyle": {
+        "fontSize": 26,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "今日任务卡"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "今日任务卡",
+          "runs": [
+            {
+              "index": 1,
+              "text": "今日任务卡",
+              "fontSize": 26,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7qpg3ex0",
+      "id": "7",
+      "bbox": [
+        354,
+        270,
+        92,
+        28
+      ],
+      "geometry": "roundRect",
+      "fillColor": "rgba(196, 111, 77, 0.13333)",
+      "lineColor": "#C46F4D",
+      "lineWidth": 1
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0z61032l",
+      "id": "8",
+      "bbox": [
+        364,
+        277,
+        72,
+        14
+      ],
+      "geometry": "rect",
+      "text": "高价值",
+      "textPreview": "高价值",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "高价值"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "高价值",
+          "runs": [
+            {
+              "index": 1,
+              "text": "高价值",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/pkzupwb2",
+      "id": "9",
+      "bbox": [
+        112,
+        318,
+        260,
+        28
+      ],
+      "geometry": "rect",
+      "text": "理解 TCP 可靠传输",
+      "textPreview": "理解 TCP 可靠传输",
+      "resolvedFontSize": 23,
+      "resolvedTextStyle": {
+        "fontSize": 23,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "理解 TCP 可靠传输"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "理解 TCP 可靠传输",
+          "runs": [
+            {
+              "index": 1,
+              "text": "理解 TCP 可靠传输",
+              "fontSize": 23,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5sneloj2",
+      "id": "10",
+      "bbox": [
+        112,
+        356,
+        300,
+        20
+      ],
+      "geometry": "rect",
+      "text": "预计 45 分钟 · 真题驱动 · 2 道验证题",
+      "textPreview": "预计 45 分钟 · 真题驱动 · 2 道验证题",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "预计 45 分钟 · 真题驱动 · 2 道验证题"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "预计 45 分钟 · 真题驱动 · 2 道验证题",
+          "runs": [
+            {
+              "index": 1,
+              "text": "预计 45 分钟 · 真题驱动 · 2 道验证题",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cbulwval",
+      "id": "11",
+      "bbox": [
+        112,
+        392,
+        318,
+        1
+      ],
+      "geometry": "rect",
+      "fillColor": "#D8D0C2",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nqxs72x4",
+      "id": "12",
+      "bbox": [
+        112,
+        410,
+        110,
+        20
+      ],
+      "geometry": "rect",
+      "text": "为什么做",
+      "textPreview": "为什么做",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "fontSize": 16,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "为什么做"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "为什么做",
+          "runs": [
+            {
+              "index": 1,
+              "text": "为什么做",
+              "fontSize": 16,
+              "typeface": "PingFang SC",
+              "color": "#557A62",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u54zidon",
+      "id": "13",
+      "bbox": [
+        112,
+        438,
+        300,
+        38
+      ],
+      "geometry": "rect",
+      "text": "高频题型，能快速提升原理题与应用题准确率。",
+      "textPreview": "高频题型，能快速提升原理题与应用题准确率。",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "高频题型，能快速提升原理题与应用题准确率"
+          },
+          {
+            "index": 2,
+            "text": "。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "高频题型，能快速提升原理题与应用题准确率。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "高频题型，能快速提升原理题与应用题准确率。",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5kb6xkf6",
+      "id": "14",
+      "bbox": [
+        112,
+        494,
+        120,
+        20
+      ],
+      "geometry": "rect",
+      "text": "卡住怎么办",
+      "textPreview": "卡住怎么办",
+      "resolvedFontSize": 16,
+      "resolvedTextStyle": {
+        "fontSize": 16,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "卡住怎么办"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "卡住怎么办",
+          "runs": [
+            {
+              "index": 1,
+              "text": "卡住怎么办",
+              "fontSize": 16,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/czed8v6p",
+      "id": "15",
+      "bbox": [
+        112,
+        522,
+        300,
+        38
+      ],
+      "geometry": "rect",
+      "text": "15 分钟无进展：看示例题 → 10 分钟讲解 → 向 Sparkle 求助。",
+      "textPreview": "15 分钟无进展：看示例题 → 10 分钟讲解 → 向 Sparkle 求助。",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "15 分钟无进展：看示例题 → 10 分钟讲解 →"
+          },
+          {
+            "index": 2,
+            "text": "向 Sparkle 求助。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "15 分钟无进展：看示例题 → 10 分钟讲解 → 向 Sparkle 求助。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "15 分钟无进展：看示例题 → 10 分钟讲解 → 向 Sparkle 求助。",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/neloj2t8",
+      "id": "16",
+      "bbox": [
+        550,
+        296,
+        124,
+        150
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ytsvu9kn",
+      "id": "17",
+      "bbox": [
+        568,
+        316,
+        24,
+        22
+      ],
+      "geometry": "rect",
+      "text": "1",
+      "textPreview": "1",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "1"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "1",
+          "runs": [
+            {
+              "index": 1,
+              "text": "1",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#A94D3F",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/58z25kb6",
+      "id": "18",
+      "bbox": [
+        568,
+        350,
+        88,
+        24
+      ],
+      "geometry": "rect",
+      "text": "失败",
+      "textPreview": "失败",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "失败"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "失败",
+          "runs": [
+            {
+              "index": 1,
+              "text": "失败",
+              "fontSize": 21,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gn29gr2p",
+      "id": "19",
+      "bbox": [
+        568,
+        386,
+        88,
+        42
+      ],
+      "geometry": "rect",
+      "text": "任务超时，题没做出",
+      "textPreview": "任务超时，题没做出",
+      "resolvedFontSize": 12.51,
+      "resolvedTextStyle": {
+        "fontSize": 12.51,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "任务超时，题没"
+          },
+          {
+            "index": 2,
+            "text": "做出"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "任务超时，题没做出",
+          "runs": [
+            {
+              "index": 1,
+              "text": "任务超时，题没做出",
+              "fontSize": 12.51,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 20,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/7qpg3ex0",
+      "id": "20",
+      "bbox": [
+        682,
+        360,
+        20,
+        20
+      ],
+      "alt": "ChevronRight icon",
+      "contentType": "image/svg+xml",
+      "asset": {
+        "assetId": "e2eae8df-ef9f-495a-8091-624268f07683",
+        "contentType": "image/svg+xml",
+        "byteLength": 209
+      }
+    },
+    {
+      "order": 21,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5gbq1ory",
+      "id": "21",
+      "bbox": [
+        706,
+        296,
+        124,
+        150
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F2D8C9",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 22,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/upwb2hwf",
+      "id": "22",
+      "bbox": [
+        724,
+        316,
+        24,
+        22
+      ],
+      "geometry": "rect",
+      "text": "2",
+      "textPreview": "2",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "2"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "2",
+          "runs": [
+            {
+              "index": 1,
+              "text": "2",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 23,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nap4r65w",
+      "id": "23",
+      "bbox": [
+        724,
+        350,
+        88,
+        24
+      ],
+      "geometry": "rect",
+      "text": "归因",
+      "textPreview": "归因",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "归因"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "归因",
+          "runs": [
+            {
+              "index": 1,
+              "text": "归因",
+              "fontSize": 21,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 24,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cj6tovah",
+      "id": "24",
+      "bbox": [
+        724,
+        386,
+        88,
+        42
+      ],
+      "geometry": "rect",
+      "text": "不是没时间，是不会做报文段推理",
+      "textPreview": "不是没时间，是不会做报文段推理",
+      "resolvedFontSize": 12.51,
+      "resolvedTextStyle": {
+        "fontSize": 12.51,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "不是没时间，是"
+          },
+          {
+            "index": 2,
+            "text": "不会做报文段推"
+          },
+          {
+            "index": 3,
+            "text": "理"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "不是没时间，是不会做报文段推理",
+          "runs": [
+            {
+              "index": 1,
+              "text": "不是没时间，是不会做报文段推理",
+              "fontSize": 12.51,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 25,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/ed8v6psf",
+      "id": "25",
+      "bbox": [
+        838,
+        360,
+        20,
+        20
+      ],
+      "alt": "ChevronRight icon",
+      "contentType": "image/svg+xml",
+      "asset": {
+        "assetId": "4b610305-a6fb-4f53-b172-fa43e43d458e",
+        "contentType": "image/svg+xml",
+        "byteLength": 209
+      }
+    },
+    {
+      "order": 26,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/udg7adsj",
+      "id": "26",
+      "bbox": [
+        862,
+        296,
+        124,
+        150
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 27,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nyd0z610",
+      "id": "27",
+      "bbox": [
+        880,
+        316,
+        24,
+        22
+      ],
+      "geometry": "rect",
+      "text": "3",
+      "textPreview": "3",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "3"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "3",
+          "runs": [
+            {
+              "index": 1,
+              "text": "3",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#7D8B6F",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 28,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cfa9w3m9",
+      "id": "28",
+      "bbox": [
+        880,
+        350,
+        88,
+        24
+      ],
+      "geometry": "rect",
+      "text": "改判",
+      "textPreview": "改判",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "改判"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "改判",
+          "runs": [
+            {
+              "index": 1,
+              "text": "改判",
+              "fontSize": 21,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 29,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1032lszq",
+      "id": "29",
+      "bbox": [
+        880,
+        386,
+        88,
+        42
+      ],
+      "geometry": "rect",
+      "text": "降低阅读量，增加例题拆解",
+      "textPreview": "降低阅读量，增加例题拆解",
+      "resolvedFontSize": 12.51,
+      "resolvedTextStyle": {
+        "fontSize": 12.51,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "降低阅读量，增"
+          },
+          {
+            "index": 2,
+            "text": "加例题拆解"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "降低阅读量，增加例题拆解",
+          "runs": [
+            {
+              "index": 1,
+              "text": "降低阅读量，增加例题拆解",
+              "fontSize": 12.51,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 30,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/c3ylc7u5",
+      "id": "30",
+      "bbox": [
+        994,
+        360,
+        20,
+        20
+      ],
+      "alt": "ChevronRight icon",
+      "contentType": "image/svg+xml",
+      "asset": {
+        "assetId": "a6d1301f-d962-4ef0-a50f-da49c2acb740",
+        "contentType": "image/svg+xml",
+        "byteLength": 209
+      }
+    },
+    {
+      "order": 31,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2hwfyxob",
+      "id": "31",
+      "bbox": [
+        1018,
+        296,
+        124,
+        150
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 32,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/94fu18jq",
+      "id": "32",
+      "bbox": [
+        1036,
+        316,
+        24,
+        22
+      ],
+      "geometry": "rect",
+      "text": "4",
+      "textPreview": "4",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "4"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "4",
+          "runs": [
+            {
+              "index": 1,
+              "text": "4",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#6E8498",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 33,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kjm1cfa9",
+      "id": "33",
+      "bbox": [
+        1036,
+        350,
+        88,
+        24
+      ],
+      "geometry": "rect",
+      "text": "重规划",
+      "textPreview": "重规划",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "重规划"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "重规划",
+          "runs": [
+            {
+              "index": 1,
+              "text": "重规划",
+              "fontSize": 21,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 34,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ra5gbq1o",
+      "id": "34",
+      "bbox": [
+        1036,
+        386,
+        88,
+        42
+      ],
+      "geometry": "rect",
+      "text": "下一张任务卡自动变短、先练题",
+      "textPreview": "下一张任务卡自动变短、先练题",
+      "resolvedFontSize": 12.51,
+      "resolvedTextStyle": {
+        "fontSize": 12.51,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "下一张任务卡自"
+          },
+          {
+            "index": 2,
+            "text": "动变短、先练题"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "下一张任务卡自动变短、先练题",
+          "runs": [
+            {
+              "index": 1,
+              "text": "下一张任务卡自动变短、先练题",
+              "fontSize": 12.51,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 35,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2p8nqxs7",
+      "id": "35",
+      "bbox": [
+        552,
+        502,
+        592,
+        58
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#172027",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 1
+    },
+    {
+      "order": 36,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9gr2p8nq",
+      "id": "36",
+      "bbox": [
+        580,
+        520,
+        536,
+        24
+      ],
+      "geometry": "rect",
+      "text": "Aurora 不是只改这一张任务卡，而是更新后续所有相关决策参数。",
+      "textPreview": "Aurora 不是只改这一张任务卡，而是更新后续所有相关决策参数。",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Aurora 不是只改这一张任务卡，而是更新后续所有相关决策参数。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Aurora 不是只改这一张任务卡，而是更新后续所有相关决策参数。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Aurora 不是只改这一张任务卡，而是更新后续所有相关决策参数。",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#FFFFFF"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 37,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gvy90je9",
+      "id": "37",
+      "bbox": [
+        64,
+        680,
+        360,
+        18
+      ],
+      "geometry": "rect",
+      "text": "Sparkle V2 Roadshow",
+      "textPreview": "Sparkle V2 Roadshow",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Sparkle V2 Roadshow"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Sparkle V2 Roadshow",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sparkle V2 Roadshow",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 38,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/re1w7mp0",
+      "id": "38",
+      "bbox": [
+        1182,
+        680,
+        34,
+        18
+      ],
+      "geometry": "rect",
+      "text": "05",
+      "textPreview": "05",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "05"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "05",
+          "runs": [
+            {
+              "index": 1,
+              "text": "05",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

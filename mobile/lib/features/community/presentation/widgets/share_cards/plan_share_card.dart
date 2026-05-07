@@ -113,7 +113,7 @@ class PlanShareCard extends StatelessWidget {
           builder: (context) {
             final isDarkMode = Theme.of(context).brightness == Brightness.dark;
             return Container(
-              width: 280,
+              constraints: const BoxConstraints(maxWidth: 280),
               decoration: BoxDecoration(
                 gradient: isDarkMode
                     ? LinearGradient(

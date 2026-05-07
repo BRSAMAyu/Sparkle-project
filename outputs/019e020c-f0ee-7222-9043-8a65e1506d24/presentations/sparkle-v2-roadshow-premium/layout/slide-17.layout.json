@@ -1,0 +1,866 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/dhvfee",
+    "id": "dhvfee",
+    "slide": 17,
+    "layoutId": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "PingFang SC"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/crmhk3q5",
+      "id": "1",
+      "bbox": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "geometry": "rect",
+      "fillColor": "#F1EDE4",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/j6tovaho",
+      "id": "2",
+      "bbox": [
+        64,
+        46,
+        420,
+        24
+      ],
+      "geometry": "rect",
+      "text": "Appendix F",
+      "textPreview": "Appendix F",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Appendix F"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Appendix F",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Appendix F",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ulwval87",
+      "id": "3",
+      "bbox": [
+        64,
+        76,
+        1060,
+        104
+      ],
+      "geometry": "rect",
+      "text": "MirrorFish / 多 Agent 推演",
+      "textPreview": "MirrorFish / 多 Agent 推演",
+      "resolvedFontSize": 37,
+      "resolvedTextStyle": {
+        "fontSize": 37,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "MirrorFish / 多 Agent 推演"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "MirrorFish / 多 Agent 推演",
+          "runs": [
+            {
+              "index": 1,
+              "text": "MirrorFish / 多 Agent 推演",
+              "fontSize": 37,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1kre1w7m",
+      "id": "4",
+      "bbox": [
+        66,
+        188,
+        1000,
+        46
+      ],
+      "geometry": "rect",
+      "text": "用模拟世界和角色代理提前压力测试策略，而不是只靠真实用户试错。",
+      "textPreview": "用模拟世界和角色代理提前压力测试策略，而不是只靠真实用户试错。",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "用模拟世界和角色代理提前压力测试策略，而不是只靠真实用户试错。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "用模拟世界和角色代理提前压力测试策略，而不是只靠真实用户试错。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "用模拟世界和角色代理提前压力测试策略，而不是只靠真实用户试错。",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/c3ylc7u5",
+      "id": "5",
+      "bbox": [
+        64,
+        680,
+        360,
+        18
+      ],
+      "geometry": "rect",
+      "text": "Appendix",
+      "textPreview": "Appendix",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Appendix"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Appendix",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Appendix",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ji5snelo",
+      "id": "6",
+      "bbox": [
+        1182,
+        680,
+        34,
+        18
+      ],
+      "geometry": "rect",
+      "text": "17",
+      "textPreview": "17",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "17"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "17",
+          "runs": [
+            {
+              "index": 1,
+              "text": "17",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/uxc3ylc7",
+      "id": "7",
+      "bbox": [
+        150,
+        236,
+        220,
+        54
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#172027",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 1
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1w7mp0bi",
+      "id": "8",
+      "bbox": [
+        180,
+        253,
+        160,
+        18
+      ],
+      "geometry": "rect",
+      "text": "目标世界",
+      "textPreview": "目标世界",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "目标世界"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "目标世界",
+          "runs": [
+            {
+              "index": 1,
+              "text": "目标世界",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/8bat47y1",
+      "id": "9",
+      "bbox": [
+        420,
+        236,
+        660,
+        54
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ytsvu9kn",
+      "id": "10",
+      "bbox": [
+        450,
+        253,
+        600,
+        18
+      ],
+      "geometry": "rect",
+      "text": "GoalWorldGraph 定义目标、约束、路径",
+      "textPreview": "GoalWorldGraph 定义目标、约束、路径",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "fontSize": 17,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "GoalWorldGraph 定义目标、约束、路径"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "GoalWorldGraph 定义目标、约束、路径",
+          "runs": [
+            {
+              "index": 1,
+              "text": "GoalWorldGraph 定义目标、约束、路径",
+              "fontSize": 17,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/neloj2t8",
+      "id": "11",
+      "bbox": [
+        150,
+        322,
+        220,
+        54
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#172027",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 1
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/czed8v6p",
+      "id": "12",
+      "bbox": [
+        180,
+        339,
+        160,
+        18
+      ],
+      "geometry": "rect",
+      "text": "角色代理",
+      "textPreview": "角色代理",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "角色代理"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "角色代理",
+          "runs": [
+            {
+              "index": 1,
+              "text": "角色代理",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5kb6xkf6",
+      "id": "13",
+      "bbox": [
+        420,
+        322,
+        660,
+        54
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u54zidon",
+      "id": "14",
+      "bbox": [
+        450,
+        339,
+        600,
+        18
+      ],
+      "geometry": "rect",
+      "text": "学生、导师、系统、责任伙伴多角色交互",
+      "textPreview": "学生、导师、系统、责任伙伴多角色交互",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "fontSize": 17,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "学生、导师、系统、责任伙伴多角色交互"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "学生、导师、系统、责任伙伴多角色交互",
+          "runs": [
+            {
+              "index": 1,
+              "text": "学生、导师、系统、责任伙伴多角色交互",
+              "fontSize": 17,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nqxs72x4",
+      "id": "15",
+      "bbox": [
+        150,
+        408,
+        220,
+        54
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#172027",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 1
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cbulwval",
+      "id": "16",
+      "bbox": [
+        180,
+        425,
+        160,
+        18
+      ],
+      "geometry": "rect",
+      "text": "推演结果",
+      "textPreview": "推演结果",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "推演结果"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "推演结果",
+          "runs": [
+            {
+              "index": 1,
+              "text": "推演结果",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5sneloj2",
+      "id": "17",
+      "bbox": [
+        420,
+        408,
+        660,
+        54
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/y90je9cv",
+      "id": "18",
+      "bbox": [
+        450,
+        425,
+        600,
+        18
+      ],
+      "geometry": "rect",
+      "text": "发现冲突、风险和失败路径",
+      "textPreview": "发现冲突、风险和失败路径",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "fontSize": 17,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "发现冲突、风险和失败路径"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "发现冲突、风险和失败路径",
+          "runs": [
+            {
+              "index": 1,
+              "text": "发现冲突、风险和失败路径",
+              "fontSize": 17,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nuxc3ylc",
+      "id": "19",
+      "bbox": [
+        150,
+        494,
+        220,
+        54
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#172027",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 1
+    },
+    {
+      "order": 20,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fmlkjm1c",
+      "id": "20",
+      "bbox": [
+        180,
+        511,
+        160,
+        18
+      ],
+      "geometry": "rect",
+      "text": "策略修正",
+      "textPreview": "策略修正",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "策略修正"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "策略修正",
+          "runs": [
+            {
+              "index": 1,
+              "text": "策略修正",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 21,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/q1orytsv",
+      "id": "21",
+      "bbox": [
+        420,
+        494,
+        660,
+        54
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 22,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xs72x4na",
+      "id": "22",
+      "bbox": [
+        450,
+        511,
+        600,
+        18
+      ],
+      "geometry": "rect",
+      "text": "回写计划、提示词、任务模板",
+      "textPreview": "回写计划、提示词、任务模板",
+      "resolvedFontSize": 17,
+      "resolvedTextStyle": {
+        "fontSize": 17,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "回写计划、提示词、任务模板"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "回写计划、提示词、任务模板",
+          "runs": [
+            {
+              "index": 1,
+              "text": "回写计划、提示词、任务模板",
+              "fontSize": 17,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

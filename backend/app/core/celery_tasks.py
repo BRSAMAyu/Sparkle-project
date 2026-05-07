@@ -2655,10 +2655,10 @@ def recall_notification_task(self, user_id: str, trigger_type: str, context: str
 
     async def _run():
         from app.core.redis_client import get_redis
-        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.signals.spine_orchestrator import get_spine_orchestrator
 
         redis = get_redis()
-        spine = SpineOrchestrator(redis=redis)
+        spine = get_spine_orchestrator(redis_client=redis)
 
         # V-14: Run signal pipeline first (generates directives + trace)
         try:
@@ -2834,10 +2834,10 @@ def spine_snapshot_task(self, user_id: str):
 
     async def _run():
         from app.core.redis_client import get_redis
-        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.signals.spine_orchestrator import get_spine_orchestrator
 
         redis = get_redis()
-        spine = SpineOrchestrator(redis_client=redis)
+        spine = get_spine_orchestrator(redis_client=redis)
         snapshot = await spine.save_spine_snapshot(user_id=user_id)
         return {"status": "saved", "snapshot_id": snapshot.get("snapshot_id")}
 
@@ -2995,10 +2995,10 @@ def community_cohort_signal_task(self, user_id: str, knowledge_node_id: str):
         import json
 
         from app.core.redis_client import get_redis
-        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.signals.spine_orchestrator import get_spine_orchestrator
 
         redis = get_redis()
-        spine = SpineOrchestrator(redis_client=redis)
+        spine = get_spine_orchestrator(redis_client=redis)
 
         # Load community_signal from knowledge node metadata
         sig_raw = await redis.get(f"galaxy:community_signal:{knowledge_node_id}")

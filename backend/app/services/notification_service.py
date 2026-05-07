@@ -426,9 +426,9 @@ class NotificationService:
 
         Returns the created Notification or None if suppressed by the directive.
         """
-        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.signals.spine_orchestrator import get_spine_orchestrator
 
-        spine = SpineOrchestrator(redis_client)
+        spine = get_spine_orchestrator(redis_client)
         directive = await spine.get_notification_directive(str(user_id))
 
         if directive is None:

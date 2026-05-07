@@ -244,7 +244,7 @@ class DualCoreRouter:
             "emotional_block": pw["emotional_block"] if emotional_block else 0.0,
             "procrastination": pw["procrastination"] if procrastination_pattern else 0.0,
             "cognitive_mode": pw["cognitive_mode"] if routing_input.cognitive_mode_suggested else 0.0,
-            "low_metacognition": pw["low_metacognition"] if False else 0.0,  # placeholder, set later
+            "low_metacognition": 0.0,  # set later via low_metacognition_accuracy at finalize (line 687)
             "high_cognitive_load": (
                 pw["high_cognitive_load"]
                 if (

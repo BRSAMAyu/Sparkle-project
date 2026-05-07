@@ -203,6 +203,7 @@ async def get_card_tree(
         tree = await service.get_card_tree(root_card_id=card_id, max_depth=max_depth)
         return {"success": True, "data": tree}
     except ValueError as exc:
+        await db.rollback()
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
@@ -332,6 +333,7 @@ async def create_card_snapshot(
     try:
         card = await CardOperationsService(db, event_bus=_event_bus).card_service.get_card(card_id)
         if not card or card.owner_id != current_user.id:
+            await db.rollback()
             raise HTTPException(status_code=404, detail="Card not found")
         snapshot = await service.create_snapshot(
             card_id=card_id,
@@ -407,8 +409,10 @@ async def get_card_share(
     service = ShareService(db, event_bus=_event_bus)
     share = await service.get_share_record(share_record_id)
     if not share:
+        await db.rollback()
         raise HTTPException(status_code=404, detail="Share record not found")
     if share.target_user_id and share.target_user_id != current_user.id and share.shared_by_user_id != current_user.id:
+        await db.rollback()
         raise HTTPException(status_code=403, detail="No access to this share")
     expires_at = (share.metadata_ or {}).get("expires_at")
     expires_at_dt = service._metadata_datetime(expires_at)

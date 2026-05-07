@@ -1,0 +1,881 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/31cmqe",
+    "id": "31cmqe",
+    "slide": 18,
+    "layoutId": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "PingFang SC"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kzupwb2h",
+      "id": "1",
+      "bbox": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "geometry": "rect",
+      "fillColor": "#F6F2E9",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/re1w7mp0",
+      "id": "2",
+      "bbox": [
+        64,
+        46,
+        420,
+        24
+      ],
+      "geometry": "rect",
+      "text": "Appendix G",
+      "textPreview": "Appendix G",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Appendix G"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Appendix G",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Appendix G",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/2t83itgf",
+      "id": "3",
+      "bbox": [
+        64,
+        76,
+        1060,
+        104
+      ],
+      "geometry": "rect",
+      "text": "技术架构：模型能力之外，是一套目标实现系统",
+      "textPreview": "技术架构：模型能力之外，是一套目标实现系统",
+      "resolvedFontSize": 37,
+      "resolvedTextStyle": {
+        "fontSize": 37,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "技术架构：模型能力之外，是一套目标实现系统"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "技术架构：模型能力之外，是一套目标实现系统",
+          "runs": [
+            {
+              "index": 1,
+              "text": "技术架构：模型能力之外，是一套目标实现系统",
+              "fontSize": 37,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/9w3m94fu",
+      "id": "4",
+      "bbox": [
+        66,
+        188,
+        1000,
+        46
+      ],
+      "geometry": "rect",
+      "text": "Python AI Engine、Go Gateway、Flutter、数据库、可信执行和多模型路由协同。",
+      "textPreview": "Python AI Engine、Go Gateway、Flutter、数据库、可信执行和多模型路由协同。",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Python AI Engine、Go Gateway、Flutter、数据库、可信执行和多模型路由协同。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Python AI Engine、Go Gateway、Flutter、数据库、可信执行和多模型路由协同。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Python AI Engine、Go Gateway、Flutter、数据库、可信执行和多模型路由协同。",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kb6xkf6d",
+      "id": "5",
+      "bbox": [
+        64,
+        680,
+        360,
+        18
+      ],
+      "geometry": "rect",
+      "text": "Appendix",
+      "textPreview": "Appendix",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Appendix"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Appendix",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Appendix",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/rqd4vmtw",
+      "id": "6",
+      "bbox": [
+        1182,
+        680,
+        34,
+        18
+      ],
+      "geometry": "rect",
+      "text": "18",
+      "textPreview": "18",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "18"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "18",
+          "runs": [
+            {
+              "index": 1,
+              "text": "18",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/25kb6xkf",
+      "id": "7",
+      "bbox": [
+        90,
+        260,
+        230,
+        94
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#DDE7EC",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/94fu18jq",
+      "id": "8",
+      "bbox": [
+        108,
+        286,
+        194,
+        40
+      ],
+      "geometry": "rect",
+      "text": "Flutter Mobile",
+      "textPreview": "Flutter Mobile",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Flutter Mobile"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Flutter Mobile",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Flutter Mobile",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/kjm1cfa9",
+      "id": "9",
+      "bbox": [
+        350,
+        260,
+        230,
+        94
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#E7EBDD",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mlkjm1cf",
+      "id": "10",
+      "bbox": [
+        368,
+        286,
+        194,
+        40
+      ],
+      "geometry": "rect",
+      "text": "Go Gateway\nWebSocket / HTTP",
+      "textPreview": "Go Gateway | WebSocket / HTTP",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Go Gateway"
+          },
+          {
+            "index": 2,
+            "text": "WebSocket / HTTP"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Go Gateway",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Go Gateway",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "WebSocket / HTTP",
+          "runs": [
+            {
+              "index": 1,
+              "text": "WebSocket / HTTP",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/f6dcbulw",
+      "id": "11",
+      "bbox": [
+        610,
+        260,
+        230,
+        94
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F2D8C9",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4r65wjud",
+      "id": "12",
+      "bbox": [
+        628,
+        286,
+        194,
+        40
+      ],
+      "geometry": "rect",
+      "text": "Python AI Engine\nAurora / Causal Spine",
+      "textPreview": "Python AI Engine | Aurora / Causal Spine",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Python AI Engine"
+          },
+          {
+            "index": 2,
+            "text": "Aurora / Causal Spine"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Python AI Engine",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Python AI Engine",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "Aurora / Causal Spine",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Aurora / Causal Spine",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/xc3ylc7u",
+      "id": "13",
+      "bbox": [
+        870,
+        260,
+        230,
+        94
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/mtwra5gb",
+      "id": "14",
+      "bbox": [
+        888,
+        286,
+        194,
+        40
+      ],
+      "geometry": "rect",
+      "text": "Data Layer\nPostgreSQL / Redis / Trace",
+      "textPreview": "Data Layer | PostgreSQL / Redis / Trace",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Data Layer"
+          },
+          {
+            "index": 2,
+            "text": "PostgreSQL / Redis /"
+          },
+          {
+            "index": 3,
+            "text": "Trace"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Data Layer",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Data Layer",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "PostgreSQL / Redis / Trace",
+          "runs": [
+            {
+              "index": 1,
+              "text": "PostgreSQL / Redis / Trace",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/fepkzupw",
+      "id": "15",
+      "bbox": [
+        610,
+        455,
+        230,
+        94
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#DDD5C8",
+      "lineWidth": 1
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/4zidonyd",
+      "id": "16",
+      "bbox": [
+        628,
+        481,
+        194,
+        40
+      ],
+      "geometry": "rect",
+      "text": "Model Router\nDeepSeek / OpenAI / others",
+      "textPreview": "Model Router | DeepSeek / OpenAI / others",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Model Router"
+          },
+          {
+            "index": 2,
+            "text": "DeepSeek / OpenAI /"
+          },
+          {
+            "index": 3,
+            "text": "others"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Model Router",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Model Router",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "DeepSeek / OpenAI / others",
+          "runs": [
+            {
+              "index": 1,
+              "text": "DeepSeek / OpenAI / others",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/qd4vmtwr",
+      "id": "17",
+      "bbox": [
+        318,
+        292,
+        28,
+        28
+      ],
+      "alt": "ArrowRight icon",
+      "contentType": "image/svg+xml",
+      "asset": {
+        "assetId": "b78f2973-8eac-4398-b125-bc4bf4fe9a88",
+        "contentType": "image/svg+xml",
+        "byteLength": 229
+      }
+    },
+    {
+      "order": 18,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/xs72x4na",
+      "id": "18",
+      "bbox": [
+        578,
+        292,
+        28,
+        28
+      ],
+      "alt": "ArrowRight icon",
+      "contentType": "image/svg+xml",
+      "asset": {
+        "assetId": "93ba8d3d-68c7-47f2-8619-e0c92733e1ae",
+        "contentType": "image/svg+xml",
+        "byteLength": 229
+      }
+    },
+    {
+      "order": 19,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/87ed8bat",
+      "id": "19",
+      "bbox": [
+        838,
+        292,
+        28,
+        28
+      ],
+      "alt": "ArrowRight icon",
+      "contentType": "image/svg+xml",
+      "asset": {
+        "assetId": "0ff67808-66d9-47de-8544-3d270ed19542",
+        "contentType": "image/svg+xml",
+        "byteLength": 229
+      }
+    },
+    {
+      "order": 20,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/4fu18jqh",
+      "id": "20",
+      "bbox": [
+        710,
+        368,
+        28,
+        28
+      ],
+      "alt": "ArrowDown icon",
+      "contentType": "image/svg+xml",
+      "asset": {
+        "assetId": "aa31ce23-a8fa-416f-8099-0299663a30d3",
+        "contentType": "image/svg+xml",
+        "byteLength": 230
+      }
+    },
+    {
+      "order": 21,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/itgfmlkj",
+      "id": "21",
+      "bbox": [
+        190,
+        606,
+        900,
+        26
+      ],
+      "geometry": "rect",
+      "text": "技术架构图放附录，主线只讲用户能感知到的结果；答辩时再展开每层如何支撑闭环。",
+      "textPreview": "技术架构图放附录，主线只讲用户能感知到的结果；答辩时再展开每层如何支撑闭环。",
+      "resolvedFontSize": 20,
+      "resolvedTextStyle": {
+        "fontSize": 20,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "技术架构图放附录，主线只讲用户能感知到的结果；答辩时再展开每层如何支撑闭环。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "技术架构图放附录，主线只讲用户能感知到的结果；答辩时再展开每层如何支撑闭环。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "技术架构图放附录，主线只讲用户能感知到的结果；答辩时再展开每层如何支撑闭环。",
+              "fontSize": 20,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

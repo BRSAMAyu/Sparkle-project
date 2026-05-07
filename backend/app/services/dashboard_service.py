@@ -366,9 +366,9 @@ class DashboardService:
             if redis_client is None:
                 return None
 
-            from app.signals.spine_orchestrator import SpineOrchestrator
+            from app.signals.spine_orchestrator import get_spine_orchestrator
 
-            orchestrator = SpineOrchestrator(redis_client=redis_client)
+            orchestrator = get_spine_orchestrator(redis_client=redis_client)
             summary = await orchestrator.get_status_band_summary(str(user_id))
             return {
                 "band_status": summary.get("band_status", "sensing"),

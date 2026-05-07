@@ -104,7 +104,7 @@ class CapsuleShareCard extends StatelessWidget {
   Widget _buildFullCard(BuildContext context) => GestureDetector(
         onTap: onTap,
         child: Container(
-          width: 280,
+          constraints: const BoxConstraints(maxWidth: 280),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [

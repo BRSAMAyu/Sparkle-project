@@ -1,0 +1,716 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/dmi2kt",
+    "id": "dmi2kt",
+    "slide": 1,
+    "layoutId": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "PingFang SC"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zqtcj6to",
+      "id": "1",
+      "bbox": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "geometry": "rect",
+      "fillColor": "#F7F4EC",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/obm58z25",
+      "id": "2",
+      "bbox": [
+        42,
+        36,
+        1196,
+        648
+      ],
+      "geometry": "roundRect",
+      "fillColor": "rgba(255, 255, 255, 0.53333)",
+      "lineColor": "#E2DACD",
+      "lineWidth": 1
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/hwfyxobm",
+      "id": "3",
+      "bbox": [
+        82,
+        68,
+        200,
+        36
+      ],
+      "geometry": "rect",
+      "text": "Sparkle",
+      "textPreview": "Sparkle",
+      "resolvedFontSize": 25,
+      "resolvedTextStyle": {
+        "fontSize": 25,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Sparkle"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Sparkle",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sparkle",
+              "fontSize": 25,
+              "typeface": "PingFang SC",
+              "color": "#6E8498",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/6xkf6dcb",
+      "id": "4",
+      "bbox": [
+        82,
+        108,
+        300,
+        22
+      ],
+      "geometry": "rect",
+      "text": "鸿雁杯校内选拔 · 8 分钟路演",
+      "textPreview": "鸿雁杯校内选拔 · 8 分钟路演",
+      "resolvedFontSize": 14,
+      "resolvedTextStyle": {
+        "fontSize": 14,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "鸿雁杯校内选拔 · 8 分钟路演"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "鸿雁杯校内选拔 · 8 分钟路演",
+          "runs": [
+            {
+              "index": 1,
+              "text": "鸿雁杯校内选拔 · 8 分钟路演",
+              "fontSize": 14,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zed8v6ps",
+      "id": "5",
+      "bbox": [
+        82,
+        170,
+        190,
+        180
+      ],
+      "geometry": "rect",
+      "text": "7",
+      "textPreview": "7",
+      "resolvedFontSize": 154,
+      "resolvedTextStyle": {
+        "fontSize": 154,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "7"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "7",
+          "runs": [
+            {
+              "index": 1,
+              "text": "7",
+              "fontSize": 154,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/oza1gvy9",
+      "id": "6",
+      "bbox": [
+        286,
+        180,
+        520,
+        130
+      ],
+      "geometry": "rect",
+      "text": "天后考试，基本没学。\nAI 能救吗？",
+      "textPreview": "天后考试，基本没学。 | AI 能救吗？",
+      "resolvedFontSize": 46,
+      "resolvedTextStyle": {
+        "fontSize": 46,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "天后考试，基本没学。"
+          },
+          {
+            "index": 2,
+            "text": "AI 能救吗？"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "天后考试，基本没学。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "天后考试，基本没学。",
+              "fontSize": 46,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "AI 能救吗？",
+          "runs": [
+            {
+              "index": 1,
+              "text": "AI 能救吗？",
+              "fontSize": 46,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/hk3q5o7q",
+      "id": "7",
+      "bbox": [
+        290,
+        334,
+        560,
+        92
+      ],
+      "geometry": "rect",
+      "text": "我们不把 Sparkle 讲成“又一个会答题的 AI”。\n今天只讲一件事：它怎样把一个普通学生从慌乱带到可执行、可反馈、可通过。",
+      "textPreview": "我们不把 Sparkle 讲成“又一个会答题的 AI”。 | 今天只讲一件事：它怎样把一个普通学生从慌乱带到可执行、可反馈、可通过。",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "我们不把 Sparkle 讲成“又一个会答题的 AI”。"
+          },
+          {
+            "index": 2,
+            "text": "今天只讲一件事：它怎样把一个普通学生从慌乱带到可执行"
+          },
+          {
+            "index": 3,
+            "text": "、可反馈、可通过。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "我们不把 Sparkle 讲成“又一个会答题的 AI”。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "我们不把 Sparkle 讲成“又一个会答题的 AI”。",
+              "fontSize": 21,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "今天只讲一件事：它怎样把一个普通学生从慌乱带到可执行、可反馈、可通过。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "今天只讲一件事：它怎样把一个普通学生从慌乱带到可执行、可反馈、可通过。",
+              "fontSize": 21,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/al87ed8b",
+      "id": "8",
+      "bbox": [
+        890,
+        80,
+        250,
+        520
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#172027",
+      "lineColor": "#0E1418",
+      "lineWidth": 1
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/z61032ls",
+      "id": "9",
+      "bbox": [
+        902,
+        92,
+        226,
+        496
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#2D3840",
+      "lineWidth": 1
+    },
+    {
+      "order": 10,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/onyd0z61",
+      "id": "10",
+      "bbox": [
+        908,
+        98,
+        214,
+        484
+      ],
+      "alt": "Sparkle UI concept",
+      "contentType": "image/png",
+      "asset": {
+        "assetId": "b72edabd-cc72-4450-a3c8-91d30820e26b",
+        "contentType": "image/png",
+        "byteLength": 1310399
+      }
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ap4r65wj",
+      "id": "11",
+      "bbox": [
+        292,
+        458,
+        174,
+        34
+      ],
+      "geometry": "roundRect",
+      "fillColor": "rgba(255, 255, 255, 0.66667)",
+      "lineColor": "#E3DED3",
+      "lineWidth": 1
+    },
+    {
+      "order": 12,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/6hcrmhk3",
+      "id": "12",
+      "bbox": [
+        304,
+        466,
+        18,
+        18
+      ],
+      "alt": "Target icon",
+      "contentType": "image/svg+xml",
+      "asset": {
+        "assetId": "0587c4d6-b2f8-423f-8fae-c469c56c7ce0",
+        "contentType": "image/svg+xml",
+        "byteLength": 278
+      }
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/svu9knih",
+      "id": "13",
+      "bbox": [
+        330,
+        466,
+        126,
+        18
+      ],
+      "geometry": "rect",
+      "text": "北极星压力测试",
+      "textPreview": "北极星压力测试",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "北极星压力测试"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "北极星压力测试",
+          "runs": [
+            {
+              "index": 1,
+              "text": "北极星压力测试",
+              "fontSize": 13,
+              "typeface": "PingFang SC",
+              "color": "#172027",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/zidonyd0",
+      "id": "14",
+      "bbox": [
+        482,
+        458,
+        160,
+        34
+      ],
+      "geometry": "roundRect",
+      "fillColor": "rgba(255, 255, 255, 0.66667)",
+      "lineColor": "#E3DED3",
+      "lineWidth": 1
+    },
+    {
+      "order": 15,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/dg7adsji",
+      "id": "15",
+      "bbox": [
+        494,
+        466,
+        18,
+        18
+      ],
+      "alt": "BookOpen icon",
+      "contentType": "image/svg+xml",
+      "asset": {
+        "assetId": "dde6b994-413a-4d64-9885-b35ba6e7fbce",
+        "contentType": "image/svg+xml",
+        "byteLength": 346
+      }
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/hoza1gvy",
+      "id": "16",
+      "bbox": [
+        520,
+        466,
+        112,
+        18
+      ],
+      "geometry": "rect",
+      "text": "计网 7 天抢救",
+      "textPreview": "计网 7 天抢救",
+      "resolvedFontSize": 13,
+      "resolvedTextStyle": {
+        "fontSize": 13,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "计网 7 天抢救"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "计网 7 天抢救",
+          "runs": [
+            {
+              "index": 1,
+              "text": "计网 7 天抢救",
+              "fontSize": 13,
+              "typeface": "PingFang SC",
+              "color": "#172027",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/s36hcrmh",
+      "id": "17",
+      "bbox": [
+        64,
+        680,
+        360,
+        18
+      ],
+      "geometry": "rect",
+      "text": "Sparkle V2 Roadshow",
+      "textPreview": "Sparkle V2 Roadshow",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Sparkle V2 Roadshow"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Sparkle V2 Roadshow",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sparkle V2 Roadshow",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/3m94fu18",
+      "id": "18",
+      "bbox": [
+        1182,
+        680,
+        34,
+        18
+      ],
+      "geometry": "rect",
+      "text": "01",
+      "textPreview": "01",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "01"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "01",
+          "runs": [
+            {
+              "index": 1,
+              "text": "01",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

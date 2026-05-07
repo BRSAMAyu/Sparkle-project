@@ -781,8 +781,8 @@ class ProductionChatOrchestrator:
                             _retrieval_top_k = 5
                             _retrieval_depth = 2
                             try:
-                                from app.signals.spine_orchestrator import SpineOrchestrator
-                                _spine_rag = SpineOrchestrator(self.redis)
+                                from app.signals.spine_orchestrator import get_spine_orchestrator
+                                _spine_rag = get_spine_orchestrator(self.redis)
                                 _ret_dir = await _spine_rag.get_retrieval_directive(str(user_id))
                                 if _ret_dir:
                                     _retrieval_top_k = max(1, min(20, _ret_dir.token_budget // 600))
@@ -1025,8 +1025,8 @@ class ProductionChatOrchestrator:
             _spine_chronicle_summary = None  # Growth chronicle narrative
             _spine_fatigue_context = None  # Fatigue/crisis state
             try:
-                from app.signals.spine_orchestrator import SpineOrchestrator
-                _spine = SpineOrchestrator(self.redis)
+                from app.signals.spine_orchestrator import get_spine_orchestrator
+                _spine = get_spine_orchestrator(self.redis)
 
                 # ResponseDirective → tone/length/avoid/acknowledge
                 _resp_dir = await _spine.get_response_directive(str(user_id))
@@ -1152,7 +1152,7 @@ class ProductionChatOrchestrator:
 
             # R5-DF2/DF3: Inject community and skill directives into user_context for prompt rendering
             try:
-                from app.signals.spine_orchestrator import SpineOrchestrator as _SO
+                from app.signals.spine_orchestrator import get_spine_orchestrator as _SO
                 _spine_quick = _SO(self.redis)
                 _comm_dir = await _spine_quick.get_community_directive(str(user_id))
                 if _comm_dir:

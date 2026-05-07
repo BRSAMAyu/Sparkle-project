@@ -113,7 +113,7 @@ class TaskShareCard extends StatelessWidget {
           builder: (context) {
             final isDarkMode = Theme.of(context).brightness == Brightness.dark;
             return Container(
-              width: 260,
+              constraints: const BoxConstraints(maxWidth: 260),
               decoration: BoxDecoration(
                 gradient: isDarkMode
                     ? LinearGradient(

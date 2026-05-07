@@ -25,7 +25,7 @@ from loguru import logger
 from app.core.cache import cache_service
 from app.services.fme_strategy_change_emitter import emit_strategy_change_card
 from app.signals.aurora_core_session import SessionClosure
-from app.signals.spine_orchestrator import SpineOrchestrator
+from app.signals.spine_orchestrator import SpineOrchestrator, get_spine_orchestrator
 
 
 async def apply_l3_closure_to_spine(
@@ -46,7 +46,7 @@ async def apply_l3_closure_to_spine(
 
     spine: SpineOrchestrator | None = None
     try:
-        spine = SpineOrchestrator(cache_service.redis)
+        spine = get_spine_orchestrator(cache_service.redis)
     except Exception:
         logger.warning("L3 closure bridge: SpineOrchestrator init failed", exc_info=True)
         return None

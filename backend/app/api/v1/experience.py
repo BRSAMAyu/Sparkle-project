@@ -309,9 +309,9 @@ async def _goal_graph_summary(user_id: UUID, goal_id: str | None) -> dict[str, A
     if not goal_id or cache_service.redis is None:
         return {"active": False, "nodes": [], "edges": [], "focus_suggestions": []}
     try:
-        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.signals.spine_orchestrator import get_spine_orchestrator
 
-        spine = SpineOrchestrator(cache_service.redis)
+        spine = get_spine_orchestrator(cache_service.redis)
         graph = await spine.get_goal_graph(user_id=str(user_id), goal_id=goal_id)
         if graph is None:
             return {"active": False, "nodes": [], "edges": [], "focus_suggestions": []}

@@ -1,0 +1,579 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/50b1so",
+    "id": "50b1so",
+    "slide": 11,
+    "layoutId": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "PingFang SC"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0nuxc3yl",
+      "id": "1",
+      "bbox": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "geometry": "rect",
+      "fillColor": "#172027",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/72x4nap4",
+      "id": "2",
+      "bbox": [
+        82,
+        82,
+        230,
+        500
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#172027",
+      "lineColor": "#0E1418",
+      "lineWidth": 1
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ih4byhgn",
+      "id": "3",
+      "bbox": [
+        94,
+        94,
+        206,
+        476
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#2D3840",
+      "lineWidth": 1
+    },
+    {
+      "order": 4,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/8nqxs72x",
+      "id": "4",
+      "bbox": [
+        100,
+        100,
+        194,
+        464
+      ],
+      "alt": "Sparkle UI concept",
+      "contentType": "image/png",
+      "asset": {
+        "assetId": "3b78c841-2013-44c1-8fa6-ceca8676cd42",
+        "contentType": "image/png",
+        "byteLength": 1310399
+      }
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0z61032l",
+      "id": "5",
+      "bbox": [
+        390,
+        118,
+        360,
+        42
+      ],
+      "geometry": "rect",
+      "text": "回到那个学生",
+      "textPreview": "回到那个学生",
+      "resolvedFontSize": 34,
+      "resolvedTextStyle": {
+        "fontSize": 34,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "回到那个学生"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "回到那个学生",
+          "runs": [
+            {
+              "index": 1,
+              "text": "回到那个学生",
+              "fontSize": 34,
+              "typeface": "PingFang SC",
+              "color": "#F2D8C9",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/7ed8bat4",
+      "id": "6",
+      "bbox": [
+        390,
+        206,
+        690,
+        44
+      ],
+      "geometry": "rect",
+      "text": "7 天前，他面对计网考试，基本没学。",
+      "textPreview": "7 天前，他面对计网考试，基本没学。",
+      "resolvedFontSize": 33,
+      "resolvedTextStyle": {
+        "fontSize": 33,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "7 天前，他面对计网考试，基本没学。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "7 天前，他面对计网考试，基本没学。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "7 天前，他面对计网考试，基本没学。",
+              "fontSize": 33,
+              "typeface": "PingFang SC",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/itgfmlkj",
+      "id": "7",
+      "bbox": [
+        390,
+        274,
+        420,
+        42
+      ],
+      "geometry": "rect",
+      "text": "7 天后，他通过了。",
+      "textPreview": "7 天后，他通过了。",
+      "resolvedFontSize": 33,
+      "resolvedTextStyle": {
+        "fontSize": 33,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "7 天后，他通过了。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "7 天后，他通过了。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "7 天后，他通过了。",
+              "fontSize": 33,
+              "typeface": "PingFang SC",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/pwb2hwfy",
+      "id": "8",
+      "bbox": [
+        390,
+        354,
+        700,
+        78
+      ],
+      "geometry": "rect",
+      "text": "不是因为 Sparkle 比他聪明，\n而是因为 Sparkle 帮他做了那些他不知道该怎么做的决策。",
+      "textPreview": "不是因为 Sparkle 比他聪明， | 而是因为 Sparkle 帮他做了那些他不知道该怎么做的决策。",
+      "resolvedFontSize": 27,
+      "resolvedTextStyle": {
+        "fontSize": 27,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "不是因为 Sparkle 比他聪明，"
+          },
+          {
+            "index": 2,
+            "text": "而是因为 Sparkle"
+          },
+          {
+            "index": 3,
+            "text": "帮他做了那些他不知道该怎么做的决策。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "不是因为 Sparkle 比他聪明，",
+          "runs": [
+            {
+              "index": 1,
+              "text": "不是因为 Sparkle 比他聪明，",
+              "fontSize": 27,
+              "typeface": "PingFang SC",
+              "color": "#D9E2D1"
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "而是因为 Sparkle 帮他做了那些他不知道该怎么做的决策。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "而是因为 Sparkle 帮他做了那些他不知道该怎么做的决策。",
+              "fontSize": 27,
+              "typeface": "PingFang SC",
+              "color": "#D9E2D1"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/0bi9s36h",
+      "id": "9",
+      "bbox": [
+        390,
+        480,
+        620,
+        1
+      ],
+      "geometry": "rect",
+      "fillColor": "#53606A",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u18jqh0f",
+      "id": "10",
+      "bbox": [
+        390,
+        516,
+        710,
+        38
+      ],
+      "geometry": "rect",
+      "text": "我们相信：能不能做成事，不应该取决于你多会用 AI、多会做计划、多有钱请私教。",
+      "textPreview": "我们相信：能不能做成事，不应该取决于你多会用 AI、多会做计划、多有钱请私教。",
+      "resolvedFontSize": 21,
+      "resolvedTextStyle": {
+        "fontSize": 21,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 2,
+        "lines": [
+          {
+            "index": 1,
+            "text": "我们相信：能不能做成事，不应该取决于你多会用"
+          },
+          {
+            "index": 2,
+            "text": "AI、多会做计划、多有钱请私教。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "我们相信：能不能做成事，不应该取决于你多会用 AI、多会做计划、多有钱请私教。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "我们相信：能不能做成事，不应该取决于你多会用 AI、多会做计划、多有钱请私教。",
+              "fontSize": 21,
+              "typeface": "PingFang SC",
+              "color": "#D8D0C2",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/jm1cfa9w",
+      "id": "11",
+      "bbox": [
+        390,
+        586,
+        620,
+        30
+      ],
+      "geometry": "rect",
+      "text": "Sparkle 让普通人第一次就能走进自己的目标路径。",
+      "textPreview": "Sparkle 让普通人第一次就能走进自己的目标路径。",
+      "resolvedFontSize": 24,
+      "resolvedTextStyle": {
+        "fontSize": 24,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Sparkle 让普通人第一次就能走进自己的目标路径。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Sparkle 让普通人第一次就能走进自己的目标路径。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sparkle 让普通人第一次就能走进自己的目标路径。",
+              "fontSize": 24,
+              "typeface": "PingFang SC",
+              "color": "#FFFFFF",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/c7u54zid",
+      "id": "12",
+      "bbox": [
+        64,
+        680,
+        360,
+        18
+      ],
+      "geometry": "rect",
+      "text": "Sparkle · Thank you",
+      "textPreview": "Sparkle · Thank you",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Sparkle · Thank you"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Sparkle · Thank you",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sparkle · Thank you",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/1orytsvu",
+      "id": "13",
+      "bbox": [
+        1182,
+        680,
+        34,
+        18
+      ],
+      "geometry": "rect",
+      "text": "11",
+      "textPreview": "11",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "11"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "11",
+          "runs": [
+            {
+              "index": 1,
+              "text": "11",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

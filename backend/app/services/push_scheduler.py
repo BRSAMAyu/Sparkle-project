@@ -210,9 +210,9 @@ class PushScheduler:
 
     async def _get_spine_directive(self, user_id: str) -> Any:
         try:
-            from app.signals.spine_orchestrator import SpineOrchestrator
+            from app.signals.spine_orchestrator import get_spine_orchestrator
             if self.redis:
-                spine = SpineOrchestrator(self.redis)
+                spine = get_spine_orchestrator(self.redis)
                 return await spine.get_notification_directive(user_id)
         except Exception:
             pass

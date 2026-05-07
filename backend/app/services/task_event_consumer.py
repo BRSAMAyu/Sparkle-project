@@ -125,8 +125,8 @@ class TaskEventConsumer:
 
                 # Signal-to-Action Spine: task.completed → signal detection
                 try:
-                    from app.signals.spine_orchestrator import SpineOrchestrator
-                    spine = SpineOrchestrator(cache_service.redis)
+                    from app.signals.spine_orchestrator import get_spine_orchestrator
+                    spine = get_spine_orchestrator(cache_service.redis)
                     await spine.on_task_completed(
                         user_id=str(user_id),
                         task_id=str(task_id),
@@ -347,8 +347,8 @@ class TaskEventConsumer:
                 try:
                     quiz_accuracy = event.get("quiz_accuracy")
                     if quiz_accuracy is not None:
-                        from app.signals.spine_orchestrator import SpineOrchestrator
-                        spine = SpineOrchestrator(cache_service.redis)
+                        from app.signals.spine_orchestrator import get_spine_orchestrator
+                        spine = get_spine_orchestrator(cache_service.redis)
                         await spine.on_quiz_result(
                             user_id=str(user_id),
                             task_id=str(task_id),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/widgets/sparkle_markdown.dart';
@@ -202,7 +203,14 @@ class AgentMessageRenderer extends ConsumerWidget {
         }
 
       case 'knowledge_card':
-        return KnowledgeCard(data: widget.data);
+        try {
+          return KnowledgeCard(data: widget.data);
+        } catch (e) {
+          debugPrint('Error rendering KnowledgeCard: $e');
+          return CompactErrorCard(
+            onRetry: null,
+          );
+        }
 
       case 'task_list':
         final rawTasks = widget.data['tasks'] as List<dynamic>?;
@@ -231,10 +239,20 @@ class AgentMessageRenderer extends ConsumerWidget {
 
       case 'plan_context_summary':
       case 'plan_state': // Legacy alias for compatibility
-        return PlanContextSummary(contextData: widget.data);
+        try {
+          return PlanContextSummary(contextData: widget.data);
+        } catch (e) {
+          debugPrint('Error rendering PlanContextSummary: $e');
+          return const CompactErrorCard(onRetry: null);
+        }
 
       case 'prism_card':
-        return PrismBehaviorCard(data: widget.data);
+        try {
+          return PrismBehaviorCard(data: widget.data);
+        } catch (e) {
+          debugPrint('Error rendering PrismBehaviorCard: $e');
+          return const CompactErrorCard(onRetry: null);
+        }
 
       case 'achievement_card':
         return _buildAchievementCard(context, widget.data);

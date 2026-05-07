@@ -33,7 +33,7 @@ class TaskProtocolPanel extends ConsumerWidget {
     final asyncProtocol = ref.watch(taskCardProtocolProvider(taskId));
 
     return asyncProtocol.when(
-      loading: () => const SizedBox.shrink(),
+      loading: () => const _ProtocolLoadingShimmer(),
       error: (_, __) => CompactErrorCard(
         onRetry: () => ref.invalidate(taskCardProtocolProvider(taskId)),
       ),
@@ -262,4 +262,69 @@ class _Section extends StatelessWidget {
           ...children,
         ],
       );
+}
+
+class _ProtocolLoadingShimmer extends StatefulWidget {
+  const _ProtocolLoadingShimmer();
+
+  @override
+  State<_ProtocolLoadingShimmer> createState() =>
+      _ProtocolLoadingShimmerState();
+}
+
+class _ProtocolLoadingShimmerState extends State<_ProtocolLoadingShimmer>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final opacity = 0.3 + 0.3 * _controller.value;
+        return Opacity(
+          opacity: opacity,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _shimmerLine(140, 12),
+              const SizedBox(height: DS.spacing8),
+              _shimmerLine(100, 10),
+              const SizedBox(height: DS.spacing6),
+              _shimmerLine(180, 10),
+              const SizedBox(height: DS.spacing6),
+              _shimmerLine(120, 10),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _shimmerLine(double width, double height) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        color: DS.borderSubtle,
+        borderRadius: BorderRadius.circular(4),
+      ),
+    );
+  }
 }

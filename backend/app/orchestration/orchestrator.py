@@ -2302,8 +2302,8 @@ class ChatOrchestrator(
                 if not request.HasField("tool_result") and user_message:
                     try:
                         from app.signals.spine_aurora_bridge import SpineAuroraBridge
-                        from app.signals.spine_orchestrator import SpineOrchestrator
-                        _spine = SpineOrchestrator(self.redis)
+                        from app.signals.spine_orchestrator import get_spine_orchestrator
+                        _spine = get_spine_orchestrator(self.redis)
                         _spine_bridge = SpineAuroraBridge(self.redis)
 
                         # First-message exam rescue detection

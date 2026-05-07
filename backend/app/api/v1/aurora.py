@@ -637,12 +637,12 @@ async def get_spine_receipt(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any] | None:
     """Get the latest UserVisibleReceipt for the current user."""
-    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.spine_orchestrator import get_spine_orchestrator
 
     redis = cache_service.redis
     if redis is None:
         return {"active": False}
-    spine = SpineOrchestrator(redis)
+    spine = get_spine_orchestrator(redis)
     receipt = await spine.get_latest_receipt(str(current_user.id))
     if receipt is None:
         return {"active": False}
@@ -658,12 +658,12 @@ async def submit_spine_receipt_action(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Submit user action on a Receipt (confirm / correct / dismiss)."""
-    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.spine_orchestrator import get_spine_orchestrator
 
     redis = cache_service.redis
     if redis is None:
         return {"processed": False}
-    spine = SpineOrchestrator(redis)
+    spine = get_spine_orchestrator(redis)
     await spine.handle_user_receipt_action(
         user_id=str(current_user.id),
         receipt_id=payload.receipt_id,
@@ -817,12 +817,12 @@ async def get_spine_state(
     current_user: User = Depends(get_current_user),
 ) -> dict[str, Any]:
     """Get the current ActionableStatePacket for the user (Spec Section 3)."""
-    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.spine_orchestrator import get_spine_orchestrator
 
     redis = cache_service.redis
     if redis is None:
         return {"active": False}
-    spine = SpineOrchestrator(redis)
+    spine = get_spine_orchestrator(redis)
     packet = await spine.build_state_packet(user_id=str(current_user.id))
     if packet is None:
         return {"active": False}
@@ -844,7 +844,7 @@ async def get_spine_status_band(
             has_active_directive, active_claims, active_state_keys,
             directive_summary, band_severity.
     """
-    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.spine_orchestrator import get_spine_orchestrator
 
     redis = cache_service.redis
     if redis is None:
@@ -866,7 +866,7 @@ async def get_spine_status_band(
             "cooldown_remaining_seconds": None,
             "cooldown_can_override": False,
         }
-    spine = SpineOrchestrator(redis)
+    spine = get_spine_orchestrator(redis)
     return await spine.get_status_band_summary(user_id=str(current_user.id))
 
 
@@ -894,14 +894,14 @@ async def correct_timeline_card(
     """User corrects a timeline card judgment (P1-1: Causal Timeline UI)."""
     import json as json_mod
 
-    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.spine_orchestrator import get_spine_orchestrator
 
     redis = cache_service.redis
     if redis is None:
         record_product_loop_event("card_action", "timeline_card", "failed", "redis_unavailable")
         return {"status": "error", "message": "service unavailable"}
 
-    spine = SpineOrchestrator(redis)
+    spine = get_spine_orchestrator(redis)
 
     if request.action == "correct":
         # User says judgment was wrong → clear directive, record correction
@@ -975,13 +975,13 @@ async def get_spine_goals(
     Returns the user's active goals ranked by urgency, with conflict detection
     and time-split recommendation. Used by Flutter goal overview UI.
     """
-    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.spine_orchestrator import get_spine_orchestrator
 
     redis = cache_service.redis
     if redis is None:
         return {"goals": [], "arbitration": None, "active": False}
 
-    spine = SpineOrchestrator(redis)
+    spine = get_spine_orchestrator(redis)
     try:
         arbitration = await spine.arbitrate_goals(user_id=str(current_user.id))
         if arbitration is None:
@@ -1012,13 +1012,13 @@ async def get_goal_graph(
     Returns nodes (knowledge/capability/artifact/habit/feedback/relationship),
     edges (prerequisite/enables/blocks), bottleneck node if any, and focus suggestions.
     """
-    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.spine_orchestrator import get_spine_orchestrator
 
     redis = cache_service.redis
     if redis is None:
         return {"active": False, "nodes": [], "edges": []}
 
-    spine = SpineOrchestrator(redis)
+    spine = get_spine_orchestrator(redis)
     try:
         graph = await spine.get_goal_graph(user_id=str(current_user.id), goal_id=goal_id)
         if graph is None:
@@ -1073,7 +1073,7 @@ async def submit_external_event(
     Accepts events from: calendar, file, email, github, tool.
     All external data enters the Spine as a controlled ExternalRawEvent.
     """
-    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.spine_orchestrator import get_spine_orchestrator
 
     redis = cache_service.redis
     if redis is None:
@@ -1088,7 +1088,7 @@ async def submit_external_event(
     if not source:
         return {"status": "error", "message": "source is required"}
 
-    spine = SpineOrchestrator(redis)
+    spine = get_spine_orchestrator(redis)
     trace = await spine.on_external_event(
         user_id=str(current_user.id),
         source=source,
@@ -1116,12 +1116,12 @@ async def get_source_tray_state(
     Returns the current SourceTrayState for the user — what materials
     are included/excluded and whether the user has overridden auto-mode.
     """
-    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.spine_orchestrator import get_spine_orchestrator
 
     redis = cache_service.redis
     if redis is None:
         return {"mode": "auto", "selections": [], "available_sources": []}
-    spine = SpineOrchestrator(redis)
+    spine = get_spine_orchestrator(redis)
     return await spine.get_source_tray_state(user_id=str(current_user.id))
 
 
@@ -1143,13 +1143,13 @@ async def set_source_tray_selection(
 
     Iron Rule: Only writes to Redis session state. No long-term DB writes.
     """
-    from app.signals.spine_orchestrator import SpineOrchestrator
+    from app.signals.spine_orchestrator import get_spine_orchestrator
 
     redis = cache_service.redis
     if redis is None:
         return {"status": "error", "message": "service unavailable"}
 
-    spine = SpineOrchestrator(redis)
+    spine = get_spine_orchestrator(redis)
     selections = request.get("selections", [])
     mode = str(request.get("mode", "manual_only"))
 

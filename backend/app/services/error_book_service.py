@@ -379,10 +379,10 @@ class ErrorBookService:
             try:
                 from app.core.cache import cache_service
                 from app.signals.mistake_signal import MistakeSignalDetector
-                from app.signals.spine_orchestrator import SpineOrchestrator
+                from app.signals.spine_orchestrator import get_spine_orchestrator
                 if cache_service.redis and linked_ids:
                     mistake_detector = MistakeSignalDetector(cache_service.redis)
-                    spine = SpineOrchestrator(cache_service.redis)
+                    spine = get_spine_orchestrator(cache_service.redis)
                     mistake_signals = await mistake_detector.on_error_created(
                         user_id=str(user_id),
                         error_id=str(error.id),

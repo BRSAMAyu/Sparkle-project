@@ -255,9 +255,9 @@ async def get_experience_envelope(
     """Return the unified ExperienceEnvelope for the current user turn."""
     try:
         from app.core.cache import cache_service
-        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.signals.spine_orchestrator import get_spine_orchestrator
 
-        spine = SpineOrchestrator(cache_service.redis)
+        spine = get_spine_orchestrator(cache_service.redis)
         envelope = await spine.build_experience_envelope(
             user_id=str(current_user.id),
         )
@@ -283,9 +283,9 @@ async def handle_receipt_action(
         raise HTTPException(status_code=400, detail="action must be confirm, correct, or dismiss")
     try:
         from app.core.cache import cache_service
-        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.signals.spine_orchestrator import get_spine_orchestrator
 
-        spine = SpineOrchestrator(cache_service.redis)
+        spine = get_spine_orchestrator(cache_service.redis)
         await spine.handle_user_receipt_action(
             user_id=str(current_user.id),
             receipt_id=request.receipt_id,
@@ -327,9 +327,9 @@ async def get_rolling_metrics(
     """Return rolling-window Spine metrics for the current user."""
     try:
         from app.core.cache import cache_service
-        from app.signals.spine_orchestrator import SpineOrchestrator
+        from app.signals.spine_orchestrator import get_spine_orchestrator
 
-        spine = SpineOrchestrator(cache_service.redis)
+        spine = get_spine_orchestrator(cache_service.redis)
         metrics = await spine.get_rolling_metrics(str(current_user.id))
         return {"ok": True, **metrics}
     except Exception as e:

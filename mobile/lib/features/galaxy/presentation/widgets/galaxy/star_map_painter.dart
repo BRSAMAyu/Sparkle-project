@@ -24,7 +24,7 @@ GalaxyLod resolveGalaxyLod(double scale) {
   if (scale < 0.5) {
     return GalaxyLod.l2;
   }
-  if (scale <= 1.0) {
+  if (scale < 1.0) {
     return GalaxyLod.l3;
   }
   return GalaxyLod.l4;
@@ -2638,7 +2638,15 @@ class StarMapPainter extends CustomPainter {
   }
 
   Color _masteryTemperatureColor(Color color, {required int masteryScore}) {
-    return color;
+    final ratio = (masteryScore / 100.0).clamp(0.0, 1.0);
+    final hsl = HSLColor.fromColor(color);
+    final warmShift = ratio * 22.0 - 6.0;
+    final satBoost = ratio * 0.18;
+    return hsl
+        .withHue((hsl.hue + warmShift) % 360.0)
+        .withSaturation((hsl.saturation + satBoost).clamp(0.0, 1.0))
+        .withLightness((hsl.lightness + ratio * 0.06).clamp(0.12, 0.88))
+        .toColor();
   }
 
   double _stableCurveDirection(String sourceId, String targetId) =>

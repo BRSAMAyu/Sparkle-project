@@ -1,0 +1,918 @@
+{
+  "schema": "openai.presentation.layout/v4",
+  "unit": "px",
+  "slide": {
+    "aid": "sl/9oaf7x",
+    "id": "9oaf7x",
+    "slide": 3,
+    "layoutId": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+    "layoutName": "Title Slide",
+    "layoutType": "title",
+    "masterLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+    "masterLayoutName": "Master",
+    "frame": {
+      "left": 0,
+      "top": 0,
+      "width": 1280,
+      "height": 720
+    }
+  },
+  "theme": {
+    "colorSchemeName": "ChatGPT",
+    "colors": {
+      "accent1": "#156082",
+      "accent2": "#E97132",
+      "accent3": "#196B24",
+      "accent4": "#0F9ED5",
+      "accent5": "#A02B93",
+      "accent6": "#4EA72E",
+      "bg1": "#FFFFFF",
+      "bg2": "#000000",
+      "tx1": "#1F1F1F",
+      "tx2": "#FFFFFF",
+      "dk1": "#000000",
+      "lt1": "#FFFFFF",
+      "dk2": "#0E2841",
+      "lt2": "#E8E8E8",
+      "hlink": "#467886",
+      "folHlink": "#96607D"
+    },
+    "typefaces": [
+      "PingFang SC"
+    ]
+  },
+  "inheritedLayers": [
+    {
+      "scope": "layout",
+      "id": "e293a5c3-2aef-4d2e-a267-4786f57f9534",
+      "name": "Title Slide",
+      "type": "title",
+      "parentLayoutId": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "elements": []
+    },
+    {
+      "scope": "master",
+      "id": "350cf6e8-8023-493a-90a3-8fb0a0061b81",
+      "name": "Master",
+      "type": "master",
+      "elements": []
+    }
+  ],
+  "elements": [
+    {
+      "order": 1,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/yhgn29gr",
+      "id": "1",
+      "bbox": [
+        0,
+        0,
+        1280,
+        720
+      ],
+      "geometry": "rect",
+      "fillColor": "#F2EEE5",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 2,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/58z25kb6",
+      "id": "2",
+      "bbox": [
+        64,
+        46,
+        420,
+        24
+      ],
+      "geometry": "rect",
+      "text": "Aurora",
+      "textPreview": "Aurora",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Aurora"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Aurora",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Aurora",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#C46F4D",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 3,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gn29gr2p",
+      "id": "3",
+      "bbox": [
+        64,
+        76,
+        1060,
+        104
+      ],
+      "geometry": "rect",
+      "text": "第一次对话就不一样：不是先答，是先决策",
+      "textPreview": "第一次对话就不一样：不是先答，是先决策",
+      "resolvedFontSize": 37,
+      "resolvedTextStyle": {
+        "fontSize": 37,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "第一次对话就不一样：不是先答，是先决策"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "第一次对话就不一样：不是先答，是先决策",
+          "runs": [
+            {
+              "index": 1,
+              "text": "第一次对话就不一样：不是先答，是先决策",
+              "fontSize": 37,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 4,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nuxc3ylc",
+      "id": "4",
+      "bbox": [
+        66,
+        188,
+        1000,
+        46
+      ],
+      "geometry": "rect",
+      "text": "Aurora 不是让 AI 更会聊天，而是每次回答前先做上下文与目标决策。",
+      "textPreview": "Aurora 不是让 AI 更会聊天，而是每次回答前先做上下文与目标决策。",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Aurora 不是让 AI 更会聊天，而是每次回答前先做上下文与目标决策。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Aurora 不是让 AI 更会聊天，而是每次回答前先做上下文与目标决策。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Aurora 不是让 AI 更会聊天，而是每次回答前先做上下文与目标决策。",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 5,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/y90je9cv",
+      "id": "5",
+      "bbox": [
+        88,
+        254,
+        500,
+        248
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#FFFFFF",
+      "lineColor": "#DED7CA",
+      "lineWidth": 1
+    },
+    {
+      "order": 6,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5wjudg7a",
+      "id": "6",
+      "bbox": [
+        668,
+        254,
+        500,
+        248
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#F7FBF2",
+      "lineColor": "#7D8B6F",
+      "lineWidth": 1
+    },
+    {
+      "order": 7,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gbq1oryt",
+      "id": "7",
+      "bbox": [
+        116,
+        280,
+        220,
+        28
+      ],
+      "geometry": "rect",
+      "text": "裸用通用 AI",
+      "textPreview": "裸用通用 AI",
+      "resolvedFontSize": 23,
+      "resolvedTextStyle": {
+        "fontSize": 23,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "裸用通用 AI"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "裸用通用 AI",
+          "runs": [
+            {
+              "index": 1,
+              "text": "裸用通用 AI",
+              "fontSize": 23,
+              "typeface": "PingFang SC",
+              "color": "#1E2429",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 8,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nqxs72x4",
+      "id": "8",
+      "bbox": [
+        116,
+        330,
+        340,
+        28
+      ],
+      "geometry": "rect",
+      "text": "“7 天后考计网，基本没学。”",
+      "textPreview": "“7 天后考计网，基本没学。”",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "fontSize": 19,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "“7 天后考计网，基本没学。”"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "“7 天后考计网，基本没学。”",
+          "runs": [
+            {
+              "index": 1,
+              "text": "“7 天后考计网，基本没学。”",
+              "fontSize": 19,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 9,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u54zidon",
+      "id": "9",
+      "bbox": [
+        116,
+        374,
+        400,
+        82
+      ],
+      "geometry": "rect",
+      "text": "常见结果：给一份完整复习计划\n包含所有章节、资料和解释\n看似全面，但没有取舍",
+      "textPreview": "常见结果：给一份完整复习计划 | 包含所有章节、资料和解释 | 看似全面，但没有取舍",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "fontSize": 22,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "常见结果：给一份完整复习计划"
+          },
+          {
+            "index": 2,
+            "text": "包含所有章节、资料和解释"
+          },
+          {
+            "index": 3,
+            "text": "看似全面，但没有取舍"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "常见结果：给一份完整复习计划",
+          "runs": [
+            {
+              "index": 1,
+              "text": "常见结果：给一份完整复习计划",
+              "fontSize": 22,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "包含所有章节、资料和解释",
+          "runs": [
+            {
+              "index": 1,
+              "text": "包含所有章节、资料和解释",
+              "fontSize": 22,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "text": "看似全面，但没有取舍",
+          "runs": [
+            {
+              "index": 1,
+              "text": "看似全面，但没有取舍",
+              "fontSize": 22,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 10,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/cbulwval",
+      "id": "10",
+      "bbox": [
+        116,
+        466,
+        300,
+        20
+      ],
+      "geometry": "rect",
+      "text": "问题：把判断留给用户",
+      "textPreview": "问题：把判断留给用户",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "问题：把判断留给用户"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "问题：把判断留给用户",
+          "runs": [
+            {
+              "index": 1,
+              "text": "问题：把判断留给用户",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#A94D3F",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 11,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/5sneloj2",
+      "id": "11",
+      "bbox": [
+        696,
+        280,
+        250,
+        28
+      ],
+      "geometry": "rect",
+      "text": "Sparkle + Aurora",
+      "textPreview": "Sparkle + Aurora",
+      "resolvedFontSize": 23,
+      "resolvedTextStyle": {
+        "fontSize": 23,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Sparkle + Aurora"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Sparkle + Aurora",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sparkle + Aurora",
+              "fontSize": 23,
+              "typeface": "PingFang SC",
+              "color": "#557A62",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 12,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/u54zidon",
+      "id": "12",
+      "bbox": [
+        696,
+        330,
+        310,
+        28
+      ],
+      "geometry": "rect",
+      "text": "同一句输入，先进入抢救模式",
+      "textPreview": "同一句输入，先进入抢救模式",
+      "resolvedFontSize": 19,
+      "resolvedTextStyle": {
+        "fontSize": 19,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "同一句输入，先进入抢救模式"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "同一句输入，先进入抢救模式",
+          "runs": [
+            {
+              "index": 1,
+              "text": "同一句输入，先进入抢救模式",
+              "fontSize": 19,
+              "typeface": "PingFang SC",
+              "color": "#68717A"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 13,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/nqxs72x4",
+      "id": "13",
+      "bbox": [
+        696,
+        374,
+        400,
+        82
+      ],
+      "geometry": "rect",
+      "text": "先做 12 分钟诊断\n根据考试权重和当前基础取舍\n主动放弃低收益章节",
+      "textPreview": "先做 12 分钟诊断 | 根据考试权重和当前基础取舍 | 主动放弃低收益章节",
+      "resolvedFontSize": 22,
+      "resolvedTextStyle": {
+        "fontSize": 22,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 3,
+        "lines": [
+          {
+            "index": 1,
+            "text": "先做 12 分钟诊断"
+          },
+          {
+            "index": 2,
+            "text": "根据考试权重和当前基础取舍"
+          },
+          {
+            "index": 3,
+            "text": "主动放弃低收益章节"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "先做 12 分钟诊断",
+          "runs": [
+            {
+              "index": 1,
+              "text": "先做 12 分钟诊断",
+              "fontSize": 22,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "text": "根据考试权重和当前基础取舍",
+          "runs": [
+            {
+              "index": 1,
+              "text": "根据考试权重和当前基础取舍",
+              "fontSize": 22,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        },
+        {
+          "index": 3,
+          "text": "主动放弃低收益章节",
+          "runs": [
+            {
+              "index": 1,
+              "text": "主动放弃低收益章节",
+              "fontSize": 22,
+              "typeface": "PingFang SC",
+              "color": "#1E2429"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 14,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/czed8v6p",
+      "id": "14",
+      "bbox": [
+        696,
+        466,
+        300,
+        20
+      ],
+      "geometry": "rect",
+      "text": "差异：系统先做目标决策",
+      "textPreview": "差异：系统先做目标决策",
+      "resolvedFontSize": 15,
+      "resolvedTextStyle": {
+        "fontSize": 15,
+        "typeface": "PingFang SC",
+        "bold": true,
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "差异：系统先做目标决策"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "差异：系统先做目标决策",
+          "runs": [
+            {
+              "index": 1,
+              "text": "差异：系统先做目标决策",
+              "fontSize": 15,
+              "typeface": "PingFang SC",
+              "color": "#557A62",
+              "bold": true
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 15,
+      "kind": "image",
+      "scope": "slide",
+      "aid": "im/e9cvixcz",
+      "id": "15",
+      "bbox": [
+        604,
+        366,
+        42,
+        42
+      ],
+      "alt": "ArrowRight icon",
+      "contentType": "image/svg+xml",
+      "asset": {
+        "assetId": "f1a836ce-979f-4c73-ac01-54b9bfb24f29",
+        "contentType": "image/svg+xml",
+        "byteLength": 229
+      }
+    },
+    {
+      "order": 16,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/ytsvu9kn",
+      "id": "16",
+      "bbox": [
+        214,
+        548,
+        852,
+        54
+      ],
+      "geometry": "roundRect",
+      "fillColor": "#172027",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 1
+    },
+    {
+      "order": 17,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/neloj2t8",
+      "id": "17",
+      "bbox": [
+        242,
+        564,
+        796,
+        24
+      ],
+      "geometry": "rect",
+      "text": "这不是“先问几个问题”的聊天技巧，而是把模型能力装进目标状态、用户画像和反馈闭环里。",
+      "textPreview": "这不是“先问几个问题”的聊天技巧，而是把模型能力装进目标状态、用户画像和反馈闭环里。",
+      "resolvedFontSize": 18,
+      "resolvedTextStyle": {
+        "fontSize": 18,
+        "typeface": "PingFang SC",
+        "alignment": "center"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "这不是“先问几个问题”的聊天技巧，而是把模型能力装进目标状态、用户画像和反馈闭环里。"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "这不是“先问几个问题”的聊天技巧，而是把模型能力装进目标状态、用户画像和反馈闭环里。",
+          "runs": [
+            {
+              "index": 1,
+              "text": "这不是“先问几个问题”的聊天技巧，而是把模型能力装进目标状态、用户画像和反馈闭环里。",
+              "fontSize": 18,
+              "typeface": "PingFang SC",
+              "color": "#FFFFFF"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 18,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/gn29gr2p",
+      "id": "18",
+      "bbox": [
+        64,
+        680,
+        360,
+        18
+      ],
+      "geometry": "rect",
+      "text": "Sparkle V2 Roadshow",
+      "textPreview": "Sparkle V2 Roadshow",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "left"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "Sparkle V2 Roadshow"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "Sparkle V2 Roadshow",
+          "runs": [
+            {
+              "index": 1,
+              "text": "Sparkle V2 Roadshow",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    },
+    {
+      "order": 19,
+      "kind": "shape",
+      "scope": "slide",
+      "aid": "sh/58z25kb6",
+      "id": "19",
+      "bbox": [
+        1182,
+        680,
+        34,
+        18
+      ],
+      "geometry": "rect",
+      "text": "03",
+      "textPreview": "03",
+      "resolvedFontSize": 11,
+      "resolvedTextStyle": {
+        "fontSize": 11,
+        "typeface": "PingFang SC",
+        "alignment": "right"
+      },
+      "textLayout": {
+        "lineCount": 1,
+        "lines": [
+          {
+            "index": 1,
+            "text": "03"
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "index": 1,
+          "text": "03",
+          "runs": [
+            {
+              "index": 1,
+              "text": "03",
+              "fontSize": 11,
+              "typeface": "PingFang SC",
+              "color": "#8F8A80"
+            }
+          ]
+        }
+      ],
+      "fillColor": "rgba(0, 0, 0, 0)",
+      "lineColor": "rgba(0, 0, 0, 0)",
+      "lineWidth": 0
+    }
+  ],
+  "composeRuns": []
+}

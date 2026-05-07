@@ -28,13 +28,23 @@ class PlanCard extends StatefulWidget {
 }
 
 class _PlanCardState extends State<PlanCard> {
+  PlanCardPayload? _cachedPayload;
+  Map<String, dynamic>? _lastData;
+
+  PlanCardPayload get _payload {
+    if (identical(widget.data, _lastData)) return _cachedPayload!;
+    _lastData = widget.data;
+    _cachedPayload = PlanCardPayload.fromMap(widget.data);
+    return _cachedPayload!;
+  }
+
   void _handleTap() {
     unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.selection));
     if (widget.onTap != null) {
       widget.onTap!();
       return;
     }
-    final payload = PlanCardPayload.fromMap(widget.data);
+    final payload = _payload;
     final planId = payload.id;
     final route = payload.entity.detailRoute;
     if (route != null && route.isNotEmpty) {
@@ -55,7 +65,7 @@ class _PlanCardState extends State<PlanCard> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final payload = PlanCardPayload.fromMap(widget.data);
+    final payload = _payload;
     final targetDateLabel = payload.targetDate != null
         ? l10n.planTargetDate(payload.targetDate!.toIso8601String().split('T').first)
         : null;

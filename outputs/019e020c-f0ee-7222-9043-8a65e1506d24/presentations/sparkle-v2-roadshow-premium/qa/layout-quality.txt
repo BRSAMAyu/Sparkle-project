@@ -1,0 +1,254 @@
+[warning] slide-04.layout.json:tight-text:6: 12 分钟诊断 text box is tight: height 30px for 1 line(s) at 28px.
+    - shape 12 分钟诊断 bbox=[110,282,220,30]
+[warning] slide-04.layout.json:tight-text:7: Sparkle 不让学生先“开始复习”，而是先测三类高收益能力： text box is tight: height 34px for 3 line(s) at 18px.
+    - shape Sparkle 不让学生先“开始复习”，而是先测三类高收益能力： bbox=[112,330,410,34]
+[warning] slide-04.layout.json:tight-text:9: TCP 可靠传输 text box is tight: height 16px for 1 line(s) at 15px.
+    - shape TCP 可靠传输 bbox=[132,400,180,16]
+[warning] slide-04.layout.json:tight-text:10: 高频考点 text box is tight: height 16px for 1 line(s) at 14px.
+    - shape 高频考点 bbox=[340,400,140,16]
+[warning] slide-04.layout.json:tight-text:12: 子网划分 text box is tight: height 16px for 1 line(s) at 15px.
+    - shape 子网划分 bbox=[132,450,180,16]
+[warning] slide-04.layout.json:tight-text:13: 短板暴露 text box is tight: height 16px for 1 line(s) at 14px.
+    - shape 短板暴露 bbox=[340,450,140,16]
+[warning] slide-04.layout.json:tight-text:15: 差错检测 text box is tight: height 16px for 1 line(s) at 15px.
+    - shape 差错检测 bbox=[132,500,180,16]
+[warning] slide-04.layout.json:tight-text:16: 可快速补齐 text box is tight: height 16px for 1 line(s) at 14px.
+    - shape 可快速补齐 bbox=[340,500,140,16]
+[warning] slide-04.layout.json:tight-text:18: 主动放弃第 8 章 text box is tight: height 30px for 1 line(s) at 28px.
+    - shape 主动放弃第 8 章 bbox=[684,282,260,30]
+[warning] slide-04.layout.json:tight-text:21: 救 TCP / 子网 / 差错检测 text box is tight: height 18px for 1 line(s) at 17px.
+    - shape 救 TCP / 子网 / 差错检测 bbox=[782,400,260,18]
+[warning] slide-04.layout.json:tight-text:23: 真题驱动补理论 text box is tight: height 18px for 1 line(s) at 17px.
+    - shape 真题驱动补理论 bbox=[782,442,260,18]
+[warning] slide-04.layout.json:tight-text:25: 错因回收 text box is tight: height 18px for 1 line(s) at 17px.
+    - shape 错因回收 bbox=[782,484,260,18]
+[warning] slide-04.layout.json:tight-text:27: 保底题型演练 text box is tight: height 18px for 1 line(s) at 17px.
+    - shape 保底题型演练 bbox=[782,526,260,18]
+[warning] slide-04.layout.json:tight-text:28: 一句话：救急不是完整学习，是最小通过路径。 text box is tight: height 28px for 1 line(s) at 25px.
+    - shape 一句话：救急不是完整学习，是最小通过路径。 bbox=[280,602,720,28]
+[warning] slide-04.layout.json:split-inline:20:21: Day 1-2 and 救 TCP / 子网 / 差错检测 look like manually split inline text.
+    - shape Day 1-2 bbox=[688,400,82,18]
+    - shape 救 TCP / 子网 / 差错检测 bbox=[782,400,260,18]
+[warning] slide-04.layout.json:split-inline:22:23: Day 3-5 and 真题驱动补理论 look like manually split inline text.
+    - shape Day 3-5 bbox=[688,442,82,18]
+    - shape 真题驱动补理论 bbox=[782,442,260,18]
+[warning] slide-04.layout.json:split-inline:24:25: Day 6 and 错因回收 look like manually split inline text.
+    - shape Day 6 bbox=[688,484,82,18]
+    - shape 错因回收 bbox=[782,484,260,18]
+[warning] slide-04.layout.json:split-inline:26:27: Day 7 and 保底题型演练 look like manually split inline text.
+    - shape Day 7 bbox=[688,526,82,18]
+    - shape 保底题型演练 bbox=[782,526,260,18]
+[warning] slide-05.layout.json:tight-text:6: 今日任务卡 text box is tight: height 28px for 1 line(s) at 26px.
+    - shape 今日任务卡 bbox=[112,270,180,28]
+[warning] slide-05.layout.json:tight-text:18: 失败 text box is tight: height 24px for 1 line(s) at 21px.
+    - shape 失败 bbox=[568,350,88,24]
+[warning] slide-05.layout.json:tight-text:23: 归因 text box is tight: height 24px for 1 line(s) at 21px.
+    - shape 归因 bbox=[724,350,88,24]
+[warning] slide-05.layout.json:tight-text:24: 不是没时间，是不会做报文段推理 text box is tight: height 42px for 3 line(s) at 12.51px.
+    - shape 不是没时间，是不会做报文段推理 bbox=[724,386,88,42]
+[warning] slide-05.layout.json:tight-text:28: 改判 text box is tight: height 24px for 1 line(s) at 21px.
+    - shape 改判 bbox=[880,350,88,24]
+[warning] slide-05.layout.json:tight-text:33: 重规划 text box is tight: height 24px for 1 line(s) at 21px.
+    - shape 重规划 bbox=[1036,350,88,24]
+[warning] slide-06.layout.json:tight-text:6: 个人 | 方法资产 text box is tight: height 76px for 3 line(s) at 30px.
+    - shape 个人 | 方法资产 bbox=[582,357,116,76]
+[warning] slide-07.layout.json:tight-text:6: 比较维度 text box is tight: height 16px for 1 line(s) at 14px.
+    - shape 比较维度 bbox=[98,258,218,16]
+[warning] slide-07.layout.json:tight-text:8: 通用大模型 text box is tight: height 16px for 1 line(s) at 14px.
+    - shape 通用大模型 bbox=[348,258,256,16]
+[warning] slide-07.layout.json:tight-text:10: 学习工具 / 校内平台 text box is tight: height 16px for 1 line(s) at 14px.
+    - shape 学习工具 / 校内平台 bbox=[636,258,256,16]
+[warning] slide-07.layout.json:tight-text:12: Sparkle text box is tight: height 16px for 1 line(s) at 14px.
+    - shape Sparkle bbox=[924,258,258,16]
+[warning] slide-08.layout.json:tight-text:10: 24 种 text box is tight: height 34px for 1 line(s) at 30px.
+    - shape 24 种 bbox=[448,244,266,34]
+[warning] slide-08.layout.json:tight-text:11: 极端目标场景全通过：含零基础、7 天 deadline、多目标冲突 text box is tight: height 24px for 2 line(s) at 14px.
+    - shape 极端目标场景全通过：含零基础、7 天 deadline、多目标冲突 bbox=[448,281,266,24]
+[warning] slide-08.layout.json:tight-text:13: 12/12 text box is tight: height 34px for 1 line(s) at 30px.
+    - shape 12/12 bbox=[784,244,266,34]
+[warning] slide-08.layout.json:tight-text:16: 97.3% text box is tight: height 34px for 1 line(s) at 30px.
+    - shape 97.3% bbox=[448,372,266,34]
+[warning] slide-08.layout.json:tight-text:17: Aurora closeout 验收项完成率：72/74 verified text box is tight: height 24px for 2 line(s) at 14px.
+    - shape Aurora closeout 验收项完成率：72/74 verified bbox=[448,409,266,24]
+[warning] slide-08.layout.json:tight-text:19: 90%+ text box is tight: height 34px for 1 line(s) at 30px.
+    - shape 90%+ bbox=[784,372,266,34]
+[warning] slide-08.layout.json:tight-text:20: 关键路径真机/本地联调已跑通，移动端黑洞状态降为 0% text box is tight: height 24px for 2 line(s) at 14px.
+    - shape 关键路径真机/本地联调已跑通，移动端黑洞状态降为 0% bbox=[784,409,266,24]
+[warning] slide-08.layout.json:tight-text:22: 这些数字不是为了炫工程量，而是回答评委心里的问题：这不是 PPT 公司，已经有能跑、能测、能继续迭代的系统底座。 text box is tight: height 30px for 2 line(s) at 17px.
+    - shape 这些数字不是为了炫工程量，而是回答评委心里的问题：这不是 PPT 公司，已经有能跑、能测、能继续迭代的系统底座。 bbox=[458,526,584,30]
+[warning] slide-09.layout.json:tight-text:7: 黄亚坤 text box is tight: height 36px for 1 line(s) at 34px.
+    - shape 黄亚坤 bbox=[112,298,160,36]
+[warning] slide-09.layout.json:tight-text:11: 产品与用户洞察 text box is tight: height 15px for 1 line(s) at 14px.
+    - shape 产品与用户洞察 bbox=[492,235,130,15]
+[warning] slide-09.layout.json:tight-text:12: 北极星场景、完整体验、路线规划 text box is tight: height 12px for 1 line(s) at 11.51px.
+    - shape 北极星场景、完整体验、路线规划 bbox=[492,253,268,12]
+[warning] slide-09.layout.json:tight-text:14: AI 系统设计 text box is tight: height 15px for 1 line(s) at 14px.
+    - shape AI 系统设计 bbox=[492,297,130,15]
+[warning] slide-09.layout.json:tight-text:15: Aurora、Causal Spine、知识星图 text box is tight: height 12px for 1 line(s) at 11.51px.
+    - shape Aurora、Causal Spine、知识星图 bbox=[492,315,268,12]
+[warning] slide-09.layout.json:tight-text:17: 后端与可信执行 text box is tight: height 15px for 1 line(s) at 14px.
+    - shape 后端与可信执行 bbox=[492,359,130,15]
+[warning] slide-09.layout.json:tight-text:18: Python AI Engine、Go Gateway、OpenClaw text box is tight: height 12px for 1 line(s) at 11.51px.
+    - shape Python AI Engine、Go Gateway、OpenClaw bbox=[492,377,268,12]
+[warning] slide-09.layout.json:tight-text:20: 移动端体验 text box is tight: height 15px for 1 line(s) at 14px.
+    - shape 移动端体验 bbox=[492,421,130,15]
+[warning] slide-09.layout.json:tight-text:21: Flutter 产品界面、任务流、社区协同 text box is tight: height 12px for 1 line(s) at 11.51px.
+    - shape Flutter 产品界面、任务流、社区协同 bbox=[492,439,268,12]
+[warning] slide-09.layout.json:tight-text:23: 验证与安全 text box is tight: height 15px for 1 line(s) at 14px.
+    - shape 验证与安全 bbox=[492,483,130,15]
+[warning] slide-09.layout.json:tight-text:24: Benchmark、trace、RBAC、审计 text box is tight: height 12px for 1 line(s) at 11.51px.
+    - shape Benchmark、trace、RBAC、审计 bbox=[492,501,268,12]
+[warning] slide-09.layout.json:tight-text:26: 邓博仁 text box is tight: height 22px for 1 line(s) at 20px.
+    - shape 邓博仁 bbox=[864,239,88,22]
+[warning] slide-09.layout.json:tight-text:30: 张雨凝 text box is tight: height 22px for 1 line(s) at 20px.
+    - shape 张雨凝 bbox=[864,313,88,22]
+[warning] slide-09.layout.json:tight-text:34: 王宇 text box is tight: height 22px for 1 line(s) at 20px.
+    - shape 王宇 bbox=[864,387,88,22]
+[warning] slide-09.layout.json:tight-text:38: 王英树 text box is tight: height 22px for 1 line(s) at 20px.
+    - shape 王英树 bbox=[864,461,88,22]
+[warning] slide-09.layout.json:box-bottom-pad:10:12: 北极星场景、完整体验、路线规划 has only 7px bottom padding inside its containing box; expected at least 12px.
+    - shape order 10 bbox=[470,226,328,46]
+    - shape 北极星场景、完整体验、路线规划 bbox=[492,253,268,12]
+[warning] slide-09.layout.json:box-bottom-pad:13:15: Aurora、Causal Spine、知识星图 has only 7px bottom padding inside its containing box; expected at least 12px.
+    - shape order 13 bbox=[470,288,328,46]
+    - shape Aurora、Causal Spine、知识星图 bbox=[492,315,268,12]
+[warning] slide-09.layout.json:box-bottom-pad:16:18: Python AI Engine、Go Gateway、OpenClaw has only 7px bottom padding inside its containing box; expected at least 12px.
+    - shape order 16 bbox=[470,350,328,46]
+    - shape Python AI Engine、Go Gateway、OpenClaw bbox=[492,377,268,12]
+[warning] slide-09.layout.json:box-bottom-pad:19:21: Flutter 产品界面、任务流、社区协同 has only 7px bottom padding inside its containing box; expected at least 12px.
+    - shape order 19 bbox=[470,412,328,46]
+    - shape Flutter 产品界面、任务流、社区协同 bbox=[492,439,268,12]
+[warning] slide-09.layout.json:box-bottom-pad:22:24: Benchmark、trace、RBAC、审计 has only 7px bottom padding inside its containing box; expected at least 12px.
+    - shape order 22 bbox=[470,474,328,46]
+    - shape Benchmark、trace、RBAC、审计 bbox=[492,501,268,12]
+[warning] slide-09.layout.json:split-inline:26:27: 邓博仁 and 计算机科学与技术 look like manually split inline text.
+    - shape 邓博仁 bbox=[864,239,88,22]
+    - shape 计算机科学与技术 bbox=[964,242,160,16]
+[warning] slide-09.layout.json:split-inline:30:31: 张雨凝 and 计算机科学与技术 look like manually split inline text.
+    - shape 张雨凝 bbox=[864,313,88,22]
+    - shape 计算机科学与技术 bbox=[964,316,160,16]
+[warning] slide-09.layout.json:split-inline:34:35: 王宇 and 电子信息 look like manually split inline text.
+    - shape 王宇 bbox=[864,387,88,22]
+    - shape 电子信息 bbox=[964,390,160,16]
+[warning] slide-09.layout.json:split-inline:38:39: 王英树 and 计算机科学与技术 look like manually split inline text.
+    - shape 王英树 bbox=[864,461,88,22]
+    - shape 计算机科学与技术 bbox=[964,464,160,16]
+[warning] slide-10.layout.json:tight-text:6: 1 text box is tight: height 28px for 1 line(s) at 26px.
+    - shape 1 bbox=[188,292,26,28]
+[warning] slide-10.layout.json:tight-text:7: 北邮试点 text box is tight: height 28px for 1 line(s) at 25px.
+    - shape 北邮试点 bbox=[90,386,222,28]
+[warning] slide-10.layout.json:tight-text:11: 2 text box is tight: height 28px for 1 line(s) at 26px.
+    - shape 2 bbox=[474,292,26,28]
+[warning] slide-10.layout.json:tight-text:12: 多高校复制 text box is tight: height 28px for 1 line(s) at 25px.
+    - shape 多高校复制 bbox=[376,386,222,28]
+[warning] slide-10.layout.json:tight-text:16: 3 text box is tight: height 28px for 1 line(s) at 26px.
+    - shape 3 bbox=[760,292,26,28]
+[warning] slide-10.layout.json:tight-text:17: 机构合作 text box is tight: height 28px for 1 line(s) at 25px.
+    - shape 机构合作 bbox=[662,386,222,28]
+[warning] slide-10.layout.json:tight-text:21: 4 text box is tight: height 28px for 1 line(s) at 26px.
+    - shape 4 bbox=[1046,292,26,28]
+[warning] slide-10.layout.json:tight-text:22: Goal OS text box is tight: height 28px for 1 line(s) at 25px.
+    - shape Goal OS bbox=[948,386,222,28]
+[warning] slide-10.layout.json:tight-text:25: C 端订阅 text box is tight: height 24px for 1 line(s) at 23px.
+    - shape C 端订阅 bbox=[184,562,130,24]
+[warning] slide-10.layout.json:tight-text:26: 学生为高频刚需与关键节点付费：考试救急、长期计划、复习资产。 text box is tight: height 38px for 3 line(s) at 15px.
+    - shape 学生为高频刚需与关键节点付费：考试救急、长期计划、复习资产。 bbox=[330,558,210,38]
+[warning] slide-10.layout.json:tight-text:28: D 端合作 text box is tight: height 24px for 1 line(s) at 23px.
+    - shape D 端合作 bbox=[724,562,130,24]
+[warning] slide-10.layout.json:tight-text:29: 与高校、课程团队、教育机构合作：个性化辅导、学习数据与导师减负。 text box is tight: height 38px for 3 line(s) at 15px.
+    - shape 与高校、课程团队、教育机构合作：个性化辅导、学习数据与导师减负。 bbox=[870,558,210,38]
+[warning] slide-11.layout.json:tight-text:8: 不是因为 Sparkle 比他聪明， | 而是因为 Sparkle 帮他做了那些他不知道该怎么做的决策。 text box is tight: height 78px for 3 line(s) at 27px.
+    - shape 不是因为 Sparkle 比他聪明， | 而是因为 Sparkle 帮他做了那些他不知道该怎么做的决策。 bbox=[390,354,700,78]
+[warning] slide-11.layout.json:tight-text:10: 我们相信：能不能做成事，不应该取决于你多会用 AI、多会做计划、多有钱请私教。 text box is tight: height 38px for 2 line(s) at 21px.
+    - shape 我们相信：能不能做成事，不应该取决于你多会用 AI、多会做计划、多有钱请私教。 bbox=[390,516,710,38]
+[warning] slide-12.layout.json:tight-text:9: 责任伙伴 text box is tight: height 22px for 1 line(s) at 23px.
+    - shape 责任伙伴 bbox=[172,278,160,22]
+[warning] slide-12.layout.json:tight-text:10: 互相见证目标、提醒关键节点、降低中途放弃概率 text box is tight: height 30px for 2 line(s) at 16px.
+    - shape 互相见证目标、提醒关键节点、降低中途放弃概率 bbox=[172,312,340,30]
+[warning] slide-12.layout.json:tight-text:13: 冲刺小组 text box is tight: height 22px for 1 line(s) at 23px.
+    - shape 冲刺小组 bbox=[732,278,160,22]
+[warning] slide-12.layout.json:tight-text:17: 群聊与打卡 text box is tight: height 22px for 1 line(s) at 23px.
+    - shape 群聊与打卡 bbox=[172,428,160,22]
+[warning] slide-12.layout.json:tight-text:21: 社群引入 text box is tight: height 22px for 1 line(s) at 23px.
+    - shape 社群引入 bbox=[732,428,160,22]
+[warning] slide-14.layout.json:tight-text:8: 输入 text box is tight: height 14px for 1 line(s) at 16px.
+    - shape 输入 bbox=[190,243,160,14]
+[warning] slide-14.layout.json:tight-text:10: 目标 / deadline / 用户情绪 / 当前资料 text box is tight: height 14px for 1 line(s) at 16px.
+    - shape 目标 / deadline / 用户情绪 / 当前资料 bbox=[446,243,600,14]
+[warning] slide-14.layout.json:tight-text:12: 理解 text box is tight: height 14px for 1 line(s) at 16px.
+    - shape 理解 bbox=[190,309,160,14]
+[warning] slide-14.layout.json:tight-text:14: 多层用户模型 + 场景模式识别 text box is tight: height 14px for 1 line(s) at 16px.
+    - shape 多层用户模型 + 场景模式识别 bbox=[446,309,600,14]
+[warning] slide-14.layout.json:tight-text:16: 决策 text box is tight: height 14px for 1 line(s) at 16px.
+    - shape 决策 bbox=[190,375,160,14]
+[warning] slide-14.layout.json:tight-text:18: 诊断、取舍、任务粒度、模型路由 text box is tight: height 14px for 1 line(s) at 16px.
+    - shape 诊断、取舍、任务粒度、模型路由 bbox=[446,375,600,14]
+[warning] slide-14.layout.json:tight-text:20: 输出 text box is tight: height 14px for 1 line(s) at 16px.
+    - shape 输出 bbox=[190,441,160,14]
+[warning] slide-14.layout.json:tight-text:22: 任务卡、解释、追问、下一步 text box is tight: height 14px for 1 line(s) at 16px.
+    - shape 任务卡、解释、追问、下一步 bbox=[446,441,600,14]
+[warning] slide-14.layout.json:tight-text:24: 反馈 text box is tight: height 14px for 1 line(s) at 16px.
+    - shape 反馈 bbox=[190,507,160,14]
+[warning] slide-14.layout.json:tight-text:26: 结果、错因、纠正、trace 回写 text box is tight: height 14px for 1 line(s) at 16px.
+    - shape 结果、错因、纠正、trace 回写 bbox=[446,507,600,14]
+[warning] slide-15.layout.json:tight-text:14: TCP text box is tight: height 20px for 1 line(s) at 18px.
+    - shape TCP bbox=[604,388,84,20]
+[warning] slide-15.layout.json:tight-text:26: 每个节点包含 text box is tight: height 24px for 1 line(s) at 22px.
+    - shape 每个节点包含 bbox=[118,306,150,24]
+[warning] slide-15.layout.json:tight-text:27: 掌握证据 | 错因记录 | 资料来源 | 下一步任务 | 可迁移策略 text box is tight: height 90px for 5 line(s) at 17px.
+    - shape 掌握证据 | 错因记录 | 资料来源 | 下一步任务 | 可迁移策略 bbox=[118,350,170,90]
+[warning] slide-17.layout.json:tight-text:8: 目标世界 text box is tight: height 18px for 1 line(s) at 18px.
+    - shape 目标世界 bbox=[180,253,160,18]
+[warning] slide-17.layout.json:tight-text:10: GoalWorldGraph 定义目标、约束、路径 text box is tight: height 18px for 1 line(s) at 17px.
+    - shape GoalWorldGraph 定义目标、约束、路径 bbox=[450,253,600,18]
+[warning] slide-17.layout.json:tight-text:12: 角色代理 text box is tight: height 18px for 1 line(s) at 18px.
+    - shape 角色代理 bbox=[180,339,160,18]
+[warning] slide-17.layout.json:tight-text:14: 学生、导师、系统、责任伙伴多角色交互 text box is tight: height 18px for 1 line(s) at 17px.
+    - shape 学生、导师、系统、责任伙伴多角色交互 bbox=[450,339,600,18]
+[warning] slide-17.layout.json:tight-text:16: 推演结果 text box is tight: height 18px for 1 line(s) at 18px.
+    - shape 推演结果 bbox=[180,425,160,18]
+[warning] slide-17.layout.json:tight-text:18: 发现冲突、风险和失败路径 text box is tight: height 18px for 1 line(s) at 17px.
+    - shape 发现冲突、风险和失败路径 bbox=[450,425,600,18]
+[warning] slide-17.layout.json:tight-text:20: 策略修正 text box is tight: height 18px for 1 line(s) at 18px.
+    - shape 策略修正 bbox=[180,511,160,18]
+[warning] slide-17.layout.json:tight-text:22: 回写计划、提示词、任务模板 text box is tight: height 18px for 1 line(s) at 17px.
+    - shape 回写计划、提示词、任务模板 bbox=[450,511,600,18]
+[warning] slide-18.layout.json:tight-text:10: Go Gateway | WebSocket / HTTP text box is tight: height 40px for 2 line(s) at 18px.
+    - shape Go Gateway | WebSocket / HTTP bbox=[368,286,194,40]
+[warning] slide-18.layout.json:tight-text:12: Python AI Engine | Aurora / Causal Spine text box is tight: height 40px for 2 line(s) at 18px.
+    - shape Python AI Engine | Aurora / Causal Spine bbox=[628,286,194,40]
+[warning] slide-18.layout.json:tight-text:14: Data Layer | PostgreSQL / Redis / Trace text box is tight: height 40px for 3 line(s) at 18px.
+    - shape Data Layer | PostgreSQL / Redis / Trace bbox=[888,286,194,40]
+[warning] slide-18.layout.json:tight-text:16: Model Router | DeepSeek / OpenAI / others text box is tight: height 40px for 3 line(s) at 18px.
+    - shape Model Router | DeepSeek / OpenAI / others bbox=[628,481,194,40]
+[warning] slide-19.layout.json:tight-text:8: SparkleGoalBench text box is tight: height 16px for 1 line(s) at 16px.
+    - shape SparkleGoalBench bbox=[140,239,260,16]
+[warning] slide-19.layout.json:tight-text:9: 24/24 text box is tight: height 20px for 1 line(s) at 19px.
+    - shape 24/24 bbox=[430,237,190,20]
+[warning] slide-19.layout.json:tight-text:10: 覆盖极端目标场景与闭环路径 text box is tight: height 16px for 1 line(s) at 15px.
+    - shape 覆盖极端目标场景与闭环路径 bbox=[670,239,440,16]
+[warning] slide-19.layout.json:tight-text:12: ExamSprintBench text box is tight: height 16px for 1 line(s) at 16px.
+    - shape ExamSprintBench bbox=[140,307,260,16]
+[warning] slide-19.layout.json:tight-text:13: 12/12 text box is tight: height 20px for 1 line(s) at 19px.
+    - shape 12/12 bbox=[430,305,190,20]
+[warning] slide-19.layout.json:tight-text:14: 考试冲刺核心路径通过 text box is tight: height 16px for 1 line(s) at 15px.
+    - shape 考试冲刺核心路径通过 bbox=[670,307,440,16]
+[warning] slide-19.layout.json:tight-text:16: Aurora Closeout text box is tight: height 16px for 1 line(s) at 16px.
+    - shape Aurora Closeout bbox=[140,375,260,16]
+[warning] slide-19.layout.json:tight-text:17: 72/74 text box is tight: height 20px for 1 line(s) at 19px.
+    - shape 72/74 bbox=[430,373,190,20]
+[warning] slide-19.layout.json:tight-text:18: 97.3% 验收项 verified text box is tight: height 16px for 1 line(s) at 15px.
+    - shape 97.3% 验收项 verified bbox=[670,375,440,16]
+[warning] slide-19.layout.json:tight-text:20: 移动端黑洞 text box is tight: height 16px for 1 line(s) at 16px.
+    - shape 移动端黑洞 bbox=[140,443,260,16]
+[warning] slide-19.layout.json:tight-text:21: 0% text box is tight: height 20px for 1 line(s) at 19px.
+    - shape 0% bbox=[430,441,190,20]
+[warning] slide-19.layout.json:tight-text:22: 关键启动/回退状态已收敛 text box is tight: height 16px for 1 line(s) at 15px.
+    - shape 关键启动/回退状态已收敛 bbox=[670,443,440,16]
+[warning] slide-19.layout.json:tight-text:24: 安全机制 text box is tight: height 16px for 1 line(s) at 16px.
+    - shape 安全机制 bbox=[140,511,260,16]
+[warning] slide-19.layout.json:tight-text:25: RBAC / trace / kill switch text box is tight: height 20px for 2 line(s) at 19px.
+    - shape RBAC / trace / kill switch bbox=[430,509,190,20]
+[warning] slide-19.layout.json:tight-text:26: 访问控制、追踪、开关与审计 text box is tight: height 16px for 1 line(s) at 15px.
+    - shape 访问控制、追踪、开关与审计 bbox=[670,511,440,16]
+Checked 19 layout file(s): 0 error(s), 120 warning(s).

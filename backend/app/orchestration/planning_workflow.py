@@ -1014,8 +1014,8 @@ class PlanningWorkflowManager:
         spine = None
         plan_directive = None
         try:
-            from app.signals.spine_orchestrator import SpineOrchestrator
-            spine = SpineOrchestrator(cache_service.redis)
+            from app.signals.spine_orchestrator import get_spine_orchestrator
+            spine = get_spine_orchestrator(cache_service.redis)
             plan_directive = await spine.get_plan_directive(str(user_id))
             if plan_directive:
                 logger.info("Spine plan_directive active for user {}: action={} constraints={}", user_id, plan_directive.plan_action, list(plan_directive.constraints.keys()))
@@ -1108,7 +1108,7 @@ class PlanningWorkflowManager:
                 # modifies task_type/strategy when a worked-example or similar
                 # skill matches the user's context.
                 try:
-                    from app.signals.spine_orchestrator import SpineOrchestrator as _Spine
+                    from app.signals.spine_orchestrator import get_spine_orchestrator as _Spine
                     _skill_spine = _Spine(cache_service.redis)
                     _skill_result = await _skill_spine.inject_skill_to_task(
                         str(user_id), day_spec,

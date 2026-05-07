@@ -305,8 +305,8 @@ class AchievementEventConsumer:
 
                 # P3: Signal-to-Action Spine — achievement reinforcement
                 try:
-                    from app.signals.spine_orchestrator import SpineOrchestrator
-                    spine = SpineOrchestrator(cache_service.redis)
+                    from app.signals.spine_orchestrator import get_spine_orchestrator
+                    spine = get_spine_orchestrator(cache_service.redis)
                     await spine.on_achievement_event(
                         user_id=str(user_id),
                         achievement_type=event.get("achievement_type", "generic"),

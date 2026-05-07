@@ -431,6 +431,7 @@ class _SourceSummaryContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final zh = I18nService.instance.isChinese;
     final headline = data['headline']?.toString().trim() ?? '';
     final citations = (data['citations'] as List<dynamic>? ?? const [])
         .whereType<Map<Object?, Object?>>()
@@ -441,45 +442,82 @@ class _SourceSummaryContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (headline.isNotEmpty)
-          Text(
-            headline,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: DS.textPrimary,
-                  fontWeight: DS.fontWeightSemibold,
-                ),
+          Padding(
+            padding: const EdgeInsets.only(bottom: DS.spacing8),
+            child: Text(
+              headline,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DS.textPrimary,
+                    fontWeight: DS.fontWeightSemibold,
+                  ),
+            ),
           ),
         if (citations.isNotEmpty) ...[
-          if (headline.isNotEmpty) const SizedBox(height: DS.spacing8),
-          ...citations.take(3).map(
-                (citation) => Padding(
-                  padding: const EdgeInsets.only(bottom: DS.spacing8),
+          Wrap(
+            spacing: DS.spacing6,
+            runSpacing: DS.spacing6,
+            children: [
+              ...citations.take(5).map((citation) {
+                final title = citation['title']?.toString().trim() ?? '';
+                final name = title.isNotEmpty
+                    ? title
+                    : (citation['content']?.toString().trim() ?? (zh ? '来源' : 'Source'));
+                final confidence = (citation['score'] as num?)?.toDouble() ?? 0.7;
+                final dotColor = confidence >= 0.7
+                    ? DS.semanticSuccess
+                    : confidence >= 0.35
+                        ? DS.semanticWarning
+                        : DS.semanticError;
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing8,
+                    vertical: DS.spacing4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: DS.surfacePanel,
+                    borderRadius: DS.borderRadius6,
+                    border: Border.all(color: DS.borderSubtle),
+                  ),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.subdirectory_arrow_right_rounded,
-                        size: DS.iconSizeXs,
-                        color: DS.textSecondary,
-                      ),
-                      const SizedBox(width: DS.spacing4),
-                      Expanded(
-                        child: Text(
-                          citation['title']?.toString().trim().isNotEmpty ??
-                                  false
-                              ? citation['title'].toString()
-                              : (citation['content']?.toString() ?? ''),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style:
-                              Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: DS.textSecondary,
-                                  ),
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: dotColor,
+                          shape: BoxShape.circle,
                         ),
+                      ),
+                      const SizedBox(width: DS.spacing6),
+                      Text(
+                        name,
+                        style: DS.labelSmall.copyWith(color: DS.textPrimary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
+                );
+              }),
+              if (citations.length > 5)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: DS.spacing8,
+                    vertical: DS.spacing4,
+                  ),
+                  child: Text(
+                    '+${citations.length - 5}',
+                    style: DS.labelSmall.copyWith(color: DS.textSecondary),
+                  ),
                 ),
-              ),
+            ],
+          ),
+          const SizedBox(height: DS.spacing6),
+          Text(
+            zh ? '${citations.length} 个来源' : '${citations.length} sources',
+            style: DS.labelSmall.copyWith(color: DS.textSecondary),
+          ),
         ],
       ],
     );
