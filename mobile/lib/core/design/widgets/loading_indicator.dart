@@ -157,7 +157,7 @@ class LoadingIndicator extends StatelessWidget {
     return Semantics(
       container: true,
       liveRegion: true,
-      label: loadingText ?? '加载中',
+      label: loadingText ?? (I18nService.instance.isChinese ? '加载中' : 'Loading'),
       child: indicator,
     );
   }
