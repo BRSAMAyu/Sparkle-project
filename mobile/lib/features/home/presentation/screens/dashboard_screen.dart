@@ -2119,7 +2119,7 @@ class _CommandCenterContent extends StatelessWidget {
                     style: context.sparkleTypography.titleLarge.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightBold,
-                      height: 1.52,
+                      height: 1.18,
                     ),
                   ),
                   if (summary.isNotEmpty) ...[
