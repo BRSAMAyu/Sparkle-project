@@ -166,6 +166,12 @@ async def _update_all_similarities(db: AsyncSession) -> int:
     # 获取每个用户学习的物品集合
     user_items = await _get_user_item_sets(db, active_user_ids)
 
+    # Pre-load subject mappings for all items to avoid per-pair DB queries
+    all_item_ids = set()
+    for items in user_items.values():
+        all_item_ids.update(items)
+    item_subject_map = await _get_item_subject_map(db, all_item_ids)
+
     # 计算用户两两之间的相似度
     similarity_count = 0
     version = int(_utcnow().timestamp())
@@ -193,10 +199,13 @@ async def _update_all_similarities(db: AsyncSession) -> int:
             if similarity < 0.1:
                 continue
 
-            # 获取共同学科
-            common_subjects = await _get_common_subjects(
-                db, user_id_1, user_id_2, items_1 & items_2
-            )
+            # 获取共同学科 (from pre-loaded map to avoid O(n^2) DB queries)
+            common_item_ids = items_1 & items_2
+            subject_set: set[str] = set()
+            for cid in common_item_ids:
+                for subj in item_subject_map.get(cid, []):
+                    subject_set.add(subj)
+            common_subjects = list(subject_set)
 
             # 规范化用户ID顺序
             if str(user_id_1) < str(user_id_2):
@@ -411,6 +420,27 @@ async def _get_user_item_sets(
         user_items[user_id].add(item_id)
 
     return dict(user_items)
+
+
+async def _get_item_subject_map(
+    db: AsyncSession,
+    item_ids: set[UUID]
+) -> dict[UUID, list[str]]:
+    """Batch load subject IDs for all items (avoids O(n^2) DB calls in similarity loop)."""
+    if not item_ids:
+        return {}
+    query = select(
+        KnowledgeNode.id,
+        KnowledgeNode.subject_id,
+    ).where(
+        KnowledgeNode.id.in_(item_ids),
+        KnowledgeNode.subject_id.isnot(None),
+    )
+    result = await db.execute(query)
+    mapping: dict[UUID, list[str]] = defaultdict(list)
+    for node_id, subject_id in result.all():
+        mapping[node_id].append(str(subject_id))
+    return dict(mapping)
 
 
 async def _get_item_user_sets(

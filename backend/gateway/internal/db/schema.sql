@@ -5228,21 +5228,6 @@ CREATE TABLE skill_share_moderation_queue (
 ALTER TABLE skill_share_moderation_queue OWNER TO brsama;
 
 --
--- Name: smoke_document_vectors; Type: TABLE; Schema: public; Owner: postgres
---
-
-CREATE TABLE smoke_document_vectors (
-    id uuid NOT NULL,
-    file_name text NOT NULL,
-    chunk_text text NOT NULL,
-    embedding vector(1024) NOT NULL,
-    created_at timestamp with time zone DEFAULT now()
-);
-
-
-ALTER TABLE smoke_document_vectors OWNER TO postgres;
-
---
 -- Name: spark_contracts; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -8958,14 +8943,6 @@ ALTER TABLE ONLY skill_share_moderation_queue
 
 
 --
--- Name: smoke_document_vectors smoke_document_vectors_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
---
-
-ALTER TABLE ONLY smoke_document_vectors
-    ADD CONSTRAINT smoke_document_vectors_pkey PRIMARY KEY (id);
-
-
---
 -- Name: spark_contracts spark_contracts_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -11232,13 +11209,6 @@ CREATE INDEX idx_shared_skills_published ON shared_skills USING btree (published
 --
 
 CREATE INDEX idx_skill_share_queue_owner_created ON skill_share_moderation_queue USING btree (owner_user_id, created_at);
-
-
---
--- Name: idx_smoke_document_vectors_embedding_hnsw; Type: INDEX; Schema: public; Owner: postgres
---
-
-CREATE INDEX idx_smoke_document_vectors_embedding_hnsw ON smoke_document_vectors USING hnsw (embedding vector_cosine_ops) WHERE (embedding IS NOT NULL);
 
 
 --
@@ -21403,15 +21373,6 @@ GRANT SELECT ON TABLE simulation_runs TO sparkle_readonly;
 --
 
 GRANT SELECT ON TABLE skill_share_moderation_queue TO sparkle_readonly;
-
-
---
--- Name: TABLE smoke_document_vectors; Type: ACL; Schema: public; Owner: postgres
---
-
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE smoke_document_vectors TO sparkle_engine;
-GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE smoke_document_vectors TO sparkle_celery;
-GRANT SELECT ON TABLE smoke_document_vectors TO sparkle_readonly;
 
 
 --
