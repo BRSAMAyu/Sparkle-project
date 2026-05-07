@@ -75,8 +75,13 @@ func main() {
 		log.Fatalf("Unable to initialize handlers: %v", err)
 	}
 
-	cqrs := initCQRS(ctx, cfg, dbh, rdb, services, logger.Log)
-	startCQRSWorkers(cqrs, logger.Log)
+	// Background-worker context: cancelled during graceful shutdown so all
+	// long-lived goroutines (CQRS workers, file event subscriber, file GC)
+	// exit promptly instead of leaking.
+	bgCtx, bgCancel := context.WithCancel(context.Background())
+
+	cqrs := initCQRS(bgCtx, cfg, dbh, rdb, services, logger.Log)
+	startCQRSWorkers(bgCtx, cqrs, logger.Log)
 
 	proxy, err := setupProxy(cfg, logger.Log)
 	if err != nil {
@@ -103,6 +108,9 @@ func main() {
 	quit, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	<-quit.Done()
+
+	// Cancel background workers so they stop accepting new work immediately.
+	bgCancel()
 
 	shutdownTimeout := 15
 	if cfg.ShutdownTimeoutSeconds > 0 {
