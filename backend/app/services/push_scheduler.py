@@ -121,6 +121,10 @@ class PushScheduler:
             return stats
 
         try:
+            # scan_iter is intentionally used here because this method must discover
+            # ALL users with pending recall queues — there is no single user_id to
+            # target. The SCAN-based iterator is O(1) per step and avoids blocking
+            # the Redis server unlike KEYS.
             keys = []
             async for key in self.redis.scan_iter(match=f"{_RECALL_QUEUE_PREFIX}*"):
                 keys.append(key)

@@ -904,7 +904,11 @@ class SessionStateMixin:
         if not self.state_manager:
             return True
 
-        return await self.state_manager.acquire_lock(session_id, request_id)
+        try:
+            return await self.state_manager.acquire_lock(session_id, request_id)
+        except Exception as e:
+            logger.warning(f"Redis lock acquisition failed, failing open for session {session_id}: {e}")
+            return True
 
     async def _release_session_lock(self, session_id: str, request_id: str):
         """Release distributed lock"""
