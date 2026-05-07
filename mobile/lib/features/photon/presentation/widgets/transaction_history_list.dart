@@ -274,6 +274,7 @@ class _TransactionItem extends StatelessWidget {
                     color: isIncome ? DS.success : DS.warning,
                     fontSize: 18,
                     fontWeight: DS.fontWeightBold,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -281,6 +282,7 @@ class _TransactionItem extends StatelessWidget {
                   DateFormat('HH:mm').format(transaction.createdAt),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: DS.textSecondary,
+                        fontFeatures: const [FontFeature.tabularFigures()],
                       ),
                 ),
               ],

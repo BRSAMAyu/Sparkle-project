@@ -292,30 +292,32 @@ class _AgentReasoningBubbleState extends State<AgentReasoningBubble>
       return headerContent;
     }
 
-    return AnimatedBuilder(
-      animation: _shimmerController,
-      builder: (context, child) => ShaderMask(
-        shaderCallback: (bounds) => LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            DS.brandPrimary.withValues(alpha: 0.18),
-            DS.brandPrimary.withValues(alpha: 0.18),
-            DS.brandPrimary.withValues(alpha: 0.7),
-            DS.brandPrimary.withValues(alpha: 0.18),
-            DS.brandPrimary.withValues(alpha: 0.18),
-          ],
-          stops: [
-            0.0,
-            (_shimmerController.value - 0.2).clamp(0.0, 1.0),
-            _shimmerController.value,
-            (_shimmerController.value + 0.2).clamp(0.0, 1.0),
-            1.0,
-          ],
-        ).createShader(bounds),
-        child: child,
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _shimmerController,
+        builder: (context, child) => ShaderMask(
+          shaderCallback: (bounds) => LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              DS.brandPrimary.withValues(alpha: 0.18),
+              DS.brandPrimary.withValues(alpha: 0.18),
+              DS.brandPrimary.withValues(alpha: 0.7),
+              DS.brandPrimary.withValues(alpha: 0.18),
+              DS.brandPrimary.withValues(alpha: 0.18),
+            ],
+            stops: [
+              0.0,
+              (_shimmerController.value - 0.2).clamp(0.0, 1.0),
+              _shimmerController.value,
+              (_shimmerController.value + 0.2).clamp(0.0, 1.0),
+              1.0,
+            ],
+          ).createShader(bounds),
+          child: child,
+        ),
+        child: headerContent,
       ),
-      child: headerContent,
     );
   }
 

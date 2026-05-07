@@ -101,6 +101,9 @@ class _StreakQualityContent extends StatelessWidget {
                               Theme.of(context).textTheme.titleLarge?.copyWith(
                                     color: scheme.onSurface,
                                     fontWeight: FontWeight.w800,
+                                    fontFeatures: const [
+                                      FontFeature.tabularFigures(),
+                                    ],
                                   ),
                         ),
                         Text(

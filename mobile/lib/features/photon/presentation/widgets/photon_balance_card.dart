@@ -107,6 +107,7 @@ class PhotonBalanceCard extends ConsumerWidget {
                           color: DS.neutral0,
                           fontSize: 28,
                           fontWeight: DS.fontWeightBold,
+                          fontFeatures: const [FontFeature.tabularFigures()],
                         ),
                       ),
                   ],

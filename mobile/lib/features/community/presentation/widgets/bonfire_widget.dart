@@ -52,11 +52,12 @@ class _BonfireWidgetState extends State<BonfireWidget>
     final baseColor = _getFireColor();
     final scaleFactor = 1.0 + (widget.level * 0.1);
 
-    return SizedBox(
-      width: widget.size * 1.5,
-      height: widget.size * 1.5,
-      child: Stack(
-        alignment: Alignment.center,
+    return RepaintBoundary(
+      child: SizedBox(
+        width: widget.size * 1.5,
+        height: widget.size * 1.5,
+        child: Stack(
+          alignment: Alignment.center,
         children: [
           // Outer Glow
           AnimatedBuilder(
@@ -212,6 +213,7 @@ class _BonfireWidgetState extends State<BonfireWidget>
               ),
             ),
         ],
+        ),
       ),
     );
   }

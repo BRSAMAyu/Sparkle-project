@@ -162,6 +162,7 @@ class _QualityRing extends StatelessWidget {
                   color: DS.textPrimary,
                   fontSize: 12,
                   fontWeight: DS.fontWeightBold,
+                  fontFeatures: const [FontFeature.tabularFigures()],
                 ),
               ),
             ),

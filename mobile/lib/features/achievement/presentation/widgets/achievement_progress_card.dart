@@ -212,6 +212,7 @@ class _AchievementRow extends StatelessWidget {
                           '$current/$target',
                           style: context.sparkleTypography.labelSmall.copyWith(
                             color: DS.textTertiary,
+                            fontFeatures: const [FontFeature.tabularFigures()],
                           ),
                         ),
                       ],

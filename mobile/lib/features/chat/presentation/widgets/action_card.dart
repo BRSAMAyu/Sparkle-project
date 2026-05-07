@@ -3340,8 +3340,9 @@ class _ActionCardState extends ConsumerState<ActionCard>
       }
       if (usesStructuredFields &&
           _reflectionStuckController.text.trim().isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SparkleSnackBar.warning(_reflectionFieldLabel(fields, 'stuck_point')),
+        AppFeedback.warning(
+          context,
+          _reflectionFieldLabel(fields, 'stuck_point'),
         );
         return;
       }
@@ -3808,6 +3809,7 @@ class _ActionCardState extends ConsumerState<ActionCard>
 
   String _formatParamKey(String key) => key
       .split('_')
+      .where((word) => word.isNotEmpty)
       .map((word) => word[0].toUpperCase() + word.substring(1))
       .join(' ');
 }

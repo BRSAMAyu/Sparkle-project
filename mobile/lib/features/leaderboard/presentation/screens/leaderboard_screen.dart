@@ -289,6 +289,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: DS.fontWeightBold,
+                fontFeatures: [FontFeature.tabularFigures()],
               ),
             ),
           ],
@@ -309,6 +310,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
                   style: TextStyle(
                     color: DS.textOnPrimary,
                     fontWeight: DS.fontWeightBold,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 )
               : null,
@@ -332,6 +334,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               entry.scoreLabel,
               style: const TextStyle(
                 fontWeight: DS.fontWeightBold,
+                fontFeatures: [FontFeature.tabularFigures()],
               ),
             ),
           ],

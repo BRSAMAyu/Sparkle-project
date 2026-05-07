@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository.dart';
 import 'package:sparkle/features/shop/data/repositories/shop_repository_provider.dart';
@@ -150,7 +151,7 @@ class ConsumableEffectNotifier extends StateNotifier<ConsumableEffectState> {
         customAvatarUnlocked: customAvatar,
       );
     } catch (e) {
-      print('Failed to load consumable effects: $e');
+      debugPrint('Failed to load consumable effects: $e');
     }
   }
 

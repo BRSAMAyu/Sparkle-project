@@ -83,7 +83,10 @@ class _TypingTextState extends State<TypingText> {
   void initState() {
     super.initState();
     _totalGraphemes = GraphemeUtils.graphemeCount(widget.text);
-    if (widget.animate) {
+    // 尊重系统 reduce-motion 设置（无障碍：减少动画）— 直接显示完整文本
+    final reduceMotion = WidgetsBinding
+        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+    if (widget.animate && !reduceMotion) {
       _startTyping();
     } else {
       _displayedText = widget.text;
@@ -103,7 +106,9 @@ class _TypingTextState extends State<TypingText> {
       _isCompleted = false;
       _totalGraphemes = GraphemeUtils.graphemeCount(widget.text);
 
-      if (widget.animate) {
+      final reduceMotion = WidgetsBinding
+          .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+      if (widget.animate && !reduceMotion) {
         _startTyping();
       } else {
         setState(() {
@@ -215,7 +220,14 @@ class _BlinkingCursorState extends State<_BlinkingCursor>
       duration: const Duration(milliseconds: 530), // 标准光标闪烁速度
       vsync: this,
     );
-    unawaited(_controller.repeat(reverse: true));
+    // 尊重系统 reduce-motion 设置（无障碍：避免持续闪烁可能引发不适）
+    final reduceMotion = WidgetsBinding
+        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+    if (!reduceMotion) {
+      unawaited(_controller.repeat(reverse: true));
+    } else {
+      _controller.value = 1.0; // 静态显示光标
+    }
   }
 
   @override
@@ -271,8 +283,10 @@ class _TypingRichTextState extends State<TypingRichText> {
     super.initState();
     _fullText = _extractText(widget.spans);
     _totalGraphemes = GraphemeUtils.graphemeCount(_fullText);
-
-    if (widget.animate) {
+    // 尊重系统 reduce-motion 设置
+    final reduceMotion = WidgetsBinding
+        .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+    if (widget.animate && !reduceMotion) {
       _startTyping();
     } else {
       _displayedText = _fullText;

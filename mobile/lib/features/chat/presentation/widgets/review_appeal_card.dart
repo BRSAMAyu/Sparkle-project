@@ -304,7 +304,11 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
                             ),
                             Text(
                               context.l10n.reviewAppealId(
-                                widget.appealData!.appealId.substring(0, 8),
+                                widget.appealData!.appealId.substring(
+                                  0,
+                                  widget.appealData!.appealId.length
+                                      .clamp(0, 8),
+                                ),
                               ),
                               style: Theme.of(context)
                                   .textTheme
@@ -709,8 +713,9 @@ class _ReviewAppealCardState extends State<ReviewAppealCard>
     }
 
     if (_selectedIssues.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SparkleSnackBar.warning(context.l10n.contentReviewAppealTypeRequired),
+      AppFeedback.warning(
+        context,
+        context.l10n.contentReviewAppealTypeRequired,
       );
       return;
     }

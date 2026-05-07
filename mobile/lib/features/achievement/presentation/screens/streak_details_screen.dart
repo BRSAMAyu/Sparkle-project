@@ -606,6 +606,7 @@ class _AnimatedStatValue extends StatelessWidget {
           fontSize: DS.fontSizeBase,
           fontWeight: DS.fontWeightSemibold,
           color: DS.textPrimary,
+          fontFeatures: const [FontFeature.tabularFigures()],
         ),
       ),
     );
