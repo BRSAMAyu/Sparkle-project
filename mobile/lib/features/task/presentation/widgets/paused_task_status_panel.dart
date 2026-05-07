@@ -133,33 +133,22 @@ class PausedTaskBanner extends StatelessWidget {
     try {
       final ok = await onResume?.call();
       if ((ok ?? false) && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.taskResumeQueued),
-            action: onUndoResume == null
-                ? null
-                : SnackBarAction(
-                    label: context.l10n.chatUndo,
-                    onPressed: onUndoResume!,
-                  ),
-          ),
-        );
+        if (onUndoResume == null) {
+          AppFeedback.success(context, context.l10n.taskResumeQueued);
+        } else {
+          AppFeedback.undoable(
+            context: context,
+            message: context.l10n.taskResumeQueued,
+            actionLabel: context.l10n.chatUndo,
+            onAction: onUndoResume!,
+          );
+        }
       } else if (!(ok ?? false) && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.taskResumeFailed),
-            backgroundColor: DS.error,
-          ),
-        );
+        AppFeedback.error(context, context.l10n.taskResumeFailed);
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(context.l10n.taskResumeFailed),
-            backgroundColor: DS.error,
-          ),
-        );
+        AppFeedback.error(context, context.l10n.taskResumeFailed);
       }
     }
   }

@@ -154,6 +154,7 @@ class SprintStatisticsCard extends ConsumerWidget {
                     style: context.sparkleTypography.labelLarge.copyWith(
                       fontWeight: DS.fontWeightBold,
                       fontSize: 15,
+                      fontFeatures: const [FontFeature.tabularFigures()],
                     ),
                   ),
                   Text(

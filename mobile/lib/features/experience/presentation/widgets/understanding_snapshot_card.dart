@@ -118,7 +118,7 @@ class _UnderstandingSnapshotSurface extends StatelessWidget {
                             color: DS.textPrimary,
                             fontSize: DS.fontSizeBase,
                             fontWeight: DS.fontWeightSemibold,
-                            height: 1.35,
+                            height: 1.52,
                           ),
                         ),
                       ],
@@ -156,7 +156,7 @@ class _UnderstandingSnapshotSurface extends StatelessWidget {
                     style: TextStyle(
                       color: DS.textPrimary,
                       fontSize: DS.fontSizeSm,
-                      height: 1.35,
+                      height: 1.52,
                     ),
                   ),
                 ),
@@ -170,7 +170,7 @@ class _UnderstandingSnapshotSurface extends StatelessWidget {
                     SparkleButton.primary(
                       label: zh ? '纠正我的理解' : 'Correct this',
                       icon: const Icon(Icons.edit_note_rounded),
-                      onPressed: onOpenChat,
+                      onPressed: onOpenChat!,
                     ),
                   if (snapshot.nextStepLabel != null)
                     _TinyEvidenceChip(

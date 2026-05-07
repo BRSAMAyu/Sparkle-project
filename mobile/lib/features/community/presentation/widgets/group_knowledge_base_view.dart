@@ -47,7 +47,8 @@ class _GroupKnowledgeBaseViewState
   KnowledgeBaseSort _sort = KnowledgeBaseSort.recency;
 
   bool get _canUpload => widget.currentUserRole != null;
-  bool get _isAdmin => widget.currentUserRole == GroupRole.owner ||
+  bool get _isAdmin =>
+      widget.currentUserRole == GroupRole.owner ||
       widget.currentUserRole == GroupRole.admin;
 
   @override
@@ -88,18 +89,19 @@ class _GroupKnowledgeBaseViewState
       return haystack.contains(normalizedQuery);
     }).toList()
       ..sort((a, b) {
-      switch (_sort) {
-        case KnowledgeBaseSort.popularity:
-          return b.downloadCount.compareTo(a.downloadCount);
-        case KnowledgeBaseSort.trustLevel:
-          final trustCompare = (_isOfficial(b) ? 1 : 0) - (_isOfficial(a) ? 1 : 0);
-          if (trustCompare != 0) {
-            return trustCompare;
-          }
-          return b.createdAt.compareTo(a.createdAt);
-        case KnowledgeBaseSort.recency:
-          return b.createdAt.compareTo(a.createdAt);
-      }
+        switch (_sort) {
+          case KnowledgeBaseSort.popularity:
+            return b.downloadCount.compareTo(a.downloadCount);
+          case KnowledgeBaseSort.trustLevel:
+            final trustCompare =
+                (_isOfficial(b) ? 1 : 0) - (_isOfficial(a) ? 1 : 0);
+            if (trustCompare != 0) {
+              return trustCompare;
+            }
+            return b.createdAt.compareTo(a.createdAt);
+          case KnowledgeBaseSort.recency:
+            return b.createdAt.compareTo(a.createdAt);
+        }
       });
 
     return filtered;
@@ -138,7 +140,8 @@ class _GroupKnowledgeBaseViewState
       AppFeedback.success(context, context.l10n.communitySavedToLibrary);
     } catch (e) {
       if (!mounted) return;
-      AppFeedback.error(context, context.l10n.communitySaveFailed(e.toString()));
+      AppFeedback.error(
+          context, context.l10n.communitySaveFailed(e.toString()));
     }
   }
 
@@ -148,7 +151,9 @@ class _GroupKnowledgeBaseViewState
     setState(() => _officialOverrides[file.fileId] = nextValue);
     AppFeedback.success(
       context,
-      nextValue ? context.l10n.communityMarkedOfficial : context.l10n.communityRemovedOfficial,
+      nextValue
+          ? context.l10n.communityMarkedOfficial
+          : context.l10n.communityRemovedOfficial,
     );
   }
 
@@ -300,7 +305,8 @@ class _GroupKnowledgeBaseViewState
 
   void _openContributorProfile(UserBrief? contributor) {
     if (contributor == null) return;
-    final route = CommunityRoutes.userProfile.replaceFirst(':id', contributor.id);
+    final route =
+        CommunityRoutes.userProfile.replaceFirst(':id', contributor.id);
     final name = Uri.encodeComponent(contributor.displayName);
     unawaited(context.push('$route?name=$name'));
   }
@@ -345,8 +351,10 @@ class _GroupKnowledgeBaseViewState
                               runSpacing: DS.spacing8,
                               children: [
                                 _MetaChip(
-                                  icon: _iconForMime(file.mimeType, file.fileName),
-                                  label: _typeLabel(file.mimeType, file.fileName),
+                                  icon: _iconForMime(
+                                      file.mimeType, file.fileName),
+                                  label:
+                                      _typeLabel(file.mimeType, file.fileName),
                                 ),
                                 _MetaChip(
                                   icon: Icons.sd_storage_outlined,
@@ -354,7 +362,8 @@ class _GroupKnowledgeBaseViewState
                                 ),
                                 _MetaChip(
                                   icon: Icons.download_outlined,
-                                  label: context.l10n.communityDownloadsCount(file.downloadCount),
+                                  label: context.l10n.communityDownloadsCount(
+                                      file.downloadCount),
                                 ),
                                 if (_isOfficial(file))
                                   _MetaChip(
@@ -507,7 +516,9 @@ class _GroupKnowledgeBaseViewState
                   const SizedBox(width: DS.spacing12),
                   SparkleIconButton(
                     icon: Icon(
-                      _gridView ? Icons.view_list_rounded : Icons.grid_view_rounded,
+                      _gridView
+                          ? Icons.view_list_rounded
+                          : Icons.grid_view_rounded,
                     ),
                     variant: ButtonVariant.ghost,
                     onPressed: () => setState(() => _gridView = !_gridView),
@@ -528,8 +539,7 @@ class _GroupKnowledgeBaseViewState
                         borderSide: BorderSide.none,
                       ),
                     ),
-                    onChanged: (value) =>
-                        setState(() => _query = value.trim()),
+                    onChanged: (value) => setState(() => _query = value.trim()),
                   );
 
                   final uploadButton = SparkleButton.primary(
@@ -609,7 +619,8 @@ class _GroupKnowledgeBaseViewState
                         ),
                         for (final item in categories)
                           _CategoryChip(
-                            label: item.category ?? context.l10n.communityUncategorized,
+                            label: item.category ??
+                                context.l10n.communityUncategorized,
                             selected: _selectedCategory == item.category,
                             onTap: () {
                               setState(() => _selectedCategory = item.category);
@@ -633,13 +644,14 @@ class _GroupKnowledgeBaseViewState
               }
               if (snapshot.hasError) {
                 return Center(
-                  child: Text(context.l10n.communityLoadFailed(snapshot.error.toString())),
+                  child: Text(context.l10n
+                      .communityLoadFailed(snapshot.error.toString())),
                 );
               }
 
               final files = _applySearchAndSort(snapshot.data ?? const []);
               if (files.isEmpty) {
-                return RefreshIndicator(
+                return SparkleRefreshIndicator(
                   onRefresh: () async => _reload(),
                   child: ListView(
                     physics: const AlwaysScrollableScrollPhysics(),
@@ -653,7 +665,7 @@ class _GroupKnowledgeBaseViewState
               }
 
               if (_gridView) {
-                return RefreshIndicator(
+                return SparkleRefreshIndicator(
                   onRefresh: () async => _reload(),
                   child: GridView.builder(
                     padding: const EdgeInsets.fromLTRB(
@@ -680,7 +692,7 @@ class _GroupKnowledgeBaseViewState
                 );
               }
 
-              return RefreshIndicator(
+              return SparkleRefreshIndicator(
                 onRefresh: () async => _reload(),
                 child: ListView.separated(
                   padding: const EdgeInsets.fromLTRB(
@@ -721,9 +733,8 @@ class _GroupKnowledgeBaseViewState
 
   IconData _iconForMime(String mimeType, String fileName) {
     final normalizedMime = mimeType.toLowerCase();
-    final extension = fileName.contains('.')
-        ? fileName.split('.').last.toLowerCase()
-        : '';
+    final extension =
+        fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
 
     if (normalizedMime.contains('pdf') || extension == 'pdf') {
       return Icons.picture_as_pdf_rounded;
@@ -745,9 +756,8 @@ class _GroupKnowledgeBaseViewState
 
   String _typeLabel(String mimeType, String fileName) {
     final normalizedMime = mimeType.toLowerCase();
-    final extension = fileName.contains('.')
-        ? fileName.split('.').last.toUpperCase()
-        : '';
+    final extension =
+        fileName.contains('.') ? fileName.split('.').last.toUpperCase() : '';
 
     if (normalizedMime.contains('pdf')) return 'PDF';
     if (normalizedMime.contains('presentation') || extension == 'PPTX') {
@@ -901,7 +911,8 @@ class _KnowledgeBaseListCard extends StatelessWidget {
                 ),
                 const Spacer(),
                 if (file.category?.isNotEmpty ?? false)
-                  _InlinePill(label: file.category!, icon: Icons.folder_outlined),
+                  _InlinePill(
+                      label: file.category!, icon: Icons.folder_outlined),
                 if (isInGalaxy) ...[
                   const SizedBox(width: DS.spacing8),
                   _InlinePill(
@@ -924,9 +935,8 @@ class _KnowledgeBaseListCard extends StatelessWidget {
 
   IconData _iconForMime(String mimeType, String fileName) {
     final normalizedMime = mimeType.toLowerCase();
-    final extension = fileName.contains('.')
-        ? fileName.split('.').last.toLowerCase()
-        : '';
+    final extension =
+        fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
 
     if (normalizedMime.contains('pdf') || extension == 'pdf') {
       return Icons.picture_as_pdf_rounded;
@@ -948,9 +958,8 @@ class _KnowledgeBaseListCard extends StatelessWidget {
 
   String _typeLabel(String mimeType, String fileName) {
     final normalizedMime = mimeType.toLowerCase();
-    final extension = fileName.contains('.')
-        ? fileName.split('.').last.toUpperCase()
-        : '';
+    final extension =
+        fileName.contains('.') ? fileName.split('.').last.toUpperCase() : '';
 
     if (normalizedMime.contains('pdf')) return 'PDF';
     if (normalizedMime.contains('presentation') || extension == 'PPTX') {
@@ -1033,7 +1042,9 @@ class _KnowledgeBaseGridCard extends StatelessWidget {
               ),
               const SizedBox(height: DS.spacing8),
               Text(
-                description.isEmpty ? context.l10n.communityClickToPreview : description,
+                description.isEmpty
+                    ? context.l10n.communityClickToPreview
+                    : description,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(color: DS.textSecondary, height: 1.35),
@@ -1065,9 +1076,8 @@ class _KnowledgeBaseGridCard extends StatelessWidget {
 
   IconData _iconForMime(String mimeType, String fileName) {
     final normalizedMime = mimeType.toLowerCase();
-    final extension = fileName.contains('.')
-        ? fileName.split('.').last.toLowerCase()
-        : '';
+    final extension =
+        fileName.contains('.') ? fileName.split('.').last.toLowerCase() : '';
 
     if (normalizedMime.contains('pdf') || extension == 'pdf') {
       return Icons.picture_as_pdf_rounded;
@@ -1089,9 +1099,8 @@ class _KnowledgeBaseGridCard extends StatelessWidget {
 
   String _typeLabel(String mimeType, String fileName) {
     final normalizedMime = mimeType.toLowerCase();
-    final extension = fileName.contains('.')
-        ? fileName.split('.').last.toUpperCase()
-        : '';
+    final extension =
+        fileName.contains('.') ? fileName.split('.').last.toUpperCase() : '';
 
     if (normalizedMime.contains('pdf')) return 'PDF';
     if (normalizedMime.contains('presentation') || extension == 'PPTX') {

@@ -1548,7 +1548,7 @@ class _RecommendedSeedStrip extends StatelessWidget {
     if (isLoading && seeds.isEmpty) {
       return const Center(
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.symmetric(vertical: DS.spacing12),
           child: CircularProgressIndicator(),
         ),
       );

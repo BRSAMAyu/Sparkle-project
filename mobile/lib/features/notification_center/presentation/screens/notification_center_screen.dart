@@ -67,10 +67,11 @@ class _NotificationCenterScreenState
                       child: Text(
                         state.unreadCount > 99 ? '99+' : '${state.unreadCount}',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              fontSize: 9,
-                              fontWeight: DS.fontWeightBold,
-                            ),
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontSize: 10,
+                          fontWeight: DS.fontWeightBold,
+                          fontFeatures: const [FontFeature.tabularFigures()],
+                        ),
                       ),
                     ),
                   ),
@@ -200,7 +201,7 @@ class _NotificationCenterScreenState
       return _buildEmpty();
     }
 
-    return RefreshIndicator(
+    return SparkleRefreshIndicator(
       onRefresh: _refresh,
       child: ListView.builder(
         padding: const EdgeInsets.all(DS.spacing16),

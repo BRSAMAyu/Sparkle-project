@@ -329,7 +329,11 @@ class _KnowledgeTheaterScreenState
                         const SizedBox(height: 16),
                       ];
 
-                      return ListView(
+                      final allIntroChildren = [
+                        ...contentChildren,
+                        introBody,
+                      ];
+                      return ListView.builder(
                         padding: EdgeInsets.fromLTRB(
                           16,
                           16,
@@ -341,10 +345,9 @@ class _KnowledgeTheaterScreenState
                         ),
                         keyboardDismissBehavior:
                             ScrollViewKeyboardDismissBehavior.onDrag,
-                        children: [
-                          ...contentChildren,
-                          introBody,
-                        ],
+                        itemCount: allIntroChildren.length,
+                        itemBuilder: (context, index) =>
+                            allIntroChildren[index],
                       );
                     }
 
@@ -1009,37 +1012,26 @@ class _KnowledgeTheaterScreenState
     if (result == null) {
       final errorMessage = ref.read(theaterProvider).error ??
           context.l10n.theaterPromoteNodeFailed;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          SnackBar(content: Text(errorMessage)),
-        );
+      AppFeedback.error(context, errorMessage);
       return;
     }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            result.created
-                ? context.l10n.theaterPromoteNodeCreated(result.nodeName)
-                : context.l10n.theaterPromoteNodeFound(result.nodeName),
+    AppFeedback.undoable(
+      context: context,
+      message: result.created
+          ? context.l10n.theaterPromoteNodeCreated(result.nodeName)
+          : context.l10n.theaterPromoteNodeFound(result.nodeName),
+      actionLabel: context.l10n.theaterGoImprove,
+      onAction: () {
+        unawaited(
+          context.push(
+            GalaxyRoutes.knowledgeDetail.replaceFirst(
+              ':id',
+              result.galaxyNodeId,
+            ),
           ),
-          action: SnackBarAction(
-            label: context.l10n.theaterGoImprove,
-            onPressed: () {
-              unawaited(
-                context.push(
-                  GalaxyRoutes.knowledgeDetail.replaceFirst(
-                    ':id',
-                    result.galaxyNodeId,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      );
+        );
+      },
+    );
   }
 
   Future<void> _showEdgeTooltip(

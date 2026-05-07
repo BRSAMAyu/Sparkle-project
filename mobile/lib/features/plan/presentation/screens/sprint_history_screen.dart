@@ -39,7 +39,7 @@ class SprintHistoryScreen extends ConsumerWidget {
           ),
         ],
       ),
-      child: RefreshIndicator(
+      child: SparkleRefreshIndicator(
         onRefresh: () => ref.read(sprintHistoryProvider.notifier).refresh(),
         child: _buildBody(context, historyState, l10n),
       ),
@@ -47,7 +47,10 @@ class SprintHistoryScreen extends ConsumerWidget {
   }
 
   Widget _buildBody(
-      BuildContext context, SprintHistoryState state, AppLocalizations l10n,) {
+    BuildContext context,
+    SprintHistoryState state,
+    AppLocalizations l10n,
+  ) {
     if (state.isLoading && state.items.isEmpty) {
       return LoadingIndicator.circular(
         showText: true,
@@ -92,7 +95,10 @@ class SprintHistoryScreen extends ConsumerWidget {
       );
 
   Widget _buildErrorState(
-          BuildContext context, String error, AppLocalizations l10n,) =>
+    BuildContext context,
+    String error,
+    AppLocalizations l10n,
+  ) =>
       Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

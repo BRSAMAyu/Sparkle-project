@@ -357,9 +357,7 @@ class _LinkListBlock extends StatelessWidget {
           onTap: () async {
             await Clipboard.setData(ClipboardData(text: link['url'] ?? ''));
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(context.l10n.taskLinkCopied)),
-              );
+              AppFeedback.success(context, context.l10n.taskLinkCopied);
             }
           },
           borderRadius: BorderRadius.circular(12),
@@ -640,8 +638,9 @@ class _ImageArtifactPreviewDialog extends StatelessWidget {
                 onPressed: () {
                   unawaited(Clipboard.setData(ClipboardData(text: imageUrl)));
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(context.l10n.taskAttachmentLinkCopied)),
+                    AppFeedback.success(
+                      context,
+                      context.l10n.taskAttachmentLinkCopied,
                     );
                   }
                 },
@@ -738,8 +737,9 @@ class _ArtifactPreviewSheet extends StatelessWidget {
                     onPressed: () {
                       unawaited(Clipboard.setData(ClipboardData(text: url)));
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(context.l10n.taskAttachmentLinkCopied)),
+                        AppFeedback.success(
+                          context,
+                          context.l10n.taskAttachmentLinkCopied,
                         );
                       }
                     },

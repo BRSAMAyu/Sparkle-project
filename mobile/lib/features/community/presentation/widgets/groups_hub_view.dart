@@ -26,7 +26,7 @@ class GroupsHubView extends ConsumerWidget {
     final recommendationsAsync = ref.watch(groupRecommendationsProvider);
     final directoryAsync = ref.watch(groupDiscoverProvider);
 
-    return RefreshIndicator(
+    return SparkleRefreshIndicator(
       onRefresh: () async {
         ref.invalidate(myGroupsProvider);
         ref.invalidate(groupRecommendationsProvider);

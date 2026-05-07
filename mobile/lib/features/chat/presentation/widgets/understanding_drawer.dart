@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/home/presentation/providers/understanding_snapshot_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/understanding_panel.dart';
@@ -72,10 +73,9 @@ class ChatUnderstandingDrawerButton extends ConsumerWidget {
 
   void _openUnderstandingSheet(BuildContext context) {
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
         isScrollControlled: true,
-        showDragHandle: true,
         builder: (sheetContext) => SafeArea(
           child: Padding(
             padding: EdgeInsets.only(

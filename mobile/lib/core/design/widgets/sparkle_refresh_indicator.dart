@@ -20,7 +20,7 @@ class SparkleRefreshIndicator extends StatelessWidget {
   Widget build(BuildContext context) => RefreshIndicator(
         onRefresh: () async {
           await SensoryFeedbackService.emit(
-            SensoryFeedbackEvent.confirm,
+            SensoryFeedbackEvent.tap,
             enableSound: false,
           );
           await onRefresh();

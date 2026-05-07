@@ -443,14 +443,26 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                             reduceMotion ? Duration.zero : DS.durationNormal,
                         curve: Curves.easeOut,
                         decoration: BoxDecoration(
-                          color: DS.surfaceTertiary,
+                          color: isFocused
+                              ? DS.surfaceRoleColor(SparkleSurfaceRole.card)
+                              : DS.surfaceTertiary,
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isFocused
                                 ? DS.brandPrimary.withValues(alpha: 0.8)
-                                : DS.surfaceTertiary,
+                                : DS.borderSubtle,
                             width: isFocused ? 1.5 : 1.0,
                           ),
+                          boxShadow: isFocused && !reduceMotion
+                              ? [
+                                  BoxShadow(
+                                    color:
+                                        DS.brandPrimary.withValues(alpha: 0.10),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: TextField(
                           controller: _controller,
@@ -463,7 +475,8 @@ class _ChatInputState extends ConsumerState<ChatInput> {
                               : TextInputAction.newline,
                           keyboardType: TextInputType.multiline,
                           decoration: InputDecoration(
-                            hintText: widget.hintText ?? context.l10n.chatInputPlaceholder,
+                            hintText: widget.hintText ??
+                                context.l10n.chatInputPlaceholder,
                             hintStyle: TextStyle(color: DS.textSecondary),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: DS.spacing16,

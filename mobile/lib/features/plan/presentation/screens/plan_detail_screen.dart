@@ -296,7 +296,7 @@ class _PlanOverviewTab extends ConsumerWidget {
     final mergedTasks = _mergedPlanTasks(plan);
 
     return ContentConstraint(
-      child: RefreshIndicator(
+      child: SparkleRefreshIndicator(
         onRefresh: () async {
           ref.invalidate(planDetailProvider(plan.id));
           await ref

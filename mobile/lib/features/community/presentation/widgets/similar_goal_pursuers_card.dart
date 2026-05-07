@@ -1,9 +1,11 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
@@ -94,85 +96,86 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
       container: true,
       label: isChinese ? '同目标伙伴' : 'Similar goal pursuers',
       child: pursuersAsync.when(
-      data: (pursuers) {
-        if (pursuers.isEmpty) return const SizedBox.shrink();
+        data: (pursuers) {
+          if (pursuers.isEmpty) return const SizedBox.shrink();
 
-        final display = pursuers.take(5).toList();
+          final display = pursuers.take(5).toList();
 
-        return Container(
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: DS.surfaceSecondary,
-            borderRadius: DS.borderRadius12,
-            border: Border.all(color: DS.border),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.group_outlined, size: 16, color: DS.brandPrimary),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      isChinese
-                          ? '和你追同样目标的 ${pursuers.length} 位伙伴'
-                          : '${pursuers.length} people pursuing similar goals',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: DS.brandPrimary,
-                          ),
+          return Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: DS.surfaceSecondary,
+              borderRadius: DS.borderRadius12,
+              border: Border.all(color: DS.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.group_outlined,
+                        size: 16, color: DS.brandPrimary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        isChinese
+                            ? '和你追同样目标的 ${pursuers.length} 位伙伴'
+                            : '${pursuers.length} people pursuing similar goals',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: DS.brandPrimary,
+                            ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (pursuers.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  GoalValueChip(text: pursuers.first.goalTitle),
+                ],
+                const SizedBox(height: 10),
+                // Avatar row
+                SizedBox(
+                  height: 64,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: display.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    itemBuilder: (context, index) => _PursuerChip(
+                      pursuer: display[index],
+                      onTap: () => unawaited(
+                        _handlePursuerTap(context, ref, display[index]),
+                      ),
+                    ),
+                  ),
+                ),
+                if (pursuers.length > 5 || onViewAll != null) ...[
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: onViewAll ??
+                          () => _showAllPursuers(context, ref, pursuers),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: Text(
+                        isChinese ? '查看全部' : 'View all',
+                        style: TextStyle(fontSize: 12, color: DS.brandPrimary),
+                      ),
                     ),
                   ),
                 ],
-              ),
-              if (pursuers.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                GoalValueChip(text: pursuers.first.goalTitle),
               ],
-              const SizedBox(height: 10),
-              // Avatar row
-              SizedBox(
-                height: 64,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: display.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
-                  itemBuilder: (context, index) => _PursuerChip(
-                    pursuer: display[index],
-                    onTap: () => unawaited(
-                      _handlePursuerTap(context, ref, display[index]),
-                    ),
-                  ),
-                ),
-              ),
-              if (pursuers.length > 5 || onViewAll != null) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: onViewAll ??
-                        () => _showAllPursuers(context, ref, pursuers),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    child: Text(
-                      isChinese ? '查看全部' : 'View all',
-                      style: TextStyle(fontSize: 12, color: DS.brandPrimary),
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        );
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => CompactErrorCard(
-        onRetry: () => ref.invalidate(similarGoalPursuersProvider(goalId)),
-      ),
+            ),
+          );
+        },
+        loading: () => const SizedBox.shrink(),
+        error: (_, __) => CompactErrorCard(
+          onRetry: () => ref.invalidate(similarGoalPursuersProvider(goalId)),
+        ),
       ),
     );
   }
@@ -215,9 +218,8 @@ class SimilarGoalPursuersCard extends ConsumerWidget {
   ) {
     final isChinese = I18nService.instance.isChinese;
     unawaited(
-      showModalBottomSheet<void>(
+      showSensoryModalBottomSheet<void>(
         context: context,
-        showDragHandle: true,
         builder: (sheetContext) => SafeArea(
           child: ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -339,7 +341,7 @@ class _ProgressAvatar extends StatelessWidget {
               radius: (size / 2) - 5,
               backgroundColor: DS.surfaceTertiary,
               backgroundImage: pursuer.avatarUrl != null
-                  ? NetworkImage(pursuer.avatarUrl!)
+                  ? CachedNetworkImageProvider(pursuer.avatarUrl!)
                   : null,
               child: pursuer.avatarUrl == null
                   ? Text(

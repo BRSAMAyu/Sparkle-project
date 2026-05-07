@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'dart:async';
 
@@ -96,7 +97,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
       return _buildEmptyView(type);
     }
 
-    return RefreshIndicator(
+    return SparkleRefreshIndicator(
       onRefresh: () => _refreshLeaderboard(type),
       child: ContentConstraint(
         child: CustomScrollView(
@@ -192,7 +193,7 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
               shape: BoxShape.circle,
               image: entry.avatarUrl != null
                   ? DecorationImage(
-                      image: NetworkImage(entry.avatarUrl!),
+                      image: CachedNetworkImageProvider(entry.avatarUrl!),
                       fit: BoxFit.cover,
                     )
                   : null,
@@ -299,8 +300,9 @@ class _LeaderboardScreenState extends ConsumerState<LeaderboardScreen>
   Widget _buildLeaderboardEntry(LeaderboardEntry entry) => ListTile(
         leading: CircleAvatar(
           backgroundColor: _getRankColor(entry.rank),
-          backgroundImage:
-              entry.avatarUrl != null ? NetworkImage(entry.avatarUrl!) : null,
+          backgroundImage: entry.avatarUrl != null
+              ? CachedNetworkImageProvider(entry.avatarUrl!)
+              : null,
           child: entry.avatarUrl == null
               ? Text(
                   entry.rank.toString(),

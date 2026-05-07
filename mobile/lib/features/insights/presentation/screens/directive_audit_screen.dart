@@ -41,7 +41,7 @@ class _DirectiveAuditScreenState extends ConsumerState<DirectiveAuditScreen> {
         title: Text(zh ? 'AI 决策日志' : 'AI Decision Log'),
       ),
       child: ContentConstraint(
-        child: RefreshIndicator(
+        child: SparkleRefreshIndicator(
           onRefresh: () async {
             ref.invalidate(directiveAuditProvider(filter));
           },
@@ -286,7 +286,7 @@ class DirectiveAuditCard extends StatelessWidget {
               entry.userVisibleReason.trim(),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: DS.textPrimary,
-                    height: 1.4,
+                    height: 1.52,
                   ),
             ),
           ],
@@ -357,7 +357,7 @@ class _DirectiveAuditFactRow extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textPrimary,
-                    height: 1.35,
+                    height: 1.52,
                   ),
             ),
           ),

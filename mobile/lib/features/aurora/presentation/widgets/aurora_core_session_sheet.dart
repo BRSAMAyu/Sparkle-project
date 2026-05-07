@@ -506,13 +506,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
           .setSession(closed);
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              context.l10n.networkErrorRetry,
-            ),
-          ),
-        );
+        AppFeedback.error(context, context.l10n.networkErrorRetry);
       }
       return;
     }
@@ -536,9 +530,7 @@ class _AuroraCoreSessionSheetState extends ConsumerState<AuroraCoreSessionSheet>
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(context.l10n.networkErrorRetry)),
-        );
+        AppFeedback.error(context, context.l10n.networkErrorRetry);
       }
     }
   }

@@ -84,7 +84,7 @@ class _OpenClawSettingsScreenState
                 l10n.settOpenclawDesc,
                 style: DS.bodySmall.copyWith(
                   color: DS.textSecondary,
-                  height: 1.5,
+                  height: 1.62,
                 ),
               ),
               const SizedBox(height: DS.spacing16),
@@ -134,7 +134,7 @@ class _OpenClawSettingsScreenState
                         l10n.settOpenclawQueueDesc,
                         style: DS.bodySmall.copyWith(
                           color: DS.textSecondary,
-                          height: 1.45,
+                          height: 1.52,
                         ),
                       ),
                       const SizedBox(height: DS.spacing12),
@@ -242,7 +242,7 @@ class _OpenClawSettingsScreenState
                         copy.aboutEngineBody,
                         style: DS.bodySmall.copyWith(
                           color: DS.textSecondary,
-                          height: 1.5,
+                          height: 1.62,
                         ),
                       ),
                     ],

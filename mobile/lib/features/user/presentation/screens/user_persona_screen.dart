@@ -134,7 +134,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     );
 
     return ContentConstraint(
-      child: RefreshIndicator(
+      child: SparkleRefreshIndicator(
         onRefresh: () => _refreshPersona(ref),
         child: ListView(
           controller: _scrollController,
@@ -315,28 +315,28 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
   Widget _buildQuickAccessCard(BuildContext context) {
     final l10n = context.l10n;
     return GraphiteCardSurface(
-        surfaceRole: SparkleSurfaceRole.panel,
-        padding: const EdgeInsets.all(DS.spacing12),
-        child: Wrap(
-          spacing: DS.spacing8,
-          runSpacing: DS.spacing8,
-          children: [
+      surfaceRole: SparkleSurfaceRole.panel,
+      padding: const EdgeInsets.all(DS.spacing12),
+      child: Wrap(
+        spacing: DS.spacing8,
+        runSpacing: DS.spacing8,
+        children: [
+          SparkleButton.ghost(
+            onPressed: () => context.push(UserRoutes.systemUpdates),
+            label: l10n.personaQuickAccessSystemUpdates,
+          ),
+          if (AppFeatureFlags.enableUserMemoryControls)
             SparkleButton.ghost(
-              onPressed: () => context.push(UserRoutes.systemUpdates),
-              label: l10n.personaQuickAccessSystemUpdates,
+              onPressed: () => context.push(MemoryRoutes.settings),
+              label: l10n.personaQuickAccessMemorySettings,
             ),
-            if (AppFeatureFlags.enableUserMemoryControls)
-              SparkleButton.ghost(
-                onPressed: () => context.push(MemoryRoutes.settings),
-                label: l10n.personaQuickAccessMemorySettings,
-              ),
-          ],
-        ),
-      );
+        ],
+      ),
+    );
   }
 
   Widget _buildProfileLoadWarning(
-      AppLocalizations l10n, String message, WidgetRef ref) =>
+          AppLocalizations l10n, String message, WidgetRef ref) =>
       GraphiteCardSurface(
         surfaceRole: SparkleSurfaceRole.card,
         padding: const EdgeInsets.all(DS.spacing12),
@@ -518,7 +518,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-           l10n.personaSimplifiedUnderstanding,
+          l10n.personaSimplifiedUnderstanding,
           style: TextStyle(
             fontWeight: DS.fontWeightSemibold,
             color: DS.textPrimary,
@@ -595,22 +595,22 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                     const SizedBox(width: DS.spacing8),
-                     Text(
-                       l10n.personaSectionLoading,
-                       style: TextStyle(color: DS.neutral500),
+                    Text(
+                      l10n.personaSectionLoading,
+                      style: TextStyle(color: DS.neutral500),
                     ),
                   ],
                 ),
               ],
               error: (error, stack) => [
-                 Text(
-                   l10n.personaLoadFailedError(_friendlyError(error, l10n)),
-                   style: TextStyle(color: DS.error),
-                 ),
-                 const SizedBox(height: DS.spacing8),
-                 SparkleButton.ghost(
-                   onPressed: onRetry,
-                   label: l10n.retry,
+                Text(
+                  l10n.personaLoadFailedError(_friendlyError(error, l10n)),
+                  style: TextStyle(color: DS.error),
+                ),
+                const SizedBox(height: DS.spacing8),
+                SparkleButton.ghost(
+                  onPressed: onRetry,
+                  label: l10n.retry,
                 ),
               ],
             ),
@@ -633,14 +633,14 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         contextData['cognitive_summary'] as Map<String, dynamic>? ?? {};
 
     final rows = <Widget>[
-       _metadataRow(
-         l10n,
-         'Preference Version: ${preferenceVersion ?? 0}',
-         <String, dynamic>{
-           'level': 'readonly',
-           'reason': l10n.personaPreferenceVersionReason,
-         },
-       ),
+      _metadataRow(
+        l10n,
+        'Preference Version: ${preferenceVersion ?? 0}',
+        <String, dynamic>{
+          'level': 'readonly',
+          'reason': l10n.personaPreferenceVersionReason,
+        },
+      ),
     ];
 
     if (preferences.isNotEmpty) {
@@ -648,10 +648,10 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         _metadataRow(
           l10n,
           'Active Preferences: ${preferences.entries.map((entry) => '${entry.key}=${entry.value}').join(', ')}',
-           <String, dynamic>{
-             'level': 'readonly',
-             'reason': l10n.personaActivePreferencesReason,
-           },
+          <String, dynamic>{
+            'level': 'readonly',
+            'reason': l10n.personaActivePreferencesReason,
+          },
         ),
       );
     }
@@ -725,7 +725,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
     final overridden = item['overridden'] == true;
     final metadata = <String, dynamic>{
       'level': adjustable ? 'editable' : 'readonly',
-      'reason': explanation.isNotEmpty ? explanation : l10n.personaInferredDefaultReason,
+      'reason': explanation.isNotEmpty
+          ? explanation
+          : l10n.personaInferredDefaultReason,
       'confidence': null,
     };
     final actions = <Widget>[
@@ -734,7 +736,7 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
           MemoryRoutes.detail,
           extra: MemoryDetailArgs.preferenceKey(key),
         ),
-         label: l10n.personaViewRecord,
+        label: l10n.personaViewRecord,
       ),
       if (adjustable)
         SparkleButton.ghost(
@@ -744,12 +746,12 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
             key,
             value,
           ),
-           label: overridden ? l10n.personaUpdate : l10n.personaAdjust,
+          label: overridden ? l10n.personaUpdate : l10n.personaAdjust,
         ),
       if (overridden)
         SparkleButton.ghost(
           onPressed: () => _resetOverride(ref, context, key),
-           label: l10n.commonReset,
+          label: l10n.commonReset,
         ),
     ];
     return KeyedSubtree(
@@ -846,8 +848,9 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       '$profileLabel · $signal: $effect',
       <String, dynamic>{
         'level': 'readonly',
-        'reason':
-            sourcePattern.isNotEmpty ? l10n.personaSourcePattern(sourcePattern) : l10n.personaActivePolicyReason,
+        'reason': sourcePattern.isNotEmpty
+            ? l10n.personaSourcePattern(sourcePattern)
+            : l10n.personaActivePolicyReason,
         'confidence': null,
       },
     );
@@ -1216,7 +1219,10 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 }
               } catch (error) {
                 if (context.mounted) {
-                  AppFeedback.error(context, l10n.personaCorrectionSubmitFailed(_friendlyError(error, l10n)));
+                  AppFeedback.error(
+                      context,
+                      l10n.personaCorrectionSubmitFailed(
+                          _friendlyError(error, l10n)));
                 }
               }
             },
@@ -1295,7 +1301,10 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 }
               } catch (error) {
                 if (context.mounted) {
-                  AppFeedback.error(context, l10n.personaPreferenceUpdateFailed(_friendlyError(error, l10n)));
+                  AppFeedback.error(
+                      context,
+                      l10n.personaPreferenceUpdateFailed(
+                          _friendlyError(error, l10n)));
                 }
               }
             },
@@ -1342,7 +1351,8 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
         }
       } catch (error) {
         if (context.mounted) {
-          AppFeedback.error(context, l10n.personaRollbackFailed(_friendlyError(error, l10n)));
+          AppFeedback.error(
+              context, l10n.personaRollbackFailed(_friendlyError(error, l10n)));
         }
       }
     }
@@ -1426,13 +1436,15 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                         (status == 'archived' && nextStatus == 'active'));
 
                 if (isHighRisk) {
-                  final displayTitle = nextTitle.isNotEmpty ? nextTitle : l10n.personaThisGoal;
+                  final displayTitle =
+                      nextTitle.isNotEmpty ? nextTitle : l10n.personaThisGoal;
                   final confirmed = await showDialog<bool>(
                     context: context,
                     builder: (dialogCtx) => AlertDialog(
                       title: Text(l10n.personaConfirmGoalStatusChange),
                       content: Text(
-                        l10n.personaGoalStatusChangeContent(displayTitle, status, nextStatus),
+                        l10n.personaGoalStatusChangeContent(
+                            displayTitle, status, nextStatus),
                       ),
                       actions: [
                         TextButton(
@@ -1563,12 +1575,16 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
                 ref.invalidate(inferredPreferencesProvider);
                 ref.invalidate(activePoliciesProvider);
                 if (context.mounted) {
-                  AppFeedback.success(context, context.l10n.personaInferredAdjusted);
+                  AppFeedback.success(
+                      context, context.l10n.personaInferredAdjusted);
                   Navigator.of(context).pop();
                 }
               } catch (error) {
                 if (context.mounted) {
-                  AppFeedback.error(context, context.l10n.personaAdjustmentFailed(_friendlyError(error, context.l10n)));
+                  AppFeedback.error(
+                      context,
+                      context.l10n.personaAdjustmentFailed(
+                          _friendlyError(error, context.l10n)));
                 }
               }
             },
@@ -1596,7 +1612,10 @@ class _UserPersonaScreenState extends ConsumerState<UserPersonaScreen> {
       }
     } catch (error) {
       if (context.mounted) {
-        AppFeedback.error(context, context.l10n.personaRestoreFailed(_friendlyError(error, context.l10n)));
+        AppFeedback.error(
+            context,
+            context.l10n
+                .personaRestoreFailed(_friendlyError(error, context.l10n)));
       }
     }
   }

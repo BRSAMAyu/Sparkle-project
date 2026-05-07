@@ -77,7 +77,7 @@ class _OpenClawPairingScannerSheetState
                 '把桌面端显示的配对二维码放进取景框，Sparkle 会自动识别并导入连接配置。',
                 style: DS.bodySmall.copyWith(
                   color: DS.textSecondary,
-                  height: 1.45,
+                  height: 1.52,
                 ),
               ),
               const SizedBox(height: DS.spacing16),

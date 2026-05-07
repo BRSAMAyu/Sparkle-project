@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -163,10 +164,9 @@ class _FlashCapsuleToolState extends ConsumerState<FlashCapsuleTool> {
 
     final history = _historyEntries(ref.read(cognitiveProvider).fragments);
 
-    await showModalBottomSheet<void>(
+    await showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (context) {
         final theme = Theme.of(context);
         return SafeArea(

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -39,62 +40,66 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
   }
 
   void _showUserOptions(UserBrief user) {
-    unawaited(showSensoryModalBottomSheet<void>(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: CircleAvatar(
-                backgroundImage: user.avatarUrl != null
-                    ? NetworkImage(user.avatarUrl!)
-                    : null,
-                child: user.avatarUrl == null
-                    ? Text(user.displayName.substring(0, 1).toUpperCase())
-                    : null,
+    unawaited(
+      showSensoryModalBottomSheet<void>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundImage: user.avatarUrl != null
+                      ? CachedNetworkImageProvider(user.avatarUrl!)
+                      : null,
+                  child: user.avatarUrl == null
+                      ? Text(user.displayName.substring(0, 1).toUpperCase())
+                      : null,
+                ),
+                title: Text(user.displayName),
+                subtitle: Text('@${user.username}'),
               ),
-              title: Text(user.displayName),
-              subtitle: Text('@${user.username}'),
-            ),
-            const Divider(),
-            ListTile(
-              leading: Icon(Icons.person_add, color: DS.primaryBase),
-              title: Text(I18nService.instance.isChinese ? '发送好友请求' : 'Send Friend Request'),
-              onTap: () async {
-                Navigator.pop(context);
-                try {
-                  await ref
-                      .read(communityRepositoryProvider)
-                      .sendFriendRequest(user.id);
-                  if (mounted) {
-                    AppFeedback.success(
-                      context,
-                      'Friend request sent to ${user.displayName}',
-                    );
+              const Divider(),
+              ListTile(
+                leading: Icon(Icons.person_add, color: DS.primaryBase),
+                title: Text(I18nService.instance.isChinese
+                    ? '发送好友请求'
+                    : 'Send Friend Request'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  try {
+                    await ref
+                        .read(communityRepositoryProvider)
+                        .sendFriendRequest(user.id);
+                    if (mounted) {
+                      AppFeedback.success(
+                        context,
+                        'Friend request sent to ${user.displayName}',
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      AppFeedback.error(context, 'Failed to send request: $e');
+                    }
                   }
-                } catch (e) {
-                  if (mounted) {
-                    AppFeedback.error(context, 'Failed to send request: $e');
-                  }
-                }
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.chat, color: DS.primaryBase),
-              title: Text(context.l10n.sendMessageLabel),
-              onTap: () {
-                Navigator.pop(context);
-                context.push(
-                  '/chat/private/${user.id}?name=${Uri.encodeComponent(user.displayName)}',
-                );
-              },
-            ),
-            const SizedBox(height: DS.spacing8),
-          ],
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.chat, color: DS.primaryBase),
+                title: Text(context.l10n.sendMessageLabel),
+                onTap: () {
+                  Navigator.pop(context);
+                  context.push(
+                    '/chat/private/${user.id}?name=${Uri.encodeComponent(user.displayName)}',
+                  );
+                },
+              ),
+              const SizedBox(height: DS.spacing8),
+            ],
+          ),
         ),
       ),
-    ),);
+    );
   }
 
   @override
@@ -148,7 +153,7 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
             );
           }
           return ContentConstraint(
-            child: RefreshIndicator(
+            child: SparkleRefreshIndicator(
               onRefresh: () async {
                 if (_searchController.text.isNotEmpty) {
                   _handleSearch();
@@ -167,78 +172,79 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
                       surfaceRole: SparkleSurfaceRole.card,
                       padding: EdgeInsets.zero,
                       child: ListTile(
-                      leading: Stack(
-                        children: [
-                          CircleAvatar(
-                            backgroundImage: user.avatarUrl != null
-                                ? NetworkImage(user.avatarUrl!)
-                                : null,
-                            child: user.avatarUrl == null
-                                ? Text(
-                                    user.displayName
-                                        .substring(0, 1)
-                                        .toUpperCase(),
-                                  )
-                                : null,
-                          ),
-                          if (user.status == UserStatus.online)
-                            Positioned(
-                              right: 0,
-                              bottom: 0,
-                              child: Container(
-                                width: 12,
-                                height: 12,
-                                decoration: BoxDecoration(
-                                  color: DS.success,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: DS.brandPrimaryConst,
-                                    width: 2,
+                        leading: Stack(
+                          children: [
+                            CircleAvatar(
+                              backgroundImage: user.avatarUrl != null
+                                  ? CachedNetworkImageProvider(user.avatarUrl!)
+                                  : null,
+                              child: user.avatarUrl == null
+                                  ? Text(
+                                      user.displayName
+                                          .substring(0, 1)
+                                          .toUpperCase(),
+                                    )
+                                  : null,
+                            ),
+                            if (user.status == UserStatus.online)
+                              Positioned(
+                                right: 0,
+                                bottom: 0,
+                                child: Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: DS.success,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: DS.brandPrimaryConst,
+                                      width: 2,
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                        ],
-                      ),
-                      title: Text(
-                        user.displayName,
-                        style: const TextStyle(fontWeight: DS.fontWeightMedium),
-                      ),
-                      subtitle: Text('@${user.username}'),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: DS.warning.shade100,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Lv.${user.flameLevel}',
-                              style: TextStyle(
-                                color: DS.warning.shade700,
-                                fontSize: 12,
-                                fontWeight: DS.fontWeightBold,
+                          ],
+                        ),
+                        title: Text(
+                          user.displayName,
+                          style:
+                              const TextStyle(fontWeight: DS.fontWeightMedium),
+                        ),
+                        subtitle: Text('@${user.username}'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: DS.warning.shade100,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'Lv.${user.flameLevel}',
+                                style: TextStyle(
+                                  color: DS.warning.shade700,
+                                  fontSize: 12,
+                                  fontWeight: DS.fontWeightBold,
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: DS.sm),
-                          Icon(Icons.chevron_right, color: DS.brandPrimary),
-                        ],
+                            const SizedBox(width: DS.sm),
+                            Icon(Icons.chevron_right, color: DS.brandPrimary),
+                          ],
+                        ),
+                        onTap: () {
+                          unawaited(
+                            SensoryFeedbackService.emit(
+                              SensoryFeedbackEvent.selection,
+                            ),
+                          );
+                          _showUserOptions(user);
+                        },
                       ),
-                      onTap: () {
-                        unawaited(
-                          SensoryFeedbackService.emit(
-                            SensoryFeedbackEvent.selection,
-                          ),
-                        );
-                        _showUserOptions(user);
-                      },
-                    ),
                     ),
                   );
                 },
@@ -253,7 +259,11 @@ class _UserSearchScreenState extends ConsumerState<UserSearchScreen> {
             children: [
               Icon(Icons.error_outline, size: 48, color: DS.error),
               const SizedBox(height: DS.lg),
-              Text(I18nService.instance.isChinese ? '搜索失败，请检查网络后重试' : 'Search failed, check your network and retry', style: TextStyle(color: DS.textSecondary)),
+              Text(
+                  I18nService.instance.isChinese
+                      ? '搜索失败，请检查网络后重试'
+                      : 'Search failed, check your network and retry',
+                  style: TextStyle(color: DS.textSecondary)),
               const SizedBox(height: DS.md),
               SparkleButton.primary(
                 label: I18nService.instance.isChinese ? '重试' : 'Retry',

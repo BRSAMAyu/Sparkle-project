@@ -61,7 +61,7 @@ class _FocusStatisticsScreenState extends ConsumerState<FocusStatisticsScreen> {
         ],
       ),
       child: ContentConstraint(
-        child: RefreshIndicator(
+        child: SparkleRefreshIndicator(
           onRefresh: _onRefresh,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),

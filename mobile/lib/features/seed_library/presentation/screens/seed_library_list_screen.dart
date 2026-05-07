@@ -278,7 +278,7 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
       );
     }
 
-    return RefreshIndicator(
+    return SparkleRefreshIndicator(
       onRefresh: () => notifier.refresh(
         category: _selectedCategory,
         visibility: _selectedVisibility,

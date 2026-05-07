@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/translation/translation.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -103,7 +104,7 @@ class _TranslatableTextState extends ConsumerState<TranslatableText> {
   }
 
   void _showTranslationSheet(String selectedText) {
-    showModalBottomSheet<void>(
+    showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       builder: (context) => DraggableScrollableSheet(

@@ -1880,6 +1880,20 @@ class GoalArbitrationEvent extends ChatStreamEvent {
   }
 }
 
+/// Divine Moment Event — unified event for MAGIC-002 through MAGIC-006.
+/// Backend key: response_metadata['spine_divine_moment']
+class DivineMomentEvent extends ChatStreamEvent {
+  DivineMomentEvent({
+    required this.cardData,
+    super.responseId,
+    super.traceId,
+    super.workflowId,
+    super.promptVersion,
+  });
+
+  final Map<String, dynamic> cardData;
+}
+
 /// Spine Degraded Event — STAB-012 graceful degradation indicator.
 /// Emitted when the Spine pipeline fails and falls back to safe defaults.
 /// Backend key: response_metadata['spine_degraded']

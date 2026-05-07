@@ -55,7 +55,7 @@ class _SystemUpdatesScreenState extends ConsumerState<SystemUpdatesScreen> {
     final priorities = _collectOptions(items, 'priority');
     final filtered = _applyFilters(items);
 
-    return RefreshIndicator(
+    return SparkleRefreshIndicator(
       onRefresh: () async {
         ref.invalidate(systemUpdatesProvider);
         await ref.read(systemUpdatesProvider.future);

@@ -46,9 +46,12 @@ class _PrismCardState extends ConsumerState<PrismCard>
     final weeklyPattern = cognitive.weeklyPattern;
     final zh = I18nService.instance.isChinese;
 
-    return GestureDetector(
-      onTap: () => context.push('/cognitive/patterns'),
-      child: ClipRRect(
+    return Semantics(
+      button: true,
+      label: zh ? '认知模式分析' : 'Cognitive pattern analysis',
+      child: GestureDetector(
+        onTap: () => context.push('/cognitive/patterns'),
+        child: ClipRRect(
         borderRadius: DS.borderRadius20,
         child: MaterialStyler(
           material: AppMaterials.ceramic(context).copyWith(
@@ -142,9 +145,12 @@ class _PrismCardState extends ConsumerState<PrismCard>
                       ),
                     ),
                     const SizedBox(height: DS.spacing4),
-                    GestureDetector(
-                      onTap: () => context.push('/errors?dimension=analysis'),
-                      child: Container(
+                    Semantics(
+                      button: true,
+                      label: zh ? '错误分析' : 'Error analysis',
+                      child: GestureDetector(
+                        onTap: () => context.push('/errors?dimension=analysis'),
+                        child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: DS.spacing8,
                           vertical: DS.spacing4,
@@ -174,6 +180,7 @@ class _PrismCardState extends ConsumerState<PrismCard>
                         ),
                       ),
                     ),
+                  ),
                   ] else ...[
                     Text(
                       zh ? '点击同步闪念，发现你的行为定式' : 'Sync your thoughts to discover behavioral patterns',
@@ -189,7 +196,8 @@ class _PrismCardState extends ConsumerState<PrismCard>
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildTag(BuildContext context, String text) => Container(

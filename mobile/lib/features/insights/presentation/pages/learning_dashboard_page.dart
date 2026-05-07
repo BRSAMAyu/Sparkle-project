@@ -53,7 +53,7 @@ class _DashboardContent extends ConsumerWidget {
         dashboard.weaknessRadar.isNotEmpty ||
         dashboard.knowledgeChanges.isNotEmpty ||
         dashboard.efficiencyMetrics.tasksCompleted > 0;
-    return RefreshIndicator(
+    return SparkleRefreshIndicator(
       onRefresh: () => ref.read(growthDashboardProvider.notifier).refresh(),
       child: Semantics(
         label: context.l10n.gdDashboardSemantics,
@@ -443,7 +443,7 @@ class _InlineEmpty extends StatelessWidget {
       context.l10n.gdNoDataDesc,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
-            height: 1.45,
+            height: 1.52,
           ),
     );
   }

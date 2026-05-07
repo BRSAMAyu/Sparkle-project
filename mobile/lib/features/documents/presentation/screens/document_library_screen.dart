@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
 import 'package:sparkle/features/community/data/repositories/community_repository.dart';
@@ -79,7 +80,7 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
         ],
       ),
       child: ContentConstraint(
-        child: RefreshIndicator(
+        child: SparkleRefreshIndicator(
           onRefresh: () => ref.read(documentLibraryProvider.notifier).refresh(),
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(
@@ -278,28 +279,22 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
 
   Future<void> _openUploadSheet() async {
     if (!mounted) return;
-    await showModalBottomSheet<void>(
+    await showSensoryModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (sheetContext) => FilePickerWithPresignedUpload(
         onUploaded: (uploadedFile) {
           if (!mounted) return;
           Navigator.of(sheetContext).pop();
-          ScaffoldMessenger.of(this.context).showSnackBar(
-            SnackBar(
-                content: Text(this.context.l10n.studyMaterialsUploadSuccess)),
+          AppFeedback.success(
+            this.context,
+            this.context.l10n.studyMaterialsUploadSuccess,
           );
           unawaited(ref.read(documentLibraryProvider.notifier).refresh());
         },
         onError: (message) {
           if (!mounted) return;
-          ScaffoldMessenger.of(this.context).showSnackBar(
-            SnackBar(
-              content: Text(message),
-              backgroundColor: DS.error,
-            ),
-          );
+          AppFeedback.error(this.context, message);
         },
       ),
     );
@@ -337,17 +332,10 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           .read(documentLibraryProvider.notifier)
           .deleteDocument(document.fileId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.studyMaterialsDeleteSuccess)),
-      );
+      AppFeedback.success(context, l10n.studyMaterialsDeleteSuccess);
     } on Exception catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.studyMaterialsDeleteFailure(error)),
-          backgroundColor: DS.error,
-        ),
-      );
+      AppFeedback.error(context, l10n.studyMaterialsDeleteFailure(error));
     }
   }
 
@@ -357,13 +345,12 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           .read(documentLibraryProvider.notifier)
           .archiveDocument(document.fileId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.studyMaterialsArchiveSuccess)),
-      );
+      AppFeedback.success(context, context.l10n.studyMaterialsArchiveSuccess);
     } on Exception catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.studyMaterialsArchiveFailed(error.toString())), backgroundColor: DS.error),
+      AppFeedback.error(
+        context,
+        context.l10n.studyMaterialsArchiveFailed(error.toString()),
       );
     }
   }
@@ -374,13 +361,12 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           .read(documentLibraryProvider.notifier)
           .restoreDocument(document.fileId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.studyMaterialsRestoreSuccess)),
-      );
+      AppFeedback.success(context, context.l10n.studyMaterialsRestoreSuccess);
     } on Exception catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.studyMaterialsRestoreFailed(error.toString())), backgroundColor: DS.error),
+      AppFeedback.error(
+        context,
+        context.l10n.studyMaterialsRestoreFailed(error.toString()),
       );
     }
   }
@@ -390,7 +376,8 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(context.l10n.studyMaterialsRevokeTitle),
-        content: Text(context.l10n.studyMaterialsRevokeMessage(document.filename)),
+        content:
+            Text(context.l10n.studyMaterialsRevokeMessage(document.filename)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -410,13 +397,12 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
           .read(documentLibraryProvider.notifier)
           .revokeDocument(document.fileId);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.studyMaterialsRevokeSuccess)),
-      );
+      AppFeedback.success(context, context.l10n.studyMaterialsRevokeSuccess);
     } on Exception catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(context.l10n.studyMaterialsRevokeFailed(error.toString())), backgroundColor: DS.error),
+      AppFeedback.error(
+        context,
+        context.l10n.studyMaterialsRevokeFailed(error.toString()),
       );
     }
   }
@@ -426,9 +412,8 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
     final groupsFuture = ref.read(communityRepositoryProvider).getMyGroups();
 
     if (!mounted) return;
-    await showModalBottomSheet<void>(
+    await showSensoryModalBottomSheet<void>(
       context: context,
-      backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (sheetContext) => GraphiteModalSurface(
         title: l10n.studyMaterialsShareSheetTitle,
@@ -507,20 +492,15 @@ class _DocumentLibraryScreenState extends ConsumerState<DocumentLibraryScreen> {
                             groupId: group.id,
                           );
                       if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            l10n.studyMaterialsShareSuccess(group.name),
-                          ),
-                        ),
+                      AppFeedback.success(
+                        context,
+                        l10n.studyMaterialsShareSuccess(group.name),
                       );
                     } on Exception catch (error) {
                       if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.studyMaterialsShareFailure(error)),
-                          backgroundColor: DS.error,
-                        ),
+                      AppFeedback.error(
+                        context,
+                        l10n.studyMaterialsShareFailure(error),
                       );
                     }
                   },

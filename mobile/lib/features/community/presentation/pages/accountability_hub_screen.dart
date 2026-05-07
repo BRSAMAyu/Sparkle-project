@@ -69,7 +69,7 @@ class AccountabilityHubScreen extends ConsumerWidget {
             ),
           ),
         ),
-        data: (hub) => RefreshIndicator(
+        data: (hub) => SparkleRefreshIndicator(
           onRefresh: () =>
               ref.read(accountabilityHubProvider.notifier).refresh(),
           child: ContentConstraint(
@@ -234,74 +234,72 @@ class _PartnerProgressCard extends StatelessWidget {
       surfaceRole: SparkleSurfaceRole.card,
       padding: const EdgeInsets.all(14),
       child: Row(
-          children: [
-            SizedBox(
-              width: 58,
-              height: 58,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  CircularProgressIndicator(
-                    value: item.weeklyProgress,
-                    strokeWidth: 7,
-                    strokeCap: StrokeCap.round,
-                  ),
-                  Text(
-                    context.l10n
-                        .cahPercent((item.weeklyProgress * 100).round()),
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: colorScheme.onSurface,
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                ],
-              ),
+        children: [
+          SizedBox(
+            width: 58,
+            height: 58,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: item.weeklyProgress,
+                  strokeWidth: 7,
+                  strokeCap: StrokeCap.round,
+                ),
+                Text(
+                  context.l10n.cahPercent((item.weeklyProgress * 100).round()),
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+              ],
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.partnerName,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    context.l10n.cahPartnerGoal(item.partnerName),
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.goalSummary,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                ],
-              ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.partnerName,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  context.l10n.cahPartnerGoal(item.partnerName),
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  item.goalSummary,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Tooltip(
-              message: item.todayDone
-                  ? context.l10n.cahTodayDone
-                  : context.l10n.cahTodayWaiting,
-              child: Icon(
-                item.todayDone
-                    ? Icons.check_circle_rounded
-                    : Icons.radio_button_unchecked_rounded,
-                color:
-                    item.todayDone ? colorScheme.primary : colorScheme.outline,
-              ),
+          ),
+          const SizedBox(width: 8),
+          Tooltip(
+            message: item.todayDone
+                ? context.l10n.cahTodayDone
+                : context.l10n.cahTodayWaiting,
+            child: Icon(
+              item.todayDone
+                  ? Icons.check_circle_rounded
+                  : Icons.radio_button_unchecked_rounded,
+              color: item.todayDone ? colorScheme.primary : colorScheme.outline,
             ),
-          ],
-        ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -344,34 +342,34 @@ class _SharedGoalCard extends StatelessWidget {
         children: [
           Text(
             item.title,
-              style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+          ),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(
+            value: item.progress,
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final name in item.memberNames)
+                Chip(
+                  avatar: CircleAvatar(
+                    backgroundColor: colorScheme.primaryContainer,
+                    foregroundColor: colorScheme.onPrimaryContainer,
+                    child: Text(name.isEmpty ? '?' : name[0].toUpperCase()),
                   ),
-            ),
-            const SizedBox(height: 10),
-            LinearProgressIndicator(
-              value: item.progress,
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(999),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final name in item.memberNames)
-                  Chip(
-                    avatar: CircleAvatar(
-                      backgroundColor: colorScheme.primaryContainer,
-                      foregroundColor: colorScheme.onPrimaryContainer,
-                      child: Text(name.isEmpty ? '?' : name[0].toUpperCase()),
-                    ),
-                    label: Text(name),
-                  ),
-              ],
-            ),
-          ],
-        ),
+                  label: Text(name),
+                ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
@@ -415,25 +413,25 @@ class _HelpSection extends StatelessWidget {
             ],
             const SizedBox(height: 8),
             PartnerObservationControl(
-                onAccept: () => _showUndoable(
-                  context,
-                  context.l10n.cahReminderAccepted,
-                ),
-                onDecline: () => _showUndoable(
-                  context,
-                  context.l10n.cahReminderDeclined,
-                ),
-                onLater: () => _showUndoable(
-                  context,
-                  context.l10n.cahReminderLater,
-                ),
-                onTooFrequent: () => _showUndoable(
-                  context,
-                  context.l10n.cahReminderReduced,
-                ),
+              onAccept: () => _showUndoable(
+                context,
+                context.l10n.cahReminderAccepted,
               ),
-            ],
-          ),
+              onDecline: () => _showUndoable(
+                context,
+                context.l10n.cahReminderDeclined,
+              ),
+              onLater: () => _showUndoable(
+                context,
+                context.l10n.cahReminderLater,
+              ),
+              onTooFrequent: () => _showUndoable(
+                context,
+                context.l10n.cahReminderReduced,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -459,44 +457,44 @@ class _SecondaryEntrySection extends StatelessWidget {
           children: [
             Text(
               context.l10n.cahFeedEntry,
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                context.l10n.cahFeedEntryHint,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-              ),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  FilledButton.icon(
-                    onPressed: () =>
-                        unawaited(context.push(CommunityRoutes.feed)),
-                    icon: const Icon(Icons.forum_outlined),
-                    label: Text(context.l10n.cahFeedEntry),
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        unawaited(context.push(CommunityRoutes.friends)),
-                    icon: const Icon(Icons.people_outline_rounded),
-                    label: Text(context.l10n.cahFriendsEntry),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              context.l10n.cahFeedEntryHint,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-                  OutlinedButton.icon(
-                    onPressed: () =>
-                        unawaited(context.push(CommunityRoutes.groups)),
-                    icon: const Icon(Icons.groups_outlined),
-                    label: Text(context.l10n.cahGroupsEntry),
-                  ),
-                ],
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilledButton.icon(
+                  onPressed: () =>
+                      unawaited(context.push(CommunityRoutes.feed)),
+                  icon: const Icon(Icons.forum_outlined),
+                  label: Text(context.l10n.cahFeedEntry),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      unawaited(context.push(CommunityRoutes.friends)),
+                  icon: const Icon(Icons.people_outline_rounded),
+                  label: Text(context.l10n.cahFriendsEntry),
+                ),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      unawaited(context.push(CommunityRoutes.groups)),
+                  icon: const Icon(Icons.groups_outlined),
+                  label: Text(context.l10n.cahGroupsEntry),
+                ),
+              ],
+            ),
+          ],
+        ),
       );
 }
 
@@ -542,8 +540,7 @@ class _EmptyHubCard extends StatelessWidget {
                 label: Text(context.l10n.cahFindPartners),
               ),
               FilledButton.icon(
-                onPressed: () =>
-                    unawaited(context.push(CommunityRoutes.feed)),
+                onPressed: () => unawaited(context.push(CommunityRoutes.feed)),
                 icon: const Icon(Icons.flag_outlined),
                 label: Text(context.l10n.cahCreateCommitment),
               ),
@@ -575,25 +572,25 @@ class _MetricTile extends StatelessWidget {
       child: Column(
         children: [
           Icon(icon, color: colorScheme.primary),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                  ),
-            ),
-          ],
-        ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
+      ),
     );
   }
 }

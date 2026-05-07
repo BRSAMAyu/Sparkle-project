@@ -389,7 +389,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
         ),
       );
 
-  Widget _buildV1Panel(BuildContext context) => RefreshIndicator(
+  Widget _buildV1Panel(BuildContext context) => SparkleRefreshIndicator(
         onRefresh: _loadAll,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -455,7 +455,7 @@ class _MemoryPanelScreenState extends ConsumerState<MemoryPanelScreen> {
 
   Widget _buildV2Panel(BuildContext context) {
     final entries = _applySort(_applyFilters(_buildEntries()));
-    return RefreshIndicator(
+    return SparkleRefreshIndicator(
       onRefresh: _loadAll,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),

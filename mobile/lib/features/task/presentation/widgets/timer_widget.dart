@@ -285,7 +285,10 @@ class _TimerWidgetState extends State<TimerWidget>
                           Theme.of(context).textTheme.displayMedium?.copyWith(
                                 fontSize: timeFontSize,
                                 fontWeight: DS.fontWeightBold,
-                                fontFamily: 'monospace',
+                                letterSpacing: -1.0,
+                                fontFeatures: const [
+                                  FontFeature.tabularFigures(),
+                                ],
                                 fontFamilyFallback: sparkleFontFallback,
                                 color: DS.textPrimary,
                               ),

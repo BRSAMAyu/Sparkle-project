@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -189,7 +190,7 @@ class _InAppNotificationBannerState extends State<InAppNotificationBanner>
                         radius: 20,
                         backgroundImage: widget.notification.senderAvatarUrl !=
                                 null
-                            ? NetworkImage(widget.notification.senderAvatarUrl!)
+                            ? CachedNetworkImageProvider(widget.notification.senderAvatarUrl!)
                             : null,
                         child: widget.notification.senderAvatarUrl == null
                             ? Text(widget.notification.senderName[0])

@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 
-const _sheetDuration = Duration(milliseconds: 220);
-const _sheetReverseDuration = Duration(milliseconds: 140);
+const _sheetDuration = Duration(milliseconds: 300);
+const _sheetReverseDuration = Duration(milliseconds: 220);
 const _dialogDuration = Duration(milliseconds: 180);
 
 class SpringCurve extends Curve {
@@ -53,11 +53,17 @@ class SparkleBottomSheet {
     Clip? clipBehavior,
     BoxConstraints? constraints,
     RouteSettings? routeSettings,
+    Color? barrierColor,
   }) {
     return showModalBottomSheet<T>(
       context: context,
-      backgroundColor: backgroundColor,
-      shape: shape,
+      backgroundColor:
+          backgroundColor ?? DS.surfaceRoleColor(SparkleSurfaceRole.modal),
+      barrierColor: barrierColor,
+      shape: shape ??
+          const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          ),
       isScrollControlled: isScrollControlled,
       useRootNavigator: useRootNavigator,
       isDismissible: isDismissible,
@@ -95,6 +101,8 @@ Future<T?> showSensoryModalBottomSheet<T>({
   unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.sheetOpen));
   if (!context.mounted) return null;
 
+  final isDark = Theme.of(context).brightness == Brightness.dark;
+
   return SparkleBottomSheet.show<T>(
     context: context,
     builder: (sheetContext) => Column(
@@ -114,6 +122,7 @@ Future<T?> showSensoryModalBottomSheet<T>({
     clipBehavior: clipBehavior,
     constraints: constraints,
     routeSettings: routeSettings,
+    barrierColor: Colors.black.withValues(alpha: isDark ? 0.65 : 0.50),
   );
 }
 
@@ -129,8 +138,9 @@ Future<T?> showSensoryDialog<T>({
   unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.dialogOpen));
   if (!context.mounted) return null;
 
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   final resolvedBarrierColor =
-      barrierColor ?? Colors.black.withValues(alpha: 0.42);
+      barrierColor ?? Colors.black.withValues(alpha: isDark ? 0.65 : 0.50);
 
   return showGeneralDialog<T>(
     context: context,
@@ -222,8 +232,9 @@ Future<T?> showSensoryGeneralDialog<T>({
   unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.dialogOpen));
   if (!context.mounted) return null;
 
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   final resolvedBarrierColor =
-      barrierColor ?? Colors.black.withValues(alpha: 0.42);
+      barrierColor ?? Colors.black.withValues(alpha: isDark ? 0.65 : 0.50);
 
   return showGeneralDialog<T>(
     context: context,
@@ -245,12 +256,12 @@ class _DragHandle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(top: DS.spacing8, bottom: DS.spacing4),
+        padding: const EdgeInsets.only(top: DS.spacing8, bottom: DS.spacing8),
         child: Container(
           width: 32,
           height: 4,
           decoration: BoxDecoration(
-            color: DS.neutral400.withValues(alpha: 0.5),
+            color: DS.neutral400.withValues(alpha: 0.72),
             borderRadius: BorderRadius.circular(999),
           ),
         ),

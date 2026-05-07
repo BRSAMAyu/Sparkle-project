@@ -269,7 +269,7 @@ class _InsightTile extends StatelessWidget {
                     style: TextStyle(
                       color: DS.textPrimary,
                       fontSize: 13,
-                      height: 1.4,
+                      height: 1.52,
                     ),
                   ),
                   if (insight.recommendedFutureUse != null &&

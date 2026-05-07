@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/features/achievement/presentation/providers/streak_quality_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -205,9 +206,8 @@ void _showQualitySheet(
   final l10n = AppLocalizations.of(context)!;
   final scheme = Theme.of(context).colorScheme;
   unawaited(
-    showModalBottomSheet<void>(
+    showSensoryModalBottomSheet<void>(
       context: context,
-      showDragHandle: true,
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
@@ -486,7 +486,8 @@ class _EvidenceCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.lightbulb_outline, size: 16, color: scheme.onTertiaryContainer),
+                Icon(Icons.lightbulb_outline,
+                    size: 16, color: scheme.onTertiaryContainer),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(

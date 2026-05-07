@@ -20,7 +20,8 @@ class MarketplaceScreen extends ConsumerWidget {
     return SparklePageScaffold(
       role: SparklePageRole.content,
       appBar: AppBar(
-        title: Text(I18nService.instance.isChinese ? '技能市场' : 'Skill Marketplace'),
+        title:
+            Text(I18nService.instance.isChinese ? '技能市场' : 'Skill Marketplace'),
         actions: [
           SparkleIconButton(
             variant: ButtonVariant.ghost,
@@ -36,8 +37,12 @@ class MarketplaceScreen extends ConsumerWidget {
             children: [
               TabBar(
                 tabs: [
-                  Tab(icon: const Icon(Icons.psychology_alt_rounded), text: I18nService.instance.isChinese ? '技能' : 'Skills'),
-                  Tab(icon: const Icon(Icons.inventory_2_outlined), text: I18nService.instance.isChinese ? '技能包' : 'Packs'),
+                  Tab(
+                      icon: const Icon(Icons.psychology_alt_rounded),
+                      text: I18nService.instance.isChinese ? '技能' : 'Skills'),
+                  Tab(
+                      icon: const Icon(Icons.inventory_2_outlined),
+                      text: I18nService.instance.isChinese ? '技能包' : 'Packs'),
                 ],
               ),
               if (state.isLoading &&
@@ -81,7 +86,10 @@ class _SkillList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (skills.isEmpty) {
-      return Center(child: Text(I18nService.instance.isChinese ? '暂无上线技能' : 'No active marketplace skills yet.'));
+      return Center(
+          child: Text(I18nService.instance.isChinese
+              ? '暂无上线技能'
+              : 'No active marketplace skills yet.'));
     }
     return ListView.separated(
       padding: const EdgeInsets.all(DS.spacing16),
@@ -100,7 +108,10 @@ class _PackList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (packs.isEmpty) {
-      return Center(child: Text(I18nService.instance.isChinese ? '暂无上线技能包' : 'No active domain packs yet.'));
+      return Center(
+          child: Text(I18nService.instance.isChinese
+              ? '暂无上线技能包'
+              : 'No active domain packs yet.'));
     }
     return ListView.separated(
       padding: const EdgeInsets.all(DS.spacing16),
@@ -195,8 +206,11 @@ class _SkillTile extends ConsumerWidget {
     if (confirmed != true) return;
     await notifier.adoptSkill(skill.skillId, preview: preview);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(I18nService.instance.isChinese ? '已采纳 ${skill.name}' : '${skill.name} adopted')),
+    AppFeedback.success(
+      context,
+      I18nService.instance.isChinese
+          ? '已采纳 ${skill.name}'
+          : '${skill.name} adopted',
     );
   }
 }
@@ -280,8 +294,11 @@ class _PackTile extends ConsumerWidget {
     if (confirmed != true) return;
     await notifier.adoptPack(pack.packId, preview: preview);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(I18nService.instance.isChinese ? '已采纳 ${pack.name}' : '${pack.name} adopted')),
+    AppFeedback.success(
+      context,
+      I18nService.instance.isChinese
+          ? '已采纳 ${pack.name}'
+          : '${pack.name} adopted',
     );
   }
 }
@@ -322,7 +339,9 @@ class _PreviewDialog extends StatelessWidget {
                 children: [
                   const Icon(Icons.verified_user_outlined, size: DS.iconSizeSm),
                   const SizedBox(width: DS.spacing8),
-                  Text(I18nService.instance.isChinese ? '质量 ${preview.qualityScore.toStringAsFixed(2)}' : 'Quality ${preview.qualityScore.toStringAsFixed(2)}'),
+                  Text(I18nService.instance.isChinese
+                      ? '质量 ${preview.qualityScore.toStringAsFixed(2)}'
+                      : 'Quality ${preview.qualityScore.toStringAsFixed(2)}'),
                 ],
               ),
               const SizedBox(height: DS.spacing12),

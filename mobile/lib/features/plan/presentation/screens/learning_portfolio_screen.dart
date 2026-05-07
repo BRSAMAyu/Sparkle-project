@@ -129,7 +129,7 @@ class _LearningPortfolioScreenState
           title: Text(context.l10n.planMyArchive),
         ),
         child: ContentConstraint(
-          child: RefreshIndicator(
+          child: SparkleRefreshIndicator(
             onRefresh: _refreshPortfolio,
             child: portfolioAsync.when(
               loading: () => const _ScrollableStateFill(
@@ -256,9 +256,15 @@ class _PortfolioSummaryCard extends StatelessWidget {
             spacing: DS.spacing8,
             runSpacing: DS.spacing8,
             children: [
-              _SummaryPill(label: context.l10n.planPortfolioActivePill(portfolio.activeCount)),
-              _SummaryPill(label: context.l10n.planPortfolioCompletedPill(portfolio.completedCount)),
-              _SummaryPill(label: context.l10n.planPortfolioPlannedPill(portfolio.plannedCount)),
+              _SummaryPill(
+                  label: context.l10n
+                      .planPortfolioActivePill(portfolio.activeCount)),
+              _SummaryPill(
+                  label: context.l10n
+                      .planPortfolioCompletedPill(portfolio.completedCount)),
+              _SummaryPill(
+                  label: context.l10n
+                      .planPortfolioPlannedPill(portfolio.plannedCount)),
             ],
           ),
         ],
@@ -386,7 +392,8 @@ class _PortfolioEntryCard extends StatelessWidget {
               border: Border.all(color: _portfolioMutedSage),
             ),
             child: Text(
-              context.l10n.planPortfolioMasteryPercent(entry.masteredNodesCount),
+              context.l10n
+                  .planPortfolioMasteryPercent(entry.masteredNodesCount),
               style: DS.labelLarge.copyWith(
                 color: _portfolioDeepGreen,
                 fontWeight: DS.fontWeightSemibold,
@@ -419,9 +426,13 @@ class _PortfolioEntryCard extends StatelessWidget {
                 _DetailChip(label: _scoreLabel(context, entry)),
                 _DetailChip(label: _modeLabel(context, entry.sprintMode)),
                 if (entry.resultRating != null)
-                  _DetailChip(label: context.l10n.planPortfolioResultRating(entry.resultRating!)),
+                  _DetailChip(
+                      label: context.l10n
+                          .planPortfolioResultRating(entry.resultRating!)),
                 if (entry.selfRating != null)
-                  _DetailChip(label: context.l10n.planPortfolioSelfRating(entry.selfRating!)),
+                  _DetailChip(
+                      label: context.l10n
+                          .planPortfolioSelfRating(entry.selfRating!)),
               ],
             ),
             const SizedBox(height: DS.spacing12),
@@ -632,7 +643,8 @@ String _statusLine(BuildContext context, LearningPortfolioEntry entry) {
   final l10n = context.l10n;
   final mode = _modeLabel(context, entry.sprintMode);
   if (entry.isCompleted) {
-    final completedOn = _formatDate(context, entry.completedAt ?? entry.targetDate);
+    final completedOn =
+        _formatDate(context, entry.completedAt ?? entry.targetDate);
     return l10n.planPortfolioCompletedOn(mode, completedOn);
   }
   if (entry.isActive) {

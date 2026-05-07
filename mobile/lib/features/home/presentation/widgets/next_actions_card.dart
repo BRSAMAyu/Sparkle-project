@@ -547,7 +547,7 @@ class _DefaultNextActionItem extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     '${task.estimatedMinutes}m',
-                    style: TextStyle(fontSize: 9, color: DS.textSecondary),
+                    style: TextStyle(fontSize: 11, color: DS.textSecondary),
                   ),
                 ),
                 GestureDetector(

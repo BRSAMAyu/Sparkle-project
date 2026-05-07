@@ -283,7 +283,7 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell> {
               ),
               constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
-                count > 99 ? '99+' : '$count',
+                count > 9 ? '9+' : '$count',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 10,
@@ -330,7 +330,8 @@ class _ShellBranchTransition extends StatelessWidget {
       child: child,
       builder: (context, value, child) {
         final scale = MediaQuery.of(context).devicePixelRatio;
-        final slide = (1 - value) * (entersChat ? 18 : -10) / scale.clamp(1.0, 4.0);
+        final slide =
+            (1 - value) * (entersChat ? 12 : -10) / scale.clamp(1.0, 4.0);
         return Opacity(
           opacity: value,
           child: Transform.translate(

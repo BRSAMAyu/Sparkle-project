@@ -154,21 +154,21 @@ class SourceLifecycleBadge extends StatelessWidget {
         return _SourceAction(
           label: zh ? '切换替代来源' : 'Switch Source',
           icon: Icons.swap_horiz_rounded,
-          onPressed: onSwitchSource,
+          onPressed: onSwitchSource!,
         );
       case SourceLifecycleStatus.revoked:
         if (onReselectSource == null) return null;
         return _SourceAction(
           label: zh ? '重新选择' : 'Choose Again',
           icon: Icons.folder_open_rounded,
-          onPressed: onReselectSource,
+          onPressed: onReselectSource!,
         );
       case SourceLifecycleStatus.orphaned:
         if (onFindSimilar == null) return null;
         return _SourceAction(
           label: zh ? '查找类似' : 'Find Similar',
           icon: Icons.manage_search_rounded,
-          onPressed: onFindSimilar,
+          onPressed: onFindSimilar!,
         );
     }
   }

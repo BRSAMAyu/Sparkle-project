@@ -740,6 +740,10 @@ extension ChatNotifierActions on ChatNotifier {
     state = state.copyWith(clearGoalArbitration: true);
   }
 
+  void dismissDivineMoment() {
+    state = state.copyWith(clearDivineMoment: true);
+  }
+
   void dismissCausalTrace() {
     state = state.copyWith(pendingCausalTraceId: '');
   }

@@ -161,9 +161,14 @@ class DailyDetailScreen extends ConsumerWidget {
     WidgetRef ref,
     PlanModel plan,
   ) =>
-      GestureDetector(
-        onTap: () => context.push('/plans/${plan.id}'),
-        child: Container(
+      Semantics(
+        button: true,
+        label: I18nService.instance.isChinese
+            ? '查看计划 ${plan.name}'
+            : 'View plan ${plan.name}',
+        child: GestureDetector(
+          onTap: () => context.push('/plans/${plan.id}'),
+          child: Container(
           margin: const EdgeInsets.only(bottom: DS.spacing8),
           padding: const EdgeInsets.all(DS.md),
         decoration: BoxDecoration(
@@ -243,6 +248,7 @@ class DailyDetailScreen extends ConsumerWidget {
             ],
           ),
         ),
+      ),
       );
 
   Widget _buildCheckinSnapshot(

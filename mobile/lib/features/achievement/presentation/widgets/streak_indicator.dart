@@ -3,6 +3,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -83,38 +84,45 @@ class _StreakIndicatorCompact extends StatelessWidget {
   Color get _flameColor => DS.getStreakColor(streakStats.currentStreak);
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: DS.spacing8,
-            vertical: DS.spacing4,
-          ),
-          decoration: BoxDecoration(
-            color: _flameColor.withValues(alpha: 0.1),
-            borderRadius: DS.borderRadius12,
-            border: Border.all(
-              color: _flameColor.withValues(alpha: 0.3),
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: I18nService.instance.isChinese
+            ? '连胜 ${streakStats.currentStreak} 天'
+            : '${streakStats.currentStreak} day streak',
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DS.spacing8,
+              vertical: DS.spacing4,
             ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.local_fire_department_rounded,
-                size: DS.iconSizeSm,
-                color: _flameColor,
+            decoration: BoxDecoration(
+              color: _flameColor.withValues(alpha: 0.1),
+              borderRadius: DS.borderRadius12,
+              border: Border.all(
+                color: _flameColor.withValues(alpha: 0.3),
               ),
-              const SizedBox(width: DS.spacing4),
-              Text(
-                '${streakStats.currentStreak}',
-                style: TextStyle(
-                  fontSize: DS.fontSizeSm,
-                  fontWeight: DS.fontWeightBold,
-                  color: DS.textPrimary,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.local_fire_department_rounded,
+                  size: DS.iconSizeSm,
+                  color: _flameColor,
                 ),
-              ),
-            ],
+                const SizedBox(width: DS.spacing4),
+                Text(
+                  '${streakStats.currentStreak}',
+                  style: TextStyle(
+                    fontSize: DS.fontSizeSm,
+                    fontWeight: DS.fontWeightBold,
+                    color: DS.textPrimary,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -135,9 +143,14 @@ class _StreakIndicatorStandard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    return GestureDetector(
-      onTap: onTap,
-      child: LayoutBuilder(
+    return Semantics(
+      button: true,
+      label: I18nService.instance.isChinese
+          ? '连胜 ${streakStats.currentStreak} 天'
+          : '${streakStats.currentStreak} day streak',
+      child: GestureDetector(
+        onTap: onTap,
+        child: LayoutBuilder(
         builder: (context, constraints) {
           final compact = constraints.maxWidth < 320;
           return Container(
@@ -205,6 +218,7 @@ class _StreakIndicatorStandard extends StatelessWidget {
           );
         },
       ),
+    ),
     );
   }
 

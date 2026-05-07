@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/features/chat/presentation/providers/source_explanation_provider.dart';
 
@@ -193,35 +194,30 @@ class _SourceExplanationCardState extends ConsumerState<SourceExplanationCard> {
     required SourceExplanationItem source,
   }) async {
     setState(() => _pendingItemId = source.id);
-    final messenger = ScaffoldMessenger.of(context);
     try {
       await ref.read(sourceExplanationActionsProvider).submitAction(
             receiptId: receipt.receiptId,
             action: SourceReceiptAction.correct,
           );
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.sourceExplanationCorrectionSent),
-          action: SnackBarAction(
-            label: context.l10n.sourceExplanationUndo,
-            onPressed: () {
-              unawaited(
-                ref.read(sourceExplanationActionsProvider).submitAction(
-                      receiptId: receipt.receiptId,
-                      action: SourceReceiptAction.dismiss,
-                    ),
-              );
-            },
-          ),
-        ),
+      AppFeedback.undoable(
+        context: context,
+        message: context.l10n.sourceExplanationCorrectionSent,
+        actionLabel: context.l10n.sourceExplanationUndo,
+        onAction: () {
+          unawaited(
+            ref.read(sourceExplanationActionsProvider).submitAction(
+                  receiptId: receipt.receiptId,
+                  action: SourceReceiptAction.dismiss,
+                ),
+          );
+        },
       );
     } catch (_) {
       if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.sourceExplanationCorrectionFailed),
-        ),
+      AppFeedback.error(
+        context,
+        context.l10n.sourceExplanationCorrectionFailed,
       );
     } finally {
       if (mounted) {

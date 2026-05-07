@@ -86,8 +86,9 @@ class AppFeedback {
       ..showSnackBar(
         SparkleSnackBar.create(
           message: message,
-          backgroundColor: style.backgroundColor,
-          foregroundColor: style.foregroundColor,
+          accentColor: style.backgroundColor,
+          backgroundColor: DS.surfaceRoleColor(SparkleSurfaceRole.modal),
+          foregroundColor: DS.textPrimary,
           icon: style.icon,
           duration: style.duration,
           showCloseIcon: true,
@@ -138,7 +139,7 @@ class SparkleSnackBar {
 
   /// Creates a fully configured [SnackBar] for error messages.
   ///
-  /// Always shows a close icon and uses [errorDuration] (6 seconds).
+  /// Always shows a close icon and uses [errorDuration].
   static SnackBar error(
     String message, {
     Key? key,
@@ -148,8 +149,9 @@ class SparkleSnackBar {
       create(
         key: key,
         message: message,
-        backgroundColor: DS.semanticError,
-        foregroundColor: DS.neutral0,
+        accentColor: DS.semanticError,
+        backgroundColor: DS.surfaceRoleColor(SparkleSurfaceRole.modal),
+        foregroundColor: DS.textPrimary,
         icon: Icons.error_outline,
         duration: errorDuration,
         showCloseIcon: true,
@@ -165,8 +167,9 @@ class SparkleSnackBar {
       create(
         key: key,
         message: message,
-        backgroundColor: DS.semanticSuccess,
-        foregroundColor: DS.neutral0,
+        accentColor: DS.semanticSuccess,
+        backgroundColor: DS.surfaceRoleColor(SparkleSurfaceRole.modal),
+        foregroundColor: DS.textPrimary,
         icon: Icons.check_circle_outline,
         duration: successDuration,
         showCloseIcon: true,
@@ -180,8 +183,9 @@ class SparkleSnackBar {
       create(
         key: key,
         message: message,
-        backgroundColor: DS.semanticWarning,
-        foregroundColor: DS.neutral0,
+        accentColor: DS.semanticWarning,
+        backgroundColor: DS.surfaceRoleColor(SparkleSurfaceRole.modal),
+        foregroundColor: DS.textPrimary,
         icon: Icons.warning_amber_rounded,
         duration: warningDuration,
         showCloseIcon: true,
@@ -196,7 +200,8 @@ class SparkleSnackBar {
       create(
         key: key,
         message: message,
-        backgroundColor: DS.surfaceTertiary,
+        accentColor: DS.info,
+        backgroundColor: DS.surfaceRoleColor(SparkleSurfaceRole.modal),
         foregroundColor: DS.textPrimary,
         icon: Icons.info_outline,
         duration: duration ?? infoDuration,
@@ -213,6 +218,7 @@ class SparkleSnackBar {
     Key? key,
     Color? backgroundColor,
     Color? foregroundColor,
+    Color? accentColor,
     IconData? icon,
     Duration duration = errorDuration,
     bool showCloseIcon = true,
@@ -222,30 +228,57 @@ class SparkleSnackBar {
     Color? actionTextColor,
     DismissDirection dismissDirection = DismissDirection.horizontal,
   }) {
+    final resolvedAccent = accentColor ?? backgroundColor ?? DS.semanticError;
+    final resolvedForeground = foregroundColor ?? DS.textPrimary;
+
     return SnackBar(
       key: key,
       behavior: SnackBarBehavior.floating,
       duration: duration,
-      backgroundColor: backgroundColor ?? DS.semanticError,
+      backgroundColor:
+          backgroundColor ?? DS.surfaceRoleColor(SparkleSurfaceRole.modal),
+      elevation: 0,
+      margin: const EdgeInsets.fromLTRB(
+        DS.spacing16,
+        0,
+        DS.spacing16,
+        DS.spacing16,
+      ),
       showCloseIcon: showCloseIcon,
-      closeIconColor: closeIconColor ?? foregroundColor ?? DS.neutral0,
+      closeIconColor: closeIconColor ?? resolvedForeground,
       dismissDirection: dismissDirection,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: DS.borderSubtle),
       ),
-      content: Row(
-        children: [
-          if (icon != null) ...[
-            Icon(icon, color: foregroundColor ?? DS.neutral0, size: 18),
-            const SizedBox(width: DS.spacing8),
-          ],
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: foregroundColor ?? DS.neutral0),
+      content: IntrinsicHeight(
+        child: Row(
+          children: [
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: resolvedAccent,
+                borderRadius: BorderRadius.circular(999),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: DS.spacing12),
+            if (icon != null) ...[
+              Icon(icon, color: resolvedAccent, size: 20),
+              const SizedBox(width: DS.spacing10),
+            ],
+            Expanded(
+              child: Text(
+                message,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: DS.bodyMedium.copyWith(
+                  color: resolvedForeground,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
       action: actionLabel != null && onAction != null
           ? SnackBarAction(

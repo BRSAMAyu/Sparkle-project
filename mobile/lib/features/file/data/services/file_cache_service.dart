@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -10,7 +11,13 @@ final fileCacheServiceProvider =
     Provider<FileCacheService>((ref) => FileCacheService());
 
 class FileCacheService {
-  FileCacheService() : _dio = Dio() {
+  FileCacheService()
+      : _dio = Dio(
+          BaseOptions(
+            connectTimeout: const Duration(seconds: 10),
+            receiveTimeout: const Duration(seconds: 30),
+          ),
+        ) {
     _cache = SmartCache<String, _CachedFile>(
       maxSize: _maxEntries,
       maxAge: _maxAge,
@@ -52,12 +59,17 @@ class FileCacheService {
     final safeKey = _sanitizeKey(key);
     final filePath = p.join(dir.path, '$safeKey${extension ?? ''}');
 
-    final response = await _dio.get<List<int>>(
-      url,
-      options: Options(responseType: ResponseType.bytes),
-    );
-
-    final bytes = response.data ?? [];
+    List<int> bytes;
+    try {
+      final response = await _dio.get<List<int>>(
+        url,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      bytes = response.data ?? [];
+    } on DioException catch (e) {
+      debugPrint('FileCacheService: failed to fetch $url: $e');
+      return null;
+    }
     final file = File(filePath);
     await file.writeAsBytes(bytes, flush: true);
 

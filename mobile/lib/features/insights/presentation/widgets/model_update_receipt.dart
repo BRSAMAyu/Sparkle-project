@@ -90,11 +90,7 @@ class ModelUpdateReceipt extends StatelessWidget {
   }
 
   void _showMessage(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-      ),
-    );
+    AppFeedback.info(context, message);
   }
 }
 
@@ -130,7 +126,7 @@ class _ReceiptLine extends StatelessWidget {
             value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: colors.onSurface,
-                  height: 1.45,
+                  height: 1.52,
                 ),
           ),
         ],

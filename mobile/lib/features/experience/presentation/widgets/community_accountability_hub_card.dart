@@ -95,7 +95,7 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
                         style: TextStyle(
                           color: DS.textPrimary,
                           fontSize: DS.fontSizeSm,
-                          height: 1.38,
+                          height: 1.52,
                           fontWeight: DS.fontWeightMedium,
                         ),
                       ),
@@ -113,13 +113,13 @@ class _CommunityAccountabilitySurface extends StatelessWidget {
                   SparkleButton.primary(
                     label: zh ? '设定承诺' : 'Set commitment',
                     icon: const Icon(Icons.flag_rounded),
-                    onPressed: onCreateCommitment,
+                    onPressed: onCreateCommitment!,
                   ),
                 if (onFindPartners != null)
                   SparkleButton.ghost(
                     label: zh ? '找目标伙伴' : 'Find partners',
                     icon: const Icon(Icons.group_add_rounded),
-                    onPressed: onFindPartners,
+                    onPressed: onFindPartners!,
                   ),
               ],
             ),

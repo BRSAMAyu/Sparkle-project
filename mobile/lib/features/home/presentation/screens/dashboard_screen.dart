@@ -522,7 +522,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 _OnboardingQuickCard(
                   icon: Icons.chat_bubble_outline,
                   color: DS.success,
-                  title: I18nService.instance.isChinese ? '跟Sparkle聊聊' : 'Chat with Sparkle',
+                  title: I18nService.instance.isChinese
+                      ? '跟Sparkle聊聊'
+                      : 'Chat with Sparkle',
                   subtitle: I18nService.instance.isChinese
                       ? '聊聊你的想法，获得个性化建议'
                       : 'Share your thoughts, get personalized guidance',
@@ -532,7 +534,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 _OnboardingQuickCard(
                   icon: Icons.explore_outlined,
                   color: DS.info,
-                  title: I18nService.instance.isChinese ? '探索知识星图' : 'Explore knowledge map',
+                  title: I18nService.instance.isChinese
+                      ? '探索知识星图'
+                      : 'Explore knowledge map',
                   subtitle: I18nService.instance.isChinese
                       ? '发现你的知识结构，找到提升方向'
                       : 'Discover your knowledge structure and growth areas',
@@ -1412,7 +1416,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           // Layer 2: Dashboard Content
           SafeArea(
             bottom: false,
-            child: RefreshIndicator(
+            child: SparkleRefreshIndicator(
               onRefresh: () async {
                 await ref.read(dashboardProvider.notifier).refresh();
                 await ref.read(taskListProvider.notifier).refreshTasks();
@@ -1779,7 +1783,7 @@ class _AccountabilityMiniCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: textTheme.bodySmall?.copyWith(
                 color: scheme.onSurfaceVariant,
-                height: 1.3,
+                height: 1.52,
               ),
             ),
           ],
@@ -2115,7 +2119,7 @@ class _CommandCenterContent extends StatelessWidget {
                     style: context.sparkleTypography.titleLarge.copyWith(
                       color: DS.textPrimary,
                       fontWeight: DS.fontWeightBold,
-                      height: 1.18,
+                      height: 1.52,
                     ),
                   ),
                   if (summary.isNotEmpty) ...[
@@ -2126,7 +2130,7 @@ class _CommandCenterContent extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       style: context.sparkleTypography.bodySmall.copyWith(
                         color: DS.textSecondary,
-                        height: 1.35,
+                        height: 1.52,
                       ),
                     ),
                   ],
@@ -2376,7 +2380,7 @@ class _CommandCenterRiskBanner extends StatelessWidget {
                   style: context.sparkleTypography.bodySmall.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightMedium,
-                    height: 1.3,
+                    height: 1.52,
                   ),
                 ),
               ),
@@ -2606,7 +2610,7 @@ class _DailyBriefingCard extends StatelessWidget {
                                 style: context.sparkleTypography.bodySmall
                                     .copyWith(
                                   color: DS.textSecondary,
-                                  height: 1.35,
+                                  height: 1.52,
                                 ),
                               ),
                             ],
@@ -2682,7 +2686,7 @@ class _BriefingBlock extends StatelessWidget {
                 summary,
                 style: context.sparkleTypography.bodyMedium.copyWith(
                   color: DS.textSecondary,
-                  height: 1.35,
+                  height: 1.52,
                 ),
               ),
             ],
@@ -2804,7 +2808,7 @@ class _BriefingDetailTile extends StatelessWidget {
                     summary,
                     style: context.sparkleTypography.bodySmall.copyWith(
                       color: DS.textSecondary,
-                      height: 1.35,
+                      height: 1.52,
                     ),
                   ),
                 ],
@@ -3152,32 +3156,38 @@ class _GoalChip extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 44),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: DS.brandPrimary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: DS.brandPrimary.withValues(alpha: 0.2),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(icon, size: 15, color: DS.brandPrimary),
-                const SizedBox(width: 6),
-                Text(
-                  label,
-                  style: DS.labelSmall.copyWith(
-                    color: DS.brandPrimary,
-                    fontWeight: FontWeight.w500,
-                  ),
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: I18nService.instance.isChinese
+            ? '选择目标: $label'
+            : 'Select goal: $label',
+        child: GestureDetector(
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: DS.brandPrimary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: DS.brandPrimary.withValues(alpha: 0.2),
                 ),
-              ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: 15, color: DS.brandPrimary),
+                  const SizedBox(width: 6),
+                  Text(
+                    label,
+                    style: DS.labelSmall.copyWith(
+                      color: DS.brandPrimary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

@@ -191,39 +191,46 @@ class _BgmLibraryScreenState extends State<BgmLibraryScreen> {
       ),
       body: _loading
           ? const SparkleListSkeleton()
-          : ListView(
+          : ListView.builder(
               padding: const EdgeInsets.fromLTRB(
                 DS.spacing16,
                 DS.spacing12,
                 DS.spacing16,
                 DS.spacing32,
               ),
-              children: [
-                _buildNowPlayingCard(),
-                const SizedBox(height: DS.spacing12),
-                _buildPlayerModeCard(),
-                const SizedBox(height: DS.spacing12),
-                _buildQuickStrategyCard(),
-                const SizedBox(height: DS.spacing12),
-                _buildLibraryStatsCard(snapshot),
-                const SizedBox(height: DS.spacing12),
-                _buildImportCard(),
-                const SizedBox(height: DS.spacing12),
-                _buildFilterBar(),
-                const SizedBox(height: DS.spacing12),
-                if (_filteredEntries.isEmpty)
-                  GraphiteCardSurface(
-                    child: Padding(
-                      padding: const EdgeInsets.all(DS.spacing16),
-                      child: Text(
-                        context.l10n.bgmLibraryEmptyFilter,
-                        style: DS.bodyMedium.copyWith(color: DS.textSecondary),
-                      ),
-                    ),
-                  )
-                else
-                  ..._filteredEntries.map(_buildEntryCard),
-              ],
+              itemCount: 12 + (_filteredEntries.isEmpty
+                  ? 1
+                  : _filteredEntries.length),
+              itemBuilder: (context, index) {
+                switch (index) {
+                  case 0: return _buildNowPlayingCard();
+                  case 1: return const SizedBox(height: DS.spacing12);
+                  case 2: return _buildPlayerModeCard();
+                  case 3: return const SizedBox(height: DS.spacing12);
+                  case 4: return _buildQuickStrategyCard();
+                  case 5: return const SizedBox(height: DS.spacing12);
+                  case 6: return _buildLibraryStatsCard(snapshot);
+                  case 7: return const SizedBox(height: DS.spacing12);
+                  case 8: return _buildImportCard();
+                  case 9: return const SizedBox(height: DS.spacing12);
+                  case 10: return _buildFilterBar();
+                  case 11: return const SizedBox(height: DS.spacing12);
+                  default:
+                    if (_filteredEntries.isEmpty) {
+                      return GraphiteCardSurface(
+                        child: Padding(
+                          padding: const EdgeInsets.all(DS.spacing16),
+                          child: Text(
+                            context.l10n.bgmLibraryEmptyFilter,
+                            style:
+                                DS.bodyMedium.copyWith(color: DS.textSecondary),
+                          ),
+                        ),
+                      );
+                    }
+                    return _buildEntryCard(_filteredEntries[index - 12]);
+                }
+              },
             ),
     );
   }

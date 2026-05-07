@@ -282,31 +282,24 @@ class CompactEmptyState extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Container(
-                  width: 64.0,
-                  height: 64.0,
-                  decoration: BoxDecoration(
-                    color: DS.neutral100,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    icon,
-                    size: DS.iconSizeLg,
-                    color: context.colors.textSecondary,
-                  ),
+                Icon(
+                  icon,
+                  size: 64,
+                  color: context.colors.textSecondary,
                 ),
                 const SizedBox(height: DS.spacing16),
               ],
               Text(
                 message,
-                style: TextStyle(
-                  fontSize: DS.fontSizeBase,
+                style: context.sparkleTypography.bodyMedium.copyWith(
                   color: context.colors.textSecondary,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
               ),
               if (onAction != null && actionText != null) ...[
-                const SizedBox(height: DS.spacing16),
+                const SizedBox(height: DS.spacing24),
                 CustomButton.text(
                   text: actionText!,
                   onPressed: onAction,

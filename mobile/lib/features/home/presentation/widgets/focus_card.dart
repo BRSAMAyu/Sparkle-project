@@ -153,8 +153,8 @@ class _FocusCardState extends ConsumerState<FocusCard>
                               nudgeMessage,
                               style:
                                   context.sparkleTypography.bodyMedium.copyWith(
-                                fontSize: 9,
-                                height: 1.2,
+                                fontSize: DS.fontSizeXs,
+                                height: 1.4,
                                 color: DS.textSecondary,
                                 fontStyle: FontStyle.italic,
                               ),

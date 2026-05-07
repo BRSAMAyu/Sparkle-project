@@ -73,7 +73,7 @@ class _StrategyMigrationWizardState
             child: suggestions.when(
               data: (bundle) => _buildStep(context, bundle),
               loading: () => const Padding(
-                padding: EdgeInsets.symmetric(vertical: 18),
+                padding: EdgeInsets.symmetric(vertical: DS.spacing18),
                 child: LinearProgressIndicator(minHeight: 4),
               ),
               error: (_, __) => _ErrorLine(
@@ -140,9 +140,7 @@ class _StrategyMigrationWizardState
     } catch (_) {
       if (!mounted) return;
       setState(() => _submitting = false);
-      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-        SnackBar(content: Text(_t('策略迁移失败', 'Migration failed'))),
-      );
+      AppFeedback.error(context, _t('策略迁移失败', 'Migration failed'));
     }
   }
 }

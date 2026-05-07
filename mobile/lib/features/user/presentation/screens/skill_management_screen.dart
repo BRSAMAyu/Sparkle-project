@@ -99,43 +99,53 @@ class _SkillManagementScreenState extends ConsumerState<SkillManagementScreen>
                     child: TabBarView(
                       controller: _tabController,
                       children: [
-                        RefreshIndicator(
+                        SparkleRefreshIndicator(
                           onRefresh: _load,
-                          child: ListView(
+                          child: ListView.builder(
                             padding: const EdgeInsets.symmetric(
                               vertical: DS.spacing16,
                             ),
-                            children: [
-                              _buildIntroCard(),
-                              const SizedBox(height: DS.spacing12),
-                              ..._skills.map(_buildSkillCard),
-                              if (_skills.isEmpty)
-                                Padding(
+                            itemCount:
+                                2 + (_skills.isEmpty ? 1 : _skills.length),
+                            itemBuilder: (context, index) {
+                              if (index == 0) return _buildIntroCard();
+                              if (index == 1) {
+                                return const SizedBox(height: DS.spacing12);
+                              }
+                              if (_skills.isEmpty) {
+                                return Padding(
                                   padding:
                                       const EdgeInsets.only(top: DS.spacing24),
                                   child: Center(
                                       child: Text(context.l10n.skillEmptyMy)),
-                                ),
-                            ],
+                                );
+                              }
+                              return _buildSkillCard(_skills[index - 2]);
+                            },
                           ),
                         ),
-                        RefreshIndicator(
+                        SparkleRefreshIndicator(
                           onRefresh: _load,
-                          child: ListView(
+                          child: ListView.builder(
                             padding: const EdgeInsets.symmetric(
                               vertical: DS.spacing16,
                             ),
-                            children: [
-                              ..._sharedSkills.map(_buildSharedSkillCard),
-                              if (_sharedSkills.isEmpty)
-                                Padding(
+                            itemCount: _sharedSkills.isEmpty
+                                ? 1
+                                : _sharedSkills.length,
+                            itemBuilder: (context, index) {
+                              if (_sharedSkills.isEmpty) {
+                                return Padding(
                                   padding:
                                       const EdgeInsets.only(top: DS.spacing24),
                                   child: Center(
                                       child:
                                           Text(context.l10n.skillEmptyShared)),
-                                ),
-                            ],
+                                );
+                              }
+                              return _buildSharedSkillCard(
+                                  _sharedSkills[index]);
+                            },
                           ),
                         ),
                       ],
@@ -572,8 +582,8 @@ class _SkillDraftRequestDialog extends ConsumerStatefulWidget {
 
 class _SkillDraftRequestDialogState
     extends ConsumerState<_SkillDraftRequestDialog> {
-  late final TextEditingController _consentController =
-      TextEditingController(text: AppLocalizations.of(context)!.skillDraftConsentDefault);
+  late final TextEditingController _consentController = TextEditingController(
+      text: AppLocalizations.of(context)!.skillDraftDefaultConsent);
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _assistantController = TextEditingController();
   bool _submitting = false;

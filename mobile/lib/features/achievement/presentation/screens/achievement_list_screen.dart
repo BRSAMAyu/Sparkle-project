@@ -170,7 +170,7 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
       role: SparklePageRole.immersive,
       safeArea: false,
       child: ContentConstraint(
-        child: RefreshIndicator(
+        child: SparkleRefreshIndicator(
           onRefresh: _refreshAchievements,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -759,11 +759,15 @@ class _AchievementListScreenState extends ConsumerState<AchievementListScreen>
 
     return EmptyState(
       icon: Icons.emoji_events_outlined,
-      title: hasFilters ? l10n.achievementNoMatch : l10n.achievementListEmptyNoUnlock,
+      title: hasFilters
+          ? l10n.achievementNoMatch
+          : l10n.achievementListEmptyNoUnlock,
       description: hasFilters
           ? l10n.achievementAdjustFilter
           : l10n.achievementListEmptyDescription,
-      actionText: hasFilters ? l10n.achievementListClearFilter : l10n.achievementListCreateTask,
+      actionText: hasFilters
+          ? l10n.achievementListClearFilter
+          : l10n.achievementListCreateTask,
       onAction: () {
         if (hasFilters) {
           _searchController.clear();

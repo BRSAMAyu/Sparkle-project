@@ -127,7 +127,7 @@ class _GoalDetailSnapshotSurface extends StatelessWidget {
                               style: TextStyle(
                                 color: DS.textPrimary,
                                 fontSize: DS.fontSizeSm,
-                                height: 1.35,
+                                height: 1.52,
                               ),
                             ),
                           ),
@@ -151,7 +151,7 @@ class _GoalDetailSnapshotSurface extends StatelessWidget {
                   style: TextStyle(
                     color: DS.textPrimary,
                     fontSize: DS.fontSizeSm,
-                    height: 1.35,
+                    height: 1.52,
                   ),
                 ),
               ),

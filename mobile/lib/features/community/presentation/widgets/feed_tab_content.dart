@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/components/atoms/sparkle_pressable.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -28,9 +29,8 @@ class FeedTabContent extends ConsumerWidget {
     final feedState = ref.watch(feedProvider);
 
     return ContentConstraint(
-      child: RefreshIndicator(
+      child: SparkleRefreshIndicator(
         onRefresh: () => ref.read(feedProvider.notifier).refresh(),
-        color: DS.primaryBase,
         child: feedState.when(
           data: (posts) {
             if (posts.isEmpty) {
@@ -50,9 +50,8 @@ class FeedTabContent extends ConsumerWidget {
                     index: index - 1,
                     child: FeedPostCard(
                       post: post,
-                      onLike: () => ref
-                          .read(feedProvider.notifier)
-                          .toggleLike(post.id),
+                      onLike: () =>
+                          ref.read(feedProvider.notifier).toggleLike(post.id),
                     ),
                   );
                 },
@@ -71,15 +70,12 @@ class FeedTabContent extends ConsumerWidget {
                 ),
                 SparkleButton.ghost(
                   label: context.l10n.communityRetry,
-                  onPressed: () =>
-                      ref.read(feedProvider.notifier).refresh(),
+                  onPressed: () => ref.read(feedProvider.notifier).refresh(),
                 ),
               ],
             ),
           ),
-          loading: () => Center(
-            child: CircularProgressIndicator(color: DS.primaryBase),
-          ),
+          loading: () => const SparkleListSkeleton(count: 5),
         ),
       ),
     );

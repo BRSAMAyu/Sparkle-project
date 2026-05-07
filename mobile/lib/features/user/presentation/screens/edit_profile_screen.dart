@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
@@ -400,11 +401,16 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                 const SizedBox(height: DS.spacing20),
                 // Avatar Section
                 Center(
-                  child: GestureDetector(
-                    onTap: _isLoading ? null : _pickAndUploadAvatar,
-                    child: Stack(
-                      children: [
-                        SparkleAvatar(
+                  child: Semantics(
+                    button: true,
+                    label: I18nService.instance.isChinese
+                        ? '上传头像'
+                        : 'Upload avatar',
+                    child: GestureDetector(
+                      onTap: _isLoading ? null : _pickAndUploadAvatar,
+                      child: Stack(
+                        children: [
+                          SparkleAvatar(
                           radius: 50,
                           backgroundColor: isDark
                               ? DS.brandPrimary.shade800
@@ -439,6 +445,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         ),
                       ],
                     ),
+                  ),
                   ),
                 ),
                 if (user?.avatarStatus == AvatarStatus.pending) ...[

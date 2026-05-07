@@ -66,7 +66,7 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
         child: jobsState.when(
           data: (jobs) => jobs.isEmpty
               ? _buildEmptyState()
-              : RefreshIndicator(
+              : SparkleRefreshIndicator(
                   onRefresh: () =>
                       ref.read(generationJobsProvider.notifier).fetchJobs(),
                   child: ListView.builder(
@@ -92,7 +92,8 @@ class _CapsuleJobsScreenState extends ConsumerState<CapsuleJobsScreen> {
             context: context,
             title: context.l10n.cogJobsLoadFailed,
             message: l10n.capsuleLoadFailed('$err'),
-            onRetry: () => ref.read(generationJobsProvider.notifier).fetchJobs(),
+            onRetry: () =>
+                ref.read(generationJobsProvider.notifier).fetchJobs(),
           ),
         ),
       ),
@@ -340,5 +341,4 @@ class _JobCard extends ConsumerWidget {
         return DS.error;
     }
   }
-
 }

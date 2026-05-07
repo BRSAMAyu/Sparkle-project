@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 
@@ -114,7 +115,11 @@ class _LearningModeControlState extends State<LearningModeControl> {
                       ),
                     ],
                   ),
-                  child: GestureDetector(
+                  child: Semantics(
+                    label: I18nService.instance.isChinese
+                        ? '学习偏好调节：拖动调整好奇深度'
+                        : 'Learning preference: drag to adjust curiosity and depth',
+                    child: GestureDetector(
                     onPanUpdate: (details) {
                       _updatePosition(
                         details.localPosition,
@@ -254,6 +259,7 @@ class _LearningModeControlState extends State<LearningModeControl> {
                   ),
                 ),
               ),
+            ),
             );
           },
         ),

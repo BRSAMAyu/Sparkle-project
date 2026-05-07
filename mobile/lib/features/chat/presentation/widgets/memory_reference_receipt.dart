@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/memory_api_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
@@ -39,9 +40,8 @@ class MemoryReferenceReceipt extends ConsumerWidget {
           onTap: () {
             unawaited(SensoryFeedbackService.emit(SensoryFeedbackEvent.tap));
             unawaited(
-              showModalBottomSheet<void>(
+              showSensoryModalBottomSheet<void>(
                 context: context,
-                backgroundColor: Colors.transparent,
                 isScrollControlled: true,
                 builder: (_) => _MemoryReceiptSheet(
                   receipt: receipt,

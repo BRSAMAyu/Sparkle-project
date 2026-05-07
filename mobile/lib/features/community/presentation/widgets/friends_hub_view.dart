@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -38,45 +39,87 @@ class FriendsHubView extends ConsumerWidget {
     final overview = overviewAsync.valueOrNull;
     final pending = pendingAsync.valueOrNull ?? const <FriendshipInfo>[];
 
-    return RefreshIndicator(
+    return SparkleRefreshIndicator(
       onRefresh: () async {
         await ref.read(friendsProvider.notifier).refresh();
         await ref.read(pendingRequestsProvider.notifier).refresh();
         await ref.read(myPartnershipsProvider.notifier).load();
         ref.invalidate(accountabilityOverviewProvider);
       },
-      child: ListView(
+      child: ListView.builder(
         padding: padding,
-        children: [
-          _PartnerHero(overview: overview),
-          if (overview?.inAppHints.isNotEmpty ?? false) ...[
-            const SizedBox(height: 12),
-            _InAppHintBanner(hint: overview!.inAppHints.first),
-          ],
-          if (pending.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            _PendingInviteBanner(count: pending.length),
-          ],
-          const SizedBox(height: 18),
-          Text(
-            context.l10n.communityFriends,
-            style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
-          ),
-          const SizedBox(height: 10),
-          if (friendsAsync.hasError)
-            _InlineError(message: friendsAsync.error.toString())
-          else if (friends.isEmpty)
-            _EmptyFriendsCard(overview: overview)
-          else
-            ...friends.map(
-              (friendship) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: _FriendCard(friendship: friendship, overview: overview),
-              ),
+        itemCount: _friendsItemCount(
+          overview,
+          pending,
+          friendsAsync,
+          friends,
+        ),
+        itemBuilder: (context, index) {
+          // Fixed header section
+          if (index == 0) return _PartnerHero(overview: overview);
+          var offset = 1;
+          if (overview?.inAppHints.isNotEmpty ?? false) {
+            if (index == offset) return const SizedBox(height: 12);
+            offset++;
+            if (index == offset) {
+              return _InAppHintBanner(hint: overview!.inAppHints.first);
+            }
+            offset++;
+          }
+          if (pending.isNotEmpty) {
+            if (index == offset) return const SizedBox(height: 12);
+            offset++;
+            if (index == offset) {
+              return _PendingInviteBanner(count: pending.length);
+            }
+            offset++;
+          }
+          if (index == offset) return const SizedBox(height: 18);
+          offset++;
+          if (index == offset) {
+            return Text(
+              context.l10n.communityFriends,
+              style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
+            );
+          }
+          offset++;
+          if (index == offset) return const SizedBox(height: 10);
+          offset++;
+          // Dynamic friends list or error/empty state
+          if (friendsAsync.hasError) {
+            return _InlineError(message: friendsAsync.error.toString());
+          }
+          if (friends.isEmpty) {
+            return _EmptyFriendsCard(overview: overview);
+          }
+          final friendIndex = index - offset;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _FriendCard(
+              friendship: friends[friendIndex],
+              overview: overview,
             ),
-        ],
+          );
+        },
       ),
     );
+  }
+
+  static int _friendsItemCount(
+    AccountabilityOverviewInfo? overview,
+    List<FriendshipInfo> pending,
+    AsyncValue<List<FriendshipInfo>> friendsAsync,
+    List<FriendshipInfo> friends,
+  ) {
+    var count = 4; // hero + spacing(18) + title + spacing(10)
+    if (overview?.inAppHints.isNotEmpty ?? false) count += 2;
+    if (pending.isNotEmpty) count += 2;
+    if (friendsAsync.hasError || friends.isEmpty) {
+      count += 1; // error or empty state
+    } else {
+      count += friends.length;
+    }
+    return count;
   }
 }
 
@@ -171,7 +214,8 @@ class _PartnerHero extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         pendingCount > 0
-                            ? context.l10n.communityPendingInvitesCount(pendingCount)
+                            ? context.l10n
+                                .communityPendingInvitesCount(pendingCount)
                             : context.l10n.communityPartnerDescription,
                         style: DS.bodySmall.copyWith(color: DS.textSecondary),
                       ),
@@ -182,7 +226,9 @@ class _PartnerHero extends ConsumerWidget {
             ),
             const SizedBox(height: 14),
             SparkleButton(
-              label: pendingCount > 0 ? context.l10n.communityViewPartnerInvites : context.l10n.communityChoosePartner,
+              label: pendingCount > 0
+                  ? context.l10n.communityViewPartnerInvites
+                  : context.l10n.communityChoosePartner,
               expand: true,
               onPressed: () {
                 if (pendingCount > 0) {
@@ -270,7 +316,10 @@ class _PartnerHero extends ConsumerWidget {
                         Text(
                           relationshipSummary == null
                               ? context.l10n.communityWorkspaceReady
-                              : context.l10n.communityTogetherDays((relationshipSummary['days_together'] as num?)?.toInt() ?? 0),
+                              : context.l10n.communityTogetherDays(
+                                  (relationshipSummary['days_together'] as num?)
+                                          ?.toInt() ??
+                                      0),
                           style: DS.bodySmall.copyWith(color: DS.textSecondary),
                         ),
                       ],
@@ -285,16 +334,24 @@ class _PartnerHero extends ConsumerWidget {
                 children: [
                   _MetricChip(
                     label: context.l10n.communityMe,
-                    value: context.l10n.communityMyStreakDays((relationshipSummary?['my_streak_days'] as num?)?.toInt() ?? 0),
+                    value: context.l10n.communityMyStreakDays(
+                        (relationshipSummary?['my_streak_days'] as num?)
+                                ?.toInt() ??
+                            0),
                   ),
                   _MetricChip(
                     label: 'TA',
-                    value:
-                        context.l10n.communityPartnerStreakDays((relationshipSummary?['partner_streak_days'] as num?)?.toInt() ?? 0),
+                    value: context.l10n.communityPartnerStreakDays(
+                        (relationshipSummary?['partner_streak_days'] as num?)
+                                ?.toInt() ??
+                            0),
                   ),
                   _MetricChip(
                     label: '合计',
-                    value: context.l10n.communityTotalCheckins((relationshipSummary?['total_checkins'] as num?)?.toInt() ?? 0),
+                    value: context.l10n.communityTotalCheckins(
+                        (relationshipSummary?['total_checkins'] as num?)
+                                ?.toInt() ??
+                            0),
                   ),
                 ],
               ),
@@ -337,7 +394,10 @@ class _PartnerHero extends ConsumerWidget {
                                 context.l10n.communityNudgeCooldown,
                               );
                             } else {
-                              AppFeedback.error(context, context.l10n.communityNudgeFailed(e.toString()));
+                              AppFeedback.error(
+                                  context,
+                                  context.l10n
+                                      .communityNudgeFailed(e.toString()));
                             }
                           }
                         }
@@ -378,7 +438,8 @@ class _PendingInviteBanner extends StatelessWidget {
             Expanded(
               child: Text(
                 context.l10n.communityPartnerRequestCount(count),
-                style: DS.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
+                style:
+                    DS.bodyMedium.copyWith(fontWeight: DS.fontWeightSemibold),
               ),
             ),
             SparkleButton.ghost(
@@ -442,7 +503,7 @@ class _FriendCard extends StatelessWidget {
             CircleAvatar(
               radius: 24,
               backgroundImage: friend.avatarUrl != null
-                  ? NetworkImage(friend.avatarUrl!)
+                  ? CachedNetworkImageProvider(friend.avatarUrl!)
                   : null,
               child: friend.avatarUrl == null
                   ? Text(friend.displayName.characters.first)
@@ -466,10 +527,14 @@ class _FriendCard extends StatelessWidget {
                       ),
                       if (isCorePartner) ...[
                         const SizedBox(width: 8),
-                        _Pill(label: context.l10n.communityAccountabilityPartner, color: DS.brandPrimary),
+                        _Pill(
+                            label: context.l10n.communityAccountabilityPartner,
+                            color: DS.brandPrimary),
                       ] else if (accountability?.isPending == true) ...[
                         const SizedBox(width: 8),
-                        _Pill(label: context.l10n.communityPendingConfirm, color: DS.warning),
+                        _Pill(
+                            label: context.l10n.communityPendingConfirm,
+                            color: DS.warning),
                       ],
                     ],
                   ),
@@ -522,11 +587,13 @@ class _FriendCard extends StatelessWidget {
                       children: [
                         if (accountability.myStreakDays != null)
                           _TinyMetric(
-                            label: context.l10n.communityMyDays(accountability.myStreakDays ?? 0),
+                            label: context.l10n.communityMyDays(
+                                accountability.myStreakDays ?? 0),
                           ),
                         if (accountability.partnerStreakDays != null)
                           _TinyMetric(
-                            label: context.l10n.communityPartnerDays(accountability.partnerStreakDays ?? 0),
+                            label: context.l10n.communityPartnerDays(
+                                accountability.partnerStreakDays ?? 0),
                           ),
                         if (accountability.partnerCheckedInToday != null)
                           _TinyMetric(
@@ -690,7 +757,9 @@ class _EmptyFriendsCard extends StatelessWidget {
           Icon(Icons.people_outline, size: 42, color: DS.neutral400),
           const SizedBox(height: 12),
           Text(
-            hasPending ? context.l10n.communityPendingFirst : context.l10n.communityNoFriendsYet,
+            hasPending
+                ? context.l10n.communityPendingFirst
+                : context.l10n.communityNoFriendsYet,
             style: DS.bodyLarge.copyWith(fontWeight: DS.fontWeightBold),
           ),
           const SizedBox(height: 6),

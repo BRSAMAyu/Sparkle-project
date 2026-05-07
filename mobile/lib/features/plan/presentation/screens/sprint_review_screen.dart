@@ -29,7 +29,8 @@ class SprintReviewScreen extends ConsumerWidget {
 
     final progress = sprint?.progress ?? plan?.progress ?? 0.0;
     final daysLeft = sprint?.daysLeft ?? 0;
-    final sprintName = sprint?.name ?? plan?.name ?? (context.l10n.sprintDefaultName);
+    final sprintName =
+        sprint?.name ?? plan?.name ?? (context.l10n.sprintDefaultName);
 
     return Scaffold(
       backgroundColor: DS.surfacePrimary,
@@ -157,59 +158,59 @@ class _ProgressHero extends StatelessWidget {
       explicitChildNodes: true,
       label: context.l10n.sprintProgressLabel(name, '$percent', '$daysLeft'),
       child: Container(
-      padding: const EdgeInsets.all(DS.spacing20),
-      decoration: BoxDecoration(
-        color: DS.surfaceHigh,
-        borderRadius: DS.borderRadius20,
-        border: Border.all(color: DS.borderSubtle),
-      ),
-      child: Column(
-        children: [
-          Text(
-            name,
-            style: DS.bodyMedium.copyWith(
-              color: DS.textPrimary,
-              fontWeight: DS.fontWeightBold,
+        padding: const EdgeInsets.all(DS.spacing20),
+        decoration: BoxDecoration(
+          color: DS.surfaceHigh,
+          borderRadius: DS.borderRadius20,
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Column(
+          children: [
+            Text(
+              name,
+              style: DS.bodyMedium.copyWith(
+                color: DS.textPrimary,
+                fontWeight: DS.fontWeightBold,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: progress.clamp(0.0, 1.0)),
-            duration: DS.durationSlow,
-            builder: (context, value, child) => Column(
-              children: [
-                Text(
-                  '$percent%',
-                  style: DS.headingLarge.copyWith(
-                    color: color,
-                    fontWeight: DS.fontWeightBold,
+            const SizedBox(height: 16),
+            TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: progress.clamp(0.0, 1.0)),
+              duration: DS.durationSlow,
+              builder: (context, value, child) => Column(
+                children: [
+                  Text(
+                    '$percent%',
+                    style: DS.headingLarge.copyWith(
+                      color: color,
+                      fontWeight: DS.fontWeightBold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: value,
-                    minHeight: 8,
-                    backgroundColor: color.withValues(alpha: 0.12),
-                    valueColor: AlwaysStoppedAnimation(color),
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: value,
+                      minHeight: 8,
+                      backgroundColor: color.withValues(alpha: 0.12),
+                      valueColor: AlwaysStoppedAnimation(color),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            daysLeft > 0
-                ? context.l10n.sprintDaysLeftShort('$daysLeft')
-                : context.l10n.sprintOverdue,
-            style: DS.labelSmall.copyWith(
-              color: isUrgent ? DS.error : DS.textSecondary,
+            const SizedBox(height: 12),
+            Text(
+              daysLeft > 0
+                  ? context.l10n.sprintDaysLeftShort('$daysLeft')
+                  : context.l10n.sprintOverdue,
+              style: DS.labelSmall.copyWith(
+                color: isUrgent ? DS.error : DS.textSecondary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 }
@@ -276,32 +277,32 @@ class _StatChip extends StatelessWidget {
         container: true,
         label: '$label: $value',
         child: Container(
-        padding: const EdgeInsets.symmetric(
-          vertical: DS.spacing12,
-          horizontal: DS.spacing10,
-        ),
-        decoration: BoxDecoration(
-          color: DS.surfaceHigh,
-          borderRadius: DS.borderRadius12,
-          border: Border.all(color: DS.borderSubtle),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 20, color: color),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: DS.bodyMedium.copyWith(
-                color: DS.textPrimary,
-                fontWeight: DS.fontWeightBold,
+          padding: const EdgeInsets.symmetric(
+            vertical: DS.spacing12,
+            horizontal: DS.spacing10,
+          ),
+          decoration: BoxDecoration(
+            color: DS.surfaceHigh,
+            borderRadius: DS.borderRadius12,
+            border: Border.all(color: DS.borderSubtle),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: DS.bodyMedium.copyWith(
+                  color: DS.textPrimary,
+                  fontWeight: DS.fontWeightBold,
+                ),
               ),
-            ),
-            Text(
-              label,
-              style: DS.labelSmall.copyWith(color: DS.textSecondary),
-            ),
-          ],
-        ),
+              Text(
+                label,
+                style: DS.labelSmall.copyWith(color: DS.textSecondary),
+              ),
+            ],
+          ),
         ),
       );
 }
@@ -341,7 +342,6 @@ class _BottleneckCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-
     // Derive bottleneck insights from available data
     final insights = <_Insight>[];
 
@@ -474,61 +474,61 @@ class _ReviewNotesCardState extends ConsumerState<_ReviewNotesCard> {
 
   @override
   Widget build(BuildContext context) {
-
     return Semantics(
       container: true,
       explicitChildNodes: true,
       label: context.l10n.sprintReviewNotes,
       child: Container(
-      padding: const EdgeInsets.all(DS.spacing16),
-      decoration: BoxDecoration(
-        color: DS.surfaceHigh,
-        borderRadius: DS.borderRadius12,
-        border: Border.all(color: DS.borderSubtle),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          TextField(
-            controller: _controller,
-            enabled: !_loading && !_saving,
-            style: DS.bodySmall.copyWith(color: DS.textPrimary),
-            maxLines: 4,
-            decoration: InputDecoration(
-              hintText: context.l10n.sprintReviewNotesHint,
-              hintStyle: DS.labelSmall.copyWith(color: DS.textTertiary),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: DS.borderSubtle),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: DS.borderSubtle),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: DS.brandPrimary),
+        padding: const EdgeInsets.all(DS.spacing16),
+        decoration: BoxDecoration(
+          color: DS.surfaceHigh,
+          borderRadius: DS.borderRadius12,
+          border: Border.all(color: DS.borderSubtle),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _controller,
+              enabled: !_loading && !_saving,
+              style: DS.bodySmall.copyWith(color: DS.textPrimary),
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: context.l10n.sprintReviewNotesHint,
+                hintStyle: DS.labelSmall.copyWith(color: DS.textTertiary),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: DS.borderSubtle),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: DS.borderSubtle),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: DS.brandPrimary),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Align(
-            alignment: Alignment.centerRight,
-            child: OutlinedButton.icon(
-              onPressed: _loading || _saving ? null : () => unawaited(_save()),
-              icon: _saving
-                  ? const SizedBox(
-                      width: 14,
-                      height: 14,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.save_outlined, size: 16),
-              label: Text(context.l10n.sprintSaveNotes),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: OutlinedButton.icon(
+                onPressed:
+                    _loading || _saving ? null : () => unawaited(_save()),
+                icon: _saving
+                    ? const SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save_outlined, size: 16),
+                label: Text(context.l10n.sprintSaveNotes),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -538,10 +538,10 @@ class _ReviewNotesCardState extends ConsumerState<_ReviewNotesCard> {
     var notes = prefs.getString('$_keyPrefix${widget.planId}') ?? '';
     if (notes.isEmpty) {
       final planState = ref.read(planListProvider);
-      final plan = planState.activePlans
-          .where((p) => p.id == widget.planId)
-          .firstOrNull;
-      final serverNotes = plan?.sourceMetadata?['sprint_review_notes'] as String?;
+      final plan =
+          planState.activePlans.where((p) => p.id == widget.planId).firstOrNull;
+      final serverNotes =
+          plan?.sourceMetadata?['sprint_review_notes'] as String?;
       if (serverNotes != null && serverNotes.isNotEmpty) {
         notes = serverNotes;
         await prefs.setString('$_keyPrefix${widget.planId}', notes);
@@ -561,15 +561,13 @@ class _ReviewNotesCardState extends ConsumerState<_ReviewNotesCard> {
         .saveSprintReviewNotes(widget.planId, notes);
     if (!mounted) return;
     setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          success
-              ? context.l10n.sprintNotesSaved
-              : context.l10n.submitFailed,
-        ),
-      ),
-    );
+    final message =
+        success ? context.l10n.sprintNotesSaved : context.l10n.submitFailed;
+    if (success) {
+      AppFeedback.success(context, message);
+    } else {
+      AppFeedback.error(context, message);
+    }
   }
 }
 
@@ -624,7 +622,6 @@ class _ActionButtons extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-
     return Column(
       children: [
         SizedBox(

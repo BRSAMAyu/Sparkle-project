@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/design/materials.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/network/api_client.dart';
 import 'package:sparkle/core/network/api_endpoints.dart';
@@ -500,11 +501,14 @@ class _HeatmapCellState extends State<_HeatmapCell> {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          GestureDetector(
-            key: ValueKey('learning-heatmap-cell-${widget.dateKey}'),
-            behavior: HitTestBehavior.opaque,
-            onTap: _isTooltipVisible ? _hideTooltip : _showTooltip,
-            child: Container(
+          Semantics(
+            button: true,
+            label: I18nService.instance.isChinese ? '显示或隐藏提示' : 'Show or hide tooltip',
+            child: GestureDetector(
+              key: ValueKey('learning-heatmap-cell-${widget.dateKey}'),
+              behavior: HitTestBehavior.opaque,
+              onTap: _isTooltipVisible ? _hideTooltip : _showTooltip,
+              child: Container(
               width: widget.size,
               height: widget.size,
               decoration: BoxDecoration(
@@ -521,6 +525,7 @@ class _HeatmapCellState extends State<_HeatmapCell> {
                     : null,
               ),
             ),
+          ),
           ),
           if (_isTooltipVisible)
             Positioned(

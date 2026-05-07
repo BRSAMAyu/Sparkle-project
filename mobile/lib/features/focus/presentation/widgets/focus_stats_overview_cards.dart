@@ -126,6 +126,7 @@ class _StatCard extends StatelessWidget {
                 color: iconColor,
                 fontSize: 18,
                 fontWeight: DS.fontWeightBold,
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
             ),
             if (subtitle != null)

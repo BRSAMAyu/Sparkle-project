@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/utils/formatters.dart';
 import 'package:sparkle/features/achievement/presentation/providers/achievement_provider.dart';
 import 'package:sparkle/l10n/app_localizations.dart';
@@ -492,10 +493,13 @@ class _ContractCelebrationState extends State<_ContractCelebration>
   @override
   Widget build(BuildContext context) => Material(
       color: Colors.black.withValues(alpha: 0.4),
-      child: GestureDetector(
-        onTap: widget.onDismiss,
-        behavior: HitTestBehavior.opaque,
-        child: Center(
+      child: Semantics(
+        button: true,
+        label: I18nService.instance.isChinese ? '关闭庆祝动画' : 'Dismiss celebration',
+        child: GestureDetector(
+          onTap: widget.onDismiss,
+          behavior: HitTestBehavior.opaque,
+          child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -555,6 +559,7 @@ class _ContractCelebrationState extends State<_ContractCelebration>
             ],
           ),
         ),
+      ),
       ),
     );
 }

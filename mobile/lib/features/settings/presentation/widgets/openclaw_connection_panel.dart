@@ -351,7 +351,7 @@ class _OpenClawConnectionPanelState
                 helperText,
                 style: DS.bodySmall.copyWith(
                   color: DS.textSecondary,
-                  height: 1.45,
+                  height: 1.52,
                 ),
               ),
               const SizedBox(height: DS.spacing12),
@@ -655,7 +655,7 @@ class _OpenClawConnectionPanelState
             body,
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
-              height: 1.45,
+              height: 1.52,
             ),
           ),
         ],
@@ -794,7 +794,7 @@ class _OpenClawConnectionPanelState
                 : context.l10n.openclawCustomConfigDesc,
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
-              height: 1.45,
+              height: 1.52,
             ),
           ),
           const SizedBox(height: DS.spacing10),
@@ -886,7 +886,7 @@ class _OpenClawConnectionPanelState
                       context.l10n.openclawPresetSelected(selectedPreset.label),
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
-                        height: 1.45,
+                        height: 1.52,
                       ),
                     ),
                   ),
@@ -936,7 +936,7 @@ class _OpenClawConnectionPanelState
                   : context.l10n.openclawTokenAuthDesc,
               style: DS.bodySmall.copyWith(
                 color: DS.textSecondary,
-                height: 1.45,
+                height: 1.52,
               ),
             ),
             SizedBox(height: spacing),
@@ -1020,7 +1020,7 @@ class _OpenClawConnectionPanelState
                         context.l10n.openclawPairingCodeInstructions,
                         style: DS.bodySmall.copyWith(
                           color: DS.textSecondary,
-                          height: 1.45,
+                          height: 1.52,
                         ),
                       ),
                     ],
@@ -1080,7 +1080,7 @@ class _OpenClawConnectionPanelState
                   : context.l10n.openclawHttpTransportDesc,
               style: DS.bodySmall.copyWith(
                 color: DS.textSecondary,
-                height: 1.45,
+                height: 1.52,
               ),
             ),
             SizedBox(height: spacing),

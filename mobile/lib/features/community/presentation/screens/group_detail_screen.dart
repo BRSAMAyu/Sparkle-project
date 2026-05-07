@@ -47,7 +47,8 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => context.pop(),
                 ),
-                title: Text(I18nService.instance.isChinese ? '社群详情' : 'Group Details'),
+                title: Text(
+                    I18nService.instance.isChinese ? '社群详情' : 'Group Details'),
               ),
               Expanded(
                 child: Center(
@@ -408,7 +409,11 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                       .read(groupDetailProvider(widget.groupId).notifier)
                       .joinGroup();
                   if (context.mounted) {
-                    AppFeedback.success(context, I18nService.instance.isChinese ? '欢迎加入社群！' : 'Welcome to the group!');
+                    AppFeedback.success(
+                        context,
+                        I18nService.instance.isChinese
+                            ? '欢迎加入社群！'
+                            : 'Welcome to the group!');
                   }
                 } catch (e) {
                   if (context.mounted) {
@@ -526,8 +531,11 @@ class _GroupDetailScreenState extends ConsumerState<GroupDetailScreen> {
                       if (context.mounted) context.pop();
                     } catch (e) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(I18nService.instance.isChinese ? '退出群组失败，请重试' : 'Failed to leave group, please retry')),
+                        AppFeedback.error(
+                          context,
+                          I18nService.instance.isChinese
+                              ? '退出群组失败，请重试'
+                              : 'Failed to leave group, please retry',
                         );
                       }
                     }

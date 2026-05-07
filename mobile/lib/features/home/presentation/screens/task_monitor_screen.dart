@@ -278,9 +278,9 @@ class _TaskMonitorScreenState extends ConsumerState<TaskMonitorScreen> {
         ),
       );
 
-  Widget _buildTaskList(List<BackgroundTaskModel> tasks) => RefreshIndicator(
+  Widget _buildTaskList(List<BackgroundTaskModel> tasks) =>
+      SparkleRefreshIndicator(
         onRefresh: () => ref.read(backgroundTaskProvider.notifier).fetchTasks(),
-        color: DS.primaryBase,
         child: ListView.builder(
           padding: const EdgeInsets.all(DS.md),
           itemCount: tasks.length,

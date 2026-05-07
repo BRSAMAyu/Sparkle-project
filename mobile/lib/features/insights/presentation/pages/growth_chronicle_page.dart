@@ -48,7 +48,7 @@ class _ChronicleContent extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final entries = dashboard.chronicleEntries;
-    return RefreshIndicator(
+    return SparkleRefreshIndicator(
       onRefresh: () => ref.read(growthDashboardProvider.notifier).refresh(),
       child: Semantics(
         label: context.l10n.gdChronicleSemantics,
@@ -107,16 +107,13 @@ class _ChronicleContent extends ConsumerWidget {
       'rejected' => context.l10n.gdEntryRejected,
       _ => context.l10n.gdEntryEdited,
     };
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        action: SnackBarAction(
-          label: context.l10n.gdUndo,
-          onPressed: () => ref
-              .read(growthDashboardProvider.notifier)
-              .updateEntryStatus(entry.id, previous),
-        ),
-      ),
+    AppFeedback.undoable(
+      context: context,
+      message: message,
+      actionLabel: context.l10n.gdUndo,
+      onAction: () => ref
+          .read(growthDashboardProvider.notifier)
+          .updateEntryStatus(entry.id, previous),
     );
   }
 }
@@ -202,7 +199,7 @@ class _WeeklyStoryCard extends StatelessWidget {
               '${context.l10n.gdNextWeekSuggestion}: ${narrative.nextWeekSuggestion}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: colors.onSurfaceVariant,
-                    height: 1.45,
+                    height: 1.52,
                   ),
             ),
           ],

@@ -33,7 +33,8 @@ class ProfileTransparentScreen extends ConsumerWidget {
       ref.invalidate(ws6TransparentProfileViewProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SparkleSnackBar.success(context.l10n.profTransRecordedAdjustment(targetId)),
+          SparkleSnackBar.success(
+              context.l10n.profTransRecordedAdjustment(targetId)),
         );
       }
     }
@@ -42,7 +43,7 @@ class ProfileTransparentScreen extends ConsumerWidget {
       role: SparklePageRole.settings,
       safeArea: false,
       child: viewAsync.when(
-        data: (view) => RefreshIndicator(
+        data: (view) => SparkleRefreshIndicator(
           onRefresh: () async {
             ref.invalidate(ws6TransparentProfileViewProvider);
             await ref.read(ws6TransparentProfileViewProvider.future);

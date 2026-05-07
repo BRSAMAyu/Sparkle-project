@@ -95,7 +95,7 @@ class _OpenClawExecutionPreferencesCardState
                 : l.execPrefDescription,
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
-              height: 1.45,
+              height: 1.52,
             ),
           ),
           if (service.error != null && service.error!.trim().isNotEmpty) ...[
@@ -129,7 +129,7 @@ class _OpenClawExecutionPreferencesCardState
             _modeDescription(l, draft.mode),
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
-              height: 1.45,
+              height: 1.52,
             ),
           ),
           if (draft.mode == 'custom') ...[
@@ -260,7 +260,7 @@ class _OpenClawExecutionPreferencesCardState
             l.execPrefBudgetDescription,
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
-              height: 1.45,
+              height: 1.52,
             ),
           ),
           const SizedBox(height: DS.spacing8),
@@ -344,7 +344,7 @@ class _OpenClawExecutionPreferencesCardState
                   '${modeLabels[item.recommendedMode] ?? item.recommendedMode} · ${item.reason}',
                   style: DS.bodySmall.copyWith(
                     color: DS.textPrimary,
-                    height: 1.4,
+                    height: 1.52,
                   ),
                 ),
               ),

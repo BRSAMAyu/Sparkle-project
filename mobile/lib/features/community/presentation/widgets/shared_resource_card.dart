@@ -27,16 +27,19 @@ class SharedResourceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isChinese = I18nService.instance.isChinese;
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(compact ? 10 : 14),
-        decoration: BoxDecoration(
-          color: DS.surfaceSecondary,
-          borderRadius: DS.borderRadius12,
-          border: Border.all(color: DS.border),
-        ),
-        child: Column(
+    return Semantics(
+      button: true,
+      label: resource.resourceTitle ?? (isChinese ? '共享资源' : 'Shared Resource'),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: EdgeInsets.all(compact ? 10 : 14),
+          decoration: BoxDecoration(
+            color: DS.surfaceSecondary,
+            borderRadius: DS.borderRadius12,
+            border: Border.all(color: DS.border),
+          ),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Header row: title + quality badge
@@ -111,6 +114,7 @@ class SharedResourceCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -338,7 +339,7 @@ class _PrivateChatBubbleState extends ConsumerState<PrivateChatBubble>
         child: CircleAvatar(
           radius: 16,
           backgroundImage:
-              user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
+              user.avatarUrl != null ? CachedNetworkImageProvider(user.avatarUrl!) : null,
           backgroundColor: DS.neutral200,
           child: user.avatarUrl == null
               ? Text(

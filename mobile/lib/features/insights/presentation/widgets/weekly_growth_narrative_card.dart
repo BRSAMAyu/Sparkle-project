@@ -132,7 +132,7 @@ class _NarrativeSurface extends StatelessWidget {
             maxLines: expanded ? null : 3,
             overflow: expanded ? TextOverflow.visible : TextOverflow.ellipsis,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  height: 1.55,
+                  height: 1.62,
                   color: DS.textPrimary,
                 ),
           ),
@@ -158,7 +158,7 @@ class _NarrativeSurface extends StatelessWidget {
                         item,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: DS.textSecondary,
-                              height: 1.45,
+                              height: 1.52,
                             ),
                       ),
                     ),
@@ -197,7 +197,7 @@ class _NarrativeSurface extends StatelessWidget {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textPrimary,
                     fontWeight: DS.fontWeightBold,
-                    height: 1.45,
+                    height: 1.52,
                   ),
             ),
           ],
@@ -402,7 +402,7 @@ class _NarrativeErrorSurface extends StatelessWidget {
                     : 'This week\'s story didn\'t sync. Keep learning and check back later.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: DS.textSecondary,
-                      height: 1.45,
+                      height: 1.52,
                     ),
               ),
             ),

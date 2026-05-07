@@ -85,7 +85,7 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
       ),
       child: directoryState.when(
         data: (directory) => ContentConstraint(
-          child: RefreshIndicator(
+          child: SparkleRefreshIndicator(
             onRefresh: notifier.refresh,
             child: ListView(
               padding: const EdgeInsets.all(16),
@@ -140,7 +140,8 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
                         ),
                       ),
                 ],
-                if (groupInsight != null && groupInsight.recentFeedbackCount > 0)
+                if (groupInsight != null &&
+                    groupInsight.recentFeedbackCount > 0)
                   Padding(
                     padding: const EdgeInsets.only(top: 18),
                     child: RecommendationFeedbackInsightCard(
@@ -319,7 +320,9 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
     String? freeText,
   }) async {
     try {
-      await ref.read(communityRepositoryProvider).sendGroupRecommendationFeedback(
+      await ref
+          .read(communityRepositoryProvider)
+          .sendGroupRecommendationFeedback(
             groupId: groupId,
             action: action,
             source: source,
@@ -376,37 +379,37 @@ class _SearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => GraphiteCardSurface(
-      surfaceRole: SparkleSurfaceRole.card,
-      padding: const EdgeInsets.all(12),
-      child: Row(
-        children: [
-          const Icon(Icons.search),
-          const SizedBox(width: 10),
-          Expanded(
-            child: TextField(
-              controller: controller,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: context.l10n.gdSearchHint,
-                border: InputBorder.none,
-                isDense: true,
+        surfaceRole: SparkleSurfaceRole.card,
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            const Icon(Icons.search),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller: controller,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: context.l10n.gdSearchHint,
+                  border: InputBorder.none,
+                  isDense: true,
+                ),
+                onSubmitted: (_) {
+                  onSubmitted();
+                },
               ),
-              onSubmitted: (_) {
-                onSubmitted();
-              },
             ),
-          ),
-          if (controller.text.isNotEmpty)
-            SparkleIconButton(
-              variant: ButtonVariant.ghost,
-              icon: const Icon(Icons.close),
-              onPressed: () {
-                onClear();
-              },
-            ),
-        ],
-      ),
-    );
+            if (controller.text.isNotEmpty)
+              SparkleIconButton(
+                variant: ButtonVariant.ghost,
+                icon: const Icon(Icons.close),
+                onPressed: () {
+                  onClear();
+                },
+              ),
+          ],
+        ),
+      );
 }
 
 class _CompactFilterBar extends StatelessWidget {
@@ -431,9 +434,21 @@ class _CompactFilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sortOptions = <(GroupDirectorySort, String, IconData)>[
-      (GroupDirectorySort.hot, context.l10n.gdSortHot, Icons.local_fire_department_outlined),
-      (GroupDirectorySort.latest, context.l10n.gdSortLatest, Icons.schedule_outlined),
-      (GroupDirectorySort.random, context.l10n.gdSortRandom, Icons.shuffle_outlined),
+      (
+        GroupDirectorySort.hot,
+        context.l10n.gdSortHot,
+        Icons.local_fire_department_outlined
+      ),
+      (
+        GroupDirectorySort.latest,
+        context.l10n.gdSortLatest,
+        Icons.schedule_outlined
+      ),
+      (
+        GroupDirectorySort.random,
+        context.l10n.gdSortRandom,
+        Icons.shuffle_outlined
+      ),
     ];
 
     final typeOptions = <(GroupType?, String)>[
@@ -494,15 +509,17 @@ class _CompactFilterBar extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 6),
               color: DS.textSecondary.withValues(alpha: 0.2),
             ),
-            ...availableTags.take(8).map((tag) => Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: FilterChip(
-                  label: Text(tag),
-                  selected: selectedTags.contains(tag),
-                  visualDensity: VisualDensity.compact,
-                  onSelected: (_) => onToggleTag(tag),
+            ...availableTags.take(8).map(
+                  (tag) => Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: FilterChip(
+                      label: Text(tag),
+                      selected: selectedTags.contains(tag),
+                      visualDensity: VisualDensity.compact,
+                      onSelected: (_) => onToggleTag(tag),
+                    ),
+                  ),
                 ),
-              ),),
           ],
         ],
       ),
@@ -523,37 +540,38 @@ class _RecommendationsPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(context.l10n.communityRecommendedForYou, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 218,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return SizedBox(
-                width: 292,
-                child: GroupRecommendationCard(
-                  recommendation: item,
-                  onTap: () =>
-                      context.push('/community/groups/${item.group.id}'),
-                  onJoin: () {
-                    onJoin(item.group.id);
-                  },
-                  onFeedback: () {
-                    onFeedback(item);
-                  },
-                ),
-              );
-            },
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(context.l10n.communityRecommendedForYou,
+              style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 218,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: items.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final item = items[index];
+                return SizedBox(
+                  width: 292,
+                  child: GroupRecommendationCard(
+                    recommendation: item,
+                    onTap: () =>
+                        context.push('/community/groups/${item.group.id}'),
+                    onJoin: () {
+                      onJoin(item.group.id);
+                    },
+                    onFeedback: () {
+                      onFeedback(item);
+                    },
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
 }
 
 class _DirectoryGroupCard extends StatelessWidget {
@@ -610,14 +628,19 @@ class _DirectoryGroupCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      context.l10n.gdGroupStats(group.memberCount, group.todayCheckinCount, group.totalFlamePower.toStringAsFixed(0)),
+                      context.l10n.gdGroupStats(
+                          group.memberCount,
+                          group.todayCheckinCount,
+                          group.totalFlamePower.toStringAsFixed(0)),
                       style: TextStyle(color: DS.textSecondary, fontSize: 12),
                     ),
                   ],
                 ),
               ),
               SemanticPill(
-                label: group.isSprint ? context.l10n.gdTypeSprint : context.l10n.gdTypeSquad,
+                label: group.isSprint
+                    ? context.l10n.gdTypeSprint
+                    : context.l10n.gdTypeSquad,
                 dense: true,
                 tone: group.isSprint ? PillTone.warning : PillTone.brand,
               ),
@@ -654,7 +677,8 @@ class _DirectoryGroupCard extends StatelessWidget {
                 child: Text(
                   group.activityScore == null
                       ? context.l10n.gdPublicGroup
-                      : context.l10n.gdActivityScore(group.activityScore!.toStringAsFixed(1)),
+                      : context.l10n.gdActivityScore(
+                          group.activityScore!.toStringAsFixed(1)),
                   style: TextStyle(color: DS.textSecondary, fontSize: 12),
                 ),
               ),

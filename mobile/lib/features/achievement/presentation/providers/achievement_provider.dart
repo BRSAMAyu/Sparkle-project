@@ -15,7 +15,7 @@ import 'package:sparkle/shared/entities/achievement_model.dart';
 // ========== Achievement State ==========
 
 // Sentinel for clearing nullable fields via copyWith
-final _cleared = Object();
+const _cleared = Object();
 
 class AchievementState {
   AchievementState({

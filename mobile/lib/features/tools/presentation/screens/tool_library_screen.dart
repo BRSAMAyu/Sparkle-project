@@ -371,6 +371,7 @@ class _LibraryToolCard extends StatelessWidget {
           Theme.of(context).brightness == Brightness.dark ? 0.12 : 0.05,
         ) ??
         DS.surfacePrimary;
+    final localizedDesc = tool.getLocalizedDescription(l10n: context.l10n);
     return SizedBox(
       width: 168,
       height: 196,
@@ -454,7 +455,6 @@ class _LibraryToolCard extends StatelessWidget {
                       ),
                 ),
                 const Spacer(),
-                final localizedDesc = tool.getLocalizedDescription(l10n: context.l10n);
                 if (localizedDesc != null) ...[
                   const SizedBox(height: DS.spacing8),
                   Text(

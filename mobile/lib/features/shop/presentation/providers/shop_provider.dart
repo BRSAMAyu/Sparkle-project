@@ -198,3 +198,106 @@ final inventoryProvider =
   final repository = ref.watch(shopRepositoryProvider);
   return InventoryNotifier(repository, ref);
 });
+
+// ========== Purchase History State ==========
+
+class PurchaseHistoryState {
+  PurchaseHistoryState({
+    this.purchases = const [],
+    this.isLoading = false,
+    this.error,
+    this.currentOffset = 0,
+    this.hasMore = true,
+  });
+  final List<ShopPurchase> purchases;
+  final bool isLoading;
+  final String? error;
+  final int currentOffset;
+  final bool hasMore;
+
+  PurchaseHistoryState copyWith({
+    List<ShopPurchase>? purchases,
+    bool? isLoading,
+    String? error,
+    int? currentOffset,
+    bool? hasMore,
+  }) =>
+      PurchaseHistoryState(
+        purchases: purchases ?? this.purchases,
+        isLoading: isLoading ?? this.isLoading,
+        error: error ?? this.error,
+        currentOffset: currentOffset ?? this.currentOffset,
+        hasMore: hasMore ?? this.hasMore,
+      );
+}
+
+// ========== Purchase History Provider ==========
+
+class PurchaseHistoryNotifier extends StateNotifier<PurchaseHistoryState> {
+  PurchaseHistoryNotifier(this._repository) : super(PurchaseHistoryState());
+
+  final ShopRepository _repository;
+
+  Future<void> refresh() async {
+    state = PurchaseHistoryState();
+    await loadPurchaseHistory();
+  }
+
+  Future<void> loadPurchaseHistory({int limit = 20, int offset = 0}) async {
+    state = state.copyWith(isLoading: true);
+    try {
+      final purchases = await _repository.getPurchaseHistory(
+        limit: limit,
+        offset: offset,
+      );
+      state = state.copyWith(
+        purchases: purchases,
+        isLoading: false,
+        currentOffset: offset,
+        hasMore: purchases.length >= limit,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString().replaceAll('Exception: ', ''),
+      );
+    }
+  }
+
+  Future<void> loadMore({int limit = 20}) async {
+    if (state.isLoading || !state.hasMore) return;
+    final offset = state.currentOffset + limit;
+    try {
+      final more = await _repository.getPurchaseHistory(
+        limit: limit,
+        offset: offset,
+      );
+      state = state.copyWith(
+        purchases: [...state.purchases, ...more],
+        currentOffset: offset,
+        hasMore: more.length >= limit,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        error: e.toString().replaceAll('Exception: ', ''),
+      );
+    }
+  }
+}
+
+final purchaseHistoryProvider = StateNotifierProvider<PurchaseHistoryNotifier,
+    PurchaseHistoryState>((ref) {
+  final repository = ref.watch(shopRepositoryProvider);
+  return PurchaseHistoryNotifier(repository);
+});
+
+// ========== Owned Items Provider ==========
+
+final ownedItemsProvider = FutureProvider<List<String>>((ref) async {
+  final repository = ref.watch(shopRepositoryProvider);
+  return repository.getOwnedItems();
+});
+
+// ========== Selected Shop Item Provider ==========
+
+final selectedShopItemProvider = StateProvider<ShopItem?>((ref) => null);

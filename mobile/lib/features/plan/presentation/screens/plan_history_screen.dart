@@ -31,7 +31,7 @@ class PlanHistoryScreen extends ConsumerWidget {
         title: Text(context.l10n.planHistoryTitle),
       ),
       child: ContentConstraint(
-        child: RefreshIndicator(
+        child: SparkleRefreshIndicator(
           onRefresh: () => ref.read(planListProvider.notifier).refresh(),
           child: _buildBody(context, ref, archivedPlans, planState.isLoading),
         ),
@@ -110,59 +110,59 @@ class _PlanHistorySection extends ConsumerWidget {
             ),
             const SizedBox(height: DS.spacing12),
             ...plans.asMap().entries.map(
-              (entry) => SparkleStaggerItem(
-                index: entry.key + 1,
-                child: GraphiteCardSurface(
-                  surfaceRole: SparkleSurfaceRole.card,
-                  margin: const EdgeInsets.only(bottom: DS.spacing12),
-                  padding: EdgeInsets.zero,
-                  child: ListTile(
-                    title: Text(entry.value.name),
-                    subtitle: Text(
-                      context.l10n.planProgressPercent(
-                        (entry.value.progress * 100).toStringAsFixed(0),
-                      ),
-                    ),
-                    trailing: Tooltip(
-                      message: context.l10n.planHistoryRestore,
-                      child: SparkleIconButton(
-                        variant: ButtonVariant.ghost,
-                        icon: const Icon(Icons.restore_rounded),
-                        onPressed: () async {
+                  (entry) => SparkleStaggerItem(
+                    index: entry.key + 1,
+                    child: GraphiteCardSurface(
+                      surfaceRole: SparkleSurfaceRole.card,
+                      margin: const EdgeInsets.only(bottom: DS.spacing12),
+                      padding: EdgeInsets.zero,
+                      child: ListTile(
+                        title: Text(entry.value.name),
+                        subtitle: Text(
+                          context.l10n.planProgressPercent(
+                            (entry.value.progress * 100).toStringAsFixed(0),
+                          ),
+                        ),
+                        trailing: Tooltip(
+                          message: context.l10n.planHistoryRestore,
+                          child: SparkleIconButton(
+                            variant: ButtonVariant.ghost,
+                            icon: const Icon(Icons.restore_rounded),
+                            onPressed: () async {
+                              unawaited(
+                                SensoryFeedbackService.emit(
+                                  SensoryFeedbackEvent.confirm,
+                                ),
+                              );
+                              await ref
+                                  .read(planListProvider.notifier)
+                                  .restorePlan(entry.value.id);
+                              if (context.mounted) {
+                                unawaited(
+                                  SensoryFeedbackService.emit(
+                                    SensoryFeedbackEvent.success,
+                                  ),
+                                );
+                                AppFeedback.success(
+                                  context,
+                                  context.l10n.planHistoryRestoreSuccess,
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        onTap: () {
                           unawaited(
                             SensoryFeedbackService.emit(
-                              SensoryFeedbackEvent.confirm,
+                              SensoryFeedbackEvent.selection,
                             ),
                           );
-                          await ref
-                              .read(planListProvider.notifier)
-                              .restorePlan(entry.value.id);
-                          if (context.mounted) {
-                            unawaited(
-                              SensoryFeedbackService.emit(
-                                SensoryFeedbackEvent.success,
-                              ),
-                            );
-                            AppFeedback.success(
-                              context,
-                              context.l10n.planHistoryRestoreSuccess,
-                            );
-                          }
+                          context.push('/plans/${entry.value.id}');
                         },
                       ),
                     ),
-                    onTap: () {
-                      unawaited(
-                        SensoryFeedbackService.emit(
-                          SensoryFeedbackEvent.selection,
-                        ),
-                      );
-                      context.push('/plans/${entry.value.id}');
-                    },
                   ),
                 ),
-              ),
-            ),
           ],
         ),
       );

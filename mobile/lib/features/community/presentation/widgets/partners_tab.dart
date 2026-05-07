@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -29,14 +30,13 @@ class PartnersTab extends ConsumerWidget {
     final friendsAsync = ref.watch(friendsProvider);
 
     return ContentConstraint(
-      child: RefreshIndicator(
+      child: SparkleRefreshIndicator(
         onRefresh: () async {
           await ref.read(myPartnershipsProvider.notifier).load();
           ref.invalidate(accountabilityHubProvider);
           ref.invalidate(accountabilityOverviewProvider);
           await ref.read(friendsProvider.notifier).refresh();
         },
-        color: DS.primaryBase,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
@@ -60,7 +60,8 @@ class PartnersTab extends ConsumerWidget {
                   return _PartnershipsSection(partnerships: active);
                 },
                 loading: () => const _SectionLoading(),
-                error: (_, __) => _SectionError(onRetry: () => ref.invalidate(myPartnershipsProvider)),
+                error: (_, __) => _SectionError(
+                    onRetry: () => ref.invalidate(myPartnershipsProvider)),
               ),
             ),
 
@@ -72,7 +73,8 @@ class PartnersTab extends ConsumerWidget {
                   return _HubSections(hub: hub);
                 },
                 loading: () => const _SectionLoading(),
-                error: (_, __) => _SectionError(onRetry: () => ref.invalidate(accountabilityHubProvider)),
+                error: (_, __) => _SectionError(
+                    onRetry: () => ref.invalidate(accountabilityHubProvider)),
               ),
             ),
 
@@ -84,7 +86,8 @@ class PartnersTab extends ConsumerWidget {
                   return _FriendsSection(friends: friends);
                 },
                 loading: () => const _SectionLoading(),
-                error: (_, __) => _SectionError(onRetry: () => ref.invalidate(friendsProvider)),
+                error: (_, __) => _SectionError(
+                    onRetry: () => ref.invalidate(friendsProvider)),
               ),
             ),
 
@@ -203,7 +206,9 @@ class _PartnershipCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      partner?.nickname ?? partner?.username ?? (zh ? '伙伴' : 'Partner'),
+                      partner?.nickname ??
+                          partner?.username ??
+                          (zh ? '伙伴' : 'Partner'),
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         color: DS.textPrimary,
@@ -250,7 +255,8 @@ class _PartnershipCard extends StatelessWidget {
                         height: 8,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: partnerCheckedIn ? DS.success : DS.textTertiary,
+                          color:
+                              partnerCheckedIn ? DS.success : DS.textTertiary,
                         ),
                       ),
                       const SizedBox(width: 4),
@@ -260,7 +266,8 @@ class _PartnershipCard extends StatelessWidget {
                             : (zh ? '今日未打卡' : 'Not yet today'),
                         style: TextStyle(
                           fontSize: 11,
-                          color: partnerCheckedIn ? DS.success : DS.textTertiary,
+                          color:
+                              partnerCheckedIn ? DS.success : DS.textTertiary,
                         ),
                       ),
                     ],
@@ -626,7 +633,8 @@ class _FriendTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: DS.sm),
       child: GestureDetector(
         onTap: () => unawaited(
-          context.push(CommunityRoutes.userProfile.replaceFirst(':id', user.id)),
+          context
+              .push(CommunityRoutes.userProfile.replaceFirst(':id', user.id)),
         ),
         child: Container(
           padding: const EdgeInsets.all(DS.md),
@@ -641,7 +649,7 @@ class _FriendTile extends StatelessWidget {
                 radius: 18,
                 backgroundColor: DS.brandPrimary12,
                 backgroundImage: user.avatarUrl != null
-                    ? NetworkImage(user.avatarUrl!)
+                    ? CachedNetworkImageProvider(user.avatarUrl!)
                     : null,
                 child: user.avatarUrl == null
                     ? Text(
@@ -657,10 +665,12 @@ class _FriendTile extends StatelessWidget {
               Expanded(
                 child: Text(
                   user.displayName,
-                  style: TextStyle(fontWeight: FontWeight.w500, color: DS.textPrimary),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w500, color: DS.textPrimary),
                 ),
               ),
-              Icon(Icons.chevron_right_rounded, color: DS.textTertiary, size: 20),
+              Icon(Icons.chevron_right_rounded,
+                  color: DS.textTertiary, size: 20),
             ],
           ),
         ),
@@ -709,8 +719,9 @@ class _PartnerAvatar extends StatelessWidget {
           CircleAvatar(
             radius: 22,
             backgroundColor: DS.brandPrimary12,
-            backgroundImage:
-                avatarUrl != null ? NetworkImage(avatarUrl!) : null,
+            backgroundImage: avatarUrl != null
+                ? CachedNetworkImageProvider(avatarUrl!)
+                : null,
             child: avatarUrl == null
                 ? Text(
                     name[0].toUpperCase(),
@@ -771,7 +782,8 @@ class _SectionError extends StatelessWidget {
             const SizedBox(height: DS.spacing8),
             TextButton(
               onPressed: onRetry,
-              child: Text(zh ? '重试' : 'Retry', style: const TextStyle(fontSize: 13)),
+              child: Text(zh ? '重试' : 'Retry',
+                  style: const TextStyle(fontSize: 13)),
             ),
           ],
         ),

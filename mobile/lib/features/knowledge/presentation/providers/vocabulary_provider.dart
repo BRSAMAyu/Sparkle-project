@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/features/knowledge/data/repositories/vocabulary_repository.dart';
 
 /// 生词本状态
@@ -75,7 +76,9 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
     } catch (e) {
       state = state.copyWith(
         isLookingUp: false,
-        error: e.toString().contains('404') ? '未找到该单词' : '查询失败: $e',
+        error: e.toString().contains('404')
+            ? (I18nService.instance.isChinese ? '未找到该单词' : 'Word not found')
+            : (I18nService.instance.isChinese ? '查询失败: $e' : 'Lookup failed: $e'),
       );
     }
   }
@@ -110,7 +113,7 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: '添加失败: $e',
+        error: I18nService.instance.isChinese ? '添加失败: $e' : 'Add failed: $e',
       );
       return false;
     }
@@ -128,7 +131,7 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: '获取生词本失败: $e',
+        error: I18nService.instance.isChinese ? '获取生词本失败: $e' : 'Failed to load wordbook: $e',
       );
     }
   }
@@ -146,7 +149,7 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
-        error: '获取复习列表失败: $e',
+        error: I18nService.instance.isChinese ? '获取复习列表失败: $e' : 'Failed to load review list: $e',
       );
     }
   }
@@ -156,7 +159,7 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
       final stats = await _repository.getStats();
       state = state.copyWith(stats: stats);
     } catch (e) {
-      state = state.copyWith(error: '获取词汇统计失败: $e');
+      state = state.copyWith(error: I18nService.instance.isChinese ? '获取词汇统计失败: $e' : 'Failed to load stats: $e');
     }
   }
 
@@ -166,7 +169,7 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
       await _repository.recordReview(wordId, success);
       await Future.wait([fetchWordbook(), fetchReviewList(), fetchStats()]);
     } catch (e) {
-      state = state.copyWith(error: '记录失败: $e');
+      state = state.copyWith(error: I18nService.instance.isChinese ? '记录失败: $e' : 'Record failed: $e');
     }
   }
 
@@ -175,7 +178,7 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
       await _repository.updateImportance(wordId, importance);
       await Future.wait([fetchWordbook(), fetchReviewList(), fetchStats()]);
     } catch (e) {
-      state = state.copyWith(error: '更新重要度失败: $e');
+      state = state.copyWith(error: I18nService.instance.isChinese ? '更新重要度失败: $e' : 'Update failed: $e');
     }
   }
 
@@ -184,7 +187,7 @@ class VocabularyNotifier extends StateNotifier<VocabularyState> {
       await _repository.deleteWordbook(wordId);
       await Future.wait([fetchWordbook(), fetchReviewList(), fetchStats()]);
     } catch (e) {
-      state = state.copyWith(error: '删除失败: $e');
+      state = state.copyWith(error: I18nService.instance.isChinese ? '删除失败: $e' : 'Delete failed: $e');
     }
   }
 

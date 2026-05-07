@@ -554,7 +554,6 @@ class MockCommunityRepository implements CommunityRepository {
 
     _mockReports = [];
 
-    final zh = I18nService.instance.isChinese;
     final now = DateTime.now();
     _mockGroupTasks = {
       'group_sprint_001': [

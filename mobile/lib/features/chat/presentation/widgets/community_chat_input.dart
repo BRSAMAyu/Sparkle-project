@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
-import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/universal_share_service.dart';
 import 'package:sparkle/features/chat/presentation/widgets/attachment_picker_sheet.dart';
 import 'package:sparkle/features/chat/presentation/widgets/voice_input_button.dart';
@@ -139,6 +138,7 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
     _controller = widget.controller ?? TextEditingController();
     _focusNode = widget.focusNode ?? FocusNode();
     _controller.addListener(_handleTextChange);
+    _focusNode.addListener(_handleFocusChange);
   }
 
   @override
@@ -154,11 +154,13 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
       _controller.addListener(_handleTextChange);
     }
     if (oldWidget.focusNode != widget.focusNode) {
+      _focusNode.removeListener(_handleFocusChange);
       if (_ownsFocusNode) {
         _focusNode.dispose();
       }
       _ownsFocusNode = widget.focusNode == null;
       _focusNode = widget.focusNode ?? FocusNode();
+      _focusNode.addListener(_handleFocusChange);
     }
     if (widget.quotedMessage != null && oldWidget.quotedMessage == null) {
       _focusNode.requestFocus();
@@ -173,12 +175,19 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
     widget.onTextChanged?.call(_controller.text);
   }
 
+  void _handleFocusChange() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   void dispose() {
     _controller.removeListener(_handleTextChange);
     if (_ownsController) {
       _controller.dispose();
     }
+    _focusNode.removeListener(_handleFocusChange);
     if (_ownsFocusNode) {
       _focusNode.dispose();
     }
@@ -525,11 +534,32 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
                     valueListenable: _textNotEmpty,
                     builder: (context, hasText, child) {
                       final canSend = widget.enabled && !_isSending && hasText;
-                      return DecoratedBox(
+                      final isFocused = _focusNode.hasFocus;
+                      return AnimatedContainer(
+                        duration:
+                            reduceMotion ? Duration.zero : DS.durationNormal,
+                        curve: Curves.easeOut,
                         decoration: BoxDecoration(
-                          color: DS.surfaceTertiary,
+                          color: isFocused
+                              ? DS.surfaceRoleColor(SparkleSurfaceRole.card)
+                              : DS.surfaceTertiary,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: DS.surfaceTertiary),
+                          border: Border.all(
+                            color: isFocused
+                                ? DS.brandPrimary.withValues(alpha: 0.8)
+                                : DS.borderSubtle,
+                            width: isFocused ? 1.5 : 1,
+                          ),
+                          boxShadow: isFocused && !reduceMotion
+                              ? [
+                                  BoxShadow(
+                                    color:
+                                        DS.brandPrimary.withValues(alpha: 0.10),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: TextField(
                           controller: _controller,
@@ -542,7 +572,8 @@ class _CommunityChatInputState extends ConsumerState<CommunityChatInput> {
                               : TextInputAction.newline,
                           keyboardType: TextInputType.multiline,
                           decoration: InputDecoration(
-                            hintText: widget.hintText ?? context.l10n.chatInputPlaceholder,
+                            hintText: widget.hintText ??
+                                context.l10n.chatInputPlaceholder,
                             hintStyle: TextStyle(color: DS.textSecondary),
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: DS.spacing16,

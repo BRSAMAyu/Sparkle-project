@@ -131,7 +131,7 @@ class _SessionManagementScreenState
           centerTitle: true,
         ),
         child: ContentConstraint(
-          child: RefreshIndicator(
+          child: SparkleRefreshIndicator(
             onRefresh: _loadSessions,
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
@@ -150,7 +150,8 @@ class _SessionManagementScreenState
                             _buildPill(
                               context,
                               icon: Icons.smartphone_rounded,
-                              label: context.l10n.sessionDeviceCount(_sessions.length),
+                              label: context.l10n
+                                  .sessionDeviceCount(_sessions.length),
                             ),
                             _buildPill(
                               context,

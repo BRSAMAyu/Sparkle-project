@@ -91,7 +91,7 @@ class _SettingsBehaviorExplanationState
                       l10n.settBehaviorSubtitle,
                       style: DS.bodySmall.copyWith(
                         color: DS.textSecondary,
-                        height: 1.4,
+                        height: 1.52,
                       ),
                     ),
                   ],
@@ -142,7 +142,7 @@ class _SettingsBehaviorExplanationState
               item.body,
               style: DS.bodySmall.copyWith(
                 color: DS.textSecondary,
-                height: 1.45,
+                height: 1.52,
               ),
             ),
           ),
@@ -254,7 +254,7 @@ class SettingsDataControlsCard extends StatelessWidget {
             l10n.settDataControlsDesc,
             style: DS.bodySmall.copyWith(
               color: DS.textSecondary,
-              height: 1.4,
+              height: 1.52,
             ),
           ),
           const SizedBox(height: DS.spacing12),
@@ -304,7 +304,7 @@ class SettingsDataControlsCard extends StatelessWidget {
               statusMessage!,
               style: DS.bodySmall.copyWith(
                 color: DS.textSecondary,
-                height: 1.4,
+                height: 1.52,
               ),
             ),
           ],

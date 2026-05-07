@@ -166,7 +166,9 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
     if (!data.containsKey('type')) {
       return ErrorEvent(
         code: 'INVALID_FORMAT',
-        message: 'Missing "type" field',
+        message: I18nService.instance.isChinese
+            ? '消息格式错误：缺少 type 字段'
+            : 'Missing "type" field',
         retryable: false,
       );
     }
@@ -539,6 +541,20 @@ ChatStreamEvent _parseChatEvent(String jsonString) {
           if (arbData != null) {
             return GoalArbitrationEvent(
               arbData: arbData,
+              responseId: responseId,
+              traceId: traceId,
+              workflowId: workflowId,
+              promptVersion: promptVersion,
+            );
+          }
+        }
+
+        // Spine: Divine Moment Card — MAGIC-002 through MAGIC-006
+        if (metadata != null && metadata['spine_divine_moment'] != null) {
+          final divineData = _decodeMapOrString(metadata['spine_divine_moment']);
+          if (divineData != null) {
+            return DivineMomentEvent(
+              cardData: divineData,
               responseId: responseId,
               traceId: traceId,
               workflowId: workflowId,
@@ -2208,7 +2224,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
     _broadcastErrorToActiveRequests(
       ErrorEvent(
         code: 'CONNECTION_ERROR',
-        message: 'Network connection failed',
+        message: I18nService.instance.isChinese
+            ? '网络连接失败'
+            : 'Network connection failed',
         retryable: true,
       ),
     );
@@ -2225,7 +2243,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _broadcastErrorToActiveRequests(
         ErrorEvent(
           code: 'CONNECTION_CLOSED',
-          message: 'Connection closed while generating response',
+          message: I18nService.instance.isChinese
+              ? '生成响应时连接中断'
+              : 'Connection closed while generating response',
           retryable: true,
         ),
       );
@@ -2268,7 +2288,9 @@ class WebSocketChatServiceV2 with WidgetsBindingObserver {
       _broadcastErrorToActiveRequests(
         ErrorEvent(
           code: 'MAX_RETRIES_EXCEEDED',
-          message: 'Unable to connect after $_maxReconnectAttempts attempts',
+          message: I18nService.instance.isChinese
+              ? '重连 $_maxReconnectAttempts 次后仍无法连接'
+              : 'Unable to connect after $_maxReconnectAttempts attempts',
           retryable: false,
         ),
       );

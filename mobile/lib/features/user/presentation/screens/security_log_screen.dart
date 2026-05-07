@@ -175,7 +175,7 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
         centerTitle: true,
       ),
       child: ContentConstraint(
-        child: RefreshIndicator(
+        child: SparkleRefreshIndicator(
           onRefresh: _loadLogs,
           child: ListView(
             padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
@@ -199,7 +199,11 @@ class _SecurityLogScreenState extends ConsumerState<SecurityLogScreen> {
                           _buildInfoChip(
                             context,
                             icon: Icons.warning_amber_rounded,
-                            label: l10n.secLogAnomalies(_logs.where((item) => item.action == 'login_failed' || item.action == 'account_delete').length),
+                            label: l10n.secLogAnomalies(_logs
+                                .where((item) =>
+                                    item.action == 'login_failed' ||
+                                    item.action == 'account_delete')
+                                .length),
                           ),
                         ],
                       ),

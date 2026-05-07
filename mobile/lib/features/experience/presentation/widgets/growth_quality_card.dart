@@ -122,7 +122,7 @@ class _GrowthQualitySurface extends StatelessWidget {
                 style: TextStyle(
                   color: DS.textSecondary,
                   fontSize: DS.fontSizeSm,
-                  height: 1.45,
+                  height: 1.52,
                 ),
               ),
             ],

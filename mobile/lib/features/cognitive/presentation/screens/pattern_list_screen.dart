@@ -50,7 +50,7 @@ class _PatternListScreenState extends ConsumerState<PatternListScreen> {
           children: [
             _buildAppBar(context),
             Expanded(
-              child: RefreshIndicator(
+              child: SparkleRefreshIndicator(
                 onRefresh: _loadPatterns,
                 child:
                     cognitiveState.isLoading && cognitiveState.patterns.isEmpty

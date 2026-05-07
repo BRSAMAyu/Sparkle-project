@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -65,7 +66,7 @@ class CompactStatusBar extends StatelessWidget {
                       CircleAvatar(
                         radius: 14,
                         backgroundImage: user?.avatarUrl != null
-                            ? NetworkImage(user!.avatarUrl!)
+                            ? CachedNetworkImageProvider(user!.avatarUrl!)
                             : null,
                         backgroundColor: DS.avatarFallbackBackground,
                         child: user?.avatarUrl == null

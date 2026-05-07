@@ -101,7 +101,8 @@ class _LearningForecastScreenState
           ),
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: Text(context.l10n.insForecastTitle, style: TextStyle(color: DS.textPrimary)),
+          title: Text(context.l10n.insForecastTitle,
+              style: TextStyle(color: DS.textPrimary)),
           iconTheme: IconThemeData(color: DS.textPrimary),
           actions: [
             SparkleIconButton(
@@ -138,7 +139,9 @@ class _LearningForecastScreenState
                             ),
                             const SizedBox(height: DS.sm),
                             Text(
-                              I18nService.instance.isChinese ? '稍后重试，或者先完成几次学习与专注记录，让预测系统有足够数据可用。' : 'Try again later, or complete a few learning and focus sessions so the prediction system has enough data.',
+                              I18nService.instance.isChinese
+                                  ? '稍后重试，或者先完成几次学习与专注记录，让预测系统有足够数据可用。'
+                                  : 'Try again later, or complete a few learning and focus sessions so the prediction system has enough data.',
                               textAlign: TextAlign.center,
                               style: TextStyle(
                                 color: DS.textSecondary,
@@ -157,7 +160,7 @@ class _LearningForecastScreenState
                     ),
                   )
                 : ContentConstraint(
-                    child: RefreshIndicator(
+                    child: SparkleRefreshIndicator(
                       onRefresh: _loadDashboard,
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
@@ -196,7 +199,8 @@ class _LearningForecastScreenState
                             const SizedBox(height: DS.xl),
 
                             // Engagement Heatmap
-                            _buildSectionTitle(context.l10n.insActivityAnalysis),
+                            _buildSectionTitle(
+                                context.l10n.insActivityAnalysis),
                             const SizedBox(height: DS.md),
                             EngagementHeatmap(
                               data: _heatmapData,
@@ -261,7 +265,9 @@ class _LearningForecastScreenState
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    I18nService.instance.isChinese ? 'AI 预测系统' : 'AI Prediction System',
+                    I18nService.instance.isChinese
+                        ? 'AI 预测系统'
+                        : 'AI Prediction System',
                     style: TextStyle(
                       color: DS.textPrimary,
                       fontSize: 20,
@@ -270,7 +276,9 @@ class _LearningForecastScreenState
                   ),
                   const SizedBox(height: DS.xs),
                   Text(
-                    I18nService.instance.isChinese ? '基于学习数据的智能分析' : 'Smart analysis based on learning data',
+                    I18nService.instance.isChinese
+                        ? '基于学习数据的智能分析'
+                        : 'Smart analysis based on learning data',
                     style: TextStyle(
                       color: DS.textSecondary,
                       fontSize: 14,
@@ -328,7 +336,9 @@ class _LearningForecastScreenState
                 ),
                 const SizedBox(width: DS.md),
                 Text(
-                  I18nService.instance.isChinese ? '最佳学习时间' : 'Best Learning Time',
+                  I18nService.instance.isChinese
+                      ? '最佳学习时间'
+                      : 'Best Learning Time',
                   style: TextStyle(fontSize: 16, fontWeight: DS.fontWeightBold),
                 ),
               ],
@@ -336,7 +346,8 @@ class _LearningForecastScreenState
             const SizedBox(height: DS.lg),
             Text(
               hasRecommendations
-                  ? context.l10n.lfcConfidence(sampleSize, (confidence * 100).round().toString())
+                  ? context.l10n.lfcConfidence(
+                      sampleSize, (confidence * 100).round().toString())
                   : (reason.isEmpty ? context.l10n.insNotEnoughData : reason),
               style: TextStyle(
                 color: DS.textSecondary,
@@ -354,12 +365,14 @@ class _LearningForecastScreenState
                 ),
                 child: Text(
                   dataStatus == 'insufficient_data'
-                      ? (I18nService.instance.isChinese ? '先完成 3 次以上学习或专注记录，系统就会开始给出更个性化的时间窗口。' : 'Complete 3+ learning or focus sessions first, and the system will provide more personalized time windows.')
+                      ? (I18nService.instance.isChinese
+                          ? '先完成 3 次以上学习或专注记录，系统就会开始给出更个性化的时间窗口。'
+                          : 'Complete 3+ learning or focus sessions first, and the system will provide more personalized time windows.')
                       : reason,
                   style: TextStyle(
                     color: DS.textSecondary,
                     fontSize: 13,
-                    height: 1.4,
+                    height: 1.52,
                   ),
                 ),
               ),
@@ -369,7 +382,9 @@ class _LearningForecastScreenState
             if (bestHours.isNotEmpty) ...[
               const SizedBox(height: DS.lg),
               Text(
-                I18nService.instance.isChinese ? '推荐学习时段' : 'Recommended Learning Hours',
+                I18nService.instance.isChinese
+                    ? '推荐学习时段'
+                    : 'Recommended Learning Hours',
                 style: TextStyle(fontSize: 14, fontWeight: DS.fontWeightMedium),
               ),
               const SizedBox(height: DS.sm),
@@ -396,7 +411,9 @@ class _LearningForecastScreenState
             if (bestWeekdays.isNotEmpty) ...[
               const SizedBox(height: DS.lg),
               Text(
-                I18nService.instance.isChinese ? '推荐学习日' : 'Recommended Learning Days',
+                I18nService.instance.isChinese
+                    ? '推荐学习日'
+                    : 'Recommended Learning Days',
                 style: TextStyle(fontSize: 14, fontWeight: DS.fontWeightMedium),
               ),
               const SizedBox(height: DS.sm),
@@ -442,13 +459,16 @@ class _LearningForecastScreenState
                   const SizedBox(width: DS.md),
                   Text(
                     I18nService.instance.isChinese ? '学习建议' : 'Learning Tips',
-                    style: TextStyle(fontSize: 16, fontWeight: DS.fontWeightBold),
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: DS.fontWeightBold),
                   ),
                 ],
               ),
               const SizedBox(height: DS.md),
               _buildTip(context.l10n.lfcTipMorning),
-              _buildTip(I18nService.instance.isChinese ? '周一到周四是您的高产学习日' : 'Mon-Thu are your peak learning days'),
+              _buildTip(I18nService.instance.isChinese
+                  ? '周一到周四是您的高产学习日'
+                  : 'Mon-Thu are your peak learning days'),
               _buildTip(context.l10n.lfcTipPomodoro),
             ],
           ),

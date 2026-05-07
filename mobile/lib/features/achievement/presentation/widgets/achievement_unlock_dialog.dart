@@ -755,9 +755,12 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
 
     final isBusy = _actionState != _AchievementUnlockActionState.idle;
 
-    return GestureDetector(
-      onTap: isBusy ? null : onPressed,
-      child: Container(
+    return Semantics(
+      button: true,
+      label: I18nService.instance.isChinese ? label : label,
+      child: GestureDetector(
+        onTap: isBusy ? null : onPressed,
+        child: Container(
         padding: const EdgeInsets.symmetric(
           vertical: DS.spacing12,
         ),
@@ -803,6 +806,7 @@ class _AchievementUnlockDialogState extends State<AchievementUnlockDialog>
             ),
           ],
         ),
+      ),
       ),
     );
   }

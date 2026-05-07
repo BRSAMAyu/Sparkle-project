@@ -122,6 +122,7 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
 
   bool _showHeart = false;
   bool _isPressed = false;
+  final Set<String> _expandedMessageIds = <String>{};
 
   bool get _isFreshUserBubble {
     if (widget.message is! ChatMessageModel) {
@@ -842,8 +843,6 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
         ? widget.message as ChatMessageModel
         : null;
     final isUser = _isUser;
-    final isMostRecentBubble =
-        _isFreshUserBubble || widget.isLatestAssistantMessage;
     final timeStr = DateFormat('HH:mm').format(_createdAt);
     final reduceMotion = context.reduceMotion;
     final orchestrationTrace = widget.message is ChatMessageModel
@@ -966,21 +965,16 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                       ? _getUserMessageMaterial()
                                       : _getAIMessageMaterial(context),
                                   shapeBorder: ContinuousRectangleBorder(
-                                    borderRadius: isMostRecentBubble
-                                        ? BorderRadius.only(
-                                            topLeft: const Radius.circular(24),
-                                            topRight:
-                                                const Radius.circular(24),
-                                            bottomLeft:
-                                                Radius.circular(
-                                                  isUser ? 24 : 6,
-                                                ),
-                                            bottomRight:
-                                                Radius.circular(
-                                                  isUser ? 6 : 24,
-                                                ),
-                                          )
-                                        : BorderRadius.circular(24),
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: const Radius.circular(24),
+                                      topRight: const Radius.circular(24),
+                                      bottomLeft: Radius.circular(
+                                        isUser ? 24 : 6,
+                                      ),
+                                      bottomRight: Radius.circular(
+                                        isUser ? 6 : 24,
+                                      ),
+                                    ),
                                   ),
                                   padding: const EdgeInsets.symmetric(
                                     vertical: 10,
@@ -1076,10 +1070,23 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                                   .chatBubble,
                                             );
 
-                                            // Try to estimate content height and decide if scrolling is needed
-                                            // For long content (heuristic: >500 chars), use constrained scrollable
                                             final shouldConstrain =
                                                 _content.length > 500;
+                                            final messageKey = _messageId ??
+                                                _createdAt
+                                                    .microsecondsSinceEpoch
+                                                    .toString();
+                                            final isExpanded =
+                                                _expandedMessageIds
+                                                    .contains(messageKey);
+                                            final collapsedHeight =
+                                                min(maxHeight, 280.0);
+                                            final toggleLabel = I18nService
+                                                    .instance.isChinese
+                                                ? (isExpanded ? '收起' : '展开全文')
+                                                : (isExpanded
+                                                    ? 'Collapse'
+                                                    : 'Read more');
 
                                             final animatedContent =
                                                 AnimatedSize(
@@ -1091,21 +1098,85 @@ class _ChatBubbleState extends ConsumerState<ChatBubble>
                                               curve: Curves.easeOutCubic,
                                               alignment: Alignment.topLeft,
                                               child: shouldConstrain
-                                                  ? SizedBox(
-                                                      height: maxHeight,
-                                                      child:
-                                                          SingleChildScrollView(
-                                                        physics:
-                                                            const ClampingScrollPhysics(),
-                                                        child: contentWidget,
-                                                      ),
+                                                  ? Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      mainAxisSize:
+                                                          MainAxisSize.min,
+                                                      children: [
+                                                        ConstrainedBox(
+                                                          constraints:
+                                                              BoxConstraints(
+                                                            maxHeight: isExpanded
+                                                                ? maxHeight
+                                                                : collapsedHeight,
+                                                          ),
+                                                          child:
+                                                              SingleChildScrollView(
+                                                            physics: isExpanded
+                                                                ? const ClampingScrollPhysics()
+                                                                : const NeverScrollableScrollPhysics(),
+                                                            child:
+                                                                contentWidget,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          height: DS.spacing8,
+                                                        ),
+                                                        Align(
+                                                          alignment:
+                                                              AlignmentDirectional
+                                                                  .centerEnd,
+                                                          child:
+                                                              TextButton.icon(
+                                                            onPressed: () {
+                                                              setState(() {
+                                                                if (isExpanded) {
+                                                                  _expandedMessageIds
+                                                                      .remove(
+                                                                    messageKey,
+                                                                  );
+                                                                } else {
+                                                                  _expandedMessageIds
+                                                                      .add(
+                                                                    messageKey,
+                                                                  );
+                                                                }
+                                                              });
+                                                            },
+                                                            icon: Icon(
+                                                              isExpanded
+                                                                  ? Icons
+                                                                      .unfold_less_rounded
+                                                                  : Icons
+                                                                      .unfold_more_rounded,
+                                                              size: 16,
+                                                            ),
+                                                            label: Text(
+                                                              toggleLabel,
+                                                            ),
+                                                            style: TextButton
+                                                                .styleFrom(
+                                                              foregroundColor: isUser
+                                                                  ? DS.chatBubbleUserText
+                                                                  : DS.brandPrimary,
+                                                              visualDensity:
+                                                                  VisualDensity
+                                                                      .compact,
+                                                              padding:
+                                                                  const EdgeInsets
+                                                                      .symmetric(
+                                                                horizontal:
+                                                                    DS.spacing8,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
                                                     )
                                                   : contentWidget,
                                             );
-
-                                            if (!shouldConstrain) {
-                                              return animatedContent;
-                                            }
 
                                             return animatedContent;
                                           },

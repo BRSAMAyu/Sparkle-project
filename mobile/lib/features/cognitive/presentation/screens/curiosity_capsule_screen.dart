@@ -73,15 +73,19 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
                           borderRadius: DS.borderRadius16,
                         ),
                         tabs: [
-                          Tab(text: l10n.capsuleCurrentTab(activeCapsules.length)),
-                          Tab(text: l10n.capsuleArchiveTab(archivedCapsules.length)),
+                          Tab(
+                              text: l10n
+                                  .capsuleCurrentTab(activeCapsules.length)),
+                          Tab(
+                              text: l10n
+                                  .capsuleArchiveTab(archivedCapsules.length)),
                         ],
                       ),
                     ),
                   ),
                 ),
                 Expanded(
-                  child: RefreshIndicator(
+                  child: SparkleRefreshIndicator(
                     onRefresh: () =>
                         ref.read(capsuleProvider.notifier).fetchTodayCapsules(),
                     child: TabBarView(
@@ -106,13 +110,16 @@ class CuriosityCapsuleScreen extends ConsumerWidget {
         },
         loading: () => LoadingIndicator.circular(
           showText: true,
-          loadingText: I18nService.instance.isChinese ? '正在整理今日胶囊...' : 'Preparing today\'s capsule...',
+          loadingText: I18nService.instance.isChinese
+              ? '正在整理今日胶囊...'
+              : 'Preparing today\'s capsule...',
         ),
         error: (err, stack) => CustomErrorWidget.page(
           context: context,
           title: context.l10n.cogCapsuleListFailed,
           message: l10n.capsuleLoadFailed('$err'),
-          onRetry: () => ref.read(capsuleProvider.notifier).fetchTodayCapsules(),
+          onRetry: () =>
+              ref.read(capsuleProvider.notifier).fetchTodayCapsules(),
         ),
       ),
     );
@@ -151,7 +158,9 @@ class _CapsuleList extends StatelessWidget {
             child: EmptyState(
               title: emptyMessage ?? context.l10n.capsuleEmptyTitle,
               description: archived
-                  ? (I18nService.instance.isChinese ? '已归档的胶囊会在这里显示。' : 'Archived capsules will appear here.')
+                  ? (I18nService.instance.isChinese
+                      ? '已归档的胶囊会在这里显示。'
+                      : 'Archived capsules will appear here.')
                   : context.l10n.capsuleEmptySubtitle,
               icon: archived
                   ? Icons.inventory_2_outlined

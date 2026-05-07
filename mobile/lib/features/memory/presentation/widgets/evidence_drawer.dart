@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
-import 'package:sparkle/core/models/memory_models.dart';
+import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/models/memory_models.dart';
 import 'package:sparkle/core/services/i18n_service.dart';
 
 class EvidenceDrawer extends StatelessWidget {
@@ -22,23 +23,21 @@ class EvidenceDrawer extends StatelessWidget {
     List<Map<String, dynamic>> items = const [],
     bool evidenceMissing = false,
   }) {
-    return showModalBottomSheet(
+    return showSensoryModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
+      builder: (ctx) => ConstrainedBox(
         constraints: BoxConstraints(
           maxHeight: MediaQuery.of(ctx).size.height * 0.6,
-        ),
-        decoration: BoxDecoration(
-          color: DS.surfacePrimary,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
-              padding: const EdgeInsets.all(DS.md),
+              padding: const EdgeInsets.symmetric(
+                horizontal: DS.md,
+                vertical: DS.sm,
+              ),
               child: Row(
                 children: [
                   Text(context.l10n.memEvidenceRecord, style: DS.titleMedium),

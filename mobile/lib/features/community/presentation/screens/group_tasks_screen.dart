@@ -44,7 +44,8 @@ class GroupTasksScreen extends ConsumerWidget {
           if (tasks.isEmpty) {
             return Center(
               child: CompactEmptyState(
-                message: I18nService.instance.isChinese ? '还没有任务' : 'No tasks yet',
+                message:
+                    I18nService.instance.isChinese ? '还没有任务' : 'No tasks yet',
                 icon: Icons.assignment_outlined,
               ),
             );
@@ -60,7 +61,7 @@ class GroupTasksScreen extends ConsumerWidget {
               .toList();
 
           return ContentConstraint(
-            child: RefreshIndicator(
+            child: SparkleRefreshIndicator(
               onRefresh: () =>
                   ref.read(groupTasksProvider(groupId).notifier).refresh(),
               child: ListView(
@@ -89,7 +90,11 @@ class GroupTasksScreen extends ConsumerWidget {
                                   .completeTask(entry.$2.id);
                               ref.invalidate(groupTasksProvider(groupId));
                               if (context.mounted) {
-                                AppFeedback.success(context, I18nService.instance.isChinese ? '任务已完成！' : 'Task completed!');
+                                AppFeedback.success(
+                                    context,
+                                    I18nService.instance.isChinese
+                                        ? '任务已完成！'
+                                        : 'Task completed!');
                               }
                             } catch (e) {
                               if (context.mounted) {
@@ -134,16 +139,15 @@ class GroupTasksScreen extends ConsumerWidget {
                       I18nService.instance.isChinese ? '已完成' : 'Completed',
                       DS.success,
                     ),
-                    ...completed.indexed
-                        .map(
-                          (entry) => SparkleStaggerItem(
-                            index: entry.$1 + inProgress.length + unclaimed.length,
-                            child: _TaskCard(
-                              task: entry.$2,
-                              groupId: groupId,
-                            ),
-                          ),
+                    ...completed.indexed.map(
+                      (entry) => SparkleStaggerItem(
+                        index: entry.$1 + inProgress.length + unclaimed.length,
+                        child: _TaskCard(
+                          task: entry.$2,
+                          groupId: groupId,
                         ),
+                      ),
+                    ),
                   ],
                 ],
               ),
@@ -179,9 +183,10 @@ class GroupTasksScreen extends ConsumerWidget {
             Text(
               title,
               style: TextStyle(
-                  fontWeight: DS.fontWeightBold,
-                  color: color,
-                  fontSize: DS.fontSizeBase,),
+                fontWeight: DS.fontWeightBold,
+                color: color,
+                fontSize: DS.fontSizeBase,
+              ),
             ),
           ],
         ),
@@ -296,7 +301,8 @@ extension on GroupTasksScreen {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Text(I18nService.instance.isChinese ? '创建群组任务' : 'Create Group Task'),
+          title: Text(
+              I18nService.instance.isChinese ? '创建群组任务' : 'Create Group Task'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -305,7 +311,8 @@ extension on GroupTasksScreen {
                 TextField(
                   controller: titleController,
                   decoration: InputDecoration(
-                    labelText: I18nService.instance.isChinese ? '任务标题' : 'Task Title',
+                    labelText:
+                        I18nService.instance.isChinese ? '任务标题' : 'Task Title',
                     hintText: I18nService.instance.isChinese
                         ? '例如：完成第三章练习'
                         : 'e.g. Complete Chapter 3 exercises',
@@ -317,8 +324,12 @@ extension on GroupTasksScreen {
                 TextField(
                   controller: descriptionController,
                   decoration: InputDecoration(
-                    labelText: I18nService.instance.isChinese ? '任务描述（可选）' : 'Description (optional)',
-                    hintText: I18nService.instance.isChinese ? '详细描述任务内容...' : 'Describe the task...',
+                    labelText: I18nService.instance.isChinese
+                        ? '任务描述（可选）'
+                        : 'Description (optional)',
+                    hintText: I18nService.instance.isChinese
+                        ? '详细描述任务内容...'
+                        : 'Describe the task...',
                     border: const OutlineInputBorder(),
                   ),
                   maxLines: 3,
@@ -333,7 +344,8 @@ extension on GroupTasksScreen {
                   min: 5,
                   max: 180,
                   divisions: 35,
-                  label: '$estimatedMinutes ${I18nService.instance.isChinese ? '分钟' : 'min'}',
+                  label:
+                      '$estimatedMinutes ${I18nService.instance.isChinese ? '分钟' : 'min'}',
                   onChanged: (value) {
                     setState(() {
                       estimatedMinutes = value.toInt();
@@ -372,7 +384,9 @@ extension on GroupTasksScreen {
                 if (title.isEmpty) {
                   AppFeedback.info(
                     context,
-                    I18nService.instance.isChinese ? '请输入任务标题' : 'Enter a task title',
+                    I18nService.instance.isChinese
+                        ? '请输入任务标题'
+                        : 'Enter a task title',
                   );
                   return;
                 }
@@ -396,7 +410,9 @@ extension on GroupTasksScreen {
                   if (context.mounted) {
                     AppFeedback.success(
                       context,
-                      I18nService.instance.isChinese ? '任务创建成功' : 'Task created',
+                      I18nService.instance.isChinese
+                          ? '任务创建成功'
+                          : 'Task created',
                     );
                   }
                 } catch (e) {

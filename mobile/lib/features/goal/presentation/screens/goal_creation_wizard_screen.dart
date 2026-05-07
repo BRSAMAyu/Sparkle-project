@@ -136,13 +136,13 @@ class _GoalCreationWizardScreenState
                       ? const SizedBox(
                           height: 16,
                           width: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2,
-                              semanticsLabel:
-                                  'Loading'),
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, semanticsLabel: 'Loading'),
                         )
-                      : Icon(_step == 4
-                          ? Icons.check_rounded
-                          : Icons.arrow_forward_rounded,
+                      : Icon(
+                          _step == 4
+                              ? Icons.check_rounded
+                              : Icons.arrow_forward_rounded,
                           semanticLabel: _step == 4
                               ? _t('创建', 'Create')
                               : _t('继续', 'Continue')),
@@ -164,7 +164,9 @@ class _GoalCreationWizardScreenState
     // chips/action rows. We only re-enable the bottom Continue button once
     // the user has fallen back to the legacy chooser.
     if (_step == 0 && _intentAnalysis == null) return false;
-    if (_step == 0 && _intentAnalysis != null && _intentAnalysis!.isActionable) {
+    if (_step == 0 &&
+        _intentAnalysis != null &&
+        _intentAnalysis!.isActionable) {
       return false;
     }
     if (_step == 1) {
@@ -280,8 +282,7 @@ class _GoalCreationWizardScreenState
       _analyzingIntent = true;
       _error = null;
     });
-    final analysis =
-        await ref.read(goalIntentServiceProvider).analyze(text);
+    final analysis = await ref.read(goalIntentServiceProvider).analyze(text);
     if (!mounted) return;
     if (analysis.isDisabled || !analysis.isActionable) {
       // Kill switch off, server didn't recognise the intent, or transport
@@ -398,9 +399,7 @@ class _GoalCreationWizardScreenState
       widget.onCreated?.call(created);
       if (widget.onCreated != null) {
         setState(() => _creating = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_t('目标已创建', 'Goal created'))),
-        );
+        AppFeedback.success(context, _t('目标已创建', 'Goal created'));
         return;
       }
       setState(() => _creating = false);
@@ -437,9 +436,7 @@ class _GoalCreationWizardScreenState
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_t('目标已创建', 'Goal created'))),
-        );
+        AppFeedback.success(context, _t('目标已创建', 'Goal created'));
       }
     } catch (_) {
       if (!mounted) return;
@@ -480,7 +477,8 @@ class _WizardProgress extends StatelessWidget {
                   Container(
                     height: 8,
                     decoration: BoxDecoration(
-                      color: index <= step ? DS.brandPrimary : DS.surfaceTertiary,
+                      color:
+                          index <= step ? DS.brandPrimary : DS.surfaceTertiary,
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),

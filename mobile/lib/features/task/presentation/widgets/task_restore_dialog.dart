@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/shared/entities/task_model.dart';
 
@@ -59,9 +60,7 @@ class TaskRestoreDialog extends StatelessWidget {
                 : () {
                     onConfirm!();
                     Navigator.of(context).pop(true);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.taskResumeQueued)),
-                    );
+                    AppFeedback.success(context, l10n.taskResumeQueued);
                   },
             child: Text(l10n.taskActionResume),
           ),

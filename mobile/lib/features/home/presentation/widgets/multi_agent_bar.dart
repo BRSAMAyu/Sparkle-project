@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/chat/data/models/chat_mode.dart';
 import 'package:sparkle/features/chat/presentation/providers/chat_mode_provider.dart';
@@ -130,14 +131,19 @@ class _ModeChipState extends State<_ModeChip> {
   Widget build(BuildContext context) {
     final colors = context.colorExtensions;
     final foregroundColor = colors.adaptiveTextPrimary;
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        widget.onTap();
-      },
-      onTapCancel: () => setState(() => _isPressed = false),
-      child: AnimatedScale(
+    return Semantics(
+      button: true,
+      label: I18nService.instance.isChinese
+          ? '切换到${widget.mode.label}模式'
+          : 'Switch to ${widget.mode.label} mode',
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) {
+          setState(() => _isPressed = false);
+          widget.onTap();
+        },
+        onTapCancel: () => setState(() => _isPressed = false),
+        child: AnimatedScale(
         scale: _isPressed ? 0.95 : 1.0,
         duration: AnimationSystem.quick,
         curve: AnimationSystem.smooth,
@@ -177,6 +183,7 @@ class _ModeChipState extends State<_ModeChip> {
           ),
         ),
       ),
+    ),
     );
   }
 }

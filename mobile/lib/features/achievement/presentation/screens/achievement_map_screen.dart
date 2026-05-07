@@ -108,12 +108,9 @@ class _AchievementMapScreenState extends ConsumerState<AchievementMapScreen> {
     );
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(context.l10n.achievementMapFocusHint(targetNode.name)),
-          duration: const Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-        ),
+      AppFeedback.info(
+        context,
+        context.l10n.achievementMapFocusHint(targetNode.name),
       );
     }
   }
@@ -192,10 +189,13 @@ class _AchievementNodeBottomSheet extends StatelessWidget {
                 children: [
                   _MetaChip(label: node.laneLabel, color: color),
                   _MetaChip(
-                      label: _displayStateLabel(node.displayState),
-                      color: Colors.white70,),
+                    label: _displayStateLabel(node.displayState),
+                    color: Colors.white70,
+                  ),
                   _MetaChip(
-                      label: '${node.progressPercentage}%', color: DS.info,),
+                    label: '${node.progressPercentage}%',
+                    color: DS.info,
+                  ),
                 ],
               ),
               if (node.unlockHint != null) ...[
@@ -294,23 +294,23 @@ class _MetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: DS.spacing10,
-        vertical: DS.spacing6,
-      ),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
-        borderRadius: DS.borderRadius12,
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: DS.fontSizeXs,
-          color: color,
-          fontWeight: DS.fontWeightMedium,
+        padding: const EdgeInsets.symmetric(
+          horizontal: DS.spacing10,
+          vertical: DS.spacing6,
         ),
-      ),
-    );
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.14),
+          borderRadius: DS.borderRadius12,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: DS.fontSizeXs,
+            color: color,
+            fontWeight: DS.fontWeightMedium,
+          ),
+        ),
+      );
 }
 
 // ---------------------------------------------------------------------------
@@ -533,13 +533,16 @@ class _CosmicConstellationCanvasState extends State<_CosmicConstellationCanvas>
     _starCount = count;
 
     final rng = math.Random(42);
-    _stars = List.generate(count, (_) => _Star(
+    _stars = List.generate(
+      count,
+      (_) => _Star(
         x: rng.nextDouble(),
         y: rng.nextDouble(),
         radius: 0.5 + rng.nextDouble() * 1.5,
         baseOpacity: 0.2 + rng.nextDouble() * 0.6,
         phase: rng.nextDouble() * math.pi * 2,
-      ),);
+      ),
+    );
   }
 
   int _getAdaptiveStarCount() {
@@ -876,25 +879,25 @@ class _MapControlButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Tooltip(
-      message: tooltip,
-      child: Material(
-        color: DS.deepSpaceStart.withValues(alpha: 0.86),
-        borderRadius: DS.borderRadius16,
-        child: InkWell(
+        message: tooltip,
+        child: Material(
+          color: DS.deepSpaceStart.withValues(alpha: 0.86),
           borderRadius: DS.borderRadius16,
-          onTap: onTap,
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              borderRadius: DS.borderRadius16,
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          child: InkWell(
+            borderRadius: DS.borderRadius16,
+            onTap: onTap,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                borderRadius: DS.borderRadius16,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              ),
+              child: Icon(icon, color: DS.textPrimary, size: 22),
             ),
-            child: Icon(icon, color: DS.textPrimary, size: 22),
           ),
         ),
-      ),
-    );
+      );
 }
 
 // ---------------------------------------------------------------------------
@@ -1262,213 +1265,219 @@ class _CosmicNodeWidget extends StatelessWidget {
         progress >= 0.75 || node.displayState == 'close_to_unlock';
     final isRecommended = node.isRecommendedTarget;
 
-    return GestureDetector(
-      onTap: () => onTap(node),
-      child: SizedBox(
-        width: 88,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Glow ring + node circle.
-            SizedBox(
-              width: 68,
-              height: 68,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Animated outer glow ring (unlocked only).
-                  if (node.isUnlocked || isRecommended)
-                    reduceMotion
-                        ? Container(
-                            width: 66,
-                            height: 66,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: color.withValues(
-                                  alpha: isRecommended
-                                      ? 0.75
-                                      : (isNearCompletion ? 0.5 : 0.3),
-                                ),
-                                width: isRecommended
-                                    ? 3.0
-                                    : (isNearCompletion ? 2.6 : 2.0),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
+    return Semantics(
+      button: true,
+      label: I18nService.instance.isChinese
+          ? '查看成就节点 ${node.name}'
+          : 'View achievement node ${node.name}',
+      child: GestureDetector(
+        onTap: () => onTap(node),
+        child: SizedBox(
+          width: 88,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Glow ring + node circle.
+              SizedBox(
+                width: 68,
+                height: 68,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Animated outer glow ring (unlocked only).
+                    if (node.isUnlocked || isRecommended)
+                      reduceMotion
+                          ? Container(
+                              width: 66,
+                              height: 66,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
                                   color: color.withValues(
                                     alpha: isRecommended
-                                        ? 0.38
-                                        : (isNearCompletion ? 0.3 : 0.18),
+                                        ? 0.75
+                                        : (isNearCompletion ? 0.5 : 0.3),
                                   ),
-                                  blurRadius: isRecommended
-                                      ? 20
-                                      : (isNearCompletion ? 16 : 12),
-                                  spreadRadius: isRecommended
-                                      ? 4
-                                      : (isNearCompletion ? 3 : 2),
+                                  width: isRecommended
+                                      ? 3.0
+                                      : (isNearCompletion ? 2.6 : 2.0),
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: color.withValues(
+                                      alpha: isRecommended
+                                          ? 0.38
+                                          : (isNearCompletion ? 0.3 : 0.18),
+                                    ),
+                                    blurRadius: isRecommended
+                                        ? 20
+                                        : (isNearCompletion ? 16 : 12),
+                                    spreadRadius: isRecommended
+                                        ? 4
+                                        : (isNearCompletion ? 3 : 2),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : AnimatedBuilder(
+                              animation: pulseController,
+                              builder: (context, _) {
+                                final pulseOpacity = (isRecommended
+                                        ? 0.55
+                                        : (isNearCompletion ? 0.4 : 0.3)) +
+                                    (isRecommended
+                                            ? 0.3
+                                            : (isNearCompletion ? 0.25 : 0.2)) *
+                                        math.sin(
+                                          pulseController.value * math.pi * 2,
+                                        );
+                                return Container(
+                                  width: 66,
+                                  height: 66,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color:
+                                          color.withValues(alpha: pulseOpacity),
+                                      width: isRecommended
+                                          ? 3.0
+                                          : (isNearCompletion ? 2.6 : 2.0),
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: color.withValues(
+                                          alpha: pulseOpacity * 0.5,
+                                        ),
+                                        blurRadius: isRecommended
+                                            ? 20
+                                            : (isNearCompletion ? 16 : 12),
+                                        spreadRadius: isRecommended
+                                            ? 4
+                                            : (isNearCompletion ? 3 : 2),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+
+                    // Core circle.
+                    Container(
+                      width: nodeSize,
+                      height: nodeSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: node.isUnlocked
+                            ? LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  color.withValues(alpha: 0.35),
+                                  color.withValues(alpha: 0.15),
+                                ],
+                              )
+                            : null,
+                        color: node.isUnlocked
+                            ? null
+                            : DS.surfaceSecondary.withValues(alpha: 0.6),
+                        border: Border.all(
+                          color: node.isUnlocked
+                              ? color.withValues(alpha: 0.7)
+                              : Colors.white.withValues(alpha: 0.1),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: node.isUnlocked
+                          ? Icon(
+                              _iconForCategory(node.category),
+                              color: color,
+                              size: DS.iconSizeSm,
+                            )
+                          : Stack(
+                              alignment: Alignment.center,
+                              children: [
+                                Icon(
+                                  _iconForCategory(node.category),
+                                  color: DS.textTertiary.withValues(alpha: 0.4),
+                                  size: DS.iconSizeSm,
+                                ),
+                                Icon(
+                                  Icons.lock_outline,
+                                  color: Colors.white.withValues(alpha: 0.35),
+                                  size: 16,
                                 ),
                               ],
                             ),
-                          )
-                        : AnimatedBuilder(
-                            animation: pulseController,
-                            builder: (context, _) {
-                              final pulseOpacity = (isRecommended
-                                      ? 0.55
-                                      : (isNearCompletion ? 0.4 : 0.3)) +
-                                  (isRecommended
-                                          ? 0.3
-                                          : (isNearCompletion ? 0.25 : 0.2)) *
-                                      math.sin(
-                                        pulseController.value * math.pi * 2,
-                                      );
-                              return Container(
-                                width: 66,
-                                height: 66,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color:
-                                        color.withValues(alpha: pulseOpacity),
-                                    width: isRecommended
-                                        ? 3.0
-                                        : (isNearCompletion ? 2.6 : 2.0),
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: color.withValues(
-                                        alpha: pulseOpacity * 0.5,
-                                      ),
-                                      blurRadius: isRecommended
-                                          ? 20
-                                          : (isNearCompletion ? 16 : 12),
-                                      spreadRadius: isRecommended
-                                          ? 4
-                                          : (isNearCompletion ? 3 : 2),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-
-                  // Core circle.
-                  Container(
-                    width: nodeSize,
-                    height: nodeSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: node.isUnlocked
-                          ? LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [
-                                color.withValues(alpha: 0.35),
-                                color.withValues(alpha: 0.15),
-                              ],
-                            )
-                          : null,
-                      color: node.isUnlocked
-                          ? null
-                          : DS.surfaceSecondary.withValues(alpha: 0.6),
-                      border: Border.all(
-                        color: node.isUnlocked
-                            ? color.withValues(alpha: 0.7)
-                            : Colors.white.withValues(alpha: 0.1),
-                        width: 1.5,
-                      ),
                     ),
-                    child: node.isUnlocked
-                        ? Icon(
-                            _iconForCategory(node.category),
-                            color: color,
-                            size: DS.iconSizeSm,
-                          )
-                        : Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              Icon(
-                                _iconForCategory(node.category),
-                                color: DS.textTertiary.withValues(alpha: 0.4),
-                                size: DS.iconSizeSm,
-                              ),
-                              Icon(
-                                Icons.lock_outline,
-                                color: Colors.white.withValues(alpha: 0.35),
-                                size: 16,
-                              ),
-                            ],
-                          ),
-                  ),
 
-                  if (isRecommended)
+                    if (isRecommended)
+                      Positioned(
+                        bottom: -2,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: DS.spacing6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.92),
+                            borderRadius: DS.borderRadius8,
+                          ),
+                          child: Text(
+                            'NEXT',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: DS.fontWeightBold,
+                              color: DS.neutral0,
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // Milestone overlay badge.
                     Positioned(
-                      bottom: -2,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: DS.spacing6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.92),
-                          borderRadius: DS.borderRadius8,
-                        ),
-                        child: Text(
-                          'NEXT',
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: DS.fontWeightBold,
-                            color: DS.neutral0,
-                            letterSpacing: 0.6,
-                          ),
-                        ),
+                      top: -4,
+                      right: -4,
+                      child: AchievementMilestoneBadge(
+                        progress: progress,
+                        rarity: node.rarity,
                       ),
                     ),
-
-                  // Milestone overlay badge.
-                  Positioned(
-                    top: -4,
-                    right: -4,
-                    child: AchievementMilestoneBadge(
-                      progress: progress,
-                      rarity: node.rarity,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: DS.spacing4),
-
-            // Name label with dark background chip.
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: DS.spacing6,
-                vertical: DS.spacing4,
-              ),
-              decoration: BoxDecoration(
-                color: isRecommended
-                    ? color.withValues(alpha: 0.26)
-                    : DS.deepSpaceStart.withValues(alpha: 0.75),
-                borderRadius: DS.borderRadius8,
-                border: isRecommended
-                    ? Border.all(color: color.withValues(alpha: 0.45))
-                    : null,
-              ),
-              child: Text(
-                node.name,
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: DS.fontSizeXs,
-                  fontWeight: DS.fontWeightMedium,
-                  color: node.isUnlocked ? DS.textPrimary : DS.textTertiary,
+                  ],
                 ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: DS.spacing4),
+
+              // Name label with dark background chip.
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: DS.spacing6,
+                  vertical: DS.spacing4,
+                ),
+                decoration: BoxDecoration(
+                  color: isRecommended
+                      ? color.withValues(alpha: 0.26)
+                      : DS.deepSpaceStart.withValues(alpha: 0.75),
+                  borderRadius: DS.borderRadius8,
+                  border: isRecommended
+                      ? Border.all(color: color.withValues(alpha: 0.45))
+                      : null,
+                ),
+                child: Text(
+                  node.name,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: DS.fontSizeXs,
+                    fontWeight: DS.fontWeightMedium,
+                    color: node.isUnlocked ? DS.textPrimary : DS.textTertiary,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

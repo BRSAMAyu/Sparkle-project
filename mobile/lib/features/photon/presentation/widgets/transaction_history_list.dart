@@ -106,7 +106,7 @@ class _TransactionHistoryListState
       );
     }
 
-    return RefreshIndicator(
+    return SparkleRefreshIndicator(
       onRefresh: () async {
         unawaited(ref.read(photonTransactionsProvider.notifier).refresh());
       },

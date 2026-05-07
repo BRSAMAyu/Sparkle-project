@@ -246,7 +246,7 @@ class _TaskListScreenState extends ConsumerState<TaskListScreen> {
           size: 32,
         ),
       ),
-      child: RefreshIndicator(
+      child: SparkleRefreshIndicator(
         onRefresh: () => ref.read(taskListProvider.notifier).refreshTasks(),
         child: ContentConstraint(
           child: Column(

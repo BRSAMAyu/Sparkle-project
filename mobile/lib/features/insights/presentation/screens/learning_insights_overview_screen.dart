@@ -248,7 +248,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                                       .bodySmall
                                       ?.copyWith(
                                         color: DS.textSecondary,
-                                        height: 1.45,
+                                        height: 1.52,
                                       ),
                                 ),
                               ),
@@ -279,7 +279,7 @@ class LearningInsightsOverviewScreen extends ConsumerWidget {
                             style:
                                 Theme.of(context).textTheme.bodySmall?.copyWith(
                                       color: DS.textSecondary,
-                                      height: 1.45,
+                                      height: 1.52,
                                     ),
                           ),
                         ),
@@ -478,7 +478,7 @@ class _OverviewHero extends StatelessWidget {
                 : 'Only the entries you actually need next — no clutter.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: DS.textSecondary,
-                  height: 1.45,
+                  height: 1.52,
                 ),
           ),
         ],
@@ -575,7 +575,7 @@ class _InsightModuleCard extends StatelessWidget {
               subtitle,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                     fontWeight: DS.fontWeightBold,
-                    height: 1.35,
+                    height: 1.52,
                   ),
             ),
             const SizedBox(height: DS.spacing6),
@@ -583,7 +583,7 @@ class _InsightModuleCard extends StatelessWidget {
               status,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: DS.textSecondary,
-                    height: 1.45,
+                    height: 1.52,
                   ),
             ),
             const SizedBox(height: DS.spacing16),

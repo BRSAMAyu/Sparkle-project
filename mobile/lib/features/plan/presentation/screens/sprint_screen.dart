@@ -61,7 +61,7 @@ class SprintScreen extends ConsumerWidget {
         ],
       ),
       child: ContentConstraint(
-        child: RefreshIndicator(
+        child: SparkleRefreshIndicator(
           onRefresh: () => ref.read(planListProvider.notifier).refresh(),
           child: _buildBody(context, planState, activeSprint),
         ),
@@ -152,8 +152,7 @@ class _ActiveSprintView extends ConsumerWidget {
           ),
           if (fullPlan.tasks == null || fullPlan.tasks!.isEmpty)
             SliverToBoxAdapter(
-              child: Center(
-                  child: Text(context.l10n.sprintNoTasks)),
+              child: Center(child: Text(context.l10n.sprintNoTasks)),
             )
           else
             SliverList(
@@ -262,7 +261,8 @@ class _SprintHeader extends StatelessWidget {
                 label: Text(context.l10n.sprintReviewBtn),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: DS.brandPrimary,
-                  side: BorderSide(color: DS.brandPrimary.withValues(alpha: 0.4)),
+                  side:
+                      BorderSide(color: DS.brandPrimary.withValues(alpha: 0.4)),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),

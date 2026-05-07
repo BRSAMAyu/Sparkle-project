@@ -181,7 +181,7 @@ class _SeedLibraryDetailScreenState
       return true;
     }).toList();
 
-    return RefreshIndicator(
+    return SparkleRefreshIndicator(
       onRefresh: () async {
         await ref
             .read(seedLibraryDetailProvider(widget.libraryId).notifier)

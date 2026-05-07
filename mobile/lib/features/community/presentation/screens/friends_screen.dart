@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -142,7 +143,7 @@ class _MyFriendsTab extends ConsumerWidget {
                     children: [
                       CircleAvatar(
                         backgroundImage: friend.avatarUrl != null
-                            ? NetworkImage(friend.avatarUrl!)
+                            ? CachedNetworkImageProvider(friend.avatarUrl!)
                             : null,
                         child: friend.avatarUrl == null
                             ? Text(friend.displayName[0])
@@ -182,7 +183,8 @@ class _MyFriendsTab extends ConsumerWidget {
                 // Block user option
                 ListTile(
                   leading: Icon(Icons.block, color: DS.error),
-                  title: Text(context.l10n.friendsBlockUser, style: TextStyle(color: DS.error)),
+                  title: Text(context.l10n.friendsBlockUser,
+                      style: TextStyle(color: DS.error)),
                   onTap: () {
                     Navigator.pop(ctx);
                     _handleBlockUser(context, ref, friendInfo);
@@ -215,7 +217,8 @@ class _MyFriendsTab extends ConsumerWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(context.l10n.friendsDeleteFriend),
-        content: Text(context.l10n.friendsConfirmDeleteFriend(friendInfo.friend.displayName)),
+        content: Text(context.l10n
+            .friendsConfirmDeleteFriend(friendInfo.friend.displayName)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -235,13 +238,15 @@ class _MyFriendsTab extends ConsumerWidget {
         await ref.read(friendsProvider.notifier).deleteFriend(friendInfo.id);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.success(context.l10n.friendsFriendDeleted(friendInfo.friend.displayName)),
+            SparkleSnackBar.success(context.l10n
+                .friendsFriendDeleted(friendInfo.friend.displayName)),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.error(context.l10n.friendsDeleteFailed(e.toString())),
+            SparkleSnackBar.error(
+                context.l10n.friendsDeleteFailed(e.toString())),
           );
         }
       }
@@ -261,7 +266,8 @@ class _MyFriendsTab extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(context.l10n.friendsAfterBlockingHint(friendInfo.friend.displayName)),
+            Text(context.l10n
+                .friendsAfterBlockingHint(friendInfo.friend.displayName)),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -330,13 +336,15 @@ class _MyFriendsTab extends ConsumerWidget {
             .blockUser(friendInfo.friend.id);
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.success(context.l10n.friendsBlockedSuccess(friendInfo.friend.displayName)),
+            SparkleSnackBar.success(context.l10n
+                .friendsBlockedSuccess(friendInfo.friend.displayName)),
           );
         }
       } catch (e) {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SparkleSnackBar.error(context.l10n.friendsBlockFailed(e.toString())),
+            SparkleSnackBar.error(
+                context.l10n.friendsBlockFailed(e.toString())),
           );
         }
       }
@@ -360,7 +368,7 @@ class _PendingRequestsTab extends ConsumerWidget {
         if (requests.isEmpty && pendingPartnerships.isEmpty) {
           return Center(child: Text(context.l10n.friendsNoPendingRequests));
         }
-        return RefreshIndicator(
+        return SparkleRefreshIndicator(
           onRefresh: () async {
             await ref.read(pendingRequestsProvider.notifier).refresh();
             await ref.read(myPartnershipsProvider.notifier).load();
@@ -375,7 +383,8 @@ class _PendingRequestsTab extends ConsumerWidget {
                   padding: const EdgeInsets.only(bottom: DS.md),
                   child: Text(
                     context.l10n.friendsFriendRequests,
-                    style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
+                    style:
+                        DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
                   ),
                 );
               }
@@ -386,7 +395,7 @@ class _PendingRequestsTab extends ConsumerWidget {
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundImage: user.avatarUrl != null
-                          ? NetworkImage(user.avatarUrl!)
+                          ? CachedNetworkImageProvider(user.avatarUrl!)
                           : null,
                       child: user.avatarUrl == null
                           ? Text(user.displayName[0])
@@ -430,8 +439,9 @@ class _PendingRequestsTab extends ConsumerWidget {
                 return Padding(
                   padding: const EdgeInsets.only(top: DS.lg, bottom: DS.md),
                   child: Text(
-                  context.l10n.friendPartnerInviteTitle,
-                    style: DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
+                    context.l10n.friendPartnerInviteTitle,
+                    style:
+                        DS.titleLarge.copyWith(fontWeight: DS.fontWeightBold),
                   ),
                 );
               }
@@ -442,13 +452,15 @@ class _PendingRequestsTab extends ConsumerWidget {
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundImage: partner?.avatarUrl != null
-                        ? NetworkImage(partner!.avatarUrl!)
+                        ? CachedNetworkImageProvider(partner!.avatarUrl!)
                         : null,
                     child: partner?.avatarUrl == null
-                        ? Text((partner?.displayName ?? context.l10n.communityPartnerFallback)[0])
+                        ? Text((partner?.displayName ??
+                            context.l10n.communityPartnerFallback)[0])
                         : null,
                   ),
-                  title: Text(partner?.displayName ?? context.l10n.friendPartnerInviteTitle),
+                  title: Text(partner?.displayName ??
+                      context.l10n.friendPartnerInviteTitle),
                   subtitle: Text(partnership.initiatorGoal),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -475,7 +487,8 @@ class _PendingRequestsTab extends ConsumerWidget {
                                   .invalidate(accountabilityOverviewProvider),
                             );
                             if (!context.mounted) return;
-                            AppFeedback.success(context, context.l10n.friendPartnerAccepted);
+                            AppFeedback.success(
+                                context, context.l10n.friendPartnerAccepted);
                             context.go(resolution.route);
                           } catch (e) {
                             if (context.mounted) {
@@ -522,7 +535,8 @@ class _PendingRequestsTab extends ConsumerWidget {
                                   .invalidate(accountabilityOverviewProvider),
                             );
                             if (context.mounted) {
-                              AppFeedback.info(context, context.l10n.friendInviteDeclined);
+                              AppFeedback.info(
+                                  context, context.l10n.friendInviteDeclined);
                             }
                           } catch (e) {
                             if (context.mounted) {
@@ -571,7 +585,7 @@ class _RecommendationsTab extends ConsumerWidget {
         .firstWhere((insight) => insight != null, orElse: () => null);
 
     return recommendationsState.when(
-      data: (recommendations) => RefreshIndicator(
+      data: (recommendations) => SparkleRefreshIndicator(
         onRefresh: () =>
             ref.read(friendRecommendationsProvider.notifier).refresh(),
         child: ListView(
@@ -797,7 +811,8 @@ class _RecommendationsTab extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, context.l10n.friendSubmitFailed(e.toString()));
+        AppFeedback.error(
+            context, context.l10n.friendSubmitFailed(e.toString()));
       }
     }
   }
@@ -816,7 +831,8 @@ class _RecommendationsTab extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, context.l10n.friendActionFailed(e.toString()));
+        AppFeedback.error(
+            context, context.l10n.friendActionFailed(e.toString()));
       }
     }
   }
@@ -860,7 +876,8 @@ class _RecommendationsTab extends ConsumerWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        AppFeedback.error(context, context.l10n.friendActionFailed(e.toString()));
+        AppFeedback.error(
+            context, context.l10n.friendActionFailed(e.toString()));
       }
     }
   }
@@ -907,7 +924,9 @@ class _RecommendationsTab extends ConsumerWidget {
                 children: [1, 2, 3, 7].map((d) {
                   final selected = checkInDays == d;
                   return FilterChip(
-                    label: Text(d == 1 ? context.l10n.friendCheckInEveryDay : context.l10n.friendCheckInEveryDays(d)),
+                    label: Text(d == 1
+                        ? context.l10n.friendCheckInEveryDay
+                        : context.l10n.friendCheckInEveryDays(d)),
                     selected: selected,
                     onSelected: (_) => setState(() => checkInDays = d),
                   );
@@ -932,7 +951,8 @@ class _RecommendationsTab extends ConsumerWidget {
     if (confirmed != true) return false;
     final goal = goalController.text.trim();
     if (goal.isEmpty) {
-      if (context.mounted) AppFeedback.info(context, context.l10n.friendGoalRequired);
+      if (context.mounted)
+        AppFeedback.info(context, context.l10n.friendGoalRequired);
       return false;
     }
 
@@ -1033,7 +1053,7 @@ class _RecommendationCard extends StatelessWidget {
               CircleAvatar(
                 radius: 24,
                 backgroundImage: recommendation.user.avatarUrl != null
-                    ? NetworkImage(recommendation.user.avatarUrl!)
+                    ? CachedNetworkImageProvider(recommendation.user.avatarUrl!)
                     : null,
                 child: recommendation.user.avatarUrl == null
                     ? Text(recommendation.user.displayName[0])
@@ -1137,7 +1157,8 @@ class _RecommendationCard extends StatelessWidget {
               Expanded(
                 child: FilledButton(
                   onPressed: onPrimaryAction,
-                  child: Text(_primaryActionLabel(recommendation, context.l10n)),
+                  child:
+                      Text(_primaryActionLabel(recommendation, context.l10n)),
                 ),
               ),
               const SizedBox(width: DS.sm),
@@ -1152,7 +1173,8 @@ class _RecommendationCard extends StatelessWidget {
     );
   }
 
-  String _primaryActionLabel(FriendRecommendation recommendation, AppLocalizations l10n) {
+  String _primaryActionLabel(
+      FriendRecommendation recommendation, AppLocalizations l10n) {
     if (recommendation.canInviteAccountability) {
       return l10n.friendStartPartnership;
     }

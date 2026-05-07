@@ -238,14 +238,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ..listenManual(chatProvider.select((state) => state.error),
           (previous, next) {
         if (next != null && next != previous) {
-          // Show snackbar so user knows error occurred
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(next),
-              duration: const Duration(seconds: 4),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          AppFeedback.error(context, next);
           Future.delayed(const Duration(seconds: 10), () {
             if (mounted) {
               final currentError = ref.read(chatProvider).error;
@@ -1537,8 +1530,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                 final showCorrectionBar = isLatestAssistant &&
                                     message.role == MessageRole.assistant &&
                                     !chatState.hasActiveRun;
-                                final showEnvelopeIndicator = isLatestAssistant &&
-                                    message.role == MessageRole.assistant;
+                                final showEnvelopeIndicator =
+                                    isLatestAssistant &&
+                                        message.role == MessageRole.assistant;
                                 final showNewMessagesDivider =
                                     message.id == _newMessageDividerBeforeId;
                                 return Column(

@@ -159,6 +159,7 @@ class ChatState {
     this.pendingUXWarning,
     this.pendingGrowthCard,
     this.pendingGoalArbitration,
+    this.pendingDivineMoment,
     this.spineDegraded = false,
     this.pendingCausalTraceId,
     this.causalTraceCount = 0,
@@ -235,6 +236,9 @@ class ChatState {
 
   /// Spine: pending multi-goal arbitration card — surfaces when ≥2 goals conflict.
   final GoalArbitrationEvent? pendingGoalArbitration;
+
+  /// Spine: pending divine moment card — MAGIC-002 through MAGIC-006.
+  final DivineMomentEvent? pendingDivineMoment;
 
   /// Spine: degraded mode flag — true when Spine pipeline failed.
   final bool spineDegraded;
@@ -343,6 +347,8 @@ class ChatState {
     bool clearGrowthCard = false,
     GoalArbitrationEvent? pendingGoalArbitration,
     bool clearGoalArbitration = false,
+    DivineMomentEvent? pendingDivineMoment,
+    bool clearDivineMoment = false,
     bool? spineDegraded,
     String? pendingCausalTraceId,
     int? causalTraceCount,
@@ -450,6 +456,9 @@ class ChatState {
         pendingGoalArbitration: clearGoalArbitration
             ? null
             : pendingGoalArbitration ?? this.pendingGoalArbitration,
+        pendingDivineMoment: clearDivineMoment
+            ? null
+            : pendingDivineMoment ?? this.pendingDivineMoment,
         spineDegraded: spineDegraded ?? this.spineDegraded,
         pendingCausalTraceId: pendingCausalTraceId ?? this.pendingCausalTraceId,
         causalTraceCount: causalTraceCount ?? this.causalTraceCount,

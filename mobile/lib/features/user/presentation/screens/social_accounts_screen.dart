@@ -239,7 +239,7 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
           centerTitle: true,
         ),
         child: ContentConstraint(
-          child: RefreshIndicator(
+          child: SparkleRefreshIndicator(
             onRefresh: _loadAccounts,
             child: ListView(
               padding: const EdgeInsets.symmetric(vertical: DS.spacing24),
@@ -258,7 +258,8 @@ class _SocialAccountsScreenState extends ConsumerState<SocialAccountsScreen> {
                             _buildInfoChip(
                               context,
                               icon: Icons.link_rounded,
-                              label: context.l10n.socialAcctLinkedCount('${_accounts.where((item) => item.linked).length}'),
+                              label: context.l10n.socialAcctLinkedCount(
+                                  '${_accounts.where((item) => item.linked).length}'),
                             ),
                             _buildInfoChip(
                               context,

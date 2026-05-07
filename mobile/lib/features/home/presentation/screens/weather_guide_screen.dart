@@ -172,7 +172,7 @@ class _WeatherGuideScreenState extends ConsumerState<WeatherGuideScreen>
                 context.l10n.weatherGuideDisclaimer,
                 style: context.sparkleTypography.labelSmall?.copyWith(
                   color: DS.textSecondary,
-                  height: 1.45,
+                  height: 1.52,
                 ),
               ),
             ),
@@ -221,7 +221,7 @@ class _CurrentWeatherPanel extends StatelessWidget {
               presentation.subtitle,
               style: context.sparkleTypography.bodyMedium.copyWith(
                 color: DS.textSecondary,
-                height: 1.45,
+                height: 1.52,
               ),
             ),
             const SizedBox(height: DS.spacing10),
@@ -246,7 +246,7 @@ class _CurrentWeatherPanel extends StatelessWidget {
                     : context.l10n.weatherGuideConditionPrefix(condition),
                 style: context.sparkleTypography.labelSmall.copyWith(
                   color: DS.textSecondary,
-                  height: 1.4,
+                  height: 1.52,
                 ),
               ),
             ),
@@ -359,7 +359,7 @@ class _WeatherPreviewCard extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                           style: context.sparkleTypography.labelSmall.copyWith(
                             color: DS.textSecondary,
-                            height: 1.35,
+                            height: 1.52,
                           ),
                         ),
                       ],
@@ -377,7 +377,7 @@ class _WeatherPreviewCard extends StatelessWidget {
                     spec.detail,
                     style: context.sparkleTypography.bodyMedium.copyWith(
                       color: DS.textSecondary,
-                      height: 1.45,
+                      height: 1.52,
                     ),
                   ),
                   const SizedBox(height: DS.spacing10),
@@ -395,7 +395,7 @@ class _WeatherPreviewCard extends StatelessWidget {
                       context.l10n.weatherGuideTriggerPrefix(spec.trigger),
                       style: context.sparkleTypography.labelSmall.copyWith(
                         color: DS.textSecondary,
-                        height: 1.4,
+                        height: 1.52,
                       ),
                     ),
                   ),
@@ -468,7 +468,7 @@ class _SectionHeader extends StatelessWidget {
             subtitle,
             style: context.sparkleTypography.labelSmall.copyWith(
               color: DS.textSecondary,
-              height: 1.45,
+              height: 1.52,
             ),
           ),
         ],
@@ -504,7 +504,7 @@ class _WeatherRuleTile extends StatelessWidget {
                 body,
                 style: context.sparkleTypography.bodyMedium.copyWith(
                   color: DS.textSecondary,
-                  height: 1.45,
+                  height: 1.52,
                 ),
               ),
             ],

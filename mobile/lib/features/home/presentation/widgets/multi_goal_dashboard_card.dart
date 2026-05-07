@@ -92,17 +92,23 @@ class _MultiGoalDashboardContentState
                   children: [
                     GoalSwitcher(overview: overview, dense: true),
                     const SizedBox(width: DS.spacing4),
-                    GestureDetector(
-                      onTap: () => setState(() => _expanded = !_expanded),
-                      child: Padding(
-                        padding: const EdgeInsets.all(DS.spacing4),
-                        child: AnimatedRotation(
-                          turns: _expanded ? 0.5 : 0,
-                          duration: DS.durationFast,
-                          child: Icon(
-                            Icons.expand_more_rounded,
-                            size: 18,
-                            color: DS.textSecondary,
+                    Semantics(
+                      button: true,
+                      label: I18nService.instance.isChinese
+                          ? '展开或收起卡片'
+                          : 'Expand or collapse card',
+                      child: GestureDetector(
+                        onTap: () => setState(() => _expanded = !_expanded),
+                        child: Padding(
+                          padding: const EdgeInsets.all(DS.spacing4),
+                          child: AnimatedRotation(
+                            turns: _expanded ? 0.5 : 0,
+                            duration: DS.durationFast,
+                            child: Icon(
+                              Icons.expand_more_rounded,
+                              size: 18,
+                              color: DS.textSecondary,
+                            ),
                           ),
                         ),
                       ),
@@ -120,7 +126,8 @@ class _MultiGoalDashboardContentState
                       _SuggestionCard(
                         suggestion: suggestion,
                         isSelected: suggestion.primaryGoalId == selectedGoalId,
-                        onResolveConflict: () => _showConflictResolution(context, overview),
+                        onResolveConflict: () =>
+                            _showConflictResolution(context, overview),
                       ),
                     ],
                     const SizedBox(height: DS.spacing14),
@@ -144,10 +151,9 @@ class _MultiGoalDashboardContentState
                                   ),
                                 );
                               } catch (_) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(context.l10n.planViewDetails),
-                                  ),
+                                AppFeedback.info(
+                                  context,
+                                  context.l10n.planViewDetails,
                                 );
                               }
                             },
@@ -259,17 +265,20 @@ class _SuggestionCard extends ConsumerWidget {
   }
 }
 
-Future<void> _showConflictResolution(BuildContext context, MultiGoalOverview overview) async {
+Future<void> _showConflictResolution(
+    BuildContext context, MultiGoalOverview overview) async {
   final totalMinutes = overview.goals.fold<int>(
     0,
-    (sum, g) => sum + (g.timeFraction != null ? (g.timeFraction! * 120).round() : 30),
+    (sum, g) =>
+        sum + (g.timeFraction != null ? (g.timeFraction! * 120).round() : 30),
   );
   final options = overview.goals.take(5).map((g) {
     final isCritical = g.weeklyConflictCount > 2 || (g.healthScore < 0.5);
     return GoalConflictOption(
       goalId: g.id,
       goalTitle: g.title,
-      suggestedMinutes: g.timeFraction != null ? (g.timeFraction! * 120).round() : 30,
+      suggestedMinutes:
+          g.timeFraction != null ? (g.timeFraction! * 120).round() : 30,
       reason: g.currentPhase ?? '',
       urgency: isCritical ? 'critical' : '',
     );

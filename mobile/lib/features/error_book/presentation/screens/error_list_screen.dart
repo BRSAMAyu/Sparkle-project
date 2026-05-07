@@ -368,7 +368,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
             return _buildEmptyState(query.needReview ?? false);
           }
 
-          return RefreshIndicator(
+          return SparkleRefreshIndicator(
             onRefresh: () async {
               ref.invalidate(errorListProvider(query));
             },

@@ -687,7 +687,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
       return _buildEmptyView(l10n);
     }
 
-    return RefreshIndicator(
+    return SparkleRefreshIndicator(
       onRefresh: () =>
           ref.read(visualElementsNotifierProvider.notifier).refresh(),
       child: CustomScrollView(
@@ -982,7 +982,7 @@ class _VisualElementsScreenState extends ConsumerState<VisualElementsScreen>
             return _buildEmptyView(l10n);
           }
 
-          return RefreshIndicator(
+          return SparkleRefreshIndicator(
             onRefresh: () =>
                 ref.read(visualElementsNotifierProvider.notifier).refresh(),
             child: CustomScrollView(

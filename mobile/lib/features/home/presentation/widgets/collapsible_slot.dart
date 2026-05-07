@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/home/presentation/providers/dashboard_slot_config_provider.dart';
 import 'package:sparkle/features/home/presentation/widgets/dashboard_edit_sheet.dart';
@@ -209,9 +210,13 @@ class _ExpandedSurface extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-        behavior: HitTestBehavior.deferToChild,
-        onLongPress: onLongPress,
-        child: child,
+  Widget build(BuildContext context) => Semantics(
+        button: true,
+        label: I18nService.instance.isChinese ? '长按编辑面板' : 'Long press to edit panel',
+        child: GestureDetector(
+          behavior: HitTestBehavior.deferToChild,
+          onLongPress: onLongPress,
+          child: child,
+        ),
       );
 }

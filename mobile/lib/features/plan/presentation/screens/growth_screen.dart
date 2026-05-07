@@ -53,7 +53,7 @@ class GrowthScreen extends ConsumerWidget {
         label: Text(context.l10n.newPlanLabel),
       ),
       child: ContentConstraint(
-        child: RefreshIndicator(
+        child: SparkleRefreshIndicator(
           onRefresh: () => ref
               .read(planListProvider.notifier)
               .loadPlans(type: PlanType.growth),
@@ -141,8 +141,8 @@ class _GrowthPlanCard extends StatelessWidget {
                       if (plan.totalEstimatedHours != null)
                         _InfoChip(
                           icon: Icons.timelapse_rounded,
-                          label:
-                              context.l10n.planHoursUnit(plan.totalEstimatedHours!.toStringAsFixed(0)),
+                          label: context.l10n.planHoursUnit(
+                              plan.totalEstimatedHours!.toStringAsFixed(0)),
                         ),
                     ],
                   ),

@@ -432,7 +432,7 @@ class _GroupChatBubbleState extends ConsumerState<GroupChatBubble>
                         errorWidget: Center(
                           child: Text(
                             '?',
-                            style: TextStyle(fontSize: 8, color: DS.neutral500),
+                            style: TextStyle(fontSize: 11, color: DS.neutral500),
                           ),
                         ),
                       ),

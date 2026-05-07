@@ -180,3 +180,9 @@ final titleDisplayFormatProvider = Provider<String>((ref) {
   final config = titleState?['config'] as Map<String, dynamic>?;
   return config?['display_format'] as String? ?? 'prefix';
 });
+
+/// Currently equipped title ID from user auth state
+final equippedTitleIdProvider = Provider<String?>((ref) {
+  final authState = ref.watch(authProvider);
+  return authState.user?.equippedTitle;
+});

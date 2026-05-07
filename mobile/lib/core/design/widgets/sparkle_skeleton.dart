@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
 
@@ -62,19 +64,24 @@ class _SparkleSkeletonState extends State<SparkleSkeleton>
         child: child,
         builder: (context, skeletonChild) {
           final t = _controller.value;
-          return ShaderMask(
-            shaderCallback: (bounds) => LinearGradient(
-              begin: Alignment(-1.5 + t * 2.5, -0.5),
-              end: Alignment(-0.5 + t * 2.5, 0.5),
-              colors: [
-                baseColor,
-                highlightColor,
-                baseColor,
-              ],
-              stops: const [0.1, 0.5, 0.9],
-            ).createShader(bounds),
-            blendMode: BlendMode.srcATop,
-            child: skeletonChild,
+          final breathingScale =
+              0.995 + (math.sin(t * math.pi * 2) + 1) * 0.0025;
+          return Transform.scale(
+            scale: breathingScale,
+            child: ShaderMask(
+              shaderCallback: (bounds) => LinearGradient(
+                begin: Alignment(-1.5 + t * 2.5, -0.5),
+                end: Alignment(-0.5 + t * 2.5, 0.5),
+                colors: [
+                  baseColor,
+                  highlightColor,
+                  baseColor,
+                ],
+                stops: const [0.1, 0.5, 0.9],
+              ).createShader(bounds),
+              blendMode: BlendMode.srcATop,
+              child: skeletonChild,
+            ),
           );
         },
       ),

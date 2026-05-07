@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sparkle/core/design/design_system.dart';
+import 'package:sparkle/core/services/i18n_service.dart';
 import 'package:sparkle/shared/entities/achievement_model.dart';
 
 /// Horizontal scrollable template selector for share cards
@@ -49,9 +50,12 @@ class _TemplateCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
+  Widget build(BuildContext context) => Semantics(
+      button: true,
+      label: I18nService.instance.isChinese ? '选择分享模板 ${template.name}' : 'Select share template ${template.name}',
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: 100,
         decoration: BoxDecoration(
@@ -106,6 +110,7 @@ class _TemplateCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
 
