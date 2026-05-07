@@ -775,6 +775,10 @@ class AuroraDecisionTelemetryService:
     async def _cleanup_expired(self, *, now: datetime) -> None:
         cutoff = now - timedelta(days=self.retention_days)
         await self.db.execute(delete(AuroraDecisionTelemetry).where(AuroraDecisionTelemetry.decided_at < cutoff))
+        # TODO: Extend retention enforcement to all Aurora data models (currently only AuroraDecisionTelemetry)
+        # Missing: AuroraStateSnapshot, AuroraScheduledWake, AuroraCoreSessionSnapshot,
+        # DurableSessionStateSnapshot, GoalWorldGraphSnapshot, GrowthChronicleSnapshot,
+        # CounterfactualReport
 
     def _classify_outcome(
         self,

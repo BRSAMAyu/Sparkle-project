@@ -15,6 +15,8 @@ def get_real_ip(request: Request) -> str:
     当所有流量经过同一个内网网关时（如 Docker 环境），
     若只用 IP 作为 key，所有端点会共享同一配额，极易误触发 429。
     """
+    # SECURITY NOTE: X-Forwarded-For is trusted from all proxies. In production,
+    # configure trusted proxy count via TRUSTED_PROXY_COUNT env var.
     forwarded = request.headers.get("X-Forwarded-For")
     real_ip = request.headers.get("X-Real-IP")
     if forwarded:

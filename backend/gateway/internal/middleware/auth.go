@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -23,6 +23,17 @@ import (
 	"github.com/sparkle/gateway/internal/logsafe"
 	"go.uber.org/zap"
 )
+
+// middlewareConfig holds the application config for config-based environment
+// checks, replacing direct os.Getenv calls. Set once at startup via
+// InitMiddlewareConfig.
+var middlewareConfig atomic.Pointer[config.Config]
+
+// InitMiddlewareConfig sets the package-level config used by isDevelopmentMode*
+// functions. Must be called once during application startup.
+func InitMiddlewareConfig(cfg *config.Config) {
+	middlewareConfig.Store(cfg)
+}
 
 const (
 	localBlacklistCleanupThreshold = 100
@@ -303,8 +314,10 @@ func middlewareErrorMessage(c *gin.Context, status int, message string) string {
 }
 
 func isDevelopmentModeForMiddlewareErrors() bool {
-	env := strings.ToLower(os.Getenv("ENVIRONMENT"))
-	return env == "" || env == "dev" || env == "development"
+	if cfg := middlewareConfig.Load(); cfg != nil {
+		return cfg.IsDevelopment()
+	}
+	return false
 }
 
 func middlewareErrorCode(status int) string {

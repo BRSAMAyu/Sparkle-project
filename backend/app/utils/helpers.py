@@ -31,6 +31,9 @@ def _validate_upload(
         if content_type not in allowed_types:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid content type")
 
+    # TODO: Add magic-byte validation (e.g. python-magic or imghdr) to verify the
+    # actual file content matches the declared extension / content_type. Currently
+    # only the client-declared extension and Content-Type header are checked.
     return ext
 
 

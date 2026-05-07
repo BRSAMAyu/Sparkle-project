@@ -15,8 +15,10 @@ import (
 	"time"
 
 	"github.com/sparkle/gateway/internal/config"
+	"github.com/sparkle/gateway/internal/handler"
 	"github.com/sparkle/gateway/internal/i18n"
 	"github.com/sparkle/gateway/internal/infra/logger"
+	"github.com/sparkle/gateway/internal/middleware"
 	"go.uber.org/zap"
 )
 
@@ -26,6 +28,10 @@ func main() {
 	defer logger.Log.Sync()
 
 	cfg := config.Load()
+
+	// Propagate config to handler/middleware packages for config-based env checks
+	handler.InitHandlerConfig(cfg)
+	middleware.InitMiddlewareConfig(cfg)
 
 	// Initialize i18n
 	if err := i18n.Init("locales"); err != nil {
