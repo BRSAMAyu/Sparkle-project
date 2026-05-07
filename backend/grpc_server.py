@@ -181,8 +181,19 @@ async def serve():
         db_session_factory=AsyncSessionLocal,
     )
 
-    if settings.DEBUG or settings.GRPC_ENABLE_REFLECTION:
-        # 启用 gRPC 反射（用于调试，生产环境可关闭）
+    # Reflection: only enable in DEBUG mode, OR via explicit opt-in that is
+    # rejected in production to prevent accidental exposure of service metadata.
+    _allow_reflection = settings.DEBUG
+    if not _allow_reflection and settings.GRPC_ENABLE_REFLECTION:
+        env_name = getattr(settings, "ENVIRONMENT", "") or ""
+        if env_name.lower() not in ("production", "prod"):
+            _allow_reflection = True
+        else:
+            logger.warning(
+                "GRPC_ENABLE_REFLECTION=true ignored in production environment; "
+                "reflection remains disabled"
+            )
+    if _allow_reflection:
         services = [*registered_grpc_service_names(), reflection.SERVICE_NAME]
         reflection.enable_server_reflection(tuple(services), server)
 

@@ -11,6 +11,7 @@ _GENERIC_TIMEOUT_ERROR_MESSAGE = "系统处理超时，请稍后重试。"
 _GENERIC_UNAVAILABLE_ERROR_MESSAGE = "服务暂时不可用，请稍后重试。"
 _GENERIC_INVALID_ARGUMENT_MESSAGE = "输入内容有误，请检查后重试。"
 _GENERIC_LLM_PROVIDER_ERROR_MESSAGE = "AI 服务暂时不可用，请稍后重试。"
+_ACTIONABLE_LLM_WARMUP_MESSAGE = "AI 服务正在启动中，请等待 30 秒后重试。"
 
 _LLM_PROVIDER_MODULE_MARKERS = (
     "openai",
@@ -84,7 +85,7 @@ def build_safe_chat_error(exc: Exception) -> tuple[str, int, bool]:
             )
         if status_code in {HTTPStatus.BAD_GATEWAY, HTTPStatus.SERVICE_UNAVAILABLE, HTTPStatus.GATEWAY_TIMEOUT}:
             return (
-                _GENERIC_LLM_PROVIDER_ERROR_MESSAGE,
+                _ACTIONABLE_LLM_WARMUP_MESSAGE,
                 agent_service_pb2.ERROR_CODE_UNAVAILABLE,
                 True,
             )

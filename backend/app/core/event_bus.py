@@ -946,12 +946,36 @@ class EventBus:
             "EVENT_BUS_STREAM_MAXLEN",
             50000,
         )
-        return await self.redis.xadd(
+
+        msg_id = await self.redis.xadd(
             stream,
             self._serialize_stream_body(message),
             maxlen=maxlen,
             approximate=True,
         )
+
+        # R3A9-P2-G07: Observability — warn if stream has no consumer groups
+        try:
+            groups = await self.redis.xinfo_groups(stream)
+            if not groups:
+                logger.debug(
+                    "Event published to stream '{}' with no registered consumer groups "
+                    "(event_type={}, message_id={}). Consider adding a consumer or routing to an existing stream.",
+                    stream,
+                    event_type,
+                    msg_id,
+                )
+        except ResponseError:
+            # Stream just created — no groups yet is expected
+            logger.debug(
+                "Event published to newly created stream '{}' with no consumer groups "
+                "(event_type={}, message_id={}).",
+                stream,
+                event_type,
+                msg_id,
+            )
+
+        return msg_id
 
     async def connect(self):
         """Establish Redis connection"""
@@ -1357,6 +1381,44 @@ class EventBus:
                 }
             logger.error(f"Failed to get consumer lag: {e}")
             return {"error": str(e), "stream": stream}
+
+    async def list_consumer_streams(self) -> dict[str, list[str]]:
+        """
+        Return a mapping of stream names to their active consumer group names.
+
+        Useful for admin endpoints to verify that all published event types have
+        at least one consumer group registered, and to detect coverage gaps.
+
+        Returns:
+            dict mapping stream name -> list of consumer group names.
+            Example: {"sparkle_events": ["achievement_group", "galaxy_group"]}
+        """
+        if not self.redis:
+            await self.connect()
+            if not self.redis:
+                return {}
+
+        result: dict[str, list[str]] = {}
+        try:
+            cursor = 0
+            while True:
+                cursor, keys = await self.redis.scan(cursor, match="*", count=200)
+                for key in keys:
+                    key_str = key if isinstance(key, str) else key.decode()
+                    try:
+                        key_type = await self.redis.type(key_str)
+                        if key_type == "stream":
+                            groups = await self.redis.xinfo_groups(key_str)
+                            group_names = [g.get("name", "unknown") for g in groups]
+                            if group_names:
+                                result[key_str] = group_names
+                    except (ResponseError, Exception):
+                        continue
+                if cursor == 0:
+                    break
+        except Exception:
+            logger.exception("list_consumer_streams scan failed")
+        return result
 
 
 # Global instance

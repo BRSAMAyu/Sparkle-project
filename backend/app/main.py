@@ -128,6 +128,28 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Sparkle API Server...")
     set_start_time()  # 记录启动时间
 
+    # Register global asyncio exception handler for background tasks
+    # that are fire-and-forget (asyncio.create_task without await).
+    loop = asyncio.get_running_loop()
+
+    _original_exception_handler = loop.get_exception_handler()
+
+    def _global_task_exception_handler(loop: asyncio.AbstractEventLoop, context: dict) -> None:
+        exception = context.get("exception")
+        if exception is not None:
+            task = context.get("task")
+            logger.opt(exception=True).error(
+                "Asyncio loop exception: message={} task={}",
+                context.get("message", ""),
+                getattr(task, "get_name", lambda: "?")() if task else "?",
+            )
+        elif _original_exception_handler is not None:
+            _original_exception_handler(loop, context)
+        else:
+            loop.default_exception_handler(context)
+
+    loop.set_exception_handler(_global_task_exception_handler)
+
     # Initialize Sentry crash reporting
     if settings.SENTRY_DSN:
         from app.core.sentry import init_sentry

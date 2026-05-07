@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import asyncio
+import logging
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
@@ -53,6 +55,34 @@ async def get_error_pattern_template_service(
     return ErrorPatternTemplateService(db)
 
 
+async def _ocr_and_update_error_task(error_id: UUID, image_url: str) -> None:
+    """Fire-and-forget OCR: extract text from image and update the error record."""
+    _log = logging.getLogger(__name__)
+    try:
+        from app.services.ocr_service import ocr_service
+        from app.db.session import AsyncSessionLocal
+
+        ocr_text = await ocr_service.ocr_for_math(image_url)
+        if not ocr_text or not ocr_text.strip():
+            _log.info("OCR returned empty for error %s, skipping update", error_id)
+            return
+
+        async with AsyncSessionLocal() as session:
+            from sqlalchemy import select, update
+            from app.models.error_book import ErrorRecord
+
+            stmt = (
+                update(ErrorRecord)
+                .where(ErrorRecord.id == error_id)
+                .values(question_text=ocr_text.strip())
+            )
+            await session.execute(stmt)
+            await session.commit()
+            _log.info("OCR text saved for error %s (%d chars)", error_id, len(ocr_text))
+    except Exception:
+        _log.warning("OCR fire-and-forget failed for error %s", error_id, exc_info=True)
+
+
 # route-tier: authed
 @router.post("", response_model=ErrorRecordResponse, status_code=201)
 async def create_error(
@@ -67,6 +97,15 @@ async def create_error(
     error = await service.create_error(UUID(user_id), data)
 
     background_tasks.add_task(_analyze_error_task, error.id, UUID(user_id), AsyncSessionLocal)
+
+    # Fire-and-forget OCR when image present but no question text
+    if error.question_image_url and not error.question_text:
+        try:
+            asyncio.create_task(_ocr_and_update_error_task(error.id, error.question_image_url))
+        except Exception:
+            logging.getLogger(__name__).warning(
+                "Failed to schedule OCR for error %s", error.id, exc_info=True
+            )
 
     return error
 

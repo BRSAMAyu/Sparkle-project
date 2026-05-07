@@ -42,8 +42,19 @@ class _GrowthExperienceDashboardBuilder:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    def _compute_lookback(self, user: User) -> tuple[datetime, int]:
+        """Progressive lookback: use registration date for new users (<7 days)."""
+        now = _utcnow()
+        created = getattr(user, "created_at", None)
+        if created and created.tzinfo is not None:
+            created = created.replace(tzinfo=None)
+        if created and (now - created).days < self.LOOKBACK_DAYS:
+            days_active = max((now - created).days, 1)
+            return created, days_active
+        return now - timedelta(days=self.LOOKBACK_DAYS), self.LOOKBACK_DAYS
+
     async def build(self, user_id: UUID, *, user: User) -> dict[str, Any]:
-        since = _utcnow() - timedelta(days=self.LOOKBACK_DAYS)
+        since, days_active = self._compute_lookback(user)
         growth_snapshot = await GrowthDashboardService(self.db).build_snapshot(user_id, user=user)
         weekly_narrative = await self._weekly_narrative(user_id)
         chronicle_entries = await self._chronicle_entries(user_id)
@@ -54,6 +65,7 @@ class _GrowthExperienceDashboardBuilder:
         plan_stability = await self._plan_stability(user_id, since)
 
         return {
+            "days_active": days_active,
             "chronicle_entries": chronicle_entries,
             "weekly_narrative": self._story_weekly_narrative(weekly_narrative, growth_snapshot),
             "time_distribution": time_distribution,

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -10,6 +11,8 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.goal import Goal
+
+_logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -177,17 +180,32 @@ class GoalDecompositionService:
         return goal
 
     def _normalize_goal_type(self, goal_type: str) -> str:
-        value = goal_type.strip().lower()
-        aliases = {
+        """Normalize a goal type using the centralized map, then resolve to a template key."""
+        from app.signals.goal_type_adapter import normalize_goal_type
+
+        canonical = normalize_goal_type(goal_type)
+
+        # Map canonical types to decomposition template keys.
+        _CANONICAL_TO_TEMPLATE: dict[str, str] = {
             "exam": "academic",
-            "school": "academic",
-            "study": "academic",
-            "skills": "skill",
-            "habits": "habit",
+            "academic": "academic",
+            "job_search": "skill",
+            "skill": "skill",
+            "fitness": "habit",
+            "habit": "habit",
+            "project": "project",
+            "startup": "project",
             "general": "other",
+            "other": "other",
         }
-        value = aliases.get(value, value)
-        return value if value in self._TEMPLATES else "other"
+        template_key = _CANONICAL_TO_TEMPLATE.get(canonical)
+        if template_key is not None and template_key in self._TEMPLATES:
+            return template_key
+        _logger.warning(
+            "Goal type %r (canonical=%r) has no decomposition template; falling back to 'other'",
+            goal_type, canonical,
+        )
+        return "other"
 
     def _normalize_horizon(self, time_horizon: str) -> str:
         value = time_horizon.strip().lower()

@@ -384,9 +384,9 @@ class TaskService:
 
     @staticmethod
     async def resume(db: AsyncSession, db_obj: Task) -> Task:
-        """Resume a paused task."""
-        if db_obj.status != TaskStatus.PAUSED:
-            raise ValueError("Only paused tasks can be resumed")
+        """Resume a paused or stuck task."""
+        if db_obj.status not in (TaskStatus.PAUSED, TaskStatus.STUCK):
+            raise ValueError("Only paused or stuck tasks can be resumed")
 
         old_status = db_obj.status
         resumed_at = _utcnow()
@@ -394,6 +394,13 @@ class TaskService:
         pause_state = dict(guide_json.get("pause_state") or {})
         pause_state["resumed_at"] = resumed_at.isoformat()
         guide_json["pause_state"] = pause_state
+
+        # Record recovery from stuck if applicable.
+        if old_status == TaskStatus.STUCK:
+            stuck_recovery = dict(guide_json.get("stuck_recovery") or {})
+            stuck_recovery["recovered_at"] = resumed_at.isoformat()
+            stuck_recovery["previous_status"] = TaskStatus.STUCK.value
+            guide_json["stuck_recovery"] = stuck_recovery
 
         db_obj.status = TaskStatus.IN_PROGRESS
         db_obj.started_at = db_obj.started_at or resumed_at
@@ -413,19 +420,21 @@ class TaskService:
             except Exception as e:
                 logger.warning(f"Failed to sync task resume with plan state: {e}")
 
+        event_type = "task.resumed_from_stuck" if old_status == TaskStatus.STUCK else "task.resumed"
         await event_bus_reliable.publish(
-            "task.resumed",
+            event_type,
             {
-                "event_type": "task.resumed",
+                "event_type": event_type,
                 "user_id": str(db_obj.user_id),
                 "task_id": str(db_obj.id),
                 "plan_id": str(db_obj.plan_id) if db_obj.plan_id else None,
+                "previous_status": old_status.value,
                 "timestamp": resumed_at.isoformat(),
             },
         )
         await publish_srl_event(
             user_id=db_obj.user_id,
-            trigger_event_type="task.resumed",
+            trigger_event_type=event_type,
             evidence_id=str(db_obj.id),
             metadata={"plan_id": str(db_obj.plan_id) if db_obj.plan_id else None},
         )

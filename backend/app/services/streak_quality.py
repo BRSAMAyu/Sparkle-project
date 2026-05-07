@@ -62,6 +62,18 @@ class StreakQualityService:
 
     async def compute_quality(self, user_id: UUID | str, target_date: date | None = None) -> StreakQuality:
         day = target_date or _utcnow().date()
+
+        # ── Cache check (TTL 300s) ──
+        cache_key = f"streak_quality:{user_id}:{day.isoformat()}"
+        try:
+            from app.core.cache import cache_service
+
+            cached = await cache_service.get(cache_key)
+            if cached is not None:
+                return StreakQuality(**cached)
+        except Exception:
+            logger.warning("Streak quality cache read failed for %s", cache_key, exc_info=True)
+
         start, end = _day_bounds(day)
 
         effective_minutes = await self._effective_minutes(user_id, start, end)
@@ -108,7 +120,7 @@ class StreakQualityService:
             effective_minutes >= 25 or core_tasks_completed > 0 or difficult_breakthroughs > 0
         )
 
-        return StreakQuality(
+        result = StreakQuality(
             effective_minutes=effective_minutes,
             core_tasks_completed=core_tasks_completed,
             difficult_breakthroughs=difficult_breakthroughs,
@@ -117,6 +129,16 @@ class StreakQualityService:
             quality_score=quality_score,
             is_quality_day=is_quality_day,
         )
+
+        # ── Cache write (TTL 300s) ──
+        try:
+            from app.core.cache import cache_service
+
+            await cache_service.set(cache_key, result.to_dict(), ttl=300)
+        except Exception:
+            logger.warning("Streak quality cache write failed for %s", cache_key, exc_info=True)
+
+        return result
 
     async def current_streak(self, user_id: UUID | str) -> int:
         result = await self.db.execute(select(UserStreakStats).where(UserStreakStats.user_id == user_id))

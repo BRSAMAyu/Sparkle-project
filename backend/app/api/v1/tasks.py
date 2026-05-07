@@ -1144,7 +1144,7 @@ async def resume_task(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Resume a paused task."""
+    """Resume a paused or stuck task back to IN_PROGRESS."""
     try:
         task = await TaskService.resume_task(db=db, task_id=task_id, user_id=current_user.id)
     except ValueError as exc:

@@ -11,10 +11,13 @@ types their own labels, phase cadence, mastery interpretation, and recall copy.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Any
 
 from app.signals.exam_sprint_policy import ExamSprintPolicyService
+
+_logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -110,15 +113,24 @@ _GOAL_TYPE_ALIASES = {
     "exam_build": "exam",
     "test": "exam",
     "考试": "exam",
+    "academic": "academic",
+    "school": "academic",
+    "study": "academic",
     "project_delivery": "project",
     "项目": "project",
     "career": "job_search",
     "job": "job_search",
     "求职": "job_search",
+    "skill": "skill",
+    "skills": "skill",
     "health": "fitness",
     "workout": "fitness",
     "健身": "fitness",
+    "habit": "habit",
+    "habits": "habit",
     "创业": "startup",
+    "other": "other",
+    "general": "general",
 }
 
 _MASTERY_BUCKETS = (
@@ -243,8 +255,71 @@ _RECALL_COPY = {
 
 
 def _normalize_goal_type(goal_type: str) -> str:
-    normalized = str(goal_type or "general").strip().lower()
-    return _GOAL_TYPE_ALIASES.get(normalized, normalized)
+    """Backward-compatible wrapper used by goal_type_adapter internals."""
+    return normalize_goal_type(goal_type)
+
+
+# ---------------------------------------------------------------------------
+# Centralized goal-type canonical map (R1A3-Finding8)
+# ---------------------------------------------------------------------------
+
+# All known canonical types.
+_CANONICAL_GOAL_TYPES = frozenset({
+    "exam", "academic", "project", "job_search", "skill",
+    "fitness", "habit", "startup", "other", "general",
+})
+
+GOAL_TYPE_CANONICAL_MAP: dict[str, str] = {
+    # ---- exam / academic family ----
+    "exam": "exam",
+    "exam_rescue": "exam",
+    "exam_build": "exam",
+    "test": "exam",
+    "考试": "exam",
+    "academic": "academic",
+    "school": "academic",
+    "study": "academic",
+    # ---- project family ----
+    "project": "project",
+    "project_delivery": "project",
+    "项目": "project",
+    # ---- job_search / skill family ----
+    "job_search": "job_search",
+    "career": "job_search",
+    "job": "job_search",
+    "求职": "job_search",
+    "skill": "skill",
+    "skills": "skill",
+    # ---- fitness / habit family ----
+    "fitness": "fitness",
+    "health": "fitness",
+    "workout": "fitness",
+    "健身": "fitness",
+    "habit": "habit",
+    "habits": "habit",
+    # ---- startup family ----
+    "startup": "startup",
+    "创业": "startup",
+    # ---- other / general family ----
+    "other": "other",
+    "general": "general",
+}
+
+
+def normalize_goal_type(raw_type: str) -> str:
+    """Canonicalize a goal type string using GOAL_TYPE_CANONICAL_MAP.
+
+    Returns the canonical type.  If *raw_type* is unknown the value is
+    returned unchanged and a warning is logged so that new types added
+    on one side without updating the map are visible in logs.
+    """
+    normalized = str(raw_type or "other").strip().lower()
+    canonical = GOAL_TYPE_CANONICAL_MAP.get(normalized)
+    if canonical is not None:
+        return canonical
+    # Unknown type — log a warning and pass through as-is.
+    _logger.warning("Unknown goal type %r (raw=%r); consider adding to GOAL_TYPE_CANONICAL_MAP", normalized, raw_type)
+    return normalized
 
 
 def _clamp_mastery(mastery: float) -> float:
