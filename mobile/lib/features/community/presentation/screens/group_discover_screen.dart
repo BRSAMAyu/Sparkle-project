@@ -7,7 +7,8 @@ import 'package:sparkle/core/design/components/atoms/semantic_pill.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/community/data/models/community_model.dart';
@@ -224,11 +225,11 @@ class _GroupDiscoverScreenState extends ConsumerState<GroupDiscoverScreen> {
             ),
           ),
         ),
-        loading: () => const Center(child: LoadingIndicator()),
+        loading: () => const SparkleListSkeleton(),
         error: (error, stackTrace) => Center(
           child: CustomErrorWidget.page(
             context: context,
-            message: error.toString(),
+            message: UserFacingError.from(error),
             onRetry: notifier.refresh,
           ),
         ),

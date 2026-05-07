@@ -8,7 +8,8 @@ import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/app_feedback.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/features/community/community_routes.dart';
 import 'package:sparkle/features/community/data/models/accountability_model.dart';
@@ -367,7 +368,11 @@ class _PendingRequestsTab extends ConsumerWidget {
             overviewAsync.valueOrNull?.pendingPartnerships ??
                 const <AccountabilityPartnershipInfo>[];
         if (requests.isEmpty && pendingPartnerships.isEmpty) {
-          return Center(child: Text(context.l10n.friendsNoPendingRequests));
+          return EmptyState(
+            type: EmptyStateType.general,
+            title: context.l10n.friendsNoPendingRequests,
+            icon: Icons.people_outline,
+          );
         }
         return SparkleRefreshIndicator(
           onRefresh: () async {
@@ -556,11 +561,11 @@ class _PendingRequestsTab extends ConsumerWidget {
           ),
         );
       },
-      loading: () => const Center(child: LoadingIndicator()),
+      loading: () => const SparkleListSkeleton(),
       error: (e, s) => Center(
         child: CustomErrorWidget.page(
           context: context,
-          message: e.toString(),
+          message: UserFacingError.from(e),
           onRetry: () => ref.read(pendingRequestsProvider.notifier).refresh(),
         ),
       ),
@@ -703,11 +708,11 @@ class _RecommendationsTab extends ConsumerWidget {
           ],
         ),
       ),
-      loading: () => const Center(child: LoadingIndicator()),
+      loading: () => const SparkleListSkeleton(),
       error: (e, s) => Center(
         child: CustomErrorWidget.page(
           context: context,
-          message: e.toString(),
+          message: UserFacingError.from(e),
           onRetry: () =>
               ref.read(friendRecommendationsProvider.notifier).refresh(),
         ),

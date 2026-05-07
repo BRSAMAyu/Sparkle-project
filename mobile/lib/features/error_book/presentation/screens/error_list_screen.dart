@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/compact_error_card.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
 import 'package:sparkle/core/services/sensory_feedback_service.dart';
 import 'package:sparkle/features/error_book/data/models/error_record.dart';
@@ -396,7 +397,7 @@ class _ErrorListScreenState extends ConsumerState<ErrorListScreen>
           );
         },
         loading: () => const SparkleListSkeleton(),
-        error: (error, stack) => _buildErrorState(error.toString(), query),
+        error: (error, stack) => _buildErrorState(UserFacingError.from(error), query),
       );
 
   bool _shouldShowLinkingHint(ErrorRecord error) {

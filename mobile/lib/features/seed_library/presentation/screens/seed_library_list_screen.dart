@@ -6,7 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:sparkle/core/design/design_system.dart';
 import 'package:sparkle/core/design/widgets/empty_state.dart';
 import 'package:sparkle/core/design/widgets/error_widget.dart';
-import 'package:sparkle/core/design/widgets/loading_indicator.dart';
+import 'package:sparkle/core/design/widgets/sparkle_skeleton.dart';
+import 'package:sparkle/core/errors/user_facing_error.dart';
 import 'package:sparkle/core/design/widgets/scroll_edge_haptics.dart';
 import 'package:sparkle/core/design/widgets/sensory_modals.dart';
 import 'package:sparkle/core/extensions/context_l10n.dart';
@@ -232,16 +233,13 @@ class _SeedLibraryListScreenState extends ConsumerState<SeedLibraryListScreen> {
     SeedLibraryListNotifier notifier,
   ) {
     if (state.isLoading && state.libraries.isEmpty) {
-      return LoadingIndicator.circular(
-        showText: true,
-        loadingText: 'Loading seed libraries...',
-      );
+      return const SparkleListSkeleton();
     }
 
     if (state.error != null && state.libraries.isEmpty) {
       return CustomErrorWidget.page(
         context: context,
-        message: state.error!,
+        message: UserFacingError.from(state.error!),
         onRetry: _applyFilters,
       );
     }
