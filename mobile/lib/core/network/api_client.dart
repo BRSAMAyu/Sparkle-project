@@ -55,8 +55,12 @@ class ApiClient {
     return await _dio.put(path, data: data, queryParameters: queryParameters);
   }
 
-  Future<Response<T>> patch<T>(String path, {Object? data}) async {
-    return await _dio.patch(path, data: data);
+  Future<Response<T>> patch<T>(
+    String path, {
+    Object? data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    return await _dio.patch(path, data: data, queryParameters: queryParameters);
   }
 
   Future<Response<T>> delete<T>(
